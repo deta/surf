@@ -1,4 +1,4 @@
-import { ElectronBlocker } from '@cliqz/adblocker-electron'
+import { ElectronBlocker } from '@ghostery/adblocker-electron'
 import fetch from 'cross-fetch'
 import { session } from 'electron'
 import { changeMenuItemLabel } from './appMenu'

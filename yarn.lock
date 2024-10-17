@@ -488,48 +488,6 @@
     human-id "^1.0.2"
     prettier "^2.7.1"
 
-"@cliqz/adblocker-content@^1.33.2":
-  version "1.33.2"
-  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-content/-/adblocker-content-1.33.2.tgz#305adcfed4be882dcdf7f0d607a1f60adf0bc056"
-  integrity sha512-OlLfenwU6sxo3/y6IPfnl9ou32IFwRzQXgHrLWZ0IjzcY8ZxpGlh97QcW1D9QyTPj3Ndub6vNJxsnMjNOWDd7g==
-  dependencies:
-    "@cliqz/adblocker-extended-selectors" "^1.33.2"
-
-"@cliqz/adblocker-electron-preload@^1.33.2":
-  version "1.33.2"
-  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-electron-preload/-/adblocker-electron-preload-1.33.2.tgz#bfc703cb7bb494b6436a97ad86164b15522fc32d"
-  integrity sha512-JdxXB8U7A9qe4D28mTQsDpRjEDQ2V9U8eYO/vAC0GhVhoyswe3QWrvDV6zfE7rcjj6WgbP3oMM/5h/TFXuty2w==
-  dependencies:
-    "@cliqz/adblocker-content" "^1.33.2"
-
-"@cliqz/adblocker-electron@^1.33.2":
-  version "1.33.2"
-  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-electron/-/adblocker-electron-1.33.2.tgz#2da52a4c4305b98d8bf70089c5012253c299beca"
-  integrity sha512-05dtFUzL1A9UwMrWulhyNC8TO9QuRRkmnNyYnVNspQMKNix6tyRIjMha2/YiceiGpDkJv6vuEeC55g0mXSAf6Q==
-  dependencies:
-    "@cliqz/adblocker" "^1.33.2"
-    "@cliqz/adblocker-electron-preload" "^1.33.2"
-    tldts-experimental "^6.0.14"
-
-"@cliqz/adblocker-extended-selectors@^1.33.2":
-  version "1.33.2"
-  resolved "https://registry.yarnpkg.com/@cliqz/adblocker-extended-selectors/-/adblocker-extended-selectors-1.33.2.tgz#f41cf3083df668c0ed9c426fa5bd7a9fdd64925e"
-  integrity sha512-SPL8vZyniuQ1kBmwM0KZyNNHnS8Nd6N0eoGDzkPJqkAW+ntT/v7MBXmlhKmpYhsh773uLZUjF5bSlTQprXtcdw==
-
-"@cliqz/adblocker@^1.33.2":
-  version "1.33.2"
-  resolved "https://registry.yarnpkg.com/@cliqz/adblocker/-/adblocker-1.33.2.tgz#e0ac543e911d8eb74c9e2d6718e99995a5a6c892"
-  integrity sha512-S6XHtSsn2+vvCgkqgmMuyZwGjXNfwQtPdzitrELzzNP881gbt7DDdbTBPAF50DOI2ZPDvkXfyoinbY5wEJPD+g==
-  dependencies:
-    "@cliqz/adblocker-content" "^1.33.2"
-    "@cliqz/adblocker-extended-selectors" "^1.33.2"
-    "@remusao/guess-url-type" "^1.3.0"
-    "@remusao/small" "^1.2.1"
-    "@remusao/smaz" "^1.9.1"
-    "@types/chrome" "^0.0.270"
-    "@types/firefox-webext-browser" "^120.0.0"
-    tldts-experimental "^6.0.14"
-
 "@csstools/cascade-layer-name-parser@^1.0.13":
   version "1.0.13"
   resolved "https://registry.yarnpkg.com/@csstools/cascade-layer-name-parser/-/cascade-layer-name-parser-1.0.13.tgz#6900157489bc53da1f6a66eaccd432025f6cd6fb"
@@ -1337,6 +1295,48 @@
   version "0.2.8"
   resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.8.tgz#21a907684723bbbaa5f0974cf7730bd797eb8e62"
   integrity sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==
+
+"@ghostery/adblocker-content@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-content/-/adblocker-content-2.0.0.tgz#f5c77ea8abe12add6f26e38676e5c89ded1e3f9d"
+  integrity sha512-tG27OMbRYxybZnY0gcWpHKMkuDzAINPc2GIOQgKkUjdckolxyIayox/1M3QK++QGe6jryeFBWMdJqSuUVJNhOQ==
+  dependencies:
+    "@ghostery/adblocker-extended-selectors" "^2.0.0"
+
+"@ghostery/adblocker-electron-preload@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-electron-preload/-/adblocker-electron-preload-2.0.0.tgz#b29666a749e952521d2928769dc037d2c2bf50d5"
+  integrity sha512-qX+DQW1iJuQzvx7fu9qgKnwf/t0r1YfEvV3yuCi0zLCxKD7voplUilddjY5Fodm66PgTwPb1tes2e23uIMS1mA==
+  dependencies:
+    "@ghostery/adblocker-content" "^2.0.0"
+
+"@ghostery/adblocker-electron@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-electron/-/adblocker-electron-2.0.0.tgz#63631f85dc4e7edca4f17c4f050cad09c08e53d8"
+  integrity sha512-MRltbJHseYEOWxpTetSgRJkJpEBjnDGaH4NmtCzhWRcRyzf6wnZZ9jElDdOj7eNmeiMCR3/c9TmDroD12sAC8g==
+  dependencies:
+    "@ghostery/adblocker" "^2.0.0"
+    "@ghostery/adblocker-electron-preload" "^2.0.0"
+    tldts-experimental "^6.0.14"
+
+"@ghostery/adblocker-extended-selectors@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-extended-selectors/-/adblocker-extended-selectors-2.0.0.tgz#77877ae113d84f89f196705b3ef2e0116d318e8b"
+  integrity sha512-NADqSwcsCCr1aI81t0bGM8G7l6Sz4ezk6QP+O2YZfEjKIZ49vYZivMmdh1s5WODJOw5MFIOEDXK49Y3UiMZOmg==
+
+"@ghostery/adblocker@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker/-/adblocker-2.0.0.tgz#4e8083228c2df39253efd91cb75c7efc9c0d1fda"
+  integrity sha512-93uGOVZcOuAsyP3oDNUuG/C8PZIN+bDIK2OlXGE2BDUVW9zpZdy0HvQkDst2GpgUVTtXxmDNLmbPFopnt8SihA==
+  dependencies:
+    "@ghostery/adblocker-content" "^2.0.0"
+    "@ghostery/adblocker-extended-selectors" "^2.0.0"
+    "@remusao/guess-url-type" "^1.3.0"
+    "@remusao/small" "^1.2.1"
+    "@remusao/smaz" "^1.9.1"
+    "@types/chrome" "^0.0.278"
+    "@types/firefox-webext-browser" "^120.0.0"
+    tldts-experimental "^6.0.14"
 
 "@humanwhocodes/config-array@^0.13.0":
   version "0.13.0"
@@ -2164,10 +2164,10 @@
     "@types/node" "*"
     "@types/responselike" "^1.0.0"
 
-"@types/chrome@^0.0.270":
-  version "0.0.270"
-  resolved "https://registry.yarnpkg.com/@types/chrome/-/chrome-0.0.270.tgz#575f47107652ef75d4841ec8ffa018137c8f51e7"
-  integrity sha512-ADvkowV7YnJfycZZxL2brluZ6STGW+9oKG37B422UePf2PCXuFA/XdERI0T18wtuWPx0tmFeZqq6MOXVk1IC+Q==
+"@types/chrome@^0.0.278":
+  version "0.0.278"
+  resolved "https://registry.yarnpkg.com/@types/chrome/-/chrome-0.0.278.tgz#f7fefc0dd4b66a54bdea2950c5fd7397c729938d"
+  integrity sha512-PDIJodOu7o54PpSOYLybPW/MDZBCjM1TKgf31I3Q/qaEbNpIH09rOM3tSEH3N7Q+FAqb1933LhF8ksUPYeQLNg==
   dependencies:
     "@types/filesystem" "*"
     "@types/har-format" "*"

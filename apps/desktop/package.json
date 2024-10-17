@@ -22,7 +22,7 @@
     "build:win:x64": "npm run build && electron-builder --win --config build/electron-builder-config.js --x64 --publish always"
   },
   "dependencies": {
-    "@cliqz/adblocker-electron": "^1.33.2",
+    "@ghostery/adblocker-electron": "^2.0.0",
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
     "@horizon/backend": "*",
