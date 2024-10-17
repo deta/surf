@@ -449,7 +449,9 @@ export class Telemetry {
   async trackPageChatMessageSent(stats: {
     contextSize: number
     numSpaces: number
-    numPages: number
+    numTabs: number
+    numResources: number
+    numScreenshots: number
     numPreviousMessages: number
     embeddingModel?: string
     error?: PageChatMessageSentEventError
@@ -457,7 +459,9 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
       context_size: stats.contextSize,
       num_spaces: stats.numSpaces,
-      num_pages: stats.numPages,
+      num_tabs: stats.numTabs,
+      num_resources: stats.numResources,
+      num_screenshots: stats.numScreenshots,
       num_messages: stats.numPreviousMessages,
       embedding_model: stats.embeddingModel,
       error: stats.error

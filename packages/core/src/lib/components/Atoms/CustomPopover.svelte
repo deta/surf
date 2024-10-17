@@ -7,13 +7,15 @@
   export let initialPopoverOpened = false
   export let position: 'top' | 'bottom' | 'left' | 'right' = 'bottom'
   export let popoverOpened = writable(initialPopoverOpened)
+  export let openDelay = 400
+  export let sideOffset = 20
+  export let forceOpen = false
 
   let timerBeforePopoverClose: NodeJS.Timeout
   let timerBeforePopoverOpen: NodeJS.Timeout
   let blockOpen = false
 
   const CLOSE_DELAY = 200
-  const OPEN_DELAY = 400
 
   const handleMouseEnter = () => {
     clearTimeout(timerBeforePopoverClose)
@@ -40,18 +42,22 @@
     clearTimeout(timerBeforePopoverClose)
     timerBeforePopoverOpen = setTimeout(() => {
       popoverOpened.set(true)
-    }, OPEN_DELAY)
+    }, openDelay)
   }
 
   const handleMouseOut = () => {
     clearTimeout(timerBeforePopoverOpen)
     timerBeforePopoverClose = setTimeout(() => {
-      popoverOpened.set(false)
-    }, CLOSE_DELAY)
+      if (!forceOpen) {
+        popoverOpened.set(false)
+      }
+    }, openDelay)
   }
 
   const closePopover = () => {
-    popoverOpened.set(false)
+    if (!forceOpen) {
+      popoverOpened.set(false)
+    }
   }
 
   onDestroy(() => {
@@ -60,7 +66,9 @@
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      popoverOpened.set(false)
+      if (!forceOpen) {
+        popoverOpened.set(false)
+      }
     }
   }
 </script>
@@ -94,7 +102,7 @@
     class="z-30 max-w-[400px] max-h-[500px] "
     transition={flyAndScale}
     side={position}
-    sideOffset={20}
+    {sideOffset}
   >
     <div
       on:mouseenter={handleMouseEnter}

@@ -68,6 +68,7 @@
     'exclude-tab': string
     'remove-magic-tab': Tab
     'include-tab': string
+    'open-context-item': ContextItem
     'close-chat': void
     'pick-screenshot': void
     'remove-context-item': string
@@ -387,6 +388,17 @@
     }
   }
 
+  const handleSelectContextItem = async (e: CustomEvent<string>) => {
+    const id = e.detail
+    const contextItem = $contextItems.find((item) => item.id === id)
+    if (!contextItem) {
+      log.error('Context item not found', id)
+      return
+    }
+
+    dispatch('open-context-item', contextItem)
+  }
+
   const handleInputKeydown = (e: KeyboardEvent) => {
     const currentTime = Date.now()
 
@@ -531,30 +543,14 @@
 
       log.debug('dropped resource, adding to context', resource)
 
-      if (resource.type.startsWith('image/')) {
-        const blob = await resource.getData()
-        resource.releaseData()
-
-        log.debug('Adding image resource as inline image to chat context')
-
-        dispatch('add-context-item', {
-          item: {
-            id: resource.id,
-            type: 'screenshot',
-            data: blob
-          },
-          trigger: PageChatUpdateContextEventTrigger.DragAndDrop
-        })
-      } else {
-        dispatch('add-context-item', {
-          item: {
-            id: resource.id,
-            type: 'resource',
-            data: resource
-          },
-          trigger: PageChatUpdateContextEventTrigger.DragAndDrop
-        })
-      }
+      dispatch('add-context-item', {
+        item: {
+          id: resource.id,
+          type: 'resource',
+          data: resource
+        },
+        trigger: PageChatUpdateContextEventTrigger.DragAndDrop
+      })
     }
   }
 
@@ -637,10 +633,14 @@
     const previousMessages = $magicPage.responses.filter(
       (message) => message.id !== (response?.id ?? '')
     )
-    const numSpaces = generalMode ? 0 : tabsInContext.filter((tab) => tab.type === 'space').length
-    const numPages = generalMode
+    const numSpaces = generalMode
       ? 0
-      : tabsInContext.filter((tab) => tab.type === 'page' && tab.chatResourceBookmark).length
+      : itemsInContext.filter(
+          (item) => item.type === 'space' || (item.type === 'tab' && item.data.type === 'space')
+        ).length
+    const numResources = generalMode
+      ? 0
+      : itemsInContext.filter((item) => item.type === 'resource').length
     let contextSize = generalMode ? 0 : itemsInContext.length
 
     try {
@@ -695,7 +695,7 @@
       }
 
       if (!generalMode && resourceIds.length > 0) {
-        contextSize = resourceIds.length
+        contextSize = resourceIds.length + inlineImages.length
       }
 
       response = {
@@ -763,8 +763,10 @@
 
       await telemetry.trackPageChatMessageSent({
         contextSize: contextSize,
-        numPages: numPages,
+        numTabs: tabsInContext.length,
         numSpaces: numSpaces,
+        numResources: numResources,
+        numScreenshots: inlineImages.length,
         numPreviousMessages: previousMessages.length,
         embeddingModel: $userConfigSettings.embedding_model
       })
@@ -782,7 +784,7 @@
 
       let error = PageChatMessageSentEventError.Other
 
-      if ((e as any)?.includes('RAG Empty Context')) {
+      if (typeof e === 'string' && e.includes('RAG Empty Context')) {
         content = `Unfortunately, we failed to find relevant information to answer your query.
 \nThere might have been an issue with extracting all information from your current context.
 \nPlease try asking a different question or let us know if the issue persists.`
@@ -1262,7 +1264,7 @@
           <div class=" flex-row items-center gap-2 flex">
             <ContextBubbles
               items={$contextItems.slice(0, 10)}
-              on:select
+              on:select={handleSelectContextItem}
               on:remove-item={handleRemoveContextItem}
             />
             {#if $contextItems.length > 0}

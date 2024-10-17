@@ -29,6 +29,7 @@ import type {
   AIDocsSimilarity,
   YoutubeTranscript
 } from '../types/browser.types'
+import type { EventBusMessage } from '@horizon/types'
 
 export type HorizonToCreate = Optional<
   HorizonData,
@@ -698,5 +699,9 @@ export class SFFS {
       opts?.inlineImages,
       opts?.general ?? false
     )
+  }
+
+  registerEventBustHandler(handler: (event: EventBusMessage) => void) {
+    return this.backend.js__backend_event_bus_register(handler) as () => void
   }
 }

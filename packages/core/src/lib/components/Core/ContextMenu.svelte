@@ -34,16 +34,25 @@
 
   export type CtxItem = CtxItemSeparator | CtxItemAction | CtxItemSubMenu
 
+  export type CtxMenuProps = {
+    key?: string
+    canOpen?: boolean
+    items: CtxItem[]
+  }
+
   declare global {
     interface HTMLElement {
       contextMenuItems?: CtxItem[]
+      contextMenuKey?: string
     }
   }
 
   import ContextMenu from './ContextMenu.svelte'
 
   const contextMenuOpen = writable(false)
+  const contextMenuKey = writable<string | null>(null)
   export const CONTEXT_MENU_OPEN = derived(contextMenuOpen, ($contextMenuOpen) => $contextMenuOpen)
+  export const CONTEXT_MENU_KEY = derived(contextMenuKey, ($contextMenuKey) => $contextMenuKey)
 
   let ctxMenuCmp: ContextMenu | null = null
   let setupComplete = false
@@ -71,7 +80,8 @@
           x: e.clientX,
           y: e.clientY,
           targetEl: target,
-          items: target.contextMenuItems
+          items: target.contextMenuItems,
+          key: target.contextMenuKey
         })
       },
       { capture: true }
@@ -88,6 +98,7 @@
     y: number
     targetEl?: HTMLElement
     items?: CtxItem[]
+    key?: string
   }) {
     if (get(contextMenuOpen)) {
       closeContextMenu()
@@ -96,6 +107,7 @@
       log.error('No target element or items provided for context menu!')
 
     contextMenuOpen.set(true)
+    contextMenuKey.set(props.key ?? null)
     ctxMenuCmp = new ContextMenu({
       target: document.body,
       props: {
@@ -110,29 +122,32 @@
   export function closeContextMenu() {
     ctxMenuCmp?.$destroy()
     contextMenuOpen.set(false)
+    contextMenuKey.set(null)
     document.body.removeAttribute('data-context-menu')
   }
 
   // TODO: (maxu): FIx typings
   // TODO: (maxu): Add support for lazy evaluation of canOpen with reference to target element?
   // NOTE: We allow undefined for more easy items construction (ternary)
-  export function contextMenu(
-    node: HTMLElement,
-    props: {
-      canOpen?: boolean
-      items: CtxItem[]
-    }
-  ): ActionReturn<any, any> {
+  export function contextMenu(node: HTMLElement, props: CtxMenuProps): ActionReturn<any, any> {
+    node.contextMenuKey = props.key
     node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
 
-    if (props.canOpen === false) node.contextMenuItems = undefined
+    if (props.canOpen === false) {
+      node.contextMenuItems = undefined
+      node.contextMenuKey = undefined
+    }
     return {
       update(props: { canOpen?: boolean; items: CtxItem[] }) {
         node.contextMenuItems = props.items
-        if (props.canOpen === false) node.contextMenuItems = undefined
+        if (props.canOpen === false) {
+          node.contextMenuItems = undefined
+          node.contextMenuKey = undefined
+        }
       },
       destroy() {
         node.contextMenuItems = undefined
+        node.contextMenuKey = undefined
       }
     }
   }

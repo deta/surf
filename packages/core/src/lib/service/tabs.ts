@@ -597,7 +597,7 @@ export class TabsManager {
     return newTab as TabPage
   }
 
-  async addSpaceTab(space: Space, opts?: Omit<CreateTabOptions, 'trigger'>) {
+  async addSpaceTab(space: Space, opts?: CreateTabOptions) {
     this.log.debug('Creating new space tab')
     const newTab = await this.create<TabSpace>(
       {

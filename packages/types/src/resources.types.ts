@@ -177,6 +177,7 @@ export type DetectedResource<T = ResourceData> = {
   type: string
 }
 
-export type ResourceState = 'idle' | 'updating' | 'error'
+export type ResourceStateCombined = 'idle' | 'extracting' | 'post-processing' | 'error'
+export type ResourceState = 'idle' | 'running' | 'error'
 
 export * from './resources/index.types'

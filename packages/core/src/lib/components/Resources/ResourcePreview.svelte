@@ -81,6 +81,8 @@
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
   export let interactive: boolean = false
+  export let frameless: boolean = false
+  export let processingText: string | undefined = undefined
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -103,6 +105,8 @@
 
   const spaces = oasis.spaces
   const resourceState = resource.state
+
+  let interactiveProp = interactive
 
   const isHovered = writable(false)
   const customTitleValue = writable(resource.metadata?.name ?? '')
@@ -144,11 +148,17 @@
       ? truncateURL(canonicalUrl, 25) || getFileType(resource.type)
       : getFileType(resource.type)) || resource.type
 
-  $: if ($resourceState === 'updating') {
+  $: if ($resourceState === 'extracting') {
     handleUpdating()
   }
 
-  $: $selectedItemIds.length > 1 ? (interactive = false) : (interactive = true)
+  $: if (interactiveProp) {
+    if ($selectedItemIds.length > 0) {
+      interactive = false
+    } else {
+      interactive = interactiveProp
+    }
+  }
 
   let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
@@ -676,6 +686,7 @@
   }
 
   const handleStartEditTitle = async () => {
+    log.debug('Starting to edit title', resource.id, interactive)
     if (interactive) {
       showEditMode = true
     }
@@ -694,6 +705,7 @@
 <div
   on:click={handleClick}
   class="resource-preview clickable relative"
+  class:frame={!frameless}
   class:isSelected={selected}
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   data-selectable
@@ -805,6 +817,9 @@
         icon: !canonicalUrl ? 'file' : undefined
       }}
       source={{ text: 'Generating Preview...', icon: 'spinner' }}
+      {interactive}
+      {frameless}
+      {processingText}
       mode="content"
     />
   {:else if previewData}
@@ -820,6 +835,9 @@
       source={previewData.source}
       author={previewData.author}
       theme={previewData.theme}
+      {interactive}
+      {frameless}
+      {processingText}
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
@@ -846,6 +864,15 @@
       {/if}
     </div>
   {/if}
+
+  <!-- {#if true}
+    <div class="absolute z-[10000] top-4 right-4 bg-white/95 backdrop-blur-md text-slate-500 p-2 rounded-lg flex items-center gap-2">
+      <Icon name="spinner" size="14px" />
+      <div>
+        Processing…
+      </div>
+    </div>
+  {/if} -->
 
   <!-- <div class="absolute z-[10000] top-2 right-2 bg-black text-white p-2 rounded-lg">
     {resource.type}
@@ -938,6 +965,10 @@
     }
   }
 
+  .frame .preview:hover {
+    outline: 3px solid rgba(0, 0, 0, 0.15);
+  }
+
   .preview {
     width: 100%;
     border-radius: 16px;
@@ -948,9 +979,6 @@
     background: rgba(255, 255, 255, 0.75);
     transition: 60ms ease-out;
     position: relative;
-    &:hover {
-      outline: 3px solid rgba(0, 0, 0, 0.15);
-    }
     &.twitter {
       border: 1px solid rgba(255, 255, 255, 0.2);
       background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%) !important;

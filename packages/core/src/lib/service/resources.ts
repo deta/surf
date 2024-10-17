@@ -1,4 +1,4 @@
-import { get, writable, type Writable } from 'svelte/store'
+import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
 import { useLogScope, type ScopedLogger, generateID, getFormattedDate } from '@horizon/utils'
 import { SFFS } from './sffs'
@@ -28,14 +28,18 @@ import {
 } from '../types'
 import type { Telemetry } from './telemetry'
 import {
+  EventBusMessageType,
+  ResourceProcessingStatusType,
   TelemetryEventTypes,
   type DetectedResource,
+  type EventBusMessage,
   type ResourceData,
   type ResourceDataAnnotation,
   type ResourceDataHistoryEntry,
-  type ResourceState
+  type ResourceState,
+  type ResourceStateCombined
 } from '@horizon/types'
-import { getContext, setContext } from 'svelte'
+import { getContext, onDestroy, setContext, tick } from 'svelte'
 
 /*
  TODO:
@@ -168,7 +172,9 @@ export class Resource {
   readDataPromise: Promise<Blob> | null // used to avoid duplicate reads
   dataUsed: number // number of times the data is being used
 
-  state: Writable<ResourceState>
+  extractionState: Writable<ResourceState>
+  postProcessingState: Writable<ResourceState>
+  state: Readable<ResourceStateCombined>
 
   sffs: SFFS
   log: ScopedLogger
@@ -192,7 +198,24 @@ export class Resource {
     this.readDataPromise = null
     this.dataUsed = 0
 
-    this.state = writable('idle')
+    this.extractionState = writable('idle')
+    this.postProcessingState = writable('idle')
+    this.state = derived(
+      [this.extractionState, this.postProcessingState],
+      ([extractionState, postProcessingState]) => {
+        if (extractionState === 'idle' && postProcessingState === 'idle') {
+          return 'idle'
+        } else if (extractionState === 'error' || postProcessingState === 'error') {
+          return 'error'
+        } else if (extractionState === 'running') {
+          return 'extracting'
+        } else if (postProcessingState === 'running') {
+          return 'post-processing'
+        } else {
+          return 'idle'
+        }
+      }
+    )
   }
 
   private async readDataAsBlob() {
@@ -307,8 +330,12 @@ export class Resource {
     }
   }
 
-  updateState(state: ResourceState) {
-    this.state.set(state)
+  updateExtractionState(state: ResourceState) {
+    this.extractionState.set(state)
+  }
+
+  updatePostProcessingState(state: ResourceState) {
+    this.postProcessingState.set(state)
   }
 }
 
@@ -432,6 +459,14 @@ export class ResourceManager {
       // @ts-ignore
       window.resourceManager = this
     }
+
+    const unregister = this.sffs.registerEventBustHandler((event) =>
+      this.handleEventBusMessage(event)
+    )
+    onDestroy(() => {
+      this.log.debug('unregistering event bus handler')
+      unregister()
+    })
   }
 
   private createResourceObject(data: SFFSResource): ResourceObject {
@@ -474,6 +509,32 @@ export class ResourceManager {
     }
 
     return this.getResource(id, opts)
+  }
+
+  private handleEventBusMessage(event: EventBusMessage) {
+    this.log.debug('received event bus message', event)
+
+    if (event.type === EventBusMessageType.ResourceProcessingMessage) {
+      this.handleResourceProcessingMessage(event.resource_id, event.status.type)
+    }
+  }
+
+  private async handleResourceProcessingMessage(id: string, status: ResourceProcessingStatusType) {
+    this.log.debug('handling resource processing message', id, status)
+
+    const resource = get(this.resources).find((r) => r.id === id)
+    if (!resource) {
+      this.log.debug('resource not used, ignoring event', id)
+      return
+    }
+
+    if (status === ResourceProcessingStatusType.Started) {
+      resource.updatePostProcessingState('running')
+    } else if (status === ResourceProcessingStatusType.Finished) {
+      resource.updatePostProcessingState('idle')
+    } else if (status === ResourceProcessingStatusType.Failed) {
+      resource.updatePostProcessingState('error')
+    }
   }
 
   async createDummyResource(
@@ -544,18 +605,16 @@ export class ResourceManager {
     )
 
     const sffsItem = await this.sffs.createResource(type, parsedMetadata, tags)
-
     const resource = this.createResourceObject(sffsItem)
+
+    this.log.debug('created resource', resource)
+    this.resources.update((resources) => [...resources, resource])
 
     // store the data in the resource and write it to sffs
     if (data) {
       resource.rawData = data
       await resource.writeData()
     }
-
-    this.log.debug('created resource', resource)
-
-    this.resources.update((resources) => [...resources, resource])
 
     const isSilent = tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SILENT)?.value === 'true'
     const isFromSpace = !!tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SPACE_SOURCE)?.value

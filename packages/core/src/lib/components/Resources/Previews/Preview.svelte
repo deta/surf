@@ -49,6 +49,9 @@
   export let theme: [string, string] | undefined = undefined
   export let editTitle: boolean = false
   export let titleValue: string = ''
+  export let interactive: boolean = false
+  export let frameless: boolean = false
+  export let processingText: string = 'Processing…'
 
   export let mode: Mode = 'full'
 
@@ -58,6 +61,8 @@
     'start-edit-title': void
     click: MouseEvent
   }>()
+
+  const resourceState = resource.state
 
   let error = ''
   let titleInputElem: HTMLElement
@@ -73,6 +78,7 @@
   $: showMedia = mode === 'full' || mode === 'media' || (!title && !content && image)
   $: showAuthor = mode === 'full' || mode === 'content'
   $: showSource = mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/'))
+  $: isProcessing = $resourceState === 'post-processing'
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -139,6 +145,8 @@
 
 <div
   class="preview"
+  class:interactive
+  class:frame={!frameless}
   class:themed={!!theme}
   style="--color1: {theme && theme[0]}; --color2: {theme && theme[1]}"
 >
@@ -187,7 +195,18 @@
         {#if showSource || (showTitle && title) || (showContent && content) || (showAuthor && author)}
           <div class="details">
             {#if showSource && mode !== 'compact' && source}
-              <SourceItem {type} {source} themed={!!theme} />
+              <div class="flex items-center justify-between gap-2 overflow-hidden">
+                <div class="flex-grow overflow-hidden">
+                  <SourceItem {type} {source} themed={!!theme} />
+                </div>
+
+                {#if isProcessing && !(showAuthor && author && (author.text || author.imageUrl || author.icon))}
+                  <div class="processing">
+                    <Icon name="spinner" size="14px" />
+                    <div>{processingText}</div>
+                  </div>
+                {/if}
+              </div>
             {/if}
 
             {#if showTitle}
@@ -272,7 +291,26 @@
             {/if}
 
             {#if showSource && mode === 'compact' && source && source.text}
-              <SourceItem {type} {source} themed={!!theme} />
+              <div class="flex items-center gap-2 justify-between">
+                <div class="flex-grow overflow-hidden">
+                  {#if type === ResourceTypes.POST_YOUTUBE}
+                    <SourceItem
+                      {type}
+                      source={{ ...source, text: author?.text || source.text }}
+                      themed={!!theme}
+                    />
+                  {:else}
+                    <SourceItem {type} {source} themed={!!theme} />
+                  {/if}
+                </div>
+
+                {#if isProcessing}
+                  <div class="processing">
+                    <Icon name="spinner" size="14px" />
+                    <div>{processingText}</div>
+                  </div>
+                {/if}
+              </div>
             {/if}
 
             {#if showAuthor && author && (author.text || author.imageUrl || author.icon)}
@@ -294,6 +332,13 @@
                     </div>
                   {/if}
                 </div>
+
+                {#if isProcessing}
+                  <div class="processing">
+                    <Icon name="spinner" size="14px" />
+                    <div>{processingText}</div>
+                  </div>
+                {/if}
               </div>
             {/if}
           </div>
@@ -306,23 +351,30 @@
 <style lang="scss">
   .preview {
     width: 100%;
-    border-radius: 16px;
-    border: 1px solid rgba(228, 228, 228, 0.75);
-    box-shadow:
-      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
     background: rgba(255, 255, 255, 0.75);
     transition: 60ms ease-out;
     position: relative;
-
-    &:hover {
-      outline: 3px solid rgba(0, 0, 0, 0.15);
-    }
 
     &.themed {
       border: 1px solid rgba(255, 255, 255, 0.2);
       background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
     }
+
+    &.frame {
+      border-radius: 16px;
+      border: 1px solid rgba(228, 228, 228, 0.75);
+      box-shadow:
+        0px 1px 0px 0px rgba(65, 58, 86, 0.25),
+        0px 0px 1px 0px rgba(0, 0, 0, 0.25);
+
+      &:hover {
+        outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+
+  .frame .preview-card {
+    padding: 0.65rem;
   }
 
   .preview-card {
@@ -331,7 +383,6 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 0.65rem;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -373,7 +424,8 @@
     .title,
     .content,
     .from,
-    .from {
+    .from,
+    .processing {
       color: #ffffff;
       opacity: 1;
     }
@@ -388,6 +440,17 @@
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
+  }
+
+  .processing {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #7e7696;
+    padding-left: 1rem;
   }
 
   .author {
@@ -438,6 +501,11 @@
     }
   }
 
+  .interactive .title {
+    cursor: pointer;
+    pointer-events: unset;
+  }
+
   .title {
     font-size: 1.25rem;
     line-height: 1.775rem;
@@ -446,6 +514,7 @@
     font-weight: 500;
     flex-shrink: 0;
     overflow-wrap: break-word;
+    pointer-events: none;
 
     &.edit {
       outline: none;

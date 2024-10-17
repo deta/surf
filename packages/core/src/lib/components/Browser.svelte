@@ -907,8 +907,114 @@
     })
   }
 
-  const handleTabSelect = (event: CustomEvent<string>) => {
-    const tabId = event.detail
+  const selectTabWhileKeepingOthersSelected = (tabId: string) => {
+    let addedTabToMagic: Tab | null = null
+
+    log.debug('select tab while keeping others selected', tabId)
+
+    log.debug('selected tabs', $selectedTabs)
+
+    // mark all currently selected tabs as user selected so they don't get deselected
+    selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+
+      newSelection.forEach((item) => {
+        if (!item.userSelected) {
+          newSelection.delete(item)
+          newSelection.add({ ...item, userSelected: true })
+        }
+      })
+
+      const existingItem = Array.from(newSelection).find((item) => item.id === tabId)
+      if (!existingItem) {
+        newSelection.add({ id: tabId, userSelected: true })
+      }
+
+      const activeTabItem = Array.from(newSelection).find((item) => item.id === $activeTabId)
+      if (!activeTabItem) {
+        newSelection.add({ id: $activeTabId, userSelected: true })
+      }
+
+      return newSelection
+    })
+
+    log.debug('selected tabs', $selectedTabs)
+
+    tabs.update((t) => {
+      const updatedTabs = t.map((tab) => {
+        if (tab.id === tabId) {
+          addedTabToMagic = tab
+          return { ...tab, magic: true }
+        }
+        return tab
+      })
+      return updatedTabs
+    })
+
+    lastSelectedTabId.set(tabId)
+
+    if (addedTabToMagic) {
+      preparePageTabsForChatContext([addedTabToMagic])
+    }
+
+    // Make the tab active
+    tabsManager.makeActive(tabId, ActivateTabEventTrigger.Click)
+
+    tick().then(() => {
+      telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.ActiveChanged,
+        $magicTabs.length
+      )
+    })
+  }
+
+  const openContextItemAsTab = async (contextItem: ContextItem) => {
+    if (contextItem.type === 'tab') {
+      selectTabWhileKeepingOthersSelected(contextItem.data.id)
+    } else if (contextItem.type === 'resource') {
+      const existingTab = $tabs.find(
+        (tab) => tab.type === 'resource' && tab.resourceId === contextItem.data.id
+      )
+      if (existingTab) {
+        selectTabWhileKeepingOthersSelected(existingTab.id)
+      } else {
+        const tab = await openResourcFromContextAsPageTab(contextItem.data.id)
+        if (tab) {
+          selectTabWhileKeepingOthersSelected(tab.id)
+        }
+      }
+    } else if (contextItem.type === 'space') {
+      const existingTab = $tabs.find(
+        (tab) => tab.type === 'space' && tab.spaceId === contextItem.data.id
+      )
+      if (existingTab) {
+        selectTabWhileKeepingOthersSelected(existingTab.id)
+      } else {
+        const existingContextTab = $chatContextItems.find(
+          (item) => item.type === 'space' && item.data.id === contextItem.data.id
+        )
+
+        const newTab = await tabsManager.addSpaceTab(contextItem.data, {
+          active: false,
+          trigger: CreateTabEventTrigger.OasisChat
+        })
+
+        selectTabWhileKeepingOthersSelected(newTab.id)
+
+        if (existingContextTab) {
+          log.debug('removing existing context item for same resource', existingContextTab.id)
+          removeContextItem(existingContextTab.id)
+        }
+
+        log.debug('created tab for space', newTab)
+      }
+    } else {
+      log.debug('cannot open context item as tab', contextItem)
+      toasts.info('Cannot open this item as a tab')
+    }
+  }
+
+  const selectTab = (tabId: string) => {
     const currentSelectedTabs = Array.from(get(selectedTabs))
     const currentTab = currentSelectedTabs.find((item) => item.id === tabId)
 
@@ -1324,6 +1430,48 @@
     return $magicTabs
   }
 
+  const openResourcFromContextAsPageTab = async (resourceId: string) => {
+    const existingContextTab = $chatContextItems.find(
+      (item) => item.type === 'resource' && item.data.id === resourceId
+    )
+
+    const resource = await resourceManager.getResource(resourceId)
+    const url = resource?.tags?.find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+    )?.value
+
+    let tab: Tab | null = null
+    if (url) {
+      tab = await tabsManager.addPageTab(url, {
+        active: false,
+        trigger: CreateTabEventTrigger.OasisChat
+      })
+    } else {
+      log.debug('no url found for resource, using resource tab as fallback', resourceId)
+
+      const resource = await resourceManager.getResource(resourceId)
+      if (resource) {
+        tab = await tabsManager.addResourceTab(resource, {
+          active: false,
+          trigger: CreateTabEventTrigger.OasisChat
+        })
+      }
+    }
+
+    if (!tab) {
+      log.error('failed to open resource from context', resourceId)
+      toasts.error('Failed to open as tab')
+      return null
+    }
+
+    if (existingContextTab) {
+      log.debug('removing existing context item for same resource', existingContextTab.id)
+      removeContextItem(existingContextTab.id)
+    }
+
+    return tab
+  }
+
   const highlightWebviewText = async (
     resourceId: string,
     answerText: string,
@@ -1335,29 +1483,11 @@
     let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) || null
 
     if (!tab) {
-      const resource = await resourceManager.getResource(resourceId)
-      const url = resource?.tags?.find(
-        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-      )?.value
-
-      if (!url) {
-        log.error('no url found for resource', resourceId)
+      tab = await openResourcFromContextAsPageTab(resourceId)
+      if (!tab) {
+        log.error('failed to open resource from context', resourceId)
         toasts.error('Failed to highlight citation')
         return
-      }
-
-      const existingContextTab = $chatContextItems.find(
-        (item) => item.type === 'resource' && item.data.id === resourceId
-      )
-
-      tab = await tabsManager.addPageTab(url, {
-        active: false,
-        trigger: CreateTabEventTrigger.OasisChat
-      })
-
-      if (existingContextTab) {
-        log.debug('removing existing context item for same resource', existingContextTab.id)
-        removeContextItem(existingContextTab.id)
       }
 
       // give the new tab some time to load
@@ -2457,7 +2587,7 @@
       if ($activeTabMagic.showSidebar) {
         // TODO: this should be cleaned up more
         if (active) {
-          handleTabSelect(new CustomEvent('tab-select', { detail: tab.id }))
+          selectTab(tab.id)
         } else {
           handlePassiveSelect(new CustomEvent('tab-select', { detail: tab.id }))
         }
@@ -3912,7 +4042,7 @@
                     isUserSelected={Array.from($selectedTabs).some(
                       (item) => item.id === tab.id && item.userSelected
                     )}
-                    on:select={handleTabSelect}
+                    on:select={(e) => selectTab(e.detail)}
                     on:remove-from-sidebar={handleRemoveFromSidebar}
                     on:delete-tab={handleDeleteTab}
                     on:exclude-tab={handleExcludeTab}
@@ -4046,7 +4176,7 @@
                         {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
-                        on:select={handleTabSelect}
+                        on:select={(e) => selectTab(e.detail)}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
                         on:exclude-tab={handleExcludeTab}
@@ -4084,7 +4214,7 @@
                         {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
-                        on:select={handleTabSelect}
+                        on:select={(e) => selectTab(e.detail)}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:exclude-tab={handleExcludeTab}
                         on:delete-tab={handleDeleteTab}
@@ -4149,7 +4279,7 @@
                         {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
-                        on:select={handleTabSelect}
+                        on:select={(e) => selectTab(e.detail)}
                         on:exclude-tab={handleExcludeTab}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
@@ -4188,7 +4318,7 @@
                         {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
-                        on:select={handleTabSelect}
+                        on:select={(e) => selectTab(e.detail)}
                         on:exclude-tab={handleExcludeTab}
                         on:remove-from-sidebar={handleRemoveFromSidebar}
                         on:delete-tab={handleDeleteTab}
@@ -4394,7 +4524,7 @@
           on:deleted={handleDeletedSpace}
           {historyEntriesManager}
           activeTabs={$activeTabs}
-          on:activate-tab={handleTabSelect}
+          on:activate-tab={(e) => selectTab(e.detail)}
           on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
           on:bookmark={() =>
             handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
@@ -4505,6 +4635,8 @@
                   spaceId={tab.spaceId}
                   active={$activeTabId === tab.id}
                   on:create-resource-from-oasis={handeCreateResourceFromOasis}
+                  on:open-and-chat={handleOpenAndChat}
+                  on:batch-open={handleOpenTabs}
                   on:deleted={handleDeletedSpace}
                   hideBar={$showNewTabOverlay !== 0}
                   {historyEntriesManager}
@@ -4603,7 +4735,7 @@
               on:navigate={(e) => {
                 $browserTabs[$activeTabId].navigate(e.detail.url)
               }}
-              on:select={handleTabSelect}
+              on:open-context-item={(e) => openContextItemAsTab(e.detail)}
               on:exclude-tab={handleExcludeTab}
               on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
               on:remove-magic-tab={removeMagicTab}

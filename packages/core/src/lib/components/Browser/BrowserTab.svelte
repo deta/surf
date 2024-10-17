@@ -349,7 +349,7 @@
   async function refreshResourceWithPage(resource: Resource, url: string) {
     log.debug('updating resource with fresh data', resource.id)
 
-    resource.updateState('updating')
+    resource.updateExtractionState('running')
 
     // Run resource detection on a fresh webview to get the latest data
     const detectedResource = await extractResource(url, true)
@@ -365,7 +365,7 @@
       })
     }
 
-    resource.updateState('idle')
+    resource.updateExtractionState('idle')
 
     return resource
   }
@@ -450,7 +450,7 @@
               .catch((e) => {
                 log.error('error refreshing resource', e)
                 toasts.error('Failed to refresh resource')
-                fetchedResource.updateState('idle') // TODO: support error state
+                fetchedResource.updateExtractionState('idle') // TODO: support error state
               })
           }
 
