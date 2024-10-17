@@ -122,6 +122,30 @@ const template = [
             },
             { type: 'separator' },
             {
+              role: 'services',
+              id: 'services',
+              label: 'Services'
+            },
+            { type: 'separator' },
+            {
+              id: 'hide-window',
+              label: 'Hide Surf',
+              accelerator: 'CmdOrCtrl+H',
+              role: 'hide'
+            },
+            {
+              id: 'hide-others',
+              label: 'Hide Others',
+              accelerator: 'CmdOrCtrl+Shift+H',
+              role: 'hideOthers'
+            },
+            {
+              id: 'unhide',
+              label: 'Show All',
+              role: 'unhide'
+            },
+            { type: 'separator' },
+            {
               label: 'Quit Surf',
               role: 'quit'
             }
