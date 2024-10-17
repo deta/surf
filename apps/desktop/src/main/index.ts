@@ -16,6 +16,7 @@ import { checkIfAppIsActivated } from './activation'
 import { isDefaultBrowser } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
+import { silentCheckForUpdates } from './appUpdates'
 
 const log = useLogScope('Main Index')
 const isDev = import.meta.env.DEV
@@ -200,6 +201,8 @@ if (!gotTheLock) {
       if (appOpenedWithURL) {
         handleOpenUrl(appOpenedWithURL!)
       }
+
+      silentCheckForUpdates()
     })
   })
 
