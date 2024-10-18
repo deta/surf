@@ -535,7 +535,7 @@ export class TabsManager {
   }
 
   // Note: the browser component uses this inside a debounced function
-  cycle(previous: boolean) {
+  cycle(previous: boolean): string | undefined {
     if (this.tabsValue.length === 0) {
       this.log.debug('No tabs in view')
       return
@@ -545,22 +545,18 @@ export class TabsManager {
       ...this.pinnedTabsValue.sort((a, b) => a.index - b.index)
     ].filter((tab) => !tab.archived)
 
+    let tabId: string
     const activeTabIndex = ordered.findIndex((tab) => tab.id === this.activeTabIdValue)
+
     if (!previous) {
       const nextTabIndex = activeTabIndex + 1
-      if (nextTabIndex >= ordered.length) {
-        this.makeActive(ordered[0].id, ActivateTabEventTrigger.Shortcut)
-      } else {
-        this.makeActive(ordered[nextTabIndex].id, ActivateTabEventTrigger.Shortcut)
-      }
+      tabId = nextTabIndex >= ordered.length ? ordered[0].id : ordered[nextTabIndex].id
     } else {
       const previousTabIndex = activeTabIndex - 1
-      if (previousTabIndex < 0) {
-        this.makeActive(ordered[ordered.length - 1].id, ActivateTabEventTrigger.Shortcut)
-      } else {
-        this.makeActive(ordered[previousTabIndex].id, ActivateTabEventTrigger.Shortcut)
-      }
+      tabId = previousTabIndex < 0 ? ordered[ordered.length - 1].id : ordered[previousTabIndex].id
     }
+
+    return tabId
   }
 
   showNewTab() {

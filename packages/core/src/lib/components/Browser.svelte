@@ -728,7 +728,10 @@
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
-  const debouncedCycleActiveTab = useDebounce((previous) => tabsManager.cycle(previous), 100)
+  const debouncedCycleActiveTab = useDebounce((previous) => {
+    const tabId = tabsManager.cycle(previous)
+    if (tabId && tabId != $activeTabId) selectTab(tabId, ActivateTabEventTrigger.Shortcut)
+  }, 100)
 
   const openUrlHandler = (url: string, active = true) => {
     log.debug('open url', url, active)
@@ -1014,7 +1017,7 @@
     }
   }
 
-  const selectTab = (tabId: string) => {
+  const selectTab = (tabId: string, trigger?: ActivateTabEventTrigger) => {
     const currentSelectedTabs = Array.from(get(selectedTabs))
     const currentTab = currentSelectedTabs.find((item) => item.id === tabId)
 
@@ -1023,7 +1026,7 @@
       selectedTabs.set(new Set([{ id: tabId, userSelected: currentTab?.userSelected || false }]))
     }
 
-    tabsManager.makeActive(tabId, ActivateTabEventTrigger.Click)
+    tabsManager.makeActive(tabId, trigger)
 
     // If chat mode is activated, update magic tabs
     if ($activeTabMagic.showSidebar) {
@@ -4538,7 +4541,7 @@
           on:deleted={handleDeletedSpace}
           {historyEntriesManager}
           activeTabs={$activeTabs}
-          on:activate-tab={(e) => selectTab(e.detail)}
+          on:activate-tab={(e) => selectTab(e.detail, ActivateTabEventTrigger.Click)}
           on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
           on:bookmark={() =>
             handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
