@@ -30,6 +30,31 @@ export const blobToDataUrl = (blob: Blob): Promise<string> => {
   })
 }
 
+export const blobToSmallImageUrl = (blob: Blob, size = 64) => {
+  return new Promise<string | null>((resolve) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      resolve(null)
+      return
+    }
+
+    const image = new Image()
+    image.src = URL.createObjectURL(blob)
+
+    image.onload = () => {
+      ctx.drawImage(image, 0, 0, size, size)
+      const dataUrl = canvas.toDataURL()
+
+      URL.revokeObjectURL(image.src)
+
+      resolve(dataUrl)
+    }
+  })
+}
+
 export const captureScreenshot = async (rect: {
   x: number
   y: number

@@ -10,6 +10,7 @@
   export let openDelay = 400
   export let sideOffset = 20
   export let forceOpen = false
+  export let disabled = false
 
   let timerBeforePopoverClose: NodeJS.Timeout
   let timerBeforePopoverOpen: NodeJS.Timeout
@@ -77,43 +78,47 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 
-<Popover.Root
-  open={$popoverOpened}
-  closeOnEscape
-  closeOnOutsideClick
-  onOpenChange={(isOpen) => {
-    if (!isOpen) {
-      popoverOpened.set(false)
-    }
-  }}
->
-  <Popover.Trigger on:click={handleClick}>
-    <div
-      role="button"
-      tabindex="0"
-      on:mouseenter={handleMouseOver}
-      on:mouseleave={handleMouseOut}
-      on:dragenter={handleMouseOver}
-    >
-      <slot name="trigger" />
-    </div>
-  </Popover.Trigger>
-  <Popover.Content
-    class="z-30 max-w-[400px] max-h-[500px] "
-    transition={flyAndScale}
-    side={position}
-    {sideOffset}
+{#if disabled}
+  <slot name="trigger" />
+{:else}
+  <Popover.Root
+    open={$popoverOpened}
+    closeOnEscape
+    closeOnOutsideClick
+    onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        popoverOpened.set(false)
+      }
+    }}
   >
-    <div
-      on:mouseenter={handleMouseEnter}
-      on:mouseleave={() => handleMouseOut()}
-      class="w-full h-full rounded-xl shadow-xl border border-dark-10 bg-neutral-100 overflow-y-scroll focus:outline-none"
-      role="menu"
-      tabindex="0"
+    <Popover.Trigger on:click={handleClick}>
+      <div
+        role="button"
+        tabindex="0"
+        on:mouseenter={handleMouseOver}
+        on:mouseleave={handleMouseOut}
+        on:dragenter={handleMouseOver}
+      >
+        <slot name="trigger" />
+      </div>
+    </Popover.Trigger>
+    <Popover.Content
+      class="z-30 max-w-[400px] max-h-[500px] "
+      transition={flyAndScale}
+      side={position}
+      {sideOffset}
     >
-      <Popover.Arrow size={6} />
+      <div
+        on:mouseenter={handleMouseEnter}
+        on:mouseleave={() => handleMouseOut()}
+        class="w-full h-full rounded-xl shadow-xl border border-dark-10 bg-neutral-100 overflow-y-scroll focus:outline-none"
+        role="menu"
+        tabindex="0"
+      >
+        <Popover.Arrow size={6} />
 
-      <slot name="content" {closePopover} />
-    </div>
-  </Popover.Content>
-</Popover.Root>
+        <slot name="content" {closePopover} />
+      </div>
+    </Popover.Content>
+  </Popover.Root>
+{/if}

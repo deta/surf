@@ -3,7 +3,7 @@
   import type { PillImage } from '../ContextBubbles.svelte'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import ContextBubbleItemWrapper, { type PillProperties } from './ContextBubbleItemWrapper.svelte'
-  import { blobToDataUrl } from '../../../utils/screenshot'
+  import { blobToDataUrl, blobToSmallImageUrl } from '../../../utils/screenshot'
 
   export let pill: PillImage
   export let pillProperties: PillProperties
@@ -13,32 +13,6 @@
   let blob: Blob | null = null
   let previewImage: string | null = null
   let fullImage: string | null = null
-
-  function blobToSmallPreview(blob: Blob) {
-    return new Promise<string | null>((resolve) => {
-      // reduce the size of the image to 32x32
-      const canvas = document.createElement('canvas')
-      canvas.width = 32
-      canvas.height = 32
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        resolve(null)
-        return
-      }
-
-      const image = new Image()
-      image.src = URL.createObjectURL(blob)
-
-      image.onload = () => {
-        ctx.drawImage(image, 0, 0, 32, 32)
-        const dataUrl = canvas.toDataURL()
-
-        URL.revokeObjectURL(image.src)
-
-        resolve(dataUrl)
-      }
-    })
-  }
 
   async function getSmallImage() {
     if (typeof pill.data === 'string') {
@@ -57,7 +31,7 @@
     //   return screenshotPreviews.get(pill.id) ?? null
     // }
 
-    const dataUrl = await blobToSmallPreview(blob)
+    const dataUrl = await blobToSmallImageUrl(blob)
     if (!dataUrl) {
       return null
     }

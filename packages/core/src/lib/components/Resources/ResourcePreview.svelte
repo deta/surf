@@ -495,9 +495,9 @@
           if (url) {
             sourceText = url.hostname
           } else if (canonicalUrl.startsWith('file://')) {
-            sourceText = 'Local file'
+            sourceText = `Local ${getFileType(resource.type)}`
           } else if (canonicalUrl.startsWith('/Users/')) {
-            sourceText = 'Local file'
+            sourceText = `Local ${getFileType(resource.type)}`
           }
         }
 

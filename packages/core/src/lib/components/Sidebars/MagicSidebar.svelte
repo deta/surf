@@ -463,36 +463,6 @@
         handleChatSubmit()
       }
     }
-
-    // Check for Cmd + Shift + A
-    if (
-      $cmdPressed &&
-      $shiftPressed &&
-      $aPressed &&
-      e.key.toLowerCase() === 'a' &&
-      $activeTabMagic.showSidebar
-    ) {
-      e.preventDefault()
-      if ($tabsInContext.length < $tabs.length) {
-        toggleSelectAll.set(false)
-      }
-
-      if ($toggleSelectAll) {
-        for (const t of $tabs) {
-          dispatch('exclude-tab', t.id)
-        }
-        for (const t of $prevSelectedTabs) {
-          dispatch('include-tab', t.id)
-        }
-      } else {
-        prevSelectedTabs.set($tabsInContext)
-        for (const t of $tabs) {
-          dispatch('include-tab', t.id)
-        }
-      }
-
-      toggleSelectAll.set(!$toggleSelectAll)
-    }
   }
 
   const handleInputKeyup = (e: KeyboardEvent) => {

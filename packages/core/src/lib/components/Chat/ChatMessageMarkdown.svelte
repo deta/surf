@@ -45,6 +45,19 @@
 
   let contentElem: HTMLDivElement
 
+  // combine sources from the same resource
+  $: collapsedSources = (sources ?? []).reduce((acc, source) => {
+    const existing = acc.find((s) => s.resource_id === source.resource_id)
+
+    if (existing) {
+      return acc
+    }
+
+    return [...acc, source]
+  }, [] as AIChatMessageSource[])
+
+  // $: log.debug('ChatMessageMarkdown', sources, collapsedSources)
+
   const renderIDFromCitationID = (citationID: string | null, sources?: AIChatMessageSource[]) => {
     if (!citationID || !sources) return ''
 
@@ -214,19 +227,20 @@
 </script>
 
 <div class=" {inline ? '!prose-sm' : 'py-5 px-6 bg-white rounded-2xl flex flex-col gap-4'}">
-  {#if sources && sources.length > 0 && showSourcesAtEnd}
+  {#if collapsedSources && collapsedSources.length > 0 && showSourcesAtEnd}
     <div class="flex flex-col gap-2">
-      <h3 class="text-md font-semibold my-1">Sources</h3>
+      <!-- <h3 class="text-md font-semibold my-1">Sources</h3> -->
 
-      <div
-        class="citations-list grid {sources &&
-        sources.some((s) => s.metadata?.timestamp !== undefined)
-          ? 'grid-cols-5'
-          : 'grid-cols-6'} gap-2"
-      >
-        {#each sources as source, idx}
+      <!--
+        Don't ask...
+        Without this when selecting the previous chat message by tripple clicking (expanding the text selection) it will select the content of each citation which means when pasting into our input field (or other ones that support HTML) it will paste the citation content. Haven't found a better way to prevent this yet other than placing a invisible character in between. huere schiss!
+      -->
+      <div class="opacity-0 w-0 h-0">x</div>
+
+      <div class="citations-list flex flex-wrap gap-y-2 gap-x-1">
+        {#each collapsedSources as source, idx}
           {#if idx <= 9}
-            <CitationItem className="!w-full max-w-24">{source.id}</CitationItem>
+            <CitationItem id={source.id} general className="w-fit"></CitationItem>
           {/if}
         {/each}
       </div>
