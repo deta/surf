@@ -1723,20 +1723,28 @@
         return null
       }
 
-      const fetchedCanonical = (fetchedResource?.tags ?? []).find(
-        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-      )?.value
-
-      if (fetchedCanonical !== tab.currentLocation) {
-        log.debug('Existing resource does not match current location', fetchedCanonical, tab.id)
-        return null
-      }
-
       const isDeleted =
         (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
           ?.value === 'true'
       if (isDeleted) {
         log.debug('Existing resource is deleted, ignoring', fetchedResource.id)
+        return null
+      }
+
+      const fetchedCanonical = (fetchedResource?.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+      )?.value
+
+      if (!fetchedCanonical) {
+        log.debug(
+          'Existing resource has no canonical url, still going to use it',
+          fetchedResource.id
+        )
+        return fetchedResource
+      }
+
+      if (fetchedCanonical !== tab.currentLocation) {
+        log.debug('Existing resource does not match current location', fetchedCanonical, tab.id)
         return null
       }
 
@@ -2833,7 +2841,13 @@
         },
         [
           ResourceTag.download(),
-          ...(downloadIntercepter ? [ResourceTag.silent(), ResourceTag.createdForChat()] : [])
+          ...(downloadIntercepter
+            ? [
+                ResourceTag.silent(),
+                ResourceTag.createdForChat(),
+                ResourceTag.canonicalURL(data.url)
+              ]
+            : [])
         ]
       )
 

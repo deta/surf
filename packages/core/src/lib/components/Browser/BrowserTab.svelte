@@ -883,7 +883,8 @@
           (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
             ?.value === 'true'
 
-        if (isSilent) {
+        // For PDFs we don't want to delete the resource as embedding it is expensive and we might need it later
+        if (isSilent && resource.type !== 'application/pdf') {
           log.debug(
             'deleting chat resource bookmark as the tab has been updated',
             tab.chatResourceBookmark
