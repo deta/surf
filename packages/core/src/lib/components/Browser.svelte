@@ -728,7 +728,7 @@
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
-  const debouncedCycleActiveTab = useDebounce(tabsManager.cycle, 100)
+  const debouncedCycleActiveTab = useDebounce((previous) => tabsManager.cycle(previous), 100)
 
   const openUrlHandler = (url: string, active = true) => {
     log.debug('open url', url, active)
