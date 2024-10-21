@@ -3,9 +3,13 @@
   import rehypeRaw from 'rehype-raw'
   import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
   import rehypeStringify from 'rehype-stringify'
+  import rehypeKatex from 'rehype-katex'
+  import remarkMath from 'remark-math'
+  import remarkGfm from 'remark-gfm'
   import rehypeHighlight from 'rehype-highlight'
   import { all } from 'lowlight'
   import 'highlight.js/styles/github-dark.min.css'
+  import 'katex/dist/katex.min.css'
 
   import CitationItem from './CitationItem.svelte'
   import CodeBlock from './CodeBlock.svelte'
@@ -19,14 +23,24 @@
     return { rehypePlugin: opts ? [plugin, opts] : [plugin] }
   }
 
+  const createRemarkPlugin = (plugin: any, opts?: any): Plugin => {
+    return { remarkPlugin: opts ? [plugin, opts] : [plugin] }
+  }
+
   const plugins: Plugin[] = [
+    createRemarkPlugin(remarkGfm),
+    createRemarkPlugin(remarkMath),
     createRehypePlugin(rehypeRaw),
     createRehypePlugin(rehypeSanitize, {
       ...defaultSchema,
       attributes: {
         ...defaultSchema.attributes,
         // allow custom citation tags so we can render them
-        citation: ['id']
+        citation: ['id'],
+        // The `language-*` regex is allowed by default.
+        code: [['className', /^language-./, 'math-inline', 'math-display']],
+        div: [...(defaultSchema.attributes?.div ?? []), ['className', 'math', 'math-display']],
+        span: [['className', 'math', 'math-inline']]
       },
       tagNames: [
         ...(defaultSchema.tagNames ?? []),
@@ -34,6 +48,7 @@
         'citation'
       ]
     }),
+    createRehypePlugin(rehypeKatex),
     createRehypePlugin(rehypeStringify),
     createRehypePlugin(rehypeHighlight, { languages: all }),
     { renderer: { citation: CitationItem, pre: CodeBlock, h4: 'h3', h5: 'h3' } }

@@ -61,7 +61,16 @@ Context:
 
 pub fn general_chat_prompt(history: Option<String>) -> String {
     let prompt = match history {
-        None => "You are a Q&A expert system. Help the user with their queries.".to_string(),
+        None => "You are a Q&A expert system. Help the user with their queries.
+
+Here are some guidelines to follow:
+
+1. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
+2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
+3. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+
+".to_string(),
+
         Some(history) => format!("You are a Q&A expert system. Help the user with their queries.
 
 You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed.
@@ -69,7 +78,8 @@ You are also provided with the conversation history with the user. Make sure to 
 Here are some guidelines to follow:
 
 1. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`.
+2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
+3. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
 
 Conversation history:
 ----------------------
@@ -90,8 +100,9 @@ You are a Q&A expert system. Your responses must always be rooted in the context
 3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
 5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
-6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). The only HTML tags allowed are `<citation>`.
-7. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists. The only HTML tags allowed are `<citation>`.
+7. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+8. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
 
 
 Context information:
@@ -110,8 +121,9 @@ Here are some guidelines to follow:
 3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
 4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
 5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
-6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). The only HTML tags allowed are `<citation>`.
-7. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists. The only HTML tags allowed are `<citation>`.
+7. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+8. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
 
 Context information:
 ----------------------
