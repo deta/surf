@@ -56,7 +56,7 @@
     copyToClipboard,
     truncateURL
   } from '@horizon/utils'
-  import { useTabsManager } from '../../service/tabs'
+  import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import { useOasis } from '../../service/oasis'
   import Preview, {
@@ -133,9 +133,11 @@
   $: annotations = resource.annotations ?? []
 
   $: isSilent = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SILENT)
-  $: canonicalUrl =
+  $: canonicalUrl = parseStringIntoUrl(
     resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
-    resource.metadata?.sourceURI
+      resource.metadata?.sourceURI ||
+      ''
+  )?.href
 
   $: isLiveSpaceResource = !!resource.tags?.find(
     (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
@@ -159,6 +161,18 @@
       interactive = interactiveProp
     }
   }
+
+  $: sourceURL = parseStringIntoUrl(resource.metadata?.sourceURI ?? '')
+
+  /*
+    Show source URL if it's different from the canonical URL or if the resource is not a web page (e.g. image).
+    For live space resources, only show the source URL if it's from Hacker News as it doesn't make sense to link to RSS feeds.
+  */
+  $: showSourceURL =
+    sourceURL &&
+    (sourceURL.href !== canonicalUrl ||
+      !PAGE_TABS_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))) &&
+    (isLiveSpaceResource ? sourceURL.hostname === 'news.ycombinator.com' : true)
 
   let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
@@ -474,7 +488,7 @@
           title: undefined,
           content: undefined,
           image: data,
-          url: canonicalUrl ?? '',
+          url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
           source: {
             text:
               resource?.metadata?.name || hostname || canonicalUrl || getFileType(resource.type),
@@ -506,7 +520,7 @@
           title: resource?.metadata?.name,
           content: undefined,
           image: undefined,
-          url: canonicalUrl ?? '',
+          url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
           source: {
             text: sourceText,
             imageUrl: hostname
@@ -523,7 +537,7 @@
         title: resource?.metadata?.name,
         content: undefined,
         image: undefined,
-        url: canonicalUrl ?? '',
+        url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
         source: {
           text: canonicalUrl ?? getFileType(resource.type),
           imageUrl: undefined
@@ -623,6 +637,13 @@
       // Handle adding to blacklist
       dispatch('whitelist-resource', resource.id)
     }
+  }
+
+  const openSourceURL = () => {
+    if (!sourceURL) return
+    tabsManager.addPageTab(sourceURL.href, {
+      active: true
+    })
   }
 
   const handleOpenAsNewTab = (e?: MouseEvent) => {
@@ -748,6 +769,17 @@
             }
           ]
         : []),
+      ...(showSourceURL
+        ? [
+            { type: 'separator' },
+            {
+              type: 'action',
+              icon: 'link',
+              text: 'Open Source',
+              action: () => openSourceURL()
+            }
+          ]
+        : []),
       {
         type: 'action',
         icon: 'chat',
@@ -803,7 +835,7 @@
     ]
   }}
 >
-  {#if $resourceState === 'updating'}
+  {#if $resourceState === 'extracting'}
     <Preview
       {resource}
       type={resource.type}
