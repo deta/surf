@@ -43,6 +43,8 @@
 
   const highlightedCitation = writable<string | null>(null)
 
+  const MAX_SOURCES = 8
+
   let contentElem: HTMLDivElement
 
   // combine sources from the same resource
@@ -55,6 +57,8 @@
 
     return [...acc, source]
   }, [] as AIChatMessageSource[])
+
+  $: filteredSources = collapsedSources.slice(0, MAX_SOURCES)
 
   // $: log.debug('ChatMessageMarkdown', sources, collapsedSources)
 
@@ -227,7 +231,7 @@
 </script>
 
 <div class=" {inline ? '!prose-sm' : 'py-5 px-6 bg-white rounded-2xl flex flex-col gap-4'}">
-  {#if collapsedSources && collapsedSources.length > 0 && showSourcesAtEnd}
+  {#if filteredSources && filteredSources.length > 0 && showSourcesAtEnd}
     <div class="flex flex-col gap-2">
       <!-- <h3 class="text-md font-semibold my-1">Sources</h3> -->
 
@@ -238,11 +242,20 @@
       <div class="opacity-0 w-0 h-0">x</div>
 
       <div class="citations-list flex flex-wrap gap-y-2 gap-x-1">
-        {#each collapsedSources as source, idx}
-          {#if idx <= 9}
-            <CitationItem id={source.id} general className="w-fit"></CitationItem>
-          {/if}
+        {#each filteredSources as source}
+          <CitationItem
+            id={source.id}
+            general
+            className="w-fit"
+            maxTitleLength={filteredSources.length > 1 ? 25 : 42}
+          ></CitationItem>
         {/each}
+
+        {#if collapsedSources.length > filteredSources.length}
+          <div class="text-slate-500 text-sm">
+            +{collapsedSources.length - filteredSources.length} more sources
+          </div>
+        {/if}
       </div>
     </div>
     <!-- <h3 class="text-2xl font-semibold">Answer</h3> -->

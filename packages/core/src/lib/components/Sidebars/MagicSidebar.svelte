@@ -131,16 +131,38 @@
       .sort((a, b) => b.index - a.index)
   })
 
+  const updateChatInput = (text: string, focus = true) => {
+    inputValue = text
+    editor.setContent(text)
+
+    if (focus) {
+      editor.focus()
+    }
+  }
+
   export const startChatWithQuery = async (query: string) => {
+    const messagesLength = $magicPage.responses.length
+
+    if (messagesLength > 0) {
+      const confirmed = await confirm(
+        'Are you sure you want to start a new chat? This will clear the current chat.'
+      )
+
+      if (!confirmed) {
+        log.debug('User cancelled new chat')
+        updateChatInput(query)
+        return
+      }
+    }
+
     await handleClearChat()
-    inputValue = query
+    updateChatInput(query)
     await handleChatSubmit()
   }
 
   export const addChatWithQuery = async (query: string) => {
-    inputValue = '<blockquote>' + query + '</blockquote>' + '</br>'
-    editor.setContent(inputValue)
-    editor.focus()
+    const value = '<blockquote>' + query + '</blockquote>' + '</br>'
+    updateChatInput(value)
   }
 
   const updateMagicPage = (data: Partial<PageMagic>) => {
@@ -313,8 +335,7 @@
     } catch (e) {
       log.error('Error doing magic', e)
 
-      inputValue = savedInputValue
-      editor.setContent(savedInputValue)
+      updateChatInput(savedInputValue)
     }
   }
 
@@ -1285,7 +1306,9 @@
             on:add-context-item
             on:close={() => {
               $tabPickerOpen = false
-              editor.focus()
+              if (editor) {
+                editor.focus()
+              }
             }}
           />
         {/if}

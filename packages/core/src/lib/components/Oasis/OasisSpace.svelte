@@ -21,7 +21,8 @@
     checkIfYoutubeUrl,
     isModKeyAndKeyPressed,
     truncate,
-    parseStringIntoUrl
+    parseStringIntoUrl,
+    isMac
   } from '@horizon/utils'
   import { useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
@@ -65,14 +66,14 @@
 
   import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
-  import { fly } from 'svelte/transition'
+  import { fly, slide } from 'svelte/transition'
   import OasisSpaceSettings from './OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
   import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { DragculaDragEvent } from '@horizon/dragcula'
-  import type { Tab, TabPage } from '../../types/browser.types'
+  import type { ChatWithSpaceEvent, Tab, TabPage } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
@@ -92,6 +93,7 @@
 
   import CreateNewSpace from './CreateNewSpace.svelte'
   import { selectedFolder } from '../../stores/oasis'
+  import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
 
   export let spaceId: string
   export let active: boolean = false
@@ -116,6 +118,7 @@
     deleted: string
     'go-back': void
     'select-space': string
+    'open-space-and-chat': ChatWithSpaceEvent
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -817,54 +820,6 @@
     })
   }
 
-  const fetchNewlyAddedResourcePrevies = async (num = 3) => {
-    if ($newlyLoadedResources.length === 0) {
-      return []
-    }
-
-    const resourceIds = $newlyLoadedResources.slice(0, num)
-    log.debug('Fetching previews for newly added resources:', resourceIds)
-
-    const fetched = await Promise.all(
-      resourceIds.map(async (id) => {
-        const resource = await resourceManager.getResource(id)
-        if (!resource) {
-          log.error('Resource not found')
-          return null
-        }
-
-        const url =
-          resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
-          resource.metadata?.sourceURI
-        if (!url) {
-          log.error('Resource URL not found')
-          return null
-        }
-
-        return {
-          id: resource.id,
-          url: url
-        }
-      })
-    )
-
-    const items = fetched.filter((x) => x !== null)
-    log.debug('Fetched items:', items)
-
-    const uniqueHosts = Array.from(new Set(items.map((x) => new URL(x.url).hostname)))
-
-    // only return one item per host
-    return items.filter((x) => {
-      const host = new URL(x.url).hostname
-      if (uniqueHosts.includes(host)) {
-        uniqueHosts.splice(uniqueHosts.indexOf(host), 1)
-        return true
-      }
-
-      return false
-    })
-  }
-
   const handleChat = async (e: CustomEvent) => {
     const result = e.detail
     chatPrompt.set(result)
@@ -1093,6 +1048,8 @@
         active: e.shiftKey,
         trigger: CreateTabEventTrigger.OasisItem
       })
+    } else if (isModKeyAndKeyPressed(e, 'Enter')) {
+      handleChatWithSpace()
     }
   }
 
@@ -1523,6 +1480,13 @@
       log.debug('Space creation aborted:', spaceId)
     }
   }
+
+  const handleChatWithSpace = () => {
+    if (!$space) return
+
+    dispatch('open-space-and-chat', { spaceId: $space.id, text: $searchValue })
+    searchValue.set('')
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1557,146 +1521,107 @@
         class="drawer-bar transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
       >
-        {#if showBackBtn}
-          <div
-            class="absolute left-6 top-1/2 transform -translate-y-1/2 z-10 flex place-items-center"
-          >
-            <!-- <button
-            on:click={handleGoBack}
-            class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
-          >
-            <Icon name="arrow.left" size="20px" />
-          </button> -->
-
-            <div class="settings-wrapper flex">
-              <button
-                class="settings-toggle flex flex-col items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
-                on:click={handleOpenSettingsModal}
-              >
-                {#if $space?.name.folderName}
-                  <div
-                    class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 pl-3 pr-2"
-                  >
-                    <span class="font-medium leading-[1]">{$space.name.folderName}</span>
-                    <Icon name="chevron.down" size="20px" />
-                  </div>
-                  {#if $space.name.smartFilterQuery}
-                    <span
-                      class="relative text-sm left-3 pointer-events-none flex items-center justify-center mb-[0.1rem] place-self-start px-0.5"
-                    >
-                      <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1.5"></span>
-                      <span class="text-blue-500 leading-[1]"> Smart Space</span>
-                    </span>
-                  {/if}
-                {/if}
-              </button>
-
-              {#if $showSettingsModal}
-                <div
-                  class="modal-wrapper"
-                  transition:fly={{ y: 10, duration: 160 }}
-                  use:clickOutside={handleCloseSettingsModal}
-                >
-                  <OasisSpaceSettings
-                    bind:space={$space}
-                    on:refresh={handleRefreshLiveSpace}
-                    on:clear={handleClearSpace}
-                    on:delete={(e) => handleDeleteSpace(e.detail)}
-                    on:load={handleLoadSpace}
-                    on:delete-auto-saved={handleDeleteAutoSaved}
-                  />
-                </div>
-              {/if}
-            </div>
-
-            <!-- <button on:click={() => navigator.clipboard.writeText(JSON.stringify($space))}>
-            Copy Space Data
-          </button> -->
-          </div>
-        {/if}
         {#if $space?.name.folderName !== '.tempspace'}
           <div
             class="drawer-chat-search bg-gradient-to-t from-sky-100/70 to-transparent via-bg-sky-100/10 bg-sky-100/70 backdrop-blur-xl backdrop-saturate-50"
           >
-            <div class="search-input-wrapper">
-              <SearchInput bind:value={$searchValue} on:search={handleSearch} />
-            </div>
+            <div
+              class="relative left-1 top-1/2 transform -translate-y-1/2 z-10 place-items-center flex items-center gap-3"
+            >
+              <!-- <button
+              on:click={handleGoBack}
+              class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+            >
+              <Icon name="arrow.left" size="20px" />
+            </button> -->
 
-            {#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
-              {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
+              <div class="settings-wrapper flex items-center gap-2">
                 <button
-                  class="live-mode"
-                  class:live-enabled={$space.name.liveModeEnabled &&
-                    $newlyLoadedResources.length === 0 &&
-                    !$loadingSpaceSources}
-                  disabled={$loadingSpaceSources}
-                  on:click={handleRefreshLiveSpace}
-                  use:tooltip={{
-                    text:
-                      $newlyLoadedResources.length > 0
-                        ? 'New content has been added to the space. Click to refresh.'
-                        : $space.name.liveModeEnabled
-                          ? ($space.name.sources ?? []).length > 0
-                            ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
-                            : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
-                          : ($space.name.sources ?? []).length > 0
-                            ? 'Click to load the latest content from the connected sources'
-                            : 'Click to load the latest content based on the smart query',
-                    position: 'top'
-                  }}
+                  class="settings-toggle flex flex-col items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
+                  on:click={handleOpenSettingsModal}
                 >
-                  {#if $loadingSpaceSources}
-                    <Icon name="spinner" />
-                    {#if $newlyLoadedResources.length > 0}
-                      <span
-                        >Processing items (<span class="tabular-nums"
-                          >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
-                        >)</span
+                  {#if $space?.name.folderName}
+                    <div
+                      class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800"
+                    >
+                      <Icon name="chevron.down" size="20px" />
+                      <span class="font-medium leading-[1] text-left">{$space.name.folderName}</span
                       >
-                    {:else if ($space.name.sources ?? []).length > 0}
-                      Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
-                    {:else}
-                      Refreshing…
-                    {/if}
-                  {:else if $newlyLoadedResources.length > 0}
-                    {#await fetchNewlyAddedResourcePrevies()}
-                      <Icon name="reload" />
-                      Update Space with {$newlyLoadedResources.length} items
-                    {:then previews}
-                      <!-- <Icon name="reload" /> -->
-                      <div class="flex items-center -space-x-3">
-                        {#each previews as preview (preview.id)}
-                          <img
-                            class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content"
-                            src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
-                            alt={`favicon`}
-                          />
-                        {/each}
-                      </div>
-
-                      {#if $newlyLoadedResources.length > previews.length}
-                        <span>+{$newlyLoadedResources.length - previews.length} new items</span>
-                      {:else}
-                        <span
-                          >{$newlyLoadedResources.length} new item{$newlyLoadedResources.length > 1
-                            ? 's'
-                            : ''}</span
-                        >
-                      {/if}
-                    {/await}
-                  {:else if $space.name.liveModeEnabled}
-                    <Icon name="news" />
-                    Auto Refresh
-                  {:else if ($space.name.sources ?? []).length > 0}
-                    <Icon name="reload" />
-                    Refresh Sources
-                  {:else}
-                    <Icon name="reload" />
-                    Smart Refresh
+                    </div>
+                    <!-- {#if $space.name.smartFilterQuery}
+                      <span
+                        class="relative text-sm left-3 pointer-events-none flex items-center justify-center mb-[0.1rem] place-self-start px-0.5"
+                      >
+                        <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1.5"></span>
+                        <span class="text-blue-500 leading-[1]"> Smart Space</span>
+                      </span>
+                    {/if} -->
                   {/if}
                 </button>
-              {/key}
-            {/if}
+
+                <div class="w-[2px] h-full min-h-6 bg-sky-800/25 ml-3"></div>
+
+                <OasisSpaceUpdateIndicator
+                  {space}
+                  {newlyLoadedResources}
+                  {loadingSpaceSources}
+                  {processingSourceItems}
+                  on:refresh={handleRefreshLiveSpace}
+                />
+
+                {#if $showSettingsModal}
+                  <div
+                    class="modal-wrapper"
+                    transition:fly={{ y: 10, duration: 160 }}
+                    use:clickOutside={handleCloseSettingsModal}
+                  >
+                    <OasisSpaceSettings
+                      bind:space={$space}
+                      on:refresh={handleRefreshLiveSpace}
+                      on:clear={handleClearSpace}
+                      on:delete={(e) => handleDeleteSpace(e.detail)}
+                      on:load={handleLoadSpace}
+                      on:delete-auto-saved={handleDeleteAutoSaved}
+                    />
+                  </div>
+                {/if}
+              </div>
+
+              <!-- <button on:click={() => navigator.clipboard.writeText(JSON.stringify($space))}>
+              Copy Space Data
+            </button> -->
+            </div>
+            <div class="search-input-wrapper">
+              <SearchInput
+                bind:value={$searchValue}
+                on:search={handleSearch}
+                on:chat={handleChatWithSpace}
+                placeholder="Search this Space"
+              />
+
+              <div class="chat-with-space-wrapper">
+                <button
+                  use:tooltip={{
+                    text:
+                      $searchValue.length > 0
+                        ? 'Create new chat with this space'
+                        : `Create new chat with this space (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                  }}
+                  class="chat-with-space"
+                  class:activated={$searchValue.length > 0}
+                  on:click={handleChatWithSpace}
+                >
+                  <Icon name="chat" size="20px" />
+
+                  {#if $searchValue.length > 0}
+                    <div transition:slide={{ axis: 'x' }} class="chat-text">
+                      Ask Space
+                      <span class="shortcut">{isMac() ? '⌘' : 'ctrl'}+↵</span>
+                    </div>
+                  {/if}
+                </button>
+              </div>
+            </div>
 
             <div class="drawer-chat active">
               <button class="close-button" on:click={handleCloseChat}>
@@ -1822,11 +1747,21 @@
     z-index: 10;
     width: 100%;
     max-width: 32rem;
+    justify-self: center;
+    gap: 1rem;
+    display: flex;
+    align-items: center;
     view-transition-name: search-transition;
     &.active {
       height: auto;
       width: 100%;
     }
+  }
+
+  .space-actions {
+    display: flex;
+    justify-content: start;
+    align-items: center;
   }
 
   .modal-wrapper {
@@ -1843,18 +1778,22 @@
     right: 0;
     z-index: 1000;
     margin: 0.5rem;
-
     .drawer-chat-search {
       position: relative;
       border: 0.5px solid rgba(0, 0, 0, 0.15);
       border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+
+      display: grid;
+      grid-template-columns: 18vw 1fr 18vw;
       width: 100%;
-      gap: 16px;
+      column-gap: 1rem;
       padding: 0.5rem 1rem;
       transition: all 240ms ease-out;
+
+      @media (max-width: 1300px) {
+        grid-template-columns: fit-content(100%) 1fr fit-content(100%);
+      }
+
       .drawer-chat {
         position: relative;
         z-index: 10;
@@ -2017,6 +1956,8 @@
 
   .settings-wrapper {
     position: relative;
+    display: flex;
+    align-items: center;
 
     .settings-toggle {
       display: flex;
@@ -2032,31 +1973,57 @@
     }
   }
 
-  .live-mode {
+  .chat-with-space-wrapper {
+    @media (min-width: 1300px) {
+      max-width: 40px;
+      width: 100%;
+      overflow: visible;
+    }
+  }
+
+  .chat-with-space {
+    flex-shrink: 0;
     appearance: none;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 8px;
-    background: #ffffffc0;
+    padding: 0.65rem;
+    border-radius: 0.75rem;
+    // background: #ffffffc0;
     border: none;
-    color: #6d6d79;
-    font-size: 1rem;
+    color: #0b689ad6;
+    font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.02rem;
+    transition:
+      color 0.2s ease-in-out,
+      background 0.2s ease-in-out;
 
-    &.live-enabled {
-      background: #ff4eed;
-      color: white;
+    &.activated {
+      background: #ffffffc0;
+      // background: #ff4eed;
+      // color: white;
 
       &:hover {
-        background: #fb3ee9;
+        background: #ffffff;
       }
     }
 
     &:hover {
-      background: #ffffff;
+      color: #10608a;
+      background: #ffffffc0;
+    }
+
+    .chat-text {
+      margin-left: 0.5rem;
+      text-wrap: nowrap;
+    }
+
+    .shortcut {
+      margin-left: 0.25rem;
+      padding: 0.25rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      background: #d4dbe4c0;
     }
   }
 

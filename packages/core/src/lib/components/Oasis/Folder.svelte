@@ -346,7 +346,7 @@
               type: 'action',
               icon: 'chat',
               text: 'Open in Chat',
-              action: () => dispatch('open-space-and-chat', folder.id)
+              action: () => dispatch('open-space-and-chat', { spaceId: folder.id })
             },
             { type: 'separator' },
             { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },

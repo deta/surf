@@ -67,7 +67,8 @@
     TabResource,
     BookmarkTabState,
     ContextItem,
-    AddContextItemEvent
+    AddContextItemEvent,
+    ChatWithSpaceEvent
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -2500,15 +2501,21 @@
     }
   }
 
-  const handleOpenSpaceAndChat = async (e: CustomEvent<string>) => {
-    const spaceId = e.detail
+  const handleOpenSpaceAndChat = async (e: CustomEvent<ChatWithSpaceEvent>) => {
+    const { spaceId, text = '' } = e.detail
 
     log.debug('create chat with space', spaceId)
 
     const space = await oasis.getSpace(spaceId)
 
     if (space) {
-      const tab = await tabsManager.addSpaceTab(space, { active: true })
+      let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
+      if (tab) {
+        tabsManager.makeActive(tab.id)
+      } else if (!tab) {
+        tab = await tabsManager.addSpaceTab(space, { active: true })
+      }
+
       if (tab) {
         openRightSidebarTab('chat')
         await includeTabAndExcludeOthersFromMagic(tab.id)
@@ -2517,7 +2524,7 @@
         await wait(500)
 
         if (magicSidebar) {
-          magicSidebar.startChatWithQuery('')
+          magicSidebar.startChatWithQuery(text)
         } else {
           log.error('Magic sidebar not found')
           toasts.error('Failed to start chat with space')
@@ -4585,6 +4592,7 @@
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
               on:deleted={handleDeletedSpace}
               on:open-space-as-tab={handleCreateTabForSpace}
+              on:open-space-and-chat={handleOpenSpaceAndChat}
               hideBar={$showNewTabOverlay !== 0}
               {experimentalMode}
               {historyEntriesManager}
@@ -4655,6 +4663,7 @@
                   on:open-and-chat={handleOpenAndChat}
                   on:batch-open={handleOpenTabs}
                   on:deleted={handleDeletedSpace}
+                  on:open-space-and-chat={handleOpenSpaceAndChat}
                   hideBar={$showNewTabOverlay !== 0}
                   {historyEntriesManager}
                 />

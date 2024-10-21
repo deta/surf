@@ -1203,35 +1203,22 @@
           >
             <Icon name="close" />
           </button>
-        {:else if $searchValue.length < 20 && !$isCreatingNewSpace}
+        {:else if showTabSearch === 1 && $searchValue.length < 20 && !$isCreatingNewSpace}
           <button
-            class="absolute right-4 transform {showTabSearch === 2
-              ? 'bottom-5'
-              : 'bottom-3'} z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+            class="absolute right-3 transform bottom-[0.85rem] z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             on:click={() => {
-              showTabSearch = showTabSearch === 1 ? 2 : 1
+              showTabSearch = 2
             }}
             aria-label="Switch tabs"
           >
             <span>
-              <!-- {createNewSpace.isCreatingNewSpace} -->
-              {showTabSearch === 1
-                ? $searchValue.length > 0
-                  ? 'Search My Stuff'
-                  : 'Open My Stuff'
-                : 'Search the Web'}</span
-            >
+              {$searchValue.length > 0 ? 'Search My Stuff' : 'Open My Stuff'}
+            </span>
             <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1">
-              {#if showTabSearch === 1}
-                {#if navigator.platform.startsWith('Mac')}
-                  ⌘O
-                {:else}
-                  Ctrl+O
-                {/if}
-              {:else if navigator.platform.startsWith('Mac')}
-                ⌘T
+              {#if navigator.platform.startsWith('Mac')}
+                ⌘O
               {:else}
-                Ctrl+T
+                Ctrl+O
               {/if}
             </Command.Shortcut>
           </button>
@@ -1360,6 +1347,7 @@
                         on:select-space={handleSpaceSelected}
                         on:batch-open
                         on:batch-remove={handleResourceRemove}
+                        on:open-space-and-chat
                         insideDrawer={true}
                         bind:this={oasisSpace}
                         {searchValue}

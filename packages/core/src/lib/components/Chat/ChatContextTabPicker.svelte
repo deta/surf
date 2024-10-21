@@ -44,7 +44,9 @@
   const oasis = useOasis()
   const resourceManager = useResourceManager()
   const config = useConfig()
+
   const userConfigSettings = config.settings
+  const spaces = oasis.spaces
 
   const dispatch = createEventDispatcher<{
     'include-tab': string
@@ -63,22 +65,50 @@
 
   const tabItems = derived(
     [searchResult, contextItems, tabs, searchValue],
-    ([searchResult, contextItems, tabs, searchValue]) =>
-      [
-        ...searchResult.filter(
-          (item) =>
-            contextItems.findIndex((ci) => ci.type === 'resource' && ci.data.id === item.id) === -1
-        ),
-        ...tabs
-          .filter((tab) => tab.title.toLowerCase().includes(searchValue.toLowerCase()))
-          .map((tab) => ({
-            id: tab.id,
-            type: tab.type,
-            label: tab.title,
-            value: `tab;;${tab.id}`,
-            ...(tab.type === 'space' ? { icon: tab.spaceId } : { iconUrl: tab.icon })
-          }))
-      ] as TabItem[]
+    ([searchResult, contextItems, tabs, searchValue]) => {
+      const result: TabItem[] = []
+
+      if (searchValue.length > 0) {
+        const filteredSpaces = $spaces.filter(
+          (space) =>
+            contextItems.findIndex((ci) => ci.type === 'space' && ci.data.id === space.id) === -1 &&
+            space.name.folderName.toLowerCase().includes(searchValue.toLowerCase())
+        )
+
+        const spaceItems = filteredSpaces.slice(0, 5).map(
+          (space) =>
+            ({
+              id: space.id,
+              type: 'space',
+              label: space.name.folderName,
+              value: `space;;${space.id}`,
+              icon: space.id
+            }) as TabItem
+        )
+
+        result.push(...spaceItems)
+      }
+
+      const searchItems = searchResult.filter(
+        (item) =>
+          contextItems.findIndex((ci) => ci.type === 'resource' && ci.data.id === item.id) === -1
+      )
+
+      const tabItems = tabs
+        .filter((tab) => tab.title.toLowerCase().includes(searchValue.toLowerCase()))
+        .map(
+          (tab) =>
+            ({
+              id: tab.id,
+              type: 'page',
+              label: tab.title,
+              value: `tab;;${tab.id}`,
+              ...(tab.type === 'space' ? { icon: tab.spaceId } : { iconUrl: tab.icon })
+            }) as TabItem
+        )
+
+      return [...result, ...searchItems, ...tabItems]
+    }
   )
 
   $: handleSearchValueChange($searchValue)
@@ -92,6 +122,21 @@
     if (type === 'tab') {
       dispatch('include-tab', id)
       $searchValue = ''
+    } else if (type === 'space') {
+      const space = await oasis.getSpace(id)
+      if (!space) {
+        log.error('space not found', id)
+        return
+      }
+
+      dispatch('add-context-item', {
+        item: {
+          id,
+          type: 'space',
+          data: space
+        },
+        trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+      })
     } else {
       const resource = await resourceManager.getResource(id)
       if (!resource) {
@@ -116,6 +161,11 @@
 
   async function searchStuff(value: string) {
     try {
+      if (!value) {
+        $searchResult = []
+        return
+      }
+
       log.debug('searching for', value)
 
       $isSearching = true

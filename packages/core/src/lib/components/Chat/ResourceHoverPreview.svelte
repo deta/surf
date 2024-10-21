@@ -3,6 +3,7 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { getFileType, truncate } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
+  import { ResourceTypes } from '@horizon/types'
 
   export let resource: Resource | null = null
   export let loading: boolean = false
@@ -12,7 +13,9 @@
   const MAX_TITLE_LENGTH = 300
 </script>
 
-<div class={resource ? 'p-1' : 'p-4 space-y-2'}>
+<div
+  class={resource ? (resource.type.startsWith(ResourceTypes.POST) ? '' : 'p-1') : 'p-4 space-y-2'}
+>
   {#if resource}
     <ResourcePreview
       {resource}

@@ -259,3 +259,8 @@ export type AddContextItemEvent = {
   item: ContextItem
   trigger: PageChatUpdateContextEventTrigger
 }
+
+export type ChatWithSpaceEvent = {
+  spaceId: string
+  text?: string
+}

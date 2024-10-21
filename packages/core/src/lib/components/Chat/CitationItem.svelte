@@ -40,6 +40,7 @@
   export let className: string = ''
   export let id: string = ''
   export let general: boolean = false
+  export let maxTitleLength = 42
 
   const log = useLogScope('CitationItem')
   const resourceManager = useResourceManager()
@@ -255,7 +256,7 @@
     renderID = info.renderID
 
     if (source?.metadata?.url) {
-      tooltipText = truncateURL(source.metadata.url, 42)
+      tooltipText = truncateURL(source.metadata.url, maxTitleLength)
     } else {
       tooltipText = renderID
     }
@@ -267,16 +268,16 @@
 
       if (resource) {
         if (resource.metadata?.name) {
-          tooltipText = truncate(resource.metadata?.name, 42)
+          tooltipText = truncate(resource.metadata?.name, maxTitleLength)
         } else if (resource instanceof ResourceJSON) {
           const data = await resource.getParsedData()
           resource.releaseData()
 
           if (data.title) {
-            tooltipText = truncate(data.title, 42)
+            tooltipText = truncate(data.title, maxTitleLength)
           }
         } else if (canonicalUrl) {
-          tooltipText = truncateURL(canonicalUrl, 42)
+          tooltipText = truncateURL(canonicalUrl, maxTitleLength)
         }
       }
     }
