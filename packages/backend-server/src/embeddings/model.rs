@@ -72,7 +72,7 @@ impl EmbeddingModel {
 
     // assumes sentences are already chunked
     pub fn encode(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
-        let embeddings = self.model.embed(sentences.to_vec(), None).map_err(|e| {
+        let embeddings = self.model.embed(sentences.to_vec(), Some(1)).map_err(|e| {
             BackendError::GenericError(format!("Error encoding sentences: {}", e.to_string()))
         })?;
         Ok(embeddings)
