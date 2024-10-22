@@ -10,13 +10,14 @@
     truncate,
     truncateURL,
     useLogScope,
-    normalizeURL
+    normalizeURL,
+    hover
   } from '@horizon/utils'
   import {
     CITATION_HANDLER_CONTEXT,
     type CitationHandlerContext
   } from './ChatMessageMarkdown.svelte'
-  import { ResourceTagsBuiltInKeys, type AIChatMessageSource } from '../../types'
+  import { DragTypeNames, ResourceTagsBuiltInKeys, type AIChatMessageSource } from '../../types'
   import { Icon } from '@horizon/icons'
   import {
     CONTEXT_MENU_KEY,
@@ -34,8 +35,8 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
-  import { startsWith } from 'lodash'
   import ResourceSmallImagePreview from '../Resources/ResourceSmallImagePreview.svelte'
+  import { Dragcula, HTMLDragItem } from '@horizon/dragcula'
 
   export let className: string = ''
   export let id: string = ''
@@ -52,6 +53,9 @@
 
   const uniqueID = generateID()
   const opened = writable(false)
+  const hoveringPreview = writable(false)
+
+  const isDraggingSomething = Dragcula.get().isDragging
 
   let slotElem: HTMLSpanElement
   let citationID: string
@@ -295,6 +299,16 @@
   class:active={$highlightedCitation === uniqueID}
   class={className}
   use:contextMenu={contextMenuData}
+  draggable={true}
+  use:HTMLDragItem.action={{}}
+  on:DragStart={(drag) => {
+    if (resource) {
+      drag.item.data.setData(DragTypeNames.SURF_RESOURCE, resource)
+      drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
+      drag.item.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+      drag.continue()
+    }
+  }}
 >
   <span bind:this={slotElem} style="display: none;">
     <slot />
@@ -306,7 +320,8 @@
     sideOffset={10}
     popoverOpened={opened}
     forceOpen={$CONTEXT_MENU_KEY === contextMenuKey}
-    disabled={general && !resource?.type.startsWith('image/')}
+    disabled={(general && !resource?.type.startsWith('image/')) ||
+      ($isDraggingSomething && !$hoveringPreview)}
   >
     <div slot="trigger" class="inline-flex items-center justify-center gap-2 select-none">
       {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
@@ -366,6 +381,7 @@
       class="no-drag bg-white hover:bg-neutral-100 relative max-w-96 cursor-pointer"
       on:click={() => handleClick()}
       use:contextMenu={contextMenuData}
+      use:hover={hoveringPreview}
     >
       <ResourceHoverPreview {resource} loading={loadingResource} title={tooltipText} />
     </div>

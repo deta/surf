@@ -977,6 +977,7 @@
   id="magic-chat"
   use:HTMLDragZone.action={{
     accepts: (drag) => {
+      if (drag.from?.id === 'magic-chat') return false
       if (
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||

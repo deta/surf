@@ -147,6 +147,8 @@
   :global(.drag-item[data-drag-preview]) {
     box-shadow: none;
     max-width: 25ch;
+    border-radius: 14px;
+    overflow: hidden;
   }
   :global(.drag-item[data-drag-preview] .resource-preview .preview) {
     box-shadow:

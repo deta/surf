@@ -3,6 +3,7 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { getFileType, truncate } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
+  import DragResourceWrapper from '../Oasis/DragResourceWrapper.svelte'
   import { ResourceTypes } from '@horizon/types'
 
   export let resource: Resource | null = null
@@ -17,13 +18,15 @@
   class={resource ? (resource.type.startsWith(ResourceTypes.POST) ? '' : 'p-1') : 'p-4 space-y-2'}
 >
   {#if resource}
-    <ResourcePreview
-      {resource}
-      interactive={false}
-      mode="compact"
-      processingText="Preparing for chat…"
-      frameless
-    />
+    <DragResourceWrapper {resource}>
+      <ResourcePreview
+        {resource}
+        interactive={false}
+        mode="compact"
+        processingText="Preparing for chat…"
+        frameless
+      />
+    </DragResourceWrapper>
   {:else}
     <div class="text-slate-900 font-medium text-lg">
       {truncate(title, MAX_TITLE_LENGTH)}

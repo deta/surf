@@ -101,10 +101,12 @@ export class Dragcula {
   }
 
   activeDrag: DragOperation | null = null;
+  isDragging = writable(false);
 
   /// Callback to update global stuff like body attributes
   public prepareDragOperation() {
     document.body.setAttribute("data-dragging", "true");
+    this.isDragging.set(true);
   }
 
   /// Callback to cleanup global stuff like body attributes
@@ -112,6 +114,7 @@ export class Dragcula {
     log.debug(`${ii_DRAGCULA}\x1B[40;97m === Cleanup Drag`);
     document.body.removeAttribute("data-dragging");
     document.body.removeAttribute("data-drag-target");
+    this.isDragging.set(false);
 
     HTMLDragZone.ZONES.forEach((zone) => {
       zone._handleDragLeave();
