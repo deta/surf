@@ -34,11 +34,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
+    gap: 1em;
   }
 
   .title {
-    font-size: 1.25rem;
+    font-size: 1.25em;
     font-weight: 500;
   }
 

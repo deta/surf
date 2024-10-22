@@ -111,13 +111,13 @@
   }
 
   .details {
-    padding: 1.25rem;
+    padding: 1.25em;
     overflow: hidden;
-    border-radius: 0.75rem;
+    border-radius: 0.75em;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 0.25rem;
+    gap: 0.25em;
     width: 100%;
     max-width: 800px;
     text-align: center;
@@ -133,13 +133,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.5em;
   }
 
   .type-info {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.25em;
     overflow: hidden;
     color: var(--color-text-muted);
   }
@@ -155,7 +155,7 @@
 
   .size,
   .type {
-    font-size: 1.2rem;
+    font-size: 1.2em;
     color: var(--color-text-muted);
     overflow: hidden;
     font-weight: 500;
@@ -171,9 +171,9 @@
 
   .title {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.5em;
     font-weight: 600;
-    letter-spacing: 0.02rem;
+    letter-spacing: 0.02em;
     color: #282f4b;
     flex-grow: 1;
     overflow: hidden;

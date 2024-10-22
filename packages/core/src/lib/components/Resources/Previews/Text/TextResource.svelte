@@ -150,24 +150,24 @@
     height: 100%;
     overflow: hidden;
     position: relative;
-    padding: 2rem;
-    padding-top: 4rem;
+    padding: 2em;
+    padding-top: 4em;
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 2em;
   }
 
   .details {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding-bottom: 0.5rem;
+    gap: 1em;
+    padding-bottom: 0.5em;
     border-bottom: 1px solid #ededed;
 
     input {
-      font-size: 1.9rem;
+      font-size: 1.9em;
       font-weight: 600;
       border: none;
       outline: none;
@@ -182,11 +182,11 @@
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1em;
     overflow: hidden;
   }
 
   :global(.notes-editor-wrapper .editor-wrapper div.tiptap) {
-    padding-bottom: 6rem;
+    padding-bottom: 6em;
   }
 </style>

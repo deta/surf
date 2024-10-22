@@ -39,7 +39,9 @@ import {
   type ResourceState,
   type ResourceStateCombined
 } from '@horizon/types'
+import type TypedEmitter from 'typed-emitter'
 import { getContext, onDestroy, setContext, tick } from 'svelte'
+import EventEmitter from 'events'
 
 /*
  TODO:
@@ -155,6 +157,13 @@ export const getPrimaryResourceType = (type: string) => {
 
 const DUMMY_PATH = '__dummy'
 
+export type ResourceEvents = {
+  created: (resource: ResourceObject) => void
+  deleted: (resourceId: string) => void
+  updated: (resource: ResourceObject) => void
+  recovered: (resourceId: string) => void
+}
+
 export class Resource {
   id: string
   type: string
@@ -177,11 +186,13 @@ export class Resource {
   state: Readable<ResourceStateCombined>
 
   sffs: SFFS
+  resourceManager: ResourceManager
   log: ScopedLogger
 
-  constructor(sffs: SFFS, data: SFFSResource) {
+  constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
     this.log = useLogScope(`SFFSResource ${data.id}`)
     this.sffs = sffs
+    this.resourceManager = resourceManager
 
     this.id = data.id
     this.type = data.type
@@ -192,7 +203,9 @@ export class Resource {
     this.dummy = data.path === DUMMY_PATH
     this.metadata = data.metadata
     this.tags = data.tags
-    this.annotations = data.annotations?.map((a) => new ResourceAnnotation(sffs, a))
+    this.annotations = data.annotations?.map(
+      (a) => new ResourceAnnotation(sffs, this.resourceManager, a)
+    )
 
     this.rawData = null
     this.readDataPromise = null
@@ -263,6 +276,7 @@ export class Resource {
     this.rawData = data
     this.updatedAt = new Date().toISOString()
 
+    this.resourceManager.eventEmitter.emit('updated', this)
     if (write) {
       return this.writeData()
     } else {
@@ -345,8 +359,8 @@ export class ResourceNote extends Resource {
 
   parsedData: Writable<string | null>
 
-  constructor(sffs: SFFS, data: SFFSResource) {
-    super(sffs, data)
+  constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
+    super(sffs, resourceManager, data)
     // this.data = writable(null)
     this.parsedData = writable(null)
   }
@@ -376,8 +390,8 @@ export class ResourceJSON<T> extends Resource {
 
   parsedData: T | null
 
-  constructor(sffs: SFFS, data: SFFSResource) {
-    super(sffs, data)
+  constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
+    super(sffs, resourceManager, data)
     this.parsedData = null
     // this.data = writable(null)
   }
@@ -448,11 +462,15 @@ export class ResourceManager {
   sffs: SFFS
   telemetry: Telemetry
 
+  private eventEmitter: TypedEmitter<ResourceEvents>
+
   constructor(telemetry: Telemetry) {
     this.log = useLogScope('SFFSResourceManager')
     this.resources = writable([])
     this.sffs = new SFFS()
     this.telemetry = telemetry
+
+    this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceEvents>
 
     const isDev = import.meta.env.DEV
     if (isDev) {
@@ -469,27 +487,35 @@ export class ResourceManager {
     })
   }
 
+  on<E extends keyof ResourceEvents>(event: E, listener: ResourceEvents[E]): () => void {
+    this.eventEmitter.on(event, listener)
+
+    return () => {
+      this.eventEmitter.off(event, listener)
+    }
+  }
+
   private createResourceObject(data: SFFSResource): ResourceObject {
     if (data.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
-      return new ResourceNote(this.sffs, data)
+      return new ResourceNote(this.sffs, this, data)
     } else if (data.type === ResourceTypes.LINK) {
-      return new ResourceLink(this.sffs, data)
+      return new ResourceLink(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.ARTICLE)) {
-      return new ResourceArticle(this.sffs, data)
+      return new ResourceArticle(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.POST)) {
-      return new ResourcePost(this.sffs, data)
+      return new ResourcePost(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.CHAT_MESSAGE)) {
-      return new ResourceChatMessage(this.sffs, data)
+      return new ResourceChatMessage(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.CHAT_THREAD)) {
-      return new ResourceChatThread(this.sffs, data)
+      return new ResourceChatThread(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.DOCUMENT)) {
-      return new ResourceDocument(this.sffs, data)
+      return new ResourceDocument(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.ANNOTATION)) {
-      return new ResourceAnnotation(this.sffs, data)
+      return new ResourceAnnotation(this.sffs, this, data)
     } else if (data.type.startsWith(ResourceTypes.HISTORY_ENTRY)) {
-      return new ResourceHistoryEntry(this.sffs, data)
+      return new ResourceHistoryEntry(this.sffs, this, data)
     } else {
-      return new Resource(this.sffs, data)
+      return new Resource(this.sffs, this, data)
     }
   }
 
@@ -499,7 +525,9 @@ export class ResourceManager {
       return existingResource
     }
 
-    return this.createResourceObject(resource)
+    let res = this.createResourceObject(resource)
+    this.eventEmitter.emit('created', res)
+    return res
   }
 
   private findOrGetResourceObject(id: string, opts?: { includeAnnotations: boolean }) {
@@ -584,6 +612,7 @@ export class ResourceManager {
 
     this.resources.update((resources) => [...resources, resource])
 
+    this.eventEmitter.emit('created', resource)
     return resource as ResourceObject
   }
 
@@ -629,12 +658,13 @@ export class ResourceManager {
     //   })
     // }
 
+    this.eventEmitter.emit('created', resource)
     return resource
   }
 
   async readResources() {
     const resourceItems = await this.sffs.readResources()
-    const resources = resourceItems.map((item) => new Resource(this.sffs, item))
+    const resources = resourceItems.map((item) => new Resource(this.sffs, this, item))
     this.resources.set(resources)
   }
 
@@ -665,7 +695,7 @@ export class ResourceManager {
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource),
           annotations: item.resource.annotations?.map((a) => this.findOrCreateResourceObject(a))
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     // we probably don't want to overwrite the existing resources
@@ -683,7 +713,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
+        } as ResourceSearchResultItem)
     )
 
     return results
@@ -825,6 +855,7 @@ export class ResourceManager {
     }
 
     this.resources.update((resources) => resources.filter((r) => r.id !== id))
+    this.eventEmitter.emit('deleted', id)
   }
 
   async deleteHistoryEntry(id: string) {
@@ -858,6 +889,7 @@ export class ResourceManager {
       return resources
     })
 
+    this.eventEmitter.emit('updated', resource)
     return resource
   }
 

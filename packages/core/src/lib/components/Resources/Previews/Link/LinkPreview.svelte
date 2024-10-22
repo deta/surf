@@ -122,21 +122,21 @@
   }
 
   .title {
-    font-size: 1.25rem;
-    line-height: 1.775rem;
-    letter-spacing: 0.02rem;
+    font-size: 1.25em;
+    line-height: 1.775em;
+    letter-spacing: 0.02em;
     text-wrap: balance;
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
-    margin-top: 1rem;
+    margin-top: 1em;
     max-width: 30ch;
   }
 
   .subtitle {
-    font-size: 1rem;
+    font-size: 1em;
     line-height: 1.4;
-    letter-spacing: 0.02rem;
+    letter-spacing: 0.02em;
     font-weight: 300;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -147,25 +147,25 @@
   .link-preview-no-image {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 2rem 2.5rem;
+    gap: 1em;
+    padding: 2em 2.5em;
     width: 100%;
     background: #f6f5f2;
     .favicon {
-      width: 2rem;
-      height: 2rem;
+      width: 2em;
+      height: 2em;
       border-radius: 5.1px;
       box-shadow:
         0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
         0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
     }
     .description {
-      font-size: 1.25rem;
-      line-height: 1.775rem;
+      font-size: 1.25em;
+      line-height: 1.775em;
       color: #281b53;
       font-weight: 500;
       flex-shrink: 0;
-      margin-top: 1rem;
+      margin-top: 1em;
       max-width: 95%;
     }
   }

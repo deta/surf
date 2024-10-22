@@ -13,7 +13,9 @@ export const SEARCH_ENGINES: {
     getUrl: (query: string) => `https://google.com/search?q=${query}`,
     getCompletions: async (query: string) => {
       const data = await window.api.fetchJSON(
-        `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`,
+        `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(
+          query
+        )}`,
         {
           // HACK: this is needed to get Google to properly encode the suggestions, without this Umlaute are not encoded properly
           headers: {

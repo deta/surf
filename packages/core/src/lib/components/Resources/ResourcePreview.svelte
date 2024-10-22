@@ -83,6 +83,7 @@
   export let interactive: boolean = false
   export let frameless: boolean = false
   export let processingText: string | undefined = undefined
+  export let hideProcessing: boolean = false
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -835,7 +836,7 @@
     ]
   }}
 >
-  {#if $resourceState === 'extracting'}
+  {#if $resourceState === 'extracting' && !hideProcessing}
     <Preview
       {resource}
       type={resource.type}
@@ -852,6 +853,7 @@
       {interactive}
       {frameless}
       {processingText}
+      {hideProcessing}
       mode="content"
     />
   {:else if previewData}
@@ -870,6 +872,7 @@
       {interactive}
       {frameless}
       {processingText}
+      {hideProcessing}
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
@@ -1051,7 +1054,7 @@
     box-shadow: 0px 0.425px 0px 0px rgba(0, 83, 172, 0.25);
     padding: 0.4rem;
     border-radius: 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.85em;
     font-weight: 600;
     color: rgb(255, 255, 255);
 
@@ -1105,13 +1108,13 @@
     display: flex;
     align-items: start;
     gap: 0.5rem;
-    font-size: 1rem;
+    font-size: 1em;
     font-weight: 500;
     color: #281b53;
   }
 
   .label {
-    font-size: 1.1rem;
+    font-size: 1.1em;
     line-height: 1.4;
     padding: 0 0.25rem 0 0.25rem;
     margin-bottom: 1.5rem;
@@ -1142,7 +1145,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.9rem;
+    font-size: 0.9em;
     color: rgb(12 74 110/0.9);
   }
 
@@ -1157,7 +1160,7 @@
     box-shadow: 0px 0.425px 0px 0px rgba(65, 58, 86, 0.25);
     padding: 0.4rem;
     border-radius: 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.85em;
     font-weight: 600;
     color: rgb(12 74 110/0.9);
 
@@ -1181,7 +1184,7 @@
   }
 
   .summary {
-    font-size: 1rem;
+    font-size: 1em;
     color: rgb(12 74 110/0.9);
     letter-spacing: 0.0175rem;
     font-weight: 500;

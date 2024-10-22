@@ -30,18 +30,18 @@
   .source {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.5em;
   }
 
   .icon {
     flex-shrink: 0;
     color: #281b53;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.25em;
+    height: 1.25em;
 
     img {
-      width: 1.35rem;
-      height: 1.35rem;
+      width: 1.35em;
+      height: 1.35em;
       border-radius: 5.1px;
       box-shadow:
         0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
@@ -50,7 +50,7 @@
   }
 
   .text {
-    font-size: 1rem;
+    font-size: 1em;
     font-weight: 500;
     text-decoration: none;
     color: #281b53;

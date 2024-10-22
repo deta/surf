@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte'
 
   export let blob: Blob
-  export let border = true
+  export let border = false
   export let fit: 'contain' | 'cover' = 'cover'
 
   const url = URL.createObjectURL(blob)

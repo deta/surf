@@ -266,7 +266,7 @@
 
   $: rightSidebarStyle = `
     width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
-    z-index: 10000000000000;
+    z-index: 1000000000;
     ${
       horizontalTabs && (leftIsOpen === State.Open || leftIsOpen === State.Peek)
         ? `top: ${HORIZONTAL_SIZE}px;`
@@ -305,6 +305,8 @@
 <div class="flex w-screen h-screen justify-start items-start">
   <nav
     class={leftBarClasses}
+    class:horizontalTabs
+    class:verticalTabs={!horizontalTabs}
     aria-labelledby="nav-heading"
     style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 10000000000000;"
   >

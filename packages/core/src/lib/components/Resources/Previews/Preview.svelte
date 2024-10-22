@@ -52,6 +52,7 @@
   export let interactive: boolean = false
   export let frameless: boolean = false
   export let processingText: string = 'Processing…'
+  export let hideProcessing: boolean = false
 
   export let mode: Mode = 'full'
 
@@ -78,7 +79,7 @@
   $: showMedia = mode === 'full' || mode === 'media' || (!title && !content && image)
   $: showAuthor = mode === 'full' || mode === 'content'
   $: showSource = mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/'))
-  $: isProcessing = $resourceState === 'post-processing'
+  $: isProcessing = $resourceState === 'post-processing' && !hideProcessing
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -374,7 +375,7 @@
   }
 
   .frame .preview-card {
-    padding: 0.65rem;
+    padding: 0.65em;
   }
 
   .preview-card {
@@ -382,7 +383,7 @@
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1em;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -404,8 +405,8 @@
   .tiny-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    gap: 0.5em;
+    padding: 0.5em;
     font-weight: 500;
     color: #281b53;
   }
@@ -413,11 +414,11 @@
   .details {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.75em;
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
-    padding: 1rem;
+    padding: 1em;
   }
 
   .themed {
@@ -433,8 +434,8 @@
 
   .favicon {
     flex-shrink: 0;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.25em;
+    height: 1.25em;
     border-radius: 5.1px;
     color: #281b53;
     box-shadow:
@@ -446,22 +447,22 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
+    gap: 0.5em;
+    font-size: 0.85em;
     font-weight: 500;
     color: #7e7696;
-    padding-left: 1rem;
+    padding-left: 1em;
   }
 
   .author {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.5em;
     overflow: hidden;
   }
 
   .from {
-    font-size: 1rem;
+    font-size: 1em;
     font-weight: 500;
     text-decoration: none;
     color: #281b53;
@@ -473,14 +474,14 @@
   }
 
   .author .from {
-    font-size: 0.85rem;
+    font-size: 0.85em;
   }
 
   .tiny-icon {
     flex-shrink: 0;
     color: #281b53;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.25em;
+    height: 1.25em;
   }
 
   .image {
@@ -488,7 +489,7 @@
     max-height: 300px;
     position: relative;
     overflow: hidden;
-    border-radius: 0.5rem;
+    border-radius: 0.5em;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
@@ -507,9 +508,9 @@
   }
 
   .title {
-    font-size: 1.25rem;
-    line-height: 1.775rem;
-    letter-spacing: 0.02rem;
+    font-size: 1.25em;
+    line-height: 1.775em;
+    letter-spacing: 0.02em;
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
@@ -539,10 +540,10 @@
   }
 
   .content {
-    font-size: 1rem;
-    line-height: 1.5rem;
+    font-size: 1em;
+    line-height: 1.5em;
     color: #281b53;
-    letter-spacing: 0.02rem;
+    letter-spacing: 0.02em;
     font-weight: 400;
     flex-shrink: 0;
     max-width: 95%;
@@ -566,8 +567,8 @@
   .annotation {
     display: flex;
     align-items: flex-start;
-    gap: 0.5rem;
-    font-size: 0.85rem;
+    gap: 0.5em;
+    font-size: 0.85em;
     color: #281b53;
 
     .icon {
@@ -577,18 +578,18 @@
   }
 
   .annotation-info {
-    font-size: 0.85rem;
+    font-size: 0.85em;
     color: #281b53;
     opacity: 0.65;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.25em;
   }
 
   .metadata {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.5em;
   }
 </style>

@@ -94,8 +94,8 @@
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.5rem;
+    gap: 1em;
+    padding: 0.5em;
     color: inherit;
     text-decoration: none;
   }
@@ -103,7 +103,7 @@
   .details {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.25em;
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
@@ -117,19 +117,19 @@
   }
 
   .title {
-    font-size: 1.25rem;
-    line-height: 1.775rem;
-    letter-spacing: 0.01rem;
+    font-size: 1.25em;
+    line-height: 1.775em;
+    letter-spacing: 0.01em;
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
-    margin-top: 1rem;
+    margin-top: 1em;
   }
 
   .subtitle {
-    font-size: 1rem;
+    font-size: 1em;
     line-height: 1.4;
-    letter-spacing: 0.02rem;
+    letter-spacing: 0.02em;
     font-weight: 300;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -140,14 +140,14 @@
   .article-preview-no-image {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 2rem 2.5rem;
+    gap: 1em;
+    padding: 2em 2.5em;
     border-radius: 8px;
     background: #f6f5f2;
 
     .favicon {
-      width: 1.5rem;
-      height: 1.5rem;
+      width: 1.5em;
+      height: 1.5em;
       border-radius: 5.1px;
       box-shadow:
         0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
@@ -155,8 +155,8 @@
     }
 
     .excerpt {
-      font-size: 1.25rem;
-      line-height: 1.775rem;
+      font-size: 1.25em;
+      line-height: 1.775em;
       color: #281b53;
       font-weight: 500;
       flex-shrink: 0;

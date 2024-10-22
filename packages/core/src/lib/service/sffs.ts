@@ -222,7 +222,7 @@ export class SFFS {
             resource_id: '',
             tag_name: tag.name ?? '',
             tag_value: tag.value ?? ''
-          }) as SFFSRawResourceTag
+          } as SFFSRawResourceTag)
       )
     )
 
@@ -233,7 +233,8 @@ export class SFFS {
       throw new Error('failed to create resource, invalid data', dataString)
     }
 
-    return this.convertCompositeResourceToResource(composite)
+    const result = this.convertCompositeResourceToResource(composite)
+    return result
   }
 
   async readResource(
@@ -270,7 +271,8 @@ export class SFFS {
       user_context: metadata.userContext
     } as SFFSRawResourceMetadata)
 
-    return this.backend.js__store_update_resource_metadata(stringified)
+    const result = this.backend.js__store_update_resource_metadata(stringified)
+    return result
   }
 
   async createResourceTag(resourceId: string, tagName: string, tagValue: string) {
@@ -329,7 +331,7 @@ export class SFFS {
             tag_name: tag.name,
             tag_value: tag.value,
             op: tag.op ?? 'eq'
-          }) as SFFSRawResourceTag
+          } as SFFSRawResourceTag)
       )
     )
     const raw = await this.backend.js__store_list_resources_by_tags(tagsData)
@@ -359,7 +361,7 @@ export class SFFS {
             tag_name: tag.name ?? '',
             tag_value: tag.value ?? '',
             op: tag.op ?? 'eq'
-          }) as SFFSRawResourceTag
+          } as SFFSRawResourceTag)
       )
     )
     const raw = await this.backend.js__store_search_resources(

@@ -67,14 +67,14 @@
     width: 100%;
     height: 100%;
     position: relative;
-    padding: 1rem;
+    padding: 1em;
     .text-card {
-      padding: 1rem;
+      padding: 1em;
       background: #f6f5f2;
       p {
         font-family: inherit;
-        font-size: 1rem;
-        line-height: 1.5rem;
+        font-size: 1em;
+        line-height: 1.5em;
         font-weight: 500;
         flex-shrink: 0;
         color: #353534;

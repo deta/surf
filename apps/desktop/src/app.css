@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: 'Bayshore';
+  src: local("Bayshore"),
+    url('./renderer/src/assets/fonts/Bayshore.woff2') format('woff2'),
+    url('./renderer/src/assets/fonts/Bayshore.woff') format('woff');
+}

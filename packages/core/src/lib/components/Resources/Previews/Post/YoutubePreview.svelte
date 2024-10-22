@@ -111,7 +111,7 @@
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1em;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -126,8 +126,8 @@
 
   .play-icon {
     position: absolute;
-    bottom: 0.5rem;
-    left: 0.5rem;
+    bottom: 0.5em;
+    left: 0.5em;
     z-index: 10;
     opacity: 0.95;
     backdrop-filter: blur(0.5px);
@@ -158,8 +158,8 @@
   }
 
   .favicon {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.5em;
+    height: 1.5em;
     border-radius: 5.1px;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
@@ -167,9 +167,9 @@
   }
 
   .title {
-    font-size: 1.25rem;
-    line-height: 1.775rem;
-    letter-spacing: 0.02rem;
+    font-size: 1.25em;
+    line-height: 1.775em;
+    letter-spacing: 0.02em;
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
@@ -178,10 +178,10 @@
   .post-metadata {
     display: flex;
     flex-direction: column;
-    padding: 0.5rem;
-    gap: 0.125rem;
+    padding: 0.5em;
+    gap: 0.125em;
     .from {
-      font-size: 1rem;
+      font-size: 1em;
       font-weight: 500;
       text-decoration: none;
       color: #281b53;

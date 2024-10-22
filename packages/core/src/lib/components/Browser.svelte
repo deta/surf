@@ -121,7 +121,12 @@
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import { Tabs } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
-  import { HTMLDragZone, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import {
+    HTMLDragZone,
+    HTMLAxisDragZone,
+    type DragculaDragEvent,
+    Dragcula
+  } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import CustomPopover from './Atoms/CustomPopover.svelte'
   import { provideConfig } from '../service/config'
@@ -141,6 +146,7 @@
   } from '../utils/screenshot'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
+  import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -1199,9 +1205,12 @@
         createdForChat: false,
         freshWebview: true
       })
+      oasis.pushPendingStackAction(resource.id, { tabId: tabId })
 
       updateBookmarkingTabState(tabId, 'success')
       toast?.success('Page Saved!')
+
+      oasis.reloadStack()
 
       await telemetry.trackSaveToOasis(resource.type, trigger, savedToSpace)
 
@@ -3419,7 +3428,7 @@
 
         // NOTE: Should be opt? when creating tab, but currently api does not support and
         // adding into CreateTabOptions doesnt match other tab apis props
-        if (pinned) tabsManager.update(tab!.id, { pinned })
+        if (tab && pinned) tabsManager.update(tab!.id, { pinned })
 
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
@@ -3545,7 +3554,7 @@
         active: false,
         index: drag.index ?? undefined
       })
-      if (pinned) await tabsManager.update(tab!.id, { pinned })
+      if (tab && pinned) await tabsManager.update(tab!.id, { pinned })
     } else if (
       drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
       drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
@@ -3575,10 +3584,9 @@
         return
       }
 
-      if (pinned) await tabsManager.update(tab!.id, { pinned, index: drag.index ?? 0 })
-      //tab.index = drag.index || 0
       // NOTE: Should be opt? when creating tab, but currently api does not support and
       // adding into CreateTabOptions doesnt match other tab apis props
+      if (pinned) await tabsManager.update(tab!.id, { pinned, index: drag.index ?? 0 })
 
       /*await tabsManager.bulkPersistChanges(
         get(tabs).map((tab) => ({
@@ -3625,7 +3633,7 @@
     drag.continue()
   }
 
-  const handleDropOnSpaceTab = async (drag: DragculaDragEvent<DragTypes>, spaceId: string) => {
+  const handleDropOnSpaceTab = async (drag: DragculaDragEvent<DragTypes>, spaceId?: string) => {
     log.debug('dropping onto sidebar tab', drag)
 
     if (drag.item !== null && drag.item !== undefined) drag.item.dropEffect = 'copy'
@@ -3643,11 +3651,13 @@
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
       log.debug('Resources', newResources)
 
-      await oasis.addResourcesToSpace(
-        spaceId,
-        newResources.map((r) => r.id),
-        SpaceEntryOrigin.ManuallyAdded
-      )
+      if (spaceId !== undefined) {
+        await oasis.addResourcesToSpace(
+          spaceId,
+          newResources.map((r) => r.id),
+          SpaceEntryOrigin.ManuallyAdded
+        )
+      }
 
       for (const r of newResources) {
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
@@ -3695,14 +3705,16 @@
         telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
       }
 
-      await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+      if (spaceId !== undefined) {
+        await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+      }
 
       // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
       //await loadSpaceContents(spaceId)
     }
 
     drag.continue()
-    toast.success(`Resources copied!`)
+    toast.success(`Resources Saved!`)
     /*toast.success(
       `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
     )*/
@@ -3963,6 +3975,7 @@
   >
     <div
       slot="sidebar"
+      id="left-sidebar"
       class="flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
       style="z-index: 5000;"
     >
@@ -4389,7 +4402,11 @@
             </div>
           </div>
 
-          <div class="flex {horizontalTabs ? 'flex-row items-center' : 'flex-col'} flex-shrink-0">
+          <div
+            class="flex {horizontalTabs
+              ? 'h-full flex-row items-center'
+              : 'flex-col'} flex-shrink-0"
+          >
             <button
               class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                 ? 'w-fit rounded-xl p-2'
@@ -4406,61 +4423,71 @@
                 <span class="label">New Tab</span>
               {/if}
             </button>
-            <div
-              class="flex flex-row flex-shrink-0 items-center mx-auto"
-              class:space-x-4={!horizontalTabs}
+            <!-- This overlay will dynamically grow / shrink depending on the current state -->
+            <SidebarMetaOverlay
+              on:open-stuff={() => ($showNewTabOverlay = 2)}
+              on:open-resource-in-mini-browser={async (e) => {
+                showResourceDetails.set(false)
+                resourceDetailsModalSelected.set(null)
+                await tick()
+                showResourceDetails.set(true)
+                resourceDetailsModalSelected.set(e.detail)
+              }}
+              on:Drop={({ detail }) => {
+                handleDropOnSpaceTab(detail)
+              }}
             >
-              {#if experimentalMode}
-                {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
-                  <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
-                    <button
-                      slot="trigger"
-                      class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                      on:click={() => toggleRightSidebar()}
-                    >
-                      <Icon name="triangle-square-circle" />
-                    </button>
+              <div slot="tools">
+                {#if experimentalMode}
+                  {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
+                    <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
+                      <button
+                        slot="trigger"
+                        class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                        on:click={() => toggleRightSidebar()}
+                      >
+                        <Icon name="triangle-square-circle" />
+                      </button>
 
-                    <div
-                      slot="content"
-                      class="flex no-drag flex-row items-center justify-center space-x-4 px-3 py-3"
-                      let:closePopover
-                    >
-                      {#each $sidebarTools as tool}
-                        <button
-                          class="flex flex-col items-center space-y-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                          on:click={() => {
-                            closePopover()
-                            openRightSidebarTab(tool.id)
-                          }}
-                          disabled={tool.disabled}
-                        >
-                          <div class="p-4 rounded-xl bg-neutral-200/50 hover:bg-neutral-200">
-                            <Icon name={tool.icon} class="text-xl text-neutral-800" />
-                          </div>
-                          <span class="text-xs">{tool.name}</span>
-                        </button>
-                      {/each}
-                    </div>
-                  </CustomPopover>
+                      <div
+                        slot="content"
+                        class="flex no-drag flex-row items-center justify-center space-x-4 px-3 py-3"
+                        let:closePopover
+                      >
+                        {#each $sidebarTools as tool}
+                          <button
+                            class="flex flex-col items-center space-y-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                            on:click={() => {
+                              closePopover()
+                              openRightSidebarTab(tool.id)
+                            }}
+                            disabled={tool.disabled}
+                          >
+                            <div class="p-4 rounded-xl bg-neutral-200/50 hover:bg-neutral-200">
+                              <Icon name={tool.icon} class="text-xl text-neutral-800" />
+                            </div>
+                            <span class="text-xs">{tool.name}</span>
+                          </button>
+                        {/each}
+                      </div>
+                    </CustomPopover>
+                  {/if}
+                {:else}
+                  <button
+                    use:tooltip={{
+                      text: 'Chat (⌘ + E)',
+                      position: horizontalTabs ? 'left' : 'top'
+                    }}
+                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    on:click={() => {
+                      toggleRightSidebarTab('chat')
+                    }}
+                    class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
+                  >
+                    <Icon name="chat" />
+                  </button>
                 {/if}
-              {:else}
-                <button
-                  use:tooltip={{
-                    text: 'Chat (⌘ + E)',
-                    position: horizontalTabs ? 'left' : 'top'
-                  }}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  on:click={() => {
-                    toggleRightSidebarTab('chat')
-                  }}
-                  class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
-                >
-                  <Icon name="chat" />
-                </button>
-              {/if}
-
-              <button
+                <!--<button
                 use:tooltip={{
                   text: 'My Stuff (⌘ + O)',
                   position: horizontalTabs ? 'left' : 'top'
@@ -4491,18 +4518,29 @@
                 ></div>
 
                 <Icon name="leave" />
-              </button>
+              </button>-->
 
-              {#if showCustomWindowActions}
-                <button
-                  on:click={() => openSettings()}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                >
-                  <Icon name="settings" />
-                </button>
-              {/if}
-            </div>
+                {#if showCustomWindowActions}
+                  <button
+                    on:click={() => openSettings()}
+                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  >
+                    <Icon name="settings" />
+                  </button>
+                {/if}
+              </div>
+            </SidebarMetaOverlay>
 
+            <!--<div
+              class="flex flex-row flex-shrink-0 w-full mx-auto"
+              style="justify-content: space-between;"
+              class:space-x-4={!horizontalTabs}
+            >
+              <!--<SaveVisualizer />
+              <RecentsStack />--
+            </div>-->
+
+            <!-- TODO: (maxu): Figure out what this is.. windiws.? -->
             {#if horizontalTabs && showCustomWindowActions}
               <div class="flex flex-row items-center space-x-2 ml-5">
                 <button

@@ -93,8 +93,8 @@
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 2rem;
+    gap: 1em;
+    padding: 2em;
     color: inherit;
     text-decoration: none;
     user-select: none;
@@ -108,7 +108,7 @@
   .details {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.25em;
     width: 100%;
     flex-shrink: 1;
     flex-grow: 1;
@@ -123,8 +123,8 @@
   }
 
   .favicon {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.5em;
+    height: 1.5em;
     border-radius: 5.1px;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
@@ -132,23 +132,23 @@
   }
 
   .title {
-    font-size: 1.25rem;
-    line-height: 1.775rem;
-    letter-spacing: 0.02rem;
+    font-size: 1.25em;
+    line-height: 1.775em;
+    letter-spacing: 0.02em;
     color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
-    margin-top: 1rem;
+    margin-top: 1em;
     max-width: 95%;
     word-break: break-all;
   }
   .post-metadata {
     display: flex;
     flex-direction: column;
-    padding: 0.5rem 0;
-    gap: 0.125rem;
+    padding: 0.5em 0;
+    gap: 0.125em;
     .from {
-      font-size: 1rem;
+      font-size: 1em;
       font-weight: 500;
       text-decoration: none;
       color: #281b53;

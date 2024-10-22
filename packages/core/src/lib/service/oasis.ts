@@ -9,6 +9,9 @@ export class OasisService {
   spaces: Writable<Space[]>
   selectedSpace: Writable<string>
 
+  stackKey: Writable<{}>
+  pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
+
   resourceManager: ResourceManager
   log: ReturnType<typeof useLogScope>
 
@@ -18,6 +21,8 @@ export class OasisService {
 
     this.spaces = writable<Space[]>([])
     this.selectedSpace = writable<string>('all')
+    this.stackKey = writable({})
+    this.pendingStackActions = []
 
     this.initSpaces()
   }
@@ -165,6 +170,27 @@ export class OasisService {
 
   async resetSelectedSpace() {
     this.selectedSpace.set('all')
+  }
+
+  reloadStack() {
+    this.stackKey.set({})
+  }
+
+  /// For now we just give it the tabId, in the future this could be an actual action,
+  /// depending on the state of the saving etc.
+  pushPendingStackAction(
+    resourceId: string,
+    origin: { tabId?: string; xy?: { x: number; y: number } }
+  ) {
+    if (origin.tabId) {
+      const tabEl = document.getElementById(`tab-${origin.tabId}`)
+      if (tabEl) {
+        const rect = tabEl.getBoundingClientRect()
+        this.pendingStackActions.push({ resourceId, origin: { x: rect.left, y: rect.top } })
+      }
+    } else if (origin.xy) {
+      this.pendingStackActions.push({ resourceId, origin: origin.xy })
+    }
   }
 
   static provide(resourceManager: ResourceManager) {

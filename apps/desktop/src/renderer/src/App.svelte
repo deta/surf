@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Browser } from '@horizon/core'
   import '../../app.css'
+  import './assets/fonts/Bayshore.woff2'
+  import './assets/fonts/Bayshore.woff'
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
   import browserBackground from './assets/bg.webp'
