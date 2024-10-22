@@ -186,7 +186,7 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
 
   contents.on('will-attach-webview', (_event, webPreferences, _params) => {
     webPreferences.webSecurity = true
-    webPreferences.sandbox = false
+    webPreferences.sandbox = true
     webPreferences.nodeIntegration = false
     webPreferences.contextIsolation = true
     webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
