@@ -139,7 +139,7 @@ export class HTMLDragItem extends DragItem {
     node: HTMLElement,
     props?: { id?: string; data?: DragData; previewType?: DragItemPreviewType }
   ) {
-    super(props?.id ?? Boolean(node.id) ? node.id : undefined, props?.data);
+    super((props?.id ?? Boolean(node.id)) ? node.id : undefined, props?.data);
     this.element = node;
     this.previewType = props?.previewType ?? "clone";
     //this.parentElement = node.parentElement;
@@ -408,8 +408,8 @@ export class HTMLDragItem extends DragItem {
       (Math.sign(this.previewPosition.vx) > 0
         ? -this.previewPosition.vy * 3
         : Math.sign(this.previewPosition.vx) < 0
-        ? this.previewPosition.vy * 3
-        : 0);
+          ? this.previewPosition.vy * 3
+          : 0);
 
     if (
       this.lastOffset.x !== this.previewPosition.x ||

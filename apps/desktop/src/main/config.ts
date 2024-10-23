@@ -87,7 +87,10 @@ export const getUserConfig = (path?: string) => {
       tabs_orientation: 'vertical',
       use_semantic_search: false,
       show_annotations_in_oasis: true,
-      experimental_mode: false,
+      automatic_page_screenshots: false,
+      go_wild_mode: false,
+      live_spaces: false,
+      annotations_sidebar: false,
       onboarding: {
         completed_welcome: false,
         completed_chat: false,
@@ -98,9 +101,11 @@ export const getUserConfig = (path?: string) => {
     setUserConfig(storedConfig as UserConfig)
   }
 
+  let changedConfig = false
+
   if (storedConfig.settings.personas === undefined) {
     storedConfig.settings.personas = []
-    setUserConfig(storedConfig as UserConfig)
+    changedConfig = true
   }
 
   if (storedConfig.settings.onboarding === undefined) {
@@ -109,16 +114,43 @@ export const getUserConfig = (path?: string) => {
       completed_chat: false,
       completed_stuff: false
     }
-    setUserConfig(storedConfig as UserConfig)
+    changedConfig = true
   }
 
   if (storedConfig.settings.show_annotations_in_oasis === undefined) {
     storedConfig.settings.show_annotations_in_oasis = true
-    setUserConfig(storedConfig as UserConfig)
+    changedConfig = true
   }
 
-  if (storedConfig.settings.experimental_mode === undefined) {
-    storedConfig.settings.experimental_mode = false
+  // Migrate experimental_mode to individual feature flags
+  if (storedConfig.settings.experimental_mode) {
+    storedConfig.settings.go_wild_mode = true
+    storedConfig.settings.annotations_sidebar = true
+    storedConfig.settings.experimental_mode = undefined
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.automatic_page_screenshots === undefined) {
+    storedConfig.settings.automatic_page_screenshots = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.go_wild_mode === undefined) {
+    storedConfig.settings.go_wild_mode = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.annotations_sidebar === undefined) {
+    storedConfig.settings.annotations_sidebar = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.live_spaces === undefined) {
+    storedConfig.settings.live_spaces = false
+    changedConfig = true
+  }
+
+  if (changedConfig) {
     setUserConfig(storedConfig as UserConfig)
   }
 

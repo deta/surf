@@ -246,45 +246,55 @@
   setContext('selectedFolder', 'all')
 
   const sidebarTools = derived(
-    [activeTabMagic, activeTab, showAppSidebar],
-    ([$activeTabMagic, $activeTab, $showAppSidebar]) => [
-      {
-        id: 'chat',
-        name: 'Chat',
-        type: 'tool',
-        icon: $activeTabMagic ? ($activeTabMagic.running ? 'spinner' : 'chat') : 'chat',
-        disabled: !$activeTabMagic,
-        showCondition: $activeTab && $activeTabMagic,
-        fallbackContent: {
-          icon: 'info',
-          message: 'Magic chat not available'
+    [activeTabMagic, activeTab, showAppSidebar, userConfigSettings],
+    ([$activeTabMagic, $activeTab, $showAppSidebar, userConfigSettings]) => {
+      const tools = [
+        {
+          id: 'chat',
+          name: 'Chat',
+          type: 'tool',
+          icon: $activeTabMagic ? ($activeTabMagic.running ? 'spinner' : 'chat') : 'chat',
+          disabled: !$activeTabMagic,
+          showCondition: $activeTab && $activeTabMagic,
+          fallbackContent: {
+            icon: 'info',
+            message: 'Magic chat not available'
+          }
         }
-      },
-      {
-        id: 'annotations',
-        name: 'Annotate',
-        type: 'tool',
-        icon: 'marker',
-        disabled: $activeTab?.type !== 'page',
-        showCondition: $activeTab && $activeTab.type === 'page',
-        fallbackContent: {
-          icon: 'info',
-          message: 'No page info available.'
-        }
-      },
-      {
-        id: 'go-wild',
-        name: 'Go Wild',
-        type: 'tool',
-        icon: 'sparkles',
-        disabled: $activeTab?.type !== 'page',
-        showCondition: $activeTab && $activeTab.type === 'page' && $showAppSidebar,
-        fallbackContent: {
-          icon: 'info',
-          message: 'Go wild not available.'
-        }
+      ]
+
+      if (userConfigSettings.annotations_sidebar) {
+        tools.push({
+          id: 'annotations',
+          name: 'Annotate',
+          type: 'tool',
+          icon: 'marker',
+          disabled: $activeTab?.type !== 'page',
+          showCondition: $activeTab && $activeTab.type === 'page',
+          fallbackContent: {
+            icon: 'info',
+            message: 'No page info available.'
+          }
+        })
       }
-    ]
+
+      if (userConfigSettings.go_wild_mode) {
+        tools.push({
+          id: 'go-wild',
+          name: 'Go Wild',
+          type: 'tool',
+          icon: 'sparkles',
+          disabled: $activeTab?.type !== 'page',
+          showCondition: $activeTab && $activeTab.type === 'page' && $showAppSidebar,
+          fallbackContent: {
+            icon: 'info',
+            message: 'Go wild not available.'
+          }
+        })
+      }
+
+      return tools
+    }
   )
 
   const chatContextItems = derived(
@@ -482,7 +492,7 @@
 
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
-  $: experimentalMode = $userConfigSettings.experimental_mode
+  $: showSidebarTools = $userConfigSettings.annotations_sidebar || $userConfigSettings.go_wild_mode
 
   const handleCollapseRight = () => {
     if (showRightSidebar) {
@@ -4069,7 +4079,6 @@
                   <TabItem
                     hibernated={!$activatedTabs.includes(tab.id)}
                     removeHighlight={$showNewTabOverlay !== 0}
-                    {experimentalMode}
                     {tab}
                     horizontalTabs={true}
                     {activeTabId}
@@ -4210,7 +4219,6 @@
                         isUserSelected={Array.from($selectedTabs).some(
                           (item) => item.id === tab.id && item.userSelected
                         )}
-                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={(e) => selectTab(e.detail)}
@@ -4248,7 +4256,6 @@
                         )}
                         isMagicActive={$magicTabs.length > 0}
                         bookmarkingState={$bookmarkingTabsState[tab.id]}
-                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={(e) => selectTab(e.detail)}
@@ -4313,7 +4320,6 @@
                         isUserSelected={Array.from($selectedTabs).some(
                           (item) => item.id === tab.id && item.userSelected
                         )}
-                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={(e) => selectTab(e.detail)}
@@ -4352,7 +4358,6 @@
                         )}
                         isMagicActive={$magicTabs.length > 0}
                         bookmarkingState={$bookmarkingTabsState[tab.id]}
-                        {experimentalMode}
                         on:multi-select={handleMultiSelect}
                         on:passive-select={handlePassiveSelect}
                         on:select={(e) => selectTab(e.detail)}
@@ -4438,7 +4443,7 @@
               }}
             >
               <div slot="tools">
-                {#if experimentalMode}
+                {#if showSidebarTools}
                   {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                       <button
@@ -4619,7 +4624,6 @@
           on:open-resource={(e) => {
             openResource(e.detail)
           }}
-          {experimentalMode}
         />
 
         {#if $sidebarTab === 'oasis'}
@@ -4632,7 +4636,6 @@
               on:open-space-as-tab={handleCreateTabForSpace}
               on:open-space-and-chat={handleOpenSpaceAndChat}
               hideBar={$showNewTabOverlay !== 0}
-              {experimentalMode}
               {historyEntriesManager}
             />
           </div>
@@ -4741,7 +4744,7 @@
       slot="right-sidebar"
       let:minimal
     >
-      {#if experimentalMode}
+      {#if showSidebarTools}
         <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
           <div class="flex items-center justify-start">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -4758,7 +4761,9 @@
           </div>
 
           <Tabs.List
-            class="grid w-full grid-cols-3 gap-1 rounded-9px bg-dark-10 text-sm font-semibold leading-[0.01em]"
+            class="grid w-full {$sidebarTools.length === 3
+              ? 'grid-cols-3'
+              : 'grid-cols-2'} gap-1 rounded-9px bg-dark-10 text-sm font-semibold leading-[0.01em]"
           >
             {#each $sidebarTools as tool}
               <Tabs.Trigger
@@ -4809,7 +4814,6 @@
               on:pick-screenshot={handlePickScreenshotForChat}
               on:remove-context-item={(e) => removeContextItem(e.detail)}
               on:add-context-item={handleAddContextItem}
-              {experimentalMode}
               {activeTabMagic}
             />
           {/key}
@@ -4828,7 +4832,6 @@
             on:scrollTo={handleAnnotationScrollTo}
             on:create={handleAnnotationSidebarCreate}
             on:reload={handleAnnotationSidebarReload}
-            {experimentalMode}
             {horizontalTabs}
             on:close={() => toggleRightSidebarTab('annotations')}
           />
@@ -4848,7 +4851,6 @@
             activeBrowserTab={$activeBrowserTab}
             on:clear={() => handleAppSidebarClear(true)}
             on:execute-tab-code={handleExecuteAppSidebarCode}
-            {experimentalMode}
             {horizontalTabs}
             on:close={() => toggleRightSidebarTab('go-wild')}
           />

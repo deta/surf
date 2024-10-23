@@ -33,7 +33,7 @@
     border-bottom: 1px solid var(--color-border);
     padding: 1.5rem;
     border-radius: 12px;
-    width: 36rem;
+    width: 100%;
 
     .info {
       display: flex;

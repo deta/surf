@@ -453,6 +453,7 @@ export class Telemetry {
     numResources: number
     numScreenshots: number
     numPreviousMessages: number
+    tookPageScreenshot: boolean
     embeddingModel?: string
     error?: PageChatMessageSentEventError
   }) {
@@ -463,6 +464,7 @@ export class Telemetry {
       num_resources: stats.numResources,
       num_screenshots: stats.numScreenshots,
       num_messages: stats.numPreviousMessages,
+      took_page_screen: stats.tookPageScreenshot,
       embedding_model: stats.embeddingModel,
       error: stats.error
     })

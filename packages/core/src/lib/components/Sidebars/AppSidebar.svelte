@@ -17,12 +17,12 @@
   import { useToasts } from '../../service/toast'
   import type { Tab } from '../../types'
   import { minifyHTML, sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let activeBrowserTab: BrowserTab
   export let activeTab: Tab
   export let sffs: SFFS
   export let appId: string
-  export let experimentalMode = false
   export let horizontalTabs = false
 
   let fetching = false
@@ -43,7 +43,9 @@
     'execute-tab-code': ExecuteCodeInTabEvent
     close: void
   }>()
+  const config = useConfig()
 
+  const userSettings = config.settings
   const activeToolTab = writable<'app' | 'page'>('page')
 
   $: if (inputValue.startsWith('app:') || inputValue.startsWith('<p>app:')) {
@@ -247,7 +249,7 @@
 </script>
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
-  {#if !experimentalMode}
+  {#if !$userSettings.go_wild_mode}
     <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 -m-4">
       <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Go Wild</div>
 

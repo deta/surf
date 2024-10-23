@@ -14,7 +14,15 @@ export type UserSettings = {
   tabs_orientation: 'vertical' | 'horizontal'
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
-  experimental_mode: boolean
+  // Experiments
+  automatic_page_screenshots: boolean
+  go_wild_mode: boolean
+  annotations_sidebar: boolean
+  live_spaces: boolean
+  /**
+   * @deprecated use individual feature flags instead
+   */
+  experimental_mode?: boolean
   search_engine: string
   onboarding: {
     completed_welcome: boolean

@@ -8,6 +8,8 @@ import { markdown as PAGE_SUMMARIZE } from './prompts/page-summarize.md'
 import { markdown as PAGE_TOC } from './prompts/page-toc.md'
 import { markdown as PAGE_TRANSLATE } from './prompts/page-translate.md'
 
+export { markdown as CLASSIFY_SCREENSHOT_PROMPT } from './prompts/classify-screenshot-prompt.md'
+
 export const SIMPLE_SUMMARIZER_PROMPT = `You are a summarizer, summarize the text given to you. Only respond with the summarization.`
 export const LEGACY_PAGE_CITATION_SUMMARY_PROMPT = LEGACY_PAGE_CITATIONS
 

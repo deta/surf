@@ -17,10 +17,10 @@
   import { Editor, getEditorContentText } from '@horizon/editor'
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
-  export let experimentalMode = false
   export let horizontalTabs = false
 
   const log = useLogScope('AnnotationsSidebar')
@@ -31,6 +31,9 @@
     close: void
   }>()
   const toast = useToasts()
+  const config = useConfig()
+
+  const userSettings = config.settings
 
   let loadingAnnotations = false
   let annotations: ResourceAnnotation[] = []
@@ -135,7 +138,7 @@
 </script>
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 pt-0 h-full">
-  {#if !experimentalMode}
+  {#if !$userSettings.annotations_sidebar}
     <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 -mx-4">
       <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Annotations</div>
 

@@ -95,6 +95,7 @@
   export const forceReload = () => webview.forceReload()
   export const navigate = (url: string) => webview.navigate(url)
   export const openDevTools = () => webview.openDevTools()
+  export const capturePage = (rect?: Electron.Rectangle) => webview.capturePage(rect)
   export const detectResource = (timeoutNum?: number) => webview.detectResource(timeoutNum)
   export const executeJavaScript = (code: string, userGesture?: boolean) =>
     webview.executeJavaScript(code, userGesture)

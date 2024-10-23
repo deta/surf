@@ -21,7 +21,6 @@
   export let space: Space | null
   const config = useConfig()
   const userConfigSettings = config.settings
-  let experimentalMode = $userConfigSettings.experimental_mode
 
   const dispatch = createEventDispatcher<{
     refresh: void
@@ -253,7 +252,7 @@
     </div>
 
     <div class="content">
-      {#if experimentalMode}
+      {#if $userConfigSettings.live_spaces}
         <div class="sources">
           <div class="info">
             <div class="title">

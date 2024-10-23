@@ -128,6 +128,8 @@ export type AIChatMessageParsed = {
   content: string
   contentItems?: ChatMessageContentItem[]
   sources?: AIChatMessageSource[]
+  usedPageScreenshot?: boolean
+  usedInlineScreenshot?: boolean
   status?: 'success' | 'pending' | 'error'
 }
 

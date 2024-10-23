@@ -695,7 +695,7 @@ export class ResourceManager {
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource),
           annotations: item.resource.annotations?.map((a) => this.findOrCreateResourceObject(a))
-        } as ResourceSearchResultItem)
+        }) as ResourceSearchResultItem
     )
 
     // we probably don't want to overwrite the existing resources
@@ -713,7 +713,7 @@ export class ResourceManager {
           engine: item.engine,
           cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource)
-        } as ResourceSearchResultItem)
+        }) as ResourceSearchResultItem
     )
 
     return results

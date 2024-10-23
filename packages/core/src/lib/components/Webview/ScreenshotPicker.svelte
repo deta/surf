@@ -59,8 +59,9 @@
   let loading = false
   let selectedIndex = -1
   let menuItems = [
-    { name: 'Save...', icon: 'leave' },
-    { name: 'Copy', icon: 'copy' }
+    { name: 'Save...', tooltip: 'Save Screenshot to My Stuff', icon: 'leave' },
+    { name: 'Copy', tooltip: 'Copy Screenshot', icon: 'copy' },
+    { name: 'Chat', tooltip: 'Use Screenshot in Chat Sidebar', icon: 'chat' }
   ]
   let menuElement: HTMLElement
   let inside = false
@@ -576,6 +577,9 @@
       case 1:
         handleCopy()
         break
+      case 2:
+        handleTakeScreenshotForChat()
+        break
     }
   }
 
@@ -718,7 +722,7 @@
           class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium bg-neutral-50 !ring-0 !ring-transparent transition-colors"
           on:click={() => handleMenuItemClick(index)}
           use:tooltip={{
-            text: item.name === 'Save...' ? 'Save Screenshot to My Stuff' : 'Copy Screenshot',
+            text: item.tooltip,
             position: 'top'
           }}
         >

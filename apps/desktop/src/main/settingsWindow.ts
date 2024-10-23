@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
@@ -53,7 +53,14 @@ export function createSettingsWindow() {
     event.preventDefault()
   })
 
-  settingsWindow.webContents.setWindowOpenHandler((_details: Electron.HandlerDetails) => {
+  settingsWindow.webContents.setWindowOpenHandler((details) => {
+    const ALLOWED_DOMAINS = ['https://deta.surf', 'https://deta.notion.site']
+
+    let isAllowedUrl = ALLOWED_DOMAINS.some((domain) => details.url.startsWith(domain))
+    if (isAllowedUrl) {
+      shell.openExternal(details.url)
+    }
+
     return { action: 'deny' }
   })
 

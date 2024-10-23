@@ -21,24 +21,28 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount, setContext } from 'svelte'
-  import { useLogScope } from '@horizon/utils'
+  import { tooltip, useLogScope } from '@horizon/utils'
 
   import type { AIChatMessageSource } from '../../types/browser.types'
   import CitationItem from './CitationItem.svelte'
   import MarkdownRenderer from './MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
+  import { Icon } from '@horizon/icons'
 
   export let id: string = ''
   export let content: string
   export let sources: AIChatMessageSource[] | undefined
   export let showSourcesAtEnd: boolean = false
   export let inline: boolean = false
+  export let usedPageScreenshot = false
+  export let usedInlineScreenshot = false
 
   const log = useLogScope('ChatMessage')
   const dispatch = createEventDispatcher<{
     citationClick: { citationID: string; text: string; sourceUid?: string }
     citationHoverStart: string
     citationHoverEnd: string
+    removeScreenshot: void
   }>()
 
   const highlightedCitation = writable<string | null>(null)
@@ -219,6 +223,10 @@
     dispatch('citationClick', { citationID: citationID, text })
   }
 
+  const handleRemoveScreenshot = () => {
+    dispatch('removeScreenshot')
+  }
+
   setContext<CitationHandlerContext>(CITATION_HANDLER_CONTEXT, {
     citationClick: handleCitationClick,
     getCitationInfo: getCitationInfo,
@@ -242,6 +250,38 @@
       <div class="opacity-0 w-0 h-0">x</div>
 
       <div class="citations-list flex flex-wrap gap-y-2 gap-x-1">
+        {#if usedPageScreenshot}
+          <div class="group/citation">
+            <CitationItem
+              className="w-fit"
+              type="image"
+              skipParsing
+              allowRemove
+              on:rerun-without-source={handleRemoveScreenshot}
+            >
+              <div class="flex items-center gap-1">
+                <div class="text-sm">Page Screenshot</div>
+
+                <!-- <button
+                  on:click|stopPropagation={handleRemoveScreenshot}
+                  use:tooltip={{ text: 'Remove', position: 'left' }}
+                  class="hidden opacity-0 group-hover/citation:block group-hover/citation:opacity-100 transition-opacity"
+                >
+                  <Icon name="close" size="16px" />
+                </button> -->
+              </div>
+            </CitationItem>
+          </div>
+        {/if}
+
+        {#if usedInlineScreenshot}
+          <CitationItem className="w-fit" type="image" skipParsing>
+            <div class="flex items-center gap-1">
+              <div class="text-sm">Inline Screenshot</div>
+            </div>
+          </CitationItem>
+        {/if}
+
         {#each filteredSources as source}
           <CitationItem
             id={source.id}

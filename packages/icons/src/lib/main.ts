@@ -93,6 +93,7 @@ import CursorArrowRays from './Icons/CursorArrowRays.svelte'
 import RectangleGroup from './Icons/RectangleGroup.svelte'
 import CursorGrab from './Icons/CursorGrab.svelte'
 import Screenshot from './Icons/Screenshot.svelte'
+import AdjustmentsHorizontal from './Icons/AdjustmentsHorizontal.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -190,7 +191,8 @@ export const icons = {
   'cursor-arrow-rays': CursorArrowRays,
   'rectangle-group': RectangleGroup,
   'cursor-grab': CursorGrab,
-  screenshot: Screenshot
+  screenshot: Screenshot,
+  'adjustments.horizontal': AdjustmentsHorizontal
 }
 
 export type Icons = keyof typeof icons
@@ -289,5 +291,6 @@ export {
   CursorArrowRays,
   RectangleGroup,
   CursorGrab,
-  Screenshot
+  Screenshot,
+  AdjustmentsHorizontal
 }

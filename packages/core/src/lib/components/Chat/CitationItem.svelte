@@ -1,5 +1,9 @@
+<script lang="ts" context="module">
+  export type CitationType = 'image' | 'resource'
+</script>
+
 <script lang="ts">
-  import { getContext, onMount } from 'svelte'
+  import { createEventDispatcher, getContext, onMount } from 'svelte'
   import { writable } from 'svelte/store'
   import {
     copyToClipboard,
@@ -41,12 +45,18 @@
   export let className: string = ''
   export let id: string = ''
   export let general: boolean = false
+  export let type: CitationType = 'resource'
+  export let skipParsing: boolean = false
+  export let allowRemove: boolean = false
   export let maxTitleLength = 42
 
   const log = useLogScope('CitationItem')
   const resourceManager = useResourceManager()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
+  const dispatch = createEventDispatcher<{
+    'rerun-without-source': void
+  }>()
 
   const citationHandler = getContext<CitationHandlerContext>(CITATION_HANDLER_CONTEXT)
   const highlightedCitation = citationHandler.highlightedCitation
@@ -62,6 +72,7 @@
   let source: AIChatMessageSource | undefined
   let renderID: string
   let tooltipText: string
+  let citationType: CitationType
   let resource: Resource | null = null
   let loadingResource = false
 
@@ -81,6 +92,14 @@
 
     log.error('Citation item does not have an ID')
     return ''
+  }
+
+  const getType = () => {
+    if (type) {
+      return type.replace('user-content-', '') as CitationType
+    }
+
+    return 'resource'
   }
 
   const getURL = (source: AIChatMessageSource) => {
@@ -159,6 +178,11 @@
 
     log.debug('Citation clicked', citationID)
 
+    if (citationType === 'image') {
+      toasts.info(`Image citations don't support jumping to the source yet`)
+      return
+    }
+
     citationHandler.citationClick({ citationID, uniqueID })
   }
 
@@ -235,6 +259,7 @@
   $: contextMenuKey = `citation-item-${uniqueID}`
 
   $: contextMenuData = {
+    canOpen: !!source || allowRemove,
     key: `citation-item-${uniqueID}`,
     items: source
       ? [
@@ -250,19 +275,37 @@
               ]
             : [])
         ]
-      : []
+      : allowRemove
+        ? [
+            {
+              type: 'action',
+              icon: 'reload',
+              text: `Re-run without ${citationType === 'image' ? 'image' : 'source'}`,
+              action: () => dispatch('rerun-without-source')
+            } as CtxItem
+          ]
+        : []
   } satisfies CtxMenuProps
 
   onMount(async () => {
+    citationType = getType()
+
+    if (skipParsing) {
+      return
+    }
+
     citationID = getID()
+
     const info = citationHandler.getCitationInfo(citationID)
     source = info.source
     renderID = info.renderID
 
     if (source?.metadata?.url) {
-      tooltipText = truncateURL(source.metadata.url, maxTitleLength)
+      tooltipText = `Source: ${truncateURL(source.metadata.url, maxTitleLength)}`
+    } else if (citationType === 'image') {
+      tooltipText = 'Source: screenshot or image'
     } else {
-      tooltipText = renderID
+      tooltipText = `Source: ${renderID}`
     }
 
     if (source?.resource_id) {
@@ -294,9 +337,11 @@
   data-uid={uniqueID}
   on:click|preventDefault={handleClick}
   class:wide={((source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null) ||
-    source?.metadata?.url) &&
+    source?.metadata?.url ||
+    (citationType === 'image' && !skipParsing)) &&
     !general}
   class:active={$highlightedCitation === uniqueID}
+  class:icon={citationType === 'image' && !skipParsing}
   class={className}
   use:contextMenu={contextMenuData}
   draggable={true}
@@ -321,6 +366,7 @@
     popoverOpened={opened}
     forceOpen={$CONTEXT_MENU_KEY === contextMenuKey}
     disabled={(general && !resource?.type.startsWith('image/')) ||
+      citationType === 'image' ||
       ($isDraggingSomething && !$hoveringPreview)}
   >
     <div slot="trigger" class="inline-flex items-center justify-center gap-2 select-none">
@@ -357,6 +403,14 @@
             <span class="uppercase">#{renderID}</span>
           {/if}
         </div>
+      {:else if citationType === 'image'}
+        <div class="file-icon">
+          <FileIcon kind="image" />
+        </div>
+
+        {#if skipParsing}
+          <slot></slot>
+        {/if}
       {:else}
         {#if resource?.type}
           {#if resource.type.startsWith('image/')}
@@ -429,11 +483,23 @@
       margin-top: -1px;
     }
 
+    .file-icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      flex-shrink: 0;
+      color: #0e53a3;
+    }
+
     &.wide {
       height: auto;
       padding: 0.25rem 0.5rem;
       position: relative;
       top: 2px;
+    }
+
+    &.icon {
+      padding: 0.25rem 0.5rem;
+      margin-top: -10px;
     }
 
     &.active {

@@ -31,7 +31,7 @@
 
   const isDefaultBrowser = writable(false)
 
-  const activeTab = writable<'general' | 'appearance' | 'oasis' | 'prompts'>('general')
+  const activeTab = writable<'general' | 'appearance' | 'experiments' | 'advanced'>('general')
 
   const debouncedPromptUpdate = useDebounce((id: string, content: string) => {
     window.api.updatePrompt(id, content)
@@ -129,37 +129,38 @@
     </div>
 
     <div
-      on:click={() => activeTab.set('oasis')}
+      on:click={() => activeTab.set('experiments')}
       role="tab"
       tabindex="0"
       class="tab no-drag"
-      class:active={$activeTab === 'oasis'}
+      class:active={$activeTab === 'experiments'}
     >
-      <Icon name="leave" size="24" />
-      <h1>My Stuff</h1>
+      <Icon name="sparkles" size="24" />
+      <h1>Experiments</h1>
     </div>
 
     <div
-      on:click={() => activeTab.set('prompts')}
+      on:click={() => activeTab.set('advanced')}
       role="tab"
       tabindex="0"
       class="tab no-drag"
-      class:active={$activeTab === 'prompts'}
+      class:active={$activeTab === 'advanced'}
     >
-      <Icon name="file-text-ai" size="24" />
-      <h1>Prompts</h1>
+      <Icon name="adjustments.horizontal" size="24" />
+      <h1>Advanced</h1>
     </div>
   </div>
 
   <div class="content-wrapper">
     {#if $activeTab === 'general'}
-      {#if !$isDefaultBrowser}
-        <div class="default-wrapper">
-          Surf is not set as your default browser.
-          <button on:click={useAsDefaultBrowser}>Set as your default browser</button>
-        </div>
-      {/if}
       <article class="general">
+        {#if !$isDefaultBrowser}
+          <div class="default-wrapper">
+            Surf is not set as your default browser.
+            <button on:click={useAsDefaultBrowser}>Set as your default browser</button>
+          </div>
+        {/if}
+
         <img src={appIcon} alt="App Icon" />
         <div class="app-id">
           <h1>Surf</h1>
@@ -188,13 +189,6 @@
               on:update={() => handleSettingsUpdate()}
             />
           </div>
-          <SettingsOption
-            icon="filter"
-            title="Experimental Mode"
-            description="Experimental Mode contains new features that may be unstable or buggy."
-            bind:value={userConfigSettings.experimental_mode}
-            on:update={handleSettingsUpdate}
-          />
         {/if}
       </article>
     {:else if $activeTab === 'appearance'}
@@ -204,17 +198,59 @@
           on:update={handleSettingsUpdate}
         />
       </article>
-    {:else if $activeTab === 'oasis'}
-      <article class="oasis">
-        {#if userConfigSettings}
-          <!-- <SettingsOption
-            icon="bookmark"
-            title="Auto Save Resources"
-            description="If enabled, every web page you visit will be automatically saved to Your Stuff."
-            bind:value={userConfigSettings.auto_save_resources}
-            on:update={handleSettingsUpdate}
-          /> -->
+    {:else if $activeTab === 'experiments'}
+      <article class="list">
+        <div class="box">
+          <div class="box-icon">
+            <Icon name="info" size="25px" />
+          </div>
 
+          <p>
+            The following features are still under development and may not work as expected. Feel
+            free to try them out and give us feedback. <a
+              href="https://deta.notion.site/Experimental-Mode-10ca5244a7178061a9fadc2434c6e666"
+              target="_blank">More info in our docs ↗</a
+            >
+          </p>
+        </div>
+
+        {#if userConfigSettings}
+          <SettingsOption
+            icon="screenshot"
+            title="Automatic Page Screenshots for Chat"
+            description="Let Surf analyse your chat prompt and automatically take a screenshot of the page to use as context for your chat."
+            bind:value={userConfigSettings.automatic_page_screenshots}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
+            icon="marker"
+            title="Live Spaces"
+            description="Subscribe to RSS feeds of websites and pull in their content into a space."
+            bind:value={userConfigSettings.live_spaces}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
+            icon="code-block"
+            title="Go Wild Mode"
+            description="Modify the page or create mini apps from the page sidebar."
+            bind:value={userConfigSettings.go_wild_mode}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
+            icon="marker"
+            title="Annotations Sidebar"
+            description="View and create annotations from the page sidebar."
+            bind:value={userConfigSettings.annotations_sidebar}
+            on:update={handleSettingsUpdate}
+          />
+        {/if}
+      </article>
+    {:else if $activeTab === 'advanced'}
+      <article class="list">
+        {#if userConfigSettings}
           <SettingsOption
             icon="search"
             title="Use Semantic Search"
@@ -231,61 +267,26 @@
             on:update={handleSettingsUpdate}
           />
         {/if}
-      </article>
-    {:else if $activeTab === 'prompts'}
-      <article class="prompts">
-        <div class="prompts-list">
-          <!-- <PromptSection
-            title="General"
-            description="Customize prompts for general features like summarizing."
-            image={promptFallback}
-          >
-            coming soon…
-          </PromptSection> -->
 
-          <PromptSection
-            title="Inline Page Menu"
-            description="Customize prompts used for the inline AI menu in web pages."
-            image={inlineAIScreenshot}
-          >
-            {#each prompts.filter((x) => x.kind === 'inline') as prompt}
-              <Prompt
-                title={prompt.title}
-                description={prompt.description}
-                content={prompt.content}
-                on:update={(e) => debouncedPromptUpdate(prompt.id, e.detail)}
-              />
-            {/each}
-          </PromptSection>
+        <PromptSection
+          title="Inline Page Menu Prompts"
+          description="Customize prompts used for the inline AI menu in web pages."
+          image={inlineAIScreenshot}
+        >
+          {#each prompts.filter((x) => x.kind === 'inline') as prompt}
+            <Prompt
+              title={prompt.title}
+              description={prompt.description}
+              content={prompt.content}
+              on:update={(e) => debouncedPromptUpdate(prompt.id, e.detail)}
+            />
+          {/each}
 
-          <PromptSection
-            title="Page Insights"
-            description="Customize prompts used for the page chat feature."
-            image={pageInsightsScreenshot}
-          >
-            {#each prompts.filter((x) => x.kind === 'page') as prompt}
-              <Prompt
-                title={prompt.title}
-                description={prompt.description}
-                content={prompt.content}
-                on:update={(e) => debouncedPromptUpdate(prompt.id, e.detail)}
-              />
-            {/each}
-          </PromptSection>
-
-          <PromptSection
-            title="Custom Prompts"
-            description="Define your own prompts to use across the app."
-            image={customPromptsScreenshot}
-          >
-            coming soon…
-          </PromptSection>
-        </div>
-
-        <div class="box">
-          <Icon name="info" size="22px" />
-          <p>Prompts can be written with basic Markdown syntax.</p>
-        </div>
+          <div class="box">
+            <Icon name="info" size="22px" />
+            <p>Prompts can be written with basic Markdown syntax.</p>
+          </div>
+        </PromptSection>
       </article>
     {/if}
   </div>
@@ -408,16 +409,67 @@
     z-index: 0;
   }
 
+  .general {
+    height: 100%;
+    width: 100%;
+    max-width: 45rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    .app-id {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+      }
+
+      .version-pill {
+        font-size: 1rem;
+        line-height: 0.85;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        background: #d7e1fd;
+        color: #678fff;
+      }
+    }
+
+    button {
+      padding: 0.75rem 1rem;
+      border: none;
+      outline: none;
+      border-radius: 0.5rem;
+      background: none;
+      color: var(--color-link);
+      cursor: pointer;
+      transition: color 0.2s;
+      font-size: 1.1rem;
+
+      &:hover {
+        color: var(--color-link-dark);
+      }
+      &:disabled {
+        cursor: not-allowed;
+        color: var(--color-text-muted);
+      }
+    }
+  }
+
   .default-wrapper {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     background-color: var(--color-background-light);
     border-bottom: 1px solid var(--color-border);
     border-radius: 1.25rem;
     padding: 1rem 1.25rem;
     text-align: center;
-    width: fit-content;
+    width: 100%;
     gap: 1rem;
     margin-bottom: 1.5rem;
 
@@ -469,11 +521,10 @@
 
   .dev-wrapper,
   .search-wrapper {
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 36rem;
-
     background-color: var(--color-background-dark);
     border-bottom: 1px solid var(--color-border);
     border-radius: 1rem;
@@ -481,64 +532,20 @@
     margin: 1rem 0;
   }
 
-  .general {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-
-    .app-id {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      h1 {
-        font-size: 2rem;
-        font-weight: 700;
-      }
-
-      .version-pill {
-        font-size: 1rem;
-        line-height: 0.85;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        background: #d7e1fd;
-        color: #678fff;
-      }
-    }
-
-    button {
-      padding: 0.75rem 1rem;
-      border: none;
-      outline: none;
-      border-radius: 0.5rem;
-      background: none;
-      color: var(--color-link);
-      cursor: pointer;
-      transition: color 0.2s;
-      font-size: 1.1rem;
-
-      &:hover {
-        color: var(--color-link-dark);
-      }
-      &:disabled {
-        cursor: not-allowed;
-        color: var(--color-text-muted);
-      }
-    }
-  }
-
   .box {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 1rem;
+    gap: 1rem;
+    padding: 0.5rem;
     border-radius: 0.5rem;
     color: var(--color-text);
-    text-align: center;
+    text-align: left;
+    margin-bottom: 1rem;
+
+    .box-icon {
+      flex-shrink: 0;
+    }
 
     p {
       font-size: 1.1rem;
@@ -546,21 +553,10 @@
     }
   }
 
-  .prompts {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-  }
-
-  .prompts-list {
+  .list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-  }
-
-  .oasis {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    max-width: 45rem;
   }
 </style>

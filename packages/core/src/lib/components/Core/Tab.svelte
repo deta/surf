@@ -31,9 +31,13 @@
   import { useTabsManager } from '../../service/tabs'
   import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   const log = useLogScope('Browser Tab')
   const tabsManager = useTabsManager()
+  const userConfig = useConfig()
+
+  const userSettings = userConfig.settings
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -53,7 +57,6 @@
   export let removeHighlight = false
   export let isSelected = false
   export let isMagicActive = false
-  export let experimentalMode = false
 
   export const editAddress = async () => {
     isEditing = true
@@ -132,7 +135,7 @@
     }
   }
 
-  $: showLiveSpaceButton = checkIfLiveSpacePossible(tab)
+  $: showLiveSpaceButton = $userSettings.live_spaces && checkIfLiveSpacePossible(tab)
 
   // $: if (tab.type === 'space') {
   //   fetchSpace(tab.spaceId)
@@ -455,7 +458,7 @@
       },
       {
         type: 'action',
-        hidden: tab.type !== 'page' || !experimentalMode,
+        hidden: tab.type !== 'page' || !showLiveSpaceButton,
         icon: 'news',
         text: 'Create Live Space',
         action: () => handleCreateLiveSpace()
@@ -613,43 +616,41 @@
 
     {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || !isUserSelected) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
-        {#if experimentalMode}
-          {#if tab.type === 'page' && isActive && showLiveSpaceButton}
-            <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
-              <button
-                slot="trigger"
-                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
-              >
-                <Icon name="news" />
-              </button>
+        {#if tab.type === 'page' && isActive && showLiveSpaceButton}
+          <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
+            <button
+              slot="trigger"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            >
+              <Icon name="news" />
+            </button>
 
-              <div slot="content" class="no-drag p-1">
-                <span class="px-4 py-8 mt-8">
-                  <br />Create a page subscription to <br />
-                  <span class="p-1 bg-white rounded-sm">
-                    {tab.currentDetectedApp?.hostname}
-                  </span>
+            <div slot="content" class="no-drag p-1">
+              <span class="px-4 py-8 mt-8">
+                <br />Create a page subscription to <br />
+                <span class="p-1 bg-white rounded-sm">
+                  {tab.currentDetectedApp?.hostname}
                 </span>
-                <div class="flex w-full">
-                  <button
-                    class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded cursor-pointer rounded-md"
-                    on:click={handleCreateLiveSpace}
-                  >
-                    <Icon name="check" size="16px" />
-                    Submit
-                  </button>
-                </div>
-                <ShortcutSaveItem
-                  on:save-resource-in-space={handleAddSourceToSpace}
-                  {spaces}
-                  infoText="or add updates from this site as a source to existing Space:"
-                />
-                <span class="p-4 py-4 mt-8 w-full text-xs text-gray-500 text-center">
-                  A Live Space will automatically pull in new <br /> items from the page
-                </span>
+              </span>
+              <div class="flex w-full">
+                <button
+                  class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded cursor-pointer rounded-md"
+                  on:click={handleCreateLiveSpace}
+                >
+                  <Icon name="check" size="16px" />
+                  Submit
+                </button>
               </div>
-            </CustomPopover>
-          {/if}
+              <ShortcutSaveItem
+                on:save-resource-in-space={handleAddSourceToSpace}
+                {spaces}
+                infoText="or add updates from this site as a source to existing Space:"
+              />
+              <span class="p-4 py-4 mt-8 w-full text-xs text-gray-500 text-center">
+                A Live Space will automatically pull in new <br /> items from the page
+              </span>
+            </div>
+          </CustomPopover>
         {/if}
 
         {#if tab.type === 'page'}

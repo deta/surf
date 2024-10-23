@@ -26,7 +26,8 @@
     AIChatMessageRole,
     Tab,
     ContextItem,
-    AddContextItemEvent
+    AddContextItemEvent,
+    TabPage
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
@@ -48,6 +49,8 @@
   import { DragTypeNames, type DragTypes } from '../../types'
   import Onboarding from '../Core/Onboarding.svelte'
   import { blobToDataUrl } from '../../utils/screenshot'
+  import { CLASSIFY_SCREENSHOT_PROMPT } from '../../constants/prompts'
+  import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -55,7 +58,6 @@
   export let activeTab: Tab | null = null
   export let activeTabMagic: PageMagic
   export let horizontalTabs = false
-  export let experimentalMode = false
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
@@ -129,6 +131,10 @@
     return tabs
       .filter((e) => !contextItems.find((i) => i.type === 'tab' && i.data.id === e.id))
       .sort((a, b) => b.index - a.index)
+  })
+
+  const showFloatingClearChat = derived(userConfigSettings, (userConfigSettings) => {
+    return userConfigSettings.annotations_sidebar || userConfigSettings.go_wild_mode
   })
 
   const updateChatInput = (text: string, focus = true) => {
@@ -339,6 +345,37 @@
     }
   }
 
+  const rerunChatMessageWithoutScreenshot = async () => {
+    const lastResponse = $magicPage.responses[$magicPage.responses.length - 1]
+    if (!lastResponse) {
+      log.error('No last response found')
+      toasts.error('No last response found')
+      return
+    }
+
+    const lastQuery = lastResponse.query
+    const lastRole = lastResponse.role
+
+    const confirmed = await confirm(
+      'Removing the screenshot will clear the chat and rerun the chat message without the screenshot in the context. \n\nAre you sure you want to proceed?'
+    )
+    if (!confirmed) {
+      return
+    }
+
+    log.debug('Rerunning chat message without screenshot', lastQuery)
+
+    // Clear chat
+    if (!$magicPage.chatId) {
+      log.error('No chat found to clear')
+      return
+    }
+
+    await clearChat($magicPage.chatId)
+
+    await sendChatMessage(lastQuery, lastRole, undefined, true)
+  }
+
   const handleSelectAllTabs = async () => {
     log.debug('Selecting all tabs')
   }
@@ -375,7 +412,19 @@
       return
     }
 
-    await clearChat($magicPage.chatId)
+    const toast = toasts.loading('Clearing chat...')
+
+    try {
+      const messagesLength = $magicPage.responses.length
+
+      await clearChat($magicPage.chatId)
+      toast.success('Chat cleared!')
+
+      await telemetry.trackPageChatClear(messagesLength)
+    } catch (e) {
+      log.error('Error clearing chat:', e)
+      toast.error('Failed to clear chat')
+    }
   }
 
   const handleClearContext = () => {
@@ -594,10 +643,63 @@
 
   let itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
 
+  const isScreenshotNeededForPromptAndTab = async (prompt: string, tab: TabPage) => {
+    try {
+      const title = tab.title
+      const url = tab.currentLocation || tab.currentDetectedApp?.canonicalUrl || tab.initialLocation
+
+      const screenshotNeededRaw = await window.api.createAIChatCompletion(
+        JSON.stringify({
+          prompt: prompt,
+          title: title,
+          url: url
+        }),
+        CLASSIFY_SCREENSHOT_PROMPT,
+        {
+          model: 'gpt-4o-mini'
+        }
+      )
+
+      if (!screenshotNeededRaw) {
+        log.error('Error determining if a screenshot is needed')
+        return false
+      }
+
+      const response = JSON.parse(screenshotNeededRaw)
+
+      // log.debug('Screenshot needed response', response)
+
+      // if (response.reason) {
+      //   toasts.info(response.reason)
+      // }
+
+      /*
+        Respond with the following format:
+
+        ```json
+        {
+            "needsScreenshot": true,
+            "reason": "The prompt refers to a specific part of the page, the hero section, that can only be seen visually."
+        }
+        ```
+
+        Only respond with the JSON itself as a string, no Markdown or other formatting.
+      */
+
+      // return response.needsScreenshot
+
+      return response
+    } catch (e) {
+      log.error('Error determining if a screenshot is needed', e)
+      return false
+    }
+  }
+
   const sendChatMessage = async (
     prompt: string,
     role: AIChatMessageRole = 'user',
-    query?: string
+    query?: string,
+    skipScreenshot = false
   ) => {
     const chatId = $magicPage.chatId
     if (!chatId) {
@@ -665,7 +767,10 @@
         }
       }
 
-      for (const item of $contextItems) {
+      let usedInlineScreenshot = false
+      let usedPageScreenshot = false
+
+      for (const item of itemsInContext) {
         log.debug('Processing context item', item)
         if (item.type === 'tab') {
           const tab = item.data
@@ -678,10 +783,45 @@
           }
         } else if (item.type === 'screenshot') {
           inlineImages.push(await blobToDataUrl(item.data))
+          usedInlineScreenshot = true
         } else if (item.type === 'resource') {
           resourceIds.push(item.data.id)
         } else if (item.type === 'space') {
           await processSpace(item.data.id)
+        }
+      }
+
+      const inlineScreenshots = itemsInContext.filter((item) => item.type === 'screenshot')
+      if (
+        inlineScreenshots.length === 0 &&
+        !skipScreenshot &&
+        $userConfigSettings.automatic_page_screenshots
+      ) {
+        log.debug('No context images found, determining if a screenshot is needed')
+        let tab = tabsInContext.find(
+          (tab) => tab.id === tabsManager.activeTabIdValue && tab.type === 'page'
+        )
+
+        if (tab) {
+          const screenshotNeeded = await isScreenshotNeededForPromptAndTab(
+            query ?? prompt,
+            tab as TabPage
+          )
+          log.debug('Screenshot needed:', screenshotNeeded)
+
+          if (screenshotNeeded) {
+            const browserTabs = tabsManager.browserTabsValue
+            const browserTab = browserTabs[tab.id]
+            if (browserTab) {
+              log.debug('Taking screenshot of page', tab)
+              const dataUrl = await browserTab.capturePage()
+              log.debug('Adding screenshot as inline image to chat context', dataUrl)
+              inlineImages.push(dataUrl)
+              usedPageScreenshot = true
+            }
+          }
+        } else {
+          log.debug('Active tab not in context, skipping screenshot')
         }
       }
 
@@ -694,6 +834,8 @@
         role: role,
         query: query ?? prompt,
         status: 'pending',
+        usedPageScreenshot: usedPageScreenshot,
+        usedInlineScreenshot: usedInlineScreenshot,
         content: '',
         citations: {}
       } as AIChatMessageParsed
@@ -759,6 +901,7 @@
         numResources: numResources,
         numScreenshots: inlineImages.length,
         numPreviousMessages: previousMessages.length,
+        tookPageScreenshot: usedPageScreenshot,
         embeddingModel: $userConfigSettings.embedding_model
       })
 
@@ -813,36 +956,23 @@
   }
 
   const clearChat = async (id: string) => {
-    const toast = toasts.loading('Clearing chat...')
+    log.debug('Clearing chat', id)
 
-    try {
-      log.debug('Clearing chat', id)
+    $magicPage.responses = []
 
-      const messagesLength = $magicPage.responses.length
+    await resourceManager.sffs.deleteAIChat(id)
 
-      $magicPage.responses = []
-
-      await resourceManager.sffs.deleteAIChat(id)
-
-      log.debug('Old chat deleted, creating new chat...')
-      const newChatId = await resourceManager.sffs.createAIChat('')
-      if (!newChatId) {
-        log.error('Failed to create new chat aftering clearing the old one')
-        return
-      }
-
-      updateMagicPage({
-        chatId: newChatId,
-        responses: []
-      })
-
-      toast.success('Chat cleared!')
-
-      await telemetry.trackPageChatClear(messagesLength)
-    } catch (e) {
-      log.error('Error clearing chat:', e)
-      toast.error('Failed to clear chat')
+    log.debug('Old chat deleted, creating new chat...')
+    const newChatId = await resourceManager.sffs.createAIChat('')
+    if (!newChatId) {
+      log.error('Failed to create new chat aftering clearing the old one')
+      return
     }
+
+    updateMagicPage({
+      chatId: newChatId,
+      responses: []
+    })
   }
 
   const fetchExistingChat = async (id: string) => {
@@ -992,7 +1122,7 @@
   }}
   on:Drop={handleDrop}
 >
-  {#if !experimentalMode}
+  {#if !$showFloatingClearChat}
     <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
       {#if $magicPage.responses.length > 0}
         <button
@@ -1058,6 +1188,24 @@
                     {sanitizeQuery(response.query)}
                   {/if}
                 </div>
+
+                <!-- {#if response.usedPageScreenshot}
+                  <div class="flex items-center gap-1 group/screenshot">
+                    <div class="w-4 h-4 text-neutral-600">
+                      <FileIcon kind="image" />
+                    </div>
+                    <span class="text-neutral-600 font-normal text-base"
+                      >Used screenshot as additional context</span
+                    >
+                    <button
+                      use:tooltip={{ text: 'Rerun without screenshot', position: 'left' }}
+                      on:click={() => rerunChatMessageWithoutScreenshot()}
+                      class="text-neutral-600 hover:text-neutral-700 opacity-0 group-hover/screenshot:opacity-100"
+                    >
+                      <Icon name="close" size="16px" />
+                    </button>
+                  </div>
+                {/if} -->
               </div>
             </div>
 
@@ -1072,7 +1220,10 @@
                   response,
                   e.detail.sourceUid
                 )}
+              on:removeScreenshot={() => rerunChatMessageWithoutScreenshot()}
               showSourcesAtEnd={true}
+              usedPageScreenshot={response.usedPageScreenshot}
+              usedInlineScreenshot={response.usedInlineScreenshot}
             />
 
             <div
@@ -1131,13 +1282,26 @@
           <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
             <div class="">
               <div
-                class="font-medium flex gap-2 text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
+                class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
               >
-                <div class="icon">
-                  <Icon name="spinner" />
+                <div class="flex items-center gap-2">
+                  <div class="icon">
+                    <Icon name="spinner" />
+                  </div>
+
+                  <div class="tiptap query">{@html response.query}</div>
                 </div>
 
-                <div class="tiptap query">{@html response.query}</div>
+                {#if response.usedPageScreenshot && (!response.sources || response.sources.length === 0)}
+                  <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 text-neutral-600">
+                      <FileIcon kind="image" />
+                    </div>
+                    <span class="text-neutral-600 font-normal text-base"
+                      >Using screenshot as additional context</span
+                    >
+                  </div>
+                {/if}
               </div>
             </div>
 
@@ -1154,6 +1318,8 @@
                     e.detail.sourceUid
                   )}
                 showSourcesAtEnd={true}
+                usedPageScreenshot={response.usedPageScreenshot}
+                usedInlineScreenshot={response.usedInlineScreenshot}
               />
             {/if}
           </div>
@@ -1222,7 +1388,7 @@
   <div
     class="chat bg-gradient-to-t from-sky-300/20 via-sky-300/10 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl pb-2"
   >
-    {#if experimentalMode && !$magicPage.running && $magicPage.responses.length >= 1}
+    {#if $showFloatingClearChat && !$magicPage.running && $magicPage.responses.length >= 1}
       <button
         transition:flyAndScale={{ duration: 125, y: 22 }}
         on:click={() => {

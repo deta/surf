@@ -25,7 +25,7 @@
   } from '@horizon/types'
   import { createHistorySwipeRecognizer, SWIPE_THRESHOLD } from '../../utils/historySwipeRecognizer'
   import type { HistoryEntriesManager } from '../../service/history'
-  import { isModKeyAndKeyPressed, useLogScope } from '@horizon/utils'
+  import { isModKeyAndKeyPressed, toHumanFileSize, useLogScope } from '@horizon/utils'
   import type { DetectedResource } from '../../types'
   import type { WebServiceActionInputs } from '@horizon/web-parser'
   import Webview, { type WebviewEvents } from './Webview.svelte'
@@ -170,6 +170,14 @@
     webview?.executeJavaScript(code, userGesture)
   export const downloadURL = (url: string, options?: Electron.DownloadURLOptions) =>
     webview.downloadURL(url, options)
+  export const capturePage = async (rect?: Electron.Rectangle) => {
+    const data = await webview?.capturePage(rect)
+
+    // reduce the size of the image
+    const resized = data.resize({ width: 1200 })
+
+    return resized?.toDataURL()
+  }
   export const goBack = () => webviewComponent.goBackInHistory()
   export const goForward = () => webviewComponent.goForwardInHistory()
   export const goToBeginning = (fallback?: string) =>

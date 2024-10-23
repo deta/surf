@@ -45,7 +45,7 @@
     padding: 0.75rem;
     padding-right: 1.5rem;
     border-radius: 12px;
-    background: var(--color-background);
+    background: var(--color-background-dark);
     color: var(--color-text);
     position: relative;
 
@@ -70,10 +70,6 @@
     justify-content: space-between;
     gap: 0.5rem;
     cursor: pointer;
-
-    &:hover {
-      background: var(--color-background);
-    }
 
     .title {
       display: flex;

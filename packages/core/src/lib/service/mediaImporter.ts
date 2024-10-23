@@ -233,7 +233,7 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
                   alt: '',
                   sourceURI: file.path
                 }
-              } as MediaParserResult)
+              }) as MediaParserResult
           )
         )
         break
@@ -247,7 +247,7 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
         break
       case 'text/uri-list':
         const urls = await processUriListData(data)
-        results.push(...urls.map((url) => ({ data: url, type: 'url' } as MediaParserResult)))
+        results.push(...urls.map((url) => ({ data: url, type: 'url' }) as MediaParserResult))
         break
       case 'text/tiptap':
         const richText = await processRichTextData(data)

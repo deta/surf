@@ -36,7 +36,7 @@
       attributes: {
         ...defaultSchema.attributes,
         // allow custom citation tags so we can render them
-        citation: ['id'],
+        citation: ['id', 'type'],
         // The `language-*` regex is allowed by default.
         code: [['className', /^language-./, 'math-inline', 'math-display']],
         div: [...(defaultSchema.attributes?.div ?? []), ['className', 'math', 'math-display']],
