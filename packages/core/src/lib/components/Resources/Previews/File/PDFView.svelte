@@ -11,6 +11,8 @@
   let error = false
   let webview: Electron.WebviewTag
 
+  const webviewSrc = `${window.api.PDFViewerEntryPoint}?path=${encodeURIComponent(resource.path)}`
+
   onMount(() => {
     webview.addEventListener('did-finish-load', () => {
       log.debug('did finish load')
@@ -36,7 +38,7 @@
 {:else}
   <webview
     bind:this={webview}
-    src="file://{resource.path}"
+    src={webviewSrc}
     webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   >
     <Unknown {resource} />

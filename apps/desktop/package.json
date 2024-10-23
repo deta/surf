@@ -26,6 +26,7 @@
     "@electron-toolkit/utils": "^2.0.0",
     "@ghostery/adblocker-electron": "^2.0.1",
     "@horizon/backend": "*",
+    "@pdfslick/core": "^1.5.2",
     "@rollup/plugin-replace": "^5.0.7",
     "cross-fetch": "^4.0.0",
     "electron-updater": "^6.1.7",

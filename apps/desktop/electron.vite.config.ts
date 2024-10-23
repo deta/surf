@@ -119,7 +119,8 @@ export default defineConfig({
           main: resolve(__dirname, 'src/renderer/index.html'),
           setup: resolve(__dirname, 'src/renderer/setup.html'),
           settings: resolve(__dirname, 'src/renderer/settings.html'),
-          updates: resolve(__dirname, 'src/renderer/updates.html')
+          updates: resolve(__dirname, 'src/renderer/updates.html'),
+          pdf: resolve(__dirname, 'src/renderer/pdf.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         plugins: [

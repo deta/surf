@@ -9,7 +9,7 @@ import { isDev, isMac, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
-import { firefoxUA, isPathSafe, normalizeElectronUserAgent } from './utils'
+import { firefoxUA, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -110,6 +110,38 @@ export function createWindow() {
 
     callback({ requestHeaders })
   })
+  webviewSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.resourceType !== 'mainFrame') {
+      callback({ cancel: false })
+      return
+    }
+
+    const getHeaderValue = (headerName: string): string[] | undefined => {
+      if (!details.responseHeaders) return
+      const key = Object.keys(details.responseHeaders || {}).find(
+        (k) => k.toLowerCase() === headerName.toLowerCase()
+      )
+      return key ? details.responseHeaders[key] : undefined
+    }
+
+    const contentTypeHeader = getHeaderValue('content-type')
+    const dispositionHeader = getHeaderValue('content-disposition')
+    const isPDF = contentTypeHeader?.[0]?.includes('application/pdf') ?? false
+    const isAttachment = dispositionHeader?.[0]?.toLowerCase().includes('attachment') ?? false
+
+    if (isPDF && !isAttachment) {
+      callback({ cancel: true })
+
+      if (details.webContents)
+        details.webContents.loadURL(
+          `${PDFViewerEntryPoint}?path=${encodeURIComponent(details.url)}`
+        )
+
+      return
+    }
+
+    callback({ cancel: false })
+  })
 
   mainWindowSession.protocol.handle('surf',
     async (req: GlobalRequest) => {
@@ -207,7 +239,7 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
   })
 
   contents.on('will-attach-webview', (_event, webPreferences, _params) => {
-    webPreferences.webSecurity = true
+    webPreferences.webSecurity = !isDev
     webPreferences.sandbox = true
     webPreferences.nodeIntegration = false
     webPreferences.contextIsolation = true

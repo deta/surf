@@ -41,7 +41,7 @@ import { ChatCompletion } from 'openai/resources'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 import EventEmitter from 'events'
 import * as crypto from 'crypto'
-import { SettingsWindowEntrypoint } from '../main/utils'
+import { PDFViewerEntryPoint, SettingsWindowEntrypoint } from '../main/utils'
 
 enum ResourceProcessingStatusType {
   Started = 'Started',
@@ -107,6 +107,7 @@ if (OPENAI_API_KEY) {
 const api = {
   disableTabSwitchingShortcuts: DISABLE_TAB_SWITCHING_SHORTCUTS,
   SettingsWindowEntrypoint: SettingsWindowEntrypoint,
+  PDFViewerEntryPoint: PDFViewerEntryPoint,
 
   createToken: (data: any) => {
     return IPC_EVENTS_RENDERER.tokenCreate.invoke(data)

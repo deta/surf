@@ -103,3 +103,11 @@ export const SettingsWindowEntrypoint = (() => {
     return `file://${path.join(__dirname, '../renderer')}`
   }
 })()
+
+export const PDFViewerEntryPoint = (() => {
+  if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    return `${process.env.ELECTRON_RENDERER_URL}/pdf.html`
+  } else {
+    return `file://${path.join(__dirname, '../renderer/pdf.html')}`
+  }
+})()
