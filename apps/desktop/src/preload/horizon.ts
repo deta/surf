@@ -23,10 +23,10 @@ import {
   type DownloadUpdatedMessage,
   type DownloadDoneMessage,
   type TelemetryEventTypes,
-  type SFFSResource,
-  ResourceProcessingStatusType,
-  EventBusMessage,
-  EventBusMessageType
+  type SFFSResource
+  // ResourceProcessingStatusType,
+  // EventBusMessage,
+  // EventBusMessageType
 } from '@horizon/types'
 import { getUserConfig } from '../main/config'
 import {
@@ -665,6 +665,27 @@ const sffs = (() => {
   let handle = null
   let server: http.Server | null = null
   const callbackEmitters = new Map()
+
+  enum ResourceProcessingStatusType {
+    Started = 'Started',
+    Failed = 'Failed',
+    Finished = 'Finished'
+  }
+
+  enum EventBusMessageType {
+    ResourceProcessingMessage = 'ResourceProcessingMessage'
+  }
+
+  type ResourceProcessingStatus =
+    | { type: ResourceProcessingStatusType.Started }
+    | { type: ResourceProcessingStatusType.Failed; message: string }
+    | { type: ResourceProcessingStatusType.Finished }
+
+  type EventBusMessage = {
+    type: EventBusMessageType.ResourceProcessingMessage
+    resource_id: string
+    status: ResourceProcessingStatus
+  }
 
   const isResourceProcessingMessage = (obj: any): boolean => {
     if (
