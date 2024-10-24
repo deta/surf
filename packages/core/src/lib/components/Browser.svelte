@@ -3987,8 +3987,10 @@
   const handleAddContextItem = (e: CustomEvent<AddContextItemEvent>) => {
     const { item, trigger } = e.detail
 
-    // This is needed for the onboarding to get to the next step
-    handleChattingWithOnboardingSpace(e.detail.item.data.name.folderName)
+    if (item.type === 'space') {
+      // This is needed for the onboarding to get to the next step
+      handleChattingWithOnboardingSpace(item.data.name.folderName)
+    }
 
     additionalChatContextItems.update((additionalChatContextItems) => {
       return [...additionalChatContextItems, item]
