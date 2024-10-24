@@ -14,11 +14,8 @@
   let isResizing: boolean = false
   let width = 233
   let containerRef: HTMLDivElement
-  let resizerRef
+  let resizerRef: HTMLDivElement
 
-  /**
-   * Make it resizable
-   */
   onMount(() => {
     let newWidth = 0
 

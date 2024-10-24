@@ -10,9 +10,6 @@
   let RO: ResizeObserver
 
   onMount(() => {
-    /**
-     * Resize observer — update thumbnails cols
-     */
     RO = new ResizeObserver(() => {
       const width = thumbsRef.clientWidth
       cols = Math.round(width / 200)
@@ -46,11 +43,7 @@
   </div>
 </div>
 
-<!--
-  Go through each thumbnail and make sure we render it in PDF.js's container
-  this ensures using PDF.js's rendering queue and performant behaviour — generating thumbnails when needed etc.
--->
-{#each Array.from($pdfSlickStore?.thumbnailViews ?? []) as [pageNumber, { div, src, loaded, canvasWidth: width, canvasHeight: height, pageLabel }] (src ?? pageNumber)}
+{#each Array.from($pdfSlickStore?.thumbnailViews ?? []) as [pageNumber, { div, src, loaded, canvasWidth: width, canvasHeight: height, pageLabel }] (pageNumber)}
   <Portal target={div}>
     <div class="box-border pt-4 h-full w-full inline-flex justify-center">
       <div>

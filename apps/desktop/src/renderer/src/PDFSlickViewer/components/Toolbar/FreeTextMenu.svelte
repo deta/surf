@@ -5,27 +5,7 @@
   import { Menu, MenuButton, MenuItems } from '@rgossiaux/svelte-headlessui'
   import { pdfSlickStore } from '../../store'
   import { default as colors, colorStrengths, colorNames } from '../../colors'
-
-  /**
-   * import { AnnotationEditorType, AnnotationEditorParamsType } from 'pdfjs-dist';
-   * ^ SyntaxError: [vite] Named export 'AnnotationEditorParamsType' not found. The requested module 'pdfjs-dist' is a CommonJS module, which may not support all module.exports as named exports.
-   */
-
-  const AnnotationEditorType = {
-    DISABLE: -1,
-    NONE: 0,
-    FREETEXT: 3,
-    INK: 15
-  }
-
-  const AnnotationEditorParamsType = {
-    FREETEXT_SIZE: 1,
-    FREETEXT_COLOR: 2,
-    FREETEXT_OPACITY: 3,
-    INK_COLOR: 11,
-    INK_THICKNESS: 12,
-    INK_OPACITY: 13
-  }
+  import { AnnotationEditorType, AnnotationEditorParamsType } from 'pdfjs-dist'
 
   let isFreetextMode = false
   let fontSize = 12
