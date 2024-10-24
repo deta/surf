@@ -163,6 +163,7 @@
 
     await handleClearChat()
     updateChatInput(query)
+    selectedMode = 'active'
     await handleChatSubmit()
   }
 
@@ -517,7 +518,6 @@
       } else {
         selectedMode = 'active'
       }
-      itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
       handleChatSubmit()
     } else if (e.key === 'Escape') {
       if ($optToggled) {
@@ -530,12 +530,12 @@
       }
     } else if (e.key === 'Enter' && $shiftPressed && $cmdPressed) {
       if (inputValue !== '') {
-        itemsInContext = $tabs.map((tab) => {
-          return {
-            type: 'tab',
-            data: tab
-          }
-        })
+        // itemsInContext = $tabs.map((tab) => {
+        //   return {
+        //     type: 'tab',
+        //     data: tab
+        //   }
+        // })
         handleChatSubmit()
       }
     }
@@ -629,6 +629,7 @@
       case 'all':
         result = $tabs.map((tab) => {
           return {
+            id: tab.id,
             type: 'tab',
             data: tab
           }
@@ -646,8 +647,6 @@
 
     return result
   }
-
-  let itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
 
   const isScreenshotNeededForPromptAndTab = async (prompt: string, tab: TabPage) => {
     try {
@@ -716,6 +715,7 @@
     errorMessage.set('')
     hasError.set(false)
 
+    const itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
     if (itemsInContext.length === 0) {
       log.debug('No tabs in context, general chat:')
     } else {
@@ -1520,7 +1520,6 @@
           class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
           on:click={() => {
             selectedMode = 'active'
-            itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
             handleChatSubmit()
           }}
           data-tooltip-action="send-chat-message"
