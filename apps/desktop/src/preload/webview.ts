@@ -39,7 +39,7 @@ let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = nul
 
 // disable console logs in production
 if (!import.meta.env.DEV) {
-  console.debug = console.log = console.warn = console.error = () => {}
+  console.debug = console.log = console.warn = console.error = () => { }
 }
 
 function runAppDetection() {
@@ -315,6 +315,7 @@ function renderComment(annotation: AnnotationCommentRange) {
 
   // listen for page resize events and update the position of the indicator
   window.addEventListener('resize', repositionWrapper)
+  window.addEventListener('wheel', repositionWrapper)
 
   const closeComment = () => {
     console.debug('Closing comment', annotation)
@@ -582,6 +583,8 @@ window.addEventListener('DOMContentLoaded', async (_) => {
 
       // listen for page resize events and update the position of the indicator
       window.addEventListener('resize', respositionWrapper)
+      window.addEventListener('wheel', respositionWrapper)
+      // TODO: reposition the wrapper when user zooms in/out in the PDF viewer
 
       // TODO: unregister the event listeners when the selection menu is removed
 
@@ -1070,7 +1073,7 @@ async function handleDrop(e: DragEvent) {
           clipboardData: new DataTransfer()
         })
         pasteEvent.clipboardData?.setData('text/plain', contentMarkdown)
-        ;(document.activeElement ?? document.body).dispatchEvent(pasteEvent)
+          ; (document.activeElement ?? document.body).dispatchEvent(pasteEvent)
       }
     } else {
       e.target!.dispatchEvent(
