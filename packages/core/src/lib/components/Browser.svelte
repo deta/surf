@@ -2747,10 +2747,6 @@
     window.api.controlWindow(action)
   }
 
-  const openSettings = () => {
-    window.api.openSettings()
-  }
-
   onMount(() => {
     const unsubscribeCreated = tabsManager.on('created', (tab, active) => {
       checkScroll()
@@ -4685,15 +4681,6 @@
 
                 <Icon name="leave" />
               </button>-->
-
-                {#if showCustomWindowActions}
-                  <button
-                    on:click={() => openSettings()}
-                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  >
-                    <Icon name="settings" />
-                  </button>
-                {/if}
               </div>
             </SidebarMetaOverlay>
 
