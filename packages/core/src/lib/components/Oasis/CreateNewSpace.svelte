@@ -509,7 +509,7 @@
         </div>
       {/if}
       <div class="input-wrapper z-20">
-        <div class="folder-rules">
+        <div class="folder-rules" data-tooltip-target="smart-space-description">
           {#if $activePillConfig}
             <div class="prompt-with-pill">
               <span>{$userPrompt}</span>
@@ -753,12 +753,12 @@
     font-size: 1.25rem;
     background: transparent;
     font-weight: 500;
-    min-width: 25rem;
+    min-width: 28rem;
     margin-top: 8px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     border: none;
-    padding: 0.5rem 0;
+    padding: 0.5rem 0.5rem;
     width: 100%;
     color: #28568f;
     transition: border-color 0.3s;
@@ -840,7 +840,7 @@
   }
 
   .template-prompts {
-    width: 28rem;
+    width: 30rem;
     margin-top: 1rem;
   }
 

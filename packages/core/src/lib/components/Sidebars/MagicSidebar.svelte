@@ -166,6 +166,12 @@
     await handleChatSubmit()
   }
 
+  export const insertQueryIntoChat = async (query: string) => {
+    inputValue = query
+    editor.setContent(inputValue)
+    editor.focus()
+  }
+
   export const addChatWithQuery = async (query: string) => {
     const value = '<blockquote>' + query + '</blockquote>' + '</br>'
     updateChatInput(value)
@@ -734,12 +740,15 @@
     const numResources = generalMode
       ? 0
       : itemsInContext.filter((item) => item.type === 'resource').length
+
     let contextSize = generalMode ? 0 : itemsInContext.length
+    let usedInlineScreenshot = false
+    let usedPageScreenshot = false
+
+    const resourceIds: string[] = []
+    const inlineImages: string[] = []
 
     try {
-      const resourceIds: string[] = []
-      const inlineImages: string[] = []
-
       const processSpace = async (spaceId: string) => {
         const spaceContents = await resourceManager.getSpaceContents(spaceId)
         if (spaceContents) {
@@ -766,9 +775,6 @@
           }
         }
       }
-
-      let usedInlineScreenshot = false
-      let usedPageScreenshot = false
 
       for (const item of itemsInContext) {
         log.debug('Processing context item', item)
@@ -937,9 +943,12 @@
 
       await telemetry.trackPageChatMessageSent({
         contextSize: contextSize,
-        numPages: numPages,
+        numTabs: tabsInContext.length,
         numSpaces: numSpaces,
+        numResources: numResources,
+        numScreenshots: inlineImages.length,
         numPreviousMessages: previousMessages.length,
+        tookPageScreenshot: usedPageScreenshot,
         embeddingModel: $userConfigSettings.embedding_model,
         error: error
       })
@@ -1051,7 +1060,7 @@
   $: smallSize = inputValue.length < 75
 </script>
 
-{#if $onboardingOpen}
+<!-- {#if $onboardingOpen}
   <Onboarding
     on:close={closeOnboarding}
     title="What you see is what you chat"
@@ -1100,7 +1109,7 @@
     warning="Chat can make mistakes. Verify results."
     buttonText="Continue"
   />
-{/if}
+{/if} -->
 
 <div
   class="flex flex-col h-full relative overflow-hidden"
@@ -1418,6 +1427,7 @@
         <div
           class="flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
           transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
+          data-tooltip-target="context-bar"
         >
           <div class=" flex-row items-center gap-2 flex">
             <ContextBubbles
@@ -1513,6 +1523,8 @@
             itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
             handleChatSubmit()
           }}
+          data-tooltip-action="send-chat-message"
+          data-tooltip-target="send-chat-message"
           disabled={!inputValue || $magicPage.running}
         >
           {#if $magicPage.running && !$optToggled}

@@ -270,7 +270,8 @@ export enum PageChatUpdateContextEventAction {
 export enum PageChatUpdateContextEventTrigger {
   DragAndDrop = 'drag_and_drop',
   TabSelection = 'tab_selection',
-  ChatAddContextMenu = 'chat_add_context_menu'
+  ChatAddContextMenu = 'chat_add_context_menu',
+  Onboarding = 'onboarding'
 }
 
 export enum SelectTabEventAction {

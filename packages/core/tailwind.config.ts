@@ -22,6 +22,9 @@ const config: Config = {
       }
     },
     extend: {
+      fontFamily: {
+        gambarino: ['Gambarino-Display', 'serif']
+      },
       typography: ({ theme }) => ({
         DEFAULT: {
           css: {

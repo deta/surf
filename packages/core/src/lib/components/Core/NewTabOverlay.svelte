@@ -62,6 +62,8 @@
   import stuffSmart from '../../../../public/assets/demo/stuffsmart.gif'
   import stuffSearch from '../../../../public/assets/demo/stuffsearch.gif'
 
+  import Tooltip from '../Onboarding/Tooltip.svelte'
+
   import {
     MEDIA_TYPES,
     createResourcesFromMediaItems,
@@ -1263,7 +1265,7 @@
                   <Onboarding
                     on:close={closeOnboarding}
                     title="Stay on top of your stuff"
-                    tip="Tip: Hover over any element to see how it works."
+                    tip=""
                     sections={[
                       {
                         title: 'Save anything',
@@ -1312,6 +1314,7 @@
                 </div>
 
                 <div class="stuff-wrap h-full w-full relative">
+                  <Tooltip rootID="stuff" />
                   {#if showTabSearch === 2 && ($selectedSpaceId === 'all' || $selectedSpaceId === null)}
                     <button
                       class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"

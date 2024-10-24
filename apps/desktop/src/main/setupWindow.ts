@@ -9,8 +9,8 @@ export function createSetupWindow() {
   const setupWindowSession = session.fromPartition('persist:surf-app-session')
 
   setupWindow = new BrowserWindow({
-    width: 600,
-    height: 800,
+    width: 1270,
+    height: 820,
     fullscreenable: false,
     show: false,
     resizable: false,

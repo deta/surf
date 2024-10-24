@@ -20,3 +20,15 @@ body {
   padding: 0;
   margin: 0;
 }
+
+@font-face {
+  font-family: 'Gambarino-Display';
+  src:
+    url('./fonts/Gambarino-Regular.woff2') format('woff2'),
+    url('./fonts/Gambarino-Regular.woff') format('woff'),
+    url('./fonts/Gambarino-Regular.ttf') format('truetype'),
+    url('./fonts/Gambarino-Regular.eot') format('embedded-opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

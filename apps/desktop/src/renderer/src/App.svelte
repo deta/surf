@@ -3,6 +3,8 @@
   import '../../app.css'
   import './assets/fonts/Bayshore.woff2'
   import './assets/fonts/Bayshore.woff'
+  import './assets/fonts/Gambarino-Regular.woff'
+  import './assets/fonts/Gambarino-Regular.woff2'
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
   import browserBackground from './assets/bg.webp'

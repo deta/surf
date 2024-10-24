@@ -732,6 +732,7 @@
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   data-selectable
   data-selectable-id={resource.id}
+  data-tooltip-target="stuff-example-resource"
   use:contextMenu={{
     canOpen: interactive,
     items: [

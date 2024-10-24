@@ -3,8 +3,33 @@
 @tailwind utilities;
 
 @font-face {
+  font-family: 'Inter';
+  src: url('./renderer/src/assets/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gambarino-Display';
+  src:
+    url('/renderer/src/assets/fonts/Gambarino-Regular.woff2') format('woff2'),
+    url('/renderer/src/assets/fonts/Gambarino-Regular.woff') format('woff'),
+    url('/renderer/src/assets/fonts/Gambarino-Regular.ttf') format('truetype'),
+    url('/renderer/src/assets/fonts/Gambarino-Regular.eot') format('embedded-opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Bayshore';
-  src: local("Bayshore"),
+  src:
+    local('Bayshore'),
     url('./renderer/src/assets/fonts/Bayshore.woff2') format('woff2'),
     url('./renderer/src/assets/fonts/Bayshore.woff') format('woff');
+}
+
+:global(.font-gambarino) {
+  font-family: 'Gambarino';
 }

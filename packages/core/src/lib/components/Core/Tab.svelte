@@ -947,7 +947,7 @@
       border-radius: 15px;
 
       //@apply animate-text-shimmer;
-      @apply bg-gradient-to-r from-indigo-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
+      @apply bg-gradient-to-r from-sky-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
       animation: text-shimmer 2s infinite linear;
     }
   }

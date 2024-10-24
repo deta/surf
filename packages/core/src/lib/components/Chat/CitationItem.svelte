@@ -343,6 +343,7 @@
   class:active={$highlightedCitation === uniqueID}
   class:icon={citationType === 'image' && !skipParsing}
   class={className}
+  data-tooltip-target="chat-citation"
   use:contextMenu={contextMenuData}
   draggable={true}
   use:HTMLDragItem.action={{}}

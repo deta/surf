@@ -331,6 +331,10 @@ const template = [
     submenu: [
       { label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet(), accelerator: 'F1' },
       {
+        label: 'Open Welcome Page',
+        click: () => ipcSenders.openWelcomePage()
+      },
+      {
         label: 'Give Feedback',
         click: () => ipcSenders.openFeedbackPage(),
         accelerator: 'CmdOrCtrl+Shift+H'

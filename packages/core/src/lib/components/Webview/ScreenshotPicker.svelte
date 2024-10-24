@@ -16,6 +16,7 @@
   import { EventContext, ResourceTypes, SaveToOasisEventTrigger } from '@horizon/types'
 
   export let mode: ScreenshotPickerMode = 'inline'
+  export let onboarding = false
 
   const sffs = new SFFS()
   const dispatch = createEventDispatcher<{
@@ -717,18 +718,20 @@
       style="left: {rect.x + rect.width + 8}px; top: {rect.y}px;"
       bind:this={buttonsElement}
     >
-      {#each menuItems as item, index}
-        <button
-          class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium bg-neutral-50 !ring-0 !ring-transparent transition-colors"
-          on:click={() => handleMenuItemClick(index)}
-          use:tooltip={{
-            text: item.tooltip,
-            position: 'top'
-          }}
-        >
-          <Icon name={item.icon} size="16px" />
-        </button>
-      {/each}
+      {#if onboarding}
+        {#each menuItems as item, index}
+          <button
+            class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium bg-neutral-50 !ring-0 !ring-transparent transition-colors"
+            on:click={() => handleMenuItemClick(index)}
+            use:tooltip={{
+              text: item.tooltip,
+              position: 'top'
+            }}
+          >
+            <Icon name={item.icon} size="16px" />
+          </button>
+        {/each}
+      {/if}
     </div>
 
     <div
@@ -879,9 +882,11 @@
 
 {#if isInstructionsVisible}
   <div
-    class="instructions fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-5 py-2.5 rounded-full text-sm z-[10000]"
+    class="instructions fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-5 py-2.5 rounded-full text-lg flex items-center gap-2 select-none pointer-events-none hover:opacity-0"
+    style="z-index: 9993231322131232132131231231211240;"
   >
-    Drag to select a region
+    <Icon name="cursor-arrow-rays" size="22px" />
+    Click and drag anywhere to select a region
   </div>
 {/if}
 

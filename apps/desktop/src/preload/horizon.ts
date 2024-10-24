@@ -330,6 +330,14 @@ const api = {
     }
   },
 
+  onOpenWelcomePage: (callback: () => void) => {
+    try {
+      IPC_EVENTS_RENDERER.openWelcomePage.on(() => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onAdBlockerStateChange: (callback: (partition: string, state: boolean) => void) => {
     IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
       callback(partition, state)

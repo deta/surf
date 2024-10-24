@@ -93,6 +93,7 @@ export const getUserConfig = (path?: string) => {
       annotations_sidebar: false,
       onboarding: {
         completed_welcome: false,
+        completed_welcome_v2: false,
         completed_chat: false,
         completed_stuff: false
       },
@@ -111,6 +112,7 @@ export const getUserConfig = (path?: string) => {
   if (storedConfig.settings.onboarding === undefined) {
     storedConfig.settings.onboarding = {
       completed_welcome: false,
+      completed_welcome_v2: false,
       completed_chat: false,
       completed_stuff: false
     }

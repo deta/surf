@@ -11,7 +11,11 @@ export default {
   ],
 
   theme: {
-    extend: {}
+    extend: {
+      fontFamily: {
+        gambarino: ['Gambarino-Display', 'serif']
+      }
+    }
   },
 
   plugins: []

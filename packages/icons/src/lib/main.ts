@@ -85,6 +85,7 @@ import PinnedOff from './Icons/PinnedOff.svelte'
 import ArrowUpRight from './Icons/ArrowUpRight.svelte'
 import Menu from './Icons/Menu.svelte'
 import Language from './Icons/Language.svelte'
+import Circle from './Icons/Circle.svelte'
 import CircleDot from './Icons/CircleDot.svelte'
 import CircleCheck from './Icons/CircleCheck.svelte'
 import MessageForward from './Icons/MessageForward.svelte'
@@ -184,6 +185,7 @@ export const icons = {
   pin: Pin,
   'pinned-off': PinnedOff,
   language: Language,
+  circle: Circle,
   'circle-dot': CircleDot,
   'circle.check': CircleCheck,
   'message-forward': MessageForward,
@@ -227,6 +229,7 @@ export {
   ListNumbered,
   ListCheck,
   Quote,
+  Circle,
   CodeBlock,
   ArrowHorizontal,
   ArrowDiagonalMinimize,

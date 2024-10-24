@@ -1,9 +1,10 @@
 import type { Tab, CreateTabOptions, TabPage, TabOnboarding } from '../types/browser.types'
 import type { Optional, Space, SpaceData } from '../types'
+import { SpaceEntryOrigin } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import type { useOasis } from './oasis'
-import { builtInSpaces } from '../constants/examples'
+import { builtInSpaces, onboardingSpace } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
 
@@ -64,69 +65,41 @@ export async function createDemoItems(
     log.debug('Created built-in space:', space)
   }
 
-  //   if (demoSpace.urls) {
-  //     const urls = demoSpace.urls
+  await createOnboardingSpace(tabsManager, oasis, createSpaceTab, resourceManager)
 
-  //     const resources = await Promise.all(
-  //       urls.map(async (url) => {
-  //         const { resource } = await extractAndCreateWebResource(
-  //           resourceManager,
-  //           url,
-  //           {
-  //             sourceURI: url
-  //           },
-  //           [ResourceTag.canonicalURL(url)]
-  //         )
-  //         return resource.id
-  //       })
-  //     )
+  await tabsManager.addOnboardingTab()
+}
 
-  //     oasis.addResourcesToSpace(space.id, resources)
-  //   }
+export async function createOnboardingSpace(
+  tabsManager: TabsManager,
+  oasis: ReturnType<typeof useOasis>,
+  createSpaceTab: any,
+  resourceManager: ResourceManager
+) {
+  const space = await oasis.createSpace({
+    folderName: onboardingSpace.name,
+    showInSidebar: true,
+    colors: ['#FFD700', '#FF8C00'],
+    builtIn: true
+  })
 
-  //   createSpaceTab(space, false)
-  // }
+  if (onboardingSpace.urls) {
+    const urls = onboardingSpace.urls
 
-  // for (const space of liveSpaces) {
-  //   const liveSpace = await oasis.createSpace({
-  //     folderName: space.name,
-  //     showInSidebar: space.active,
-  //     colors: ['#FFD700', '#FF8C00'],
-  //     sources: [
-  //       {
-  //         id: '1',
-  //         name: space.name,
-  //         type: 'rss',
-  //         url: space.rss,
-  //         last_fetched_at: null
-  //       }
-  //     ],
-  //     sortBy: 'source_published_at',
-  //     liveModeEnabled: true
-  //   })
+    const resources = await Promise.all(
+      urls.map(async (url) => {
+        const { resource } = await extractAndCreateWebResource(
+          resourceManager,
+          url,
+          {
+            sourceURI: url
+          },
+          [ResourceTag.canonicalURL(url)]
+        )
+        return resource.id
+      })
+    )
 
-  //   if (space.active) {
-  //     createSpaceTab(liveSpace, false)
-  //   }
-  // }
-
-  // await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  // demoPages.forEach((page) => {
-  //   tabManager.addPageTab(page.url, {
-  //     active: page.active ?? false
-  //   }, {
-  //     pinned: page.pinned ?? false
-  //   })
-  // })
-
-  await tabsManager.create<TabOnboarding>(
-    {
-      title: 'Welcome To Surf',
-      icon: 'https://deta.surf/favicon-32x32.png',
-      type: 'onboarding',
-      pinned: true
-    },
-    { active: true }
-  )
+    oasis.addResourcesToSpace(space.id, resources, SpaceEntryOrigin.ManuallyAdded)
+  }
 }

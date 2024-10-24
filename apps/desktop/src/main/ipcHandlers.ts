@@ -329,6 +329,16 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.openFeedbackPage.sendToWebContents(window.webContents)
   },
 
+  openWelcomePage: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openWelcomePage.sendToWebContents(window.webContents)
+  },
+
   adBlockChanged: (partition: string, state: boolean) => {
     const window = getMainWindow()
     if (!window) {

@@ -52,7 +52,7 @@
   import TabItem from './Core/Tab.svelte'
   import { type ShortcutMenuEvents } from './Shortcut/ShortcutMenu.svelte'
   import '../../app.css'
-  import { createDemoItems } from '../service/demoitems'
+  import { createDemoItems, createOnboardingSpace } from '../service/demoitems'
 
   import './index.scss'
   import type {
@@ -107,9 +107,12 @@
     type Download,
     EventContext,
     SelectTabEventAction,
-    MultiSelectResourceEventAction
+    MultiSelectResourceEventAction,
+    PageChatUpdateContextEventTrigger
   } from '@horizon/types'
+  import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
+  import { onboardingSpace } from '../constants/examples'
   import { SFFS } from '../service/sffs'
   import OasisResourceModalWrapper from './Oasis/OasisResourceModalWrapper.svelte'
   import { provideOasis, colorPairs } from '../service/oasis'
@@ -146,6 +149,8 @@
   } from '../utils/screenshot'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
+  import Tooltip from './Onboarding/Tooltip.svelte'
+  import { launchTimeline, endTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
 
   let activeTabComponent: TabItem | null = null
@@ -159,6 +164,9 @@
   let magicSidebar: MagicSidebar
   let isFirstButtonVisible = true
   let containerRef: Element
+
+  const isDev = import.meta.env.DEV
+  const onboardingActive = writable(false)
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -322,6 +330,14 @@
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
     tabsManager.makePreviousActive()
+  }
+
+  $: if (onboardingActive) {
+    if ($activeTab?.type === 'onboarding') {
+      onboardingActive.set(false)
+    } else {
+      onboardingActive.set(true)
+    }
   }
 
   const openResourceDetailsModal = (resourceId: string, from?: OpenResourceEventFrom) => {
@@ -1125,6 +1141,8 @@
     selectedTabs.set(new Set())
     lastSelectedTabId.set(null)
 
+    handleEndOnboardingTooltips()
+
     tabs.update((x) => {
       return x.map((tab) => {
         return {
@@ -1813,6 +1831,10 @@
 
     await Promise.allSettled(
       tabs.map(async (tab) => {
+        if (tab.type === 'onboarding') {
+          log.debug('Ignoring onboarding tab', tab.id)
+          return
+        }
         try {
           await prepareTabForChatContext(tab)
         } catch (e: any) {
@@ -2527,27 +2549,105 @@
 
     const space = await oasis.getSpace(spaceId)
 
-    if (space) {
-      let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
-      if (tab) {
-        tabsManager.makeActive(tab.id)
-      } else if (!tab) {
-        tab = await tabsManager.addSpaceTab(space, { active: true })
+    if (!space) {
+      log.error('Space not found', spaceId)
+      toasts.error('Space not found')
+      return
+    }
+
+    // When the user drops the onboarding space into the chat we start the onboarding
+    const ONBOARDING_SPACE_NAME = onboardingSpace.name
+    if (space.name.folderName === ONBOARDING_SPACE_NAME) {
+      handleAddContextItem(
+        new CustomEvent('add-context-item', {
+          detail: {
+            item: {
+              id: space.id,
+              type: 'space',
+              data: space
+            },
+            trigger: PageChatUpdateContextEventTrigger.Onboarding
+          }
+        })
+      )
+
+      return
+    }
+
+    let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
+    if (tab) {
+      tabsManager.makeActive(tab.id)
+    } else if (!tab) {
+      tab = await tabsManager.addSpaceTab(space, { active: true })
+    }
+
+    if (tab) {
+      openRightSidebarTab('chat')
+      await includeTabAndExcludeOthersFromMagic(tab.id)
+
+      // Wait for the chat to be ready
+      await wait(500)
+
+      if (magicSidebar) {
+        magicSidebar.startChatWithQuery(text)
+      } else {
+        log.error('Magic sidebar not found')
+        toasts.error('Failed to start chat with space')
       }
+    } else {
+      log.error('Failed to open space as tab')
+      toasts.error('Failed to open space')
+    }
+  }
 
+  const handleChattingWithOnboardingSpace = async (spaceName: string) => {
+    const ONBOARDING_SPACE_NAME = onboardingSpace.name
+    const ONBOARDING_SPACE_QUERY = onboardingSpace.query
+
+    // When the user drops the onboarding space into the chat we start the onboarding
+    if (spaceName === ONBOARDING_SPACE_NAME) {
+      endTimeline()
+      launchTimeline(OnboardingFeature.ChatWithSpaceOnboardingInChat)
+      await handleOnboardingChatWithQuery(
+        new CustomEvent('onboardingChatWithQuery', { detail: { query: ONBOARDING_SPACE_QUERY } })
+      )
+
+      showNewTabOverlay.set(0)
+      return true
+    } else {
+      return false
+    }
+  }
+
+  const handleOnboardingChatWithSpace = async (e: CustomEvent<{ id: string; query: string }>) => {
+    const { id: spaceId, query } = e.detail
+
+    const space = await oasis.getSpace(spaceId)
+
+    if (space) {
+      let tab = $tabs.find((t) => t.spaceId === spaceId)
+      log.debug('Current tabs:', $tabs)
+      if (!tab) {
+        tab = await tabsManager.addSpaceTab(space, { active: false })
+        log.debug('Added new space tab:', tab)
+      }
       if (tab) {
-        openRightSidebarTab('chat')
+        await tick()
         await includeTabAndExcludeOthersFromMagic(tab.id)
+        openRightSidebarTab('chat')
 
-        // Wait for the chat to be ready
-        await wait(500)
-
-        if (magicSidebar) {
-          magicSidebar.startChatWithQuery(text)
-        } else {
-          log.error('Magic sidebar not found')
-          toasts.error('Failed to start chat with space')
+        const attemptInsertQuery = (retries = 3) => {
+          if (magicSidebar) {
+            magicSidebar.insertQueryIntoChat(query)
+          } else if (retries > 0) {
+            setTimeout(() => attemptInsertQuery(retries - 1), 1000)
+          } else {
+            log.error('Magic sidebar not found after multiple attempts')
+            toasts.error('Failed to start chat with prefilled message')
+          }
         }
+
+        attemptInsertQuery()
       } else {
         log.error('Failed to open space as tab')
         toasts.error('Failed to open space')
@@ -2556,6 +2656,41 @@
       log.error('Space not found', spaceId)
       toasts.error('Space not found')
     }
+  }
+
+  const handleOnboardingChatWithQuery = async (e: CustomEvent<{ query: string }>) => {
+    const { query } = e.detail
+
+    openRightSidebarTab('chat')
+
+    const attemptInsertQuery = (retries = 3) => {
+      if (magicSidebar) {
+        magicSidebar.insertQueryIntoChat(query)
+      } else if (retries > 0) {
+        setTimeout(() => attemptInsertQuery(retries - 1), 1000)
+      } else {
+        log.error('Magic sidebar not found after multiple attempts')
+        toasts.error('Failed to start chat with prefilled message')
+      }
+    }
+
+    attemptInsertQuery()
+  }
+
+  const handleLaunchOnboardingTooltips = (timeline: OnboardingFeature) => {
+    launchTimeline(timeline)
+  }
+
+  const handleEndOnboardingTooltips = () => {
+    console.log('end onboarding tooltips')
+    endTimeline()
+  }
+
+  const handleOpenOnboardingTabs = (e: CustomEvent<string[]>) => {
+    const tabUrls = e.detail
+    tabUrls.forEach((url) => {
+      tabsManager.addPageTab(url, { active: false })
+    })
   }
 
   let maxWidth = window.innerWidth
@@ -2760,6 +2895,10 @@
 
     window.api.onOpenFeedbackPage(() => {
       openFeedback()
+    })
+
+    window.api.onOpenWelcomePage(() => {
+      openWelcomeTab()
     })
 
     window.api.onOpenCheatSheet(() => {
@@ -3005,9 +3144,17 @@
       await window.api.updateInitializedTabs(true)
 
       showSplashScreen.set(false)
-    } else {
+    } else if (!userConfig?.settings.onboarding.completed_welcome_v2) {
+      openWelcomeTab()
+    } else if (isDev) {
+      // @ts-ignore
       window.createDemoItems = () => {
         createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
+      }
+
+      // @ts-ignore
+      window.createOnboardingSpace = () => {
+        createOnboardingSpace(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
       }
     }
 
@@ -3017,6 +3164,15 @@
   const openFeedback = () => {
     const url = 'https://surf.featurebase.app/'
     window.open(url, '_blank')
+  }
+
+  const openWelcomeTab = async () => {
+    const onboardingTab = $tabs.find((tab) => tab.type === 'onboarding')
+    if (onboardingTab) {
+      tabsManager.makeActive(onboardingTab.id)
+    } else {
+      await tabsManager.addOnboardingTab(false)
+    }
   }
 
   const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
@@ -3835,6 +3991,9 @@
   const handleAddContextItem = (e: CustomEvent<AddContextItemEvent>) => {
     const { item, trigger } = e.detail
 
+    // This is needed for the onboarding to get to the next step
+    handleChattingWithOnboardingSpace(e.detail.item.data.name.folderName)
+
     additionalChatContextItems.update((additionalChatContextItems) => {
       return [...additionalChatContextItems, item]
     })
@@ -3894,6 +4053,7 @@
 
 <ToastsProvider service={toasts} />
 
+<Tooltip rootID="body" />
 <!-- <pre
   style="position: fixed; bottom: 1rem; right: 1rem; top:1rem; z-index: 10000; background: black; color: white; overflow-y: scroll;"
   aria-hidden={true}>
@@ -3913,6 +4073,7 @@
 {#if $showScreenshotPicker === true}
   <ScreenshotPicker
     mode={$screenshotPickerMode}
+    onboarding={$onboardingActive}
     on:save={handleSaveScreenshot}
     on:copy={handleCopyScreenshot}
     on:screenshot-for-chat={handleTakeScreenshotForChat}
@@ -4714,9 +4875,20 @@
                 <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
               {:else if tab.type === 'onboarding'}
                 <TabOnboarding
-                  on:openChat={() => openRightSidebarTab('chat')}
+                  on:openChat={handleOnboardingChatWithQuery}
                   on:openStuff={() => ($showNewTabOverlay = 2)}
                   on:openScreenshot={() => openScreenshotPicker()}
+                  on:launchTimeline={(e) => handleLaunchOnboardingTooltips(e.detail)}
+                  on:endTimeline={() => handleEndOnboardingTooltips}
+                  on:batchOpenTabs={handleOpenOnboardingTabs}
+                  on:createOnboardingSpace={() => {
+                    createOnboardingSpace(
+                      tabsManager,
+                      oasis,
+                      tabsManager.addSpaceTab,
+                      resourceManager
+                    )
+                  }}
                 />
               {/if}
             </div>
@@ -4810,7 +4982,10 @@
               on:remove-magic-tab={removeMagicTab}
               on:include-tab={handleIncludeTabInMagic}
               {horizontalTabs}
-              on:close-chat={() => toggleRightSidebarTab('chat')}
+              on:close-chat={() => {
+                toggleRightSidebarTab('chat')
+                handleEndOnboardingTooltips()
+              }}
               on:pick-screenshot={handlePickScreenshotForChat}
               on:remove-context-item={(e) => removeContextItem(e.detail)}
               on:add-context-item={handleAddContextItem}
@@ -5052,6 +5227,39 @@
   :global(*) {
     scrollbar-color: rgb(130, 130, 130) transparent;
     scrollbar-width: thin;
+  }
+
+  /* Pulse effect for tooltip targets */
+  :global(.tooltip-target[data-tooltip-target]) {
+    position: relative;
+    outline: 2px solid rgba(73, 82, 242, 0.4);
+    border-radius: 16px;
+  }
+
+  :global(.tooltip-target[data-tooltip-target]::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: inherit;
+    border-radius: calc(inherit + 8px);
+    z-index: -1;
+    animation: pulse 2s infinite;
+    filter: blur(4px);
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    }
   }
 
   .messi {

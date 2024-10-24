@@ -30,7 +30,7 @@
 {#if title && sections}
   <div
     class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-25 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24 overflow-y-scroll"
-    style="z-index: 2147483647;"
+    style="z-index: 1234567;"
   >
     <div class="gap-4 flex flex-col items-center max-w-md">
       <h1 class="text-2xl font-bold">{title}</h1>
@@ -41,32 +41,26 @@
       class="flex flex-col gap-10 w-full max-w-md border-t-[0.07rem] border-t-[rgba(0,0,0,0.15)] pt-8"
     >
       {#each sections as section}
-        <ResourceOverlay>
-          <div class="flex items-start gap-4" slot="content">
-            {#if section.icon}
-              {@html section.icon}
-            {:else if section.iconName}
-              <div
-                class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
-              >
-                <Icon name={section.iconName} />
-              </div>
-            {/if}
-            <div class="flex-1 flex-grow">
-              {#if section.title}
-                <h2 class="font-semibold">{section.title}</h2>
-              {/if}
-              <div>{@html section.description}</div>
-              {#if section.hint}
-                <p class="opacity-70">{section.hint}</p>
-              {/if}
+        <div class="flex items-start gap-4">
+          {#if section.icon}
+            {@html section.icon}
+          {:else if section.iconName}
+            <div
+              class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
+            >
+              <Icon name={section.iconName} />
             </div>
+          {/if}
+          <div class="flex-1 flex-grow">
+            {#if section.title}
+              <h2 class="font-semibold">{section.title}</h2>
+            {/if}
+            <div>{@html section.description}</div>
+            {#if section.hint}
+              <p class="opacity-70">{section.hint}</p>
+            {/if}
           </div>
-
-          <div slot="caption">
-            <img src={section.imgSrc} class="" alt={section.imgAlt} />
-          </div>
-        </ResourceOverlay>
+        </div>
       {/each}
     </div>
 

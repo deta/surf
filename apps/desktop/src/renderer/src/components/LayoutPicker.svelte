@@ -40,9 +40,8 @@
         }}
         bind:this={videoRefs.horizontal}
       ></video>
-
-      <span>Horizontal Tabs</span>
     </label>
+    <span>Horizontal Tabs</span>
   </div>
   <div class="radio-item">
     <input
@@ -65,16 +64,15 @@
         }}
         bind:this={videoRefs.vertical}
       ></video>
-
-      <span>Vertical Tabs</span>
     </label>
+    <span>Vertical Tabs</span>
   </div>
 </div>
 
 <style lang="scss">
   span {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    font-size: 1rem;
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 1.25rem;
     line-height: 1.6;
     color: var(--color-text);
     -webkit-font-smoothing: antialiased;
@@ -82,42 +80,19 @@
     margin: 0;
     padding: 0;
     letter-spacing: 0.01em;
-  }
-
-  span {
-    display: inline-block;
-  }
-
-  .radio-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding-left: 0.25rem;
+    color: #fff;
+    text-align: center;
+    display: block;
+    margin-top: 0.75rem;
   }
 
   .radio-container {
     display: flex;
-    gap: 20px;
+    gap: 4rem;
     padding: 1rem 0.5rem;
   }
 
-  .radio-form {
-    display: flex;
-    padding-bottom: 2rem;
-    gap: 1rem;
-  }
-
-  .radio-submit {
-    margin-top: 2rem;
-  }
-
   .radio-item {
-    .media-container {
-      position: relative;
-      overflow: hidden;
-      border-radius: 8px;
-    }
-
     label {
       cursor: pointer;
     }
@@ -126,33 +101,36 @@
   .radio-item input[type='radio'] {
     display: none;
   }
+
   .radio-item label {
+    background: rgba(255, 255, 255, 0.6);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
+    padding: 1px;
     gap: 1rem;
-    border: 0.5px solid #ccc;
+    outline: 0;
     border-radius: 12px;
-    transition: all 0.3s ease;
+    transition: all 0.06s ease;
   }
 
   .radio-item label:hover {
     background-color: #eff5ff;
   }
   .radio-item input[type='radio']:checked + label {
-    border-color: #3a83ea;
-    background-color: #e2eeff;
+    outline: 4px solid rgba(59, 130, 246, 0.8);
+    color: #fff;
+  }
+  .radio-item input[type='radio']:checked + label span {
+    color: #fff;
+    font-weight: 600;
   }
   .radio-item span {
     color: #333;
   }
-  .settings-ai-models {
-    text-align: left;
-  }
   video {
     width: 240px;
     height: 100%;
-    border-radius: 8px;
+    border-radius: 11px;
   }
 </style>

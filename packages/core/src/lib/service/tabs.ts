@@ -18,6 +18,7 @@ import type {
   SpaceData,
   Tab,
   TabImporter,
+  TabOnboarding,
   TabPage,
   TabResource,
   TabSpace
@@ -652,7 +653,7 @@ export class TabsManager {
     return this.addResourceTab(resource, opts)
   }
 
-  async addImporterTab() {
+  async addImporterTab(opts?: CreateTabOptions) {
     this.log.debug('Creating new importer tab')
     const newTab = await this.create<TabImporter>(
       {
@@ -663,7 +664,22 @@ export class TabsManager {
         pinned: false,
         magic: false
       },
-      { active: true }
+      { active: true, ...opts }
+    )
+
+    return newTab
+  }
+
+  async addOnboardingTab(pinned = true, opts?: CreateTabOptions) {
+    this.log.debug('Creating new onboarding tab')
+    const newTab = await this.create<TabOnboarding>(
+      {
+        title: 'Welcome To Surf',
+        icon: 'https://deta.surf/favicon-32x32.png',
+        type: 'onboarding',
+        pinned: pinned
+      },
+      { active: true, ...opts }
     )
 
     return newTab

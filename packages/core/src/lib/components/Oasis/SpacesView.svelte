@@ -13,6 +13,7 @@
   import type { Readable } from 'svelte/store'
   import type { Space } from '@horizon/core/src/lib/types'
   import { useTelemetry } from '../../service/telemetry'
+  import { onboardingSpace } from '../../constants/examples'
   import { CreateSpaceEventFrom, OpenSpaceEventTrigger } from '@horizon/types'
   import type { ResourceManager } from '../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
@@ -255,6 +256,18 @@
     }
   }
 
+  const handleTooltipTarget = (folder: any) => {
+    if (folder.id === 'all') {
+      return 'stuff-spaces-all'
+    }
+
+    if (folder.name.folderName === onboardingSpace.name) {
+      return 'demo-space'
+    }
+
+    return undefined
+  }
+
   onMount(() => {
     log.debug('Mounted SpacesView')
     const resizeObserver = new ResizeObserver(updateNewSpaceButtonPosition)
@@ -286,10 +299,10 @@
   bind:this={sidebarElement}
   on:wheel|passive={handleWheel}
 >
-  <div class="folders-wrapper" bind:this={foldersWrapper}>
+  <div class="folders-wrapper" bind:this={foldersWrapper} data-tooltip-target="stuff-spaces-list">
     {#each $filteredSpaces as folder (folder.id)}
       {#key folder.id}
-        <div class="folder-wrapper">
+        <div class="folder-wrapper" data-tooltip-target={handleTooltipTarget(folder)}>
           <Folder
             {folder}
             on:select={() => handleSpaceSelect(folder.id)}
@@ -317,6 +330,8 @@
       $spaces.find((space) => space.id === $selectedSpace)?.name.folderName === '.tempspace'}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
+    data-tooltip-target="create-space"
+    data-tooltip-action="action-new-space"
   >
     <div class="icon-wrapper">
       <Icon name="add" size="2rem" color={'white'} />

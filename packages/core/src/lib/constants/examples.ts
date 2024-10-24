@@ -46,11 +46,18 @@ export const builtInSpaces = [
   }
 ] as WithRequired<SpaceData, 'folderName' | 'colors'>[]
 
-export const demoSpaces = [
-  {
-    name: 'Deta',
-    urls: ['https://deta.surf', 'https://deta.surf/cheatsheets/v0.0.1']
-  }
+export const onboardingSpace = {
+  name: 'Apple iPhone Keynotes',
+  query: 'What does Steve say about styluses?',
+  urls: [
+    'https://www.youtube.com/watch?v=VKpaK670U7s',
+    'https://www.youtube.com/watch?v=PugKQZHPut8'
+  ]
+}
+
+export const onboardingTabs = [
+  'https://en.wikipedia.org/wiki/Vannevar_Bush',
+  'https://press.stripe.com/the-dream-machine'
 ]
 
 export const liveSpaces = [

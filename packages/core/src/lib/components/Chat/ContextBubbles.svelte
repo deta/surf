@@ -211,25 +211,25 @@
     class="flex items-center -space-x-3 h-full relative overflow-x-autoscrollbar-hide"
     style="width: {$containerWidth}px; height: 64px; min-width: 100%; overflow-x: scroll;"
   >
-    {#each pills as pill (pill.id)}
-      {#if pill.type === 'space'}
+    {#each pills as pill (pill?.id)}
+      {#if pill?.type === 'space'}
         <ContextBubbleSpace
           {pill}
-          pillProperties={$pillProperties[pills.findIndex((p) => p.id === pill.id)]}
+          pillProperties={$pillProperties[pills.findIndex((p) => p?.id === pill?.id)] ?? {}}
           on:remove-item
           on:select
         />
-      {:else if pill.type === 'image'}
+      {:else if pill?.type === 'image'}
         <ContextBubbleImage
           {pill}
-          pillProperties={$pillProperties[pills.findIndex((p) => p.id === pill.id)]}
+          pillProperties={$pillProperties[pills.findIndex((p) => p?.id === pill?.id)] ?? {}}
           on:remove-item
           on:select
         />
-      {:else if pill.type === 'resource'}
+      {:else if pill?.type === 'resource'}
         <ContextBubbleResource
           {pill}
-          pillProperties={$pillProperties[pills.findIndex((p) => p.id === pill.id)]}
+          pillProperties={$pillProperties[pills.findIndex((p) => p?.id === pill?.id)] ?? {}}
           on:remove-item
           on:select
         />

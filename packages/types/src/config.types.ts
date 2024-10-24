@@ -26,6 +26,7 @@ export type UserSettings = {
   search_engine: string
   onboarding: {
     completed_welcome: boolean
+    completed_welcome_v2: boolean
     completed_chat: boolean
     completed_stuff: boolean
   }
