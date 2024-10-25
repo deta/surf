@@ -70,21 +70,23 @@ impl FromSql for EmbeddingType {
     }
 }
 
-#[derive(strum_macros::Display, Debug, PartialEq, EnumString, Serialize, Deserialize, Clone)]
+#[derive(
+    strum_macros::Display, Debug, Eq, PartialEq, EnumString, Serialize, Deserialize, Clone, Hash,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum ResourceTextContentType {
+    Annotation,
+    Article,
+    ChatMessage,
+    ChatThread,
+    Document,
+    Image,
+    ImageCaptions,
+    ImageTags,
+    Link,
     Note,
     PDF,
     Post,
-    ChatMessage,
-    Document,
-    Article,
-    Link,
-    ChatThread,
-    Annotation,
-    Image,
-    ImageTags,
-    ImageCaptions,
     YoutubeTranscript,
 }
 
