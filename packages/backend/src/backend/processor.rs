@@ -45,19 +45,20 @@ impl Processor {
                     let resource_id = resource.resource.id.clone();
                     self.emit_processing_status(&resource_id, ResourceProcessingStatus::Started);
 
-                    let result = self.handle_process_resource(resource);
-
-                    match result {
+                    match self.handle_process_resource(resource) {
                         Ok(_) => self.emit_processing_status(
                             &resource_id,
                             ResourceProcessingStatus::Finished,
                         ),
-                        Err(err) => self.emit_processing_status(
-                            &resource_id,
-                            ResourceProcessingStatus::Failed {
-                                message: format!("error while processing resource: {err:?}"),
-                            },
-                        ),
+                        Err(err) => {
+                            tracing::error!("failed to process resource: {err}");
+                            self.emit_processing_status(
+                                &resource_id,
+                                ResourceProcessingStatus::Failed {
+                                    message: format!("error while processing resource: {err:?}"),
+                                },
+                            )
+                        }
                     }
                 }
             }
