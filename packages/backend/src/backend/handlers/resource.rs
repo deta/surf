@@ -3,8 +3,7 @@ use std::collections::HashSet;
 use crate::{
     backend::{
         message::{
-            AIMessage, ProcessorMessage, ResourceMessage,
-            ResourceTagMessage, TunnelOneshot,
+            AIMessage, ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot,
         },
         worker::{send_worker_response, Worker},
     },
@@ -501,11 +500,10 @@ impl Worker {
         tx.commit()?;
 
         // TODO: no embeddings for image tags and captions for now
-        match content_type {
-            ResourceTextContentType::ImageTags | ResourceTextContentType::ImageCaptions => {
-                return Ok(());
-            }
-            _ => (),
+        if content_type == ResourceTextContentType::ImageTags
+            || content_type == ResourceTextContentType::ImageCaptions
+        {
+            return Ok(());
         }
 
         self.upsert_embeddings(
@@ -558,7 +556,6 @@ impl Worker {
             Err(e) => {
                 self.db
                     .delete_all_embedding_resources(&resource_id, embedding_type)?;
-                eprintln!("failed to upsert embeddings: {:#?}", e);
                 return Err(e);
             }
         }

@@ -1,4 +1,6 @@
-use super::message::{AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage};
+use super::message::{
+    AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
+};
 use crate::{ai::ai::AI, backend::handlers::*, store::db::Database, BackendError, BackendResult};
 
 use crossbeam_channel as crossbeam;
@@ -163,34 +165,35 @@ pub fn send_worker_response<T: Serialize + Send + 'static>(
         None => return,
     };
 
-    let serialized_response = match &result {
-        Ok(value) => serde_json::to_string(value),
-        Err(e) => serde_json::to_string(&e.to_string()),
-    };
-
     match oneshot {
         TunnelOneshot::Rust(tx) => {
-            let response =
-                serialized_response.map_err(|e| BackendError::GenericError(e.to_string()));
+            let response = result.map(|t| serde_json::to_string(&t)).and_then(|inner| {
+                inner.map_err(|e| {
+                    BackendError::GenericError(format!("Failed to serialize response: {}", e))
+                })
+            });
             let _ = tx
                 .send(response)
                 .map_err(|e| eprintln!("oneshot receiver is dropped: {e}"));
         }
         TunnelOneshot::Javascript(deferred) => {
+            let serialized_response = match result.as_ref() {
+                Ok(data) => serde_json::to_string(data),
+                Err(err) => Ok(err.to_string()),
+            };
             channel.send(move |mut cx| {
                 match serialized_response {
-                    Ok(response) => {
-                        let resp = cx.string(&response);
+                    Ok(data) => {
+                        let data = cx.string(&data);
                         if result.is_ok() {
-                            deferred.resolve(&mut cx, resp);
+                            deferred.resolve(&mut cx, data);
                         } else {
-                            deferred.reject(&mut cx, resp);
+                            deferred.reject(&mut cx, data);
                         }
                     }
-                    Err(serialize_error) => {
-                        let error_message =
-                            cx.string(format!("Failed to serialize response: {}", serialize_error));
-                        deferred.reject(&mut cx, error_message);
+                    Err(err) => {
+                        let message = cx.string(format!("failed to serialize response: {}", err));
+                        deferred.reject(&mut cx, message);
                     }
                 }
                 Ok(())
