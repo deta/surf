@@ -9,13 +9,14 @@ pub struct DocsSimilarity {
 }
 
 fn new_index(embeddings_dim: &usize) -> BackendResult<Index> {
-    let mut options = IndexOptions::default();
-    options.dimensions = *embeddings_dim;
-    options.metric = MetricKind::Cos;
-    options.quantization = ScalarKind::F32;
-
-    let index = Index::new(&options)?;
-    Ok(index)
+    Index::new(&IndexOptions {
+        dimensions: *embeddings_dim,
+        metric: MetricKind::Cos,
+        quantization: ScalarKind::F32,
+        multi: true,
+        ..Default::default()
+    })
+    .map_err(|err| BackendError::CxxError(err))
 }
 
 pub struct EmbeddingsStore {

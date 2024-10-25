@@ -279,7 +279,7 @@ impl LocalAIClient {
             let message = Self::read_message(&mut stream)?;
             let (is_err, message) = Self::is_error(&message);
             if is_err {
-                eprintln!("failed to upsert embeddings: {:#?}", message);
+                tracing::error!("failed to upsert embeddings: {:#?}", message);
                 return Err(BackendError::GenericError(format!(
                     "failed to upsert embeddings: {:#?}",
                     message
