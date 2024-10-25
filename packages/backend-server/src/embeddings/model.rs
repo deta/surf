@@ -56,7 +56,6 @@ fn new_fastembed_model(
 impl EmbeddingModel {
     pub fn new_remote(cache_dir: &PathBuf, mode: EmbeddingModelMode) -> BackendResult<Self> {
         let model_name: fastembed::EmbeddingModel = mode.into();
-        dbg!(&model_name);
         let model = new_fastembed_model(cache_dir, model_name.clone(), false)?;
         let chunker = ContentChunker::new(2000, 1);
         Ok(Self {
