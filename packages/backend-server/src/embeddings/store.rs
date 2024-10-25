@@ -169,10 +169,7 @@ mod tests {
             vec![0.4, 0.4],
             vec![0.5, 0.5],
         ];
-        let now = std::time::Instant::now();
         let results = store.get_docs_similarity(&query, &docs, &0.5, &2).unwrap();
-        dbg!(now.elapsed());
-        dbg!(&results);
         assert_eq!(results.len(), 2);
         for r in results.iter() {
             assert!(r.similarity <= 0.5);
