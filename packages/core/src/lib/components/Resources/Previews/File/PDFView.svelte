@@ -11,7 +11,7 @@
   let error = false
   let webview: Electron.WebviewTag
 
-  const webviewSrc = `${window.api.PDFViewerEntryPoint}?path=${encodeURIComponent(resource.path)}`
+  const webviewSrc = `${window.api.PDFViewerEntryPoint}?path=${encodeURIComponent(`file://${resource.path}`)}`
 
   onMount(() => {
     webview.addEventListener('did-finish-load', () => {

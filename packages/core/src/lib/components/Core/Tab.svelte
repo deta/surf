@@ -159,7 +159,7 @@
   $: sanitizedTitle = tab.title
     ? tab.type !== 'space'
       ? (() => {
-          if (tab.title.toLowerCase().startsWith('http')) {
+          if (tab.title.startsWith('http') || tab.title.startsWith('surf://')) {
             return tab.title
           }
           let title = tab.title

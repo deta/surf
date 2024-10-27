@@ -152,6 +152,14 @@
   }
 
   const handleNavigation = (newUrl: string) => {
+    if (newUrl.startsWith(window.api.PDFViewerEntryPoint)) {
+      try {
+        const urlParams = new URLSearchParams(new URL(newUrl).search)
+        newUrl = decodeURIComponent(urlParams.get('path') || '') || newUrl
+      } catch (err) {
+        log.error('URL parsing error:', err)
+      }
+    }
     updateUrl(newUrl)
 
     if (programmaticNavigation) {

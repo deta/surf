@@ -6,8 +6,7 @@
   import { pdfSlickStore, isThumbsbarOpen } from '../store'
 
   const urlParams = new URLSearchParams(window.location.search)
-  const path = decodeURIComponent(urlParams.get('path'))
-  export let url = `file://${path}`
+  export const url = decodeURIComponent(urlParams.get('path'))
 
   let RO: ResizeObserver
 

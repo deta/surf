@@ -99,6 +99,16 @@ export function createWindow() {
   const webviewSession = session.fromPartition('persist:horizon')
   const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
 
+  webviewSession.webRequest.onBeforeRequest((details, callback) => {
+    const shouldBlockRequest =
+      details.url.startsWith('surf:') &&
+      // navigation and APIs like webContents.loadURL should be able to request resources
+      details.resourceType !== 'mainFrame' &&
+      // only the PDF renderer should be able to request resources, cancel if webContents is unavailable
+      (!details.webContents || !details.webContents.getURL().startsWith(PDFViewerEntryPoint));
+
+    callback({ cancel: shouldBlockRequest })
+  })
   webviewSession.webRequest.onBeforeSendHeaders((details, callback) => {
     const { requestHeaders, url } = details
     const isGoogleAccounts = new URL(url).hostname === 'accounts.google.com'
@@ -143,24 +153,25 @@ export function createWindow() {
     callback({ cancel: false })
   })
 
-  mainWindowSession.protocol.handle('surf',
-    async (req: GlobalRequest) => {
-      try {
-        const id = req.url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
-        if (!id) return new Response('Invalid Surf protocol URL', { status: 400 })
+  let surfProtocolHandler = async (req: GlobalRequest) => {
+    try {
+      const id = req.url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
+      if (!id) return new Response('Invalid Surf protocol URL', { status: 400 })
 
-        const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
-        const path = join(base, id)
+      const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
+      const path = join(base, id)
 
-        return isPathSafe(base, path)
-          ? await net.fetch(`file://${path}`)
-          : new Response('Forbidden', { status: 403 })
-      } catch (err) {
-        console.error('surf protocol error:', err)
-        return new Response('Internal Server Error', { status: 500 })
-      }
+      return isPathSafe(base, path)
+        ? await net.fetch(`file://${path}`)
+        : new Response('Forbidden', { status: 403 })
+    } catch (err) {
+      console.error('surf protocol error:', err)
+      return new Response('Internal Server Error', { status: 500 })
     }
-  )
+  }
+
+  webviewSession.protocol.handle('surf', surfProtocolHandler)
+  mainWindowSession.protocol.handle('surf', surfProtocolHandler)
 
   applyCSPToSession(mainWindowSession)
   // TODO: expose these to the renderer over IPC so

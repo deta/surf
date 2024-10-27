@@ -654,6 +654,9 @@ export class TabsManager {
     if (PAGE_TABS_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) && canonicalUrl) {
       return this.addPageTab(canonicalUrl, opts)
     }
+    if (resource.type === 'application/pdf') {
+      return this.addPageTab(`surf://resource/${resource.id}`, opts)
+    }
 
     return this.addResourceTab(resource, opts)
   }

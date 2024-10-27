@@ -37,7 +37,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { writable, type Writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { PageMagic, TabPage } from '../../types/browser.types'
   import {
@@ -61,6 +61,7 @@
     WebViewEventReceiveNames,
     WebViewEventSendNames,
     type AnnotationCommentData,
+    type Download,
     type ResourceDataAnnotation,
     type ResourceDataLink,
     type WebViewEventKeyDown,
@@ -88,6 +89,7 @@
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
 
   export let tab: TabPage
+  export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
   export let historyEntriesManager: HistoryEntriesManager
   export let webview: WebviewWrapper
   export let pageMagic: PageMagic | undefined = undefined
@@ -96,6 +98,14 @@
   export let isLoading = writable(false)
   export let disableMiniBrowser = false
   export let insideMiniBrowser = false
+
+  let initialSrc =
+    tab.currentLocation ??
+    historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
+    tab.initialLocation ??
+    'about:blank'
+
+  export let url = writable<string>(initialSrc)
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
@@ -109,14 +119,6 @@
   const activeTabId = tabs.activeTabId
   const showNewTabOverlay = tabs.showNewTabOverlay
   const userConfigSettings = config.settings
-
-  let initialSrc =
-    tab.currentLocation ??
-    historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
-    tab.initialLocation ??
-    'about:blank'
-
-  export let url = writable<string>(initialSrc)
 
   export const goBack = () => webview.goBack()
   export const goForward = () => webview.goForward()
