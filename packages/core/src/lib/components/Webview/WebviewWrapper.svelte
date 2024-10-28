@@ -258,7 +258,6 @@
       let pageLoadTimeoutId: ReturnType<typeof setTimeout> | null = null
 
       const handleEvent = (event: Electron.IpcMessageEvent) => {
-        log.debug('Handling event while waiting for resource detection', event)
         if (event.channel !== 'webview-page-event') return
 
         const eventType = event.args[0] as WebViewEventSendNames

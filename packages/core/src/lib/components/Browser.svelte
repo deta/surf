@@ -1795,14 +1795,15 @@
       return fetchedResource
     }
 
+    const browserTab = $browserTabs[tab.id]
+    if (!browserTab) {
+      log.error('Browser tab not found', tab.id)
+      throw Error(`Browser tab not found`)
+    }
+
     let tabResource = await getExistingResource()
     if (!tabResource) {
       log.debug('No existing resource found for tab', tab.id)
-      const browserTab = $browserTabs[tab.id]
-      if (!browserTab) {
-        log.error('Browser tab not found', tab.id)
-        throw Error(`Browser tab not found`)
-      }
 
       const detectedResourceType = tab.currentDetectedApp?.resourceType
       if (detectedResourceType === 'application/pdf') {
@@ -1812,6 +1813,20 @@
         log.debug('Bookmarking page for chat context', tab.id)
         tabResource = await browserTab.createResourceForChat()
       }
+    } else {
+      const url =
+        tabResource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+          ?.value ??
+        tab.currentLocation ??
+        tab.initialLocation
+
+      log.debug(
+        'Existing resource found for tab, updating with fresh content',
+        tab.id,
+        tabResource.id,
+        url
+      )
+      tabResource = await browserTab.refreshResourceWithPage(tabResource, url, false)
     }
 
     if (!tabResource) {

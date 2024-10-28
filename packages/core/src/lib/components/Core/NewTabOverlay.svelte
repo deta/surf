@@ -725,7 +725,7 @@
       )
 
       const items = resources
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map(
           (resource) =>
             ({

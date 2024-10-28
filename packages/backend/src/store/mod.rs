@@ -58,6 +58,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     )?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
     cx.export_function(
+        "js__store_update_resource",
+        js_update_resource,
+    )?;
+    cx.export_function(
         "js__store_update_resource_metadata",
         js_update_resource_metadata,
     )?;
@@ -302,8 +306,6 @@ fn js_get_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     Ok(promise)
 }
-
-// fn js_update_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {}
 
 fn js_remove_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -797,6 +799,24 @@ fn js_search_history_entries_by_url_and_title(mut cx: FunctionContext) -> JsResu
         WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByUrlAndTitle(
             query, since,
         )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_update_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_json = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let resource: models::Resource = match serde_json::from_str(&resource_json) {
+        Ok(resource) => resource,
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::UpdateResource(resource)),
         deferred,
     );
 

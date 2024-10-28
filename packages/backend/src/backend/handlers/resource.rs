@@ -372,6 +372,13 @@ impl Worker {
         Ok(())
     }
 
+    pub fn update_resource(&mut self, resource: Resource) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::update_resource_tx(&mut tx, &resource)?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
         /*
         self.aiqueue_tx
@@ -667,6 +674,10 @@ pub fn handle_resource_message(
                 include_annotations,
                 space_id,
             );
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::UpdateResource(resource) => {
+            let result = worker.update_resource(resource);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::UpdateResourceMetadata(metadata) => {

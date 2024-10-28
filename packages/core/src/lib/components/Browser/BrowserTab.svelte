@@ -125,6 +125,7 @@
 
   const appDetectionCallbacks = new Map<string, (app: DetectedWebApp) => void>()
   const bookmarkingPromises = new Map<string, Promise<Resource>>()
+  const updatingResourcePromises = new Map<string, Promise<Resource>>()
 
   const debouncedAppDetection = useDebounce(async () => {
     await wait(500)
@@ -347,28 +348,58 @@
     return bookmarkingPromise
   }
 
-  async function refreshResourceWithPage(resource: Resource, url: string) {
-    log.debug('updating resource with fresh data', resource.id)
-
-    resource.updateExtractionState('running')
-
-    // Run resource detection on a fresh webview to get the latest data
-    const detectedResource = await extractResource(url, true)
-
-    log.debug('extracted resource data', detectedResource)
-
-    if (detectedResource) {
-      log.debug('updating resource with fresh data', detectedResource.data)
-      await resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
-      await resourceManager.updateResourceMetadata(resource.id, {
-        name: (detectedResource.data as any).title || tab.title || '',
-        sourceURI: url
+  export async function refreshResourceWithPage(
+    resource: Resource,
+    url: string,
+    freshWebview = false
+  ): Promise<Resource> {
+    let updatingPromise = updatingResourcePromises.get(url)
+    if (updatingPromise !== undefined) {
+      log.debug('already updating resource, piggybacking on existing promise')
+      return new Promise(async (resolve, reject) => {
+        try {
+          const resource = await updatingPromise!
+          resolve(resource)
+        } catch (e) {
+          reject(null)
+        }
       })
     }
 
-    resource.updateExtractionState('idle')
+    updatingPromise = new Promise(async (resolve, reject) => {
+      try {
+        resource.updateExtractionState('updating')
 
-    return resource
+        // Run resource detection on a fresh webview to get the latest data
+        const detectedResource = await extractResource(url, freshWebview)
+
+        log.debug('extracted resource data', detectedResource)
+
+        if (detectedResource) {
+          log.debug('updating resource with fresh data', detectedResource.data)
+          await resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+          await resourceManager.updateResourceMetadata(resource.id, {
+            name: (detectedResource.data as any).title || tab.title || '',
+            sourceURI: url
+          })
+        }
+
+        resource.updateExtractionState('idle')
+
+        resolve(resource)
+      } catch (e) {
+        log.error('error refreshing resource', e)
+        resource.updateExtractionState('idle') // TODO: support error state
+        reject(null)
+      }
+    })
+
+    updatingResourcePromises.set(url, updatingPromise)
+    updatingPromise.then(() => {
+      updatingResourcePromises.delete(url)
+    })
+
+    return updatingPromise
   }
 
   export async function bookmarkPage(opts?: BookmarkPageOpts) {
@@ -414,20 +445,7 @@
 
           if (!silent) {
             tab.resourceBookmarkedManually = true
-            await resourceManager.deleteResourceTag(
-              fetchedResource.id,
-              ResourceTagsBuiltInKeys.SILENT
-            )
-
-            await resourceManager.deleteResourceTag(
-              fetchedResource.id,
-              ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-            )
-
-            await resourceManager.deleteResourceTag(
-              fetchedResource.id,
-              ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
-            )
+            await resourceManager.markResourceAsSavedByUser(fetchedResource.id)
           }
 
           // Make sure the resource is up to date with at least the latest title and sourceURI
@@ -444,12 +462,12 @@
           })
 
           if (freshWebview) {
-            refreshResourceWithPage(fetchedResource, url)
+            log.debug('updating resource with fresh data', fetchedResource.id)
+            refreshResourceWithPage(fetchedResource, url, true)
               .then((resource) => {
                 log.debug('refreshed resource', resource)
               })
               .catch((e) => {
-                log.error('error refreshing resource', e)
                 toasts.error('Failed to refresh resource')
                 fetchedResource.updateExtractionState('idle') // TODO: support error state
               })
@@ -869,6 +887,9 @@
           createdForChat: true,
           freshWebview: false
         })
+      } else {
+        log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
+        await refreshResourceWithPage(bookmarkedResource, url, false)
       }
 
       // Check if the detected resource is different from the one we previously bookmarked

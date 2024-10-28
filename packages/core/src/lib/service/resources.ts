@@ -24,7 +24,8 @@ import {
   type Space,
   type SpaceData,
   type SpaceSource,
-  SpaceEntryOrigin
+  SpaceEntryOrigin,
+  type SFFSRawResource
 } from '../types'
 import type { Telemetry } from './telemetry'
 import {
@@ -893,6 +894,42 @@ export class ResourceManager {
     return resource
   }
 
+  async updateResource(
+    id: string,
+    data: Pick<Partial<SFFSRawResource>, 'created_at' | 'updated_at' | 'deleted'>
+  ) {
+    const resource = await this.getResource(id)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    this.log.debug('updating resource', id, data)
+
+    if (data.created_at) {
+      resource.createdAt = data.created_at
+    }
+
+    if (data.updated_at) {
+      resource.updatedAt = data.updated_at
+    }
+
+    if (data.deleted) {
+      resource.deleted = data.deleted === 1
+    }
+
+    const fullData = {
+      id: id,
+      resource_path: resource.path,
+      resource_type: resource.type,
+      created_at: resource.createdAt,
+      updated_at: resource.updatedAt,
+      deleted: resource.deleted ? 1 : 0,
+      ...data
+    } as SFFSRawResource
+
+    await this.sffs.updateResource(fullData)
+  }
+
   async updateResourceData(id: string, data: Blob, write = true) {
     const resource = await this.getResource(id)
     if (!resource) {
@@ -965,6 +1002,17 @@ export class ResourceManager {
     await this.sffs.deleteResourceTag(resourceId, tagName)
 
     resource.removeTag(tagName)
+  }
+
+  async markResourceAsSavedByUser(resourceId: string) {
+    await this.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
+
+    await this.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+
+    await this.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.CREATED_FOR_CHAT)
+
+    // Note: we update the created timestamp to make sure the date (and order) is what the user expects
+    await this.updateResource(resourceId, { created_at: new Date().toISOString() })
   }
 
   async createResourceNote(

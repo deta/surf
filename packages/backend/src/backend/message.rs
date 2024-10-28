@@ -122,6 +122,7 @@ pub enum ResourceMessage {
         include_annotations: Option<bool>,
         space_id: Option<String>,
     },
+    UpdateResource(Resource),
     UpdateResourceMetadata(ResourceMetadata),
     UpsertResourceTextContent {
         resource_id: String,

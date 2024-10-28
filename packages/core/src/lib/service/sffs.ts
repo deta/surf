@@ -20,7 +20,8 @@ import type {
   Space,
   SpaceEntry,
   SpaceData,
-  SpaceEntryOrigin
+  SpaceEntryOrigin,
+  SFFSRawResource
 } from '../types'
 
 import type {
@@ -253,6 +254,15 @@ export class SFFS {
     }
 
     return this.convertCompositeResourceToResource(composite)
+  }
+
+  async updateResource(resource: SFFSRawResource) {
+    this.log.debug('updating resource with id', resource.id, 'data:', resource)
+
+    const stringified = JSON.stringify(resource)
+
+    const result = this.backend.js__store_update_resource(stringified)
+    return result
   }
 
   async updateResourceMetadata(id: string, metadata: SFFSResourceMetadata) {
