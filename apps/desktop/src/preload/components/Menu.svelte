@@ -373,6 +373,7 @@
           parseHashtags
           placeholder="Jot down your thoughts…"
           autofocus
+          submitOnEnter
         />
       </div>
       <!-- <textarea

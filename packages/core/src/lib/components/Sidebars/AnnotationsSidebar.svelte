@@ -202,6 +202,7 @@
         on:hashtags={handleHashtags}
         parseHashtags
         autofocus={false}
+        submitOnEnter
         placeholder="Jot down your thoughts…"
       />
     </div>

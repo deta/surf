@@ -176,6 +176,7 @@
             on:update={handleContentUpdate}
             parseHashtags
             autofocus={false}
+            submitOnEnter
             placeholder="Jot down your thoughts…"
           />
         </div>

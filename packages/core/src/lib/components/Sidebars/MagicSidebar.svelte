@@ -231,7 +231,7 @@
     }
 
     const resource = await resourceManager.createResourceNote(content, {
-      name: truncate(response.query, 50)
+      name: truncate(cleanQuery(response.query), 50)
     })
 
     savedChatResponses.update((responses) => {
@@ -612,6 +612,10 @@
     } else {
       return raw
     }
+  }
+
+  const cleanQuery = (raw: string) => {
+    return getEditorContentText(raw)
   }
 
   let selectedMode: 'general' | 'all' | 'active' | 'context' = 'general'
@@ -1190,9 +1194,9 @@
               <div
                 class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-6 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
               >
-                <div class="tiptap query">
+                <div class="query">
                   {#if response.role === 'user'}
-                    {@html response.query}
+                    {cleanQuery(response.query)}
                   {:else}
                     {sanitizeQuery(response.query)}
                   {/if}
@@ -1298,7 +1302,9 @@
                     <Icon name="spinner" />
                   </div>
 
-                  <div class="tiptap query">{@html response.query}</div>
+                  <div class="query">
+                    {cleanQuery(response.query)}
+                  </div>
                 </div>
 
                 {#if response.usedPageScreenshot && (!response.sources || response.sources.length === 0)}

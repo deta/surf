@@ -342,6 +342,7 @@
         bind:content={inputValue}
         bind:focused={editorFocused}
         autofocus={false}
+        submitOnEnter
         placeholder="Tell me what you want…"
       />
     </div>

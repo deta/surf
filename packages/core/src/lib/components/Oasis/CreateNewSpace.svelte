@@ -531,6 +531,7 @@
                 on:update={handleEditorUpdate}
                 placeholder="Describe your space and stuff will be auto-fetched."
                 tabindex="1"
+                submitOnEnter
                 autofocus={false}
                 on:keydown={(e) => {
                   if (e.key === 'Tab') {

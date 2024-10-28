@@ -85,6 +85,7 @@
       bind:content={text}
       on:update={handleUpdate}
       parseHashtags
+      submitOnEnter
       autofocus={false}
       placeholder="Jot down your thoughts…"
     />

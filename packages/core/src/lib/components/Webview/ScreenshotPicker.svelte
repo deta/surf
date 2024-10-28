@@ -803,6 +803,7 @@
                   bind:content={prompt}
                   bind:focused={editorFocused}
                   on:submit={handleAISubmit}
+                  submitOnEnter
                   autofocus={true}
                   placeholder="Ask a question..."
                 />

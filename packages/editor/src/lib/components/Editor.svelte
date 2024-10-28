@@ -17,6 +17,7 @@
   export let autofocus: boolean = true
   export let focused: boolean = false
   export let parseHashtags: boolean = false
+  export let submitOnEnter: boolean = false
 
   const dispatch = createEventDispatcher<{ update: string; submit: void; hashtags: string[] }>()
 
@@ -60,8 +61,12 @@
     addKeyboardShortcuts() {
       return {
         Enter: () => {
-          onSubmit()
-          return true
+          if (submitOnEnter) {
+            onSubmit()
+            return true
+          }
+
+          return false
         },
 
         'Shift-Enter': () => {
