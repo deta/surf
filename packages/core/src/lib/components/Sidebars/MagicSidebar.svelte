@@ -977,11 +977,7 @@
       }
 
       const inlineScreenshots = itemsInContext.filter((item) => item.type === 'screenshot')
-      if (
-        inlineScreenshots.length === 0 &&
-        !skipScreenshot &&
-        $userConfigSettings.automatic_page_screenshots
-      ) {
+      if (inlineScreenshots.length === 0 && !skipScreenshot) {
         log.debug('No context images found, determining if a screenshot is needed')
         let tab = tabsInContext.find(
           (tab) => tab.id === tabsManager.activeTabIdValue && tab.type === 'page'

@@ -224,14 +224,6 @@
           />
 
           <SettingsOption
-            icon="screenshot"
-            title="Automatic Page Screenshots for Chat"
-            description="Let Surf analyse your chat prompt and automatically take a screenshot of the page to use as context for your chat."
-            bind:value={userConfigSettings.automatic_page_screenshots}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
             icon="marker"
             title="Live Spaces"
             description="Subscribe to RSS feeds of websites and pull in their content into a space."

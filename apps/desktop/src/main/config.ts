@@ -87,7 +87,6 @@ export const getUserConfig = (path?: string) => {
       tabs_orientation: 'vertical',
       use_semantic_search: false,
       show_annotations_in_oasis: true,
-      automatic_page_screenshots: false,
       auto_generate_chat_prompts: false,
       go_wild_mode: false,
       live_spaces: false,
@@ -130,11 +129,6 @@ export const getUserConfig = (path?: string) => {
     storedConfig.settings.go_wild_mode = true
     storedConfig.settings.annotations_sidebar = true
     storedConfig.settings.experimental_mode = undefined
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.automatic_page_screenshots === undefined) {
-    storedConfig.settings.automatic_page_screenshots = false
     changedConfig = true
   }
 

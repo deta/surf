@@ -15,7 +15,6 @@ export type UserSettings = {
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
   // Experiments
-  automatic_page_screenshots: boolean
   go_wild_mode: boolean
   annotations_sidebar: boolean
   live_spaces: boolean
