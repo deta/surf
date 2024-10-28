@@ -28,11 +28,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-          x: winState.state.x,
-          y: winState.state.y,
-          width: winState.state.width,
-          height: winState.state.height
-        })
+        x: winState.state.x,
+        y: winState.state.y,
+        width: winState.state.width,
+        height: winState.state.height
+      })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -91,7 +91,8 @@ export function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       session: mainWindowSession,
-      defaultFontSize: 14
+      defaultFontSize: 14,
+      spellcheck: isMac()
     }
   })
 
@@ -190,6 +191,7 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
     webPreferences.nodeIntegration = false
     webPreferences.contextIsolation = true
     webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
+    webPreferences.spellcheck = isMac()
   })
 
   // Handle navigation requests within webviews:
