@@ -32,7 +32,7 @@
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope, useDebounce } from '@horizon/utils'
+  import { useLogScope, useDebounce, parseUrlIntoCanonical } from '@horizon/utils'
   import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
   import {
     useResourceManager,
@@ -97,8 +97,9 @@
   const addHistoryEntry = useDebounce(async (newUrl: string) => {
     try {
       const oldUrl = $currentHistoryEntry?.url
+      const newCanonicalUrl = parseUrlIntoCanonical(newUrl) ?? newUrl
 
-      if (oldUrl && oldUrl === newUrl) {
+      if (oldUrl && parseUrlIntoCanonical(oldUrl) === newCanonicalUrl) {
         log.debug('did Skipping history entry for same URL')
         return
       }

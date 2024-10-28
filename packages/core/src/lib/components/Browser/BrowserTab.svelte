@@ -39,7 +39,14 @@
   import { writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { PageMagic, TabPage } from '../../types/browser.types'
-  import { useLogScope, useDebounce, wait, generateID, truncate } from '@horizon/utils'
+  import {
+    useLogScope,
+    useDebounce,
+    wait,
+    generateID,
+    truncate,
+    parseUrlIntoCanonical
+  } from '@horizon/utils'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
     CreateAnnotationEventTrigger,
@@ -146,14 +153,22 @@
     // await wait(500)
     // log.debug('running app detection on', e.detail)
 
+    const urlChanged =
+      parseUrlIntoCanonical(e.detail) !==
+      parseUrlIntoCanonical(tab.currentLocation ?? tab.initialLocation)
+
     tab = {
       ...tab,
       currentLocation: e.detail
     }
 
     debouncedTabUpdate()
-    debouncedAppDetection()
     debouncedUrlUpdate()
+
+    // We only want to run app detection if the URL has actually changed i.e. the user navigated to a new page
+    if (urlChanged) {
+      debouncedAppDetection()
+    }
   }
 
   const handleWebviewTitleChange = (e: CustomEvent<string>) => {
@@ -411,10 +426,12 @@
 
     const { silent, createdForChat, freshWebview } = Object.assign({}, defaultOpts, opts)
 
-    let url =
+    const rawUrl =
       tab.currentLocation ??
       historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
       tab.initialLocation
+
+    let url = parseUrlIntoCanonical(rawUrl) ?? rawUrl
 
     // strip &t from url suffix
     let youtubeHostnames = [
@@ -896,22 +913,22 @@
       // If it is and it is silent, delete it as it is no longer needed
       if (tab.chatResourceBookmark && tab.chatResourceBookmark !== bookmarkedResource.id) {
         const resource = await resourceManager.getResource(tab.chatResourceBookmark)
-        if (!resource) {
+        if (resource) {
+          const isSilent =
+            (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+              ?.value === 'true'
+
+          // For PDFs we don't want to delete the resource as embedding it is expensive and we might need it later
+          if (isSilent && resource.type !== 'application/pdf') {
+            log.debug(
+              'deleting chat resource bookmark as the tab has been updated',
+              tab.chatResourceBookmark
+            )
+            await resourceManager.deleteResource(resource.id)
+          }
+        } else {
           log.error('resource not found', tab.chatResourceBookmark)
-          return
-        }
-
-        const isSilent =
-          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
-            ?.value === 'true'
-
-        // For PDFs we don't want to delete the resource as embedding it is expensive and we might need it later
-        if (isSilent && resource.type !== 'application/pdf') {
-          log.debug(
-            'deleting chat resource bookmark as the tab has been updated',
-            tab.chatResourceBookmark
-          )
-          await resourceManager.deleteResource(resource.id)
+          tab.chatResourceBookmark = null
         }
       }
 

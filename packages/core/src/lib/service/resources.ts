@@ -1,6 +1,13 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
-import { useLogScope, type ScopedLogger, generateID, getFormattedDate } from '@horizon/utils'
+import {
+  useLogScope,
+  type ScopedLogger,
+  generateID,
+  getFormattedDate,
+  normalizeURL,
+  parseUrlIntoCanonical
+} from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
   type AiSFFSQueryResponse,
@@ -634,6 +641,15 @@ export class ResourceManager {
       metadata
     )
 
+    // Make sure we normalize the canonical URL to prevent broken links between resource and pages
+    const canonicalUrlTag = tags?.find((t) => t.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+    if (canonicalUrlTag) {
+      const canonicalURL = parseUrlIntoCanonical(canonicalUrlTag.value)
+      if (canonicalURL) {
+        canonicalUrlTag.value = canonicalURL
+      }
+    }
+
     const sffsItem = await this.sffs.createResource(type, parsedMetadata, tags)
     const resource = this.createResourceObject(sffsItem)
 
@@ -730,10 +746,25 @@ export class ResourceManager {
   }
 
   async getResourcesFromSourceURL(url: string) {
+    const canonicalURL = parseUrlIntoCanonical(url)
+    if (!canonicalURL) {
+      return []
+    }
+
     const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagCanonicalURL(url),
+      ResourceManager.SearchTagCanonicalURL(canonicalURL),
       ResourceManager.SearchTagDeleted(false)
     ])
+
+    // if the canonical URL is different, we should also search for the original URL
+    if (canonicalURL !== url) {
+      const additionalResources = await this.listResourcesByTags([
+        ResourceManager.SearchTagCanonicalURL(url),
+        ResourceManager.SearchTagDeleted(false)
+      ])
+
+      resources.push(...additionalResources)
+    }
 
     return resources
   }

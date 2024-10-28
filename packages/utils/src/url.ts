@@ -262,3 +262,33 @@ export const checkIfSecureURL = (url: string) => {
     return false
   }
 }
+
+export const parseUrlIntoCanonical = (value: string | URL) => {
+  let url: URL
+  if (typeof value === 'string') {
+    const parsed = parseStringIntoUrl(value)
+    if (!parsed) {
+      return null
+    }
+
+    url = parsed
+  } else {
+    url = value
+  }
+
+  const cleanHostname = normalizeURL(url.hostname)
+
+  if (cleanHostname === 'notion.so') {
+    const pathParts = url.pathname.split('/')
+    const lastPart = pathParts[pathParts.length - 1]
+    const notionPageRegex = /^(.*?)-([a-f0-9]{32})$/i
+    
+    if (notionPageRegex.test(lastPart)) {
+      const pageId = lastPart.split('-').pop()
+      url.pathname = `${pathParts[1]}/${pageId}`
+      return url.toString()
+    }
+  }
+  
+  return normalizeURL(url.href)
+}

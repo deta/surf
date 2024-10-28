@@ -33,7 +33,7 @@
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
-  const log = useLogScope('Browser Tab')
+  const log = useLogScope('Tab')
   const tabsManager = useTabsManager()
   const userConfig = useConfig()
 
