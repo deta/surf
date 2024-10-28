@@ -19,6 +19,7 @@ export type UserSettings = {
   go_wild_mode: boolean
   annotations_sidebar: boolean
   live_spaces: boolean
+  auto_generate_chat_prompts: boolean
   /**
    * @deprecated use individual feature flags instead
    */

@@ -216,6 +216,14 @@
 
         {#if userConfigSettings}
           <SettingsOption
+            icon="message"
+            title="Auto Generate Chat Prompts"
+            description="Let Surf generate chat prompts for you based on the page content and metadata. The prompts will be shown directly in the chat sidebar."
+            bind:value={userConfigSettings.auto_generate_chat_prompts}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
             icon="screenshot"
             title="Automatic Page Screenshots for Chat"
             description="Let Surf analyse your chat prompt and automatically take a screenshot of the page to use as context for your chat."

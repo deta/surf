@@ -287,6 +287,7 @@
       }
 
       timeout = setTimeout(() => {
+        log.debug('Resource detection timed out')
         webview.removeEventListener('ipc-message', handleEvent)
         webview.removeEventListener('did-finish-load', handleDidFinishLoad)
         webview.removeEventListener('dom-ready', handleDidFinishLoad)

@@ -1,8 +1,15 @@
+<script lang="ts" context="module">
+  export type ExamplePrompt = {
+    label: string
+    prompt: string
+  }
+</script>
+
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
-  import { derived, readable, writable, type Readable, type Writable } from 'svelte/store'
+  import { derived, get, readable, writable, type Readable, type Writable } from 'svelte/store'
   import { fly, slide } from 'svelte/transition'
-  import { tooltip, truncate } from '@horizon/utils'
+  import { tooltip, truncate, useDebounce, useThrottle } from '@horizon/utils'
   import { DropdownMenu } from 'bits-ui'
   import chatContextDemo from '../../../../public/assets/demo/chatcontext.gif'
   import chatAdd from '../../../../public/assets/demo/chatadd.gif'
@@ -35,6 +42,7 @@
   import { useClipboard, generateID, useLogScope, flyAndScale } from '@horizon/utils'
   import {
     Resource,
+    ResourceJSON,
     ResourceManager,
     useResourceManager,
     type ResourceLink
@@ -49,8 +57,14 @@
   import { DragTypeNames, type DragTypes } from '../../types'
   import Onboarding from '../Core/Onboarding.svelte'
   import { blobToDataUrl } from '../../utils/screenshot'
-  import { CLASSIFY_SCREENSHOT_PROMPT } from '../../constants/prompts'
+  import { WebParser } from '@horizon/web-parser'
+  import {
+    BUILT_IN_PAGE_PROMPTS,
+    CLASSIFY_SCREENSHOT_PROMPT,
+    PAGE_PROMPTS_GENERATOR_PROMPT
+  } from '../../constants/prompts'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
+  import PromptItem from '../Chat/PromptItem.svelte'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -87,6 +101,7 @@
   const tabs = tabsManager.tabs
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
+  const activeTabId = tabsManager.activeTabId
 
   const optPressed = writable(false)
   const cmdPressed = writable(false)
@@ -100,6 +115,11 @@
   const tabPickerOpen = writable(false)
   const savedResponse = writable(false)
   const savedChatResponses = writable<Record<string, string>>({})
+  const examplePrompts = writable<ExamplePrompt[]>([])
+  const generatingExamplePrompts = writable(false)
+  const resourceToGeneratePromptsFor = writable<string | null>(null)
+  const cachedPagePrompts = new Map<string, ExamplePrompt[]>()
+  const processingUnsubs = new Map<string, () => void>()
 
   const CMD_A_DELAY = 300
 
@@ -135,6 +155,46 @@
 
   const showFloatingClearChat = derived(userConfigSettings, (userConfigSettings) => {
     return userConfigSettings.annotations_sidebar || userConfigSettings.go_wild_mode
+  })
+
+  const showExamplePrompts = derived(
+    [tabsInContext, userConfigSettings],
+    ([tabsInContext, userConfigSettings]) => {
+      if (!userConfigSettings.auto_generate_chat_prompts) {
+        return false
+      }
+
+      const tab = tabsInContext.find((tab) => tab.id === $activeTabId)
+      if (!tab || tab.type !== 'page' || !tab.chatResourceBookmark) {
+        return false
+      }
+
+      return true
+    }
+  )
+
+  const filteredExamplePrompts = derived(
+    [examplePrompts, magicPage],
+    ([examplePrompts, magicPage]) => {
+      return examplePrompts.filter((prompt) => {
+        return (
+          !magicPage.responses.find(
+            (response) => response.query === prompt.prompt || response.query === prompt.label
+          ) &&
+          BUILT_IN_PAGE_PROMPTS.find(
+            (p) => p.label.toLowerCase() === prompt.label.toLowerCase()
+          ) === undefined
+        )
+      })
+    }
+  )
+
+  const filteredBuiltInPrompts = derived([magicPage], ([magicPage]) => {
+    return BUILT_IN_PAGE_PROMPTS.filter((prompt) => {
+      return !magicPage.responses.find(
+        (response) => response.query === prompt.prompt || response.query === prompt.label
+      )
+    })
   })
 
   const updateChatInput = (text: string, focus = true) => {
@@ -398,18 +458,18 @@
     autoScrollChat = false
   }
 
-  const runPrompt = async (promptType: PromptIDs) => {
-    try {
-      log.debug('Handling prompt submit', promptType)
-      autoScrollChat = true
+  // const runPrompt = async (promptType: PromptIDs) => {
+  //   try {
+  //     log.debug('Handling prompt submit', promptType)
+  //     autoScrollChat = true
 
-      const prompt = await getPrompt(promptType)
+  //     const prompt = await getPrompt(promptType)
 
-      await sendChatMessage(prompt.content, 'assistant', prompt.title)
-    } catch (e) {
-      log.error('Error doing magic', e)
-    }
-  }
+  //     await sendChatMessage(prompt.content, 'assistant', prompt.title)
+  //   } catch (e) {
+  //     log.error('Error doing magic', e)
+  //   }
+  // }
 
   const handleClearChat = async () => {
     log.debug('Clearing chat')
@@ -701,6 +761,121 @@
     } catch (e) {
       log.error('Error determining if a screenshot is needed', e)
       return false
+    }
+  }
+
+  const generateExamplePromptsForPage = useDebounce(async (resourceId: string, tab: TabPage) => {
+    generatingExamplePrompts.set(true)
+    resourceToGeneratePromptsFor.set(resourceId)
+    examplePrompts.set([])
+
+    const resource = await resourceManager.getResource(resourceId)
+    if (!(resource instanceof ResourceJSON)) {
+      log.debug('No resource content')
+      generatingExamplePrompts.set(false)
+      resourceToGeneratePromptsFor.set(null)
+      return null
+    }
+
+    const resourceState = get(resource.state)
+    if (resourceState !== 'idle') {
+      log.debug('Resource is still extracting')
+      generatingExamplePrompts.set(false)
+
+      if (resourceState === 'extracting' || resourceState === 'post-processing') {
+        const unsubscribe = resource.state.subscribe((state) => {
+          const processingUnsub = processingUnsubs.get(resourceId)
+          if (processingUnsub) {
+            processingUnsub()
+            processingUnsubs.delete(resourceId)
+          }
+
+          if (state === 'idle') {
+            generateExamplePromptsForPage(resourceId, tab)
+          } else {
+            resourceToGeneratePromptsFor.set(null)
+          }
+        })
+
+        processingUnsubs.set(resourceId, unsubscribe)
+      }
+
+      return null
+    }
+
+    const data = await resource.getParsedData()
+    const content = WebParser.getResourceContent(resource?.type, data)
+
+    log.debug('Generating prompts for page', tab.title, resource.id, content.plain?.length)
+    const promptsRaw = await window.api.createAIChatCompletion(
+      JSON.stringify({
+        title: tab.title,
+        url: tab.currentLocation,
+        content: content.plain
+      }),
+      PAGE_PROMPTS_GENERATOR_PROMPT,
+      {
+        model: 'gpt-4o-mini'
+      }
+    )
+
+    log.debug('Prompts raw', promptsRaw)
+
+    if (!promptsRaw) {
+      log.error('Failed to generate prompts')
+      examplePrompts.set([])
+      generatingExamplePrompts.set(false)
+      resourceToGeneratePromptsFor.set(null)
+      return null
+    }
+
+    const prompts = JSON.parse(promptsRaw)
+    const parsedPrompts = prompts.filter(
+      (p: any) => p.label !== undefined && p.prompt !== undefined
+    )
+
+    log.debug('Generated prompts', parsedPrompts)
+
+    examplePrompts.set(parsedPrompts)
+    cachedPagePrompts.set(resource.id, parsedPrompts)
+    await tick()
+    generatingExamplePrompts.set(false)
+  }, 600)
+
+  const handleTabPromptGeneration = async (tab: TabPage) => {
+    const resourceId = tab.chatResourceBookmark
+    if (!resourceId) {
+      log.debug('No chat resource bookmark')
+      return null
+    }
+
+    const cachedPrompts = cachedPagePrompts.get(resourceId)
+    if (cachedPrompts) {
+      log.debug('Using cached prompts for page', tab.title, resourceId, cachedPrompts)
+      examplePrompts.set(cachedPrompts)
+      return
+    }
+
+    if ($resourceToGeneratePromptsFor === resourceId) {
+      log.debug('Already generating/generated prompts for page', tab.title, resourceId)
+      return
+    }
+
+    examplePrompts.set([])
+    resourceToGeneratePromptsFor.set(null)
+
+    await generateExamplePromptsForPage(resourceId, tab)
+  }
+
+  const runPrompt = async (prompt: ExamplePrompt) => {
+    try {
+      log.debug('Handling prompt submit', prompt)
+      autoScrollChat = true
+      selectedMode = 'active'
+
+      await sendChatMessage(prompt.prompt, 'user', prompt.label)
+    } catch (e) {
+      log.error('Error doing magic', e)
     }
   }
 
@@ -1062,6 +1237,13 @@
   }
 
   $: smallSize = inputValue.length < 75
+
+  $: if ($showExamplePrompts) {
+    const tab = $tabsInContext.find((tab) => tab.id === $activeTabId)
+    if (tab && tab.type === 'page') {
+      handleTabPromptGeneration(tab)
+    }
+  }
 </script>
 
 <!-- {#if $onboardingOpen}
@@ -1180,7 +1362,7 @@
     </div>
   {/if}
   <div
-    class="flex flex-col overflow-auto h-full pb-52 pt-2 overflow-x-hidden"
+    class="flex flex-col overflow-auto h-full pb-60 pt-2 overflow-x-hidden"
     bind:this={listElem}
     on:wheel|passive={handleListWheel}
   >
@@ -1420,6 +1602,31 @@
         {/if}
       </button>
     {/if}
+
+    <div class="overflow-hidden">
+      {#if $showExamplePrompts && $resourceToGeneratePromptsFor !== null}
+        <div
+          transition:fly={{ y: 200 }}
+          class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto z-0"
+        >
+          <div class="text-sky-800">
+            <Icon name="sparkles" />
+          </div>
+
+          {#each $filteredBuiltInPrompts as prompt (prompt.prompt.replace(/[^a-zA-Z0-9]/g, ''))}
+            <PromptItem on:click={() => runPrompt(prompt)} label={prompt.label} />
+          {/each}
+
+          {#if $generatingExamplePrompts}
+            <PromptItem label="Analysing Page…" icon="spinner" />
+          {:else if $filteredExamplePrompts.length > 0}
+            {#each $filteredExamplePrompts as prompt (prompt.prompt.replace(/[^a-zA-Z0-9]/g, ''))}
+              <PromptItem on:click={() => runPrompt(prompt)} label={prompt.label} />
+            {/each}
+          {/if}
+        </div>
+      {/if}
+    </div>
 
     {#if $magicPage.initializing}
       <div

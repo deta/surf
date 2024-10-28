@@ -7,8 +7,8 @@ import { markdown as LEGACY_PAGE_CITATIONS } from './prompts/page-citations.md'
 import { markdown as PAGE_SUMMARIZE } from './prompts/page-summarize.md'
 import { markdown as PAGE_TOC } from './prompts/page-toc.md'
 import { markdown as PAGE_TRANSLATE } from './prompts/page-translate.md'
-
 export { markdown as CLASSIFY_SCREENSHOT_PROMPT } from './prompts/classify-screenshot-prompt.md'
+export { markdown as PAGE_PROMPTS_GENERATOR_PROMPT } from './prompts/page-prompts-generator.md'
 
 export const SIMPLE_SUMMARIZER_PROMPT = `You are a summarizer, summarize the text given to you. Only respond with the summarization.`
 export const LEGACY_PAGE_CITATION_SUMMARY_PROMPT = LEGACY_PAGE_CITATIONS
@@ -26,3 +26,11 @@ export const PAGE_PROMPTS = {
   TOC: PAGE_TOC,
   TRANSLATE: PAGE_TRANSLATE
 }
+
+export const BUILT_IN_PAGE_PROMPTS = [
+  {
+    label: 'Summarize',
+    prompt:
+      'Summarize the page to extract the main points and give a overview of what it is about. Try to stay concise and to the point.'
+  }
+]

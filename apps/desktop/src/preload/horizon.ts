@@ -24,10 +24,12 @@ import {
   type DownloadDoneMessage,
   type TelemetryEventTypes,
   type SFFSResource
+  // Note: we can't import the types as that breaks building the preload scripts as Vite/Rollup will bundle things together
   // ResourceProcessingStatusType,
   // EventBusMessage,
   // EventBusMessageType
 } from '@horizon/types'
+
 import { getUserConfig } from '../main/config'
 import {
   IPC_EVENTS_RENDERER,
@@ -38,6 +40,27 @@ import { ChatCompletion } from 'openai/resources'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 import EventEmitter from 'events'
 import * as crypto from 'crypto'
+
+enum ResourceProcessingStatusType {
+  Started = 'Started',
+  Failed = 'Failed',
+  Finished = 'Finished'
+}
+
+enum EventBusMessageType {
+  ResourceProcessingMessage = 'ResourceProcessingMessage'
+}
+
+type ResourceProcessingStatus =
+  | { type: ResourceProcessingStatusType.Started }
+  | { type: ResourceProcessingStatusType.Failed; message: string }
+  | { type: ResourceProcessingStatusType.Finished }
+
+type EventBusMessage = {
+  type: EventBusMessageType.ResourceProcessingMessage
+  resource_id: string
+  status: ResourceProcessingStatus
+}
 
 const isDev = import.meta.env.DEV
 
@@ -673,27 +696,6 @@ const sffs = (() => {
   let handle = null
   let server: http.Server | null = null
   const callbackEmitters = new Map()
-
-  enum ResourceProcessingStatusType {
-    Started = 'Started',
-    Failed = 'Failed',
-    Finished = 'Finished'
-  }
-
-  enum EventBusMessageType {
-    ResourceProcessingMessage = 'ResourceProcessingMessage'
-  }
-
-  type ResourceProcessingStatus =
-    | { type: ResourceProcessingStatusType.Started }
-    | { type: ResourceProcessingStatusType.Failed; message: string }
-    | { type: ResourceProcessingStatusType.Finished }
-
-  type EventBusMessage = {
-    type: EventBusMessageType.ResourceProcessingMessage
-    resource_id: string
-    status: ResourceProcessingStatus
-  }
 
   const isResourceProcessingMessage = (obj: any): boolean => {
     if (
