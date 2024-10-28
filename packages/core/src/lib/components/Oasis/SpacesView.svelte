@@ -309,7 +309,6 @@
             on:space-selected={() => handleSpaceSelect(folder.id)}
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-            on:open-resource
             on:open-space-and-chat
             on:Drop
             on:editing-start={handleEditingStart}

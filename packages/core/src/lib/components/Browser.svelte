@@ -340,7 +340,10 @@
     }
   }
 
-  const openResourceDetailsModal = (resourceId: string, from?: OpenResourceEventFrom) => {
+  const openResourceDetailsModal = async (resourceId: string, from?: OpenResourceEventFrom) => {
+    showResourceDetails.set(false)
+    resourceDetailsModalSelected.set(null)
+    await tick()
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
 
@@ -4590,13 +4593,8 @@
             <!-- This overlay will dynamically grow / shrink depending on the current state -->
             <SidebarMetaOverlay
               on:open-stuff={() => ($showNewTabOverlay = 2)}
-              on:open-resource-in-mini-browser={async (e) => {
-                showResourceDetails.set(false)
-                resourceDetailsModalSelected.set(null)
-                await tick()
-                showResourceDetails.set(true)
-                resourceDetailsModalSelected.set(e.detail)
-              }}
+              on:open-resource-in-mini-browser={(e) =>
+                openResourceDetailsModal(e.detail, OpenResourceEventFrom.Stack)}
               on:Drop={({ detail }) => {
                 handleDropOnSpaceTab(detail)
               }}

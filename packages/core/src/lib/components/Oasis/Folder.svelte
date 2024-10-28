@@ -269,12 +269,6 @@
     }
   }
 
-  const openResource = (id: string) => {
-    log.debug('Resource clicked', id)
-
-    dispatch('open-resource', id)
-  }
-
   const getRandomRotation = () => {
     const maxRotation = 1.5
     const minRotation = -1.5

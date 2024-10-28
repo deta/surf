@@ -3,7 +3,7 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useOasis } from '../../../service/oasis'
   import { ResourceManager, type ResourceObject } from '../../../service/resources'
-  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
+  import { CreateTabEventTrigger, ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
   import { writable } from 'svelte/store'
   import { useDebounce } from '@horizon/utils'
   import { useTabsManager } from '../../../service/tabs'
@@ -159,8 +159,14 @@
   resourceManager.on('recovered', () => oasis.reloadStack())
 
   const handleCardClick = (resourceId: string, active: boolean, overlay = false) => {
-    if (!overlay) tabsManager.openResourceAsTab(resourceId, { active })
-    else dispatch('open-resource-in-mini-browser', resourceId)
+    if (!overlay) {
+      tabsManager.openResourceAsTab(resourceId, {
+        active,
+        trigger: CreateTabEventTrigger.StackItem
+      })
+    } else {
+      dispatch('open-resource-in-mini-browser', resourceId)
+    }
   }
 
   function getRelativeOriginOffset(origin: { x: number; y: number }) {

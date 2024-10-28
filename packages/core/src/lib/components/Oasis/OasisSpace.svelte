@@ -1370,6 +1370,20 @@
   const openResourceDetailsModal = (resourceId: string) => {
     resourceDetailsModalSelected.set(resourceId)
     showResourceDetails.set(true)
+  }
+
+  const closeResourceDetailsModal = () => {
+    showResourceDetails.set(false)
+    resourceDetailsModalSelected.set(null)
+  }
+
+  const handleOpen = (e: CustomEvent<string>) => {
+    const resourceId = e.detail
+    if (handleEventsOutside) {
+      dispatch('open', resourceId)
+    } else {
+      openResourceDetailsModal(resourceId)
+    }
 
     resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
       if (resource) {
@@ -1383,19 +1397,6 @@
         )
       }
     })
-  }
-
-  const closeResourceDetailsModal = () => {
-    showResourceDetails.set(false)
-    resourceDetailsModalSelected.set(null)
-  }
-
-  const handleOpen = (e: CustomEvent<string>) => {
-    if (handleEventsOutside) {
-      dispatch('open', e.detail)
-    } else {
-      openResourceDetailsModal(e.detail)
-    }
   }
 
   const handleSpaceSelected = (e: CustomEvent<{ id: string; canGoBack: boolean }>) => {

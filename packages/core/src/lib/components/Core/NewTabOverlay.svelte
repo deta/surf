@@ -88,6 +88,7 @@
     CreateTabEventTrigger,
     DeleteResourceEventTrigger,
     MultiSelectResourceEventAction,
+    OpenResourceEventFrom,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger
   } from '@horizon/types'
@@ -973,9 +974,16 @@
     })
   }
 
-  const handleOpen = async (e: CustomEvent<string>) => {
+  const handleOpen = async (e: CustomEvent<string>, trackSource: boolean = false) => {
     openResourceDetailsModal(e.detail)
-    // openResourceAsTab(e.detail)
+
+    if (trackSource) {
+      resourceManager.getResource(e.detail, { includeAnnotations: false }).then((resource) => {
+        if (resource) {
+          telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.Oasis)
+        }
+      })
+    }
   }
 
   const handleCreateEmptySpace = async () => {
@@ -1305,7 +1313,6 @@
                       on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
                       on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
                       on:create-empty-space={handleCreateEmptySpace}
-                      on:open-resource={handleOpen}
                       on:open-space-and-chat
                       on:delete-space={handleDeleteSpace}
                       on:Drop
@@ -1384,7 +1391,7 @@
                               isInSpace={false}
                               scrollTop={0}
                               on:click={handleItemClick}
-                              on:open={handleOpen}
+                              on:open={(e) => handleOpen(e, true)}
                               on:open-and-chat
                               on:open-space-as-tab
                               on:remove={handleResourceRemove}

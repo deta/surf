@@ -100,8 +100,11 @@ export enum CreateTabEventTrigger {
   Drop = 'drop',
   /** Tab was created by dropping something in the tab list */
   History = 'history',
+  /** Tab was created by opening the source of a item from the stack */
+  StackItem = 'stack_item',
   /** Tab was created because a URL was opened outside of the app / by the system */
   System = 'system',
+  /** Tab was created from the context menu */
   ContextMenu = 'context_menu',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
@@ -144,7 +147,8 @@ export enum OpenResourceEventFrom {
   History = 'history',
   NewTab = 'new_tab',
   Page = 'page',
-  CommandMenu = 'command_menu'
+  CommandMenu = 'command_menu',
+  Stack = 'stack'
 }
 
 export enum DeleteResourceEventTrigger {
