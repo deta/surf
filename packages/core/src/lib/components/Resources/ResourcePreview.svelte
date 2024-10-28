@@ -83,6 +83,7 @@
   export let interactive: boolean = false
   export let frameless: boolean = false
   export let processingText: string | undefined = undefined
+  export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
 
   const log = useLogScope('ResourcePreview')
@@ -854,6 +855,7 @@
       {interactive}
       {frameless}
       {processingText}
+      {failedText}
       {hideProcessing}
       mode="content"
     />
@@ -873,6 +875,7 @@
       {interactive}
       {frameless}
       {processingText}
+      {failedText}
       {hideProcessing}
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}

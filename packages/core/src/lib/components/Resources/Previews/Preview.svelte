@@ -34,6 +34,7 @@
   import FilePreview from './File/FilePreview.svelte'
   import SourceItem from './Source.svelte'
   import { createEventDispatcher } from 'svelte'
+  import { isDebugModeEnabled } from '../../../stores/debug'
 
   export let resource: Resource
 
@@ -52,6 +53,7 @@
   export let interactive: boolean = false
   export let frameless: boolean = false
   export let processingText: string = 'Processing…'
+  export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
 
   export let mode: Mode = 'full'
@@ -80,6 +82,7 @@
   $: showAuthor = mode === 'full' || mode === 'content'
   $: showSource = mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/'))
   $: isProcessing = $resourceState === 'post-processing' && !hideProcessing
+  $: failedProcessing = ($isDebugModeEnabled || failedText) && $resourceState === 'error'
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text
@@ -201,11 +204,17 @@
                   <SourceItem {type} {source} themed={!!theme} />
                 </div>
 
-                {#if isProcessing && !(showAuthor && author && (author.text || author.imageUrl || author.icon))}
-                  <div class="processing">
-                    <Icon name="spinner" size="14px" />
-                    <div>{processingText}</div>
-                  </div>
+                {#if !(showAuthor && author && (author.text || author.imageUrl || author.icon))}
+                  {#if isProcessing}
+                    <div class="processing">
+                      <Icon name="spinner" size="14px" />
+                      <div>{processingText}</div>
+                    </div>
+                  {:else if failedProcessing}
+                    <div class="processing">
+                      <div>{failedText || 'Failed to process'}</div>
+                    </div>
+                  {/if}
                 {/if}
               </div>
             {/if}
@@ -310,6 +319,10 @@
                     <Icon name="spinner" size="14px" />
                     <div>{processingText}</div>
                   </div>
+                {:else if failedProcessing}
+                  <div class="processing">
+                    <div>{failedText || 'Failed to process'}</div>
+                  </div>
                 {/if}
               </div>
             {/if}
@@ -338,6 +351,10 @@
                   <div class="processing">
                     <Icon name="spinner" size="14px" />
                     <div>{processingText}</div>
+                  </div>
+                {:else if failedProcessing}
+                  <div class="processing">
+                    <div>{failedText || 'Failed to process'}</div>
                   </div>
                 {/if}
               </div>

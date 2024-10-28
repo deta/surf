@@ -24,6 +24,7 @@
   export let pill: Pill
   export let pillProperties: PillProperties
   export let loading: boolean = false
+  export let failed: boolean = false
   export let opened: Writable<boolean> = writable(false)
 
   const dispatch = createEventDispatcher<{
@@ -71,15 +72,16 @@
   <div slot="trigger" class="flex items-center gap-2">
     <div
       aria-hidden="true"
-      class="shine-border pill transform hover:translate-y-[-6px]"
+      class="shine-border pill transform hover:translate-y-[-6px] group/pill"
       on:click={() => handleSelect(pill.contextItemId)}
       use:contextMenu={contextMenuData}
       style="transform: rotate({pillProperties.rotate}deg); transform-origin: center center;"
     >
       <div
         aria-hidden="true"
-        class="pill flex items-center bg-white border-[1px] border-slate-200 z-0 shadow-md {pill.type ===
-        'image'
+        class="pill flex items-center border-[1px] border-slate-200 {failed
+          ? 'bg-red-50'
+          : 'bg-white'} z-0 shadow-md {pill.type === 'image'
           ? 'pl-[5px]'
           : 'pl-[11px]'} hover:bg-red-100 transform hover:translate-y-[-6px]"
         style="width: {pillProperties.width}px; height: {pillProperties.height}px; border-radius: {pillProperties.borderRadius}px; transition: width 0.3s, height 0.3s, transform 0.3s, background-color 0.3s;"
@@ -93,9 +95,13 @@
         </button>
 
         <div
-          class="flex items-center justify-center flex-shrink-0 {loading
-            ? 'opacity-75 hover:opacity-100'
-            : 'opacity-100'} {pill.type === 'image' ? 'w-8 h-8' : 'w-5 h-5'}"
+          class="flex items-center justify-center flex-shrink-0 group-hover/pill:opacity-100 {pill.type ===
+          'image'
+            ? 'w-8 h-8'
+            : 'w-5 h-5'}"
+          class:loading
+          class:failed
+          class:opacity-100={!loading && !failed}
         >
           <slot></slot>
         </div>
@@ -142,5 +148,12 @@
     &:hover button.remove {
       display: flex;
     }
+  }
+  .loading {
+    opacity: 0.6;
+  }
+
+  .failed {
+    opacity: 0.4;
   }
 </style>

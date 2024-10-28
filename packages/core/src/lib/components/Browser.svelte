@@ -152,11 +152,11 @@
   import Tooltip from './Onboarding/Tooltip.svelte'
   import { launchTimeline, endTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
+  import { debugMode } from '../stores/debug'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
   let showLeftSidebar = true
-  let showDevOverlay = import.meta.env.DEV || false
   let showRightSidebar = false
   let rightPane: PaneAPI | undefined = undefined
   let sidebarComponent: SidebarPane | null = null
@@ -629,7 +629,7 @@
       }
       deselectAllTabs()
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
-      showDevOverlay = !showDevOverlay
+      debugMode.update((mode) => !mode)
 
       // @ts-ignore
       if (window.LOG_LEVEL === 'debug') {
@@ -4059,7 +4059,7 @@
   }
 </script>
 
-{#if showDevOverlay}
+{#if $debugMode}
   <DevOverlay />
 {/if}
 

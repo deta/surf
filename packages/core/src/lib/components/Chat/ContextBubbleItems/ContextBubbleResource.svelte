@@ -21,6 +21,7 @@
 
   $: resourceState = resource ? resource.state : null
   $: isProcessing = resourceState !== null ? $resourceState === 'post-processing' : false
+  $: processingFailed = resourceState !== null ? $resourceState === 'error' : false
 
   onMount(async () => {
     if (pill.data.id) {
@@ -31,9 +32,16 @@
   })
 </script>
 
-<ContextBubbleItemWrapper {pill} {pillProperties} loading={isProcessing} on:remove-item on:select>
+<ContextBubbleItemWrapper
+  {pill}
+  {pillProperties}
+  loading={isProcessing}
+  failed={processingFailed}
+  on:remove-item
+  on:select
+>
   <div class="w-full h-full relative">
-    <div class="w-full h-full {isProcessing ? 'p-1' : ''}">
+    <div class="w-full h-full {isProcessing || processingFailed ? 'p-1' : ''}">
       {#if pill.data.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
         <Icon name="docs" size="16px" />
       {:else if pill.icon}
@@ -57,6 +65,12 @@
       >
         <Icon name="spinner" size="100%" />
       </div>
+    {:else if processingFailed}
+      <!-- <div
+        class="absolute z-10 -top-1 -left-1 w-[calc(100%+8px)] h-[calc(100%+8px)] flex items-center justify-center bg-red-500/50 text-white"
+      >
+        <Icon name="close" size="100%" />
+      </div> -->
     {/if}
   </div>
 
