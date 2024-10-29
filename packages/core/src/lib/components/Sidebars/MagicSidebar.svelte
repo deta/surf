@@ -952,6 +952,8 @@
             const dataUrl = await blobToDataUrl(blob)
             inlineImages.push(dataUrl)
           }
+        } else {
+          resourceIds.push(resourceId)
         }
       }
 
@@ -970,7 +972,7 @@
           inlineImages.push(await blobToDataUrl(item.data))
           usedInlineScreenshot = true
         } else if (item.type === 'resource') {
-          resourceIds.push(item.data.id)
+          await processResource(item.data.id, item.data.type)
         } else if (item.type === 'space') {
           await processSpace(item.data.id)
         }

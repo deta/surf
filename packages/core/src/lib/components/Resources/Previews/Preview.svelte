@@ -75,7 +75,9 @@
 
   $: showTitle = !(mode === 'media' && image)
   $: showContent =
-    (mode === 'full' || mode === 'content' || (!title && !image)) &&
+    (mode === 'full' ||
+      mode === 'content' ||
+      (!title && !image && !resource.type.startsWith(ResourceTypes.DOCUMENT))) &&
     !((annotations || []).length > 0 && type !== ResourceTypes.ANNOTATION)
   $: showAnnotations = mode === 'full' || mode === 'content' || (!title && !image)
   $: showMedia = mode === 'full' || mode === 'media' || (!title && !content && image)
