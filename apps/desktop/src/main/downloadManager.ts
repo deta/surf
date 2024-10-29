@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import mime from 'mime-types'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
-import { SFFSResource } from '@horizon/types'
+import type { DownloadPathResponseMessage, SFFSResource } from '@horizon/types'
 import { isPathSafe } from './utils'
 
 const log = useLogScope('Download Manager')
@@ -16,6 +16,8 @@ export function initDownloadManager(partition: string) {
 
   targetSession.on('will-download', (_event, downloadItem) => {
     let finalPath = ''
+    let copyToUserDownloadsDirectory = false
+
     const downloadId = randomUUID()
     const filename = downloadItem.getFilename()
     const tempDownloadPath = path.join(app.getPath('temp'), `${downloadId}-${filename}`)
@@ -45,13 +47,17 @@ export function initDownloadManager(partition: string) {
         }
       }
 
-      log.debug('saving download to system downloads', downloadFilePath)
-      fs.copyFile(tempDownloadPath, downloadFilePath, (err) => {
-        if (err) {
-          log.error(`error copying file to downloads: ${err}`)
-          return
-        }
-      })
+      if (copyToUserDownloadsDirectory) {
+        log.debug('saving download to system downloads', downloadFilePath)
+        fs.copyFile(tempDownloadPath, downloadFilePath, (err) => {
+          if (err) {
+            log.error(`error copying file to downloads: ${err}`)
+            return
+          }
+        })
+      } else {
+        log.debug('skip saving download to system downloads')
+      }
 
       log.debug('moving download to oasis directory', finalPath)
       fs.rename(tempDownloadPath, finalPath, (err) => {
@@ -79,19 +85,21 @@ export function initDownloadManager(partition: string) {
       hasUserGesture: downloadItem.hasUserGesture()
     })
 
-    ipcMain.once(`download-path-response-${downloadId}`, (_event, path) => {
-      if (path) {
-        // downloadItem.setSavePath(path)
-        // downloadItem.resume()
+    ipcMain.once(
+      `download-path-response-${downloadId}`,
+      (_event, data: DownloadPathResponseMessage) => {
+        const { path, copyToDownloads } = data
+
+        copyToUserDownloadsDirectory = copyToDownloads
         finalPath = path
-      }
 
-      log.debug(`download-path-response-${downloadId}`, path)
+        log.debug(`download-path-response-${downloadId}`, path)
 
-      if (downloadItem.getState() === 'completed') {
-        moveTempFile(finalPath)
+        if (downloadItem.getState() === 'completed') {
+          moveTempFile(finalPath)
+        }
       }
-    })
+    )
 
     downloadItem.on('updated', (_event, state) => {
       log.debug(

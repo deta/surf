@@ -14,6 +14,8 @@ export type UserSettings = {
   tabs_orientation: 'vertical' | 'horizontal'
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
+  /** Copy downloaded files to the user's system downloads directory */
+  save_to_user_downloads: boolean
   // Experiments
   go_wild_mode: boolean
   annotations_sidebar: boolean

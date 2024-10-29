@@ -266,6 +266,14 @@
             bind:value={userConfigSettings.show_annotations_in_oasis}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="download"
+            title="Save Downloads to System Downloads Folder"
+            description="If enabled, a copy of the files you download with Surf will be saved to your system's default downloads folder in addition to your stuff in Surf."
+            bind:value={userConfigSettings.save_to_user_downloads}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
 
         <PromptSection

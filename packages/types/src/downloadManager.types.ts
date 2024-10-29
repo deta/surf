@@ -9,6 +9,11 @@ export interface DownloadRequestMessage {
   hasUserGesture: boolean
 }
 
+export interface DownloadPathResponseMessage {
+  path: string
+  copyToDownloads: boolean
+}
+
 export interface DownloadUpdatedMessage {
   id: string
   state: 'progressing' | 'interrupted'

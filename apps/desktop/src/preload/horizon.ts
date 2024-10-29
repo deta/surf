@@ -23,7 +23,8 @@ import {
   type DownloadUpdatedMessage,
   type DownloadDoneMessage,
   type TelemetryEventTypes,
-  type SFFSResource
+  type SFFSResource,
+  type DownloadPathResponseMessage
   // Note: we can't import the types as that breaks building the preload scripts as Vite/Rollup will bundle things together
   // ResourceProcessingStatusType,
   // EventBusMessage,
@@ -385,11 +386,13 @@ const api = {
     return IPC_EVENTS_RENDERER.getUserConfig.invoke()
   },
 
-  onRequestDownloadPath: (callback: (data: DownloadRequestMessage) => Promise<string>) => {
+  onRequestDownloadPath: (
+    callback: (data: DownloadRequestMessage) => Promise<DownloadPathResponseMessage>
+  ) => {
     IPC_EVENTS_RENDERER.downloadRequest.on(async (_, data) => {
-      const path = await callback(data)
+      const res = await callback(data)
       // TODO: refactor this to use the new event system
-      ipcRenderer.send(`download-path-response-${data.id}`, path)
+      ipcRenderer.send(`download-path-response-${data.id}`, res)
     })
   },
 

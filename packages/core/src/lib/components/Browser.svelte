@@ -2985,10 +2985,14 @@
     window.api.onRequestDownloadPath(async (data) => {
       await tick()
 
+      const downloadIntercepter = downloadIntercepters.get(data.url)
       const existingDownload = downloadResourceMap.get(data.id)
       if (existingDownload) {
         log.debug('download already in progress', data)
-        return existingDownload.savePath
+        return {
+          path: existingDownload.savePath,
+          copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
+        }
       }
 
       const downloadData: Download = {
@@ -3007,7 +3011,6 @@
 
       log.debug('new download request', downloadData)
 
-      const downloadIntercepter = downloadIntercepters.get(downloadData.url)
       if (!downloadIntercepter) {
         const toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
         downloadToastsMap.set(data.id, toast)
@@ -3039,7 +3042,10 @@
       downloadData.savePath = resource.path
       downloadResourceMap.set(data.id, downloadData)
 
-      return downloadData.savePath
+      return {
+        path: downloadData.savePath,
+        copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
+      }
     })
 
     window.api.onDownloadUpdated((data) => {

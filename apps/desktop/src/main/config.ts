@@ -86,6 +86,7 @@ export const getUserConfig = (path?: string) => {
       embedding_model: 'english_small',
       tabs_orientation: 'vertical',
       use_semantic_search: false,
+      save_to_user_downloads: true,
       show_annotations_in_oasis: true,
       auto_generate_chat_prompts: false,
       go_wild_mode: false,
@@ -149,6 +150,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.auto_generate_chat_prompts === undefined) {
     storedConfig.settings.auto_generate_chat_prompts = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.save_to_user_downloads === undefined) {
+    storedConfig.settings.save_to_user_downloads = true
     changedConfig = true
   }
 
