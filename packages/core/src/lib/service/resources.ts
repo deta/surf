@@ -746,6 +746,12 @@ export class ResourceManager {
   }
 
   async getResourcesFromSourceURL(url: string) {
+    const surfUrlMatch = url.match(/surf:\/\/resource\/([^\/]+)/)
+    if (surfUrlMatch) {
+      const resource = await this.getResource(surfUrlMatch[1])
+      return resource ? [resource] : []
+    }
+
     const canonicalURL = parseUrlIntoCanonical(url)
     if (!canonicalURL) {
       return []
@@ -1020,6 +1026,7 @@ export class ResourceManager {
     await this.sffs.createResourceTag(resourceId, tagName, tagValue)
 
     resource.addTag({ name: tagName, value: tagValue })
+    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async deleteResourceTag(resourceId: string, tagName: string) {
@@ -1033,6 +1040,7 @@ export class ResourceManager {
     await this.sffs.deleteResourceTag(resourceId, tagName)
 
     resource.removeTag(tagName)
+    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async markResourceAsSavedByUser(resourceId: string) {

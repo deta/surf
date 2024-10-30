@@ -6,7 +6,12 @@ import type {
   WebServiceActionInputs
 } from '@horizon/web-parser'
 import { WebParser, getRangeData, constructRange, applyRangeHighlight } from '@horizon/web-parser'
-import type { AnnotationCommentRange, AnnotationRangeData, DetectedWebApp } from '@horizon/types'
+import type {
+  AnnotationCommentRange,
+  AnnotationRangeData,
+  DetectedWebApp,
+  ResourceDataPDF
+} from '@horizon/types'
 import {
   WebviewAnnotationEventNames,
   WebviewAnnotationEvents,
@@ -29,6 +34,8 @@ import { type ResourceArticle, type Resource } from '@horizon/core/src/lib/servi
 import { normalizeURL } from '@horizon/utils/src/url'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
+const PDFViewerEntryPoint =
+  process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
 
 // let mouseDownX = 0
 let previouslySelectedText: string | undefined = ''
@@ -39,32 +46,44 @@ let selectionMenuWrapper: ReturnType<typeof createComponentWrapper> | null = nul
 
 // disable console logs in production
 if (!import.meta.env.DEV) {
-  console.debug = console.log = console.warn = console.error = () => { }
+  console.debug = console.log = console.warn = console.error = () => {}
+}
+
+function pdfViewerCheck(): { url: URL; isPDFPage: boolean } {
+  let url = new URL(window.location.href)
+
+  if (url.href.startsWith(PDFViewerEntryPoint)) {
+    const path = url.searchParams.get('path')
+    if (path) return { url: new URL(decodeURIComponent(path)), isPDFPage: true }
+  }
+
+  return { url, isPDFPage: false }
 }
 
 function runAppDetection() {
-  console.debug('Running app detection on', window.location.href)
-  // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
-  const webParser = new WebParser(window.location.href)
+  const { url, isPDFPage } = pdfViewerCheck()
 
-  const isWebPage = document.contentType === 'text/html'
+  console.debug('Running app detection on', url.href)
 
+  const isWebPage = !isPDFPage && document.contentType === 'text/html'
   if (!isWebPage) {
     const appInfo: DetectedWebApp = {
-      appId: window.location.hostname,
-      appName: window.location.hostname,
-      hostname: window.location.hostname,
-      canonicalUrl: window.location.href,
-      resourceType: document.contentType,
+      appId: url.hostname,
+      appName: url.hostname,
+      hostname: url.hostname,
+      canonicalUrl: url.href,
+      resourceType: isPDFPage ? 'application/pdf' : document.contentType,
       appResourceIdentifier: window.location.pathname,
       resourceNeedsPicking: false
     }
 
     console.debug('App detected:', appInfo)
     sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)
-    return
+    return { url, isPDFPage }
   }
 
+  // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
+  const webParser = new WebParser(url.href)
   const isSupported = webParser.isSupportedApp()
   console.debug('Is supported app', isSupported)
 
@@ -95,8 +114,15 @@ function runAppDetection() {
 function runResourceDetection() {
   // We are intentionally re-running the app detection here since the user might have navigated to a different page since the last detection
   const appParser = runAppDetection()
+  if (appParser && typeof (appParser as any).isPDFPage === 'boolean') {
+    sendPageEvent(WebViewEventSendNames.DetectedResource, {
+      type: ResourceTypes.PDF,
+      data: { url: appParser.url.href } as ResourceDataPDF
+    } as DetectedResource)
+  }
+
   if (appParser) {
-    appParser.extractResourceFromDocument(document).then((resource) => {
+    ;(appParser as WebAppExtractor).extractResourceFromDocument(document).then((resource) => {
       console.debug('Resource', resource)
       console.debug('Sending detected-resource event')
       sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
@@ -1073,7 +1099,7 @@ async function handleDrop(e: DragEvent) {
           clipboardData: new DataTransfer()
         })
         pasteEvent.clipboardData?.setData('text/plain', contentMarkdown)
-          ; (document.activeElement ?? document.body).dispatchEvent(pasteEvent)
+        ;(document.activeElement ?? document.body).dispatchEvent(pasteEvent)
       }
     } else {
       e.target!.dispatchEvent(

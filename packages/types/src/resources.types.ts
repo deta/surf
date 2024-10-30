@@ -96,6 +96,8 @@ export interface SFFSSearchResultItem {
 }
 
 export enum ResourceTypes {
+  PDF = 'application/pdf',
+
   SPACE = 'application/vnd.space',
 
   POST = 'application/vnd.space.post',
@@ -142,7 +144,14 @@ export enum ResourceTypes {
   PLAYLIST_YOUTUBE = 'application/vnd.space.playlist.youtube'
 }
 
+export interface ResourceDataPDF {
+  url: string
+  // TODO: parse more from pdf.js
+}
+
 export interface ResourceDataTypes {
+  [ResourceTypes.PDF]: ResourceDataPDF
+
   [ResourceTypes.POST]: ResourceDataPost
   [ResourceTypes.DOCUMENT]: ResourceDataDocument
   [ResourceTypes.CHAT_MESSAGE]: ResourceDataChatMessage

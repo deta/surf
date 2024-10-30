@@ -64,6 +64,7 @@
     type Download,
     type ResourceDataAnnotation,
     type ResourceDataLink,
+    type ResourceDataPDF,
     type WebViewEventKeyDown,
     type WebViewReceiveEvents,
     type WebViewSendEvents
@@ -142,6 +143,7 @@
   ): void => webview.sendEvent(name, data)
   export const canGoBack = webview?.canGoBack
   export const canGoForward = webview?.canGoForward
+  export const getInitialSrc = () => initialSrc
 
   let app: DetectedWebApp | null = null
 
@@ -324,52 +326,96 @@
     }
 
     bookmarkingPromise = new Promise(async (resolve, reject) => {
-      try {
-        const detectedResource = await extractResource(url, freshWebview)
+      const detectedResource = await extractResource(url, freshWebview)
+      const resourceTags = [
+        ResourceTag.canonicalURL(url),
+        ResourceTag.viewedByUser(true),
+        ...(silent ? [ResourceTag.silent()] : []),
+        ...(createdForChat ? [ResourceTag.createdForChat()] : [])
+      ]
 
-        log.debug('extracted resource data', detectedResource)
-
-        if (!detectedResource) {
-          // create basic link resource
-          const linkData = {
+      if (!detectedResource) {
+        const resource = await resourceManager.createResourceLink(
+          {
             title: tab.title ?? '',
             url: url
-          } as ResourceDataLink
-          const resource = await resourceManager.createResourceLink(
-            linkData,
-            { name: tab.title ?? '', sourceURI: url, alt: '' },
-            [
-              ResourceTag.canonicalURL(url),
-              ResourceTag.viewedByUser(true),
-              ...(silent ? [ResourceTag.silent()] : []),
-              ...(createdForChat ? [ResourceTag.createdForChat()] : [])
-            ]
-          )
-
-          log.debug('created resource', resource)
-
-          resolve(resource)
-          return
-        }
-
-        const title = (detectedResource.data as any)?.title ?? tab.title ?? ''
-
-        const resource = await resourceManager.createDetectedResource(
-          detectedResource,
-          { name: title, sourceURI: url, alt: '' },
-          [
-            ResourceTag.canonicalURL(url),
-            ResourceTag.viewedByUser(true),
-            ...(silent ? [ResourceTag.silent()] : []),
-            ...(createdForChat ? [ResourceTag.createdForChat()] : [])
-          ]
+          } as ResourceDataLink,
+          {
+            name: tab.title ?? '',
+            sourceURI: url,
+            alt: ''
+          },
+          resourceTags
         )
 
-        log.debug('created resource', resource)
+        resolve(resource)
+        return
+      }
+
+      const isPDFPage = detectedResource.type === ResourceTypes.PDF
+      try {
+        if (isPDFPage) {
+          const downloadData = await new Promise<Download | null>((resolveDownload) => {
+            const timeout = setTimeout(() => {
+              downloadIntercepters.update((intercepters) => {
+                intercepters.delete(url)
+                return intercepters
+              })
+              resolveDownload(null)
+            }, 1000 * 60)
+
+            downloadIntercepters.update((intercepters) => {
+              intercepters.set(url, (data) => {
+                clearTimeout(timeout)
+                downloadIntercepters.update((intercepters) => {
+                  intercepters.delete(url)
+                  return intercepters
+                })
+                resolveDownload(data)
+              })
+              return intercepters
+            })
+
+            downloadURL((detectedResource.data as ResourceDataPDF).url)
+          })
+
+          if (downloadData) {
+            const resource = (await resourceManager.getResource(downloadData.resourceId))!
+
+            const hasSilentTag = (resource.tags ?? []).find(
+              (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+            )
+            if (hasSilentTag && !silent)
+              await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+
+            const hasCreatedForChatTag = (resource.tags ?? []).find(
+              (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+            )
+            if (hasCreatedForChatTag && !createdForChat)
+              await resourceManager.deleteResourceTag(
+                resource.id,
+                ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+              )
+
+            resolve(resource)
+            return
+          }
+        }
+
+        const title = detectedResource.data?.title ?? tab.title ?? ''
+        const resource = await resourceManager.createDetectedResource(
+          detectedResource,
+          {
+            name: title,
+            sourceURI: url,
+            alt: ''
+          },
+          resourceTags
+        )
 
         resolve(resource)
-      } catch (e) {
-        log.error('error creating bookmark resource', e)
+      } catch (error) {
+        log.error('Error creating bookmark resource:', error)
         reject(null)
       }
     })
@@ -402,6 +448,10 @@
 
     updatingPromise = new Promise(async (resolve, reject) => {
       try {
+        if (app?.resourceType === 'application/pdf') {
+          resolve(resource)
+          return
+        }
         resource.updateExtractionState('running')
 
         // Run resource detection on a fresh webview to get the latest data
@@ -959,29 +1009,9 @@
         })
       }
 
+      const detectedResourceType = detectedApp.resourceType
       log.debug('bookmarked resource found', bookmarkedResource, tab)
       if (!bookmarkedResource) {
-        const detectedResourceType = detectedApp.resourceType
-        if (detectedResourceType === 'application/pdf') {
-          log.debug(
-            'tab is not a normal web page, skipping bookmarking process',
-            detectedResourceType
-          )
-          tab.resourceBookmark = null
-          tab.chatResourceBookmark = null
-          dispatch('update-tab', {
-            resourceBookmark: null,
-            chatResourceBookmark: null,
-            resourceBookmarkedManually: false
-          })
-
-          if (pageMagic?.showSidebar) {
-            dispatch('prepare-tab-for-chat', tab)
-          }
-
-          return
-        }
-
         log.debug('creating new silent resource', url)
         bookmarkedResource = await createBookmarkResource(url, tab, {
           silent: true,
@@ -989,8 +1019,10 @@
           freshWebview: false
         })
       } else {
-        log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
-        await refreshResourceWithPage(bookmarkedResource, url, false)
+        if (detectedResourceType !== 'application/pdf') {
+          log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
+          await refreshResourceWithPage(bookmarkedResource, url, false)
+        }
       }
 
       // Check if the detected resource is different from the one we previously bookmarked

@@ -239,7 +239,7 @@
   const cachedMagicTabs = new Set<string>()
   const downloadResourceMap = new Map<string, Download>()
   const downloadToastsMap = new Map<string, ToastItem>()
-  const downloadIntercepters = new Map<string, (data: Download) => void>()
+  const downloadIntercepters = writable(new Map<string, (data: Download) => void>())
   const showStartMask = writable(false)
   const showEndMask = writable(false)
   const additionalChatContextItems = writable<ContextItem[]>([])
@@ -1326,10 +1326,14 @@
         return { resource: null, isNew: false }
       }
 
+      let browserTab = $browserTabs[tabId]
+      if (browserTab.getInitialSrc().startsWith('surf://')) {
+        return { resource: null, isNew: false }
+      }
+
       updateBookmarkingTabState(tabId, 'in_progress')
       toast = toasts.loading('Saving Page…')
 
-      let browserTab = $browserTabs[tabId]
       const isActivated = $activatedTabs.includes(tab.id)
       if (!isActivated) {
         log.debug('Tab not activated, activating first', tab.id)
@@ -1740,47 +1744,13 @@
     }
   }
 
-  const preparePDFPageForChat = async (tab: TabPage) => {
-    const browserTab = $browserTabs[tab.id]
-
-    const url = tab.currentLocation || tab.initialLocation
-
-    const downloadData = await new Promise<Download | null>((resolve) => {
-      const timeout = setTimeout(() => {
-        downloadIntercepters.delete(url)
-        resolve(null)
-      }, CHAT_DOWNLOAD_INTERCEPT_TIMEOUT)
-
-      downloadIntercepters.set(url, (data) => {
-        clearTimeout(timeout)
-        downloadIntercepters.delete(url)
-        resolve(data)
-      })
-
-      // initiate download
-      browserTab.downloadURL(url)
-    })
-
-    if (!downloadData) {
-      return null
-    }
-
-    log.debug('intercepted download', downloadData)
-
-    tabsManager.update(tab.id, {
-      chatResourceBookmark: downloadData.resourceId,
-      resourceBookmark: downloadData.resourceId,
-      resourceBookmarkedManually: false
-    })
-
-    const resource = await resourceManager.getResource(downloadData.resourceId)
-    log.debug('downloaded resource', resource)
-    return resource
-  }
-
   const prepareTabForChatContext = async (tab: TabPage | TabSpace | TabResource) => {
     if (tab.type === 'space' || tab.type === 'resource') {
       log.debug('Preparing space tab for chat context', tab.id)
+      return
+    }
+    const surfUrlMatch = tab.currentLocation?.match(/surf:\/\/resource\/([^\/]+)/)
+    if (surfUrlMatch) {
       return
     }
 
@@ -1862,16 +1832,8 @@
 
     let tabResource = await getExistingResource()
     if (!tabResource) {
-      log.debug('No existing resource found for tab', tab.id)
-
-      const detectedResourceType = tab.currentDetectedApp?.resourceType
-      if (detectedResourceType === 'application/pdf') {
-        log.debug('Page is PDF')
-        tabResource = await preparePDFPageForChat(tab)
-      } else {
-        log.debug('Bookmarking page for chat context', tab.id)
-        tabResource = await browserTab.createResourceForChat()
-      }
+      log.debug('Bookmarking page for chat context', tab.id)
+      tabResource = await browserTab.createResourceForChat()
     } else {
       const url =
         tabResource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
@@ -1928,10 +1890,10 @@
 
   const handlePrepareTabForChat = async (e: CustomEvent<TabPage | TabSpace | TabResource>) => {
     try {
-      const tab = e.detail
-      if (tab.type === 'page') {
-        await preparePDFPageForChat(tab)
-      }
+      // const tab = e.detail
+      // if (tab.type === 'page') {
+      //   await preparePDFPageForChat(tab)
+      // }
 
       log.debug('Done preparing page tab for chat context')
     } catch (e: any) {
@@ -3081,7 +3043,7 @@
     window.api.onRequestDownloadPath(async (data) => {
       await tick()
 
-      const downloadIntercepter = downloadIntercepters.get(data.url)
+      const downloadIntercepter = get(downloadIntercepters).get(data.url)
       const existingDownload = downloadResourceMap.get(data.id)
       if (existingDownload) {
         log.debug('download already in progress', data)
@@ -3204,7 +3166,7 @@
 
       downloadResourceMap.delete(data.id)
 
-      const downloadIntercepter = downloadIntercepters.get(downloadData.url)
+      const downloadIntercepter = get(downloadIntercepters).get(downloadData.url)
       if (downloadIntercepter) {
         downloadIntercepter(downloadData)
       } else {
@@ -5026,6 +4988,7 @@
               {#if tab.type === 'page'}
                 <BrowserTab
                   {historyEntriesManager}
+                  {downloadIntercepters}
                   active={$activeTabId === tab.id}
                   pageMagic={$activeTabMagic}
                   bind:this={$browserTabs[tab.id]}

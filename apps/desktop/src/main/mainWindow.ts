@@ -256,6 +256,7 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
     webPreferences.contextIsolation = true
     webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
     webPreferences.spellcheck = isMac()
+    webPreferences.additionalArguments = [`--pdf-viewer-entry-point=${PDFViewerEntryPoint}`]
   })
 
   // Handle navigation requests within webviews:
