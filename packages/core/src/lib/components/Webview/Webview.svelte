@@ -32,7 +32,7 @@
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope, useDebounce, parseUrlIntoCanonical } from '@horizon/utils'
+  import { useLogScope, useDebounce, parseUrlIntoCanonical, generateID } from '@horizon/utils'
   import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
   import {
     useResourceManager,
@@ -42,7 +42,13 @@
     type ResourceObject
   } from '../../service/resources'
   import type { Tab, TabPage } from '../../types/browser.types'
-  import { Dragcula, HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import {
+    Dragcula,
+    DragOperation,
+    DragZone,
+    HTMLDragZone,
+    type DragculaDragEvent
+  } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
   import type { NewWindowRequest } from '../../service/ipc/events'
 
@@ -266,6 +272,21 @@
         shiftKey: data.shiftKey,
         bubbles: true
       })
+
+      let activeDrag = Dragcula.get().activeDrag
+      if (activeDrag === null) {
+        activeDrag = DragOperation.new({
+          id: `__webview_drag_${generateID()}`,
+          from: undefined,
+          to: DragZone.ZONES.values().find((x) => (x as HTMLDragZone).element === webview),
+          dataTransfer: data.dataTransfer ?? new DataTransfer(),
+          item: undefined
+        })
+
+        Dragcula.get().prepareDragOperation()
+        Dragcula.get().callHandlers('dragstart', activeDrag)
+      }
+
       webview.dispatchEvent(e)
     }
 

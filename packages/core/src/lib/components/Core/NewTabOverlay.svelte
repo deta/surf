@@ -630,7 +630,7 @@
     filteredItems = []
     searchEngineSuggestions = []
     showTabSearch = 0
-    $selectedSpaceId = null
+    $selectedSpaceId = 'all'
     hasLoadedEverything = false
   }
   const browserCommands = [
@@ -657,20 +657,20 @@
     { id: 'create-note', label: 'Create Note', shortcut: '⌘n', type: 'command', icon: 'docs' }
   ] as CMDMenuItem[]
 
-  $: isEverythingSpace = spaceId === 'all'
+  $: isEverythingSpace = $selectedSpaceId === 'all'
 
   const oasis = useOasis()
   const toasts = useToasts()
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
+  const selectedSpaceId = oasis.selectedSpace
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const showResourceDetails = writable(false)
   const resourceDetailsModalSelected = writable<string | null>(null)
   const showCreationModal = writable(false)
-  const selectedSpaceId = writable<string | null>(null)
   const searchResults = writable<ResourceSearchResultItem[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
   const spaceCreationActive = writable(false)
@@ -704,10 +704,10 @@
       oasis.resetSelectedSpace()
 
       loadingContents.set(true)
+      everythingContents.set([])
+      await tick()
 
       if (initialLoad) {
-        everythingContents.set([])
-        await tick()
         telemetry.trackOpenOasis()
       }
 
@@ -884,26 +884,31 @@
     selectedItem.set(e.detail)
   }
 
+  let handledDrop = false
+
   const handleDropOnSpace = async (spaceId: string, drag: DragculaDragEvent<DragTypes>) => {
     //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
     const toast = toasts.loading(`Adding to space...`)
 
     try {
       if (drag.isNative) {
+        handledDrop = true
         const parsed = await processDrop(drag.event!)
         log.debug('Parsed', parsed)
 
         const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
         log.debug('Resources', newResources)
 
-        await oasis.addResourcesToSpace(
-          spaceId,
-          newResources.map((r) => r.id),
-          SpaceEntryOrigin.ManuallyAdded
-        )
+        if (!isEverythingSpace) {
+          await oasis.addResourcesToSpace(
+            spaceId,
+            newResources.map((r) => r.id),
+            SpaceEntryOrigin.ManuallyAdded
+          )
+        }
 
         for (const r of newResources) {
-          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, !isEverythingSpace)
         }
       } else if (
         drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
@@ -939,6 +944,8 @@
     drag.continue()
 
     toast.success(`Resources added!`)
+    await tick()
+    showTabSearch = 2
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -1103,6 +1110,10 @@
     closeResourceDetailsModal()
   }
 
+  $: if ($selectedSpaceId === 'all') {
+    loadEverything()
+  }
+
   const handleOasisFilterChange = (e: CustomEvent<string>) => {
     log.debug('Filter change:', e.detail)
     debouncedSearch($searchValue)
@@ -1120,15 +1131,30 @@
     })
   }
 
+  // Used to reset dragcula when clicking the page after dragging (to prevent the drawer from being stuck)
+  const dragClickHandler = (_e: MouseEvent) => {
+    window.removeEventListener('click', dragClickHandler)
+
+    const dragcula = Dragcula.get()
+    if (dragcula.activeDrag && dragcula.activeDrag.isNative) {
+      log.debug('Reset dragcula', dragcula.activeDrag)
+      dragcula.cleanupDragOperation()
+    }
+  }
+
   let dragculaDragStartOpenTimeout: Timer | null = null // Used to delay opening stuff a bit, so that it doesnt laaagggg
-  const handleDragculaDragStart = () => {
+  const handleDragculaDragStart = (drag: DragOperation) => {
     dragculaDragStartOpenTimeout = setTimeout(() => {
       showTabSearch = 2
     }, 150)
+
+    window.addEventListener('click', dragClickHandler)
   }
   const handleDragculaDragEnd = (drag: DragOperation) => {
     // TODO: Only close when dropped outside
     if (dragculaDragStartOpenTimeout !== null) clearTimeout(dragculaDragStartOpenTimeout)
+
+    window.removeEventListener('click', dragClickHandler)
 
     for (const toId of ['drawer', 'folder-']) {
       if (drag.to?.id.startsWith(toId)) {
@@ -1140,7 +1166,17 @@
       }
     }
 
-    showTabSearch = 0
+    log.warn('Drag end - closing', handledDrop)
+
+    if (!handledDrop) {
+      showTabSearch = 0
+    } else {
+      handledDrop = false
+    }
+  }
+
+  const handlePostDropOnSpace = () => {
+    handledDrop = true
   }
 
   onDestroy(
@@ -1236,7 +1272,7 @@
 
         <Command.Root
           class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
-          $selectedSpaceId === null
+          $selectedSpaceId === 'all'
             ? ''
             : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
           loop
@@ -1322,7 +1358,7 @@
 
                 <div class="stuff-wrap h-full w-full relative">
                   <Tooltip rootID="stuff" />
-                  {#if showTabSearch === 2 && ($selectedSpaceId === 'all' || $selectedSpaceId === null)}
+                  {#if showTabSearch === 2 && $selectedSpaceId === 'all'}
                     <button
                       class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
                       on:click={() => {
@@ -1338,7 +1374,7 @@
                     </button>
                   {/if}
 
-                  {#if $selectedSpaceId !== null && $selectedSpaceId !== 'all'}
+                  {#if $selectedSpaceId !== 'all'}
                     {#key $selectedSpaceId}
                       <OasisSpace
                         spaceId={$selectedSpaceId}
@@ -1349,7 +1385,7 @@
                         {historyEntriesManager}
                         on:open={handleOpen}
                         on:open-and-chat
-                        on:go-back={() => selectedSpaceId.set(null)}
+                        on:go-back={() => selectedSpaceId.set('all')}
                         on:deleted={handleSpaceDeleted}
                         on:updated-space={handleUpdatedSpace}
                         on:creating-new-space={handleCreatingNewSpace}
@@ -1357,6 +1393,7 @@
                         on:select-space={handleSpaceSelected}
                         on:batch-open
                         on:batch-remove={handleResourceRemove}
+                        on:handled-drop={handlePostDropOnSpace}
                         on:open-space-and-chat
                         insideDrawer={true}
                         bind:this={oasisSpace}
@@ -1441,7 +1478,7 @@
           <!-- </Motion> -->
           <!-- </AnimatePresence> -->
 
-          {#if $selectedSpaceId === 'all' || $selectedSpaceId === null || showTabSearch === 1}
+          {#if $selectedSpaceId === 'all' || showTabSearch === 1}
             <div
               class={showTabSearch === 2
                 ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
@@ -1459,7 +1496,7 @@
                     : 'w-[32rem] py-4 pl-2'}
                 />
 
-                {#if showTabSearch === 2 && $selectedSpaceId === null && !!$searchValue}
+                {#if showTabSearch === 2 && $selectedSpaceId === 'all' && !!$searchValue}
                   <div class="rounded-lg bg-neutral-100 p-2 absolute left-full">
                     <select
                       bind:value={$selectedFilter}

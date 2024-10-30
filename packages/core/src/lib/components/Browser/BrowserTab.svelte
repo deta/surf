@@ -86,7 +86,9 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabs = useTabsManager()
+
   const activeTabId = tabs.activeTabId
+  const showNewTabOverlay = tabs.showNewTabOverlay
 
   const userConfigSettings = config.settings
 
@@ -1023,7 +1025,9 @@
 
 <WebviewWrapper
   id="webview-{tab.id}"
-  style={$activeTabId !== tab.id ? 'pointer-events: none !important;' : ''}
+  style={$activeTabId !== tab.id || $showNewTabOverlay === 2
+    ? 'pointer-events: none !important;'
+    : ''}
   src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}

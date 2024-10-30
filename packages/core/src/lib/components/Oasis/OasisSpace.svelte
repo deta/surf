@@ -119,6 +119,7 @@
     'go-back': void
     'select-space': string
     'open-space-and-chat': ChatWithSpaceEvent
+    'handled-drop': void
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -1060,6 +1061,7 @@
     log.debug('dropping onto DropWrapper', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
     if (drag.isNative) {
+      dispatch('handled-drop')
       const parsed = await processDrop(drag.event!)
       log.debug('Parsed', parsed)
 
@@ -1107,7 +1109,7 @@
     }*/
 
     drag.continue()
-    toast.success(`Resources copied'!`)
+    toast.success(`Resources saved to Space!`)
     return
     /*if (
       ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
