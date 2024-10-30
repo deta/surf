@@ -29,7 +29,7 @@
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
   import { Editor } from '@horizon/editor'
-  import MarkdownRenderer from '../../Chat/MarkdownRenderer.svelte'
+  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { ResourceTypes } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
   import SourceItem from './Source.svelte'

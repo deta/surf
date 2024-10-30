@@ -8,13 +8,11 @@
   import type { WebViewEventTransform } from '@horizon/types'
 
   import AiPrompts from './AIPrompts.svelte'
-  import AiOutput from './AIOutput.svelte'
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
-  import ChatMessageMarkdown from '@horizon/core/src/lib/components/Chat/ChatMessageMarkdown.svelte'
-  import { tooltip, truncate, useLogScope } from '@horizon/utils'
+  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { onMount } from 'svelte'
 
   export let text = ''
@@ -276,7 +274,10 @@
                 {@html lastPrompt}
               </div>
             {/if}
-            <ChatMessageMarkdown content={output} sources={[]} inline id="chat-message" />
+
+            <div class="!prose-sm">
+              <MarkdownRenderer content={output} id="chat-message" size="sm" />
+            </div>
 
             {#if output.length > 0 && !running}
               <div class="save-buttons">

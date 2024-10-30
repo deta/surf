@@ -25,9 +25,8 @@
 
   import type { AIChatMessageSource } from '../../types/browser.types'
   import CitationItem from './CitationItem.svelte'
-  import MarkdownRenderer from './MarkdownRenderer.svelte'
+  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
 
   export let id: string = ''
   export let content: string
@@ -301,5 +300,11 @@
     <!-- <h3 class="text-2xl font-semibold">Answer</h3> -->
   {/if}
 
-  <MarkdownRenderer bind:element={contentElem} {content} {id} size={inline ? 'sm' : 'lg'} />
+  <MarkdownRenderer
+    bind:element={contentElem}
+    {content}
+    {id}
+    size={inline ? 'sm' : 'lg'}
+    citationComponent={CitationItem}
+  />
 </div>

@@ -1,25 +1,20 @@
 import { ipcRenderer } from 'electron'
-import {
-  WebParser,
-  type WebAppExtractor,
+import type {
+  WebAppExtractor,
   DetectedResource,
   WebAppExtractorActions,
-  WebServiceActionInputs,
-  getRangeData,
-  constructRange,
-  applyRangeHighlight
+  WebServiceActionInputs
 } from '@horizon/web-parser'
+import { WebParser, getRangeData, constructRange, applyRangeHighlight } from '@horizon/web-parser'
+import type { AnnotationCommentRange, AnnotationRangeData, DetectedWebApp } from '@horizon/types'
 import {
-  AnnotationCommentRange,
-  AnnotationRangeData,
-  DetectedWebApp,
-  ResourceTypes,
-  WebViewEventReceiveNames,
-  WebViewEventSendNames,
+  WebviewAnnotationEventNames,
+  WebviewAnnotationEvents,
   WebViewReceiveEvents,
   WebViewSendEvents,
-  WebviewAnnotationEventNames,
-  WebviewAnnotationEvents
+  WebViewEventReceiveNames,
+  WebViewEventSendNames,
+  ResourceTypes
 } from '@horizon/types'
 import { unified } from 'unified'
 import rehypeParse from 'rehype-parse'
@@ -30,12 +25,8 @@ import remarkStringify from 'remark-stringify'
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
-import {
-  ResourceArticle,
-  ResourceDocument,
-  type Resource
-} from '@horizon/core/src/lib/service/resources'
-import { normalizeURL } from '@horizon/utils'
+import { type ResourceArticle, type Resource } from '@horizon/core/src/lib/service/resources'
+import { normalizeURL } from '@horizon/utils/src/url'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ComponentType, SvelteComponent } from 'svelte'
   import Markdown, { type Plugin } from 'svelte-exmarkdown'
   import rehypeRaw from 'rehype-raw'
   import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
@@ -11,13 +12,13 @@
   import 'highlight.js/styles/github-dark.min.css'
   import 'katex/dist/katex.min.css'
 
-  import CitationItem from './CitationItem.svelte'
   import CodeBlock from './CodeBlock.svelte'
 
   export let id: string = ''
   export let content: string
   export let element: HTMLDivElement | undefined = undefined
   export let size: 'sm' | 'lg' = 'lg'
+  export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
 
   const createRehypePlugin = (plugin: any, opts?: any): Plugin => {
     return { rehypePlugin: opts ? [plugin, opts] : [plugin] }
@@ -51,7 +52,9 @@
     createRehypePlugin(rehypeKatex),
     createRehypePlugin(rehypeStringify),
     createRehypePlugin(rehypeHighlight, { languages: all }),
-    { renderer: { citation: CitationItem, pre: CodeBlock, h4: 'h3', h5: 'h3' } }
+    ...(citationComponent
+      ? [{ renderer: { citation: citationComponent, pre: CodeBlock, h4: 'h3', h5: 'h3' } }]
+      : [])
   ]
 </script>
 
