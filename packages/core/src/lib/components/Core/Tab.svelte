@@ -32,11 +32,18 @@
   import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  const log = useLogScope('Tab')
+  const tabsManager = useTabsManager()
+  const userConfig = useConfig()
+
+  const userSettings = userConfig.settings
+
   import {
     useGlobalMiniBrowser,
     useScopedMiniBrowser,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
+
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -120,6 +127,7 @@
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
   const selectedTabs = tabsManager.selectedTabs
+  const tabStyles = writable<string>('')
 
   const SHOW_INSECURE_WARNING_TIMEOUT = 3000
 
@@ -150,6 +158,7 @@
   }
 
   $: showLiveSpaceButton = $userSettings.live_spaces && checkIfLiveSpacePossible(tab)
+  $: tabStyles.set(getTabStyles({ isActive, pinned, horizontalTabs, tab, isSelected }))
 
   // $: if (tab.type === 'space') {
   //   fetchSpace(tab.spaceId)
@@ -369,6 +378,45 @@
     }
   }
 
+  function getTabStyles({
+    isActive,
+    pinned,
+    horizontalTabs,
+    tab,
+    isSelected
+  }: {
+    isActive: boolean
+    pinned: boolean
+    horizontalTabs: boolean
+    tab: Tab
+    isSelected: boolean
+  }) {
+    const baseClasses =
+      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md'
+    const activeClasses = isActive
+      ? 'active text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px]'
+      : pinned
+        ? 'bg-sky-100/10'
+        : '' // Default background when not active if unpinned
+    const magicClasses = tab.magic && !isActive ? 'shadow-inner ring-[0] ring-pink-600' : ''
+    const selectedClasses = isSelected && !isActive ? '' : ''
+    const hoverClasses = 'hover:bg-sky-100'
+
+    let styleClasses = ''
+    if (pinned && horizontalTabs) {
+      styleClasses =
+        'rounded-lg bg-sky-100/20 mx-0.25 py-[0.525rem] px-[0.575rem] w-full border border-white/10'
+    } else if (pinned && !horizontalTabs) {
+      styleClasses = 'w-full rounded-2xl p-3 border-2 border-white/10'
+    } else if (!pinned && horizontalTabs) {
+      styleClasses = 'py-1.5 px-2.5 rounded-xl'
+    } else {
+      styleClasses = 'px-4 py-3 rounded-2xl'
+    }
+
+    return `${baseClasses} ${activeClasses} ${magicClasses} ${selectedClasses} ${styleClasses} ${hoverClasses}`
+  }
+
   onMount(() => {
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
@@ -387,10 +435,12 @@
 <div
   draggable={true}
   id="tab-{tab.id}"
-  class={`tab no-drag ${isActive ? 'active' : ''} ${tab.magic ? (isActive ? 'shadow-inner ring-[0] ring-pink-600' : '') : isActive ? 'text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px] ring-sky-500' : isSelected ? 'bg-white outline outline-2 outline-sky-500' : ''} flex items-center ${pinned ? 'p-1 rounded-lg' : horizontalTabs ? 'py-1.5 px-2.5 rounded-xl' : 'px-4 py-3 rounded-2xl'} group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md hover:bg-sky-100 z-50 select-none`}
+  class={$tabStyles}
   class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app' && !tab.magic}
   class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app' && !tab.magic}
   class:pinned
+  class:horizontalTabs
+  {horizontalTabs}
   class:hovered
   class:selected={isSelected}
   class:combine-border={(isMagicActive && tab.magic) ||

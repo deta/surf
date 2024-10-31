@@ -25,6 +25,11 @@ Object.values(scripts).forEach((script) => {
 // Store for the active timeline
 const activeTimeline = writable<OnboardingFeature | null>(null)
 
+export const hasActiveTimeline = derived(
+  activeTimeline,
+  ($activeTimeline) => $activeTimeline !== null
+)
+
 let previousTargetElements: Element[] = []
 export const activeStep = derived([activeTimeline, timelines], ([$activeTimeline, $timelines]) => {
   if ($activeTimeline && $timelines[$activeTimeline]) {

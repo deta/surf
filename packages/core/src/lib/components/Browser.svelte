@@ -150,7 +150,7 @@
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
   import Tooltip from './Onboarding/Tooltip.svelte'
-  import { launchTimeline, endTimeline } from './Onboarding/timeline'
+  import { launchTimeline, endTimeline, hasActiveTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
@@ -169,6 +169,7 @@
   let magicSidebar: MagicSidebar
   let isFirstButtonVisible = true
   let containerRef: Element
+  let pinnedTabsWrapper: HTMLElement
 
   const onboardingActive = writable(false)
 
@@ -356,7 +357,8 @@
   }
 
   $: if (onboardingActive) {
-    if ($activeTab?.type === 'onboarding') {
+    // Set onboarding to active if the user is on the onboarding tab or an active onboarding timeline is running.
+    if ($activeTab?.type === 'onboarding' || hasActiveTimeline) {
       onboardingActive.set(false)
     } else {
       onboardingActive.set(true)
@@ -4280,16 +4282,23 @@
           {/if}
 
           <div
-            class="bg-sky-50 no-drag my-auto rounded-xl shadow-md flex-shrink-0 overflow-x-scroll no-scrollbar"
-            class:p-2={!horizontalTabs}
-            class:p-0.5={horizontalTabs}
+            id="sidebar-pinned-tabs-wrapper"
+            class={$pinnedTabs.length !== 0
+              ? 'relative no-drag my-auto rounded-xl flex-shrink-0 overflow-x-scroll no-scrollbar transition-colors'
+              : horizontalTabs
+                ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 overflow-x-scroll no-scrollbar transition-colors'
+                : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 overflow-x-scroll no-scrollbar transition-colors'}
+            class:horizontalTabs
+            class:empty={$pinnedTabs.length === 0}
+            bind:this={pinnedTabsWrapper}
           >
             <div
               id="sidebar-pinned-tabs"
               style:view-transition-name="pinned-tabs-wrapper"
-              class="flex items-center h-fit px-2 py-1"
+              class="flex items-center h-fit"
               axis="horizontal"
               dragdeadzone="5"
+              aria-hidden="true"
               use:HTMLAxisDragZone.action={{
                 accepts: (drag) => {
                   if (
@@ -4307,14 +4316,14 @@
               on:Drop={handleDropSidebar}
             >
               {#if $pinnedTabs.length === 0}
-                <div class="">Drop Tabs here to pin them.</div>
+                <div style="height: 0rem; width: 100%;"></div>
               {:else}
                 {#each $pinnedTabs as tab, index (tab.id + index)}
                   <TabItem
                     hibernated={!$activatedTabs.includes(tab.id)}
                     removeHighlight={$showNewTabOverlay !== 0}
                     {tab}
-                    horizontalTabs={true}
+                    {horizontalTabs}
                     {activeTabId}
                     pinned={true}
                     isMagicActive={$magicTabs.length > 0}
@@ -4343,8 +4352,8 @@
 
           <div
             class=" {horizontalTabs
-              ? 'overflow-x-scroll space-x-2 px-3 outline'
-              : 'overflow-y-scroll space-y-2 py-3 outline'} w-full h-full inline-flex flex-nowrap overflow-hidden no-scrollbar outline'"
+              ? 'overflow-x-scroll space-x-2 outline'
+              : 'overflow-y-scroll space-y-2 outline'} w-full h-full inline-flex flex-nowrap overflow-hidden no-scrollbar outline'"
             class:flex-row={horizontalTabs}
             class:items-center={horizontalTabs}
             class:flex-col={!horizontalTabs}
@@ -5277,6 +5286,11 @@
     opacity: 0;
   }
 
+  :global(body[data-dragging='true'] #sidebar-pinned-tabs-wrapper.empty) {
+    @apply bg-sky-100;
+    z-index: 100;
+  }
+
   :global(*) {
     scrollbar-color: rgb(130, 130, 130) transparent;
     scrollbar-width: thin;
@@ -5492,7 +5506,7 @@
   }
 
   #sidebar-pinned-tabs {
-    gap: 4px;
+    gap: 6px;
   }
 
   input {
