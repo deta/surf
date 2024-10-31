@@ -32,18 +32,12 @@
   import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  const log = useLogScope('Tab')
-  const tabsManager = useTabsManager()
-  const userConfig = useConfig()
-
-  const userSettings = userConfig.settings
 
   import {
     useGlobalMiniBrowser,
     useScopedMiniBrowser,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
-
 
   export let tab: Tab
   export let activeTabId: Writable<string>
