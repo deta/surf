@@ -339,6 +339,14 @@ const api = {
     }
   },
 
+  onOpenInvitePage: (callback: () => void) => {
+    try {
+      IPC_EVENTS_RENDERER.openInvitePage.on(() => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onOpenDevtools: (callback: () => void) => {
     try {
       IPC_EVENTS_RENDERER.openDevTools.on(() => callback())
@@ -444,6 +452,10 @@ const api = {
       userConfig.settings = settings
       callback(settings)
     })
+  },
+
+  openInvitePage: () => {
+    IPC_EVENTS_RENDERER.openInvitePage.send()
   },
 
   updateInitializedTabs: async (value: boolean) => {

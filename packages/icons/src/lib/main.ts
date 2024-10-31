@@ -95,6 +95,7 @@ import RectangleGroup from './Icons/RectangleGroup.svelte'
 import CursorGrab from './Icons/CursorGrab.svelte'
 import Screenshot from './Icons/Screenshot.svelte'
 import AdjustmentsHorizontal from './Icons/AdjustmentsHorizontal.svelte'
+import Ticket from './Icons/Ticket.svelte'
 import Save from './Icons/Save.svelte'
 
 export const icons = {
@@ -196,6 +197,7 @@ export const icons = {
   'cursor-grab': CursorGrab,
   screenshot: Screenshot,
   'adjustments.horizontal': AdjustmentsHorizontal,
+  ticket: Ticket,
   save: Save
 }
 
@@ -298,5 +300,6 @@ export {
   CursorGrab,
   Screenshot,
   AdjustmentsHorizontal,
+  Ticket,
   Save
 }

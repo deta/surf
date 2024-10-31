@@ -116,6 +116,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   resetPrompt: ipcService.addEvent<string>('reset-prompt'),
   updatePrompt: ipcService.addEvent<Pick<EditablePrompt, 'id' | 'content'>>('update-prompt'),
   openCheatSheet: ipcService.addEvent<void>('open-cheat-sheet'),
+  openInvitePage: ipcService.addEvent<void>('open-invite-page'),
   openFeedbackPage: ipcService.addEvent<void>('open-feedback-page'),
   openWelcomePage: ipcService.addEvent<void>('open-welcome-page'),
   adBlockerStateChange: ipcService.addEvent<AdblockerStateChange>('adblocker-state-change'),

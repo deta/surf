@@ -294,6 +294,11 @@ function setupIpcHandlers(backendRootPath: string) {
     ipcSenders.resetPrompt(id)
   })
 
+  IPC_EVENTS_MAIN.openInvitePage.on((event) => {
+    if (!validateIPCSender(event)) return
+    ipcSenders.openInvitePage()
+  })
+
   IPC_EVENTS_MAIN.updatePrompt.on((event, { id, content }) => {
     if (!validateIPCSender(event)) return
 
@@ -321,6 +326,16 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.openCheatSheet.sendToWebContents(window.webContents)
+  },
+
+  openInvitePage: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openInvitePage.sendToWebContents(window.webContents)
   },
 
   openFeedbackPage: () => {

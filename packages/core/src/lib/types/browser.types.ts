@@ -24,7 +24,7 @@ export interface BaseTab {
     | 'history'
     | 'resource'
     | 'onboarding'
-
+    | 'invites'
   archived: boolean
   index: number
   pinned: boolean
@@ -90,6 +90,10 @@ export interface TabOnboarding extends BaseTab {
   type: 'onboarding'
 }
 
+export interface TabInvites extends BaseTab {
+  type: 'invites'
+}
+
 export type Tab =
   | TabPage
   | TabChat
@@ -101,6 +105,8 @@ export type Tab =
   | TabHistory
   | TabResource
   | TabOnboarding
+  | TabInvites
+
 export type AIChat = {
   id: string
   messages: AIChatMessage[]

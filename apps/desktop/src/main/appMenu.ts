@@ -111,6 +111,10 @@ const template = [
               click: useAsDefaultBrowser
             },
             {
+              label: 'Invite Friends',
+              click: () => ipcSenders.openInvitePage()
+            },
+            {
               label: 'Show Surf Data in Finder',
               click: showSurfDataInFinder
             },
@@ -163,6 +167,10 @@ const template = [
             {
               label: 'Use as Default Browser',
               click: useAsDefaultBrowser
+            },
+            {
+              label: 'Invite Friends',
+              click: () => ipcSenders.openInvitePage()
             },
             { type: 'separator' },
             {

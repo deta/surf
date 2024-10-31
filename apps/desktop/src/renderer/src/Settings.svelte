@@ -190,6 +190,11 @@
             />
           </div>
         {/if}
+
+        <div class="dev-wrapper">
+          <h3>Invite Friends</h3>
+          <button on:click={() => window.api.openInvitePage(() => {})}>Create Invite Link</button>
+        </div>
       </article>
     {:else if $activeTab === 'appearance'}
       <article class="general">

@@ -43,6 +43,7 @@
     "is-ip": "^5.0.1",
     "lethargy-ts": "^0.0.5",
     "p-queue": "^8.0.1",
+    "perfect-freehand": "^1.2.2",
     "postcss": "^8.4.38",
     "sass": "^1.70.0",
     "svelte": "^4.2.19",

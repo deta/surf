@@ -63,7 +63,8 @@
     BookmarkTabState,
     ContextItem,
     AddContextItemEvent,
-    ChatWithSpaceEvent
+    ChatWithSpaceEvent,
+    TabInvites
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -131,6 +132,7 @@
   import Tooltip from './Onboarding/Tooltip.svelte'
   import { launchTimeline, endTimeline, hasActiveTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
+  import TabInvite from './Core/TabInvite.svelte'
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
   import { provideHomescreen } from './Oasis/homescreen/homescreen'
   import { debugMode } from '../stores/debug'
@@ -684,6 +686,27 @@
     }
   }
 
+  const handleInvitesTab = async () => {
+
+    // check if there already exists a invites tab, if yes we just change to it
+
+    const invitesTab = $tabs.find((tab) => tab.type === 'invites')
+
+    if (invitesTab) {
+      tabsManager.makeActive(invitesTab.id)
+      return
+    }
+
+    await tabsManager.create<TabInvites>(
+      {
+        title: 'Invites',
+        icon: 'ticket',
+        type: 'invites'
+      },
+      { active: true }
+    )
+  }
+
   // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -739,6 +762,7 @@
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
+      // TEMPORARY: this is only used for testing the invites feature
     } else if (isModKeyAndKeyPressed(e, 'o')) {
       if ($showNewTabOverlay === 2) {
         setShowNewTabOverlay(0)
@@ -2994,6 +3018,10 @@
       openCheatSheet()
     })
 
+    window.api.onOpenInvitePage(() => {
+      openInvitePage()
+    })
+
     window.api.onOpenDevtools(() => {
       const activeTabMiniBrowserSelected = getActiveMiniBrowser()
       if (activeTabMiniBrowserSelected && activeTabMiniBrowserSelected.selected.browserTab) {
@@ -3297,6 +3325,10 @@
       new Set([{ id: $tabs.find((t) => t.type === 'onboarding')?.id ?? '', userSelected: true }])
     )
     onboardingTabVisible.set(true)
+  }
+
+  const openInvitePage = () => {
+    handleInvitesTab()
   }
 
   const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
@@ -5058,6 +5090,8 @@
                     )
                   }}
                 />
+              {:else if tab.type === 'invites'}
+                <TabInvite />
               {/if}
             </div>
           {/if}
