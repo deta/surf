@@ -12,6 +12,7 @@
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
+  export type Origin = 'stuff' | 'homescreen'
   export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
 
   export type Annotation = {

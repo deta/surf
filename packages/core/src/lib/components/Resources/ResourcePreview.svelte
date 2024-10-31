@@ -19,6 +19,7 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
+  import type { CtxItem } from '../Core/ContextMenu.svelte'
 
   import {
     ResourceJSON,
@@ -32,7 +33,9 @@
     type CreateTabOptions,
     type ResourceData,
     type ResourceDataPost,
-    SpaceEntryOrigin
+    SpaceEntryOrigin,
+    type DragTypes,
+    DragTypeNames
   } from '../../types'
 
   import { writable, get, derived } from 'svelte/store'
@@ -66,6 +69,7 @@
     type Author,
     type ContentType,
     type Mode,
+    type Origin,
     type Source
   } from './Previews/Preview.svelte'
   import { slide } from 'svelte/transition'
@@ -75,10 +79,13 @@
     selectedItemIds,
     addSelectionById
   } from '@horizon/core/src/lib/components/Oasis/utils/select'
+  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
 
   export let resource: Resource
+  export let draggable = true
   export let selected: boolean = false
   export let mode: Mode = 'full'
+  export let origin: Origin = 'stuff'
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
@@ -87,6 +94,7 @@
   export let processingText: string | undefined = undefined
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
+  export let context: 'homescreen' | 'homescreen-space' | undefined = undefined
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -105,6 +113,8 @@
     'created-tab': void
     'whitelist-resource': string
     'blacklist-resource': string
+    'set-resource-as-background': string
+    'remove-from-homescreen'
   }>()
 
   const spaces = oasis.spaces
@@ -132,6 +142,7 @@
             text: space.name.folderName,
             action: () => {
               oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+              toasts.success(`Resource added to space: ${space.name.folderName}`)
             }
           }) as CtxItem
       )
@@ -561,24 +572,6 @@
     dispatch('created-tab')
   }
 
-  const handleDragStart = (e: DragEvent) => {
-    dragging = true
-    if (resourceData) {
-      if (resource.type.startsWith(ResourceTypes.POST)) {
-        e.dataTransfer?.setData('text/uri-list', (resourceData as ResourceDataPost)?.url ?? '')
-      }
-
-      const content = WebParser.getResourceContent(resource.type, resourceData)
-      if (content.plain) {
-        e.dataTransfer?.setData('text/plain', content.plain)
-      }
-
-      if (content.html) {
-        e.dataTransfer?.setData('text/html', content.html)
-      }
-    }
-  }
-
   const handleClick = async (e: MouseEvent) => {
     // TOOD: @felix replace this with interactive prop
     if (resourcesBlacklistable) {
@@ -620,7 +613,12 @@
       log.debug('opening resource in new tab', resource.id)
       openResourceAsTab({
         active: !isModKeyPressed(e) || e.shiftKey,
-        trigger: CreateTabEventTrigger.OasisItem
+        trigger:
+          context === 'homescreen'
+            ? CreateTabEventTrigger.Homescreen
+            : context === 'homescreen-space'
+              ? CreateTabEventTrigger.HomescreenSpace
+              : CreateTabEventTrigger.OasisItem
       })
     }
 
@@ -725,6 +723,13 @@
     }
   }
 
+  const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
+    drag.item!.data.setData(DragTypeNames.SURF_RESOURCE, resource)
+    drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
+    drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+
+    drag.continue()
+  }
   $: contextMenuItems = [
     {
       type: 'action',
@@ -822,13 +827,18 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
+  id="resource-preview-{resource.id}-{Math.floor(Math.random() * 100000)}"
+  {draggable}
+  use:HTMLDragItem.action={{}}
+  on:DragStart={handleDragStart}
   on:click={handleClick}
-  class="resource-preview clickable relative"
+  class="resource-preview clickable relative preview-mode-{mode}"
   class:frame={!frameless}
   class:isSelected={selected}
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
   data-selectable
   data-selectable-id={resource.id}
+  data-vaul-no-drag
   data-tooltip-target="stuff-example-resource"
   use:contextMenu={{
     canOpen: interactive,
@@ -1198,5 +1208,19 @@
     -moz-osx-font-smoothing: grayscale;
     -webkit-line-clamp: 15;
     -webkit-box-orient: vertical;
+  }
+
+  /* Dragcula Dragging */
+  :global(.resource-preview[data-drag-preview]) {
+    box-shadow: none;
+    max-width: 25ch;
+    border-radius: 14px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  :global(.drag-item[data-drag-preview] .resource-preview .preview) {
+    box-shadow:
+      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
+      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
   }
 </style>

@@ -191,6 +191,38 @@ export class HTMLDragItem extends DragItem {
     };
   }
 
+  /** Create the drag preview element and attache it to the DOM.
+   */
+  createPreivewElement() {
+    console.warn("createPreivewElement");
+    //   const transition = await HTMLDragItem.startTransition(() => {
+    if (this.previewType === "clone") {
+      this.previewElement = this.element.cloneNode(true) as HTMLElement;
+
+      let vtName = this.element.style.viewTransitionName;
+
+      this.previewElement.style.viewTransitionName = vtName;
+      this.element.style.viewTransitionName = "";
+
+      this.previewElement.setAttribute("data-drag-preview", "");
+      this.previewElement.style.pointerEvents = "none";
+      this.previewElement.style.position = "fixed";
+      this.previewElement.style.zIndex = "2147483647";
+      this.previewElement.style.left = "0px";
+      this.previewElement.style.top = "0px";
+      this.previewElement.style.setProperty("--drag-width", `${this.previewSize.x}px`);
+      this.previewElement.style.setProperty("--drag-height", `${this.previewSize.y}px`);
+      this.previewElement.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
+      this.previewElement.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
+    }
+
+    if (this.previewType === "clone") {
+      document.body.appendChild(this.previewElement!);
+    }
+
+    //});
+  }
+
   // === DOM EVENTS
   protected handleDragStart = this._handleDragStart.bind(this);
   protected handleDrag = this._handleDrag.bind(this);
@@ -205,13 +237,6 @@ export class HTMLDragItem extends DragItem {
     //e.dataTransfer!.setData("text", "test");
     e.dataTransfer!.effectAllowed = "all";
     e.dataTransfer!.dropEffect = "copy";
-
-    //	e.dataTransfer?.setData("text/uri-list", "https://foogle.com");
-    //e.dataTransfer!.setData("text", "FUCKCKC");
-    //e.dataTransfer!.setData("text/html", "<b>WTF NOTION?</b>");
-    //const aFileParts = ['<a id="a"><b id="b">hey!</b></a>'];
-    //
-    //e.dataTransfer!.items.add(new File([new Blob(aFileParts, { type: 'text/html' })], 'test.html'));
 
     log.debug(`${this.prefix}:dragStart`, e);
 
@@ -236,6 +261,23 @@ export class HTMLDragItem extends DragItem {
 
     this.element.setAttribute("data-dragging-item", "");
 
+    Dragcula.get().activeDrag = DragOperation.new({
+      item: this
+    });
+    Dragcula.get().prepareDragOperation();
+    const drag = Dragcula.get().activeDrag;
+
+    DragculaDragEvent.dispatch("DragStart", this.element, {
+      metaKey: e?.metaKey,
+      ctrlKey: e?.ctrlKey,
+      shiftKey: e?.shiftKey,
+      altKey: e?.altKey,
+      ...drag,
+      event: e,
+      bubbles: false
+    }); // no fck bubbles to annoy u ;) !
+
+    this.dragInterval = setInterval(() => this.onDrag.bind(this)(drag), 300);
     this.onDragStart(e);
   }
 
@@ -301,7 +343,6 @@ export class HTMLDragItem extends DragItem {
   protected boundRafCbk = this.rafCbk.bind(this);
 
   protected override async onDragStart(e?: DragEvent) {
-    super.onDragStart();
     const drag = Dragcula.get().activeDrag;
     if (drag === null) {
       throw new Error("No active drag operation during onDragStart! This should not happen!");
@@ -329,48 +370,25 @@ export class HTMLDragItem extends DragItem {
     this.previewSize = { x: this.element.clientWidth, y: this.element.clientHeight };
 
     // Create preview element
-    if (this.element.style.viewTransitionName === "")
-      this.element.style.viewTransitionName = "drag-item";
-    const transition = await HTMLDragItem.startTransition(() => {
-      if (this.previewType === "clone") {
-        //this.previewSize = { x: this.element.getBoundingClientRect().width, y: this.element.getBoundingClientRect().height };
-        this.previewElement = this.element.cloneNode(true) as HTMLElement;
+    setTimeout(() => this.createPreivewElement(), 0);
 
-        let vtName = this.element.style.viewTransitionName;
+    //window.addEventListener("mouseup", this.handleMouseUp, { once: true, capture: true });
 
-        this.previewElement.style.viewTransitionName = vtName;
-        this.element.style.viewTransitionName = "";
+    DragculaDragEvent.dispatch("DragStart", this.element, {
+      metaKey: e?.metaKey,
+      ctrlKey: e?.ctrlKey,
+      shiftKey: e?.shiftKey,
+      altKey: e?.altKey,
+      ...drag,
+      event: e,
+      bubbles: false
+    }); // no fck bubbles to annoy u ;) !
 
-        this.previewElement.setAttribute("data-drag-preview", "");
-        this.previewElement.style.pointerEvents = "none";
-        this.previewElement.style.position = "fixed";
-        this.previewElement.style.zIndex = "2147483647";
-        this.previewElement.style.left = "0px";
-        this.previewElement.style.top = "0px";
-        this.previewElement.style.setProperty("--drag-width", `${this.previewSize.x}px`);
-        this.previewElement.style.setProperty("--drag-height", `${this.previewSize.y}px`);
-        this.previewElement.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
-        this.previewElement.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
-      }
+    this.dragInterval = setInterval(() => this.onDrag.bind(this)(drag), 300);
 
-      if (this.previewType === "clone") {
-        document.body.appendChild(this.previewElement!);
-      }
+    //transition.updateCallbackDone.then(() => {
 
-      //window.addEventListener("mouseup", this.handleMouseUp, { once: true, capture: true });
-      this.dragInterval = setInterval(() => this.onDrag.bind(this)(drag), 300);
-
-      DragculaDragEvent.dispatch("DragStart", this.element, {
-        metaKey: e?.metaKey,
-        ctrlKey: e?.ctrlKey,
-        shiftKey: e?.shiftKey,
-        altKey: e?.altKey,
-        ...drag,
-        event: e,
-        bubbles: false
-      }); // no fck bubbles to annoy u ;) !
-    });
-    transition.updateCallbackDone.then(() => {
+    setTimeout(() => {
       const parentZone = getParentZoneEl(this.element);
       if (parentZone) {
         const evt = new DragEvent("dragenter", {
@@ -381,8 +399,8 @@ export class HTMLDragItem extends DragItem {
         });
         parentZone.dispatchEvent(evt);
       }
-    });
-    transition.finished.then(() => {
+      //});
+      /*transition.finished.then(() => {
       if (this.previewElement) {
         const vtName = this.previewElement.style.viewTransitionName;
         if (vtName !== "drag-item") {
@@ -390,9 +408,10 @@ export class HTMLDragItem extends DragItem {
         }
         this.previewElement.style.viewTransitionName = "";
       }
-    });
+    });*/
 
-    Dragcula.get().callHandlers("dragstart", drag);
+      Dragcula.get().callHandlers("dragstart", drag);
+    }, 1);
   }
 
   lastOffset: Vec2<number> = { x: NaN, y: NaN }; // TODO: refac.

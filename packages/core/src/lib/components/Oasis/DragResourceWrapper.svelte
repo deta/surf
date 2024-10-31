@@ -132,6 +132,7 @@
 <div
   id={resource.id}
   {draggable}
+  data-vaul-no-drag
   use:HTMLDragItem.action={{}}
   class="drag-item"
   style:view-transition-name="oasis-resource-{resource.id}"
@@ -149,6 +150,7 @@
     max-width: 25ch;
     border-radius: 14px;
     overflow: hidden;
+    pointer-events: none;
   }
   :global(.drag-item[data-drag-preview] .resource-preview .preview) {
     box-shadow:

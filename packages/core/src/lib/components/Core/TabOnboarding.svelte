@@ -92,7 +92,7 @@
   let activeTab = 'welcome'
 </script>
 
-<div class="flex h-full w-full">
+<div class="flex h-full w-full onboarding-wrapper">
   <div class="fixed bg-gradient-to-t from-white to-transparent w-full h-full z-0" />
   <div class="flex flex-col w-1/4 px-8 h-screen relative z-20 justify-center items-center">
     <div class="flex flex-col items-start pb-8 gap-4">
@@ -448,5 +448,9 @@
       background: #4592ef !important;
       color: #fff;
     }
+  }
+
+  .onboarding-wrapper {
+    background: #4592ef;
   }
 </style>

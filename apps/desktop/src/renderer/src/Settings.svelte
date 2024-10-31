@@ -246,6 +246,14 @@
             bind:value={userConfigSettings.annotations_sidebar}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="code-block"
+            title="Homescreen"
+            description="Pin resources and spaces onto your personalizable homescreen."
+            bind:value={userConfigSettings.homescreen}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}

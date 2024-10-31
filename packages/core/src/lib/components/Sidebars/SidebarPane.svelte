@@ -253,20 +253,19 @@
   ].join(' ')
 
   $: leftPeakAreaClasses = [
-    'fixed z-50 no-drag',
+    'fixed no-drag',
     leftIsOpen === State.Closed ? 'block' : 'hidden',
     horizontalTabs ? 'top-0 left-0 right-0 h-4' : 'top-0 left-0 w-4 h-full'
   ].join(' ')
 
   $: rightPeakAreaClasses = [
-    'fixed z-50 no-drag w-4',
+    'fixed no-drag w-4',
     rightIsOpen === State.Closed ? 'block' : 'hidden',
     'right-0 w-4 h-full'
   ].join(' ')
 
   $: rightSidebarStyle = `
     width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
-    z-index: 1000000000;
     ${
       horizontalTabs && (leftIsOpen === State.Open || leftIsOpen === State.Peek)
         ? `top: ${HORIZONTAL_SIZE}px;`
@@ -308,7 +307,7 @@
     class:horizontalTabs
     class:verticalTabs={!horizontalTabs}
     aria-labelledby="nav-heading"
-    style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 10000000000000;"
+    style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 502;"
   >
     <div class="h-full w-full">
       <slot name="sidebar" />
@@ -331,13 +330,21 @@
   <!-- svelte-ignore a11y-no-static-element-interactions -->
 
   {#if enablePeeking}
-    <div class={leftPeakAreaClasses} on:mouseenter={() => handleMouseEnter('left')} />
+    <div
+      class="left-peeking-area {leftPeakAreaClasses}"
+      on:mouseenter={() => handleMouseEnter('left')}
+      style="z-index: 550;"
+    />
   {/if}
   <main style={mainStyle} class={mainClasses}>
     <slot name="content" />
   </main>
 
-  <div class={rightBarClasses} aria-labelledby="nav-heading" style={rightSidebarStyle}>
+  <div
+    class="sidebar-right {rightBarClasses}"
+    aria-labelledby="nav-heading"
+    style="z-index: 501; {rightSidebarStyle}"
+  >
     <div
       class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag left-0 top-0 bottom-0 w-1 cursor-col-resize"
     >

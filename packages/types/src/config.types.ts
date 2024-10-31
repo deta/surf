@@ -21,6 +21,7 @@ export type UserSettings = {
   annotations_sidebar: boolean
   live_spaces: boolean
   auto_generate_chat_prompts: boolean
+  homescreen: boolean
   /**
    * @deprecated use individual feature flags instead
    */

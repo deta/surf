@@ -36,7 +36,15 @@
   } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { useHomescreen } from '../Oasis/homescreen/homescreen'
 
+  const log = useLogScope('Tab')
+  const tabsManager = useTabsManager()
+  const userConfig = useConfig()
+  const homescreen = useHomescreen()
+  const homescreenVisible = homescreen.visible
+
+  const userSettings = userConfig.settings
   import {
     useGlobalMiniBrowser,
     useScopedMiniBrowser,
@@ -62,12 +70,7 @@
   export let isSelected = false
   export let isMagicActive = false
 
-  const log = useLogScope('Tab')
-  const tabsManager = useTabsManager()
-  const userConfig = useConfig()
   const globalMiniBrowser = useGlobalMiniBrowser()
-
-  const userSettings = userConfig.settings
 
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
 
@@ -139,7 +142,7 @@
   let showInsecureWarningText = false
 
   // $: acceptDrop = tab.type === 'space'
-  $: isActive = tab.id === $activeTabId && !removeHighlight
+  $: isActive = tab.id === $activeTabId && !removeHighlight && !$homescreenVisible
   $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
@@ -235,6 +238,7 @@
       e.preventDefault()
       e.stopPropagation()
 
+      homescreen.setVisible(false)
       dispatch('select', tab.id)
     }
 
@@ -434,13 +438,19 @@
   draggable={true}
   id="tab-{tab.id}"
   class={$tabStyles}
-  class:bg-green-200={isActive && $inputUrl === 'surf.featurebase.app' && !tab.magic}
-  class:bg-sky-200={isActive && $inputUrl !== 'surf.featurebase.app' && !tab.magic}
+  class:bg-green-200={isActive &&
+    $inputUrl === 'surf.featurebase.app' &&
+    !tab.magic &&
+    !$homescreenVisible}
+  class:bg-sky-200={isActive &&
+    $inputUrl !== 'surf.featurebase.app' &&
+    !tab.magic &&
+    !$homescreenVisible}
   class:pinned
   class:horizontalTabs
   {horizontalTabs}
   class:hovered
-  class:selected={isSelected}
+  class:selected={isSelected && !$homescreenVisible}
   class:combine-border={(isMagicActive && tab.magic) ||
     (!isMagicActive && (isSelected || isActive))}
   class:magic={tab.magic}
