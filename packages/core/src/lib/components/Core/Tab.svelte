@@ -32,12 +32,11 @@
   import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-
-  const log = useLogScope('Tab')
-  const tabsManager = useTabsManager()
-  const userConfig = useConfig()
-
-  const userSettings = userConfig.settings
+  import {
+    useGlobalMiniBrowser,
+    useScopedMiniBrowser,
+    useScopedMiniBrowserAsStore
+  } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -57,6 +56,21 @@
   export let removeHighlight = false
   export let isSelected = false
   export let isMagicActive = false
+
+  const log = useLogScope('Tab')
+  const tabsManager = useTabsManager()
+  const userConfig = useConfig()
+  const globalMiniBrowser = useGlobalMiniBrowser()
+
+  const userSettings = userConfig.settings
+
+  const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
+
+  // Why is there no better way in Svelte :/
+  $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
+  $: isScopedMiniBrowserOpen = $isScopedMiniBrowserOpenStore ?? false
+
+  $: log.debug('mini browser open', isScopedMiniBrowserOpen)
 
   export const editAddress = async () => {
     isEditing = true
@@ -191,6 +205,14 @@
     if (e.shiftKey) {
       e.preventDefault()
       e.stopPropagation()
+
+      if (tab.pinned) {
+        if (tab.type === 'page' && url) {
+          globalMiniBrowser.openWebpage(url)
+          return
+        }
+      }
+
       blur()
 
       dispatch('multi-select', tab.id)
@@ -735,6 +757,14 @@
             >
           </button>
         {/if}
+      </div>
+    {/if}
+
+    {#if isScopedMiniBrowserOpen}
+      <div
+        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content text-sky-950 bg-sky-200/80 rounded-full"
+      >
+        <Icon name="eye" />
       </div>
     {/if}
 

@@ -1,4 +1,4 @@
-import { isMac, isWindows, useLogScope } from '@horizon/utils'
+import { isDev, isMac, isWindows, useLogScope } from '@horizon/utils'
 import { app, BrowserWindow } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
@@ -19,7 +19,6 @@ import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { silentCheckForUpdates } from './appUpdates'
 
 const log = useLogScope('Main Index')
-const isDev = import.meta.env.DEV
 
 process.on('uncaughtException', (error: any) => {
   log.error('Uncaught exception:', error)

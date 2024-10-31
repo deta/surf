@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-const isDev = import.meta.env.DEV
 
+import { isDev } from './system'
+
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 const levelMap = ['verbose', 'debug', 'info', 'warn', 'error']
 export type LogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error'
 

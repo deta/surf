@@ -93,10 +93,11 @@
     SearchOasisEventTrigger
   } from '@horizon/types'
   import { useTabsManager } from '../../service/tabs'
-  import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
   import { CONTEXT_MENU_OPEN } from './ContextMenu.svelte'
   import Onboarding from './Onboarding.svelte'
+  import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
+  import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
@@ -108,7 +109,17 @@
   const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
+  const oasis = useOasis()
+  const toasts = useToasts()
+  const miniBrowserService = useMiniBrowserService()
+  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`new-tab-overlay`)
+
+  const resourceManager = oasis.resourceManager
+  const telemetry = resourceManager.telemetry
+  const spaces = oasis.spaces
+  const selectedSpaceId = oasis.selectedSpace
   const userConfigSettings = config.settings
+
   let oasisSpace: OasisSpace
 
   let createSpaceRef: any
@@ -659,17 +670,9 @@
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
 
-  const oasis = useOasis()
-  const toasts = useToasts()
-  const resourceManager = oasis.resourceManager
-  const telemetry = resourceManager.telemetry
-  const spaces = oasis.spaces
-  const selectedSpaceId = oasis.selectedSpace
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
-  const showResourceDetails = writable(false)
-  const resourceDetailsModalSelected = writable<string | null>(null)
   const showCreationModal = writable(false)
   const searchResults = writable<ResourceSearchResultItem[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
@@ -683,13 +686,6 @@
       }
 
       return everythingContents
-    }
-  )
-
-  const isResourceDetailsModalOpen = derived(
-    [showResourceDetails, resourceDetailsModalSelected],
-    ([$showResourceDetails, $resourceDetailsModalSelected]) => {
-      return $showResourceDetails && !!$resourceDetailsModalSelected
     }
   )
 
@@ -949,13 +945,13 @@
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
-    resourceDetailsModalSelected.set(resourceId)
-    showResourceDetails.set(true)
+    scopedMiniBrowser.openResource(resourceId, {
+      from: OpenResourceEventFrom.NewTab
+    })
   }
 
   const closeResourceDetailsModal = () => {
-    resourceDetailsModalSelected.set(null)
-    showResourceDetails.set(false)
+    scopedMiniBrowser.close()
   }
 
   const openResourceAsTab = async (id: string) => {
@@ -1228,13 +1224,8 @@
       class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
-      {#if $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
-        <OasisResourceModalWrapper
-          resourceId={$resourceDetailsModalSelected}
-          active
-          on:close={() => closeResourceDetailsModal()}
-        />
-      {/if}
+      <MiniBrowser service={scopedMiniBrowser} />
+
       <!-- <Motion
         let:motion
         animate={{

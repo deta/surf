@@ -1,4 +1,4 @@
-import { useLogScope, type ScopedLogger } from '@horizon/utils'
+import { isDev, useLogScope, type ScopedLogger } from '@horizon/utils'
 import type {
   AiSFFSQueryResponse,
   HistoryEntry,
@@ -55,7 +55,6 @@ export class SFFS {
     // @ts-ignore
     this.fs = window.backend.resources
 
-    const isDev = import.meta.env.DEV
     if (isDev) {
       // @ts-ignore
       window.sffs = this

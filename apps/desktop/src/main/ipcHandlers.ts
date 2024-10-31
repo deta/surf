@@ -12,7 +12,11 @@ import { useAsDefaultBrowser } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
 
-import { IPC_EVENTS_MAIN, TrackEvent } from '@horizon/core/src/lib/service/ipc/events'
+import {
+  IPC_EVENTS_MAIN,
+  NewWindowRequest,
+  TrackEvent
+} from '@horizon/core/src/lib/service/ipc/events'
 import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'
@@ -517,6 +521,20 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.openURL.sendToWebContents(window.webContents, { url, active })
+  },
+
+  newWindowRequest: (details: NewWindowRequest) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(window.webContents, {
+      url: details.url,
+      disposition: details.disposition,
+      webContentsId: details.webContentsId
+    })
   },
 
   userConfigSettingsChange(settings: UserSettings) {

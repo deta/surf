@@ -9,3 +9,5 @@ export const isWindows = () => {
 export const isLinux = () => {
   return import.meta.env.PLATFORM === 'linux'
 }
+
+export const isDev = import.meta.env.DEV

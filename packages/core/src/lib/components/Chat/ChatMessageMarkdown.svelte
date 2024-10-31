@@ -8,7 +8,7 @@
 
   export const CITATION_HANDLER_CONTEXT = 'citation-handler'
 
-  export type CitationClickData = { citationID: string; uniqueID: string }
+  export type CitationClickData = { citationID: string; uniqueID: string; preview?: boolean }
 
   export type CitationHandlerContext = {
     citationClick: (data: CitationClickData) => void
@@ -27,6 +27,8 @@
   import CitationItem from './CitationItem.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
+  import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
+  import { OpenResourceEventFrom } from '@horizon/types'
 
   export let id: string = ''
   export let content: string
@@ -37,6 +39,8 @@
   export let usedInlineScreenshot = false
 
   const log = useLogScope('ChatMessage')
+  const globalMiniBrowser = useGlobalMiniBrowser()
+
   const dispatch = createEventDispatcher<{
     citationClick: { citationID: string; text: string; sourceUid?: string }
     citationHoverStart: string
@@ -199,18 +203,27 @@
   }
 
   const handleCitationClick = (data: CitationClickData) => {
-    const { citationID, uniqueID } = data
+    const { citationID, uniqueID, preview } = data
     log.debug('Citation clicked', citationID, uniqueID)
 
     const citationsToText = mapCitationsToText(contentElem)
     const text = citationsToText.get(uniqueID)
+    const source = sources?.find((source) => source.all_chunk_ids.includes(citationID))
 
     log.debug('Citation text', text)
+
+    if (preview && source) {
+      globalMiniBrowser.openResource(source.resource_id, {
+        from: OpenResourceEventFrom.OasisChat,
+        highlightSimilarText: text || source.content,
+        jumptToTimestamp: source.metadata?.timestamp
+      })
+      return
+    }
 
     if (!text) {
       log.debug('ChatMessage: No text found for citation, ', citationID)
 
-      const source = sources?.find((source) => source.all_chunk_ids.includes(citationID))
       dispatch('citationClick', { citationID: citationID, text: '', sourceUid: source?.uid })
 
       return

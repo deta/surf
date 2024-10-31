@@ -54,6 +54,7 @@
   const resourceManager = useResourceManager()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
+
   const dispatch = createEventDispatcher<{
     'rerun-without-source': void
   }>()
@@ -119,6 +120,11 @@
       if (!source) return
       log.debug('General citation clicked', citationID)
 
+      if (e?.shiftKey && !isModKeyPressed(e)) {
+        citationHandler.citationClick({ citationID, uniqueID, preview: true })
+        return
+      }
+
       const openAsActiveTab = e ? !isModKeyPressed(e) : true
 
       const url = getURL(source)
@@ -183,7 +189,11 @@
       return
     }
 
-    citationHandler.citationClick({ citationID, uniqueID })
+    citationHandler.citationClick({
+      citationID,
+      uniqueID,
+      preview: e?.shiftKey && !isModKeyPressed(e)
+    })
   }
 
   // format number to hh:mm:ss or mm:ss or ss (for seconds add "s" e.g. 5s)

@@ -37,7 +37,6 @@
   import ErrorPage from './ErrorPage.svelte'
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
-  import { useTabsManager } from '../../service/tabs'
   import { Dragcula } from '@horizon/dragcula'
 
   export let id: string | undefined
@@ -48,6 +47,7 @@
   export let historyStackIds = writable<string[]>([])
   export let currentHistoryIndex = writable(-1)
   export let acceptsDrags: boolean = false
+  export let isLoading = writable(false)
 
   export const canGoBack = derived(
     currentHistoryIndex,
@@ -57,11 +57,9 @@
     [currentHistoryIndex, historyStackIds],
     ([$currentHistoryIndex, $historyStackIds]) => $currentHistoryIndex < $historyStackIds.length - 1
   )
-  export const isLoading = writable(false)
   export const error = writable<WebviewError | null>(null)
 
   const log = useLogScope('WebviewWrapper')
-  const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<WebviewWrapperEvents>()
 
   const zoomLevel = writable<number>(1)
@@ -134,16 +132,6 @@
     }
 
     dispatch('webview-page-event', { type, data })
-  }
-
-  const handleWebviewNewWindow = async (e: CustomEvent<WebviewEvents['new-window']>) => {
-    const disposition = e.detail.disposition
-    if (disposition === 'new-window') return
-
-    tabsManager.addPageTab(e.detail.url, {
-      active: disposition === 'foreground-tab',
-      trigger: CreateTabEventTrigger.Page
-    })
   }
 
   const handleWebviewFoundInPage = (event: CustomEvent<Electron.FoundInPageEvent>) => {
@@ -434,7 +422,7 @@
     bind:this={webviewComponent}
     on:webview-page-event={handleWebviewPageEvent}
     on:update-target-url={(e) => (hoverTargetUrl = e.detail)}
-    on:new-window={handleWebviewNewWindow}
+    on:new-window
     on:found-in-page={handleWebviewFoundInPage}
     on:navigation
     on:did-finish-load

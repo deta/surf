@@ -1,7 +1,7 @@
 import contextMenu from 'electron-context-menu'
 import { ipcSenders } from './ipcHandlers'
 
-export function setupContextMenu(options: contextMenu.Options = {}) {
+export function setupContextMenu(window: Electron.WebContents, options: contextMenu.Options = {}) {
   const defaultOpts: contextMenu.Options = {
     showSearchWithGoogle: false,
     showSaveImage: true,
@@ -17,6 +17,19 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
         visible: parameters.linkURL.length > 0,
         click: () => {
           ipcSenders.openURL(parameters.linkURL, false)
+        }
+      },
+      {
+        label: 'Open in Mini Browser',
+        visible: parameters.linkURL.length > 0,
+        click: () => {
+          const webContentsId = window.id
+
+          ipcSenders.newWindowRequest({
+            url: parameters.linkURL,
+            disposition: 'new-window',
+            webContentsId: webContentsId
+          })
         }
       },
       defaultActions.separator(),
@@ -43,10 +56,10 @@ export function setupContextMenu(options: contextMenu.Options = {}) {
     ]
   }
 
-  const opts = Object.assign(defaultOpts, options)
+  const opts = Object.assign(defaultOpts, { window }, options)
   contextMenu(opts)
 }
 
 export function attachContextMenu(window: Electron.WebContents) {
-  setupContextMenu({ window })
+  setupContextMenu(window)
 }

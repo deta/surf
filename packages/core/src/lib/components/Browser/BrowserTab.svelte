@@ -25,6 +25,7 @@
     'annotation-update': WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
     'add-to-chat': WebViewSendEvents[WebViewEventSendNames.AddToChat]
     'prepare-tab-for-chat': TabPage
+    'open-mini-browser': string
   }
 
   export type BookmarkPageOpts = {
@@ -66,7 +67,7 @@
     type WebViewSendEvents
   } from '@horizon/types'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
-  import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
+  import type { WebviewEvents, WebviewNavigationEvent } from '../Webview/Webview.svelte'
   import {
     Resource,
     ResourceAnnotation,
@@ -79,6 +80,20 @@
   import { handleInlineAI } from '../../service/ai'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
+  import {
+    useMiniBrowserService,
+    type MiniBrowserSelected
+  } from '@horizon/core/src/lib/service/miniBrowser'
+  import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
+
+  export let tab: TabPage
+  export let historyEntriesManager: HistoryEntriesManager
+  export let webview: WebviewWrapper
+  export let pageMagic: PageMagic | undefined = undefined
+  export let id: string = `webview-${tab.id}`
+  export let active: boolean = false
+  export let isLoading = writable(false)
+  export let disableMiniBrowser = false
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
@@ -86,16 +101,20 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabs = useTabsManager()
+  const miniBrowserService = useMiniBrowserService()
+  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`tab-${tab.id}`)
 
   const activeTabId = tabs.activeTabId
   const showNewTabOverlay = tabs.showNewTabOverlay
-
   const userConfigSettings = config.settings
 
-  export let tab: TabPage
-  export let historyEntriesManager: HistoryEntriesManager
-  export let webview: WebviewWrapper
-  export let pageMagic: PageMagic | undefined = undefined
+  let initialSrc =
+    tab.currentLocation ??
+    historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
+    tab.initialLocation ??
+    'about:blank'
+
+  export let url = writable<string>(initialSrc)
 
   export const goBack = () => webview.goBack()
   export const goForward = () => webview.goForward()
@@ -120,14 +139,8 @@
   export const canGoBack = webview?.canGoBack
   export const canGoForward = webview?.canGoForward
 
-  let initialSrc =
-    tab.currentLocation ??
-    historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
-    tab.initialLocation ??
-    'about:blank'
   let app: DetectedWebApp | null = null
 
-  const url = writable<string>(initialSrc)
   const historyStackIds = writable<string[]>(tab.historyStackIds)
   const currentHistoryIndex = writable(tab.currentHistoryIndex)
   const appDetectionRunning = writable(false)
@@ -385,7 +398,7 @@
 
     updatingPromise = new Promise(async (resolve, reject) => {
       try {
-        resource.updateExtractionState('updating')
+        resource.updateExtractionState('running')
 
         // Run resource detection on a fresh webview to get the latest data
         const detectedResource = await extractResource(url, freshWebview)
@@ -549,6 +562,71 @@
         resolve(app)
       })
     })
+  }
+
+  export const highlightWebviewText = async (resourceId: string, answerText: string) => {
+    log.debug('highlighting text', resourceId, answerText)
+
+    const toast = toasts.loading('Highlighting Citation..')
+    const detectedResource = await detectResource()
+    if (!detectedResource) {
+      log.error('no resource detected')
+      toast.error('Failed to highlight citation')
+      return
+    }
+
+    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+    if (!content || !content.html) {
+      log.debug('no content found from web parser')
+      toast.error('Failed to parse content to highlight citation')
+      return
+    }
+
+    const textElements = getTextElementsFromHtml(content.html)
+    if (!textElements) {
+      log.debug('no text elements found')
+      toast.error('Failed to find source text in the page for citation')
+      return
+    }
+
+    log.debug('text elements length', textElements.length)
+    const docsSimilarity = await resourceManager.sffs.getAIDocsSimilarity(
+      answerText,
+      textElements,
+      0.5
+    )
+    if (!docsSimilarity || docsSimilarity.length === 0) {
+      log.debug('no docs similarity found')
+      toast.error('Failed to find source text in the page for citation')
+      return
+    }
+
+    log.debug('docs similarity', docsSimilarity)
+
+    docsSimilarity.sort((a, b) => a.similarity - b.similarity)
+    const texts = []
+    for (const docSimilarity of docsSimilarity) {
+      const doc = textElements[docSimilarity.index]
+      log.debug('doc', doc)
+      if (doc && doc.includes(' ')) {
+        texts.push(doc)
+      }
+    }
+
+    sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
+      texts: texts
+    })
+
+    toast.success('Citation Highlighted!')
+  }
+
+  const getTextElementsFromHtml = (html: string): string[] => {
+    let textElements: string[] = []
+    const body = new DOMParser().parseFromString(html, 'text/html').body
+    body.querySelectorAll('p').forEach((p) => {
+      textElements.push(p.textContent?.trim() ?? '')
+    })
+    return textElements
   }
 
   const handleWebviewAnnotationClick = async (
@@ -979,6 +1057,24 @@
     }
   }
 
+  const handleWebviewNewWindow = async (e: CustomEvent<WebviewEvents['new-window']>) => {
+    const disposition = e.detail.disposition
+    if (disposition === 'new-window') {
+      if (disableMiniBrowser) {
+        dispatch('open-mini-browser', e.detail.url)
+        return
+      }
+
+      scopedMiniBrowser.openWebpage(e.detail.url)
+      return
+    }
+
+    tabs.addPageTab(e.detail.url, {
+      active: disposition === 'foreground-tab',
+      trigger: CreateTabEventTrigger.Page
+    })
+  }
+
   const handleWebviewPageEvent = (
     event: CustomEvent<WebviewWrapperEvents['webview-page-event']>
   ) => {
@@ -1023,18 +1119,19 @@
   })
 </script>
 
+<MiniBrowser service={scopedMiniBrowser} {active} />
+
 <WebviewWrapper
-  id="webview-{tab.id}"
-  style={$activeTabId !== tab.id || $showNewTabOverlay === 2
-    ? 'pointer-events: none !important;'
-    : ''}
+  {id}
+  style={!active || $showNewTabOverlay === 2 ? 'pointer-events: none !important;' : ''}
   src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}
   {url}
   {historyStackIds}
   {currentHistoryIndex}
-  acceptsDrags={$activeTabId === tab.id}
+  {isLoading}
+  acceptsDrags={active}
   bind:this={webview}
   on:webview-page-event={handleWebviewPageEvent}
   on:url-change={handleUrlChange}
@@ -1042,5 +1139,6 @@
   on:favicon-change={handleWebviewFaviconChange}
   on:history-change={handleHistoryChange}
   on:did-finish-load={debouncedAppDetection}
+  on:new-window={handleWebviewNewWindow}
   on:navigation
 />

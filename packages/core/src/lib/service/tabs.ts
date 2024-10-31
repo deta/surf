@@ -1,5 +1,5 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { getFileType, useLocalStorageStore, useLogScope } from '@horizon/utils'
+import { getFileType, isDev, normalizeURL, useLocalStorageStore, useLogScope } from '@horizon/utils'
 import {
   ActivateTabEventTrigger,
   CreateTabEventTrigger,
@@ -71,10 +71,10 @@ export class TabsManager {
   private log: ReturnType<typeof useLogScope>
   private db: HorizonStore<Tab>
   private resourceManager: ResourceManager
-  private historyEntriesManager: HistoryEntriesManager
   private telemetry: Telemetry
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
+  historyEntriesManager: HistoryEntriesManager
 
   tabs: Writable<Tab[]>
   activeTabId: Writable<string>
@@ -176,7 +176,6 @@ export class TabsManager {
       )[]
     })
 
-    const isDev = import.meta.env.DEV
     if (isDev) {
       // @ts-ignore
       window.tabsManager = this
@@ -570,6 +569,11 @@ export class TabsManager {
     if (!url) {
       this.showNewTab()
       return null
+    }
+
+    if (isDev && normalizeURL(url) === 'localhost:5173') {
+      this.log.debug('Skipping creating Vite dev server tab')
+      return
     }
 
     const newTab = await this.create<TabPage>(

@@ -6,7 +6,8 @@ import {
   generateID,
   getFormattedDate,
   normalizeURL,
-  parseUrlIntoCanonical
+  parseUrlIntoCanonical,
+  isDev
 } from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
@@ -480,7 +481,6 @@ export class ResourceManager {
 
     this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceEvents>
 
-    const isDev = import.meta.env.DEV
     if (isDev) {
       // @ts-ignore
       window.resourceManager = this

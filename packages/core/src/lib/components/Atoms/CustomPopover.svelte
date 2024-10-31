@@ -16,6 +16,8 @@
   let timerBeforePopoverOpen: NodeJS.Timeout
   let blockOpen = false
 
+  const dispatch = createEventDispatcher<{ click: MouseEvent }>()
+
   const CLOSE_DELAY = 200
 
   const handleMouseEnter = () => {
@@ -23,7 +25,10 @@
   }
 
   const handleClick = (e: CustomEventHandler<MouseEvent, HTMLButtonElement>) => {
+    console.warn('handleClick')
     e.preventDefault()
+
+    dispatch('click', e.detail.originalEvent)
 
     popoverOpened.set(false)
     clearTimeout(timerBeforePopoverOpen)

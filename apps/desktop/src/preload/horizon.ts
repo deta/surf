@@ -63,6 +63,7 @@ type EventBusMessage = {
   status: ResourceProcessingStatus
 }
 
+// Note: we can't import this from @horizon/utils as that breaks building the preload scripts as Vite/Rollup will bundle things together
 const isDev = import.meta.env.DEV
 
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''

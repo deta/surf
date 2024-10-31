@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-  import { derived, writable } from 'svelte/store'
+  import { derived, get, writable } from 'svelte/store'
 
   import {
     useLogScope,
@@ -71,7 +71,6 @@
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
-  import OasisResourceModalWrapper from './OasisResourceModalWrapper.svelte'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { ChatWithSpaceEvent, Tab, TabPage } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
@@ -94,6 +93,8 @@
   import CreateNewSpace from './CreateNewSpace.svelte'
   import { selectedFolder } from '../../stores/oasis'
   import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
+  import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
+  import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let spaceId: string
   export let active: boolean = false
@@ -124,6 +125,9 @@
   const toasts = useToasts()
   const tabsManager = useTabsManager()
 
+  const miniBrowserService = useMiniBrowserService()
+  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`space-${spaceId}`)
+
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
   const telemetry = resourceManager.telemetry
@@ -140,8 +144,6 @@
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<Space | null>(null)
-  const showResourceDetails = writable(false)
-  const resourceDetailsModalSelected = writable<string | null>(null)
   // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
@@ -172,13 +174,6 @@
       }
 
       return ids
-    }
-  )
-
-  const isResourceDetailsModalOpen = derived(
-    [showResourceDetails, resourceDetailsModalSelected],
-    ([$showResourceDetails, $resourceDetailsModalSelected]) => {
-      return $showResourceDetails && !!$resourceDetailsModalSelected
     }
   )
 
@@ -1031,12 +1026,16 @@
     } else if (
       e.key === ' ' &&
       $selectedItem &&
-      !$isResourceDetailsModalOpen &&
+      !get(scopedMiniBrowser.isOpen) &&
       !$showSettingsModal
     ) {
       e.preventDefault()
       openResourceDetailsModal($selectedItem)
-    } else if (isModKeyAndKeyPressed(e, 'Enter') && $selectedItem && !$isResourceDetailsModalOpen) {
+    } else if (
+      isModKeyAndKeyPressed(e, 'Enter') &&
+      $selectedItem &&
+      !get(scopedMiniBrowser.isOpen)
+    ) {
       e.preventDefault()
 
       const resource = await resourceManager.getResource($selectedItem)
@@ -1370,13 +1369,9 @@
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
-    resourceDetailsModalSelected.set(resourceId)
-    showResourceDetails.set(true)
-  }
-
-  const closeResourceDetailsModal = () => {
-    showResourceDetails.set(false)
-    resourceDetailsModalSelected.set(null)
+    scopedMiniBrowser.openResource(resourceId, {
+      from: OpenResourceEventFrom.Oasis
+    })
   }
 
   const handleOpen = (e: CustomEvent<string>) => {
@@ -1494,13 +1489,7 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-{#if !hideResourcePreview && $isResourceDetailsModalOpen && $resourceDetailsModalSelected}
-  <OasisResourceModalWrapper
-    resourceId={$resourceDetailsModalSelected}
-    {active}
-    on:close={() => closeResourceDetailsModal()}
-  />
-{/if}
+<MiniBrowser service={scopedMiniBrowser} {active} />
 
 <DropWrapper
   {spaceId}

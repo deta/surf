@@ -5,15 +5,15 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { isMac } from '@horizon/utils'
+import { isDev, isMac, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
 import { firefoxUA, normalizeElectronUserAgent } from './utils'
 
-const isDev = import.meta.env.DEV
-
 let mainWindow: BrowserWindow | undefined
+
+const log = useLogScope('MainWindow')
 
 export function createWindow() {
   const winState = new WindowState(
@@ -28,11 +28,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-        x: winState.state.x,
-        y: winState.state.y,
-        width: winState.state.width,
-        height: winState.state.height
-      })
+          x: winState.state.x,
+          y: winState.state.y,
+          width: winState.state.width,
+          height: winState.state.height
+        })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -173,6 +173,8 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
   })
 
   contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+    log.debug('Window open request', details)
+
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
@@ -200,13 +202,20 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
   // 3. Allow opening new windows but deny other requests, and handle them within the renderer.
   contents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-      const mainWindow = getMainWindow()
-      if (mainWindow) {
-        IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-          url: details.url,
-          disposition: details.disposition,
-          webContentsId: contents.id
-        })
+      log.debug('Webview window open request', details)
+
+      // If there is no frame name we assume the request is orginating from the user clicking the link and we let the renderer handle the request
+      if (details.frameName === '') {
+        const mainWindow = getMainWindow()
+        if (mainWindow) {
+          IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+            url: details.url,
+            disposition: details.disposition,
+            webContentsId: contents.id
+          })
+        }
+
+        return { action: 'deny' }
       }
 
       // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly

@@ -170,7 +170,9 @@ export enum SaveToOasisEventTrigger {
   /** Page was saved by dropping into Oasis or a Space */
   Drop = 'drop',
   /** Saved from context menu */
-  ContextMenu = 'context_menu'
+  ContextMenu = 'context_menu',
+  /** Saved from the mini browser */
+  MiniBrowser = 'mini_browser'
 }
 
 export enum EventContext {

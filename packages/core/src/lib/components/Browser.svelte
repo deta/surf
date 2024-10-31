@@ -26,7 +26,8 @@
     truncate,
     tooltip,
     type LogLevel,
-    isMac
+    isMac,
+    isDev
   } from '@horizon/utils'
   import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
@@ -114,7 +115,6 @@
   import { scrollToTextCode } from '../constants/inline'
   import { onboardingSpace } from '../constants/examples'
   import { SFFS } from '../service/sffs'
-  import OasisResourceModalWrapper from './Oasis/OasisResourceModalWrapper.svelte'
   import { provideOasis, colorPairs } from '../service/oasis'
   import OasisSpace from './Oasis/OasisSpace.svelte'
 
@@ -153,6 +153,11 @@
   import { launchTimeline, endTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import { debugMode } from '../stores/debug'
+  import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
+  import {
+    createMiniBrowserService,
+    useScopedMiniBrowserAsStore
+  } from '@horizon/core/src/lib/service/miniBrowser'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -165,7 +170,6 @@
   let isFirstButtonVisible = true
   let containerRef: Element
 
-  const isDev = import.meta.env.DEV
   const onboardingActive = writable(false)
 
   let telemetryAPIKey = ''
@@ -190,7 +194,9 @@
   const toasts = provideToasts()
   const config = provideConfig()
   const tabsManager = createTabsManager(resourceManager, historyEntriesManager, telemetry)
+  const miniBrowserService = createMiniBrowserService(resourceManager)
 
+  const globalMiniBrowser = miniBrowserService.globalBrowser
   const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const spaces = oasis.spaces
@@ -228,8 +234,6 @@
   })
   const showCreateLiveSpaceDialog = writable(false)
   const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
-  const showResourceDetails = writable(false)
-  const resourceDetailsModalSelected = writable<string | null>(null)
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
@@ -315,17 +319,36 @@
     }
   )
 
+  $: activeTabMiniBrowser = useScopedMiniBrowserAsStore(`tab-${$activeTabId}`)
+  $: activeTabMiniBrowserIsOpen = $activeTabMiniBrowser?.isOpen
+
+  $: canGoBack = (() => {
+    if ($showNewTabOverlay !== 0) return false
+    if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
+
+    return $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
+  })()
+
+  $: canGoForward = (() => {
+    if ($showNewTabOverlay !== 0) return false
+    if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
+
+    return (
+      $activeTab?.type === 'page' &&
+      $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
+    )
+  })()
+
+  $: canReload = (() => {
+    if ($showNewTabOverlay !== 0) return false
+    if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
+
+    return $activeTab?.type === 'page'
+  })()
+
   $: {
     handleRightSidebarTabsChange($rightSidebarTab)
   }
-
-  $: canGoBack =
-    $showNewTabOverlay === 0 && $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
-  $: canGoForward =
-    $showNewTabOverlay === 0 &&
-    $activeTab?.type === 'page' &&
-    $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
-  $: canReload = $showNewTabOverlay === 0 && $activeTab?.type === 'page'
 
   $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
     log.debug('Active tab is not in view, resetting')
@@ -341,22 +364,7 @@
   }
 
   const openResourceDetailsModal = async (resourceId: string, from?: OpenResourceEventFrom) => {
-    showResourceDetails.set(false)
-    resourceDetailsModalSelected.set(null)
-    await tick()
-    resourceDetailsModalSelected.set(resourceId)
-    showResourceDetails.set(true)
-
-    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
-      if (resource) {
-        resourceManager.telemetry.trackOpenResource(resource.type, from)
-      }
-    })
-  }
-
-  const closeResourceDetailsModal = () => {
-    showResourceDetails.set(false)
-    resourceDetailsModalSelected.set(null)
+    globalMiniBrowser.openResource(resourceId, { from })
   }
 
   const handleDeleteTab = async (
@@ -479,7 +487,50 @@
     activeTabComponent?.editAddress()
   }
 
+  const getActiveMiniBrowser = () => {
+    if (globalMiniBrowser.isOpenValue) {
+      const selectedItem = globalMiniBrowser.selected ? get(globalMiniBrowser.selected) : null
+
+      if (!selectedItem) {
+        return null
+      }
+
+      return {
+        miniBrowser: globalMiniBrowser,
+        selected: selectedItem
+      }
+    }
+
+    if (activeTabMiniBrowserIsOpen && $activeTabMiniBrowserIsOpen && $activeTabMiniBrowser) {
+      const selectedItem = $activeTabMiniBrowser.selected
+        ? get($activeTabMiniBrowser.selected)
+        : null
+
+      if (!selectedItem) {
+        return null
+      }
+
+      return {
+        miniBrowser: $activeTabMiniBrowser,
+        selected: selectedItem
+      }
+    }
+
+    return null
+  }
+
   const handleCopyLocation = useDebounce(() => {
+    const activeTabMiniBrowser = getActiveMiniBrowser()
+    if (activeTabMiniBrowser) {
+      window.api.copyToClipboard(
+        activeTabMiniBrowser.selected.data.currentLocation ||
+          activeTabMiniBrowser.selected.data.initialLocation
+      )
+
+      toasts.success('Copied to Clipboard!')
+      return
+    }
+
     if ($activeTabLocation) {
       log.debug('Copying location to clipboard', $activeTabLocation)
       window.api.copyToClipboard($activeTabLocation)
@@ -627,6 +678,18 @@
         $showScreenshotPicker = false
         return
       }
+
+      if (get(globalMiniBrowser.isOpen)) {
+        globalMiniBrowser.close()
+        return
+      }
+
+      const activeTabMiniBrowser = miniBrowserService.useScopedBrowser(`tab-${$activeTabId}`, false)
+      if (activeTabMiniBrowser) {
+        activeTabMiniBrowser.close()
+        return
+      }
+
       deselectAllTabs()
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       debugMode.update((mode) => !mode)
@@ -1560,53 +1623,7 @@
         answerText = source.content
       }
 
-      const toast = toasts.loading('Highlighting citation..')
-      const detectedResource = await browserTab.detectResource()
-      if (!detectedResource) {
-        log.error('no resource detected')
-        toast.error('Failed to highlight citation')
-        return
-      }
-      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-      if (!content || !content.html) {
-        log.debug('no content found from web parser')
-        toast.error('Failed to parse content to highlight citation')
-        return
-      }
-
-      const textElements = getTextElementsFromHtml(content.html)
-      if (!textElements) {
-        log.debug('no text elements found')
-        toast.error('Failed to find source text in the page for citation')
-        return
-      }
-
-      log.debug('text elements length', textElements.length)
-      let docsSimilarity = await sffs.getAIDocsSimilarity(answerText, textElements, 0.5)
-      if (!docsSimilarity || docsSimilarity.length === 0) {
-        log.debug('no docs similarity found')
-        toast.error('Failed to find source text in the page for citation')
-        return
-      }
-
-      log.debug('docs similarity', docsSimilarity)
-
-      docsSimilarity.sort((a, b) => a.similarity - b.similarity)
-      const texts = []
-      for (const docSimilarity of docsSimilarity) {
-        const doc = textElements[docSimilarity.index]
-        log.debug('doc', doc)
-        if (doc && doc.includes(' ')) {
-          texts.push(doc)
-        }
-      }
-
-      // const texts = [textElements[docsSimilarity[0].index]]
-
-      browserTab.sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
-        texts: texts
-      })
-      toast.success('Citation highlighted')
+      await browserTab.highlightWebviewText(resourceId, answerText)
     } else {
       log.error('No tab in chat context found for resource', resourceId)
       toasts.error('Failed to highlight citation')
@@ -2869,8 +2886,16 @@
 
     // Handle new window requests from webviews
     window.api.onNewWindowRequest((details) => {
-      const active = details.disposition === 'foreground-tab'
-      openUrlHandler(details.url, active)
+      log.debug('new window request', details)
+
+      const { disposition, url } = details
+      if (disposition === 'new-window') {
+        globalMiniBrowser.openWebpage(url)
+        return
+      }
+
+      const active = disposition === 'foreground-tab'
+      openUrlHandler(url, active)
     })
 
     window.api.onOpenURL((details) => {
@@ -2920,6 +2945,12 @@
     })
 
     window.api.onOpenDevtools(() => {
+      const activeTabMiniBrowserSelected = getActiveMiniBrowser()
+      if (activeTabMiniBrowserSelected && activeTabMiniBrowserSelected.selected.browserTab) {
+        activeTabMiniBrowserSelected.selected.browserTab.openDevTools()
+        return
+      }
+
       $activeBrowserTab?.openDevTools()
     })
 
@@ -2962,11 +2993,29 @@
     })
 
     window.api.onCloseActiveTab(() => {
+      const activeTabMiniBrowserSelected = getActiveMiniBrowser()
+      if (activeTabMiniBrowserSelected) {
+        activeTabMiniBrowserSelected.miniBrowser.close()
+        return
+      }
+
       tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
     })
 
     window.api.onReloadActiveTab((force) => {
       if ($showNewTabOverlay !== 0) return
+
+      const activeTabMiniBrowserSelected = getActiveMiniBrowser()
+      if (activeTabMiniBrowserSelected && activeTabMiniBrowserSelected.selected.browserTab) {
+        if (force) {
+          activeTabMiniBrowserSelected.selected.browserTab.forceReload()
+        } else {
+          activeTabMiniBrowserSelected.selected.browserTab.reload()
+        }
+
+        return
+      }
+
       if (force) {
         $activeBrowserTab?.forceReload()
       } else {
@@ -4103,6 +4152,8 @@
   />
 {/if}
 
+<MiniBrowser service={globalMiniBrowser} />
+
 <div
   class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col"
   class:drag={$showScreenshotPicker === false}
@@ -4810,13 +4861,6 @@
           </div>
         {/if}
 
-        {#if $showResourceDetails && $resourceDetailsModalSelected}
-          <OasisResourceModalWrapper
-            resourceId={$resourceDetailsModalSelected}
-            on:close={() => closeResourceDetailsModal()}
-          />
-        {/if}
-
         {#each $activeTabs as tab (tab.id)}
           {#if $activatedTabs.includes(tab.id)}
             <div
@@ -4834,6 +4878,7 @@
               {#if tab.type === 'page'}
                 <BrowserTab
                   {historyEntriesManager}
+                  active={$activeTabId === tab.id}
                   pageMagic={$activeTabMagic}
                   bind:this={$browserTabs[tab.id]}
                   bind:tab={$tabs[$tabs.findIndex((t) => t.id === tab.id)]}
