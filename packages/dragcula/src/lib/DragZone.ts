@@ -242,7 +242,7 @@ export class HTMLDragZone extends DragZone {
     // false true -> now target?
 
     /*if (drag.to !== null && drag.to !== this) {
-      console.warn("leave", this.id, " >> ", drag.to.id)
+      console.warn("bookmark", this.id, " >> ", drag.to.id)
       if (!drag.to.acceptsCbk(drag)) {
         return;
       }

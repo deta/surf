@@ -502,7 +502,7 @@
         type: 'action',
         hidden: tab.type !== 'page',
         disabled: isBookmarkedByUser,
-        icon: isBookmarkedByUser ? 'check' : 'leave',
+        icon: isBookmarkedByUser ? 'check' : 'save',
         text: isBookmarkedByUser ? 'Saved' : 'Save',
         action: () => handleBookmark(SaveToOasisEventTrigger.ContextMenu)
       },
@@ -740,7 +740,7 @@
                 {:else if isBookmarkedByUser}
                   <Icon name="bookmarkFilled" size="16px" />
                 {:else}
-                  <Icon name="leave" size="16px" />
+                  <Icon name="save" size="18px" />
                 {/if}
               </button>
 

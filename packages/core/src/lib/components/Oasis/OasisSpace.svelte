@@ -1693,7 +1693,7 @@
     {:else}
       <div class="content-wrapper">
         <div class="content">
-          <Icon name="leave" size="22px" />
+          <Icon name="save" size="22px" />
           <p>Oops! It seems like this Space is feeling a bit empty.</p>
         </div>
       </div>

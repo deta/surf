@@ -47,17 +47,16 @@
         <span class="eyebrow">LANGUAGE SETTINGS</span>
       </div>
 
-      <h1 in:fly={{ x: 35, duration: 500, delay: 250 }}>Choose Your Language</h1>
+      <h1 in:fly={{ x: 35, duration: 500, delay: 250 }}>Optimize Surf's AI for Your Language</h1>
       <div in:fly={{ x: 35, duration: 500, delay: 300 }}>
-        <p>Some of Surf's AI features are language dependent.</p>
         <p>
-          We recommend <strong>English</strong> if you primarily interact with English content. If
-          you regularly interact with content in another language, select a
-          <strong>Multi-language</strong> option.
+          For the best experience, we recommend choosing <strong>English</strong> if you mostly read
+          and browse English websites. If you frequently use websites in multiple languages or
+          languages other than English, choose the <strong>Multi-language</strong> option instead.
         </p>
       </div>
       <div in:fly={{ x: 35, duration: 500, delay: 350 }}>
-        <p class="caption">You will not be able to change this for now.</p>
+        <p class="caption">Note: This language preference cannot be changed after initial setup.</p>
       </div>
     {/if}
     <div class="actions bottom">

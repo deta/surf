@@ -45,29 +45,53 @@ export async function createDemoItems(
   createSpaceTab: any,
   resourceManager: ResourceManager
 ) {
+  // Load all spaces once at the start to avoid duplicated spaces
+  const existingSpaces = await oasis.loadSpaces()
+
   for (const builtInSpace of builtInSpaces) {
-    const data = Object.assign(
-      {
-        folderName: 'New Space',
-        colors: ['#76E0FF', '#4EC9FB'],
-        showInSidebar: false,
-        liveModeEnabled: false,
-        hideViewed: false,
-        smartFilterQuery: null,
-        sql_query: null,
-        embedding_query: null,
-        sortBy: 'created_at',
-        builtIn: true
-      },
-      builtInSpace
-    ) as SpaceData
-    const space = await oasis.createSpace(data)
-    log.debug('Created built-in space:', space)
+    const existingSpace = existingSpaces.find(
+      (space) => space.name.folderName === builtInSpace.folderName
+    )
+    log.debug('Checking built-in space:', builtInSpace.folderName, 'exists:', !!existingSpace)
+
+    if (!existingSpace) {
+      const data = Object.assign(
+        {
+          folderName: 'New Space',
+          colors: ['#76E0FF', '#4EC9FB'],
+          showInSidebar: false,
+          liveModeEnabled: false,
+          hideViewed: false,
+          smartFilterQuery: null,
+          sql_query: null,
+          embedding_query: null,
+          sortBy: 'created_at',
+          builtIn: true
+        },
+        builtInSpace
+      ) as SpaceData
+      const space = await oasis.createSpace(data)
+      log.debug('Created built-in space:', space)
+    }
   }
 
-  await createOnboardingSpace(tabsManager, oasis, createSpaceTab, resourceManager)
+  const existingOnboardingSpace = existingSpaces.find(
+    (space) => space.name.folderName === onboardingSpace.name
+  )
+  log.debug('Checking onboarding space exists:', !!existingOnboardingSpace)
 
-  await tabsManager.addOnboardingTab()
+  if (!existingOnboardingSpace) {
+    log.debug('Creating onboarding space')
+    await createOnboardingSpace(tabsManager, oasis, createSpaceTab, resourceManager)
+  }
+
+  const onboardingTab = tabsManager.tabsValue.find((tab) => tab.type === 'onboarding')
+  log.debug('Checking onboarding tab exists:', !!onboardingTab)
+
+  if (!onboardingTab) {
+    log.debug('Creating onboarding tab')
+    await tabsManager.addOnboardingTab()
+  }
 }
 
 export async function createOnboardingSpace(

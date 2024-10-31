@@ -409,7 +409,7 @@
               {:else if tab.resourceBookmarkedManually}
                 <Icon name="bookmarkFilled" size="16px" />
               {:else}
-                <Icon name="leave" size="16px" />
+                <Icon name="save" size="16px" />
               {/if}
             </button>
 

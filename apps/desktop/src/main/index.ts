@@ -159,6 +159,7 @@ if (!gotTheLock) {
 
     setAppMenu()
     createWindow()
+
     if (config.forceSetupWindow) {
       createSetupWindow()
     }

@@ -98,7 +98,7 @@
     <button
       class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
     >
-      <Icon name="leave" />
+      <Icon name="save" />
     </button>
   </DropdownMenu.Trigger>
   <DropdownMenu.Content

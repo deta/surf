@@ -60,7 +60,7 @@
   let loading = false
   let selectedIndex = -1
   let menuItems = [
-    { name: 'Save...', tooltip: 'Save Screenshot to My Stuff', icon: 'leave' },
+    { name: 'Save...', tooltip: 'Save Screenshot to My Stuff', icon: 'save' },
     { name: 'Copy', tooltip: 'Copy Screenshot', icon: 'copy' },
     { name: 'Chat', tooltip: 'Use Screenshot in Chat Sidebar', icon: 'chat' }
   ]
@@ -718,7 +718,7 @@
       style="left: {rect.x + rect.width + 8}px; top: {rect.y}px;"
       bind:this={buttonsElement}
     >
-      {#if onboarding}
+      {#if !onboarding}
         {#each menuItems as item, index}
           <button
             class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium bg-neutral-50 !ring-0 !ring-transparent transition-colors"

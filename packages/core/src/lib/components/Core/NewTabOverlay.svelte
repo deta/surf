@@ -644,7 +644,7 @@
   }
   const browserCommands = [
     { id: 'close-active-tab', label: 'Close Tab', shortcut: '⌘W', type: 'command', icon: 'close' },
-    { id: 'bookmark', label: 'Toggle Bookmark', shortcut: '⌘D', type: 'command', icon: 'bookmark' },
+    { id: 'bookmark', label: 'Toggle Bookmark', shortcut: '⌘D', type: 'command', icon: 'save' },
     {
       id: 'toggle-sidebar',
       label: 'Toggle Sidebar',
@@ -1305,7 +1305,7 @@
                         description: `<p>Save webpages, tweets, YouTube videos, screenshots, PDFs,and more. </p>`,
                         imgSrc: stuffAdd,
                         imgAlt: 'Save anything',
-                        iconName: 'leave'
+                        iconName: 'save'
                       },
                       {
                         title: '(Auto)-organize',
@@ -1449,7 +1449,7 @@
                             <div
                               class="content flex flex-col items-center justify-center text-center space-y-4"
                             >
-                              <Icon name="leave" size="22px" class="mb-2" />
+                              <Icon name="save" size="22px" class="mb-2" />
 
                               <p class="text-lg font-medium text-gray-700">
                                 No stuff found for "{$searchValue}". Try a different search term.

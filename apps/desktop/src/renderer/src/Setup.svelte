@@ -9,6 +9,8 @@
   import ExplainerChat from './components/setup/ExplainerChat.svelte'
   import DoneView from './components/setup/DoneView.svelte'
 
+  const isDev = import.meta.env.DEV
+
   // Import or define UserSettings type
   import type { UserSettings } from '@horizon/types'
 
@@ -28,7 +30,7 @@
   let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let selectedPersonas: string[] = []
 
-  const handleViewChange = (event: CustomEvent<ViewType>) => {
+  const handleViewChange = async (event: CustomEvent<ViewType>) => {
     view = event.detail
     viewHistory.push(view)
   }
@@ -52,7 +54,13 @@
     selectedPersonas = event.detail
   }
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    await window.api.updateUserConfigSettings({
+      embedding_model: embeddingModel,
+      tabs_orientation: tabsOrientation,
+      personas: selectedPersonas
+    })
+
     window.api.restartApp()
   }
 </script>

@@ -28,7 +28,7 @@
   let editorFocused = true
   let editor: Editor
   let menuItems = [
-    { name: 'Save...', icon: 'leave' },
+    { name: 'Save...', icon: 'save' },
     { name: 'Copy', icon: 'copy' }
   ]
 

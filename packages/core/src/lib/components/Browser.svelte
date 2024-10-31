@@ -172,6 +172,8 @@
   let pinnedTabsWrapper: HTMLElement
 
   const onboardingActive = writable(false)
+  const onboardingTabVisible = writable(false)
+  const onboardingTabOpened = writable(false)
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -254,6 +256,11 @@
   const CHAT_DOWNLOAD_INTERCEPT_TIMEOUT = 1000 * 60 // 60s
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
+
+  $: if ($activeTab) {
+    const isActiveTabOnboarding = $activeTab?.type === 'onboarding'
+    onboardingActive.set(isActiveTabOnboarding)
+  }
 
   // Set global context
   setContext('selectedFolder', 'all')
@@ -356,12 +363,10 @@
     tabsManager.makePreviousActive()
   }
 
-  $: if (onboardingActive) {
-    // Set onboarding to active if the user is on the onboarding tab or an active onboarding timeline is running.
-    if ($activeTab?.type === 'onboarding' || hasActiveTimeline) {
-      onboardingActive.set(false)
-    } else {
-      onboardingActive.set(true)
+  $: {
+    if ($onboardingActive) {
+      const hasOnboardingTab = $tabs.some((tab) => tab.type === 'onboarding')
+      onboardingTabOpened.set(hasOnboardingTab)
     }
   }
 
@@ -2728,8 +2733,13 @@
 
   const handleOpenOnboardingTabs = (e: CustomEvent<string[]>) => {
     const tabUrls = e.detail
-    tabUrls.forEach((url) => {
-      tabsManager.addPageTab(url, { active: false })
+    tabUrls.forEach(async (url) => {
+      const existingTab = $tabs.some(
+        (tab) => tab.type === 'page' && (tab.initialLocation === url || tab.currentLocation === url)
+      )
+      if (!existingTab) {
+        await tabsManager.addPageTab(url, { active: false })
+      }
     })
   }
 
@@ -3247,6 +3257,11 @@
     } else {
       await tabsManager.addOnboardingTab(false)
     }
+
+    selectedTabs.set(
+      new Set([{ id: $tabs.find((t) => t.type === 'onboarding')?.id ?? '', userSelected: true }])
+    )
+    onboardingTabVisible.set(true)
   }
 
   const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
@@ -4763,7 +4778,7 @@
                   on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
                 ></div>
 
-                <Icon name="leave" />
+                <Icon name="save" />
               </button>-->
               </div>
             </SidebarMetaOverlay>
@@ -4883,6 +4898,20 @@
               <!-- {#if !horizontalTabs}<div
                   class="w-full h-3 pointer-events-none fixed z-[1002] drag"
                 />{/if} -->
+
+              <!-- {#if $onboardingTabVisible && $onboardingTabOpened && !$userConfigSettings?.onboarding?.ignore_back_to_onboarding_button}
+                <button
+                  class="transform no-drag active:scale-95 appearance-none select-none outline-none border-2 border-sky-100 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer bg-white w-fit fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
+                  on:click={() => openWelcomeTab()}
+                >
+                  <span>← Back to Surf Onboarding</span>
+                </button>
+                <span
+                  class="transform no-drag active:scale-95 appearance-none select-none outline-none margin-0 group flex items-center justify-center p-2 transition-colors duration-200 text-sky-800 cursor-pointer w-fit fixed bottom-16 left-1/2 -translate-x-1/2 z-50 underline"
+                >
+                  <span>Dismiss this</span>
+                </span>
+              {/if} -->
 
               {#if tab.type === 'page'}
                 <BrowserTab

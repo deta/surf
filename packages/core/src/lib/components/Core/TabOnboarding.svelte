@@ -12,6 +12,7 @@
 
 <script lang="ts">
   import { isMac, wait } from '@horizon/utils'
+  import { writable } from 'svelte/store'
   import { OnboardingFeature } from '../Onboarding/onboardingScripts'
   import { get } from 'svelte/store'
   import { createEventDispatcher, onMount } from 'svelte'
@@ -23,7 +24,7 @@
   import onboVision from '../../../../public/assets/demo/onbovision.gif'
   import onboBg from '../../../../public/assets/demo/bag_full_bg.png'
   import stuffOnboarding01 from '../../../../public/assets/onboarding/stuff.onboarding.teaser.png'
-  import smartSpacesOnboarding from '../../../../public/assets/onboarding/smartspaces.onboarding.png'
+  import smartSpacesOnboarding from '../../../../public/assets/onboarding/smartspaces.png'
   import { createOnboardingSpace } from '../../service/demoitems'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
@@ -31,6 +32,8 @@
   const oasis = useOasis()
   const config = useConfig()
   const userSettings = config.settings
+
+  export const onboardingRunning = writable(true)
 
   $: modShortcut = isMac() ? '⌘' : 'Ctrl'
 
@@ -49,7 +52,6 @@
     if (space) {
       console.debug('detaSpace found:', space.id)
       dispatch('openChat', { query: ONBOARDING_SPACE_QUERY })
-      // dispatch('openChat', { id: space.id, query: ONBOARDING_SPACE_QUERY })
     } else {
       dispatch('createOnboardingSpace')
       console.error(`Space "${ONBOARDING_SPACE_NAME}" not found`)
@@ -148,6 +150,15 @@
       >
         <span class="index">6.</span> <span>Smart Spaces</span>
       </button>
+      <button
+        class="selector font-gambarino py-4 px-6 text-left flex flex-col text-2xl hover:text-blue-700 transition-colors duration-300 bg-white hover:bg-gray-100 border border-gray-300 rounded-2xl w-full {activeTab ===
+        'complete'
+          ? 'active'
+          : ''}"
+        on:click={() => (activeTab = 'complete')}
+      >
+        <span class="index">7.</span> <span>Complete!</span>
+      </button>
     </div>
   </div>
   <div
@@ -226,7 +237,7 @@
         <div
           class="flex flex-col items-center justify-center gap-6 w-full py-64 h-screen max-w-xl mx-auto"
         >
-          <Icon name="leave" color="#2497e9" size="44" />
+          <Icon name="save" color="#2497e9" size="44" />
           <h1
             class="font-gambarino text-5xl text-center animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 bg-[length:250%_100%] leading-tight"
           >
@@ -302,11 +313,13 @@
         <div
           class="flex flex-col items-center justify-center gap-6 w-full py-64 h-screen max-w-xl mx-auto"
         >
-          <img
-            src={smartSpacesOnboarding}
-            alt="Stuff Feature"
-            class="w-full h-auto object-cover rounded-xl"
-          />
+          <div class="max-h-[420px]">
+            <img
+              src={smartSpacesOnboarding}
+              alt="Stuff Feature"
+              class="w-full h-full object-contain rounded-xl"
+            />
+          </div>
           <h1
             class="font-gambarino text-5xl text-center animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 bg-[length:250%_100%] leading-tight"
           >
@@ -315,6 +328,63 @@
           <p class="max-w-xl text-center">Ask a folder what you want, and watch it fill itself.</p>
           <div class="flex gap-4">
             <Button on:click={handleTrySmartSpaces}>Try Smart Spaces</Button>
+          </div>
+        </div>
+      {/if}
+
+      {#if activeTab === 'complete'}
+        <div
+          class="flex flex-col items-center justify-center gap-8 w-full py-64 h-screen max-w-2xl mx-auto"
+        >
+          <h1
+            class="font-gambarino text-5xl text-center animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 bg-[length:250%_100%] leading-tight"
+          >
+            You're all set!
+          </h1>
+          <p class="text-xl text-center text-sky-900">
+            Here are some helpful resources to get the most out of Surf:
+          </p>
+          <div class="grid grid-cols-2 gap-8 w-full">
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+              <h3 class="font-bold text-lg mb-2">Quick Reference</h3>
+              <ul class="space-y-2">
+                <li><span class="text-gray-600">{modShortcut} + O</span> - Open Stuff</li>
+                <li><span class="text-gray-600">{modShortcut} + Shift + 1</span> - Vision</li>
+                <li>
+                  <a
+                    href="https://deta.notion.site/Shortcuts-10ca5244a71780a7ae1aee4b51fab009"
+                    target="_blank"
+                    class="text-blue-500 hover:underline">View all Shortcuts</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+              <h3 class="font-bold text-lg mb-2">Community & Support</h3>
+              <ul class="space-y-2">
+                <li>
+                  <a
+                    href="https://deta.surf/discord"
+                    target="_blank"
+                    class="text-blue-500 hover:underline">Join Discord</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="https://deta.notion.site/Surf-Zero-e9c49ddf02a8476fb3c53b7efdc7e0fd"
+                    target="_blank"
+                    class="text-blue-500 hover:underline">Documentation</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="mailto:support@deta.surf"
+                    target="_blank"
+                    class="text-blue-500 hover:underline">Email Support</a
+                  >
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       {/if}

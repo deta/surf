@@ -100,7 +100,7 @@
     {/if}
 
     <!-- <Button on:click={handleOpenOasis} tooltip="Open in Oasis">
-      <IconConfirmation bind:this={openIcon} name="leave" />
+      <IconConfirmation bind:this={openIcon} name="save" />
     </Button> -->
 
     <CopyButton {text} />

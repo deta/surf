@@ -674,11 +674,11 @@ export class TabsManager {
     return newTab
   }
 
-  async addOnboardingTab(pinned = true, opts?: CreateTabOptions) {
+  async addOnboardingTab(pinned = false, opts?: CreateTabOptions) {
     this.log.debug('Creating new onboarding tab')
     const newTab = await this.create<TabOnboarding>(
       {
-        title: 'Welcome To Surf',
+        title: 'Surf Onboarding',
         icon: 'https://deta.surf/favicon-32x32.png',
         type: 'onboarding',
         pinned: pinned

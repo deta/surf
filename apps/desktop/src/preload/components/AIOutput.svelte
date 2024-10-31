@@ -31,7 +31,7 @@
 
 <div class="actions">
   <Button on:click={handleBookmark} tooltip="Save to My Stuff as a comment">
-    <IconConfirmation bind:this={bookmarkingIcon} name="leave" />
+    <IconConfirmation bind:this={bookmarkingIcon} name="save" />
   </Button>
 
   <Button on:click={() => copy(output)} tooltip="Copy to Clipboard">

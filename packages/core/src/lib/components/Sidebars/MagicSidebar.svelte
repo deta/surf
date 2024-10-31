@@ -1462,7 +1462,7 @@
                   }}
                   class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 >
-                  <Icon name="leave" />
+                  <Icon name="save" />
                   Save
                 </button>
               {/if}

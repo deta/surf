@@ -245,11 +245,11 @@
           style:--r={i % 2 === 0
             ? -5 + (Math.random() - 0.5) + 'deg'
             : 5 + (Math.random() - 0.5) + 'deg'}
-          style={`--item: ${i}; 
+          style={`--item: ${i};
 --grid-x: ${i % gridColumns};
---grid-y: ${Math.floor(i / gridColumns)}; 
---even: ${1 * (i % 2 === 0 ? 1 : -1)}; 
---randX: ${randX}; 
+--grid-y: ${Math.floor(i / gridColumns)};
+--even: ${1 * (i % 2 === 0 ? 1 : -1)};
+--randX: ${randX};
 --randY: ${randY};
 
 --offset-x: ${i % 2 === 0 ? i * 2 : -i * 2}px;
@@ -278,7 +278,7 @@
     class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer flex"
     on:click={() => dispatch('open-stuff')}
   >
-    <Icon name="leave" size="18px" />
+    <Icon name="arrow.up.right" size="18px" />
     <span>Open Your Stuff</span>
   </button>
   <span class="title verticalOnly">Your Stuff</span>
