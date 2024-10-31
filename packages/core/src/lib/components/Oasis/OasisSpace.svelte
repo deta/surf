@@ -80,6 +80,7 @@
     CreateTabEventTrigger,
     DeleteResourceEventTrigger,
     DeleteSpaceEventTrigger,
+    OpenInMiniBrowserEventFrom,
     OpenResourceEventFrom,
     RefreshSpaceEventTrigger,
     SaveToOasisEventTrigger,
@@ -1370,7 +1371,7 @@
 
   const openResourceDetailsModal = (resourceId: string) => {
     scopedMiniBrowser.openResource(resourceId, {
-      from: OpenResourceEventFrom.Oasis
+      from: OpenInMiniBrowserEventFrom.Oasis
     })
   }
 
@@ -1381,19 +1382,6 @@
     } else {
       openResourceDetailsModal(resourceId)
     }
-
-    resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
-      if (resource) {
-        telemetry.trackOpenResource(
-          resource.type,
-          isEverythingSpace
-            ? OpenResourceEventFrom.Oasis
-            : $space?.name.liveModeEnabled
-              ? OpenResourceEventFrom.SpaceLive
-              : OpenResourceEventFrom.Space
-        )
-      }
-    })
   }
 
   const handleSpaceSelected = (e: CustomEvent<{ id: string; canGoBack: boolean }>) => {

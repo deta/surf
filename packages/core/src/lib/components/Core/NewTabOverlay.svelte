@@ -12,7 +12,6 @@
     'reset-zoom': void
     'open-url': string
     'activate-tab': string
-    'open-resource': string
     'create-chat': string
     'open-space': Space
     'create-note': string
@@ -88,7 +87,7 @@
     CreateTabEventTrigger,
     DeleteResourceEventTrigger,
     MultiSelectResourceEventAction,
-    OpenResourceEventFrom,
+    OpenInMiniBrowserEventFrom,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger
   } from '@horizon/types'
@@ -625,7 +624,6 @@
       telemetry.trackSearchOasis(SearchOasisEventTrigger.CommandMenu, false)
 
       openResourceAsTab(item.id)
-      // dispatch('open-resource', item.id!)
     } else if (item.type === 'space') {
       const space = $spaces.find((x) => x.id === item.id)
       if (!space) {
@@ -946,7 +944,7 @@
 
   const openResourceDetailsModal = (resourceId: string) => {
     scopedMiniBrowser.openResource(resourceId, {
-      from: OpenResourceEventFrom.NewTab
+      from: OpenInMiniBrowserEventFrom.Oasis
     })
   }
 
@@ -979,14 +977,6 @@
 
   const handleOpen = async (e: CustomEvent<string>, trackSource: boolean = false) => {
     openResourceDetailsModal(e.detail)
-
-    if (trackSource) {
-      resourceManager.getResource(e.detail, { includeAnnotations: false }).then((resource) => {
-        if (resource) {
-          telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.Oasis)
-        }
-      })
-    }
   }
 
   const handleCreateEmptySpace = async () => {

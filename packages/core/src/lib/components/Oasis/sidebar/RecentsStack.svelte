@@ -3,7 +3,12 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useOasis } from '../../../service/oasis'
   import { ResourceManager, type ResourceObject } from '../../../service/resources'
-  import { CreateTabEventTrigger, ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
+  import {
+    CreateTabEventTrigger,
+    OpenResourceEventFrom,
+    ResourceTagsBuiltInKeys,
+    ResourceTypes
+  } from '@horizon/types'
   import { writable } from 'svelte/store'
   import { useDebounce } from '@horizon/utils'
   import { useTabsManager } from '../../../service/tabs'
@@ -163,6 +168,12 @@
       tabsManager.openResourceAsTab(resourceId, {
         active,
         trigger: CreateTabEventTrigger.StackItem
+      })
+
+      resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
+        if (resource) {
+          resourceManager.telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.Stack)
+        }
       })
     } else {
       dispatch('open-resource-in-mini-browser', resourceId)

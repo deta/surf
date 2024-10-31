@@ -54,6 +54,7 @@
     CreateTabEventTrigger,
     DeleteAnnotationEventTrigger,
     EventContext,
+    OpenInMiniBrowserEventFrom,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger,
@@ -1065,7 +1066,7 @@
         return
       }
 
-      scopedMiniBrowser.openWebpage(e.detail.url)
+      scopedMiniBrowser.openWebpage(e.detail.url, { from: OpenInMiniBrowserEventFrom.WebPage })
       return
     }
 

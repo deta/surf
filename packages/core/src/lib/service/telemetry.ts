@@ -32,7 +32,8 @@ import {
   SelectTabEventAction,
   DeleteResourceEventTrigger,
   MultiSelectResourceEventAction,
-  PageChatUpdateContextEventTrigger
+  PageChatUpdateContextEventTrigger,
+  OpenInMiniBrowserEventFrom
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -313,6 +314,13 @@ export class Telemetry {
         from: from
       })
     }
+  }
+
+  async trackOpenInMiniBrowser(type: 'page' | 'resource', from?: OpenInMiniBrowserEventFrom) {
+    await this.trackEvent(TelemetryEventTypes.OpenInMiniBrowser, {
+      type: type,
+      from: from
+    })
   }
 
   async trackSaveToOasis(

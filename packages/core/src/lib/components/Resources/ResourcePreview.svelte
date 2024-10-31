@@ -38,6 +38,7 @@
   import { writable, get, derived } from 'svelte/store'
   import {
     CreateTabEventTrigger,
+    OpenResourceEventFrom,
     type AnnotationCommentData,
     type AnnotationRangeData,
     type ResourceDataAnnotation,
@@ -618,6 +619,11 @@
         trigger: CreateTabEventTrigger.OasisItem
       })
     }
+
+    resourceManager.telemetry.trackOpenResource(
+      resource.type,
+      isInSpace ? OpenResourceEventFrom.Space : OpenResourceEventFrom.Oasis
+    )
   }
 
   const handleTitleClick = (e: CustomEvent<MouseEvent>) => {

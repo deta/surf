@@ -27,6 +27,7 @@ export enum TelemetryEventTypes {
   DeleteTab = 'Delete Tab',
   DeleteTabSpace = 'Delete Tab Space',
   MoveTab = 'Move Tab',
+  OpenInMiniBrowser = 'Open in Mini Browser',
 
   // CreateResource = 'Create Resource',
   SaveToOasis = 'Save to Oasis',
@@ -149,6 +150,14 @@ export enum OpenResourceEventFrom {
   Page = 'page',
   CommandMenu = 'command_menu',
   Stack = 'stack'
+}
+
+export enum OpenInMiniBrowserEventFrom {
+  Oasis = 'oasis',
+  Stack = 'stack',
+  Chat = 'chat',
+  PinnedTab = 'pinned_tab',
+  WebPage = 'web_page'
 }
 
 export enum DeleteResourceEventTrigger {

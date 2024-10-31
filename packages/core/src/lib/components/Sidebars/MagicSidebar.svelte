@@ -18,6 +18,7 @@
   import { Icon } from '@horizon/icons'
   import {
     EventContext,
+    OpenInMiniBrowserEventFrom,
     PageChatMessageSentEventError,
     PageChatUpdateContextEventTrigger,
     ResourceTypes,
@@ -65,6 +66,7 @@
   } from '../../constants/prompts'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import PromptItem from '../Chat/PromptItem.svelte'
+  import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -97,6 +99,7 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabsManager = useTabsManager()
+  const globalMiniBrowser = useGlobalMiniBrowser()
 
   const tabs = tabsManager.tabs
   const userConfigSettings = config.settings
@@ -342,7 +345,8 @@
     sourceId: string,
     answerText: string,
     message: AIChatMessageParsed,
-    sourceUid?: string
+    sourceUid?: string,
+    preview?: boolean
   ) => {
     log.debug('Citation clicked', sourceId, message, sourceUid)
     const source = (message.sources ?? []).find((s) => s.id === sourceId)
@@ -356,6 +360,20 @@
       tab.type === 'page' ? tab.chatResourceBookmark === resource.id : false
     )
     const sourceTabType = sourceTab?.type === 'page' ? 'page' : 'space'
+
+    if (preview && source) {
+      globalMiniBrowser.openResource(source.resource_id, {
+        from: OpenInMiniBrowserEventFrom.Chat,
+        highlightSimilarText: answerText || source.content,
+        jumptToTimestamp: source.metadata?.timestamp
+      })
+
+      await telemetry.trackPageChatCitationClick(
+        source.metadata?.timestamp !== undefined ? 'timestamp' : 'text',
+        sourceTabType
+      )
+      return
+    }
 
     if (
       resource.type === ResourceTypes.LINK ||
@@ -1411,7 +1429,8 @@
                   e.detail.citationID,
                   e.detail.text,
                   response,
-                  e.detail.sourceUid
+                  e.detail.sourceUid,
+                  e.detail.preview
                 )}
               on:removeScreenshot={() => rerunChatMessageWithoutScreenshot()}
               showSourcesAtEnd={true}
@@ -1510,7 +1529,8 @@
                     e.detail.citationID,
                     e.detail.text,
                     response,
-                    e.detail.sourceUid
+                    e.detail.sourceUid,
+                    e.detail.preview
                   )}
                 showSourcesAtEnd={true}
                 usedPageScreenshot={response.usedPageScreenshot}

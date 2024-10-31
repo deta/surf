@@ -27,8 +27,6 @@
   import CitationItem from './CitationItem.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
-  import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
-  import { OpenResourceEventFrom } from '@horizon/types'
 
   export let id: string = ''
   export let content: string
@@ -39,10 +37,9 @@
   export let usedInlineScreenshot = false
 
   const log = useLogScope('ChatMessage')
-  const globalMiniBrowser = useGlobalMiniBrowser()
 
   const dispatch = createEventDispatcher<{
-    citationClick: { citationID: string; text: string; sourceUid?: string }
+    citationClick: { citationID: string; text: string; sourceUid?: string; preview?: boolean }
     citationHoverStart: string
     citationHoverEnd: string
     removeScreenshot: void
@@ -212,19 +209,15 @@
 
     log.debug('Citation text', text)
 
-    if (preview && source) {
-      globalMiniBrowser.openResource(source.resource_id, {
-        from: OpenResourceEventFrom.OasisChat,
-        highlightSimilarText: text || source.content,
-        jumptToTimestamp: source.metadata?.timestamp
-      })
-      return
-    }
-
     if (!text) {
       log.debug('ChatMessage: No text found for citation, ', citationID)
 
-      dispatch('citationClick', { citationID: citationID, text: '', sourceUid: source?.uid })
+      dispatch('citationClick', {
+        citationID: citationID,
+        text: '',
+        sourceUid: source?.uid,
+        preview
+      })
 
       return
     }
@@ -232,7 +225,7 @@
     // citation.classList.add('clicked')
 
     highlightedCitation.set(uniqueID)
-    dispatch('citationClick', { citationID: citationID, text })
+    dispatch('citationClick', { citationID: citationID, text, preview })
   }
 
   const handleRemoveScreenshot = () => {

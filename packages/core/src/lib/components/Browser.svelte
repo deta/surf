@@ -93,7 +93,6 @@
     CreateTabEventTrigger,
     DeleteTabEventTrigger,
     MoveTabEventAction,
-    OpenResourceEventFrom,
     OpenSpaceEventTrigger,
     PageChatUpdateContextEventAction,
     ResourceTagsBuiltInKeys,
@@ -109,7 +108,8 @@
     EventContext,
     SelectTabEventAction,
     MultiSelectResourceEventAction,
-    PageChatUpdateContextEventTrigger
+    PageChatUpdateContextEventTrigger,
+    OpenInMiniBrowserEventFrom
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -365,7 +365,10 @@
     }
   }
 
-  const openResourceDetailsModal = async (resourceId: string, from?: OpenResourceEventFrom) => {
+  const openResourceDetailsModal = async (
+    resourceId: string,
+    from?: OpenInMiniBrowserEventFrom
+  ) => {
     globalMiniBrowser.openResource(resourceId, { from })
   }
 
@@ -4675,7 +4678,7 @@
             <SidebarMetaOverlay
               on:open-stuff={() => ($showNewTabOverlay = 2)}
               on:open-resource-in-mini-browser={(e) =>
-                openResourceDetailsModal(e.detail, OpenResourceEventFrom.Stack)}
+                openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Stack)}
               on:Drop={({ detail }) => {
                 handleDropOnSpaceTab(detail)
               }}
@@ -4850,9 +4853,6 @@
               trigger: CreateTabEventTrigger.AddressBar
             })
           }}
-          on:open-resource={(e) => {
-            openResource(e.detail)
-          }}
         />
 
         {#if $sidebarTab === 'oasis'}
@@ -4894,7 +4894,7 @@
                   on:navigation={(e) => handleWebviewTabNavigation(e, tab)}
                   on:update-tab={(e) => tabsManager.update(tab.id, e.detail)}
                   on:open-resource={(e) =>
-                    openResourceDetailsModal(e.detail, OpenResourceEventFrom.Page)}
+                    openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.WebPage)}
                   on:reload-annotations={(e) => reloadAnnotationsSidebar(e.detail)}
                   on:update-page-magic={(e) => updateActiveMagicPage(e.detail)}
                   on:keydown={(e) => handleKeyDown(e.detail)}
@@ -4913,7 +4913,7 @@
                     })}
                   on:tabsManager.update={(e) => tabsManager.update(tab.id, e.detail)}
                   on:openResource={(e) =>
-                    openResourceDetailsModal(e.detail, OpenResourceEventFrom.OasisChat)}
+                    openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Chat)}
                 />
               {:else if tab.type === 'importer'}
                 <Importer {resourceManager} />

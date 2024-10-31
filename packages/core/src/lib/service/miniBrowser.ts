@@ -1,10 +1,11 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { Resource, ResourceManager } from './resources'
 import { generateID, useLogScope } from '@horizon/utils'
-import { OpenResourceEventFrom, ResourceTagsBuiltInKeys } from '@horizon/types'
+import { OpenInMiniBrowserEventFrom, ResourceTagsBuiltInKeys } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
 import type { TabPage } from '../types'
 import type BrowserTab from '../components/Browser/BrowserTab.svelte'
+import type { Telemetry } from './telemetry'
 
 // export type MiniBrowserSelected = MiniBrowserSelectedResource | MiniBrowserSelectedWebPage
 
@@ -42,10 +43,12 @@ export class MiniBrowser {
 
   private log: ReturnType<typeof useLogScope>
   private resourceManager: ResourceManager
+  private telemetry: Telemetry
 
   constructor(key: string, resourceManager: ResourceManager) {
     this.log = useLogScope('MiniBrowser')
     this.resourceManager = resourceManager
+    this.telemetry = resourceManager.telemetry
 
     this.key = key
     this.isOpen = writable(false)
@@ -85,7 +88,7 @@ export class MiniBrowser {
     opts?: {
       highlightSimilarText?: string
       jumptToTimestamp?: number
-      from?: OpenResourceEventFrom
+      from?: OpenInMiniBrowserEventFrom
     }
   ) {
     let resource: Resource | null
@@ -122,7 +125,7 @@ export class MiniBrowser {
 
     this.isOpen.set(true)
 
-    this.resourceManager.telemetry.trackOpenResource(resource.type, opts?.from)
+    this.telemetry.trackOpenInMiniBrowser('resource', opts?.from)
   }
 
   openWebpage(
@@ -130,7 +133,7 @@ export class MiniBrowser {
     opts?: {
       highlightSimilarText?: string
       jumptToTimestamp?: number
-      from?: OpenResourceEventFrom
+      from?: OpenInMiniBrowserEventFrom
     }
   ) {
     this.log.debug('Opening webpage', url)
@@ -150,17 +153,30 @@ export class MiniBrowser {
 
     this.isOpen.set(true)
 
-    // TODO: track open webpage
+    this.telemetry.trackOpenInMiniBrowser('page', opts?.from)
   }
 
-  openTab(tab: TabPage) {
+  openTab(
+    tab: TabPage,
+    opts?: {
+      highlightSimilarText?: string
+      jumptToTimestamp?: number
+      from?: OpenInMiniBrowserEventFrom
+    }
+  ) {
     this.selected.set({
       id: generateID(),
       type: 'tab',
-      data: tab
+      data: tab,
+      selection: {
+        text: opts?.highlightSimilarText,
+        timestamp: opts?.jumptToTimestamp
+      }
     })
 
     this.isOpen.set(true)
+
+    this.telemetry.trackOpenInMiniBrowser('page', opts?.from)
   }
 
   show() {

@@ -29,7 +29,11 @@
   import { contextMenu } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useTabsManager } from '../../service/tabs'
-  import { DeleteTabEventTrigger, SaveToOasisEventTrigger } from '@horizon/types'
+  import {
+    DeleteTabEventTrigger,
+    OpenInMiniBrowserEventFrom,
+    SaveToOasisEventTrigger
+  } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
@@ -211,7 +215,7 @@
 
       if (tab.pinned) {
         if (tab.type === 'page' && url) {
-          globalMiniBrowser.openWebpage(url)
+          globalMiniBrowser.openWebpage(url, { from: OpenInMiniBrowserEventFrom.PinnedTab })
           return
         }
       }
