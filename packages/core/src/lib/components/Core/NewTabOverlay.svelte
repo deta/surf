@@ -1179,6 +1179,13 @@
     handledDrop = true
   }
 
+  const updateWebviewPointerEvents = (value: string) => {
+    // TODO: find a better way to do this
+    document.querySelectorAll('.browser-window.active webview').forEach((webview) => {
+      ;(webview as HTMLElement).style.pointerEvents = value
+    })
+  }
+
   onDestroy(
     Dragcula.get().targetDomElement.subscribe((el: HTMLElement) => {
       // We need to manually query as bits-ui/svelte-vaul shit doesnt expose element ref.. because ofc why would anyone neeeed that!!?
@@ -1187,6 +1194,7 @@
         drawerContentEl?.classList.add('hovering')
       } else {
         drawerContentEl?.classList.remove('hovering')
+        updateWebviewPointerEvents('unset')
       }
     })
   )
