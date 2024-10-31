@@ -687,7 +687,6 @@
   }
 
   const handleInvitesTab = async () => {
-
     // check if there already exists a invites tab, if yes we just change to it
 
     const invitesTab = $tabs.find((tab) => tab.type === 'invites')

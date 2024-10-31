@@ -19,7 +19,6 @@
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { WebParser } from '@horizon/web-parser'
-  import type { CtxItem } from '../Core/ContextMenu.svelte'
 
   import {
     ResourceJSON,
@@ -114,7 +113,7 @@
     'whitelist-resource': string
     'blacklist-resource': string
     'set-resource-as-background': string
-    'remove-from-homescreen'
+    'remove-from-homescreen': void
   }>()
 
   const spaces = oasis.spaces
@@ -773,13 +772,24 @@
       text: 'Open in Chat',
       action: () => dispatch('open-and-chat', resource.id)
     },
+    ...conditionalArrayItem<CtxItem>(
+      resource.type.startsWith('image/') ||
+        resource.type === ResourceTypes.LINK ||
+        resource.type === ResourceTypes.ARTICLE,
+      {
+        type: 'action',
+        icon: '',
+        text: 'Set as Background',
+        action: () => dispatch('set-resource-as-background', resource.id)
+      }
+    ),
     { type: 'separator' },
     ...conditionalArrayItem<CtxItem>($contextMenuSpaces.length > 0, [
       {
         type: 'sub-menu',
         icon: '',
         disabled: $contextMenuSpaces.length === 0,
-        text: `Add to Space`,
+        text: 'Add to Space',
         items: $contextMenuSpaces
       },
       { type: 'separator' }
@@ -807,13 +817,25 @@
         }
       }
     ),
-    {
-      type: 'action',
-      icon: 'trash',
-      text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
-      kind: 'danger',
-      action: () => handleRemove()
-    }
+    ...(origin !== 'homescreen'
+      ? [
+          {
+            type: 'action',
+            icon: 'trash',
+            text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+            kind: 'danger',
+            action: () => handleRemove()
+          }
+        ]
+      : [
+          {
+            type: 'action',
+            icon: 'trash',
+            text: 'Remove from Homescreen',
+            kind: 'danger',
+            action: () => dispatch('remove-from-homescreen')
+          }
+        ])
   ] as CtxItem[]
 
   onMount(async () => {
