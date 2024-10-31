@@ -54,6 +54,15 @@ impl Processor {
                         ),
                         Err(err) => {
                             tracing::error!("failed to process resource: {err}");
+
+                            if err.to_string().contains("failed to upsert embedding") {
+                                self.emit_processing_status(
+                                    &resource_id,
+                                    ResourceProcessingStatus::Finished,
+                                );
+                                return;
+                            }
+
                             self.emit_processing_status(
                                 &resource_id,
                                 ResourceProcessingStatus::Failed {
