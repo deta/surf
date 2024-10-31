@@ -23,7 +23,8 @@
     PageChatUpdateContextEventTrigger,
     ResourceTypes,
     SaveToOasisEventTrigger,
-    type ResourceDataPost
+    type ResourceDataPost,
+    type ResourceStateCombined
   } from '@horizon/types'
   import { Editor, getEditorContentText } from '@horizon/editor'
 
@@ -87,6 +88,7 @@
     'remove-magic-tab': Tab
     'include-tab': string
     'open-context-item': ContextItem
+    'process-context-item': ContextItem
     'close-chat': void
     'pick-screenshot': void
     'remove-context-item': string
@@ -121,6 +123,7 @@
   const examplePrompts = writable<ExamplePrompt[]>([])
   const generatingExamplePrompts = writable(false)
   const resourceToGeneratePromptsFor = writable<string | null>(null)
+  const resourceToGeneratePromptsForState = writable<ResourceStateCombined | null>(null)
   const cachedPagePrompts = new Map<string, ExamplePrompt[]>()
   const processingUnsubs = new Map<string, () => void>()
 
@@ -554,6 +557,17 @@
     dispatch('open-context-item', contextItem)
   }
 
+  const handleRetryContextItem = async (e: CustomEvent<string>) => {
+    const id = e.detail
+    const contextItem = $contextItems.find((item) => item.id === id)
+    if (!contextItem) {
+      log.error('Context item not found', id)
+      return
+    }
+
+    dispatch('process-context-item', contextItem)
+  }
+
   const handleInputKeydown = (e: KeyboardEvent) => {
     const currentTime = Date.now()
 
@@ -792,16 +806,19 @@
       log.debug('No resource content')
       generatingExamplePrompts.set(false)
       resourceToGeneratePromptsFor.set(null)
+      resourceToGeneratePromptsForState.set(null)
       return null
     }
 
     const resourceState = get(resource.state)
+    resourceToGeneratePromptsForState.set(resourceState)
     if (resourceState !== 'idle') {
       log.debug('Resource is still extracting')
       generatingExamplePrompts.set(false)
 
       if (resourceState === 'extracting' || resourceState === 'post-processing') {
         const unsubscribe = resource.state.subscribe((state) => {
+          resourceToGeneratePromptsForState.set(state)
           const processingUnsub = processingUnsubs.get(resourceId)
           if (processingUnsub) {
             processingUnsub()
@@ -812,6 +829,7 @@
             generateExamplePromptsForPage(resourceId, tab)
           } else {
             resourceToGeneratePromptsFor.set(null)
+            resourceToGeneratePromptsForState.set(null)
           }
         })
 
@@ -844,6 +862,7 @@
       examplePrompts.set([])
       generatingExamplePrompts.set(false)
       resourceToGeneratePromptsFor.set(null)
+      resourceToGeneratePromptsForState.set(null)
       return null
     }
 
@@ -881,6 +900,7 @@
 
     examplePrompts.set([])
     resourceToGeneratePromptsFor.set(null)
+    resourceToGeneratePromptsForState.set(null)
 
     await generateExamplePromptsForPage(resourceId, tab)
   }
@@ -1622,7 +1642,7 @@
     {/if}
 
     <div class="overflow-hidden">
-      {#if $showExamplePrompts && $resourceToGeneratePromptsFor !== null}
+      {#if $showExamplePrompts && $resourceToGeneratePromptsFor !== null && $resourceToGeneratePromptsForState === 'idle'}
         <div
           transition:fly={{ y: 200 }}
           class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto z-0"
@@ -1665,6 +1685,7 @@
               items={$contextItems.slice(0, 10)}
               on:select={handleSelectContextItem}
               on:remove-item={handleRemoveContextItem}
+              on:retry={handleRetryContextItem}
             />
             {#if $contextItems.length > 0}
               <button

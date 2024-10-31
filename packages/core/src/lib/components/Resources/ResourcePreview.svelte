@@ -55,10 +55,11 @@
     hover,
     isMac,
     copyToClipboard,
-    truncateURL
+    truncateURL,
+    conditionalArrayItem
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
-  import { contextMenu } from '../Core/ContextMenu.svelte'
+  import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
   import { useOasis } from '../../service/oasis'
   import Preview, {
     type Annotation,
@@ -123,14 +124,17 @@
           !e.name.builtIn
       )
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .map((space) => ({
-        type: 'action',
-        icon: '',
-        text: space.name.folderName,
-        action: () => {
-          oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-        }
-      }))
+      .map(
+        (space) =>
+          ({
+            type: 'action',
+            icon: '',
+            text: space.name.folderName,
+            action: () => {
+              oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+            }
+          }) as CtxItem
+      )
   })
 
   $: annotations = resource.annotations ?? []
@@ -721,6 +725,92 @@
     }
   }
 
+  $: contextMenuItems = [
+    {
+      type: 'action',
+      icon: 'arrow.up.right',
+      text: 'Open as Tab',
+      action: () => handleOpenAsNewTab()
+    },
+    {
+      type: 'action',
+      icon: 'eye',
+      text: 'Open in Mini Browser',
+      action: () => dispatch('open', resource.id)
+    },
+    { type: 'separator' },
+    ...conditionalArrayItem<CtxItem>($selectedItemIds.length === 0, {
+      type: 'action',
+      icon: 'circle.check',
+      text: 'Select',
+      action: () => {
+        addSelectionById(resource.id)
+      }
+    }),
+    ...conditionalArrayItem<CtxItem>(!!canonicalUrl, {
+      type: 'action',
+      icon: 'copy',
+      text: 'Copy URL',
+      action: () => handleCopyToClipboard()
+    }),
+    ...conditionalArrayItem<CtxItem>(!!showSourceURL, [
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'link',
+        text: 'Open Source',
+        action: () => openSourceURL()
+      }
+    ]),
+    {
+      type: 'action',
+      icon: 'chat',
+      text: 'Open in Chat',
+      action: () => dispatch('open-and-chat', resource.id)
+    },
+    { type: 'separator' },
+    ...conditionalArrayItem<CtxItem>($contextMenuSpaces.length > 0, [
+      {
+        type: 'sub-menu',
+        icon: '',
+        disabled: $contextMenuSpaces.length === 0,
+        text: `Add to Space`,
+        items: $contextMenuSpaces
+      },
+      { type: 'separator' }
+    ]),
+    ...conditionalArrayItem<CtxItem>(!!showOpenAsFile, [
+      {
+        type: 'action',
+        icon: '',
+        text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+        action: () => handleOpenAsFile()
+      },
+      { type: 'separator' }
+    ]),
+    ...conditionalArrayItem<CtxItem>(
+      mode === 'full' ||
+        mode === 'content' ||
+        mode === 'compact' ||
+        (mode === 'media' && !previewData?.image),
+      {
+        type: 'action',
+        icon: 'edit',
+        text: previewData?.title || resource?.metadata?.name ? 'Edit Title' : 'Add Title',
+        action: () => {
+          showEditMode = true
+        }
+      }
+    ),
+    {
+      type: 'action',
+      icon: 'trash',
+      text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+      kind: 'danger',
+      action: () => handleRemove()
+    }
+  ] as CtxItem[]
+
   onMount(async () => {
     await loadResource()
   })
@@ -742,106 +832,7 @@
   data-tooltip-target="stuff-example-resource"
   use:contextMenu={{
     canOpen: interactive,
-    items: [
-      {
-        type: 'action',
-        icon: 'arrow.up.right',
-        text: 'Open as Tab',
-        action: () => handleOpenAsNewTab()
-      },
-      {
-        type: 'action',
-        icon: 'eye',
-        text: 'Open in Mini Browser',
-        action: () => dispatch('open', resource.id)
-      },
-      { type: 'separator' },
-      ...($selectedItemIds.length === 0
-        ? [
-            {
-              type: 'action',
-              icon: 'circle.check',
-              text: 'Select',
-              action: () => {
-                addSelectionById(resource.id)
-              }
-            }
-          ]
-        : []),
-      ...(canonicalUrl
-        ? [
-            {
-              type: 'action',
-              icon: 'copy',
-              text: 'Copy URL',
-              action: () => handleCopyToClipboard()
-            }
-          ]
-        : []),
-      ...(showSourceURL
-        ? [
-            { type: 'separator' },
-            {
-              type: 'action',
-              icon: 'link',
-              text: 'Open Source',
-              action: () => openSourceURL()
-            }
-          ]
-        : []),
-      {
-        type: 'action',
-        icon: 'chat',
-        text: 'Open in Chat',
-        action: () => dispatch('open-and-chat', resource.id)
-      },
-      { type: 'separator' },
-      ...($contextMenuSpaces.length > 0
-        ? [
-            {
-              type: 'sub-menu',
-              icon: '',
-              disabled: $contextMenuSpaces.length === 0,
-              text: `Add to Space`,
-              items: $contextMenuSpaces
-            },
-            { type: 'separator' }
-          ]
-        : []),
-      ...(showOpenAsFile
-        ? [
-            {
-              type: 'action',
-              icon: '',
-              text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
-              action: () => handleOpenAsFile()
-            },
-            { type: 'separator' }
-          ]
-        : []),
-      ...(mode === 'full' ||
-      mode === 'content' ||
-      mode === 'compact' ||
-      (mode === 'media' && !previewData?.image)
-        ? [
-            {
-              type: 'action',
-              icon: 'edit',
-              text: previewData?.title || resource?.metadata?.name ? 'Edit Title' : 'Add Title',
-              action: () => {
-                showEditMode = true
-              }
-            }
-          ]
-        : []),
-      {
-        type: 'action',
-        icon: 'trash',
-        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
-        kind: 'danger',
-        action: () => handleRemove()
-      }
-    ]
+    items: contextMenuItems
   }}
 >
   {#if $resourceState === 'extracting' && !hideProcessing}

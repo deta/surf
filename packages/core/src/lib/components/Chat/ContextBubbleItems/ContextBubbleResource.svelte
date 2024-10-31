@@ -39,6 +39,7 @@
   failed={processingFailed}
   on:remove-item
   on:select
+  on:retry
 >
   <div class="w-full h-full relative">
     <div class="w-full h-full {isProcessing || processingFailed ? 'p-1' : ''}">

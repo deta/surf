@@ -218,6 +218,7 @@
           pillProperties={$pillProperties[pills.findIndex((p) => p?.id === pill?.id)] ?? {}}
           on:remove-item
           on:select
+          on:retry
         />
       {:else if pill?.type === 'image'}
         <ContextBubbleImage
@@ -225,6 +226,7 @@
           pillProperties={$pillProperties[pills.findIndex((p) => p?.id === pill?.id)] ?? {}}
           on:remove-item
           on:select
+          on:retry
         />
       {:else if pill?.type === 'resource'}
         <ContextBubbleResource
@@ -232,6 +234,7 @@
           pillProperties={$pillProperties[pills.findIndex((p) => p?.id === pill?.id)] ?? {}}
           on:remove-item
           on:select
+          on:retry
         />
       {/if}
     {/each}

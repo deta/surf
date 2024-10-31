@@ -52,7 +52,7 @@
   }
 </script>
 
-<ContextBubbleItemWrapper {pill} {pillProperties} on:remove-item on:select>
+<ContextBubbleItemWrapper {pill} {pillProperties} on:remove-item on:select on:retry>
   {#await getSmallImage()}
     <Icon name="spinner" />
   {:then image}

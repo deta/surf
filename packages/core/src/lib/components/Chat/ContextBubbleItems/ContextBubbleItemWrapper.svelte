@@ -19,7 +19,13 @@
   import { Icon } from '@horizon/icons'
   import type { Pill } from '../ContextBubbles.svelte'
   import CustomPopover from '../../Atoms/CustomPopover.svelte'
-  import { CONTEXT_MENU_KEY, contextMenu, type CtxMenuProps } from '../../Core/ContextMenu.svelte'
+  import {
+    CONTEXT_MENU_KEY,
+    contextMenu,
+    type CtxItem,
+    type CtxMenuProps
+  } from '../../Core/ContextMenu.svelte'
+  import { conditionalArrayItem } from '@horizon/utils'
 
   export let pill: Pill
   export let pillProperties: PillProperties
@@ -29,6 +35,7 @@
 
   const dispatch = createEventDispatcher<{
     select: string
+    retry: string
     'remove-item': string
   }>()
 
@@ -38,6 +45,10 @@
 
   const handleExcludeItem = (id: string) => {
     dispatch('remove-item', id)
+  }
+
+  const handleRety = (id: string) => {
+    dispatch('retry', id)
   }
 
   $: contextMenuKey = `context-item-${pill.id}`
@@ -51,6 +62,12 @@
         text: 'Open as Tab',
         action: () => handleSelect(pill.contextItemId)
       },
+      ...conditionalArrayItem<CtxItem>(failed, {
+        type: 'action',
+        icon: 'reload',
+        text: 'Retry Processing',
+        action: () => handleRety(pill.contextItemId)
+      }),
       {
         type: 'action',
         icon: 'close',

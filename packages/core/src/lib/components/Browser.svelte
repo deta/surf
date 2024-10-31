@@ -27,7 +27,8 @@
     tooltip,
     type LogLevel,
     isMac,
-    isDev
+    isDev,
+    parseUrlIntoCanonical
   } from '@horizon/utils'
   import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
@@ -1126,6 +1127,27 @@
     }
   }
 
+  const processContextItem = async (contextItem: ContextItem) => {
+    if (
+      contextItem.type === 'tab' &&
+      contextItem.data.type === 'page' &&
+      contextItem.data.chatResourceBookmark
+    ) {
+      log.debug('re-processing context item tab resource', contextItem.data.chatResourceBookmark)
+      await resourceManager.sffs.backend.js__store_resource_post_process(
+        contextItem.data.chatResourceBookmark
+      )
+    } else if (contextItem.type === 'resource') {
+      log.debug('re-processing context item resource', contextItem.data.id)
+      await resourceManager.sffs.backend.js__store_resource_post_process(contextItem.data.id)
+    } else {
+      log.debug(
+        `cannot re-process context item since it doesn't have a resource attached`,
+        contextItem
+      )
+    }
+  }
+
   const selectTab = (tabId: string, trigger?: ActivateTabEventTrigger) => {
     const currentSelectedTabs = Array.from(get(selectedTabs))
     const currentTab = currentSelectedTabs.find((item) => item.id === tabId)
@@ -1814,8 +1836,16 @@
         return fetchedResource
       }
 
-      if (fetchedCanonical !== tab.currentLocation) {
-        log.debug('Existing resource does not match current location', fetchedCanonical, tab.id)
+      if (
+        parseUrlIntoCanonical(fetchedCanonical) !==
+        parseUrlIntoCanonical(tab.currentLocation || tab.initialLocation)
+      ) {
+        log.debug(
+          'Existing resource does not match current location',
+          fetchedCanonical,
+          tab.currentLocation,
+          tab.id
+        )
         return null
       }
 
@@ -5068,6 +5098,7 @@
                 $browserTabs[$activeTabId].navigate(e.detail.url)
               }}
               on:open-context-item={(e) => openContextItemAsTab(e.detail)}
+              on:process-context-item={(e) => processContextItem(e.detail)}
               on:exclude-tab={handleExcludeTab}
               on:updateActiveChatId={(e) => activeChatId.set(e.detail)}
               on:remove-magic-tab={removeMagicTab}
