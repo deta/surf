@@ -33,7 +33,6 @@ import {
   DeleteResourceEventTrigger,
   MultiSelectResourceEventAction,
   PageChatUpdateContextEventTrigger,
-  OpenHomescreenEventTrigger,
   OpenInMiniBrowserEventFrom
 } from '@horizon/types'
 
@@ -563,36 +562,6 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.SaveAIResponse, {
       context: data.context,
       base_media: data.baseMedia
-    })
-  }
-
-  async trackOpenHomescreen(trigger: OpenHomescreenEventTrigger) {
-    await this.trackEvent(TelemetryEventTypes.OpenHomescreen, {
-      trigger
-    })
-  }
-
-  async trackAddHomescreenItem(
-    trigger: AddHomescreenItemEventTrigger,
-    type: 'resource' | 'space',
-    source?: AddHomescreenItemEventSource
-  ) {
-    await this.trackEvent(TelemetryEventTypes.AddHomescreenItem, {
-      trigger,
-      type,
-      source
-    })
-  }
-
-  async trackRemoveHomescreenItem(trigger: RemoveHomescreenItemEventTrigger) {
-    await this.trackEvent(TelemetryEventTypes.RemoveHomescreenItem, {
-      trigger
-    })
-  }
-
-  async trackUpdateHomescreen(action: UpdateHomescreenEventAction) {
-    await this.trackEvent(TelemetryEventTypes.UpdateHomescreen, {
-      action
     })
   }
 

@@ -69,10 +69,6 @@
       "outputs": [".dist/**"],
       "outputLogs": "new-only"
     },
-    "@deta/teletype#build": {
-      "outputs": [".dist/**"],
-      "outputLogs": "new-only"
-    },
     "@horizon/types#build": {
       "outputs": [".build/**"],
       "outputLogs": "new-only"
@@ -82,8 +78,7 @@
         "^build",
         "@horizon/backend#build",
         "@horizon/backend-server#build",
-        "@horizon/cmdk-sv#build",
-        "@deta/teletype#build"
+        "@horizon/cmdk-sv#build"
       ],
       "outputs": [".dist/**"]
     },
@@ -96,8 +91,7 @@
         "@horizon/trackpad#dev",
         "@horizon/backend#dev",
         "@horizon/backend-server#build",
-        "@horizon/cmdk-sv#build",
-        "@deta/teletype#build"
+        "@horizon/cmdk-sv#build"
       ],
       "outputs": [".dist/**", ".out/**"]
     },
@@ -107,8 +101,7 @@
         "@horizon/trackpad#dev",
         "@horizon/backend#dev",
         "@horizon/backend-server#build",
-        "@horizon/cmdk-sv#build",
-        "@deta/teletype#build"
+        "@horizon/cmdk-sv#build"
       ],
       "cache": false,
       "persistent": true

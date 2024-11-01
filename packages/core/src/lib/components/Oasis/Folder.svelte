@@ -238,23 +238,7 @@
     drag.item!.data.setData(DragTypeNames.SURF_SPACE, folder)
     drag.continue()
   }
-
-  let dragoverTimeout: Timer | null = null
-  const handleDragEnter = (drag: DragculaDragEvent) => {
-    if (dragoverTimeout) clearTimeout(dragoverTimeout)
-
-    dragoverTimeout = setTimeout(() => {
-      dispatch('select')
-      dragoverTimeout = null
-    }, 800)
-  }
-
-  const handleDragLeave = (drag: DragculaDragEvent) => {
-    if (dragoverTimeout) clearTimeout(dragoverTimeout)
-  }
-
   const handleDrop = async (drag: DragculaDragEvent) => {
-    if (dragoverTimeout) clearTimeout(dragoverTimeout)
     dispatch('Drop', { drag, spaceId: folder.id })
   }
 
@@ -345,8 +329,6 @@
       return false
     }
   }}
-  on:DragEnter={handleDragEnter}
-  on:DragLeave={handleDragLeave}
   on:Drop={handleDrop}
   use:contextMenu={{
     canOpen: folder.id !== 'all',

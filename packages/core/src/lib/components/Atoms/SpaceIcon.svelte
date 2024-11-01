@@ -9,7 +9,6 @@
   const log = useLogScope('SpaceIcon')
 
   export let folder: Space
-  export let interactive = true
 
   $: parsedColors = getColors(folder?.name?.colors ?? ['#76E0FF', '#4EC9FB'])
 
@@ -54,8 +53,4 @@
   })
 </script>
 
-<ColorIcon
-  colors={parsedColors}
-  on:click={() => interactive && updateColor()}
-  style={!interactive ? 'pointer-events: none;' : ''}
-/>
+<ColorIcon colors={parsedColors} on:click={() => updateColor()} />

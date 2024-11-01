@@ -15,7 +15,6 @@
     'create-chat': string
     'open-space': Space
     'create-note': string
-    'toggle-homescreen': void
     open: string
     'create-resource-from-oasis': string
     'create-tab-from-space': { tab: TabSpace; active: boolean }
@@ -30,6 +29,7 @@
     useLogScope,
     optimisticCheckIfURLOrIPorFile,
     parseStringIntoBrowserLocation,
+    isModKeyAndKeyPressed,
     truncateURL,
     getFileType,
     useDebounce,
@@ -60,7 +60,6 @@
   import stuffAdd from '../../../../public/assets/demo/stuffsave.gif'
   import stuffSmart from '../../../../public/assets/demo/stuffsmart.gif'
   import stuffSearch from '../../../../public/assets/demo/stuffsearch.gif'
-  import { portal } from '../Core/Portal.svelte'
 
   import Tooltip from '../Onboarding/Tooltip.svelte'
 
@@ -81,6 +80,7 @@
   import type { HistoryEntriesManager } from '../../service/history'
   import OasisSpace from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
+  import CreateNewSpace from '../Oasis/CreateNewSpace.svelte'
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
   import {
@@ -95,7 +95,6 @@
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
   import { CONTEXT_MENU_OPEN } from './ContextMenu.svelte'
   import Onboarding from './Onboarding.svelte'
-  import { useHomescreen } from '../Oasis/homescreen/homescreen'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
 
@@ -109,8 +108,6 @@
   const tabsManager = useTabsManager()
   const dispatch = createEventDispatcher<OverlayEvents>()
   const config = useConfig()
-  const homescreen = useHomescreen()
-  const homescreenVisible = homescreen.visible
   const oasis = useOasis()
   const toasts = useToasts()
   const miniBrowserService = useMiniBrowserService()
@@ -317,6 +314,7 @@
     if (!searchValue || showTabSearch !== 1) {
       return []
     }
+
     log.debug('Filtering command items', searchValue)
 
     if (searchValue.length > 2) {
@@ -452,14 +450,13 @@
     try {
       $isFilteringCommandItems = true
       const items = commandItems
-      // TODO: Why re-create this each time? This should be a top level const
       const fuse = new Fuse(items, fuseOptions)
 
       const fuseResults = fuse.search(searchValue)
 
       const result = fuseResults
         .map((result) => ({ ...result.item, score: result.score }))
-        .filter((x) => x.score! < fuseOptions.threshold) as CMDMenuItem[] // NOTE (crizti): Why < threshold?
+        .filter((x) => x.score! < fuseOptions.threshold) as CMDMenuItem[]
       log.debug('Fuse search result items', result)
 
       $filteredCommandItems = result
@@ -645,7 +642,7 @@
     $selectedSpaceId = 'all'
     hasLoadedEverything = false
   }
-  $: browserCommands = [
+  const browserCommands = [
     { id: 'close-active-tab', label: 'Close Tab', shortcut: '⌘W', type: 'command', icon: 'close' },
     { id: 'bookmark', label: 'Toggle Bookmark', shortcut: '⌘D', type: 'command', icon: 'save' },
     {
@@ -666,14 +663,7 @@
     { id: 'zoom', label: 'Zoom In', shortcut: '⌘+', type: 'command', icon: 'zoom-in' },
     { id: 'zoom-out', label: 'Zoom Out', shortcut: '⌘-', type: 'command', icon: 'zoom-out' },
     { id: 'reset-zoom', label: 'Reset Zoom', shortcut: '⌘0', type: 'command', icon: 'maximize' },
-    { id: 'create-note', label: 'Create Note', shortcut: '⌘N', type: 'command', icon: 'docs' },
-    {
-      id: 'toggle-homescreen',
-      label: `${$homescreenVisible ? 'Hide' : 'Show'} Homescreen`,
-      shortcut: '⌘-Ctrl-H',
-      type: 'command',
-      icon: 'home'
-    }
+    { id: 'create-note', label: 'Create Note', shortcut: '⌘n', type: 'command', icon: 'docs' }
   ] as CMDMenuItem[]
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
@@ -703,6 +693,9 @@
         log.debug('Already loading everything')
         return
       }
+
+      // resets the selected space
+      oasis.resetSelectedSpace()
 
       loadingContents.set(true)
       everythingContents.set([])
@@ -1124,10 +1117,8 @@
     })
   }
 
-  let showDragHint = false
   // Used to reset dragcula when clicking the page after dragging (to prevent the drawer from being stuck)
   const dragClickHandler = (_e: MouseEvent) => {
-    showDragHint = false
     window.removeEventListener('click', dragClickHandler)
 
     const dragcula = Dragcula.get()
@@ -1137,21 +1128,17 @@
     }
   }
 
-  let handleDrag = (e: DragEvent) => {
-    if (showTabSearch === 0 && e.clientY > window.innerHeight - 80) {
-      showTabSearch = 2
-    }
-  }
+  let dragculaDragStartOpenTimeout: Timer | null = null // Used to delay opening stuff a bit, so that it doesnt laaagggg
   const handleDragculaDragStart = (drag: DragOperation) => {
-    showDragHint = true
-    window.addEventListener('drag', handleDrag)
+    dragculaDragStartOpenTimeout = setTimeout(() => {
+      showTabSearch = 2
+    }, 150)
 
     window.addEventListener('click', dragClickHandler)
   }
   const handleDragculaDragEnd = (drag: DragOperation) => {
-    showDragHint = false
-    window.removeEventListener('drag', handleDrag)
     // TODO: Only close when dropped outside
+    if (dragculaDragStartOpenTimeout !== null) clearTimeout(dragculaDragStartOpenTimeout)
 
     window.removeEventListener('click', dragClickHandler)
 
@@ -1189,8 +1176,6 @@
     Dragcula.get().targetDomElement.subscribe((el: HTMLElement) => {
       // We need to manually query as bits-ui/svelte-vaul shit doesnt expose element ref.. because ofc why would anyone neeeed that!!?
       const drawerContentEl = document.querySelector('.drawer-content')
-      const drawerHintEl = document.querySelector('#drawer-hint')
-      console.warn(drawerHintEl?.contains(el))
       if (drawerContentEl?.contains(el)) {
         drawerContentEl?.classList.add('hovering')
       } else {
@@ -1203,27 +1188,12 @@
   onMount(() => {
     Dragcula.get().on('dragstart', handleDragculaDragStart)
     Dragcula.get().on('dragend', handleDragculaDragEnd)
-    window.addEventListener('dragend', (e: DragEvent) => {
-      handleDragculaDragEnd()
-    })
   })
   onDestroy(() => {
     Dragcula.get().off('dragstart', handleDragculaDragStart)
     Dragcula.get().off('dragend', handleDragculaDragEnd)
   })
 </script>
-
-<div
-  id="drawer-hint"
-  class:show={showDragHint && showTabSearch === 0}
-  style="pointer-events:none; position: fixed; left:0;right:0;bottom:0;height:4rem; z-index: 9;display:flex;justify-content: center;align-items: flex-end;font-weight:500;letter-spacing:0.07px;font-size:0.9em; background: linear-gradient(to top, #00000022, #00000000);color:#00000077; mix-blend-mode: exclude; transition: transform 105ms ease-out; transform: translateY(100%);text-align: center;"
-  use:portal={'body'}
->
-  <span
-    style="background: #fff;padding: 0.5em 1em; border-radius: 1.3em 1.3em 0 0; border: 1px solid rgba(0,0,0,0.15); border-bottom: 0;width:90%;"
-    >Hover to open your Stuff</span
-  >
-</div>
 
 <Drawer.Root
   dismissible={!$CONTEXT_MENU_OPEN}
@@ -1236,10 +1206,12 @@
   }}
 >
   <Drawer.Portal>
-    <Drawer.Overlay class="drawer-overlay transition-opacity duration-300 no-drag" />
+    <Drawer.Overlay
+      class="drawer-overlay fixed inset-0 z-10 transition-opacity duration-300 no-drag"
+    />
     <Drawer.Content
       data-vaul-no-drag
-      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl bg-[#FEFFFE] outline-none"
+      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl transition duration-400 bg-[#FEFFFE] outline-none"
       style="width: fit-content;"
     >
       <MiniBrowser service={scopedMiniBrowser} />
@@ -1497,7 +1469,6 @@
 
           {#if $selectedSpaceId === 'all' || showTabSearch === 1}
             <div
-              l
               class={showTabSearch === 2
                 ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
                 : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-neutral-100 bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px]'}
@@ -1537,9 +1508,6 @@
 </Drawer.Root>
 
 <style lang="scss">
-  #drawer-hint.show {
-    transform: translateY(0) !important;
-  }
   .wrapper {
     display: flex;
     flex-direction: column;
@@ -1576,9 +1544,6 @@
     right: 0;
     z-index: 1000;
   }
-  :global(.drawer-content) {
-    transition: transform 150ms ease-in-out !important;
-  }
 
   /* FIXES double drop as webview still consumes drop if pointer is inside overlay. */
   :global(body:has(.drawer-content.hovering) webview) {
@@ -1586,12 +1551,8 @@
   }
 
   :global([data-dialog-portal] .drawer-overlay) {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
     background: rgba(0, 0, 0, 0.35);
     opacity: 1;
-    backdrop-filter: blur(2px);
   }
   :global(body[data-dragging='true'] .drawer-overlay) {
     pointer-events: none;

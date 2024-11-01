@@ -2,6 +2,7 @@
 
 <script lang="ts">
   import { onMount, setContext, tick } from 'svelte'
+  import { fly } from 'svelte/transition'
   import SplashScreen from './Atoms/SplashScreen.svelte'
   import { writable, derived, get, type Writable } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
@@ -17,6 +18,7 @@
     useDebounce,
     useThrottle,
     wait,
+    writableAutoReset,
     parseStringIntoBrowserLocation,
     generateID,
     useLogScope,
@@ -32,7 +34,12 @@
   import SidebarPane from './Sidebars/SidebarPane.svelte'
 
   import type { PaneAPI } from 'paneforge'
-  import { Resource, ResourceTag, createResourceManager } from '../service/resources'
+  import {
+    Resource,
+    ResourceHistoryEntry,
+    ResourceTag,
+    createResourceManager
+  } from '../service/resources'
 
   import {
     DragTypeNames,
@@ -69,6 +76,12 @@
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
   import { HorizonDatabase } from '../service/storage'
+  import type {
+    DownloadDoneMessage,
+    Optional,
+    SFFSResourceMetadata,
+    SFFSResourceTag
+  } from '../types'
   import { WebParser } from '@horizon/web-parser'
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
@@ -98,7 +111,6 @@
     SelectTabEventAction,
     MultiSelectResourceEventAction,
     PageChatUpdateContextEventTrigger,
-    OpenHomescreenEventTrigger,
     OpenInMiniBrowserEventFrom
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
@@ -114,7 +126,12 @@
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import { Tabs } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
-  import { HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import {
+    HTMLDragZone,
+    HTMLAxisDragZone,
+    type DragculaDragEvent,
+    Dragcula
+  } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import CustomPopover from './Atoms/CustomPopover.svelte'
   import { provideConfig } from '../service/config'
@@ -126,29 +143,24 @@
   import { createTabsManager } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
   import ScreenshotPicker, { type ScreenshotPickerMode } from './Webview/ScreenshotPicker.svelte'
-  import { captureScreenshot, getHostFromURL, getScreenshotFileName } from '../utils/screenshot'
+  import {
+    dataUrltoBlob,
+    captureScreenshot,
+    getHostFromURL,
+    getScreenshotFileName
+  } from '../utils/screenshot'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
   import Tooltip from './Onboarding/Tooltip.svelte'
   import { launchTimeline, endTimeline, hasActiveTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import TabInvite from './Core/TabInvite.svelte'
-  import Homescreen from './Oasis/homescreen/Homescreen.svelte'
-  import { provideHomescreen } from './Oasis/homescreen/homescreen'
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
   import {
     createMiniBrowserService,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
-
-  /*
-  NOTE: Funky notes on our z-index issue.
-
-  Left Sidebar: 502
-  Right Sidebar: 501
-  Content: 500
-  */
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -188,7 +200,6 @@
   const toasts = provideToasts()
   const config = provideConfig()
   const tabsManager = createTabsManager(resourceManager, historyEntriesManager, telemetry)
-  const homescreen = provideHomescreen(telemetry)
   const miniBrowserService = createMiniBrowserService(resourceManager)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
@@ -196,13 +207,6 @@
   const tabsDB = storage.tabs
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
-
-  const homescreenVisible = homescreen.visible
-  const homescreenCustomization = homescreen.customization
-
-  const homescreenBackground = derived(homescreenCustomization, (homescreenCustomization) => {
-    return homescreenCustomization.background
-  })
 
   const {
     tabs,
@@ -248,13 +252,6 @@
   const showStartMask = writable(false)
   const showEndMask = writable(false)
   const additionalChatContextItems = writable<ContextItem[]>([])
-  const newTabSelectedSpaceId = oasis.selectedSpace
-
-  // NOTE: Had to tmp use new store here, as setting the value of $activeTabId didnt work wtf?
-  $: {
-    $activeTabId
-    homescreen.setVisible(false)
-  }
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
@@ -778,8 +775,6 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       setShowNewTabOverlay(0)
       createHistoryTab()
-    } else if (isModKeyAndKeyPressed(e, 'h') && e.ctrlKey && $userConfigSettings.homescreen) {
-      homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.Shortcut)
     } else if (
       isModKeyAndEventCodeIs(e, 'Plus') ||
       isModKeyAndEventCodeIs(e, 'Equal') ||
@@ -4198,9 +4193,6 @@
 
     tabsManager.update(tabId, { pinned: false })
   }
-
-  let leftSidebarWidth = 0
-  let leftSidebarHeight = 0
 </script>
 
 {#if $debugMode}
@@ -4244,10 +4236,9 @@
 <MiniBrowser service={globalMiniBrowser} />
 
 <div
-  class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col"
+  class="antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col"
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
-  class:horizontalTabs
 >
   {#if !horizontalTabs && showCustomWindowActions}
     <div class="flex flex-row flex-shrink-0 items-center justify-between p-1">
@@ -4262,9 +4253,6 @@
           on:go-forward={() => $activeBrowserTab?.goForward()}
           on:reload={() => $activeBrowserTab?.reload()}
           on:toggle-sidebar={() => changeLeftSidebarState()}
-          on:go-home={() => {
-            homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.Click)
-          }}
         />
       </div>
       <div class="flex flex-row items-center space-x-2 ml-5">
@@ -4290,25 +4278,6 @@
     </div>
   {/if}
 
-  {#if $userConfigSettings.homescreen}
-    <Homescreen
-      on:click
-      on:space-selected={async (e) => {
-        const space = e.detail
-        showNewTabOverlay.set(2)
-        newTabSelectedSpaceId.set(space.id)
-      }}
-      on:open={(e) => {
-        openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Homescreen)
-      }}
-      on:open-and-chat={handleOpenAndChat}
-      on:open-space-as-tab={handleCreateTabForSpace}
-      style="--padding: calc({horizontalTabs
-        ? leftSidebarHeight
-        : 0}px + 1.5em) 1.5em 1.5em calc({horizontalTabs ? 0 : leftSidebarWidth}px + 1.5em);"
-    />
-  {/if}
-
   <!--
     NOTE: Removed from SidebarPane to disable chat peek for now.
 
@@ -4332,12 +4301,8 @@
     <div
       slot="sidebar"
       id="left-sidebar"
-      class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
-      class:homescreenVisible={$homescreenVisible}
-      class:customBg={$homescreenBackground !== 'transparent'}
-      class:horizontalTabs
-      bind:clientWidth={leftSidebarWidth}
-      bind:clientHeight={leftSidebarHeight}
+      class="flex-grow {horizontalTabs ? 'w-full h-full py-1' : 'h-full'}"
+      style="z-index: 5000;"
     >
       {#if $sidebarTab !== 'oasis'}
         <div
@@ -4392,9 +4357,6 @@
               on:go-forward={() => $activeBrowserTab?.goForward()}
               on:reload={() => $activeBrowserTab?.reload()}
               on:toggle-sidebar={() => changeLeftSidebarState()}
-              on:go-home={() => {
-                homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.Click)
-              }}
             />
           {/if}
 
@@ -4921,12 +4883,7 @@
       {/if}
     </div>
 
-    <div
-      slot="content"
-      class="browser-content h-full w-full flex relative flex-row"
-      class:slide-hide={$homescreenVisible}
-      class:horizontalTabs
-    >
+    <div slot="content" class="h-full w-full flex relative flex-row">
       <div
         style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow rounded-xl"
@@ -4938,7 +4895,6 @@
           spaceId={'all'}
           activeTab={$activeTab}
           bind:showTabSearch={$showNewTabOverlay}
-          selectedSpaceId={newTabSelectedSpaceId}
           on:open-space-as-tab={handleCreateTabForSpace}
           on:deleted={handleDeletedSpace}
           {historyEntriesManager}
@@ -4966,9 +4922,6 @@
           }}
           on:reset-zoom={() => {
             $activeBrowserTab?.resetZoom()
-          }}
-          on:toggle-homescreen={() => {
-            homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.CommandMenu)
           }}
           on:open-url={(e) => {
             tabsManager.addPageTab(e.detail, {
@@ -5113,8 +5066,7 @@
 
     <Tabs.Root
       bind:value={$rightSidebarTab}
-      class="bg-sky-50 h-full flex flex-col relative no-drag"
-      id="sidebar-right"
+      class="h-full flex flex-col relative no-drag"
       slot="right-sidebar"
       let:minimal
     >
@@ -5243,167 +5195,14 @@
   </SidebarPane>
 </div>
 
-<!--<TeletypeEntry />-->
-
 <style lang="scss">
-  .app-contents {
-    & :global(#homescreen-wrapper) {
-      position: fixed;
-      inset: 0;
-    }
-  }
-
-  /* MAXU HOMESCREEN JANK TODO: Cleanup / move to correct places*/
-  :global(#sidebar-right) {
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      left: -10px;
-      width: calc(100% + 10px);
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(12px);
-      z-index: -1;
-
-      transition: background 145ms ease-out;
-    }
-  }
-  #left-sidebar {
-    position: relative;
-
-    &.customBg {
-      &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        width: calc(100% + 0px);
-        background: rgba(255, 255, 255, 0.75);
-        backdrop-filter: blur(12px);
-        z-index: -1;
-
-        transition: background 145ms ease-out;
-      }
-      &.horizontalTabs {
-        &::before {
-          width: 100%;
-          height: calc(100% + 0px);
-        }
-      }
-
-      &.homescreenVisible {
-        &::before {
-          width: 100%;
-          pointer-events: none;
-          background: rgba(255, 255, 255, 0.4);
-          backdrop-filter: blur(12px);
-          mask-image: linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(0, 0, 0, 1) 100%);
-          //mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 0) 70%);
-        }
-        &.horizontalTabs {
-          &::before {
-            height: 100%;
-            border-bottom-left-radius: 0.25em;
-            border-bottom-right-radius: 0.25em;
-          }
-        }
-      }
-    }
-  }
-  :global(body:has(.left-sidebar.homescreenVisible) .sidebar-meta) {
-    background: transparent;
-    &::after {
-      opacity: 0 !important;
-    }
-  }
-
-  .browser-content {
-    position: relative;
-    z-index: 500;
-
-    --slide-offset: -10%;
-    --slide-scale: 0.9;
-
-    will-change: transform;
-
-    &.slide-hide {
-      transform-origin: left center;
-      // NOTE: Dont use translate3d, this works better just with will-change
-      transform: translate(var(--slide-offset), 0px) scale(var(--slide-scale));
-      opacity: 0;
-      pointer-events: none !important;
-
-      &.horizontalTabs {
-        transform-origin: center top;
-        // NOTE: Dont use translate3d, this works better just with will-change
-        transform: translate(0%, var(--slide-offset)) scale(var(--slide-scale));
-      }
-    }
-    transition:
-      transform 255.84ms,
-      opacity 300ms;
-    transition-timing-function: linear(
-      0 0%,
-      0.015482 1%,
-      0.055044 2%,
-      0.11025 3%,
-      0.174758 4%,
-      0.243871 5%,
-      0.314179 6%,
-      0.383265 7.000000000000001%,
-      0.449482 8%,
-      0.511762 9%,
-      0.569475 10%,
-      0.622318 11%,
-      0.670218 12%,
-      0.713271 13%,
-      0.751684 14.000000000000002%,
-      0.785737 15%,
-      0.815755 16%,
-      0.84208 17%,
-      0.86506 18%,
-      0.885034 19%,
-      0.902328 20%,
-      0.917247 21%,
-      0.930073 22%,
-      0.941064 23%,
-      0.950454 24%,
-      0.958453 25%,
-      0.965247 26%,
-      0.971002 27%,
-      0.975864 28.000000000000004%,
-      0.979962 28.999999999999996%,
-      0.983406 30%,
-      0.986294 31%,
-      0.988709 32%,
-      0.990723 33%,
-      0.9924 34%,
-      0.993792 35%,
-      0.994944 36%,
-      0.995896 37%,
-      0.99668 38%,
-      0.997324 39%,
-      0.997851 40%,
-      0.998282 41%,
-      0.998632 42%,
-      0.998917 43%,
-      0.999147 44%,
-      0.999333 45%,
-      0.999482 46%,
-      0.999601 47%,
-      0.999695 48%,
-      0.99977 49%,
-      0.999829 50%,
-      0.999876 51%,
-      0.999911 52%
-    );
-  }
   /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
   :global(::view-transition-group(*)) {
     animation-duration: 280ms;
     animation-timing-function: ease; //cubic-bezier(0, 1, 0.41, 0.99);
   }
 
-  :global(*[data-drag-preview]) {
+  :global([data-drag-preview]) {
     pointer-events: none !important;
     user-select: none !important;
     width: var(--drag-width, auto);
@@ -5419,8 +5218,6 @@
       box-shadow 165ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;
     opacity: 85%;
     box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
-    pointer-events: none !important;
-    overflow: hidden;
     /*scale: var(--scaleX, 1) var(--scaleY, 1);*/
   }
   :global(body[data-dragging]:has([data-drag-target^='webview'])) {

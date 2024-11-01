@@ -181,9 +181,7 @@ export const stuffOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#stuff.onboarding.4',
       headline: 'One more thing: Multi-select',
-      content: `You can also multi-select more items by click-dragging or using ${
-        isMac() ? '⌘' : 'CTRL'
-      } + Click.`,
+      content: `You can also multi-select more items by click-dragging or using ${isMac() ? '⌘' : 'CTRL'} + Click.`,
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 380 },
       domRoot: 'stuff',
       domTarget: '',

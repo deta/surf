@@ -152,7 +152,6 @@
               on:whitelist-resource
               on:rendered={handleRenderingDone}
               {interactive}
-              draggable
             />
           </Masonry>
         {/key}
@@ -173,7 +172,6 @@
             on:remove
             on:load
             {interactive}
-            draggable
           />
         </div>
       {/each}

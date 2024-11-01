@@ -18,15 +18,16 @@
   class={resource ? (resource.type.startsWith(ResourceTypes.POST) ? '' : 'p-1') : 'p-4 space-y-2'}
 >
   {#if resource}
-    <ResourcePreview
-      {resource}
-      interactive={false}
-      mode="compact"
-      processingText="Preparing for chat…"
-      failedText="Processing failed, not available for chat"
-      frameless
-      draggable
-    />
+    <DragResourceWrapper {resource}>
+      <ResourcePreview
+        {resource}
+        interactive={false}
+        mode="compact"
+        processingText="Preparing for chat…"
+        failedText="Processing failed, not available for chat"
+        frameless
+      />
+    </DragResourceWrapper>
   {:else}
     <div class="text-slate-900 font-medium text-lg">
       {truncate(title, MAX_TITLE_LENGTH)}

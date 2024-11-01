@@ -5,17 +5,12 @@
 
   import DragResourceWrapper from './DragResourceWrapper.svelte'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
-  import type { Mode, Origin } from '../Resources/Previews/Preview.svelte'
 
   export let resourceOrId: string | Resource
   export let selected: boolean = false
   export let isInSpace: boolean = false
   export let resourcesBlacklistable: boolean = false
   export let interactive: boolean = true
-  export let mode: Mode = 'full'
-  export let origin: Origin = 'stuff'
-  export let draggable: boolean = true
-  export let context: 'homescreen' | 'homeascreen-space' | undefined = undefined
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -50,41 +45,32 @@
   })
 </script>
 
-<div class="wrapper" {...$$restProps}>
+<div class="wrapper">
   {#if resource}
     {#if interactive}
-      <ResourcePreview
-        {resource}
-        {mode}
-        {origin}
-        {selected}
-        {isInSpace}
-        {resourcesBlacklistable}
-        {interactive}
-        {draggable}
-        {context}
-        on:load
-        on:click
-        on:open
-        on:open-and-chat
-        on:remove
-        on:blacklist-resource
-        on:whitelist-resource
-        on:set-resource-as-background
-        on:remove-from-homescreen
-        {...$$restProps}
-      />
+      <DragResourceWrapper {resource}>
+        <ResourcePreview
+          {resource}
+          {selected}
+          {isInSpace}
+          {resourcesBlacklistable}
+          {interactive}
+          on:load
+          on:click
+          on:open
+          on:open-and-chat
+          on:remove
+          on:blacklist-resource
+          on:whitelist-resource
+        />
+      </DragResourceWrapper>
     {:else}
       <ResourcePreview
         {resource}
-        {mode}
-        {origin}
         {selected}
         {isInSpace}
         {resourcesBlacklistable}
         {interactive}
-        {draggable}
-        {context}
         on:load
         on:click
         on:open
@@ -92,8 +78,6 @@
         on:remove
         on:blacklist-resource
         on:whitelist-resource
-        on:remove-from-homescreen
-        {...$$restProps}
       />
     {/if}
   {/if}

@@ -92,7 +92,6 @@ export const getUserConfig = (path?: string) => {
       go_wild_mode: false,
       live_spaces: false,
       annotations_sidebar: false,
-      homescreen: false,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -151,11 +150,6 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.auto_generate_chat_prompts === undefined) {
     storedConfig.settings.auto_generate_chat_prompts = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.homescreen === undefined) {
-    storedConfig.settings.homescreen = false
     changedConfig = true
   }
 

@@ -128,12 +128,7 @@
       {#each resourcesData as item, index}
         <div class="card" style={getTransformStyle(index, $activeIndex)}>
           <div class="overflow-hidden w-full h-full">
-            <ResourcePreview
-              resource={resources[index]}
-              on:click
-              resourcesBlacklistable={false}
-              draggable
-            />
+            <ResourcePreview resource={resources[index]} on:click resourcesBlacklistable={false} />
           </div>
         </div>
       {/each}
