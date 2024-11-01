@@ -390,7 +390,7 @@
     isSelected: boolean
   }) {
     const baseClasses =
-      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md'
+      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md overflow-hidden min-w-[48px]'
     const activeClasses = isActive
       ? 'active text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px]'
       : pinned

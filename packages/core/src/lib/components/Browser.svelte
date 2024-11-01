@@ -149,6 +149,7 @@
     getHostFromURL,
     getScreenshotFileName
   } from '../utils/screenshot'
+  import { useResizeObserver } from '../utils/observers'
   import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
   import Tooltip from './Onboarding/Tooltip.svelte'
@@ -173,6 +174,7 @@
   let isFirstButtonVisible = true
   let containerRef: Element
   let pinnedTabsWrapper: HTMLElement
+  let pinnedTabsScrollArea: HTMLElement
 
   const onboardingActive = writable(false)
   const onboardingTabVisible = writable(false)
@@ -4365,21 +4367,27 @@
           <div
             id="sidebar-pinned-tabs-wrapper"
             class={$pinnedTabs.length !== 0
-              ? 'relative no-drag my-auto rounded-xl flex-shrink-0 overflow-x-scroll no-scrollbar transition-colors'
+              ? 'relative no-drag my-auto rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden outline}'
               : horizontalTabs
-                ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 overflow-x-scroll no-scrollbar transition-colors'
-                : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 overflow-x-scroll no-scrollbar transition-colors'}
+                ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
+                : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
             class:horizontalTabs
             class:empty={$pinnedTabs.length === 0}
             bind:this={pinnedTabsWrapper}
+            style="scroll-behavior: smooth;"
           >
             <div
               id="sidebar-pinned-tabs"
               style:view-transition-name="pinned-tabs-wrapper"
-              class="flex items-center h-fit"
+              class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between outline outline-red-300`}
               axis="horizontal"
               dragdeadzone="5"
               aria-hidden="true"
+              bind:this={pinnedTabsScrollArea}
+              use:useResizeObserver
+              on:resize={() => {
+                pinnedTabsScrollArea.className = pinnedTabsScrollArea.className
+              }}
               use:HTMLAxisDragZone.action={{
                 accepts: (drag) => {
                   if (
@@ -4406,6 +4414,7 @@
                     {tab}
                     {horizontalTabs}
                     {activeTabId}
+                    {spaces}
                     pinned={true}
                     isMagicActive={$magicTabs.length > 0}
                     isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
