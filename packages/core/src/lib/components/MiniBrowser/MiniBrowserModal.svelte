@@ -442,6 +442,7 @@
           {webview}
           isLoading={isLoadingPage}
           active
+          insideMiniBrowser
           disableMiniBrowser
           bind:this={browserTab}
           bind:tab

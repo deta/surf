@@ -95,6 +95,7 @@
   export let active: boolean = false
   export let isLoading = writable(false)
   export let disableMiniBrowser = false
+  export let insideMiniBrowser = false
 
   const log = useLogScope('BrowserTab')
   const dispatch = createEventDispatcher<BrowserTabEvents>()
@@ -1124,7 +1125,9 @@
 
 <WebviewWrapper
   {id}
-  style={!active || $showNewTabOverlay === 2 ? 'pointer-events: none !important;' : ''}
+  style={!active || ($showNewTabOverlay === 2 && !insideMiniBrowser)
+    ? 'pointer-events: none !important;'
+    : ''}
   src={initialSrc}
   partition="persist:horizon"
   {historyEntriesManager}
