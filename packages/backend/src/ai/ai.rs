@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::ai::client::FilteredSearchRequest;
 use crate::embeddings::chunking::ContentChunker;
 use crate::llm::models::MessageContent;
@@ -10,12 +12,10 @@ use serde::{Deserialize, Serialize};
 
 use super::client::{DocsSimilarityRequest, LocalAIClient, UpsertEmbeddingsRequest};
 use super::prompts::{
-    chat_prompt, command_prompt, create_app_prompt, should_narrow_search_prompt,
-    sql_query_generator_prompt, transcript_chunking_prompt,
+    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt,
+    should_narrow_search_prompt, sql_query_generator_prompt, transcript_chunking_prompt,
 };
 
-use core::fmt;
-use std::collections::HashMap;
 use std::pin::Pin;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -282,104 +282,28 @@ impl AI {
 
     pub fn get_sources_contexts(
         &self,
-        mut resources: Vec<CompositeResource>,
-        max_contexts: usize,
+        resources: Vec<CompositeResource>,
     ) -> (Vec<AIChatSessionMessageSource>, String, String) {
-        resources.sort_by(|a, b| a.resource.id.cmp(&b.resource.id));
-
-        struct ResourceStats {
-            original_count: usize,
-            final_count: usize,
-            original_chars: usize,
-            final_chars: usize,
-        }
-        let mut stats: HashMap<String, ResourceStats> = HashMap::new();
-
-        for r in &resources {
-            let chars = r.text_content.as_ref().map_or(0, |t| t.content.len());
-            let entry = stats.entry(r.resource.id.clone()).or_insert(ResourceStats {
-                original_count: 0,
-                final_count: 0,
-                original_chars: 0,
-                final_chars: 0,
-            });
-            entry.original_count += 1;
-            entry.original_chars += chars;
-        }
-
-        let unique_resources = stats.len();
-        let contexts_per_resource = (max_contexts + unique_resources - 1) / unique_resources;
-
-        let mut index = 1;
         let mut sources = Vec::new();
+        let mut sources_xml = "<sources>\n".to_string();
         let mut contexts = String::new();
-        let mut sources_xml = String::from("<sources>\n");
-        let mut current_resource_id = None;
-        let mut current_resource_count = 0;
-
+        let mut index = 1;
         for resource in resources {
-            if current_resource_id.as_ref() != Some(&resource.resource.id) {
-                current_resource_id = Some(resource.resource.id.clone());
-                current_resource_count = 0;
+            if resource.text_content.is_none() {
+                continue;
             }
-
-            if current_resource_count < contexts_per_resource {
-                if let Some(source) =
-                    AIChatSessionMessageSource::from_resource_index(&resource, index)
-                {
-                    sources_xml.push_str(&source.to_xml());
-                    sources.push(source);
-
-                    if let Some(text_content) = resource.text_content {
-                        contexts.push_str(&format!("{}. {}\n", index, text_content.content));
-
-                        let entry = stats.get_mut(&resource.resource.id).unwrap();
-                        entry.final_count += 1;
-                        entry.final_chars += text_content.content.len();
-                    }
-
-                    index += 1;
-                    current_resource_count += 1;
-                }
+            let source = AIChatSessionMessageSource::from_resource_index(&resource, index);
+            if source.is_none() {
+                continue;
             }
+            let content = resource.text_content.unwrap().content;
+            let source = source.unwrap();
+            sources_xml.push_str(&source.to_xml());
+            sources.push(source);
+            contexts.push_str(format!("{}. {}\n", index, content).as_str());
+            index += 1;
         }
-
         sources_xml.push_str("</sources>");
-
-        let total_original_chars: usize = stats.values().map(|s| s.original_chars).sum();
-        let total_final_chars: usize = stats.values().map(|s| s.final_chars).sum();
-        let estimated_final_tokens = total_final_chars / 4;
-        tracing::debug!(
-            "distribution overview: {} max chunks, {} unique resources, {} chunks per resource",
-            max_contexts,
-            unique_resources,
-            contexts_per_resource
-        );
-
-        for (resource_id, stat) in &stats {
-            tracing::debug!(
-                "resource {}: {} chunks ({} dropped), {} chars ({} dropped), ~{} tokens",
-                resource_id,
-                stat.final_count,
-                stat.original_count - stat.final_count,
-                stat.final_chars,
-                stat.original_chars - stat.final_chars,
-                stat.final_chars / 4
-            );
-        }
-
-        tracing::debug!(
-            "context summary: {} chunks ({} dropped), {} chars ({} dropped), ~{} tokens (~{} paragraphs)",
-            stats.values().map(|s| s.final_count).sum::<usize>(),
-            stats
-                .values()
-                .map(|s| s.original_count - s.final_count)
-                .sum::<usize>(),
-            total_final_chars,
-            total_original_chars - total_final_chars,
-            estimated_final_tokens,
-            estimated_final_tokens / 100
-        );
         (sources, sources_xml, contexts)
     }
 
@@ -392,7 +316,7 @@ impl AI {
         let mut messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: vec![MessageContent::new_text(chat_prompt(None, history))],
+                content: vec![MessageContent::new_text(general_chat_prompt(history))],
             },
             llm::models::Message {
                 role: "user".to_string(),
@@ -450,7 +374,7 @@ impl AI {
         }
         let resource_ids = resource_ids.unwrap_or(Vec::new());
 
-        let rag_results = match should_cluster {
+        let mut rag_results = match should_cluster {
             true => self.vector_search(
                 contents_store,
                 query.clone(),
@@ -461,10 +385,6 @@ impl AI {
             )?,
             false => contents_store.list_resources_by_ids(resource_ids.clone())?,
         };
-        let mut rag_results: Vec<CompositeResource> = rag_results
-            .into_iter()
-            .filter(|r| r.text_content.is_some())
-            .collect();
         if rag_results.is_empty() {
             // NOTE: this is a fallback solution to let the llm decide what to do if no rag results
             // are found by sending everything to the llm
@@ -479,14 +399,11 @@ impl AI {
             }
         }
 
-        let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results, 50);
+        let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
         let mut messages = vec![
             llm::models::Message {
                 role: "system".to_string(),
-                content: vec![MessageContent::new_text(chat_prompt(
-                    Some(contexts),
-                    history,
-                ))],
+                content: vec![MessageContent::new_text(chat_prompt(contexts, history))],
             },
             llm::models::Message {
                 role: "user".to_string(),

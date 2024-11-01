@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::{message::*, tunnel::WorkerTunnel};
 use crate::{
     backend::ai::AI,
@@ -47,29 +45,19 @@ impl Processor {
                     let resource_id = resource.resource.id.clone();
                     self.emit_processing_status(&resource_id, ResourceProcessingStatus::Started);
 
-                    match self.handle_process_resource(resource) {
+                    let result = self.handle_process_resource(resource);
+
+                    match result {
                         Ok(_) => self.emit_processing_status(
                             &resource_id,
                             ResourceProcessingStatus::Finished,
                         ),
-                        Err(err) => {
-                            tracing::error!("failed to process resource: {err}");
-
-                            if err.to_string().contains("failed to upsert embedding") {
-                                self.emit_processing_status(
-                                    &resource_id,
-                                    ResourceProcessingStatus::Finished,
-                                );
-                                return;
-                            }
-
-                            self.emit_processing_status(
-                                &resource_id,
-                                ResourceProcessingStatus::Failed {
-                                    message: format!("error while processing resource: {err:?}"),
-                                },
-                            )
-                        }
+                        Err(err) => self.emit_processing_status(
+                            &resource_id,
+                            ResourceProcessingStatus::Failed {
+                                message: format!("error while processing resource: {err:?}"),
+                            },
+                        ),
                     }
                 }
             }
@@ -92,38 +80,30 @@ impl Processor {
         if !needs_processing(&resource.resource.resource_type) {
             return Ok(());
         }
-
-        let mut result: HashMap<
-            ResourceTextContentType,
-            (Vec<String>, Vec<ResourceTextContentMetadata>),
-        > = HashMap::new();
+        let mut contents = Vec::new();
+        let mut metadatas = Vec::new();
 
         match resource.resource.resource_type.as_str() {
             t if t.starts_with("image/") => {
                 if let Some((content_type, content)) =
                     process_resource_data(&resource, "", &self.ocr_engine)
                 {
-                    result.insert(
-                        content_type,
-                        (
-                            vec![content],
-                            vec![create_metadata_from_resource(&resource)],
-                        ),
-                    );
+                    contents.push((content_type, vec![content]));
+                    metadatas.push(create_metadata_from_resource(&resource));
                 }
 
                 match self.ai.process_vision_message(&resource) {
                     Ok(ai_results) => {
                         for (content_type, content) in ai_results {
                             let content_len = content.len();
-                            let metadata = vec![
+                            contents.push((content_type, content));
+                            metadatas.extend(vec![
                                 ResourceTextContentMetadata {
                                     timestamp: None,
                                     url: None,
                                 };
                                 content_len
-                            ];
-                            result.insert(content_type, (content, metadata));
+                            ]);
                         }
                     }
                     Err(e) => tracing::error!("error processing image with AI: {:?}", e),
@@ -133,13 +113,8 @@ impl Processor {
                 if let Some((content_type, content)) =
                     process_resource_data(&resource, "", &self.ocr_engine)
                 {
-                    result.insert(
-                        content_type,
-                        (
-                            vec![content],
-                            vec![create_metadata_from_resource(&resource)],
-                        ),
-                    );
+                    contents.push((content_type, vec![content]));
+                    metadatas.push(create_metadata_from_resource(&resource));
                 }
             }
             "application/vnd.space.post.youtube" => {
@@ -148,10 +123,8 @@ impl Processor {
                         &metadata.source_uri,
                         self.language.clone(),
                     )?;
-                    result.insert(
-                        ResourceTextContentType::YoutubeTranscript,
-                        (youtube_contents, youtube_metadatas),
-                    );
+                    contents.push((ResourceTextContentType::YoutubeTranscript, youtube_contents));
+                    metadatas.extend(youtube_metadatas);
                 }
             }
             _ => {
@@ -159,19 +132,15 @@ impl Processor {
                 if let Some((content_type, content)) =
                     process_resource_data(&resource, &resource_data, &self.ocr_engine)
                 {
-                    result.insert(
-                        content_type,
-                        (
-                            vec![content],
-                            vec![create_metadata_from_resource(&resource)],
-                        ),
-                    );
+                    contents.push((content_type, vec![content]));
+                    metadatas.push(create_metadata_from_resource(&resource));
                 }
             }
         }
 
-        tracing::debug!("content types to be batch upserted: {}", result.len());
-        for (content_type, (content, metadata)) in result {
+        tracing::debug!("contents length to be batch upserted: {}", contents.len());
+
+        for (content_type, content) in contents {
             if !content.is_empty() {
                 let (tx, rx) = crossbeam_channel::bounded(1);
                 self.tunnel.worker_send_rust(
@@ -180,7 +149,7 @@ impl Processor {
                             resource_id: resource.resource.id.clone(),
                             content_type,
                             content,
-                            metadata,
+                            metadata: metadatas.clone(),
                         },
                     ),
                     Some(tx),

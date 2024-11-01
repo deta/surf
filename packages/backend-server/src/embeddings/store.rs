@@ -9,14 +9,13 @@ pub struct DocsSimilarity {
 }
 
 fn new_index(embeddings_dim: &usize) -> BackendResult<Index> {
-    Index::new(&IndexOptions {
-        dimensions: *embeddings_dim,
-        metric: MetricKind::Cos,
-        quantization: ScalarKind::F32,
-        multi: true,
-        ..Default::default()
-    })
-    .map_err(|err| BackendError::CxxError(err))
+    let mut options = IndexOptions::default();
+    options.dimensions = *embeddings_dim;
+    options.metric = MetricKind::Cos;
+    options.quantization = ScalarKind::F32;
+
+    let index = Index::new(&options)?;
+    Ok(index)
 }
 
 pub struct EmbeddingsStore {
@@ -170,7 +169,10 @@ mod tests {
             vec![0.4, 0.4],
             vec![0.5, 0.5],
         ];
+        let now = std::time::Instant::now();
         let results = store.get_docs_similarity(&query, &docs, &0.5, &2).unwrap();
+        dbg!(now.elapsed());
+        dbg!(&results);
         assert_eq!(results.len(), 2);
         for r in results.iter() {
             assert!(r.similarity <= 0.5);

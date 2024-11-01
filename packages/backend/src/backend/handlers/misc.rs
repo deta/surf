@@ -278,14 +278,13 @@ impl Worker {
         data: String,
     ) -> BackendResult<Root<JsFunction>> {
         self.channel
-            .try_send(|mut cx| {
+            .send(|mut cx| {
                 let f = callback.into_inner(&mut cx);
                 let this = cx.undefined();
                 let args = vec![cx.string(data).upcast::<JsValue>()];
                 f.call(&mut cx, this, args).unwrap();
                 Ok(f.root(&mut cx))
             })
-            .map_err(|e| BackendError::GenericError(e.to_string()))?
             .join()
             .map_err(|err| BackendError::GenericError(err.to_string()))
     }

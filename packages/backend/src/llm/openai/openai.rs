@@ -252,6 +252,7 @@ impl OpenAI {
         let body = serde_json::to_string(&request).map_err(|e| {
             BackendError::GenericError(format!("OpenAI client: failed to serialize request: {}", e))
         })?;
+        dbg!(body.clone());
         let response = self.async_client.post(url).body(body).send().await?;
         match response.error_for_status_ref() {
             Ok(_) => {}

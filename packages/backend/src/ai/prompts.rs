@@ -59,43 +59,89 @@ Context:
 ", context)
 }
 
-pub fn chat_prompt(context: Option<String>, history: Option<String>) -> String {
-    let base_prompt = r#"You are a Q&A expert system. Help the user with their queries.
+pub fn general_chat_prompt(history: Option<String>) -> String {
+    let prompt = match history {
+        None => "You are a Q&A expert system. Help the user with their queries.
 
 Here are some guidelines to follow:
 
 1. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
 2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
 3. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
-4. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
-5. Provide citations whenever possible from the context provided. A citation should consist of the context ID enclosed in a `<citation>` tag, placed directly at the end of sentences that are supported by the context. Ensure citations are integrated as closely as possible to the information they support within the different sections of your response. If comparing multiple sources, use multiple citation tags to indicate the source of each piece of information. Do not place citations at the end of the entire response, but rather at the relevant points throughout the text. For example, use `<citation>4</citation>`.
-6. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
-7. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
-8. Focus on the text context provided and use it to answer the user's query. Use the conversation history to provide more context or to clarify the user's query. Only use images if necessary and if you don't have enough information from the text context.
-9. If images are provided in the context, you can refer to them in your response. For example, 'The image shows...'.
-10. If you use information from an image, add a citation with the type 'image' at the end of the sentence. You can omit the context id. For example, `<citation type=\"image\"></citation>`."#;
 
-    let context_section = context.map_or_else(
-        || "CONTEXT: Not provided for this query.".to_string(),
-        |c| format!("CONTEXT:\n{}", c),
-    );
+".to_string(),
 
-    let history_section = history.map_or_else(
-        || "CONVERSATION_HISTORY: Not available for this interaction.".to_string(),
-        |h| format!("CONVERSATION_HISTORY:\n{}", h),
-    );
+        Some(history) => format!("You are a Q&A expert system. Help the user with their queries.
 
-    format!(
-        r#"{base_prompt}
+You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed.
 
------------------
-{context_section}
------------------
+Here are some guidelines to follow:
 
------------------
-{history_section}
------------------"#
-    )
+1. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
+2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
+3. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+
+Conversation history:
+----------------------
+{}
+----------------------
+", history)
+    };
+    prompt
+}
+
+pub fn chat_prompt(context: String, history: Option<String>) -> String {
+    let prompt = match history {
+        None => format!("
+You are a Q&A expert system. Your responses must always be rooted in the context provided for each query. Here are some guidelines to follow:
+
+1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
+2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
+3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
+4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
+5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
+6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists. The only HTML tags allowed are `<citation>`.
+7. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+8. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+9. Focus on the text context provided and use it to answer the user's query. Use the conversation history to provide more context or to clarify the user's query. Only use images if necessary and if you don't have enough information from the text context.
+10. If images are provided in the context, you can refer to them in your response. For example, 'The image shows...'.
+11. If you use information from an image, add a citation with the type 'image' at the end of the sentence. You can omit the context id. For example, `<citation type=\"image\"></citation>`.
+
+Context information:
+----------------------
+{}
+----------------------
+", context),
+
+        Some(history) => format!("
+You are a Q&A expert system. Your responses must always be rooted in the context provided for each query. You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed.
+
+Here are some guidelines to follow:
+
+1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
+2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
+3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
+4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
+5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
+6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists. The only HTML tags allowed are `<citation>`.
+7. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+8. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
+9. Focus on the text context provided and use it to answer the user's query. Use the conversation history to provide more context or to clarify the user's query. Only use images if necessary and if you don't have enough information from the text context.
+10. If images are provided in the context, you can refer to them in your response. For example, 'The image shows...'.
+11. If you use information from an image, add a citation with the type 'image' at the end of the sentence. You can omit the context id. For example, `<citation type=\"image\"></citation>`.
+
+Context information:
+----------------------
+{}
+----------------------
+
+Conversation history:
+----------------------
+{}
+----------------------
+", context, history)
+    };
+    prompt
 }
 
 pub fn sql_query_generator_prompt() -> String {
