@@ -1807,6 +1807,8 @@
       return
     }
 
+    await tick()
+
     const isActivated = $activatedTabs.includes(tab.id)
     if (!isActivated) {
       log.debug('Tab not activated, activating first', tab.id)
