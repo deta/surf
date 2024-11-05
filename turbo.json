@@ -73,12 +73,22 @@
       "outputs": [".build/**"],
       "outputLogs": "new-only"
     },
+    "@horizon/core#dev:tailwind": {
+      "outputs": ["src/output.css"],
+      "outputLogs": "new-only",
+      "persistent": true
+    },
+    "@horizon/core#build:tailwind": {
+      "outputs": ["src/output.css"],
+      "outputLogs": "new-only"
+    },
     "build": {
       "dependsOn": [
         "^build",
         "@horizon/backend#build",
         "@horizon/backend-server#build",
-        "@horizon/cmdk-sv#build"
+        "@horizon/cmdk-sv#build",
+        "@horizon/core#build:tailwind"
       ],
       "outputs": [".dist/**"]
     },

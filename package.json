@@ -2,7 +2,7 @@
   "name": "horizon",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --filter=desktop",
+    "dev": "turbo run desktop#dev @horizon/core#dev:tailwind",
     "dev:all": "turbo dev",
     "build": "turbo build",
     "build:packages": "turbo build --filter=!desktop",

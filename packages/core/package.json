@@ -12,8 +12,10 @@
     "src/lib"
   ],
   "scripts": {
-    "dev": "vite && npx tailwindcss -i ./src/app.css -o ./src/output.css --watch --minify",
+    "dev": "vite && yarn run dev:tailwind",
+    "dev:tailwind": "npx tailwindcss -i ./src/app.css -o ./src/output.css --watch --minify",
     "build": "vite build",
+    "build:tailwind": "npx tailwindcss -i ./src/app.css -o ./src/output.css --minify",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
