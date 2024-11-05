@@ -52,9 +52,8 @@ impl LocalAIServer {
     }
 
     fn try_send<T>(sender: mpsc::Sender<T>, msg: T) {
-        match sender.send(msg) {
-            Ok(_) => {}
-            Err(e) => eprintln!("[LocalAIServer] failed to send message: {:#?}", e),
+        if let Err(e) = sender.send(msg) {
+            eprintln!("failed to send message: {:#?}", e)
         }
     }
 
@@ -66,10 +65,7 @@ impl LocalAIServer {
         let embeddings_store = match EmbeddingsStore::new(index_path, embedding_dim) {
             Ok(store) => store,
             Err(e) => {
-                eprintln!(
-                    "[LocalAIServer] failed to create embeddings store: {:#?}",
-                    e
-                );
+                eprintln!("failed to create embeddings store: {:#?}", e);
                 return;
             }
         };
@@ -77,7 +73,7 @@ impl LocalAIServer {
             let msg = match rx.recv() {
                 Ok(msg) => msg,
                 Err(e) => {
-                    eprintln!("[LocalAIServer] failed to receive message: {:#?}", e);
+                    eprintln!("failed to receive message: {:#?}", e);
                     break;
                 }
             };
@@ -112,7 +108,7 @@ impl LocalAIServer {
 
     // TODO: use single thread for embeddings store
     pub fn listen(&self) {
-        println!("[LocalAIServer] listening on: {:#?}", self.socket_path);
+        println!("listening on: {:#?}", self.socket_path);
         let (tx, rx) = mpsc::channel();
 
         let index_path = self.index_path.clone();
@@ -125,18 +121,18 @@ impl LocalAIServer {
         for stream in self.listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    println!("[LocalAIServer] accepted new client");
+                    println!("accepted new client");
                     let embedding_model = Arc::clone(&self.embedding_model);
                     let tx = tx.clone();
                     std::thread::spawn(move || match handle_client(tx, &embedding_model, stream) {
                         Ok(_) => {}
                         Err(e) => {
-                            eprintln!("[LocalAIServer] failed to handle client: {:#?}", e);
+                            eprintln!("failed to handle client: {:#?}", e);
                         }
                     });
                 }
                 Err(e) => {
-                    eprintln!("[LocalAIServer] failed to accept client: {:#?}", e);
+                    eprintln!("failed to accept client: {:#?}", e);
                 }
             }
         }

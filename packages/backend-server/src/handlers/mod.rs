@@ -49,32 +49,20 @@ pub fn is_done(message: &str) -> (bool, String) {
 }
 
 pub fn try_stream_write_all(mut stream: &UnixStream, message: &str) {
-    match stream.write_all(message.as_bytes()) {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("[LocalAIServer] failed to write to stream: {:#?}", e);
-        }
+    if let Err(e) = stream.write_all(message.as_bytes()) {
+        eprintln!("failed to write to stream: {:#?}", e);
     }
-    match stream.flush() {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("[LocalAIServer] failed to flush stream: {:#?}", e);
-        }
+    if let Err(e) = stream.flush() {
+        eprintln!("failed to flush stream: {:#?}", e);
     }
 }
 
 pub fn try_stream_write_all_bytes(mut stream: &UnixStream, bytes: &[u8]) {
-    match stream.write_all(bytes) {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("[LocalAIServer] failed to write to stream: {:#?}", e);
-        }
+    if let Err(e) = stream.write_all(bytes) {
+        eprintln!("failed to write to stream: {:#?}", e);
     }
-    match stream.flush() {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("[LocalAIServer] failed to flush stream: {:#?}", e);
-        }
+    if let Err(e) = stream.flush() {
+        eprintln!("failed to flush stream: {:#?}", e);
     }
 }
 
@@ -112,10 +100,7 @@ pub fn handle_client(
         let (is_done, message) = is_done(&message);
         client_message_buffer.push_str(&message);
         if is_done {
-            println!(
-                "[LocalAIServer] received message with len: {:#?}",
-                message.len()
-            );
+            println!("received message with len: {:#?}", message.len());
             break;
         }
     }

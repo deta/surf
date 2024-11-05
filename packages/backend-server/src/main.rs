@@ -60,7 +60,7 @@ fn main() {
     };
 
     println!(
-        "[LocalAIServer]: started with socket_path: {:#?}, local_llm_mode: {:#?}",
+        "started with socket_path: {:#?}, local_llm_mode: {:#?}",
         socket_path, local_llm_mode
     );
     let server = LocalAIServer::new(
@@ -72,6 +72,6 @@ fn main() {
     )
     .unwrap();
 
-    println!("[LocalAIServer]: healthy");
+    println!("healthy");
     server.listen();
 }
