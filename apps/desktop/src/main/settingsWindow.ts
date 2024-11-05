@@ -6,6 +6,8 @@ import { isMac } from '@horizon/utils'
 
 let settingsWindow: BrowserWindow | undefined
 
+export const settingsEntryPoint = join(__dirname, '../renderer')
+
 export function createSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show()
@@ -67,7 +69,7 @@ export function createSettingsWindow() {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     settingsWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/settings.html`)
   } else {
-    settingsWindow.loadFile(join(__dirname, '../renderer/settings.html'))
+    settingsWindow.loadFile(join(settingsEntryPoint, 'settings.html'))
   }
 }
 

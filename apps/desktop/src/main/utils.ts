@@ -95,3 +95,11 @@ export const firefoxUA = (() => {
   const fxVersion = 91 + Math.floor((Date.now() - 1628553600000) / (4.1 * 7 * 24 * 60 * 60 * 1000))
   return `Mozilla/5.0 (${platform}; rv:${fxVersion}.0) Gecko/20100101 Firefox/${fxVersion}.0`
 })()
+
+export const SettingsWindowEntrypoint = (() => {
+  if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    return `${process.env.ELECTRON_RENDERER_URL}`
+  } else {
+    return `file://${path.join(__dirname, '../renderer')}`
+  }
+})()

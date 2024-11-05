@@ -1,5 +1,6 @@
 {
 	"name": "@horizon/cmdk-sv",
+	"private": true,
 	"version": "0.0.15",
 	"scripts": {
 		"dev": "vite dev",

@@ -28,6 +28,8 @@
   let userConfigSettings: UserSettings | undefined = undefined
   let userConfig: UserConfig | undefined = undefined
   let checkInterval: NodeJS.Timeout
+  let showLicenses = false
+  let licenses: string
 
   const isDefaultBrowser = writable(false)
 
@@ -78,6 +80,14 @@
   //   window.api.restartApp()
   // }
 
+  const fetchLicenses = async () => {
+    const data = await fetch(window.api.SettingsWindowEntrypoint + '/assets/dependencies.txt')
+    const text = await data.text()
+    if (text) {
+      licenses = text
+    }
+  }
+
   onMount(async () => {
     userConfigSettings = window.api.getUserConfigSettings()
     userConfig = await window.api.getUserConfig()
@@ -96,6 +106,10 @@
       console.log('user config settings change', settings)
       userConfigSettings = settings
     })
+
+    if (!isDev) {
+      fetchLicenses()
+    }
   })
 
   onDestroy(() => {
@@ -194,6 +208,22 @@
         <div class="dev-wrapper">
           <h3>Invite Friends</h3>
           <button on:click={() => window.api.openInvitePage(() => {})}>Create Invite Link</button>
+        </div>
+
+        <div class="license-wrapper">
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div class="license-trigger" on:click={() => (showLicenses = !showLicenses)}>
+            <div class="license-icon" class:open={showLicenses}>
+              <Icon name="chevron.down" />
+            </div>
+            Open Source Licenses
+          </div>
+
+          {#if showLicenses}
+            <div class="license-output">
+              <pre>{licenses ?? 'Loading...'}</pre>
+            </div>
+          {/if}
         </div>
       </article>
     {:else if $activeTab === 'appearance'}
@@ -571,5 +601,54 @@
     flex-direction: column;
     gap: 1rem;
     max-width: 45rem;
+  }
+
+  .license-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .license-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--color-link);
+    }
+  }
+
+  .license-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease-in-out;
+
+    &.open {
+      transform: rotate(180deg);
+    }
+  }
+
+  .license-output {
+    height: 300px;
+    overflow: auto;
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-background-light);
+    color: var(--color-text);
+    outline: none;
+    font-size: 1rem;
+    font-family: inherit;
+
+    &:focus {
+      border-color: var(--color-brand-light);
+    }
   }
 </style>
