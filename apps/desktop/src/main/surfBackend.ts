@@ -11,6 +11,11 @@ export class SurfBackendServerManager extends EventEmitter {
   private readonly maxRestartAttempts = 5
   private readonly restartDelay = 1000
 
+  private readonly startTimeout = 5000
+  private startPromise: Promise<void> | null = null
+  private startResolve: (() => void) | null = null
+  private startReject: ((reason: Error) => void) | null = null
+
   constructor(
     private readonly serverPath: string,
     private readonly args: string[],
@@ -26,8 +31,29 @@ export class SurfBackendServerManager extends EventEmitter {
     }
 
     this.killExistingProcess()
+    this.initializeStartPromise()
     this.spawnProcess()
     this.isShuttingDown = false
+  }
+
+  waitForStart(): Promise<void> {
+    if (!this.startPromise) throw new Error('server has not been started')
+    return this.startPromise
+  }
+
+  private initializeStartPromise(): void {
+    this.startPromise = new Promise((resolve, reject) => {
+      this.startResolve = resolve
+      this.startReject = reject
+
+      setTimeout(() => {
+        if (this.startReject) {
+          this.startReject(new Error('server startup timed out'))
+          this.startResolve = null
+          this.startReject = null
+        }
+      }, this.startTimeout)
+    })
   }
 
   stop(): void {
@@ -39,6 +65,9 @@ export class SurfBackendServerManager extends EventEmitter {
     this.isShuttingDown = true
     this.process.kill()
     this.process = null
+    this.startPromise = null
+    this.startResolve = null
+    this.startReject = null
   }
 
   restart(): void {
@@ -52,14 +81,20 @@ export class SurfBackendServerManager extends EventEmitter {
     })
 
     this.process.stdout?.on('data', (data: string) => {
-      if (data.includes('healthy')) {
-        this.restartAttempts = 0
-      }
-      data
-        .toString()
-        .trimEnd()
-        .split('\n')
-        .forEach((line) => this.emit('stdout', line))
+      const lines = data.toString().trimEnd().split('\n')
+
+      lines.forEach((line) => {
+        if (line.includes('healthy')) {
+          this.restartAttempts = 0
+          this.emit('ready')
+          if (this.startResolve) {
+            this.startResolve()
+            this.startResolve = null
+            this.startReject = null
+          }
+        }
+        this.emit('stdout', line)
+      })
     })
 
     this.process.stderr?.on('data', (data: string) => {
@@ -77,8 +112,22 @@ export class SurfBackendServerManager extends EventEmitter {
       if (signal) this.emit('signal', signal)
 
       if (!this.isShuttingDown) {
+        if (this.startReject) {
+          this.startReject(new Error('server process exited before becoming ready'))
+          this.startResolve = null
+          this.startReject = null
+        }
         this.handleUnexpectedExit()
       }
+    })
+
+    this.process.on('error', (error) => {
+      if (this.startReject) {
+        this.startReject(error)
+        this.startResolve = null
+        this.startReject = null
+      }
+      this.emit('error', error)
     })
 
     this.emit('start')

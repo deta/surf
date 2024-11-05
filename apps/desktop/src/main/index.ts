@@ -71,7 +71,7 @@ const handleOpenUrl = (url: string) => {
   }
 }
 
-const setupBackendServer = (appPath: string, backendRootPath: string, userConfig: any) => {
+const setupBackendServer = async (appPath: string, backendRootPath: string, userConfig: any) => {
   const backendServerPath = join(
     appPath,
     'resources',
@@ -98,6 +98,7 @@ const setupBackendServer = (appPath: string, backendRootPath: string, userConfig
   }
 
   surfBackendManager.start()
+  await surfBackendManager.waitForStart()
 }
 
 const initializeApp = async () => {
@@ -138,7 +139,11 @@ const initializeApp = async () => {
     createSetupWindow()
   }
 
-  setupBackendServer(appPath, backendRootPath, userConfig)
+  try {
+    await setupBackendServer(appPath, backendRootPath, userConfig)
+  } catch (err) {
+    log.error(`failed to start the surf backend process: ${err}`)
+  }
 
   IPC_EVENTS_MAIN.appReady.once(async () => {
     const appIsDefaultBrowser = await isDefaultBrowser()
