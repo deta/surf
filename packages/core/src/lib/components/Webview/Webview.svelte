@@ -32,7 +32,7 @@
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope, useDebounce, parseUrlIntoCanonical, generateID } from '@horizon/utils'
+  import { useLogScope, useDebounce, parseUrlIntoCanonical, generateID, shouldIgnoreWebviewErrorCode } from '@horizon/utils'
   import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
   import {
     useResourceManager,
@@ -73,7 +73,6 @@
 
   const resourceManager = useResourceManager()
 
-  const ERROR_CODES_TO_IGNORE = [-3] // -3 is ERR_ABORTED
   const NAVIGATION_DEBOUNCE_TIME = 500
 
   const log = useLogScope('Webview')
@@ -567,7 +566,7 @@ Made with Deta Surf.`
       log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
 
       // Ignore errors that are not related to the webview itself or don't need an error page to be shown
-      if (ERROR_CODES_TO_IGNORE.includes(e.errorCode)) {
+      if (shouldIgnoreWebviewErrorCode(e.errorCode)) {
         log.debug('Ignoring error code', e.errorCode)
         return
       }

@@ -3282,17 +3282,15 @@
 
     if (userConfig && !userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
-
       showSplashScreen.set(true)
-
       await createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
-
       await window.api.updateInitializedTabs(true)
-
       showSplashScreen.set(false)
     } else if (!userConfig?.settings.onboarding.completed_welcome_v2) {
       openWelcomeTab()
-    } else if (isDev) {
+    }
+
+    if (isDev) {
       // @ts-ignore
       window.createDemoItems = () => {
         createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)

@@ -1,3 +1,5 @@
+const ERROR_CODES_TO_IGNORE = [-3] // -3 is ERR_ABORTED
+
 export interface APIErrorMeta {
   status: number
   message: string
@@ -62,4 +64,8 @@ export const parseError = (
   } else {
     return { type: 'unknown', err }
   }
+}
+
+export const shouldIgnoreWebviewErrorCode = (code: number): boolean => {
+  return ERROR_CODES_TO_IGNORE.includes(code)
 }

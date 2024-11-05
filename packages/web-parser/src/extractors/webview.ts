@@ -1,6 +1,7 @@
 import type { WebviewTag } from 'electron'
 import { DetectedResource, DetectedWebApp, WebServiceActionInputs } from '../types'
 import { WebViewEventReceiveNames, WebViewEventSendNames } from '@horizon/types'
+import { shouldIgnoreWebviewErrorCode } from '@horizon/utils'
 
 const DEFAULT_EXTRACTION_TIMEOUT = 10000
 const DEFAULT_INITIALIZING_TIMEOUT = 7000
@@ -114,11 +115,12 @@ export class WebViewExtractor {
       this.webview?.addEventListener('did-finish-load', handleLoad)
 
       this.webview?.addEventListener('did-fail-load', (event: Electron.DidFailLoadEvent) => {
-        if (event.isMainFrame) {
-          console.error('Webview failed to load', event)
-          this.destroyWebview()
-          reject()
-        }
+        if (!event.isMainFrame) return
+        if (shouldIgnoreWebviewErrorCode(event.errorCode)) return
+
+        console.error('Webview failed to load', event)
+        this.destroyWebview()
+        reject()
       })
     })
   }
