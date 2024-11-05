@@ -442,8 +442,7 @@
             class="font-gambarino text-lg text-[#6C6C8D] max-w-[250px] cursor-text select-none"
             style="z-index: 400;"
           >
-            Hey! I'm having a good time here in Surf and I want to invite you to join the alpha
-            test.
+            Hey! I'm having fun with Surf, join the alpha with me.
           </p>
         </div>
 
