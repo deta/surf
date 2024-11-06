@@ -108,11 +108,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           choco install visualstudio2019buildtools -y --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
-          choco install llvm -y
           echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat" >> $env:GITHUB_PATH
-          echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
-          cl
-          clang --version
         shell: cmd
 
       - name: Set up Windows Sign Tool

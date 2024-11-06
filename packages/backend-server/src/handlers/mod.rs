@@ -1,5 +1,4 @@
 pub mod embeddings;
-pub mod llm;
 pub mod requests;
 
 use crate::embeddings::model::EmbeddingModel;
@@ -8,7 +7,6 @@ use crate::handlers::embeddings::{
     handle_upsert_embeddings,
 };
 use crate::handlers::requests::Requests;
-use crate::llm::llama::llama::Llama;
 use crate::server::message::Message;
 use crate::BackendResult;
 use std::io::{Read, Write};
@@ -18,8 +16,6 @@ use std::str::FromStr;
 use std::sync::mpsc::Sender;
 #[cfg(target_os = "windows")]
 use uds_windows::UnixStream;
-
-use crate::handlers::llm::handle_llm_chat_completion;
 
 // TODO: better logging, especially for errors
 
@@ -85,7 +81,6 @@ pub fn try_stream_write_all_bytes(mut stream: &UnixStream, bytes: &[u8]) {
 // TODO: better error handling and saner protocol
 pub fn handle_client(
     main_thread_tx: Sender<Message>,
-    llm_model: &Option<Llama>,
     embedding_model: &EmbeddingModel,
     mut stream: UnixStream,
 ) -> BackendResult<()> {
@@ -126,11 +121,7 @@ pub fn handle_client(
     }
     match api_request {
         Requests::LLMChatCompletion => {
-            if let Some(llm_model) = llm_model {
-                handle_llm_chat_completion(llm_model, &stream, &client_message_buffer);
-            } else {
-                try_stream_write_all(&mut stream, "error: local llm not enabled, api unsupported");
-            }
+            try_stream_write_all(&mut stream, "error: local llm not enabled, api unsupported");
         }
         Requests::GetDocsSimilarity => {
             match handle_get_docs_similarity(

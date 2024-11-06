@@ -12,12 +12,6 @@ use std::str::FromStr;
 pub enum BackendError {
     #[error("IO error: {0}")]
     IOError(#[from] std::io::Error),
-    #[error("Llama context error: {0}")]
-    LlamaContextError(#[from] llama_cpp::LlamaContextError),
-    #[error("Llama load error: {0}")]
-    LlamaLoadError(#[from] llama_cpp::LlamaLoadError),
-    #[error("Llama tokenization error: {0}")]
-    LlamaTokenizationError(#[from] llama_cpp::LlamaTokenizationError),
     #[error("Cxx exception: {0}")]
     CxxError(#[from] cxx::Exception),
     #[error("Serde json error: {0}")]

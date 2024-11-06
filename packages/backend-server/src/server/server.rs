@@ -8,16 +8,14 @@ use uds_windows::UnixListener;
 use crate::embeddings::model::{EmbeddingModel, EmbeddingModelMode};
 use crate::embeddings::store::EmbeddingsStore;
 use crate::handlers::handle_client;
-use crate::llm::llama::llama::Llama;
 use crate::server::message::Message;
-use crate::BackendResult;
+use crate::{BackendError, BackendResult};
 
 use std::sync::{mpsc, Arc};
 
 pub struct LocalAIServer {
     socket_path: String,
     index_path: String,
-    llama: Arc<Option<Llama>>,
     embedding_model: Arc<EmbeddingModel>,
     listener: UnixListener,
 }
@@ -35,19 +33,11 @@ impl LocalAIServer {
             fs::remove_file(&socket_path)?;
         }
         let listener = UnixListener::bind(socket_path)?;
-        let llama = match local_llm {
-            true => {
-                let llama = Llama::new_remote(
-                    "bartowski/Meta-Llama-3-8B-Instruct-GGUF".to_string(),
-                    "Meta-Llama-3-8B-Instruct-Q4_K_S.gguf".to_string(),
-                    8192,
-                    512,
-                    8192,
-                )?;
-                Arc::new(Some(llama))
-            }
-            false => Arc::new(None),
-        };
+        if local_llm {
+            return Err(BackendError::GenericError(
+                "Local LLM not supported".to_string(),
+            ));
+        }
         let embedding_model = Arc::new(EmbeddingModel::new_remote(
             model_cache_dir,
             embedding_model_mode,
@@ -56,7 +46,6 @@ impl LocalAIServer {
         Ok(Self {
             socket_path: socket_path.to_string_lossy().to_string(),
             index_path: index_path.to_string_lossy().to_string(),
-            llama,
             embedding_model,
             listener,
         })
@@ -137,15 +126,12 @@ impl LocalAIServer {
             match stream {
                 Ok(stream) => {
                     println!("[LocalAIServer] accepted new client");
-                    let model = Arc::clone(&self.llama);
                     let embedding_model = Arc::clone(&self.embedding_model);
                     let tx = tx.clone();
-                    std::thread::spawn(move || {
-                        match handle_client(tx, &model, &embedding_model, stream) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                eprintln!("[LocalAIServer] failed to handle client: {:#?}", e);
-                            }
+                    std::thread::spawn(move || match handle_client(tx, &embedding_model, stream) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            eprintln!("[LocalAIServer] failed to handle client: {:#?}", e);
                         }
                     });
                 }

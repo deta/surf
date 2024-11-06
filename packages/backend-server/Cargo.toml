@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 futures = "0.3.30"
 cxx = "1.0.124"
-llama_cpp = { version = "0.3.2", features = [ "metal" ] }
 thiserror = "1.0.63"
 hf-hub = "0.3.2"
 serde_json = "1.0.121"
