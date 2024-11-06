@@ -116,7 +116,7 @@
       <div
         on:mouseenter={handleMouseEnter}
         on:mouseleave={() => handleMouseOut()}
-        class="w-full h-full rounded-xl shadow-xl border border-dark-10 bg-neutral-100 overflow-y-scroll focus:outline-none"
+        class="w-full h-full rounded-xl shadow-xl border border-dark-10 bg-white overflow-y-scroll focus:outline-none"
         role="menu"
         tabindex="0"
       >

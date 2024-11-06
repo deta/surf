@@ -390,26 +390,27 @@
     isSelected: boolean
   }) {
     const baseClasses =
-      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3 justify-center relative text-sky-900 font-medium text-md overflow-hidden min-w-[48px]'
+      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3  justify-center relative text-sky-900 font-medium text-md overflow-hidden min-w-[48px]'
     const activeClasses = isActive
       ? 'active text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px]'
       : pinned
-        ? 'bg-sky-100/10'
-        : '' // Default background when not active if unpinned
+        ? ''
+        : horizontalTabs
+          ? 'bg-sky-100/60'
+          : '' // Default background when not active if unpinned
     const magicClasses = tab.magic && !isActive ? 'shadow-inner ring-[0] ring-pink-600' : ''
     const selectedClasses = isSelected && !isActive ? '' : ''
     const hoverClasses = 'hover:bg-sky-100'
 
     let styleClasses = ''
     if (pinned && horizontalTabs) {
-      styleClasses =
-        'rounded-lg bg-sky-100/20 mx-0.25 py-[0.525rem] px-[0.575rem] w-full border border-white/10'
+      styleClasses = 'rounded-lg bg-sky-100/60 w-full min-w-fit px-[0.563rem] py-[0.438rem]'
     } else if (pinned && !horizontalTabs) {
       styleClasses = 'w-full rounded-2xl p-3 border-2 border-white/10'
     } else if (!pinned && horizontalTabs) {
-      styleClasses = 'py-1.5 px-2.5 rounded-xl'
+      styleClasses = 'px-[0.625rem] !rounded-[0.625rem] text-[0.938rem] h-full'
     } else {
-      styleClasses = 'px-4 py-3 rounded-2xl'
+      styleClasses = 'px-4 py-2.5 rounded-2xl'
     }
 
     return `${baseClasses} ${activeClasses} ${magicClasses} ${selectedClasses} ${styleClasses} ${hoverClasses}`
@@ -684,7 +685,7 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && ((tabSize && tabSize > 64) || !isUserSelected) && !showExcludeOthersButton}
+    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > 64)) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
@@ -933,7 +934,7 @@
   }*/
 
   .tab.active {
-    background: #e0f2fe;
+    background: #e9f5fd;
     outline: none;
   }
 

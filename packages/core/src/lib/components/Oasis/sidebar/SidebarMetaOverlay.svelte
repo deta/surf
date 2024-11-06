@@ -88,7 +88,7 @@
     width: fit-content;
     //width: var(--height-override, auto);
     min-width: fit-content;
-    height: calc(100% + 0.5rem);
+    height: calc(100%);
 
     flex-direction: row;
     align-items: center;

@@ -81,9 +81,6 @@
   box-sizing: border-box;
 }
 
-::selection {
-  background: rgba(223, 39, 127, 0.5);
-}
 
 .tooltip {
   /* Styling for @svelte-plugins/tooltips */

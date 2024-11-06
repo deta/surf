@@ -21,7 +21,7 @@
   const MAX_VERTICAL_SIZE = 400
   const MIN_VERTICAL_RIGHT_SIZE = 380
   const MAX_VERTICAL_RIGHT_SIZE = 600
-  const HORIZONTAL_SIZE = 40
+  const HORIZONTAL_SIZE = 42
   const TRANSITION_DURATION = 300
   const BUFFER = 50
   const CLOSE_THRESHOLD = 10
@@ -140,7 +140,7 @@
     if (side === 'left' && leftIsOpen === State.Closed) {
       leftIsOpen = State.Peek
       dispatch('leftPeekOpen')
-      peekBg = 'bg-sky-100'
+      peekBg = 'bg-blue-300/75 backdrop-blur-sm'
     } else if (side === 'right' && rightIsOpen === State.Closed) {
       rightIsOpen = State.Peek
       dispatch('rightPeekOpen')
@@ -154,9 +154,9 @@
         dispatch('leftPeekClose')
 
         // wait for the transition to finish, then change peekbg to transparent
-        peekTimeout = setTimeout(() => {
-          peekBg = ''
-        }, 300)
+        // peekTimeout = setTimeout(() => {
+        //   peekBg = ''
+        // }, 300)
       } else if (!horizontalTabs && mouseX > leftSize + BUFFER && !isDraggingLeft) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
