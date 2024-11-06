@@ -25,6 +25,8 @@ pub enum BackendError {
     RAGEmptyContextError(String),
     #[error("Generic error: {0}")]
     GenericError(String),
+    #[error("Multiple errors: {0:#?}")]
+    MultipleErrors(Vec<BackendError>),
 }
 
 type BackendResult<T> = Result<T, BackendError>;

@@ -554,9 +554,21 @@ impl Worker {
         match self.ai.upsert_embeddings(old_keys, new_row_ids, chunks) {
             Ok(_) => {}
             Err(e) => {
-                self.db
-                    .delete_all_embedding_resources(&resource_id, embedding_type)?;
-                return Err(e);
+                let mut errors = Vec::new();
+                errors.push(e);
+
+                if let Err(delete_error) = self
+                    .db
+                    .delete_all_embedding_resources(&resource_id, embedding_type)
+                {
+                    errors.push(delete_error);
+                }
+
+                return Err(if errors.len() == 1 {
+                    errors.into_iter().next().unwrap()
+                } else {
+                    BackendError::MultipleErrors(errors)
+                });
             }
         }
         Ok(())
