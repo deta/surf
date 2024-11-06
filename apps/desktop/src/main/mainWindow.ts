@@ -204,26 +204,18 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
       log.debug('Webview window open request', details)
 
-      // If there is no frame name we assume the request is orginating from the user clicking the link and we let the renderer handle the request
-      if (details.frameName === '') {
-        const mainWindow = getMainWindow()
-        if (mainWindow) {
-          IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-            url: details.url,
-            disposition: details.disposition,
-            webContentsId: contents.id
-          })
-        }
+      // If there is a frame name or features provided we assume the request
+      // is part of a auth flow and we create a new isolated window for it
+      const shouldCreateWindow =
+        details.disposition === 'new-window' &&
+        (details.frameName !== '' || details.features !== '')
 
-        return { action: 'deny' }
-      }
-
-      // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
-      // created window here. The creation of it is controlled from the renderer. Because
-      // of this, Surf won't play well with websites that for some reason utilizes more
-      // than one window. In the future, Each new window we create should receive its own
-      // instance of Surf.
-      if (details.disposition === 'new-window') {
+      if (shouldCreateWindow) {
+        // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
+        // created window here. The creation of it is controlled from the renderer. Because
+        // of this, Surf won't play well with websites that for some reason utilizes more
+        // than one window. In the future, Each new window we create should receive its own
+        // instance of Surf.
         return {
           action: 'allow',
           createWindow: undefined,
@@ -237,9 +229,18 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
             }
           }
         }
-      } else {
-        return { action: 'deny' }
       }
+
+      const mainWindow = getMainWindow()
+      if (mainWindow) {
+        IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+          url: details.url,
+          disposition: details.disposition,
+          webContentsId: contents.id
+        })
+      }
+
+      return { action: 'deny' }
     })
 
     attachContextMenu(contents)
