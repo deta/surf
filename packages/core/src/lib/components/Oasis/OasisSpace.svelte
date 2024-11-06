@@ -901,113 +901,27 @@
   }
 
   const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
-    const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
-    log.debug('removing resources', resourceIds)
-
-    const resources = await Promise.all(resourceIds.map((id) => resourceManager.getResource(id)))
-    const validResources = resources.filter((resource) => resource !== null) as Resource[]
-
-    if (validResources.length === 0) {
-      log.error('No valid resources found')
-      return
-    }
-
-    const allReferences = await Promise.all(
-      validResources.map((resource) => resourceManager.getAllReferences(resource.id, $spaces))
-    )
-
-    let totalNumberOfReferences = 0
-    if (isEverythingSpace) {
-      totalNumberOfReferences = allReferences.reduce((sum, refs) => sum + refs.length, 0)
-    }
-
-    const confirmMessage = !isEverythingSpace
-      ? `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${$space?.name.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
-      : totalNumberOfReferences > 0
-        ? `These resources will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
-        : `These resources will be deleted permanently.`
-
-    const confirm = window.confirm(confirmMessage)
-
-    if (!confirm) {
-      return
-    }
-
+    const ids = e.detail
     try {
-      if (!isEverythingSpace) {
-        log.debug('removing resource entries from space...', validResources)
+      await oasis.removeResourceFromSpace(ids, spaceId)
+      toasts.success(
+        `Resource${ids.length > 1 ? 's' : ''} ${isEverythingSpace ? 'deleted' : 'removed'}!`
+      )
 
-        const referencesToRemove = allReferences.flatMap((refs, index) =>
-          refs.filter((x) => x.folderId === spaceId && x.resourceId === validResources[index].id)
-        )
-
-        if (referencesToRemove.length === 0) {
-          log.error('References not found')
-          toasts.error('References not found')
-          return
-        }
-
-        await resourceManager.deleteSpaceEntries(referencesToRemove.map((ref) => ref.entryId))
-
-        await resourceManager.addItemsToSpace(
-          spaceId,
-          referencesToRemove.map((ref) => ref.resourceId),
-          SpaceEntryOrigin.Blacklisted
-        )
-
-        // HACK: this is needed for the preview to update with the summary
-        const contents = $spaceContents.filter((x) => !resourceIds.includes(x.resource_id))
+      // HACK: this is needed for the preview to update with the summary
+      if (isEverythingSpace) {
+        const contents = $everythingContents.filter((x) => !ids.includes(x.id))
+        everythingContents.set([])
+      } else {
+        const contents = $spaceContents.filter((x) => !ids.includes(x.resource_id))
         spaceContents.set([])
         await tick()
         spaceContents.set(contents)
       }
-    } catch (error) {
-      log.error('Error removing references:', error)
+    } catch (e) {
+      toasts.error(e.toString())
+      throw e
     }
-
-    if (isEverythingSpace) {
-      log.debug('deleting resources from oasis', resourceIds)
-      await Promise.all(resourceIds.map((id) => resourceManager.deleteResource(id)))
-
-      // HACK: this is needed for the preview to update with the summary
-      const contents = $everythingContents.filter((x) => !resourceIds.includes(x.id))
-      everythingContents.set([])
-
-      // update tabs to remove any links to the resources
-      await Promise.all(resourceIds.map((id) => tabsManager.removeResourceBookmarks(id)))
-
-      await tick()
-      everythingContents.set(contents)
-
-      await Promise.all(
-        validResources.map((resource) =>
-          telemetry.trackDeleteResource(
-            resource.type,
-            false,
-            validResources.length > 1
-              ? DeleteResourceEventTrigger.OasisMultiSelect
-              : DeleteResourceEventTrigger.OasisItem
-          )
-        )
-      )
-    } else {
-      await Promise.all(
-        validResources.map((resource) =>
-          telemetry.trackDeleteResource(
-            resource.type,
-            true,
-            validResources.length > 1
-              ? DeleteResourceEventTrigger.OasisMultiSelect
-              : DeleteResourceEventTrigger.OasisItem
-          )
-        )
-      )
-    }
-
-    log.debug('Resources removed:', resourceIds)
-    toasts.success(
-      `Resource${resourceIds.length > 1 ? 's' : ''} ${isEverythingSpace ? 'deleted' : 'removed'}!`
-    )
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {

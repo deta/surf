@@ -28,9 +28,12 @@
   <div class="bottom" style="gap: 0.25em;">
     <RecentsStack
       wasMouseInside={wasMouseInsideStack}
+      on:open
       on:open-stuff
+      on:open-and-chat
       on:update-container-height={handleUpdateContainerHeight}
       on:open-resource-in-mini-browser
+      on:remove
       on:Drop
     />
     <slot name="tools" />
@@ -76,7 +79,7 @@
     .bottom {
       display: flex;
       align-items: flex-end;
-      padding: 0.5rem;
+      padding: 0;
       height: 100%;
     }
   }
@@ -117,6 +120,12 @@
 
     &:after {
       mask-image: linear-gradient(to right, transparent 0%, #000 50%);
+    }
+  }
+
+  :global(.verticalTabs) .sidebar-meta {
+    & :global(.bottom > div:last-child) {
+      padding: 0.5rem;
     }
   }
 </style>

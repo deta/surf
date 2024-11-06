@@ -213,6 +213,11 @@
   on:contextmenu={(e) => {
     closeContextMenu()
   }}
+  on:keydown={(e) => {
+    if (e.key === 'Escape') {
+      closeContextMenu()
+    }
+  }}
   autofocus
 >
   <ContextMenuItems {items} />

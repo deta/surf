@@ -130,8 +130,17 @@
             type: 'action',
             icon: '',
             text: space.name.folderName,
-            action: () => {
-              oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+            action: async () => {
+              try {
+                await oasis.addResourcesToSpace(
+                  space.id,
+                  [resource.id],
+                  SpaceEntryOrigin.ManuallyAdded
+                )
+                toasts.success(`Added to ${space.name.folderName}`)
+              } catch (e) {
+                toasts.error(`Failed to add to ${space.name.folderName}`)
+              }
             }
           }) as CtxItem
       )

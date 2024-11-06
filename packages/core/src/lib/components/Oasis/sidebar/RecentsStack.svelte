@@ -10,7 +10,7 @@
     ResourceTypes
   } from '@horizon/types'
   import { writable } from 'svelte/store'
-  import { useDebounce } from '@horizon/utils'
+  import { isMac, useDebounce } from '@horizon/utils'
   import { useTabsManager } from '../../../service/tabs'
   import { Icon } from '@horizon/icons'
   import { DragTypeNames } from '../../../types'
@@ -192,6 +192,7 @@
 <div
   id="stuff-stack"
   class="wrapper stack-wrapper"
+  class:isMac={isMac()}
   class:wasMouseInside={$wasMouseInside}
   class:empty={$items.length <= 0}
   style:--sidebar-width={sidebarWidth + 'px'}
@@ -269,7 +270,16 @@
             drag.continue()
           }}
         >
-          <ResourcePreview {resource} mode="media" frameless={true} hideProcessing />
+          <ResourcePreview
+            {resource}
+            mode="media"
+            frameless={true}
+            interactive
+            hideProcessing
+            on:open
+            on:open-and-chat
+            on:remove
+          />
         </div>
       {/if}
     {/each}
@@ -521,6 +531,8 @@
     display: flex;
     justify-content: flex-start;
     align-items: flex-end;
+    padding-left: 0.5rem;
+    padding-bottom: 0.5rem;
 
     &::before {
       position: absolute;
@@ -530,7 +542,8 @@
       width: calc(calc(var(--gridColumns) * calc(var(--cardWidth) + 20px)));
     }
 
-    &:hover::before {
+    &:hover::before,
+    &:has([data-context-menu-anchor])::before {
       content: '';
     }
 
@@ -577,7 +590,7 @@
       font-size: 2rem;
       mix-blend-mode: plus-lighter;
       user-select: none;
-      transform: translate(2px, 7px) rotate(6deg);
+      transform: translate(6px, 3px) rotate(6deg);
 
       transition:
         transform 230ms,
@@ -592,7 +605,8 @@
       }
     }
 
-    &:hover {
+    &:hover,
+    &:has([data-context-menu-anchor]) {
       .stack {
         > .card {
           opacity: calc(1 - ((var(--item) - 1 + 1) / (8 - 1) * (1 - 0.4)));
@@ -614,8 +628,10 @@
     }
   }
 
-  :global(.horizontalTabs .sidebar-meta.mouseInside) {
-    :global(.stack-wrapper.wasMouseInside) {
+  :global(.horizontalTabs .sidebar-meta.mouseInside),
+  :global(.horizontalTabs .sidebar-meta .stack-wrapper:has([data-context-menu-anchor])) {
+    :global(.stack-wrapper.wasMouseInside),
+    &:has([data-context-menu-anchor]) {
       button {
         opacity: 1 !important;
       }
@@ -631,6 +647,13 @@
         width: 200px !important;
         height: 100vh;
         background: linear-gradient(90deg, #cce1f900 0%, #cce1f977 80%);
+      }
+      &:not(.isMac)::before {
+        width: 300px !important;
+        position: relative;
+        transform: translateX(25%);
+        background: radial-gradient(circle at 50% 0%, #cce1f9bb 0%, transparent 70%);
+        mask-image: linear-gradient(90deg, #0000 0%, #000 50%, #0000 100%);
       }
 
       button {
@@ -669,7 +692,7 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    margin-right: 0.5rem;
+    padding: 0.25rem;
 
     button {
       position: relative;
@@ -709,7 +732,8 @@
       }
     }
 
-    &:hover {
+    &:hover,
+    &:has([data-context-menu-anchor]) {
       &::before {
         content: '';
         position: absolute;
@@ -859,7 +883,8 @@
         0.999983 80%
       );
 
-      &:hover {
+      &:hover,
+      &:has([data-context-menu-anchor]) {
         --scale: 0.975;
         opacity: 1 !important;
       }

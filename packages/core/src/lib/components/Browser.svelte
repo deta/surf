@@ -198,10 +198,10 @@
   const storage = new HorizonDatabase()
   const sffs = new SFFS()
   const historyEntriesManager = new HistoryEntriesManager()
-  const oasis = provideOasis(resourceManager)
   const toasts = provideToasts()
   const config = provideConfig()
   const tabsManager = createTabsManager(resourceManager, historyEntriesManager, telemetry)
+  const oasis = provideOasis(resourceManager, tabsManager)
   const miniBrowserService = createMiniBrowserService(resourceManager)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
@@ -4245,7 +4245,10 @@
   class:no-drag={$showScreenshotPicker === true}
 >
   {#if !horizontalTabs && showCustomWindowActions}
-    <div class="flex flex-row flex-shrink-0 items-center justify-between p-1">
+    <div
+      class="flex flex-row flex-shrink-0 items-center justify-between p-1"
+      style="position: relative; z-index: 9999999999;"
+    >
       <div>
         <BrowserActions
           {horizontalTabs}
@@ -4764,11 +4767,12 @@
             <!-- This overlay will dynamically grow / shrink depending on the current state -->
             <SidebarMetaOverlay
               on:open-stuff={() => ($showNewTabOverlay = 2)}
+              on:open={(e) => miniBrowserService.globalBrowser.openResource(e.detail)}
+              on:remove={(e) => oasis.removeResourceFromSpace(e.detail)}
+              on:open-and-chat={handleOpenAndChat}
               on:open-resource-in-mini-browser={(e) =>
                 openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Stack)}
-              on:Drop={({ detail }) => {
-                handleDropOnSpaceTab(detail)
-              }}
+              on:Drop={({ detail }) => handleDropOnSpaceTab(detail)}
             >
               <div slot="tools">
                 {#if showSidebarTools}
@@ -4866,7 +4870,10 @@
 
             <!-- TODO: (maxu): Figure out what this is.. windiws.? -->
             {#if horizontalTabs && showCustomWindowActions}
-              <div class="flex flex-row items-center space-x-2 ml-5">
+              <div
+                class="flex flex-row items-center space-x-2 ml-5"
+                style="position: relative; z-index: 9999999999;"
+              >
                 <button
                   on:click={() => controlWindow('minimize')}
                   class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"

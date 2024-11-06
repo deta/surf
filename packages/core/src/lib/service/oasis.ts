@@ -1,9 +1,12 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { generateID, useLogScope } from '@horizon/utils'
-import type { ResourceManager } from './resources'
+import type { Resource, ResourceManager } from './resources'
 
-import type { Optional, Space, SpaceData, SpaceEntryOrigin } from '../types'
+import { SpaceEntryOrigin, type Optional, type Space, type SpaceData } from '../types'
 import { getContext, setContext } from 'svelte'
+import type { Telemetry } from './telemetry'
+import { DeleteResourceEventTrigger } from '@horizon/types'
+import type { TabsManager } from './tabs'
 
 export class OasisService {
   spaces: Writable<Space[]>
@@ -12,12 +15,16 @@ export class OasisService {
   stackKey: Writable<{}>
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
 
+  tabsManager: TabsManager
   resourceManager: ResourceManager
+  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
-  constructor(resourceManager: ResourceManager) {
+  constructor(resourceManager: ResourceManager, tabsManager: TabsManager) {
     this.log = useLogScope('OasisService')
+    this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
+    this.tabsManager = tabsManager
 
     this.spaces = writable<Space[]>([])
     this.selectedSpace = writable<string>('all')
@@ -168,6 +175,109 @@ export class OasisService {
     return result
   }
 
+  /** Remove a resource from a specific space, or from Stuff entirely if no space is provided.
+   * throws: Error in various failure cases.
+   */
+  async removeResourceFromSpace(resourceIds: string | string[], spaceId?: string) {
+    const isEverythingSpace = spaceId === undefined || spaceId === 'all'
+    const space = isEverythingSpace ? null : await this.getSpace(spaceId)
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+    this.log.debug('removing resources', resourceIds)
+
+    const resources = await Promise.all(
+      resourceIds.map((id) => this.resourceManager.getResource(id))
+    )
+    const validResources = resources.filter((resource) => resource !== null) as Resource[]
+
+    if (validResources.length === 0) {
+      this.log.error('No valid resources found')
+      return
+    }
+
+    const allReferences = await Promise.all(
+      validResources.map((resource) =>
+        this.resourceManager.getAllReferences(resource.id, get(this.spaces))
+      )
+    )
+
+    let totalNumberOfReferences = 0
+    if (isEverythingSpace) {
+      totalNumberOfReferences = allReferences.reduce((sum, refs) => sum + refs.length, 0)
+    }
+
+    const confirmMessage = !isEverythingSpace
+      ? `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${space?.name.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
+      : totalNumberOfReferences > 0
+        ? `These ${validResources.length} resources will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
+        : `This resource will be deleted permanently.`
+
+    const confirm = window.confirm(confirmMessage)
+
+    if (!confirm) {
+      return
+    }
+
+    try {
+      if (!isEverythingSpace) {
+        this.log.debug('removing resource entries from space...', validResources)
+
+        const referencesToRemove = allReferences.flatMap((refs, index) =>
+          refs.filter((x) => x.folderId === spaceId && x.resourceId === validResources[index].id)
+        )
+
+        if (referencesToRemove.length === 0) {
+          this.log.error('References not found')
+          throw new Error('References not found')
+        }
+
+        await this.resourceManager.deleteSpaceEntries(referencesToRemove.map((ref) => ref.entryId))
+
+        await this.resourceManager.addItemsToSpace(
+          spaceId,
+          referencesToRemove.map((ref) => ref.resourceId),
+          SpaceEntryOrigin.Blacklisted
+        )
+      }
+    } catch (error) {
+      this.log.error('Error removing references:', error)
+      throw new Error('Error removing references' + error)
+    }
+
+    if (isEverythingSpace) {
+      this.log.debug('deleting resources from oasis', resourceIds)
+      await Promise.all(resourceIds.map((id) => this.resourceManager.deleteResource(id)))
+
+      // update tabs to remove any links to the resources
+      await Promise.all(resourceIds.map((id) => this.tabsManager.removeResourceBookmarks(id)))
+
+      await Promise.all(
+        validResources.map((resource) =>
+          this.telemetry.trackDeleteResource(
+            resource.type,
+            false,
+            validResources.length > 1
+              ? DeleteResourceEventTrigger.OasisMultiSelect
+              : DeleteResourceEventTrigger.OasisItem
+          )
+        )
+      )
+    } else {
+      await Promise.all(
+        validResources.map((resource) =>
+          this.telemetry.trackDeleteResource(
+            resource.type,
+            !isEverythingSpace,
+            validResources.length > 1
+              ? DeleteResourceEventTrigger.OasisMultiSelect
+              : DeleteResourceEventTrigger.OasisItem
+          )
+        )
+      )
+    }
+
+    this.log.debug('Resources removed:', resourceIds)
+  }
+
   async resetSelectedSpace() {
     this.selectedSpace.set('all')
   }
@@ -193,8 +303,8 @@ export class OasisService {
     }
   }
 
-  static provide(resourceManager: ResourceManager) {
-    const service = new OasisService(resourceManager)
+  static provide(resourceManager: ResourceManager, tabsManager: TabsManager) {
+    const service = new OasisService(resourceManager, tabsManager)
 
     setContext('oasis', service)
 
