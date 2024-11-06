@@ -104,13 +104,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.architecture }}-build-cache-
 
-      - name: Set up Windows build environment
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install visualstudio2019buildtools -y --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
-          echo "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\Tools\VsDevCmd.bat" >> $env:GITHUB_PATH
-        shell: cmd
-
       - name: Install Dependencies
         run: |
           yarn config set network-timeout 300000
