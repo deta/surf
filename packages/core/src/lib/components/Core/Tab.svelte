@@ -155,20 +155,20 @@
   //   fetchSpace(tab.spaceId)
   // }
 
-  // NOTE: commented out 'sanitizations' are not useful
-  $: sanitizedTitle = tab.title
-    ? tab.type !== 'space'
-      ? (() => {
-          if (tab.title.startsWith('http') || tab.title.startsWith('surf://')) {
-            return tab.title
-          }
-          let title = tab.title
-            .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-            .replace(/[\/\\]/g, '–')
-          return title !== tab.title ? title.replace(/^\w/, (c) => c.toUpperCase()) : title
-        })()
-      : tab.title
-    : ''
+  $: sanitizedTitle = tab.type === 'space' ? '' : tab.title
+  // $: sanitizedTitle = tab.title
+  //   ? tab.type !== 'space'
+  //     ? (() => {
+  //         if (tab.title.startsWith('http') || tab.title.startsWith('surf://')) {
+  //           return tab.title
+  //         }
+  //         let title = tab.title
+  //           .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
+  //           .replace(/[\/\\]/g, '–')
+  //         return title !== tab.title ? title.replace(/^\w/, (c) => c.toUpperCase()) : title
+  //       })()
+  //     : tab.title
+  //   : ''
 
   let insecureWarningTimeout: ReturnType<typeof setTimeout>
   const handleTabUrlChange = (url: string | null) => {
