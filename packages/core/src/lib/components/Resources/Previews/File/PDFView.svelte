@@ -37,7 +37,7 @@
   <webview
     bind:this={webview}
     src="file://{resource.path}"
-    webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=14,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
+    webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   >
     <Unknown {resource} />
   </webview>
