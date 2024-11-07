@@ -93,6 +93,12 @@ export class Dragcula {
     });
 
     // FIX: UNBIND
+    document.addEventListener("dragend", (e) => {
+      // TODO: (maxu): investigate again.
+      setTimeout(() => this.cleanupDragOperation());
+    });
+
+    // FIX: UNBIND
     document.addEventListener("drag", handleDragUpdate);
     document.addEventListener("dragover", handleDragUpdate);
 
