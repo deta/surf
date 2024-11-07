@@ -4642,32 +4642,30 @@
                       on:edit={handleEdit}
                     />
                   {/if}
-
-                  {#if index === $unpinnedTabs.length - 1}
-                    <div
-                      class:w-fit={horizontalTabs}
-                      class:h-full={horizontalTabs}
-                      class="select-none flex items-center justify-center"
-                      class:opacity-100={!$showEndMask}
-                      class:opacity-0={$showEndMask}
-                      class:pointer-events-auto={!$showEndMask}
-                      class:pointer-events-none={$showEndMask}
-                    >
-                      <button
-                        class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
-                          ? 'w-fit rounded-xl p-2'
-                          : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                        class:bg-sky-200={$showNewTabOverlay === 1}
-                        on:click|preventDefault={() => tabsManager.showNewTab()}
-                      >
-                        <Icon name="add" />
-                        {#if !horizontalTabs}
-                          <span class="label">New Tab</span>
-                        {/if}
-                      </button>
-                    </div>
-                  {/if}
                 {/each}
+
+                <div
+                  class:w-fit={horizontalTabs}
+                  class:h-full={horizontalTabs}
+                  class="select-none flex items-center justify-center"
+                  class:opacity-100={!$showEndMask}
+                  class:opacity-0={$showEndMask}
+                  class:pointer-events-auto={!$showEndMask}
+                  class:pointer-events-none={$showEndMask}
+                >
+                  <button
+                    class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
+                      ? 'w-fit rounded-[0.625rem] p-1.5'
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                    class:bg-sky-200={$showNewTabOverlay === 1}
+                    on:click|preventDefault={() => tabsManager.showNewTab()}
+                  >
+                    <Icon name="add" />
+                    {#if !horizontalTabs}
+                      <span class="label">New Tab</span>
+                    {/if}
+                  </button>
+                </div>
               </div>
             {:else}
               <div
@@ -4769,32 +4767,30 @@
                       on:edit={handleEdit}
                     />
                   {/if}
-
-                  {#if index === $unpinnedTabs.length - 1}
-                    <div
-                      class:w-fit={horizontalTabs}
-                      class:h-full={horizontalTabs}
-                      class="select-none flex items-center justify-center"
-                      class:opacity-100={!$showEndMask}
-                      class:opacity-0={$showEndMask}
-                      class:pointer-events-auto={!$showEndMask}
-                      class:pointer-events-none={$showEndMask}
-                    >
-                      <button
-                        class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
-                          ? 'w-fit rounded-xl p-2'
-                          : 'w-full rounded-2xl px-4 py-3'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
-                        class:bg-sky-200={$showNewTabOverlay === 1}
-                        on:click|preventDefault={() => tabsManager.showNewTab()}
-                      >
-                        <Icon name="add" />
-                        {#if !horizontalTabs}
-                          <span class="label">New Tab</span>
-                        {/if}
-                      </button>
-                    </div>
-                  {/if}
                 {/each}
+
+                <div
+                  class:w-fit={horizontalTabs}
+                  class:h-full={horizontalTabs}
+                  class="select-none flex items-center justify-center"
+                  class:opacity-100={!$showEndMask}
+                  class:opacity-0={$showEndMask}
+                  class:pointer-events-auto={!$showEndMask}
+                  class:pointer-events-none={$showEndMask}
+                >
+                  <button
+                    class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
+                      ? 'w-fit rounded-xl p-2'
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                    class:bg-sky-200={$showNewTabOverlay === 1}
+                    on:click|preventDefault={() => tabsManager.showNewTab()}
+                  >
+                    <Icon name="add" />
+                    {#if !horizontalTabs}
+                      <span class="label">New Tab</span>
+                    {/if}
+                  </button>
+                </div>
               </div>
             {/if}
           </div>
