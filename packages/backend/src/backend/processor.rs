@@ -60,6 +60,7 @@ impl Processor {
                                 .to_string()
                                 .contains("Duplicate keys not allowed in high-level wrappers")
                             {
+                                tracing::warn!("ignoring usearch duplicate upserting error");
                                 return self.emit_processing_status(
                                     &resource_id,
                                     ResourceProcessingStatus::Finished,
