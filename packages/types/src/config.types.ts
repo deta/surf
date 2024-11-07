@@ -16,11 +16,11 @@ export type UserSettings = {
   show_annotations_in_oasis: boolean
   /** Copy downloaded files to the user's system downloads directory */
   save_to_user_downloads: boolean
+  automatic_chat_prompt_generation: boolean
   // Experiments
   go_wild_mode: boolean
   annotations_sidebar: boolean
   live_spaces: boolean
-  auto_generate_chat_prompts: boolean
   homescreen: boolean
   /**
    * @deprecated use individual feature flags instead

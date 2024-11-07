@@ -255,14 +255,6 @@
 
         {#if userConfigSettings}
           <SettingsOption
-            icon="message"
-            title="Auto Generate Chat Prompts"
-            description="Let Surf generate chat prompts for you based on the page content and metadata. The prompts will be shown directly in the chat sidebar."
-            bind:value={userConfigSettings.auto_generate_chat_prompts}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
             icon="marker"
             title="Live Spaces"
             description="Subscribe to RSS feeds of websites and pull in their content into a space."
@@ -327,6 +319,14 @@
             title="Save Downloads to System Downloads Folder"
             description="If enabled, a copy of the files you download with Surf will be saved to your system's default downloads folder in addition to your stuff in Surf."
             bind:value={userConfigSettings.save_to_user_downloads}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
+            icon="message"
+            title="Auto Generate Chat Prompts"
+            description="Let Surf generate chat prompts for you based on the page content and metadata. The prompts will be shown directly in the chat sidebar."
+            bind:value={userConfigSettings.automatic_chat_prompt_generation}
             on:update={handleSettingsUpdate}
           />
         {/if}

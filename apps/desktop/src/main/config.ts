@@ -88,7 +88,7 @@ export const getUserConfig = (path?: string) => {
       use_semantic_search: false,
       save_to_user_downloads: true,
       show_annotations_in_oasis: true,
-      auto_generate_chat_prompts: false,
+      automatic_chat_prompt_generation: true,
       go_wild_mode: false,
       live_spaces: false,
       annotations_sidebar: false,
@@ -149,8 +149,8 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
 
-  if (storedConfig.settings.auto_generate_chat_prompts === undefined) {
-    storedConfig.settings.auto_generate_chat_prompts = false
+  if (storedConfig.settings.automatic_chat_prompt_generation === undefined) {
+    storedConfig.settings.automatic_chat_prompt_generation = true
     changedConfig = true
   }
 

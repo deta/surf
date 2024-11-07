@@ -166,7 +166,7 @@
   const showExamplePrompts = derived(
     [tabsInContext, userConfigSettings],
     ([tabsInContext, userConfigSettings]) => {
-      if (!userConfigSettings.auto_generate_chat_prompts) {
+      if (!userConfigSettings.automatic_chat_prompt_generation) {
         return false
       }
 
