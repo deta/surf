@@ -4257,7 +4257,8 @@
     <div
       class="vertical-window-bar flex flex-row flex-shrink-0 items-center justify-between p-1"
       style="position: relative; z-index: 9999999999;"
-      class:customBg={$homescreenBackground !== undefined &&
+      class:customBg={$userConfigSettings.homescreen &&
+        $homescreenBackground !== undefined &&
         $homescreenBackground !== '' &&
         $homescreenBackground !== 'transparent'}
       class:mutedBg={$homescreenVisible}
@@ -4346,7 +4347,8 @@
       id="left-sidebar"
       class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
       class:homescreenVisible={$homescreenVisible}
-      class:customBg={$homescreenBackground !== undefined &&
+      class:customBg={$userConfigSettings.homescreen &&
+        $homescreenBackground !== undefined &&
         $homescreenBackground !== '' &&
         $homescreenBackground !== 'transparent'}
       class:horizontalTabs
