@@ -88,6 +88,10 @@
     }
   }
 
+  const handleResetBackgroundImage = () => {
+    window.api.resetBackgroundImage()
+  }
+
   onMount(async () => {
     userConfigSettings = window.api.getUserConfigSettings()
     userConfig = await window.api.getUserConfig()
@@ -281,6 +285,22 @@
             bind:value={userConfigSettings.annotations_sidebar}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="home"
+            title="Homescreen"
+            description="Pin resources and spaces onto your personalizable homescreen. (This feature might change soon, so your homescreen state might reset at that point)."
+            bind:value={userConfigSettings.homescreen}
+            on:update={handleSettingsUpdate}
+          >
+            {#if userConfigSettings.homescreen}
+              <section>
+                <button on:click={handleResetBackgroundImage} style="padding: 0.5em 0.75em;"
+                  >Reset Background Image</button
+                >
+              </section>
+            {/if}
+          </SettingsOption>
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}

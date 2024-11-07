@@ -315,6 +315,12 @@ function setupIpcHandlers(backendRootPath: string) {
       log.error('Error opening resource file:', error)
     }
   })
+
+  IPC_EVENTS_MAIN.resetBackgroundImage.on((event) => {
+    if (!validateIPCSender(event)) return
+
+    ipcSenders.resetBackgroundImage()
+  })
 }
 
 export const ipcSenders = {
@@ -568,5 +574,11 @@ export const ipcSenders = {
 
       IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
     })
+  },
+
+  resetBackgroundImage() {
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return
+    IPC_EVENTS_MAIN.resetBackgroundImage.sendToWebContents(mainWindow.webContents)
   }
 }

@@ -250,6 +250,11 @@
         dataTransfer: drag?.dataTransfer ?? new DataTransfer()
       })
       webview.dispatchEvent(e)
+      const endevent = new DragEvent('dragend', {
+        dataTransfer: drag?.dataTransfer ?? new DataTransfer(),
+        bubbles: true
+      })
+      webview.dispatchEvent(endevent)
     } else if (
       eventType === WebViewEventSendNames.Drag ||
       eventType === WebViewEventSendNames.DragOver

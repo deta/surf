@@ -577,6 +577,13 @@ const api = {
 
   showAppMenuPopup: () => {
     IPC_EVENTS_RENDERER.showAppMenuPopup.send()
+  },
+
+  resetBackgroundImage: async () => {
+    IPC_EVENTS_RENDERER.resetBackgroundImage.send()
+  },
+  onResetBackgroundImage: (callback: () => void) => {
+    IPC_EVENTS_RENDERER.resetBackgroundImage.on((_) => callback())
   }
 }
 

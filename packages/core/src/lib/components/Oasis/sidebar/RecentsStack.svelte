@@ -163,23 +163,6 @@
   resourceManager.on('updated', () => oasis.reloadStack())
   resourceManager.on('recovered', () => oasis.reloadStack())
 
-  const handleCardClick = (resourceId: string, active: boolean, overlay = false) => {
-    if (!overlay) {
-      tabsManager.openResourceAsTab(resourceId, {
-        active,
-        trigger: CreateTabEventTrigger.StackItem
-      })
-
-      resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
-        if (resource) {
-          resourceManager.telemetry.trackOpenResource(resource.type, OpenResourceEventFrom.Stack)
-        }
-      })
-    } else {
-      dispatch('open-resource-in-mini-browser', resourceId)
-    }
-  }
-
   function getRelativeOriginOffset(origin: { x: number; y: number }) {
     const stackBounds = stackEl.getBoundingClientRect()
     return {
@@ -234,7 +217,6 @@
         <div
           class="card stack-card relative"
           data-id={resource.id}
-          on:click={(e) => handleCardClick(resource.id, !e.metaKey, e.shiftKey)}
           use:originTransition={{ resourceId: resource.id }}
           style:--origin-x={item.fromOrigin
             ? getRelativeOriginOffset(item.fromOrigin.origin).x + 'px'
@@ -273,6 +255,7 @@
           <ResourcePreview
             {resource}
             mode="media"
+            origin="stack"
             frameless={true}
             interactive
             hideProcessing

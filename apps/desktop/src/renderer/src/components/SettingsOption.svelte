@@ -9,32 +9,40 @@
 </script>
 
 <div class="setting">
-  <div class="info">
-    <div class="title">
-      {#if icon}
-        <Icon name={icon} size="20px" />
-      {/if}
+  <section>
+    <div class="info">
+      <div class="title">
+        {#if icon}
+          <Icon name={icon} size="20px" />
+        {/if}
 
-      <h2>{title}</h2>
+        <h2>{title}</h2>
+      </div>
+      <p>{description}</p>
     </div>
-    <p>{description}</p>
-  </div>
 
-  <Switch color="#ff4eed" bind:checked={value} on:update />
+    <Switch color="#ff4eed" bind:checked={value} on:update />
+  </section>
+  <slot />
 </div>
 
 <style lang="scss">
   .setting {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 1rem;
     background: var(--color-background-dark);
     border-bottom: 1px solid var(--color-border);
     padding: 1.5rem;
     border-radius: 12px;
     width: 100%;
 
+    & :global(> section) {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
     .info {
       display: flex;
       flex-direction: column;

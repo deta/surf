@@ -13,9 +13,9 @@
   ],
   "scripts": {
     "dev": "vite && yarn run dev:tailwind",
-    "dev:tailwind": "npx tailwindcss -i ./src/app.css -o ./src/output.css --watch --minify",
+    "dev:tailwind": "yarn run tailwindcss -i ./src/app.css -o ./src/output.css --watch --minify",
     "build": "vite build",
-    "build:tailwind": "npx tailwindcss -i ./src/app.css -o ./src/output.css --minify",
+    "build:tailwind": "yarn run tailwindcss -i ./src/app.css -o ./src/output.css --minify",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },

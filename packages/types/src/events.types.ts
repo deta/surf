@@ -76,7 +76,13 @@ export enum TelemetryEventTypes {
   CopyScreenshot = 'Copy Screenshot',
   SaveAIResponse = 'Save AI Response',
 
-  MultiSelectResourceAction = 'Multi Select Resource Action'
+  MultiSelectResourceAction = 'Multi Select Resource Action',
+
+  // Homescreen
+  OpenHomescreen = 'Open Homescreen',
+  AddHomescreenItem = 'Add Item to Homescreen',
+  RemoveHomescreenItem = 'Remove Item from Homescreen',
+  UpdateHomescreen = 'Update Homescreen'
 }
 
 export type AIMessageContext = 'inline' | 'chat'
@@ -107,6 +113,10 @@ export enum CreateTabEventTrigger {
   System = 'system',
   /** Tab was created from the context menu */
   ContextMenu = 'context_menu',
+  /** Tab was created from the homescreen */
+  Homescreen = 'homescreen',
+  /** Tab was created from inside a space on the homescreen */
+  HomescreenSpace = 'homescreen_space',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
 }
@@ -149,7 +159,8 @@ export enum OpenResourceEventFrom {
   NewTab = 'new_tab',
   Page = 'page',
   CommandMenu = 'command_menu',
-  Stack = 'stack'
+  Stack = 'stack',
+  Homescreen = 'homescreen'
 }
 
 export enum OpenInMiniBrowserEventFrom {
@@ -157,7 +168,8 @@ export enum OpenInMiniBrowserEventFrom {
   Stack = 'stack',
   Chat = 'chat',
   PinnedTab = 'pinned_tab',
-  WebPage = 'web_page'
+  WebPage = 'web_page',
+  Homescreeen = 'homescreen'
 }
 
 export enum DeleteResourceEventTrigger {
@@ -181,7 +193,9 @@ export enum SaveToOasisEventTrigger {
   /** Saved from context menu */
   ContextMenu = 'context_menu',
   /** Saved from the mini browser */
-  MiniBrowser = 'mini_browser'
+  MiniBrowser = 'mini_browser',
+  /* When dropped onto homescreen -> Saving */
+  Homescreen = 'homescreen'
 }
 
 export enum EventContext {
@@ -189,7 +203,8 @@ export enum EventContext {
   Inline = 'inline',
   Chat = 'chat',
   Tabs = 'tabs',
-  Overlay = 'overlay'
+  Overlay = 'overlay',
+  Homescreen = 'homescreen'
 }
 
 export enum SearchOasisEventTrigger {
@@ -335,4 +350,47 @@ export type EditablePrompt = {
   content: string
   createdAt: string
   updatedAt: string
+}
+
+export enum OpenHomescreenEventTrigger {
+  /** Open from "home" button in sidebar */
+  Click = 'click',
+  /** Open from keyboard shortcut */
+  Shortcut = 'shortcut',
+  /** Open from command menu */
+  CommandMenu = 'command_menu',
+  /** By dragging over the home button / possible another drag touchpoint in the future */
+  DragOver = 'drag_over'
+}
+
+export enum AddHomescreenItemEventTrigger {
+  /** Place by dropping */
+  Drop = 'drop'
+  /** Pin from command menu */
+  //CommandMenu = 'command_menu'
+  /* Right click menu e.g. inside stuff */
+  //ContextMenu = 'context_menu',
+}
+
+export enum AddHomescreenItemEventSource {
+  Tabs = 'tabs',
+  Stack = 'stack',
+  CommandMenu = 'command_menu',
+  Stuff = 'stuff',
+  Chat = 'chat',
+  NativeDrop = 'native_drop'
+  // Webpage = 'webpage',
+}
+
+export enum RemoveHomescreenItemEventTrigger {
+  /* Right click menu */
+  ContextMenu = 'context_menu'
+  /* Possible trashbin area in the future? */
+  //TrashBin = 'trash_bin'
+}
+
+export enum UpdateHomescreenEventAction {
+  MoveItem = 'move_item',
+  ResizeItem = 'resize_item',
+  SetBackground = 'set_background'
 }

@@ -12,6 +12,7 @@
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
+  export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space'
   export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
 
   export type Annotation = {
@@ -372,7 +373,9 @@
   .preview {
     width: 100%;
     background: rgba(255, 255, 255, 0.75);
-    transition: 60ms ease-out;
+    transition: background, border, outline;
+    transition-duration: 60ms;
+    transition-timing-function: ease-out;
     position: relative;
 
     &.themed {
