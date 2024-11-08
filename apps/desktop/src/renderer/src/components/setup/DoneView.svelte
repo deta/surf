@@ -19,7 +19,7 @@
     <p class="description">You're all set to start using Surf 🎉</p>
 
     <p class="caption">
-      <a href="mailto:team@deta.space">team@deta.space</a> •
+      <a href="mailto:hello@deta.surf">hello@deta.surf</a> •
       <a href={DISCORD_URL} target="_blank">Discord Server</a>
     </p>
 
