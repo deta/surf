@@ -156,7 +156,7 @@ const initializeApp = async () => {
       handleOpenUrl(appOpenedWithURL)
     }
 
-    silentCheckForUpdates()
+    setInterval(silentCheckForUpdates, 1000 * 60 * 30) // 30 minutes
   })
 }
 
