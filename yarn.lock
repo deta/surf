@@ -4764,10 +4764,10 @@ electron-vite@^1.0.27:
     magic-string "^0.30.1"
     picocolors "^1.0.0"
 
-electron@33.1.0:
-  version "33.1.0"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-33.1.0.tgz#c86042e71fa964a054b3306810a3c451aada98f7"
-  integrity sha512-7KiY6MtRo1fVFLPGyHS7Inh8yZfrbUTy43nNwUgMD2CBk729BgSwOC2WhmcptNJVlzHJpVxSWkiVi2hp9mH/bw==
+electron@33.2.0:
+  version "33.2.0"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-33.2.0.tgz#2a7098653eaf1a53c7311a01d5636783019f2354"
+  integrity sha512-PVw1ICAQDPsnnsmpNFX/b1i/49h67pbSPxuIENd9K9WpGO1tsRaQt+K2bmXqTuoMJsbzIc75Ce8zqtuwBPqawA==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^20.9.0"
@@ -7392,7 +7392,7 @@ matcher@^3.0.0:
   dependencies:
     escape-string-regexp "^4.0.0"
 
-"matchers@link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
+"matchers@link:../../../AppData/Local/Yarn/Cache/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers":
   version "0.0.0"
   uid ""
 
@@ -8006,7 +8006,7 @@ mode-watcher@^0.0.2:
   resolved "https://registry.yarnpkg.com/mode-watcher/-/mode-watcher-0.0.2.tgz#4f821adf72ffae59f176cb61ce780bfc340a39f6"
   integrity sha512-sB9bHKyNfk2qftJC3zE7cVo9nrD7OgtaXeABuSs8/rozZFDnpvBQ/jcuECo/CmQ3N+el6oBS5hJNecuoboK8gA==
   dependencies:
-    matchers "link:../../../AppData/Local/Yarn/Cache/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
+    matchers "link:../../../Library/Caches/Yarn/v6/npm-mode-watcher-0.0.2-4f821adf72ffae59f176cb61ce780bfc340a39f6-integrity/node_modules/mode-watcher/@testing-library/jest-dom/matchers"
     svelte-persisted-store "^0.7.0"
 
 modify-filename@^1.1.0:
