@@ -350,7 +350,6 @@
 
 <div
   id="homescreen-wrapper"
-  class="no-drag"
   style:--background={$customization.background}
   style={$$restProps.style}
 >
@@ -358,6 +357,7 @@
 
   <div
     id="homescreen"
+    class="no-drag"
     style:--bento_gap={BENTO_CONFIG.GAP + 'px'}
     style:--bento_cell_size={BENTO_CONFIG.CELL_SIZE + 'px'}
     bind:this={bentoEl}
