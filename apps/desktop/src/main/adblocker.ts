@@ -4,8 +4,12 @@ import { session } from 'electron'
 import { changeMenuItemLabel } from './appMenu'
 import { getBrowserConfig, setBrowserConfig } from './config'
 import { ipcSenders } from './ipcHandlers'
+import { getWebRequestManager } from './webRequestManager'
 
-let blocker: ElectronBlocker | undefined
+let blocker: ElectronBlocker | null = null
+
+let removeBeforeRequest: (() => void) | null = null
+let removeHeadersReceived: (() => void) | null = null
 
 export async function setupAdblocker() {
   // blocker = await ElectronBlocker.fromPrebuiltAdsOnly(fetch, {
@@ -30,13 +34,30 @@ export function initAdblocker(partition: string) {
 export function setAdblockerState(partition: string, state: boolean): void {
   if (!blocker) return
 
+  const webRequestManager = getWebRequestManager()
   const targetSession = session.fromPartition(partition)
-  if (state) {
-    !blocker.isBlockingEnabled(targetSession) && blocker.enableBlockingInSession(targetSession)
-  } else {
-    blocker.isBlockingEnabled(targetSession) && blocker.disableBlockingInSession(targetSession)
-  }
 
+  if (state) {
+    if (!blocker.isBlockingEnabled(targetSession)) {
+      blocker.enableBlockingInSession(targetSession, false)
+      removeBeforeRequest = webRequestManager.addBeforeRequest(
+        targetSession,
+        blocker.onBeforeRequest
+      )
+      removeHeadersReceived = webRequestManager.addHeadersReceived(
+        targetSession,
+        blocker.onHeadersReceived
+      )
+    }
+  } else {
+    if (blocker.isBlockingEnabled(targetSession)) {
+      blocker.disableBlockingInSession(targetSession)
+      if (removeBeforeRequest) removeBeforeRequest()
+      if (removeHeadersReceived) removeHeadersReceived()
+      removeBeforeRequest = null
+      removeHeadersReceived = null
+    }
+  }
   // Store state
   setBrowserConfig({ ...getBrowserConfig(), adblockerEnabled: state })
 
@@ -68,4 +89,8 @@ export function toggleAdblocker(partition: string): boolean {
   setAdblockerState(partition, newState)
 
   return newState
+}
+
+export function getAdblocker(): ElectronBlocker | null {
+  return blocker
 }

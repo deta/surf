@@ -1,3 +1,5 @@
+import { getWebRequestManager } from './webRequestManager'
+
 const CSP_BACKEND_API = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space'
 const CSP_OPEN_AI = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT ?? 'https://api.openai.com'
 
@@ -31,7 +33,7 @@ const CSP_DIRECTIVES = [
 ]
 
 export const applyCSPToSession = (session: Electron.Session) => {
-  session.webRequest.onHeadersReceived((details, callback) => {
+  getWebRequestManager().addHeadersReceived(session, (details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,

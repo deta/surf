@@ -10,6 +10,7 @@ import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
 import { firefoxUA, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
+import { getWebRequestManager } from './webRequestManager'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -98,8 +99,9 @@ export function createWindow() {
 
   const webviewSession = session.fromPartition('persist:horizon')
   const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
+  const webRequestManager = getWebRequestManager()
 
-  webviewSession.webRequest.onBeforeRequest((details, callback) => {
+  webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
     const shouldBlockRequest =
       details.url.startsWith('surf:') &&
       // navigation and APIs like webContents.loadURL should be able to request resources
@@ -109,7 +111,7 @@ export function createWindow() {
 
     callback({ cancel: shouldBlockRequest })
   })
-  webviewSession.webRequest.onBeforeSendHeaders((details, callback) => {
+  webRequestManager.addBeforeSendHeaders(webviewSession, (details, callback) => {
     const { requestHeaders, url } = details
     const isGoogleAccounts = new URL(url).hostname === 'accounts.google.com'
     requestHeaders['User-Agent'] = isGoogleAccounts ? firefoxUA : webviewSessionUserAgent
@@ -120,7 +122,7 @@ export function createWindow() {
 
     callback({ requestHeaders })
   })
-  webviewSession.webRequest.onHeadersReceived((details, callback) => {
+  webRequestManager.addHeadersReceived(webviewSession, (details, callback) => {
     if (details.resourceType !== 'mainFrame') {
       callback({ cancel: false })
       return
