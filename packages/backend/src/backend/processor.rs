@@ -124,6 +124,7 @@ impl Processor {
                                 ResourceTextContentMetadata {
                                     timestamp: None,
                                     url: None,
+                                    page: None
                                 };
                                 content_len
                             ];
@@ -134,17 +135,21 @@ impl Processor {
                 }
             }
             "application/pdf" => {
-                if let Some((content_type, content)) =
-                    process_resource_data(&resource, "", &self.ocr_engine)
-                {
-                    result.insert(
-                        content_type,
-                        (
-                            vec![content],
-                            vec![create_metadata_from_resource(&resource)],
-                        ),
-                    );
-                }
+                let (contents, metadatas): (Vec<String>, Vec<ResourceTextContentMetadata>) =
+                    extract_text_from_pdf(&resource.resource.resource_path)?
+                        .into_iter()
+                        .map(|(page, content)| {
+                            (
+                                content,
+                                ResourceTextContentMetadata {
+                                    url: resource.metadata.as_ref().map(|m| m.source_uri.clone()),
+                                    page: Some(page),
+                                    ..Default::default()
+                                },
+                            )
+                        })
+                        .unzip();
+                result.insert(ResourceTextContentType::PDF, (contents, metadatas));
             }
             "application/vnd.space.post.youtube" => {
                 if let Some(metadata) = &resource.metadata {
@@ -246,6 +251,7 @@ fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Er
 fn create_metadata_from_resource(resource: &CompositeResource) -> ResourceTextContentMetadata {
     ResourceTextContentMetadata {
         timestamp: None,
+        page: None,
         url: resource.metadata.as_ref().map(|m| m.source_uri.clone()),
     }
 }
@@ -286,6 +292,7 @@ pub fn get_youtube_contents_metadatas(
         if transcript.offset - prev_offset > 20.0 || i == transcripts.len() - 1 {
             contents.push(ContentChunker::normalize(&transcript_chunk));
             metadatas.push(ResourceTextContentMetadata {
+                page: None,
                 timestamp: Some(prev_offset.clone() as f32),
                 url: Some(source_uri.to_string()),
             });
@@ -311,15 +318,6 @@ fn process_resource_data(
             normalize_html_data(resource_data),
         )),
 
-        ResourceTextContentType::PDF => {
-            match extract_text_from_pdf(&resource.resource.resource_path) {
-                Ok(text) => Some((resource_text_content_type, text)),
-                Err(e) => {
-                    eprintln!("extracting text from pdf: {e:#?}");
-                    None
-                }
-            }
-        }
         ResourceTextContentType::Image => {
             match extract_text_from_image(&resource.resource.resource_path, ocr_engine) {
                 Ok(text) => Some((resource_text_content_type, text)),
@@ -504,22 +502,23 @@ fn extract_text_from_image(
     Ok(ocr_text.trim().to_owned())
 }
 
-fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<String> {
+fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<Vec<(u32, String)>> {
     let doc =
         lopdf::Document::load(pdf_path).map_err(|e| BackendError::GenericError(e.to_string()))?;
-    let mut text = String::new();
+    let mut result = Vec::new();
 
     for (page_num, _object_id) in doc.get_pages() {
-        match doc.extract_text(&[page_num]) {
-            Ok(page_text) => {
-                text += &page_text;
-                text.push_str("\n")
-            }
-            Err(e) => eprintln!("error extracting text from page {page_num}: {e:#?}"),
-        }
+        result.push((
+            page_num,
+            doc.extract_text(&[page_num]).map_err(|e| {
+                BackendError::GenericError(format!(
+                    "error extracting text from page {page_num}: {e:#?}"
+                ))
+            })?,
+        ));
     }
 
-    Ok(text)
+    Ok(result)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

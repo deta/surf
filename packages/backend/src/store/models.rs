@@ -428,10 +428,11 @@ impl ResourceMetadata {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTextContentMetadata {
     pub timestamp: Option<f32>,
     pub url: Option<String>,
+    pub page: Option<u32>,
 }
 
 impl ToSql for ResourceTextContentMetadata {
@@ -567,6 +568,7 @@ pub struct AIChatSession {
 pub struct AIChatSessionMessageSourceMetadata {
     pub timestamp: Option<f32>,
     pub url: Option<String>,
+    pub page: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -587,18 +589,15 @@ impl AIChatSessionMessageSource {
         }
         let metadata = resource.metadata.as_ref().unwrap();
         let text_content = resource.text_content.as_ref().unwrap();
-        let timestamp = match text_content.metadata.timestamp {
-            Some(ts) => Some(ts),
-            None => None,
-        };
 
         Some(AIChatSessionMessageSource {
             id: index.to_string(),
             uid: text_content.id.clone(),
             resource_id: resource.resource.id.clone(),
             metadata: Some(AIChatSessionMessageSourceMetadata {
-                timestamp,
+                timestamp: text_content.metadata.timestamp,
                 url: Some(metadata.source_uri.clone()),
+                page: text_content.metadata.page,
             }),
         })
     }
@@ -606,6 +605,7 @@ impl AIChatSessionMessageSource {
     pub fn to_xml(&self) -> String {
         let mut timestamp = String::new();
         let mut url = String::new();
+        let mut page = String::new();
         match &self.metadata {
             Some(metadata) => {
                 if let Some(ts) = metadata.timestamp {
@@ -613,6 +613,9 @@ impl AIChatSessionMessageSource {
                 }
                 if let Some(u) = &metadata.url {
                     url = u.to_string();
+                }
+                if let Some(p) = &metadata.page {
+                    page = p.to_string();
                 }
             }
             None => {}
@@ -626,9 +629,10 @@ impl AIChatSessionMessageSource {
     <metadata>
         <timestamp>{}</timestamp>
         <url>{}</url>
+        <page>{}</page>
     </metadata>
 </source>\n",
-            self.id, self.uid, self.resource_id, timestamp, url
+            self.id, self.uid, self.resource_id, timestamp, url, page
         )
     }
 }

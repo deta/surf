@@ -34,6 +34,7 @@ pub struct DataSourceChunkMetadata {
     pub hash: Option<String>,
     pub timestamp: Option<String>,
     pub url: Option<String>,
+    pub page: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,6 +54,7 @@ pub struct DataSourceMetadata {
 pub struct CitationSourceMetadata {
     pub timestamp: Option<String>,
     pub url: Option<String>,
+    pub page: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

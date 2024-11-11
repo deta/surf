@@ -51,10 +51,12 @@ impl Worker {
                     Some(metadata) => ResourceTextContentMetadata {
                         timestamp: None,
                         url: Some(metadata.source_uri.clone()),
+                        page: None,
                     },
                     None => ResourceTextContentMetadata {
                         timestamp: None,
                         url: None,
+                        page: None,
                     },
                 };
                 self.upsert_resource_text_content(
