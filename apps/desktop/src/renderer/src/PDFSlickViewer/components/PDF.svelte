@@ -4,9 +4,20 @@
   import Thumbsbar from './Thumbsbar/Thumbsbar.svelte'
   import Toolbar from './Toolbar/Toolbar.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../store'
+  import {
+    WebViewEventReceiveNames,
+    type WebViewEventGoToPDFPage,
+    type WebViewReceiveEvents
+  } from '@horizon/types'
+
+  let pdfSlickReady = null
+  const pdfSlickInstance: Promise<PDFSlick> = new Promise((resolve) => {
+    pdfSlickReady = resolve
+  })
 
   const urlParams = new URLSearchParams(window.location.search)
   export const url = decodeURIComponent(urlParams.get('path'))
+  export const page = urlParams.get('page') ? parseInt(urlParams.get('page'), 10) : null
 
   let RO: ResizeObserver
 
@@ -39,11 +50,20 @@
     })
 
     pdfSlick.loadDocument(url).then(async () => {
+      if (pdfSlickReady) pdfSlickReady(pdfSlick)
+
       const { info, metadata } = await pdfSlick.document.getMetadata()
       const pageTitle =
         info['Title'] || metadata?.get('dc:title') || pdfSlick.filename || 'Surf PDF Viewer'
 
       document.title = pageTitle
+      if (page) {
+        try {
+          pdfSlick.gotoPage(page)
+        } catch (err) {
+          console.error(`failed to go to page ${page}: ${err}`)
+        }
+      }
     })
     store.setState({ pdfSlick })
 
@@ -53,6 +73,30 @@
         pdfSlick.viewer.currentScaleValue = scaleValue
       }
     })
+
+    window.addEventListener(
+      'pdf-renderer-event',
+      async (
+        event: CustomEvent<
+          {
+            [K in WebViewEventReceiveNames]: {
+              type: K
+              data: WebViewReceiveEvents[K]
+            }
+          }[WebViewEventReceiveNames]
+        >
+      ) => {
+        const { type, data } = event.detail
+
+        switch (type) {
+          case WebViewEventReceiveNames.GoToPDFPage: {
+            const pdfSlick = await pdfSlickInstance
+            pdfSlick.gotoPage(data.page)
+            break
+          }
+        }
+      }
+    )
 
     unsubscribe = store.subscribe((s) => {
       pdfSlickStore.set(s)

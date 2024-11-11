@@ -122,7 +122,7 @@ function runResourceDetection() {
   }
 
   if (appParser) {
-    ;(appParser as WebAppExtractor).extractResourceFromDocument(document).then((resource) => {
+    ;(appParser as WebAppExtractor)?.extractResourceFromDocument(document).then((resource) => {
       console.debug('Resource', resource)
       console.debug('Sending detected-resource event')
       sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
@@ -511,6 +511,19 @@ function handleSeekToTimestamp(
   }
   video.currentTime = timestamp
   video.play()
+}
+
+function handleGoToPDFPage(data: WebViewReceiveEvents[WebViewEventReceiveNames.GoToPDFPage]) {
+  window.dispatchEvent(
+    new CustomEvent('pdf-renderer-event', {
+      detail: {
+        type: WebViewEventReceiveNames.GoToPDFPage,
+        data: {
+          page: data.page
+        }
+      }
+    })
+  )
 }
 
 function handleScrollToAnnotation(
@@ -1252,6 +1265,8 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleHighlightText(data)
   } else if (type == WebViewEventReceiveNames.SeekToTimestamp) {
     handleSeekToTimestamp(data)
+  } else if (type === WebViewEventReceiveNames.GoToPDFPage) {
+    handleGoToPDFPage(data)
   } /*else if (type === WebViewEventReceiveNames.SimulateDragStart) {
     handleSimulateDragStart(data)
   } else if (type === WebViewEventReceiveNames.SimulateDragUpdate) {

@@ -18,7 +18,8 @@ export enum WebViewEventReceiveNames {
   SeekToTimestamp = 'seek_to_timestamp',
   SimulateDragStart = 'simulate_drag_start',
   SimulateDragUpdate = 'simulate_drag_update',
-  SimulateDragEnd = 'simulate_drag_end'
+  SimulateDragEnd = 'simulate_drag_end',
+  GoToPDFPage = 'go_to_pdf_page'
 }
 
 export enum WebViewEventSendNames {
@@ -144,6 +145,9 @@ export type WebViewEventSimulateDragEnd = {
     files: { name: string; type: string; buffer: ArrayBuffer }[]
   }
 }
+export type WebViewEventGoToPDFPage = {
+  page: number
+}
 
 export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.GetSelection]: void
@@ -158,6 +162,7 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.SimulateDragStart]: WebViewEventSimulateDragStart
   [WebViewEventReceiveNames.SimulateDragUpdate]: WebViewEventSimulateDragUpdate
   [WebViewEventReceiveNames.SimulateDragEnd]: WebViewEventSimulateDragEnd
+  [WebViewEventReceiveNames.GoToPDFPage]: WebViewEventGoToPDFPage
 }
 
 export type WebViewSendEvents = {
