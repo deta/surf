@@ -1,0 +1,144 @@
+name: Nightly Build
+
+permissions:
+  id-token: write
+  contents: write
+
+on:
+  schedule:
+    # every weekday at 20:03 UTC
+    # 20:03 because if you github runners will be more congested at the exact hours
+    - cron: '3 20 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            **/target
+          key: ${{ runner.os }}-nightly-build-cache-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nightly-build-cache-
+
+      - name: Set up Windows Sign Tool
+        if: matrix.os == 'windows-latest'
+        run: dotnet tool install --no-cache --global AzureSignTool --version 5.0.0
+
+      - name: Azure Login
+        if: matrix.os == 'windows-latest'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure Key Vault Access Token
+        if: matrix.os == 'windows-latest'
+        run: |
+          $az_token=$(az account get-access-token --scope https://vault.azure.net/.default --query accessToken -o tsv)
+          echo "::add-mask::$az_token"
+          echo "AZURE_KEYVAULT_ACCESS_TOKEN=$az_token" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: build for ${{ matrix.os }}
+        run: |
+          if [[ ${{ matrix.os }} == 'macos-latest' ]]; then
+            yarn build:desktop:mac:arm
+          elif [[ ${{ matrix.os }} == 'windows-latest' ]]; then
+            yarn build:desktop:win:x64
+          fi
+
+        env:
+          HUSKY: 0
+          NODE_OPTIONS: --max_old_space_size=8192
+          SHOULD_NOTARIZE: 'true'
+          DISABLE_ALL_OBFUSCATION: 'false'
+
+          PRODUCT_NAME: 'Surf'
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/nightly
+
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+
+          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
+          R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
+          P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
+          P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
+          P_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_API_BASE: ${{ secrets.API_BASE }}
+
+          RELEASE_CHANNEL: surf-nightly
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
+          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
+
+          # windows code signing configuration
+          SIGN_WINDOWS: 'true'
+          AZURE_KEYVAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEYVAULT_CERTIFICATE_NAME }}
+          AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_KEYVAULT_ACCESS_TOKEN: ${{ env.AZURE_KEYVAULT_ACCESS_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-build-${{ matrix.os }}
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.tar.gz
+
+  create-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: build/
+      - name: create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: true
+          tag_name: nightly-${{ github.sha }}
+          files: |
+            build/**/*.dmg
+            build/**/*.exe
+            build/**/*.AppImage
+            build/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
