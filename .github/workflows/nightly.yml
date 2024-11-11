@@ -69,13 +69,7 @@ jobs:
           yarn install --frozen-lockfile --network-timeout 300000
 
       - name: build for ${{ matrix.os }}
-        run: |
-          if [[ ${{ matrix.os }} == 'macos-latest' ]]; then
-            yarn build:desktop:mac:arm
-          elif [[ ${{ matrix.os }} == 'windows-latest' ]]; then
-            yarn build:desktop:win:x64
-          fi
-
+        run: yarn build:desktop:${{ matrix.os == 'macos-latest' && 'mac:arm' || 'win:x64' }}
         env:
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
