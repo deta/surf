@@ -195,7 +195,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           draft: false
-          prerelease: true
+          prerelease: false
           tag_name: ${{ inputs.b_app_version }}
           files: |
             build/**/*.dmg
