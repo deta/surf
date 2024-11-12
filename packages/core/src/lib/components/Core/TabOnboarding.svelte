@@ -173,7 +173,7 @@
             Welcome to Surf
           </h1>
           <p class="text-xl text-center text-sky-900">
-            It's a browser, file manager, and AI assitant — all in one.
+            It's a browser, file manager, and AI assistant — all in one.
           </p>
         </div>
         <div
