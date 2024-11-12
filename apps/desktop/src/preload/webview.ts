@@ -519,7 +519,8 @@ function handleGoToPDFPage(data: WebViewReceiveEvents[WebViewEventReceiveNames.G
       detail: {
         type: WebViewEventReceiveNames.GoToPDFPage,
         data: {
-          page: data.page
+          page: data.page,
+          targetText: data.targetText
         }
       }
     })

@@ -640,7 +640,7 @@
         toast.error('Failed to find source source page')
         return
       }
-      sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, { page })
+      sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, { page, targetText: source.content })
       toast.success('Citation Highlighted!')
       return
     }

@@ -74,30 +74,6 @@
       }
     })
 
-    window.addEventListener(
-      'pdf-renderer-event',
-      async (
-        event: CustomEvent<
-          {
-            [K in WebViewEventReceiveNames]: {
-              type: K
-              data: WebViewReceiveEvents[K]
-            }
-          }[WebViewEventReceiveNames]
-        >
-      ) => {
-        const { type, data } = event.detail
-
-        switch (type) {
-          case WebViewEventReceiveNames.GoToPDFPage: {
-            const pdfSlick = await pdfSlickInstance
-            pdfSlick.gotoPage(data.page)
-            break
-          }
-        }
-      }
-    )
-
     unsubscribe = store.subscribe((s) => {
       pdfSlickStore.set(s)
     })
@@ -111,6 +87,132 @@
   $: {
     if (RO && container) {
       RO.observe(container)
+    }
+  }
+
+  window.addEventListener(
+    'pdf-renderer-event',
+    async (
+      event: CustomEvent<
+        {
+          [K in WebViewEventReceiveNames]: {
+            type: K
+            data: WebViewReceiveEvents[K]
+          }
+        }[WebViewEventReceiveNames]
+      >
+    ) => {
+      const { type, data } = event.detail
+      console.log('pdf-renderer-event', type, data)
+
+      switch (type) {
+        case WebViewEventReceiveNames.GoToPDFPage: {
+          handleGoToPDFPage(data.page, data.targetText)
+          break
+        }
+      }
+    }
+  )
+
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    let matches = 0
+    const minLength = Math.min(str1.length, str2.length)
+
+    for (let i = 0; i < minLength; i++) {
+      if (str1[i].toLowerCase() === str2[i].toLowerCase()) {
+        matches++
+      }
+    }
+
+    return matches / Math.max(str1.length, str2.length)
+  }
+
+  const findApproximateMatch = (
+    fullText: string,
+    targetText: string
+  ): { idx: number; length: number; similarity: number }[] => {
+    const targetLength = targetText.length
+    let bestMatch = {
+      idx: -1,
+      length: 0,
+      similarity: 0
+    }
+
+    const targetWords = targetText.toLowerCase().split(/\s+/)
+    // pick a proper anchor word here
+    const anchorWord =
+      targetWords.find((w) => w.length > 5) ||
+      targetWords.reduce((a, b) => (a.length >= b.length ? a : b))
+
+    let pos = 0
+    const wordPositions: number[] = []
+
+    // find possible start positions
+    while (true) {
+      pos = fullText.toLowerCase().indexOf(anchorWord, pos)
+      if (pos === -1) break
+      wordPositions.push(pos)
+      pos += anchorWord.length
+    }
+
+    // find the best match!!!
+    for (const startPos of wordPositions) {
+      const windowStart = Math.max(0, startPos - 20)
+      const windowEnd = Math.min(fullText.length, startPos + targetLength + 20)
+      const substring = fullText.substring(windowStart, windowEnd)
+
+      const similarity = calculateSimilarity(substring, targetText)
+
+      if (similarity > bestMatch.similarity) {
+        bestMatch = {
+          idx: windowStart,
+          length: windowEnd - windowStart,
+          similarity: similarity
+        }
+
+        if (similarity > 0.95) break
+      }
+    }
+
+    return [bestMatch]
+  }
+
+  const handleGoToPDFPage = async (page: number, targetText?: string) => {
+    // remove the existing highlight classes
+    Array.from(document.querySelectorAll('span'))
+      .map((span) => span.classList.remove('highlight'))
+
+    const pdfSlick = await pdfSlickInstance
+    pdfSlick.gotoPage(page)
+
+    if (!targetText) return
+    // TODO: instead of this, wait until the page is ready by listening to the event bus
+    await new Promise((resolve) => setTimeout(resolve, 150))
+
+    const pageContainer = document.querySelector(`.page[data-page-number="${page}"]`)
+    if (!pageContainer) return
+    const spans = Array.from(pageContainer.querySelectorAll('span'))
+
+    let fullText = ''
+    const spanMapping: number[] = []
+
+    spans.forEach((span, idx) => {
+      const text = span.textContent || ''
+      fullText += text
+      for (let i = 0; i < text.length; i++) {
+        spanMapping.push(idx)
+      }
+    })
+
+    const result = findApproximateMatch(fullText, targetText)
+    if (result.length > 0) {
+      const match = result[0]
+      const startSpanIndex = spanMapping[match.idx]
+      const endSpanIndex = spanMapping[match.idx + match.length - 1]
+
+      for (let i = startSpanIndex; i <= endSpanIndex; i++) {
+        spans[i].classList.add('highlight')
+      }
     }
   }
 </script>

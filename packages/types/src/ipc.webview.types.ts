@@ -147,6 +147,7 @@ export type WebViewEventSimulateDragEnd = {
 }
 export type WebViewEventGoToPDFPage = {
   page: number
+  targetText?: string
 }
 
 export type WebViewReceiveEvents = {

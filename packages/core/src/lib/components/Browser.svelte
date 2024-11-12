@@ -1579,6 +1579,14 @@
     )
 
     const resource = await resourceManager.getResource(resourceId)
+    if (resource?.type === ResourceTypes.PDF) {
+      await tabsManager.addPageTab(`surf://resource/${resourceId}`, {
+        active: true,
+        trigger: CreateTabEventTrigger.OasisChat
+      })
+      return
+    }
+
     const url = resource?.tags?.find(
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
     )?.value
