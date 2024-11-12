@@ -1648,18 +1648,17 @@
       tabsManager.makeActive(tab.id, ActivateTabEventTrigger.ChatCitation)
 
       log.debug('highlighting citation', tab.id, answerText, sourceUid)
+      let source = null
+      if (sourceUid) source = await sffs.getAIChatDataSource(sourceUid)
+
       if (answerText === '') {
-        if (!sourceUid) {
-          return
-        }
-        const source = await sffs.getAIChatDataSource(sourceUid)
         if (!source) {
           return
         }
         answerText = source.content
       }
 
-      await browserTab.highlightWebviewText(resourceId, answerText)
+      await browserTab.highlightWebviewText(resourceId, answerText, source)
     } else {
       log.error('No tab in chat context found for resource', resourceId)
       toasts.error('Failed to highlight citation')

@@ -149,6 +149,7 @@ export type AIChatMessageSource = {
   metadata?: {
     timestamp?: number
     url?: string
+    page?: number
   }
 }
 

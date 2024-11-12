@@ -39,7 +39,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
-  import type { PageMagic, TabPage } from '../../types/browser.types'
+  import type { AIChatMessageSource, PageMagic, TabPage } from '../../types/browser.types'
   import {
     useLogScope,
     useDebounce,
@@ -618,14 +618,30 @@
     })
   }
 
-  export const highlightWebviewText = async (resourceId: string, answerText: string) => {
-    log.debug('highlighting text', resourceId, answerText)
+  export const highlightWebviewText = async (
+    resourceId: string,
+    answerText: string,
+    source: AIChatMessageSource | null
+  ) => {
+    log.debug('highlighting text', resourceId, answerText, source)
 
     const toast = toasts.loading('Highlighting Citation..')
     const detectedResource = await detectResource()
     if (!detectedResource) {
       log.error('no resource detected')
       toast.error('Failed to highlight citation')
+      return
+    }
+
+    if (detectedResource.type === ResourceTypes.PDF) {
+      const page = source?.metadata?.page
+      if (!page) {
+        log.debug("page attribute isn't present")
+        toast.error('Failed to find source source page')
+        return
+      }
+      sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, { page })
+      toast.success('Citation Highlighted!')
       return
     }
 

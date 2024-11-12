@@ -225,7 +225,7 @@
     // citation.classList.add('clicked')
 
     highlightedCitation.set(uniqueID)
-    dispatch('citationClick', { citationID: citationID, text, preview })
+    dispatch('citationClick', { citationID: citationID, text, preview, sourceUid: source?.uid })
   }
 
   const handleRemoveScreenshot = () => {

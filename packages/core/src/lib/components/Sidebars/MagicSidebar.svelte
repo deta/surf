@@ -379,6 +379,7 @@
     }
 
     if (
+      resource.type === ResourceTypes.PDF ||
       resource.type === ResourceTypes.LINK ||
       resource.type === ResourceTypes.ARTICLE ||
       resource.type.startsWith(ResourceTypes.POST)

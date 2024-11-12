@@ -652,7 +652,8 @@ export class SFFS {
       resource_id: dataChunkSource.resource_id,
       metadata: {
         timestamp: dataChunkSource.metadata.timestamp,
-        url: dataChunkSource.metadata.url
+        url: dataChunkSource.metadata.url,
+        page: dataChunkSource.metadata.page
       }
     }
     return source
