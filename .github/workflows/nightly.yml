@@ -5,10 +5,10 @@ permissions:
   contents: write
 
 on:
-  schedule:
-    # every weekday at 20:03 UTC
-    # 20:03 because if you github runners will be more congested at the exact hours
-    - cron: '3 20 * * 1-5'
+  #schedule:
+  #  # every weekday at 20:03 UTC
+  #  # 20:03 because if you github runners will be more congested at the exact hours
+  #  - cron: '3 20 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -96,8 +96,8 @@ jobs:
           RELEASE_CHANNEL: surf-nightly
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_UPDATES_BUCKET_NAME }}
-          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_UPDATES_BUCKET_REGION }}
+          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_NIGHTLY_UPDATES_BUCKET_NAME }}
+          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_NIGHTLY_UPDATES_BUCKET_REGION }}
 
           # windows code signing configuration
           SIGN_WINDOWS: 'true'
