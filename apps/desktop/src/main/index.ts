@@ -40,8 +40,8 @@ process.on('uncaughtException', (error: any) => {
 
 const initializePaths = () => {
   const userDataPath = CONFIG.useTmpDataDir
-     ? join(app.getPath('temp'), CONFIG.appVersion || '', CONFIG.appName)
-     : join(dirname(app.getPath('userData')), CONFIG.appName)
+    ? join(app.getPath('temp'), CONFIG.appVersion || '', CONFIG.appName)
+    : join(dirname(app.getPath('userData')), CONFIG.appName)
   mkdirSync(userDataPath, { recursive: true })
   app.setPath('userData', userDataPath)
   return userDataPath
@@ -88,13 +88,13 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
   // prettier-ignore
   {
     surfBackendManager
-      .on('stdout',  data   => log.info ('backend:stdout:', data))
-      .on('stderr',  data   => log.error('backend:stderr:', data))
-      .on('error',   error  => log.error(' backend:error:', error))
-      .on('warn',    msg    => log.warn ('  backend:warn:', msg))
-      .on('info',    msg    => log.info ('  backend:info:', msg))
-      .on('exit',    code   => log.info ('  backend:exit: code:', code))
-      .on('signal',  signal => log.info ('backend:signal: signal:', signal))
+      .on('stdout', data => log.info('backend:stdout:', data))
+      .on('stderr', data => log.error('backend:stderr:', data))
+      .on('error', error => log.error(' backend:error:', error))
+      .on('warn', msg => log.warn('  backend:warn:', msg))
+      .on('info', msg => log.info('  backend:info:', msg))
+      .on('exit', code => log.info('  backend:exit: code:', code))
+      .on('signal', signal => log.info('backend:signal: signal:', signal))
   }
 
   surfBackendManager.start()
@@ -175,16 +175,16 @@ const setupApplication = () => {
   // prettier-ignore
   {
     app
-      .on('browser-window-blur',    unregisterShortcuts)
-      .on('browser-window-focus',   registerShortcuts)
-      .on('second-instance',        (_event, commandLine) => handleOpenUrl(commandLine.pop() ?? ''))
-      .on('browser-window-created', (_,      window)      => optimizer.watchWindowShortcuts(window))
-      .on('window-all-closed',      ()                    => { if (!isMac()) app.quit() })
+      .on('browser-window-blur', unregisterShortcuts)
+      .on('browser-window-focus', registerShortcuts)
+      .on('second-instance', (_event, commandLine) => handleOpenUrl(commandLine.pop() ?? ''))
+      .on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
+      .on('window-all-closed', () => { if (!isMac()) app.quit() })
 
     app
-      .on('open-url',   (_event, url) => isAppLaunched ? handleOpenUrl(url) : (appOpenedWithURL = url))
-      .on('activate',   ()            => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
-      .on('will-quit',  ()            => surfBackendManager?.stop())
+      .on('open-url', (_event, url) => isAppLaunched ? handleOpenUrl(url) : (appOpenedWithURL = url))
+      .on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
+      .on('will-quit', () => surfBackendManager?.stop())
   }
 
   app.whenReady().then(initializeApp)

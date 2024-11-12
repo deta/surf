@@ -1,5 +1,11 @@
 import { dialog } from 'electron'
 import { autoUpdater } from 'electron-updater'
+import {
+  createUpdatesWindow,
+  closeUpdatesWindow,
+  sendUpdateErrorStatus,
+  sendUpdateProgressStatus
+} from './updatesWindow'
 
 autoUpdater.autoDownload = false
 
@@ -14,6 +20,12 @@ autoUpdater.on('update-available', async (updateInfo) => {
     buttons: ['OK']
   })
   if (userAction.checkboxChecked) {
+    try {
+      createUpdatesWindow()
+    } catch (e) {
+      dialog.showErrorBox('Update Error', `Error while updating the app: ${e}`)
+      closeUpdatesWindow()
+    }
     await autoUpdater.downloadUpdate()
   }
 })
@@ -29,13 +41,19 @@ autoUpdater.on('update-not-available', async () => {
 })
 
 autoUpdater.on('update-downloaded', async (_1) => {
+  closeUpdatesWindow()
   autoUpdater.quitAndInstall(false)
 })
 
 autoUpdater.on('error', async (_error, message) => {
   if (!isSilent) {
+    closeUpdatesWindow()
     dialog.showErrorBox('Update Error', `Error while updating the app: ${message}`)
   }
+})
+
+autoUpdater.on('download-progress', async (progress) => {
+  sendUpdateProgressStatus(progress.percent)
 })
 
 // Don't call this multiple times.

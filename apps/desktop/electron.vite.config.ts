@@ -53,7 +53,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
-          webview: resolve(__dirname, 'src/preload/webview.ts')
+          webview: resolve(__dirname, 'src/preload/webview.ts'),
+          updates: resolve(__dirname, 'src/preload/updates.ts')
         },
         plugins: [
           ...(!disableAllObfuscation
@@ -92,7 +93,8 @@ export default defineConfig({
         input: {
           main: resolve(__dirname, 'src/renderer/index.html'),
           setup: resolve(__dirname, 'src/renderer/setup.html'),
-          settings: resolve(__dirname, 'src/renderer/settings.html')
+          settings: resolve(__dirname, 'src/renderer/settings.html'),
+          updates: resolve(__dirname, 'src/renderer/updates.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         plugins: [
