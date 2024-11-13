@@ -3381,8 +3381,6 @@
         // await archiveTab(tabId)
         await tabsManager.delete(tabId, DeleteTabEventTrigger.Click)
       }
-
-      toasts.success('Space removed from sidebar!')
     } catch (error) {
       log.error('Failed to remove space from sidebar:', error)
     }
