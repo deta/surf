@@ -86,7 +86,7 @@
         return {
           id: `${item.id}-${resourceId}`,
           contextItemId: item.id,
-          icon: tab.icon,
+          icon: tab.currentLocation?.startsWith('surf://') ? undefined : tab.icon,
           title: tab.title,
           type: 'resource',
           data: {
