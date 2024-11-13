@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "turbo run desktop#dev @horizon/core#dev:tailwind",
+    "dev:silent": "SILENCE_WARNINGS=true yarn run dev",
     "dev:all": "turbo dev",
     "build": "turbo build",
     "build:packages": "turbo build --filter=!desktop",

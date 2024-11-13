@@ -11,6 +11,29 @@ import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/licen
 const disableAllObfuscation =
   process.env.DISABLE_ALL_OBFUSCATION === 'true' || process.env.NODE_ENV === 'development'
 
+// TODO: actually fix the warnings in the code
+const silenceWarnings = process.env.SILENCE_WARNINGS === 'true'
+
+const svelteOptions = silenceWarnings
+  ? {
+      onwarn: (_warning: any, _handler: any) => {
+        return
+      }
+    }
+  : {}
+
+const cssConfig = silenceWarnings
+  ? {
+      preprocessorOptions: {
+        scss: {
+          silenceDeprecations: ['legacy-js-api', 'mixed-decls']
+        }
+      }
+    }
+  : {}
+// END TODO
+///////////
+
 export default defineConfig({
   main: {
     envPrefix: 'M_VITE_',
@@ -28,12 +51,13 @@ export default defineConfig({
     },
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
-    }
+    },
+    css: cssConfig
   },
   preload: {
     envPrefix: 'P_VITE_',
     plugins: [
-      svelte(),
+      svelte(svelteOptions),
       externalizeDepsPlugin({ exclude: ['@horizon/backend'] }),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webview.js'),
@@ -68,7 +92,8 @@ export default defineConfig({
         ]
       },
       minify: !disableAllObfuscation
-    }
+    },
+    css: cssConfig
   },
 
   renderer: {
@@ -83,7 +108,7 @@ export default defineConfig({
       }),
       */
       Markdown({ mode: [Mode.MARKDOWN] }),
-      svelte(),
+      svelte(svelteOptions),
       createLicensePlugin('renderer'),
       createConcatLicensesPlugin()
     ],
@@ -113,6 +138,7 @@ export default defineConfig({
     },
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
-    }
+    },
+    css: cssConfig
   }
 })
