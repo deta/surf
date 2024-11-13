@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
@@ -45,6 +45,21 @@ const initializePaths = () => {
   mkdirSync(userDataPath, { recursive: true })
   app.setPath('userData', userDataPath)
   return userDataPath
+}
+
+const registerProtocols = () => {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'surf',
+      privileges: {
+        standard: true,
+        supportFetchAPI: true,
+        secure: true,
+        corsEnabled: true,
+        stream: true
+      }
+    }
+  ])
 }
 
 const handleOpenUrl = (url: string) => {
@@ -187,6 +202,7 @@ const setupApplication = () => {
       .on('will-quit', () => surfBackendManager?.stop())
   }
 
+  registerProtocols()
   app.whenReady().then(initializeApp)
 }
 

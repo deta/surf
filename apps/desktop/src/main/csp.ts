@@ -12,7 +12,7 @@ const CSP_DIRECTIVES = [
   "style-src 'self' 'unsafe-inline'",
 
   // Allow images from same origin, data: URLs, and any HTTPS source (needed for tab favicons and resource previews)
-  "img-src 'self' data: blob: https:",
+  "img-src 'self' surf: data: blob: https:",
 
   // Allow object-src from same origin and blob: URLs (needed for PDF previews)
   "object-src 'self' blob:",
@@ -24,7 +24,7 @@ const CSP_DIRECTIVES = [
   "media-src 'self' blob:",
 
   // Allow connections to same origin, localhost (HTTP/WS), and specific APIs
-  `connect-src 'self' http://localhost:* ws://localhost:* https://*.sentry.io https://*.amplitude.com ${CSP_BACKEND_API} ${CSP_OPEN_AI}`,
+  `connect-src 'self' surf: http://localhost:* ws://localhost:* https://*.sentry.io https://*.amplitude.com ${CSP_BACKEND_API} ${CSP_OPEN_AI}`,
 
   // Allow web workers from same origin and blob: URLs
   "worker-src 'self' blob:"

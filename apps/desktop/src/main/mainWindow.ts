@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, screen } from 'electron'
+import { app, BrowserWindow, session, screen, net } from 'electron'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
@@ -9,7 +9,7 @@ import { isDev, isMac, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
-import { firefoxUA, normalizeElectronUserAgent } from './utils'
+import { firefoxUA, isPathSafe, normalizeElectronUserAgent } from './utils'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -28,11 +28,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-          x: winState.state.x,
-          y: winState.state.y,
-          width: winState.state.width,
-          height: winState.state.height
-        })
+        x: winState.state.x,
+        y: winState.state.y,
+        width: winState.state.width,
+        height: winState.state.height
+      })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -110,6 +110,25 @@ export function createWindow() {
 
     callback({ requestHeaders })
   })
+
+  mainWindowSession.protocol.handle('surf',
+    async (req: GlobalRequest) => {
+      try {
+        const id = req.url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
+        if (!id) return new Response('Invalid Surf protocol URL', { status: 400 })
+
+        const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
+        const path = join(base, id)
+
+        return isPathSafe(base, path)
+          ? await net.fetch(`file://${path}`)
+          : new Response('Forbidden', { status: 403 })
+      } catch (err) {
+        console.error('surf protocol error:', err)
+        return new Response('Internal Server Error', { status: 500 })
+      }
+    }
+  )
 
   applyCSPToSession(mainWindowSession)
   // TODO: expose these to the renderer over IPC so
