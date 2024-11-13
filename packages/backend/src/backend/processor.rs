@@ -381,7 +381,7 @@ fn process_resource_data(
         }
         ResourceTextContentType::Article => {
             match serde_json::from_str::<ArticleData>(resource_data)
-                .map_err(|e| eprintln!("deserializing article data: {e:#?}, {resource_data}"))
+                .map_err(|e| eprintln!("deserializing article data: {e:#?}"))
                 .ok()
                 .map(|article_data| {
                     format!(

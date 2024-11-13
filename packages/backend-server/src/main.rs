@@ -7,6 +7,8 @@ use crate::embeddings::model::EmbeddingModelMode;
 use crate::server::server::LocalAIServer;
 use std::path::Path;
 use std::str::FromStr;
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
@@ -28,6 +30,16 @@ pub type BackendResult<T> = Result<T, BackendError>;
 
 // TODO: handle kill signal gracefully
 fn main() {
+    tracing_subscriber::fmt()
+        .compact()
+        .with_target(false)
+        .with_line_number(true)
+        .with_thread_names(true)
+        .with_env_filter(EnvFilter::from_default_env())
+        .try_init()
+        .map_err(|err| eprintln!("failed to init tracing: {:?}", err))
+        .ok();
+
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 4 {
         eprintln!(
@@ -36,6 +48,7 @@ fn main() {
         );
         std::process::exit(1);
     }
+
     let root_path = Path::new(&args[1]);
     let socket_path = Path::join(root_path, "sffs-ai.sock");
     let index_path = Path::join(root_path, "index.usearch");
@@ -59,7 +72,7 @@ fn main() {
         }
     };
 
-    println!(
+    info!(
         "started with socket_path: {:#?}, local_llm_mode: {:#?}",
         socket_path, local_llm_mode
     );
@@ -72,6 +85,6 @@ fn main() {
     )
     .unwrap();
 
-    println!("healthy");
+    info!("healthy");
     server.listen();
 }

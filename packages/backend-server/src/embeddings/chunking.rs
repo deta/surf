@@ -1,51 +1,136 @@
 use html_escape::decode_html_entities;
+use tracing::{debug, info, instrument, trace, warn};
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
+#[derive(Debug)]
 pub struct ContentChunker {
     max_chunk_size: usize,
     overlap_sentences: usize,
 }
 
 impl ContentChunker {
-    // max chunk size is len of the chunk in characters
-    // overlap_sentences is the number of sentences to overlap between chunks
+    #[instrument(level = "trace")]
     pub fn new(max_chunk_size: usize, overlap_sentences: usize) -> Self {
+        info!(
+            "Creating new ContentChunker with max_chunk_size={}, overlap_sentences={}",
+            max_chunk_size, overlap_sentences
+        );
         ContentChunker {
             max_chunk_size,
             overlap_sentences,
         }
     }
 
+    #[instrument(level = "trace", skip(content), fields(content_length = content.len()))]
     pub fn normalize(content: &str) -> String {
+        debug!("Normalizing content of length {}", content.len());
+
+        let original_len = content.len();
+
         let sanitized: String = content.nfc().filter(|ch| !ch.is_control()).collect();
-        decode_html_entities(&sanitized).to_string()
+        trace!(
+            "After NFC normalization and control char filtering: length={}",
+            sanitized.len()
+        );
+
+        let decoded = decode_html_entities(&sanitized).to_string();
+
+        debug!(
+            "Normalization complete. Length changes: {} -> {} -> {}",
+            original_len,
+            sanitized.len(),
+            decoded.len()
+        );
+
+        decoded
     }
 
+    #[instrument(level = "trace", skip(self, content), fields(content_length = content.len()))]
     pub fn chunk(&self, content: &str) -> Vec<String> {
+        debug!(
+            "Starting content chunking. Content length: {}, max_chunk_size: {}, overlap_sentences: {}",
+            content.len(),
+            self.max_chunk_size,
+            self.overlap_sentences
+        );
+
         let sentences: Vec<&str> = content.unicode_sentences().collect();
+        debug!("Split content into {} sentences", sentences.len());
+
         let mut chunks: Vec<String> = Vec::new();
         let mut current_chunk: Vec<&str> = Vec::new();
         let mut current_length = 0;
 
         for (i, &sentence) in sentences.iter().enumerate() {
-            if current_length + sentence.len() > self.max_chunk_size && !current_chunk.is_empty() {
-                chunks.push(Self::normalize(&current_chunk.join(" ")));
+            trace!(
+                "Processing sentence {}/{}. Length: {}",
+                i + 1,
+                sentences.len(),
+                sentence.len()
+            );
 
-                // Keep the last 'overlap_sentences' for the next chunk
+            if current_length + sentence.len() > self.max_chunk_size && !current_chunk.is_empty() {
+                let chunk_text = Self::normalize(&current_chunk.join(" "));
+                debug!(
+                    "Chunk size limit reached. Creating chunk {} with {} sentences, length: {}",
+                    chunks.len() + 1,
+                    current_chunk.len(),
+                    chunk_text.len()
+                );
+                chunks.push(chunk_text);
+
+                // Keep overlap sentences
                 let overlap_start = current_chunk.len().saturating_sub(self.overlap_sentences);
-                current_chunk = current_chunk[overlap_start..].to_vec();
+                let overlapped_sentences = current_chunk[overlap_start..].to_vec();
+                trace!(
+                    "Keeping {} sentences for overlap",
+                    overlapped_sentences.len()
+                );
+
+                current_chunk = overlapped_sentences;
                 current_length = current_chunk.iter().map(|s| s.len() + 1).sum();
+
+                debug!(
+                    "New chunk started with {} overlapped sentences, current length: {}",
+                    current_chunk.len(),
+                    current_length
+                );
             }
 
             current_chunk.push(sentence);
             current_length += sentence.len() + 1; // +1 for space
 
-            // If this is the last sentence, add the final chunk
+            // Handle final chunk
             if i == sentences.len() - 1 {
-                chunks.push(Self::normalize(&current_chunk.join(" ")));
+                let final_chunk = Self::normalize(&current_chunk.join(" "));
+                debug!(
+                    "Creating final chunk {} with {} sentences, length: {}",
+                    chunks.len() + 1,
+                    current_chunk.len(),
+                    final_chunk.len()
+                );
+                chunks.push(final_chunk);
             }
         }
+
+        for (i, chunk) in chunks.iter().enumerate() {
+            if chunk.len() > self.max_chunk_size {
+                warn!(
+                    "Chunk {} exceeds max_chunk_size: {} > {}",
+                    i + 1,
+                    chunk.len(),
+                    self.max_chunk_size
+                );
+            }
+        }
+
+        debug!(
+            "Chunking complete. Created {} chunks from {} sentences",
+            chunks.len(),
+            sentences.len()
+        );
+
         chunks
     }
 }
@@ -64,7 +149,7 @@ mod tests {
         In modern human society, long-distance running has multiple purposes: people may engage in it for physical exercise, for recreation, as a means of travel, as a competitive sport, for economic reasons, or cultural reasons. Long-distance running can also be used as a means to improve cardiovascular health";
 
         let chunks = chunker.chunk(content);
-        for chunk in chunks.iter() {
+        for (_i, chunk) in chunks.iter().enumerate() {
             assert!(
                 chunk.len() <= 2000,
                 "Chunk length should be less than or equal to 2000 characters",

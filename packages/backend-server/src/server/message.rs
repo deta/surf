@@ -1,6 +1,7 @@
 use crate::{embeddings::store::DocsSimilarity, BackendResult};
 use std::sync::mpsc::Sender;
 
+#[derive(Debug)]
 pub enum Message {
     AddEmbedding(Sender<BackendResult<()>>, u64, Vec<f32>),
     RemoveEmbedding(Sender<BackendResult<()>>, u64),

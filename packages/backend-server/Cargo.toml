@@ -18,3 +18,5 @@ unicode-segmentation = "1.11.0"
 strum = { version = "0.26.3", features = ["strum_macros"] }
 strum_macros = "0.26.4"
 uds_windows = "1.1.0"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

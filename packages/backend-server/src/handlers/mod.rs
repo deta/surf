@@ -14,69 +14,86 @@ use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
+use tracing::{debug, error, instrument, warn};
 #[cfg(target_os = "windows")]
 use uds_windows::UnixStream;
 
-// TODO: better logging, especially for errors
-
+#[instrument(level = "trace", skip(stream))]
 pub fn read_msg(mut stream: &UnixStream) -> BackendResult<(usize, String)> {
     let mut buffer = [0; 1024 * 16];
     let bytes_read = stream.read(&mut buffer[..])?;
+
     if bytes_read == 0 {
+        debug!("received empty message");
         return Ok((0, String::new()));
     }
 
     let message = String::from_utf8_lossy(&buffer[..bytes_read]);
     let message = message.trim();
+    debug!(bytes_read = ?bytes_read, "received message");
     Ok((bytes_read, message.to_string()))
 }
 
+#[instrument(level = "trace", skip(stream))]
 pub fn send_ack(stream: &UnixStream) {
+    debug!("sending acknowledgment");
     try_stream_write_all(stream, "[ack]\n");
 }
 
+#[instrument(level = "trace", skip(stream))]
 pub fn send_done(stream: &UnixStream) {
+    debug!("sending done signal");
     try_stream_write_all(stream, "[done]\n");
 }
 
+#[instrument(level = "trace", skip(message))]
 pub fn is_done(message: &str) -> (bool, String) {
     let done = message.ends_with("[done]");
     if done {
         let stripped = message.strip_suffix("[done]").unwrap();
+        debug!("message contains done signal");
         return (done, stripped.to_string());
     }
     (done, message.to_string())
 }
 
+#[instrument(level = "trace", skip(stream, message), fields(message_len = message.len()))]
 pub fn try_stream_write_all(mut stream: &UnixStream, message: &str) {
     if let Err(e) = stream.write_all(message.as_bytes()) {
-        eprintln!("failed to write to stream: {:#?}", e);
+        error!(?e, "failed to write to stream");
     }
     if let Err(e) = stream.flush() {
-        eprintln!("failed to flush stream: {:#?}", e);
+        error!(?e, "failed to flush stream");
     }
 }
 
+#[instrument(level = "trace", skip(stream, bytes), fields(bytes_len = bytes.len()))]
 pub fn try_stream_write_all_bytes(mut stream: &UnixStream, bytes: &[u8]) {
     if let Err(e) = stream.write_all(bytes) {
-        eprintln!("failed to write to stream: {:#?}", e);
+        error!(?e, "failed to write bytes to stream");
     }
     if let Err(e) = stream.flush() {
-        eprintln!("failed to flush stream: {:#?}", e);
+        error!(?e, "failed to flush stream");
     }
 }
 
-// TODO: better error handling and saner protocol
+#[instrument(level = "trace", skip(main_thread_tx, embedding_model, stream))]
 pub fn handle_client(
     main_thread_tx: Sender<Message>,
     embedding_model: &EmbeddingModel,
     mut stream: UnixStream,
 ) -> BackendResult<()> {
+    debug!("handling new client connection");
     let mut client_message_buffer = String::new();
+
     let (bytes_read, api_request) = read_msg(&stream)?;
     let api_request = match Requests::from_str(&api_request) {
-        Ok(request) => request,
+        Ok(request) => {
+            debug!(?request, "parsed API request");
+            request
+        }
         Err(e) => {
+            error!(?e, "failed to parse API request");
             try_stream_write_all(
                 &stream,
                 format!("error: failed to parse api request: {}", e)
@@ -89,72 +106,87 @@ pub fn handle_client(
     send_ack(&stream);
 
     if bytes_read == 0 {
+        debug!("no message content received");
         return Ok(());
     }
 
+    debug!("entering message receive loop");
     loop {
         let (bytes_read, message) = read_msg(&stream)?;
         if bytes_read == 0 {
+            debug!("connection closed by client");
             return Ok(());
         }
         let (is_done, message) = is_done(&message);
         client_message_buffer.push_str(&message);
         if is_done {
-            println!("received message with len: {:#?}", message.len());
+            debug!(message_len = ?message.len(), "received complete message");
             break;
         }
     }
+
+    debug!(?api_request, "processing API request");
     match api_request {
         Requests::LLMChatCompletion => {
+            warn!("local LLM request rejected - feature not enabled");
             try_stream_write_all(&mut stream, "error: local llm not enabled, api unsupported");
         }
         Requests::GetDocsSimilarity => {
+            debug!("handling get docs similarity request");
             match handle_get_docs_similarity(
                 main_thread_tx,
                 &stream,
                 embedding_model,
                 &client_message_buffer,
             ) {
-                Ok(_) => {}
+                Ok(_) => debug!("get docs similarity request completed successfully"),
                 Err(e) => {
+                    error!(?e, "get docs similarity request failed");
                     try_stream_write_all(&stream, &format!("error: {:#?}", e));
                 }
             }
         }
         Requests::EncodeSentences => {
+            debug!("handling encode sentences request");
             match handle_encode_sentences(&stream, embedding_model, &client_message_buffer) {
-                Ok(_) => {}
+                Ok(_) => debug!("encode sentences request completed successfully"),
                 Err(e) => {
+                    error!(?e, "encode sentences request failed");
                     try_stream_write_all(&stream, &format!("error: {:#?}", e));
                 }
             }
         }
         Requests::FilteredSearch => {
+            debug!("handling filtered search request");
             match handle_filtered_search(
                 main_thread_tx,
                 &stream,
                 embedding_model,
                 &client_message_buffer,
             ) {
-                Ok(_) => {}
+                Ok(_) => debug!("filtered search request completed successfully"),
                 Err(e) => {
+                    error!(?e, "filtered search request failed");
                     try_stream_write_all(&mut stream, &format!("error: {:#?}", e));
                 }
             }
         }
         Requests::UpsertEmbeddings => {
+            debug!("handling upsert embeddings request");
             match handle_upsert_embeddings(
                 main_thread_tx,
                 &stream,
                 embedding_model,
                 &client_message_buffer,
             ) {
-                Ok(_) => {}
+                Ok(_) => debug!("upsert embeddings request completed successfully"),
                 Err(e) => {
+                    error!(?e, "upsert embeddings request failed");
                     try_stream_write_all(&mut stream, &format!("error: {:#?}", e));
                 }
             }
         }
     }
+    debug!("client handler completed successfully");
     Ok(())
 }

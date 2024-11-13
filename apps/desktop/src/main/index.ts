@@ -88,13 +88,13 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
   // prettier-ignore
   {
     surfBackendManager
-      .on('stdout', data => log.info('backend:stdout:', data))
-      .on('stderr', data => log.error('backend:stderr:', data))
-      .on('error', error => log.error(' backend:error:', error))
-      .on('warn', msg => log.warn('  backend:warn:', msg))
-      .on('info', msg => log.info('  backend:info:', msg))
-      .on('exit', code => log.info('  backend:exit: code:', code))
-      .on('signal', signal => log.info('backend:signal: signal:', signal))
+      .on('stdout', data => log.info('[backend:stdout] ', data))
+      .on('stderr', data => log.error('[backend:stderr]', data))
+      .on('error', error => log.error('[backend:error ]', error))
+      .on('warn', msg => log.warn('[backend:warn  ]', msg))
+      .on('info', msg => log.info('[backend:info  ]', msg))
+      .on('exit', code => log.info('[backend:exit  ] code:', code))
+      .on('signal', signal => log.info('[backend:signal] signal:', signal))
   }
 
   surfBackendManager.start()
