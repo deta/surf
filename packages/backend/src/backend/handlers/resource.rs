@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use tracing::instrument;
+
 use crate::{
     backend::{
         message::{
@@ -23,6 +25,7 @@ use crate::{
 use std::{path::Path, str::FromStr};
 
 impl Worker {
+    #[instrument(level = "trace", skip(self, tags, metadata))]
     pub fn create_resource(
         &mut self,
         resource_type: String,
@@ -135,6 +138,7 @@ impl Worker {
         })
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn read_resource(
         &mut self,
         id: String,
@@ -164,6 +168,7 @@ impl Worker {
         }))
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn remove_resource(&mut self, id: String) -> BackendResult<()> {
         let resource = self.db.get_resource(&id)?;
         // deletion is no-op if resource does not exist
@@ -200,6 +205,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn recover_resource(&mut self, id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
@@ -208,6 +214,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn proximity_search_resources(
         &mut self,
         resource_id: String,
@@ -232,6 +239,7 @@ impl Worker {
         )
     }
 
+    #[instrument(level = "trace", skip(self))]
     // Only return resource ids
     pub fn list_resources_by_tags(
         &mut self,
@@ -263,6 +271,7 @@ impl Worker {
     }
 
     // TODO: break up this function
+    #[instrument(level = "trace", skip(self))]
     pub fn search_resources(
         &mut self,
         query: String,
@@ -350,6 +359,7 @@ impl Worker {
         })
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
         let resource = self
             .read_resource(resource_id, false)?
@@ -371,6 +381,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self, resource))]
     pub fn update_resource(&mut self, resource: Resource) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::update_resource_tx(&mut tx, &resource)?;
@@ -378,6 +389,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn update_resource_metadata(&mut self, metadata: ResourceMetadata) -> BackendResult<()> {
         /*
         self.aiqueue_tx
@@ -391,6 +403,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn create_resource_tag(&mut self, mut tag: ResourceTag) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         tag.id = random_uuid();
@@ -399,6 +412,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn delete_resource_tag_by_id(&mut self, tag_id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::remove_resource_tag_tx(&mut tx, &tag_id)?;
@@ -406,6 +420,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn delete_resource_tag_by_name(
         &mut self,
         resource_id: String,
@@ -417,6 +432,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn update_resource_tag_by_name(&mut self, tag: ResourceTag) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::update_resource_tag_by_name_tx(&mut tx, &tag)?;
@@ -424,6 +440,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self, content))]
     pub fn upsert_resource_text_content(
         &mut self,
         resource_id: String,
@@ -463,6 +480,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self, content))]
     pub fn batch_upsert_resource_text_content(
         &mut self,
         resource_id: String,
@@ -516,6 +534,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self, chunks))]
     pub fn upsert_embeddings(
         &mut self,
         resource_id: String,
@@ -574,6 +593,7 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn upsert_resource_hash(&mut self, resource_id: String, hash: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::upsert_resource_hash_tx(&mut tx, &resource_id, &hash)?;
@@ -581,10 +601,12 @@ impl Worker {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn get_resource_hash(&mut self, resource_id: String) -> BackendResult<Option<String>> {
         self.db.get_resource_hash(&resource_id)
     }
 
+    #[instrument(level = "trace", skip(self))]
     pub fn delete_resource_hash(&mut self, resource_id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::delete_resource_hash_tx(&mut tx, &resource_id)?;
@@ -622,7 +644,7 @@ pub fn handle_resource_tag_message(
     }
 }
 
-#[tracing::instrument(level = "trace", skip(worker, oneshot))]
+#[tracing::instrument(level = "trace", skip(worker, oneshot, message))]
 pub fn handle_resource_message(
     worker: &mut Worker,
     oneshot: Option<TunnelOneshot>,
