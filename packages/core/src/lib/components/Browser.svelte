@@ -1434,30 +1434,6 @@
       log.debug('webview navigation same url')
       return
     }
-
-    if (tab.resourceBookmark) {
-      log.debug('tab url changed, removing bookmark')
-      tabsManager.update(tab.id, { resourceBookmark: null, chatResourceBookmark: null })
-    }
-
-    if (tab.chatResourceBookmark) {
-      const resource = await resourceManager.getResource(tab.chatResourceBookmark)
-      if (!resource) {
-        return
-      }
-
-      const isSilent =
-        (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
-        'true'
-
-      if (isSilent) {
-        log.debug(
-          'deleting silent chat resource as the tab has navigated away',
-          tab.chatResourceBookmark
-        )
-        await resourceManager.deleteResource(resource.id)
-      }
-    }
   }
 
   function handleCreateChat(e: CustomEvent<string>) {
