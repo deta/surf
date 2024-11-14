@@ -33,6 +33,7 @@
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
+  import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let tab: TabPage
   // export let url: Writable<string>
@@ -61,6 +62,8 @@
   const bookmarkingState = writable<BookmarkTabState | null>(null)
   const saveToSpacePopoverOpened = writable(false)
   const isLoadingPage = writable(false)
+
+  const miniBrowserService = useMiniBrowserService()
 
   const hostname = derived(url, (url) => {
     try {
@@ -430,6 +433,7 @@
       {#if $url}
         <BrowserTab
           {historyEntriesManager}
+          downloadIntercepters={miniBrowserService.downloadIntercepters}
           {url}
           id={tab.id}
           {webview}

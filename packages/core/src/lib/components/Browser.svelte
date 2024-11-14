@@ -174,6 +174,10 @@
     trackHostnames: false
   })
 
+  const downloadResourceMap = new Map<string, Download>()
+  const downloadToastsMap = new Map<string, ToastItem>()
+  const downloadIntercepters = writable(new Map<string, (data: Download) => void>())
+
   const log = useLogScope('Browser')
   const resourceManager = createResourceManager(telemetry)
   const storage = new HorizonDatabase()
@@ -184,7 +188,7 @@
   const tabsManager = createTabsManager(resourceManager, historyEntriesManager, telemetry)
   const homescreen = provideHomescreen(telemetry)
   const oasis = provideOasis(resourceManager, tabsManager)
-  const miniBrowserService = createMiniBrowserService(resourceManager)
+  const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
   const userConfigSettings = config.settings
@@ -237,9 +241,6 @@
   const rightSidebarTab = writable<RightSidebarTab>('chat')
   const showSplashScreen = writable(false)
   const cachedMagicTabs = new Set<string>()
-  const downloadResourceMap = new Map<string, Download>()
-  const downloadToastsMap = new Map<string, ToastItem>()
-  const downloadIntercepters = writable(new Map<string, (data: Download) => void>())
   const showStartMask = writable(false)
   const showEndMask = writable(false)
   const additionalChatContextItems = writable<ContextItem[]>([])

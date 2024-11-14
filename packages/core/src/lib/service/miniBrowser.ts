@@ -3,7 +3,7 @@ import { Resource, ResourceManager } from './resources'
 import { generateID, useLogScope } from '@horizon/utils'
 import { OpenInMiniBrowserEventFrom, ResourceTagsBuiltInKeys } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
-import type { TabPage } from '../types'
+import type { Download, TabPage } from '../types'
 import type BrowserTab from '../components/Browser/BrowserTab.svelte'
 import type { Telemetry } from './telemetry'
 
@@ -215,15 +215,21 @@ export class MiniBrowserService {
   private log: ReturnType<typeof useLogScope>
   private resourceManager: ResourceManager
 
+  downloadIntercepters: Writable<Map<string, (data: Download) => void>>
+
   globalBrowser: MiniBrowser
   scopedBrowsers: Writable<{ [key: string]: MiniBrowser }>
 
   isOpen: Readable<boolean>
   openScopedBrowsers: Readable<string[]>
 
-  constructor(resourceManager: ResourceManager) {
+  constructor(
+    resourceManager: ResourceManager,
+    downloadIntercepters: Writable<Map<string, (data: Download) => void>>
+  ) {
     this.log = useLogScope('MiniBrowser')
     this.resourceManager = resourceManager
+    this.downloadIntercepters = downloadIntercepters
 
     this.globalBrowser = MiniBrowser.provide(resourceManager)
     this.scopedBrowsers = writable({})
@@ -285,8 +291,11 @@ export class MiniBrowserService {
     })
   }
 
-  static provide(resourceManager: ResourceManager) {
-    const service = new MiniBrowserService(resourceManager)
+  static provide(
+    resourceManager: ResourceManager,
+    downloadIntercepters: Writable<Map<string, (data: Download) => void>>
+  ) {
+    const service = new MiniBrowserService(resourceManager, downloadIntercepters)
 
     setContext(MINI_BROWSER_SERVICE_CONTEXT_KEY, service)
 
