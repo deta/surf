@@ -3,13 +3,13 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { get, writable } from 'svelte/store'
   import { useTelemetry } from '../../../service/telemetry'
-  import { useOasis } from '../../../service/oasis'
+  import { OasisSpace, useOasis } from '../../../service/oasis'
   import { useToasts } from '../../../service/toast'
   import type { Resource } from '../../../service/resources'
   import { BentoController } from './BentoController'
   import { blobToDataUrl } from '../../../utils/screenshot'
   import { DragculaDragEvent, HTMLDragZone } from '@horizon/dragcula'
-  import { DragTypeNames, type Space } from '../../../types'
+  import { DragTypeNames } from '../../../types'
   import { useHomescreen } from './homescreen'
   import LazyComponent from '../../Atoms/LazyComponent.svelte'
   import { createResourcesFromMediaItems, processDrop } from '../../../service/mediaImporter'
@@ -31,7 +31,7 @@
 
   const log = useLogScope('Homescreen')
   const dispatch = createEventDispatcher<{
-    'space-selected': Space
+    'space-selected': OasisSpace
   }>()
   const telemetry = useTelemetry()
   const oasis = useOasis()

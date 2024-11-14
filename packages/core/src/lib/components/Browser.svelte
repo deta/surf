@@ -34,13 +34,7 @@
   import type { PaneAPI } from 'paneforge'
   import { Resource, ResourceTag, createResourceManager } from '../service/resources'
 
-  import {
-    DragTypeNames,
-    type DragTypes,
-    SpaceEntryOrigin,
-    type Space,
-    type SpaceSource
-  } from '../types'
+  import { DragTypeNames, type DragTypes, SpaceEntryOrigin, type SpaceSource } from '../types'
 
   import BrowserTab, { type BrowserTabNewTabEvent } from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
@@ -104,8 +98,8 @@
   import { scrollToTextCode } from '../constants/inline'
   import { onboardingSpace } from '../constants/examples'
   import { SFFS } from '../service/sffs'
-  import { provideOasis, colorPairs } from '../service/oasis'
-  import OasisSpace from './Oasis/OasisSpace.svelte'
+  import { provideOasis, colorPairs, OasisSpace } from '../service/oasis'
+  import OasisSpaceRenderer from './Oasis/OasisSpace.svelte'
 
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
   import ToastsProvider from './Toast/ToastsProvider.svelte'
@@ -2189,7 +2183,7 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleCreateTabForSpace = async (e: CustomEvent<Space>) => {
+  const handleCreateTabForSpace = async (e: CustomEvent<OasisSpace>) => {
     const space = e.detail
 
     log.debug('create tab from space', space)
@@ -2212,9 +2206,9 @@
       await tick()
 
       await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu, {
-        isLiveSpace: space.name.liveModeEnabled,
-        hasSources: (space.name.sources ?? []).length > 0,
-        hasSmartQuery: !!space.name.smartFilterQuery
+        isLiveSpace: space.dataValue.liveModeEnabled,
+        hasSources: (space.dataValue.sources ?? []).length > 0,
+        hasSmartQuery: !!space.dataValue.smartFilterQuery
       })
     } catch (error) {
       log.error('[Browser.svelte] Failed to add folder to sidebar:', error)
@@ -2223,7 +2217,7 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
+  const handleSaveResourceInSpace = async (e: CustomEvent<OasisSpace>) => {
     log.debug('add resource to space', e.detail)
 
     const toast = toasts.loading('Adding resource to space...')
@@ -2425,7 +2419,7 @@
     }
   }
 
-  const handleAddSourceToSpace = async (e: CustomEvent<Space>) => {
+  const handleAddSourceToSpace = async (e: CustomEvent<OasisSpace>) => {
     if ($activeTab?.type !== 'page') {
       log.debug('No page tab active')
       return
@@ -2450,7 +2444,7 @@
       log.debug('adding source to space', name, source)
       await oasis.updateSpaceData(space.id, {
         showInSidebar: true,
-        sources: [...(space.name.sources ?? []), source],
+        sources: [...(space.dataValue.sources ?? []), source],
         sortBy: 'source_published_at',
         liveModeEnabled: true
       })
@@ -2664,7 +2658,7 @@
 
     // When the user drops the onboarding space into the chat we start the onboarding
     const ONBOARDING_SPACE_NAME = onboardingSpace.name
-    if (space.name.folderName === ONBOARDING_SPACE_NAME) {
+    if (space.dataValue.folderName === ONBOARDING_SPACE_NAME) {
       handleAddContextItem(
         new CustomEvent('add-context-item', {
           detail: {
@@ -4144,7 +4138,7 @@
 
     if (item.type === 'space') {
       // This is needed for the onboarding to get to the next step
-      handleChattingWithOnboardingSpace(item.data.name.folderName)
+      handleChattingWithOnboardingSpace(item.data.dataValue.folderName)
     }
 
     additionalChatContextItems.update((additionalChatContextItems) => {
@@ -4596,7 +4590,7 @@
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
-                      on:create-live-space={handleCreateLiveSpace}
+                      on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
                       on:include-tab={handleIncludeTabInMagic}
@@ -4721,7 +4715,7 @@
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
-                      on:create-live-space={handleCreateLiveSpace}
+                      on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
                       on:include-tab={handleIncludeTabInMagic}
@@ -4821,7 +4815,7 @@
               on:open-stuff={() => ($showNewTabOverlay = 2)}
               on:open={(e) =>
                 miniBrowserService.globalBrowser.openResource(e.detail, { from: 'stack' })}
-              on:remove={(e) => oasis.removeResourceFromSpace(e.detail)}
+              on:remove={(e) => oasis.removeResourcesFromSpaceOrOasis(e.detail)}
               on:open-and-chat={handleOpenAndChat}
               on:open-resource-in-mini-browser={(e) =>
                 openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Stack)}
@@ -4971,7 +4965,6 @@
           spaceId={'all'}
           activeTab={$activeTab}
           bind:showTabSearch={$showNewTabOverlay}
-          selectedSpaceId={newTabSelectedSpaceId}
           on:open-space-as-tab={handleCreateTabForSpace}
           on:deleted={handleDeletedSpace}
           {historyEntriesManager}
@@ -5013,7 +5006,7 @@
 
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window flex-grow active no-drag" style="--scaling: 1;">
-            <OasisSpace
+            <OasisSpaceRenderer
               spaceId={$selectedSpace}
               active
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
@@ -5090,7 +5083,7 @@
               {:else if tab.type === 'oasis-discovery'}
                 <OasisDiscovery {resourceManager} />
               {:else if tab.type === 'space'}
-                <OasisSpace
+                <OasisSpaceRenderer
                   spaceId={tab.spaceId}
                   active={$activeTabId === tab.id}
                   on:create-resource-from-oasis={handeCreateResourceFromOasis}

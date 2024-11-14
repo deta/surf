@@ -1,5 +1,5 @@
-import type { Tab, CreateTabOptions, TabPage, TabOnboarding } from '../types/browser.types'
-import type { Optional, Space, SpaceData } from '../types'
+import type { TabPage } from '../types/browser.types'
+import type { SpaceData } from '../types'
 import { SpaceEntryOrigin } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'

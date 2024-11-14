@@ -1,8 +1,8 @@
 <script lang="ts">
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragItem, type DragculaDragEvent } from '@horizon/dragcula'
-  import { DragTypeNames, type DragTypes, type Space } from '../../types'
-  import { useOasis } from '../../service/oasis'
+  import { DragTypeNames, type DragTypes } from '../../types'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { createEventDispatcher, onMount } from 'svelte'
   import OasisResourceLoader from '../Oasis/OasisResourceLoader.svelte'
   import { Icon } from '@horizon/icons'
@@ -11,7 +11,7 @@
   import { useTabsManager } from '../../service/tabs'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
 
-  export let space: Space
+  export let space: OasisSpace
   export let draggable: boolean | undefined
 
   // NOTE: container will use container query to determine the mode
@@ -19,13 +19,19 @@
 
   export let contentViewMode: 'list' | 'grid' = 'list'
   export let contentMode =
-    space?.name?.folderName === 'Media' ? 'media' : contentViewMode === 'grid' ? 'media' : 'tiny'
+    space?.dataValue?.folderName === 'Media'
+      ? 'media'
+      : contentViewMode === 'grid'
+        ? 'media'
+        : 'tiny'
+
+  $: spaceData = space.data
 
   const dispatch = createEventDispatcher<{
     'select-space': string
     'change-space-view-mode': 'list' | 'grid'
     'remove-from-homescreen': void
-    'open-space-as-tab': Space
+    'open-space-as-tab': OasisSpace
   }>()
   const oasis = useOasis()
   const resourceManager = oasis.resourceManager
@@ -89,7 +95,7 @@
 >
   <div class="identity">
     <div class="flex" style="gap: 1ch;" on:click={() => dispatch('select-space', space.id)}>
-      <span class="name">{space?.name?.folderName}</span>
+      <span class="name">{$spaceData.folderName}</span>
       <SpaceIcon folder={space} interactive={false} />
     </div>
     <button

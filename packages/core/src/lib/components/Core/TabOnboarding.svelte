@@ -45,8 +45,8 @@
     const ONBOARDING_SPACE_NAME = onboardingSpace.name
     const ONBOARDING_SPACE_QUERY = onboardingSpace.query
     const spaces = get(oasis.spaces)
-    const space = spaces.find((space: any) => {
-      return space.name.folderName === ONBOARDING_SPACE_NAME
+    const space = spaces.find((space) => {
+      return space.dataValue.folderName === ONBOARDING_SPACE_NAME
     })
 
     if (space) {

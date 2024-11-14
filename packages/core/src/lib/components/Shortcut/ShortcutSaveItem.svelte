@@ -1,19 +1,22 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import { derived, type Writable } from 'svelte/store'
-  import type { Space } from '../../types'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
-  export let spaces: Writable<Space[]>
+  export let spaces: Writable<OasisSpace[]>
   export let infoText: string | undefined = undefined
 
   let selectedSpaceIndex = 0
   let inputRef: HTMLInputElement
 
-  const dispatch = createEventDispatcher<{ 'save-resource-in-space': Space }>()
+  const dispatch = createEventDispatcher<{ 'save-resource-in-space': OasisSpace }>()
 
   const filteredSpaces = derived([spaces], ([spaces]) => {
     return spaces.filter(
-      (space) => space.id !== 'all' && space.name.folderName !== '.tempspace' && !space.name.builtIn
+      (space) =>
+        space.id !== 'all' &&
+        space.dataValue.folderName !== '.tempspace' &&
+        !space.dataValue.builtIn
     )
   })
 
@@ -64,7 +67,7 @@
   {#if $filteredSpaces && $filteredSpaces.length > 0}
     {#each $filteredSpaces as space, index}
       <span class="label" on:click={() => handleClick(index)} aria-hidden="true"
-        >{space.name.folderName}</span
+        >{space.dataValue.folderName}</span
       >
     {/each}
   {:else}

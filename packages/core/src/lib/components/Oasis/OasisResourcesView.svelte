@@ -54,7 +54,7 @@
 
   const handleAddToSpace = async (spaceId: string) => {
     const itemCount = $selectedItemIds.length
-    const spaceName = $spaces.find((space) => space.id === spaceId)?.name.folderName
+    const spaceName = $spaces.find((space) => space.id === spaceId)?.dataValue.folderName
     try {
       await oasis.addResourcesToSpace(spaceId, $selectedItemIds, SpaceEntryOrigin.ManuallyAdded)
       toasts.success(`Added ${itemCount} item${itemCount > 1 ? 's' : ''} to ${spaceName}`)
@@ -102,15 +102,15 @@
         items: $spaces
           .filter(
             (e) =>
-              e.name.folderName.toLowerCase() !== 'all my stuff' &&
-              e.name.folderName.toLowerCase() !== '.tempspace' &&
-              !e.name.builtIn
+              e.dataValue.folderName.toLowerCase() !== 'all my stuff' &&
+              e.dataValue.folderName.toLowerCase() !== '.tempspace' &&
+              !e.dataValue.builtIn
           )
-          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
           .map((space) => ({
             type: 'action',
             icon: '',
-            text: space.name.folderName,
+            text: space.dataValue.folderName,
             action: () => handleAddToSpace(space.id)
           }))
       },

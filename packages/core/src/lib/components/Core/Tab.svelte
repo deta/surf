@@ -15,15 +15,8 @@
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
-  import { Resource, useResourceManager } from '../../service/resources'
-  import {
-    ResourceTagsBuiltInKeys,
-    ResourceTypes,
-    type Space,
-    type DragTypes,
-    DragTypeNames
-  } from '../../types'
-  import { popover } from '../Atoms/Popover/popover'
+  import { useResourceManager } from '../../service/resources'
+  import { ResourceTypes, type DragTypes, DragTypeNames } from '../../types'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { contextMenu } from './ContextMenu.svelte'
@@ -37,19 +30,11 @@
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useHomescreen } from '../Oasis/homescreen/homescreen'
-
-  const log = useLogScope('Tab')
-  const tabsManager = useTabsManager()
-  const userConfig = useConfig()
-  const homescreen = useHomescreen()
-  const homescreenVisible = homescreen.visible
-
-  const userSettings = userConfig.settings
   import {
     useGlobalMiniBrowser,
-    useScopedMiniBrowser,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
+  import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -61,7 +46,7 @@
   export let isUserSelected: boolean
   export let enableEditing = false
   export let showClose = false
-  export let spaces: Writable<Space[]>
+  export let spaces: Writable<OasisSpace[]>
   export const inputUrl = writable<string>('')
   export let hibernated = false
   export let tabSize: number | undefined = undefined
@@ -70,15 +55,20 @@
   export let isSelected = false
   export let isMagicActive = false
 
+  const log = useLogScope('Tab')
+  const tabsManager = useTabsManager()
+  const userConfig = useConfig()
+  const oasis = useOasis()
+  const homescreen = useHomescreen()
   const globalMiniBrowser = useGlobalMiniBrowser()
-
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
+
+  const homescreenVisible = homescreen.visible
+  const userSettings = userConfig.settings
 
   // Why is there no better way in Svelte :/
   $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
   $: isScopedMiniBrowserOpen = $isScopedMiniBrowserOpenStore ?? false
-
-  $: log.debug('mini browser open', isScopedMiniBrowserOpen)
 
   export const editAddress = async () => {
     isEditing = true
@@ -109,9 +99,9 @@
     bookmark: { trigger: SaveToOasisEventTrigger }
     pin: string
     unpin: string
-    'save-resource-in-space': Space
+    'save-resource-in-space': OasisSpace
     'create-live-space': void
-    'add-source-to-space': Space
+    'add-source-to-space': OasisSpace
     'exclude-other-tabs': string
     'exclude-tab': string
     'include-tab': string
@@ -133,7 +123,7 @@
   const SHOW_INSECURE_WARNING_TIMEOUT = 3000
 
   let addressInputElem: HTMLInputElement
-  let space: Space | null = null
+  let space: OasisSpace | null = null
   let isDragging = false
   let isEditing = false
   let hovered = false
@@ -291,7 +281,7 @@
 
   const fetchSpace = async (id: string) => {
     try {
-      space = await resourceManager.getSpace(id)
+      space = await oasis.getSpace(id)
     } catch (error) {
       log.error('Failed to fetch space:', error)
     }
@@ -311,12 +301,12 @@
     dispatch('create-live-space')
   }
 
-  const handleAddSourceToSpace = (event: CustomEvent<Space>) => {
+  const handleAddSourceToSpace = (event: CustomEvent<OasisSpace>) => {
     liveSpacePopoverOpened.set(false)
     dispatch('add-source-to-space', event.detail)
   }
 
-  const handleSaveResourceInSpace = (event: CustomEvent<Space>) => {
+  const handleSaveResourceInSpace = (event: CustomEvent<OasisSpace>) => {
     saveToSpacePopoverOpened.set(false)
     dispatch('save-resource-in-space', event.detail)
   }

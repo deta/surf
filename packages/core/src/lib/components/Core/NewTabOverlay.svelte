@@ -13,7 +13,7 @@
     'open-url': string
     'activate-tab': string
     'create-chat': string
-    'open-space': Space
+    'open-space': OasisSpace
     'create-note': string
     'toggle-homescreen': void
     open: string
@@ -39,7 +39,7 @@
     normalizeURL,
     conditionalArrayItem
   } from '@horizon/utils'
-  import { useOasis } from '../../service/oasis'
+  import { useOasis, type OasisSpace } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import {
@@ -54,8 +54,7 @@
     ResourceTypes,
     SpaceEntryOrigin,
     type DragTypes,
-    type HistoryEntry,
-    type Space
+    type HistoryEntry
   } from '../../types'
   import DropWrapper from '../Oasis/DropWrapper.svelte'
   import stuffAdd from '../../../../public/assets/demo/stuffsave.gif'
@@ -80,7 +79,7 @@
   import Fuse from 'fuse.js'
   import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
   import type { HistoryEntriesManager } from '../../service/history'
-  import OasisSpace from '../Oasis/OasisSpace.svelte'
+  import OasisSpaceRenderer from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import { useConfig } from '../../service/config'
   import { Drawer } from 'vaul-svelte'
@@ -123,7 +122,7 @@
   const selectedSpaceId = oasis.selectedSpace
   const userConfigSettings = config.settings
 
-  let oasisSpace: OasisSpace
+  let oasisSpaceComp: OasisSpaceRenderer
 
   let createSpaceRef: any
 
@@ -291,12 +290,12 @@
     } as CMDMenuItem
   }
 
-  function spaceToItem(space: Space, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
+  function spaceToItem(space: OasisSpace, params: Partial<CMDMenuItem> = {}): CMDMenuItem {
     return {
       id: space.id,
-      label: space.name.folderName,
+      label: space.dataValue.folderName,
       type: 'space',
-      iconColors: space.name.colors,
+      iconColors: space.dataValue.colors,
       ...params
     } as CMDMenuItem
   }
@@ -808,7 +807,7 @@
     let isFromLiveSpace = false
 
     for (const resource of resources) {
-      const references = await resourceManager.getAllReferences(resource.id, $spaces)
+      const references = await resourceManager.getAllReferences(resource.id, oasis.spacesValue)
       if (isEverythingSpace) {
         totalReferences += references.length
       }
@@ -834,7 +833,7 @@
 
     try {
       for (const resource of resources) {
-        const references = await resourceManager.getAllReferences(resource.id, $spaces)
+        const references = await resourceManager.getAllReferences(resource.id, oasis.spacesValue)
         log.debug('removing resource references', references)
         for (const reference of references) {
           log.debug('deleting reference', reference)
@@ -1025,7 +1024,7 @@
   }
 
   const handleDeleteSpace = async () => {
-    await oasisSpace.handleDeleteSpace(false, true)
+    await oasisSpaceComp.handleDeleteSpace(false, true)
     isCreatingNewSpace.set(false)
   }
 
@@ -1393,7 +1392,7 @@
 
                   {#if $selectedSpaceId !== 'all'}
                     {#key $selectedSpaceId}
-                      <OasisSpace
+                      <OasisSpaceRenderer
                         spaceId={$selectedSpaceId}
                         active
                         showBackBtn
@@ -1413,7 +1412,7 @@
                         on:handled-drop={handlePostDropOnSpace}
                         on:open-space-and-chat
                         insideDrawer={true}
-                        bind:this={oasisSpace}
+                        bind:this={oasisSpaceComp}
                         {searchValue}
                       />
                     {/key}

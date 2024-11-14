@@ -4,7 +4,7 @@ import type {
   PageChatUpdateContextEventTrigger
 } from '@horizon/types'
 import type { Resource, ResourceHistoryEntry } from '../service/resources'
-import type { Space } from './spaces.types'
+import type { OasisSpace } from '../service/oasis'
 
 export interface BaseTab {
   id: string
@@ -260,7 +260,7 @@ export type ContextItemResource = {
 export type ContextItemSpace = {
   id: string
   type: 'space'
-  data: Space
+  data: OasisSpace
 }
 
 export type AddContextItemEvent = {

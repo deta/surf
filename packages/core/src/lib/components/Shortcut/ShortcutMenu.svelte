@@ -1,13 +1,13 @@
 <script lang="ts" context="module">
   export type ShortcutMenuEvents = {
-    'create-tab-from-space': Space
+    'create-tab-from-space': OasisSpace
     'create-new-space': {
       name: string
       processNaturalLanguage: boolean
     }
     'update-existing-space': {
       name: string
-      space: Space
+      space: OasisSpace
       processNaturalLanguage: boolean
       userPrompt: string
       resourceIds?: string[]
@@ -16,14 +16,14 @@
 </script>
 
 <script lang="ts">
-  import { everythingSpace, ResourceManager } from '../../service/resources'
+  import { everythingSpace } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
-  import type { Space } from '../../types'
   import { tooltip } from '@horizon/utils'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
-  export let spaces: Writable<Space[]>
+  export let spaces: Writable<OasisSpace[]>
   export let closePopover: () => void
 
   let selectedSpaceIndex = 0
@@ -37,15 +37,13 @@
   let newSpaceName = ''
 
   const filteredSpaces = derived([spaces, searchQuery], ([spaces, searchQuery]) => {
-    const hasEverythingSpace = spaces.some((space) => space.id === everythingSpace.id)
-    const everything = hasEverythingSpace ? spaces : [everythingSpace, ...spaces]
-    return everything.filter((space) => {
-      if (space.name.showInSidebar) {
+    return spaces.filter((space) => {
+      if (space.dataValue.showInSidebar) {
         return false
       }
 
       if (searchQuery) {
-        return space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
+        return space.dataValue.folderName.toLowerCase().includes(searchQuery.toLowerCase())
       }
 
       return true
@@ -157,7 +155,7 @@
         class="label"
         class:active={index === selectedSpaceIndex}
         on:click={() => handleClick(index)}
-        aria-hidden="true">{space.name.folderName}</span
+        aria-hidden="true">{space.dataValue.folderName}</span
       >
     {/each}
   {:else}

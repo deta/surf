@@ -127,17 +127,17 @@
     return spaces
       .filter(
         (e) =>
-          e.name.folderName.toLowerCase() !== 'all my stuff' &&
-          e.name.folderName.toLowerCase() !== '.tempspace' &&
-          !e.name.builtIn
+          e.dataValue.folderName.toLowerCase() !== 'all my stuff' &&
+          e.dataValue.folderName.toLowerCase() !== '.tempspace' &&
+          !e.dataValue.builtIn
       )
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .map(
         (space) =>
           ({
             type: 'action',
             icon: '',
-            text: space.name.folderName,
+            text: space.dataValue.folderName,
             action: async () => {
               try {
                 await oasis.addResourcesToSpace(
@@ -145,9 +145,9 @@
                   [resource.id],
                   SpaceEntryOrigin.ManuallyAdded
                 )
-                toasts.success(`Added to ${space.name.folderName}`)
+                toasts.success(`Added to ${space.dataValue.folderName}`)
               } catch (e) {
-                toasts.error(`Failed to add to ${space.name.folderName}`)
+                toasts.error(`Failed to add to ${space.dataValue.folderName}`)
               }
             }
           }) as CtxItem

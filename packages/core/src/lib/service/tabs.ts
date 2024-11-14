@@ -31,6 +31,7 @@ import type { Telemetry } from './telemetry'
 import { getContext, setContext, tick } from 'svelte'
 import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
+import type { OasisSpace } from './oasis'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -598,15 +599,15 @@ export class TabsManager {
     return newTab as TabPage
   }
 
-  async addSpaceTab(space: Space, opts?: CreateTabOptions) {
+  async addSpaceTab(space: OasisSpace, opts?: CreateTabOptions) {
     this.log.debug('Creating new space tab')
     const newTab = await this.create<TabSpace>(
       {
-        title: space.name.folderName,
+        title: space.dataValue.folderName,
         icon: '',
         spaceId: space.id,
         type: 'space',
-        colors: space.name.colors
+        colors: space.dataValue.colors
       },
       opts
     )

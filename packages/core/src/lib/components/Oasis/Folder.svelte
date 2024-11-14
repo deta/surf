@@ -1,49 +1,68 @@
+<script lang="ts" context="module">
+  export type EditingStartEvent = { id: string }
+  export type OpenSpaceAsTabEvent = { space: OasisSpace; active: boolean }
+  export type SpaceSelectedEvent = { id: string; canGoBack: boolean }
+  export type OpenSpaceAndChatEvent = { spaceId: string }
+  export type UpdateFolderDataEvent = {
+    folderName?: string
+    smartFilterQuery?: string
+    colors?: [string, string]
+  }
+
+  export type FolderEvents = {
+    'editing-start': { id: string }
+    'editing-end': void
+    'update-data': UpdateFolderDataEvent
+    select: void
+    'open-space-as-tab': OpenSpaceAsTabEvent
+    'space-selected': SpaceSelectedEvent
+    'open-space-and-chat': { spaceId: string }
+    Drop: { drag: DragculaDragEvent; spaceId: string }
+  }
+</script>
+
 <script lang="ts">
   import { createEventDispatcher, tick, onMount } from 'svelte'
   import { writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
   import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
-  import type { DragTypes, Space, SpaceData } from '../../types'
+  import type { DragTypes } from '../../types'
   import {
     DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SpaceEntryOrigin
   } from '../../types'
-  import { useLogScope, hover, tooltip, isModKeyPressed } from '@horizon/utils'
+  import { useLogScope, hover, isModKeyPressed } from '@horizon/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
-  import { useOasis } from '../../service/oasis'
-  import { processDrop } from '../../service/mediaImporter'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
-  import { fade, fly } from 'svelte/transition'
   import {
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
     UpdateSpaceSettingsEventTrigger
   } from '@horizon/types'
 
-  import type { TabSpace } from '../../types/browser.types'
   import { useTelemetry } from '../../service/telemetry'
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
-  export let folder: Space
+  export let folder: OasisSpace
   export let selected: boolean
   export let showPreview = false
   export let isEditing = false // New prop to control editing state
 
   const log = useLogScope('Folder')
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<FolderEvents>()
   const oasis = useOasis()
   const toast = useToasts()
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
 
-  let folderDetails = folder.name
-  let inputWidth = `${folderDetails.folderName.length}ch`
+  let folderDetails = folder.data
+  let inputWidth = `${$folderDetails.folderName.length}ch`
   let processing = false
   let inputElement: HTMLInputElement
   let previewContainer: HTMLDivElement
@@ -52,7 +71,7 @@
   const hovered = writable(false)
   const draggedOver = writable(false)
   const inView = writable(false)
-  const previousName = writable(folderDetails.folderName)
+  const previousName = writable($folderDetails.folderName)
 
   $: {
     if (isEditing) {
@@ -110,7 +129,7 @@
     if (!(event.target as HTMLElement).closest('button')) {
       try {
         log.debug('Selected space:', folder.id)
-        if (folder.name.folderName === '.tempspace' && $selectedFolder === '.tempspace') {
+        if (folder.dataValue.folderName === '.tempspace' && $selectedFolder === '.tempspace') {
           return
         }
         if (isModKeyPressed(event) && folder.id !== 'all') {
@@ -131,12 +150,12 @@
   }
 
   const handleBlur = async () => {
-    if (folderDetails.folderName.trim() !== '') {
-      dispatch('update-data', { folderName: folderDetails.folderName })
+    if ($folderDetails.folderName.trim() !== '') {
+      dispatch('update-data', { folderName: $folderDetails.folderName })
     } else {
-      folderDetails.folderName = $previousName
+      $folderDetails.folderName = $previousName
       dispatch('update-data', { folderName: $previousName })
-      previousName.set(folderDetails.folderName)
+      previousName.set($folderDetails.folderName)
       await tick()
     }
     dispatch('editing-end')
@@ -155,7 +174,7 @@
     log.debug('Adding space to tabs:', space)
     try {
       if (space) {
-        space.name.showInSidebar = true
+        space.dataValue.showInSidebar = true
 
         await oasis.updateSpaceData(folder.id, {
           showInSidebar: true
@@ -172,7 +191,7 @@
 
   const handleDelete = async () => {
     try {
-      const confirmed = confirm(`Are you sure you want to delete ${folder.name.folderName}?`)
+      const confirmed = confirm(`Are you sure you want to delete ${folder.dataValue.folderName}?`)
       if (!confirmed) {
         return
       }
@@ -270,7 +289,7 @@
 
     if (e.code === 'Space' && !e.shiftKey) {
       e.preventDefault()
-      folderDetails.folderName = value + ' '
+      $folderDetails.folderName = value + ' '
     } else if (e.code === 'Enter') {
       e.preventDefault()
       if (value.trim() !== '') {
@@ -314,7 +333,7 @@
   })
 
   $: {
-    inputWidth = `${folderDetails.folderName.length + 3}ch`
+    inputWidth = `${$folderDetails.folderName.length + 3}ch`
   }
 </script>
 
@@ -388,7 +407,7 @@
             id={`folder-input-${folder.id}`}
             style={`width: 100%;`}
             type="text"
-            bind:value={folderDetails.folderName}
+            bind:value={$folderDetails.folderName}
             class="folder-input isEditing"
             on:keydown={handleKeyDown}
             on:blur={handleBlur}
@@ -400,7 +419,7 @@
             aria-hidden="true"
             on:click|stopPropagation={handleSpaceSelect}
           >
-            {folderDetails.folderName}
+            {$folderDetails.folderName}
           </div>
         {/if}
       </div>

@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
   export type ShortcutMenuEvents = {
-    'create-tab-from-space': Space
+    'create-tab-from-space': OasisSpace
     'create-new-space': { name: string; processNaturalLanguage: boolean }
     'create-new-history-tab': void
     'create-new-tab': void
@@ -12,10 +12,10 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
-  import type { Space } from '../../types'
   import { DropdownMenu } from 'bits-ui'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
-  export let spaces: Writable<Space[]>
+  export let spaces: Writable<OasisSpace[]>
 
   let selectedSpaceIndex = 0
   let isLoading = true
@@ -29,15 +29,13 @@
   let newSpaceName = ''
 
   const filteredSpaces = derived([spaces, searchQuery], ([spaces, searchQuery]) => {
-    const hasEverythingSpace = spaces.some((space) => space.id === everythingSpace.id)
-    const everything = hasEverythingSpace ? spaces : [everythingSpace, ...spaces]
-    return everything.filter((space) => {
+    return spaces.filter((space) => {
       // if (space.name.showInSidebar) {
       //   return false
       // }
 
       if (searchQuery) {
-        return space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
+        return space.dataValue.folderName.toLowerCase().includes(searchQuery.toLowerCase())
       }
 
       return true
@@ -111,7 +109,7 @@
             class="flex  select-none items-center group  py-4 pl-3 pr-1.5 cursor-pointer space-x-4 justify-between  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
             on:click={() => handleClick(index)}
           >
-            <div class="truncate">{space.name.folderName}</div>
+            <div class="truncate">{space.dataValue.folderName}</div>
             <div
               class="items-center gap-px text-[10px] hidden group-focus:flex opacity-50 ease-in-out flex-shrink-0"
             >

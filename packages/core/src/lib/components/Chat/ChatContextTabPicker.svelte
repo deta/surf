@@ -72,7 +72,7 @@
         const filteredSpaces = $spaces.filter(
           (space) =>
             contextItems.findIndex((ci) => ci.type === 'space' && ci.data.id === space.id) === -1 &&
-            space.name.folderName.toLowerCase().includes(searchValue.toLowerCase())
+            space.dataValue.folderName.toLowerCase().includes(searchValue.toLowerCase())
         )
 
         const spaceItems = filteredSpaces.slice(0, 5).map(
@@ -80,7 +80,7 @@
             ({
               id: space.id,
               type: 'space',
-              label: space.name.folderName,
+              label: space.dataValue.folderName,
               value: `space;;${space.id}`,
               icon: space.id
             }) as TabItem

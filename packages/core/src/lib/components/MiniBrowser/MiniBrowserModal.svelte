@@ -1,11 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
   import WebviewWrapper from '../Webview/WebviewWrapper.svelte'
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
     AddResourceToSpaceEventTrigger,
-    CreateTabEventTrigger,
     ResourceTagsBuiltInKeys,
     SaveToOasisEventTrigger,
     type WebViewEventKeyDown
@@ -13,11 +11,8 @@
   import {
     useLogScope,
     isModKeyAndKeyPressed,
-    copyToClipboard,
-    parseStringIntoUrl,
     getFileKind,
     tooltip,
-    generateID,
     checkIfYoutubeUrl
   } from '@horizon/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
@@ -25,19 +20,17 @@
   import { useToasts, type ToastItem } from '@horizon/core/src/lib/service/toast'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import Image from '../Atoms/Image.svelte'
-  import { derived, writable, type Writable } from 'svelte/store'
+  import { derived, writable } from 'svelte/store'
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import BrowserTab from '../Browser/BrowserTab.svelte'
   import {
     SpaceEntryOrigin,
     type BookmarkTabState,
-    type Optional,
-    type Space,
     type TabPage
   } from '@horizon/core/src/lib/types'
   import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
-  import { useOasis } from '@horizon/core/src/lib/service/oasis'
+  import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
 
@@ -223,7 +216,7 @@
     }
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
+  const handleSaveResourceInSpace = async (e: CustomEvent<OasisSpace>) => {
     log.debug('add resource to space', e.detail)
 
     const toast = toasts.loading('Adding resource to space...')

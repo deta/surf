@@ -10,7 +10,7 @@
   export interface PillSpace extends PillBase {
     icon?: [string, string]
     type: 'space'
-    data: string | Space
+    data: string | OasisSpace
   }
 
   export interface PillImage extends PillBase {
@@ -40,7 +40,7 @@
   import ContextBubbleImage from './ContextBubbleItems/ContextBubbleImage.svelte'
   import ContextBubbleResource from './ContextBubbleItems/ContextBubbleResource.svelte'
   import ContextBubbleSpace from './ContextBubbleItems/ContextBubbleSpace.svelte'
-  import type { Space } from '@horizon/core/src/lib/types'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let items: ContextItem[]
 
@@ -138,7 +138,7 @@
         }
       } as PillResource
     } else if (item.type === 'space') {
-      const spaceData = item.data.name
+      const spaceData = item.data.dataValue
       return {
         id: `${item.id}-${item.data.id}`,
         contextItemId: item.id,

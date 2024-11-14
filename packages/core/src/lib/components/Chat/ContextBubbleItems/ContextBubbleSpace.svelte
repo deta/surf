@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { useOasis } from '@horizon/core/src/lib/service/oasis'
+  import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
 
   import type { PillSpace } from '../ContextBubbles.svelte'
   import ContextBubbleItemWrapper, { type PillProperties } from './ContextBubbleItemWrapper.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
-  import type { Space } from '@horizon/core/src/lib/types'
 
   export let pill: PillSpace
   export let pillProperties: PillProperties
 
   const oasis = useOasis()
 
-  let space: Space | null = null
+  let space: OasisSpace | null = null
 
   const getSpace = async (spaceId: string) => {
     space = await oasis.getSpace(spaceId)

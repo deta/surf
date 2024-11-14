@@ -5,11 +5,12 @@
   import { Icon } from '@horizon/icons'
   import { hover, tooltip, useLogScope } from '@horizon/utils'
 
-  import { ResourceTagsBuiltInKeys, type Space } from '@horizon/core/src/lib/types'
+  import { ResourceTagsBuiltInKeys } from '@horizon/core/src/lib/types'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { slide } from 'svelte/transition'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
-  export let space: Writable<Space | null>
+  export let space: Writable<OasisSpace | null>
   export let newlyLoadedResources: Writable<any[]>
   export let processingSourceItems: Writable<any[]>
   export let loadingSpaceSources: Writable<boolean>
@@ -21,6 +22,8 @@
   }>()
 
   const isHovered = writable(false)
+
+  $: spaceData = $space?.data
 
   const handleRefreshLiveSpace = () => {
     dispatch('refresh')
@@ -75,11 +78,11 @@
   }
 </script>
 
-{#if $space && ($space.name.liveModeEnabled || ($space.name.sources ?? []).length > 0 || $space.name.smartFilterQuery)}
-  {#key '' + $space.name.liveModeEnabled + ($newlyLoadedResources.length > 0)}
+{#if $space && ($spaceData?.liveModeEnabled || ($spaceData?.sources ?? []).length > 0 || $spaceData?.smartFilterQuery)}
+  {#key '' + $spaceData?.liveModeEnabled + ($newlyLoadedResources.length > 0)}
     <button
       class="live-mode"
-      class:live-enabled={$space.name.liveModeEnabled &&
+      class:live-enabled={$spaceData?.liveModeEnabled &&
         $newlyLoadedResources.length === 0 &&
         !$loadingSpaceSources}
       disabled={$loadingSpaceSources}
@@ -89,11 +92,11 @@
         text:
           $newlyLoadedResources.length > 0
             ? 'New content has been added to the space. Click to refresh.'
-            : $space.name.liveModeEnabled
-              ? ($space.name.sources ?? []).length > 0
+            : $spaceData?.liveModeEnabled
+              ? ($spaceData?.sources ?? []).length > 0
                 ? 'The sources will automatically be loaded when you open the space. Click to manually refresh.'
                 : 'New resources that match the smart query will automatically be added. Click to manually refresh.'
-              : ($space.name.sources ?? []).length > 0
+              : ($spaceData?.sources ?? []).length > 0
                 ? 'Click to load the latest content from the connected sources'
                 : 'Click to load the latest content based on the smart query',
         position: 'top'
@@ -107,8 +110,8 @@
               >{$newlyLoadedResources.length} / {$processingSourceItems.length}</span
             >)
           </span>
-        {:else if ($space.name.sources ?? []).length > 0}
-          Loading source{($space.name.sources ?? []).length > 1 ? 's' : ''}…
+        {:else if ($spaceData?.sources ?? []).length > 0}
+          Loading source{($spaceData?.sources ?? []).length > 1 ? 's' : ''}…
         {:else}
           Refreshing…
         {/if}
@@ -141,7 +144,7 @@
         <!-- {:else if $space.name.liveModeEnabled}
                 <Icon name="news" />
                 Auto Refresh -->
-      {:else if ($space.name.sources ?? []).length > 0}
+      {:else if ($spaceData?.sources ?? []).length > 0}
         <div class="flex items-center">
           <Icon name="reload" size="20px" />
 

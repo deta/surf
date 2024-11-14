@@ -1,20 +1,20 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import type { Space } from '../../types'
   import { useLogScope } from '@horizon/utils'
   import ColorIcon from './ColorIcon.svelte'
-  import { colorPairs } from '../../service/oasis'
+  import { colorPairs, OasisSpace } from '../../service/oasis'
 
   const dispatch = createEventDispatcher<{ change: [string, string] }>()
   const log = useLogScope('SpaceIcon')
 
-  export let folder: Space
+  export let folder: OasisSpace
   export let interactive = true
 
-  $: parsedColors = getColors(folder?.name?.colors ?? ['#76E0FF', '#4EC9FB'])
+  $: spaceData = folder.data
+  $: parsedColors = getColors($spaceData?.colors ?? ['#76E0FF', '#4EC9FB'])
 
   const pickRandomColorPair = (colorPairs: [string, string][]): [string, string] => {
-    if (folder?.id === 'all') {
+    if (folder.id === 'all') {
       return colorPairs[0]
     }
     return colorPairs[Math.floor(Math.random() * colorPairs.length)]
@@ -46,7 +46,7 @@
   }
 
   onMount(() => {
-    const filtered = folder?.name?.colors?.filter((c) => c)
+    const filtered = $spaceData?.colors?.filter((c) => c)
     if (!filtered) {
       log.debug('No colors provided, picking random color pair')
       updateColor(false)

@@ -11,13 +11,11 @@
   import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
 
-  import { colorPairs } from '../../service/oasis'
+  import { colorPairs, OasisSpace } from '../../service/oasis'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
   import SpacePreview from './SpacePreview.svelte'
   import LoadingParticles from '../Effects/LoadingParticles.svelte'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-
-  import { type Space } from '../../types'
 
   interface PromptConfig {
     name: string
@@ -63,8 +61,8 @@
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
 
-  export let space: Space
-  export let isCreatingNewSpace: Writable<boolean>
+  export let space: OasisSpace
+  export let isCreatingNewSpace: Writable<boolean> = writable(false)
 
   // const templatePrompts: PromptConfig[] = [
   //   { name: 'Images', prompt: 'All my Images' },
@@ -150,7 +148,7 @@
 
     dispatch('update-existing-space', {
       name: spaceName,
-      space: $space,
+      space: space,
       processNaturalLanguage: $aiEnabled,
       userPrompt: sanitizedUserPrompt,
 

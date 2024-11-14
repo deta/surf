@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
-  import type { Space, SpaceSource } from '../../types'
+  import type { SpaceSource } from '../../types'
   import {
     useLogScope,
     tooltip,
@@ -12,13 +12,13 @@
     getHumanDistanceToNow,
     copyToClipboard
   } from '@horizon/utils'
-  import { useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import Switch from '../Atoms/Switch.svelte'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
-  export let space: Space | null
+  export let space: OasisSpace | null
   const config = useConfig()
   const userConfigSettings = config.settings
 
@@ -36,11 +36,13 @@
   const telemetry = oasis.resourceManager.telemetry
   const autoSaveResources = oasis.autoSaveResources
 
-  let isLiveModeOn = space?.name.liveModeEnabled
-  let hideViewedResources = space?.name.hideViewed
-  let smartFilterQuery = space?.name.smartFilterQuery
+  let spaceData = space?.data
+  let isLiveModeOn = $spaceData?.liveModeEnabled
+  let hideViewedResources = $spaceData?.hideViewed
+  let smartFilterQuery = $spaceData?.smartFilterQuery
+  let sortBy = $spaceData?.sortBy ?? 'created_at'
+
   let sourceValue = ''
-  let sortBy = space?.name.sortBy ?? 'created_at'
   let loading = false
   let showAddSource = false
   let shoulDeleteAllResources = false
@@ -51,9 +53,9 @@
     if (!space) return
 
     // TODO: rename tab as well
-    await oasis.updateSpaceData(space.id, space.name)
+    await oasis.updateSpaceData(space.id, space.dataValue)
 
-    await tabsManager.updateSpaceTabs(space.id, space.name)
+    await tabsManager.updateSpaceTabs(space.id, space.dataValue)
 
     await telemetry.trackUpdateSpaceSettings({
       setting: 'name',
@@ -84,13 +86,12 @@
       last_fetched_at: null
     } as SpaceSource
 
-    const newSources = [...(space.name.sources ?? []), source]
-    space.name.sources = newSources
+    const newSources = [...(space.dataValue.sources ?? []), source]
+
+    await space.updateData({ sources: newSources, liveModeEnabled: true })
 
     showAddSource = false
     sourceValue = ''
-
-    await oasis.updateSpaceData(space.id, { sources: newSources, liveModeEnabled: true })
 
     await telemetry.trackUpdateSpaceSettings({
       setting: 'source',
@@ -117,9 +118,7 @@
     )
     if (!confirmed) return
 
-    space.name.sources = space.name.sources?.filter((s) => s.id !== source.id)
-
-    await oasis.updateSpaceData(space.id, { sources: space.name.sources })
+    await space.updateData({ sources: space.dataValue.sources?.filter((s) => s.id !== source.id) })
 
     toasts.success('Source removed!')
 
@@ -151,9 +150,7 @@
   const handleLiveModeUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
     if (!space) return
 
-    space.name.liveModeEnabled = e.detail
-
-    await oasis.updateSpaceData(space.id, { liveModeEnabled: e.detail })
+    await space.updateData({ liveModeEnabled: e.detail })
 
     await telemetry.trackUpdateSpaceSettings({
       setting: 'live_mode',
@@ -164,9 +161,7 @@
   const handleSortingUpdate = useDebounce(async () => {
     if (!space) return
 
-    space.name.sortBy = sortBy
-
-    await oasis.updateSpaceData(space.id, { sortBy: sortBy })
+    await space.updateData({ sortBy: sortBy })
 
     await telemetry.trackUpdateSpaceSettings({
       setting: 'sort_by',
@@ -179,9 +174,7 @@
   const handleHideViewedUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
     if (!space) return
 
-    space.name.hideViewed = e.detail
-
-    await oasis.updateSpaceData(space.id, { hideViewed: e.detail })
+    await space.updateData({ hideViewed: e.detail })
 
     await telemetry.trackUpdateSpaceSettings({
       setting: 'hide_viewed',
@@ -198,15 +191,11 @@
       smartFilterQuery = null
     }
 
-    if (smartFilterQuery === space.name.smartFilterQuery) {
+    if (smartFilterQuery === space.dataValue.smartFilterQuery) {
       return
     }
 
-    space.name.smartFilterQuery = smartFilterQuery ?? null
-    space.name.sql_query = null
-    space.name.embedding_query = null
-
-    await oasis.updateSpaceData(space.id, {
+    await space.updateData({
       smartFilterQuery: smartFilterQuery,
       sql_query: null,
       embedding_query: null
@@ -230,12 +219,12 @@
 </script>
 
 <article class="wrapper">
-  {#if space}
+  {#if space && $spaceData}
     <div class="header">
       <!-- <SpaceIcon folder={space} /> -->
       <div use:tooltip={{ text: 'Click to edit' }}>
         <input
-          bind:value={space.name.folderName}
+          bind:value={$spaceData.folderName}
           on:blur={handleNameBlur}
           on:keydown|stopPropagation
           class="folder-input"
@@ -268,8 +257,8 @@
             </p>
           </div>
 
-          {#if space.name.sources}
-            {#each space.name.sources as source}
+          {#if $spaceData.sources}
+            {#each $spaceData.sources as source}
               <div class="source">
                 <div class="title">
                   <img

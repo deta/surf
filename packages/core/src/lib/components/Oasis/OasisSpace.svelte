@@ -24,14 +24,13 @@
     parseStringIntoUrl,
     isMac
   } from '@horizon/utils'
-  import { useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import Chat from '../Chat/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import {
     Resource,
-    ResourceJSON,
     ResourceManager,
     ResourcePost,
     ResourceTag,
@@ -45,9 +44,6 @@
     ResourceTypes,
     SpaceEntryOrigin,
     type DragTypes,
-    type ResourceDataLink,
-    type ResourceDataPost,
-    type Space,
     type SpaceEntry,
     type SpaceSource
   } from '../../types'
@@ -58,10 +54,7 @@
     MEDIA_TYPES,
     createResourcesFromMediaItems,
     extractAndCreateWebResource,
-    processDrop,
-    type MediaParserResult,
-    type MediaParserResultURL,
-    type MediaParserResultUnknown
+    processDrop
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
@@ -78,10 +71,8 @@
   import {
     AddResourceToSpaceEventTrigger,
     CreateTabEventTrigger,
-    DeleteResourceEventTrigger,
     DeleteSpaceEventTrigger,
     OpenInMiniBrowserEventFrom,
-    OpenResourceEventFrom,
     RefreshSpaceEventTrigger,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger
@@ -92,7 +83,6 @@
   import { useTabsManager } from '../../service/tabs'
 
   import CreateNewSpace from './CreateNewSpace.svelte'
-  import { selectedFolder } from '../../stores/oasis'
   import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
@@ -144,7 +134,7 @@
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
-  const space = writable<Space | null>(null)
+  const space = writable<OasisSpace | null>(null)
   // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
@@ -160,6 +150,8 @@
   const everythingContents = writable<ResourceSearchResultItem[]>([])
   const newlyLoadedResources = writable<string[]>([])
   const processingSourceItems = writable<string[]>([])
+
+  $: spaceData = $space?.data
 
   const spaceResourceIds = derived(
     [searchValue, spaceContents, searchResults],
@@ -225,7 +217,7 @@
 
       await tick()
 
-      if ($space?.name.sortBy === 'source_published_at') {
+      if ($space?.dataValue.sortBy === 'source_published_at') {
         log.debug('Sorting by source_published_at, fetching resource data')
         const fullResources = (
           await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
@@ -282,7 +274,7 @@
         return
       }
 
-      const spaceData = fetchedSpace.name
+      const spaceData = fetchedSpace.dataValue
 
       let addedResources = 0
       let fetchedSources = false
@@ -396,7 +388,7 @@
       })
       log.debug('AI response:', response)
 
-      if ($space?.name.sql_query !== response.sql_query) {
+      if ($space?.dataValue.sql_query !== response.sql_query) {
         await oasis.updateSpaceData(spaceId, {
           sql_query: response.sql_query,
           embedding_query: response.embedding_search_query ?? undefined
@@ -531,12 +523,14 @@
         return null
       }
 
-      s.name.sources = (s.name.sources ?? []).map((x) => (x.id === source.id ? source : x))
+      s.dataValue.sources = (s.dataValue.sources ?? []).map((x) =>
+        x.id === source.id ? source : x
+      )
       return s
     })
 
     await oasis.updateSpaceData($space!.id, {
-      sources: ($space?.name.sources ?? []).map((x) => (x.id === source.id ? source : x))
+      sources: ($space?.dataValue.sources ?? []).map((x) => (x.id === source.id ? source : x))
     })
 
     const rssResult = await RSSParser.parse(source.url)
@@ -783,18 +777,18 @@
     }
 
     let addedResources = 0
-    if ($space.name.smartFilterQuery) {
+    if ($space.dataValue.smartFilterQuery) {
       const fetchedResources = await updateLiveSpaceContentsWithAI(
-        $space.name.smartFilterQuery,
-        $space.name.sql_query,
-        $space.name.embedding_query
+        $space.dataValue.smartFilterQuery,
+        $space.dataValue.sql_query,
+        $space.dataValue.embedding_query
       )
       if (fetchedResources) {
         addedResources = fetchedResources.length
       }
     }
 
-    const sources = $space.name.sources
+    const sources = $space.dataValue.sources
     if (sources && sources.length > 0) {
       const fetchedResources = await loadSpaceSources(sources, true)
       if (fetchedResources) {
@@ -811,7 +805,7 @@
     }
 
     await telemetry.trackRefreshSpaceContent(RefreshSpaceEventTrigger.LiveSpaceManuallyRefreshed, {
-      usedSmartQuery: !!$space.name.smartFilterQuery,
+      usedSmartQuery: !!$space.dataValue.smartFilterQuery,
       fetchedSources: !!sources,
       addedResources: addedResources > 0
     })
@@ -903,9 +897,13 @@
   const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
     const ids = e.detail
     try {
-      await oasis.removeResourceFromSpace(ids, spaceId)
+      const res = await oasis.removeResourcesFromSpaceOrOasis(ids, spaceId)
+      if (!res) {
+        return
+      }
+
       toasts.success(
-        `Resource${ids.length > 1 ? 's' : ''} ${isEverythingSpace ? 'deleted' : 'removed'}!`
+        `${res.length > 1 ? res.length : ''} Resource${res.length > 1 ? 's' : ''} ${isEverythingSpace ? 'deleted' : 'removed'}!`
       )
 
       // HACK: this is needed for the preview to update with the summary
@@ -1266,7 +1264,7 @@
     const resource = e.detail
     log.debug('Load resource:', resource)
 
-    if ($space?.name.hideViewed) {
+    if ($space?.dataValue.hideViewed) {
       const viewedByUser =
         resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.VIEWED_BY_USER)?.value ===
         'true'
@@ -1324,19 +1322,26 @@
       userPrompt,
       blacklistedResourceIds,
       llmFetchedResourceIds
-    } = e.detail
+    } = e.detail as {
+      space: OasisSpace
+      name: string
+      processNaturalLanguage: boolean
+      userPrompt: string
+      blacklistedResourceIds: string[]
+      llmFetchedResourceIds: string[]
+    }
     if (!space) {
       log.error('No space found')
       return
     }
 
-    let createdSpace: Space | null = null
+    let createdSpace: OasisSpace | null = null
 
     try {
       await oasis.deleteSpace(space.id)
 
       createdSpace = await oasis.createSpace({
-        ...space.name,
+        ...space.dataValue,
         folderName: name,
         smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
       })
@@ -1410,12 +1415,12 @@
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
   <div class="relative wrapper bg-sky-100/50">
-    {#if !isEverythingSpace && $space?.name.folderName !== '.tempspace'}
+    {#if !isEverythingSpace && $spaceData?.folderName !== '.tempspace'}
       <div
         class="drawer-bar transition-transform duration-300 ease-in-out"
         class:translate-y-24={hideBar && active}
       >
-        {#if $space?.name.folderName !== '.tempspace'}
+        {#if $spaceData?.folderName !== '.tempspace'}
           <div
             class="drawer-chat-search bg-gradient-to-t from-sky-100/70 to-transparent via-bg-sky-100/10 bg-sky-100/70 backdrop-blur-xl backdrop-saturate-50"
           >
@@ -1434,12 +1439,12 @@
                   class="settings-toggle flex flex-col items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
                   on:click={handleOpenSettingsModal}
                 >
-                  {#if $space?.name.folderName}
+                  {#if $spaceData?.folderName}
                     <div
                       class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800"
                     >
                       <Icon name="chevron.down" size="20px" />
-                      <span class="font-medium leading-[1] text-left">{$space.name.folderName}</span
+                      <span class="font-medium leading-[1] text-left">{$spaceData?.folderName}</span
                       >
                     </div>
                     <!-- {#if $space.name.smartFilterQuery}
@@ -1589,13 +1594,13 @@
           <Icon name="spinner" size="20px" />
         </div>
       {/if}
-    {:else if $space?.name.folderName === '.tempspace'}
+    {:else if $space && $spaceData?.folderName === '.tempspace'}
       <CreateNewSpace
         on:update-existing-space={handleUpdateExistingSpace}
         on:abort-space-creation={handleAbortSpaceCreation}
         on:creating-new-space
         on:done-creating-new-space
-        {space}
+        space={$space}
       />
     {:else if $loadingContents}
       <div class="content-wrapper">

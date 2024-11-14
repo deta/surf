@@ -68,7 +68,7 @@
       if (resources.length > 0 && showHeader) {
         const space = await oasis.getSpace(resources[0].space_id)
         if (space) {
-          spaceName = space.name.folderName
+          spaceName = space.dataValue.folderName
         }
       }
     } catch (error) {

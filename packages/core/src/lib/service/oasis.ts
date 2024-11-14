@@ -1,20 +1,164 @@
-import { get, writable, type Writable } from 'svelte/store'
-import { generateID, useLogScope } from '@horizon/utils'
-import type { Resource, ResourceManager } from './resources'
-
-import { SpaceEntryOrigin, type Optional, type Space, type SpaceData } from '../types'
 import { getContext, setContext } from 'svelte'
-import type { Telemetry } from './telemetry'
+import { get, writable, type Writable } from 'svelte/store'
+import EventEmitter from 'events'
+import type TypedEmitter from 'typed-emitter'
+
+import { generateID, useLogScope } from '@horizon/utils'
 import { DeleteResourceEventTrigger } from '@horizon/types'
+
+import {
+  SpaceEntryOrigin,
+  type Optional,
+  type Space,
+  type SpaceData,
+  type SpaceEntry
+} from '../types'
+import type { Resource, ResourceManager } from './resources'
+import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
 
+export type OasisEvents = {
+  created: (space: OasisSpace) => void
+  updated: (space: OasisSpace, changes: Partial<SpaceData>) => void
+  'added-resources': (space: OasisSpace, resourceIds: string[]) => void
+  'removed-resources': (space: OasisSpace, resourceIds: string[]) => void
+  deleted: (spaceId: string) => void
+}
+
+export type OptionalSpaceData = Optional<
+  SpaceData,
+  | 'showInSidebar'
+  | 'liveModeEnabled'
+  | 'hideViewed'
+  | 'smartFilterQuery'
+  | 'sortBy'
+  | 'sources'
+  | 'sql_query'
+  | 'embedding_query'
+  | 'builtIn'
+>
+
+export class OasisSpace {
+  id: string
+  createdAt: string
+  updatedAt: string
+  deleted: number
+
+  /** Svelte store for the associated space data, use dataValue to access the value directly  */
+  data: Writable<SpaceData>
+  /** Svelte store for the associated space contents, use contentsValue to access the value directly */
+  contents: Writable<SpaceEntry[]>
+
+  log: ReturnType<typeof useLogScope>
+  oasis: OasisService
+  resourceManager: ResourceManager
+  telemetry: Telemetry
+
+  constructor(space: Space, oasis: OasisService) {
+    this.id = space.id
+    this.createdAt = space.created_at
+    this.updatedAt = space.updated_at
+    this.deleted = space.deleted
+
+    this.data = writable<SpaceData>(space.name)
+    this.contents = writable<SpaceEntry[]>([])
+
+    this.log = useLogScope(`OasisSpace ${this.id}`)
+    this.oasis = oasis
+    this.resourceManager = oasis.resourceManager
+    this.telemetry = oasis.telemetry
+  }
+
+  /** Access the data of the space directly */
+  get dataValue() {
+    return get(this.data)
+  }
+
+  /** Returns the space data in the format of the old/sffs Space object */
+  get spaceValue() {
+    return {
+      id: this.id,
+      name: this.dataValue,
+      created_at: this.createdAt,
+      updated_at: this.updatedAt,
+      deleted: this.deleted
+    } as Space
+  }
+
+  /** Access the contents of the space directly */
+  get contentsValue() {
+    return get(this.contents)
+  }
+
+  async updateData(updates: Partial<SpaceData>) {
+    this.log.debug('updating space', updates)
+
+    const data = { ...this.dataValue, ...updates }
+    this.data.set(data)
+
+    await this.resourceManager.updateSpace(this.id, data)
+
+    this.oasis.emit('updated', this, updates)
+  }
+
+  async fetchContents() {
+    this.log.debug('getting space contents')
+    const result = await this.resourceManager.getSpaceContents(this.id)
+
+    this.log.debug('got space contents:', result)
+    this.contents.set(result)
+    return result
+  }
+
+  async addResources(resourceIds: string[], origin: SpaceEntryOrigin) {
+    this.log.debug('adding resources to space', resourceIds)
+    await this.resourceManager.addItemsToSpace(this.id, resourceIds, origin)
+
+    this.log.debug('added resources to space, updating contents')
+    await this.fetchContents()
+
+    this.oasis.emit('added-resources', this, resourceIds)
+  }
+
+  async removeResources(resourceIds: string | string[]) {
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+
+    this.log.debug('removing resources', resourceIds)
+    const matchingSpaceContents = this.contentsValue.filter((entry) =>
+      resourceIds.includes(entry.resource_id)
+    )
+
+    this.log.debug('removing matching entries from space...', matchingSpaceContents)
+    await this.resourceManager.deleteSpaceEntries(matchingSpaceContents.map((entry) => entry.id))
+
+    this.log.debug('removing resources from space contents store')
+    this.contents.update((contents) => {
+      return contents.filter((entry) => !resourceIds.includes(entry.resource_id))
+    })
+
+    this.log.debug('adding resources to space blacklist', resourceIds)
+    await this.resourceManager.addItemsToSpace(
+      this.id,
+      matchingSpaceContents.map((entry) => entry.resource_id),
+      SpaceEntryOrigin.Blacklisted
+    )
+
+    const removedResourceIds = matchingSpaceContents.map((entry) => entry.resource_id)
+    this.log.debug('Resources removed:', removedResourceIds)
+    this.oasis.emit('removed-resources', this, removedResourceIds)
+
+    return removedResourceIds
+  }
+}
+
 export class OasisService {
-  spaces: Writable<Space[]>
+  spaces: Writable<OasisSpace[]>
   selectedSpace: Writable<string>
 
   stackKey: Writable<{}>
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
 
+  private eventEmitter: TypedEmitter<OasisEvents>
   tabsManager: TabsManager
   resourceManager: ResourceManager
   telemetry: Telemetry
@@ -25,8 +169,9 @@ export class OasisService {
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
     this.tabsManager = tabsManager
+    this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
-    this.spaces = writable<Space[]>([])
+    this.spaces = writable<OasisSpace[]>([])
     this.selectedSpace = writable<string>('all')
     this.stackKey = writable({})
     this.pendingStackActions = []
@@ -34,42 +179,80 @@ export class OasisService {
     this.initSpaces()
   }
 
-  async initSpaces() {
+  private async initSpaces() {
     try {
-      const spaces = await this.loadSpaces()
-      this.spaces.set(spaces)
+      await this.loadSpaces()
     } catch (error) {
       this.log.error('Failed to load spaces:', error)
     }
   }
 
+  private createSpaceObject(space: Space) {
+    return new OasisSpace(space, this)
+  }
+
+  private triggerStoreUpdate(space: OasisSpace) {
+    // trigger Svelte reactivity
+    this.spaces.update((spaces) => {
+      return spaces.map((s) => (s.id === space.id ? space : s))
+    })
+  }
+
+  private createFakeSpace(data: SpaceData) {
+    const fakeSpace = {
+      name: data,
+      id: generateID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted: 0
+    } as Space
+
+    const space = this.createSpaceObject(fakeSpace)
+    this.log.debug('created fake space:', space)
+
+    this.spaces.update((spaces) => {
+      return [...spaces, space]
+    })
+
+    this.emit('created', space)
+
+    return space
+  }
+
+  get spacesValue() {
+    return get(this.spaces).map((space) => space.spaceValue)
+  }
+
+  on<E extends keyof OasisEvents>(event: E, listener: OasisEvents[E]): () => void {
+    this.eventEmitter.on(event, listener)
+
+    return () => {
+      this.eventEmitter.off(event, listener)
+    }
+  }
+
+  emit<E extends keyof OasisEvents>(event: E, ...args: Parameters<OasisEvents[E]>) {
+    this.eventEmitter.emit(event, ...args)
+  }
+
   async loadSpaces() {
-    this.log.debug('loading spaces')
+    this.log.debug('fetching spaces')
     let result = await this.resourceManager.listSpaces()
 
     // TODO: Felix — Continuation on felix/tempspace-removal: Remove all .tempspaces
     const filteredResult = result.filter((space) => space.name.folderName !== '.tempspace')
     result = filteredResult
 
-    this.log.debug('loaded spaces:', result)
-    this.spaces.set(result)
+    this.log.debug('fetched spaces:', result)
+
+    const spaces = result.map((space) => this.createSpaceObject(space))
+    this.log.debug('loaded spaces:', spaces)
+
+    this.spaces.set(spaces)
     return result
   }
 
-  async createSpace(
-    data: Optional<
-      SpaceData,
-      | 'showInSidebar'
-      | 'liveModeEnabled'
-      | 'hideViewed'
-      | 'smartFilterQuery'
-      | 'sortBy'
-      | 'sources'
-      | 'sql_query'
-      | 'embedding_query'
-      | 'builtIn'
-    >
-  ) {
+  async createSpace(data: OptionalSpaceData) {
     this.log.debug('creating space')
 
     const defaults = {
@@ -87,20 +270,8 @@ export class OasisService {
     const fullData = Object.assign({}, defaults, data)
 
     if (fullData.folderName === '.tempspace') {
-      const fakeSpace = {
-        name: fullData,
-        id: generateID(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        deleted: 0
-      } as Space
-      this.log.debug('created fake space:', fakeSpace)
-
-      this.spaces.update((spaces) => {
-        return [...spaces, fakeSpace]
-      })
-
-      return fakeSpace
+      const space = this.createFakeSpace(fullData)
+      return space
     }
 
     const result = await this.resourceManager.createSpace(fullData)
@@ -109,21 +280,38 @@ export class OasisService {
       throw new Error('Failed to create space')
     }
 
-    this.log.debug('created space:', result)
+    const space = this.createSpaceObject(result)
+
+    this.log.debug('created space:', space)
     this.spaces.update((spaces) => {
-      return [...spaces, result]
+      return [...spaces, space]
     })
 
-    return result
+    this.emit('created', space)
+
+    return space
   }
 
-  getSpace(spaceId: string, fresh = false) {
+  async getSpace(spaceId: string, fresh = false) {
     const storedSpace = get(this.spaces).find((space) => space.id === spaceId)
     if (storedSpace && !fresh) {
       return storedSpace
     }
 
-    return this.resourceManager.getSpace(spaceId)
+    const result = await this.resourceManager.getSpace(spaceId)
+    if (!result) {
+      this.log.error('space not found:', spaceId)
+      return null
+    }
+
+    const space = this.createSpaceObject(result)
+    this.spaces.update((spaces) => {
+      return spaces.map((s) => (s.id === spaceId ? space : s))
+    })
+
+    this.log.debug('got space:', space)
+
+    return space
   }
 
   async deleteSpace(spaceId: string) {
@@ -134,6 +322,8 @@ export class OasisService {
     this.spaces.update((spaces) => {
       return spaces.filter((space) => space.id !== spaceId)
     })
+
+    this.emit('deleted', spaceId)
   }
 
   async updateSpaceData(id: string, updates: Partial<SpaceData>) {
@@ -145,42 +335,45 @@ export class OasisService {
       throw new Error('Space not found')
     }
 
-    const data = { ...space.name, ...updates }
+    await space.updateData(updates)
+    this.log.debug('updated space:', space)
 
-    await this.resourceManager.updateSpace(id, data)
+    this.triggerStoreUpdate(space)
 
-    this.spaces.update((spaces) => {
-      return spaces.map((space) => {
-        if (space.id === id) {
-          return { ...space, name: data }
-        }
-        return space
-      })
-    })
+    return space
   }
 
   async addResourcesToSpace(spaceId: string, resourceIds: string[], origin: SpaceEntryOrigin) {
     this.log.debug('adding resources to space', spaceId, resourceIds)
-    await this.resourceManager.addItemsToSpace(spaceId, resourceIds, origin)
 
-    this.log.debug('added resources to space, reloading spaces')
-    await this.loadSpaces()
+    const space = await this.getSpace(spaceId)
+    if (!space) {
+      this.log.error('space not found:', spaceId)
+      throw new Error('Space not found')
+    }
+
+    await space.addResources(resourceIds, origin)
+    this.log.debug('added resources to space')
+
+    this.triggerStoreUpdate(space)
+
+    return space
   }
 
   async getSpaceContents(spaceId: string) {
     this.log.debug('getting space contents', spaceId)
-    const result = await this.resourceManager.getSpaceContents(spaceId)
 
-    this.log.debug('got space contents:', result)
-    return result
+    const space = await this.getSpace(spaceId)
+    if (!space) {
+      this.log.error('space not found:', spaceId)
+      throw new Error('Space not found')
+    }
+
+    return space.fetchContents()
   }
 
-  /** Remove a resource from a specific space, or from Stuff entirely if no space is provided.
-   * throws: Error in various failure cases.
-   */
-  async removeResourceFromSpace(resourceIds: string | string[], spaceId?: string) {
-    const isEverythingSpace = spaceId === undefined || spaceId === 'all'
-    const space = isEverythingSpace ? null : await this.getSpace(spaceId)
+  /** Deletes the provided resources from Oasis and gets rid of all references in any space */
+  async deleteResourcesFromOasis(resourceIds: string | string[], confirmAction = true) {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
     this.log.debug('removing resources', resourceIds)
 
@@ -191,91 +384,139 @@ export class OasisService {
 
     if (validResources.length === 0) {
       this.log.error('No valid resources found')
-      return
+      return false
     }
 
     const allReferences = await Promise.all(
       validResources.map((resource) =>
-        this.resourceManager.getAllReferences(resource.id, get(this.spaces))
+        this.resourceManager.getAllReferences(resource.id, this.spacesValue)
       )
     )
 
-    let totalNumberOfReferences = 0
-    if (isEverythingSpace) {
-      totalNumberOfReferences = allReferences.reduce((sum, refs) => sum + refs.length, 0)
-    }
+    let totalNumberOfReferences = allReferences.reduce((sum, refs) => sum + refs.length, 0)
 
-    const confirmMessage = !isEverythingSpace
-      ? `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${space?.name.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
-      : totalNumberOfReferences > 0
+    const confirmMessage =
+      totalNumberOfReferences > 0
         ? `These ${validResources.length} resources will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
         : `This resource will be deleted permanently.`
 
-    const confirm = window.confirm(confirmMessage)
-
-    if (!confirm) {
-      return
+    const confirmed = !confirmAction || window.confirm(confirmMessage)
+    if (!confirmed) {
+      return false
     }
 
-    try {
-      if (!isEverythingSpace) {
-        this.log.debug('removing resource entries from space...', validResources)
-
-        const referencesToRemove = allReferences.flatMap((refs, index) =>
-          refs.filter((x) => x.folderId === spaceId && x.resourceId === validResources[index].id)
-        )
-
-        if (referencesToRemove.length === 0) {
-          this.log.error('References not found')
-          throw new Error('References not found')
+    // turn the array of references into an array of spaces with the resources to remove
+    const spacesWithReferences = allReferences
+      .map((references, index) => {
+        return {
+          spaceId: references[0].folderId,
+          resourceIds: references.map((ref) => ref.folderId)
         }
+      })
+      .filter((entry, index, self) => {
+        return self.findIndex((e) => e.spaceId === entry.spaceId) === index
+      })
 
-        await this.resourceManager.deleteSpaceEntries(referencesToRemove.map((ref) => ref.entryId))
+    this.log.debug('deleting resource references from spaces', spacesWithReferences)
+    await Promise.all(
+      spacesWithReferences.map(async (entry, index) => {
+        const space = await this.getSpace(entry.spaceId)
+        if (space) {
+          await space.removeResources(entry.resourceIds)
+        }
+      })
+    )
 
-        await this.resourceManager.addItemsToSpace(
-          spaceId,
-          referencesToRemove.map((ref) => ref.resourceId),
-          SpaceEntryOrigin.Blacklisted
-        )
-      }
-    } catch (error) {
-      this.log.error('Error removing references:', error)
-      throw new Error('Error removing references' + error)
-    }
+    this.log.debug('deleting resources from oasis', resourceIds)
+    await Promise.all(resourceIds.map((id) => this.resourceManager.deleteResource(id)))
 
-    if (isEverythingSpace) {
-      this.log.debug('deleting resources from oasis', resourceIds)
-      await Promise.all(resourceIds.map((id) => this.resourceManager.deleteResource(id)))
+    this.log.debug('removing resource bookmarks from tabs', resourceIds)
+    await Promise.all(resourceIds.map((id) => this.tabsManager.removeResourceBookmarks(id)))
 
-      // update tabs to remove any links to the resources
-      await Promise.all(resourceIds.map((id) => this.tabsManager.removeResourceBookmarks(id)))
-
-      await Promise.all(
-        validResources.map((resource) =>
-          this.telemetry.trackDeleteResource(
-            resource.type,
-            false,
-            validResources.length > 1
-              ? DeleteResourceEventTrigger.OasisMultiSelect
-              : DeleteResourceEventTrigger.OasisItem
-          )
+    await Promise.all(
+      validResources.map((resource) =>
+        this.telemetry.trackDeleteResource(
+          resource.type,
+          false,
+          validResources.length > 1
+            ? DeleteResourceEventTrigger.OasisMultiSelect
+            : DeleteResourceEventTrigger.OasisItem
         )
       )
+    )
+
+    this.log.debug('deleted resources:', resourceIds)
+    return resourceIds
+  }
+
+  /** Removes the provided resources from the space */
+  async removeResourcesFromSpace(
+    spaceId: string,
+    resourceIds: string | string[],
+    confirmAction = true
+  ) {
+    const space = await this.getSpace(spaceId)
+    if (!space) {
+      this.log.error('space not found:', spaceId)
+      throw new Error('Space not found')
+    }
+
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+    this.log.debug('removing resources', resourceIds)
+
+    const resources = await Promise.all(
+      resourceIds.map((id) => this.resourceManager.getResource(id))
+    )
+
+    const validResources = resources.filter((resource) => resource !== null) as Resource[]
+    if (validResources.length === 0) {
+      this.log.error('No valid resources found')
+      return false
+    }
+
+    const confirmMessage = `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${space?.dataValue.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
+    const confirmed = !confirmAction || window.confirm(confirmMessage)
+    if (!confirmed) {
+      return false
+    }
+
+    this.log.debug('removing resource entries from space...', validResources)
+
+    const removedResources = await space.removeResources(
+      validResources.map((resource) => resource.id)
+    )
+    this.log.debug('removed resource entries from space', removedResources)
+
+    this.triggerStoreUpdate(space)
+
+    await Promise.all(
+      validResources.map((resource) =>
+        this.telemetry.trackDeleteResource(
+          resource.type,
+          true,
+          validResources.length > 1
+            ? DeleteResourceEventTrigger.OasisMultiSelect
+            : DeleteResourceEventTrigger.OasisItem
+        )
+      )
+    )
+
+    this.log.debug('resources removed from space:', resourceIds)
+    return removedResources
+  }
+
+  /** Remove a resource from a specific space, or from Stuff entirely if no space is provided.
+   * throws: Error in various failure cases.
+   */
+  async removeResourcesFromSpaceOrOasis(resourceIds: string | string[], spaceId?: string) {
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+    this.log.debug('removing resources from', spaceId ?? 'oasis', resourceIds)
+
+    if (spaceId) {
+      return this.removeResourcesFromSpace(spaceId, resourceIds)
     } else {
-      await Promise.all(
-        validResources.map((resource) =>
-          this.telemetry.trackDeleteResource(
-            resource.type,
-            !isEverythingSpace,
-            validResources.length > 1
-              ? DeleteResourceEventTrigger.OasisMultiSelect
-              : DeleteResourceEventTrigger.OasisItem
-          )
-        )
-      )
+      return this.deleteResourcesFromOasis(resourceIds)
     }
-
-    this.log.debug('Resources removed:', resourceIds)
   }
 
   async resetSelectedSpace() {

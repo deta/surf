@@ -1,17 +1,28 @@
+<script lang="ts" context="module">
+  export type CreateSpaceTabEvent = { tab: TabSpace; active: boolean }
+  export type SpaceSelectedEvent = { id: string; canGoBack: boolean }
+  export type DeleteSpaceEvent = { id: string }
+
+  export type SpacesViewEvents = {
+    createTab: CreateSpaceTabEvent
+    'space-selected': SpaceSelectedEvent
+    'create-empty-space': void
+    'delete-space': DeleteSpaceEvent
+  }
+</script>
+
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
   import { useLogScope } from '@horizon/utils'
-  import Folder from './Folder.svelte'
+  import Folder, { type EditingStartEvent } from './Folder.svelte'
   import { Icon } from '@horizon/icons'
-  import { useOasis } from '../../service/oasis'
-  import { fly } from 'svelte/transition'
+  import { OasisSpace, useOasis } from '../../service/oasis'
 
   import { useToasts } from '../../service/toast'
-  import { SpaceEntryOrigin, type SpaceData, type SpaceSource, type TabSpace } from '../../types'
+  import { SpaceEntryOrigin, type SpaceData, type TabSpace } from '../../types'
   import type { Readable } from 'svelte/store'
-  import type { Space } from '@horizon/core/src/lib/types'
   import { useTelemetry } from '../../service/telemetry'
   import { onboardingSpace } from '../../constants/examples'
   import { CreateSpaceEventFrom, OpenSpaceEventTrigger } from '@horizon/types'
@@ -24,27 +35,21 @@
   const toast = useToasts()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
-  const dispatch = createEventDispatcher<{
-    createTab: { tab: TabSpace; active: boolean }
-    'space-selected': { id: string; canGoBack: boolean }
-    'create-empty-space': void
-    'delete-space': { id: string }
-  }>()
+  const dispatch = createEventDispatcher<SpacesViewEvents>()
 
   let sidebarElement: HTMLElement
   let foldersWrapper: HTMLElement
   let newSpaceButton: HTMLElement
   const isNewSpaceButtonSticky = writable(false)
 
-  export let spaces: Readable<Space[]>
+  export let spaces: Readable<OasisSpace[]>
   export let interactive = true
   export let type: 'grid' | 'horizontal' = 'grid'
   export let resourceManager: ResourceManager
   export let showPreview = true
   const selectedSpace = oasis.selectedSpace
 
-  const renamingFolderId = writable(null)
-  const editingFolderId = writable(null)
+  const editingFolderId = writable<string | null>(null)
 
   export let onBack = () => {}
   export const handleCreateSpace = async (
@@ -150,7 +155,7 @@
       log.debug('Adding folder to tabs:', id)
       const space = $spaces.find((space) => space.id === id)
       if (space) {
-        space.name.showInSidebar = true
+        space.dataValue.showInSidebar = true
 
         await oasis.updateSpaceData(id, {
           showInSidebar: true
@@ -158,7 +163,7 @@
 
         dispatch('createTab', {
           tab: {
-            title: space.name.folderName,
+            title: space.dataValue.folderName,
             icon: '',
             spaceId: id,
             type: 'space',
@@ -172,9 +177,9 @@
         await tick()
 
         await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SidebarMenu, {
-          isLiveSpace: space.name.liveModeEnabled,
-          hasSources: (space.name.sources ?? []).length > 0,
-          hasSmartQuery: !!space.name.smartFilterQuery
+          isLiveSpace: space.dataValue.liveModeEnabled,
+          hasSources: (space.dataValue.sources ?? []).length > 0,
+          hasSmartQuery: !!space.dataValue.smartFilterQuery
         })
       }
     } catch (error) {
@@ -208,7 +213,7 @@
     try {
       const space = $spaces.find((space) => space.id === $selectedSpace)
 
-      if (space?.name.folderName === '.tempspace' && id !== $selectedSpace) {
+      if (space?.dataValue.folderName === '.tempspace' && id !== $selectedSpace) {
         dispatch('delete-space', { id: $selectedSpace })
         return
       }
@@ -227,7 +232,7 @@
     }
   }
 
-  const handleEditingStart = (event) => {
+  const handleEditingStart = (event: CustomEvent<EditingStartEvent>) => {
     const newEditingId = event.detail.id
     editingFolderId.set(newEditingId)
   }
@@ -238,7 +243,7 @@
 
   const handleCreateEmptySpace = () => {
     const selectedSpaceObj = $spaces.find((space) => space.id === $selectedSpace)
-    if (!selectedSpaceObj || selectedSpaceObj.name.folderName !== '.tempspace') {
+    if (!selectedSpaceObj || selectedSpaceObj.dataValue.folderName !== '.tempspace') {
       dispatch('create-empty-space')
     }
   }
@@ -256,12 +261,12 @@
     }
   }
 
-  const handleTooltipTarget = (folder: any) => {
+  const handleTooltipTarget = (folder: OasisSpace) => {
     if (folder.id === 'all') {
       return 'stuff-spaces-all'
     }
 
-    if (folder.name.folderName === onboardingSpace.name) {
+    if (folder.dataValue.folderName === onboardingSpace.name) {
       return 'demo-space'
     }
 
@@ -281,15 +286,15 @@
 
   const filteredSpaces = derived(spaces, ($spaces) =>
     $spaces
-      .filter((space) => space.name.folderName !== '.tempspace')
+      .filter((space) => space.dataValue.folderName !== '.tempspace')
       .sort((a, b) => {
         if (a.id === 'all') return -1 // Move 'all' folder to the top
         if (b.id === 'all') return 1
 
         // move built in folders to the top behind 'all'
-        if (a.name.builtIn && !b.name.builtIn) return -1
+        if (a.dataValue.builtIn && !b.dataValue.builtIn) return -1
 
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Sort others by creation date
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() // Sort others by creation date
       })
   )
 </script>
@@ -326,7 +331,7 @@
     class:sticky={$isNewSpaceButtonSticky}
     class:text-white={$isNewSpaceButtonSticky}
     class:disabled={$selectedSpace &&
-      $spaces.find((space) => space.id === $selectedSpace)?.name.folderName === '.tempspace'}
+      $spaces.find((space) => space.id === $selectedSpace)?.dataValue.folderName === '.tempspace'}
     on:click={handleCreateEmptySpace}
     bind:this={newSpaceButton}
     data-tooltip-target="create-space"

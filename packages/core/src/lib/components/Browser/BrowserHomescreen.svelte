@@ -9,8 +9,7 @@
   import { fly } from 'svelte/transition'
 
   import { Icon } from '@horizon/icons'
-  import SpacesView from '../Oasis/SpacesView.svelte'
-  import type { Space } from '@horizon/core/src/lib/types'
+  import SpacesView, { type CreateSpaceTabEvent } from '../Oasis/SpacesView.svelte'
 
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
@@ -20,9 +19,10 @@
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { useResourceManager } from '../../service/resources'
   import { OpenResourceEventFrom } from '@horizon/types'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let historyEntriesManager: HistoryEntriesManager
-  export let spaces: Writable<Space[]>
+  export let spaces: Writable<OasisSpace[]>
   export let active = true
 
   const log = useLogScope('BrowserHomescreen')
@@ -133,8 +133,8 @@
     }
   }
 
-  const handleCreateTabFromOasisSidebar = (e: CustomEvent<TabSpace>) => {
-    dispatch('create-tab-from-space', e.detail)
+  const handleCreateTabFromOasisSidebar = (e: CustomEvent<CreateSpaceTabEvent>) => {
+    dispatch('create-tab-from-space', e.detail.tab)
   }
 
   function goToURL() {
