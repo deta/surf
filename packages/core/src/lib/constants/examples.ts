@@ -13,24 +13,16 @@ import type { SpaceData, WithRequired } from '../types'
 
 export const builtInSpaces = [
   {
-    folderName: 'Media',
-    colors: ['#76E0FF', '#4EC9FB'],
-    liveModeEnabled: true,
-    smartFilterQuery: 'Images, Videos or Audio Files',
-    sql_query:
-      "SELECT id FROM resources WHERE (resource_type LIKE 'image/%' OR resource_type LIKE 'video/%' OR resource_type LIKE 'audio/%') AND deleted = 0;"
-  },
-  {
     folderName: 'Files',
-    colors: ['#76E0FF', '#4EC9FB'],
+    colors: ['#3EAD4A', '#2CAB3A'],
     liveModeEnabled: true,
-    smartFilterQuery: 'Images, Videos or Audio Files',
+    smartFilterQuery: 'Files and Media (Images, Videos, Audio)',
     sql_query:
-      "SELECT DISTINCT id FROM resources WHERE (resource_type NOT LIKE 'application/vnd.space.%' AND resource_type NOT LIKE 'image/%' AND resource_type NOT LIKE 'video/%' AND resource_type NOT LIKE 'audio/%') AND deleted = 0;"
+      "SELECT id FROM resources WHERE (resource_type LIKE 'image/%' OR resource_type LIKE 'video/%' OR resource_type LIKE 'audio/%') AND deleted = 0 AND resource_type NOT LIKE 'application/vnd.space.%';"
   },
   {
     folderName: 'Documents',
-    colors: ['#76E0FF', '#4EC9FB'],
+    colors: ['#6B4EFB', '#5534F7'],
     liveModeEnabled: true,
     smartFilterQuery: 'All my Documents',
     sql_query:
@@ -38,11 +30,29 @@ export const builtInSpaces = [
   },
   {
     folderName: 'Bookmarks',
-    colors: ['#76E0FF', '#4EC9FB'],
+    colors: ['#F74545', '#f22727'],
     liveModeEnabled: true,
     smartFilterQuery: 'All my articles and links',
-    sql_query:
-      "SELECT r.id FROM resources r LEFT JOIN resource_tags rt1 ON r.id = rt1.resource_id AND rt1.tag_name = 'silent' AND rt1.tag_value = 'true' LEFT JOIN resource_tags rt2 ON r.id = rt2.resource_id AND rt2.tag_name = 'hideInEverything' AND rt2.tag_value = 'true' WHERE r.deleted = 0 AND (r.resource_type IN ('application/vnd.space.link', 'application/vnd.space.article') OR r.resource_type LIKE 'application/vnd.space.post%') AND rt1.resource_id IS NULL AND rt2.resource_id IS NULL ORDER BY r.created_at;"
+    sql_query: `SELECT r.id 
+        FROM resources r
+        WHERE r.deleted = 0 
+        AND (r.resource_type IN ('application/vnd.space.link', 'application/vnd.space.article') 
+             OR r.resource_type LIKE 'application/vnd.space.post%')
+        AND NOT EXISTS (
+            SELECT 1 
+            FROM resource_tags rt 
+            WHERE rt.resource_id = r.id 
+            AND rt.tag_name = 'silent' 
+            AND rt.tag_value = 'true'
+        )
+        AND NOT EXISTS (
+            SELECT 1 
+            FROM resource_tags rt 
+            WHERE rt.resource_id = r.id 
+            AND rt.tag_name = 'hideInEverything' 
+            AND rt.tag_value = 'true'
+        )
+        ORDER BY r.created_at;`
   }
 ] as WithRequired<SpaceData, 'folderName' | 'colors'>[]
 
