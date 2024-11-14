@@ -1,12 +1,12 @@
 <script lang="ts">
   import { useLogScope, wait } from '@horizon/utils'
   import { createEventDispatcher, onMount } from 'svelte'
-  import { get, writable } from 'svelte/store'
+  import { get, writable, type Writable } from 'svelte/store'
   import { useTelemetry } from '../../../service/telemetry'
   import { OasisSpace, useOasis } from '../../../service/oasis'
   import { useToasts } from '../../../service/toast'
   import type { Resource } from '../../../service/resources'
-  import { BentoController } from './BentoController'
+  import { BentoController, BentoItem } from './BentoController'
   import { blobToDataUrl } from '../../../utils/screenshot'
   import { DragculaDragEvent, HTMLDragZone } from '@horizon/dragcula'
   import { DragTypeNames } from '../../../types'
@@ -26,6 +26,7 @@
   import { useMiniBrowserService } from '../../../service/miniBrowser'
   import MiniBrowser from '../../MiniBrowser/MiniBrowser.svelte'
   import { useTabsManager } from '../../../service/tabs'
+  import { contextMenu } from '../../Core/ContextMenu.svelte'
 
   export let newTabOverlayState: number = 0
 
@@ -49,9 +50,9 @@
 
   const BENTO_CONFIG = {
     height: 348,
-    PADDING: 20,
+    PADDING: 0,
     GAP: 10,
-    CELL_SIZE: 100,
+    CELL_SIZE: 50,
     items: $homescreen.bentoItems
   }
 
@@ -61,45 +62,69 @@
 
   /// DND Preview
   // TODO: (maxu) replace with uodate in raf, not reactive
-  let dropTargetPreview = writable({
-    visible: false,
+  let dropPreviewVisible = writable(false)
+  let dropTargetPreview = {
     cellX: 1,
     cellY: 1,
-    spanX: 2,
-    spanY: 2
-  })
+    spanX: 4,
+    spanY: 4
+  }
+  let dropTargetPreviewFlushed = {
+    cellX: 1,
+    cellY: 1,
+    spanX: 4,
+    spanY: 4
+  }
+
+  /// Raf
+  let raf: number | null = null
+  function rafCbk() {
+    dropTargetPreviewFlushed.cellX = dropTargetPreview.cellX
+    dropTargetPreviewFlushed.cellY = dropTargetPreview.cellY
+    dropTargetPreviewFlushed.spanX = dropTargetPreview.spanX
+    dropTargetPreviewFlushed.spanY = dropTargetPreview.spanY
+    raf = null
+  }
 
   /// Drag Handlers
 
   function handleDragEnter(drag: DragculaDragEvent) {
     const overCellXY = bentoController.getCellAt(drag.event.x, drag.event.y)
-    dropTargetPreview.update((o) => {
-      o.cellX = overCellXY.cellX
-      o.cellY = overCellXY.cellY
-      return o
-    })
+    dropTargetPreview.cellX = overCellXY?.cellX ?? 0
+    dropTargetPreview.cellY = overCellXY?.cellY ?? ß
 
-    $dropTargetPreview.visible = true
+    dropPreviewVisible.set(true)
 
     if (!drag.isNative && drag.data?.hasData(DragTypeNames.BENTO_ITEM)) {
       const item = drag.data?.getData(DragTypeNames.BENTO_ITEM)
-      $dropTargetPreview.spanX = get(item).spanX
-      $dropTargetPreview.spanY = get(item).spanY
+      dropTargetPreview.spanX = get(item).spanX
+      dropTargetPreview.spanY = get(item).spanY
     }
   }
   function handleDragLeave(drag: DragculaDragEvent) {
-    $dropTargetPreview.visible = false
+    dropPreviewVisible.set(false)
   }
   function handleDragOver(drag: DragculaDragEvent) {
-    const overCellXY = bentoController.getCellAt(drag.event.x, drag.event.y)
-    dropTargetPreview.update((o) => {
-      o.cellX = overCellXY.cellX
-      o.cellY = overCellXY.cellY
-      return o
-    })
+    const bentoItem = drag.item?.data.getData(DragTypeNames.BENTO_ITEM) as Writable<BentoItem>
+    let size = { x: 0, y: 0 }
+    if (bentoItem) {
+      size = {
+        x: bentoController.computeWidth(get(bentoItem).spanX),
+        y: bentoController.computeWidth(get(bentoItem).spanY)
+      }
+    }
+
+    const overCellXY = bentoController.getCellAt(
+      drag.event.x - size.x / 2,
+      drag.event.y - size.y / 2
+    )
+    dropTargetPreview.cellX = overCellXY?.cellX ?? 0
+    dropTargetPreview.cellY = overCellXY?.cellY ?? 0
+
+    if (raf === null) raf = requestAnimationFrame(rafCbk)
   }
   async function handleDrop(drag: DragculaDragEvent) {
-    $dropTargetPreview.visible = false
+    dropPreviewVisible.set(false)
 
     let source: AddHomescreenItemEventSource | undefined
     if (drag.isNative) source = AddHomescreenItemEventSource.NativeDrop
@@ -121,10 +146,10 @@
           items.push(
             writable({
               id: crypto.randomUUID(),
-              cellX: $dropTargetPreview.cellX,
-              cellY: $dropTargetPreview.cellY,
-              spanX: $dropTargetPreview.spanX,
-              spanY: $dropTargetPreview.spanY,
+              cellX: dropTargetPreview.cellX,
+              cellY: dropTargetPreview.cellY,
+              spanX: dropTargetPreview.spanX,
+              spanY: dropTargetPreview.spanY,
               resourceId: resource.id
             })
           )
@@ -194,10 +219,10 @@
         items.push(
           writable({
             id: crypto.randomUUID(),
-            cellX: $dropTargetPreview.cellX,
-            cellY: $dropTargetPreview.cellY,
-            spanX: $dropTargetPreview.spanX,
-            spanY: $dropTargetPreview.spanY,
+            cellX: dropTargetPreview.cellX,
+            cellY: dropTargetPreview.cellY,
+            spanX: dropTargetPreview.spanX,
+            spanY: dropTargetPreview.spanY,
             resourceId: resource.id
           })
         )
@@ -211,10 +236,10 @@
         items.push(
           writable({
             id: crypto.randomUUID(),
-            cellX: $dropTargetPreview.cellX,
-            cellY: $dropTargetPreview.cellY,
-            spanX: $dropTargetPreview.spanX,
-            spanY: $dropTargetPreview.spanY,
+            cellX: dropTargetPreview.cellX,
+            cellY: dropTargetPreview.cellY,
+            spanX: dropTargetPreview.spanX,
+            spanY: dropTargetPreview.spanY,
             spaceId: space.id
           })
         )
@@ -265,10 +290,10 @@
         items.push(
           writable({
             id: crypto.randomUUID(),
-            cellX: $dropTargetPreview.cellX,
-            cellY: $dropTargetPreview.cellY,
-            spanX: $dropTargetPreview.spanX,
-            spanY: $dropTargetPreview.spanY,
+            cellX: dropTargetPreview.cellX,
+            cellY: dropTargetPreview.cellY,
+            spanX: dropTargetPreview.spanX,
+            spanY: dropTargetPreview.spanY,
             resourceId: resource.id
           })
         )
@@ -279,8 +304,8 @@
         telemetry.trackAddHomescreenItem(AddHomescreenItemEventTrigger.Drop, 'resource', source)
     }
 
-    $dropTargetPreview.spanX = 2
-    $dropTargetPreview.spanY = 2
+    dropTargetPreview.spanX = 4
+    dropTargetPreview.spanY = 4
     //bentoController.reflowItems($bentoItems)
     drag.continue()
   }
@@ -301,27 +326,9 @@
   }
   async function handleSetResourceBackground(e: CustomEvent<string>) {
     const resourceId = e.detail
-    const resource = await resourceManager.getResource(resourceId)
 
-    const MAX_SIZE = 2 * 1000 * 1000 // 2MB but with room for error
-
-    let dataUrl = ''
-    if (resource && resource.type.startsWith('image/')) {
-      const blob = resource.rawData as Blob
-      if (blob.size <= MAX_SIZE) {
-        dataUrl = await blobToDataUrl(blob)
-      } else {
-        toast.error('Image size exceeds 2MB limit')
-        return
-      }
-    } else {
-      const imgUrl = resource?.parsedData?.image
-      if (imgUrl) {
-        dataUrl = await window.api.fetchAsDataURL(imgUrl)
-      }
-    }
     homescreen.customization.update((cfg) => {
-      cfg.background = `url(${dataUrl})`
+      cfg.background = `surf://resource/${resourceId}`
       return cfg
     })
 
@@ -372,13 +379,13 @@
     on:DragOver={handleDragOver}
     on:Drop={handleDrop}
   >
-    {#if $dropTargetPreview.visible}
+    {#if $dropPreviewVisible}
       <div
         class="drop-preview"
-        style:--cellX={$dropTargetPreview.cellX + 1}
-        style:--cellY={$dropTargetPreview.cellY + 1}
-        style:--spanX={$dropTargetPreview.spanX}
-        style:--spanY={$dropTargetPreview.spanY}
+        style:--cellX={dropTargetPreviewFlushed.cellX + 1}
+        style:--cellY={dropTargetPreviewFlushed.cellY + 1}
+        style:--spanX={dropTargetPreviewFlushed.spanX}
+        style:--spanY={dropTargetPreviewFlushed.spanY}
       />
     {/if}
     {#if $bentoItems.length === 0}
@@ -428,38 +435,17 @@
 </div>
 
 <style lang="scss">
-  :global(.app-contents.horizontalTabs.showLeftSidebar #homescreen-wrapper .mini-browser-wrapper) {
-    top: var(--left-sidebar-height, 0);
-    height: unset;
-    padding-top: 4rem;
-  }
-  :global(.app-contents.horizontalTabs.showRightSidebar #homescreen-wrapper .mini-browser-wrapper) {
-    right: var(--right-sidebar-size, 0);
-    width: unset;
-  }
-
-  :global(
-      .app-contents:not(.horizontalTabs).showLeftSidebar #homescreen-wrapper .mini-browser-wrapper
-    ) {
-    left: var(--left-sidebar-size, 0);
-    width: unset;
-  }
-  :global(
-      .app-contents:not(.horizontalTabs).showRightSidebar #homescreen-wrapper .mini-browser-wrapper
-    ) {
-    right: var(--right-sidebar-size, 0);
-    width: unset;
-  }
   #homescreen-wrapper {
+    position: relative;
     width: 100%;
     height: 100%;
 
     display: flex;
     flex-direction: column;
 
+    --padding: 1em;
     padding: var(--padding, 0);
 
-    //background-image: radial-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 1)),var(--background);
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
@@ -478,15 +464,15 @@
         z-index: 5;
         width: calc(var(--spanX) * var(--bento_cell_size) + (var(--spanX) - 1) * var(--bento_gap));
         height: calc(var(--spanY) * var(--bento_cell_size) + (var(--spanY) - 1) * var(--bento_gap));
-        background: rgba(200, 200, 200, 0.21);
-        border: 2px dashed rgba(255, 255, 255, 0.9);
+        background: rgba(200, 200, 200, 0.15);
+        border: 2px dashed rgba(126, 126, 126, 0.4);
         border-radius: 0.5em;
         overflow: hidden;
 
         transition:
           width 0.2s,
           height 0.2s,
-          transform 60ms ease-out;
+          transform 220ms cubic-bezier(0.19, 1, 0.22, 1);
 
         transform: translate3d(
           calc((var(--cellX) - 1) * var(--bento_cell_size) + (var(--cellX) - 1) * var(--bento_gap)),
@@ -528,5 +514,8 @@
         @apply text-sky-600/80;
       }
     }
+  }
+  :global(#homescreen-wrapper .mini-browser-wrapper) {
+    padding: var(--padding);
   }
 </style>

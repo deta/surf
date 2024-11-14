@@ -114,6 +114,10 @@ export class BentoController<
     }
   }
 
+  public computeWidth(span: number): number {
+    return span * this.CELL_SIZE + (span - 1) * this.GAP
+  }
+
   /**
    * Iterates all items from left to right, top to bottom and if an overlap is found,
    * try to resolve it by moving the item to the left, if possible, or to the right.
@@ -278,10 +282,14 @@ export class BentoItem {
     }
   }
   get width(): number {
-    return this.spanX * this.controller.CELL_SIZE + (this.spanX - 1) * this.controller.GAP
+    return this.controller
+      ? this.spanX * this.controller.CELL_SIZE + (this.spanX - 1) * this.controller.GAP
+      : 0
   }
   get height(): number {
-    return this.spanY * this.controller.CELL_SIZE + (this.spanY - 1) * this.controller.GAP
+    return this.controller
+      ? this.spanY * this.controller.CELL_SIZE + (this.spanY - 1) * this.controller.GAP
+      : 0
   }
 
   /// === UTILS

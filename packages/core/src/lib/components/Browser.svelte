@@ -1,7 +1,7 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { onMount, setContext, tick } from 'svelte'
+  import { onDestroy, onMount, setContext, tick } from 'svelte'
   import SplashScreen from './Atoms/SplashScreen.svelte'
   import { writable, derived, get, type Writable } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
@@ -4138,6 +4138,11 @@
   let leftSidebarWidth = 0
   let leftSidebarHeight = 0
   let rightSidebarWidth = 0
+
+  let backgroundImage = derived(
+    homescreen.customization,
+    ($customization) => $customization.background
+  )
 </script>
 
 {#if $debugMode}
@@ -4182,6 +4187,7 @@
 
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40"
+  style:--background-image="url('{backgroundImage}')"
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
   class:horizontalTabs
@@ -4255,8 +4261,14 @@
       on:open-and-chat={handleOpenAndChat}
       on:open-space-as-tab={handleCreateTabForSpace}
       style="--padding: calc({horizontalTabs
-        ? leftSidebarHeight
-        : 0}px + 1.5em) 1.5em 1.5em calc({horizontalTabs ? 0 : leftSidebarWidth}px + 1.5em);"
+        ? showLeftSidebar
+          ? leftSidebarHeight
+          : 0
+        : 0}px + 1.5em) 1.5em 1.5em calc({horizontalTabs
+        ? 0
+        : showLeftSidebar
+          ? leftSidebarWidth
+          : 0}px + 1.5em);"
     />
   {/if}
 
@@ -5225,6 +5237,11 @@
 
 <style lang="scss">
   .app-contents {
+    background-image: var(--background-image);
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+
     & :global(#homescreen-wrapper) {
       position: fixed;
       inset: 0;

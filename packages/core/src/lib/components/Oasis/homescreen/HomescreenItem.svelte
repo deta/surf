@@ -73,6 +73,8 @@
         }
       }
       const handleMouseUp = (e: MouseEvent) => {
+        e.preventDefault()
+        e.stopImmediatePropagation()
         homescreen.store()
         e.target.classList.remove('active')
 
@@ -83,7 +85,7 @@
       e.target.classList.add('active')
 
       window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp, { once: true })
+      window.addEventListener('mouseup', handleMouseUp, { capture: true, once: true })
     }
   }
 
@@ -99,7 +101,7 @@
   bind:this={bentoItemEl}
   use:BentoItem.action={{ data: item }}
   use:HTMLDragItem.action={{}}
-  on:click={(e) => {
+  on:mouseup={(e) => {
     if (e.shiftKey || e.ctrlKey || e.metaKey) return
     homescreen.setVisible(false)
   }}
@@ -187,7 +189,7 @@ TODO: Fix resizing logic for other corners
     {#if $item.resourceId}
       <OasisResourceLoader
         resourceOrId={$item.resourceId}
-        mode={'full'}
+        mode={'responsive'}
         origin="homescreen"
         draggable={false}
         frameless={true}
@@ -249,6 +251,9 @@ TODO: Fix resizing logic for other corners
 
     &:global([data-dragging-item]) {
       opacity: 0.4;
+    }
+    &:global([data-dragging-item][data-drag-preview]) {
+      opacity: 0.9;
     }
 
     &.item-type-resource {

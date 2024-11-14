@@ -899,6 +899,7 @@
       {processingText}
       {failedText}
       {hideProcessing}
+      {origin}
       mode="content"
     />
   {:else if previewData}
@@ -919,6 +920,7 @@
       {processingText}
       {failedText}
       {hideProcessing}
+      {origin}
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}

@@ -11,7 +11,7 @@
     icon?: Icons
   }
 
-  export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny'
+  export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny' | 'responsive'
   export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space'
   export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
 
@@ -56,10 +56,11 @@
   export let processingText: string = 'Processing…'
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
+  export let origin: Origin = 'stuff'
 
   export let mode: Mode = 'full'
 
-  const log = useLogScope('PostPreview')
+  const log = useLogScope('ResourcePreview')
   const dispatch = createEventDispatcher<{
     'edit-title': string
     'start-edit-title': void
@@ -74,16 +75,22 @@
   const MAX_TITLE_LENGTH = 300
   const MAX_CONTENT_LENGTH = 500
 
-  $: showTitle = !(mode === 'media' && image)
+  const isModeResponsive = mode === 'responsive'
+
+  $: showTitle = (isModeResponsive && image) || !(mode === 'media' && image)
   $: showContent =
-    (mode === 'full' ||
+    isModeResponsive ||
+    ((mode === 'full' ||
       mode === 'content' ||
       (!title && !image && !resource.type.startsWith(ResourceTypes.DOCUMENT))) &&
-    !((annotations || []).length > 0 && type !== ResourceTypes.ANNOTATION)
-  $: showAnnotations = mode === 'full' || mode === 'content' || (!title && !image)
-  $: showMedia = mode === 'full' || mode === 'media' || (!title && !content && image)
-  $: showAuthor = mode === 'full' || mode === 'content'
-  $: showSource = mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/'))
+      !((annotations || []).length > 0 && type !== ResourceTypes.ANNOTATION))
+  $: showAnnotations =
+    isModeResponsive || mode === 'full' || mode === 'content' || (!title && !image)
+  $: showMedia =
+    isModeResponsive || mode === 'full' || mode === 'media' || (!title && !content && image)
+  $: showAuthor = isModeResponsive || mode === 'full' || mode === 'content'
+  $: showSource =
+    isModeResponsive || (mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/')))
   $: isProcessing = $resourceState === 'post-processing' && !hideProcessing
   $: failedProcessing = ($isDebugModeEnabled || failedText) && $resourceState === 'error'
 
@@ -151,11 +158,12 @@
 </script>
 
 <div
-  class="preview"
+  class="preview origin-{origin} mode-{mode}"
   class:interactive
   class:frame={!frameless}
   class:themed={!!theme}
   style="--color1: {theme && theme[0]}; --color2: {theme && theme[1]}"
+  data-resource-type={type}
 >
   <div class="preview-card relative">
     <!-- <div class="absolute top-1 right-1 z-50 {theme ? 'text-white/50' : 'text-black/50'}">
@@ -163,6 +171,19 @@
     </div> -->
 
     <div class="inner">
+      <!--<div class="minimal">
+        <div class="icon">
+          {#if source?.imageUrl}
+            <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
+          {:else if source?.icon}
+            <Icon name={source.icon} />
+          {:else}
+            <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
+          {/if}
+        </div>
+        <span class="title">{title || content || source?.text || author?.text || 'Untitled'}</span>
+      </div>-->
+
       {#if error}
         <div class="title">{error}</div>
         <div class="subtitle">{url}</div>
@@ -613,5 +634,165 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5em;
+  }
+
+  /////////// Responsive Mode overrides
+
+  /// Make card image media use full height on homescreen
+  :global(.preview.mode-responsive[data-resource-type^='image/'] .inner > .image) {
+    flex-grow: 1;
+  }
+  /// Make card image media use full height on homescreen
+  :global(.preview.mode-responsive[data-resource-type^='image/'] .inner .details) {
+    display: none !important;
+  }
+
+  /// Make notion show more of the content
+  :global(
+      .preview.mode-responsive[data-resource-type^='application/vnd.space.document.notion']
+        .inner
+        .details
+        .content
+    ) {
+    flex-grow: 1;
+  }
+
+  /// Container queries
+  /// NOTE: All scoped to homescreen for now, not to break anthing and homescreen is a good place to
+  /// try out the different sizes easily.
+
+  // Not setting them when not in preview mode will nuke Masonry.
+  .preview.mode-responsive {
+    container: preview-card / size;
+
+    .details {
+      //     container: card-details / size;
+    }
+  }
+
+  // NOTE: For calculations:
+  // cell: 50x50px
+  // gap: 10px
+
+  // Applies when wider > taller
+  @container preview-card (aspect-ratio > 1 / 1) {
+    .mode-responsive {
+      .title {
+        // DBG
+        //background: blue;
+      }
+
+      .inner {
+        flex-direction: row;
+      }
+
+      @container preview-card (height <= calc(50px * 3 + 2 * 10px)) {
+        :has(.image) {
+          .inner > .image {
+            flex-grow: 1;
+          }
+
+          .details {
+            padding: 0.5em;
+
+            .content {
+              display: none !important;
+            }
+            .source {
+              display: none !important;
+            }
+          }
+        }
+      }
+
+      @container preview-card (width >= calc(50px * 8 + 7 * 10px)) {
+        :has(.image) {
+          .inner > .image {
+            flex-grow: 1;
+          }
+
+          .details {
+            width: 50%;
+          }
+        }
+      }
+
+      @container preview-card (width <= calc(50px * 4 + 3 * 10px)) and (height <= calc(50px * 2 + 1 * 10px)) {
+        :has(.image) {
+          .inner > .image {
+            flex-grow: 1;
+          }
+
+          .details {
+            .content,
+            .title {
+              display: none !important;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Applies when taller > wider
+  @container preview-card (aspect-ratio < 1 / 1) {
+    .mode-responsive {
+      .title {
+        // DBG
+        //background: lime;
+      }
+
+      :has(.image) {
+        .inner > .image {
+          flex-grow: 1;
+        }
+      }
+      @container preview-card (height <= calc(50px * 4 + 3 * 10px)) {
+        .content {
+          display: none !important;
+        }
+      }
+      @container preview-card (height < 200px) {
+        .content {
+          display: none !important;
+        }
+      }
+      @container preview-card (height < 160px) {
+        .title {
+          display: none !important;
+        }
+      }
+    }
+  }
+
+  // Applies when square
+  @container preview-card (aspect-ratio = 1 / 1) {
+    .mode-responsive {
+      :has(.image) {
+        .inner > .image {
+          flex-grow: 1 !important;
+        }
+      }
+
+      // Only show icon if 1 x 1
+      @container preview-card (height <= calc(50px * 1 + 0 * 10px)) {
+        .image {
+          display: none !important;
+        }
+
+        .details {
+          padding: 0.3em;
+          .title {
+            display: none !important;
+          }
+          .content {
+            display: none !important;
+          }
+          .source .text {
+            display: none !important;
+          }
+        }
+      }
+    }
   }
 </style>
