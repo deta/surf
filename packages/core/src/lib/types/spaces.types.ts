@@ -24,6 +24,7 @@ export interface SpaceData {
   embedding_query: string | null
   builtIn?: boolean
   index?: number
+  pinned?: boolean
 }
 
 export interface SpaceSource {

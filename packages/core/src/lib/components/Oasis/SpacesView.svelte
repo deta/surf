@@ -16,7 +16,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
-  import { tooltip, useLogScope } from '@horizon/utils'
+  import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
   import Folder, { type EditingStartEvent } from './Folder.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import { OasisSpace, useOasis } from '../../service/oasis'
@@ -58,6 +58,7 @@
 
   const editingFolderId = writable<string | null>(null)
   const didChangeOrder = writable(false)
+  const showAllSpaces = useLocalStorageStore<boolean>('showAllSpacesInOasis', true, true)
 
   const filteredSpaces = derived([spaces, didChangeOrder], ([$spaces, didChangeOrder]) =>
     $spaces
@@ -66,14 +67,15 @@
           space.dataValue.folderName !== '.tempspace' && space.id !== 'all' && space.id !== 'inbox'
       )
       .sort((a, b) => {
-        // if (a.id === 'all') return -1 // Move 'all' folder to the top
-        // if (b.id === 'all') return 1
-
-        // move built in folders to the top behind 'all'
-        // if (a.dataValue.builtIn && !b.dataValue.builtIn) return -1
-
         return a.indexValue - b.indexValue
       })
+  )
+
+  const pinnedSpaces = derived(filteredSpaces, ($spaces) =>
+    $spaces.filter((space) => space.dataValue.pinned)
+  )
+  const unpinnedSpaces = derived(filteredSpaces, ($spaces) =>
+    $spaces.filter((space) => !space.dataValue.pinned)
   )
 
   const builtInSpaces = [
@@ -303,20 +305,38 @@
 
     if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
       const space = drag.item.data.getData(DragTypeNames.SURF_SPACE)
+      if (!space || drag.index === null) return
 
-      log.debug('dropped space', space, drag.index)
-      didChangeOrder.set(false)
+      const target = drag.to?.id
 
-      if (drag.index !== null) {
-        log.debug('moving space to index', drag.index)
+      dispatch('handled-drop')
+      drag.continue()
 
-        dispatch('handled-drop')
-        drag.continue()
-
-        await oasis.moveSpaceToIndex(space.id, drag.index)
-        didChangeOrder.set(true)
+      log.debug('dropped space', space, drag.index, target)
+      let newIndex = drag.index
+      if (target === 'overlay-spaces-list-pinned') {
+        log.debug('dropped onto pinned list')
+        if (!space.dataValue.pinned) {
+          await space.updateData({ pinned: true })
+        }
+      } else if (target === 'overlay-spaces-list') {
+        log.debug('dropped onto unpinned list')
+        if (space.dataValue.pinned) {
+          newIndex = newIndex + ($pinnedSpaces.length - 1)
+          await space.updateData({ pinned: false })
+        }
       }
+
+      didChangeOrder.set(false)
+      log.debug('moving space to index', newIndex)
+
+      await oasis.moveSpaceToIndex(space.id, newIndex)
+      didChangeOrder.set(true)
     }
+  }
+
+  const toggleShowSpaces = () => {
+    showAllSpaces.update((show) => !show)
   }
 </script>
 
@@ -340,31 +360,12 @@
         />
       </div>
     {/each}
-  </div>
-
-  <div class="folders-wrapper">
-    <div class="folders-header">
-      <div class="folders-header-text">Your Spaces</div>
-
-      <button
-        class="action-new-space"
-        class:disabled={$selectedSpace &&
-          $spaces.find((space) => space.id === $selectedSpace)?.dataValue.folderName ===
-            '.tempspace'}
-        on:click={handleCreateEmptySpace}
-        data-tooltip-target="create-space"
-        data-tooltip-action="action-new-space"
-        use:tooltip={{ position: 'left', text: 'Create a new space' }}
-      >
-        <Icon name="add" size="17px" stroke-width="2" />
-      </button>
-    </div>
 
     <div
-      class="folders-list"
-      data-tooltip-target="stuff-spaces-list"
+      class="pinned-list"
+      class:empty={$pinnedSpaces.length === 0}
       axis="vertical"
-      id="overlay-spaces-list"
+      id="overlay-spaces-list-pinned"
       use:HTMLAxisDragZone.action={{
         accepts: (drag) => {
           if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
@@ -375,23 +376,87 @@
       }}
       on:Drop={handleDrop}
     >
-      {#each $filteredSpaces as folder, index (folder.id + index)}
-        <Folder
-          {folder}
-          on:select={() => handleSpaceSelect(folder.id)}
-          on:space-selected={() => handleSpaceSelect(folder.id)}
-          on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
-          on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-          on:open-space-and-chat
-          on:Drop
-          on:editing-start={handleEditingStart}
-          on:editing-end={handleEditingEnd}
-          selected={$selectedSpace === folder.id}
-          isEditing={$editingFolderId === folder.id}
-          {showPreview}
-        />
-      {/each}
+      {#if $pinnedSpaces.length === 0}
+        <div class="pinned-list-drag-indicator-wrapper">
+          <div class="pinned-list-drag-indicator">Drop Space here to Pin</div>
+        </div>
+      {:else}
+        {#each $pinnedSpaces as folder, index (folder.id + index)}
+          <Folder
+            {folder}
+            on:select={() => handleSpaceSelect(folder.id)}
+            on:space-selected={() => handleSpaceSelect(folder.id)}
+            on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+            on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+            on:open-space-and-chat
+            on:Drop
+            on:editing-start={handleEditingStart}
+            on:editing-end={handleEditingEnd}
+            selected={$selectedSpace === folder.id}
+            isEditing={$editingFolderId === folder.id}
+            {showPreview}
+          />
+        {/each}
+      {/if}
     </div>
+  </div>
+
+  <div class="folders-wrapper">
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="folders-header" on:click={toggleShowSpaces}>
+      <div class="folders-header-left">
+        <Icon name="chevron.down" className={$showAllSpaces ? '' : '-rotate-90'} />
+        <div class="folders-header-text">All Your Spaces</div>
+      </div>
+
+      <button
+        class="action-new-space"
+        class:disabled={$selectedSpace &&
+          $spaces.find((space) => space.id === $selectedSpace)?.dataValue.folderName ===
+            '.tempspace'}
+        on:click|stopPropagation={handleCreateEmptySpace}
+        data-tooltip-target="create-space"
+        data-tooltip-action="action-new-space"
+        use:tooltip={{ position: 'left', text: 'Create a new space' }}
+      >
+        <Icon name="add" size="17px" stroke-width="2" />
+      </button>
+    </div>
+
+    {#if $showAllSpaces}
+      <div
+        class="folders-list"
+        data-tooltip-target="stuff-spaces-list"
+        axis="vertical"
+        id="overlay-spaces-list"
+        use:HTMLAxisDragZone.action={{
+          accepts: (drag) => {
+            if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+              return true
+            }
+            return false
+          }
+        }}
+        on:Drop={handleDrop}
+      >
+        {#each $unpinnedSpaces as folder, index (folder.id + index)}
+          <Folder
+            {folder}
+            on:select={() => handleSpaceSelect(folder.id)}
+            on:space-selected={() => handleSpaceSelect(folder.id)}
+            on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+            on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+            on:open-space-and-chat
+            on:Drop
+            on:editing-start={handleEditingStart}
+            on:editing-end={handleEditingEnd}
+            selected={$selectedSpace === folder.id}
+            isEditing={$editingFolderId === folder.id}
+            {showPreview}
+          />
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -408,7 +473,7 @@
     flex-direction: column;
     align-items: center;
     padding: 1rem 0.75rem 1rem 0.75rem;
-    gap: 1.75rem;
+    gap: 1.5rem;
     height: 100%;
     flex: 1;
     scrollbar-width: none;
@@ -443,11 +508,57 @@
   }
 
   .built-in-list,
+  .pinned-list,
   .folders-list {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     width: 100%;
+  }
+
+  .built-in-list {
+    position: relative;
+  }
+
+  .pinned-list {
+    border: 1px dashed transparent;
+
+    &.empty {
+      min-height: 1.5rem;
+      margin-top: -0.5rem !important;
+      margin-bottom: -1rem;
+    }
+  }
+
+  :global(
+      body[data-dragging='true']:has(.folder-wrapper[data-drag-preview])
+        [data-drag-zone='overlay-spaces-list-pinned'].empty
+    ) {
+    border-color: #3e475d;
+    border-radius: 8px;
+    margin-top: -1px;
+  }
+
+  .pinned-list-drag-indicator-wrapper {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .pinned-list-drag-indicator {
+    color: #3e475d;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+
+  :global(
+      body[data-dragging='true']:has(.folder-wrapper[data-drag-preview])
+        .pinned-list-drag-indicator-wrapper
+    ) {
+    display: flex;
   }
 
   .folders-list {
@@ -464,6 +575,23 @@
     gap: 0.5rem;
     padding-left: 0.75rem;
     padding-right: 0.5rem;
+  }
+
+  .folders-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    padding: 0.25rem 0.5rem;
+    padding-left: 0.2rem;
+    margin-left: -0.2rem;
+
+    &:hover {
+      background: rgb(224 242 254); // bg-sky-100
+      color: rgba(0, 103, 185, 1);
+    }
   }
 
   .folders-header-text {
@@ -515,9 +643,10 @@
     opacity: 1;
     background: transparent;
     color: rgb(52, 108, 181);
+    transition: all 0.2s ease;
 
     &:hover {
-      background: rgba(201, 221, 243, 0.9);
+      background: rgb(224 242 254); // bg-sky-100
       color: rgba(0, 103, 185, 1);
       border: 0.5px solid rgba(67, 142, 239, 0.15);
     }

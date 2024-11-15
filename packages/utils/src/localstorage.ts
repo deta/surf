@@ -74,7 +74,15 @@ export const useLocalStorageStore = <T extends Value>(
     store.set(value)
   }
 
+  const update = (fn: (value: T) => T) => {
+    store.update((value) => {
+      const newValue = fn(value)
+      setValue(key, newValue)
+      return newValue
+    })
+  }
+
   load(key)
 
-  return { set, update: store.update, subscribe: store.subscribe, load }
+  return { set, update, subscribe: store.subscribe, load }
 }
