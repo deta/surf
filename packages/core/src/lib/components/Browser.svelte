@@ -265,7 +265,7 @@
   }
 
   // Set global context
-  setContext('selectedFolder', 'all')
+  setContext('selectedFolder', 'inbox')
 
   const sidebarTools = derived(
     [activeTabMagic, activeTab, showAppSidebar, userConfigSettings],
@@ -3891,90 +3891,98 @@
   }
 
   const handleDropOnSpaceTab = async (drag: DragculaDragEvent<DragTypes>, spaceId?: string) => {
-    log.debug('dropping onto sidebar tab', drag)
-
-    if (drag.item !== null && drag.item !== undefined) drag.item.dropEffect = 'copy'
+    const saveToSpace = spaceId !== undefined && spaceId !== 'all' && spaceId !== 'inbox'
 
     const toast = toasts.loading(
-      spaceId === 'all'
+      !saveToSpace
         ? 'Saving to Your Stuff...'
         : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Space...`
     )
 
-    if (drag.isNative) {
-      const parsed = await processDrop(drag.event!)
-      log.debug('Parsed', parsed)
+    try {
+      log.debug('dropping onto sidebar tab', drag)
 
-      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-      log.debug('Resources', newResources)
+      if (drag.item !== null && drag.item !== undefined) drag.item.dropEffect = 'copy'
 
-      if (spaceId !== undefined) {
-        await oasis.addResourcesToSpace(
-          spaceId,
-          newResources.map((r) => r.id),
-          SpaceEntryOrigin.ManuallyAdded
-        )
+      if (drag.isNative) {
+        const parsed = await processDrop(drag.event!)
+        log.debug('Parsed', parsed)
+
+        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        log.debug('Resources', newResources)
+
+        if (saveToSpace) {
+          await oasis.addResourcesToSpace(
+            spaceId,
+            newResources.map((r) => r.id),
+            SpaceEntryOrigin.ManuallyAdded
+          )
+        }
+
+        for (const r of newResources) {
+          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
+        }
+
+        // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+        //await oasis.loadSpaceContents(spaceId)
+      } else if (
+        drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        let resource: Resource | null = null
+        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+          resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+          resource = await resourceFetcher()
+        }
+
+        if (resource === null) {
+          log.warn('Dropped resource but resource is null! Aborting drop!')
+          drag.abort()
+          return
+        }
+
+        const isSilent =
+          resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+          'true'
+        const hideInEverything =
+          resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+            ?.value === 'true'
+
+        if (hideInEverything) {
+          // remove hide in everything tag if it exists since the user is explicitly adding it
+          log.debug('Removing hide in everything tag from resource', resource.id)
+          await resourceManager.deleteResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+          )
+        }
+
+        if (isSilent) {
+          // remove silent tag if it exists since the user is explicitly adding it
+          log.debug('Removing silent tag from resource', resource.id)
+          await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+          telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
+        }
+
+        if (saveToSpace) {
+          await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+        }
+
+        // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
+        //await loadSpaceContents(spaceId)
       }
 
-      for (const r of newResources) {
-        telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
-      }
-
-      // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
-      //await oasis.loadSpaceContents(spaceId)
-    } else if (
-      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-    ) {
-      let resource: Resource | null = null
-      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
-        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
-      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
-        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
-        resource = await resourceFetcher()
-      }
-
-      if (resource === null) {
-        log.warn('Dropped resource but resource is null! Aborting drop!')
-        drag.abort()
-        return
-      }
-
-      const isSilent =
-        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value === 'true'
-      const hideInEverything =
-        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
-          ?.value === 'true'
-
-      if (hideInEverything) {
-        // remove hide in everything tag if it exists since the user is explicitly adding it
-        log.debug('Removing hide in everything tag from resource', resource.id)
-        await resourceManager.deleteResourceTag(
-          resource.id,
-          ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-        )
-      }
-
-      if (isSilent) {
-        // remove silent tag if it exists since the user is explicitly adding it
-        log.debug('Removing silent tag from resource', resource.id)
-        await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
-        telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, spaceId !== 'all')
-      }
-
-      if (spaceId !== undefined) {
-        await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-      }
-
-      // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
-      //await loadSpaceContents(spaceId)
+      drag.continue()
+      toast.success(`Resources Saved!`)
+      /*toast.success(
+        `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
+      )*/
+    } catch (error) {
+      log.error('Failed to drop on space tab', error)
+      toast.error('Failed to save resources')
     }
-
-    drag.continue()
-    toast.success(`Resources Saved!`)
-    /*toast.success(
-      `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
-    )*/
   }
 
   const handleSaveScreenshot = async (
@@ -4920,7 +4928,7 @@
         class:sidebarHidden={!showLeftSidebar}
       >
         <NewTabOverlay
-          spaceId={'all'}
+          spaceId={'inbox'}
           activeTab={$activeTab}
           bind:showTabSearch={$showNewTabOverlay}
           on:open-space-as-tab={handleCreateTabForSpace}

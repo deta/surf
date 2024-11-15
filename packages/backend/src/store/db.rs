@@ -1146,6 +1146,30 @@ impl Database {
         Ok(result)
     }
 
+    pub fn list_resource_ids_by_tags_no_space(
+        &self,
+        tags: &Vec<ResourceTagFilter>,
+    ) -> BackendResult<Vec<String>> {
+        if tags.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut result = Vec::new();
+        let (mut query, params) = Self::list_resource_ids_by_tags_query(tags, 0);
+
+        query = format!(
+            "{} EXCEPT SELECT resource_id FROM space_entries WHERE manually_added = 1",
+            query
+        );
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let resource_ids =
+            stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
+        for resource_id in resource_ids {
+            result.push(resource_id?);
+        }
+        Ok(result)
+    }
+
     pub fn list_resource_ids_by_space_id(&self, space_id: &str) -> BackendResult<Vec<String>> {
         let mut result = Vec::new();
         let mut stmt = self
@@ -1458,6 +1482,26 @@ impl Database {
         mut tags: Vec<ResourceTagFilter>,
     ) -> BackendResult<SearchResultSimple> {
         let filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
+
+        if filtered_resource_ids.is_empty() {
+            return Ok(SearchResultSimple {
+                items: vec![],
+                total: 0,
+            });
+        }
+
+        Ok(SearchResultSimple {
+            total: filtered_resource_ids.len() as i64,
+            items: filtered_resource_ids,
+        })
+    }
+
+    // list all resources that are not in a space by list of tags
+    pub fn list_resources_by_tags_no_space(
+        &self,
+        tags: Vec<ResourceTagFilter>
+    ) -> BackendResult<SearchResultSimple> {
+        let filtered_resource_ids = self.list_resource_ids_by_tags_no_space(&tags)?;
 
         if filtered_resource_ids.is_empty() {
             return Ok(SearchResultSimple {

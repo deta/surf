@@ -320,6 +320,8 @@ pub enum ResourceTagFilterOp {
     Prefix,
     Suffix,
     NotExists,
+    NePrefix,
+    NeSuffix,
 }
 
 impl Default for ResourceTagFilterOp {
@@ -361,6 +363,14 @@ impl ResourceTagFilter {
                 // currently doing this as indices are supposed to be incremented in pairs
                 format!("resource_id NOT IN (SELECT resource_id FROM resource_tags WHERE tag_name = ?{} AND tag_name = ?{})", i1, i2),
                 self.tag_name.clone(),
+            ),
+            ResourceTagFilterOp::NePrefix => (
+                format!("tag_name = ?{} AND tag_value NOT LIKE ?{}", i1, i2),
+                format!("{}%", self.tag_value),
+            ),
+            ResourceTagFilterOp::NeSuffix => (
+                format!("tag_name = ?{} AND tag_value NOT LIKE ?{}", i1, i2),
+                format!("%{}", self.tag_value),
             ),
         }
     }

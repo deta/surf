@@ -172,6 +172,7 @@
             on:whitelist-resource
             on:remove
             on:load
+            on:saved-resource-in-space
             {interactive}
             draggable
           />

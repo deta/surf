@@ -239,7 +239,7 @@ export class SFFS {
 
   async readResource(
     id: string,
-    opts?: { includeAnnotations: boolean }
+    opts?: { includeAnnotations?: boolean }
   ): Promise<SFFSResource | null> {
     this.log.debug('reading resource with id', id)
     const dataString = await this.backend.js__store_get_resource(
@@ -329,8 +329,8 @@ export class SFFS {
     return items.map(this.convertCompositeResourceToResource)
   }
 
-  async listResourceIDsByTags(tags: SFFSResourceTag[]) {
-    this.log.debug('listing resources by tags', tags)
+  async listResourceIDsByTags(tags: SFFSResourceTag[], excludeWithinSpaces: boolean = false) {
+    this.log.debug('listing resources by tags', tags, excludeWithinSpaces)
     const tagsData = JSON.stringify(
       tags.map(
         (tag) =>
@@ -343,7 +343,14 @@ export class SFFS {
           }) as SFFSRawResourceTag
       )
     )
-    const raw = await this.backend.js__store_list_resources_by_tags(tagsData)
+
+    let raw: string
+    if (excludeWithinSpaces) {
+      raw = await this.backend.js__store_list_resources_by_tags_no_space(tagsData)
+    } else {
+      raw = await this.backend.js__store_list_resources_by_tags(tagsData)
+    }
+
     const parsed = this.parseData<{ items: string[]; total: number }>(raw)
     return parsed?.items ?? []
   }

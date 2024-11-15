@@ -162,6 +162,7 @@
             on:open-space-as-tab
             on:blacklist-resource
             on:whitelist-resource
+            on:saved-resource-in-space
             on:rendered={handleRenderingDone}
             {interactive}
           />

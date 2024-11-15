@@ -42,7 +42,7 @@ export type SFFSRawResourceTag = {
   resource_id: string
   tag_name: string
   tag_value: string
-  op?: 'eq' | 'ne' | 'prefix' | 'suffix'
+  op?: 'eq' | 'ne' | 'prefix' | 'suffix' | 'neprefix' | 'nesuffix'
 }
 
 export type SFFSRawResourceTextContent = {

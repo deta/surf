@@ -24,7 +24,7 @@ export interface SFFSResourceTag {
   id?: string
   name: string
   value: string
-  op?: 'eq' | 'ne' | 'prefix' | 'suffix' | 'notexists'
+  op?: 'eq' | 'ne' | 'prefix' | 'suffix' | 'notexists' | 'neprefix' | 'nesuffix'
 }
 
 export enum ResourceTagsBuiltInKeys {

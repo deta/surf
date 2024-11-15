@@ -113,6 +113,7 @@
     'blacklist-resource': string
     'set-resource-as-background': string
     'remove-from-homescreen': void
+    'saved-resource-in-space': string
   }>()
 
   const spaces = oasis.spaces
@@ -127,11 +128,11 @@
     return spaces
       .filter(
         (e) =>
-          e.dataValue.folderName.toLowerCase() !== 'all my stuff' &&
+          e.id !== 'all' &&
+          e.id !== 'inbox' &&
           e.dataValue.folderName.toLowerCase() !== '.tempspace' &&
           !e.dataValue.builtIn
       )
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .map(
         (space) =>
           ({
@@ -145,6 +146,7 @@
                   [resource.id],
                   SpaceEntryOrigin.ManuallyAdded
                 )
+                dispatch('saved-resource-in-space', space.id)
                 toasts.success(`Added to ${space.dataValue.folderName}`)
               } catch (e) {
                 toasts.error(`Failed to add to ${space.dataValue.folderName}`)

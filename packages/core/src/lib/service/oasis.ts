@@ -1,9 +1,9 @@
-import { getContext, setContext } from 'svelte'
-import { get, writable, type Writable } from 'svelte/store'
+import { getContext, setContext, tick } from 'svelte'
+import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
 
-import { generateID, useLogScope } from '@horizon/utils'
+import { generateID, isDev, useLogScope } from '@horizon/utils'
 import { DeleteResourceEventTrigger } from '@horizon/types'
 
 import {
@@ -48,6 +48,8 @@ export class OasisSpace {
   data: Writable<SpaceData>
   /** Svelte store for the associated space contents, use contentsValue to access the value directly */
   contents: Writable<SpaceEntry[]>
+  /** Svelte store for the associated space index, use index to access the value directly */
+  index: Readable<number>
 
   log: ReturnType<typeof useLogScope>
   oasis: OasisService
@@ -62,6 +64,7 @@ export class OasisSpace {
 
     this.data = writable<SpaceData>(space.name)
     this.contents = writable<SpaceEntry[]>([])
+    this.index = derived(this.data, ($data) => $data.index ?? -1)
 
     this.log = useLogScope(`OasisSpace ${this.id}`)
     this.oasis = oasis
@@ -90,6 +93,11 @@ export class OasisSpace {
     return get(this.contents)
   }
 
+  /** Access the index of the space directly */
+  get indexValue() {
+    return get(this.index)
+  }
+
   async updateData(updates: Partial<SpaceData>) {
     this.log.debug('updating space', updates)
 
@@ -99,6 +107,12 @@ export class OasisSpace {
     await this.resourceManager.updateSpace(this.id, data)
 
     this.oasis.emit('updated', this, updates)
+  }
+
+  async updateIndex(index: number) {
+    this.log.debug('updating space index', index)
+
+    await this.updateData({ index })
   }
 
   async fetchContents() {
@@ -177,6 +191,11 @@ export class OasisService {
     this.pendingStackActions = []
 
     this.initSpaces()
+
+    if (isDev) {
+      // @ts-ignore
+      window.oasis = this
+    }
   }
 
   private async initSpaces() {
@@ -245,7 +264,21 @@ export class OasisService {
 
     this.log.debug('fetched spaces:', result)
 
-    const spaces = result.map((space) => this.createSpaceObject(space))
+    const spaces = result
+      // make sure each space has a index
+      .map((space, idx) => {
+        return {
+          ...space,
+          name: {
+            ...space.name,
+            index: space.name.index ?? idx
+          }
+        }
+      })
+      .sort((a, b) => (a.name.index ?? -1) - (b.name.index ?? -1))
+      .map((space, idx) => ({ ...space, name: { ...space.name, index: idx } }))
+      .map((space) => this.createSpaceObject(space))
+
     this.log.debug('loaded spaces:', spaces)
 
     this.spaces.set(spaces)
@@ -264,6 +297,7 @@ export class OasisService {
       embedding_query: null,
       sortBy: 'created_at',
       builtIn: false,
+      index: this.spacesValue.length,
       sources: []
     }
 
@@ -542,6 +576,38 @@ export class OasisService {
     } else if (origin.xy) {
       this.pendingStackActions.push({ resourceId, origin: origin.xy })
     }
+  }
+
+  async moveSpaceToIndex(spaceId: string, index: number) {
+    const space = await this.getSpace(spaceId)
+    if (!space) {
+      this.log.error('space not found:', spaceId)
+      throw new Error('Space not found')
+    }
+
+    this.log.debug('moving space', spaceId, 'to index', index)
+
+    // adjust the index of the space and all other spaces that are affected by the change
+    const spaces = get(this.spaces)
+
+    // place the space at the new index
+    spaces.splice(space.indexValue, 1)
+
+    // adjust the index of the other spaces
+    spaces.splice(index, 0, space)
+
+    // update the index of all spaces
+    await Promise.all(
+      spaces.map(async (space, idx) => {
+        if (space.indexValue !== idx) {
+          await space.updateIndex(idx)
+        }
+      })
+    )
+
+    await tick()
+
+    this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
   }
 
   static provide(resourceManager: ResourceManager, tabsManager: TabsManager) {

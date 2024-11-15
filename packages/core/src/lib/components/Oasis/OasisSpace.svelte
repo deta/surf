@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-  import { derived, get, writable } from 'svelte/store'
+  import { derived, get, writable, type Readable } from 'svelte/store'
 
   import {
     useLogScope,
@@ -86,6 +86,7 @@
   import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
+  import FilterSelector, { type FilterItem } from './FilterSelector.svelte'
 
   export let spaceId: string
   export let active: boolean = false
@@ -135,6 +136,8 @@
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<OasisSpace | null>(null)
+  const selectedFilterTypeId = writable<string | null>(null)
+  let selectedFilterType: Readable<FilterItem | null>
   // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
@@ -217,13 +220,49 @@
 
       await tick()
 
-      if ($space?.dataValue.sortBy === 'source_published_at') {
-        log.debug('Sorting by source_published_at, fetching resource data')
-        const fullResources = (
-          await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
-        ).filter((x) => x !== null)
+      const fullResources = (
+        await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
+      ).filter((x) => x !== null)
 
-        log.debug('Sorting full resources:', fullResources)
+      if ($selectedFilterType !== null) {
+        items = items.filter((item) => {
+          const resource = fullResources.find((x) => x.id === item.resource_id)
+          if (!resource) {
+            return false
+          }
+
+          if ($selectedFilterType.id === 'media') {
+            return (
+              resource.type.startsWith('image/') ||
+              resource.type.startsWith('video/') ||
+              resource.type.startsWith('audio/')
+            )
+          } else if ($selectedFilterType.id === 'documents') {
+            return resource.type.startsWith(ResourceTypes.DOCUMENT)
+          } else if ($selectedFilterType.id === 'files') {
+            return (
+              !resource.type.startsWith('application/vnd.space.') &&
+              !resource.type.startsWith('image/') &&
+              !resource.type.startsWith('video/') &&
+              !resource.type.startsWith('audio/')
+            )
+          } else if ($selectedFilterType.id === 'links') {
+            return (
+              resource.type.startsWith('application/vnd.space.') &&
+              !resource.type.startsWith(ResourceTypes.DOCUMENT)
+            )
+          } else {
+            return true
+          }
+        })
+
+        log.debug('Filtered items:', items)
+      }
+
+      log.debug('Sorting full resources:', fullResources)
+
+      if ($space?.dataValue.sortBy === 'source_published_at') {
+        log.debug('Sorting by source_published_at')
         // Use the source_published_at tag for sorting
         const sorted = fullResources
           .map((resource) => {
@@ -245,11 +284,6 @@
           .filter((x) => x !== undefined) as SpaceEntry[]
       } else {
         log.debug('sorting by resource created_at')
-        const fullResources = (
-          await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
-        ).filter((x) => x !== null)
-
-        log.debug('Sorting full resources:', fullResources)
         // Use the create_at field for sorting
         const sorted = fullResources
           .map((resource) => {
@@ -1392,6 +1426,11 @@
     dispatch('open-space-and-chat', { spaceId: $space.id, text: $searchValue })
     searchValue.set('')
   }
+
+  const handleFilterTypeChange = (e: CustomEvent<FilterItem | null>) => {
+    log.debug('Filter type change:', e.detail)
+    loadSpaceContents(spaceId, true)
+  }
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1522,6 +1561,14 @@
               </div>
             </div>
 
+            <div class="flex justify-end">
+              <FilterSelector
+                selected={selectedFilterTypeId}
+                bind:selectedFilter={selectedFilterType}
+                on:change={handleFilterTypeChange}
+              />
+            </div>
+
             <div class="drawer-chat active">
               <button class="close-button" on:click={handleCloseChat}>
                 <Icon name="close" size="15px" />
@@ -1564,6 +1611,7 @@
         on:batch-remove={handleResourceRemove}
         on:batch-open
         on:create-tab-from-space
+        on:saved-resource-in-space
         {searchValue}
       />
 
@@ -1585,6 +1633,7 @@
         on:batch-remove
         on:batch-open
         on:open-space-as-tab
+        on:saved-resource-in-space
         isEverythingSpace={false}
         {searchValue}
       />

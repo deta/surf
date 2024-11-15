@@ -8,6 +8,7 @@
     'space-selected': SpaceSelectedEvent
     'create-empty-space': void
     'delete-space': DeleteSpaceEvent
+    'handled-drop': void
   }
 </script>
 
@@ -15,13 +16,19 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
-  import { useLogScope } from '@horizon/utils'
+  import { tooltip, useLogScope } from '@horizon/utils'
   import Folder, { type EditingStartEvent } from './Folder.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon, type Icons } from '@horizon/icons'
   import { OasisSpace, useOasis } from '../../service/oasis'
 
   import { useToasts } from '../../service/toast'
-  import { SpaceEntryOrigin, type SpaceData, type TabSpace } from '../../types'
+  import {
+    DragTypeNames,
+    SpaceEntryOrigin,
+    type DragTypes,
+    type SpaceData,
+    type TabSpace
+  } from '../../types'
   import type { Readable } from 'svelte/store'
   import { useTelemetry } from '../../service/telemetry'
   import { onboardingSpace } from '../../constants/examples'
@@ -29,6 +36,8 @@
   import type { ResourceManager } from '../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import BuiltInSpace from './BuiltInSpace.svelte'
+  import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
 
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
@@ -39,8 +48,6 @@
 
   let sidebarElement: HTMLElement
   let foldersWrapper: HTMLElement
-  let newSpaceButton: HTMLElement
-  const isNewSpaceButtonSticky = writable(false)
 
   export let spaces: Readable<OasisSpace[]>
   export let interactive = true
@@ -50,6 +57,37 @@
   const selectedSpace = oasis.selectedSpace
 
   const editingFolderId = writable<string | null>(null)
+  const didChangeOrder = writable(false)
+
+  const filteredSpaces = derived([spaces, didChangeOrder], ([$spaces, didChangeOrder]) =>
+    $spaces
+      .filter(
+        (space) =>
+          space.dataValue.folderName !== '.tempspace' && space.id !== 'all' && space.id !== 'inbox'
+      )
+      .sort((a, b) => {
+        // if (a.id === 'all') return -1 // Move 'all' folder to the top
+        // if (b.id === 'all') return 1
+
+        // move built in folders to the top behind 'all'
+        // if (a.dataValue.builtIn && !b.dataValue.builtIn) return -1
+
+        return a.indexValue - b.indexValue
+      })
+  )
+
+  const builtInSpaces = [
+    {
+      id: 'all',
+      name: 'All Your Stuff',
+      icon: 'leave'
+    },
+    {
+      id: 'inbox',
+      name: 'Inbox',
+      icon: 'save'
+    }
+  ] as { id: string; name: string; icon: Icons }[]
 
   export let onBack = () => {}
   export const handleCreateSpace = async (
@@ -248,19 +286,6 @@
     }
   }
 
-  const updateNewSpaceButtonPosition = () => {
-    if (foldersWrapper && newSpaceButton) {
-      const foldersWrapperRect = foldersWrapper.getBoundingClientRect()
-      const newSpaceButtonRect = newSpaceButton.getBoundingClientRect()
-
-      if (foldersWrapperRect.bottom + newSpaceButtonRect.height > window.innerHeight - 50) {
-        isNewSpaceButtonSticky.set(true)
-      } else {
-        isNewSpaceButtonSticky.set(false)
-      }
-    }
-  }
-
   const handleTooltipTarget = (folder: OasisSpace) => {
     if (folder.id === 'all') {
       return 'stuff-spaces-all'
@@ -273,75 +298,101 @@
     return undefined
   }
 
-  onMount(() => {
-    log.debug('Mounted SpacesView')
-    const resizeObserver = new ResizeObserver(updateNewSpaceButtonPosition)
-    if (foldersWrapper) {
-      resizeObserver.observe(foldersWrapper)
+  const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
+    log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
+
+    if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+      const space = drag.item.data.getData(DragTypeNames.SURF_SPACE)
+
+      log.debug('dropped space', space, drag.index)
+      didChangeOrder.set(false)
+
+      if (drag.index !== null) {
+        log.debug('moving space to index', drag.index)
+
+        dispatch('handled-drop')
+        drag.continue()
+
+        await oasis.moveSpaceToIndex(space.id, drag.index)
+        didChangeOrder.set(true)
+      }
     }
-    return () => {
-      resizeObserver.disconnect()
-    }
-  })
-
-  const filteredSpaces = derived(spaces, ($spaces) =>
-    $spaces
-      .filter((space) => space.dataValue.folderName !== '.tempspace')
-      .sort((a, b) => {
-        if (a.id === 'all') return -1 // Move 'all' folder to the top
-        if (b.id === 'all') return 1
-
-        // move built in folders to the top behind 'all'
-        if (a.dataValue.builtIn && !b.dataValue.builtIn) return -1
-
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() // Sort others by creation date
-      })
-  )
+  }
 </script>
 
 <div
   class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem]"
+  data-tooltip-target="stuff-spaces-list"
   bind:this={sidebarElement}
   on:wheel|passive={handleWheel}
 >
-  <div class="folders-wrapper" bind:this={foldersWrapper} data-tooltip-target="stuff-spaces-list">
-    {#each $filteredSpaces as folder (folder.id)}
-      {#key folder.id}
-        <div class="folder-wrapper" data-tooltip-target={handleTooltipTarget(folder)}>
-          <Folder
-            {folder}
-            on:select={() => handleSpaceSelect(folder.id)}
-            on:space-selected={() => handleSpaceSelect(folder.id)}
-            on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
-            on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-            on:open-space-and-chat
-            on:Drop
-            on:editing-start={handleEditingStart}
-            on:editing-end={handleEditingEnd}
-            selected={$selectedSpace === folder.id}
-            isEditing={$editingFolderId === folder.id}
-            {showPreview}
-          />
-        </div>
-      {/key}
+  <div class="built-in-list">
+    {#each builtInSpaces as builtInSpace (builtInSpace.id)}
+      <div class="folder-wrapper">
+        <BuiltInSpace
+          id={builtInSpace.id}
+          name={builtInSpace.name}
+          icon={builtInSpace.icon}
+          selected={$selectedSpace === builtInSpace.id}
+          on:select={() => handleSpaceSelect(builtInSpace.id)}
+          on:space-selected={() => handleSpaceSelect(builtInSpace.id)}
+          on:Drop
+        />
+      </div>
     {/each}
   </div>
-  <button
-    class="action-new-space"
-    class:sticky={$isNewSpaceButtonSticky}
-    class:text-white={$isNewSpaceButtonSticky}
-    class:disabled={$selectedSpace &&
-      $spaces.find((space) => space.id === $selectedSpace)?.dataValue.folderName === '.tempspace'}
-    on:click={handleCreateEmptySpace}
-    bind:this={newSpaceButton}
-    data-tooltip-target="create-space"
-    data-tooltip-action="action-new-space"
-  >
-    <div class="icon-wrapper">
-      <Icon name="add" size="2rem" color={'white'} />
+
+  <div class="folders-wrapper">
+    <div class="folders-header">
+      <div class="folders-header-text">Your Spaces</div>
+
+      <button
+        class="action-new-space"
+        class:disabled={$selectedSpace &&
+          $spaces.find((space) => space.id === $selectedSpace)?.dataValue.folderName ===
+            '.tempspace'}
+        on:click={handleCreateEmptySpace}
+        data-tooltip-target="create-space"
+        data-tooltip-action="action-new-space"
+        use:tooltip={{ position: 'left', text: 'Create a new space' }}
+      >
+        <Icon name="add" size="17px" stroke-width="2" />
+      </button>
     </div>
-    <span class="new-space-text">Create New Space</span>
-  </button>
+
+    <div
+      class="folders-list"
+      data-tooltip-target="stuff-spaces-list"
+      axis="vertical"
+      id="overlay-spaces-list"
+      use:HTMLAxisDragZone.action={{
+        accepts: (drag) => {
+          if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+            return true
+          }
+          return false
+        }
+      }}
+      on:Drop={handleDrop}
+    >
+      {#each $filteredSpaces as folder, index (folder.id + index)}
+        <Folder
+          {folder}
+          on:select={() => handleSpaceSelect(folder.id)}
+          on:space-selected={() => handleSpaceSelect(folder.id)}
+          on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+          on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+          on:open-space-and-chat
+          on:Drop
+          on:editing-start={handleEditingStart}
+          on:editing-end={handleEditingEnd}
+          selected={$selectedSpace === folder.id}
+          isEditing={$editingFolderId === folder.id}
+          {showPreview}
+        />
+      {/each}
+    </div>
+  </div>
 </div>
 
 <style lang="scss">
@@ -356,17 +407,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem 0.75rem 1rem 0.75rem;
-    gap: 0.5rem;
+    padding: 1rem 0.75rem 1rem 0.75rem;
+    gap: 1.75rem;
     height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
     flex: 1;
     scrollbar-width: none;
     scrollbar-color: transparent transparent;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(24px);
     border-bottom: 0.5px solid var(--Grey-2, #f4f4f4);
+    overflow: hidden;
   }
 
   .folders-sidebar::-webkit-scrollbar {
@@ -386,15 +436,51 @@
   .folders-wrapper {
     display: flex;
     flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .built-in-list,
+  .folders-list {
+    display: flex;
+    flex-direction: column;
     gap: 0.25rem;
     width: 100%;
+  }
+
+  .folders-list {
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 2rem;
+  }
+
+  .folders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.5rem;
+  }
+
+  .folders-header-text {
+    color: #3b578a;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.0025em;
+    line-height: 1;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1;
   }
 
   button {
     display: flex;
     align-items: center;
-    margin: 0.5rem 0;
-    padding: 1rem 0.5rem;
     gap: 0.5rem;
     background-color: transparent;
     border: 0;
@@ -417,73 +503,29 @@
   }
 
   .action-new-space {
-    position: relative;
-    width: 100%;
     display: flex;
     align-items: center;
-    box-shadow:
-      0 1px 1px rgba(67, 142, 239, 0.05),
-      0 1px 2px rgba(67, 142, 239, 0.03),
-      0 2px 4px rgba(67, 142, 239, 0.02),
-      0 3px 6px rgba(67, 142, 239, 0.01),
-      0 4px 8px rgba(67, 142, 239, 0.005);
-    border: 0.5px solid rgba(67, 142, 239, 0.15);
-    color: rgba(0, 103, 185, 0.7);
-    background: rgba(224, 242, 254, 0.6);
+    justify-content: center;
+    border-radius: 50%;
+    padding: 0 1px 0.5px 0;
+    border: 0.5px solid transparent;
     backdrop-filter: blur(10px);
-    .new-space-text {
-      font-size: 1rem;
-      font-weight: 500;
-      letter-spacing: 0.0025em;
-      font-smooth: always;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      line-height: 1;
-      color: rgba(0, 82, 147, 0.9);
-    }
-    letter-spacing: 0.01em;
     margin: 0;
     gap: 0.75rem;
-    padding: 0.85rem;
     opacity: 1;
+    background: transparent;
+    color: rgb(52, 108, 181);
 
     &:hover {
-      background: rgba(224, 242, 254, 1);
+      background: rgba(201, 221, 243, 0.9);
       color: rgba(0, 103, 185, 1);
-    }
-    &.sticky {
-      position: sticky;
-      z-index: 1000;
-      bottom: 0;
-      backdrop-filter: blur(10px);
-      box-shadow:
-        0 1px 1px rgba(67, 142, 239, 0.05),
-        0 1px 2px rgba(67, 142, 239, 0.03),
-        0 2px 4px rgba(67, 142, 239, 0.02),
-        0 3px 6px rgba(67, 142, 239, 0.01),
-        0 4px 8px rgba(67, 142, 239, 0.005);
       border: 0.5px solid rgba(67, 142, 239, 0.15);
-      background: rgba(224, 242, 254, 0.6);
-      color: rgba(0, 103, 185, 0.7); // Tinted text color for sticky state
     }
+
     &.disabled {
       opacity: 0.5;
       pointer-events: none;
       filter: grayscale(100%);
-    }
-    & .icon-wrapper {
-      background: rgba(0, 122, 255, 0.9);
-      border: 1px solid rgba(67, 142, 239, 0.3);
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      padding: 0 1px 0.5px 0;
-      justify-content: center;
-      align-items: center;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      text-rendering: optimizeLegibility;
     }
   }
 

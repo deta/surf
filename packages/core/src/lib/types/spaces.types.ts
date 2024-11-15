@@ -23,6 +23,7 @@ export interface SpaceData {
   sql_query: string | null
   embedding_query: string | null
   builtIn?: boolean
+  index?: number
 }
 
 export interface SpaceSource {

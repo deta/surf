@@ -15,6 +15,7 @@
     return spaces.filter(
       (space) =>
         space.id !== 'all' &&
+        space.id !== 'inbox' &&
         space.dataValue.folderName !== '.tempspace' &&
         !space.dataValue.builtIn
     )

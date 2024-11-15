@@ -56,6 +56,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         "js__store_list_resources_by_tags",
         js_list_resources_by_tags,
     )?;
+    cx.export_function(
+        "js__store_list_resources_by_tags_no_space",
+        js_list_resources_by_tags_no_space,
+    )?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
     cx.export_function(
         "js__store_update_resource",
@@ -495,11 +499,11 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .argument_opt(1)
         .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
         .map(|js_string| js_string.value(&mut cx));
-    let resource_tags: Option<Vec<models::ResourceTagFilter>> = match resource_tags_json
+    let resource_tags: Vec<models::ResourceTagFilter> = match resource_tags_json
         .map(|json_str| serde_json::from_str(&json_str))
         .transpose()
     {
-        Ok(Some(tags)) => Some(tags),
+        Ok(Some(tags)) => tags,
         Ok(None) => return cx.throw_error("Resource tags must be provided"),
         Err(err) => return cx.throw_error(&err.to_string()),
     };
@@ -507,7 +511,34 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(
-            resource_tags.unwrap(),
+            resource_tags
+        )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_list_resources_by_tags_no_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let resource_tags_json = cx
+        .argument_opt(1)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
+    let resource_tags: Vec<models::ResourceTagFilter> = match resource_tags_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(Some(tags)) => tags,
+        Ok(None) => return cx.throw_error("Resource tags must be provided"),
+        Err(err) => return cx.throw_error(&err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(
+            resource_tags
         )),
         deferred,
     );

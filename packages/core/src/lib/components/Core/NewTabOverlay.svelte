@@ -24,7 +24,7 @@
 </script>
 
 <script lang="ts">
-  import { derived, writable } from 'svelte/store'
+  import { derived, writable, type Readable } from 'svelte/store'
 
   import {
     useLogScope,
@@ -98,6 +98,7 @@
   import { useHomescreen } from '../Oasis/homescreen/homescreen'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
+  import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch = 0
@@ -126,7 +127,6 @@
 
   let createSpaceRef: any
 
-  let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
   let filteredItems: CMDMenuItem[] = []
   let historyEntries: HistoryEntry[] = []
   let searchEngineSuggestions: string[] = []
@@ -142,6 +142,9 @@
     threshold: 0.7,
     includeScore: true
   }
+
+  const defaultSpaceId = 'inbox'
+
   let onboardingOpen = writable($userConfigSettings.onboarding.completed_stuff === false)
 
   let selectFirstCommandItem: () => void
@@ -158,6 +161,8 @@
   const isFetchingHostnameHistoryEntriesResults = writable(false)
   const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
+  const selectedFilterTypeId = writable<string | null>(null)
+  let selectedFilterType: Readable<FilterItem | null>
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
     'oasis-filter-resources',
     'all'
@@ -195,27 +200,7 @@
   ]
 
   $: placeholder =
-    showTabSearch === 2
-      ? 'Search Your Stuff...'
-      : page === 'tabs'
-        ? 'Search for a tab...'
-        : page === 'oasis'
-          ? 'Search for a resource...'
-          : page === 'history'
-            ? 'Search for a page...'
-            : page === 'spaces'
-              ? 'Search for a space...'
-              : 'Search the web or enter a URL...'
-  $: breadcrumb =
-    page === 'tabs'
-      ? 'Active Tabs'
-      : page === 'oasis'
-        ? 'My Stuff'
-        : page === 'history'
-          ? 'History'
-          : page === 'spaces'
-            ? 'Spaces'
-            : undefined
+    showTabSearch === 2 ? 'Search All Your Stuff...' : 'Search the web or enter a URL...'
 
   const deboundedSelectFirstCommandItem = useDebounce(() => {
     if (selectFirstCommandItem) {
@@ -677,6 +662,7 @@
   ] as CMDMenuItem[]
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
+  $: isInboxSpace = $selectedSpaceId === 'inbox'
 
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
@@ -696,6 +682,10 @@
       return everythingContents
     }
   )
+
+  const isBuiltInSpace = derived([selectedSpaceId], ([$selectedSpaceId]) => {
+    return $selectedSpaceId === 'all' || $selectedSpaceId === 'inbox'
+  })
 
   const loadEverything = async (initialLoad = false) => {
     try {
@@ -718,11 +708,12 @@
           ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...conditionalArrayItem($selectedFilterType !== null, $selectedFilterType?.tags ?? []),
           ...($userConfigSettings.show_annotations_in_oasis
             ? []
             : [ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')])
         ],
-        { includeAnnotations: true }
+        { includeAnnotations: true, excludeWithinSpaces: isInboxSpace }
       )
 
       const items = resources
@@ -808,7 +799,7 @@
 
     for (const resource of resources) {
       const references = await resourceManager.getAllReferences(resource.id, oasis.spacesValue)
-      if (isEverythingSpace) {
+      if (isEverythingSpace || isInboxSpace) {
         totalReferences += references.length
       }
       const resourceIsFromLiveSpace = !!resource.tags?.find(
@@ -818,7 +809,7 @@
     }
 
     const confirm = window.confirm(
-      !isEverythingSpace && !isFromLiveSpace
+      !isEverythingSpace && !isFromLiveSpace && !isInboxSpace
         ? `Remove reference? The original will still be in Everything.`
         : totalReferences > 0
           ? `These resources will be removed from ${totalReferences} space${
@@ -840,7 +831,7 @@
           await resourceManager.deleteSpaceEntries([reference.entryId])
         }
 
-        if (isEverythingSpace) {
+        if (isEverythingSpace || isInboxSpace) {
           log.debug('deleting resource from oasis', resource.id)
           await resourceManager.deleteResource(resource.id)
           everythingContents.update((contents) => {
@@ -853,7 +844,7 @@
 
         await telemetry.trackDeleteResource(
           resource.type,
-          !isEverythingSpace,
+          !isEverythingSpace && !isInboxSpace,
           resources.length > 1
             ? DeleteResourceEventTrigger.OasisMultiSelect
             : DeleteResourceEventTrigger.OasisItem
@@ -866,7 +857,7 @@
         await telemetry.trackMultiSelectResourceAction(
           MultiSelectResourceEventAction.Delete,
           resources.length,
-          isEverythingSpace ? 'oasis' : 'space'
+          isEverythingSpace || isInboxSpace ? 'oasis' : 'space'
         )
       }
     } catch (error) {
@@ -878,6 +869,14 @@
     }
 
     toasts.success('Resources deleted!')
+  }
+
+  const handleSavedResourceInSpace = (e: CustomEvent<string>) => {
+    const spaceId = e.detail
+    log.debug('Saved resource in space:', spaceId)
+    if (spaceId !== 'inbox' && spaceId !== 'all') {
+      loadEverything()
+    }
   }
 
   const handleItemClick = (e: CustomEvent<string>) => {
@@ -900,7 +899,7 @@
         const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
         log.debug('Resources', newResources)
 
-        if (!isEverythingSpace) {
+        if (!isEverythingSpace && !isInboxSpace) {
           await oasis.addResourcesToSpace(
             spaceId,
             newResources.map((r) => r.id),
@@ -909,7 +908,11 @@
         }
 
         for (const r of newResources) {
-          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, !isEverythingSpace)
+          telemetry.trackSaveToOasis(
+            r.type,
+            SaveToOasisEventTrigger.Drop,
+            !isEverythingSpace && !isInboxSpace
+          )
         }
       } else if (
         drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
@@ -1029,7 +1032,7 @@
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
-    selectedSpaceId.set('all')
+    selectedSpaceId.set(defaultSpaceId)
   }
 
   const handleSpaceSelected = async (e: CustomEvent<string>) => {
@@ -1105,11 +1108,18 @@
 
   $: if ($selectedSpaceId === 'all') {
     loadEverything()
+  } else if ($selectedSpaceId === 'inbox') {
+    loadEverything()
   }
 
   const handleOasisFilterChange = (e: CustomEvent<string>) => {
     log.debug('Filter change:', e.detail)
     debouncedSearch($searchValue)
+  }
+
+  const handleFilterTypeChange = (e: CustomEvent<FilterItem | null>) => {
+    log.debug('Filter type change:', e.detail)
+    loadEverything()
   }
 
   const closeOnboarding = async () => {
@@ -1155,9 +1165,9 @@
 
     window.removeEventListener('click', dragClickHandler)
 
-    for (const toId of ['drawer', 'folder-']) {
+    for (const toId of ['drawer', 'folder-', 'overlay-']) {
       if (drag && drag.to?.id.startsWith(toId)) {
-        for (const fromId of ['drawer', 'folder-']) {
+        for (const fromId of ['drawer', 'folder-', 'overlay-']) {
           if (drag.from?.id.startsWith(fromId)) {
             return
           }
@@ -1288,7 +1298,7 @@
 
         <Command.Root
           class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
-          $selectedSpaceId === 'all'
+          $isBuiltInSpace
             ? ''
             : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
           loop
@@ -1367,6 +1377,7 @@
                       on:create-empty-space={handleCreateEmptySpace}
                       on:open-space-and-chat
                       on:delete-space={handleDeleteSpace}
+                      on:handled-drop={handlePostDropOnSpace}
                       on:Drop
                     />
                   {/key}
@@ -1374,7 +1385,7 @@
 
                 <div class="stuff-wrap h-full w-full relative">
                   <Tooltip rootID="stuff" />
-                  {#if showTabSearch === 2 && $selectedSpaceId === 'all'}
+                  {#if showTabSearch === 2 && $isBuiltInSpace}
                     <button
                       class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
                       on:click={() => {
@@ -1390,7 +1401,7 @@
                     </button>
                   {/if}
 
-                  {#if $selectedSpaceId !== 'all'}
+                  {#if !$isBuiltInSpace}
                     {#key $selectedSpaceId}
                       <OasisSpaceRenderer
                         spaceId={$selectedSpaceId}
@@ -1401,7 +1412,7 @@
                         {historyEntriesManager}
                         on:open={handleOpen}
                         on:open-and-chat
-                        on:go-back={() => selectedSpaceId.set('all')}
+                        on:go-back={() => selectedSpaceId.set(defaultSpaceId)}
                         on:deleted={handleSpaceDeleted}
                         on:updated-space={handleUpdatedSpace}
                         on:creating-new-space={handleCreatingNewSpace}
@@ -1410,6 +1421,7 @@
                         on:batch-open
                         on:batch-remove={handleResourceRemove}
                         on:handled-drop={handlePostDropOnSpace}
+                        on:saved-resource-in-space={handleSavedResourceInSpace}
                         on:open-space-and-chat
                         insideDrawer={true}
                         bind:this={oasisSpaceComp}
@@ -1451,6 +1463,7 @@
                               on:batch-remove={handleResourceRemove}
                               on:batch-open
                               on:new-tab
+                              on:saved-resource-in-space={handleSavedResourceInSpace}
                               {searchValue}
                             />
                           {/key}
@@ -1494,9 +1507,8 @@
           <!-- </Motion> -->
           <!-- </AnimatePresence> -->
 
-          {#if $selectedSpaceId === 'all' || showTabSearch === 1}
+          {#if $isBuiltInSpace || showTabSearch === 1}
             <div
-              l
               class={showTabSearch === 2
                 ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
                 : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-neutral-100 bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px]'}
@@ -1505,7 +1517,6 @@
                 <Command.Input
                   id="search-field"
                   {placeholder}
-                  {breadcrumb}
                   loading={$isLoadingCommandItems || isSearching || $loadingContents}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
@@ -1513,7 +1524,7 @@
                     : 'w-[32rem] py-4 pl-2'}
                 />
 
-                {#if showTabSearch === 2 && $selectedSpaceId === 'all' && !!$searchValue}
+                {#if showTabSearch === 2 && $isBuiltInSpace && !!$searchValue}
                   <div class="rounded-lg bg-neutral-100 p-2 absolute left-full">
                     <select
                       bind:value={$selectedFilter}
@@ -1526,6 +1537,16 @@
                   </div>
                 {/if}
               </div>
+
+              {#if showTabSearch === 2}
+                <div class="absolute right-2 flex items-center gap-2">
+                  <FilterSelector
+                    selected={selectedFilterTypeId}
+                    bind:selectedFilter={selectedFilterType}
+                    on:change={handleFilterTypeChange}
+                  />
+                </div>
+              {/if}
             </div>
           {/if}
         </Command.Root>

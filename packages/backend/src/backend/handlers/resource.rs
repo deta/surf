@@ -248,6 +248,14 @@ impl Worker {
         self.db.list_resources_by_tags(tags)
     }
 
+    // Only return resource ids
+    pub fn list_resources_by_tags_no_space(
+        &mut self,
+        tags: Vec<ResourceTagFilter>,
+    ) -> BackendResult<SearchResultSimple> {
+        self.db.list_resources_by_tags_no_space(tags)
+    }
+
     fn get_filtered_ids_for_search(
         &mut self,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
@@ -685,6 +693,10 @@ pub fn handle_resource_message(
         }
         ResourceMessage::ListResourcesByTags(tags) => {
             let result = worker.list_resources_by_tags(tags);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::ListResourcesByTagsNoSpace(tags) => {
+            let result = worker.list_resources_by_tags_no_space(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::SearchResources {

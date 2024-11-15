@@ -113,6 +113,7 @@ pub enum ResourceMessage {
         proximity_limit: Option<i64>,
     },
     ListResourcesByTags(Vec<ResourceTagFilter>),
+    ListResourcesByTagsNoSpace(Vec<ResourceTagFilter>),
     SearchResources {
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,

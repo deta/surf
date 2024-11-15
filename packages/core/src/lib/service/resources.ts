@@ -78,6 +78,25 @@ export const everythingSpace = {
   type: 'space'
 } as Space
 
+export const inboxSpace = {
+  id: 'inbox',
+  name: {
+    folderName: 'Inbox',
+    colors: ['#76E0FF', '#4EC9FB'],
+    showInSidebar: false,
+    liveModeEnabled: false,
+    hideViewed: false,
+    smartFilterQuery: null,
+    sql_query: null,
+    embedding_query: null,
+    sortBy: 'created_at'
+  },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  deleted: 0,
+  type: 'space'
+} as Space
+
 export class ResourceTag {
   static download() {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'download' }
@@ -538,7 +557,7 @@ export class ResourceManager {
     return res
   }
 
-  private findOrGetResourceObject(id: string, opts?: { includeAnnotations: boolean }) {
+  private findOrGetResourceObject(id: string, opts: { includeAnnotations?: boolean } = {}) {
     const existingResource = get(this.resources).find((r) => r.id === id)
     if (existingResource) {
       return Promise.resolve(existingResource)
@@ -685,13 +704,19 @@ export class ResourceManager {
     this.resources.set(resources)
   }
 
-  async listResourceIDsByTags(tags: SFFSResourceTag[]) {
-    const results = await this.sffs.listResourceIDsByTags(tags)
+  async listResourceIDsByTags(tags: SFFSResourceTag[], excludeWithinSpaces: boolean = false) {
+    const results = await this.sffs.listResourceIDsByTags(tags, excludeWithinSpaces)
     return results
   }
 
-  async listResourcesByTags(tags: SFFSResourceTag[], opts?: { includeAnnotations: boolean }) {
-    const resourceIds = await this.sffs.listResourceIDsByTags(tags)
+  async listResourcesByTags(
+    tags: SFFSResourceTag[],
+    opts: { includeAnnotations?: boolean; excludeWithinSpaces?: boolean } = {}
+  ) {
+    const resourceIds = await this.sffs.listResourceIDsByTags(
+      tags,
+      opts?.excludeWithinSpaces ?? false
+    )
     this.log.debug('found resource ids', resourceIds)
     return (await Promise.all(
       resourceIds.map((id) => this.findOrGetResourceObject(id, opts))
@@ -845,7 +870,7 @@ export class ResourceManager {
     }
   }
 
-  async getResource(id: string, opts?: { includeAnnotations: boolean }) {
+  async getResource(id: string, opts: { includeAnnotations?: boolean } = {}) {
     // check if resource is already loaded
     const loadedResources = get(this.resources)
     const loadedResource = loadedResources.find((r) => r.id === id)
@@ -1184,13 +1209,17 @@ export class ResourceManager {
       return everythingSpace
     }
 
+    if (id === 'inbox') {
+      return inboxSpace
+    }
+
     return await this.sffs.getSpace(id)
   }
 
   async listSpaces() {
     const spaces = await this.sffs.listSpaces()
 
-    return [everythingSpace, ...spaces] as Space[]
+    return spaces // [inboxSpace, everythingSpace, ...spaces] as Space[]
   }
 
   async updateSpace(spaceId: string, name: SpaceData) {

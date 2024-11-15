@@ -48,32 +48,32 @@ export async function createDemoItems(
   // Load all spaces once at the start to avoid duplicated spaces
   const existingSpaces = await oasis.loadSpaces()
 
-  for (const builtInSpace of builtInSpaces) {
-    const existingSpace = existingSpaces.find(
-      (space) => space.name.folderName === builtInSpace.folderName
-    )
-    log.debug('Checking built-in space:', builtInSpace.folderName, 'exists:', !!existingSpace)
+  // for (const builtInSpace of builtInSpaces) {
+  //   const existingSpace = existingSpaces.find(
+  //     (space) => space.name.folderName === builtInSpace.folderName
+  //   )
+  //   log.debug('Checking built-in space:', builtInSpace.folderName, 'exists:', !!existingSpace)
 
-    if (!existingSpace) {
-      const data = Object.assign(
-        {
-          folderName: 'New Space',
-          colors: ['#76E0FF', '#4EC9FB'],
-          showInSidebar: false,
-          liveModeEnabled: false,
-          hideViewed: false,
-          smartFilterQuery: null,
-          sql_query: null,
-          embedding_query: null,
-          sortBy: 'created_at',
-          builtIn: true
-        },
-        builtInSpace
-      ) as SpaceData
-      const space = await oasis.createSpace(data)
-      log.debug('Created built-in space:', space)
-    }
-  }
+  //   if (!existingSpace) {
+  //     const data = Object.assign(
+  //       {
+  //         folderName: 'New Space',
+  //         colors: ['#76E0FF', '#4EC9FB'],
+  //         showInSidebar: false,
+  //         liveModeEnabled: false,
+  //         hideViewed: false,
+  //         smartFilterQuery: null,
+  //         sql_query: null,
+  //         embedding_query: null,
+  //         sortBy: 'created_at',
+  //         builtIn: true
+  //       },
+  //       builtInSpace
+  //     ) as SpaceData
+  //     const space = await oasis.createSpace(data)
+  //     log.debug('Created built-in space:', space)
+  //   }
+  // }
 
   const existingOnboardingSpace = existingSpaces.find(
     (space) => space.name.folderName === onboardingSpace.name
