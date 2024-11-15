@@ -1892,6 +1892,17 @@ impl Database {
         Ok(tx.last_insert_rowid())
     }
 
+    pub fn delete_embedding_resource_by_rowid_tx(
+        tx: &mut rusqlite::Transaction,
+        rowid: i64,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "DELETE FROM embedding_resources WHERE rowid = ?1",
+            rusqlite::params![rowid],
+        )?;
+        Ok(())
+    }
+
     pub fn get_embedding_resource_ids_by_type(
         &self,
         resource_id: &str,

@@ -54,19 +54,6 @@ impl Processor {
                         ),
                         Err(err) => {
                             tracing::error!("failed to process resource: {err}");
-
-                            // TODO(@aavash, @brkp): remove this once we fix the usearch issues
-                            if err
-                                .to_string()
-                                .contains("Duplicate keys not allowed in high-level wrappers")
-                            {
-                                tracing::warn!("ignoring usearch duplicate upserting error");
-                                return self.emit_processing_status(
-                                    &resource_id,
-                                    ResourceProcessingStatus::Finished,
-                                );
-                            }
-
                             self.emit_processing_status(
                                 &resource_id,
                                 ResourceProcessingStatus::Failed {

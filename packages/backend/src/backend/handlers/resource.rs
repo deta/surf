@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 use crate::{
     backend::{
@@ -542,6 +542,9 @@ impl Worker {
         Ok(())
     }
 
+    // TODO: add a 'status' in the embedding resource table to indicate whether the new embedding
+    // resource entries are pending on upsertion, currently the old entries being in the table
+    // while the upsertion is in progress is not a problem, but it might be in the future
     #[instrument(level = "trace", skip(self, chunks))]
     pub fn upsert_embeddings(
         &mut self,
@@ -557,40 +560,52 @@ impl Worker {
             ));
         }
 
+        // first insert new embedding resources
+        // these will be deleted later if there is an upsertion error
         let mut tx = self.db.begin()?;
-
-        for key in old_keys.iter() {
-            Database::remove_embedding_resource_by_row_id_tx(&mut tx, key)?;
-        }
         let mut new_row_ids = vec![];
-
-        for (_, content_id) in content_ids.iter().enumerate() {
+        for content_id in content_ids {
             let rowid = Database::create_embedding_resource_tx(
                 &mut tx,
                 &EmbeddingResource {
                     rowid: None,
                     resource_id: resource_id.clone(),
-                    content_id: *content_id,
+                    content_id,
                     embedding_type: embedding_type.clone(),
                 },
             )?;
             new_row_ids.push(rowid);
         }
+        // commit transaction already to not hold the table lock
         tx.commit()?;
 
-        match self.ai.upsert_embeddings(old_keys, new_row_ids, chunks) {
+        match self
+            .ai
+            .upsert_embeddings(old_keys.clone(), new_row_ids.clone(), chunks)
+        {
             Ok(_) => {}
             Err(e) => {
                 let mut errors = Vec::new();
                 errors.push(e);
 
-                if let Err(delete_error) = self
-                    .db
-                    .delete_all_embedding_resources(&resource_id, embedding_type)
-                {
-                    errors.push(delete_error);
+                // cleanup newly inserted embedding resources
+                debug!("upsert_embeddings failed, cleaning up newly inserted embedding resources");
+				let mut tx = self.db.begin().map_err(|err| {
+				    errors.push(err);
+				    Err(BackendError::MultipleErrors(errors));
+				})?;
+                for key in new_row_ids.iter() {
+                    if let Err(delete_error) =
+                        Database::remove_embedding_resource_by_row_id_tx(&mut tx, key)
+                    {
+                        errors.push(delete_error);
+                        return Err(BackendError::MultipleErrors(errors));
+                    }
                 }
-
+                if let Err(tx_error) = tx.commit() {
+                    errors.push(BackendError::DatabaseError(tx_error));
+                    return Err(BackendError::MultipleErrors(errors));
+                }
                 return Err(if errors.len() == 1 {
                     errors.into_iter().next().unwrap()
                 } else {
@@ -598,6 +613,13 @@ impl Worker {
                 });
             }
         }
+
+        // finally remove old keys if upsertion was successful
+        let mut tx = self.db.begin()?;
+        for key in old_keys.iter() {
+            Database::remove_embedding_resource_by_row_id_tx(&mut tx, key)?;
+        }
+        tx.commit()?;
         Ok(())
     }
 

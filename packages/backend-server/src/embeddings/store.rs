@@ -12,10 +12,12 @@ pub struct DocsSimilarity {
 #[instrument(level = "trace", skip(embeddings_dim))]
 fn new_index(embeddings_dim: &usize) -> BackendResult<Index> {
     debug!("Creating new index with dimensions: {}", embeddings_dim);
-    let mut options = IndexOptions::default();
-    options.dimensions = *embeddings_dim;
-    options.metric = MetricKind::Cos;
-    options.quantization = ScalarKind::F32;
+    let options = IndexOptions {
+        dimensions: *embeddings_dim,
+        metric: MetricKind::Cos,
+        quantization: ScalarKind::F32,
+        ..Default::default()
+    };
 
     match Index::new(&options) {
         Ok(index) => {
@@ -59,6 +61,20 @@ impl EmbeddingsStore {
         })
     }
 
+    #[instrument(level = "trace", skip(self))]
+    fn reload(&self) -> BackendResult<()> {
+        match self.index.load(&self.index_path) {
+            Ok(_) => {
+                debug!("Reloaded index from: {}", self.index_path);
+            }
+            Err(e) => {
+                error!("Failed to reload index: {}", e);
+                return Err(e.into());
+            }
+        }
+        Ok(())
+    }
+
     #[instrument(level = "trace", skip(self, embedding))]
     pub fn add(&self, id: u64, embedding: &[f32]) -> BackendResult<()> {
         debug!("Adding embedding for id: {}", id);
@@ -88,41 +104,71 @@ impl EmbeddingsStore {
     #[instrument(level = "trace", skip(self, embeddings))]
     pub fn batch_add(&self, ids: Vec<u64>, embeddings: &Vec<Vec<f32>>) -> BackendResult<()> {
         debug!("Starting batch add for {} embeddings", ids.len());
+        self.validate_inputs(&ids, embeddings)?;
+
+        match self.execute_batch_add(&ids, embeddings) {
+            Ok(_) => {
+                self.index.save(&self.index_path).map_err(|e| {
+                    error!("Failed to save changes to disk: {}", e);
+                    e
+                })?;
+                debug!(
+                    "Successfully completed batch add of {} embeddings",
+                    ids.len()
+                );
+                Ok(())
+            }
+            Err(e) => {
+                error!("Batch add failed, rolling back to last saved state: {}", e);
+                self.reload().map_err(|load_err| {
+                    error!("Failed to rollback to last saved state: {}", load_err);
+                    load_err
+                })?;
+                Err(e)
+            }
+        }
+    }
+
+    fn validate_inputs(&self, ids: &[u64], embeddings: &[Vec<f32>]) -> BackendResult<()> {
+        if ids.is_empty() || embeddings.is_empty() {
+            return Ok(());
+        }
 
         if ids.len() != embeddings.len() {
-            error!(
+            return Err(BackendError::GenericError(format!(
                 "Mismatched lengths: ids={}, embeddings={}",
                 ids.len(),
                 embeddings.len()
-            );
+            )));
+        }
+
+        if embeddings.iter().any(|e| e.len() != self.embedding_dim) {
             return Err(BackendError::GenericError(
-                "ids and embeddings must have the same length".to_string(),
+                "All embeddings must match the index dimension".to_string(),
             ));
         }
 
-        debug!("Reserving space for {} embeddings", embeddings.len());
-        if let Err(e) = self.index.reserve(self.index.size() + embeddings.len()) {
-            error!("Failed to reserve space: {}", e);
-            return Err(e.into());
+        Ok(())
+    }
+
+    fn execute_batch_add(&self, ids: &[u64], embeddings: &[Vec<f32>]) -> BackendResult<()> {
+        for id in ids {
+            self.index.remove(*id)?;
         }
+
+        let new_size = self.index.size() + ids.len();
+        self.index.reserve(new_size).map_err(|e| {
+            error!("Failed to reserve space: {}", e);
+            e
+        })?;
 
         for (id, embedding) in ids.iter().zip(embeddings.iter()) {
-            debug!("Adding embedding for id {}", id);
-            if let Err(e) = self.index.add(*id, embedding) {
+            self.index.add(*id, embedding).map_err(|e| {
                 error!("Failed to add embedding for id {}: {}", id, e);
-                return Err(e.into());
-            }
+                e
+            })?;
         }
 
-        if let Err(e) = self.index.save(&self.index_path) {
-            error!("Failed to save index after batch add: {}", e);
-            return Err(e.into());
-        }
-
-        debug!(
-            "Successfully completed batch add of {} embeddings",
-            ids.len()
-        );
         Ok(())
     }
 
@@ -294,21 +340,40 @@ impl EmbeddingsStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+    use std::collections::HashMap;
 
-    struct NeedsCleanup;
+    struct NeedsCleanup {
+        index_path: String,
+    }
 
-    const TEST_DB: &str = ".test_index.usearch";
+    impl NeedsCleanup {
+        // must be called before the store is created
+        fn new(index_path: &str) -> Self {
+            if let Err(error) = std::fs::remove_file(index_path) {
+                if error.kind() != std::io::ErrorKind::NotFound {
+                    panic!("Failed to remove existing test index");
+                }
+            }
+            Self {
+                index_path: index_path.to_string(),
+            }
+        }
+    }
 
     impl Drop for NeedsCleanup {
         fn drop(&mut self) {
-            std::fs::remove_file(TEST_DB).unwrap();
+            std::fs::remove_file(&self.index_path).expect("Failed to remove test index");
         }
     }
 
     #[test]
+    #[serial]
     fn test_sanity_docs_similarity() {
-        let store = EmbeddingsStore::new(TEST_DB, &2).unwrap();
-        let _cleanup = NeedsCleanup;
+        let test_db = ".test_sanity_docs_similarity.usearch";
+        // must be called before the store is created
+        let _cleanup = NeedsCleanup::new(test_db);
+        let store = EmbeddingsStore::new(test_db, &2).unwrap();
         let query = vec![0.1, 0.1];
         let docs = vec![
             vec![0.1, 0.1],
@@ -321,6 +386,54 @@ mod tests {
         assert_eq!(results.len(), 2);
         for r in results.iter() {
             assert!(r.similarity <= 0.5);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_reload() {
+        let test_db = ".test_rollback.usearch";
+        // must be called before the store is created
+        let _cleanup = NeedsCleanup::new(test_db);
+        let store = EmbeddingsStore::new(test_db, &1).unwrap();
+
+        let old_state: HashMap<u64, Vec<f32>> = HashMap::from([(1, vec![1.0]), (2, vec![2.0])]);
+        let new_state: HashMap<u64, Vec<f32>> = HashMap::from([(3, vec![3.0]), (4, vec![4.0])]);
+
+        for (key, value) in old_state.clone() {
+            store
+                .index
+                .reserve(store.index.size() + 1)
+                .expect("Failed to reserve space");
+            store
+                .index
+                .add(key, &value)
+                .expect("Failed to add to index");
+            assert!(store.index.contains(key));
+        }
+        store.index.save(test_db).expect("Failed to save index");
+
+        for (key, value) in new_state.clone() {
+            store
+                .index
+                .reserve(store.index.size() + 1)
+                .expect("Failed to reserve space");
+            store
+                .index
+                .add(key, &value)
+                .expect("Failed to add to index");
+            assert!(store.index.contains(key));
+        }
+
+        store.reload().expect("Failed to reload index");
+
+        for (key, _) in old_state {
+            assert!(store.index.contains(key));
+        }
+
+        // since we reloaded the index, the new state should not be present
+        for (key, _) in new_state {
+            assert!(!store.index.contains(key));
         }
     }
 }
