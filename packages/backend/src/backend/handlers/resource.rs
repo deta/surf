@@ -590,10 +590,13 @@ impl Worker {
 
                 // cleanup newly inserted embedding resources
                 debug!("upsert_embeddings failed, cleaning up newly inserted embedding resources");
-				let mut tx = self.db.begin().map_err(|err| {
-				    errors.push(err);
-				    Err(BackendError::MultipleErrors(errors));
-				})?;
+                let mut tx = match self.db.begin() {
+                    Ok(tx) => tx,
+                    Err(e) => {
+                        errors.push(e);
+                        return Err(BackendError::MultipleErrors(errors));
+                    }
+                };
                 for key in new_row_ids.iter() {
                     if let Err(delete_error) =
                         Database::remove_embedding_resource_by_row_id_tx(&mut tx, key)
