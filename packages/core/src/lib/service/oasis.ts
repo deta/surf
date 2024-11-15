@@ -353,9 +353,12 @@ export class OasisService {
     await this.resourceManager.deleteSpace(spaceId)
 
     this.log.debug('deleted space:', spaceId)
-    this.spaces.update((spaces) => {
-      return spaces.filter((space) => space.id !== spaceId)
-    })
+
+    const filtered = get(this.spaces).filter((space) => space.id !== spaceId)
+
+    await Promise.all(filtered.map((space, idx) => space.updateIndex(idx)))
+
+    this.spaces.set(filtered)
 
     this.emit('deleted', spaceId)
   }
