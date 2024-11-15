@@ -4,11 +4,17 @@
   import Thumbsbar from './Thumbsbar/Thumbsbar.svelte'
   import Toolbar from './Toolbar/Toolbar.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../store'
-  import {
-    WebViewEventReceiveNames,
-    type WebViewEventGoToPDFPage,
-    type WebViewReceiveEvents
-  } from '@horizon/types'
+  import { WebViewEventReceiveNames, type WebViewReceiveEvents } from '@horizon/types'
+
+  let debugInfo = {
+    anchorWord: '',
+    targetText: '',
+    fullText: '',
+    matchStart: -1,
+    matchEnd: -1,
+    similarity: 0,
+    totalSpans: 0
+  }
 
   let pdfSlickReady = null
   const pdfSlickInstance: Promise<PDFSlick> = new Promise((resolve) => {
@@ -137,19 +143,16 @@
       length: 0,
       similarity: 0
     }
-
-    const targetWords = targetText.toLowerCase().split(/\s+/)
-    // pick a proper anchor word here
-    const anchorWord =
-      targetWords.find((w) => w.length > 5) ||
-      targetWords.reduce((a, b) => (a.length >= b.length ? a : b))
+    const anchorWord = targetText.slice(0, 10)
+    if (import.meta.env.DEV) {
+      debugInfo.anchorWord = anchorWord
+    }
 
     let pos = 0
     const wordPositions: number[] = []
 
-    // find possible start positions
     while (true) {
-      pos = fullText.toLowerCase().indexOf(anchorWord, pos)
+      pos = fullText.indexOf(anchorWord, pos)
       if (pos === -1) break
       wordPositions.push(pos)
       pos += anchorWord.length
@@ -157,8 +160,8 @@
 
     // find the best match!!!
     for (const startPos of wordPositions) {
-      const windowStart = Math.max(0, startPos - 20)
-      const windowEnd = Math.min(fullText.length, startPos + targetLength + 20)
+      const windowStart = Math.max(0, startPos)
+      const windowEnd = Math.min(fullText.length, startPos + targetLength)
       const substring = fullText.substring(windowStart, windowEnd)
 
       const similarity = calculateSimilarity(substring, targetText)
@@ -170,6 +173,12 @@
           similarity: similarity
         }
 
+        if (import.meta.env.DEV) {
+          debugInfo.matchStart = windowStart
+          debugInfo.matchEnd = windowEnd
+          debugInfo.similarity = similarity
+        }
+
         if (similarity > 0.95) break
       }
     }
@@ -178,33 +187,76 @@
   }
 
   const handleGoToPDFPage = async (page: number, targetText?: string) => {
-    // remove the existing highlight classes
-    Array.from(document.querySelectorAll('span'))
-      .map((span) => span.classList.remove('highlight'))
+    Array.from(document.querySelectorAll('span')).map((span) => span.classList.remove('highlight'))
+
+    const normalizeString = (str: string) => {
+      // log these in dev mode
+      if (import.meta.env.DEV) {
+        const nonBasic = str.match(/[^a-zA-Z0-9\s.,!?-]/g)
+        if (nonBasic) {
+          console.log(
+            'Special characters found:',
+            nonBasic.map((c) => ({
+              char: c,
+              unicode: `U+${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
+              context: str.substring(
+                Math.max(0, str.indexOf(c) - 10),
+                Math.min(str.length, str.indexOf(c) + 10)
+              )
+            }))
+          )
+        }
+      }
+
+      // thank ya claude
+      return (
+        str
+          .normalize('NFKD')
+          // Common PDF ligatures
+          .replace(/ﬁ/g, 'fi')
+          .replace(/ﬂ/g, 'fl')
+          .replace(/ﬀ/g, 'ff')
+          .replace(/ﬃ/g, 'ffi')
+          .replace(/ﬄ/g, 'ffl')
+          // Smart quotes to regular quotes
+          .replace(/[''‚‛]/g, "'")
+          .replace(/[""„‟]/g, '"')
+          // Various hyphens/dashes to simple hyphen
+          .replace(/[‐‑‒–—―]/g, '-')
+          // Final cleanup
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+          .trim()
+      )
+    }
 
     const pdfSlick = await pdfSlickInstance
     pdfSlick.gotoPage(page)
 
     if (!targetText) return
-    // TODO: instead of this, wait until the page is ready by listening to the event bus
     await new Promise((resolve) => setTimeout(resolve, 150))
 
     const pageContainer = document.querySelector(`.page[data-page-number="${page}"]`)
     if (!pageContainer) return
-    const spans = Array.from(pageContainer.querySelectorAll('span'))
+    const spans = Array.from(pageContainer.querySelectorAll('span[dir="ltr"]'))
+
+    if (import.meta.env.DEV) {
+      debugInfo.totalSpans = spans.length
+      debugInfo.targetText = targetText
+    }
 
     let fullText = ''
     const spanMapping: number[] = []
 
     spans.forEach((span, idx) => {
-      const text = span.textContent || ''
+      const text = normalizeString(span.textContent || '')
       fullText += text
       for (let i = 0; i < text.length; i++) {
         spanMapping.push(idx)
       }
     })
 
-    const result = findApproximateMatch(fullText, targetText)
+    const result = findApproximateMatch(fullText, normalizeString(targetText))
     if (result.length > 0) {
       const match = result[0]
       const startSpanIndex = spanMapping[match.idx]
@@ -229,6 +281,29 @@
     </div>
   </div>
 </div>
+
+{#if import.meta.env.DEV}
+  <div
+    class="fixed top-4 right-4 bg-black/80 text-white p-4 rounded-lg shadow-lg text-sm font-mono z-50 max-w-md"
+    style="background: black; color: white; font-family: monospace;"
+  >
+    <h3 class="text-xs uppercase tracking-wider mb-2">Debug Info</h3>
+    <div class="space-y-1">
+      <div>anchor 0: <span class="text-yellow-400">{debugInfo.anchorWord}</span></div>
+      <div>Target 0: <span class="text-blue-400">{debugInfo.targetText.slice(0, 40)}</span></div>
+      <div>
+        Target 1: <span class="text-blue-400"
+          >{debugInfo.targetText.slice(
+            debugInfo.targetText.length - 40,
+            debugInfo.targetText.length
+          )}</span
+        >
+      </div>
+      <div>Match: {debugInfo.matchStart}->{debugInfo.matchEnd}</div>
+      <div>Similarity: {(debugInfo.similarity * 100).toFixed(1)}%</div>
+    </div>
+  </div>
+{/if}
 
 <div id="printContainer" />
 <dialog id="printServiceDialog" class="min-w-[200px]">
