@@ -32,6 +32,7 @@ import { getContext, setContext, tick } from 'svelte'
 import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
 import type { OasisSpace } from './oasis'
+import type { Homescreen } from '../components/Oasis/homescreen/homescreen'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -73,6 +74,7 @@ export class TabsManager {
   private db: HorizonStore<Tab>
   private resourceManager: ResourceManager
   private telemetry: Telemetry
+  private homescreen: Homescreen
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
   historyEntriesManager: HistoryEntriesManager
@@ -98,13 +100,15 @@ export class TabsManager {
   constructor(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
-    telemetry: Telemetry
+    telemetry: Telemetry,
+    homescreen: Homescreen
   ) {
     const storage = new HorizonDatabase()
     this.db = storage.tabs
     this.resourceManager = resourceManager
     this.historyEntriesManager = historyEntriesManager
     this.telemetry = telemetry
+    this.homescreen = homescreen
     this.log = useLogScope('TabsService')
     this.eventEmitter = new EventEmitter() as TypedEmitter<TabEvents>
     this.closedTabs = new ClosedTabs()
@@ -463,6 +467,7 @@ export class TabsManager {
 
     this.activeTabId.set(tabId)
     this.addToActiveTabsHistory(tabId)
+    this.homescreen.setVisible(false)
 
     // TODO: make this work again
     // if ($showAppSidebar) {
@@ -771,9 +776,15 @@ export class TabsManager {
   static provide(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
-    telemetry: Telemetry
+    telemetry: Telemetry,
+    homescreen: Homescreen
   ) {
-    const tabsService = new TabsManager(resourceManager, historyEntriesManager, telemetry)
+    const tabsService = new TabsManager(
+      resourceManager,
+      historyEntriesManager,
+      telemetry,
+      homescreen
+    )
     setContext(TABS_CONTEXT_KEY, tabsService)
     return tabsService
   }

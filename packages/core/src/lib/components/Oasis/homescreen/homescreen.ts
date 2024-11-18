@@ -1,6 +1,6 @@
 import { derived, writable, get, type Readable, type Writable, readable } from 'svelte/store'
 import type { BentoItem, BentoItemData } from './BentoController'
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, tick } from 'svelte'
 import { OpenHomescreenEventTrigger } from '@horizon/types'
 import type { Telemetry } from '../../../service/telemetry'
 import { HorizonDatabase } from '../../../service/storage'
@@ -101,7 +101,11 @@ export class Homescreen
   }
 
   setVisible(visible: boolean, trigger = OpenHomescreenEventTrigger.Click) {
-    this.#visible.set(visible)
+    if (visible === get(this.#visible)) return
+    document.startViewTransition(async () => {
+      this.#visible.set(visible)
+      await tick()
+    })
     if (visible) {
       this.telemetry.trackOpenHomescreen(trigger)
     }

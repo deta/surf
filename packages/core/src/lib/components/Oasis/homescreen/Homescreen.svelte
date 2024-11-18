@@ -47,6 +47,7 @@
   const spaces = oasis.spaces
   const bentoItems = homescreen.bentoItems
   const customization = homescreen.customization
+  const homescreenVisible = homescreen.visible
 
   const BENTO_CONFIG = {
     height: 348,
@@ -328,7 +329,7 @@
     const resourceId = e.detail
 
     homescreen.customization.update((cfg) => {
-      cfg.background = `surf://resource/${resourceId}`
+      cfg.background = `url('surf://resource/${resourceId}')`
       return cfg
     })
 
@@ -357,6 +358,7 @@
 
 <div
   id="homescreen-wrapper"
+  class:homescreenVisible={$homescreenVisible}
   style:--background={$customization.background}
   style={$$restProps.style}
 >
@@ -450,6 +452,12 @@
     background-position: center center;
     background-repeat: no-repeat;
     background-image: var(--background);
+    contain: strict;
+
+    &:not(.homescreenVisible) {
+      //display: none !important;
+      visibility: hidden !important;
+    }
 
     > #homescreen {
       position: relative;

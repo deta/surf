@@ -425,6 +425,11 @@
   })
 </script>
 
+<!--
+NOTE: need to disabled if for now and add back in future -> ONly apply to tabs full yvisible  not scrolled outside
+  style:view-transition-name="tab-{tab.id}"
+
+-->
 <div
   draggable={true}
   id="tab-{tab.id}"
@@ -450,7 +455,6 @@
     : ''}
   style:position="relative"
   aria-hidden="true"
-  style:view-transition-name="tab-{tab.id}"
   use:HTMLDragItem.action={{}}
   on:DragStart={handleDragStart}
   on:DragEnd={handleDragEnd}
@@ -825,6 +829,8 @@
 
 <style lang="scss">
   .tab {
+    view-transition-class: tab !important;
+
     transition:
       0s ease-in-out,
       transform 0s;

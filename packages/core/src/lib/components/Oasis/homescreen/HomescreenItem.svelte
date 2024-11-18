@@ -103,7 +103,7 @@
   use:HTMLDragItem.action={{}}
   on:mouseup={(e) => {
     if (e.shiftKey || e.ctrlKey || e.metaKey) return
-    homescreen.setVisible(false)
+    //homescreen.setVisible(false)
   }}
   on:DragStart={async (drag) => {
     drag.data.setData(DragTypeNames.BENTO_ITEM, item)
@@ -209,6 +209,7 @@ TODO: Fix resizing logic for other corners
         mode="container"
         contentViewMode={$item.contentViewMode}
         contentMode={$item.contentMode}
+        renderContents={$item.spanX > 2 && $item.spanY > 2}
         interactive={true}
         draggable={false}
         on:change-space-view-mode={(e) => {

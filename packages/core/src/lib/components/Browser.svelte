@@ -107,7 +107,7 @@
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import { Tabs } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
-  import { HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { HTMLAxisDragZone, HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import CustomPopover from './Atoms/CustomPopover.svelte'
   import { provideConfig } from '../service/config'
@@ -135,6 +135,7 @@
     createMiniBrowserService,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
+  import HomescreenToggleButton from './Oasis/homescreen/HomescreenToggleButton.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -185,8 +186,13 @@
   const historyEntriesManager = new HistoryEntriesManager()
   const toasts = provideToasts()
   const config = provideConfig()
-  const tabsManager = createTabsManager(resourceManager, historyEntriesManager, telemetry)
   const homescreen = provideHomescreen(telemetry)
+  const tabsManager = createTabsManager(
+    resourceManager,
+    historyEntriesManager,
+    telemetry,
+    homescreen
+  )
   const oasis = provideOasis(resourceManager, tabsManager)
   const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
 
@@ -774,8 +780,6 @@
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       setShowNewTabOverlay(0)
       createHistoryTab()
-    } else if (isModKeyAndKeyPressed(e, 'h') && e.ctrlKey && $userConfigSettings.homescreen) {
-      homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.Shortcut)
     } else if (
       isModKeyAndEventCodeIs(e, 'Plus') ||
       isModKeyAndEventCodeIs(e, 'Equal') ||
@@ -796,7 +800,11 @@
       isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9']) &&
       !e.shiftKey
     ) {
-      const index = parseInt(e.key, 10) - 1
+      if (parseInt(e.key, 10) === 1 && $userConfigSettings.homescreen) {
+        homescreen.setVisible(!$homescreenVisible)
+        return
+      }
+      const index = parseInt(e.key, 10) - ($userConfigSettings.homescreen ? 2 : 1)
       const tabs = [...$pinnedTabs, ...$unpinnedTabs]
 
       if (index < 8) {
@@ -4203,7 +4211,7 @@
   class:showRightSidebar
   style:--left-sidebar-size={leftSidebarWidth + 'px'}
   style:--left-sidebar-height={leftSidebarHeight + 'px'}
-  style:--right-sidebar-size={rightSidebarWidth + 'px'}
+  style:--right-sidebar-size={(showRightSidebar ? rightSidebarWidth : 0) + 'px'}
 >
   {#if !horizontalTabs && showCustomWindowActions}
     <div
@@ -4226,9 +4234,6 @@
           on:go-forward={() => $activeBrowserTab?.goForward()}
           on:reload={() => $activeBrowserTab?.reload()}
           on:toggle-sidebar={() => changeLeftSidebarState()}
-          on:go-home={() => {
-            homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.Click)
-          }}
         />
       </div>
       <div class="flex flex-row items-center space-x-2 ml-5">
@@ -4272,7 +4277,7 @@
         ? showLeftSidebar
           ? leftSidebarHeight
           : 0
-        : 0}px + 1.5em) 1.5em 1.5em calc({horizontalTabs
+        : 0}px + 1.5em) calc(var(--right-sidebar-size, 0) + 1.5em) 1.5em calc({horizontalTabs
         ? 0
         : showLeftSidebar
           ? leftSidebarWidth
@@ -4366,9 +4371,6 @@
               on:go-forward={() => $activeBrowserTab?.goForward()}
               on:reload={() => $activeBrowserTab?.reload()}
               on:toggle-sidebar={() => changeLeftSidebarState()}
-              on:go-home={() => {
-                homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.Click)
-              }}
             />
           {/if}
 
@@ -4384,9 +4386,11 @@
             bind:this={pinnedTabsWrapper}
             style="scroll-behavior: smooth;"
           >
+            {#if $userConfigSettings.homescreen}
+              <HomescreenToggleButton />
+            {/if}
             <div
               id="sidebar-pinned-tabs"
-              style:view-transition-name="pinned-tabs-wrapper"
               class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between`}
               axis="horizontal"
               dragdeadzone="5"
@@ -5269,7 +5273,8 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.35);
+
         backdrop-filter: blur(12px);
         z-index: -1;
       }
@@ -5304,7 +5309,7 @@
         position: absolute;
         inset: 0;
         width: calc(100% + 0px);
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.35);
         backdrop-filter: blur(12px);
         z-index: -1;
 
@@ -5355,7 +5360,7 @@
     &.slide-hide {
       transform-origin: left center;
       // NOTE: Dont use translate3d, this works better just with will-change
-      transform: translate(var(--slide-offset), 0px) scale(var(--slide-scale));
+      transform: translate3d(var(--slide-offset), 0px) scale(var(--slide-scale), 0);
       opacity: 0;
       pointer-events: none !important;
 
@@ -5365,10 +5370,15 @@
         transform: translate(0%, var(--slide-offset)) scale(var(--slide-scale));
       }
     }
-    transition:
-      transform 255.84ms,
-      opacity 300ms;
-    transition-timing-function: linear(
+  }
+  /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
+  :global(::view-transition-group(*)) {
+    animation-duration: 170ms;
+    animation-timing-function: ease;
+  }
+  :global(::view-transition-old(active-content-wrapper)) {
+    animation-duration: 1u0ms;
+    animation-timing-function: linear(
       0 0%,
       0.015482 1%,
       0.055044 2%,
@@ -5424,10 +5434,63 @@
       0.999911 52%
     );
   }
-  /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
-  :global(::view-transition-group(*)) {
-    animation-duration: 280ms;
-    animation-timing-function: ease; //cubic-bezier(0, 1, 0.41, 0.99);
+  :global(::view-transition-new(active-content-wrapper)) {
+    animation-duration: 170ms;
+    animation-timing-function: linear(
+      0 0%,
+      0.015482 1%,
+      0.055044 2%,
+      0.11025 3%,
+      0.174758 4%,
+      0.243871 5%,
+      0.314179 6%,
+      0.383265 7.000000000000001%,
+      0.449482 8%,
+      0.511762 9%,
+      0.569475 10%,
+      0.622318 11%,
+      0.670218 12%,
+      0.713271 13%,
+      0.751684 14.000000000000002%,
+      0.785737 15%,
+      0.815755 16%,
+      0.84208 17%,
+      0.86506 18%,
+      0.885034 19%,
+      0.902328 20%,
+      0.917247 21%,
+      0.930073 22%,
+      0.941064 23%,
+      0.950454 24%,
+      0.958453 25%,
+      0.965247 26%,
+      0.971002 27%,
+      0.975864 28.000000000000004%,
+      0.979962 28.999999999999996%,
+      0.983406 30%,
+      0.986294 31%,
+      0.988709 32%,
+      0.990723 33%,
+      0.9924 34%,
+      0.993792 35%,
+      0.994944 36%,
+      0.995896 37%,
+      0.99668 38%,
+      0.997324 39%,
+      0.997851 40%,
+      0.998282 41%,
+      0.998632 42%,
+      0.998917 43%,
+      0.999147 44%,
+      0.999333 45%,
+      0.999482 46%,
+      0.999601 47%,
+      0.999695 48%,
+      0.99977 49%,
+      0.999829 50%,
+      0.999876 51%,
+      0.999911 52%
+    );
   }
 
   :global(*[data-drag-preview]) {

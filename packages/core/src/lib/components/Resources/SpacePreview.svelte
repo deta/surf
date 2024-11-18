@@ -24,6 +24,7 @@
       : contentViewMode === 'grid'
         ? 'media'
         : 'tiny'
+  export let renderContents = true
 
   $: spaceData = space.data
 
@@ -109,24 +110,26 @@
     </button>
   </div>
   <div class="content mode-{contentViewMode}">
-    {#each spaceContents as item, i (item.resource_id + i)}
-      <LazyComponent this={() => import('../Oasis/OasisResourceLoader.svelte')}>
-        <svelte:fragment slot="component" let:Component>
-          <Component
-            style="--even: {i % 2 === 0 ? 0 : 1};"
-            resourceOrId={item.resource_id}
-            mode={contentMode}
-            frameless={true}
-            origin="homescreen-space"
-            on:open
-            on:click
-            on:open-and-chat
-            on:remove
-            on:set-resource-as-background
-          />
-        </svelte:fragment>
-      </LazyComponent>
-    {/each}
+    {#if renderContents}
+      {#each spaceContents as item, i (item.resource_id + i)}
+        <LazyComponent this={() => import('../Oasis/OasisResourceLoader.svelte')}>
+          <svelte:fragment slot="component" let:Component>
+            <Component
+              style="--even: {i % 2 === 0 ? 0 : 1};"
+              resourceOrId={item.resource_id}
+              mode={contentMode}
+              frameless={true}
+              origin="homescreen-space"
+              on:open
+              on:click
+              on:open-and-chat
+              on:remove
+              on:set-resource-as-background
+            />
+          </svelte:fragment>
+        </LazyComponent>
+      {/each}
+    {/if}
   </div>
 </div>
 

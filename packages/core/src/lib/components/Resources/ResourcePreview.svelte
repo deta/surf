@@ -788,9 +788,7 @@
       action: () => dispatch('open-and-chat', resource.id)
     },
     ...conditionalArrayItem<CtxItem>(
-      (origin === 'homescreen' && resource.type.startsWith('image/')) ||
-        resource.type === ResourceTypes.LINK ||
-        resource.type === ResourceTypes.ARTICLE,
+      origin === 'homescreen' && resource.type.startsWith('image/'),
       {
         type: 'action',
         icon: '',
