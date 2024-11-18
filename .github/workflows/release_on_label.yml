@@ -110,6 +110,8 @@ jobs:
             apps/desktop/dist/*.exe
             apps/desktop/dist/*.AppImage
             apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/*.yml
+            apps/desktop/dist/*.yaml
 
   create-release:
     needs: [prepare, build]
@@ -128,6 +130,8 @@ jobs:
             build/**/*.dmg
             build/**/*.exe
             build/**/*.AppImage
+            build/**/*.yml
+            build/**/*.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Pull Request with Release URL
