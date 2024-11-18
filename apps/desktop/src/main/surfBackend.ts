@@ -155,7 +155,7 @@ export class SurfBackendServerManager extends EventEmitter {
       if (isWindows()) {
         execSync(`taskkill /F /IM ${processName} /T`)
       } else {
-        execSync(`pkill -P ${process.pid} -f ${processName}`)
+        execSync(`pkill -x ${processName}`)
       }
       this.emit('info', 'killed existing surf backend server process')
     } catch (error) {

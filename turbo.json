@@ -100,7 +100,7 @@
         "@horizon/dragcula#build",
         "@horizon/trackpad#dev",
         "@horizon/backend#dev",
-        "@horizon/backend-server#build",
+        "@horizon/backend-server#dev",
         "@horizon/cmdk-sv#build"
       ],
       "outputs": [".dist/**", ".out/**"]

@@ -91,7 +91,9 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
     appPath,
     'resources',
     'bin',
-    `surf-backend${isWindows() ? '.exe' : ''}`
+    // dev: surf-backend-dev, prod: surf-backend
+    // dev-windows: surf-backend-dev.exe, prod-windows: surf-backend.exe
+    `surf-backend${isDev ? '-dev' : ''}${isWindows() ? '.exe' : ''}`
   )
 
   surfBackendManager = new SurfBackendServerManager(backendServerPath, [

@@ -4,7 +4,11 @@ const { join } = require('path')
 const binDir =
   process.env.RESOURCES_BIN_DIR || join(__dirname, '../../../apps/desktop/resources/bin')
 const sourceBin = 'backend-server'
-const targetBin = `surf-backend${process.platform === 'win32' ? '.exe' : ''}`
+
+const isDev = process.argv.includes('--dev')
+// dev: surf-backend-dev, prod: surf-backend
+// dev-win: surf-backend-dev.exe, prod-win: surf-backend.exe
+const targetBin = `surf-backend${isDev ? '-dev' : ''}${process.platform === 'win32' ? '.exe' : ''}`
 const targetBinPath = join(binDir, targetBin)
 const extraArgsIndex = process.argv.indexOf('--')
 const extraArgs = extraArgsIndex !== -1 ? process.argv.slice(extraArgsIndex + 1) : []
