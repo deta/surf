@@ -329,7 +329,7 @@
     const resourceId = e.detail
 
     homescreen.customization.update((cfg) => {
-      cfg.background = `url('surf://resource/${resourceId}')`
+      cfg.background = `${resourceId}`
       return cfg
     })
 
@@ -359,7 +359,7 @@
 <div
   id="homescreen-wrapper"
   class:homescreenVisible={$homescreenVisible}
-  style:--background={$customization.background}
+  style:--background={`url('surf://resource/${$customization.background}')`}
   style={$$restProps.style}
 >
   <MiniBrowser service={scropedMinibrowser} />

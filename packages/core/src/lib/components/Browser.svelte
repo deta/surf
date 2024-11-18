@@ -4203,7 +4203,7 @@
 
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40"
-  style:--background-image="url('{backgroundImage}')"
+  style:--background-image="url('surf://resource/{$backgroundImage}')"
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
   class:horizontalTabs
