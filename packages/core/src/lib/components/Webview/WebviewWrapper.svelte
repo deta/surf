@@ -219,7 +219,7 @@
   */
   export const getSelection = () => {
     return new Promise<string>((resolve) => {
-      webview.addEventListener('ipc-message', (event) => {
+      const listener = (event) => {
         if (event.channel !== 'webview-page-event') return
 
         const eventType = event.args[0] as WebViewEventSendNames
@@ -228,10 +228,12 @@
         if (eventType === WebViewEventSendNames.Selection) {
           event.preventDefault()
           event.stopPropagation()
+          webview.removeEventListener('ipc-message', listener)
           resolve(eventData as WebViewSendEvents[WebViewEventSendNames.Selection])
         }
-      })
+      }
 
+      webview.addEventListener('ipc-message', listener)
       sendEvent(WebViewEventReceiveNames.GetSelection)
     })
   }

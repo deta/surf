@@ -1,13 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { WebviewTag } from 'electron'
-
   import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
 
   export let webview: WebviewTag
   export let value = ''
   export let show = false
-
   export let getSelection: () => Promise<string>
 
   let matches = 0
@@ -19,25 +17,25 @@
 
   export const open = async () => {
     log.debug('open find')
-
     show = true
-
+    await new Promise((resolve) => setTimeout(resolve, 0))
     const selection = await getSelection()
     if (selection) {
-      find(selection)
+      value = selection
+      find()
     }
-
-    inputElem.focus()
+    inputElem?.focus()
   }
 
   export const find = async (searchValue?: string) => {
-    log.debug('start find')
-
-    if (searchValue) {
+    if (searchValue !== undefined) {
       value = searchValue
-      inputElem.focus()
-      inputElem.setSelectionRange(0, searchValue.length)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      inputElem?.focus()
+      inputElem?.setSelectionRange(0, searchValue.length)
     }
+
+    log.debug('start find', searchValue, value)
 
     if (value === '') {
       return
@@ -47,6 +45,7 @@
   }
 
   export const findNext = () => {
+    if (!value) return
     log.debug('find next')
     requestId = webview.findInPage(value, {
       forward: true,
@@ -56,6 +55,7 @@
   }
 
   export const findPrevious = () => {
+    if (!value) return
     log.debug('find previous')
     requestId = webview.findInPage(value, {
       forward: false,
@@ -73,10 +73,10 @@
     try {
       log.debug('stop find')
       value = ''
+      matches = 0
+      activeMatchOrdinal = 0
       webview?.stopFindInPage('clearSelection')
-    } catch (error) {
-      // ignore
-    }
+    } catch (_) {}
   }
 
   export const isOpen = () => show
@@ -95,28 +95,32 @@
   }
 
   const handleKeyDown = async (event: KeyboardEvent) => {
-    console.log('handleKeyDown', event)
+    log.debug('handleKeyDown', event)
     if (event.key === 'Escape') {
       close()
     } else if (isModKeyAndKeyPressed(event, 'f')) {
       event.preventDefault()
-
       const selection = await getSelection()
+      log.debug('selection', selection)
       if (selection) {
         find(selection)
       } else {
         close()
       }
-    } else if (event.key === 'ArrowDown') {
-      findNext()
-    } else if (event.key === 'ArrowUp') {
+    } else if (event.key === 'ArrowUp' || (event.shiftKey && event.key === 'Enter')) {
+      event.preventDefault()
       findPrevious()
-    } else if (value === '') {
-      if (event.key === 'Backspace') {
-        close()
-      } else {
-        stopFind()
-      }
+    } else if (event.key === 'ArrowDown' || event.key === 'Enter') {
+      event.preventDefault()
+      findNext()
+    } else if (value === '' && event.key === 'Backspace') {
+      close()
+    }
+  }
+
+  const handleInput = () => {
+    if (value === '') {
+      stopFind()
     } else {
       find()
     }
@@ -139,6 +143,7 @@
         bind:this={inputElem}
         bind:value
         on:keydown={handleKeyDown}
+        on:input={handleInput}
         type="text"
         placeholder="find in page"
       />
