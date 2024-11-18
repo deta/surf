@@ -121,11 +121,12 @@
   const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
   const selectedSpaceId = oasis.selectedSpace
+  const everythingContentsResources = oasis.everythingContents
   const userConfigSettings = config.settings
 
   let oasisSpaceComp: OasisSpaceRenderer
 
-  let createSpaceRef: any
+  let createSpaceRef: SpacesView
 
   let filteredItems: CMDMenuItem[] = []
   let historyEntries: HistoryEntry[] = []
@@ -669,8 +670,24 @@
   const loadingContents = writable(false)
   const showCreationModal = writable(false)
   const searchResults = writable<ResourceSearchResultItem[]>([])
-  const everythingContents = writable<ResourceSearchResultItem[]>([])
   const spaceCreationActive = writable(false)
+
+  const everythingContents = derived(
+    [everythingContentsResources],
+    ([everythingContentsResources]) => {
+      return everythingContentsResources
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map(
+          (resource) =>
+            ({
+              id: resource.id,
+              resource: resource,
+              annotations: resource.annotations,
+              engine: 'local'
+            }) as ResourceSearchResultItem
+        )
+    }
+  )
 
   const resourcesToShow = derived(
     [searchValue, searchResults, everythingContents],
@@ -688,54 +705,11 @@
   })
 
   const loadEverything = async (initialLoad = false) => {
-    try {
-      if ($loadingContents) {
-        log.debug('Already loading everything')
-        return
-      }
-
-      loadingContents.set(true)
-      everythingContents.set([])
-      await tick()
-
-      if (initialLoad) {
-        telemetry.trackOpenOasis()
-      }
-
-      const resources = await resourceManager.listResourcesByTags(
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ...conditionalArrayItem($selectedFilterType !== null, $selectedFilterType?.tags ?? []),
-          ...($userConfigSettings.show_annotations_in_oasis
-            ? []
-            : [ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')])
-        ],
-        { includeAnnotations: true, excludeWithinSpaces: isInboxSpace }
-      )
-
-      const items = resources
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map(
-          (resource) =>
-            ({
-              id: resource.id,
-              resource: resource,
-              annotations: resource.annotations,
-              engine: 'local'
-            }) as ResourceSearchResultItem
-        )
-
-      log.debug('Loaded everything:', items)
-
-      everythingContents.set(items)
-    } catch (error) {
-      log.error('Error loading everything:', error)
-    } finally {
-      loadingContents.set(false)
-    }
+    await oasis.loadEverything(
+      initialLoad,
+      $selectedFilterType,
+      !$userConfigSettings.show_annotations_in_oasis
+    )
   }
 
   const handleSearch = async (searchValueInput: string) => {
@@ -776,106 +750,43 @@
   }
 
   const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
-    const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
-    log.debug('removing resources', resourceIds)
-
-    const resources = []
-    for (const resourceId of resourceIds) {
-      const resource = await resourceManager.getResource(resourceId)
-      if (!resource) {
-        log.error('Resource not found:', resourceId)
-        continue
-      }
-      resources.push(resource)
-    }
-
-    if (resources.length === 0) {
-      toasts.error('No resources found to remove.')
-      return
-    }
-
-    let totalReferences = 0
-    let isFromLiveSpace = false
-
-    for (const resource of resources) {
-      const references = await resourceManager.getAllReferences(resource.id, oasis.spacesValue)
-      if (isEverythingSpace || isInboxSpace) {
-        totalReferences += references.length
-      }
-      const resourceIsFromLiveSpace = !!resource.tags?.find(
-        (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
-      )
-      isFromLiveSpace = isFromLiveSpace || resourceIsFromLiveSpace
-    }
-
-    const confirm = window.confirm(
-      !isEverythingSpace && !isFromLiveSpace && !isInboxSpace
-        ? `Remove reference? The original will still be in Everything.`
-        : totalReferences > 0
-          ? `These resources will be removed from ${totalReferences} space${
-              totalReferences > 1 ? 's' : ''
-            } and deleted permanently.`
-          : `These resources will be deleted permanently.`
-    )
-
-    if (!confirm) {
-      return
-    }
-
     try {
-      for (const resource of resources) {
-        const references = await resourceManager.getAllReferences(resource.id, oasis.spacesValue)
-        log.debug('removing resource references', references)
-        for (const reference of references) {
-          log.debug('deleting reference', reference)
-          await resourceManager.deleteSpaceEntries([reference.entryId])
-        }
+      const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
+      log.debug('removing resources', resourceIds)
 
-        if (isEverythingSpace || isInboxSpace) {
-          log.debug('deleting resource from oasis', resource.id)
-          await resourceManager.deleteResource(resource.id)
-          everythingContents.update((contents) => {
-            return contents.filter((x) => x.id !== resource.id)
-          })
-
-          // update tabs to remove any links to the resource
-          await tabsManager.removeResourceBookmarks(resource.id)
-        }
-
-        await telemetry.trackDeleteResource(
-          resource.type,
-          !isEverythingSpace && !isInboxSpace,
-          resources.length > 1
-            ? DeleteResourceEventTrigger.OasisMultiSelect
-            : DeleteResourceEventTrigger.OasisItem
-        )
-
-        log.debug('Resource removed:', resource.id)
+      if (resourceIds.length === 0) {
+        toasts.error('No resources found to remove.')
+        return
       }
 
-      if (resources.length > 1) {
+      const isInSpace = $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox'
+      await oasis.removeResourcesFromSpaceOrOasis(
+        resourceIds,
+        isInSpace ? $selectedSpaceId : undefined
+      )
+
+      if (resourceIds.length > 1) {
         await telemetry.trackMultiSelectResourceAction(
           MultiSelectResourceEventAction.Delete,
-          resources.length,
+          resourceIds.length,
           isEverythingSpace || isInboxSpace ? 'oasis' : 'space'
         )
       }
+
+      if ($searchValue) {
+        await handleSearch($searchValue)
+      }
+
+      toasts.success('Resources deleted!')
     } catch (error) {
-      log.error('Error removing references:', error)
-    }
-
-    if ($searchValue) {
-      await handleSearch($searchValue)
-    }
-
-    toasts.success('Resources deleted!')
-  }
-
-  const handleSavedResourceInSpace = (e: CustomEvent<string>) => {
-    const spaceId = e.detail
-    log.debug('Saved resource in space:', spaceId)
-    if (spaceId !== 'inbox' && spaceId !== 'all') {
-      loadEverything()
+      log.error('Error removing resources:', error)
+      if (error instanceof Error) {
+        toasts.error('Error removing resources: ' + error.message)
+      } else if (typeof error === 'string') {
+        toasts.error('Error removing resources: ' + error)
+      } else {
+        toasts.error('Error removing resources')
+      }
     }
   }
 
@@ -991,39 +902,14 @@
 
   const handleCreateEmptySpace = async () => {
     await tick()
-    const spaceID = await createSpaceRef.handleCreateSpace({
-      detail: {
-        name: '.tempspace',
-        aiEnabled: false,
-        colors: ['#000000', '#ffffff'],
-        userPrompt: ''
-      }
-    })
+    const spaceID = await createSpaceRef.handleCreateSpace('.tempspace', undefined, '')
+    if (spaceID === null) {
+      toasts.error('Failed to create new space')
+      return
+    }
 
     isCreatingNewSpace.set(true)
     selectedSpaceId.set(spaceID)
-  }
-
-  const handleCreateSpace = async (
-    e: CustomEvent<{
-      name: string
-      aiEnabled: boolean
-      colors: ['string', 'string']
-      userPrompt: string
-    }>
-  ) => {
-    await tick()
-    const spaceID = await createSpaceRef.handleCreateSpace(
-      e,
-      e.detail.name,
-      e.detail.colors,
-      e.detail.userPrompt
-    )
-
-    if (e.detail.aiEnabled) {
-      await tick()
-      await createSpaceRef.createSpaceWithAI(spaceID, e.detail.userPrompt, e.detail.colors)
-    }
   }
 
   const handleDeleteSpace = async () => {
@@ -1049,6 +935,11 @@
       selectedSpaceId.set(e.detail)
       oasis.selectedSpace.set(e.detail)
     }
+  }
+
+  const handleCreatedSpace = async (e: CustomEvent<OasisSpace>) => {
+    const createdSpace = e.detail
+    createSpaceRef.createdNewSpace(createdSpace)
   }
 
   const handleCreatingNewSpace = () => {
@@ -1164,6 +1055,8 @@
     // TODO: Only close when dropped outside
 
     window.removeEventListener('click', dragClickHandler)
+
+    log.debug('Drag end', drag, drag.to, drag.from)
 
     for (const toId of ['drawer', 'folder-', 'overlay-']) {
       if (drag && drag.to?.id.startsWith(toId)) {
@@ -1421,7 +1314,7 @@
                         on:batch-open
                         on:batch-remove={handleResourceRemove}
                         on:handled-drop={handlePostDropOnSpace}
-                        on:saved-resource-in-space={handleSavedResourceInSpace}
+                        on:created-space={handleCreatedSpace}
                         on:open-space-and-chat
                         insideDrawer={true}
                         bind:this={oasisSpaceComp}
@@ -1463,7 +1356,6 @@
                               on:batch-remove={handleResourceRemove}
                               on:batch-open
                               on:new-tab
-                              on:saved-resource-in-space={handleSavedResourceInSpace}
                               {searchValue}
                             />
                           {/key}

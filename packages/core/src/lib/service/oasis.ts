@@ -3,8 +3,8 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
 
-import { generateID, isDev, useLogScope } from '@horizon/utils'
-import { DeleteResourceEventTrigger } from '@horizon/types'
+import { conditionalArrayItem, generateID, isDev, useLogScope } from '@horizon/utils'
+import { DeleteResourceEventTrigger, ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
 
 import {
   SpaceEntryOrigin,
@@ -13,9 +13,10 @@ import {
   type SpaceData,
   type SpaceEntry
 } from '../types'
-import type { Resource, ResourceManager } from './resources'
+import { ResourceManager, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
+import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -169,6 +170,9 @@ export class OasisService {
   spaces: Writable<OasisSpace[]>
   selectedSpace: Writable<string>
 
+  everythingContents: Writable<Resource[]>
+  loadingEverythingContents: Writable<boolean>
+
   stackKey: Writable<{}>
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
 
@@ -187,6 +191,10 @@ export class OasisService {
 
     this.spaces = writable<OasisSpace[]>([])
     this.selectedSpace = writable<string>('all')
+
+    this.everythingContents = writable([])
+    this.loadingEverythingContents = writable(false)
+
     this.stackKey = writable({})
     this.pendingStackActions = []
 
@@ -360,6 +368,10 @@ export class OasisService {
 
     this.spaces.set(filtered)
 
+    if (get(this.selectedSpace) === spaceId && spaceId !== '.tempspace') {
+      this.selectedSpace.set('all')
+    }
+
     this.emit('deleted', spaceId)
   }
 
@@ -394,6 +406,11 @@ export class OasisService {
 
     this.triggerStoreUpdate(space)
 
+    if (get(this.selectedSpace) === 'inbox') {
+      this.log.debug('updating everything after resource was moved to a space')
+      await this.loadEverything()
+    }
+
     return space
   }
 
@@ -418,23 +435,23 @@ export class OasisService {
       resourceIds.map((id) => this.resourceManager.getResource(id))
     )
     const validResources = resources.filter((resource) => resource !== null) as Resource[]
+    const validResourceIDs = validResources.map((resource) => resource.id)
 
-    if (validResources.length === 0) {
+    if (validResourceIDs.length === 0) {
       this.log.error('No valid resources found')
       return false
     }
 
     const allReferences = await Promise.all(
-      validResources.map((resource) =>
-        this.resourceManager.getAllReferences(resource.id, this.spacesValue)
-      )
+      validResourceIDs.map((id) => this.resourceManager.getAllReferences(id, this.spacesValue))
     )
+    this.log.debug('all references:', allReferences)
 
     let totalNumberOfReferences = allReferences.reduce((sum, refs) => sum + refs.length, 0)
 
     const confirmMessage =
       totalNumberOfReferences > 0
-        ? `These ${validResources.length} resources will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
+        ? `${validResourceIDs.length > 1 ? `These ${validResourceIDs.length} resources` : `This resource`} will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
         : `This resource will be deleted permanently.`
 
     const confirmed = !confirmAction || window.confirm(confirmMessage)
@@ -444,6 +461,7 @@ export class OasisService {
 
     // turn the array of references into an array of spaces with the resources to remove
     const spacesWithReferences = allReferences
+      .filter((references) => references.length > 0)
       .map((references, index) => {
         return {
           spaceId: references[0].folderId,
@@ -464,11 +482,16 @@ export class OasisService {
       })
     )
 
-    this.log.debug('deleting resources from oasis', resourceIds)
-    await Promise.all(resourceIds.map((id) => this.resourceManager.deleteResource(id)))
+    this.log.debug('deleting resources from oasis', validResourceIDs)
+    await Promise.all(validResourceIDs.map((id) => this.resourceManager.deleteResource(id)))
 
-    this.log.debug('removing resource bookmarks from tabs', resourceIds)
-    await Promise.all(resourceIds.map((id) => this.tabsManager.removeResourceBookmarks(id)))
+    this.log.debug('removing resource bookmarks from tabs', validResourceIDs)
+    await Promise.all(validResourceIDs.map((id) => this.tabsManager.removeResourceBookmarks(id)))
+
+    this.log.debug('updating everything after resource deletion')
+    this.everythingContents.update((contents) => {
+      return contents.filter((resource) => !validResourceIDs.includes(resource.id))
+    })
 
     await Promise.all(
       validResources.map((resource) =>
@@ -553,6 +576,53 @@ export class OasisService {
       return this.removeResourcesFromSpace(spaceId, resourceIds)
     } else {
       return this.deleteResourcesFromOasis(resourceIds)
+    }
+  }
+
+  async loadEverything(
+    initialLoad = false,
+    $selectedFilterType: FilterItem | null = null,
+    excludeAnnotations = false
+  ) {
+    try {
+      if (get(this.loadingEverythingContents)) {
+        this.log.debug('Already loading everything')
+        return
+      }
+
+      this.loadingEverythingContents.set(true)
+      this.everythingContents.set([])
+      await tick()
+
+      if (initialLoad) {
+        this.telemetry.trackOpenOasis()
+      }
+
+      this.log.debug('loading everything')
+      const resources = await this.resourceManager.listResourcesByTags(
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...conditionalArrayItem($selectedFilterType !== null, $selectedFilterType?.tags ?? []),
+          ...conditionalArrayItem(
+            excludeAnnotations,
+            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+          )
+        ],
+        { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }
+      )
+
+      this.log.debug('Loaded everything:', resources)
+      this.everythingContents.set(resources)
+
+      return resources
+    } catch (error) {
+      this.log.error('Failed to load everything:', error)
+      throw error
+    } finally {
+      this.loadingEverythingContents.set(false)
     }
   }
 

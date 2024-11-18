@@ -17,6 +17,8 @@
     'open-space-as-tab': OpenSpaceAsTabEvent
     'space-selected': SpaceSelectedEvent
     'open-space-and-chat': { spaceId: string }
+    pin: string
+    unpin: string
     Drop: { drag: DragculaDragEvent; spaceId: string }
   }
 </script>
@@ -34,7 +36,7 @@
     ResourceTypes,
     SpaceEntryOrigin
   } from '../../types'
-  import { useLogScope, hover, isModKeyPressed } from '@horizon/utils'
+  import { useLogScope, hover, isModKeyPressed, conditionalArrayItem } from '@horizon/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
@@ -52,6 +54,7 @@
   export let selected: boolean
   export let showPreview = false
   export let isEditing = false // New prop to control editing state
+  export let allowPinning = false
 
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher<FolderEvents>()
@@ -380,6 +383,13 @@
               action: () => dispatch('open-space-and-chat', { spaceId: folder.id })
             },
             { type: 'separator' },
+            ...conditionalArrayItem(allowPinning, {
+              type: 'action',
+              icon: $folderDetails.pinned ? `pinned-off` : `pin`,
+              text: $folderDetails.pinned ? 'Unpin' : 'Pin',
+              action: () =>
+                $folderDetails.pinned ? dispatch('unpin', folder.id) : dispatch('pin', folder.id)
+            }),
             { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
             { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
           ]

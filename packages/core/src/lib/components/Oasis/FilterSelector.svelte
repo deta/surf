@@ -91,7 +91,7 @@
     <Icon name="filter" />
   </div>
 
-  <div class="filters">
+  <!-- <div class="filters">
     {#each filters as filter (filter.id)}
       <button
         class="filter"
@@ -101,7 +101,7 @@
         {filter.label}
       </button>
     {/each}
-  </div>
+  </div> -->
 
   <select class="filter-select" value={$selectedAsString} on:change={handleChange}>
     <option value="all" selected>All Types</option>
@@ -187,11 +187,6 @@
     &:focus {
       outline: none;
     }
-
-    @media screen and (min-width: 1700px) {
-      display: none;
-    }
-
     @media screen and (max-width: 1100px) {
       padding: 0.5rem 0.25rem;
       font-size: 0.9rem;

@@ -1,3 +1,21 @@
+<script lang="ts" context="module">
+  export type CreateNewSpaceEvents = {
+    'abort-space-creation': string
+    'close-modal': void
+    'creating-new-space': void
+    'done-creating-new-space': void
+    'update-existing-space': {
+      space: OasisSpace
+      name: string
+      colors: [string, string]
+      processNaturalLanguage: boolean
+      userPrompt: string
+      blacklistedResourceIds: string[]
+      llmFetchedResourceIds: string[]
+    }
+  }
+</script>
+
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -36,7 +54,6 @@
   const userPrompt = writable('<p></p>')
   const previousUserPrompt = writable('<p></p>')
   const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
-  const dispatch = createEventDispatcher()
   const userEnteredName = writable(false)
   const previewIDs = writable<PreviewID[]>([])
   const previewResources = writable<any[]>([])
@@ -58,6 +75,7 @@
   let shakeClass = ''
 
   const log = useLogScope('OasisSpace')
+  const dispatch = createEventDispatcher<CreateNewSpaceEvents>()
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
 
@@ -149,6 +167,7 @@
     dispatch('update-existing-space', {
       name: spaceName,
       space: space,
+      colors: $colors,
       processNaturalLanguage: $aiEnabled,
       userPrompt: sanitizedUserPrompt,
 
@@ -260,7 +279,7 @@
 
   const debouncedPreviewAISpace = useDebounce(previewAISpace, 860)
 
-  const handleEditorUpdate = (event) => {
+  const handleEditorUpdate = (event: CustomEvent<string>) => {
     previousUserPrompt.set($userPrompt)
     userPrompt.set(event.detail)
     isTyping.set(true)
@@ -282,7 +301,7 @@
     }
   }
 
-  const handleBlacklistResource = (event) => {
+  const handleBlacklistResource = (event: CustomEvent<string>) => {
     const resourceId = event.detail
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: true } : id))
@@ -293,7 +312,7 @@
     })
   }
 
-  const handleWhitelistResource = (event) => {
+  const handleWhitelistResource = (event: CustomEvent<string>) => {
     const resourceId = event.detail
     previewIDs.update((ids) =>
       ids.map((id) => (id.id === resourceId ? { ...id, blacklisted: false } : id))

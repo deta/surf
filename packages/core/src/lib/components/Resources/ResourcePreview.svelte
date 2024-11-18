@@ -113,7 +113,6 @@
     'blacklist-resource': string
     'set-resource-as-background': string
     'remove-from-homescreen': void
-    'saved-resource-in-space': string
   }>()
 
   const spaces = oasis.spaces
@@ -146,7 +145,7 @@
                   [resource.id],
                   SpaceEntryOrigin.ManuallyAdded
                 )
-                dispatch('saved-resource-in-space', space.id)
+
                 toasts.success(`Added to ${space.dataValue.folderName}`)
               } catch (e) {
                 toasts.error(`Failed to add to ${space.dataValue.folderName}`)

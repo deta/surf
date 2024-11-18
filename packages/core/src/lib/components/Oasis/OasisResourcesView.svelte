@@ -102,11 +102,11 @@
         items: $spaces
           .filter(
             (e) =>
-              e.dataValue.folderName.toLowerCase() !== 'all my stuff' &&
+              e.id !== 'all' &&
+              e.id !== 'inbox' &&
               e.dataValue.folderName.toLowerCase() !== '.tempspace' &&
               !e.dataValue.builtIn
           )
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
           .map((space) => ({
             type: 'action',
             icon: '',
@@ -172,7 +172,6 @@
             on:whitelist-resource
             on:remove
             on:load
-            on:saved-resource-in-space
             {interactive}
             draggable
           />

@@ -17,7 +17,7 @@
   import { writable, derived } from 'svelte/store'
 
   import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
-  import Folder, { type EditingStartEvent } from './Folder.svelte'
+  import Folder, { type EditingStartEvent, type FolderEvents } from './Folder.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import { OasisSpace, useOasis } from '../../service/oasis'
 
@@ -93,7 +93,6 @@
 
   export let onBack = () => {}
   export const handleCreateSpace = async (
-    _e: MouseEvent,
     name: string,
     colors?: [string, string],
     userPrompt?: string
@@ -188,6 +187,14 @@
     } finally {
       await tick()
     }
+  }
+
+  export const createdNewSpace = async (space: OasisSpace) => {
+    didChangeOrder.set(false)
+    showAllSpaces.set(true)
+    const newIndex = $pinnedSpaces.length
+    await oasis.moveSpaceToIndex(space.id, newIndex)
+    didChangeOrder.set(true)
   }
 
   const addItemToTabs = async (id: string, active: boolean) => {
@@ -338,6 +345,40 @@
   const toggleShowSpaces = () => {
     showAllSpaces.update((show) => !show)
   }
+
+  const handlePin = async (e: CustomEvent<FolderEvents['pin']>) => {
+    try {
+      const id = e.detail
+      const space = $spaces.find((space) => space.id === id)
+      if (space) {
+        // Move the pinned space to the end of the pinned list
+        didChangeOrder.set(false)
+        const lastPinnedIndex = $pinnedSpaces.length
+        await space.updateData({ pinned: true })
+        await oasis.moveSpaceToIndex(id, lastPinnedIndex)
+        didChangeOrder.set(true)
+      }
+    } catch (error) {
+      log.error('Failed to pin folder:', error)
+    }
+  }
+
+  const handleUnpin = async (e: CustomEvent<FolderEvents['unpin']>) => {
+    try {
+      const id = e.detail
+      const space = $spaces.find((space) => space.id === id)
+      if (space) {
+        // Move the unpinned space to the start of the unpinned list
+        didChangeOrder.set(false)
+        const firstUnpinnedIndex = $pinnedSpaces.length - 1
+        await space.updateData({ pinned: false })
+        await oasis.moveSpaceToIndex(id, firstUnpinnedIndex)
+        didChangeOrder.set(true)
+      }
+    } catch (error) {
+      log.error('Failed to unpin folder:', error)
+    }
+  }
 </script>
 
 <div
@@ -392,8 +433,11 @@
             on:Drop
             on:editing-start={handleEditingStart}
             on:editing-end={handleEditingEnd}
+            on:pin={handlePin}
+            on:unpin={handleUnpin}
             selected={$selectedSpace === folder.id}
             isEditing={$editingFolderId === folder.id}
+            allowPinning
             {showPreview}
           />
         {/each}
@@ -450,8 +494,11 @@
             on:Drop
             on:editing-start={handleEditingStart}
             on:editing-end={handleEditingEnd}
+            on:pin={handlePin}
+            on:unpin={handleUnpin}
             selected={$selectedSpace === folder.id}
             isEditing={$editingFolderId === folder.id}
+            allowPinning
             {showPreview}
           />
         {/each}

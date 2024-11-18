@@ -82,7 +82,7 @@
   import { sanitizeHTML } from '@horizon/web-parser/src/utils'
   import { useTabsManager } from '../../service/tabs'
 
-  import CreateNewSpace from './CreateNewSpace.svelte'
+  import CreateNewSpace, { type CreateNewSpaceEvents } from './CreateNewSpace.svelte'
   import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
@@ -113,6 +113,7 @@
     'select-space': string
     'open-space-and-chat': ChatWithSpaceEvent
     'handled-drop': void
+    'created-space': OasisSpace
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -1348,22 +1349,18 @@
     dispatch('go-back')
   }
 
-  const handleUpdateExistingSpace = async (e: CustomEvent) => {
+  const handleUpdateExistingSpace = async (
+    e: CustomEvent<CreateNewSpaceEvents['update-existing-space']>
+  ) => {
     const {
       space,
       name,
+      colors,
       processNaturalLanguage,
       userPrompt,
       blacklistedResourceIds,
       llmFetchedResourceIds
-    } = e.detail as {
-      space: OasisSpace
-      name: string
-      processNaturalLanguage: boolean
-      userPrompt: string
-      blacklistedResourceIds: string[]
-      llmFetchedResourceIds: string[]
-    }
+    } = e.detail
     if (!space) {
       log.error('No space found')
       return
@@ -1376,9 +1373,12 @@
 
       createdSpace = await oasis.createSpace({
         ...space.dataValue,
+        colors: colors,
         folderName: name,
         smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
       })
+
+      dispatch('created-space', createdSpace)
 
       if (blacklistedResourceIds && blacklistedResourceIds.length > 0) {
         await oasis.addResourcesToSpace(
@@ -1611,7 +1611,6 @@
         on:batch-remove={handleResourceRemove}
         on:batch-open
         on:create-tab-from-space
-        on:saved-resource-in-space
         {searchValue}
       />
 
@@ -1633,7 +1632,6 @@
         on:batch-remove
         on:batch-open
         on:open-space-as-tab
-        on:saved-resource-in-space
         isEverythingSpace={false}
         {searchValue}
       />
