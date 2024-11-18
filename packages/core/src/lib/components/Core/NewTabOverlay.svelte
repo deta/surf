@@ -705,6 +705,7 @@
   })
 
   const loadEverything = async (initialLoad = false) => {
+    await tick()
     await oasis.loadEverything(
       initialLoad,
       $selectedFilterType,

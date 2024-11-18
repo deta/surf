@@ -581,7 +581,7 @@ export class OasisService {
 
   async loadEverything(
     initialLoad = false,
-    $selectedFilterType: FilterItem | null = null,
+    selectedFilterType: FilterItem | null = null,
     excludeAnnotations = false
   ) {
     try {
@@ -598,14 +598,14 @@ export class OasisService {
         this.telemetry.trackOpenOasis()
       }
 
-      this.log.debug('loading everything')
+      this.log.debug('loading everything', selectedFilterType, { excludeAnnotations })
       const resources = await this.resourceManager.listResourcesByTags(
         [
           ResourceManager.SearchTagDeleted(false),
           ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ...conditionalArrayItem($selectedFilterType !== null, $selectedFilterType?.tags ?? []),
+          ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
           ...conditionalArrayItem(
             excludeAnnotations,
             ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')

@@ -328,8 +328,9 @@
         }
       } else if (target === 'overlay-spaces-list') {
         log.debug('dropped onto unpinned list')
+        newIndex = newIndex + $pinnedSpaces.length
         if (space.dataValue.pinned) {
-          newIndex = newIndex + ($pinnedSpaces.length - 1)
+          newIndex -= 1
           await space.updateData({ pinned: false })
         }
       }
