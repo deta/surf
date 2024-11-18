@@ -4376,13 +4376,13 @@
 
           <div
             id="sidebar-pinned-tabs-wrapper"
-            class={$pinnedTabs.length !== 0
+            class={$pinnedTabs.length !== 0 || $userConfigSettings.homescreen
               ? 'relative no-drag my-auto rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
               : horizontalTabs
                 ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
                 : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
             class:horizontalTabs
-            class:empty={$pinnedTabs.length === 0}
+            class:empty={$pinnedTabs.length === 0 && !$userConfigSettings.homescreen}
             bind:this={pinnedTabsWrapper}
             style="scroll-behavior: smooth;"
           >
@@ -4391,7 +4391,7 @@
             {/if}
             <div
               id="sidebar-pinned-tabs"
-              class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between`}
+              class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between min-w-[1ch]`}
               axis="horizontal"
               dragdeadzone="5"
               aria-hidden="true"
