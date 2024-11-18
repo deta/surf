@@ -32,7 +32,14 @@
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope, useDebounce, parseUrlIntoCanonical, generateID, shouldIgnoreWebviewErrorCode } from '@horizon/utils'
+  import {
+    useLogScope,
+    useDebounce,
+    parseUrlIntoCanonical,
+    generateID,
+    shouldIgnoreWebviewErrorCode,
+    isPDFViewerURL
+  } from '@horizon/utils'
   import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
   import {
     useResourceManager,
@@ -152,7 +159,7 @@
   }
 
   const handleNavigation = (newUrl: string) => {
-    if (newUrl.startsWith(window.api.PDFViewerEntryPoint)) {
+    if (isPDFViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
       try {
         const urlParams = new URLSearchParams(new URL(newUrl).search)
         newUrl = decodeURIComponent(urlParams.get('path') || '') || newUrl

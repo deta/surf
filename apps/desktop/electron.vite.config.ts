@@ -93,6 +93,9 @@ export default defineConfig({
       },
       minify: !disableAllObfuscation
     },
+    define: {
+      'import.meta.env.PLATFORM': JSON.stringify(process.platform)
+    },
     css: cssConfig
   },
 

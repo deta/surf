@@ -1,4 +1,5 @@
 import { isIP } from 'is-ip'
+import { isWindows } from './system'
 
 export const prependProtocol = (url: string, secure = true) => {
   try {
@@ -296,4 +297,14 @@ export const parseUrlIntoCanonical = (value: string | URL) => {
   }
 
   return normalized
+}
+
+export const isPDFViewerURL = (url: string, entryPoint: string) => {
+  if (url.startsWith(entryPoint)) return true
+  if (
+    isWindows() &&
+    url.startsWith(entryPoint.replaceAll('\\', '/').replace('file://', 'file:///'))
+  )
+    return true
+  return false
 }

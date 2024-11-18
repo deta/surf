@@ -5,7 +5,7 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { isDev, isMac, useLogScope } from '@horizon/utils'
+import { isDev, isMac, isPDFViewerURL, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
@@ -29,11 +29,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-        x: winState.state.x,
-        y: winState.state.y,
-        width: winState.state.width,
-        height: winState.state.height
-      })
+          x: winState.state.x,
+          y: winState.state.y,
+          width: winState.state.width,
+          height: winState.state.height
+        })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -107,7 +107,7 @@ export function createWindow() {
       // navigation and APIs like webContents.loadURL should be able to request resources
       details.resourceType !== 'mainFrame' &&
       // only the PDF renderer should be able to request resources, cancel if webContents is unavailable
-      (!details.webContents || !details.webContents.getURL().startsWith(PDFViewerEntryPoint));
+      (!details.webContents || !isPDFViewerURL(details.webContents.getURL(), PDFViewerEntryPoint))
 
     callback({ cancel: shouldBlockRequest })
   })

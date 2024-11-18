@@ -31,7 +31,7 @@ import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
 import { type ResourceArticle, type Resource } from '@horizon/core/src/lib/service/resources'
-import { normalizeURL } from '@horizon/utils/src/url'
+import { isPDFViewerURL, normalizeURL } from '@horizon/utils/src/url'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 const PDFViewerEntryPoint =
@@ -51,8 +51,7 @@ if (!import.meta.env.DEV) {
 
 function pdfViewerCheck(): { url: URL; isPDFPage: boolean } {
   let url = new URL(window.location.href)
-
-  if (url.href.startsWith(PDFViewerEntryPoint)) {
+  if (isPDFViewerURL(url.href, PDFViewerEntryPoint)) {
     const path = url.searchParams.get('path')
     if (path) return { url: new URL(decodeURIComponent(path)), isPDFPage: true }
   }
@@ -119,6 +118,7 @@ function runResourceDetection() {
       type: ResourceTypes.PDF,
       data: { url: appParser.url.href } as ResourceDataPDF
     } as DetectedResource)
+    return
   }
 
   if (appParser) {
