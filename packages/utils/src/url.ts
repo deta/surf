@@ -303,7 +303,7 @@ export const isPDFViewerURL = (url: string, entryPoint: string) => {
   if (url.startsWith(entryPoint)) return true
   if (
     isWindows() &&
-    url.startsWith(entryPoint.replaceAll('\\', '/').replace('file://', 'file:///'))
+    url.startsWith(encodeURI(entryPoint.replaceAll('\\', '/').replace('file://', 'file:///')))
   )
     return true
   return false
