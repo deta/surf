@@ -61,7 +61,7 @@ function electronBuilderConfig() {
       //verifyUpdateCodeSignature: false
     },
     nsis: {
-      artifactName: `${params.buildName}-setup.$\{ext\}`,
+      artifactName: `${params.buildName}-${params.appVersion}-setup.$\{ext\}`,
       shortcutName: params.buildName,
       uninstallDisplayName: params.buildName,
       createDesktopShortcut: 'always',
@@ -85,13 +85,13 @@ function electronBuilderConfig() {
       notarize: params.shouldNotarize === 'true' ? { teamId: params.appleTeamId } : false
     },
     dmg: {
-      artifactName: `${params.buildName}.$\{arch\}.$\{ext\}`
+      artifactName: `${params.buildName}-${params.appVersion}.$\{arch\}.$\{ext\}`
     },
     linux: {
       // target: ['AppImage', 'tar.gz'],
       target: ['AppImage'],
       maintainer: 'deta.surf',
-      artifactName: `${params.buildName}.\${arch}.\${ext}`,
+      artifactName: `${params.buildName}-${params.appVersion}.\${arch}.\${ext}`,
       category: 'WebBrowser'
     },
     npmRebuild: false,
