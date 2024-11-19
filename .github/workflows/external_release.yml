@@ -183,8 +183,7 @@ jobs:
             apps/desktop/dist/*.exe
             apps/desktop/dist/*.AppImage
             apps/desktop/dist/*.tar.gz
-            apps/desktop/dist/*.yml
-            apps/desktop/dist/*.yaml
+            apps/desktop/dist/surf-*.yml
 
   create-release:
     needs: [build]
@@ -204,7 +203,6 @@ jobs:
             build/**/*.exe
             build/**/*.AppImage
             build/**/*.tar.gz
-            build/**/*.yml
-            build/**/*.yaml
+            build/**/surf-*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
