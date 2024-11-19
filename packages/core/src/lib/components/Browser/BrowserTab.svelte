@@ -502,6 +502,11 @@
 
     let url = parseUrlIntoCanonical(rawUrl) ?? rawUrl
 
+    const surfResourceId = url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
+    if (surfResourceId) {
+      return await resourceManager.getResource(surfResourceId)
+    }
+
     // strip &t from url suffix
     let youtubeHostnames = [
       'youtube.com',

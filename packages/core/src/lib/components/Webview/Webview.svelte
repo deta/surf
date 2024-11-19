@@ -625,7 +625,10 @@ Made with Deta Surf.`
         return getPriority(b) - getPriority(a) || getSize(b) - getSize(a)
       })
 
-      handleFaviconChange(sortedFavicons[0])
+      const favicon = sortedFavicons[0]
+      if (!favicon?.startsWith('http://localhost') && !favicon?.startsWith('file://')) {
+        handleFaviconChange(favicon)
+      }
     })
     webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
       dispatch('update-target-url', e.url)

@@ -15,7 +15,7 @@
   import { writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
-  import { useResourceManager } from '../../service/resources'
+  import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTypes, type DragTypes, DragTypeNames } from '../../types'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
@@ -130,6 +130,20 @@
   let popoverVisible = false
   let popoverLiveSpaceVisible = false
   let showInsecureWarningText = false
+  let pdfResource: Resource | null = null
+
+  $: {
+    if (
+      tab?.type === 'page' &&
+      tab.currentDetectedApp?.resourceType === 'application/pdf' &&
+      tab.resourceBookmark
+    ) {
+      resourceManager
+        .getResource(tab.resourceBookmark)
+        .then((resource) => (pdfResource = resource))
+        .catch((error) => console.error('error loading PDF resource:', error))
+    }
+  }
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId && !removeHighlight && !$homescreenVisible
@@ -609,7 +623,13 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       (isActive && showClose && !pinned && hovered)}
   >
     <!--     style:view-transition-name="tab-icon-{tab.id}" -->
-    {#if tab.icon}
+    {#if pdfResource}
+      <Image
+        src={`https://www.google.com/s2/favicons?domain=${pdfResource?.metadata?.sourceURI}&sz=48`}
+        alt={tab.title}
+        fallbackIcon="world"
+      />
+    {:else if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     {:else if tab.type === 'horizon'}
       <Icon name="grid" size="16px" />
