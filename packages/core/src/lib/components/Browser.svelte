@@ -193,7 +193,7 @@
     telemetry,
     homescreen
   )
-  const oasis = provideOasis(resourceManager, tabsManager)
+  const oasis = provideOasis(resourceManager, tabsManager, config)
   const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser

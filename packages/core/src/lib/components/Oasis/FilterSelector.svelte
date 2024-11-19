@@ -11,52 +11,11 @@
   import { derived, writable } from 'svelte/store'
   import { type SFFSResourceTag } from '@horizon/types'
   import { Icon } from '@horizon/icons'
-  import {
-    filterApplicationFileTags,
-    filterMediaTags,
-    filterOtherFileTags,
-    filterDocumentTags,
-    filterSpaceResourcesTags
-  } from '../../constants/resourceFilters'
+  import { RESOURCE_FILTERS } from '../../constants/resourceFilters'
 
   export let selected = writable<string | null>(null)
 
   const dispatch = createEventDispatcher<{ change: FilterItem | null }>()
-
-  const filters: FilterItem[] = [
-    {
-      id: 'links',
-      label: 'Links',
-      tags: [...filterSpaceResourcesTags('prefix'), ...filterDocumentTags('neprefix')]
-    },
-    {
-      id: 'media',
-      label: 'Media',
-      tags: [
-        ...filterSpaceResourcesTags('neprefix'),
-        ...filterApplicationFileTags('neprefix'),
-        ...filterOtherFileTags('neprefix')
-      ]
-    },
-    {
-      id: 'documents',
-      label: 'Documents',
-      tags: [...filterDocumentTags('prefix')]
-    },
-    {
-      id: 'files',
-      label: 'Files',
-      tags: [...filterMediaTags('neprefix'), ...filterSpaceResourcesTags('neprefix')]
-    }
-  ]
-
-  export const selectedFilter = derived(selected, ($selectedFilterId) => {
-    const filter = filters.find((filter) => filter.id === $selectedFilterId) ?? null
-
-    dispatch('change', filter)
-
-    return filter
-  })
 
   const selectedAsString = derived(selected, ($selected) => {
     if ($selected === null) {
@@ -70,19 +29,15 @@
     selected.set(id)
   }
 
-  const handleClick = (id: string) => {
-    if ($selected === id) {
-      selected.set(null)
-    } else {
-      selected.set(id)
-    }
-  }
-
   const handleChange = (event: Event) => {
     const target = event.target as HTMLSelectElement
     const value = target.value
 
     selected.set(value)
+
+    const filter = RESOURCE_FILTERS.find((filter) => filter.id === value) ?? null
+
+    dispatch('change', filter)
   }
 </script>
 
@@ -106,7 +61,7 @@
   <select class="filter-select" value={$selectedAsString} on:change={handleChange}>
     <option value="all" selected>All Types</option>
 
-    {#each filters as filter (filter.id)}
+    {#each RESOURCE_FILTERS as filter (filter.id)}
       <option value={filter.id}>{filter.label}</option>
     {/each}
   </select>

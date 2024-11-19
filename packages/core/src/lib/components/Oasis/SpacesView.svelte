@@ -48,6 +48,10 @@
 
   let sidebarElement: HTMLElement
   let foldersWrapper: HTMLElement
+  let pinnedList: HTMLElement
+  let unpinnedList: HTMLElement
+  let pinnedOverflow = false
+  let unpinnedOverflow = false
 
   export let spaces: Readable<OasisSpace[]>
   export let interactive = true
@@ -107,7 +111,7 @@
 
       log.debug('New Folder:', newSpace)
 
-      selectedSpace.set(newSpace.id)
+      oasis.changeSelectedSpace(newSpace.id)
 
       await tick()
 
@@ -265,7 +269,7 @@
         return
       }
 
-      selectedSpace.set(id)
+      oasis.changeSelectedSpace(id)
       log.debug('Selected space:', id)
       dispatch('space-selected', { id: id, canGoBack: true })
     } catch (error) {
@@ -312,7 +316,7 @@
 
     if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
       const space = drag.item.data.getData(DragTypeNames.SURF_SPACE)
-      if (!space || drag.index === null) return
+      if (!space) return
 
       const target = drag.to?.id
 
@@ -320,6 +324,16 @@
       drag.continue()
 
       log.debug('dropped space', space, drag.index, target)
+
+      if (target === 'overlay-unpinned-list-wrapper') {
+        didChangeOrder.set(false)
+        const newIndex = $pinnedSpaces.length - 1
+        await space.updateData({ pinned: false })
+        await oasis.moveSpaceToIndex(space.id, newIndex)
+        didChangeOrder.set(true)
+        return
+      }
+
       let newIndex = drag.index
       if (target === 'overlay-spaces-list-pinned') {
         log.debug('dropped onto pinned list')
@@ -380,15 +394,55 @@
       log.error('Failed to unpin folder:', error)
     }
   }
+
+  const checkOverflowPinned = () => {
+    if (!pinnedList) return
+    if (pinnedList.scrollHeight > pinnedList.clientHeight) {
+      pinnedOverflow = pinnedList.scrollTop + pinnedList.clientHeight < pinnedList.scrollHeight
+    } else {
+      pinnedOverflow = false
+    }
+  }
+
+  const checkOverflowUnpinned = () => {
+    if (!unpinnedList) return
+    if (unpinnedList.scrollHeight > unpinnedList.clientHeight) {
+      unpinnedOverflow =
+        unpinnedList.scrollTop + unpinnedList.clientHeight < unpinnedList.scrollHeight
+    } else {
+      unpinnedOverflow = false
+    }
+  }
+
+  const recalculateListOverflows = async (_didChangeOrder: boolean, _showAllSpaces: boolean) => {
+    await tick()
+    checkOverflowPinned()
+    checkOverflowUnpinned()
+  }
+
+  const handleResize = () => {
+    recalculateListOverflows($didChangeOrder, $showAllSpaces)
+  }
+
+  // Recalculate overflows when the list changes
+  $: recalculateListOverflows($didChangeOrder, $showAllSpaces)
 </script>
+
+<svelte:window on:resize={handleResize} />
 
 <div
   class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem]"
+  class:all-spaces-hidden={!$showAllSpaces}
   data-tooltip-target="stuff-spaces-list"
   bind:this={sidebarElement}
   on:wheel|passive={handleWheel}
 >
-  <div class="built-in-list">
+  <div
+    class="built-in-list"
+    class:overflowing={pinnedOverflow}
+    class:expanded={!$showAllSpaces}
+    class:empty={$pinnedSpaces.length === 0}
+  >
     {#each builtInSpaces as builtInSpace (builtInSpace.id)}
       <div class="folder-wrapper">
         <BuiltInSpace
@@ -404,6 +458,8 @@
     {/each}
 
     <div
+      bind:this={pinnedList}
+      on:scroll={() => checkOverflowPinned()}
       class="pinned-list"
       class:empty={$pinnedSpaces.length === 0}
       axis="vertical"
@@ -446,7 +502,22 @@
     </div>
   </div>
 
-  <div class="folders-wrapper">
+  <div
+    id="overlay-unpinned-list-wrapper"
+    class="folders-wrapper"
+    class:overflowing={unpinnedOverflow}
+    axis="horizontal"
+    use:HTMLAxisDragZone.action={{
+      accepts: (drag) => {
+        if ($showAllSpaces) return false
+        if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+          return true
+        }
+        return false
+      }
+    }}
+    on:Drop={handleDrop}
+  >
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="folders-header" on:click={toggleShowSpaces}>
       <div class="folders-header-left">
@@ -470,6 +541,8 @@
 
     {#if $showAllSpaces}
       <div
+        bind:this={unpinnedList}
+        on:scroll={() => checkOverflowUnpinned()}
         class="folders-list"
         data-tooltip-target="stuff-spaces-list"
         axis="vertical"
@@ -553,6 +626,19 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+    position: relative;
+  }
+
+  .folders-wrapper.overflowing::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4rem;
+    background: linear-gradient(rgba(255, 255, 255, 0), rgb(251 253 254));
+    pointer-events: none;
+    z-index: 100000;
   }
 
   .built-in-list,
@@ -560,22 +646,60 @@
   .folders-list {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.2rem;
     width: 100%;
   }
 
   .built-in-list {
     position: relative;
+    max-height: 65%;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    &.expanded {
+      max-height: calc(100% - 4.5rem);
+      height: min-content;
+    }
+
+    &.empty {
+      overflow: unset;
+    }
   }
 
   .pinned-list {
     border: 1px dashed transparent;
+    height: 100%;
+    overflow: auto;
+    position: relative;
+    padding-bottom: 5px;
 
     &.empty {
       min-height: 1.5rem;
-      margin-top: -0.5rem !important;
+      margin-top: 0rem !important;
       margin-bottom: -1rem;
     }
+  }
+
+  .built-in-list.overflowing::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5rem;
+    background: linear-gradient(rgba(255, 255, 255, 0), rgb(251 253 254));
+    pointer-events: none;
+    z-index: 100000;
+  }
+
+  :global(
+      body[data-dragging='true']:has(.folder-wrapper[data-drag-preview])
+        .all-spaces-hidden
+        .folders-wrapper
+    ) {
+    outline: 1px dashed #3e475d;
+    border-radius: 8px;
+    height: min-content;
   }
 
   :global(

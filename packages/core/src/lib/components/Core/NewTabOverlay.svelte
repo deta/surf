@@ -123,6 +123,7 @@
   const selectedSpaceId = oasis.selectedSpace
   const everythingContentsResources = oasis.everythingContents
   const userConfigSettings = config.settings
+  const selectedFilterTypeId = oasis.selectedFilterTypeId
 
   let oasisSpaceComp: OasisSpaceRenderer
 
@@ -162,8 +163,6 @@
   const isFetchingHostnameHistoryEntriesResults = writable(false)
   const isCreatingNewSpace = writable(false)
   const isFilteringCommandItems = writable(false)
-  const selectedFilterTypeId = writable<string | null>(null)
-  let selectedFilterType: Readable<FilterItem | null>
   const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
     'oasis-filter-resources',
     'all'
@@ -706,11 +705,7 @@
 
   const loadEverything = async (initialLoad = false) => {
     await tick()
-    await oasis.loadEverything(
-      initialLoad,
-      $selectedFilterType,
-      !$userConfigSettings.show_annotations_in_oasis
-    )
+    await oasis.loadEverything(initialLoad)
   }
 
   const handleSearch = async (searchValueInput: string) => {
@@ -910,7 +905,7 @@
     }
 
     isCreatingNewSpace.set(true)
-    selectedSpaceId.set(spaceID)
+    oasis.changeSelectedSpace(spaceID)
   }
 
   const handleDeleteSpace = async () => {
@@ -919,12 +914,12 @@
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
-    selectedSpaceId.set(defaultSpaceId)
+    oasis.changeSelectedSpace(defaultSpaceId)
   }
 
   const handleSpaceSelected = async (e: CustomEvent<string>) => {
     log.debug('Space selected:', e.detail)
-    selectedSpaceId.set(e.detail)
+    oasis.changeSelectedSpace(e.detail)
   }
 
   const handleUpdatedSpace = async (e: CustomEvent<string | undefined>) => {
@@ -933,8 +928,7 @@
     await tick()
 
     if (e.detail) {
-      selectedSpaceId.set(e.detail)
-      oasis.selectedSpace.set(e.detail)
+      oasis.changeSelectedSpace(e.detail)
     }
   }
 
@@ -1266,7 +1260,7 @@
                       showPreview={true}
                       type="horizontal"
                       interactive={false}
-                      on:space-selected={(e) => selectedSpaceId.set(e.detail.id)}
+                      on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
                       on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
                       on:create-empty-space={handleCreateEmptySpace}
                       on:open-space-and-chat
@@ -1306,7 +1300,7 @@
                         {historyEntriesManager}
                         on:open={handleOpen}
                         on:open-and-chat
-                        on:go-back={() => selectedSpaceId.set(defaultSpaceId)}
+                        on:go-back={() => oasis.changeSelectedSpace(defaultSpaceId)}
                         on:deleted={handleSpaceDeleted}
                         on:updated-space={handleUpdatedSpace}
                         on:creating-new-space={handleCreatingNewSpace}
@@ -1435,7 +1429,6 @@
                 <div class="absolute right-2 flex items-center gap-2">
                   <FilterSelector
                     selected={selectedFilterTypeId}
-                    bind:selectedFilter={selectedFilterType}
                     on:change={handleFilterTypeChange}
                   />
                 </div>

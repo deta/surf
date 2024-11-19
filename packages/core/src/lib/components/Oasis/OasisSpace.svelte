@@ -123,6 +123,8 @@
 
   const resourceManager = oasis.resourceManager
   const spaces = oasis.spaces
+  const selectedFilterTypeId = oasis.selectedFilterTypeId
+  const selectedFilterType = oasis.selectedFilterType
   const telemetry = resourceManager.telemetry
   const userConfigSettings = config.settings
 
@@ -137,8 +139,6 @@
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<OasisSpace | null>(null)
-  const selectedFilterTypeId = writable<string | null>(null)
-  let selectedFilterType: Readable<FilterItem | null>
   // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
@@ -1275,7 +1275,7 @@
 
       await tabsManager.removeSpaceTabs(spaceId)
 
-      oasis.selectedSpace.set('all')
+      oasis.changeSelectedSpace('all')
       dispatch('deleted', spaceId)
 
       if (!abortSpaceCreation) {
@@ -1562,11 +1562,7 @@
             </div>
 
             <div class="flex justify-end">
-              <FilterSelector
-                selected={selectedFilterTypeId}
-                bind:selectedFilter={selectedFilterType}
-                on:change={handleFilterTypeChange}
-              />
+              <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
             </div>
 
             <div class="drawer-chat active">

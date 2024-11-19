@@ -17,6 +17,8 @@ import { ResourceManager, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
+import type { ConfigService } from './config'
+import { RESOURCE_FILTERS } from '../constants/resourceFilters'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -172,6 +174,8 @@ export class OasisService {
 
   everythingContents: Writable<Resource[]>
   loadingEverythingContents: Writable<boolean>
+  selectedFilterTypeId: Writable<string | null>
+  selectedFilterType: Readable<FilterItem | null>
 
   stackKey: Writable<{}>
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
@@ -179,14 +183,16 @@ export class OasisService {
   private eventEmitter: TypedEmitter<OasisEvents>
   tabsManager: TabsManager
   resourceManager: ResourceManager
+  config: ConfigService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
-  constructor(resourceManager: ResourceManager, tabsManager: TabsManager) {
+  constructor(resourceManager: ResourceManager, tabsManager: TabsManager, config: ConfigService) {
     this.log = useLogScope('OasisService')
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
     this.tabsManager = tabsManager
+    this.config = config
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
     this.spaces = writable<OasisSpace[]>([])
@@ -194,9 +200,14 @@ export class OasisService {
 
     this.everythingContents = writable([])
     this.loadingEverythingContents = writable(false)
+    this.selectedFilterTypeId = writable<string | null>(null)
 
     this.stackKey = writable({})
     this.pendingStackActions = []
+
+    this.selectedFilterType = derived(this.selectedFilterTypeId, (id) => {
+      return RESOURCE_FILTERS.find((filter) => filter.id === id) ?? null
+    })
 
     this.initSpaces()
 
@@ -369,7 +380,7 @@ export class OasisService {
     this.spaces.set(filtered)
 
     if (get(this.selectedSpace) === spaceId && spaceId !== '.tempspace') {
-      this.selectedSpace.set('all')
+      this.changeSelectedSpace('all')
     }
 
     this.emit('deleted', spaceId)
@@ -408,7 +419,7 @@ export class OasisService {
 
     if (get(this.selectedSpace) === 'inbox') {
       this.log.debug('updating everything after resource was moved to a space')
-      await this.loadEverything()
+      await this.loadEverything(false)
     }
 
     return space
@@ -579,11 +590,7 @@ export class OasisService {
     }
   }
 
-  async loadEverything(
-    initialLoad = false,
-    selectedFilterType: FilterItem | null = null,
-    excludeAnnotations = false
-  ) {
+  async loadEverything(initialLoad = false) {
     try {
       if (get(this.loadingEverythingContents)) {
         this.log.debug('Already loading everything')
@@ -597,6 +604,9 @@ export class OasisService {
       if (initialLoad) {
         this.telemetry.trackOpenOasis()
       }
+
+      const excludeAnnotations = !get(this.config.settings).show_annotations_in_oasis
+      const selectedFilterType = get(this.selectedFilterType)
 
       this.log.debug('loading everything', selectedFilterType, { excludeAnnotations })
       const resources = await this.resourceManager.listResourcesByTags(
@@ -626,8 +636,13 @@ export class OasisService {
     }
   }
 
+  changeSelectedSpace(spaceId: string) {
+    this.selectedSpace.set(spaceId)
+    this.selectedFilterTypeId.set(null)
+  }
+
   async resetSelectedSpace() {
-    this.selectedSpace.set('all')
+    this.changeSelectedSpace('all')
   }
 
   reloadStack() {
@@ -683,8 +698,12 @@ export class OasisService {
     this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
   }
 
-  static provide(resourceManager: ResourceManager, tabsManager: TabsManager) {
-    const service = new OasisService(resourceManager, tabsManager)
+  static provide(
+    resourceManager: ResourceManager,
+    tabsManager: TabsManager,
+    config: ConfigService
+  ) {
+    const service = new OasisService(resourceManager, tabsManager, config)
 
     setContext('oasis', service)
 
