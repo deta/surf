@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
 
   import { Icon } from '@horizon/icons'
-  import { getFileKind, getFileType, truncate } from '@horizon/utils'
+  import { getFileKind, getFileType, truncate, getHostname } from '@horizon/utils'
   import { ResourceTypes } from '@horizon/types'
 
   import type { PillResource } from '../ContextBubbles.svelte'
@@ -18,10 +18,17 @@
 
   let resource: Resource | null = null
   let loading = false
+  let iconUrl: string | undefined = pill.icon
 
   $: resourceState = resource ? resource.state : null
   $: isProcessing = resourceState !== null ? $resourceState === 'post-processing' : false
   $: processingFailed = resourceState !== null ? $resourceState === 'error' : false
+
+  $: if (resource && resource.type === 'application/pdf') {
+    iconUrl = resource.metadata?.sourceURI
+      ? `https://www.google.com/s2/favicons?domain=${getHostname(resource.metadata.sourceURI)}&sz=48`
+      : pill.icon
+  }
 
   onMount(async () => {
     if (pill.data.id) {
@@ -45,9 +52,9 @@
     <div class="w-full h-full {isProcessing || processingFailed ? 'p-1' : ''}">
       {#if pill.data.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
         <Icon name="docs" size="16px" />
-      {:else if pill.icon}
+      {:else if iconUrl}
         <img
-          src={pill.icon}
+          src={iconUrl}
           alt={pill.title}
           class="w-full h-full object-contain"
           style="transition: transform 0.3s;"
