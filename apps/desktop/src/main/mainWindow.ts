@@ -167,7 +167,7 @@ export function createWindow() {
         ? await net.fetch(`file://${path}`)
         : new Response('Forbidden', { status: 403 })
     } catch (err) {
-      console.error('surf protocol error:', err)
+      console.error('surf protocol error:', err, req.url)
       return new Response('Internal Server Error', { status: 500 })
     }
   }

@@ -5,6 +5,7 @@
   import Toolbar from './Toolbar/Toolbar.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../store'
   import { WebViewEventReceiveNames, type WebViewReceiveEvents } from '@horizon/types'
+  import { isDev } from '@horizon/utils'
 
   let debugInfo = {
     anchorWord: '',
@@ -33,6 +34,11 @@
   let pdfSlick: PDFSlick
   let unsubscribe: () => void = () => {}
   let openedInitial = false
+
+  if (isDev) {
+    // @ts-ignore
+    window.pdfSlickInstance = pdfSlickInstance
+  }
 
   $: {
     if ($pdfSlickStore && $pdfSlickStore.pagesReady && !openedInitial) {
@@ -186,6 +192,31 @@
     return [bestMatch]
   }
 
+  const ensurePageRendered = async (page: number, pdfSlick: PDFSlick): Promise<void> => {
+    const promise = new Promise<void>((resolve, reject) => {
+      const pageDiv = document.querySelector(`.page[data-page-number="${page}"]`)
+      if (pageDiv?.querySelector('.textLayer')) {
+        resolve()
+        return
+      }
+
+      const handler = (e: { pageNumber: number }) => {
+        if (e.pageNumber === page) {
+          pdfSlick.eventBus.off('textlayerrendered', handler)
+          resolve()
+        }
+      }
+      pdfSlick.eventBus.on('textlayerrendered', handler)
+      setTimeout(() => {
+        pdfSlick.eventBus.off('textlayerrendered', handler)
+        reject('text layer rendering timed out')
+      }, 2000)
+    })
+
+    pdfSlick.gotoPage(page)
+    return promise
+  }
+
   const handleGoToPDFPage = async (page: number, targetText?: string) => {
     Array.from(document.querySelectorAll('span')).map((span) => span.classList.remove('highlight'))
 
@@ -195,7 +226,7 @@
         const nonBasic = str.match(/[^a-zA-Z0-9\s.,!?-]/g)
         if (nonBasic) {
           console.log(
-            'Special characters found:',
+            'special characters found:',
             nonBasic.map((c) => ({
               char: c,
               unicode: `U+${c.charCodeAt(0).toString(16).padStart(4, '0')}`,
@@ -231,10 +262,8 @@
     }
 
     const pdfSlick = await pdfSlickInstance
-    pdfSlick.gotoPage(page)
-
+    await ensurePageRendered(page, pdfSlick)
     if (!targetText) return
-    await new Promise((resolve) => setTimeout(resolve, 150))
 
     const pageContainer = document.querySelector(`.page[data-page-number="${page}"]`)
     if (!pageContainer) return
