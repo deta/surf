@@ -353,6 +353,7 @@
       }
 
       const isPDFPage = detectedResource.type === ResourceTypes.PDF
+      let filename = null
       try {
         if (isPDFPage) {
           const downloadData = await new Promise<Download | null>((resolveDownload) => {
@@ -380,6 +381,7 @@
           })
 
           if (downloadData) {
+            filename = downloadData.filename
             const resource = (await resourceManager.getResource(downloadData.resourceId))!
 
             const hasSilentTag = (resource.tags ?? []).find(
@@ -402,7 +404,7 @@
           }
         }
 
-        const title = detectedResource.data?.title ?? tab.title ?? ''
+        const title = filename ?? detectedResource.data?.title ?? tab.title ?? ''
         const resource = await resourceManager.createDetectedResource(
           detectedResource,
           {

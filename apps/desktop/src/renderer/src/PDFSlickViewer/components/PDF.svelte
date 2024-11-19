@@ -64,11 +64,9 @@
     pdfSlick.loadDocument(url).then(async () => {
       if (pdfSlickReady) pdfSlickReady(pdfSlick)
 
-      const { info, metadata } = await pdfSlick.document.getMetadata()
-      const pageTitle =
-        info['Title'] || metadata?.get('dc:title') || pdfSlick.filename || 'Surf PDF Viewer'
+      const title = await getDocumentTitle(pdfSlick)
+      if (title && title !== 'document.pdf') document.title = title
 
-      document.title = pageTitle
       if (page) {
         try {
           pdfSlick.gotoPage(page)
@@ -100,6 +98,48 @@
     if (RO && container) {
       RO.observe(container)
     }
+  }
+
+  const getDocumentTitle = async (pdfSlick: PDFSlick): Promise<string> => {
+    const getFilename = new Promise<string | null>((resolve) => {
+      try {
+        const xhr = new XMLHttpRequest()
+        xhr.open('HEAD', url)
+        xhr.timeout = 5000
+
+        xhr.onload = () => {
+          try {
+            const filename = xhr
+              .getResponseHeader('Content-Disposition')
+              ?.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)?.[1]
+              ?.replace(/['"]/g, '')
+            resolve(filename)
+          } catch (e) {
+            console.warn('failed to parse content-disposition:', e)
+            resolve(null)
+          }
+        }
+        xhr.onerror = xhr.ontimeout = () => {
+          console.warn('failed to get content-disposition filename')
+          resolve(null)
+        }
+
+        xhr.send()
+      } catch (e) {
+        console.warn('failed to make HEAD request:', e)
+        resolve(null)
+      }
+    })
+
+    const [filename, metadata] = await Promise.all([getFilename, pdfSlick.document.getMetadata()])
+
+    return (
+      filename ||
+      metadata?.info?.['Title'] ||
+      metadata?.metadata?.get('dc:title') ||
+      pdfSlick.filename ||
+      'Surf PDF Viewer'
+    )
   }
 
   window.addEventListener(

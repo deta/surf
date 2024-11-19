@@ -570,7 +570,7 @@ export class TabsManager {
   }
 
   async addPageTab(url: string, opts?: CreateTabOptions, tabData?: Partial<TabPage>) {
-    this.log.debug('Creating new page tab')
+    this.log.debug('Creating new page tab', opts, tabData)
 
     if (!url) {
       this.showNewTab()
@@ -660,7 +660,9 @@ export class TabsManager {
       return this.addPageTab(canonicalUrl, opts)
     }
     if (resource.type === 'application/pdf') {
-      return this.addPageTab(`surf://resource/${resource.id}`, opts)
+      return this.addPageTab(`surf://resource/${resource.id}`, opts, {
+        title: resource.metadata?.name
+      })
     }
 
     return this.addResourceTab(resource, opts)
