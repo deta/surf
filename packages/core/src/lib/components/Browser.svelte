@@ -34,7 +34,12 @@
   import SidebarPane from './Sidebars/SidebarPane.svelte'
 
   import type { PaneAPI } from 'paneforge'
-  import { Resource, ResourceTag, createResourceManager } from '../service/resources'
+  import {
+    Resource,
+    ResourceTag,
+    createResourceManager,
+    initResourceDebugger
+  } from '../service/resources'
 
   import { DragTypeNames, type DragTypes, SpaceEntryOrigin, type SpaceSource } from '../types'
 
@@ -2841,6 +2846,8 @@
   }
 
   onMount(() => {
+    initResourceDebugger(resourceManager)
+
     const unsubscribeCreated = tabsManager.on('created', (tab, active) => {
       checkScroll()
 

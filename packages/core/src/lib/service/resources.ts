@@ -1367,5 +1367,193 @@ export class ResourceManager {
   }
 }
 
+type ResourceSnapshot = {
+  timestamp: string
+  resources: Array<{
+    id: string
+    type: string
+    name?: string
+    sourceURI?: string
+  }>
+}
+
+class ResourceDebugger {
+  private snapshots: ResourceSnapshot[] = []
+  private intervalId: number | null = null
+  private rm: ResourceManager
+  private static STORAGE_KEY = 'resource_debugger_snapshots'
+  private static MAX_STORAGE_SIZE = 3 * 1024 * 1024
+
+  constructor(resourceManager: ResourceManager) {
+    this.rm = resourceManager
+    this.loadFromStorage()
+  }
+
+  private loadFromStorage() {
+    try {
+      const stored = localStorage.getItem(ResourceDebugger.STORAGE_KEY)
+      if (stored) {
+        this.snapshots = JSON.parse(stored)
+        console.log(`loaded ${this.snapshots.length} snapshots from storage`)
+      }
+    } catch (e) {
+      console.error('failed to load snapshots from storage:', e)
+      this.snapshots = []
+    }
+  }
+
+  private saveToStorage() {
+    try {
+      let data = JSON.stringify(this.snapshots)
+
+      while (data.length > ResourceDebugger.MAX_STORAGE_SIZE && this.snapshots.length > 1) {
+        this.snapshots.shift()
+        data = JSON.stringify(this.snapshots)
+      }
+
+      localStorage.setItem(ResourceDebugger.STORAGE_KEY, data)
+    } catch (e) {
+      console.error('failed to save snapshots to storage:', e)
+    }
+  }
+
+  private printResource(r: ResourceSnapshot['resources'][0]) {
+    return `${r.id} | ${r.type} | ${r.name || '-'} | ${r.sourceURI || '-'}`
+  }
+
+  take() {
+    const snapshot: ResourceSnapshot = {
+      timestamp: new Date().toISOString(),
+      resources: get(this.rm.resources).map((r) => ({
+        id: r.id,
+        type: r.type,
+        name: r.metadata?.name,
+        sourceURI: r.metadata?.sourceURI
+      }))
+    }
+
+    this.snapshots.push(snapshot)
+    this.saveToStorage()
+    return snapshot
+  }
+
+  sequentialCompare(startIdx: number) {
+    if (startIdx >= this.snapshots.length) {
+      console.error('invalid start index')
+      return
+    }
+
+    console.log('Sequential Comparison Report')
+    console.log('===========================')
+
+    let totalMissing = 0
+    for (let i = startIdx; i < this.snapshots.length - 1; i++) {
+      const { missing } = this.compare(i, i + 1, false)
+      if (missing.length > 0) totalMissing += missing.length
+    }
+
+    if (totalMissing === 0) {
+      console.log('No resources went missing in sequence')
+    }
+  }
+
+  compare(idx1: number, idx2: number, standalone = true) {
+    const s1 = this.snapshots[idx1]
+    const s2 = this.snapshots[idx2]
+
+    if (!s1 || !s2) {
+      console.error('invalid snapshot indices')
+      return { missing: [], added: [] }
+    }
+
+    const s1Map = new Map(s1.resources.map((r) => [r.id, r]))
+    const s2Map = new Map(s2.resources.map((r) => [r.id, r]))
+
+    const missing = s1.resources.filter((r) => !s2Map.has(r.id))
+    const added = s2.resources.filter((r) => !s1Map.has(r.id))
+
+    if (standalone) {
+      console.log('Resource Change Report')
+      console.log('=====================')
+    }
+
+    if (missing.length > 0) {
+      console.log(`Snapshot ${idx1} -> ${idx2}`)
+      console.log(`${s1.timestamp} -> ${s2.timestamp}`)
+      console.log(`Resources: ${s1.resources.length} -> ${s2.resources.length}`)
+      console.log('Missing:')
+      missing.forEach((r) => console.log(this.printResource(r)))
+    }
+
+    return { missing, added }
+  }
+
+  compareWithCurrent(idx: number) {
+    this.take()
+    return this.compare(idx, this.snapshots.length - 1)
+  }
+
+  auto(intervalMs: number = 60000) {
+    this.stop()
+    this.take()
+    this.intervalId = window.setInterval(() => this.take(), intervalMs)
+  }
+
+  stop() {
+    if (this.intervalId) {
+      window.clearInterval(this.intervalId)
+      this.intervalId = null
+    }
+  }
+
+  list() {
+    console.log('Snapshot History')
+    console.log('================')
+    this.snapshots.forEach((s, i) => {
+      console.log(`${i}: ${s.timestamp} (${s.resources.length} resources)`)
+    })
+  }
+
+  clear() {
+    this.snapshots = []
+    localStorage.removeItem(ResourceDebugger.STORAGE_KEY)
+  }
+
+  save() {
+    this.saveToStorage()
+  }
+
+  load() {
+    this.loadFromStorage()
+  }
+
+  getStorageSize() {
+    const size = JSON.stringify(this.snapshots).length
+    console.log(`Current storage size: ${(size / 1024 / 1024).toFixed(2)}MB`)
+    return size
+  }
+}
+
+export function initResourceDebugger(resourceManager: ResourceManager) {
+  if (!window.debug) window.debug = {} as any
+  // @ts-ignore
+  window.debug.resources = new ResourceDebugger(resourceManager)
+  // @ts-ignore
+  window.debug.resources.auto(1 * 1000 * 60 * 60)
+  // @ts-ignore
+  window.debug.help = () => {
+    console.log('Resource Debugger Commands')
+    console.log('=======================')
+    console.log('debug.resources.take()                - Take a snapshot')
+    console.log('debug.resources.compare(i,j)          - Compare two snapshots')
+    console.log(
+      'debug.resources.sequentialCompare(i)  - Compare snapshots sequentially from index i'
+    )
+    console.log('debug.resources.compareWithCurrent(i) - Compare snapshot with current state')
+    console.log('debug.resources.list()                - List all snapshots')
+    console.log('debug.resources.clear()               - Clear all snapshots')
+  }
+}
+
 export const createResourceManager = ResourceManager.provide
 export const useResourceManager = ResourceManager.use
