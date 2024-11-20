@@ -719,6 +719,19 @@
       return
     }
 
+    // update `surf://resource` tabs to have the new title if they
+    // don't have a custom name given to them by the PDF renderer
+    tabsManager.tabsValue.forEach((tab) => {
+      if (tab.type !== 'page') return
+      if (
+        tab.resourceBookmark === resource.id &&
+        tab.currentLocation?.startsWith('surf://') &&
+        tab.title !== resource.metadata?.name
+      ) {
+        tabsManager.update(tab.id, { title })
+      }
+    })
+
     // update the local resource first for instant feedback
     resource.updateMetadata({ name: title })
 
