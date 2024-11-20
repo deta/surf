@@ -776,6 +776,8 @@
       toggleRightSidebarTab('chat')
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.Shortcut)
+    } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
+      homescreen.setVisible(!$homescreenVisible)
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
       // TEMPORARY: this is only used for testing the invites feature
