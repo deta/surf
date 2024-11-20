@@ -174,6 +174,7 @@
         <div style="height: {totalHeight}px; position: relative">
           {#each visibleItems as item (item.id)}
             <div
+              class="history-entry"
               style="position: absolute; top: {(startIndex + visibleItems.indexOf(item)) *
                 (itemHeight + itemMargin)}px; left: 0; right: 0; margin-bottom: {itemMargin}px;"
             >
@@ -237,7 +238,6 @@
     }
 
     input {
-      border: 1px solid #e5e2d5;
       border-radius: 8px;
       background-color: white;
       padding: 0.5rem 1rem;
@@ -246,6 +246,11 @@
       color: #7d7448;
       outline: none;
       width: 300px;
+      background: paint(squircle);
+      --squircle-radius: 6px;
+      --squircle-smooth: 0.2;
+      --squircle-outline: 2px;
+      --squircle-fill: #e5e2d5;
     }
   }
 

@@ -6,6 +6,7 @@
   import { writable, derived, get, type Writable } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
   import { Icon } from '@horizon/icons'
+
   import {
     isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
@@ -5354,8 +5355,6 @@
 
     --slide-offset: -10%;
     --slide-scale: 0.9;
-
-    will-change: transform;
 
     &.slide-hide {
       transform-origin: left center;
