@@ -750,6 +750,20 @@ export class TabsManager {
     return tabsToDelete.length
   }
 
+  async updateSurfResourceTabs(resourceId: string, updates: Partial<TabPage>) {
+    this.log.debug('Updating surf resource tabs for resource', resourceId, updates)
+
+    this.tabsValue.forEach((tab) => {
+      if (tab.type !== 'page') return
+      if (
+        tab.resourceBookmark === resourceId &&
+        tab.currentLocation?.startsWith('surf://resource')
+      ) {
+        this.update(tab.id, updates)
+      }
+    })
+  }
+
   async updateSpaceTabs(spaceId: string, updates: Partial<SpaceData>) {
     this.log.debug('Updating space tabs for space', spaceId, updates)
 
