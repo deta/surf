@@ -1,0 +1,54 @@
+name: Backend Changes Pull Request
+
+on:
+  pull_request:
+    branches:
+      - grooves-base
+    paths:
+      - 'packages/backend/**'
+      - 'packages/backend-server/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      RUST_LOG: debug
+      RUSTFLAGS: '-D warnings'
+      CARGO_INCREMENTAL: 0
+      RUST_TEST_THREADS: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/backend/target
+            packages/backend-server/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/backend/Cargo.lock'), hashFiles('packages/backend-server/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run backend tests
+        env:
+          TEST_OPENAI_API_KEY: ${{ secrets.TEST_OPENAI_API_KEY }}
+        run: |
+          cd packages/backend
+          cargo test
+
+      - name: Run backend-server tests
+        run: |
+          cd packages/backend-server
+          cargo test
