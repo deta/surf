@@ -327,6 +327,10 @@
   }
 
   const handleFaviconChange = (newFaviconURL: string) => {
+    if (webview?.getURL()) {
+      if (isPDFViewerURL(webview?.getURL(), window.api.PDFViewerEntryPoint)) return
+    }
+
     if ($faviconURL === newFaviconURL) {
       return
     }
@@ -625,10 +629,7 @@ Made with Deta Surf.`
         return getPriority(b) - getPriority(a) || getSize(b) - getSize(a)
       })
 
-      const favicon = sortedFavicons[0]
-      if (!favicon?.startsWith('http://localhost') && !favicon?.startsWith('file://')) {
-        handleFaviconChange(favicon)
-      }
+      handleFaviconChange(sortedFavicons[0])
     })
     webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
       dispatch('update-target-url', e.url)
