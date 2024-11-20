@@ -16,6 +16,7 @@
     similarity: 0,
     totalSpans: 0
   }
+  let showDebugInfo = false
 
   let pdfSlickReady = null
   const pdfSlickInstance: Promise<PDFSlick> = new Promise((resolve) => {
@@ -351,7 +352,7 @@
   </div>
 </div>
 
-{#if import.meta.env.DEV}
+{#if showDebugInfo}
   <div
     class="fixed top-4 right-4 bg-black/80 text-white p-4 rounded-lg shadow-lg text-sm font-mono z-50 max-w-md"
     style="background: black; color: white; font-family: monospace;"
