@@ -5,12 +5,16 @@ use crate::{
 use futures::Stream;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
+use tracing::{instrument, debug};
 use std::pin::Pin;
 
-use super::response::{parse_error, parse_response, DelimitedStream};
+
+use super::{
+    models::{Model, TokenModel}, response::{parse_error, parse_response, DelimitedStream}, tokens::truncate_messages
+};
 
 pub struct OpenAI {
-    pub model: String,
+    pub model: Model,
     pub api_base_url: String,
     async_client: reqwest::Client,
     client: reqwest::blocking::Client,
@@ -25,7 +29,7 @@ struct ChatCompletionRequest {
 
 impl OpenAI {
     pub fn new(
-        model: String,
+        model: Model,
         api_key: String,
         api_base_url: Option<String>,
     ) -> BackendResult<Self> {
@@ -61,15 +65,22 @@ impl OpenAI {
         })
     }
 
+    pub fn max_tokens(&self) -> usize {
+        self.model.max_tokens()
+    }
+
     pub fn create_chat_completion_blocking(
         &self,
         messages: Vec<Message>,
-        model: Option<String>,
+        model: Option<Model>,
     ) -> BackendResult<String> {
         let url = format!("{}/chat/completions", self.api_base_url);
         let model = model.unwrap_or_else(|| self.model.clone());
+        
+        // TODO: should we let the user know about truncation?
+        let (_, messages) = truncate_messages(messages, &model);
         let request = ChatCompletionRequest {
-            model,
+            model: model.to_string(),
             messages,
             stream: false,
         };
@@ -89,13 +100,18 @@ impl OpenAI {
         }
     }
 
+    #[instrument(level = "trace", skip(self, messages))]
     pub async fn create_chat_completion(
         &self,
         messages: Vec<Message>,
     ) -> BackendResult<Pin<Box<dyn Stream<Item = BackendResult<String>>>>> {
         let url = format!("{}/chat/completions", self.api_base_url);
+
+        // TODO: should we let the user know about truncation?
+        let (truncated, messages) = truncate_messages(messages, &self.model);
+        debug!("Truncated messages: {}", truncated);
         let request = ChatCompletionRequest {
-            model: self.model.clone(),
+            model: self.model.to_string(),
             messages,
             stream: true,
         };
@@ -123,7 +139,7 @@ mod tests {
     fn test_sanity_create_chat_completion() -> Result<(), Box<dyn std::error::Error>> {
         let api_key =
             std::env::var("TEST_OPENAI_API_KEY").map_err(|_| "TEST_OPENAI_API_KEY not set")?;
-        let openai = OpenAI::new("gpt-4o-mini".to_string(), api_key, None)?;
+        let openai = OpenAI::new(Model::GPT4oMini, api_key, None)?;
 
         let messages = vec![Message {
             role: "user".to_string(),

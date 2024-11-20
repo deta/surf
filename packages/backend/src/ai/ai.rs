@@ -5,7 +5,7 @@ use crate::embeddings::chunking::ContentChunker;
 use crate::llm::models::MessageContent;
 use crate::store::db::{CompositeResource, Database};
 use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource};
-use crate::{llm, llm::openai::openai};
+use crate::{llm, llm::openai::{openai, models}};
 use crate::{BackendError, BackendResult};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -154,8 +154,7 @@ impl AI {
     ) -> BackendResult<Self> {
         let local_ai_client = LocalAIClient::new(local_ai_socket_path);
         Ok(Self {
-            // TODO: not hardcode model
-            llm: openai::OpenAI::new("gpt-4o".to_string(), api_key, openai_api_endpoint)?,
+            llm: openai::OpenAI::new(models::Model::GPT4o, api_key, openai_api_endpoint)?,
             chunker: ContentChunker::new(2000, 1),
             local_mode,
             local_ai_client,

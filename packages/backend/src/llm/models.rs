@@ -1,25 +1,25 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct MessageContentText {
     #[serde(rename = "type")]
     typ: String,
     pub text: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct MessageContentImageURL {
     pub url: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct MessageContentImage {
     #[serde(rename = "type")]
     typ: String,
     pub image_url: MessageContentImageURL,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum MessageContent {
     Text(MessageContentText),
     Image(MessageContentImage),
@@ -52,7 +52,7 @@ impl Serialize for MessageContent {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Message {
     pub role: String,
     pub content: Vec<MessageContent>,
