@@ -37,7 +37,7 @@ jobs:
             ~/.cargo/git
             packages/backend/target
             packages/backend-server/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/backend/Cargo.lock'), hashFiles('packages/backend-server/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/backend/Cargo.lock', 'packages/backend-server/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
