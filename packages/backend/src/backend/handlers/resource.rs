@@ -169,38 +169,45 @@ impl Worker {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn remove_resource(&mut self, id: String) -> BackendResult<()> {
-        let resource = self.db.get_resource(&id)?;
-        // deletion is no-op if resource does not exist
-        if resource.is_none() {
+    pub fn remove_resources(&mut self, ids: Vec<String>) -> BackendResult<()> {
+        if ids.is_empty() {
             return Ok(());
         }
+        let mut resources_to_remove = Vec::new();
+        let mut all_embedding_keys = Vec::new();
 
-        let embedding_keys = self
-            .db
-            .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &id)?;
+        for id in &ids {
+            if let Some(resource) = self.db.get_resource(id)? {
+                resources_to_remove.push(resource);
 
-        let mut tx = self.db.begin()?;
-        /*
-        Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
-        Database::update_resource_tag_by_name_tx(&mut tx, &ResourceTag::new_deleted(&id, true))?;
-        */
-        Database::remove_resource_tx(&mut tx, &id)?;
-        let resource_path = resource.unwrap().resource_path;
-        self.ai.upsert_embeddings(embedding_keys, vec![], vec![])?;
-        match std::fs::remove_file(&resource_path) {
-            Ok(_) => {}
-            // Path not found is non-error
-            // this also happens if another resource was pointing to the same file and was already deleted
-            // or if the underlying file was deleted manually but the resource was not
-            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => {
-                return Err(BackendError::GenericError(format!(
-                    "failed to remove resource file from disk: {:#?}",
-                    e
-                )))
+                let embedding_keys = self
+                    .db
+                    .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, id)?;
+                all_embedding_keys.extend(embedding_keys);
             }
         }
+
+        if resources_to_remove.is_empty() {
+            return Ok(());
+        }
+        let mut tx = self.db.begin()?;
+
+        Database::remove_resources_tx(&mut tx, &ids)?;
+        self.ai
+            .upsert_embeddings(all_embedding_keys, vec![], vec![])?;
+        for resource in resources_to_remove {
+            match std::fs::remove_file(&resource.resource_path) {
+                Ok(_) => {}
+                Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => {
+                    return Err(BackendError::GenericError(format!(
+                        "Failed to remove some resource files: {}",
+                        e
+                    )));
+                }
+            }
+        }
+
         tx.commit()?;
         Ok(())
     }
@@ -696,8 +703,8 @@ pub fn handle_resource_message(
             let result = worker.read_resource(id, include_annotations);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        ResourceMessage::RemoveResource(id) => {
-            let result = worker.remove_resource(id);
+        ResourceMessage::RemoveResources(ids) => {
+            let result = worker.remove_resources(ids);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::RecoverResource(id) => {

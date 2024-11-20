@@ -45,7 +45,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_create_resource", js_create_resource)?;
     cx.export_function("js__store_get_resource", js_get_resource)?;
     // cx.export_function("js__store_update_resource", js_update_resource)?;
-    cx.export_function("js__store_remove_resource", js_remove_resource)?;
+    cx.export_function("js__store_remove_resources", js_remove_resources)?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
     cx.export_function(
         "js__store_proximity_search_resources",
@@ -311,13 +311,21 @@ fn js_get_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
-fn js_remove_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
+fn js_remove_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let resource_ids = cx.argument::<JsArray>(1)?.to_vec(&mut cx)?;
+    let resource_ids = resource_ids
+        .iter()
+        .map(|value| {
+            Ok(value
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx))
+        })
+        .collect::<NeonResult<Vec<String>>>()?;
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::RemoveResource(resource_id)),
+        WorkerMessage::ResourceMessage(ResourceMessage::RemoveResources(resource_ids)),
         deferred,
     );
 

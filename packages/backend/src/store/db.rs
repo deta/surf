@@ -402,10 +402,37 @@ impl Database {
         Ok(result)
     }
 
-    pub fn remove_resource_tx(tx: &mut rusqlite::Transaction, id: &str) -> BackendResult<()> {
-        tx.execute("DELETE FROM resources WHERE id = ?1", rusqlite::params![id])?;
-        Self::remove_resource_metadata_tx(tx, id)?;
-        Self::remove_resource_text_content_tx(tx, id)?;
+    pub fn remove_resources_tx(
+        tx: &mut rusqlite::Transaction,
+        ids: &[String],
+    ) -> BackendResult<()> {
+        let placeholders = std::iter::repeat("?")
+            .take(ids.len())
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let id_params: Vec<&dyn rusqlite::ToSql> =
+            ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+
+        tx.execute(
+            &format!("DELETE FROM resources WHERE id IN ({})", placeholders),
+            &id_params[..],
+        )?;
+        tx.execute(
+            &format!(
+                "DELETE FROM resource_metadata WHERE resource_id IN ({})",
+                placeholders
+            ),
+            &id_params[..],
+        )?;
+        tx.execute(
+            &format!(
+                "DELETE FROM resource_text_content WHERE resource_id IN ({})",
+                placeholders
+            ),
+            &id_params[..],
+        )?;
+
         Ok(())
     }
 
@@ -1499,7 +1526,7 @@ impl Database {
     // list all resources that are not in a space by list of tags
     pub fn list_resources_by_tags_no_space(
         &self,
-        tags: Vec<ResourceTagFilter>
+        tags: Vec<ResourceTagFilter>,
     ) -> BackendResult<SearchResultSimple> {
         let filtered_resource_ids = self.list_resource_ids_by_tags_no_space(&tags)?;
 

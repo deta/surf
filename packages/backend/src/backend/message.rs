@@ -105,7 +105,7 @@ pub enum ResourceMessage {
         resource_metadata: Option<ResourceMetadata>,
     },
     GetResource(String, bool),
-    RemoveResource(String),
+    RemoveResources(Vec<String>),
     RecoverResource(String),
     ProximitySearchResources {
         resource_id: String,

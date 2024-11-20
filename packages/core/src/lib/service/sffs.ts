@@ -315,7 +315,11 @@ export class SFFS {
 
   async deleteResource(id: string): Promise<void> {
     this.log.debug('deleting resource with id', id)
-    await this.backend.js__store_remove_resource(id)
+    await this.backend.js__store_remove_resources([id])
+  }
+  async deleteResources(ids: string[]): Promise<void> {
+    this.log.debug('deleting resources', ids)
+    await this.backend.js__store_remove_resources(ids)
   }
 
   async recoverResource(id: string): Promise<void> {
