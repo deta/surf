@@ -172,8 +172,12 @@ export function createWindow() {
     }
   }
 
-  webviewSession.protocol.handle('surf', surfProtocolHandler)
-  mainWindowSession.protocol.handle('surf', surfProtocolHandler)
+  try {
+    webviewSession.protocol.handle('surf', surfProtocolHandler)
+    mainWindowSession.protocol.handle('surf', surfProtocolHandler)
+  } catch (e) {
+    log.error('possibly failed to register surf protocol: ', e)
+  }
 
   applyCSPToSession(mainWindowSession)
   // TODO: expose these to the renderer over IPC so

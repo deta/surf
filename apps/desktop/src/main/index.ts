@@ -196,7 +196,10 @@ const setupApplication = () => {
       .on('browser-window-focus', registerShortcuts)
       .on('second-instance', (_event, commandLine) => handleOpenUrl(commandLine.pop() ?? ''))
       .on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
-      .on('window-all-closed', () => { if (!isMac()) app.quit() })
+      .on('window-all-closed', () => {
+        unregisterShortcuts()
+        if (!isMac()) app.quit()
+      })
 
     app
       .on('open-url', (_event, url) => isAppLaunched ? handleOpenUrl(url) : (appOpenedWithURL = url))
