@@ -65,8 +65,12 @@
     pdfSlick.loadDocument(url).then(async () => {
       if (pdfSlickReady) pdfSlickReady(pdfSlick)
 
-      const title = await getDocumentTitle(pdfSlick)
-      if (title && title !== 'document.pdf') document.title = title
+      // do not update the title for Surf resource URLs, these are handled
+      // by the browser itself
+      if (!url.startsWith('surf://resource')) {
+        const title = await getDocumentTitle(pdfSlick)
+        if (title && title !== 'document.pdf') document.title = title
+      }
 
       if (page) {
         try {
