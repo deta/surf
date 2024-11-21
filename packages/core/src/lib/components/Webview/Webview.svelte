@@ -294,7 +294,7 @@
 
       let activeDrag = Dragcula.get().activeDrag
       if (activeDrag === null) {
-        activeDrag = DragOperation.new({
+        Dragcula.get().activeDrag = DragOperation.new({
           id: `__webview_drag_${generateID()}`,
           from: undefined,
           to: DragZone.ZONES.values().find((x) => (x as HTMLDragZone).element === webview),
