@@ -1,22 +1,25 @@
 <script lang="ts">
   export let colors: [string, string]
+  export let size: string = '100%'
+
+  $: minSize = size === '100%' ? '1.25rem' : size
 </script>
 
 <div
   class="color-icon"
   on:click
-  style="--color1: {colors[0]}; --color2: {colors[1]}"
+  style="--color1: {colors[0]}; --color2: {colors[1]}; --size: {size}; --min-size: {minSize}"
   aria-hidden="true"
 ></div>
 
 <style lang="scss">
   .color-icon {
     flex-shrink: 0;
-    width: 100%;
-    height: 100%;
+    width: var(--size);
+    height: var(--size);
     aspect-ratio: 1 / 1;
-    min-width: 1.25rem;
-    min-height: 1.25rem;
+    min-width: var(--min-size);
+    min-height: var(--min-size);
     border-radius: 50%;
     background: radial-gradient(
         95% 95% at 50% 10%,

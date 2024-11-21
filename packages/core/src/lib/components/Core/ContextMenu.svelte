@@ -21,7 +21,7 @@
     kind?: 'danger'
     disabled?: boolean
     text: string
-    icon?: string
+    icon?: string | [string, string]
     action: () => void
   }
   export interface CtxItemSubMenu extends CtxItemBase {

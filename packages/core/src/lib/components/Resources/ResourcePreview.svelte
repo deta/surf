@@ -129,14 +129,14 @@
         (e) =>
           e.id !== 'all' &&
           e.id !== 'inbox' &&
-          e.dataValue.folderName.toLowerCase() !== '.tempspace' &&
+          e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
           !e.dataValue.builtIn
       )
       .map(
         (space) =>
           ({
             type: 'action',
-            icon: '',
+            icon: space.dataValue.colors,
             text: space.dataValue.folderName,
             action: async () => {
               try {

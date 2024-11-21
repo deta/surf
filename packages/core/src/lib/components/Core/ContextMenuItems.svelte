@@ -2,6 +2,7 @@
   import { Icon } from '@horizon/icons'
   import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
   import { onMount, tick } from 'svelte'
+  import ColorIcon from '../Atoms/ColorIcon.svelte'
 
   export let items: CtxItem[]
   export let subMenuRef: string | undefined = undefined
@@ -52,14 +53,22 @@
           disabled={item.disabled}
         >
           {#if item.icon}
-            <Icon name={item.icon} size="1.2em" />
+            {#if typeof item.icon === 'string'}
+              <Icon name={item.icon} size="1.2em" />
+            {:else if Array.isArray(item.icon)}
+              <ColorIcon colors={item.icon} size="1.1em" />
+            {/if}
           {/if}
           <span class="truncate" style="flex: 1; width:100%; max-width: 20ch;">{item.text}</span>
         </button>
       {:else if item.type === 'sub-menu'}
         <li class="sub-item" style="anchor-name: --sub-{i};">
           {#if item.icon}
-            <Icon name={item.icon} size="1.2em" />
+            {#if typeof item.icon === 'string'}
+              <Icon name={item.icon} size="1.2em" />
+            {:else if Array.isArray(item.icon)}
+              <ColorIcon colors={item.icon} size="1.1em" />
+            {/if}
           {/if}
           <span style="flex: 1; width:100%;">{item.text} </span>
           <Icon name="chevron.right" size="1.2em" style="align-self: flex-end;" />
