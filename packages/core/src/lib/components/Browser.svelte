@@ -38,7 +38,8 @@
     Resource,
     ResourceTag,
     createResourceManager,
-    initResourceDebugger
+    initResourceDebugger,
+    toggleResourceDebugger
   } from '../service/resources'
 
   import { DragTypeNames, type DragTypes, SpaceEntryOrigin, type SpaceSource } from '../types'
@@ -750,6 +751,8 @@
       }
 
       deselectAllTabs()
+    } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
+      toggleResourceDebugger(resourceManager)
     } else if (e.metaKey && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
       debugMode.update((mode) => !mode)
 

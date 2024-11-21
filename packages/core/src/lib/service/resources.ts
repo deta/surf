@@ -1535,7 +1535,10 @@ class ResourceDebugger {
 }
 
 export function initResourceDebugger(resourceManager: ResourceManager) {
+  const enabled = localStorage.getItem('resource_debugger_enabled') === 'true'
+  if (!enabled) return
   if (!window.debug) window.debug = {} as any
+
   // @ts-ignore
   window.debug.resources = new ResourceDebugger(resourceManager)
   // @ts-ignore
@@ -1552,6 +1555,24 @@ export function initResourceDebugger(resourceManager: ResourceManager) {
     console.log('debug.resources.compareWithCurrent(i) - Compare snapshot with current state')
     console.log('debug.resources.list()                - List all snapshots')
     console.log('debug.resources.clear()               - Clear all snapshots')
+  }
+}
+
+export function toggleResourceDebugger(resourceManager: ResourceManager) {
+  const enabled = localStorage.getItem('resource_debugger_enabled') === 'true'
+
+  if (enabled) {
+    // @ts-ignore
+    if (window.debug?.resources) {
+      // @ts-ignore
+      window.debug.resources.stop()
+      // @ts-ignore
+      window.debug.resources = undefined
+    }
+    localStorage.setItem('resource_debugger_enabled', 'false')
+  } else {
+    localStorage.setItem('resource_debugger_enabled', 'true')
+    initResourceDebugger(resourceManager)
   }
 }
 
