@@ -107,15 +107,6 @@ export class Dragcula {
     this.addEventListener(document, "drag", handleDragUpdate);
     this.addEventListener(document, "dragover", handleDragUpdate);
 
-    // FIX: For drag not getting cleaned up outside window..
-    // In both of these cases, there can't be an active drag, so if there is one we can safely cleanup!
-    this.addEventListener(document.documentElement, "mouseleave", () =>
-      this.cleanupDragOperation()
-    );
-    this.addEventListener(document.documentElement, "mouseenter", () =>
-      this.cleanupDragOperation()
-    );
-
     // @ts-ignore
     window.Dragcula = this;
   }
