@@ -1210,7 +1210,7 @@
 
     log.debug('Deleting auto-saved resources:', resources)
 
-    await Promise.all(resources.map((x) => resourceManager.deleteResource(x)))
+    await resourceManager.deleteResources(resources)
 
     toast.success('Auto-saved resources deleted!')
 
@@ -1267,7 +1267,7 @@
       if (shouldDeleteAllResources) {
         log.debug('Deleting all resources in space', spaceId)
         const resources = await oasis.getSpaceContents($space!.id)
-        await Promise.all(resources.map((x) => resourceManager.deleteResource(x.resource_id)))
+        await resourceManager.deleteResources(resources.map((x) => x.resource_id))
       }
 
       log.debug('Deleting space', spaceId)

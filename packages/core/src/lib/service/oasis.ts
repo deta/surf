@@ -494,7 +494,7 @@ export class OasisService {
     )
 
     this.log.debug('deleting resources from oasis', validResourceIDs)
-    await Promise.all(validResourceIDs.map((id) => this.resourceManager.deleteResource(id)))
+    await this.resourceManager.deleteResources(validResourceIDs)
 
     this.log.debug('removing resource bookmarks from tabs', validResourceIDs)
     await Promise.all(validResourceIDs.map((id) => this.tabsManager.removeResourceBookmarks(id)))
