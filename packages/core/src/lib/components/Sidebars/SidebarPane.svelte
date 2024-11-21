@@ -274,6 +274,10 @@
   `
 
   onMount(() => {
+    document
+      .querySelectorAll('iframe[tabindex="-1"][src="about:blank"]')
+      .forEach((iframe) => iframe.remove())
+
     ownerDocument = document
     loadSavedSizes()
     previousOrientation = horizontalTabs
