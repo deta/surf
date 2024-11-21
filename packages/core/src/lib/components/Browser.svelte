@@ -8,6 +8,7 @@
   import { Icon } from '@horizon/icons'
 
   import {
+    isAltKeyAndKeysPressed,
     isModKeyAndEventCodeIs,
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
@@ -813,15 +814,21 @@
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 't')) {
       tabsManager.reopenDeleted()
     } else if (
-      !window.api.disableTabSwitchingShortcuts &&
-      isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9']) &&
+      ((!window.api.disableTabSwitchingShortcuts &&
+        isModKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9'])) ||
+        (window.api.disableTabSwitchingShortcuts &&
+          isAltKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9']))) &&
       !e.shiftKey
     ) {
-      if (parseInt(e.key, 10) === 1 && $userConfigSettings.homescreen) {
+      let key = parseInt(
+        !window.api.disableTabSwitchingShortcuts ? e.key : e.code.match(/\d$/)?.[0] || '1'
+      )
+      if (key == 1 && $userConfigSettings.homescreen && !window.api.disableTabSwitchingShortcuts) {
         homescreen.setVisible(!$homescreenVisible)
         return
       }
-      const index = parseInt(e.key, 10) - ($userConfigSettings.homescreen ? 2 : 1)
+      const index =
+        key - ($userConfigSettings.homescreen && !window.api.disableTabSwitchingShortcuts ? 2 : 1)
       const tabs = [...$pinnedTabs, ...$unpinnedTabs]
 
       if (index < 8) {
@@ -832,7 +839,6 @@
         // if 9 is pressed, go to the last tab
         tabsManager.makeActive(tabs[tabs.length - 1].id, ActivateTabEventTrigger.Shortcut)
       }
-      homescreen.setVisible(false)
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
       if (canGoBack) {
         $activeBrowserTab?.goBack()
