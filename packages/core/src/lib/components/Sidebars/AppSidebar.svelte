@@ -250,7 +250,9 @@
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 h-full">
   {#if !$userSettings.go_wild_mode}
-    <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 -m-4">
+    <div
+      class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 dark:border-gray-900 -m-4"
+    >
       <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Go Wild</div>
 
       <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -429,6 +431,11 @@
     flex-direction: row;
     gap: 10px;
     overflow: hidden;
+
+    :global(.dark) & {
+      background: #1e1e1e;
+      color: #fff;
+    }
   }
 
   .message {
@@ -464,6 +471,11 @@
     font-size: 1rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     transition: background 0.2s;
+
+    :global(.dark) & {
+      background: #1e1e1e;
+      color: #fff;
+    }
 
     &.rerun-btn {
       display: flex;
@@ -502,6 +514,11 @@
       font-family: inherit;
       resize: vertical;
       min-height: 80px;
+
+      :global(.dark) & {
+        background: #1e1e1e;
+        border-color: #2e2e2e;
+      }
     }
 
     button {

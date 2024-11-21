@@ -28,7 +28,7 @@
   })
 </script>
 
-<div class="wrapper">
+<div class="wrapper bg-[#f8f7f2] dark:bg-[#181818]">
   {#if resource}
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <TextResource {resourceId} on:update-title={handleUpdateTitle} />
@@ -47,7 +47,6 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    background-color: #f8f7f2;
     border-radius: 0.5rem;
   }
 </style>

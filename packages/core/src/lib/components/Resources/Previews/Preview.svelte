@@ -154,11 +154,25 @@
     previousEditTitle = editTitle
   }
 
-  const IFRAME_STYLES = `<style> html { font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif; } </style>`
+  const IFRAME_STYLES = `<style> 
+    html { 
+      font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif;
+      color: #6b7280;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+     
+    }
+    html::-webkit-scrollbar {
+      display: none;
+    }
+     
+  </style>`
 </script>
 
 <div
-  class="preview origin-{origin} mode-{mode}"
+  class="preview origin-{origin} mode-{mode} bg-[#FDFDFD] dark:bg-gray-800 {mode !== 'compact'
+    ? 'border-[1px] border-gray-200 dark:border-gray-700'
+    : ''}"
   class:interactive
   class:frame={!frameless}
   class:themed={!!theme}
@@ -188,7 +202,7 @@
         <div class="title">{error}</div>
         <div class="subtitle">{url}</div>
       {:else if mode === 'tiny'}
-        <div class="tiny-wrapper">
+        <div class="tiny-wrapper text-[#281b53] dark:text-gray-300">
           <div class="tiny-icon">
             {#if source?.imageUrl}
               <div class="favicon">
@@ -201,7 +215,7 @@
             {/if}
           </div>
 
-          <div class="from">
+          <div class="from text-[#281b53] dark:text-gray-300">
             {title || content || source?.text || author?.text || 'Untitled'}
           </div>
         </div>
@@ -221,21 +235,23 @@
         {/if}
 
         {#if showSource || (showTitle && title) || (showContent && content) || (showAuthor && author)}
-          <div class="details">
+          <div class="details text-[#281b53] dark:text-gray-300">
             {#if showSource && mode !== 'compact' && source}
-              <div class="flex items-center justify-between gap-2 overflow-hidden">
+              <div
+                class="flex items-center justify-between gap-2 overflow-hidden text-[#281b53] dark:text-gray-300"
+              >
                 <div class="flex-grow overflow-hidden">
                   <SourceItem {type} {source} themed={!!theme} />
                 </div>
 
                 {#if !(showAuthor && author && (author.text || author.imageUrl || author.icon))}
                   {#if isProcessing}
-                    <div class="processing">
+                    <div class="processing text-[#281b53] dark:text-gray-300">
                       <Icon name="spinner" size="14px" />
                       <div>{processingText}</div>
                     </div>
                   {:else if failedProcessing}
-                    <div class="processing">
+                    <div class="processing text-[#281b53] dark:text-gray-300">
                       <div>{failedText || 'Failed to process'}</div>
                     </div>
                   {/if}
@@ -247,7 +263,7 @@
               {#if editTitle}
                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                 <div
-                  class="title edit"
+                  class="title edit text-[#281b53] dark:text-gray-300"
                   contenteditable="true"
                   placeholder="Enter title"
                   bind:this={titleInputElem}
@@ -261,7 +277,7 @@
               {:else if title}
                 <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
                 <div
-                  class="title"
+                  class="title text-[#281b53] dark:text-gray-300"
                   on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
                   on:click|stopPropagation={handleTitleClick}
                 >
@@ -273,7 +289,7 @@
             {#if showAnnotations && annotations && (annotations || []).length > 0}
               {@const annotation = annotations[0]}
 
-              <div class="annotation">
+              <div class="annotation text-[#281b53] dark:text-gray-300">
                 {#if annotation.type === 'highlight'}
                   <div class="content quote">
                     <mark>
@@ -292,7 +308,7 @@
             {/if}
 
             {#if showContent && content}
-              <div class="content">
+              <div class="content no-scrollbar">
                 {#if contentType === 'plain'}
                   {truncate(content, MAX_CONTENT_LENGTH)}
                 {:else if contentType === 'rich_text'}
@@ -312,7 +328,7 @@
 
             {#if showAnnotations && annotations && annotations.length > 0}
               {#if annotations.length > 1}
-                <div class="annotation-info">
+                <div class="annotation-info text-[#281b53] dark:text-gray-300">
                   <Icon name="marker" />
                   + {annotations.length - 1} more annotation{annotations.length > 2 ? 's' : ''}
                 </div>
@@ -325,8 +341,10 @@
             {/if}
 
             {#if showSource && mode === 'compact' && source && source.text}
-              <div class="flex items-center gap-2 justify-between">
-                <div class="flex-grow overflow-hidden">
+              <div
+                class="flex items-center gap-2 justify-between text-[#281b53] dark:text-gray-300"
+              >
+                <div class="flex-grow overflow-hidden text-[#281b53] dark:text-gray-300">
                   {#if type === ResourceTypes.POST_YOUTUBE}
                     <SourceItem
                       {type}
@@ -352,27 +370,27 @@
             {/if}
 
             {#if showAuthor && author && (author.text || author.imageUrl || author.icon)}
-              <div class="metadata">
+              <div class="metadata text-[#281b53] dark:text-gray-300">
                 <div class="author">
                   {#if author.imageUrl}
-                    <div class="favicon">
+                    <div class="favicon text-[#281b53] dark:text-gray-300">
                       <Image src={author.imageUrl} alt={author.text ?? ''} emptyOnError />
                     </div>
                   {:else if author.icon}
-                    <div class="favicon">
+                    <div class="favicon text-[#281b53] dark:text-gray-300">
                       <Icon name={author.icon} />
                     </div>
                   {/if}
 
                   {#if author.text}
-                    <div class="from">
+                    <div class="from text-[#281b53] dark:text-gray-300">
                       {author.text}
                     </div>
                   {/if}
                 </div>
 
                 {#if isProcessing}
-                  <div class="processing">
+                  <div class="processing text-[#281b53] dark:text-gray-300">
                     <Icon name="spinner" size="14px" />
                     <div>{processingText}</div>
                   </div>
@@ -393,26 +411,29 @@
 <style lang="scss">
   .preview {
     width: 100%;
-    background: rgba(255, 255, 255, 0.75);
     transition: background, border, outline;
     transition-duration: 60ms;
     transition-timing-function: ease-out;
     position: relative;
 
     &.themed {
-      border: 1px solid rgba(255, 255, 255, 0.2);
       background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
     }
 
     &.frame {
       border-radius: 16px;
-      border: 1px solid rgba(228, 228, 228, 0.75);
       box-shadow:
         0px 1px 0px 0px rgba(65, 58, 86, 0.25),
         0px 0px 1px 0px rgba(0, 0, 0, 0.25);
 
       &:hover {
         outline: 3px solid rgba(0, 0, 0, 0.15);
+      }
+
+      :global(.dark) & {
+        &:hover {
+          outline: none;
+        }
       }
     }
   }
@@ -451,7 +472,6 @@
     gap: 0.5em;
     padding: 0.5em;
     font-weight: 500;
-    color: #281b53;
   }
 
   .details {
@@ -470,7 +490,6 @@
     .from,
     .from,
     .processing {
-      color: #ffffff;
       opacity: 1;
     }
   }
@@ -480,7 +499,6 @@
     width: 1.25em;
     height: 1.25em;
     border-radius: 5.1px;
-    color: #281b53;
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
@@ -493,7 +511,6 @@
     gap: 0.5em;
     font-size: 0.85em;
     font-weight: 500;
-    color: #7e7696;
     padding-left: 1em;
   }
 
@@ -508,7 +525,6 @@
     font-size: 1em;
     font-weight: 500;
     text-decoration: none;
-    color: #281b53;
     opacity: 0.65;
     width: 100%;
     overflow: hidden;
@@ -522,7 +538,6 @@
 
   .tiny-icon {
     flex-shrink: 0;
-    color: #281b53;
     width: 1.25em;
     height: 1.25em;
   }
@@ -554,7 +569,6 @@
     font-size: 1.25em;
     line-height: 1.775em;
     letter-spacing: 0.02em;
-    color: #281b53;
     font-weight: 500;
     flex-shrink: 0;
     overflow-wrap: break-word;
@@ -585,7 +599,6 @@
   .content {
     font-size: 1em;
     line-height: 1.5em;
-    color: #281b53;
     letter-spacing: 0.02em;
     font-weight: 400;
     flex-shrink: 0;
@@ -595,7 +608,6 @@
 
     mark {
       background-color: rgb(238, 229, 251);
-      color: #1c1c3b;
     }
 
     iframe {
@@ -612,7 +624,6 @@
     align-items: flex-start;
     gap: 0.5em;
     font-size: 0.85em;
-    color: #281b53;
 
     .icon {
       flex-shrink: 0;
@@ -622,7 +633,6 @@
 
   .annotation-info {
     font-size: 0.85em;
-    color: #281b53;
     opacity: 0.65;
     display: flex;
     align-items: center;

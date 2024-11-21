@@ -287,11 +287,11 @@
     width: 1.75rem;
     height: 1.75rem;
     font-size: 0.9rem;
-    background: rgb(226 240 255);
-    border: 1px solid rgb(183 198 218);
     border-radius: 100%;
     user-select: none;
     cursor: pointer;
+
+    @apply border-[1px] border-gray-200 dark:bg-[#006eff] dark:border-[#006eff];
   }
 
   :global(citation.wide:hover) {
@@ -309,13 +309,16 @@
     padding: 0.1rem 0.4rem;
     font-size: 0.9rem;
     font-weight: 500;
-    background: rgb(226 240 255);
-    border: 1px solid rgb(183 198 218);
     border-radius: 10px;
     user-select: none;
     cursor: pointer;
     width: fit-content;
     height: auto;
+
+    :global(.dark) & {
+      background: #111827;
+      border: 1px solid #374151;
+    }
   }
 
   :global(citation.wide) {
@@ -366,6 +369,11 @@
     width: 2rem;
     height: 2rem;
     text-align: center;
+
+    :global(.dark) & {
+      background: #374151;
+      border: 1px solid #374151;
+    }
   }
 
   .citation-item:hover {

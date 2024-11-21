@@ -145,7 +145,7 @@
 <div class="wrapper">
   <div class="content">
     <div class="header">
-      <div class="title">
+      <div class="title text-gray-900 dark:text-gray-100">
         {#if $loading}
           <Icon name="spinner" size="28px" />
         {:else}
@@ -186,8 +186,8 @@
         <div class="loading flex flex-col">
           {#each new Array(10) as _, i}
             <div
-              class="animate-pulse"
-              style="width: 100%; height: {itemHeight}px; background-color: #ecebe5c6; border-radius: 12px;"
+              class="animate-pulse bg-gray-200 dark:bg-gray-800"
+              style="width: 100%; height: {itemHeight}px; border-radius: 12px;"
             />
           {/each}
         </div>
@@ -208,6 +208,10 @@
     background-color: #f8f7f2;
     border-radius: 0.5rem;
     overflow: hidden;
+
+    :global(.dark) & {
+      background-color: #1a1a1a;
+    }
   }
 
   .content {
@@ -235,6 +239,12 @@
       color: #7d7448;
       cursor: pointer;
       flex-shrink: 0;
+
+      :global(.dark) & {
+        background-color: #2a2a2a;
+        border-color: #3a3a3a;
+        color: #a3a3a3;
+      }
     }
 
     input {
@@ -246,11 +256,18 @@
       color: #7d7448;
       outline: none;
       width: 300px;
+     
       background: paint(squircle);
       --squircle-radius: 6px;
       --squircle-smooth: 0.2;
       --squircle-outline: 2px;
       --squircle-fill: #e5e2d5;
+      
+       :global(.dark) & {
+        background-color: #2a2a2a;
+        border-color: #3a3a3a;
+        color: #e5e5e5;
+      }
     }
   }
 
@@ -279,6 +296,10 @@
     gap: 1rem;
     font-size: 1.25rem;
     color: #7d7448;
+
+    :global(.dark) & {
+      color: #a3a3a3;
+    }
   }
 
   .empty {
@@ -288,5 +309,9 @@
     font-size: 1.25rem;
     color: #7d7448;
     padding: 6rem 0;
+
+    :global(.dark) & {
+      color: #a3a3a3;
+    }
   }
 </style>

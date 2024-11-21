@@ -45,7 +45,7 @@
 </script>
 
 <div
-  class="absolute bottom-0 right-0 w-fit p-1 bg-neutral-900 bg-opacity-50 text-neutral-100 font-mono text-xs pointer-events-none"
+  class="absolute bottom-0 right-0 w-fit p-1 bg-gray-900 bg-opacity-50 text-gray-100 font-mono text-xs pointer-events-none"
   style="z-index: 999999999999;"
 >
   <div class="flex justify-between items-center flex-col">

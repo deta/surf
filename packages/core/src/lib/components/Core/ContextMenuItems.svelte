@@ -88,11 +88,11 @@
     height: fit-content;
     max-height: 24.5ch;
     overflow-y: auto;
-    background: #fff;
+    background: var(--ctx-background);
     padding: 0.25rem;
     border-radius: 9px;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    border: 0.5px solid var(--ctx-border);
+    box-shadow: 0 2px 10px var(--ctx-shadow-color);
     user-select: none;
     position-anchor: var(--sub-id);
 
@@ -139,7 +139,7 @@
     display: flex;
   }
   :global(ul:has(.sub-menu:hover) .sub-item) {
-    background: rgba(0, 0, 0, 0.065);
+    background: var(--ctx-item-submenu-open);
   }
 
   ul {
@@ -163,16 +163,14 @@
       font-size: 0.99em;
       text-align: left;
 
-      color: #210e1f;
+      color: var(--ctx-item-text);
       font-family: system-ui;
       -webkit-font-smoothing: antialiased;
       cursor: pointer;
 
-      --highlight-color: #2497e9;
-
       &:hover {
-        background: var(--highlight-color);
-        color: #fff;
+        background: var(--ctx-item-hover);
+        color: var(--ctx-item-text-hover);
         outline: none;
       }
       &:focus {
@@ -197,7 +195,7 @@
       }
 
       &.danger {
-        --highlight-color: #ff4d4f;
+        --ctx-item-hover: var(--ctx-item-danger-hover);
       }
 
       :global(svg) {

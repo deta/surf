@@ -61,7 +61,7 @@
 <div
   {id}
   bind:this={element}
-  class="prose prose-{size} prose-neutral prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
+  class="prose prose-{size} prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
 >
   <Markdown md={content} {plugins} />
 </div>

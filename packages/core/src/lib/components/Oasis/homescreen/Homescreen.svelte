@@ -321,7 +321,6 @@
   }
 
   async function handleOpenItem(e: CustomEvent) {
-    console.warn('Open item', e.detail)
     if (!scropedMinibrowser) return
     scropedMinibrowser?.openResource(e.detail)
   }
@@ -356,12 +355,7 @@
   }}
 />
 
-<div
-  id="homescreen-wrapper"
-  class:homescreenVisible={$homescreenVisible}
-  style:--background={`url('surf://resource/${$customization.background}')`}
-  style={$$restProps.style}
->
+<div id="homescreen-wrapper" class:homescreenVisible={$homescreenVisible} style={$$restProps.style}>
   <MiniBrowser service={scropedMinibrowser} />
 
   <div
@@ -448,10 +442,6 @@
     --padding: 1em;
     padding: var(--padding, 0);
 
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-image: var(--background);
     contain: strict;
 
     &:not(.homescreenVisible) {
@@ -502,6 +492,12 @@
       align-items: center;
       backdrop-filter: blur(10px);
       text-align: center;
+      @apply select-none;
+
+      :global(.dark) & {
+        background: rgba(0, 0, 0, 0.15);
+      }
+
       h3 {
         font-size: 1.875em;
         font-weight: 500;
@@ -510,6 +506,11 @@
         border-radius: 64px;
         background: rgba(255, 255, 255, 0.5);
         @apply text-sky-500/60;
+
+        :global(.dark) & {
+          background: rgba(0, 0, 0, 0.5);
+          @apply text-sky-500/80;
+        }
       }
 
       p {

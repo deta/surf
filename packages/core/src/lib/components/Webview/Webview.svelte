@@ -714,11 +714,15 @@ Made with Deta Surf.`
   {...$$restProps}
 />
 
-<style>
+<style lang="scss">
   webview {
     user-select: none;
     width: 100%;
     height: 100%;
     background: white;
+
+    :global(.dark) & {
+      background: #171717;
+    }
   }
 </style>

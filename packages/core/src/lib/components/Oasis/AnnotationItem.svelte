@@ -338,6 +338,10 @@
     text-decoration: none;
     border-bottom: 1px solid #f0f0f0;
 
+    :global(.dark) & {
+      border-color: #2e2e2e;
+    }
+
     &:hover {
       .actions {
         opacity: 1;
@@ -350,12 +354,20 @@
 
     &.background {
       border-bottom: 1px solid #e3e3e3;
+
+      :global(.dark) & {
+        border-color: #2e2e2e;
+      }
     }
   }
 
   .link-card.active {
     background: #ffd9ef;
     border-radius: 5px;
+
+    :global(.dark) & {
+      background: #ffd9ef;
+    }
   }
 
   .details {
@@ -383,6 +395,10 @@
       align-items: center;
       gap: 0.5rem;
       margin-top: 1rem;
+
+      :global(.dark) & {
+        color: #fff;
+      }
     }
   }
 
@@ -397,6 +413,11 @@
 
   .content {
     color: #000000;
+
+    :global(.dark) & {
+      color: #fff;
+    }
+
     flex-shrink: 0;
     max-width: 95%;
     width: 100%;
@@ -419,6 +440,10 @@
     padding: 0.55rem;
     padding-left: 1rem;
     cursor: pointer;
+
+    :global(.dark) & {
+      color: #fff;
+    }
   }
 
   .footer {
@@ -426,6 +451,10 @@
     justify-content: space-between;
     align-items: center;
     color: #110a2a9e;
+
+    :global(.dark) & {
+      color: #fff;
+    }
 
     button {
       background: none;

@@ -29,16 +29,16 @@
 
 {#if title && sections}
   <div
-    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-25 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24 overflow-y-scroll"
+    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-10 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24 overflow-y-scroll"
     style="z-index: 1234567;"
   >
-    <div class="gap-4 flex flex-col items-center max-w-md">
+    <div class="gap-4 flex flex-col items-center max-w-md text-gray-900 dark:text-gray-100">
       <h1 class="text-2xl font-bold">{title}</h1>
       <p class="opacity-70 text-center">{tip}</p>
     </div>
 
     <div
-      class="flex flex-col gap-10 w-full max-w-md border-t-[0.07rem] border-t-[rgba(0,0,0,0.15)] pt-8"
+      class="flex flex-col gap-10 w-full text-gray-900 dark:text-gray-100 max-w-md border-t-[0.07rem] border-t-[rgba(0,0,0,0.15)] dark:border-t-[rgba(255,255,255,0.15)] pt-8"
     >
       {#each sections as section}
         <div class="flex items-start gap-4">
@@ -46,7 +46,7 @@
             {@html section.icon}
           {:else if section.iconName}
             <div
-              class="relative w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center font-semibold text-xl"
+              class="relative w-12 h-12 bg-black/10 dark:bg-gray-600 rounded-xl flex items-center justify-center font-semibold text-xl"
             >
               <Icon name={section.iconName} />
             </div>

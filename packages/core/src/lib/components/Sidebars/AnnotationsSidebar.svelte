@@ -258,6 +258,10 @@
     color: #2b2715;
     white-space: nowrap;
 
+    :global(.dark) & {
+      color: #e0e7ff;
+    }
+
     h1 {
       font-size: 1.5rem;
       font-weight: 500;
@@ -283,6 +287,10 @@
       font-size: 1rem;
       color: #666;
       text-align: center;
+
+      :global(.dark) & {
+        color: #fff;
+      }
     }
   }
 
@@ -312,6 +320,10 @@
     border-top: 1px solid #e0e0e0;
     font-family: inherit;
 
+    :global(.dark) & {
+      border-color: #2e2e2e;
+    }
+
     textarea {
       flex: 1;
       border: none;
@@ -323,6 +335,11 @@
       background: #f8f8f8;
       border: 1px solid #e0e0e0;
       font-family: inherit;
+
+      :global(.dark) & {
+        background: #1e1e1e;
+        border-color: #2e2e2e;
+      }
     }
 
     button {
@@ -373,5 +390,10 @@
     font-family: inherit;
     resize: vertical;
     min-height: 80px;
+
+    :global(.dark) & {
+      background: #1e1e1e;
+      border-color: #2e2e2e;
+    }
   }
 </style>

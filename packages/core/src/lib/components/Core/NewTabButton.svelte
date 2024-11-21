@@ -100,13 +100,13 @@
     </button>
   </DropdownMenu.Trigger>
   <DropdownMenu.Content
-    class="z-50 w-full max-w-[250px] rounded-xl bg-neutral-100 px-1 py-1.5 shadow-md outline-none"
+    class="z-50 w-full max-w-[250px] rounded-xl bg-gray-100 px-1 py-1.5 shadow-md outline-none"
   >
     <DropdownMenu.Group class="max-h-[300px] overflow-y-scroll">
       {#if $filteredSpaces.length > 0}
         {#each $filteredSpaces as space, index}
           <DropdownMenu.Item
-            class="flex  select-none items-center group  py-4 pl-3 pr-1.5 cursor-pointer space-x-4 justify-between  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+            class="flex  select-none items-center group  py-4 pl-3 pr-1.5 cursor-pointer space-x-4 justify-between  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 data-[state=open]:bg-gray-200"
             on:click={() => handleClick(index)}
           >
             <div class="truncate">{space.dataValue.folderName}</div>
@@ -126,10 +126,10 @@
       {/if}
     </DropdownMenu.Group>
 
-    <DropdownMenu.Separator class="my-1 block h-px bg-neutral-200" />
+    <DropdownMenu.Separator class="my-1 block h-px bg-gray-200" />
     <DropdownMenu.Item asChild>
       <input
-        class="w-full py-4 pl-3 pr-1.5 space-x-2 font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-neutral-200 data-[state=open]:bg-neutral-200"
+        class="w-full py-4 pl-3 pr-1.5 space-x-2 font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 data-[state=open]:bg-gray-200"
         bind:this={inputRef}
         bind:value={newSpaceName}
         on:blur={handleBlur}

@@ -287,13 +287,17 @@
   </div>
 {/if}
 
-<div class="flex h-full w-full bg-white px-8 overflow-y-auto relative justify-center items-center">
+<div
+  class="flex h-full w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-8 overflow-y-auto relative justify-center items-center"
+>
   <div class="flex flex-col w-full gap-8 relative z-10 max-w-7xl mx-auto">
     <div class="flex flex-col gap-2 overflow-y-scroll">
-      <h1 class="font-gambarino text-3xl text-center animate-text-shimmer text-[#6C6C8D]">
+      <h1
+        class="font-gambarino text-3xl text-center animate-text-shimmer text-[#6C6C8D] dark:text-slate-200"
+      >
         Give Surf to a friend
       </h1>
-      <p class="text-lg text-center text-sky-900 text-balance">
+      <p class="text-lg text-center text-sky-900 dark:text-sky-100 text-balance">
         Send them a personalized invite pass to Surf.
       </p>
     </div>
@@ -469,7 +473,7 @@
 
     <div class="flex flex-row items-center justify-center gap-4">
       <button
-        class="px-4 py-2 border border-gray-200 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         on:click={() => {
           navigator.clipboard.writeText(`${$inviteLink}`)
           toasts.success('Invite link copied to clipboard')
@@ -483,7 +487,7 @@
 </div>
 
 <div
-  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200"
+  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white dark:bg-gray-900 shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200 dark:border-gray-700"
   style="box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-top-left-radius: 12px; border-top-right-radius: 12px;"
 >
   <div class="flex flex-col items-center justify-center gap-4">
@@ -492,7 +496,7 @@
         <Tooltip.Trigger>
           <button
             on:click={undo}
-            class="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
             <Icon name="arrow.left" size="20" />
           </button>
@@ -502,11 +506,13 @@
           transitionConfig={{ y: 8, duration: 150 }}
           sideOffset={8}
         >
-          <div class="bg-neutral-100">
-            <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+          <div class="bg-gray-100 dark:bg-gray-800">
+            <Tooltip.Arrow
+              class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+            />
           </div>
           <div
-            class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+            class="flex items-center justify-center rounded-input border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
           >
             Undo
           </div>
@@ -517,7 +523,7 @@
         <Tooltip.Trigger>
           <button
             on:click={redo}
-            class="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
             <Icon name="arrow.right" size="20" />
           </button>
@@ -527,11 +533,13 @@
           transitionConfig={{ y: 8, duration: 150 }}
           sideOffset={8}
         >
-          <div class="bg-neutral-100">
-            <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+          <div class="bg-gray-100 dark:bg-gray-800">
+            <Tooltip.Arrow
+              class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+            />
           </div>
           <div
-            class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+            class="flex items-center justify-center rounded-input border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
           >
             Redo
           </div>
@@ -542,7 +550,7 @@
         <Tooltip.Trigger>
           <button
             on:click={clearDrawing}
-            class="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+            class="p-2 bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
             <Icon name="trash" size="20" />
           </button>
@@ -552,11 +560,13 @@
           transitionConfig={{ y: 8, duration: 150 }}
           sideOffset={8}
         >
-          <div class="bg-neutral-100">
-            <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+          <div class="bg-gray-100 dark:bg-gray-800">
+            <Tooltip.Arrow
+              class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+            />
           </div>
           <div
-            class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+            class="flex items-center justify-center rounded-input border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
           >
             Clear drawing
           </div>
@@ -573,7 +583,7 @@
               <Tooltip.Trigger>
                 <button
                   on:click={() => (selectedColor = color)}
-                  class="w-8 h-8 rounded-full border-2 border-gray-300 flex-shrink-0 transition-transform hover:scale-110 outline-blue-500"
+                  class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-700 flex-shrink-0 transition-transform hover:scale-110 outline-blue-500"
                   class:outline={selectedColor === color}
                   style="background-color: {color};"
                 />
@@ -583,11 +593,13 @@
                 transitionConfig={{ y: 8, duration: 150 }}
                 sideOffset={8}
               >
-                <div class="bg-neutral-100">
-                  <Tooltip.Arrow class="rounded-[2px] border-l border-t border-dark-10" />
+                <div class="bg-gray-100 dark:bg-gray-800">
+                  <Tooltip.Arrow
+                    class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+                  />
                 </div>
                 <div
-                  class="flex items-center justify-center rounded-input border border-dark-10 bg-neutral-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                  class="flex items-center justify-center rounded-input border border-gray-200 dark:border-gray-700 bg-gray-100 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
                 >
                   Select color
                 </div>
@@ -596,10 +608,10 @@
           {/each}
         </div>
         <div
-          class="absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-white to-transparent pointer-events-none fade-left"
+          class="absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-white dark:from-gray-900 to-transparent pointer-events-none fade-left"
         />
         <div
-          class="absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-white to-transparent pointer-events-none fade-right"
+          class="absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-white dark:from-gray-900 to-transparent pointer-events-none fade-right"
         />
       </div>
     </div>

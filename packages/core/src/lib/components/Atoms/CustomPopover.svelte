@@ -115,13 +115,10 @@
     >
       <div
         on:mouseenter={handleMouseEnter}
-        on:mouseleave={() => handleMouseOut()}
-        class="w-full h-full rounded-xl shadow-xl border border-dark-10 bg-white overflow-y-scroll focus:outline-none"
+        class="w-full h-full rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 overflow-y-scroll focus:outline-none"
         role="menu"
         tabindex="0"
       >
-        <Popover.Arrow size={6} />
-
         <slot name="content" {closePopover} />
       </div>
     </Popover.Content>

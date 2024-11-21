@@ -398,21 +398,22 @@
     isSelected: boolean
   }) {
     const baseClasses =
-      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3  justify-center relative text-sky-900 font-medium text-md overflow-hidden min-w-[48px]'
+      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3  justify-center relative text-sky-900 dark:text-sky-100 font-medium text-md overflow-hidden min-w-[48px]'
     const activeClasses = isActive
-      ? 'active text-sky-950 bg-sky-200 sticky shadow-inner ring-[0.5px]'
+      ? 'active text-sky-950 dark:text-gray-100 bg-sky-200 dark:bg-gray-600 sticky shadow-inner ring-[0.5px]'
       : pinned
         ? ''
         : horizontalTabs
-          ? 'bg-sky-100/60'
+          ? 'bg-sky-100/60 dark:bg-gray-800/60'
           : '' // Default background when not active if unpinned
     const magicClasses = tab.magic && !isActive ? 'shadow-inner ring-[0] ring-pink-600' : ''
     const selectedClasses = isSelected && !isActive ? '' : ''
-    const hoverClasses = 'hover:bg-sky-100'
+    const hoverClasses = 'hover:bg-sky-100 dark:hover:bg-gray-600'
 
     let styleClasses = ''
     if (pinned && horizontalTabs) {
-      styleClasses = 'rounded-lg bg-sky-100/60 w-full min-w-fit px-[0.563rem] py-[0.438rem]'
+      styleClasses =
+        'rounded-lg bg-sky-100/60 dark:bg-gray-700/60 w-full min-w-fit px-[0.563rem] py-[0.438rem]'
     } else if (pinned && !horizontalTabs) {
       styleClasses = 'w-full rounded-2xl p-3 border-2 border-white/10 bg-sky-100/10'
     } else if (!pinned && horizontalTabs) {
@@ -654,7 +655,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -665,7 +666,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -691,14 +692,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           class={`w-full h-full bg-transparent focus:outline-none group-active:select-none
           ${
             !isEditing && !isMagicActive
-              ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 bg-[length:250%_100%] z-[60]'
+              ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60]'
               : ''
           }`}
         />
       {:else}
         <div
           aria-hidden="true"
-          class={`whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 bg-[length:250%_100%]' : ''}`}
+          class={`whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
         >
           {#if tab.type === 'space'}
             {tab.title}
@@ -715,7 +716,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
             >
               <Icon name="news" />
             </button>
@@ -729,7 +730,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               </span>
               <div class="flex w-full">
                 <button
-                  class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded cursor-pointer rounded-md"
+                  class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 cursor-pointer rounded-md"
                   on:click={handleCreateLiveSpace}
                 >
                   <Icon name="check" size="16px" />
@@ -753,7 +754,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             <CustomPopover position="right" popoverOpened={saveToSpacePopoverOpened}>
               <button
                 slot="trigger"
-                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
                 on:click|stopPropagation={handleBookmark}
               >
                 {#if bookmarkingState === 'in_progress'}
@@ -801,7 +802,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         {#if showExcludeOthersButton}
           <button
             on:click|stopPropagation={handleExcludeOthers}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none text-sky-900 transition-colors hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none text-sky-900 dark:text-gray-200 transition-colors hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
             use:tooltip={{
               content: 'Only use this tab',
               action: 'hover',
@@ -835,7 +836,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
 
     {#if isScopedMiniBrowserOpen}
       <div
-        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content text-sky-950 bg-sky-200/80 rounded-full"
+        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content text-sky-950 dark:text-gray-200 bg-sky-200/80 dark:bg-gray-700/80 rounded-full"
       >
         <Icon name="eye" />
       </div>
@@ -937,6 +938,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     opacity: 1;
     background: rgba(255, 255, 255, 0.55);
     outline: none;
+
+    :global(.dark) & {
+      @apply bg-gray-700/70;
+    }
   }
   /*.tab.magic:not(.active) {
     //background: rgba(255, 205, 205, 0.55);
@@ -962,6 +967,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   .tab.active {
     background: #e9f5fd;
     outline: none;
+
+    :global(.dark) & {
+      @apply bg-gray-600;
+    }
   }
 
   :global(.vertical-tabs) {

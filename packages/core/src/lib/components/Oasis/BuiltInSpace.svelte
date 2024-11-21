@@ -122,7 +122,9 @@
   on:Drop={handleDrop}
 >
   <div
-    class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
+    class="folder {selected
+      ? 'bg-sky-100 dark:bg-gray-700'
+      : 'hover:bg-sky-50 dark:hover:bg-gray-800'}"
     on:click={handleSpaceSelect}
     aria-hidden="true"
     use:hover={hovered}
@@ -183,7 +185,6 @@
     cursor: pointer;
 
     position: relative;
-    color: #244581;
     width: 100%;
     max-height: 12rem;
     font-weight: 500;
@@ -254,6 +255,8 @@
         }
       }
     }
+
+    @apply text-[#244581] dark:text-gray-100;
   }
 
   .folder.active {

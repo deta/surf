@@ -123,6 +123,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   trackEvent: ipcService.addEvent<TrackEvent>('track-event'),
   toggleSidebar: ipcService.addEvent<boolean | undefined>('toggle-sidebar'),
   toggleTabsPosition: ipcService.addEvent<void>('toggle-tabs-position'),
+  toggleTheme: ipcService.addEvent<void>('toggle-theme'),
   copyActiveTabUrl: ipcService.addEvent<void>('copy-active-tab-url'),
   createNewTab: ipcService.addEvent<void>('create-new-tab'),
   closeActiveTab: ipcService.addEvent<void>('close-active-tab'),

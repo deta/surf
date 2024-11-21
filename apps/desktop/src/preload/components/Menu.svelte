@@ -283,7 +283,7 @@
               <div class="save-buttons">
                 {#each menuItems as item, index}
                   <button on:click={() => handleAIMessageItemClick(index)}>
-                    <Icon name={item.icon} size="14px" className="!text-neutral-500" />
+                    <Icon name={item.icon} size="14px" className="!text-gray-500" />
                   </button>
                 {/each}
               </div>
@@ -332,7 +332,7 @@
             disabled={inputValue.length > 0 && running}
           >
             {#if inputValue.length > 0 && !running}
-              <!-- <kbd class="text-neutral-500">↵</kbd> -->
+              <!-- <kbd class="text-gray-500">↵</kbd> -->
               <span>Submit</span>
             {:else if running}
               <div>
@@ -341,7 +341,7 @@
                 <span class="ball" style="animation-delay: 0.4s;"></span>
               </div>
             {:else}
-              <!-- <kbd class="text-neutral-500 text-xs">ESC</kbd> -->
+              <!-- <kbd class="text-gray-500 text-xs">ESC</kbd> -->
               <span>Cancel</span>
             {/if}
           </button>

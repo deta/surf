@@ -952,7 +952,7 @@
   {/if}
 
   <!-- {#if true}
-    <div class="absolute z-[10000] top-4 right-4 bg-white/95 backdrop-blur-md text-slate-500 p-2 rounded-lg flex items-center gap-2">
+    <div class="absolute z-[10000] top-4 right-4 bg-white/95 backdrop-blur-md text-gray-500 p-2 rounded-lg flex items-center gap-2">
       <Icon name="spinner" size="14px" />
       <div>
         Processing…

@@ -142,6 +142,8 @@
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
   import HomescreenToggleButton from './Oasis/homescreen/HomescreenToggleButton.svelte'
+  import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
+  import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -272,6 +274,9 @@
   const showCustomWindowActions = !isMac()
 
   const CHAT_DOWNLOAD_INTERCEPT_TIMEOUT = 1000 * 60 // 60s
+
+  // Toggle dark mode
+  $: document.body.classList[$userConfigSettings.app_style === 'dark' ? 'add' : 'remove']('dark')
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
@@ -878,6 +883,15 @@
       telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
     checkScroll()
+  }
+
+  const handleToggleTheme = () => {
+    const newTheme = $userConfigSettings.app_style === 'dark' ? 'light' : 'dark'
+    config.updateSettings({
+      app_style: newTheme
+    })
+
+    // note: theme is tracked as a user property of all events
   }
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
@@ -2913,7 +2927,7 @@
     const userConfig = await window.api.getUserConfig()
     log.debug('user config', userConfig)
 
-    await telemetry.init(userConfig)
+    await telemetry.init(userConfig, config)
 
     // Handle new window requests from webviews
     window.api.onNewWindowRequest((details) => {
@@ -2957,6 +2971,10 @@
 
     window.api.onToggleTabsPosition(() => {
       handleToggleHorizontalTabs()
+    })
+
+    window.api.onToggleTheme(() => {
+      handleToggleTheme()
     })
 
     window.api.onCopyActiveTabURL(() => {
@@ -4166,8 +4184,21 @@
   let rightSidebarWidth = 0
 
   let backgroundImage = derived(
-    homescreen.customization,
-    ($customization) => $customization.background
+    [homescreen.customization, userConfigSettings],
+    ([$customization, $userConfigSettings]) => {
+      // Custom
+      if (
+        $customization.background !== undefined &&
+        $customization.background !== 'transparent' &&
+        $customization.background !== ''
+      ) {
+        return `url('surf://resource/${$customization.background}')`
+      }
+      // Vendor
+      else {
+        return `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`
+      }
+    }
   )
 </script>
 
@@ -4212,8 +4243,9 @@
 <MiniBrowser service={globalMiniBrowser} />
 
 <div
-  class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40"
-  style:--background-image="url('surf://resource/{$backgroundImage}')"
+  class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
+  style:--background-image={$backgroundImage}
+  style:--background-opacity={$backgroundImage.startsWith(`url('surf://`) ? 1 : 0.4}
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
   class:horizontalTabs
@@ -4249,19 +4281,19 @@
       <div class="flex flex-row items-center space-x-2 ml-5">
         <button
           on:click={() => controlWindow('minimize')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-x text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
         >
           <Icon name="minus" />
         </button>
         <button
           on:click={() => controlWindow('toggle-maximize')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
         >
           <Icon name="rectangle" />
         </button>
         <button
           on:click={() => controlWindow('close')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
         >
           <Icon name="close" />
         </button>
@@ -4630,8 +4662,9 @@
                   <button
                     class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-[0.625rem] p-1.5'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                     class:bg-sky-200={$showNewTabOverlay === 1}
+                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                   >
                     <Icon name="add" />
@@ -4755,8 +4788,9 @@
                   <button
                     class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                     class:bg-sky-200={$showNewTabOverlay === 1}
+                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                   >
                     <Icon name="add" />
@@ -4775,15 +4809,17 @@
               : 'flex-col'} flex-shrink-0"
           >
             <button
-              class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
+              class="transform select-none no-drag active:scale-95 space-x-2
+              {horizontalTabs
                 ? 'w-fit rounded-xl p-2'
-                : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 transition-colors duration-200 text-sky-800 cursor-pointer"
+                : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
               on:click|preventDefault={() => tabsManager.showNewTab()}
               class:opacity-100={$showEndMask}
               class:opacity-0={!$showEndMask}
               class:pointer-events-auto={$showEndMask}
               class:pointer-events-none={!$showEndMask}
               class:bg-sky-200={$showNewTabOverlay === 1}
+              class:dark:bg-sky-900={$showNewTabOverlay === 1}
             >
               <Icon name="add" />
               {#if !horizontalTabs}
@@ -4807,7 +4843,7 @@
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                       <button
                         slot="trigger"
-                        class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                        class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 dark:hover:bg-gray-800 dark:text-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                         on:click={() => toggleRightSidebar()}
                       >
                         <Icon name="triangle-square-circle" />
@@ -4827,10 +4863,16 @@
                             }}
                             disabled={tool.disabled}
                           >
-                            <div class="p-4 rounded-xl bg-neutral-200/50 hover:bg-neutral-200">
-                              <Icon name={tool.icon} class="text-xl text-neutral-800" />
+                            <div
+                              class="p-4 rounded-xl bg-gray-200/50 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-800"
+                            >
+                              <Icon
+                                name={tool.icon}
+                                class="text-xl text-gray-800 dark:text-gray-100"
+                              />
                             </div>
-                            <span class="text-xs">{tool.name}</span>
+                            <span class="text-xs text-gray-800 dark:text-gray-100">{tool.name}</span
+                            >
                           </button>
                         {/each}
                       </div>
@@ -4842,11 +4884,12 @@
                       text: 'Chat (⌘ + E)',
                       position: horizontalTabs ? 'left' : 'top'
                     }}
-                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                     on:click={() => {
                       toggleRightSidebarTab('chat')
                     }}
                     class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
+                    class:dark:bg-gray-800={showRightSidebar && $rightSidebarTab === 'chat'}
                   >
                     <Icon name="chat" />
                   </button>
@@ -4903,19 +4946,19 @@
               >
                 <button
                   on:click={() => controlWindow('minimize')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 >
                   <Icon name="minus" />
                 </button>
                 <button
                   on:click={() => controlWindow('toggle-maximize')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 >
                   <Icon name="rectangle" />
                 </button>
                 <button
                   on:click={() => controlWindow('close')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
                 >
                   <Icon name="close" />
                 </button>
@@ -5121,14 +5164,16 @@
     <div slot="right-sidebar" bind:clientWidth={rightSidebarWidth} class="w-full h-full">
       <Tabs.Root
         bind:value={$rightSidebarTab}
-        class="bg-sky-50 h-full flex flex-col relative no-drag {$userConfigSettings.homescreen
+        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag {$userConfigSettings.homescreen
           ? 'customBg'
           : ''}"
         id="sidebar-right"
         let:minimal
       >
         {#if showSidebarTools}
-          <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
+          <div
+            class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 dark:border-gray-700"
+          >
             <div class="flex items-center justify-start">
               <!-- svelte-ignore a11y-click-events-have-key-events -->
               <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -5136,7 +5181,7 @@
                 role="button"
                 tabindex="0"
                 on:click={() => toggleRightSidebar()}
-                class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+                class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group cursor-pointer"
               >
                 <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
                 <Icon name="close" class="hidden group-hover:block" size="20px" />
@@ -5151,7 +5196,7 @@
               {#each $sidebarTools as tool}
                 <Tabs.Trigger
                   value={tool.id}
-                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer opacity-75 data-[state='active']:opacity-100 data-[state='active']:bg-sky-200 hover:bg-sky-100 data-[state='active']:hover:bg-sky-200/50"
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-300 cursor-pointer opacity-75 data-[state='active']:opacity-100 dark:data-[state='active']:bg-gray-700 hover:bg-sky-100 dark:hover:bg-gray-700 data-[state='active']:hover:bg-sky-200/50"
                   disabled={tool.disabled}
                 >
                   {#if tool.icon}
@@ -5259,10 +5304,18 @@
 
 <style lang="scss">
   .app-contents {
-    background-image: var(--background-image);
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: var(--background-image);
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      opacity: var(--background-opacity);
+    }
 
     & :global(#homescreen-wrapper) {
       position: fixed;

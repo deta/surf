@@ -235,7 +235,6 @@ TODO: Fix resizing logic for other corners
     //overflow: hidden;
     isolation: isolate;
 
-    background: #fff;
     border-radius: 1em;
     border: 1px solid rgba(0, 0, 0, 0.1);
 
@@ -338,5 +337,7 @@ TODO: Fix resizing logic for other corners
         }
       }
     }
+
+    @apply bg-gray-100 dark:bg-gray-800 border-[1px] border-gray-200 dark:border-gray-700;
   }
 </style>

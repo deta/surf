@@ -510,7 +510,7 @@
 />
 
 <div
-  class="masonry-grid"
+  class="masonry-grid bg-[#f7f7f7] dark:bg-gray-900"
   on:wheel={handleWheel}
   bind:this={gridContainer}
   use:selection
@@ -550,7 +550,6 @@
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
-    background: #f7f7f7;
     container-type: inline-size;
     container-name: masonry-grid;
   }

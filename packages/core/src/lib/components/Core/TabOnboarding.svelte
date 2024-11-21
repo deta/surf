@@ -402,7 +402,7 @@
   style="box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-top-left-radius: 12px; border-top-right-radius: 12px;"
 >
   <div class="flex flex-col items-center justify-center">
-    <p class="text-center text-neutral-700">
+    <p class="text-center text-gray-700">
       Need help? Check out our <a
         rel="noopener noreferrer"
         target="_blank"

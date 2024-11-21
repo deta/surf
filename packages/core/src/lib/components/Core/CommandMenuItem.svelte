@@ -97,7 +97,7 @@
     </div>
 
     {#if item.shortcut}
-      <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1"
+      <Command.Shortcut class="flex-shrink-0 bg-gray-100 rounded-lg p-1"
         >{item.shortcut}</Command.Shortcut
       >
     {/if}

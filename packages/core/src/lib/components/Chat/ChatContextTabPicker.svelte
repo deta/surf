@@ -272,7 +272,9 @@
   {state}
   shouldFilter={false}
   label="chat-add-context-tabs"
-  class={cn('bg-sky-100 shadow-xl p-2 border-sky-200 border-2 rounded-xl relative')}
+  class={cn(
+    'bg-sky-100 dark:bg-gray-900 shadow-xl p-2 border-sky-200 dark:border-gray-800 border-2 rounded-xl relative'
+  )}
 >
   {#if $tabItems.length > 0}
     <button
@@ -282,7 +284,7 @@
         }
         dispatch('close')
       }}
-      class="add-app-btn active:scale-95 shadow-xl appearance-none w-fit mx-auto border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
+      class="add-app-btn active:scale-95 shadow-xl appearance-none w-fit mx-auto border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-200/50 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
       use:tooltip={{
         text: '⌘ + Shift + A',
         position: 'left'

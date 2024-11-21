@@ -67,7 +67,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
-  class="entry max-h-[90px]"
+  class="entry max-h-[90px] text-gray-900 dark:text-gray-100"
   on:click={handleClick}
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
@@ -120,6 +120,16 @@
     &:hover {
       background-color: #ecebe5c6;
     }
+
+    :global(.dark) & {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: #3a3a3a;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: #4a4a4a;
+      }
+    }
   }
 
   .details {
@@ -164,6 +174,14 @@
 
     &:hover {
       background: #ecebe5c6;
+    }
+
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.05);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
     }
   }
 </style>

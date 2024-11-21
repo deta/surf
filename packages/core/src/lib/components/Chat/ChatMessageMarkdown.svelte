@@ -243,7 +243,11 @@
   })
 </script>
 
-<div class=" {inline ? '!prose-sm' : 'py-5 px-6 bg-white rounded-2xl flex flex-col gap-4'}">
+<div
+  class=" {inline
+    ? '!prose-sm !dark:prose-invert'
+    : 'py-5 px-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-50 rounded-2xl flex flex-col gap-4'}"
+>
   {#if filteredSources && filteredSources.length > 0 && showSourcesAtEnd}
     <div class="flex flex-col gap-2">
       <!-- <h3 class="text-md font-semibold my-1">Sources</h3> -->
@@ -297,7 +301,7 @@
         {/each}
 
         {#if collapsedSources.length > filteredSources.length}
-          <div class="text-slate-500 text-sm">
+          <div class="text-gray-500 text-sm">
             +{collapsedSources.length - filteredSources.length} more sources
           </div>
         {/if}

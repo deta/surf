@@ -70,8 +70,8 @@
   })
 </script>
 
-<div class="relative bg-slate-800 rounded-lg overflow-hidden">
-  <div class="flex items-center justify-between px-3 py-2 bg-slate-900">
+<div class="relative bg-gray-900 rounded-lg overflow-hidden">
+  <div class="flex items-center justify-between px-3 py-2 bg-gray-950">
     <div class="text-sm text-gray-300 font-mono">{language}</div>
 
     <button

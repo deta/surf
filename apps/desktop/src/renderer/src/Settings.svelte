@@ -15,6 +15,7 @@
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
+  import AppStylePicker from './components/AppStylePicker.svelte'
 
   // let error = ''
   // let loading = false
@@ -234,6 +235,10 @@
       <article class="general">
         <LayoutPicker
           bind:orientation={userConfigSettings.tabs_orientation}
+          on:update={handleSettingsUpdate}
+        />
+        <AppStylePicker
+          bind:style={userConfigSettings.app_style}
           on:update={handleSettingsUpdate}
         />
       </article>

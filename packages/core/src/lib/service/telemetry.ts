@@ -41,6 +41,7 @@ import { useLogScope } from '@horizon/utils'
 import type { Tab } from '../types/browser.types'
 import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'
+import type { ConfigService } from './config'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -56,6 +57,7 @@ export enum HorizonActivationSource {
 interface UserProperties {
   personas: string[]
   email?: string
+  app_style?: string
 }
 
 // TODO: how much does telemetry hurt performance?
@@ -64,6 +66,7 @@ export class Telemetry {
   active: boolean
   trackHostnames: boolean
   userConfig: UserConfig | null
+  configService: ConfigService | null
   appInfo: ElectronAppInfo | null
   personas: string[]
 
@@ -75,15 +78,20 @@ export class Telemetry {
     this.trackHostnames = config.trackHostnames
 
     this.userConfig = null
+    this.configService = null
     this.appInfo = null
     this.personas = []
     this.log = useLogScope('telemetry')
   }
-  async init(userConfig: UserConfig | null = null) {
+  async init(userConfig: UserConfig | null = null, configService: ConfigService | null = null) {
     if (userConfig) {
       this.userConfig = userConfig
     } else {
       this.userConfig = await window.api.getUserConfig()
+    }
+
+    if (configService) {
+      this.configService = configService
     }
 
     if (!this.userConfig) {
@@ -162,22 +170,32 @@ export class Telemetry {
       return
     }
 
+    const userSettings = this.configService?.getSettings()
+
+    let user_properties: UserProperties = {
+      personas: this.personas,
+      app_style: userSettings?.app_style || this.userConfig?.settings.app_style
+    }
+
     if (!this.isActive()) {
-      this.log.debug('Telemetry is not active, not tracking event', eventName, eventProperties)
+      this.log.debug(
+        'Telemetry is not active, not tracking event',
+        eventName,
+        eventProperties,
+        user_properties
+      )
       return
     }
 
-    this.log.debug('Tracking event', eventName, eventProperties)
+    this.log.debug('Tracking event', eventName, eventProperties, user_properties)
 
-    let user_properties: UserProperties = {
-      personas: this.personas
-    }
     if (!this.userConfig?.anon_telemetry) {
       user_properties = {
         ...user_properties,
         email: this.userConfig?.email
       }
     }
+
     amplitude.track({
       event_type: eventName,
       event_properties: eventProperties,

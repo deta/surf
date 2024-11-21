@@ -96,7 +96,7 @@
     >
       <div
         aria-hidden="true"
-        class="pill flex items-center border-[1px] border-slate-200 {failed
+        class="pill flex items-center border-[1px] border-gray-200 {failed
           ? 'bg-red-50'
           : 'bg-white'} z-0 shadow-md {pill.type === 'image'
           ? 'pl-[5px]'
@@ -136,7 +136,7 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
     slot="content"
-    class="no-drag bg-white hover:bg-neutral-100 relative max-w-96 cursor-pointer"
+    class="no-drag bg-white dark:bg-gray-800 hover:bg-gray-100 w-fit relative max-w-96 cursor-pointer"
     on:click={() => handleSelect(pill.contextItemId)}
     use:contextMenu={contextMenuData}
   >

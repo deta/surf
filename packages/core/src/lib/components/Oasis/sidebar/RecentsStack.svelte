@@ -268,7 +268,7 @@
     {/each}
   </div>
   <button
-    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer flex"
+    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-700 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-200 cursor-pointer flex"
     on:click={() => dispatch('open-stuff')}
   >
     <Icon name="arrow.up.right" size="18px" />
@@ -301,6 +301,7 @@
       height: 100%;
       :global(.preview) {
         height: 100%;
+        border: 0 !important;
         :global(.preview-card .inner) {
           height: 100%;
           :global(.image) {
@@ -452,8 +453,6 @@
 
         z-index: calc(1 - var(--item));
 
-        background: #fefefe;
-        border: 1.5px solid #fff;
         border-radius: 6px;
         box-shadow: 1px 2px 8px rgba(0, 0, 0, 0.13);
 
@@ -481,6 +480,8 @@
           background: rgba(255, 255, 255, 0.7);
           border-color: rgba(180, 180, 180, 0.1);
         }
+
+        @apply bg-[#fefefe] border-[1.5px] border-white dark:bg-gray-900 dark:border-gray-700;
       }
     }
 

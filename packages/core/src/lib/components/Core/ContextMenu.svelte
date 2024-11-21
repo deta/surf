@@ -236,6 +236,16 @@
   }
 
   #context-menu {
+    --ctx-background: #fff;
+    --ctx-border: rgba(0, 0, 0, 0.25);
+    --ctx-shadow-color: rgba(0, 0, 0, 0.12);
+
+    --ctx-item-hover: #2497e9;
+    --ctx-item-danger-hover: #ff4d4f;
+    --ctx-item-submenu-open: rgba(0, 0, 0, 0.065);
+    --ctx-item-text: #210e1f;
+    --ctx-item-text-hover: #fff;
+
     isolation: isolate;
     position: fixed;
     top: var(--y);
@@ -243,11 +253,11 @@
     z-index: 2147483647; /* max value lol */
     min-width: 180px;
     height: fit-content;
-    background: #fff;
+    background: var(--ctx-background);
     padding: 0.25rem;
     border-radius: 9px;
-    border: 0.5px solid rgba(0, 0, 0, 0.25);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    border: 0.5px solid var(--ctx-border);
+    box-shadow: 0 2px 10px var(--ctx-shadow-color);
     user-select: none;
     font-size: 0.95em;
     transform-origin: top left;
@@ -257,6 +267,15 @@
     &::backdrop {
       background-color: rgba(0, 0, 0, 0);
     }
+  }
+
+  :global(body.dark) #context-menu {
+    --ctx-background: #111b2b;
+    --ctx-border: rgba(255, 255, 255, 0.25);
+
+    --ctx-item-text: #fff;
+    --ctx-item-submenu-open: rgba(255, 255, 255, 0.075);
+    --ctx-shadow-color: rgba(125, 125, 125, 0.25);
   }
 
   :global(body[data-context-menu='true'] *) {

@@ -721,7 +721,7 @@
       {#if !onboarding}
         {#each menuItems as item, index}
           <button
-            class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium bg-neutral-50 !ring-0 !ring-transparent transition-colors"
+            class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-900 text-gray-800 dark:text-gray-200 disabled:opacity-25 transition-colors"
             on:click={() => handleMenuItemClick(index)}
             use:tooltip={{
               text: item.tooltip,
@@ -764,14 +764,18 @@
     >
       {#if mode === 'inline'}
         <div class="flex-1 shadow-xl">
-          <div class="bg-neutral-50 rounded-t-lg px-3 py-1">
+          <div
+            class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-t-lg px-3 py-1"
+          >
             {#if aiResponse}
               <div
                 bind:this={aiResponseElement}
                 class="overflow-y-auto max-h-80 py-2 w-full overflow-x-hidden"
               >
                 {#if lastPrompt}
-                  <div class="font-semibold text-neutral-800 pt-2 rounded-xl w-fit mb-2">
+                  <div
+                    class="font-semibold text-gray-800 dark:text-gray-200 pt-2 rounded-xl w-fit mb-2"
+                  >
                     {@html lastPrompt}
                   </div>
                 {/if}
@@ -781,14 +785,14 @@
                   <div class="flex flex-row items-center gap-2 justify-end my-2">
                     {#each menuItems as item, index}
                       <button
-                        class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
+                        class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-900 disabled:opacity-25"
                         on:click={() => handleAIMessageItemClick(index)}
                         use:tooltip={{
                           text: item.name === 'Save...' ? 'Save' : 'Copy',
                           position: 'top'
                         }}
                       >
-                        <Icon name={item.icon} size="14px" className="!text-neutral-500" />
+                        <Icon name={item.icon} size="14px" className="!text-gray-500" />
                       </button>
                     {/each}
                   </div>
@@ -796,7 +800,10 @@
               </div>
             {/if}
 
-            <form class="py-2 flex-1 border-neutral-200" class:border-t={aiResponse}>
+            <form
+              class="py-2 flex-1 border-gray-200 dark:border-gray-700"
+              class:border-t={aiResponse}
+            >
               <div class="flex-grow overflow-y-auto max-h-24 !text-md">
                 <Editor
                   bind:this={editor}
@@ -812,11 +819,11 @@
           </div>
 
           <div
-            class="flex flex-row justify-between items-center text-sm bg-neutral-100 rounded-b-lg px-1 py-1"
+            class="flex flex-row justify-between items-center text-sm bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-b-lg px-1 py-1"
           >
             <div class="flex items-center gap-2">
               <button
-                class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors"
+                class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-100"
                 on:click={() => {
                   if (prompt.length > 0 && !loading) {
                     handleAISubmit()
@@ -827,22 +834,22 @@
                 disabled={prompt.length > 0 && loading}
               >
                 {#if prompt.length > 0 && !loading}
-                  <!-- <kbd class="text-neutral-500">↵</kbd> -->
+                  <!-- <kbd class="text-gray-500">↵</kbd> -->
                   <span>Submit</span>
                 {:else if loading}
                   <div>
                     <span
-                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash"
+                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-gray-400 inline-block animate-flash"
                     ></span>
                     <span
-                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash [animation-delay:0.2s]"
+                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-gray-400 inline-block animate-flash [animation-delay:0.2s]"
                     ></span>
                     <span
-                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-neutral-400 inline-block animate-flash [animation-delay:0.4s]"
+                      class="w-1.5 h-1.5 ml-1.5 rounded-full bg-gray-400 inline-block animate-flash [animation-delay:0.4s]"
                     ></span>
                   </div>
                 {:else}
-                  <!-- <kbd class="text-neutral-500 text-xs">ESC</kbd> -->
+                  <!-- <kbd class="text-gray-500 text-xs">ESC</kbd> -->
                   <span>Cancel</span>
                 {/if}
               </button>
@@ -855,7 +862,7 @@
                 }}
                 disabled={prompt.length > 0 && loading}
               >
-                <kbd class="text-neutral-500 text-xs">
+                <kbd class="text-gray-500 text-xs">
                   {#if navigator.userAgent.includes('Macintosh')}
                     <kbd>⌘+⌫ </kbd>
                   {:else}
@@ -873,7 +880,7 @@
           class="flex gap-2 select-none items-center h-fit rounded-lg p-2 text-base font-medium !ring-0 !ring-transparent transition-colors text-white/75 bg-blue-500 hover:!bg-blue-600"
           on:click={handleTakeScreenshotForChat}
         >
-          <Icon name="message" className="!text-neutral-500" />
+          <Icon name="message" className="!text-gray-500" />
           Use in Chat
         </button>
       {/if}
@@ -900,7 +907,7 @@
   button {
     &:hover,
     &[aria-current='true'] {
-      @apply bg-neutral-200;
+      @apply bg-gray-200;
     }
   }
 </style>

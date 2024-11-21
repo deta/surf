@@ -85,6 +85,7 @@ export const getUserConfig = (path?: string) => {
       search_engine: 'google',
       embedding_model: 'english_small',
       tabs_orientation: 'vertical',
+      app_style: 'light',
       use_semantic_search: false,
       save_to_user_downloads: true,
       show_annotations_in_oasis: true,
@@ -105,6 +106,11 @@ export const getUserConfig = (path?: string) => {
   }
 
   let changedConfig = false
+
+  if (storedConfig.settings.app_style === undefined) {
+    storedConfig.settings.app_style = 'light'
+    changedConfig = true
+  }
 
   if (storedConfig.settings.personas === undefined) {
     storedConfig.settings.personas = []

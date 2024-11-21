@@ -108,7 +108,7 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div on:drop={handleDrop} class="wrapper">
+<div on:drop={handleDrop} class="wrapper text-gray-900 dark:text-gray-100">
   <div class="content">
     <div class="details">
       <input type="text" bind:value={title} on:blur={handleTitleBlur} />
@@ -142,6 +142,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
+
+    :global(.dark) & {
+      background: #181818;
+    }
   }
 
   .content {
@@ -165,6 +169,10 @@
     gap: 1em;
     padding-bottom: 0.5em;
     border-bottom: 1px solid #ededed;
+
+    :global(.dark) & {
+      border-bottom: 1px solid #282828;
+    }
 
     input {
       font-size: 1.9em;

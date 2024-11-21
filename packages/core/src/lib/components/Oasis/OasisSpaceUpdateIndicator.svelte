@@ -196,7 +196,15 @@
 
     &:hover {
       color: #0b689a;
-      background: #ffffffc0;
+      background: rgb(232, 238, 241);
+    }
+
+    :global(.dark) & {
+      color: #b9b9b9;
+      &:hover {
+        color: #ffffff;
+        background: #ffffff10;
+      }
     }
   }
 </style>

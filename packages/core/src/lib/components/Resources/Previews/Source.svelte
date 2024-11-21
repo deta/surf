@@ -35,7 +35,6 @@
 
   .icon {
     flex-shrink: 0;
-    color: #281b53;
     width: 1.25em;
     height: 1.25em;
 
@@ -53,7 +52,6 @@
     font-size: 1em;
     font-weight: 500;
     text-decoration: none;
-    color: #281b53;
     opacity: 0.65;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -62,12 +60,10 @@
 
   .themed {
     .text {
-      color: #ffffff;
       opacity: 1;
     }
 
     .icon {
-      color: #ffffff;
     }
   }
 </style>

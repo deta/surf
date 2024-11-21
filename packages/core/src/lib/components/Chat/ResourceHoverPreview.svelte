@@ -28,17 +28,17 @@
       draggable
     />
   {:else}
-    <div class="text-slate-900 font-medium text-lg">
+    <div class="text-gray-900 dark:text-gray-100 font-medium text-lg">
       {truncate(title, MAX_TITLE_LENGTH)}
     </div>
 
     {#if loading}
       <div class="flex items-center gap-2">
         <Icon name="spinner" />
-        <div class="text-slate-500">Preparing for chat…</div>
+        <div class="text-gray-500">Preparing for chat…</div>
       </div>
     {:else}
-      <div class="text-slate-500">
+      <div class="text-gray-500 dark:text-gray-400">
         {type ? getFileType(type) : 'Resource'}
       </div>
     {/if}

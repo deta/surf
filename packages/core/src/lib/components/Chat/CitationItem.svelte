@@ -352,7 +352,7 @@
     !general}
   class:active={$highlightedCitation === uniqueID}
   class:icon={citationType === 'image' && !skipParsing}
-  class={className}
+  class={`${className} ${general ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-700' : ''}`}
   data-tooltip-target="chat-citation"
   use:contextMenu={contextMenuData}
   draggable={true}
@@ -443,7 +443,7 @@
 
     <div
       slot="content"
-      class="no-drag bg-white hover:bg-neutral-100 relative max-w-96 cursor-pointer"
+      class="no-drag bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 relative max-w-96 cursor-pointer"
       on:click={() => handleClick()}
       use:contextMenu={contextMenuData}
       use:hover={hoveringPreview}
@@ -456,14 +456,11 @@
 <style lang="scss">
   citation {
     cursor: pointer;
-    color: #333;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     padding: 0.5rem;
-    background: white;
-    border: 0.5px solid rgba(131, 146, 165, 0.4);
     border-radius: 12px;
     font-size: 0.9rem;
     font-weight: 500;
@@ -499,6 +496,10 @@
       height: 1.1rem;
       flex-shrink: 0;
       color: #0e53a3;
+
+      :global(.dark) & {
+        color: #d1d1c2;
+      }
     }
 
     &.wide {
@@ -517,13 +518,26 @@
       background: #e4d3fd;
       border: 1px solid #aa8df2;
 
+      :global(.dark) & {
+        background: #374151;
+        border: 1px solid #4b5565;
+      }
+
       &:hover {
         background: rgba(183, 198, 218, 0.2);
+
+        :global(.dark) & {
+          background: rgba(183, 198, 218, 0.2);
+        }
       }
     }
 
     &:hover {
       background: rgba(183, 198, 218, 0.2);
+
+      :global(.dark) & {
+        background: rgba(183, 198, 218, 0.2);
+      }
     }
   }
 </style>

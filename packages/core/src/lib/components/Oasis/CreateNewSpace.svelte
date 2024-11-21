@@ -351,16 +351,16 @@
 />
 
 <div
-  class="flex flex-col items-center justify-center h-screen w-full bg-[#f6faff] overflow-y-auto pb-48 border border-natural-100 border-l-natural-100"
+  class="flex flex-col items-center justify-center h-screen w-full bg-[#f6faff] dark:bg-gray-900 overflow-y-auto pb-48 border border-natural-100 border-l-natural-100 dark:border-gray-800 text-gray-900 dark:text-gray-100"
 >
   <div
-    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-19.5rem)] px-4 py-2 bg-white z-50 border border-gray-200"
+    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-19.5rem)] px-4 py-2 bg-white dark:bg-gray-800 z-50 border border-gray-200 dark:border-gray-700"
     style="border-bottom-width: 0.5px; margin: 0.75rem; border-radius: 12px;"
   >
     <div class="input-wrapper flex-grow">
       <input
         type="text"
-        class="folder-name w-full text-xl font-medium text-gray-700 bg-transparent border-none focus:outline-none"
+        class="folder-name w-full text-xl font-medium text-gray-700 dark:text-gray-100 bg-transparent border-none focus:outline-none"
         id="folder-name"
         name="folder-name"
         placeholder="Enter Space Name"
@@ -377,14 +377,10 @@
       />
     </div>
     <div class="button-group flex space-x-2 ml-4">
-      <button
-        on:click={handleAbortSpaceCreation}
-        class="cancel-button px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-        >Cancel</button
-      >
+      <button on:click={handleAbortSpaceCreation} class="cancel-button px-4 py-2">Cancel</button>
       <button
         on:click={handleSubmit}
-        class="create-button px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:hover:bg-gray-400"
+        class="create-button px-4 py-2 text-white dark:text-gray-100 bg-blue-500 dark:bg-blue-500 rounded-md hover:bg-blue-600 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-700 disabled:hover:bg-gray-400 dark:disabled:hover:bg-gray-700"
         disabled={isCreateButtonDisabled}>Create</button
       >
     </div>
@@ -493,12 +489,12 @@
       </div>
     {/if}
     <div
-      class="ai-voodoo bg-white/95 backdrop-blur-md px-8 pt-4 pb-4 mb-20 mt-4 rounded-[3rem] relative border-[0.5px] border-opacity-20"
+      class="ai-voodoo bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-8 pt-4 pb-4 mb-20 mt-4 rounded-[3rem] relative border-[0.5px] border-gray-200 dark:border-gray-800 border-opacity-20"
       class:loading={$fineTuneEnabled && $isLoading}
     >
       {#if $aiEnabled && !$fineTuneEnabled}
         <div
-          class="ai-description"
+          class="ai-description text-gray-900 dark:text-gray-100 bg-sky-50 dark:bg-sky-900"
           transition:fly={{
             y: 20,
             duration: 420,
@@ -510,7 +506,7 @@
             >Surf will from now automatically add content to your space that matches your
             description.</span
           >
-          <Icon name="sparkles.fill" size="22px" color="#29A6F3" />
+          <Icon name="sparkles.fill" size="22px" className="text-[#29A6F3] dark:text-sky-100" />
         </div>
       {/if}
       {#if $previewIDs.length > 0 || $fineTuneEnabled}
@@ -526,9 +522,12 @@
         </div>
       {/if}
       <div class="input-wrapper z-20">
-        <div class="folder-rules" data-tooltip-target="smart-space-description">
+        <div
+          class="folder-rules text-gray-900 dark:text-gray-100"
+          data-tooltip-target="smart-space-description"
+        >
           {#if $activePillConfig}
-            <div class="prompt-with-pill">
+            <div class="prompt-with-pill text-gray-900 dark:text-gray-100">
               <span>{$userPrompt}</span>
               <div
                 class="pill-content"
@@ -597,9 +596,9 @@
               <button
                 class={`prompt-pill ${
                   $userPrompt.startsWith(template.prompt)
-                    ? 'bg-blue-200 text-blue-800'
-                    : 'bg-blue-50 text-blue-600/80'
-                } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                    ? 'bg-blue-200 dark:bg-blue-700 text-gray-800 dark:text-gray-100'
+                    : 'bg-blue-50 dark:bg-gray-700 text-gray-600/80 dark:text-gray-100'
+                } rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
                 on:click={async () => await handleTemplatePromptClick(template)}
               >
                 {template.prompt}
@@ -784,6 +783,9 @@
 
     &::placeholder {
       color: rgba(40, 86, 143, 0.4);
+      :global(.dark) & {
+        color: rgba(186, 230, 253, 0.4);
+      }
       text-align: left;
     }
 
@@ -805,10 +807,8 @@
     max-width: 24rem;
     font-weight: 500;
     font-size: 0.875rem;
-    color: #28568f;
     text-align: left;
     padding: 0.5rem 0 0.5rem 1rem;
-    background-color: #e1f0ff;
     border-radius: 8px;
     border: 0.5px solid rgba(41, 128, 185, 0.2);
     box-shadow:
@@ -816,6 +816,16 @@
       0 2px 4px rgba(186, 230, 253, 0.8),
       0 4px 8px rgba(186, 230, 253, 0.7),
       0 8px 16px rgba(186, 230, 253, 0.9);
+
+    :global(.dark) & {
+      border: 0.5px solid rgba(41, 128, 185, 0.2);
+      box-shadow:
+        0 1px 2px rgba(30, 58, 138, 0.9),
+        0 2px 4px rgba(30, 58, 138, 0.8),
+        0 4px 8px rgba(30, 58, 138, 0.7),
+        0 8px 16px rgba(30, 58, 138, 0.9);
+    }
+
     span {
       width: 80%;
     }
@@ -842,11 +852,15 @@
   .cancel-button {
     background-color: #fff;
     color: #28568f;
+
+    @apply bg-white text-[#28568f]  dark:text-gray-100 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors rounded-xl;
   }
 
   .cancel-button:hover {
     background-color: #d1edff;
     color: #173861;
+
+    @apply hover:bg-[#d1edff] hover:text-[#173861] dark:hover:bg-gray-700 dark:hover:text-gray-100;
   }
 
   .create-button {

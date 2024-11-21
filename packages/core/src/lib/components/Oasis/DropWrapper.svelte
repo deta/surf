@@ -76,7 +76,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   id={`${zonePrefix ?? ''}oasis-space-${spaceId}`}
-  class="drop-wrapper"
+  class="drop-wrapper bg-[#f7f7f7] dark:bg-gray-900"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
     id: `${zonePrefix ?? ''}oasis-space-${spaceId}`,

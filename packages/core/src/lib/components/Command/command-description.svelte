@@ -8,6 +8,6 @@
   export { className as class }
 </script>
 
-<span class={cn('text-neutral-500 ml-auto text-sm', className)} {...$$restProps}>
+<span class={cn('text-gray-500 ml-auto text-sm', className)} {...$$restProps}>
   <slot />
 </span>

@@ -49,6 +49,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    :global(.dark) & {
+      background: #171717;
+      color: #fff;
+    }
   }
 
   .content {

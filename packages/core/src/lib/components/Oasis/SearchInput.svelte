@@ -40,7 +40,7 @@
 </script>
 
 <div
-  class="flex items-center bg-white px-4 rounded-xl w-full gap-2 border border-sky-400/40 outline outline-[0.5px] outline-offset-0 outline-sky-800/20"
+  class="flex items-center bg-sky-100/10 dark:bg-gray-700 px-4 rounded-xl w-full gap-2 border border-sky-300/40 dark:border-gray-600 outline outline-[0.5px] outline-offset-0 outline-sky-800/20 dark:outline-gray-500/20"
 >
   {#if loading}
     <Icon name="spinner" class="shrink-0 opacity-50 icon" />
@@ -53,7 +53,7 @@
     type="message"
     name="message"
     {placeholder}
-    class="placeholder:text-neutral-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-2.5 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    class="placeholder:text-gray-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-2.5 outline-none disabled:cursor-not-allowed disabled:opacity-50"
     on:keydown={handleKeyDown}
   />
 </div>

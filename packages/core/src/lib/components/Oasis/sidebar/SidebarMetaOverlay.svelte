@@ -56,6 +56,10 @@
 
     background: linear-gradient(0deg, rgb(77 135 240 / 74%) 0%, rgba(0, 0, 0, 0) 100%);
 
+    :global(.dark) & {
+      background: linear-gradient(0deg, rgba(8, 16, 56, 0.74) 0%, rgba(22, 8, 8, 0) 100%);
+    }
+
     transition: height 185ms ease-out;
 
     &:after {

@@ -7,15 +7,9 @@
   import './assets/fonts/Gambarino-Regular.woff2'
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
-  import browserBackground from './assets/bg.webp'
 </script>
 
 <div class="main relative">
-  <img
-    class="w-screen h-screen absolute object-cover opacity-60 select-none pointer-events-none"
-    src={browserBackground}
-    alt="background"
-  />
   <Browser />
 </div>
 

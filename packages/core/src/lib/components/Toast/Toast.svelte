@@ -51,6 +51,12 @@
     background: #fffdf9;
     border: 1px solid #e4dfd6;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+
+    :global(.dark) & {
+      background: #1e293b;
+      border: 1px solid #1e293b;
+      color: rgba(255, 255, 255, 0.7);
+    }
   }
 
   .icon {

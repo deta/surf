@@ -74,9 +74,6 @@
     gap: 0.5rem;
     padding: 0.25rem;
     border-radius: 10px;
-    color: #465b86;
-    background-color: rgb(247, 252, 255);
-    border: 1px solid rgb(186 230 253); // border-sky-200
 
     @media screen and (max-width: 1700px) {
       gap: 0;
@@ -85,6 +82,8 @@
     @media screen and (max-width: 1100px) {
       padding: 0.25rem 0;
     }
+
+    @apply text-[#465b86] dark:text-gray-300 bg-sky-50 border-[1px] dark:bg-gray-700 border-sky-200 dark:border-gray-600;
   }
 
   .filter-icon {
@@ -115,13 +114,12 @@
     transition: background-color 0.2s;
 
     &:hover {
-      color: rgb(2 132 199); // text-sky-600
+      @apply text-sky-600 dark:text-gray-400;
     }
   }
 
   .filter.active {
-    color: rgb(7 89 133); // text-sky-800
-    background: rgb(186 230 253); // bg-sky-200
+    @apply text-sky-800 bg-sky-200 dark:bg-gray-700 dark:text-gray-100;
   }
 
   .filter-select {

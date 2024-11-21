@@ -538,6 +538,10 @@ const api = {
     IPC_EVENTS_RENDERER.toggleTabsPosition.on((_) => callback())
   },
 
+  onToggleTheme: (callback: () => void) => {
+    IPC_EVENTS_RENDERER.toggleTheme.on((_) => callback())
+  },
+
   onCopyActiveTabURL: (callback: () => void) => {
     IPC_EVENTS_RENDERER.copyActiveTabUrl.on((_) => callback())
   },

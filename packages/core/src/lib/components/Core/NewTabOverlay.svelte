@@ -1110,16 +1110,8 @@
   })
 </script>
 
-<div
-  id="drawer-hint"
-  class:show={showDragHint && showTabSearch === 0}
-  style="pointer-events:none; position: fixed; left:0;right:0;bottom:0;height:4rem; z-index: 9;display:flex;justify-content: center;align-items: flex-end;font-weight:500;letter-spacing:0.07px;font-size:0.9em; background: linear-gradient(to top, #00000022, #00000000);color:#00000077; mix-blend-mode: exclude; transition: transform 105ms ease-out; transform: translateY(100%);text-align: center;"
-  use:portal={'body'}
->
-  <span
-    style="background: #fff;padding: 0.5em 1em; border-radius: 1.3em 1.3em 0 0; border: 1px solid rgba(0,0,0,0.15); border-bottom: 0;width:90%;"
-    >Hover to open your Stuff</span
-  >
+<div id="drawer-hint" class:show={showDragHint && showTabSearch === 0} use:portal={'body'}>
+  <span>Hover to open your Stuff</span>
 </div>
 
 <Drawer.Root
@@ -1136,7 +1128,7 @@
     <Drawer.Overlay class="drawer-overlay transition-opacity duration-300 no-drag" />
     <Drawer.Content
       data-vaul-no-drag
-      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl bg-[#FEFFFE] outline-none"
+      class="drawer-content fixed inset-x-4 bottom-4 will-change-transform no-drag z-[50001] mx-auto overflow-hidden rounded-xl bg-[#FEFFFE] dark:bg-gray-900 outline-none"
       style="width: fit-content;"
     >
       <MiniBrowser service={scopedMiniBrowser} />
@@ -1165,7 +1157,7 @@
           </button>
         {:else if showTabSearch === 1 && $searchValue.length < 20 && !$isCreatingNewSpace}
           <button
-            class="absolute right-3 transform bottom-[0.85rem] z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+            class="absolute right-3 transform bottom-[0.85rem] z-10 flex items-center justify-center gap-2 transition-all cursor-pointer hover:bg-sky-300/50 dark:hover:bg-sky-700/50 text-gray-900 dark:text-gray-100 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             on:click={() => {
               showTabSearch = 2
             }}
@@ -1174,7 +1166,7 @@
             <span>
               {$searchValue.length > 0 ? 'Search My Stuff' : 'Open My Stuff'}
             </span>
-            <Command.Shortcut class="flex-shrink-0 bg-neutral-100 rounded-lg p-1">
+            <Command.Shortcut class="flex-shrink-0 bg-gray-100 rounded-lg p-1">
               {#if navigator.platform.startsWith('Mac')}
                 ⌘O
               {:else}
@@ -1185,8 +1177,7 @@
         {/if}
 
         <Command.Root
-          class="[&_[data-cmdk-group-heading]]:text-neutral-500 {showTabSearch === 2 &&
-          $isBuiltInSpace
+          class="[&_[data-cmdk-group-heading]]:text-gray-500 {showTabSearch === 2 && $isBuiltInSpace
             ? ''
             : ''} !relative w-full transition-transform will-change-transform flex flex-col items-center justify-end [&_[data-cmdk-group-heading]]:px-2 [&_[data-cmdk-group-heading]]:font-medium [&_[data-cmdk-group]:not([hidden])_~[data-cmdk-group]]:pt-0 [&_[data-cmdk-group]]:px-2 [&_[data-cmdk-input-wrapper]_svg]:h-5 [&_[data-cmdk-input-wrapper]_svg]:w-5 [&_[data-cmdk-input]]:h-12 [&_[data-cmdk-item]]:px-4 [&_[data-cmdk-item]]:py-4 [&_[data-cmdk-item]_svg]:h-5 [&_[data-cmdk-item]_svg]:w-5"
           loop
@@ -1275,7 +1266,7 @@
                   <Tooltip rootID="stuff" />
                   {#if showTabSearch === 2 && $isBuiltInSpace}
                     <button
-                      class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white hover:bg-pink-300/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+                      class="absolute left-6 bottom-[1.4rem] transform z-[10000] flex items-center justify-center gap-2 transition-all cursor-pointer bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-pink-300/50 dark:hover:bg-pink-700/50 p-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
                       on:click={() => {
                         $onboardingOpen = !$onboardingOpen
                       }}
@@ -1366,7 +1357,7 @@
                               class="content flex flex-col items-center justify-center text-center space-y-4"
                             >
                               <Icon name="spinner" size="22px" />
-                              <p class="text-lg font-medium text-gray-700">
+                              <p class="text-lg font-medium text-gray-700 dark:text-gray-300">
                                 Searching your stuff...
                               </p>
                             </div>
@@ -1378,7 +1369,7 @@
                             >
                               <Icon name="save" size="22px" class="mb-2" />
 
-                              <p class="text-lg font-medium text-gray-700">
+                              <p class="text-lg font-medium text-gray-700 dark:text-gray-300">
                                 No stuff found for "{$searchValue}". Try a different search term.
                               </p>
                             </div>
@@ -1397,8 +1388,8 @@
           {#if $isBuiltInSpace || showTabSearch === 1}
             <div
               class={showTabSearch === 2
-                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px] z-10 p-2 border-[1px] border-neutral-200 m-[0.5rem] rounded-2xl'
-                : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-neutral-100 bg-[rgba(255,255,255,0.9)] backdrop-blur-[30px]'}
+                ? 'w-[calc(100%-19rem)] absolute bottom-0 right-0 flex items-center justify-center bg-[rgba(255,255,255,0.9)] dark:bg-gray-800 backdrop-blur-[30px] text-gray-900 dark:text-gray-100 z-10 p-2 border-[1px] border-gray-200 dark:border-gray-700 m-[0.5rem] rounded-2xl'
+                : 'w-full absolute bottom-0 flex items-center justify-center p-2 border-t-[1px] border-gray-100 dark:border-gray-800 bg-[rgba(255,255,255,0.9)] text-gray-900 dark:text-gray-100 dark:bg-gray-900 backdrop-blur-[30px]'}
             >
               <div class={'flex items-center relative'}>
                 <Command.Input
@@ -1407,12 +1398,14 @@
                   loading={$isLoadingCommandItems || isSearching || $loadingContents}
                   bind:value={$searchValue}
                   class={showTabSearch === 2
-                    ? 'w-[32rem] bg-neutral-200 rounded-lg py-2 px-4'
+                    ? 'w-[32rem] bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg py-2 px-4 border border-gray-200 dark:border-gray-600'
                     : 'w-[32rem] py-4 pl-2'}
                 />
 
                 {#if showTabSearch === 2 && $isBuiltInSpace && !!$searchValue}
-                  <div class="rounded-lg bg-neutral-100 p-2 absolute left-full">
+                  <div
+                    class="rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2 absolute left-full"
+                  >
                     <select
                       bind:value={$selectedFilter}
                       on:change={handleOasisFilterChange}
@@ -1450,8 +1443,46 @@
     content: none;
   }
 
-  #drawer-hint.show {
-    transform: translateY(0) !important;
+  #drawer-hint {
+    pointer-events: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4rem;
+    z-index: 9;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    font-weight: 500;
+    letter-spacing: 0.07px;
+    font-size: 0.9em;
+    mix-blend-mode: exclude;
+    transition: transform 105ms ease-out;
+    transform: translateY(100%);
+    text-align: center;
+
+    background: linear-gradient(to top, #00000022, #00000000);
+
+    > span {
+      background: #fff;
+      padding: 0.5em 1em;
+      border-radius: 1.3em 1.3em 0 0;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      border-bottom: 0;
+      width: 90%;
+    }
+    &.show {
+      transform: translateY(0) !important;
+    }
+  }
+  :global(body.dark) #drawer-hint {
+    background: linear-gradient(to top, #ffffff22, #ffffff00);
+    > span {
+      background: #121828;
+      color: #aaaaaacc;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
   }
   .wrapper {
     display: flex;

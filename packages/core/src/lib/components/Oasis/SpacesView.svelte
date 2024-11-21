@@ -431,7 +431,7 @@
 <svelte:window on:resize={handleResize} />
 
 <div
-  class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem]"
+  class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem] bg-white/95 dark:bg-gray-900/95"
   class:all-spaces-hidden={!$showAllSpaces}
   data-tooltip-target="stuff-spaces-list"
   bind:this={sidebarElement}
@@ -599,9 +599,7 @@
     flex: 1;
     scrollbar-width: none;
     scrollbar-color: transparent transparent;
-    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(24px);
-    border-bottom: 0.5px solid var(--Grey-2, #f4f4f4);
     overflow: hidden;
   }
 
@@ -639,6 +637,10 @@
     background: linear-gradient(rgba(255, 255, 255, 0), rgb(251 253 254));
     pointer-events: none;
     z-index: 100000;
+
+    :global(.dark) & {
+      background: linear-gradient(rgba(0, 0, 0, 0), rgb(17 27 43));
+    }
   }
 
   .built-in-list,
@@ -690,6 +692,10 @@
     background: linear-gradient(rgba(255, 255, 255, 0), rgb(251 253 254));
     pointer-events: none;
     z-index: 100000;
+
+    :global(.dark) & {
+      background: linear-gradient(#111b2b00, #111b2b);
+    }
   }
 
   :global(
@@ -760,14 +766,10 @@
     padding-left: 0.2rem;
     margin-left: -0.2rem;
 
-    &:hover {
-      background: rgb(224 242 254); // bg-sky-100
-      color: rgba(0, 103, 185, 1);
-    }
+    @apply hover:bg-sky-100 hover:text-sky-500 dark:hover:bg-gray-700 dark:hover:text-sky-400;
   }
 
   .folders-header-text {
-    color: #3b578a;
     font-size: 1rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
@@ -776,6 +778,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1;
+
+    @apply text-[#3b578a] dark:text-gray-300;
   }
 
   button {
@@ -820,13 +824,81 @@
     &:hover {
       background: rgb(224 242 254); // bg-sky-100
       color: rgba(0, 103, 185, 1);
+    }
+
+    :global(.dark) & {
+      background: rgba(17, 24, 39, 0.6);
+      border-color: rgba(75, 85, 99, 0.3);
+      color: rgba(147, 197, 253, 0.8);
+      box-shadow:
+        0 1px 1px rgba(0, 0, 0, 0.1),
+        0 1px 2px rgba(0, 0, 0, 0.06),
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 3px 6px rgba(0, 0, 0, 0.02),
+        0 4px 8px rgba(0, 0, 0, 0.01);
+
+      .new-space-text {
+        color: rgba(191, 219, 254, 0.9);
+      }
+
+      &:hover {
+        background: rgba(17, 24, 39, 0.8);
+        color: rgba(191, 219, 254, 1);
+      }
+    }
+
+    &.sticky {
+      position: sticky;
+      z-index: 1000;
+      bottom: 0;
+      backdrop-filter: blur(10px);
+      box-shadow:
+        0 1px 1px rgba(67, 142, 239, 0.05),
+        0 1px 2px rgba(67, 142, 239, 0.03),
+        0 2px 4px rgba(67, 142, 239, 0.02),
+        0 3px 6px rgba(67, 142, 239, 0.01),
+        0 4px 8px rgba(67, 142, 239, 0.005);
       border: 0.5px solid rgba(67, 142, 239, 0.15);
+      background: rgba(224, 242, 254, 0.6);
+      color: rgba(0, 103, 185, 0.7);
+
+      :global(.dark) & {
+        background: rgba(17, 24, 39, 0.6);
+        border-color: rgba(75, 85, 99, 0.3);
+        color: rgba(147, 197, 253, 0.8);
+        box-shadow:
+          0 1px 1px rgba(0, 0, 0, 0.1),
+          0 1px 2px rgba(0, 0, 0, 0.06),
+          0 2px 4px rgba(0, 0, 0, 0.04),
+          0 3px 6px rgba(0, 0, 0, 0.02),
+          0 4px 8px rgba(0, 0, 0, 0.01);
+      }
     }
 
     &.disabled {
-      opacity: 0.5;
+      opacity: 0.9;
       pointer-events: none;
       filter: grayscale(100%);
+    }
+
+    & .icon-wrapper {
+      background: rgba(0, 122, 255, 0.9);
+      border: 1px solid rgba(67, 142, 239, 0.3);
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      padding: 0 1px 0.5px 0;
+      justify-content: center;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+
+      :global(.dark) & {
+        background: rgba(59, 130, 246, 0.9);
+        border-color: rgba(147, 197, 253, 0.3);
+      }
     }
   }
 

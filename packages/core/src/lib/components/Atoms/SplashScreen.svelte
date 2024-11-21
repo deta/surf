@@ -65,12 +65,17 @@
         </g>
       </g>
     </svg>
-    <span class="" style="margin-top: 1rem; font-size: 1.1em; font-weight: 500;">Surf</span>
-    <span class="" style="margin-top: 4px; font-size: 1em;">by Deta</span>
+    <span
+      class="text-gray-900 dark:text-gray-100"
+      style="margin-top: 1rem; font-size: 1.1em; font-weight: 500;">Surf</span
+    >
+    <span class="text-gray-900/60 dark:text-gray-100/60" style="margin-top: 4px; font-size: 1em;"
+      >by Deta</span
+    >
   </div>
 {/if}
 
-<style>
+<style lang="scss">
   .splash {
     position: fixed;
     top: 0;
@@ -83,6 +88,10 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
+
+    :global(.dark) & {
+      background: #181818;
+    }
   }
   .cls-1 {
     fill: none;
@@ -92,6 +101,10 @@
     stroke-dasharray: 250;
     stroke-dashoffset: 0;
     animation: stroke-reveal 1.1s ease-out infinite;
+
+    :global(.dark) & {
+      stroke: #fff;
+    }
   }
   .ttr {
     animation: title-reveal 1.1s ease-out infinite;
@@ -99,13 +112,11 @@
   @keyframes stroke-reveal {
     from {
       stroke-dashoffset: 450;
-      stroke: rgba(255, 255, 255, 0.4);
       stroke-width: 0;
       stroke-opacity: 0.4;
     }
     to {
       stroke-dashoffset: 0;
-      stroke: rgba(0, 0, 0, 1);
       stroke-width: 5px;
       stroke-opacity: 1;
     }

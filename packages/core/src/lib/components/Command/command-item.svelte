@@ -13,7 +13,7 @@
 <CommandPrimitive.Item
   {asChild}
   class={cn(
-    'aria-selected:bg-neutral-200 aria-selected:text-neutral-900 rounded-lg relative flex cursor-pointer select-none items-center  outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+    'aria-selected:bg-gray-200 dark:aria-selected:bg-gray-800 aria-selected:text-gray-900 dark:aria-selected:text-gray-100 rounded-lg relative flex cursor-pointer select-none items-center  outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
     className
   )}
   {...$$restProps}

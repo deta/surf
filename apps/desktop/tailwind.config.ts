@@ -9,6 +9,7 @@ export default {
     './src/**/*.{js,ts,jsx,tsx}',
     './src/**/*.svelte'
   ],
+  darkMode: 'class',
 
   theme: {
     extend: {

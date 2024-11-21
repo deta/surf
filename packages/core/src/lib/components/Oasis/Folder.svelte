@@ -398,7 +398,9 @@
   }}
 >
   <div
-    class="folder {selected ? 'bg-sky-100' : 'hover:bg-sky-50'}"
+    class="folder {selected
+      ? 'bg-sky-100 dark:bg-gray-700'
+      : 'hover:bg-sky-50 dark:hover:bg-gray-600'}"
     on:click={$editMode ? null : handleSpaceSelect}
     on:dblclick={handleDoubleClick}
     aria-hidden="true"
@@ -424,7 +426,7 @@
           />
         {:else}
           <div
-            class="folder-input"
+            class="folder-input text-[#244581] dark:text-sky-100/90"
             style={`width: ${inputWidth};`}
             aria-hidden="true"
             on:click|stopPropagation={handleSpaceSelect}
@@ -567,12 +569,17 @@
         &:hover {
           background: #cee2ff;
         }
+
+        :global(.dark) & {
+          &:hover {
+            background: #244581;
+          }
+        }
       }
 
       .folder-input {
         border: none;
         background: transparent;
-        color: #244581;
         font-size: 1rem;
         font-weight: 500;
         letter-spacing: 0.0025em;
@@ -600,6 +607,11 @@
           padding: 0 0.25rem;
           margin: 0.4rem 0;
           outline: 4px solid rgba(0, 110, 255, 0.4);
+
+          :global(.dark) & {
+            outline: 4px solid rgba(0, 110, 255, 0.4);
+            color: #fff;
+          }
         }
       }
 

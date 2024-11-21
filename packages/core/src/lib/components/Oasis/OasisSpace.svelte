@@ -1453,7 +1453,7 @@
   }}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
-  <div class="relative wrapper bg-sky-100/50">
+  <div class="relative wrapper bg-sky-100/50 dark:bg-gray-900">
     {#if !isEverythingSpace && $spaceData?.folderName !== '.tempspace'}
       <div
         class="drawer-bar transition-transform duration-300 ease-in-out"
@@ -1461,7 +1461,7 @@
       >
         {#if $spaceData?.folderName !== '.tempspace'}
           <div
-            class="drawer-chat-search bg-gradient-to-t from-sky-100/70 to-transparent via-bg-sky-100/10 bg-sky-100/70 backdrop-blur-xl backdrop-saturate-50"
+            class="drawer-chat-search bg-[rgba(255,255,255)] dark:bg-gray-800 text-gray-900 dark:text-gray-100 from-sky-100/70 dark:from-gray-900/90 border-gray-200 dark:border-gray-700 border-[1px] to-transparent via-bg-sky-100/10 dark:via-gray-900/10 backdrop-blur-xl backdrop-saturate-50"
           >
             <div
               class="relative left-1 top-1/2 transform -translate-y-1/2 z-10 place-items-center flex items-center gap-3"
@@ -1473,16 +1473,25 @@
               <Icon name="arrow.left" size="20px" />
             </button> -->
 
-              <div class="settings-wrapper flex items-center gap-2">
+              <div
+                class="settings-wrapper flex items-center gap-2"
+                use:clickOutside={handleCloseSettingsModal}
+              >
                 <button
-                  class="settings-toggle flex flex-col items-start hover:bg-sky-200 rounded-md h-full gap-[0.33rem]"
+                  class="settings-toggle flex flex-col items-start hover:bg-sky-200 dark:hover:bg-gray-800 rounded-md h-full gap-[0.33rem]"
                   on:click={handleOpenSettingsModal}
                 >
                   {#if $spaceData?.folderName}
                     <div
-                      class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800"
+                      class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 dark:text-gray-100"
                     >
-                      <Icon name="chevron.down" size="20px" />
+                      <Icon
+                        name="chevron.down"
+                        size="20px"
+                        class="transition-all duration-200 {$showSettingsModal === true
+                          ? 'rotate-180'
+                          : ''}"
+                      />
                       <span class="font-medium leading-[1] text-left">{$spaceData?.folderName}</span
                       >
                     </div>
@@ -1497,7 +1506,7 @@
                   {/if}
                 </button>
 
-                <div class="w-[2px] h-full min-h-6 bg-sky-800/25 ml-3"></div>
+                <div class="w-[2px] h-full min-h-6 bg-sky-800/25 dark:bg-gray-800/25 ml-3"></div>
 
                 <OasisSpaceUpdateIndicator
                   {space}
@@ -1508,11 +1517,7 @@
                 />
 
                 {#if $showSettingsModal}
-                  <div
-                    class="modal-wrapper"
-                    transition:fly={{ y: 10, duration: 160 }}
-                    use:clickOutside={handleCloseSettingsModal}
-                  >
+                  <div class="modal-wrapper" transition:fly={{ y: 10, duration: 160 }}>
                     <OasisSpaceSettings
                       bind:space={$space}
                       on:refresh={handleRefreshLiveSpace}
@@ -1722,7 +1727,6 @@
     margin: 0.5rem;
     .drawer-chat-search {
       position: relative;
-      border: 0.5px solid rgba(0, 0, 0, 0.15);
       border-radius: 12px;
 
       display: grid;
@@ -1881,7 +1885,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #7d7448;
 
     .content {
       display: flex;
@@ -1894,6 +1897,8 @@
         font-size: 1.2rem;
       }
     }
+
+    @apply text-[#7d7448] dark:text-gray-300;
   }
 
   .settings-wrapper {
@@ -1930,29 +1935,44 @@
     align-items: center;
     padding: 0.65rem;
     border-radius: 0.75rem;
-    // background: #ffffffc0;
     border: none;
-    color: #0b689ad6;
     font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.02rem;
-    transition:
-      color 0.2s ease-in-out,
-      background 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
+
+    // Light theme
+    color: #0b689ad6;
+
+    &:hover {
+      color: #0369a1;
+      background: rgb(232, 238, 241);
+    }
 
     &.activated {
-      background: #ffffffc0;
-      // background: #ff4eed;
-      // color: white;
+      background: rgba(255, 255, 255, 0.75);
 
       &:hover {
-        background: #ffffff;
+        background: rgba(255, 255, 255, 1);
       }
     }
 
-    &:hover {
-      color: #10608a;
-      background: #ffffffc0;
+    // Dark theme
+    :global(.dark) & {
+      color: #7dd3ffd6;
+
+      &:hover {
+        color: #7dd3fc;
+        @apply bg-sky-700/20;
+      }
+
+      &.activated {
+        @apply bg-sky-700/20;
+
+        &:hover {
+          @apply bg-sky-700/40;
+        }
+      }
     }
 
     .chat-text {
@@ -1966,6 +1986,10 @@
       border-radius: 6px;
       font-size: 0.75rem;
       background: #d4dbe4c0;
+
+      :global(.dark) & {
+        background: #1e293b;
+      }
     }
   }
 

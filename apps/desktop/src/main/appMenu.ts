@@ -295,6 +295,11 @@ const template = [
         accelerator: 'CmdOrCtrl+Shift+Alt+B',
         click: () => ipcSenders.toggleTabsPosition()
       },
+      {
+        id: 'toggleTheme',
+        label: 'Toggle Theme',
+        click: () => ipcSenders.toggleTheme()
+      },
       { type: 'separator' },
       {
         label: 'Toggle Right Sidebar',

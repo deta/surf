@@ -1355,10 +1355,12 @@
   on:Drop={handleDrop}
 >
   {#if !$showFloatingClearChat}
-    <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100">
+    <div
+      class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 dark:border-gray-800"
+    >
       {#if $magicPage.responses.length > 0}
         <button
-          class="flex items-center gap-2 p-2 rounded-lg opacity-60 hover:bg-blue-200"
+          class="flex items-center gap-2 p-2 rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100"
           on:click={() => {
             handleClearChat()
           }}
@@ -1367,9 +1369,11 @@
           New Chat
         </button>
       {:else}
-        <div class="flex items-center justify-start text-lg p-1.5 font-semibold">
+        <div
+          class="flex items-center justify-start text-lg p-1.5 font-semibold text-gray-900 dark:text-gray-100"
+        >
           Chat <button
-            class="flex items-center gap-2 p-2 ml-2 rounded-lg opacity-60 hover:bg-blue-200"
+            class="flex items-center gap-2 p-2 ml-2 rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
             on:click={() => {
               $onboardingOpen = true
             }}
@@ -1390,7 +1394,7 @@
           role="button"
           tabindex="0"
           on:click={() => dispatch('close-chat')}
-          class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+          class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-sky-100/50 rounded-lg hover:bg-sky-100 dark:hover:bg-gray-800 hover:text-sky-800 dark:hover:text-sky-100 group cursor-pointer"
         >
           <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
           <Icon name="close" class="hidden group-hover:block" size="20px" />
@@ -1411,7 +1415,7 @@
           >
             <div class="">
               <div
-                class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-6 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
+                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 px-6 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
               >
                 <div class="query">
                   {#if response.role === 'user'}
@@ -1423,16 +1427,16 @@
 
                 <!-- {#if response.usedPageScreenshot}
                   <div class="flex items-center gap-1 group/screenshot">
-                    <div class="w-4 h-4 text-neutral-600">
+                    <div class="w-4 h-4 text-gray-600">
                       <FileIcon kind="image" />
                     </div>
-                    <span class="text-neutral-600 font-normal text-base"
+                    <span class="text-gray-600 font-normal text-base"
                       >Used screenshot as additional context</span
                     >
                     <button
                       use:tooltip={{ text: 'Rerun without screenshot', position: 'left' }}
                       on:click={() => rerunChatMessageWithoutScreenshot()}
-                      class="text-neutral-600 hover:text-neutral-700 opacity-0 group-hover/screenshot:opacity-100"
+                      class="text-gray-600 hover:text-gray-700 opacity-0 group-hover/screenshot:opacity-100"
                     >
                       <Icon name="close" size="16px" />
                     </button>
@@ -1469,7 +1473,7 @@
                     text: 'Open as tab',
                     position: 'left'
                   }}
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 dark:bg-gray-800 hover:bg-sky-200/50 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer"
                 >
                   <Icon name="check" />
                   Saved
@@ -1481,7 +1485,7 @@
                     text: 'Save to My Stuff',
                     position: 'left'
                   }}
-                  class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 hover:bg-sky-200/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 dark:bg-gray-800 hover:bg-sky-200/50 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer"
                 >
                   <Icon name="save" />
                   Save
@@ -1501,7 +1505,7 @@
                   text: 'Copy to Clipboard',
                   position: 'left'
                 }}
-                class="transform active:scale-95 appearance-none border-0 group margin-0 flex items-center py-2.5 px-2.5 bg-sky-100 hover:bg-sky-100/50 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center py-2.5 px-2.5 bg-sky-100 dark:bg-gray-800 hover:bg-sky-100/50 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer"
               >
                 {#if $copied}
                   <Icon name="check" size="16px" />
@@ -1515,7 +1519,7 @@
           <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
             <div class="">
               <div
-                class="font-medium text-neutral-800 bg-sky-100 border-sky-200 border-1 px-4 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
+                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 px-4 py-2 rounded-xl w-fit mb-2 truncate max-w-full text-gray-900 dark:text-gray-100"
               >
                 <div class="flex items-center gap-2">
                   <div class="icon">
@@ -1529,10 +1533,10 @@
 
                 {#if response.usedPageScreenshot && (!response.sources || response.sources.length === 0)}
                   <div class="flex items-center gap-2">
-                    <div class="w-4 h-4 text-neutral-600">
+                    <div class="w-4 h-4 text-gray-600 dark:text-gray-400">
                       <FileIcon kind="image" />
                     </div>
-                    <span class="text-neutral-600 font-normal text-base"
+                    <span class="text-gray-600 dark:text-gray-400 font-normal text-base"
                       >Using screenshot as additional context</span
                     >
                   </div>
@@ -1570,7 +1574,7 @@
 
       {#if $magicPage.errors.length > 0}
         <div
-          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
+          class="flex flex-col bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
         >
           {#each $magicPage.errors as error}
             <div class="info-box">
@@ -1580,7 +1584,7 @@
           {/each}
 
           <button
-            class="absolute top-3 right-3 text-yellow-800 hover:text-yellow-600"
+            class="absolute top-3 right-3 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
             on:click={() => magicPage.update((v) => ({ ...v, errors: [] }))}
           >
             <Icon name="close" />
@@ -1590,11 +1594,11 @@
 
       {#if $hasError}
         <div
-          class="flex flex-col bg-yellow-50 border-yellow-300 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 relative"
+          class="flex flex-col bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
         >
           {$errorMessage}
           <button
-            class="absolute top-5 right-4 text-yellow-800 hover:text-yellow-600"
+            class="absolute top-5 right-4 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
             on:click={() => hasError.set(false)}
           >
             <Icon name="close" />
@@ -1602,16 +1606,16 @@
         </div>
       {/if}
     {:else}
-      <div class="flex flex-col items-center justify-center empty">
+      <div class="flex flex-col items-center justify-center empty text-gray-900 dark:text-gray-100">
         <div class="empty-title" style="line-height: 1;">
           <Icon name="chat" />
           <h1>New Chat</h1>
         </div>
 
-        <p class="text-sky-900">
+        <p class="text-sky-900 dark:text-gray-100">
           Ask questions about specific tabs or start a general conversation.
         </p>
-        <p class=" text-sky-900/60">
+        <p class="text-sky-900/60 dark:text-gray-100/60">
           Use the + icon or select tabs from the tab bar to add context.
           <!-- Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
             .toLowerCase()
@@ -1622,7 +1626,7 @@
   </div>
 
   <div
-    class="chat bg-gradient-to-t from-sky-300/20 via-sky-300/10 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl pb-2"
+    class="chat bg-gradient-to-t from-sky-300/20 via-sky-300/10 dark:from-gray-800/20 dark:via-gray-800/10 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl pb-2"
   >
     {#if $showFloatingClearChat && !$magicPage.running && $magicPage.responses.length >= 1}
       <button
@@ -1632,7 +1636,7 @@
             handleClearChat()
           }
         }}
-        class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer text-xs"
+        class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
       >
         {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
           Clear Chat
@@ -1646,9 +1650,9 @@
       {#if $showExamplePrompts && $resourceToGeneratePromptsFor !== null && $resourceToGeneratePromptsForState === 'idle'}
         <div
           transition:fly={{ y: 200 }}
-          class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto z-0"
+          class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto no-scrollbar z-0"
         >
-          <div class="text-sky-800">
+          <div class="text-sky-800 dark:text-gray-100">
             <Icon name="sparkles" />
           </div>
 
@@ -1670,14 +1674,14 @@
     {#if $magicPage.initializing}
       <div
         transition:slide={{ duration: 150, axis: 'y' }}
-        class="err flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
+        class="err flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
       >
         Preparing tabs for the chat…
       </div>
     {:else if $contextItems.length}
       {#if !$optToggled}
         <div
-          class="flex flex-col bg-blue-50 border-t-blue-300 border-l-blue-300 border-r-blue-300 border-[1px] py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 relative"
+          class="flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
           transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
           data-tooltip-target="context-bar"
         >
@@ -1690,7 +1694,7 @@
             />
             {#if $contextItems.length > 0}
               <button
-                class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200"
+                class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
                 on:click={() => {
                   handleClearContext()
                 }}
@@ -1709,7 +1713,7 @@
 
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
-      class="flex bg-sky-50 border-blue-300 border-[1px] px-4 py-3 gap-2 shadow-lg mx-4"
+      class="flex bg-sky-50 dark:bg-gray-700 border-blue-300 dark:border-gray-600 border-[1px] px-4 py-3 gap-2 shadow-lg mx-4"
       class:rounded-2xl={smallSize}
       class:rounded-xl={!smallSize}
       class:flex-col={!smallSize}
@@ -1744,20 +1748,20 @@
         {/if}
 
         <button
-          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
           on:click={handlePickScreenshot}
           use:tooltip={{
             text: 'Add Screenshot',
             position: 'left'
           }}
         >
-          <Icon name="screenshot" color="#1e3a8a" className="opacity-60" />
+          <Icon name="screenshot" className="opacity-60" />
         </button>
 
         <button
           disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
           popovertarget="chat-add-context-tabs"
-          class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+          class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
           on:click={(e) => {
             $tabPickerOpen = !$tabPickerOpen
           }}
@@ -1766,11 +1770,11 @@
             position: 'left'
           }}
         >
-          <Icon name={'add'} size={'18px'} color="#1e3a8a" className="opacity-60" />
+          <Icon name={'add'} size={'18px'} className="opacity-60" />
         </button>
 
         <button
-          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer text-sm"
+          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
           on:click={() => {
             selectedMode = 'active'
             handleChatSubmit()

@@ -97,8 +97,16 @@
       font-smooth: always;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      :global(.dark) & {
+        color: #d1d1c2;
+      }
+
       &:hover {
         background-color: #e0e0d1;
+
+        :global(.dark) & {
+          background-color: #374151;
+        }
       }
 
       & * {
@@ -124,8 +132,18 @@
     background: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    :global(.dark) & {
+      color: #d1d1c2;
+      background-color: #1a1a1a;
+    }
+
     ::placeholder {
       color: #b8b5a4;
+
+      :global(.dark) & {
+        color: #d1d1c2;
+      }
     }
     &:focus {
       outline: none;
@@ -141,6 +159,11 @@
     background-color: #ffffff;
     border-radius: 8px;
     color: white;
+
+    :global(.dark) & {
+      color: #d1d1c2;
+      background-color: #1a1a1a;
+    }
   }
 
   .info {
@@ -150,5 +173,9 @@
     text-align: left;
     color: #7d7653;
     // border-bottom: 1px solid #e0e0d1;
+
+    :global(.dark) & {
+      color: #d1d1c2;
+    }
   }
 </style>

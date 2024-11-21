@@ -506,12 +506,13 @@
     width: 40rem;
     min-height: 20rem;
     border: 0.5px solid rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
     border-radius: 12px;
     box-shadow:
       0px 0px 0px 1px rgba(0, 0, 0, 0.07),
       0px 4px 10px 0px rgba(0, 0, 0, 0.12);
+
+    @apply bg-white dark:bg-gray-800 dark:border-gray-600;
   }
 
   .content {
@@ -592,6 +593,10 @@
     background: rgba(0, 0, 0, 0.05);
     padding: 0.75rem 1rem;
     border-radius: 8px;
+
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.05);
+    }
 
     .title {
       display: flex;
@@ -719,6 +724,10 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       outline: none;
+
+      :global(.dark) & {
+        background: rgba(155, 155, 155, 0.05);
+      }
     }
   }
 
@@ -730,6 +739,10 @@
     background: rgba(255, 0, 0, 0.1);
     padding: 1rem;
     border-radius: 12px;
+
+    :global(.dark) & {
+      background: rgba(255, 0, 0, 0.25);
+    }
 
     .expand-toggle {
       display: flex;
@@ -848,6 +861,10 @@
       -moz-osx-font-smoothing: grayscale;
       outline: none;
       width: 100%;
+
+      :global(.dark) & {
+        background: rgba(155, 155, 155, 0.05);
+      }
 
       &::placeholder {
         color: inherit;

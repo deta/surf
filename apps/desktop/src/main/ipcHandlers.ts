@@ -434,6 +434,16 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.toggleTabsPosition.sendToWebContents(window.webContents)
   },
 
+  toggleTheme: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.toggleTheme.sendToWebContents(window.webContents)
+  },
+
   copyActiveTabURL: () => {
     const window = getMainWindow()
     if (!window) {

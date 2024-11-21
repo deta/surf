@@ -12,6 +12,7 @@ export type UserConfig = {
 export type UserSettings = {
   embedding_model: 'english_small' | 'english_large' | 'multilingual_small' | 'multilingual_large'
   tabs_orientation: 'vertical' | 'horizontal'
+  app_style: 'light' | 'dark' // Note intentionally used app_style as "app_theme" would be themes in the future?
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
   /** Copy downloaded files to the user's system downloads directory */

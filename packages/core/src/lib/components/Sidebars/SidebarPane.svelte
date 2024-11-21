@@ -140,7 +140,7 @@
     if (side === 'left' && leftIsOpen === State.Closed) {
       leftIsOpen = State.Peek
       dispatch('leftPeekOpen')
-      peekBg = 'bg-blue-300/75 backdrop-blur-sm'
+      peekBg = 'bg-blue-300/75 dark:bg-gray-900/75 backdrop-blur-sm'
     } else if (side === 'right' && rightIsOpen === State.Closed) {
       rightIsOpen = State.Peek
       dispatch('rightPeekOpen')
@@ -223,7 +223,7 @@
     .join(' ')
 
   $: rightBarClasses = [
-    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 bottom-0 flex-col space-y-2`,
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-10 bottom-0 flex-col space-y-2`,
     isDraggingRight
       ? 'transition-none'
       : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
