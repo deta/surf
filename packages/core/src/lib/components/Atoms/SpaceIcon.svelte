@@ -7,14 +7,14 @@
   const dispatch = createEventDispatcher<{ change: [string, string] }>()
   const log = useLogScope('SpaceIcon')
 
-  export let folder: OasisSpace
+  export let folder: OasisSpace | undefined = undefined
   export let interactive = true
 
-  $: spaceData = folder.data
+  $: spaceData = folder?.data
   $: parsedColors = getColors($spaceData?.colors ?? ['#76E0FF', '#4EC9FB'])
 
   const pickRandomColorPair = (colorPairs: [string, string][]): [string, string] => {
-    if (folder.id === 'all') {
+    if (folder?.id === 'all') {
       return colorPairs[0]
     }
     return colorPairs[Math.floor(Math.random() * colorPairs.length)]
