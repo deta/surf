@@ -34,6 +34,12 @@ export class Dragcula {
   // Workarounds for native drag shittyness
   targetDomElement = writable<HTMLElement | null>(null);
 
+  // Listener bindings
+  private _listenerBindings = new Map<
+    EventTarget,
+    [string, (<E extends Event>(e: E) => void)[]][]
+  >();
+
   protected constructor() {
     const img = document.createElement("img");
     img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -85,25 +91,58 @@ export class Dragcula {
     }
     // Reset after native drop
     // FIX: UNBIND
-    document.addEventListener("drop", (e) => {
+    this.addEventListener(document, "drop", (e) => {
       // NOTE: This will cleanup after a native drop, as it wont have dragend called on any element.
       // TODO: Is this correct?
       if (!Dragcula.get().activeDrag?.isNative) return;
       setTimeout(() => this.cleanupDragOperation());
     });
 
-    // FIX: UNBIND
-    document.addEventListener("dragend", (e) => {
+    /* this.addEventListener(document, "dragend", (e) => {    // FIX: UNBIND
       // TODO: (maxu): investigate again.
       setTimeout(() => this.cleanupDragOperation());
-    });
+    });*/
 
     // FIX: UNBIND
-    document.addEventListener("drag", handleDragUpdate);
-    document.addEventListener("dragover", handleDragUpdate);
+    this.addEventListener(document, "drag", handleDragUpdate);
+    this.addEventListener(document, "dragover", handleDragUpdate);
+
+    // FIX: For drag not getting cleaned up outside window..
+    // In both of these cases, there can't be an active drag, so if there is one we can safely cleanup!
+    this.addEventListener(document.documentElement, "mouseleave", () =>
+      this.cleanupDragOperation()
+    );
+    this.addEventListener(document.documentElement, "mouseenter", () =>
+      this.cleanupDragOperation()
+    );
 
     // @ts-ignore
     window.Dragcula = this;
+  }
+
+  public destroy() {
+    for (const [bindingEl, listeners] of this._listenerBindings) {
+      if (!bindingEl) continue;
+      for (const [event, cbs] of listeners) {
+        for (const cb of cbs) {
+          bindingEl.removeEventListener(event, cb);
+        }
+      }
+    }
+  }
+
+  public addEventListener(el: EventTarget, event: string, cb: (e: Event) => void) {
+    if (!this._listenerBindings.has(el)) {
+      this._listenerBindings.set(el, []);
+    }
+    const listeners = this._listenerBindings.get(el)!;
+    let listener = listeners.find(([e]) => e === event);
+    if (!listener) {
+      listener = [event, []];
+      listeners.push(listener);
+    }
+    listener[1].push(cb);
+    el.addEventListener(event, cb);
   }
 
   activeDrag: DragOperation | null = null;
@@ -122,9 +161,10 @@ export class Dragcula {
     document.body.removeAttribute("data-drag-target");
     this.isDragging.set(false);
 
-    HTMLDragZone.ZONES.forEach((zone) => {
+    /* HTMLDragZone.ZONES.forEach((zone) => {
       zone._handleDragLeave();
     });
+    */
 
     // Make sure no previews are dnagling
     // FIX: Ideally this shouldnt happen in the first case.. but better save than sorry

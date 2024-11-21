@@ -108,7 +108,12 @@
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import { Tabs } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
-  import { HTMLAxisDragZone, HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import {
+    Dragcula,
+    HTMLAxisDragZone,
+    HTMLDragZone,
+    type DragculaDragEvent
+  } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import CustomPopover from './Atoms/CustomPopover.svelte'
   import { provideConfig } from '../service/config'
@@ -209,6 +214,10 @@
   const homescreenBackground = derived(homescreenCustomization, (homescreenCustomization) => {
     return homescreenCustomization.background
   })
+
+  // NOTE: Make sure Dragcula is initialized
+  Dragcula.get().isDragging.set(false)
+  onDestroy(Dragcula.get().destroy)
 
   const {
     tabs,

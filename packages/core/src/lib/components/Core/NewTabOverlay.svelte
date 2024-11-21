@@ -1044,19 +1044,19 @@
 
     window.addEventListener('click', dragClickHandler)
   }
-  const handleDragculaDragEnd = (drag: DragOperation) => {
+  const handleDragculaDragEnd = (drag: DragOperation | undefined) => {
     showDragHint = false
     window.removeEventListener('drag', handleDrag)
     // TODO: Only close when dropped outside
 
     window.removeEventListener('click', dragClickHandler)
 
-    log.debug('Drag end', drag, drag.to, drag.from)
+    log.debug('Drag end', drag, drag?.to, drag?.from)
 
     for (const toId of ['drawer', 'folder-', 'overlay-']) {
-      if (drag && drag.to?.id.startsWith(toId)) {
+      if (drag && drag?.to?.id.startsWith(toId)) {
         for (const fromId of ['drawer', 'folder-', 'overlay-']) {
-          if (drag.from?.id.startsWith(fromId)) {
+          if (drag?.from?.id.startsWith(fromId)) {
             return
           }
         }
