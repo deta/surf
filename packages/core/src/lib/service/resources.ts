@@ -924,20 +924,12 @@ export class ResourceManager {
   async deleteResources(ids: string[]) {
     if (!ids.length) return
 
-    const resources = (await Promise.all(ids.map((id) => this.getResource(id)))).filter(
-      (resource): resource is Resource => resource !== null && !resource.dummy
-    )
+    await this.sffs.deleteResources(ids)
+    this.resources.update((resources) => resources.filter((r) => !ids.includes(r.id)))
 
-    if (resources.length > 0) {
-      const ids = resources.map((r) => r.id)
-      await this.sffs.deleteResources(ids)
-
-      this.resources.update((resources) => resources.filter((r) => !ids.includes(r.id)))
-
-      ids.forEach((id) => {
-        this.eventEmitter.emit('deleted', id)
-      })
-    }
+    ids.forEach((id) => {
+      this.eventEmitter.emit('deleted', id)
+    })
   }
 
   async deleteHistoryEntry(id: string) {
