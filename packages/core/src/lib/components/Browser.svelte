@@ -1694,11 +1694,10 @@
     )
     const resource = await resourceManager.getResource(resourceId)
     if (resource?.type === ResourceTypes.PDF) {
-      await tabsManager.addPageTab(`surf://resource/${resourceId}`, {
+      return await tabsManager.addPageTab(`surf://resource/${resourceId}`, {
         active: true,
         trigger: CreateTabEventTrigger.OasisChat
       })
-      return
     }
     const url = resource?.tags?.find(
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
@@ -1742,7 +1741,7 @@
     let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) || null
 
     if (!tab) {
-      tab = await openResourcFromContextAsPageTab(resourceId)
+      tab = (await openResourcFromContextAsPageTab(resourceId)) ?? null
       if (!tab) {
         log.error('failed to open resource from context', resourceId)
         toasts.error('Failed to highlight citation')

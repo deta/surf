@@ -632,37 +632,39 @@
   ) => {
     log.debug('highlighting text', resourceId, answerText, source)
 
-    const toast = toasts.loading('Highlighting Citation..')
+    const pdfPage = source?.metadata?.page
+    let toast
+    if (pdfPage === undefined) toast = toasts.loading('Highlighting Citation..')
+
     const detectedResource = await detectResource()
     if (!detectedResource) {
       log.error('no resource detected')
-      toast.error('Failed to highlight citation')
       return
     }
 
     if (detectedResource.type === ResourceTypes.PDF) {
-      const page = source?.metadata?.page
-      if (!page) {
-        log.debug("page attribute isn't present")
-        toast.error('Failed to find source source page')
+      if (pdfPage === undefined) {
+        log.error("page attribute isn't present")
         return
       }
-      sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, { page, targetText: source.content })
-      toast.success('Citation Highlighted!')
+      sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, {
+        page: pdfPage,
+        targetText: source!.content
+      })
       return
     }
 
     const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
     if (!content || !content.html) {
       log.debug('no content found from web parser')
-      toast.error('Failed to parse content to highlight citation')
+      toast?.error('Failed to parse content to highlight citation')
       return
     }
 
     const textElements = getTextElementsFromHtml(content.html)
     if (!textElements) {
       log.debug('no text elements found')
-      toast.error('Failed to find source text in the page for citation')
+      toast?.error('Failed to find source text in the page for citation')
       return
     }
 
@@ -674,7 +676,7 @@
     )
     if (!docsSimilarity || docsSimilarity.length === 0) {
       log.debug('no docs similarity found')
-      toast.error('Failed to find source text in the page for citation')
+      toast?.error('Failed to find source text in the page for citation')
       return
     }
 
