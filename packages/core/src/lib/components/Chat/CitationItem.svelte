@@ -472,6 +472,7 @@
     line-height: 1;
     padding-top: calc(0.5rem + 1px);
     padding-bottom: calc(0.5rem - 1px);
+    min-width: 4rem;
 
     div {
       font-size: 0.9rem;
