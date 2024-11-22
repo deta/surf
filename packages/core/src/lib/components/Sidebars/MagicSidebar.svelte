@@ -56,7 +56,7 @@
   import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
   import { useTabsManager } from '../../service/tabs'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
-  import { DragTypeNames, type DragTypes } from '../../types'
+  import { DragTypeNames, SpaceEntryOrigin, type DragTypes } from '../../types'
   import Onboarding from '../Core/Onboarding.svelte'
   import { blobToDataUrl } from '../../utils/screenshot'
   import { WebParser } from '@horizon/web-parser'
@@ -970,7 +970,11 @@
       const processSpace = async (spaceId: string) => {
         const spaceContents = await resourceManager.getSpaceContents(spaceId)
         if (spaceContents) {
-          resourceIds.push(...spaceContents.map((content) => content.resource_id))
+          const filteredContents = spaceContents
+            .filter((content) => content.manually_added !== SpaceEntryOrigin.Blacklisted)
+            .map((content) => content.resource_id)
+
+          resourceIds.push(...filteredContents)
         }
       }
 
