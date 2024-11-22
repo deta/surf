@@ -1,77 +1,60 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { fade } from 'svelte/transition'
+  import { onMount, onDestroy } from 'svelte'
+
+  import frame1 from '../../../../public/assets/boot/charC_hairmotion1.png'
+  import frame2 from '../../../../public/assets/boot/charC_hairmotion2.png'
+  import frame3 from '../../../../public/assets/boot/charC_hairmotion3.png'
+  import frame4 from '../../../../public/assets/boot/charC_hairmotion4.png'
+  import { isDev } from '@horizon/utils'
 
   export let show = false
 
+  let fadeOut = false
+
   let done = false
   onMount(() => {
-    setTimeout(() => {
+    if (isDev) {
       done = true
-    }, 1000)
+      fadeOut = true
+      return
+    }
+
+    setTimeout(() => {
+      fadeOut = true
+
+      setTimeout(() => {
+        done = true
+      }, 400)
+    }, 1400)
+  })
+
+  let frame = 0
+  let flipInterval: Timer
+  onMount(() => {
+    flipInterval = setInterval(() => {
+      frame += 1
+      if (frame > 3) frame = 0
+      Array.from(document.querySelectorAll('.flipbook > img')).forEach((e, i) => {
+        if (i === frame) e.style.opacity = '1'
+        else e.style.opacity = '0'
+      })
+    }, 350)
+  })
+  onDestroy(() => {
+    clearInterval(flipInterval)
   })
 </script>
 
 {#if !done || show}
-  <div class="splash">
-    <svg
-      id="Ebene_1"
-      data-name="Ebene 1"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 102.36 99.88"
-      style="margin-top: 30vh;"
-      width="90px"
-      height="90px"
-    >
-      <defs>
-        <style>
-          .cls-1 {
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            stroke-width: 5px;
-          }
-        </style>
-      </defs>
-      <g id="_1AWJB8.tif" data-name="1AWJB8.tif">
-        <g>
-          <path
-            class="cls-1"
-            d="M73.46,58.94c7.08.18,12.8-3.02,17.75-7.6,3.64-3.36,6.52-7.48,7.85-12.33,1.99-7.22.41-11.87-6.91-15.34-2-.95-4.22-1.42-6.32-2.16-1.62-.57-3.26-.44-4.82.03-3.04.92-5.99,2.23-9.08,2.91-2.39.53-3.5,2.82-5.72,3.4"
-          />
-          <path
-            class="cls-1"
-            d="M70.75,24.54c-.4-1.51-.94-3-1.19-4.53-1.38-8.57-6.41-14.1-14.53-16.52-7.93-2.36-15.19-.49-21.07,5.4-4.79,4.8-5.5,10.77-3.97,17.16,1.19,4.96,4.17,8.77,7.89,12.02,1.1.96,2.04,1.99,2.98,3.07"
-          />
-          <path
-            class="cls-1"
-            d="M28.8,22.73c-1.31.36-2.65.55-3.92-.01-3.18-1.4-6.52-2.13-9.97-2.39-7.39-.57-11.3,1.79-12.21,9.06-1.21,9.63,2.98,21.94,14.34,27.1,2.15.98,4.53,1.39,6.92.64"
-          />
-          <path
-            class="cls-1"
-            d="M59.28,39.33c.92,2.03,2.62,3.3,4.54,4.2,5.52,2.61,8.14,6.84,8.9,12.97.59,4.8-1.78,7.87-4.44,10.82-4.51,5-10.69,6.79-17.14,6.87-4.32.05-9.14-.1-12.84-1.96-3.74-1.88-7.4-4.87-9.81-8.77-.83-1.35-1.86-2.58-2.69-3.94-2.32-3.77-2.02-6.84.89-10.25,2.88-3.38,6.43-5.26,10.82-6.51,5.41-1.54,10.86-1.97,16.34-2.55,5.45-.58,8.76-4.2,11.4-8.48.84-1.37,1.55-3.3-.24-4.78-1.51-1.24-1.32-2.89-1.2-4.53"
-          />
-          <path
-            class="cls-1"
-            d="M38.15,72.82c-1.24,9.94,3.12,20.22,13.63,23.68,2.01.66,4.53,1.13,6.89.76"
-          />
-          <path
-            class="cls-1"
-            d="M43.89,17.91c-3.66.15-4.15,1.3-3.72,4.84.53,4.44,1.4,8.74,2.8,12.97.56,1.69,1.87,3.16,1.52,5.12"
-          />
-          <path
-            class="cls-1"
-            d="M52.94,22.28c-.92.25-1.93.34-2.49,1.51,3.38,3.97,2.84,8.09.07,12.22-.8,1.19-1.06,2.51-.91,3.92"
-          />
-        </g>
-      </g>
-    </svg>
-    <span
-      class="text-gray-900 dark:text-gray-100"
-      style="margin-top: 1rem; font-size: 1.1em; font-weight: 500;">Surf</span
-    >
-    <span class="text-gray-900/60 dark:text-gray-100/60" style="margin-top: 4px; font-size: 1em;"
-      >by Deta</span
-    >
+  <div class="splash" class:fadeOut>
+    <div class="flipbook">
+      <img src={frame1} style="opacity: 0;" />
+      <img src={frame2} style="opacity: 0;" />
+      <img src={frame3} style="opacity: 0;" />
+      <img src={frame4} style="opacity: 0;" />
+    </div>
+    <span class="surf text-gray-900 dark:text-gray-100" style="margin-top: 1rem; ">Surf</span>
+    <span class="sub text-gray-900/60 dark:text-gray-100/60">by deta</span>
   </div>
 {/if}
 
@@ -109,6 +92,29 @@
   .ttr {
     animation: title-reveal 1.1s ease-out infinite;
   }
+
+  .flipbook {
+    position: relative;
+    width: 40ch;
+    aspect-ratio: 1 / 1;
+    height: 200px;
+
+    > img {
+      position: absolute;
+      inset: 0;
+      object-fit: cover;
+      opacity: 1;
+    }
+  }
+  .surf {
+    font-family: Gambarino;
+    font-size: 2em;
+    letter-spacing: 0.32px;
+  }
+  .sub {
+    margin-top: 4px;
+    font-size: 0.9em;
+  }
   @keyframes stroke-reveal {
     from {
       stroke-dashoffset: 450;
@@ -131,5 +137,18 @@
     100% {
       opacity: 1;
     }
+  }
+
+  @keyframes fadeOut {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .fadeOut {
+    animation: fadeOut 575ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
   }
 </style>
