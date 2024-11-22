@@ -1100,9 +1100,6 @@
   onMount(() => {
     Dragcula.get().on('dragstart', handleDragculaDragStart)
     Dragcula.get().on('dragend', handleDragculaDragEnd)
-    window.addEventListener('dragend', (e: DragEvent) => {
-      handleDragculaDragEnd(Dragcula.get().activeDrag)
-    })
   })
   onDestroy(() => {
     Dragcula.get().off('dragstart', handleDragculaDragStart)

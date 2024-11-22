@@ -374,6 +374,12 @@ const api = {
     }
   },
 
+  onBrowserFocusChange: (callback: (state: 'focused' | 'unfocused') => void) => {
+    IPC_EVENTS_RENDERER.browserFocusChange.on((_, { state }) => {
+      callback(state)
+    })
+  },
+
   onAdBlockerStateChange: (callback: (partition: string, state: boolean) => void) => {
     IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
       callback(partition, state)

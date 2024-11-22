@@ -20,6 +20,10 @@ export interface AdblockerStateChange {
   state: boolean
 }
 
+export interface BrowserFocusChange {
+  state: 'focused' | 'unfocused'
+}
+
 export interface TrackEvent {
   name: TelemetryEventTypes
   properties: Record<string, any>
@@ -119,6 +123,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   openInvitePage: ipcService.addEvent<void>('open-invite-page'),
   openFeedbackPage: ipcService.addEvent<void>('open-feedback-page'),
   openWelcomePage: ipcService.addEvent<void>('open-welcome-page'),
+  browserFocusChange: ipcService.addEvent<BrowserFocusChange>('browser-focus-change'),
   adBlockerStateChange: ipcService.addEvent<AdblockerStateChange>('adblocker-state-change'),
   trackEvent: ipcService.addEvent<TrackEvent>('track-event'),
   toggleSidebar: ipcService.addEvent<boolean | undefined>('toggle-sidebar'),

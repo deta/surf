@@ -885,11 +885,6 @@
 
   const setShowNewTabOverlay = (value: number) => {
     showNewTabOverlay.set(value)
-    // FIX:es the bug where dragging sth over the app will make it stuck as we dont have a way to check
-    // cursor & drag state outside the app (yet)
-    if (value !== 0) {
-      Dragcula.get().cleanupDragOperation()
-    }
   }
 
   const handleToggleHorizontalTabs = () => {
@@ -2850,6 +2845,12 @@
 
   onMount(() => {
     initResourceDebugger(resourceManager)
+    
+    window.api.onBrowserFocusChange((state) => {
+      if (state === 'unfocused') {
+        Dragcula.get().cleanupDragOperation()
+      }
+    })
 
     const unsubscribeCreated = tabsManager.on('created', (tab, active) => {
       checkScroll()

@@ -56,7 +56,7 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
   }
 
   if (!validIDs.includes(event.sender.id)) {
-    log.warn('Invalid sender:', event.senderFrame.url)
+    log.warn('Invalid sender:', event.senderFrame?.url)
     return false
   }
 
@@ -362,6 +362,16 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.openWelcomePage.sendToWebContents(window.webContents)
+  },
+
+  browserFocusChanged: (state: 'focused' | 'unfocused') => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.browserFocusChange.sendToWebContents(window.webContents, { state })
   },
 
   adBlockChanged: (partition: string, state: boolean) => {

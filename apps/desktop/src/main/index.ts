@@ -194,6 +194,8 @@ const setupApplication = () => {
     app
       .on('browser-window-blur', unregisterShortcuts)
       .on('browser-window-focus', registerShortcuts)
+      .on('browser-window-blur', () => ipcSenders.browserFocusChanged('unfocused'))
+      .on('browser-window-focus', () => ipcSenders.browserFocusChanged('focused'))
       .on('second-instance', (_event, commandLine) => handleOpenUrl(commandLine.pop() ?? ''))
       .on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
       .on('window-all-closed', () => {
