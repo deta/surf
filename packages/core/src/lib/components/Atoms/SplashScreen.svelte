@@ -18,7 +18,6 @@
       fadeOut = true
       return
     }
-
     setTimeout(() => {
       fadeOut = true
 
@@ -105,6 +104,9 @@
       object-fit: cover;
       opacity: 1;
     }
+  }
+  :global(.dark) .flipbook > img {
+    filter: invert(1);
   }
   .surf {
     font-family: Gambarino;
