@@ -952,7 +952,8 @@ window.addEventListener(
       altKey: event.altKey,
       ctrlKey: event.ctrlKey,
       metaKey: event.metaKey,
-      shiftKey: event.shiftKey
+      shiftKey: event.shiftKey,
+      button: event.button
     })
   },
   { passive: true, capture: true }

@@ -212,7 +212,8 @@
           altKey: data.altKey,
           ctrlKey: data.ctrlKey,
           metaKey: data.metaKey,
-          shiftKey: data.shiftKey
+          shiftKey: data.shiftKey,
+          button: data.button
         })
       )
       return

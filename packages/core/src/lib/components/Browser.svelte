@@ -889,6 +889,18 @@
     }
   }
 
+  const handleMouseUp = (e: MouseEvent) => {
+    if (e.button === 3) {
+      if (canGoBack) {
+        $activeBrowserTab?.goBack()
+      }
+    } else if (e.button === 4) {
+      if (canGoForward) {
+        $activeBrowserTab?.goForward()
+      }
+    }
+  }
+
   const startChatWithSelectedTabs = () => {
     if (($activeTab?.type === 'page' || $activeTab?.type === 'space') && !showRightSidebar) {
       toggleRightSidebar()
@@ -4353,7 +4365,7 @@
 
 <SplashScreen show={$showSplashScreen} />
 
-<svelte:window on:keydown={handleKeyDown} />
+<svelte:window on:keydown={handleKeyDown} on:mouseup={handleMouseUp} />
 
 <ToastsProvider service={toasts} />
 
