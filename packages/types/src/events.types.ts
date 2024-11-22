@@ -28,6 +28,8 @@ export enum TelemetryEventTypes {
   DeleteTabSpace = 'Delete Tab Space',
   MoveTab = 'Move Tab',
   OpenInMiniBrowser = 'Open in Mini Browser',
+  SwitchContext = 'Switch Context',
+  MoveTabToContext = 'Move Tab to Context',
 
   // CreateResource = 'Create Resource',
   SaveToOasis = 'Save to Oasis',
@@ -148,6 +150,18 @@ export enum MoveTabEventAction {
   Unpin = 'unpin',
   AddMagic = 'add_magic',
   RemoveMagic = 'remove_magic'
+}
+
+export enum ChangeContextEventTrigger {
+  ContextSwitcher = 'context_switcher',
+  Tab = 'tab',
+  SpaceInOasis = 'space_in_oasis',
+  CommandMenu = 'command_menu'
+}
+
+export enum BrowserContextScope {
+  General = 'general',
+  Space = 'space'
 }
 
 export enum OpenResourceEventFrom {

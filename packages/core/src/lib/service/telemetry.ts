@@ -34,7 +34,13 @@ import {
   MultiSelectResourceEventAction,
   PageChatUpdateContextEventTrigger,
   OpenHomescreenEventTrigger,
-  OpenInMiniBrowserEventFrom
+  OpenInMiniBrowserEventFrom,
+  ChangeContextEventTrigger,
+  BrowserContextScope,
+  RemoveHomescreenItemEventTrigger,
+  AddHomescreenItemEventTrigger,
+  AddHomescreenItemEventSource,
+  UpdateHomescreenEventAction
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -83,6 +89,7 @@ export class Telemetry {
     this.personas = []
     this.log = useLogScope('telemetry')
   }
+
   async init(userConfig: UserConfig | null = null, configService: ConfigService | null = null) {
     if (userConfig) {
       this.userConfig = userConfig
@@ -208,25 +215,36 @@ export class Telemetry {
   async trackCreateTab(
     trigger: CreateTabEventTrigger,
     foreground: boolean,
-    type: Tab['type'] = 'page'
+    type: Tab['type'] = 'page',
+    scope: BrowserContextScope = BrowserContextScope.General
   ) {
     await this.trackEvent(TelemetryEventTypes.CreateTab, {
       trigger: trigger,
       foreground: foreground,
-      type: type
+      type: type,
+      scope: scope
     })
   }
 
-  async trackActivateTab(trigger: ActivateTabEventTrigger, type: Tab['type']) {
+  async trackActivateTab(
+    trigger: ActivateTabEventTrigger,
+    type: Tab['type'],
+    scope: BrowserContextScope = BrowserContextScope.General
+  ) {
     await this.trackEvent(TelemetryEventTypes.ActivateTab, {
       trigger: trigger,
-      type: type
+      type: type,
+      scope: scope
     })
   }
 
-  async trackActivateTabSpace(trigger: ActivateTabEventTrigger) {
+  async trackActivateTabSpace(
+    trigger: ActivateTabEventTrigger,
+    scope: BrowserContextScope = BrowserContextScope.General
+  ) {
     await this.trackEvent(TelemetryEventTypes.ActivateTabSpace, {
-      trigger: trigger
+      trigger: trigger,
+      scope: scope
     })
   }
 
@@ -242,21 +260,48 @@ export class Telemetry {
     })
   }
 
-  async trackDeletePageTab(trigger: DeleteTabEventTrigger) {
+  async trackDeletePageTab(
+    trigger: DeleteTabEventTrigger,
+    scope: BrowserContextScope = BrowserContextScope.General
+  ) {
     await this.trackEvent(TelemetryEventTypes.DeleteTab, {
-      trigger: trigger
+      trigger: trigger,
+      scope: scope
     })
   }
 
-  async trackDeleteSpaceTab(trigger: DeleteTabEventTrigger) {
+  async trackDeleteSpaceTab(
+    trigger: DeleteTabEventTrigger,
+    scope: BrowserContextScope = BrowserContextScope.General
+  ) {
     await this.trackEvent(TelemetryEventTypes.DeleteTabSpace, {
-      trigger: trigger
+      trigger: trigger,
+      scope: scope
     })
   }
 
   async trackMoveTab(action: MoveTabEventAction) {
     await this.trackEvent(TelemetryEventTypes.MoveTab, {
       action: action
+    })
+  }
+
+  async trackContextSwitch(
+    trigger: ChangeContextEventTrigger,
+    from: BrowserContextScope,
+    to: BrowserContextScope
+  ) {
+    await this.trackEvent(TelemetryEventTypes.SwitchContext, {
+      trigger: trigger,
+      from: from,
+      to: to
+    })
+  }
+
+  async trackMoveTabToContext(from: BrowserContextScope, to: BrowserContextScope) {
+    await this.trackEvent(TelemetryEventTypes.MoveTabToContext, {
+      from: from,
+      to: to
     })
   }
 

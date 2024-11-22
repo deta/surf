@@ -4,6 +4,7 @@
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
     AddResourceToSpaceEventTrigger,
+    OpenInMiniBrowserEventFrom,
     ResourceTagsBuiltInKeys,
     SaveToOasisEventTrigger,
     type WebViewEventKeyDown
@@ -33,7 +34,10 @@
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
-  import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
+  import {
+    useMiniBrowserService,
+    type MiniBrowserSelected
+  } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let tab: TabPage
   // export let url: Writable<string>
@@ -42,6 +46,7 @@
   export let highlightSimilarText: string | undefined = undefined
   export let jumpToTimestamp: number | undefined = undefined
   export let browserTab: BrowserTab
+  export let selected: MiniBrowserSelected
   export let isGlobal: boolean = false
 
   let webview: WebviewWrapper
@@ -76,6 +81,8 @@
 
   $: canGoBack = tab?.currentHistoryIndex > 0
   $: canGoForward = tab?.currentHistoryIndex < tab.historyStackIds.length - 1
+
+  $: log.debug('scope', selected.from)
 
   // $: if (webview) {
   //   webview.focus()
@@ -187,10 +194,32 @@
         freshWebview: true
       })
 
+      if (!resource) {
+        log.error('error creating resource', resource)
+        bookmarkingState.set('error')
+        toast?.error('Failed to save page!')
+        return { resource: null, isNew: false }
+      }
+
       oasis.pushPendingStackAction(resource.id, { tabId: tab.id })
 
+      const scopedToSpace =
+        selected.from &&
+        [OpenInMiniBrowserEventFrom.WebPage, OpenInMiniBrowserEventFrom.Chat].includes(
+          selected.from
+        )
+      if (!savedToSpace && scopedToSpace && tabsManager.activeScopeIdValue) {
+        await oasis.addResourcesToSpace(
+          tabsManager.activeScopeIdValue,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+        toast?.success(`Page saved to active space!`)
+      } else {
+        toast?.success('Page Saved!')
+      }
+
       bookmarkingState.set('success')
-      toast?.success('Page Saved!')
 
       oasis.reloadStack()
 
@@ -296,7 +325,7 @@
 <svelte:window on:keydown|capture={handleKeydown} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="mini-browser-wrapper" class:global-modal={isGlobal} on:click|self={close}>
+<div class="mini-browser-wrapper no-drag" class:global-modal={isGlobal} on:click|self={close}>
   <!-- <div class="close-hitarea" on:click={close} aria-hidden="true">
     <span class="label">Click or ESC to close</span>
   </div> -->

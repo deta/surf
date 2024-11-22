@@ -256,14 +256,14 @@
       color: #7d7448;
       outline: none;
       width: 300px;
-     
+
       background: paint(squircle);
       --squircle-radius: 6px;
       --squircle-smooth: 0.2;
       --squircle-outline: 2px;
       --squircle-fill: #e5e2d5;
-      
-       :global(.dark) & {
+
+      :global(.dark) & {
         background-color: #2a2a2a;
         border-color: #3a3a3a;
         color: #e5e5e5;

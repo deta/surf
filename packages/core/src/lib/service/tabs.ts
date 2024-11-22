@@ -2,6 +2,8 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 import { getFileType, isDev, normalizeURL, useLocalStorageStore, useLogScope } from '@horizon/utils'
 import {
   ActivateTabEventTrigger,
+  BrowserContextScope,
+  ChangeContextEventTrigger,
   CreateTabEventTrigger,
   ResourceTagsBuiltInKeys,
   ResourceTypes,
@@ -31,7 +33,7 @@ import type { Telemetry } from './telemetry'
 import { getContext, setContext, tick } from 'svelte'
 import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
-import type { OasisSpace } from './oasis'
+import type { OasisService, OasisSpace } from './oasis'
 import type { Homescreen } from '../components/Oasis/homescreen/homescreen'
 
 export type TabEvents = {
@@ -40,9 +42,15 @@ export type TabEvents = {
   updated: (tab: Tab) => void
   selected: (tab: Tab) => void
   'url-changed': (tab: Tab, newUrl: string) => void
+  'changed-active-scope': (scopeId: string | null) => void
 }
 
+export type TabScopeObject = { tabId: string; scopeId: string | null }
+
 export const TABS_CONTEXT_KEY = 'tabs-manager'
+
+const SCOPED_TAB_DEACTIVATION_TIMEOUT = 1000 * 60 * 5 // deactivate scoped tabs after 5 minutes if the scope is longer active
+const MAX_LAST_USED_SCOPES = 15
 
 export const PAGE_TABS_RESOURCE_TYPES = [
   ResourceTypes.LINK,
@@ -50,6 +58,10 @@ export const PAGE_TABS_RESOURCE_TYPES = [
   ResourceTypes.DOCUMENT,
   ResourceTypes.POST
 ]
+
+export const getBrowserContextScopeType = (scopeId: string | undefined | null) => {
+  return scopeId ? BrowserContextScope.Space : BrowserContextScope.General
+}
 
 class ClosedTabs {
   private MAX_CLOSED_TABS = 96
@@ -77,6 +89,7 @@ export class TabsManager {
   private homescreen: Homescreen
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
+  private oasis: OasisService
   historyEntriesManager: HistoryEntriesManager
 
   tabs: Writable<Tab[]>
@@ -88,6 +101,11 @@ export class TabsManager {
   activeTabMagic: Writable<PageMagic>
   selectedTabs: Writable<Set<{ id: string; userSelected: boolean }>>
   lastSelectedTabId: Writable<string | null>
+  activeScopeId: Writable<string | null>
+  scopedActiveTabs: Writable<TabScopeObject[]>
+  lastUsedScopes: Writable<string[]>
+
+  offloadTabsTimeouts: Map<string, ReturnType<typeof setTimeout>>
 
   activeTab: Readable<Tab | undefined>
   activeBrowserTab: Readable<BrowserTab | undefined>
@@ -96,12 +114,14 @@ export class TabsManager {
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
   magicTabs: Readable<(TabPage | TabSpace | TabResource)[]>
+  activeScopeTabId: Readable<string | null>
 
   constructor(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     telemetry: Telemetry,
-    homescreen: Homescreen
+    homescreen: Homescreen,
+    oasis: OasisService
   ) {
     const storage = new HorizonDatabase()
     this.db = storage.tabs
@@ -109,6 +129,7 @@ export class TabsManager {
     this.historyEntriesManager = historyEntriesManager
     this.telemetry = telemetry
     this.homescreen = homescreen
+    this.oasis = oasis
     this.log = useLogScope('TabsService')
     this.eventEmitter = new EventEmitter() as TypedEmitter<TabEvents>
     this.closedTabs = new ClosedTabs()
@@ -121,6 +142,9 @@ export class TabsManager {
     this.selectedTabs = writable(new Set())
     this.lastSelectedTabId = writable(null)
     this.activeTabsHistory = writable<string[]>([])
+    this.activeScopeId = useLocalStorageStore<string | null>('active-surf-scope', null)
+    this.scopedActiveTabs = useLocalStorageStore<TabScopeObject[]>('scoped-active-tabs', [], true)
+    this.lastUsedScopes = useLocalStorageStore<string[]>('last-used-scopes', [], true)
     this.activeTabMagic = writable<PageMagic>({
       running: false,
       showSidebar: false,
@@ -128,6 +152,8 @@ export class TabsManager {
       responses: [],
       errors: []
     })
+
+    this.offloadTabsTimeouts = new Map()
 
     this.activeTab = derived([this.tabs, this.activeTabId], ([tabs, activeTabId]) => {
       return tabs.find((tab) => tab.id === activeTabId)
@@ -169,8 +195,13 @@ export class TabsManager {
       return tabs.filter((tab) => tab.pinned).sort((a, b) => a.index - b.index)
     })
 
-    this.unpinnedTabs = derived([this.activeTabs], ([tabs]) => {
-      return tabs.filter((tab) => !tab.pinned).sort((a, b) => a.index - b.index)
+    this.unpinnedTabs = derived([this.activeTabs, this.activeScopeId], ([tabs, activeScopeId]) => {
+      return tabs
+        .filter(
+          (tab) =>
+            !tab.pinned && (activeScopeId !== null ? tab.scopeId === activeScopeId : !tab.scopeId)
+        )
+        .sort((a, b) => a.index - b.index)
     })
 
     this.magicTabs = derived([this.activeTabs], ([tabs]) => {
@@ -179,6 +210,53 @@ export class TabsManager {
         | TabSpace
         | TabResource
       )[]
+    })
+
+    // we use derived instead of subscribe so we can listen to changes for both stores, the actual returned value is not used
+    this.activeScopeTabId = derived(
+      [this.activeTabId, this.activeScopeId],
+      ([activeTabId, activeScopeId]) => {
+        const activeTab = this.tabsValue.find((tab) => tab.id === activeTabId)
+
+        if (activeTab?.pinned) return activeTab?.id ?? null
+
+        if (activeScopeId) {
+          if (activeTab?.scopeId === activeScopeId) {
+            return activeTab?.id ?? null
+          }
+
+          const newTabId =
+            this.scopedActiveTabsValue.find((tab) => tab.scopeId === activeScopeId)?.tabId ||
+            this.tabsValue.find((tab) => tab.scopeId === activeScopeId && !tab.pinned)?.id ||
+            this.pinnedTabsValue[0]?.id
+
+          if (newTabId) {
+            this.makeActive(newTabId)
+            return newTabId
+          }
+
+          return null
+        } else if (activeTab?.scopeId) {
+          const newTabId =
+            this.scopedActiveTabsValue.find((tab) => tab.scopeId === null)?.tabId ||
+            this.tabsValue.find((tab) => !tab.scopeId && !tab.pinned)?.id ||
+            this.pinnedTabsValue[0]?.id
+
+          if (newTabId) {
+            this.makeActive(newTabId)
+            return newTabId
+          }
+
+          return null
+        } else {
+          return activeTab?.id ?? null
+        }
+      }
+    )
+
+    // we only have this to make sure the above derived runs
+    this.activeScopeTabId.subscribe((tabId) => {
+      this.log.debug('Active scope tab id changed', tabId)
     })
 
     if (isDev) {
@@ -233,6 +311,14 @@ export class TabsManager {
 
   get selectedTabsValue() {
     return get(this.selectedTabs)
+  }
+
+  get activeScopeIdValue() {
+    return get(this.activeScopeId)
+  }
+
+  get scopedActiveTabsValue() {
+    return get(this.scopedActiveTabs)
   }
 
   private addToActiveTabsHistory(tabId: string) {
@@ -296,6 +382,7 @@ export class TabsManager {
       pinned: false,
       magic: false,
       index: newIndex,
+      scopeId: this.activeScopeIdValue ?? undefined,
       ...tab
     })
 
@@ -368,9 +455,15 @@ export class TabsManager {
 
     if (trigger) {
       if (tab.type === 'page') {
-        await this.telemetry.trackDeletePageTab(trigger)
+        await this.telemetry.trackDeletePageTab(
+          trigger,
+          getBrowserContextScopeType(this.activeScopeIdValue)
+        )
       } else if (tab.type === 'space') {
-        await this.telemetry.trackDeleteSpaceTab(trigger)
+        await this.telemetry.trackDeleteSpaceTab(
+          trigger,
+          getBrowserContextScopeType(this.activeScopeIdValue)
+        )
       }
     }
   }
@@ -434,8 +527,56 @@ export class TabsManager {
     }
   }
 
+  activateTab(tabId: string) {
+    this.log.debug('Activating tab', tabId)
+
+    if (get(this.activatedTabs).includes(tabId)) {
+      this.log.debug('Tab already activated', tabId)
+      this.offloadTabsTimeouts.delete(tabId)
+      return
+    }
+
+    this.activatedTabs.update((tabs) => {
+      if (tabs.includes(tabId)) {
+        return tabs
+      }
+
+      return [...tabs, tabId]
+    })
+
+    this.offloadTabsTimeouts.delete(tabId)
+  }
+
+  deactivateTab(tabId: string) {
+    if (this.activeTabIdValue === tabId) {
+      this.log.debug('Skip deactivating active tab', tabId)
+      return
+    }
+    this.log.debug('Deactivating tab', tabId)
+    this.activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
+  }
+
+  addTabToScopedActiveTabs(tab: Tab) {
+    const existingTabForSameSpace = this.scopedActiveTabsValue.find(
+      (t) => t.scopeId === (tab.scopeId ?? null)
+    )
+
+    this.scopedActiveTabs.update((items) => {
+      const newTabs = existingTabForSameSpace
+        ? items.filter((t) => t.tabId !== existingTabForSameSpace.tabId)
+        : items
+
+      if (!newTabs.find((t) => t.tabId === tab.id)) {
+        return [...newTabs, { tabId: tab.id, scopeId: tab.scopeId ?? null }]
+      }
+
+      return newTabs
+    })
+  }
+
   async makeActive(tabId: string, trigger?: ActivateTabEventTrigger) {
     this.log.debug('Making tab active', tabId)
+
     const tab = this.tabsValue.find((tab) => tab.id === tabId)
     if (!tab) {
       this.log.error('Tab not found', tabId)
@@ -457,15 +598,10 @@ export class TabsManager {
       }
     }
 
-    this.activatedTabs.update((tabs) => {
-      if (tabs.includes(tabId)) {
-        return tabs
-      }
-
-      return [...tabs, tabId]
-    })
-
+    this.activateTab(tabId)
     this.activeTabId.set(tabId)
+    this.addTabToScopedActiveTabs(tab)
+
     this.addToActiveTabsHistory(tabId)
     this.homescreen.setVisible(false)
 
@@ -491,10 +627,17 @@ export class TabsManager {
     this.emit('selected', tab)
 
     if (trigger) {
-      this.telemetry.trackActivateTab(trigger, tab.type)
+      this.telemetry.trackActivateTab(
+        trigger,
+        tab.type,
+        getBrowserContextScopeType(this.activeScopeIdValue)
+      )
 
       if (tab.type === 'space') {
-        this.telemetry.trackActivateTabSpace(trigger)
+        this.telemetry.trackActivateTabSpace(
+          trigger,
+          getBrowserContextScopeType(this.activeScopeIdValue)
+        )
       }
     }
   }
@@ -598,7 +741,8 @@ export class TabsManager {
     await this.telemetry.trackCreateTab(
       opts?.trigger ?? CreateTabEventTrigger.Other,
       opts?.active ?? false,
-      'page'
+      'page',
+      getBrowserContextScopeType(this.activeScopeIdValue)
     )
 
     return newTab as TabPage
@@ -615,6 +759,13 @@ export class TabsManager {
         colors: space.dataValue.colors
       },
       opts
+    )
+
+    await this.telemetry.trackCreateTab(
+      opts?.trigger ?? CreateTabEventTrigger.Other,
+      opts?.active ?? false,
+      'space',
+      getBrowserContextScopeType(this.activeScopeIdValue)
     )
 
     return newTab
@@ -637,7 +788,8 @@ export class TabsManager {
     await this.telemetry.trackCreateTab(
       opts?.trigger ?? CreateTabEventTrigger.Other,
       opts?.active ?? false,
-      'resource'
+      'resource',
+      getBrowserContextScopeType(this.activeScopeIdValue)
     )
 
     return newTab
@@ -789,17 +941,132 @@ export class TabsManager {
     }
   }
 
+  changeScope(
+    scopeId: string | null,
+    trigger: ChangeContextEventTrigger = ChangeContextEventTrigger.ContextSwitcher
+  ) {
+    const currentActiveScope = this.activeScopeIdValue
+    this.log.debug('changing active scope from', currentActiveScope, 'to', scopeId)
+
+    if (scopeId === null) {
+      this.activeScopeId.set(null)
+      this.emit('changed-active-scope', null)
+    } else {
+      this.activeScopeId.set(scopeId)
+      this.emit('changed-active-scope', scopeId)
+
+      this.lastUsedScopes.update((scopes) => {
+        const filteredScopes = (scopes ?? []).filter((s) => s !== scopeId)
+        return [scopeId, ...filteredScopes].slice(0, MAX_LAST_USED_SCOPES)
+      })
+
+      this.log.debug('preventing scoped tabs from being offloaded', scopeId)
+      this.cancelScopedTabsOffloading(scopeId)
+    }
+
+    // offload tabs from the previous active scope (we intentionally skip it for the default browsing context e.g. no current active scope)
+    if (currentActiveScope && currentActiveScope !== scopeId) {
+      this.log.debug('triggering tab offloading timeout for previous active scope')
+      this.triggerScopedTabsOffloading(currentActiveScope)
+    }
+
+    this.log.debug('changed active scope', scopeId)
+    this.telemetry.trackContextSwitch(
+      trigger,
+      getBrowserContextScopeType(currentActiveScope),
+      getBrowserContextScopeType(scopeId)
+    )
+  }
+
+  async scopeTab(tabId: string, scopeId: string | null) {
+    this.log.debug('Scoping tab', tabId, 'to', scopeId)
+
+    const tab = this.tabsValue.find((tab) => tab.id === tabId)
+    const currentScopeId = tab?.scopeId
+
+    if (this.activeTabIdValue === tabId && scopeId !== this.activeScopeIdValue) {
+      this.log.debug('Changing active tab', tabId)
+      const lastActiveTabId = this.unpinnedTabsValue.find((tab) => tab.id !== tabId)?.id
+      if (lastActiveTabId) {
+        this.makeActive(lastActiveTabId)
+      } else {
+        this.makeActive(this.pinnedTabsValue[0].id)
+      }
+    }
+
+    // if the tab is active for its scope, remove it from the list
+    const tabIsActiveForItsScope = this.scopedActiveTabsValue.find((t) => t.tabId === tabId)
+    if (tabIsActiveForItsScope) {
+      this.scopedActiveTabs.update((items) => items.filter((t) => t.tabId !== tabId))
+    }
+
+    await this.update(tabId, { scopeId: scopeId ?? undefined })
+
+    this.telemetry.trackMoveTabToContext(
+      getBrowserContextScopeType(currentScopeId),
+      getBrowserContextScopeType(scopeId)
+    )
+  }
+
+  async deleteScopedTabs(scopeId: string) {
+    this.log.debug('Deleting tabs for scope', scopeId)
+    const tabsToDelete = this.tabsValue.filter((tab) => tab.scopeId === scopeId)
+
+    if (tabsToDelete.length > 0) {
+      this.log.debug('Deleting tabs', tabsToDelete)
+      await Promise.all(tabsToDelete.map((tab) => this.delete(tab.id)))
+    }
+  }
+
+  triggerScopedTabsOffloading(scopeId: string) {
+    this.log.debug('Triggering offloading of scoped tabs for scope', scopeId)
+    const tabsToUpdate = this.tabsValue.filter(
+      (tab) => tab.scopeId === scopeId && !tab.pinned // && tab.id !== this.activeTabIdValue
+    )
+
+    if (tabsToUpdate.length > 0) {
+      this.log.debug('Triggering offloading of tabs', tabsToUpdate)
+      for (const tab of tabsToUpdate) {
+        const timeout = setTimeout(() => {
+          this.offloadTabsTimeouts.delete(tab.id)
+          this.deactivateTab(tab.id)
+        }, SCOPED_TAB_DEACTIVATION_TIMEOUT)
+
+        this.offloadTabsTimeouts.set(tab.id, timeout)
+      }
+    }
+  }
+
+  cancelScopedTabsOffloading(scopeId: string) {
+    this.log.debug('Cancelling offloading of scoped tabs for scope', scopeId)
+    const tabsToUpdate = this.tabsValue.filter((tab) => tab.scopeId === scopeId && !tab.pinned)
+
+    if (tabsToUpdate.length > 0) {
+      this.log.debug('Cancelling offloading of tabs', tabsToUpdate)
+      for (const tab of tabsToUpdate) {
+        const timeout = this.offloadTabsTimeouts.get(tab.id)
+        this.log.debug('Cancelling offloading of tab', tab.id, timeout)
+        if (timeout) {
+          clearTimeout(timeout)
+          this.offloadTabsTimeouts.delete(tab.id)
+        }
+      }
+    }
+  }
+
   static provide(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     telemetry: Telemetry,
-    homescreen: Homescreen
+    homescreen: Homescreen,
+    oasis: OasisService
   ) {
     const tabsService = new TabsManager(
       resourceManager,
       historyEntriesManager,
       telemetry,
-      homescreen
+      homescreen,
+      oasis
     )
     setContext(TABS_CONTEXT_KEY, tabsService)
     return tabsService

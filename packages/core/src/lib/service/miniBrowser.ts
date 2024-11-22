@@ -25,6 +25,7 @@ export type MiniBrowserSelected = {
   id: string
   type: 'tab'
   data: TabPage
+  from?: OpenInMiniBrowserEventFrom
   resource?: Resource
   browserTab?: BrowserTab
   selection?: {
@@ -116,6 +117,7 @@ export class MiniBrowser {
       id: generateID(),
       type: 'tab',
       data: tab,
+      from: opts?.from,
       resource: resource,
       selection: {
         text: opts?.highlightSimilarText,
@@ -144,6 +146,7 @@ export class MiniBrowser {
       id: generateID(),
       type: 'tab',
       data: tab,
+      from: opts?.from,
       resource: undefined,
       selection: {
         text: opts?.highlightSimilarText,
@@ -168,6 +171,7 @@ export class MiniBrowser {
       id: generateID(),
       type: 'tab',
       data: tab,
+      from: opts?.from,
       selection: {
         text: opts?.highlightSimilarText,
         timestamp: opts?.jumptToTimestamp

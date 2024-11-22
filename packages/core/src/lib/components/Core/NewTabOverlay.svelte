@@ -1020,6 +1020,10 @@
     })
   }
 
+  const closeOverlay = () => {
+    showTabSearch = 0
+  }
+
   let showDragHint = false
   // Used to reset dragcula when clicking the page after dragging (to prevent the drawer from being stuck)
   const dragClickHandler = (_e: MouseEvent) => {
@@ -1254,6 +1258,7 @@
                       on:open-space-and-chat
                       on:delete-space={handleDeleteSpace}
                       on:handled-drop={handlePostDropOnSpace}
+                      on:close-oasis={closeOverlay}
                       on:Drop
                     />
                   {/key}

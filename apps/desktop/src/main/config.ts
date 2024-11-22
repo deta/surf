@@ -94,6 +94,7 @@ export const getUserConfig = (path?: string) => {
       live_spaces: false,
       annotations_sidebar: false,
       homescreen: false,
+      experimental_browsing_context: false,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -167,6 +168,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.save_to_user_downloads === undefined) {
     storedConfig.settings.save_to_user_downloads = true
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_browsing_context === undefined) {
+    storedConfig.settings.experimental_browsing_context = false
     changedConfig = true
   }
 

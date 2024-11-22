@@ -1,6 +1,7 @@
 <script lang="ts">
   export let colors: [string, string]
   export let size: string = '100%'
+  export let style: string = ''
 
   $: minSize = size === '100%' ? '1.25rem' : size
 </script>
@@ -8,7 +9,7 @@
 <div
   class="color-icon"
   on:click
-  style="--color1: {colors[0]}; --color2: {colors[1]}; --size: {size}; --min-size: {minSize}"
+  style="--color1: {colors[0]}; --color2: {colors[1]}; --size: {size}; --min-size: {minSize}; {style}"
   aria-hidden="true"
 ></div>
 

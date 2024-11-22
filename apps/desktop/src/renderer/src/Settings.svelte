@@ -298,6 +298,14 @@
               </section>
             {/if}
           </SettingsOption>
+
+          <SettingsOption
+            icon="circle-dot"
+            title="Spaces as Browsing Context"
+            description="Use Spaces to separate tabs into different browsing contexts."
+            bind:value={userConfigSettings.experimental_browsing_context}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}

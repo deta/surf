@@ -17,6 +17,7 @@
     'open-space-as-tab': OpenSpaceAsTabEvent
     'space-selected': SpaceSelectedEvent
     'open-space-and-chat': { spaceId: string }
+    'use-as-context': string
     pin: string
     unpin: string
     Drop: { drag: DragculaDragEvent; spaceId: string }
@@ -49,6 +50,8 @@
   import { useTelemetry } from '../../service/telemetry'
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let folder: OasisSpace
   export let selected: boolean
@@ -63,6 +66,8 @@
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
+  const config = useConfig()
+  const userSettings = config.settings
 
   let folderDetails = folder.data
   let inputWidth = `${$folderDetails.folderName.length}ch`
@@ -284,6 +289,10 @@
     dispatch('update-data', { colors: event.detail })
   }
 
+  const handleOpenAsContext = () => {
+    dispatch('use-as-context', folder.id)
+  }
+
   const handleKeyDown = async (e: KeyboardEvent) => {
     e.stopPropagation()
 
@@ -376,6 +385,13 @@
       ...(folder.id !== 'all'
         ? [
             { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
+            {
+              type: 'action',
+              hidden: !$userSettings.experimental_browsing_context,
+              icon: generalContext.icon,
+              text: 'Open as Context',
+              action: handleOpenAsContext
+            },
             {
               type: 'action',
               icon: 'chat',

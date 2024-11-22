@@ -79,3 +79,23 @@ export function hover(node: HTMLElement, store: Writable<boolean>) {
     }
   }
 }
+
+export function focus(node: HTMLElement, store: Writable<boolean>) {
+  const handleFocus = () => {
+    store.set(true)
+  }
+
+  const handleBlur = () => {
+    store.set(false)
+  }
+
+  node.addEventListener('focus', handleFocus)
+  node.addEventListener('blur', handleBlur)
+
+  return {
+    destroy() {
+      node.removeEventListener('focus', handleFocus)
+      node.removeEventListener('blur', handleBlur)
+    }
+  }
+}

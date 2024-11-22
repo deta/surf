@@ -121,7 +121,7 @@
           )
           .map((space) => ({
             type: 'action',
-            icon: '',
+            icon: space.dataValue.colors,
             text: space.dataValue.folderName,
             action: () => handleAddToSpace(space.id)
           }))

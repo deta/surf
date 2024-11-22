@@ -12,17 +12,18 @@
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { BookmarkTabState, Tab, TabPage, TabSpace } from '../../types/browser.types'
-  import { writable, type Writable } from 'svelte/store'
+  import { derived, writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTypes, type DragTypes, DragTypeNames } from '../../types'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
-  import { contextMenu } from './ContextMenu.svelte'
+  import { contextMenu, type CtxItem } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useTabsManager } from '../../service/tabs'
   import {
+    ChangeContextEventTrigger,
     DeleteTabEventTrigger,
     OpenInMiniBrowserEventFrom,
     SaveToOasisEventTrigger
@@ -35,6 +36,8 @@
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
   import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -59,6 +62,7 @@
   const tabsManager = useTabsManager()
   const userConfig = useConfig()
   const oasis = useOasis()
+  const toasts = useToasts()
   const homescreen = useHomescreen()
   const globalMiniBrowser = useGlobalMiniBrowser()
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
@@ -425,6 +429,63 @@
     return `${baseClasses} ${activeClasses} ${magicClasses} ${selectedClasses} ${styleClasses} ${hoverClasses}`
   }
 
+  const contextMenuMoveTabsToSpaces = derived(
+    [spaces, tabsManager.activeScopeId],
+    ([spaces, activeScopeId]) => {
+      const handleMove = async (spaceId: string | null, label: string, makeActive = false) => {
+        try {
+          await tabsManager.scopeTab(tab.id, spaceId)
+
+          if (makeActive) {
+            await tabsManager.makeActive(tab.id)
+          }
+
+          toasts.success(`Tabs moved to ${label}!`)
+        } catch (e) {
+          toasts.error(`Failed to add to ${label}`)
+        }
+      }
+
+      return [
+        {
+          type: 'action',
+          icon: generalContext.icon,
+          text: generalContext.label,
+          action: () => handleMove(null, generalContext.label)
+        } as CtxItem,
+        {
+          type: 'action',
+          icon: newContext.icon,
+          text: newContext.label,
+          action: async () => {
+            const space = await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab, {
+              newTab: false
+            })
+            await handleMove(space.id, space.dataValue.folderName, true)
+          }
+        } as CtxItem,
+        ...spaces
+          .filter(
+            (e) =>
+              e.id !== 'all' &&
+              e.id !== 'inbox' &&
+              e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
+              !e.dataValue.builtIn &&
+              e.id !== activeScopeId
+          )
+          .map(
+            (space) =>
+              ({
+                type: 'action',
+                icon: space.dataValue.colors,
+                text: space.dataValue.folderName,
+                action: () => handleMove(space.id, space.dataValue.folderName)
+              }) as CtxItem
+          )
+      ]
+    }
+  )
+
   onMount(() => {
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
@@ -535,7 +596,16 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         action: () => handleRemoveBookmark()
       },
       { type: 'separator', hidden: tab.type !== 'page' },
-
+      {
+        type: 'action',
+        hidden: tab.type !== 'space' || !$userSettings.experimental_browsing_context,
+        icon: generalContext.icon,
+        text: 'Open as Context',
+        action: () => {
+          if (tab.type !== 'space') return
+          tabsManager.changeScope(tab.spaceId, ChangeContextEventTrigger.Tab)
+        }
+      },
       {
         type: 'action',
         hidden: isMagicActive,
@@ -571,7 +641,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           if (url) navigator.clipboard.writeText(url)
         }
       },
-
+      { type: 'separator', hidden: !$userSettings.experimental_browsing_context },
+      {
+        type: 'sub-menu',
+        hidden: !$userSettings.experimental_browsing_context,
+        icon: 'circle.dot',
+        text: 'Move Tabs to Space',
+        items: $contextMenuMoveTabsToSpaces
+      },
       { type: 'separator' },
       {
         type: 'action',

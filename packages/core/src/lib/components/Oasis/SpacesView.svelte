@@ -9,6 +9,7 @@
     'create-empty-space': void
     'delete-space': DeleteSpaceEvent
     'handled-drop': void
+    'close-oasis': void
   }
 </script>
 
@@ -32,7 +33,11 @@
   import type { Readable } from 'svelte/store'
   import { useTelemetry } from '../../service/telemetry'
   import { onboardingSpace } from '../../constants/examples'
-  import { CreateSpaceEventFrom, OpenSpaceEventTrigger } from '@horizon/types'
+  import {
+    ChangeContextEventTrigger,
+    CreateSpaceEventFrom,
+    OpenSpaceEventTrigger
+  } from '@horizon/types'
   import type { ResourceManager } from '../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
@@ -277,6 +282,11 @@
     }
   }
 
+  const handleUseAsContext = (spaceId: string) => {
+    tabsManager.changeScope(spaceId, ChangeContextEventTrigger.SpaceInOasis)
+    dispatch('close-oasis')
+  }
+
   const handleWheel = (event: WheelEvent) => {
     if (sidebarElement) {
       sidebarElement.scrollLeft += event.deltaY
@@ -486,6 +496,7 @@
             on:space-selected={() => handleSpaceSelect(folder.id)}
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+            on:use-as-context={() => handleUseAsContext(folder.id)}
             on:open-space-and-chat
             on:Drop
             on:editing-start={handleEditingStart}
@@ -564,6 +575,7 @@
             on:space-selected={() => handleSpaceSelect(folder.id)}
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+            on:use-as-context={() => handleUseAsContext(folder.id)}
             on:open-space-and-chat
             on:Drop
             on:editing-start={handleEditingStart}

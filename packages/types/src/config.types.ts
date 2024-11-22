@@ -23,6 +23,7 @@ export type UserSettings = {
   annotations_sidebar: boolean
   live_spaces: boolean
   homescreen: boolean
+  experimental_browsing_context: boolean
   /**
    * @deprecated use individual feature flags instead
    */

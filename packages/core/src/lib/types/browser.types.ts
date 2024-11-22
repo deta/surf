@@ -29,6 +29,7 @@ export interface BaseTab {
   index: number
   pinned: boolean
   magic: boolean
+  scopeId?: string
 }
 
 export interface TabPage extends BaseTab {

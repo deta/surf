@@ -100,7 +100,9 @@
     MultiSelectResourceEventAction,
     PageChatUpdateContextEventTrigger,
     OpenHomescreenEventTrigger,
-    OpenInMiniBrowserEventFrom
+    OpenInMiniBrowserEventFrom,
+    BrowserContextScope,
+    ChangeContextEventTrigger
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -129,12 +131,12 @@
   import DevOverlay from './Browser/DevOverlay.svelte'
   import BrowserActions from './Browser/BrowserActions.svelte'
   import CreateLiveSpace from './Oasis/CreateLiveSpace.svelte'
-  import { createTabsManager } from '../service/tabs'
+  import { createTabsManager, getBrowserContextScopeType } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
   import ScreenshotPicker, { type ScreenshotPickerMode } from './Webview/ScreenshotPicker.svelte'
   import { captureScreenshot, getHostFromURL, getScreenshotFileName } from '../utils/screenshot'
   import { useResizeObserver } from '../utils/observers'
-  import { contextMenu, prepareContextMenu } from './Core/ContextMenu.svelte'
+  import { contextMenu, prepareContextMenu, type CtxItem } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
   import Tooltip from './Onboarding/Tooltip.svelte'
   import { launchTimeline, endTimeline, hasActiveTimeline } from './Onboarding/timeline'
@@ -151,6 +153,8 @@
   import HomescreenToggleButton from './Oasis/homescreen/HomescreenToggleButton.svelte'
   import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
   import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
+  import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
+  import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -202,13 +206,16 @@
   const toasts = provideToasts()
   const config = provideConfig()
   const homescreen = provideHomescreen(telemetry)
+  const oasis = provideOasis(resourceManager, config)
   const tabsManager = createTabsManager(
     resourceManager,
     historyEntriesManager,
     telemetry,
-    homescreen
+    homescreen,
+    oasis
   )
-  const oasis = provideOasis(resourceManager, tabsManager, config)
+  oasis.attachTabsManager(tabsManager)
+
   const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
@@ -932,7 +939,12 @@
       currentHistoryIndex: -1
     })
 
-    telemetry.trackCreateTab(CreateTabEventTrigger.AddressBar, true)
+    telemetry.trackCreateTab(
+      CreateTabEventTrigger.AddressBar,
+      true,
+      'page',
+      getBrowserContextScopeType(tabsManager.activeScopeIdValue)
+    )
   }
 
   const handleMultiSelect = (event: CustomEvent<string>) => {
@@ -1408,10 +1420,28 @@
         createdForChat: false,
         freshWebview: true
       })
+
+      if (!resource) {
+        log.error('error creating resource', resource)
+        updateBookmarkingTabState(tabId, 'error')
+        toast?.error('Failed to save page!')
+        return { resource: null, isNew: false }
+      }
+
       oasis.pushPendingStackAction(resource.id, { tabId: tabId })
 
+      if (!savedToSpace && tabsManager.activeScopeIdValue) {
+        await oasis.addResourcesToSpace(
+          tabsManager.activeScopeIdValue,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+        toast?.success(`Page saved to active space!`)
+      } else {
+        toast?.success('Page Saved!')
+      }
+
       updateBookmarkingTabState(tabId, 'success')
-      toast?.success('Page Saved!')
 
       oasis.reloadStack()
 
@@ -1815,9 +1845,7 @@
     const isActivated = $activatedTabs.includes(tab.id)
     if (!isActivated) {
       log.debug('Tab not activated, activating first', tab.id)
-      activatedTabs.update((tabs) => {
-        return [...tabs, tab.id]
-      })
+      tabsManager.activateTab(tab.id)
 
       // give the tab some time to load
       await wait(200)
@@ -2214,7 +2242,7 @@
   const handleSaveResourceInSpace = async (e: CustomEvent<OasisSpace>) => {
     log.debug('add resource to space', e.detail)
 
-    const toast = toasts.loading('Adding resource to space...')
+    const toast = toasts.loading('Saving page to space...')
 
     try {
       const { resource } = await handleBookmark($activeTabId, true, SaveToOasisEventTrigger.Click)
@@ -2235,10 +2263,10 @@
         )
       }
 
-      toast.success('Resource added to space!')
+      toast.success('Page saved to space!')
     } catch (e) {
       log.error('Failed to add resource to space:', e)
-      toast.error('Failed to add resource to space')
+      toast.error('Failed to save page to space')
     }
   }
 
@@ -2845,7 +2873,7 @@
 
   onMount(() => {
     initResourceDebugger(resourceManager)
-    
+
     window.api.onBrowserFocusChange((state) => {
       if (state === 'unfocused') {
         Dragcula.get().cleanupDragOperation()
@@ -4224,6 +4252,74 @@
       }
     }
   )
+
+  const contextMenuMoveTabsToSpaces = derived(
+    [spaces, tabsManager.activeScopeId],
+    ([spaces, activeScopeId]) => {
+      const handleMove = async (spaceId: string | null, label: string, makeActive = false) => {
+        try {
+          if ($selectedTabs.size === 0) {
+            toasts.error('No tabs selected')
+            return
+          }
+
+          const selected = Array.from($selectedTabs).map((tab) => tab.id)
+
+          await Promise.all(selected.map((id) => tabsManager.scopeTab(id, spaceId)))
+
+          const lastTabId = selected[selected.length - 1]
+          if (makeActive) {
+            await tabsManager.makeActive(lastTabId)
+          }
+
+          // reset selected tabs
+          selectedTabs.set(new Set())
+
+          toasts.success(`Tabs moved to ${label}!`)
+        } catch (e) {
+          toasts.error(`Failed to add to ${label}`)
+        }
+      }
+
+      return [
+        {
+          type: 'action',
+          icon: generalContext.icon,
+          text: generalContext.label,
+          action: () => handleMove(null, generalContext.label)
+        } as CtxItem,
+        {
+          type: 'action',
+          icon: newContext.icon,
+          text: newContext.label,
+          action: async () => {
+            const space = await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab, {
+              newTab: false
+            })
+            await handleMove(space.id, space.dataValue.folderName, true)
+          }
+        } as CtxItem,
+        ...spaces
+          .filter(
+            (e) =>
+              e.id !== 'all' &&
+              e.id !== 'inbox' &&
+              e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
+              !e.dataValue.builtIn &&
+              e.id !== activeScopeId
+          )
+          .map(
+            (space) =>
+              ({
+                type: 'action',
+                icon: space.dataValue.colors,
+                text: space.dataValue.folderName,
+                action: () => handleMove(space.id, space.dataValue.folderName)
+              }) as CtxItem
+          )
+      ]
+    }
+  )
 </script>
 
 {#if $debugMode}
@@ -4397,6 +4493,15 @@
                 text: 'New Tab',
                 action: () => tabsManager.addPageTab('')
               },
+              {
+                type: 'action',
+                icon: generalContext.icon,
+                text: 'New Space',
+                action: async () => {
+                  await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab)
+                  toasts.success('New Space created!')
+                }
+              },
               { type: 'separator' },
               {
                 type: 'action',
@@ -4522,6 +4627,10 @@
             <div class="bg-sky-50/50 h-1/2 w-1.5 rounded-full"></div>
           {/if}
 
+          {#if $userConfigSettings.experimental_browsing_context}
+            <ScopeSwitcher {horizontalTabs} />
+          {/if}
+
           <div
             class="relative w-full h-full no-scrollbar overflow-hidden py-2 {horizontalTabs
               ? 'flex-row overflow-y-hidden'
@@ -4541,8 +4650,8 @@
               items: [
                 {
                   type: 'action',
-                  icon: '',
-                  text: 'Create Space',
+                  icon: 'add',
+                  text: 'Save to new Space',
                   action: () => {
                     const tabIds = $tabs
                       .filter((tab) => Array.from($selectedTabs).some((item) => item.id === tab.id))
@@ -4555,6 +4664,13 @@
                   icon: 'chat',
                   text: 'Open Tabs in Chat',
                   action: () => startChatWithSelectedTabs()
+                },
+                { type: 'separator', hidden: !$userConfigSettings.experimental_browsing_context },
+                {
+                  type: 'sub-menu',
+                  hidden: !$userConfigSettings.experimental_browsing_context,
+                  text: 'Move Tabs to Space',
+                  items: $contextMenuMoveTabsToSpaces
                 },
                 { type: 'separator' },
                 {

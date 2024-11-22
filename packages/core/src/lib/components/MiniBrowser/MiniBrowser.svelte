@@ -1,12 +1,10 @@
 <script lang="ts">
   import { useLogScope } from '@horizon/utils'
   import {
+    MINI_BROWSER_CONTEXT_KEY,
     MINI_BROWSER_SERVICE_CONTEXT_KEY,
-    MiniBrowser,
-    type MiniBrowserSelected
+    MiniBrowser
   } from '@horizon/core/src/lib/service/miniBrowser'
-  import { ResourceTagsBuiltInKeys } from '@horizon/types'
-  import { writable } from 'svelte/store'
   import MiniBrowserModal from './MiniBrowserModal.svelte'
   import BrowserTab from '../Browser/BrowserTab.svelte'
 
@@ -32,20 +30,6 @@
     service.openWebpage(e.detail)
   }
 
-  // $: resource = $selected?.type === 'resource' ? $selected.data : undefined
-
-  // $: canonicalUrl = resource?.tags?.find(
-  //   (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-  // )?.value
-
-  // $: if ($selected?.type === 'resource') {
-  //   url.set(canonicalUrl || resource?.metadata?.sourceURI || '')
-  // } else if ($selected?.type === 'webpage') {
-  //   url.set($selected.data)
-  // }
-
-  // $: log.debug('url changed', $url)
-
   $: isGlobal = service.key === MINI_BROWSER_SERVICE_CONTEXT_KEY
 </script>
 
@@ -55,6 +39,7 @@
       <MiniBrowserModal
         bind:browserTab
         bind:tab={$selected.data}
+        selected={$selected}
         {isGlobal}
         resource={$selected.resource}
         highlightSimilarText={$selected.selection?.text}

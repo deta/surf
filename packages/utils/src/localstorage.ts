@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store'
 
-type Value = string | number | boolean | { [key: string]: unknown } | Value[]
+type Value = string | number | boolean | null | { [key: string]: unknown } | Value[]
 
 export const setValue = (key: string, value: Value) => {
   const stringValue = typeof value !== 'string' ? JSON.stringify(value) : value
@@ -64,6 +64,11 @@ export const useLocalStorageStore = <T extends Value>(
 
   const load = (key: string) => {
     const stored = getValue<T>(key, parse)
+    if (typeof stored === 'string' && stored === 'null') {
+      store.set(null as unknown as T)
+      return
+    }
+
     if (stored !== null) {
       store.set(stored)
     }

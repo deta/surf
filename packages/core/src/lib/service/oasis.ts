@@ -3,8 +3,20 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
 
-import { conditionalArrayItem, generateID, isDev, useLogScope } from '@horizon/utils'
-import { DeleteResourceEventTrigger, ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
+import {
+  conditionalArrayItem,
+  generateID,
+  getFormattedDate,
+  isDev,
+  useLocalStorageStore,
+  useLogScope
+} from '@horizon/utils'
+import {
+  ChangeContextEventTrigger,
+  DeleteResourceEventTrigger,
+  ResourceTagsBuiltInKeys,
+  ResourceTypes
+} from '@horizon/types'
 
 import {
   SpaceEntryOrigin,
@@ -26,6 +38,7 @@ export type OasisEvents = {
   'added-resources': (space: OasisSpace, resourceIds: string[]) => void
   'removed-resources': (space: OasisSpace, resourceIds: string[]) => void
   deleted: (spaceId: string) => void
+  'changed-active-space': (space: OasisSpace | null) => void
 }
 
 export type OptionalSpaceData = Optional<
@@ -109,6 +122,8 @@ export class OasisSpace {
 
     await this.resourceManager.updateSpace(this.id, data)
 
+    this.oasis.triggerStoreUpdate(this)
+
     this.oasis.emit('updated', this, updates)
   }
 
@@ -181,17 +196,16 @@ export class OasisService {
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
 
   private eventEmitter: TypedEmitter<OasisEvents>
-  tabsManager: TabsManager
+  tabsManager!: TabsManager
   resourceManager: ResourceManager
   config: ConfigService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
-  constructor(resourceManager: ResourceManager, tabsManager: TabsManager, config: ConfigService) {
+  constructor(resourceManager: ResourceManager, config: ConfigService) {
     this.log = useLogScope('OasisService')
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
-    this.tabsManager = tabsManager
     this.config = config
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
@@ -217,6 +231,10 @@ export class OasisService {
     }
   }
 
+  attachTabsManager(tabsManager: TabsManager) {
+    this.tabsManager = tabsManager
+  }
+
   private async initSpaces() {
     try {
       await this.loadSpaces()
@@ -227,13 +245,6 @@ export class OasisService {
 
   private createSpaceObject(space: Space) {
     return new OasisSpace(space, this)
-  }
-
-  private triggerStoreUpdate(space: OasisSpace) {
-    // trigger Svelte reactivity
-    this.spaces.update((spaces) => {
-      return spaces.map((s) => (s.id === space.id ? space : s))
-    })
   }
 
   private createFakeSpace(data: SpaceData) {
@@ -271,6 +282,13 @@ export class OasisService {
 
   emit<E extends keyof OasisEvents>(event: E, ...args: Parameters<OasisEvents[E]>) {
     this.eventEmitter.emit(event, ...args)
+  }
+
+  triggerStoreUpdate(space: OasisSpace) {
+    // trigger Svelte reactivity
+    this.spaces.update((spaces) => {
+      return spaces.map((s) => (s.id === space.id ? space : s))
+    })
   }
 
   async loadSpaces() {
@@ -382,6 +400,8 @@ export class OasisService {
     if (get(this.selectedSpace) === spaceId && spaceId !== '.tempspace') {
       this.changeSelectedSpace('all')
     }
+
+    await this.tabsManager.deleteScopedTabs(spaceId)
 
     this.emit('deleted', spaceId)
   }
@@ -645,6 +665,28 @@ export class OasisService {
     this.changeSelectedSpace('all')
   }
 
+  async createNewBrowsingSpace(
+    trigger: ChangeContextEventTrigger,
+    opts?: { switch?: boolean; newTab?: boolean }
+  ) {
+    const space = await this.createSpace({
+      folderName: getFormattedDate(Date.now()),
+      colors: pickRandomColorPair()
+    })
+
+    const options = Object.assign({ switch: true, newTab: true }, opts)
+
+    if (options.switch) {
+      await this.tabsManager.changeScope(space.id, trigger)
+    }
+
+    if (options.newTab) {
+      this.tabsManager.showNewTabOverlay.set(1)
+    }
+
+    return space
+  }
+
   reloadStack() {
     this.stackKey.set({})
   }
@@ -698,12 +740,8 @@ export class OasisService {
     this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
   }
 
-  static provide(
-    resourceManager: ResourceManager,
-    tabsManager: TabsManager,
-    config: ConfigService
-  ) {
-    const service = new OasisService(resourceManager, tabsManager, config)
+  static provide(resourceManager: ResourceManager, config: ConfigService) {
+    const service = new OasisService(resourceManager, config)
 
     setContext('oasis', service)
 
@@ -737,6 +775,10 @@ export const colorPairs: [string, string][] = [
   ['#FFF776', '#FBE24E'],
   ['#FFE076', '#FBC94E']
 ]
+
+export const pickRandomColorPair = (): [string, string] => {
+  return colorPairs[Math.floor(Math.random() * colorPairs.length)]
+}
 
 export const useOasis = OasisService.use
 export const provideOasis = OasisService.provide
