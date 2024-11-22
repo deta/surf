@@ -93,7 +93,8 @@ export function createWindow() {
       contextIsolation: true,
       session: mainWindowSession,
       defaultFontSize: 14,
-      spellcheck: isMac()
+      spellcheck: isMac(),
+      enableBlinkFeatures: 'CSSLayoutAPI'
     }
   })
 
