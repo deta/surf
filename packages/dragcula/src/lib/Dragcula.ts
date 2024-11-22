@@ -35,15 +35,14 @@ export class Dragcula {
   targetDomElement = writable<HTMLElement | null>(null);
 
   // Listener bindings
-  private _listenerBindings = new Map<
-    EventTarget,
-    [string, (<E extends Event>(e: E) => void)[]][]
-  >();
+  private _listenerBindings: Map<EventTarget, [string, (<E extends Event>(e: E) => void)[]][]>;
 
   protected constructor() {
     const img = document.createElement("img");
     img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     this.transparentImg = img;
+
+    this._listenerBindings = new Map();
 
     // This should probably live somewhere else lol
     function handleDragUpdate(e: DragEvent) {
@@ -112,6 +111,7 @@ export class Dragcula {
   }
 
   public destroy() {
+    if (!this._listenerBindings) return;
     for (const [bindingEl, listeners] of this._listenerBindings) {
       if (!bindingEl) continue;
       for (const [event, cbs] of listeners) {
