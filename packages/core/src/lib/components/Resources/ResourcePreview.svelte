@@ -90,6 +90,7 @@
   export let resourceBlacklisted: boolean = false
   export let interactive: boolean = false
   export let frameless: boolean = false
+  export let background: boolean
   export let processingText: string | undefined = undefined
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
@@ -924,6 +925,7 @@
       {failedText}
       {hideProcessing}
       {origin}
+      {background}
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
@@ -1033,7 +1035,7 @@
         0px 0px 1px 0px rgba(0, 0, 0, 0.25);
 
       .preview:not(.slack):not(.reddit):not(.twitter):not(.notion) {
-        background: rgba(255, 255, 255, 0.75);
+        background: red;
         border: none;
         box-shadow: none;
       }
@@ -1062,7 +1064,6 @@
     box-shadow:
       0px 1px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-    background: rgba(255, 255, 255, 0.75);
     transition: 60ms ease-out;
     position: relative;
     &.twitter {

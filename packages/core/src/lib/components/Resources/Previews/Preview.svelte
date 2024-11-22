@@ -57,6 +57,7 @@
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
   export let origin: Origin = 'stuff'
+  export let background: boolean = true
 
   export let mode: Mode = 'full'
 
@@ -154,18 +155,18 @@
     previousEditTitle = editTitle
   }
 
-  const IFRAME_STYLES = `<style> 
-    html { 
+  const IFRAME_STYLES = `<style>
+    html {
       font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif;
       color: #6b7280;
       scrollbar-width: none;
       -ms-overflow-style: none;
-     
+
     }
     html::-webkit-scrollbar {
       display: none;
     }
-     
+
   </style>`
 </script>
 
@@ -176,6 +177,7 @@
   class:interactive
   class:frame={!frameless}
   class:themed={!!theme}
+  class:background
   style="--color1: {theme && theme[0]}; --color2: {theme && theme[1]}"
   data-resource-type={type}
 >
@@ -235,7 +237,7 @@
         {/if}
 
         {#if showSource || (showTitle && title) || (showContent && content) || (showAuthor && author)}
-          <div class="details text-[#281b53] dark:text-gray-300">
+          <div class="details text-[#281b53] dark:text-gray-300" class:background>
             {#if showSource && mode !== 'compact' && source}
               <div
                 class="flex items-center justify-between gap-2 overflow-hidden text-[#281b53] dark:text-gray-300"
@@ -452,6 +454,7 @@
     text-decoration: none;
     user-select: none;
     -webkit-user-drag: none;
+    background: transparent;
 
     &.loading {
       padding: 0 !important;

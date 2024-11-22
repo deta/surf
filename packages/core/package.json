@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@horizon/cmdk-sv": "*",
+    "@deta/teletype": "*",
     "@horizon/dragcula": "*",
     "@horizon/editor": "*",
     "@horizon/eslint-config": "*",

@@ -34,6 +34,7 @@ import ArrowDiagonalMinimize from './Icons/ArrowDiagonalMinimize.svelte'
 import Search from './Icons/Search.svelte'
 import Info from './Icons/Info.svelte'
 import Face from './Icons/Face.svelte'
+import FaceLight from './Icons/FaceLight.svelte'
 import File from './Icons/File.svelte'
 import Docs from './Icons/Docs.svelte'
 import Bookmark from './Icons/Bookmark.svelte'
@@ -97,6 +98,7 @@ import Screenshot from './Icons/Screenshot.svelte'
 import AdjustmentsHorizontal from './Icons/AdjustmentsHorizontal.svelte'
 import Ticket from './Icons/Ticket.svelte'
 import Save from './Icons/Save.svelte'
+import PlusBoxed from './Icons/PlusBoxed.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -136,6 +138,7 @@ export const icons = {
   arrowDiagonalMinimize: ArrowDiagonalMinimize,
   info: Info,
   face: Face,
+  'face.light': FaceLight,
   file: File,
   docs: Docs,
   bookmark: Bookmark,
@@ -198,7 +201,8 @@ export const icons = {
   screenshot: Screenshot,
   'adjustments.horizontal': AdjustmentsHorizontal,
   ticket: Ticket,
-  save: Save
+  save: Save,
+  'plus.boxed': PlusBoxed
 }
 
 export type Icons = keyof typeof icons
@@ -240,6 +244,7 @@ export {
   Search,
   Info,
   Face,
+  FaceLight,
   File,
   Docs,
   Bookmark,
@@ -301,5 +306,6 @@ export {
   Screenshot,
   AdjustmentsHorizontal,
   Ticket,
-  Save
+  Save,
+  PlusBoxed
 }

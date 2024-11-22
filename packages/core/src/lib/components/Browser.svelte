@@ -1,7 +1,7 @@
 <svelte:options immutable={true} />
 
 <script lang="ts">
-  import { onDestroy, onMount, setContext, tick } from 'svelte'
+  import { onMount, onDestroy, setContext, tick } from 'svelte'
   import SplashScreen from './Atoms/SplashScreen.svelte'
   import { writable, derived, get, type Writable } from 'svelte/store'
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
@@ -42,13 +42,21 @@
     toggleResourceDebugger
   } from '../service/resources'
 
-  import { DragTypeNames, type DragTypes, SpaceEntryOrigin, type SpaceSource } from '../types'
+  import {
+    DragTypeNames,
+    type DragTypes,
+    SpaceEntryOrigin,
+    type Space,
+    type SpaceSource
+  } from '../types'
 
   import BrowserTab, { type BrowserTabNewTabEvent } from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
   import TabItem from './Core/Tab.svelte'
   import '../../app.css'
   import { createDemoItems, createOnboardingSpace } from '../service/demoitems'
+
+  import TeletypeEntry from './Overlay/TeletypeEntry.svelte'
 
   import './index.scss'
   import type {
@@ -153,6 +161,7 @@
   import HomescreenToggleButton from './Oasis/homescreen/HomescreenToggleButton.svelte'
   import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
   import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
+  import { springVisibility } from './motion/springVisibility'
   import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
 
@@ -277,6 +286,7 @@
   const showEndMask = writable(false)
   const additionalChatContextItems = writable<ContextItem[]>([])
   const newTabSelectedSpaceId = oasis.selectedSpace
+  const updateSearchValue = writable('')
 
   // NOTE: Intended for homescreen v1, as we want to auto close the homescreen when active tab changes
   $: {
@@ -412,6 +422,18 @@
     from?: OpenInMiniBrowserEventFrom
   ) => {
     globalMiniBrowser.openResource(resourceId, { from })
+  }
+
+  const openURLDetailsModal = async (e: any) => {
+    showNewTabOverlay.set(0)
+
+    let url = e.detail
+
+    // Add protocol if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url
+    }
+    globalMiniBrowser.openWebpage(url)
   }
 
   const handleDeleteTab = async (
@@ -737,10 +759,12 @@
     )
   }
 
-  // fix the syntax error
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      if ($showNewTabOverlay !== 0) return
+      if ($showNewTabOverlay !== 0) {
+        showNewTabOverlay.set(0)
+        return
+      }
       if ($showScreenshotPicker) {
         $showScreenshotPicker = false
         return
@@ -798,6 +822,7 @@
       // this creates a new electron window
       // TEMPORARY: this is only used for testing the invites feature
     } else if (isModKeyAndKeyPressed(e, 'o')) {
+      console.log('OPEN STUFF', e, $showNewTabOverlay)
       if ($showNewTabOverlay === 2) {
         setShowNewTabOverlay(0)
       } else {
@@ -811,8 +836,7 @@
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       // showTabSearch = !showTabSearch
     } else if (isModKeyAndKeyPressed(e, 'y')) {
-      setShowNewTabOverlay(0)
-      createHistoryTab()
+      handleCreateHistoryTab()
     } else if (
       isModKeyAndEventCodeIs(e, 'Plus') ||
       isModKeyAndEventCodeIs(e, 'Equal') ||
@@ -1656,7 +1680,6 @@
     const existingContextTab = $chatContextItems.find(
       (item) => item.type === 'resource' && item.data.id === resourceId
     )
-
     const resource = await resourceManager.getResource(resourceId)
     if (resource?.type === ResourceTypes.PDF) {
       await tabsManager.addPageTab(`surf://resource/${resourceId}`, {
@@ -1665,11 +1688,9 @@
       })
       return
     }
-
     const url = resource?.tags?.find(
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
     )?.value
-
     let tab: Tab | null = null
     if (url) {
       tab = await tabsManager.addPageTab(url, {
@@ -1678,7 +1699,6 @@
       })
     } else {
       log.debug('no url found for resource, using resource tab as fallback', resourceId)
-
       const resource = await resourceManager.getResource(resourceId)
       if (resource) {
         tab = await tabsManager.addResourceTab(resource, {
@@ -1687,18 +1707,15 @@
         })
       }
     }
-
     if (!tab) {
       log.error('failed to open resource from context', resourceId)
       toasts.error('Failed to open as tab')
       return null
     }
-
     if (existingContextTab) {
       log.debug('removing existing context item for same resource', existingContextTab.id)
       removeContextItem(existingContextTab.id)
     }
-
     return tab
   }
 
@@ -2239,7 +2256,12 @@
     toasts.success('Space added to your Tabs!')
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent<OasisSpace>) => {
+  const handleCreateHistoryTab = () => {
+    setShowNewTabOverlay(0)
+    createHistoryTab()
+  }
+
+  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
     log.debug('add resource to space', e.detail)
 
     const toast = toasts.loading('Saving page to space...')
@@ -3093,6 +3115,7 @@
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
       } else {
+        // THIS IS WHERE THE OLD COMMAND BAR GOT CALLED
         $showNewTabOverlay = 1
       }
     })
@@ -3409,6 +3432,8 @@
         // await archiveTab(tabId)
         await tabsManager.delete(tabId, DeleteTabEventTrigger.Click)
       }
+
+      toasts.success('Space removed from sidebar!')
     } catch (error) {
       log.error('Failed to remove space from sidebar:', error)
     }
@@ -4362,6 +4387,75 @@
 
 <MiniBrowser service={globalMiniBrowser} />
 
+<!-- {#if $showNewTabOverlay == 1} -->
+<div
+  class="teletype-motion fixed bottom-0 left-0 right-0 z-[5001] h-[1px]"
+  use:springVisibility={{
+    visible: $showNewTabOverlay == 1
+  }}
+>
+  <TeletypeEntry
+    {tabsManager}
+    open={$showNewTabOverlay == 1}
+    on:close={() => {
+      showNewTabOverlay.set(0)
+    }}
+    on:ask={(e) => {
+      let query = e.detail
+      console.log('create chat')
+
+      showNewTabOverlay.set(0)
+      handleCreateChatWithQuery(e)
+    }}
+    on:open-url={(e) => {
+      tabsManager.addPageTab(e.detail, {
+        active: true,
+        trigger: CreateTabEventTrigger.AddressBar
+      })
+    }}
+    on:open-url-in-minibrowser={openURLDetailsModal}
+    on:reload={() => {
+      $activeBrowserTab?.reload()
+    }}
+    on:zoom-in={() => {
+      $activeBrowserTab?.zoomIn()
+    }}
+    on:zoom-out={() => {
+      $activeBrowserTab?.zoomOut()
+    }}
+    on:reset-zoom={() => {
+      $activeBrowserTab?.resetZoom()
+    }}
+    on:toggle-sidebar={() => changeLeftSidebarState()}
+    on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
+    on:create-note={handleCreateNote}
+    on:toggle-bookmark={() =>
+      handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
+    on:show-history-tab={handleCreateHistoryTab}
+    on:create-new-space={async () => {
+      showNewTabOverlay.set(2)
+      await tick()
+      const button = document.querySelector('.action-new-space')
+      if (button) button.click()
+    }}
+    on:open-space={async (e) => {
+      const space = e.detail
+      showNewTabOverlay.set(2)
+      await tick()
+
+      newTabSelectedSpaceId.set(space.id)
+    }}
+    on:open-stuff={async (e) => {
+      const searchValue = e.detail
+      selectedSpace.set('all')
+      updateSearchValue.set(searchValue)
+      await tick()
+      showNewTabOverlay.set(2)
+    }}
+  />
+</div>
+<!-- {/if} -->
+
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
   style:--background-image={$backgroundImage}
@@ -5024,14 +5118,17 @@
                       text: 'Chat (⌘ + E)',
                       position: horizontalTabs ? 'left' : 'top'
                     }}
-                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class:scale-90={horizontalTabs ?? false}
                     on:click={() => {
                       toggleRightSidebarTab('chat')
                     }}
+                    style="gap: .25rem;"
                     class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
                     class:dark:bg-gray-800={showRightSidebar && $rightSidebarTab === 'chat'}
                   >
-                    <Icon name="chat" />
+                    <Icon name="face.light" />
+                    <span class="text-xl font-medium text-white">Ask</span>
                   </button>
                 {/if}
                 <!--<button
@@ -5124,52 +5221,9 @@
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
       >
-        <NewTabOverlay
-          spaceId={'inbox'}
-          activeTab={$activeTab}
-          bind:showTabSearch={$showNewTabOverlay}
-          on:open-space-as-tab={handleCreateTabForSpace}
-          on:deleted={handleDeletedSpace}
-          {historyEntriesManager}
-          activeTabs={$activeTabs}
-          on:activate-tab={(e) => selectTab(e.detail, ActivateTabEventTrigger.Click)}
-          on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
-          on:bookmark={() =>
-            handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
-          on:toggle-sidebar={() => changeLeftSidebarState()}
-          on:create-tab-from-space={handleCreateTabFromSpace}
-          on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
-          on:reload-window={() => $activeBrowserTab?.reload()}
-          on:open-space={handleCreateTabForSpace}
-          on:create-chat={handleCreateChatWithQuery}
-          on:create-note={handleCreateNote}
-          on:open-and-chat={handleOpenAndChat}
-          on:batch-open={handleOpenTabs}
-          on:open-space-and-chat={handleOpenSpaceAndChat}
-          on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
-          on:zoom={() => {
-            $activeBrowserTab?.zoomIn()
-          }}
-          on:zoom-out={() => {
-            $activeBrowserTab?.zoomOut()
-          }}
-          on:reset-zoom={() => {
-            $activeBrowserTab?.resetZoom()
-          }}
-          on:toggle-homescreen={() => {
-            homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.CommandMenu)
-          }}
-          on:open-url={(e) => {
-            tabsManager.addPageTab(e.detail, {
-              active: true,
-              trigger: CreateTabEventTrigger.AddressBar
-            })
-          }}
-        />
-
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window flex-grow active no-drag" style="--scaling: 1;">
-            <OasisSpaceRenderer
+            <OasisSpace
               spaceId={$selectedSpace}
               active
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
@@ -5213,7 +5267,6 @@
               {#if tab.type === 'page'}
                 <BrowserTab
                   {historyEntriesManager}
-                  {downloadIntercepters}
                   active={$activeTabId === tab.id}
                   pageMagic={$activeTabMagic}
                   bind:this={$browserTabs[tab.id]}
@@ -5441,6 +5494,50 @@
     </div>
   </SidebarPane>
 </div>
+
+<NewTabOverlay
+  spaceId={'all'}
+  activeTab={$activeTab}
+  {updateSearchValue}
+  bind:showTabSearch={$showNewTabOverlay}
+  selectedSpaceId={newTabSelectedSpaceId}
+  on:open-space-as-tab={handleCreateTabForSpace}
+  on:deleted={handleDeletedSpace}
+  {historyEntriesManager}
+  activeTabs={$activeTabs}
+  on:activate-tab={(e) => selectTab(e.detail, ActivateTabEventTrigger.Click)}
+  on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
+  on:bookmark={() => handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
+  on:toggle-sidebar={() => changeLeftSidebarState()}
+  on:create-tab-from-space={handleCreateTabFromSpace}
+  on:toggle-horizontal-tabs={debounceToggleHorizontalTabs}
+  on:reload-window={() => $activeBrowserTab?.reload()}
+  on:open-space={handleCreateTabForSpace}
+  on:create-chat={handleCreateChatWithQuery}
+  on:create-note={handleCreateNote}
+  on:open-and-chat={handleOpenAndChat}
+  on:batch-open={handleOpenTabs}
+  on:open-space-and-chat={handleOpenSpaceAndChat}
+  on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+  on:zoom={() => {
+    $activeBrowserTab?.zoomIn()
+  }}
+  on:zoom-out={() => {
+    $activeBrowserTab?.zoomOut()
+  }}
+  on:reset-zoom={() => {
+    $activeBrowserTab?.resetZoom()
+  }}
+  on:toggle-homescreen={() => {
+    homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.CommandMenu)
+  }}
+  on:open-url={(e) => {
+    tabsManager.addPageTab(e.detail, {
+      active: true,
+      trigger: CreateTabEventTrigger.AddressBar
+    })
+  }}
+/>
 
 <style lang="scss">
   .app-contents {
