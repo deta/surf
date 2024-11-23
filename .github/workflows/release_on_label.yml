@@ -9,8 +9,6 @@ permissions:
 on:
   pull_request:
     types: [labeled]
-    branches:
-      - grooves-base
 
 jobs:
   prepare:
