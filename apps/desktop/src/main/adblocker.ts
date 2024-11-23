@@ -26,7 +26,7 @@ export function initAdblocker(partition: string) {
 
   // Get initial state
   const config = getBrowserConfig()
-  const isEnabled = config.adblockerEnabled ?? false
+  const isEnabled = config.adblockerEnabled ?? true
 
   setAdblockerState(partition, isEnabled)
 }
