@@ -3,7 +3,7 @@
   import { get, readable, writable } from 'svelte/store'
   import { TeletypeProvider, Teletype } from '@deta/teletype/src'
   import { CreateTabEventTrigger } from '@horizon/types'
-  import { useLogScope } from '@horizon/utils'
+  import { parseStringIntoBrowserLocation, useLogScope } from '@horizon/utils'
   import {
     type Action,
     type HandlerAction,
@@ -146,11 +146,23 @@
   }
 
   function handleNavigate(payload: { url: string }) {
-    dispatch('open-url', payload.url)
+    const validUrl = parseStringIntoBrowserLocation(payload.url)
+    if (!validUrl) {
+      log.error('Invalid URL:', payload.url)
+      return
+    }
+
+    dispatch('open-url', validUrl)
   }
 
   function handleOpenURLInMiniBrowser(payload: { url: string }) {
-    dispatch('open-url-in-minibrowser', payload.url)
+    const validUrl = parseStringIntoBrowserLocation(payload.url)
+    if (!validUrl) {
+      log.error('Invalid URL:', payload.url)
+      return
+    }
+
+    dispatch('open-url-in-minibrowser', validUrl)
   }
 
   function handleSuggestion(payload: { suggestion: string }) {
@@ -212,7 +224,13 @@
   }
 
   function handleCreate(payload: { id: string; url: string }) {
-    dispatch('open-url', payload.url)
+    const validUrl = parseStringIntoBrowserLocation(payload.url)
+    if (!validUrl) {
+      log.error('Invalid URL:', payload.url)
+      return
+    }
+
+    dispatch('open-url', validUrl)
   }
 
   const handleShowCreate = () => {

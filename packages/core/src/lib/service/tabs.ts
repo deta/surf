@@ -720,11 +720,6 @@ export class TabsManager {
       return null
     }
 
-    // Add protocol if missing
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url
-    }
-
     if (isDev && normalizeURL(url) === 'localhost:5173') {
       this.log.debug('Skipping creating Vite dev server tab')
       return
