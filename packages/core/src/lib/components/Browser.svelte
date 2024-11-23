@@ -3817,8 +3817,8 @@
       return
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
-      tabs.update((_tabs) => {
-        let unpinnedTabsArray = get(unpinnedTabs)
+      tabs.update((oldTabs) => {
+        let unpinnedTabsArray = oldTabs.filter((t) => !t.pinned).sort((a, b) => a.index - b.index)
         let pinnedTabsArray = get(pinnedTabs)
         let magicTabsArray = get(magicTabs)
 
