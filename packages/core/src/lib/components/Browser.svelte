@@ -5278,6 +5278,7 @@
               {#if tab.type === 'page'}
                 <BrowserTab
                   {historyEntriesManager}
+                  {downloadIntercepters}
                   active={$activeTabId === tab.id}
                   pageMagic={$activeTabMagic}
                   bind:this={$browserTabs[tab.id]}
