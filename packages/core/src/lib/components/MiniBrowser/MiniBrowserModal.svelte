@@ -63,7 +63,25 @@
   const oasis = useOasis()
   const telemetry = resourceManager.telemetry
 
-  const url = writable(tab.currentLocation || tab.initialLocation)
+  const injectYouTubeTimestamp = (value: string, timestamp: number) => {
+    const url = new URL(value)
+    url.searchParams.set('t', `${Math.floor(timestamp).toString()}s`)
+    log.debug('Injecting timestamp', url.href)
+    return url.href
+  }
+
+  const getInitialUrl = () => {
+    const baseUrl = tab.currentLocation || tab.initialLocation
+    if (jumpToTimestamp && checkIfYoutubeUrl(baseUrl)) {
+      return injectYouTubeTimestamp(baseUrl, jumpToTimestamp)
+    }
+
+    return baseUrl
+  }
+
+  const initialSrc = getInitialUrl()
+
+  const url = writable(initialSrc)
   const bookmarkingState = writable<BookmarkTabState | null>(null)
   const saveToSpacePopoverOpened = writable(false)
   const isLoadingPage = writable(false)
@@ -87,13 +105,6 @@
   // $: if (webview) {
   //   webview.focus()
   // }
-
-  const injectYouTubeTimestamp = (value: string, timestamp: number) => {
-    const url = new URL(value)
-    url.searchParams.set('t', Math.floor(timestamp).toString())
-    log.debug('Injecting timestamp', url.href)
-    return url.href
-  }
 
   const createTabUrl = () => {
     if (!$url) {
@@ -284,7 +295,7 @@
   }
 
   onMount(async () => {
-    log.debug('Resource modal mounted', resource)
+    log.debug('Resource modal mounted', resource, jumpToTimestamp, $url)
 
     if (resource) {
       const viewedByUserTag = (resource.tags ?? []).find(
@@ -464,6 +475,7 @@
           {historyEntriesManager}
           downloadIntercepters={miniBrowserService.downloadIntercepters}
           {url}
+          {initialSrc}
           id={tab.id}
           {webview}
           isLoading={isLoadingPage}

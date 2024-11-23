@@ -99,8 +99,7 @@
   export let isLoading = writable(false)
   export let disableMiniBrowser = false
   export let insideMiniBrowser = false
-
-  let initialSrc =
+  export let initialSrc =
     tab.currentLocation ??
     historyEntriesManager.getEntry(tab.historyStackIds[tab.currentHistoryIndex])?.url ??
     tab.initialLocation ??
