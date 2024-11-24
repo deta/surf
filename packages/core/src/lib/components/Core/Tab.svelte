@@ -787,7 +787,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > 64)) && !showExcludeOthersButton}
+    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > 64) || !horizontalTabs) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
