@@ -482,14 +482,16 @@
   const handleDragculaDragEnd = (drag: DragOperation | undefined) => {
     showDragHint = false
     window.removeEventListener('drag', handleDrag)
-    // TODO: Only close when dropped outside
-
     window.removeEventListener('click', dragClickHandler)
+
+    // If there's no drag operation, it means the user just clicked somewhere
+    if (!drag) return
 
     log.debug('Drag end', drag, drag?.to, drag?.from)
 
+    // Check if the drop happened within any of our known containers
     for (const toId of ['drawer', 'folder-', 'overlay-']) {
-      if (drag && drag?.to?.id.startsWith(toId)) {
+      if (drag.to?.id.startsWith(toId)) {
         for (const fromId of ['drawer', 'folder-', 'overlay-']) {
           if (drag?.from?.id.startsWith(fromId)) {
             return
@@ -498,12 +500,12 @@
       }
     }
 
-    log.warn('Drag end - closing', handledDrop)
-    if (!handledDrop) {
+    // Only close if we have a drop target and it's not handled
+    if (drag?.to && !handledDrop) {
       showTabSearch = 0
-    } else {
-      handledDrop = false
     }
+
+    handledDrop = false
   }
 
   const handlePostDropOnSpace = () => {
