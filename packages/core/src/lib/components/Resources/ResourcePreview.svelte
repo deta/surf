@@ -674,7 +674,7 @@
     e?.stopImmediatePropagation()
 
     openResourceAsTab({
-      active: true,
+      active: false,
       trigger: CreateTabEventTrigger.OasisItem
     })
   }
