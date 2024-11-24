@@ -398,7 +398,7 @@
 </div>
 
 <div
-  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200"
+  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white z-50 shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200"
   style="box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-top-left-radius: 12px; border-top-right-radius: 12px;"
 >
   <div class="flex flex-col items-center justify-center">
