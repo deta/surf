@@ -1714,7 +1714,7 @@
       log.debug('no url found for resource, using resource tab as fallback', resourceId)
       const resource = await resourceManager.getResource(resourceId)
       if (resource) {
-        tab = await tabsManager.addResourceTab(resource, {
+        tab = await tabsManager.openResourceAsTab(resource, {
           active: false,
           trigger: CreateTabEventTrigger.OasisChat
         })
@@ -2564,7 +2564,7 @@
     log.debug('create note with query', query)
 
     const resource = await resourceManager.createResourceNote(query)
-    await tabsManager.addResourceTab(resource, { active: true })
+    await tabsManager.openResourceAsTab(resource, { active: true })
     toasts.success('Note created!')
   }
 

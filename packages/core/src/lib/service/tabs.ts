@@ -722,7 +722,7 @@ export class TabsManager {
 
     if (isDev && normalizeURL(url) === 'localhost:5173') {
       this.log.debug('Skipping creating Vite dev server tab')
-      return
+      return null
     }
 
     const newTab = await this.create<TabPage>(

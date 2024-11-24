@@ -143,7 +143,7 @@
           return
         }
 
-        tabsManager.addResourceTab(resource, {
+        tabsManager.openResourceAsTab(resource, {
           active: openAsActiveTab
         })
 
