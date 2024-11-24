@@ -321,7 +321,6 @@
   }
 
   const handleCloseOverlay = () => {
-    console.log('close overlay')
     showTabSearch = 0
   }
 
@@ -746,7 +745,7 @@
         {/if}
 
         <div class="input-wrapper">
-          <SearchField {searchValue} placeholder="Search..." />
+          <SearchField {searchValue} placeholder="Search..." autoFocus={showTabSearch === 2} />
 
           {#if $isBuiltInSpace && !!$searchValue}
             <Select {selectedFilter} on:change={handleOasisFilterChange}>

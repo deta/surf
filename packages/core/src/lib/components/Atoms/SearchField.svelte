@@ -1,14 +1,28 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import { type Writable } from 'svelte/store'
+  import { tick } from 'svelte'
 
   export let placeholder: string = 'Search...'
   export let searchValue: Writable<string>
+  export let autoFocus: boolean = false
+
+  let inputElement: HTMLInputElement
+
+  $: if (autoFocus && inputElement) {
+    tick().then(() => inputElement.focus())
+  }
 </script>
 
 <div class="search-field-wrapper">
   <Icon name="search" size="24" color="#586884" />
-  <input class="search-field" type="text" {placeholder} bind:value={$searchValue} />
+  <input
+    bind:this={inputElement}
+    class="search-field"
+    type="text"
+    {placeholder}
+    bind:value={$searchValue}
+  />
 </div>
 
 <style lang="scss">
