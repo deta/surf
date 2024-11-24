@@ -280,7 +280,7 @@
   const activeAppId = writable<string>('')
   const showAppSidebar = writable(false)
   const rightSidebarTab = writable<RightSidebarTab>('chat')
-  const showSplashScreen = writable(false)
+  const showSplashScreen = writable(true)
   const cachedMagicTabs = new Set<string>()
   const showStartMask = writable(false)
   const showEndMask = writable(false)
@@ -3341,16 +3341,17 @@
     await tick()
 
     checkScroll()
+    prepareContextMenu()
 
     if (userConfig && !userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
-      showSplashScreen.set(true)
       await createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
       await window.api.updateInitializedTabs(true)
-      showSplashScreen.set(false)
     } else if (!userConfig?.settings.onboarding.completed_welcome_v2) {
-      openWelcomeTab()
+      await openWelcomeTab()
     }
+
+    showSplashScreen.set(false)
 
     if (isDev) {
       // @ts-ignore
@@ -3363,8 +3364,6 @@
         createOnboardingSpace(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
       }
     }
-
-    prepareContextMenu()
   })
 
   const openFeedback = () => {

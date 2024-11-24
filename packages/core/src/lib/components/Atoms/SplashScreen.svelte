@@ -45,7 +45,7 @@
 </script>
 
 {#if !done || show}
-  <div class="splash" class:fadeOut>
+  <div class="splash" class:fadeOut={fadeOut && !show}>
     <div class="flipbook">
       <img src={frame1} style="opacity: 0;" />
       <img src={frame2} style="opacity: 0;" />
