@@ -972,7 +972,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     }
   }
   :global(.tab[data-drag-preview][data-drag-target^='webview']) {
-    --scale: 0.88;
+    //--scale: 0.88;
 
     /*border-width: 1.5px;
     border-color: rgba(5, 5, 25, 0.3);
