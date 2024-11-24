@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useLogScope, wait } from '@horizon/utils'
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { get, writable, type Writable } from 'svelte/store'
   import { useTelemetry } from '../../../service/telemetry'
   import { OasisSpace, useOasis } from '../../../service/oasis'
@@ -335,7 +335,35 @@
     telemetry.trackUpdateHomescreen(UpdateHomescreenEventAction.SetBackground)
   }
 
-  onMount(() => {
+  function removeAllItemsLinking(to: { resourceId?: string; spaceId?: string }) {
+    bentoItems.update((v) => {
+      v = v.filter((e) => {
+        if (to.resourceId !== undefined && get(e).resourceId === to.resourceId) return false
+        if (to.spaceId !== undefined && get(e).spaceId === to.spaceId) return false
+        return true
+      })
+      return v
+    })
+  }
+
+  onDestroy(resourceManager.on('deleted', (resourceId) => removeAllItemsLinking({ resourceId })))
+  onDestroy(oasis.on('deleted', (spaceId) => removeAllItemsLinking({ spaceId })))
+
+  onMount(async () => {
+    // Make sure that all the items on the hoemscreen exists
+    for (const _item of get(bentoItems)) {
+      const item = get(_item)
+      if (item.resourceId !== undefined) {
+        const exists = (await resourceManager.getResource(item.resourceId)) !== null
+        if (!exists) removeAllItemsLinking({ resourceId: item.resourceId })
+      } else if (item.spaceId !== undefined) {
+        const exists = (await oasis.getSpace(item.spaceId)) !== null
+        if (!exists) {
+          removeAllItemsLinking({ spaceId: item.spaceId })
+        }
+      }
+    }
+
     bentoController = bentoEl.bentoController
 
     window.api.onResetBackgroundImage(() => {

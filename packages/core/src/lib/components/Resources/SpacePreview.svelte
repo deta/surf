@@ -26,7 +26,7 @@
         : 'tiny'
   export let renderContents = true
 
-  $: spaceData = space.data
+  $: spaceData = space?.data
 
   const dispatch = createEventDispatcher<{
     'select-space': string
@@ -47,6 +47,7 @@
   }
 
   async function loadContents() {
+    if (!space) return
     spaceContents = (await oasis.getSpaceContents(space.id)).sort(
       (a, b) => a.updated_at - b.updated_at
     )
@@ -83,55 +84,56 @@
   }
 
   onMount(async () => {
-    loadContents()
-    console.warn('spaceContents', spaceContents)
+    if (space) loadContents()
   })
 </script>
 
-<div
-  class="space-preview mode-{mode} {contentMode} {contentViewMode}"
-  use:contextMenu={{
-    items: getContextMenuItems()
-  }}
->
-  <div class="identity">
-    <div class="flex" style="gap: 1ch;" on:click={() => dispatch('select-space', space.id)}>
-      <span class="name">{$spaceData.folderName}</span>
-      <SpaceIcon folder={space} interactive={false} />
+{#if spaceData}
+  <div
+    class="space-preview mode-{mode} {contentMode} {contentViewMode}"
+    use:contextMenu={{
+      items: getContextMenuItems()
+    }}
+  >
+    <div class="identity">
+      <div class="flex" style="gap: 1ch;" on:click={() => dispatch('select-space', space.id)}>
+        <span class="name">{$spaceData.folderName}</span>
+        <SpaceIcon folder={space} interactive={false} />
+      </div>
+      <button
+        class="btn-change-view"
+        on:click={() => {
+          contentViewMode = contentViewMode === 'list' ? 'grid' : 'list'
+          dispatch('change-space-view-mode', contentViewMode)
+        }}
+      >
+        <Icon name={contentViewMode === 'list' ? 'grid' : 'list'} size="16px" />
+      </button>
     </div>
-    <button
-      class="btn-change-view"
-      on:click={() => {
-        contentViewMode = contentViewMode === 'list' ? 'grid' : 'list'
-        dispatch('change-space-view-mode', contentViewMode)
-      }}
-    >
-      <Icon name={contentViewMode === 'list' ? 'grid' : 'list'} size="16px" />
-    </button>
+    <div class="content mode-{contentViewMode}">
+      {#if renderContents}
+        {#each spaceContents as item, i (item.resource_id + i)}
+          <LazyComponent this={() => import('../Oasis/OasisResourceLoader.svelte')}>
+            <svelte:fragment slot="component" let:Component>
+              <Component
+                style="--even: {i % 2 === 0 ? 0 : 1};"
+                resourceOrId={item.resource_id}
+                mode={contentMode}
+                frameless={true}
+                origin="homescreen-space"
+                on:open
+                on:click
+                on:open-and-chat
+                on:remove
+                on:set-resource-as-background
+              />
+            </svelte:fragment>
+          </LazyComponent>
+        {/each}
+      {/if}
+    </div>
   </div>
-  <div class="content mode-{contentViewMode}">
-    {#if renderContents}
-      {#each spaceContents as item, i (item.resource_id + i)}
-        <LazyComponent this={() => import('../Oasis/OasisResourceLoader.svelte')}>
-          <svelte:fragment slot="component" let:Component>
-            <Component
-              style="--even: {i % 2 === 0 ? 0 : 1};"
-              resourceOrId={item.resource_id}
-              mode={contentMode}
-              frameless={true}
-              origin="homescreen-space"
-              on:open
-              on:click
-              on:open-and-chat
-              on:remove
-              on:set-resource-as-background
-            />
-          </svelte:fragment>
-        </LazyComponent>
-      {/each}
-    {/if}
-  </div>
-</div>
+{/if}
 
 <style lang="scss">
   .space-preview {
