@@ -1424,7 +1424,9 @@
       }
 
       let browserTab = $browserTabs[tabId]
-      if (browserTab.getInitialSrc().startsWith('surf://')) {
+
+      const tabUrl = browserTab?.getInitialSrc() || tab.currentLocation || tab.initialLocation
+      if (tabUrl.startsWith('surf://')) {
         return { resource: null, isNew: false }
       }
 
