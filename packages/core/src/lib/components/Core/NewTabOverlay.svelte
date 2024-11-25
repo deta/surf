@@ -487,7 +487,6 @@
     window.removeEventListener('drag', handleDrag)
     window.removeEventListener('click', dragClickHandler, { capture: true })
     window.removeEventListener('keydown', dragClickHandler, { capture: true })
-    window.removeEventListener('mousemove', dragClickHandler, { capture: true })
   }
 
   // Used to reset dragcula when clicking the page after dragging (to prevent the drawer from being stuck)
@@ -509,7 +508,6 @@
     window.addEventListener('drag', handleDrag)
     window.addEventListener('click', dragClickHandler, { capture: true })
     window.addEventListener('keydown', dragClickHandler, { capture: true })
-    window.addEventListener('mousemove', dragClickHandler, { capture: true })
   }
 
   const handleDragculaDragEnd = (drag: DragOperation | undefined) => {

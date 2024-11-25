@@ -302,6 +302,7 @@
           dataTransfer: data.dataTransfer ?? new DataTransfer(),
           item: undefined
         })
+        activeDrag = Dragcula.get().activeDrag
 
         Dragcula.get().prepareDragOperation()
         Dragcula.get().callHandlers('dragstart', activeDrag)
