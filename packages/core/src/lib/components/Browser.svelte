@@ -5510,7 +5510,7 @@
   spaceId={'all'}
   activeTab={$activeTab}
   {updateSearchValue}
-  bind:showTabSearch={$showNewTabOverlay}
+  showTabSearch={showNewTabOverlay}
   selectedSpaceId={newTabSelectedSpaceId}
   on:open-space-as-tab={handleCreateTabForSpace}
   on:deleted={handleDeletedSpace}

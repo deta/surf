@@ -9,7 +9,7 @@
   import '../../../../../packages/core/src/output.css'
 </script>
 
-<div class="main relative">
+<div class="main">
   <Browser />
 </div>
 
@@ -23,5 +23,10 @@
   .main {
     width: 100%;
     height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 </style>

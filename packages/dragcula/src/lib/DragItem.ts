@@ -553,6 +553,7 @@ export class HTMLDragItem extends DragItem {
     log.debug(`${this.prefix}:DragTargetLeave`, drag);
 
     if (drag.to?.id !== this.previewElement?.getAttribute("data-drag-target")) {
+      log.debug("DRAG LEFT WINDOW");
       log.warn(`${this.prefix}:DragTargetLeave: Drag target mismatch! This should not happen!`);
     }
     if (drag.to === null) this.previewElement?.removeAttribute("data-drag-target");

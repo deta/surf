@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { type Writable, derived, writable } from 'svelte/store'
+  import {
+    type Writable,
+    derived,
+    writable,
+    type Subscriber,
+    type Unsubscriber
+  } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import Fuse from 'fuse.js'
   import { useLogScope, useDebounce, useLocalStorageStore, tooltip } from '@horizon/utils'
@@ -61,7 +67,7 @@
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
 
   export let activeTabs: Tab[] = []
-  export let showTabSearch = 0
+  export let showTabSearch: Writable<number>
   export let spaceId: string
   export let historyEntriesManager: HistoryEntriesManager
   export let activeTab: Tab | undefined = undefined
@@ -95,7 +101,7 @@
   let hasLoadedEverything = false
   let searchTimeout: NodeJS.Timeout | null = null
   let previousSearchValue = ''
-  let showDragHint = false
+  let showDragHint = writable(false)
   let filteredItems
 
   const defaultSpaceId = 'all'
@@ -113,19 +119,21 @@
     'all'
   )
 
+  let stuffWrapperRef: HTMLElement
+
   $: isEverythingSpace = $selectedSpaceId === 'all'
   $: isInboxSpace = $selectedSpaceId === 'inbox'
 
   $: if (updateSearchValue) {
-    console.log('updateSearchValue', $updateSearchValue)
+    //console.log('updateSearchValue', $updateSearchValue)
     searchValue.set($updateSearchValue)
   }
 
-  $: if (showTabSearch === 2) {
+  $: if ($showTabSearch === 2) {
     loadEverything(true)
   }
 
-  $: if (showTabSearch === 2 && $searchValue !== previousSearchValue) {
+  $: if ($showTabSearch === 2 && $searchValue !== previousSearchValue) {
     isSearching.set(true)
     previousSearchValue = $searchValue
 
@@ -138,7 +146,7 @@
     }, 300)
   }
 
-  $: if (showTabSearch !== 2) {
+  $: if ($showTabSearch !== 2) {
     closeResourceDetailsModal()
   }
 
@@ -148,6 +156,23 @@
     loadEverything()
   }
 
+  let dragculaTargetUnsubscriber: Unsubscriber
+  $: {
+    if (showTabSearch) {
+      dragculaTargetUnsubscriber = Dragcula.get().targetDomElement.subscribe(
+        (el: HTMLElement | null) => {
+          if (stuffWrapperRef?.contains(el) && $showTabSearch === 2) {
+            stuffWrapperRef?.classList.add('hovering')
+          } else {
+            stuffWrapperRef?.classList.remove('hovering')
+            updateWebviewPointerEvents('unset')
+          }
+        }
+      )
+    } else {
+      dragculaTargetUnsubscriber()
+    }
+  }
   const everythingContents = derived(
     [everythingContentsResources],
     ([everythingContentsResources]) => {
@@ -168,7 +193,7 @@
   const resourcesToShow = derived(
     [searchValue, searchResults, everythingContents],
     ([searchValue, searchResults, everythingContents]) => {
-      if (searchValue && showTabSearch === 2) {
+      if (searchValue && $showTabSearch === 2) {
         return searchResults
       }
       return everythingContents
@@ -303,7 +328,7 @@
 
     toast.success(`Resources added!`)
     await tick()
-    showTabSearch = 2
+    showTabSearch.set(2)
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -321,7 +346,7 @@
   }
 
   const handleCloseOverlay = () => {
-    showTabSearch = 0
+    showTabSearch.set(0)
   }
 
   const handleCreateEmptySpace = async () => {
@@ -452,57 +477,67 @@
   }, 300)
 
   const closeOverlay = () => {
-    showTabSearch = 0
+    showTabSearch.set(0)
+  }
+
+  const cleanupDragStuck = () => {
+    showDragHint.set(false)
+    stuffWrapperRef?.classList.remove('hovering')
+    updateWebviewPointerEvents('unset')
+    window.removeEventListener('drag', handleDrag)
+    window.removeEventListener('click', dragClickHandler, { capture: true })
+    window.removeEventListener('keydown', dragClickHandler, { capture: true })
+    window.removeEventListener('mousemove', dragClickHandler, { capture: true })
   }
 
   // Used to reset dragcula when clicking the page after dragging (to prevent the drawer from being stuck)
-  const dragClickHandler = (_e: MouseEvent) => {
-    showDragHint = false
-    window.removeEventListener('click', dragClickHandler)
-
-    const dragcula = Dragcula.get()
-    if (dragcula.activeDrag && dragcula.activeDrag.isNative) {
-      log.debug('Reset dragcula', dragcula.activeDrag)
-      dragcula.cleanupDragOperation()
-    }
+  const dragClickHandler = (_: Event) => {
+    cleanupDragStuck()
+    Dragcula.get().cleanupDragOperation()
   }
 
   const handleDrag = (e: DragEvent) => {
-    if (showTabSearch === 0 && e.clientY > window.innerHeight - 80) {
-      showTabSearch = 2
+    if ($showTabSearch !== 0) return
+    if (e.clientY > window.innerHeight - 80) {
+      stuffWrapperRef.classList.add('hovering')
+      showTabSearch.set(2)
     }
   }
 
   const handleDragculaDragStart = (drag: DragOperation) => {
-    showDragHint = true
+    showDragHint.set(true)
     window.addEventListener('drag', handleDrag)
-
-    window.addEventListener('click', dragClickHandler)
+    window.addEventListener('click', dragClickHandler, { capture: true })
+    window.addEventListener('keydown', dragClickHandler, { capture: true })
+    window.addEventListener('mousemove', dragClickHandler, { capture: true })
   }
+
   const handleDragculaDragEnd = (drag: DragOperation | undefined) => {
-    showDragHint = false
-    window.removeEventListener('drag', handleDrag)
-    window.removeEventListener('click', dragClickHandler)
+    cleanupDragStuck()
 
     // If there's no drag operation, it means the user just clicked somewhere
     if (!drag) return
 
     log.debug('Drag end', drag, drag?.to, drag?.from)
 
-    // Check if the drop happened within any of our known containers
-    for (const toId of ['drawer', 'folder-', 'overlay-']) {
-      if (drag.to?.id.startsWith(toId)) {
-        for (const fromId of ['drawer', 'folder-', 'overlay-']) {
-          if (drag?.from?.id.startsWith(fromId)) {
-            return
-          }
-        }
-      }
+    // Check if drag target is within drawer or related components
+    const containedIds = ['drawer', 'folder-', 'overlay-']
+    const isTargetWithinContainer =
+      drag?.to && containedIds.some((id) => drag.to!.id.startsWith(id))
+    const isSourceWithinContainer =
+      drag?.from && containedIds.some((id) => drag.from!.id.startsWith(id))
+
+    // Don't close if dragged within container components
+    if (isTargetWithinContainer && isSourceWithinContainer) {
+      return
     }
 
-    // Only close if we have a drop target and it's not handled
-    if (drag?.to && !handledDrop) {
-      showTabSearch = 0
+    log.warn('Drag end - closing', handledDrop)
+    // Only close drawer if item wasn't successfully dropped
+    if (!handledDrop) {
+      showTabSearch.set(0)
+    } else {
+      handledDrop = false
     }
 
     handledDrop = false
@@ -519,22 +554,15 @@
     })
   }
 
-  onDestroy(
-    Dragcula.get().targetDomElement.subscribe((el: HTMLElement) => {
-      // We need to manually query as bits-ui/svelte-vaul shit doesnt expose element ref.. because ofc why would anyone neeeed that!!?
-      const drawerContentEl = document.querySelector('.stuff-wrapper')
-      if (drawerContentEl?.contains(el)) {
-        drawerContentEl?.classList.add('hovering')
-      } else {
-        drawerContentEl?.classList.remove('hovering')
-        updateWebviewPointerEvents('unset')
-      }
-    })
-  )
-
   onMount(() => {
     Dragcula.get().on('dragstart', handleDragculaDragStart)
     Dragcula.get().on('dragend', handleDragculaDragEnd)
+
+    window.api.onBrowserFocusChange((v) => {
+      if (v === 'unfocused') {
+        showDragHint.set(false)
+      }
+    })
   })
 
   onDestroy(() => {
@@ -543,20 +571,20 @@
   })
 </script>
 
-<div id="drawer-hint" class:show={showDragHint && showTabSearch === 0} use:portal={'body'}>
+<div id="drawer-hint" class:show={$showDragHint && $showTabSearch === 0} use:portal={'body'}>
   <span>Hover to open your Stuff</span>
 </div>
 
-{#if showTabSearch === 2}
+{#if $showTabSearch === 2}
   <div class="stuff-backdrop" aria-hidden="true" on:click={handleCloseOverlay}></div>
 {/if}
 <div
   class="stuff-motion-wrapper relative z-[100000000]"
   use:springAppear={{
-    visible: showTabSearch === 2
+    visible: $showTabSearch === 2
   }}
 >
-  <div class="stuff-wrapper no-drag" style="width: fit-content;">
+  <div class="stuff-wrapper no-drag" style="width: fit-content;" bind:this={stuffWrapperRef}>
     <MiniBrowser service={scopedMiniBrowser} />
 
     <div class="w-[90vw] h-[calc(100vh-120px)] relative block overflow-hidden rounded-2xl">
@@ -592,7 +620,7 @@
             buttonText="Continue"
           />
         {/if}
-        {#if showTabSearch === 2}
+        {#if $showTabSearch === 2}
           <div class="sidebar-wrap h-full bg-sky-500/40 w-[18rem] max-w-[18rem]">
             {#key $spaces}
               <SpacesView
@@ -730,7 +758,7 @@
 
     {#if $isBuiltInSpace}
       <div class="global-search-wrapper">
-        {#if showTabSearch === 2 && $isBuiltInSpace}
+        {#if $showTabSearch === 2 && $isBuiltInSpace}
           <button
             class="onboarding-button"
             on:click={() => {
@@ -757,7 +785,7 @@
           {/if}
         </div>
 
-        {#if showTabSearch === 2}
+        {#if $showTabSearch === 2}
           <div class="absolute right-2 flex items-center gap-2">
             <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
           </div>
@@ -900,10 +928,6 @@
     @apply bg-black/40 dark:bg-gray-700/80;
   }
 
-  :global(body[data-dragging='true']:has(.stuff-wrapper:not(.hovering))) .stuff-backdrop {
-    display: none;
-  }
-
   .page-background {
     background: linear-gradient(180deg, #f9f5e6, rgb(237, 236, 226));
     background: linear-gradient(
@@ -984,10 +1008,10 @@
     overflow: visible !important;
     &::before {
       content: '';
-      position: absolute;
+      position: fixed;
       background: transparent;
-      left: 0;
-      right: 0;
+      left: -100vw;
+      right: -100vw;
       top: 100%;
       height: 100px;
     }
@@ -1000,12 +1024,21 @@
   :global(body[data-dragging='true'] .stuff-backdrop) {
     pointer-events: none;
   }
+
   :global(body[data-dragging='true']:not(:has(.stuff-wrapper.hovering)) .stuff-backdrop) {
     opacity: 0 !important;
   }
 
+  :global(body[data-dragging='true']:has(.stuff-wrapper:not(.hovering))) .stuff-wrapper {
+    transform: translate(-50%, 100%) !important;
+  }
+
+  :global(body[data-dragging='true']:has(.stuff-wrapper:not(.hovering))) .stuff-backdrop {
+    display: none;
+  }
+
   /* Hides the Drawer when dragging and not targeting it */
   :global(body[data-dragging='true'] .stuff-wrapper:not(.hovering)) {
-    translate: 0 100%;
+    transform: translate(-50%, 0);
   }
 </style>
