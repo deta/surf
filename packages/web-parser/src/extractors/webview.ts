@@ -88,7 +88,7 @@ export class WebViewExtractor {
     this.webview.src = this.url.href
     this.webview.partition = this.partition
     this.webview.webpreferences =
-      'autoplayPolicy=user-gesture-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
+      'autoplayPolicy=document-user-activation-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
     // webviews needed for extracting stuff don't need to create windows
     this.webview.allowpopups = false
 

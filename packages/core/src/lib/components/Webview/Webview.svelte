@@ -692,7 +692,7 @@ Made with Deta Surf.`
   bind:this={webview}
   {src}
   {partition}
-  webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
+  webpreferences="autoplayPolicy=document-user-activation-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
   allowpopups
   use:HTMLDragZone.action={{
     accepts: (drag) => {
