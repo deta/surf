@@ -54,6 +54,7 @@
       dispatch('openChat', { query: ONBOARDING_SPACE_QUERY })
     } else {
       dispatch('createOnboardingSpace')
+      dispatch('openChat', { query: ONBOARDING_SPACE_QUERY })
       console.error(`Space "${ONBOARDING_SPACE_NAME}" not found`)
     }
 

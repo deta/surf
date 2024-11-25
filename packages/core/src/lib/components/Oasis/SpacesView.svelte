@@ -309,18 +309,6 @@
     }
   }
 
-  const handleTooltipTarget = (folder: OasisSpace) => {
-    if (folder.id === 'all') {
-      return 'stuff-spaces-all'
-    }
-
-    if (folder.dataValue.folderName === onboardingSpace.name) {
-      return 'demo-space'
-    }
-
-    return undefined
-  }
-
   const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
     log.debug('dropping onto sidebar', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
 
@@ -443,7 +431,6 @@
 <div
   class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem] bg-white/95 dark:bg-gray-900/95"
   class:all-spaces-hidden={!$showAllSpaces}
-  data-tooltip-target="stuff-spaces-list"
   bind:this={sidebarElement}
   on:wheel|passive={handleWheel}
 >
@@ -518,6 +505,7 @@
     class="folders-wrapper"
     class:overflowing={unpinnedOverflow}
     axis="horizontal"
+    data-tooltip-target="stuff-spaces-list"
     use:HTMLAxisDragZone.action={{
       accepts: (drag) => {
         if ($showAllSpaces) return false
@@ -555,7 +543,6 @@
         bind:this={unpinnedList}
         on:scroll={() => checkOverflowUnpinned()}
         class="folders-list"
-        data-tooltip-target="stuff-spaces-list"
         axis="vertical"
         id="overlay-spaces-list"
         use:HTMLAxisDragZone.action={{
@@ -639,20 +626,8 @@
     position: relative;
   }
 
-  .folders-wrapper.overflowing::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 4rem;
-    background: linear-gradient(rgba(255, 255, 255, 0), rgb(251 253 254));
-    pointer-events: none;
-    z-index: 100000;
-
-    :global(.dark) & {
-      background: linear-gradient(rgba(0, 0, 0, 0), rgb(17 27 43));
-    }
+  .folders-wrapper.overflowing {
+    -webkit-mask-image: linear-gradient(to bottom, #000 98%, transparent 100%);
   }
 
   .built-in-list,

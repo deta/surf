@@ -129,6 +129,7 @@
     aria-hidden="true"
     use:hover={hovered}
     bind:this={previewContainer}
+    data-tooltip-target={id === 'inbox' ? 'stuff-spaces-inbox' : ''}
   >
     <div class="folder-label">
       <div class="folder-leading">

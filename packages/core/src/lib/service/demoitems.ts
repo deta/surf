@@ -124,6 +124,6 @@ export async function createOnboardingSpace(
       })
     )
 
-    oasis.addResourcesToSpace(space.id, resources, SpaceEntryOrigin.ManuallyAdded)
+    await oasis.addResourcesToSpace(space.id, resources, SpaceEntryOrigin.ManuallyAdded)
   }
 }

@@ -53,6 +53,8 @@
   import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
+  import { onboardingSpace } from '../../constants/examples'
+
   export let folder: OasisSpace
   export let selected: boolean
   export let showPreview = false
@@ -423,7 +425,10 @@
     use:hover={hovered}
     bind:this={previewContainer}
   >
-    <div class="folder-label">
+    <div
+      class="folder-label"
+      data-tooltip-target={$folderDetails.folderName === onboardingSpace.name ? 'demo-space' : ''}
+    >
       <div class="folder-leading">
         <div class="space-icon-wrapper" on:click|stopPropagation aria-hidden="true">
           <SpaceIcon on:change={handleColorChange} {folder} />

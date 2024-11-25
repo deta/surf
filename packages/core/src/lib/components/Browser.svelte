@@ -5334,8 +5334,8 @@
                   on:launchTimeline={(e) => handleLaunchOnboardingTooltips(e.detail)}
                   on:endTimeline={() => handleEndOnboardingTooltips}
                   on:batchOpenTabs={handleOpenOnboardingTabs}
-                  on:createOnboardingSpace={() => {
-                    createOnboardingSpace(
+                  on:createOnboardingSpace={async () => {
+                    await createOnboardingSpace(
                       tabsManager,
                       oasis,
                       tabsManager.addSpaceTab,
@@ -6005,6 +6005,7 @@
     left: -4px;
     right: -4px;
     bottom: -4px;
+    display: block;
     border-radius: inherit;
     border-radius: calc(inherit + 8px);
     z-index: -1;

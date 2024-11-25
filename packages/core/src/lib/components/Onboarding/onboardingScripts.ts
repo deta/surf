@@ -158,11 +158,10 @@ export const stuffOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#stuff.onboarding.2',
       headline: 'Your Inbox',
-      content:
-        'This is your default space where all your saved items are initially stored. Think of it as your digital inbox for web content.',
-      position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
+      content: 'This is your digital inbox for all the stuff you save.',
+      position: { vertical: 'top', horizontal: 'left', offsetY: 58, offsetX: 10 },
       domRoot: 'stuff',
-      domTarget: 'stuff-spaces-all',
+      domTarget: 'stuff-spaces-inbox',
       prevButtonLabel: 'Previous',
       nextButtonLabel: 'Next'
     },
@@ -221,8 +220,8 @@ export const smartSpacesOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#smartspaces.stuff.2',
       headline: 'Chatting with a Space',
-      content: "Let's create a smart space together.",
-      position: { vertical: 'top', horizontal: 'left', offsetY: 450, offsetX: 10 },
+      content: "Let's create a smart space together. Click the + button to create a new space.",
+      position: { vertical: 'top', horizontal: 'left', offsetY: 120, offsetX: 10 },
       domTarget: 'create-space',
       action: 'create-space',
       domRoot: 'stuff',
