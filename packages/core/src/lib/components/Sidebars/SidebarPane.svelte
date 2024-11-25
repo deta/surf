@@ -17,14 +17,14 @@
 
   type SidebarState = (typeof State)[keyof typeof State]
 
-  const MIN_VERTICAL_SIZE = 200
+  const MIN_VERTICAL_SIZE = 250
   const MAX_VERTICAL_SIZE = 400
   const MIN_VERTICAL_RIGHT_SIZE = 380
   const MAX_VERTICAL_RIGHT_SIZE = 600
   const HORIZONTAL_SIZE = 42
   const TRANSITION_DURATION = 300
   const BUFFER = 50
-  const CLOSE_THRESHOLD = 10
+  const CLOSE_THRESHOLD = 75
 
   let leftSize: number
   let rightSize: number

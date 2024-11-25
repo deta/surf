@@ -4496,10 +4496,12 @@
           {canGoBack}
           {canGoForward}
           {canReload}
+          showHomescreenToggle={$userConfigSettings.homescreen && !horizontalTabs}
           on:go-back={() => $activeBrowserTab?.goBack()}
           on:go-forward={() => $activeBrowserTab?.goForward()}
           on:reload={() => $activeBrowserTab?.reload()}
           on:toggle-sidebar={() => changeLeftSidebarState()}
+          on:toggle-homescreen={() => homescreen.setVisible(!$homescreenVisible)}
         />
       </div>
       <div class="flex flex-row items-center space-x-2 ml-5">
@@ -4642,16 +4644,18 @@
               {canGoBack}
               {canGoForward}
               {canReload}
+              showHomescreenToggle={$userConfigSettings.homescreen && !horizontalTabs}
               on:go-back={() => $activeBrowserTab?.goBack()}
               on:go-forward={() => $activeBrowserTab?.goForward()}
               on:reload={() => $activeBrowserTab?.reload()}
               on:toggle-sidebar={() => changeLeftSidebarState()}
+              on:toggle-homescreen={() => homescreen.setVisible(!$homescreenVisible)}
             />
           {/if}
 
           <div
             id="sidebar-pinned-tabs-wrapper"
-            class={$pinnedTabs.length !== 0 || $userConfigSettings.homescreen
+            class={$pinnedTabs.length !== 0 || (horizontalTabs && $userConfigSettings.homescreen)
               ? 'relative no-drag my-auto rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
               : horizontalTabs
                 ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
@@ -4661,7 +4665,7 @@
             bind:this={pinnedTabsWrapper}
             style="scroll-behavior: smooth;"
           >
-            {#if $userConfigSettings.homescreen}
+            {#if $userConfigSettings.homescreen && horizontalTabs}
               <HomescreenToggleButton />
             {/if}
             <div

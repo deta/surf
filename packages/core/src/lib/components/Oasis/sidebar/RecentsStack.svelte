@@ -268,13 +268,13 @@
     {/each}
   </div>
   <button
-    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-700 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-200 cursor-pointer flex"
+    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-700 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-200 cursor-pointer flex active:outline-none focus:outline-none"
     on:click={() => dispatch('open-stuff')}
   >
     <Icon name="arrow.up.right" size="18px" />
-    <span>Open Your Stuff</span>
+    <span>Open My Stuff</span>
   </button>
-  <span class="title verticalOnly">Your Stuff</span>
+  <!--<span class="title verticalOnly">Your Stuff</span>-->
 </div>
 
 <style lang="scss">
@@ -548,8 +548,8 @@
     .stack {
       position: absolute;
       position-anchor: --stack-anchor;
-      top: calc(anchor(start) - 50px);
-      left: calc(anchor(start) + 25px);
+      top: calc(anchor(start) - 30px);
+      left: calc(anchor(start) + 15px);
 
       > .card {
         transform: translate3d(
@@ -596,8 +596,8 @@
           opacity: calc(1 - ((var(--item) - 1 + 1) / (8 - 1) * (1 - 0.4)));
 
           transform: translate(
-              calc(var(--grid-x) * 70px - 20px),
-              calc(var(--grid-y) * -60px - 15px)
+              calc(var(--grid-x) * 70px - 12px),
+              calc(var(--grid-y) * -60px - 30px)
             )
             scale(1) rotate(0) scale(var(--scale));
         }
