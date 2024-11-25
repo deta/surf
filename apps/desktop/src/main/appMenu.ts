@@ -11,6 +11,7 @@ import { toggleHistorySwipeGestureConfig } from './historySwipe'
 import { updateUserConfig } from './config'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { importFiles } from './importer'
 
 const log = useLogScope('Main App Menu')
 const execFileAsync = promisify(execFile)
@@ -211,6 +212,12 @@ const template = [
           log.log('Open History')
           ipcSenders.openHistory()
         }
+      },
+      { type: 'separator' },
+      {
+        id: 'importFiles',
+        label: 'Import Files',
+        click: () => importFiles()
       }
     ]
   },

@@ -8,6 +8,7 @@ import {
   ReadStream,
   WriteStream
 } from 'fs'
+import mime from 'mime-types'
 import path from 'path'
 import http from 'http'
 import fetch from 'cross-fetch'
@@ -593,8 +594,30 @@ const api = {
   resetBackgroundImage: async () => {
     IPC_EVENTS_RENDERER.resetBackgroundImage.send()
   },
+
   onResetBackgroundImage: (callback: () => void) => {
     IPC_EVENTS_RENDERER.resetBackgroundImage.on((_) => callback())
+  },
+
+  onImportedFiles: (callback: (files: File[]) => void) => {
+    IPC_EVENTS_RENDERER.importedFiles.on(async (_, filePaths) => {
+      try {
+        const files = await Promise.all(
+          filePaths.map(async (filePath) => {
+            const fileBuffer = await fsp.readFile(filePath)
+            const fileName = path.basename(filePath)
+            const fileType = mime.lookup(fileName.toLowerCase()) || 'application/octet-stream'
+            return new File([fileBuffer], fileName, {
+              type: fileType
+            })
+          })
+        )
+
+        callback(files)
+      } catch (err) {
+        console.error('Failed to import files: ', err)
+      }
+    })
   }
 }
 

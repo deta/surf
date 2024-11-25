@@ -518,3 +518,18 @@ export const extractAndCreateWebResource = async (
     content
   }
 }
+
+export const createResourcesFromFiles = async (files: File[], resourceManager: ResourceManager) => {
+  const processedFiles = await Promise.all(
+    files.map(async (file) => {
+      log.debug('file', file)
+
+      const processed = await processFile(file)
+      return processed
+    })
+  )
+
+  const newResources = await createResourcesFromMediaItems(resourceManager, processedFiles, '')
+
+  return newResources
+}

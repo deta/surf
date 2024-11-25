@@ -600,5 +600,11 @@ export const ipcSenders = {
     const mainWindow = getMainWindow()
     if (!mainWindow) return
     IPC_EVENTS_MAIN.resetBackgroundImage.sendToWebContents(mainWindow.webContents)
+  },
+
+  importedFiles(files: string[]) {
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return
+    IPC_EVENTS_MAIN.importedFiles.sendToWebContents(mainWindow.webContents, files)
   }
 }

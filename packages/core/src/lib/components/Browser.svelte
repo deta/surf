@@ -30,7 +30,12 @@
     isDev,
     parseUrlIntoCanonical
   } from '@horizon/utils'
-  import { MEDIA_TYPES, createResourcesFromMediaItems, processDrop } from '../service/mediaImporter'
+  import {
+    MEDIA_TYPES,
+    createResourcesFromFiles,
+    createResourcesFromMediaItems,
+    processDrop
+  } from '../service/mediaImporter'
   import SidebarPane from './Sidebars/SidebarPane.svelte'
 
   import type { PaneAPI } from 'paneforge'
@@ -3161,6 +3166,23 @@
         $activeBrowserTab?.forceReload()
       } else {
         $activeBrowserTab?.reload()
+      }
+    })
+
+    window.api.onImportedFiles(async (files: File[]) => {
+      const toast = toasts.loading('Importing files...')
+      try {
+        log.debug('imported files', files)
+
+        const newResources = await createResourcesFromFiles(files, resourceManager)
+        log.debug('Resources', newResources)
+
+        await oasis.loadEverything(true)
+
+        toast.success(`Imported ${newResources.length} file${newResources.length > 1 ? 's' : ''}!`)
+      } catch (err) {
+        log.error('Failed to import', err)
+        toast.error('Failed to import files')
       }
     })
 
