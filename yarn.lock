@@ -1284,41 +1284,41 @@
   resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.8.tgz#21a907684723bbbaa5f0974cf7730bd797eb8e62"
   integrity sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==
 
-"@ghostery/adblocker-content@^2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-content/-/adblocker-content-2.0.4.tgz#8a96ca639a8a92a0789bb65ed3fd816b7b5a5a8b"
-  integrity sha512-IhYx/5FY210+VfWlLZ7tPzo54XA2cAYzQesxjyGkVr4hl6gwV/ubeQzxzY3RdThS9v+ArbWGM/rGGpJjZtrTZA==
+"@ghostery/adblocker-content@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-content/-/adblocker-content-2.1.1.tgz#09aa494e5879e958997828183c4c49f312dc3895"
+  integrity sha512-1DKHmPnlQleXapaL36xZOwwZmpdbjMP/IcWdTTzyriyCDIFlSwBDT1DJ3xg0TK61ahZMEwz1MnTGM6X99z/5rQ==
   dependencies:
-    "@ghostery/adblocker-extended-selectors" "^2.0.4"
+    "@ghostery/adblocker-extended-selectors" "^2.1.1"
 
-"@ghostery/adblocker-electron-preload@^2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-electron-preload/-/adblocker-electron-preload-2.0.4.tgz#eb16cb81c767f8470e1f7e1e56251856cc6d8cc9"
-  integrity sha512-V8GXQE9owlJY+DNmKt93hhEvdCe6zxV3sLJoK2FP9pvA5WHJvt/yUC/bDu6hEbPW6hdFkGxbi4EFnds8IPpm7Q==
+"@ghostery/adblocker-electron-preload@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-electron-preload/-/adblocker-electron-preload-2.1.1.tgz#9b291197139ddb591bce88bf232b1653e6ba4026"
+  integrity sha512-HYqTNZ+usX5uPzjnycxr6P5y+M8yUXXIRSHKBASkzIXASn1M+GXo0CnTOfCHWkhDuiTa9Alo/zCN+d0rtH0BjA==
   dependencies:
-    "@ghostery/adblocker-content" "^2.0.4"
+    "@ghostery/adblocker-content" "^2.1.1"
 
-"@ghostery/adblocker-electron@^2.0.1":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-electron/-/adblocker-electron-2.0.4.tgz#e48125832ecbbaf478168b6ecb6ed7ef39b12808"
-  integrity sha512-c3BntLx7kojWthXXN6DDKtC8zFLsXxjzPP9jjebr/cnjpZvmflZqF4Pw16MenjI87wo9SF0yk5DNSNflcFeE5g==
+"@ghostery/adblocker-electron@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-electron/-/adblocker-electron-2.1.1.tgz#1c8d8992b8a4f6aaac9888eee861cbd570523901"
+  integrity sha512-UxniR5WD1VR+op0SRiqayJGX1gl4+ZPxuTaUj/2hPnvT4mJ0jY7DOq1YWEgLzSYqDbPRyEu1Bic+uZPhP7Je4g==
   dependencies:
-    "@ghostery/adblocker" "^2.0.4"
-    "@ghostery/adblocker-electron-preload" "^2.0.4"
+    "@ghostery/adblocker" "^2.1.1"
+    "@ghostery/adblocker-electron-preload" "^2.1.1"
     tldts-experimental "^6.0.14"
 
-"@ghostery/adblocker-extended-selectors@^2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-extended-selectors/-/adblocker-extended-selectors-2.0.4.tgz#6ff7169b657b4cf000139b95e2dbc35eac63cc23"
-  integrity sha512-HIhTFpPn3lepYaudC2/yUxAFe1LhGzQCgPjv9kN2f7L9zwr96w1T+iL0jtaXnsrxLKeJ/krYR3gmNKhFcdsnEA==
+"@ghostery/adblocker-extended-selectors@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker-extended-selectors/-/adblocker-extended-selectors-2.1.1.tgz#0f37cabc595f8c85609df63f0f1caf966c36de09"
+  integrity sha512-jEHjU2CarS2MtRYfm/6iTKMS1DVzepuwXSMKg1zTyHl+u4ZKvKNYFK7plD0nUlL5a8akyRkYwLheXnKsW3nChQ==
 
-"@ghostery/adblocker@^2.0.4":
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/@ghostery/adblocker/-/adblocker-2.0.4.tgz#ab7d71fcf7e890176da7fcb53e33ce330baf16f4"
-  integrity sha512-n2z0IHzEfK/J7sBz2R6R69o9W7NdVJGc6IPMztMvGloPyJDv5D9mZNIfiz9EoLI9YHRIJd/lV3bMI7VJWVR1YA==
+"@ghostery/adblocker@^2.1.1":
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/@ghostery/adblocker/-/adblocker-2.1.1.tgz#60a54c06cd92c0a66e389c4e7ab02b44cfb9f759"
+  integrity sha512-FL4yWrpNTCmtbAfeLotUoo94ZyNqHdZpZRo4Qlk0guPzDGcOtW4/c84UzS9D/Z9Z4H3nWSCrW0q38pjwAbDykA==
   dependencies:
-    "@ghostery/adblocker-content" "^2.0.4"
-    "@ghostery/adblocker-extended-selectors" "^2.0.4"
+    "@ghostery/adblocker-content" "^2.1.1"
+    "@ghostery/adblocker-extended-selectors" "^2.1.1"
     "@remusao/guess-url-type" "^1.3.0"
     "@remusao/small" "^1.2.1"
     "@remusao/smaz" "^1.9.1"

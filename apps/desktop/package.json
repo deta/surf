@@ -24,7 +24,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
-    "@ghostery/adblocker-electron": "^2.0.1",
+    "@ghostery/adblocker-electron": "^2.1.1",
     "@horizon/backend": "*",
     "@pdfslick/core": "^1.5.2",
     "@rollup/plugin-replace": "^5.0.7",
