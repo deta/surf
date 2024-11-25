@@ -726,7 +726,7 @@
                         <Icon name="spinner" size="20px" />
                       </div>
                     {/if}
-                  {:else if isSearching && $searchValue?.length > 0}
+                  {:else if $isSearching && $searchValue?.length > 0}
                     <div class="content-wrapper h-full flex items-center justify-center">
                       <div
                         class="content flex flex-col items-center justify-center text-center space-y-4"
@@ -775,7 +775,7 @@
         {/if}
 
         <div class="input-wrapper">
-          <SearchField {searchValue} placeholder="Search..." autoFocus={showTabSearch === 2} />
+          <SearchField {searchValue} placeholder="Search..." autoFocus={$showTabSearch === 2} />
 
           {#if $isBuiltInSpace && !!$searchValue}
             <Select {selectedFilter} on:change={handleOasisFilterChange}>
