@@ -62,6 +62,7 @@
 
   const handleBatchRemove = () => {
     dispatch('batch-remove', $selectedItemIds)
+    deselectAll()
   }
 
   const handleAddToSpace = async (spaceId: string) => {
