@@ -11,8 +11,7 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint './src/**/*.{js,ts,svelte}'",
-    "lint:fix": "eslint --fix './src/**/*.{js,ts,svelte}'",
-    "deploy": "yarn build && cp -R dist ./micro && cd ./micro && deta deploy"
+    "lint:fix": "eslint --fix './src/**/*.{js,ts,svelte}'"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^4.0.0",

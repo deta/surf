@@ -1,1 +1,0 @@
-{"id":"ecef77e8-187b-4d60-a095-65a2f097bd9f","space":3561,"runtime":"nodejs14.x","name":"teletype-prototype","path":"nh77vj","project":"a0vvcl2v","account":"144798365827","region":"eu-central-1","deps":["express@^4.18.1"],"envs":null,"public":true,"log_level":"debug","cron":""}
