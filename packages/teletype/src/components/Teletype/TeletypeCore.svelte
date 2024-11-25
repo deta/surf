@@ -205,8 +205,10 @@
     callAction(action)
   }
 
-  const handleBackClick = () => {
+  const handleBackClick = async () => {
     teletype.showParentAction()
+    await tick()
+    inputElem?.focus()
   }
 
   const handleInputKey = (e: KeyboardEvent) => {

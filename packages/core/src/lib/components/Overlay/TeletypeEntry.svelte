@@ -233,10 +233,13 @@
     dispatch('open-url', validUrl)
   }
 
-  const handleShowCreate = () => {
+  const handleShowCreate = async () => {
     if (teletype) {
       teletype.executeAction('create')
       teletype.open()
+      await tick()
+      const inputElem = document.getElementById(`teletype-input-${teletype.key || 'default'}`)
+      inputElem?.focus()
     }
   }
 
