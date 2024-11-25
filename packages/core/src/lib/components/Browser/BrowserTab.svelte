@@ -631,9 +631,9 @@
   ) => {
     log.debug('highlighting text', resourceId, answerText, source)
 
-    const pdfPage = source?.metadata?.page
+    const pdfPage = source?.metadata?.page ?? null
     let toast
-    if (pdfPage === undefined) toast = toasts.loading('Highlighting Citation..')
+    if (pdfPage === null) toast = toasts.loading('Highlighting Citation..')
 
     const detectedResource = await detectResource()
     if (!detectedResource) {
@@ -642,7 +642,7 @@
     }
 
     if (detectedResource.type === ResourceTypes.PDF) {
-      if (pdfPage === undefined) {
+      if (pdfPage === null) {
         log.error("page attribute isn't present")
         return
       }
@@ -695,7 +695,7 @@
       texts: texts
     })
 
-    toast.success('Citation Highlighted!')
+    toast?.success('Citation Highlighted!')
   }
 
   const getTextElementsFromHtml = (html: string): string[] => {
