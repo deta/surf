@@ -269,6 +269,7 @@ pub struct Resource {
     #[serde(default)]
     pub resource_path: String,
 
+    // TODO: should use enum
     pub resource_type: String,
 
     #[serde(default = "current_time")]
@@ -279,6 +280,40 @@ pub struct Resource {
 
     #[serde(default)]
     pub deleted: i32,
+}
+
+impl Resource {
+    pub fn get_human_readable_type(&self) -> String {
+        match self.resource_type.as_str() {
+            t if t.starts_with("image") => "Image".to_string(),
+            "application/pdf" => "PDF".to_string(),
+            // posts
+            "application/vnd.space.post" => "Post".to_string(),
+            "application/vnd.space.post.reddit" => "Reddit Post".to_string(),
+            "application/vnd.space.post.youtube" => "Youtube Video".to_string(),
+            "application/vnd.space.post.twitter" => "Twitter Post".to_string(),
+            // chat messages and threads
+            "application/vnd.space.chat-message" => "Chat Message".to_string(),
+            "application/vnd.space.chat-message.discord" => "Discord Message".to_string(),
+            "application/vnd.space.chat-message.slack" => "Slack Message".to_string(),
+            "application/vnd.space.chat-thread" => "Chat Thread".to_string(),
+            "application/vnd.space.chat-thread.slack" => "Slack Chat Thread".to_string(),
+            // documents
+            "application/vnd.space.document" => "Document".to_string(),
+            "application/vnd.space.document.space-note" => "Note".to_string(),
+            "application/vnd.space.document.notion" => "Notion Document".to_string(),
+            "application/vnd.space.document.google-doc" => "Google Doc".to_string(),
+            // tables
+            "application/vnd.space.table" => "Table".to_string(),
+            "application/vnd.space.table.google-sheet" => "Google sheet".to_string(),
+            "application/vnd.space.table.typeform" => "Typeform table".to_string(),
+            // articles, link & annotation
+            "application/vnd.space.article" => "Article".to_string(),
+            "application/vnd.space.link" => "Link".to_string(),
+            "application/vnd.space.annotation" => "Annotation".to_string(),
+            t => t.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -652,6 +687,10 @@ pub struct AIChatSessionMessage {
     pub ai_session_id: String,
     pub role: String,
     pub content: String,
+    pub truncatable: bool,
+    pub is_context: bool,
+    pub msg_type: String,
+    // TODO: get rid of this, needs frontend changes
     pub sources: Option<Vec<AIChatSessionMessageSource>>,
     #[serde(default = "current_time")]
     pub created_at: chrono::DateTime<chrono::Utc>,

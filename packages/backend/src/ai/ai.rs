@@ -1,11 +1,11 @@
-use core::fmt;
+use std::str::FromStr;
 
 use crate::ai::client::FilteredSearchRequest;
 use crate::embeddings::chunking::ContentChunker;
-use crate::llm::models::MessageContent;
+use crate::llm::models::{ContextMessage, Message, MessageContent, MessageRole};
+use crate::llm::openai::{models, openai};
 use crate::store::db::{CompositeResource, Database};
 use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource};
-use crate::{llm, llm::openai::{openai, models}};
 use crate::{BackendError, BackendResult};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -17,68 +17,6 @@ use super::prompts::{
 };
 
 use std::pin::Pin;
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DataSource {
-    pub data_type: String,
-    pub data_value: String,
-    pub metadata: String,
-    pub env_variables: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DataSourceChunkMetadata {
-    pub resource_id: String,
-    pub resource_type: String,
-    pub hash: Option<String>,
-    pub timestamp: Option<String>,
-    pub url: Option<String>,
-    pub page: Option<u32>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DataSourceChunk {
-    pub content: String,
-    pub metadata: DataSourceChunkMetadata,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DataSourceMetadata {
-    pub resource_id: String,
-    pub resource_type: String,
-    pub url: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CitationSourceMetadata {
-    pub timestamp: Option<String>,
-    pub url: Option<String>,
-    pub page: Option<u32>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CitationSource {
-    pub id: String,
-    pub resource_id: String,
-    pub hash: Option<String>,
-    pub content: Option<String>,
-    pub metadata: Option<CitationSourceMetadata>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChatMessage {
-    pub role: String,
-    pub content: String,
-    pub sources: Option<Vec<CitationSource>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SimilarDocsRequest {
-    pub query: String,
-    pub docs: Vec<String>,
-    pub threshold: Option<f32>,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DocsSimilarity {
@@ -105,44 +43,33 @@ pub struct YoutubeTranscript {
     pub metadata: YoutubeTranscriptMetadata,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateAppRequest {
-    pub prompt: String,
-    pub session_id: String,
-    pub contexts: Option<Vec<String>>,
-    pub system_prompt: Option<String>,
+// TODO: fix sources vs messages
+pub struct ChatResult {
+    pub messages: Vec<Message>,
+    pub sources: Vec<AIChatSessionMessageSource>,
+    pub sources_xml: String,
+    pub stream: Pin<Box<dyn Stream<Item = BackendResult<String>>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ResourcesQueryRequest {
-    pub query: String,
-    pub resource_ids: Vec<String>,
+pub struct ShouldClusterResult {
+    pub embeddings_search_needed: bool,
+    pub relevant_context_ids: Option<Vec<String>>,
 }
 
-#[derive(Debug)]
-pub enum DataSourceType {
-    Text,
-    YoutubeVideo,
-    Webpage,
-}
-
-impl fmt::Display for DataSourceType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            DataSourceType::Text => write!(f, "text"),
-            DataSourceType::YoutubeVideo => write!(f, "youtube_video"),
-            DataSourceType::Webpage => write!(f, "web_page"),
-        }
-    }
-}
-
-// TODO: move embeddings store and embedding model to backend server process
 pub struct AI {
     pub llm: openai::OpenAI, // TODO: use a trait
     pub chunker: ContentChunker,
     local_mode: bool,
     local_ai_client: LocalAIClient,
     async_runtime: tokio::runtime::Runtime,
+}
+
+fn human_readable_current_time() -> String {
+    // 2023-09-13 21:00:00 Tuesday
+    chrono::Utc::now()
+        .format("%Y-%m-%d %H:%M:%S %A")
+        .to_string()
 }
 
 impl AI {
@@ -166,15 +93,33 @@ impl AI {
         self.local_mode = !self.local_mode;
     }
 
-    pub fn format_chat_history(&self, history: Vec<AIChatSessionMessage>) -> Option<String> {
-        if history.is_empty() {
-            return None;
+    pub fn parse_chat_history(
+        &self,
+        history: Vec<AIChatSessionMessage>,
+    ) -> BackendResult<Vec<Message>> {
+        let mut messages = Vec::new();
+        for msg in history {
+            let content = match msg.msg_type.as_ref() {
+                "text" => MessageContent::new_text(msg.content),
+                "image" => MessageContent::new_image(msg.content),
+                _ => {
+                    return Err(BackendError::GenericError(format!(
+                        "unknown chat message type: {}",
+                        msg.msg_type
+                    )));
+                }
+            };
+            let role = MessageRole::from_str(&msg.role).map_err(|e| {
+                BackendError::GenericError(format!("failed to parse chat message role: {}", e))
+            })?;
+            messages.push(Message {
+                role,
+                content: vec![content],
+                truncatable: msg.truncatable,
+                is_context: msg.is_context,
+            });
         }
-        let mut formatted = String::new();
-        for message in history {
-            formatted.push_str(format!("{}: {}\n", message.role, message.content).as_str());
-        }
-        Some(formatted)
+        Ok(messages)
     }
 
     pub fn get_docs_similarity(
@@ -199,34 +144,58 @@ impl AI {
             })
     }
 
-    pub fn should_cluster(&self, query: &str) -> BackendResult<bool> {
-        let prompt = should_narrow_search_prompt();
-        let messages = vec![
-            llm::models::Message {
-                role: "system".to_string(),
-                content: vec![MessageContent::new_text(prompt)],
-            },
-            llm::models::Message {
-                role: "user".to_string(),
-                content: vec![MessageContent::new_text(query.to_string())],
-            },
-        ];
-        // TODO: use local mode
-        Ok(self
-            .llm
-            .create_chat_completion_blocking(messages, None)?
-            .to_lowercase()
-            .contains("true"))
+    pub fn should_cluster(
+        &self,
+        query: &str,
+        context: Vec<ContextMessage>,
+    ) -> BackendResult<ShouldClusterResult> {
+        let prompt = should_narrow_search_prompt(&human_readable_current_time());
+        let mut messages = vec![Message::new_system(&prompt), Message::new_user(query)];
+        for msg in context {
+            messages.push(Message::new_context(&msg)?);
+        }
+
+        let response_format = serde_json::json!({
+            "type": "json_schema",
+            "json_schema": {
+                "name": "should_cluster_response",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "embeddings_search_needed": {
+                            "type": "boolean"
+                        },
+                        "relevant_context_ids": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "required": ["embeddings_search_needed", "relevant_context_ids"],
+                    "additionalProperties": false
+                }
+            }
+        });
+
+        let answer =
+            self.llm
+                .create_chat_completion_blocking(messages, None, Some(response_format))?;
+
+        let response: ShouldClusterResult = serde_json::from_str(&answer).map_err(|e| {
+            BackendError::GenericError(format!("failed to parse should_cluster response: {}", e))
+        })?;
+        Ok(response)
     }
 
     #[allow(dead_code)]
     pub fn chunk_transcript(&self, transcript: &str) -> BackendResult<Vec<String>> {
         let prompt = transcript_chunking_prompt(transcript);
-        let messages = vec![llm::models::Message {
-            role: "system".to_string(),
-            content: vec![MessageContent::new_text(prompt)],
-        }];
-        let output = self.llm.create_chat_completion_blocking(messages, None)?;
+        let messages = vec![Message::new_system(&prompt)];
+        let output = self
+            .llm
+            .create_chat_completion_blocking(messages, None, None)?;
 
         Ok(output.split("\n").map(|chunk| chunk.to_string()).collect())
     }
@@ -281,58 +250,121 @@ impl AI {
         Ok(resources)
     }
 
-    pub fn get_sources_contexts(
+    pub fn llm_metadata_messages_from_sources(
         &self,
-        resources: Vec<CompositeResource>,
-    ) -> (Vec<AIChatSessionMessageSource>, String, String) {
-        let mut sources = Vec::new();
-        let mut sources_xml = "<sources>\n".to_string();
-        let mut contexts = String::new();
-        let mut index = 1;
-        for resource in resources {
+        resources: &[CompositeResource],
+    ) -> Vec<ContextMessage> {
+        let mut messages = Vec::new();
+        for (i, resource) in resources.iter().enumerate() {
+            let mut msg = ContextMessage {
+                // we don't use the actual resource id as it's a uuid
+                // which is too long, use simple index instead
+                id: i.to_string(),
+                content_type: resource.resource.get_human_readable_type().clone(),
+                created_at: Some(resource.resource.created_at.to_string()),
+                page: None,
+                content: None,
+                title: None,
+                source_url: None,
+                author: None,
+                description: None,
+            };
+            // TODO: is author info easily retreivable or stored?
+            if let Some(metadata) = &resource.metadata {
+                if !metadata.name.is_empty() {
+                    msg.title = Some(metadata.name.clone());
+                }
+                if !metadata.source_uri.is_empty() {
+                    msg.source_url = Some(metadata.source_uri.clone());
+                }
+                if !metadata.alt.is_empty() {
+                    msg.description = Some(metadata.alt.clone());
+                }
+            }
+            messages.push(msg);
+        }
+        messages
+    }
+
+    pub fn llm_context_messages_from_sources(
+        &self,
+        resources: &[CompositeResource],
+    ) -> Vec<ContextMessage> {
+        let mut messages = Vec::new();
+
+        for (i, resource) in resources.iter().enumerate() {
             if resource.text_content.is_none() {
                 continue;
             }
+            let text_content = resource.text_content.as_ref().unwrap();
+            let mut msg = ContextMessage {
+                id: (i + 1).to_string(),
+                content: Some(text_content.content.clone()),
+                content_type: resource.resource.get_human_readable_type().clone(),
+                created_at: Some(resource.resource.created_at.to_string()),
+                page: text_content.metadata.page,
+                title: None,
+                source_url: None,
+                author: None,
+                description: None,
+            };
+            // TODO: is author info easily retreivable or stored?
+            if let Some(metadata) = &resource.metadata {
+                if !metadata.name.is_empty() {
+                    msg.title = Some(metadata.name.clone());
+                }
+                if !metadata.source_uri.is_empty() {
+                    msg.source_url = Some(metadata.source_uri.clone());
+                }
+                if !metadata.alt.is_empty() {
+                    msg.description = Some(metadata.alt.clone());
+                }
+            }
+            messages.push(msg);
+        }
+        messages
+    }
+
+    pub fn get_sources_xml(
+        &self,
+        resources: Vec<CompositeResource>,
+    ) -> (Vec<AIChatSessionMessageSource>, String) {
+        let mut sources_xml = "<sources>\n".to_string();
+        let mut index = 1;
+        let mut sources = Vec::new();
+        for resource in resources {
             let source = AIChatSessionMessageSource::from_resource_index(&resource, index);
             if source.is_none() {
                 continue;
             }
-            let content = resource.text_content.unwrap().content;
             let source = source.unwrap();
             sources_xml.push_str(&source.to_xml());
             sources.push(source);
-            contexts.push_str(format!("{}. {}\n", index, content).as_str());
             index += 1;
         }
         sources_xml.push_str("</sources>");
-        (sources, sources_xml, contexts)
+        (sources, sources_xml)
     }
 
     async fn general_chat(
         &self,
         query: String,
-        history: Option<String>,
+        history: Vec<Message>,
         inline_images: Option<Vec<String>>,
-    ) -> BackendResult<(String, Pin<Box<dyn Stream<Item = BackendResult<String>>>>)> {
-        let mut messages = vec![
-            llm::models::Message {
-                role: "system".to_string(),
-                content: vec![MessageContent::new_text(general_chat_prompt(history))],
-            },
-            llm::models::Message {
-                role: "user".to_string(),
-                content: vec![MessageContent::new_text(query)],
-            },
-        ];
+    ) -> BackendResult<ChatResult> {
+        let mut messages = vec![Message::new_system(&general_chat_prompt(
+            &human_readable_current_time(),
+        ))];
+        messages.extend(history);
+
         if let Some(inline_images) = inline_images {
             for image in inline_images {
-                messages.push(llm::models::Message {
-                    role: "user".to_string(),
-                    content: vec![MessageContent::new_image(image)],
-                });
+                messages.push(Message::new_image(&image));
             }
         }
+        messages.push(Message::new_user(&query));
         let preamble = "<sources></sources>".to_string();
+
         let stream = match self.local_mode {
             true => {
                 self.local_ai_client
@@ -341,7 +373,12 @@ impl AI {
             }
             false => self.llm.create_chat_completion(messages).await?,
         };
-        Ok((preamble, stream))
+        Ok(ChatResult {
+            messages: vec![Message::new_user(&query)],
+            sources: vec![],
+            sources_xml: preamble,
+            stream,
+        })
     }
 
     pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
@@ -353,27 +390,21 @@ impl AI {
         contents_store: &Database,
         query: String,
         number_documents: i32,
-        resource_ids: Option<Vec<String>>,
+        resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
         should_cluster: bool,
-        history: Option<String>,
-    ) -> BackendResult<(
-        Vec<AIChatSessionMessageSource>,
-        String,
-        Pin<Box<dyn Stream<Item = BackendResult<String>>>>,
-    )> {
+        history: Vec<Message>,
+    ) -> BackendResult<ChatResult> {
         if general {
-            let (preamble, stream) = self.general_chat(query, history, inline_images).await?;
-            return Ok((Vec::new(), preamble, stream));
+            return self.general_chat(query, history, inline_images).await;
         }
 
-        if !should_cluster && resource_ids.is_none() {
+        if resource_ids.is_empty() {
             return Err(BackendError::GenericError(
-                "Resource IDs must be provided if not clustering".to_string(),
+                "Resource IDs must be provided if not general query".to_string(),
             ));
         }
-        let resource_ids = resource_ids.unwrap_or(Vec::new());
 
         let mut rag_results = match should_cluster {
             true => self.vector_search(
@@ -382,7 +413,9 @@ impl AI {
                 number_documents as usize,
                 Some(resource_ids.clone()),
                 false,
-                None,
+                // this is intentionally set a bit lax to allow for more results
+                // ultimately the llm will decide what to do with the results
+                Some(0.5),
             )?,
             false => contents_store.list_resources_by_ids(resource_ids.clone())?,
         };
@@ -400,25 +433,33 @@ impl AI {
             }
         }
 
-        let (sources, sources_xml, contexts) = self.get_sources_contexts(rag_results);
-        let mut messages = vec![
-            llm::models::Message {
-                role: "system".to_string(),
-                content: vec![MessageContent::new_text(chat_prompt(contexts, history))],
-            },
-            llm::models::Message {
-                role: "user".to_string(),
-                content: vec![MessageContent::new_text(query)],
-            },
-        ];
+        let contexts = self.llm_context_messages_from_sources(&rag_results);
+        let (sources, sources_xml) = self.get_sources_xml(rag_results);
+
+        // system message
+        let mut messages = vec![Message::new_system(&chat_prompt(
+            &human_readable_current_time(),
+        ))];
+
+        let history_len = history.len();
+        // history if any
+        messages.extend(history);
+
+        // context messages
+        for msg in contexts {
+            messages.push(Message::new_context(&msg)?);
+        }
+        // inline images
         if let Some(inline_images) = inline_images {
             for image in inline_images {
-                messages.push(llm::models::Message {
-                    role: "user".to_string(),
-                    content: vec![MessageContent::new_image(image)],
-                });
+                messages.push(Message::new_image(&image));
             }
         }
+        // finally user query
+        messages.push(Message::new_user(&query));
+
+        let messages_slice = messages[history_len + 1..].to_vec().clone();
+
         let stream = match self.local_mode {
             true => {
                 self.local_ai_client
@@ -427,21 +468,21 @@ impl AI {
             }
             false => self.llm.create_chat_completion(messages).await?,
         };
-        Ok((sources, sources_xml, stream))
+        Ok(ChatResult {
+            messages: messages_slice,
+            sources,
+            sources_xml,
+            stream,
+        })
     }
 
     // TODO: migrate
     pub fn get_sql_query(&self, prompt: String) -> BackendResult<String> {
         let messages = vec![
-            llm::models::Message {
-                role: "system".to_string(),
-                content: vec![MessageContent::new_text(sql_query_generator_prompt())],
-            },
-            llm::models::Message {
-                role: "user".to_string(),
-                content: vec![MessageContent::new_text(prompt)],
-            },
+            Message::new_system(&sql_query_generator_prompt()),
+            Message::new_user(&prompt),
         ];
+
         match self.local_mode {
             true => {
                 let mut result = String::new();
@@ -504,14 +545,8 @@ impl AI {
         };
 
         let messages = vec![
-            llm::models::Message {
-                role: "system".to_string(),
-                content: vec![MessageContent::new_text(system_message)],
-            },
-            llm::models::Message {
-                role: "user".to_string(),
-                content: vec![MessageContent::new_text(prompt)],
-            },
+            Message::new_system(&system_message),
+            Message::new_user(&prompt),
         ];
 
         // TODO: is this the best way to use tokio async runtime?
@@ -536,7 +571,9 @@ impl AI {
                 Ok(())
             })?;
         } else {
-            result = self.llm.create_chat_completion_blocking(messages, None)?;
+            result = self
+                .llm
+                .create_chat_completion_blocking(messages, None, None)?;
         }
         Ok(result)
     }

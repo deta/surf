@@ -95,6 +95,7 @@ export const getUserConfig = (path?: string) => {
       annotations_sidebar: false,
       homescreen: false,
       experimental_browsing_context: false,
+      always_include_screenshot_in_chat: false,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -173,6 +174,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.experimental_browsing_context === undefined) {
     storedConfig.settings.experimental_browsing_context = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.always_include_screenshot_in_chat === undefined) {
+    storedConfig.settings.always_include_screenshot_in_chat = false
     changedConfig = true
   }
 

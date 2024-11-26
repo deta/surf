@@ -119,3 +119,7 @@ CREATE TABLE IF NOT EXISTS resource_content_hashes (
     resource_id TEXT PRIMARY KEY REFERENCES resources(id) ON DELETE CASCADE,
     content_hash TEXT NOT NULL
 );
+
+ALTER TABLE ai_session_messages ADD COLUMN msg_type TEXT NOT NULL DEFAULT 'text'; 
+ALTER TABLE ai_session_messages ADD COLUMN truncatable INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE ai_session_messages ADD COLUMN is_context INTEGER NOT NULL DEFAULT 0;

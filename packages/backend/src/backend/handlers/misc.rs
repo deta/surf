@@ -1,11 +1,13 @@
 use crate::{
     ai::ai::{
-        DocsSimilarity, YoutubeTranscript, YoutubeTranscriptMetadata, YoutubeTranscriptPiece,
+        ChatResult, DocsSimilarity, YoutubeTranscript, YoutubeTranscriptMetadata,
+        YoutubeTranscriptPiece,
     },
     backend::{
         message::{MiscMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
+    llm::models::{Message, MessageContent},
     store::{
         db::{CompositeResource, Database},
         models::{
@@ -28,7 +30,7 @@ impl Worker {
     pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<AIChatHistory> {
         Ok(AIChatHistory {
             id: id.clone(),
-            messages: self.db.list_ai_session_messages(&id)?,
+            messages: self.db.list_non_context_ai_session_messages(&id)?,
         })
     }
 
@@ -59,6 +61,7 @@ impl Worker {
         Ok(self.ai.get_docs_similarity(query, docs, threshold)?)
     }
 
+    // TODO: store history
     pub fn create_app(
         &mut self,
         prompt: String,
@@ -69,8 +72,11 @@ impl Worker {
             ai_session_id: session_id.clone(),
             role: "user".to_owned(),
             content: prompt.clone(),
-            sources: None,
+            truncatable: false,
             created_at: chrono::Utc::now(),
+            msg_type: "text".to_owned(),
+            is_context: false,
+            sources: None,
         };
         let result = self.ai.create_app(prompt, session_id.clone(), contexts)?;
         let mut tx = self.db.begin()?;
@@ -80,9 +86,12 @@ impl Worker {
             &AIChatSessionMessage {
                 ai_session_id: session_id.clone(),
                 role: "assistant".to_owned(),
+                truncatable: false,
+                is_context: false,
+                msg_type: "text".to_owned(),
                 content: result.clone(),
-                sources: None,
                 created_at: chrono::Utc::now(),
+                sources: None,
             },
         )?;
         tx.commit()?;
@@ -100,43 +109,40 @@ impl Worker {
         inline_images: Option<Vec<String>>,
         general: bool,
     ) -> BackendResult<()> {
-        let user_message = AIChatSessionMessage {
-            ai_session_id: session_id.to_owned(),
-            role: "user".to_owned(),
-            content: query.to_owned(),
-            sources: None,
-            created_at: chrono::Utc::now(),
+        // frontend sends a query with a trailing <p></p> for some reason
+        let query = match query.strip_suffix("<p></p>") {
+            Some(q) => q.to_string(),
+            None => query,
         };
 
         if rag_only {
-            self.handle_rag_only_query(
-                query,
-                number_documents,
-                resource_ids,
-                callback,
-                user_message,
-            )
-        } else {
-            self.handle_full_chat_query(
-                query,
-                session_id,
-                number_documents,
-                resource_ids,
-                inline_images,
-                general,
-                callback,
-                user_message,
-            )
+            return self.handle_rag_only_query(query, number_documents, resource_ids, callback);
         }
+
+        if !general && resource_ids.is_none() {
+            return Err(BackendError::GenericError(
+                "Resource ids must be provided for non-general queries".to_string(),
+            ));
+        }
+
+        self.handle_full_chat_query(
+            query,
+            session_id,
+            number_documents,
+            resource_ids.unwrap_or(vec![]),
+            inline_images,
+            general,
+            callback,
+        )
     }
 
+    // TODO: store history
     fn handle_rag_only_query(
         &mut self,
         query: String,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
         callback: Root<JsFunction>,
-        user_message: AIChatSessionMessage,
     ) -> BackendResult<()> {
         let results = self.ai.vector_search(
             &self.db,
@@ -147,20 +153,13 @@ impl Worker {
             None,
         )?;
 
-        let (sources_str, sources) = self.process_search_results(&results)?;
-
+        let sources_str = self.process_search_results(&results)?;
         self.send_callback(callback, sources_str)?;
-        self.save_messages(user_message, String::new(), Some(sources))?;
-
         Ok(())
     }
 
-    fn process_search_results(
-        &self,
-        results: &[CompositeResource],
-    ) -> BackendResult<(String, Vec<AIChatSessionMessageSource>)> {
+    fn process_search_results(&self, results: &[CompositeResource]) -> BackendResult<String> {
         let mut sources_str = String::from("<sources>");
-        let mut sources = Vec::new();
 
         for (i, result) in results.iter().enumerate() {
             let source =
@@ -174,11 +173,40 @@ impl Worker {
                     )
                 })?;
             sources_str.push_str(&source.to_xml());
-            sources.push(source);
         }
 
         sources_str.push_str("</sources>\n<answer> </answer>");
-        Ok((sources_str, sources))
+        Ok(sources_str)
+    }
+
+    // 'true' if more than on resource
+    // 'true' if single resource and text content is more than 24k characters
+    // 'false' otherwise
+    fn should_send_cluster_query(&self, ids: &[String]) -> BackendResult<bool> {
+        if ids.len() > 0 {
+            if ids.len() == 1 {
+                // TODO: count the number of text content
+                let resource = match self.db.get_resource(&ids[0])? {
+                    Some(r) => r,
+                    None => return Ok(false),
+                };
+                let text_content_count = self.db.count_resource_text_content_by_ids(ids)?;
+                // for all other resources, we cluster by 2k characters per chunk
+                // 12 chunks is 24k characters, which is the limit within which we could send
+                // all the content to the LLM
+                // for youtube videos, we cluster by ~20 seconds per chunk, which is about ~300 characters
+                // so the threshold is 80 chunks which is 24k characters
+                // TODO: check if the thresholds produce good results
+                match resource.resource_type.as_ref() {
+                    "application/vnd.space.post.youtube" => {
+                        return Ok(text_content_count > 80);
+                    }
+                    _ => return Ok(text_content_count > 12),
+                };
+            }
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     fn handle_full_chat_query(
@@ -186,22 +214,49 @@ impl Worker {
         query: String,
         session_id: String,
         number_documents: i32,
-        resource_ids: Option<Vec<String>>,
+        mut resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
         callback: Root<JsFunction>,
-        user_message: AIChatSessionMessage,
     ) -> BackendResult<()> {
         let history = self
             .ai
-            .format_chat_history(self.db.list_ai_session_messages(&session_id)?);
+            .parse_chat_history(self.db.list_ai_session_messages_skip_sources(&session_id)?)?;
 
         let mut should_cluster = false;
-        if !general {
-            should_cluster = self.ai.should_cluster(&query)?;
+
+        let send_cluster_query = !general && self.should_send_cluster_query(&resource_ids)?;
+
+        if send_cluster_query {
+            let composite_resources = self.db.list_resources_metadata_by_ids(&resource_ids)?;
+            let should_cluster_result = self.ai.should_cluster(
+                &query,
+                self.ai
+                    .llm_metadata_messages_from_sources(&composite_resources),
+            )?;
+            should_cluster = should_cluster_result.embeddings_search_needed;
+            // we are already narrowing down the search space
+            // if the llm pre-determines the search space
+            if let Some(search_space) = should_cluster_result.relevant_context_ids {
+                if search_space.len() > 0 {
+                    let mut pruned_resources_ids: Vec<String> = vec![];
+
+                    // the relevant context ids are the indices of the resources for llm efficiency
+                    for str_index in search_space {
+                        match str_index.parse::<usize>() {
+                            Ok(i) => {
+                                pruned_resources_ids
+                                    .push(composite_resources[i].resource.id.clone());
+                            }
+                            Err(_) => continue,
+                        };
+                    }
+                    resource_ids = pruned_resources_ids;
+                }
+            }
         }
 
-        let (assistant_message, sources) = match self.async_runtime.block_on(async {
+        let (assistant_message, chat_result) = match self.async_runtime.block_on(async {
             tokio::time::timeout(
                 std::time::Duration::from_secs(100),
                 self.process_chat_stream(
@@ -225,9 +280,7 @@ impl Worker {
                 ))
             }
         };
-
-        self.save_messages(user_message, assistant_message, Some(sources))?;
-
+        self.save_messages(session_id, assistant_message, chat_result)?;
         Ok(())
     }
 
@@ -236,13 +289,13 @@ impl Worker {
         mut callback: Root<JsFunction>,
         query: String,
         number_documents: i32,
-        resource_ids: Option<Vec<String>>,
+        resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
         should_cluster: bool,
-        history: Option<String>,
-    ) -> BackendResult<(String, Vec<AIChatSessionMessageSource>)> {
-        let (sources, preamble, mut stream) = self
+        history: Vec<Message>,
+    ) -> BackendResult<(String, ChatResult)> {
+        let mut chat_result = self
             .ai
             .chat(
                 &self.db,
@@ -256,10 +309,10 @@ impl Worker {
             )
             .await?;
 
-        callback = self.send_callback(callback, preamble)?;
+        callback = self.send_callback(callback, chat_result.sources_xml.clone())?;
 
         let mut assistant_message = String::new();
-        while let Some(chunk) = stream.next().await {
+        while let Some(chunk) = chat_result.stream.next().await {
             match chunk {
                 Ok(data) => {
                     assistant_message.push_str(&data);
@@ -269,7 +322,7 @@ impl Worker {
             }
         }
 
-        Ok((assistant_message, sources))
+        Ok((assistant_message, chat_result))
     }
 
     fn send_callback(
@@ -289,24 +342,50 @@ impl Worker {
             .map_err(|err| BackendError::GenericError(err.to_string()))
     }
 
+    // NOTE: each chat_result.message only has a single content
+    // but the content is a vector of MessageContent because of the llm API
     fn save_messages(
         &mut self,
-        user_message: AIChatSessionMessage,
+        session_id: String,
         assistant_message: String,
-        sources: Option<Vec<AIChatSessionMessageSource>>,
+        chat_result: ChatResult,
     ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
-        Database::create_ai_session_message_tx(&mut tx, &user_message)?;
+        for msg in chat_result.messages.iter() {
+            if msg.content.len() != 1 {
+                continue;
+            }
+            let (msg_type, content) = match msg.content[0] {
+                MessageContent::Text(ref t) => ("text".to_owned(), t.text.clone()),
+                MessageContent::Image(ref i) => ("image".to_owned(), i.image_url.url.clone()),
+            };
+
+            let message = AIChatSessionMessage {
+                ai_session_id: session_id.clone(),
+                role: msg.role.to_string(),
+                content,
+                truncatable: msg.truncatable,
+                is_context: msg.is_context,
+                msg_type,
+                created_at: chrono::Utc::now(),
+                sources: None,
+            };
+            Database::create_ai_session_message_tx(&mut tx, &message)?;
+        }
         Database::create_ai_session_message_tx(
             &mut tx,
             &AIChatSessionMessage {
-                ai_session_id: user_message.ai_session_id.clone(),
+                ai_session_id: session_id.clone(),
                 role: "assistant".to_owned(),
                 content: assistant_message,
-                sources,
+                truncatable: false,
+                is_context: false,
+                msg_type: "text".to_owned(),
                 created_at: chrono::Utc::now(),
+                sources: Some(chat_result.sources),
             },
         )?;
+
         tx.commit()?;
         Ok(())
     }

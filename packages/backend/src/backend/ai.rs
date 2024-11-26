@@ -1,8 +1,5 @@
 use crate::{
-    store::{
-        db::CompositeResource,
-        models,
-    },
+    store::{db::CompositeResource, models},
     vision::vision::Vision,
     BackendError, BackendResult,
 };

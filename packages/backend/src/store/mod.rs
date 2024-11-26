@@ -61,10 +61,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_list_resources_by_tags_no_space,
     )?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
-    cx.export_function(
-        "js__store_update_resource",
-        js_update_resource,
-    )?;
+    cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function(
         "js__store_update_resource_metadata",
         js_update_resource_metadata,
@@ -518,9 +515,7 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(
-            resource_tags
-        )),
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(resource_tags)),
         deferred,
     );
 
@@ -545,9 +540,7 @@ fn js_list_resources_by_tags_no_space(mut cx: FunctionContext) -> JsResult<JsPro
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(
-            resource_tags
-        )),
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(resource_tags)),
         deferred,
     );
 

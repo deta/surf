@@ -105,6 +105,22 @@ fn escape_fts_query(keyword: &str) -> String {
         .join(" ")
 }
 
+fn execute_ignoring_duplicate_column<T, E>(f: impl FnOnce() -> Result<T, E>) -> Result<Option<T>, E>
+where
+    E: std::fmt::Display,
+{
+    match f() {
+        Ok(t) => Ok(Some(t)),
+        Err(e) => {
+            if e.to_string().contains("duplicate column name") {
+                Ok(None)
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
 impl Database {
     pub fn new(db_path: &str, run_migrations: bool) -> BackendResult<Database> {
         let mut conn = Connection::open(db_path)?;
@@ -128,10 +144,14 @@ impl Database {
                 .map_err(|e| BackendError::GenericError(e.to_string()))?;
 
             let tx = conn.transaction()?;
-            tx.execute_batch(init_schema)?;
+
+            // TODO: have proper migration schema
+            // sqlite doesn't support IF NOT EXISTS on columns, so we need to ignore the error
+            execute_ignoring_duplicate_column(|| tx.execute_batch(init_schema))?;
             if let Some(schema) = migrations_schema {
-                tx.execute_batch(&schema)?;
+                execute_ignoring_duplicate_column(|| tx.execute_batch(&schema))?;
             }
+
             tx.commit()?;
         }
         // TODO: do we need this?
@@ -2086,6 +2106,67 @@ impl Database {
         Ok(results)
     }
 
+    pub fn count_resource_text_content_by_ids(
+        &self,
+        resource_ids: &[String],
+    ) -> BackendResult<i64> {
+        let placeholders = vec!["?"; resource_ids.len()].join(",");
+        let query = format!(
+            "SELECT COUNT(*) FROM resource_text_content WHERE resource_id IN ({})",
+            placeholders
+        );
+        let mut stmt = self.conn.prepare(&query)?;
+        let count: i64 = stmt
+            .query_row(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+                row.get(0)
+            })?;
+        Ok(count)
+    }
+
+    pub fn list_resources_metadata_by_ids(
+        &self,
+        resource_ids: &[String],
+    ) -> BackendResult<Vec<CompositeResource>> {
+        let placeholders = vec!["?"; resource_ids.len()].join(",");
+        let query = format!(
+            "SELECT M.*, R.* FROM resources R
+            LEFT JOIN resource_metadata M ON M.resource_id = R.id
+            WHERE R.id IN ({}) ORDER BY R.created_at DESC",
+            placeholders
+        );
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut results = vec![];
+        let results_iter =
+            stmt.query_map(rusqlite::params_from_iter(resource_ids.iter()), |row| {
+                Ok(CompositeResource {
+                    metadata: Some(ResourceMetadata {
+                        id: row.get(0)?,
+                        resource_id: row.get(1)?,
+                        name: row.get(2)?,
+                        source_uri: row.get(3)?,
+                        alt: row.get(4)?,
+                        user_context: row.get(5)?,
+                    }),
+                    resource: Resource {
+                        id: row.get(6)?,
+                        resource_path: row.get(7)?,
+                        resource_type: row.get(8)?,
+                        created_at: row.get(9)?,
+                        updated_at: row.get(10)?,
+                        deleted: row.get(11)?,
+                    },
+                    text_content: None,
+                    resource_tags: None,
+                    resource_annotations: None,
+                })
+            })?;
+
+        for result in results_iter {
+            results.push(result?);
+        }
+        Ok(results)
+    }
+
     pub fn list_resources_by_ids(
         &self,
         resource_ids: Vec<String>,
@@ -2095,7 +2176,7 @@ impl Database {
             "SELECT DISTINCT M.*, R.*, C.* FROM resources R
             LEFT JOIN resource_metadata M ON M.resource_id = R.id
             LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id
-            WHERE R.id IN ({}) GROUP BY C.content",
+            WHERE R.id IN ({}) GROUP BY C.content ORDER BY R.created_at DESC",
             placeholders
         );
         let mut stmt = self.conn.prepare(&query)?;
@@ -2318,24 +2399,64 @@ impl Database {
             None => "".to_string(),
         };
         tx.execute(
-            "INSERT INTO ai_session_messages (ai_session_id, role, content, sources, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-            rusqlite::params![msg.ai_session_id, msg.role, msg.content, sources_string, msg.created_at],
+            "INSERT INTO ai_session_messages (ai_session_id, role, content, truncatable, is_context, msg_type, sources, created_at) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            rusqlite::params![
+                msg.ai_session_id,
+                msg.role,
+                msg.content,
+                msg.truncatable,
+                msg.is_context,
+                msg.msg_type,
+                sources_string,
+                msg.created_at
+            ],
         )?;
         Ok(())
     }
 
-    pub fn list_ai_session_messages(
+    pub fn list_ai_session_messages_skip_sources(
         &self,
         session_id: &str,
     ) -> BackendResult<Vec<AIChatSessionMessage>> {
         let mut stmt = self.conn.prepare(
-            "SELECT ai_session_id, role, content, sources, created_at
+            "SELECT ai_session_id, role, content, truncatable, is_context, msg_type, created_at
             FROM ai_session_messages
             WHERE ai_session_id = ?1
             ORDER BY created_at ASC",
         )?;
         let messages = stmt.query_map(rusqlite::params![session_id], |row| {
-            let sources_raw: String = row.get(3)?;
+            Ok(AIChatSessionMessage {
+                ai_session_id: row.get(0)?,
+                role: row.get(1)?,
+                content: row.get(2)?,
+                truncatable: row.get(3)?,
+                is_context: row.get(4)?,
+                msg_type: row.get(5)?,
+                created_at: row.get(6)?,
+                sources: None,
+            })
+        })?;
+        let mut result = Vec::new();
+        for message in messages {
+            result.push(message?);
+        }
+        Ok(result)
+    }
+
+    pub fn list_non_context_ai_session_messages(
+        &self,
+        session_id: &str,
+    ) -> BackendResult<Vec<AIChatSessionMessage>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT ai_session_id, role, content, truncatable, is_context, msg_type, sources, created_at
+            FROM ai_session_messages
+            WHERE ai_session_id = ?1
+            AND is_context = 0
+            ORDER BY created_at ASC",
+        )?;
+        let messages = stmt.query_map(rusqlite::params![session_id], |row| {
+            let sources_raw: String = row.get(6)?;
             let parsed_sources: Option<Vec<AIChatSessionMessageSource>> =
                 match serde_json::from_str(&sources_raw) {
                     Ok(sources) => Some(sources),
@@ -2346,8 +2467,11 @@ impl Database {
                 ai_session_id: row.get(0)?,
                 role: row.get(1)?,
                 content: row.get(2)?,
+                truncatable: row.get(3)?,
+                is_context: row.get(4)?,
+                msg_type: row.get(5)?,
                 sources: parsed_sources,
-                created_at: row.get(4)?,
+                created_at: row.get(7)?,
             })
         })?;
         let mut result = Vec::new();

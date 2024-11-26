@@ -17,10 +17,20 @@ Transcript:
     .to_string()
 }
 
-pub fn should_narrow_search_prompt() -> String {
-    "You are a helpful assistant that is being used in a question answering pipeline during the search step.
-A user has some context and a query, and you need to determine whether the query should lead to a vector search to narrow down the search space or not.
-Return 'true' if the query suggests needing search, otherwise return 'false' for general queries. For e.g., 'Summarize this' or 'what are the key points?' would not require a search, but questions about specifics will require a search.".to_string()
+pub fn should_narrow_search_prompt(current_time: &str) -> String {
+    format!("You are a helpful assistant that is being used in a question answering pipeline during the search step.
+A user has some metadata about the context and a query, and you need to determine whether the query should lead to an embeddings search over the content of the context to narrow down the search space or not.
+For e.g., 'Summarize this' or 'What are the key points?' would not require a search, but specific questions about the content will require a search.
+
+You should also already determine which contexts are relevant for the search based on the metadata provided but only if there is high confidence that other contexts are not relevant.
+
+If all contexts are relevant, return an empty list in the 'relevant_context_ids' field.
+
+If only a single context is provided, always return that context as relevant.
+
+You should also use the current date and time in UTC to help make the decision using the `created_at` metadata.
+The current date and time in UTC is: {}
+", current_time).to_string()
 }
 
 pub fn create_app_prompt(context: &str) -> String {
@@ -59,9 +69,8 @@ Context:
 ", context)
 }
 
-pub fn general_chat_prompt(history: Option<String>) -> String {
-    let prompt = match history {
-        None => "You are a Q&A expert system. Help the user with their queries.
+pub fn general_chat_prompt(current_time: &str) -> String {
+    format!("You are a Q&A expert system. Help the user with their queries.
 
 Here are some guidelines to follow:
 
@@ -69,79 +78,73 @@ Here are some guidelines to follow:
 2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
 3. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
 
-".to_string(),
+Here's the current date and time in UTC: {}
 
-        Some(history) => format!("You are a Q&A expert system. Help the user with their queries.
-
-You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed.
-
-Here are some guidelines to follow:
-
-1. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-2. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
-3. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
-
-Conversation history:
-----------------------
-{}
-----------------------
-", history)
-    };
-    prompt
+", current_time).to_string()
 }
 
-pub fn chat_prompt(context: String, history: Option<String>) -> String {
-    let prompt = match history {
-        None => format!("
-You are a Q&A expert system. Your responses must always be rooted in the context provided for each query. Here are some guidelines to follow:
+pub fn chat_prompt(current_time: &str) -> String {
+    format!("You are a Q&A expert system. The user will provide a set of contexts and a query. You must root your answers in the context provided with citations. Here are some guidelines to follow:
 
-1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
-2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
-4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
-5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
-6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists. The only HTML tags allowed are `<citation>`.
-7. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
-8. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
-9. Focus on the text context provided and use it to answer the user's query. Use the conversation history to provide more context or to clarify the user's query. Only use images if necessary and if you don't have enough information from the text context.
-10. If images are provided in the context, you can refer to them in your response. For example, 'The image shows...'.
-11. If you use information from an image, add a citation with the type 'image' at the end of the sentence. You can omit the context id. For example, `<citation type=\"image\"></citation>`.
+- There can be multiple documents provided as context. The context will be provided in JSON format.
+- The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
+- Every factual statement in your response MUST have a citation from the provided context.
+- If a statement combines information from multiple sources, you MUST cite all relevant sources.
+- Citations must be placed immediately after the sentence or clause they support using the `<citation>` tag.
+- Multiple pieces of information from the same source in a single sentence should still use separate citation tags.
+- Never group multiple context ids within a single citation tag.
 
-Context information:
-----------------------
-{}
-----------------------
-", context),
+- Citation format:
+  - Basic citation: `<citation>context_id</citation>`
+  - Image citation: `<citation type=\"image\"></citation>`
+  - Place citations outside of punctuation marks but inside list items or paragraphs
 
-        Some(history) => format!("
-You are a Q&A expert system. Your responses must always be rooted in the context provided for each query. You are also provided with the conversation history with the user. Make sure to use relevant context from conversation history as needed.
+Response Structure Requirements:
+- Use Markdown formatting for clarity and readability
+- Organize content with headers (levels 1-3 only: #, ##, ###)
+- Utilize formatting elements like:
+  - Lists (ordered and unordered)
+  - Bold and italics
+  - Tables when appropriate
+  - Task lists for step-by-step information
+- The only permitted HTML tags are `<answer>` and `<citation>`
 
-Here are some guidelines to follow:
+Mathematical Content:
+- Use LaTeX between dollar signs:
+  - Inline math: `$equation$`
+  - Display math: `$$equation$$`
+  - If code blocks are necessary, use language=\"math\"
 
-1. There can be multiple documents provided as context. A context follows after the context id in the format `{{context id}}. {{context}}`.
-2. The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-3. Provide citations when ever possible from the context provided. A citation consists of the context id enclosed in a `<citation>` tag at the end of sentences that are supported by the context.
-4. Do not put citations at the end of the entire response, put them as close as possible to the information they support within the different sections of your response. If you are comparing multiple sources, use multiple citation tags to indicate the source of each piece of information.
-5. Use separate citation tags for each context id and do not separate multiple context ids with commas. Do not put the citation tags inside of parantheses or brackets, just use the tag directly.
-6. Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists. The only HTML tags allowed are `<citation>`.
-7. For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
-8. DO NOT USE phrases such as 'According to the context provided', 'Based on the context, ...' etc.
-9. Focus on the text context provided and use it to answer the user's query. Use the conversation history to provide more context or to clarify the user's query. Only use images if necessary and if you don't have enough information from the text context.
-10. If images are provided in the context, you can refer to them in your response. For example, 'The image shows...'.
-11. If you use information from an image, add a citation with the type 'image' at the end of the sentence. You can omit the context id. For example, `<citation type=\"image\"></citation>`.
+Prohibited Elements:
+- Do not use phrases like:
+  - \"According to the context provided\"
+  - \"Based on the context\"
+  - \"The context indicates\"
 
-Context information:
-----------------------
-{}
-----------------------
+- Do not use code blocks except for math
+- Do not group citations at the end of responses
+- Do not skip citations for any factual statements
+- Do not combine multiple context ids in one citation tag
 
-Conversation history:
-----------------------
-{}
-----------------------
-", context, history)
-    };
-    prompt
+Quality Control Steps:
+1. Before submitting your response, verify that EVERY factual statement has a citation
+2. Check that each citation immediately follows the information it supports
+3. Confirm that no citations are grouped at the end of sections or the response
+4. Verify that citation tags are properly formatted and not enclosed in brackets or parentheses
+5. Ensure all information is traceable to the provided context
+
+Example of Correct Citation Usage:
+```markdown
+The temperature reached 32°C yesterday <citation>1</citation> while humidity remained at 45% <citation>2</citation>. 
+```
+
+Example of Incorrect Citation Usage:
+```markdown
+The temperature reached 32°C yesterday and humidity remained at 45%. <citation>1,2</citation>
+```
+
+The current date and time in UTC is: {}
+", current_time).to_string()
 }
 
 pub fn sql_query_generator_prompt() -> String {

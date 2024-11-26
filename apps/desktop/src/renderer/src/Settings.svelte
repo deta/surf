@@ -342,6 +342,14 @@
             bind:value={userConfigSettings.automatic_chat_prompt_generation}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="eye"
+            title="Always Include Screenshot in Chat"
+            description="Always include a screenshot of your current webpage when using Chat"
+            bind:value={userConfigSettings.always_include_screenshot_in_chat}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
 
         <PromptSection

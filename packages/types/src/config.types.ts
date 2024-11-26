@@ -15,6 +15,7 @@ export type UserSettings = {
   app_style: 'light' | 'dark' // Note intentionally used app_style as "app_theme" would be themes in the future?
   use_semantic_search: boolean
   show_annotations_in_oasis: boolean
+  always_include_screenshot_in_chat: boolean
   /** Copy downloaded files to the user's system downloads directory */
   save_to_user_downloads: boolean
   automatic_chat_prompt_generation: boolean

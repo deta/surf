@@ -1029,10 +1029,9 @@
         )
 
         if (tab) {
-          const screenshotNeeded = await isScreenshotNeededForPromptAndTab(
-            query ?? prompt,
-            tab as TabPage
-          )
+          const screenshotNeeded = $userConfigSettings.always_include_screenshot_in_chat
+            ? true
+            : await isScreenshotNeededForPromptAndTab(query ?? prompt, tab as TabPage)
           log.debug('Screenshot needed:', screenshotNeeded)
 
           if (screenshotNeeded) {

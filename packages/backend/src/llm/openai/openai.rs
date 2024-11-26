@@ -1,16 +1,14 @@
-use crate::{
-    llm::models::Message,
-    BackendError, BackendResult,
-};
+use crate::{llm::models::Message, BackendError, BackendResult};
 use futures::Stream;
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-use tracing::{instrument, debug};
 use std::pin::Pin;
-
+use tracing::instrument;
 
 use super::{
-    models::{Model, TokenModel}, response::{parse_error, parse_response, DelimitedStream}, tokens::truncate_messages
+    models::{Model, TokenModel},
+    response::{parse_error, parse_response, DelimitedStream},
+    tokens,
 };
 
 pub struct OpenAI {
@@ -25,14 +23,22 @@ struct ChatCompletionRequest {
     model: String,
     messages: Vec<Message>,
     stream: bool,
+    response_format: Option<serde_json::Value>,
+}
+
+fn truncate_messages(messages: Vec<Message>, model: &Model) -> Vec<Message> {
+    if messages.is_empty() {
+        return messages;
+    }
+    // first message is always system message which should always be included
+    let mut truncated_messages = vec![messages[0].clone()];
+    let (_, messages) = tokens::truncate_messages(messages[1..].to_vec(), model);
+    truncated_messages.extend(messages);
+    truncated_messages
 }
 
 impl OpenAI {
-    pub fn new(
-        model: Model,
-        api_key: String,
-        api_base_url: Option<String>,
-    ) -> BackendResult<Self> {
+    pub fn new(model: Model, api_key: String, api_base_url: Option<String>) -> BackendResult<Self> {
         let api_base_url = api_base_url.unwrap_or_else(|| "https://api.openai.com/v1".to_string());
 
         let mut default_headers = header::HeaderMap::new();
@@ -73,16 +79,16 @@ impl OpenAI {
         &self,
         messages: Vec<Message>,
         model: Option<Model>,
+        response_format: Option<serde_json::Value>,
     ) -> BackendResult<String> {
         let url = format!("{}/chat/completions", self.api_base_url);
         let model = model.unwrap_or_else(|| self.model.clone());
-        
-        // TODO: should we let the user know about truncation?
-        let (_, messages) = truncate_messages(messages, &model);
+
         let request = ChatCompletionRequest {
             model: model.to_string(),
-            messages,
+            messages: truncate_messages(messages, &model),
             stream: false,
+            response_format,
         };
         let body = serde_json::to_string(&request).map_err(|e| {
             BackendError::GenericError(format!("OpenAI client: failed to serialize request: {}", e))
@@ -108,12 +114,11 @@ impl OpenAI {
         let url = format!("{}/chat/completions", self.api_base_url);
 
         // TODO: should we let the user know about truncation?
-        let (truncated, messages) = truncate_messages(messages, &self.model);
-        debug!("Truncated messages: {}", truncated);
         let request = ChatCompletionRequest {
             model: self.model.to_string(),
-            messages,
+            messages: truncate_messages(messages, &self.model),
             stream: true,
+            response_format: None,
         };
         let body = serde_json::to_string(&request).map_err(|e| {
             BackendError::GenericError(format!("OpenAI client: failed to serialize request: {}", e))
@@ -130,7 +135,6 @@ impl OpenAI {
 
 #[cfg(test)]
 mod tests {
-    use crate::llm::models::MessageContent;
     use super::*;
     use futures::StreamExt;
     use tokio::runtime::Runtime;
@@ -141,10 +145,7 @@ mod tests {
             std::env::var("TEST_OPENAI_API_KEY").map_err(|_| "TEST_OPENAI_API_KEY not set")?;
         let openai = OpenAI::new(Model::GPT4oMini, api_key, None)?;
 
-        let messages = vec![Message {
-            role: "user".to_string(),
-            content: vec![MessageContent::new_text("Hello!".to_string())],
-        }];
+        let messages = vec![Message::new_user("Hello!")];
         let runtime = Runtime::new()?;
         let mut result = String::new();
         runtime.block_on(async {
