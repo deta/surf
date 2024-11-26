@@ -129,7 +129,7 @@ impl Message {
             BackendError::GenericError(format!("failed to serialize context message: {}", e))
         })?;
         Ok(Message {
-            role: MessageRole::System,
+            role: MessageRole::User,
             content: vec![MessageContent::new_text(context_message_str)],
             truncatable: true,
             is_context: true,
