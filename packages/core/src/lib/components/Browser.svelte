@@ -5251,11 +5251,11 @@
       class:horizontalTabs
     >
       <div
-        style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow rounded-xl"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
+        style:view-transition-name="browser_content"
       >
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window flex-grow active no-drag" style="--scaling: 1;">
@@ -5577,6 +5577,38 @@
 />
 
 <style lang="scss">
+  // NOTE: Needed for the content to transition smoothly e.g. when toggling sidebars!
+  /*:global(::view-transition-group(browser_content)) {
+    animation-duration: 100ms;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  :global(::view-transition-image-pair(browser_content)) {
+    animation-duration: 100ms;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  :global(::view-transition-old(browser_content)) {
+    display: none;
+    opacity: 0;
+    height: 100%;
+    // width: 100%;
+    overflow: clip;
+    object-fit: none;
+    object-position: left top;
+    animation-duration: 100ms;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  // NOTE: Needed for the content to transition smoothly e.g. when toggling sidebars!
+  :global(::view-transition-new(browser_content)) {
+    //width: 100%;
+    // height: 100%;
+    //overflow: clip;
+    // object-fit: none;
+    // object-position: left top;
+    animation-duration: 100ms;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }*/
+
   .app-contents {
     position: relative;
 

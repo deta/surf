@@ -101,7 +101,7 @@
           : 'bg-white'} z-0 shadow-md {pill.type === 'image'
           ? 'pl-[5px]'
           : 'pl-[11px]'} hover:bg-red-100 transform hover:translate-y-[-6px]"
-        style="width: {pillProperties.width}px; height: {pillProperties.height}px; border-radius: {pillProperties.borderRadius}px; transition: width 0.3s, height 0.3s, transform 0.3s, background-color 0.3s;"
+        style="width: 40px; height: 40px; border-radius: {pillProperties.borderRadius}px; transition: transform 0.3s, background-color 0.3s;"
       >
         <button
           class="remove absolute top-0 left-0 shadow-sm transform"

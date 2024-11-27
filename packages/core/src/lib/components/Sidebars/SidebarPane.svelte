@@ -1,6 +1,8 @@
 <script lang="ts">
   import { useDebounce } from '@horizon/utils'
-  import { onMount, createEventDispatcher, onDestroy } from 'svelte'
+  import { onMount, createEventDispatcher, onDestroy, tick } from 'svelte'
+
+  import './sidebars.scss'
 
   export let horizontalTabs = false
   export let showLeftSidebar = true
@@ -184,13 +186,16 @@
   }
 
   $: {
-    if (showRightSidebar === true) {
-      rightIsOpen = State.Open
-      startTransition('right')
-    } else if (showRightSidebar === false) {
-      rightIsOpen = State.Closed
-      startTransition('right')
-    }
+    document.startViewTransition(async () => {
+      if (showRightSidebar === true) {
+        rightIsOpen = State.Open
+        startTransition('right')
+      } else if (showRightSidebar === false) {
+        rightIsOpen = State.Closed
+        startTransition('right')
+      }
+      await tick()
+    })
   }
 
   $: {
@@ -223,17 +228,15 @@
     .join(' ')
 
   $: rightBarClasses = [
-    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-10 bottom-0 flex-col space-y-2`,
-    isDraggingRight
-      ? 'transition-none'
-      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300',
+    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-10 bottom-0 flex-col space-y-2 translate-x-0`,
+    isDraggingRight ? 'transition-none' : '',
     {
       'cursor-col-resize': isDraggingRight,
       'shadow-lg': rightIsOpen === State.Peek,
       'bg-[rgb(251,251,250)]':
         rightIsOpen === State.Peek || rightIsOpen === State.Open || rightIsTransitioning
-    },
-    rightIsOpen === State.Open || rightIsOpen === State.Peek ? 'translate-x-0' : 'translate-x-full'
+    }
+    //rightIsOpen === State.Open || rightIsOpen === State.Peek ? 'translate-x-0' : 'translate-x-full'
   ]
     .filter(Boolean)
     .join(' ')
@@ -243,13 +246,13 @@
     ${!horizontalTabs ? `padding-left: ${leftIsOpen === State.Open ? leftSize : 0}px;` : ''}
     padding-right: ${rightIsOpen === State.Open ? rightSize : 0}px;
   `
+
+  // transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300
   $: mainClasses = [
     showRightSidebar ? 'mr-2' : '',
     'flex flex-grow max-h-screen h-full',
     isDraggingLeft || isDraggingRight ? 'pointer-events-none' : '',
-    isDraggingLeft || isDraggingRight
-      ? 'transition-none'
-      : 'transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300'
+    isDraggingLeft || isDraggingRight ? 'transition-none' : ''
   ].join(' ')
 
   $: leftPeakAreaClasses = [
@@ -264,8 +267,10 @@
     'right-0 w-4 h-full'
   ].join(' ')
 
+  //     width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
+
   $: rightSidebarStyle = `
-    width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
+    width: ${rightSize + 'px'};
     ${
       horizontalTabs && (leftIsOpen === State.Open || leftIsOpen === State.Peek)
         ? `top: ${HORIZONTAL_SIZE}px;`
@@ -316,6 +321,7 @@
     class:verticalTabs={!horizontalTabs}
     aria-labelledby="nav-heading"
     style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 502;"
+    style:view-transition-name={'app_sidebar_left'}
   >
     <div class="h-full w-full">
       <slot name="sidebar" />
@@ -348,27 +354,28 @@
     <slot name="content" />
   </main>
 
-  <div
-    class="sidebar-right {rightBarClasses}"
-    aria-labelledby="nav-heading"
-    style="z-index: 490; {rightSidebarStyle}"
-  >
+  {#if showRightSidebar}
     <div
-      class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag left-0 top-0 bottom-0 w-1 cursor-col-resize"
+      class="sidebar-right {rightBarClasses}"
+      aria-labelledby="nav-heading"
+      style="z-index: 490; {rightSidebarStyle}"
+      style:view-transition-name="app_sidebar_right"
     >
       <div
-        on:pointerdown={(e) => handlePointerDown(e, 'right')}
-        class="w-3 h-full cursor-col-resize shrink-0"
-      />
-    </div>
-    <!-- NOTE: This margin-top is weird, i dunno why it exists, but we have to kill it here -->
+        class="absolute z-10 hover:bg-purple-500/50 transition-all duration-300 flex-grow-0 no-drag left-0 top-0 bottom-0 w-1 cursor-col-resize"
+      >
+        <div
+          on:pointerdown={(e) => handlePointerDown(e, 'right')}
+          class="w-3 h-full cursor-col-resize shrink-0"
+        />
+      </div>
+      <!-- NOTE: This margin-top is weird, i dunno why it exists, but we have to kill it here -->
 
-    {#if showRightSidebar}
-      <div class="h-full w-full" style="margin-top: 0;">
+      <div id="app__sidebar_right" class="h-full w-full" style="margin-top: 0;">
         <slot name="right-sidebar" />
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <!--<div
     class={rightPeakAreaClasses}

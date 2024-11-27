@@ -1,0 +1,184 @@
+$vt-sidebars-timing: 350ms;
+$vt-timing-easing: cubic-bezier(0.19, 1, 0.22, 1);
+
+
+::view-transition {
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+::view-transition-group(app_sidebar_right) {
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+::view-transition-image-pair(app_sidebar_right) {
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+::view-transition-group(browser_content) {
+  animation-duration: $vt-sidebars-timing; //425ms;
+  animation-timing-function: $vt-timing-easing;
+}
+
+/*::view-transition-image-pair(browser_content) {
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+::view-transition-old(browser_content) {
+
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+::view-transition-new(browser_content) {
+
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}*/
+
+
+::view-transition-old(browser_content),
+::view-transition-new(browser_content) {
+  mix-blend-mode: normal;
+  height: 100%;
+  overflow: clip;
+}
+
+::view-transition-old(browser_content) {
+  /* Maintain the aspect ratio of the view,
+  by shrinking it to fit within the bounds of the element */
+  object-fit: contain;
+  display: none;
+}
+
+::view-transition-old(app_sidebar_left) {
+  animation: none;
+  display: none;
+}
+
+::view-transition-new(app_sidebar_left) {
+  animation: none;
+}
+
+/* The new view is the full image */
+:not(:has(#app__sidebar_right))::view-transition-new(browser_content) {
+  animation: none;
+  height: 100%;
+  overflow: clip;
+  object-fit: cover;
+  object-position: top left;
+}
+
+:has(#app__sidebar_right)::view-transition-new(browser_content) {
+  animation: none;
+  object-fit: contain;
+  object-position: top left;
+}
+
+
+/* Entry transition */
+::view-transition-new(app_sidebar_right):only-child {
+  animation: both slide-from-right;
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+/* Exit transition */
+::view-transition-old(app_sidebar_right):only-child {
+  animation: both slide-to-right;
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+// Entry transition
+/*html:has(.verticalTabs)::view-transition-new(app_sidebar_left):only-child {
+  animation: both slide-from-left;
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+// Exit transition
+html:has(.verticalTabs)::view-transition-old(app_sidebar_left):only-child {
+  animation: both slide-to-left;
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+// Entry transition
+html:has(.horizontalTabs)::view-transition-new(app_sidebar_rigth):only-child {
+  animation: both slide-from-top;
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+
+// Exit transition
+html:has(.horizontalTabs)::view-transition-old(app_sidebar_right):only-child {
+  animation: both slide-to-top;
+  animation-duration: $vt-sidebars-timing;
+  animation-timing-function: $vt-timing-easing;
+}
+*/
+
+// Animations
+@keyframes slide-from-right {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-to-right {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-to-left {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slide-from-top {
+  from {
+    transform: translateY(-100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-to-top {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-100%);
+  }
+}
