@@ -46,7 +46,8 @@
     wait,
     generateID,
     truncate,
-    parseUrlIntoCanonical
+    parseUrlIntoCanonical,
+    useTimeout
   } from '@horizon/utils'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
@@ -629,73 +630,81 @@
     answerText: string,
     source: AIChatMessageSource | null
   ) => {
-    log.debug('highlighting text', resourceId, answerText, source)
-
     const pdfPage = source?.metadata?.page ?? null
-    let toast
-    if (pdfPage === null) toast = toasts.loading('Highlighting Citation..')
+    const toast = pdfPage === null ? toasts.loading('Highlighting Citation…') : undefined
 
-    const detectedResource = await detectResource()
-    if (!detectedResource) {
-      log.error('no resource detected')
-      return
-    }
+    try {
+      log.debug('highlighting text', resourceId, answerText, source)
 
-    if (detectedResource.type === ResourceTypes.PDF) {
-      if (pdfPage === null) {
-        log.error("page attribute isn't present")
+      const detectedResource = await detectResource()
+      if (!detectedResource) {
+        log.error('no resource detected')
+        toast?.error('Failed to parse content to highlight citation')
         return
       }
-      sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, {
-        page: pdfPage,
-        targetText: source!.content
-      })
-      return
-    }
 
-    const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
-    if (!content || !content.html) {
-      log.debug('no content found from web parser')
-      toast?.error('Failed to parse content to highlight citation')
-      return
-    }
-
-    const textElements = getTextElementsFromHtml(content.html)
-    if (!textElements) {
-      log.debug('no text elements found')
-      toast?.error('Failed to find source text in the page for citation')
-      return
-    }
-
-    log.debug('text elements length', textElements.length)
-    const docsSimilarity = await resourceManager.sffs.getAIDocsSimilarity(
-      answerText,
-      textElements,
-      0.5
-    )
-    if (!docsSimilarity || docsSimilarity.length === 0) {
-      log.debug('no docs similarity found')
-      toast?.error('Failed to find source text in the page for citation')
-      return
-    }
-
-    log.debug('docs similarity', docsSimilarity)
-
-    docsSimilarity.sort((a, b) => a.similarity - b.similarity)
-    const texts = []
-    for (const docSimilarity of docsSimilarity) {
-      const doc = textElements[docSimilarity.index]
-      log.debug('doc', doc)
-      if (doc && doc.includes(' ')) {
-        texts.push(doc)
+      if (detectedResource.type === ResourceTypes.PDF) {
+        if (pdfPage === null) {
+          log.error("page attribute isn't present")
+          toast?.error('Failed to find source text in the page for citation')
+          return
+        }
+        sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, {
+          page: pdfPage,
+          targetText: source!.content
+        })
+        return
       }
+
+      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+      if (!content || !content.html) {
+        log.debug('no content found from web parser')
+        toast?.error('Failed to parse content to highlight citation')
+        return
+      }
+
+      const textElements = getTextElementsFromHtml(content.html)
+      if (!textElements) {
+        log.debug('no text elements found')
+        toast?.error('Failed to find source text in the page for citation')
+        return
+      }
+
+      log.debug('text elements length', textElements.length)
+
+      // will throw an error if the request takes longer than 20 seconds
+      const timedGetAIDocsSimilarity = useTimeout(() => {
+        return resourceManager.sffs.getAIDocsSimilarity(answerText, textElements, 0.5)
+      }, 20000)
+
+      const docsSimilarity = await timedGetAIDocsSimilarity()
+      if (!docsSimilarity || docsSimilarity.length === 0) {
+        log.debug('no docs similarity found')
+        toast?.error('Failed to find source text in the page for citation')
+        return
+      }
+
+      log.debug('docs similarity', docsSimilarity)
+
+      docsSimilarity.sort((a, b) => a.similarity - b.similarity)
+      const texts = []
+      for (const docSimilarity of docsSimilarity) {
+        const doc = textElements[docSimilarity.index]
+        log.debug('doc', doc)
+        if (doc && doc.includes(' ')) {
+          texts.push(doc)
+        }
+      }
+
+      sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
+        texts: texts
+      })
+
+      toast?.success('Citation Highlighted!')
+    } catch (e) {
+      log.error('error highlighting text', e)
+      toast?.error('Failed to highlight citation')
     }
-
-    sendWebviewEvent(WebViewEventReceiveNames.HighlightText, {
-      texts: texts
-    })
-
-    toast?.success('Citation Highlighted!')
   }
 
   const getTextElementsFromHtml = (html: string): string[] => {

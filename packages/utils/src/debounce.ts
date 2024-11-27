@@ -119,3 +119,23 @@ export const useAnimationFrameThrottle = <F extends (...args: any[]) => any>(
 
   return throttle
 }
+
+export const useTimeout = <F extends (...args: any[]) => Promise<any>>(func: F, timeout = 250) => {
+  return (...args: Parameters<F>) => {
+    return new Promise<Awaited<ReturnType<F>>>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('Function timed out'))
+      }, timeout)
+
+      func(...args)
+        .then((result) => {
+          clearTimeout(timer)
+          resolve(result)
+        })
+        .catch((err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+    })
+  }
+}

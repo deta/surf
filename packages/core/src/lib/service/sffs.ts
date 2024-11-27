@@ -653,6 +653,10 @@ export class SFFS {
     const raw = await this.backend.js__ai_get_chat_data_source(hash)
     //
     const dataChunkSource = JSON.parse(raw)
+    if (!dataChunkSource) {
+      return null
+    }
+
     // TODO: fix the empty fields and also the data remodelling done
     const source: AIChatMessageSource = {
       id: '',
