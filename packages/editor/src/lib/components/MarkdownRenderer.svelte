@@ -54,7 +54,7 @@
     createRehypePlugin(rehypeHighlight, { languages: all }),
     ...(citationComponent
       ? [{ renderer: { citation: citationComponent, pre: CodeBlock, h4: 'h3', h5: 'h3' } }]
-      : [])
+      : [{ renderer: { pre: CodeBlock, h4: 'h3', h5: 'h3' } }])
   ]
 </script>
 

@@ -21,17 +21,13 @@ import {
   WebViewEventSendNames,
   ResourceTypes
 } from '@horizon/types'
-import { unified } from 'unified'
-import rehypeParse from 'rehype-parse'
-import rehypeRemark from 'rehype-remark'
-import remarkGfm from 'remark-gfm'
-import remarkStringify from 'remark-stringify'
 
 import Menu from './components/Menu.svelte'
 import CommentMenu from './components/Comment.svelte'
 // import CommentIndicator from './components/CommentIndicator.svelte'
 import { type ResourceArticle, type Resource } from '@horizon/core/src/lib/service/resources'
 import { isPDFViewerURL, normalizeURL } from '@horizon/utils/src/url'
+import { htmlToMarkdown } from '@horizon/utils/src/markdown'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 const PDFViewerEntryPoint =
@@ -1097,15 +1093,7 @@ async function handleDrop(e: DragEvent) {
         newDataTransfer?.getData('text/html')
       ) {
         const contentHtml = newDataTransfer!.getData('text/html')
-
-        const contentMarkdown = String(
-          await unified()
-            .use(rehypeParse)
-            .use(remarkGfm)
-            .use(rehypeRemark)
-            .use(remarkStringify)
-            .process(contentHtml)
-        )
+        const contentMarkdown = await htmlToMarkdown(contentHtml)
 
         await navigator.clipboard.writeText(contentMarkdown)
         const pasteEvent = new ClipboardEvent('paste', {

@@ -9,7 +9,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { derived, get, readable, writable, type Readable, type Writable } from 'svelte/store'
   import { fly, slide } from 'svelte/transition'
-  import { tooltip, truncate, useDebounce, useThrottle } from '@horizon/utils'
+  import { htmlToMarkdown, tooltip, truncate, useDebounce, useThrottle } from '@horizon/utils'
   import { DropdownMenu } from 'bits-ui'
   import chatContextDemo from '../../../../public/assets/demo/chatcontext.gif'
   import chatAdd from '../../../../public/assets/demo/chatadd.gif'
@@ -68,6 +68,7 @@
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import PromptItem from '../Chat/PromptItem.svelte'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
+  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -418,7 +419,7 @@
       return
     }
 
-    const savedInputValue = inputValue.trim().replace('<p>', '').replace('</p>', '')
+    const savedInputValue = await htmlToMarkdown(inputValue) //inputValue.trim().replaceAll('<p></p>', '')
     autoScrollChat = true
 
     try {
@@ -1418,14 +1419,20 @@
           >
             <div class="">
               <div
-                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 px-6 py-2 rounded-xl w-fit mb-2 truncate max-w-full"
+                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 p-4 rounded-xl w-fit mb-2"
               >
-                <div class="query">
-                  {#if response.role === 'user'}
-                    {cleanQuery(response.query)}
-                  {:else}
-                    {sanitizeQuery(response.query)}
-                  {/if}
+                <div class="flex items-start gap-2">
+                  <div class="icon mt-0.5 bg-sky-50 rounded-full p-1">
+                    <Icon name="user" />
+                  </div>
+
+                  <div class="query">
+                    {#if response.role === 'user'}
+                      <MarkdownRenderer content={response.query} id={response.id} />
+                    {:else}
+                      {sanitizeQuery(response.query)}
+                    {/if}
+                  </div>
                 </div>
 
                 <!-- {#if response.usedPageScreenshot}
@@ -1522,15 +1529,15 @@
           <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
             <div class="">
               <div
-                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 px-4 py-2 rounded-xl w-fit mb-2 truncate max-w-full text-gray-900 dark:text-gray-100"
+                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 p-4 rounded-xl w-fit mb-2 text-gray-900 dark:text-gray-100"
               >
-                <div class="flex items-center gap-2">
-                  <div class="icon">
-                    <Icon name="spinner" />
+                <div class="flex items-start gap-2">
+                  <div class="icon mt-0.5 bg-sky-50 rounded-full p-1">
+                    <Icon name="user" />
                   </div>
 
                   <div class="query">
-                    {cleanQuery(response.query)}
+                    <MarkdownRenderer content={response.query} id={response.id} />
                   </div>
                 </div>
 
@@ -1939,11 +1946,6 @@
 
   .query {
     flex: 1;
-    // truncate with ellipses after two lines
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .output-actions {
