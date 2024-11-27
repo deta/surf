@@ -70,6 +70,7 @@
   let menuHeight = mode === 'inline' ? 87 : 35
   let isResizingMenu = false
   let menuResizeStartX = 0
+  let autoScrollChat = true
 
   const MIN_SIZE = 20
   const resourceManager = useResourceManager()
@@ -411,9 +412,14 @@
   }
 
   function scrollToBottom() {
+    if (!autoScrollChat) return
     if (aiResponseElement) {
       aiResponseElement.scrollTop = aiResponseElement.scrollHeight
     }
+  }
+
+  function handleWheel(e: WheelEvent) {
+    autoScrollChat = false
   }
 
   function chatCallback(chunk: string) {
@@ -430,6 +436,7 @@
     const correctedRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
     const savedInputValue = prompt.trim().replace('<p>', '').replace('</p>', '')
     lastPrompt = ''
+    autoScrollChat = true
 
     try {
       let dataUrl: string | null
@@ -770,6 +777,7 @@
             {#if aiResponse}
               <div
                 bind:this={aiResponseElement}
+                on:wheel|passive={handleWheel}
                 class="overflow-y-auto max-h-80 py-2 w-full overflow-x-hidden"
               >
                 {#if lastPrompt}
@@ -823,7 +831,7 @@
           >
             <div class="flex items-center gap-2">
               <button
-                class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-100"
+                class="flex gap-2 select-none items-center rounded-lg p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:hover:text-gray-100"
                 on:click={() => {
                   if (prompt.length > 0 && !loading) {
                     handleAISubmit()
