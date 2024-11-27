@@ -575,8 +575,8 @@
     }
   }
 
-  const openResourceAsTab = (opts?: CreateTabOptions) => {
-    tabsManager.openResourceAsTab(resource, opts)
+  const openResourceAsTab = (resourceId: string, opts?: CreateTabOptions) => {
+    tabsManager.openResourceAsTab(resourceId, opts)
     dispatch('created-tab')
   }
 
@@ -600,14 +600,13 @@
       return
     }
 
+    let resourceToOpen = resource.id
+
     if (resource.type === ResourceTypes.ANNOTATION) {
       const annotatesTag = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.ANNOTATES)
       if (annotatesTag) {
-        dispatch('open', annotatesTag.value)
-        return
+        resourceToOpen = annotatesTag.value
       }
-
-      return
     }
 
     if (!interactive) {
@@ -615,11 +614,11 @@
     }
 
     if (e.shiftKey && !isModKeyPressed(e)) {
-      log.debug('opening resource in mini browser', resource.id)
-      dispatch('open', resource.id)
+      log.debug('opening resource in mini browser', resourceToOpen)
+      dispatch('open', resourceToOpen)
     } else {
-      log.debug('opening resource in new tab', resource.id)
-      openResourceAsTab({
+      log.debug('opening resource in new tab', resourceToOpen)
+      openResourceAsTab(resourceToOpen, {
         active: !isModKeyPressed(e) || e.shiftKey,
         trigger:
           origin === 'homescreen'
@@ -673,7 +672,7 @@
   const handleOpenAsNewTab = (e?: MouseEvent) => {
     e?.stopImmediatePropagation()
 
-    openResourceAsTab({
+    openResourceAsTab(resource.id, {
       active: false,
       trigger: CreateTabEventTrigger.OasisItem
     })
