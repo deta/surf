@@ -1436,7 +1436,7 @@
       }
 
       updateBookmarkingTabState(tabId, 'in_progress')
-      toast = toasts.loading('Saving Page…')
+      toast = toasts.loading(savedToSpace ? 'Saving Page to Space…' : 'Saving Page…')
 
       const isActivated = $activatedTabs.includes(tab.id)
       if (!isActivated) {
@@ -1480,6 +1480,8 @@
           SpaceEntryOrigin.ManuallyAdded
         )
         toast?.success(`Page saved to active space!`)
+      } else if (savedToSpace) {
+        toast?.success('Page Saved to Space!')
       } else {
         toast?.success('Page Saved!')
       }
@@ -2136,6 +2138,13 @@
     }
   }
 
+  const openCreateSpaceMenu = async () => {
+    showNewTabOverlay.set(2)
+    await tick()
+    const button = document.querySelector('.action-new-space')
+    if (button) button.click()
+  }
+
   const createPageAnnotation = async (
     text: string,
     html?: string,
@@ -2279,19 +2288,17 @@
     createHistoryTab()
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
-    log.debug('add resource to space', e.detail)
-
-    const toast = toasts.loading('Saving page to space...')
+  const saveTabInSpace = async (tabId: string, space: OasisSpace) => {
+    log.debug('save tab page to space', tabId, space)
 
     try {
-      const { resource } = await handleBookmark($activeTabId, true, SaveToOasisEventTrigger.Click)
+      const { resource } = await handleBookmark(tabId, true, SaveToOasisEventTrigger.Click)
       log.debug('bookmarked resource', resource)
 
       if (resource) {
-        log.debug('will add item', resource.id, 'to space', e.detail.id)
+        log.debug('will add item', resource.id, 'to space', space.id)
         await resourceManager.addItemsToSpace(
-          e.detail.id,
+          space.id,
           [resource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
@@ -2302,11 +2309,8 @@
           AddResourceToSpaceEventTrigger.TabMenu
         )
       }
-
-      toast.success('Page saved to space!')
     } catch (e) {
       log.error('Failed to add resource to space:', e)
-      toast.error('Failed to save page to space')
     }
   }
 
@@ -4471,12 +4475,7 @@
     on:toggle-bookmark={() =>
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
     on:show-history-tab={handleCreateHistoryTab}
-    on:create-new-space={async () => {
-      showNewTabOverlay.set(2)
-      await tick()
-      const button = document.querySelector('.action-new-space')
-      if (button) button.click()
-    }}
+    on:create-new-space={() => openCreateSpaceMenu()}
     on:open-space={async (e) => {
       const space = e.detail
       showNewTabOverlay.set(2)
@@ -4754,6 +4753,7 @@
                     on:pin={handlePinTab}
                     on:unpin={handleUnpinTab}
                     on:edit={handleEdit}
+                    on:create-new-space={() => openCreateSpaceMenu()}
                   />
                 {/each}
               {/if}
@@ -4881,7 +4881,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -4889,6 +4889,7 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
+                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {:else}
                     <TabItem
@@ -4916,6 +4917,7 @@
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -4923,6 +4925,7 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
+                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {/if}
                 {/each}
@@ -5007,7 +5010,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5015,6 +5018,7 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
+                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {:else}
                     <TabItem
@@ -5042,6 +5046,7 @@
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5049,6 +5054,7 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
+                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {/if}
                 {/each}

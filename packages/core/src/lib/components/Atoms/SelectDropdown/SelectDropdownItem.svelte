@@ -1,8 +1,9 @@
 <script lang="ts">
-  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
-  import type { SelectItem } from '../../Atoms/SelectDropdown.svelte'
   import { Icon } from '@horizon/icons'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+
+  import SpaceIcon from '../SpaceIcon.svelte'
+  import type { SelectItem } from '.'
 
   export let item: SelectItem
 

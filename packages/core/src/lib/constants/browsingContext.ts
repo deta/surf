@@ -1,4 +1,4 @@
-import type { SelectItem } from '../components/Atoms/SelectDropdown.svelte'
+import type { SelectItem } from '../components/Atoms/SelectDropdown/index'
 
 export const generalContext = {
   id: 'default',

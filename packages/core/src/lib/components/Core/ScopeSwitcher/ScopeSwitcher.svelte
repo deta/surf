@@ -1,10 +1,13 @@
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
-  import { OasisSpace, pickRandomColorPair, useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { conditionalArrayItem, getFormattedDate, useLogScope, wait } from '@horizon/utils'
-  import ScopeSwitcherItem from './ScopeSwitcherItem.svelte'
+  import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
+  import { conditionalArrayItem, useLogScope, wait } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
-  import SelectDropdown, { type SelectItem } from '../../Atoms/SelectDropdown.svelte'
+  import {
+    SelectDropdown,
+    SelectDropdownItem,
+    type SelectItem
+  } from '../../Atoms/SelectDropdown/index'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { contextMenu, type CtxItem } from '../ContextMenu.svelte'
   import { ChangeContextEventTrigger, DeleteSpaceEventTrigger } from '@horizon/types'
@@ -312,7 +315,7 @@
         items: getSpaceContextItems(item?.data, item?.id === $activeScopeId)
       }}
     >
-      <ScopeSwitcherItem {item} />
+      <SelectDropdownItem {item} />
     </div>
   </SelectDropdown>
 </div>
@@ -322,7 +325,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem;
     padding-left: 0.75rem;
     border-radius: 1rem;
     color: #465b86;
@@ -336,6 +339,12 @@
       padding: 0.1rem 0.1rem;
       padding-left: 0.5rem;
       border-radius: 0.75rem;
+    }
+
+    :global(.dark) & {
+      background-color: rgb(58, 68, 83);
+      border-color: rgb(58, 68, 83);
+      color: rgb(232, 235, 238);
     }
   }
 
@@ -382,7 +391,7 @@
     align-items: center;
     justify-content: center;
     padding: 0.5rem 0.5rem;
-    border-radius: calc(10px - 0.25rem);
+    border-radius: calc(1rem - 0.25rem);
     font-size: 1rem;
     font-weight: 400;
     cursor: pointer;
@@ -396,6 +405,11 @@
     &:hover {
       color: rgb(2 132 199); // text-sky-600
       background: rgba(2, 132, 199, 0.1);
+
+      :global(.dark) & {
+        color: rgb(2 132 199); // text-sky-600
+        background-color: rgb(59, 80, 111);
+      }
     }
 
     &:focus {

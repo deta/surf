@@ -38,6 +38,7 @@
   import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -116,6 +117,7 @@
     edit: void
     mouseenter: string
     mouseleave: string
+    'create-new-space': void
   }>()
   const resourceManager = useResourceManager()
 
@@ -123,6 +125,7 @@
   const saveToSpacePopoverOpened = writable(false)
   const selectedTabs = tabsManager.selectedTabs
   const tabStyles = writable<string>('')
+  const spaceSearchValue = writable<string>('')
 
   const SHOW_INSECURE_WARNING_TIMEOUT = 3000
 
@@ -136,6 +139,25 @@
   let popoverLiveSpaceVisible = false
   let showInsecureWarningText = false
   let pdfResource: Resource | null = null
+
+  const saveToSpaceItems = derived([spaces, spaceSearchValue], ([spaces, searchValue]) => {
+    const spaceItems = spaces
+      .sort((a, b) => {
+        return a.indexValue - b.indexValue
+      })
+      .map(
+        (space) =>
+          ({
+            id: space.id,
+            label: space.dataValue.folderName,
+            data: space
+          }) as SelectItem
+      )
+
+    if (!searchValue) return spaceItems
+
+    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
+  })
 
   $: {
     if (
@@ -310,8 +332,8 @@
   }
 
   const handleBookmark = (trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
-    saveToSpacePopoverOpened.set(false)
     dispatch('bookmark', { trigger })
+    saveToSpacePopoverOpened.set(false)
   }
 
   const handleRemoveBookmark = () => {
@@ -323,14 +345,34 @@
     dispatch('create-live-space')
   }
 
+  const handleCreateNewSpace = () => {
+    saveToSpacePopoverOpened.set(false)
+    dispatch('create-new-space')
+  }
+
   const handleAddSourceToSpace = (event: CustomEvent<OasisSpace>) => {
     liveSpacePopoverOpened.set(false)
     dispatch('add-source-to-space', event.detail)
   }
 
-  const handleSaveResourceInSpace = (event: CustomEvent<OasisSpace>) => {
+  const handleSaveResourceInSpace = (event: CustomEvent<string>) => {
+    const spaceId = event.detail
+    log.debug('selected space to save to', spaceId)
+
+    if (spaceId === 'new') {
+      handleCreateNewSpace()
+      return
+    }
+
+    const space = $spaces.find((space) => space.id === spaceId)
+
+    if (!space) {
+      log.error('Space not found:', spaceId)
+      return
+    }
+
+    dispatch('save-resource-in-space', space)
     saveToSpacePopoverOpened.set(false)
-    dispatch('save-resource-in-space', event.detail)
   }
 
   const handleExcludeOthers = () => {
@@ -833,11 +875,21 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
 
         {#if tab.type === 'page'}
           {#key isBookmarkedByUser}
-            <CustomPopover position="right" popoverOpened={saveToSpacePopoverOpened}>
+            <SelectDropdown
+              items={saveToSpaceItems}
+              search={$spaces.length > 0 ? 'manual' : 'disabled'}
+              searchValue={spaceSearchValue}
+              footerItem={newContext}
+              inputPlaceholder="Select a Space to save to…"
+              open={saveToSpacePopoverOpened}
+              openOnHover={500}
+              side="right"
+              keepHeightWhileSearching
+              on:select={handleSaveResourceInSpace}
+            >
               <button
-                slot="trigger"
+                on:click|stopPropagation={() => handleBookmark()}
                 class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
-                on:click|stopPropagation={handleBookmark}
               >
                 {#if bookmarkingState === 'in_progress'}
                   <Icon name="spinner" size="16px" />
@@ -852,14 +904,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
                 {/if}
               </button>
 
-              <div slot="content" class="no-drag p-1">
-                <ShortcutSaveItem
-                  on:save-resource-in-space={handleSaveResourceInSpace}
-                  {spaces}
-                  infoText="Save page to Space:"
-                />
+              <div slot="empty" class="flex flex-col justify-center gap-2 h-full">
+                {#if $spaceSearchValue.length > 0 || $saveToSpaceItems.length === 0}
+                  <div class="h-full flex flex-col justify-center">
+                    <p class="text-gray-400 dark:text-gray-400 text-center py-6">No Spaces found</p>
+                  </div>
+                {/if}
               </div>
-            </CustomPopover>
+            </SelectDropdown>
           {/key}
         {/if}
 
