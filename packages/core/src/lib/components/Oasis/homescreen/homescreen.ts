@@ -1,9 +1,10 @@
 import { derived, writable, get, type Readable, type Writable, readable } from 'svelte/store'
 import type { BentoItem, BentoItemData } from './BentoController'
 import { getContext, setContext, tick } from 'svelte'
-import { OpenHomescreenEventTrigger } from '@horizon/types'
+import { OpenHomescreenEventTrigger, type UserSettings } from '@horizon/types'
 import type { Telemetry } from '../../../service/telemetry'
 import { HorizonDatabase } from '../../../service/storage'
+import type { ConfigService } from '../../../service/config'
 
 type Item = BentoItemData & {
   isDragged?: boolean
@@ -28,6 +29,7 @@ export class Homescreen
     }>
 {
   telemetry: Telemetry
+  userConfig: Writable<UserSettings>
   storage: HorizonDatabase
 
   #visible: Writable<boolean> = writable(false)
@@ -41,8 +43,9 @@ export class Homescreen
     customization: Writable<Customization>
   }>
 
-  constructor(telemetry: Telemetry) {
+  constructor(telemetry: Telemetry, userConfig: Writable<UserSettings>) {
     this.telemetry = telemetry
+    this.userConfig = userConfig
     this.storage = new HorizonDatabase()
     this.bentoItems = writable<Writable<Item>[]>([])
     this.customization = writable<Customization>({
@@ -65,6 +68,10 @@ export class Homescreen
     this.customization.subscribe((customization) => {
       this.store()
     })
+  }
+
+  get isEnabled() {
+    return get(this.userConfig).homescreen === true
   }
 
   get subscribe() {
@@ -111,8 +118,8 @@ export class Homescreen
     }
   }
 
-  static provide(telemetry: Telemetry) {
-    const service = new Homescreen(telemetry)
+  static provide(telemetry: Telemetry, userConfig: Writable<UserSettings>) {
+    const service = new Homescreen(telemetry, userConfig)
 
     setContext('homeSpace', service)
 

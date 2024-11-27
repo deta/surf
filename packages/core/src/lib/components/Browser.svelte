@@ -219,7 +219,7 @@
   const historyEntriesManager = new HistoryEntriesManager()
   const toasts = provideToasts()
   const config = provideConfig()
-  const homescreen = provideHomescreen(telemetry)
+  const homescreen = provideHomescreen(telemetry, config.settings)
   const oasis = provideOasis(resourceManager, config)
   const tabsManager = createTabsManager(
     resourceManager,

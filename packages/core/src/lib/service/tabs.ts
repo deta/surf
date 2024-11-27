@@ -440,7 +440,10 @@ export class TabsManager {
     this.activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
 
     await tick()
-    if (this.activeTabIdValue === tabId) {
+
+    if (this.homescreen.isEnabled && this.unpinnedTabsValue.length <= 0) {
+      this.homescreen.setVisible(true)
+    } else if (this.activeTabIdValue === tabId) {
       const updatedTabsInOrder = tabsInOrder.filter((tab) => tab.id !== tabId)
       if (updatedTabsInOrder.length > 0) {
         const newActiveTab =
