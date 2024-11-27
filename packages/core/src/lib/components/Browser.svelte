@@ -3830,7 +3830,7 @@
 
         // NOTE: Should be opt? when creating tab, but currently api does not support and
         // adding into CreateTabOptions doesnt match other tab apis props
-        if (tab && pinned) tabsManager.update(tab!.id, { pinned })
+        if (tab && pinned) tabsManager.changeTabPinnedState(tab!.id, pinned)
 
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
@@ -3882,6 +3882,7 @@
           }
 
           if (drag.to?.id === 'sidebar-pinned-tabs') {
+            droppedTab.scopeId = undefined
             droppedTab.pinned = true
             droppedTab.magic = false
 
@@ -3914,6 +3915,7 @@
               telemetry.trackMoveTab(MoveTabEventAction.Unpin)
             }
 
+            droppedTab.scopeId = tabsManager.activeScopeIdValue ?? undefined
             droppedTab.pinned = false
             droppedTab.magic = false
             cachedMagicTabs.delete(droppedTab.id)
@@ -3938,7 +3940,12 @@
         tabsManager.bulkPersistChanges(
           newTabs.map((tab) => ({
             id: tab.id,
-            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+            updates: {
+              pinned: tab.pinned,
+              magic: tab.magic,
+              index: tab.index,
+              scopeId: tab.scopeId
+            }
           }))
         )
 
@@ -4275,7 +4282,7 @@
       return
     }
 
-    tabsManager.update(tabId, { pinned: true })
+    tabsManager.pinTab(tabId)
   }
   const handleUnpinTab = (e: CustomEvent<string>) => {
     const tabId = e.detail
@@ -4285,7 +4292,7 @@
       return
     }
 
-    tabsManager.update(tabId, { pinned: false })
+    tabsManager.unpinTab(tabId)
   }
 
   let leftSidebarWidth = 0

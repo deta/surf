@@ -490,6 +490,34 @@ export class TabsManager {
     this.emit('updated', this.tabsValue.find((tab) => tab.id === tabId)!)
   }
 
+  pinTab(tabId: string) {
+    this.log.debug('Pinning tab', tabId)
+
+    const tab = this.tabsValue.find((tab) => tab.id === tabId)
+    if (!tab) {
+      this.log.error('Tab not found', tabId)
+      return
+    }
+
+    return this.update(tabId, { pinned: true, scopeId: undefined })
+  }
+
+  unpinTab(tabId: string) {
+    this.log.debug('Unpinning tab', tabId)
+
+    const tab = this.tabsValue.find((tab) => tab.id === tabId)
+    if (!tab) {
+      this.log.error('Tab not found', tabId)
+      return
+    }
+
+    return this.update(tabId, { pinned: false, scopeId: this.activeScopeIdValue ?? undefined })
+  }
+
+  changeTabPinnedState(tabId: string, pinned: boolean) {
+    return pinned ? this.pinTab(tabId) : this.unpinTab(tabId)
+  }
+
   async updateActive(updates: Partial<Tab>) {
     if (!this.activeTabValue) {
       this.log.error('No active tab')
