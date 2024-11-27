@@ -13,7 +13,9 @@ export interface Space {
 
 export interface SpaceData {
   folderName: string
-  colors: [string, string]
+  colors?: [string, string]
+  emoji?: string
+  imageIcon?: string
   showInSidebar: boolean
   sources?: SpaceSource[]
   liveModeEnabled: boolean

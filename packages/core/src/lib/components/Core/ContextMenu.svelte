@@ -21,14 +21,14 @@
     kind?: 'danger'
     disabled?: boolean
     text: string
-    icon?: string | [string, string]
+    icon?: string | [string, string] | OasisSpace // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
     action: () => void
   }
   export interface CtxItemSubMenu extends CtxItemBase {
     type: 'sub-menu'
     disabled?: boolean
     text: string
-    icon?: string
+    icon?: string | [string, string] | OasisSpace // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
     items: CtxItem[]
   }
 
@@ -159,6 +159,7 @@
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
   import log from '@horizon/utils/src/log'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let targetX: number
   export let targetY: number

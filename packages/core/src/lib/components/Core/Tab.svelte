@@ -128,6 +128,7 @@
 
   let addressInputElem: HTMLInputElement
   let space: OasisSpace | null = null
+  let spaceData: OasisSpace['data'] | null = null
   let isDragging = false
   let isEditing = false
   let hovered = false
@@ -300,6 +301,9 @@
   const fetchSpace = async (id: string) => {
     try {
       space = await oasis.getSpace(id)
+      if (space) {
+        spaceData = space.data
+      }
     } catch (error) {
       log.error('Failed to fetch space:', error)
     }
@@ -477,7 +481,7 @@
             (space) =>
               ({
                 type: 'action',
-                icon: space.dataValue.colors,
+                icon: space,
                 text: space.dataValue.folderName,
                 action: () => handleMove(space.id, space.dataValue.folderName)
               }) as CtxItem
@@ -693,6 +697,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   <div
     class:icon-wrapper={true}
     class:flex-shrink-0={true}
+    class:emoji-adjustment={$spaceData?.emoji}
     class:group-hover:hidden={(!isActive &&
       showClose &&
       ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) &&
@@ -716,7 +721,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else if tab.type === 'history'}
       <Icon name="history" size="16px" />
     {:else if tab.type === 'space' && space}
-      <SpaceIcon folder={space} />
+      <SpaceIcon folder={space} interactive />
     {:else if tab.type === 'resource'}
       {#if tab.resourceType === ResourceTypes.DOCUMENT_SPACE_NOTE}
         <Icon name="docs" size="16px" />
@@ -1009,6 +1014,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     display: block;
     user-select: none;
     flex-shrink: 0;
+
+    &.emoji-adjustment {
+      margin-top: -1.5px;
+    }
   }
 
   .tab.selected:not(.active) {

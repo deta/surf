@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { useLogScope } from '@horizon/utils'
   import ColorIcon from './ColorIcon.svelte'
+  import IconSelector from '../Oasis/IconSelector.svelte'
   import { OasisSpace, pickRandomColorPair } from '../../service/oasis'
 
   const dispatch = createEventDispatcher<{ change: [string, string] }>()
@@ -9,9 +10,18 @@
 
   export let folder: OasisSpace | undefined = undefined
   export let interactive = true
+  export let round = false
+  export let size: 'sm' | 'md' | 'lg' | 'xl' = 'md'
+  export let isCreating = false
+  export let disablePopoverTransition: boolean | undefined = undefined
 
   $: spaceData = folder?.data
   $: parsedColors = getColors($spaceData?.colors ?? ['#76E0FF', '#4EC9FB'])
+
+  $: colorIconSize =
+    size === 'sm' ? '1.1em' : size === 'lg' ? '1.3em' : size === 'xl' ? '1.5em' : '1.2em'
+
+  let pickedEmoji: string | null = null
 
   const updateColor = (userAction = true) => {
     const newColors = pickRandomColorPair()
@@ -47,8 +57,72 @@
   })
 </script>
 
-<ColorIcon
-  colors={parsedColors}
-  on:click={() => interactive && updateColor()}
-  style={!interactive ? 'pointer-events: none;' : ''}
-/>
+{#if folder && $spaceData && interactive}
+  <IconSelector
+    space={folder}
+    disabled={!interactive}
+    disableTransition={disablePopoverTransition}
+    {isCreating}
+    on:update
+  >
+    <div class="list">
+      {#if pickedEmoji || ($spaceData && $spaceData.emoji)}
+        <span class="emoji" data-size={size}>{pickedEmoji || $spaceData.emoji}</span>
+      {:else if $spaceData && $spaceData.imageIcon}
+        <img src={$spaceData.imageIcon} alt="Space icon" class="image" class:round />
+      {:else}
+        <ColorIcon colors={parsedColors} style="pointer-events: none;" size={colorIconSize} />
+      {/if}
+    </div>
+  </IconSelector>
+{:else}
+  <div class="list">
+    {#if pickedEmoji || ($spaceData && $spaceData.emoji)}
+      <span class="emoji" data-size={size}>{pickedEmoji || $spaceData?.emoji}</span>
+    {:else if $spaceData && $spaceData.imageIcon}
+      <img src={$spaceData.imageIcon} alt="Space icon" class="image" class:round />
+    {:else}
+      <ColorIcon colors={parsedColors} style="pointer-events: none;" size={colorIconSize} />
+    {/if}
+  </div>
+{/if}
+
+<style lang="scss">
+  .list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .emoji {
+    font-size: 1.25rem /* 20px */;
+    line-height: 1;
+
+    &[data-size='sm'] {
+      font-size: 1.1rem /* 18px */;
+    }
+
+    &[data-size='lg'] {
+      font-size: 1.5rem /* 24px */;
+    }
+
+    &[data-size='xl'] {
+      font-size: 6rem /* 64px */;
+    }
+  }
+
+  .image {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 5px;
+    object-fit: cover;
+  }
+
+  .round {
+    border-radius: 50%;
+  }
+</style>

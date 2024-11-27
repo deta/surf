@@ -4369,7 +4369,7 @@
             (space) =>
               ({
                 type: 'action',
-                icon: space.dataValue.colors,
+                icon: space,
                 text: space.dataValue.folderName,
                 action: () => handleMove(space.id, space.dataValue.folderName)
               }) as CtxItem

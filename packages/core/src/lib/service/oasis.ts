@@ -29,6 +29,7 @@ import { ResourceManager, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
+import { blobToSmallImageUrl } from '../utils/screenshot'
 import type { ConfigService } from './config'
 import { RESOURCE_FILTERS } from '../constants/resourceFilters'
 
@@ -180,6 +181,36 @@ export class OasisSpace {
     this.oasis.emit('removed-resources', this, removedResourceIds)
 
     return removedResourceIds
+  }
+
+  async useResourceAsIcon(resourceId: string) {
+    const resource = await this.resourceManager.getResource(resourceId)
+    if (!resource) {
+      this.log.error('Resource not found')
+      return
+    }
+
+    if (!resource.type.startsWith('image/')) {
+      this.log.error('Resource is not an image')
+      return
+    }
+
+    const blob = await resource.getData()
+    if (!blob) {
+      this.log.error('Resource data not found')
+      return
+    }
+
+    const base64 = await blobToSmallImageUrl(blob)
+    if (!base64) {
+      this.log.error('Failed to convert blob to base64')
+      return
+    }
+
+    await this.oasis.updateSpaceData(this.id, {
+      emoji: undefined,
+      imageIcon: base64
+    })
   }
 }
 

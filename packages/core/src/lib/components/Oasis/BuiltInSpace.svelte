@@ -138,7 +138,7 @@
         </div>
 
         <div
-          class="folder-input"
+          class="folder-input text-[#244581] dark:text-sky-100/90"
           style={`width: ${inputWidth};`}
           aria-hidden="true"
           on:click|stopPropagation={handleSpaceSelect}
@@ -222,15 +222,53 @@
       .folder-leading {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 1rem;
         flex: 1;
         max-width: calc(100% - 1rem);
         overflow: visible;
+        padding-left: 0.5rem;
       }
 
       .space-icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 0.25rem;
+        margin: -0.25rem;
         border-radius: 4px;
+      }
+
+      .folder-input {
+        border: none;
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.0025em;
+        line-height: 1;
+        font-smooth: always;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        max-width: 100%;
+        padding: 0.525rem 0 0.5rem 0;
+        outline: none;
+        width: fit-content;
+
+        // truncate text
+        white-space: nowrap;
+        overflow-y: visible;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+
+        &::selection {
+          background-color: rgba(0, 110, 255, 0.2);
+        }
+
+        &.isEditing {
+          border-radius: 4px;
+          padding: 0 0.25rem;
+          margin: 0.4rem 0;
+          outline: 4px solid rgba(0, 110, 255, 0.4);
+        }
       }
 
       .close {

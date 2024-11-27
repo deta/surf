@@ -109,7 +109,7 @@
           )
           .map((space) => ({
             type: 'action',
-            icon: space.dataValue.colors,
+            icon: space,
             text: space.dataValue.folderName,
             action: () => handleAddToSpace(space.id)
           }))
@@ -150,6 +150,7 @@
               on:load
               on:blacklist-resource
               on:whitelist-resource
+              on:set-resource-as-space-icon
               on:rendered={handleRenderingDone}
               {interactive}
               draggable
@@ -172,6 +173,7 @@
             on:whitelist-resource
             on:remove
             on:load
+            on:set-resource-as-space-icon
             {interactive}
             draggable
           />

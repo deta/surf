@@ -122,7 +122,7 @@
           )
           .map((space) => ({
             type: 'action',
-            icon: space.dataValue.colors,
+            icon: space,
             text: space.dataValue.folderName,
             action: () => handleAddToSpace(space.id)
           }))
@@ -164,6 +164,7 @@
             on:blacklist-resource
             on:whitelist-resource
             on:rendered={handleRenderingDone}
+            on:set-resource-as-space-icon
             {interactive}
           />
         </Masonry>

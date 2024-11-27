@@ -86,11 +86,11 @@ const createSpaceAction = async (
 
   const openSpaceAction = {
     id: result.id + '-open',
-    name: `Open ${result.name}`,
+    name: result.name,
     selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
     displayPriority: result.displayPriority || ActionDisplayPriority.HIGHEST,
     execute: TeletypeAction.OpenSpace,
-    icon: '',
+    icon: result.icon,
     section: 'Spaces',
     handler: () => {
       try {

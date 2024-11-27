@@ -17,6 +17,7 @@
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import SpaceIcon from '../Atoms/SpaceIcon.svelte'
 
   export let space: OasisSpace | null
   const config = useConfig()
@@ -221,15 +222,20 @@
 <article class="wrapper">
   {#if space && $spaceData}
     <div class="header">
-      <!-- <SpaceIcon folder={space} /> -->
-      <div use:tooltip={{ text: 'Click to edit' }}>
-        <input
-          bind:value={$spaceData.folderName}
-          on:blur={handleNameBlur}
-          on:keydown|stopPropagation
-          class="folder-input"
-          spellcheck="false"
-        />
+      <div class="title">
+        <div class="icon-wrapper">
+          <SpaceIcon folder={space} size="lg" />
+        </div>
+
+        <div use:tooltip={{ text: 'Click to edit' }}>
+          <input
+            bind:value={$spaceData.folderName}
+            on:blur={handleNameBlur}
+            on:keydown|stopPropagation
+            class="folder-input"
+            spellcheck="false"
+          />
+        </div>
       </div>
 
       <Switch
@@ -528,6 +534,12 @@
     justify-content: space-between;
     gap: 1rem;
     width: 100%;
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 
     h1 {
       font-size: 1.4rem;
@@ -535,6 +547,11 @@
       font-smooth: always;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+    }
+
+    .icon-wrapper {
+      width: 1.5rem;
+      height: 1.5rem;
     }
   }
 

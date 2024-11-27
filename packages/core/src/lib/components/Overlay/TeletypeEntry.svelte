@@ -27,6 +27,7 @@
 
   import { createActionsFromResults } from './horizontal'
   import TeletypeHeader from './TeletypeHeader.svelte'
+  import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
 
   export let tabsManager: TabsManager
   export let open: boolean
@@ -305,7 +306,7 @@
   actions={staticActions}
   class="teletype-provider"
   options={{
-    iconComponent: Icon,
+    iconComponent: TeletypeIconRenderer,
     showHelper: true,
     placeholder: 'Search the web, enter URL or ask a question...',
     localSearch: true,

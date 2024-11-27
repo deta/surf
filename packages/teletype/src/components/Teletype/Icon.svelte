@@ -10,10 +10,8 @@
   const iconComponent = teletype.iconComponent
 </script>
 
-<div class="icon">
-  {#if component}
-    <svelte:component this={component} />
-  {:else if name && iconComponent}
-    <svelte:component this={iconComponent} {name} />
-  {/if}
-</div>
+{#if component}
+  <svelte:component this={component} />
+{:else if name && iconComponent}
+  <svelte:component this={iconComponent} {name} />
+{/if}

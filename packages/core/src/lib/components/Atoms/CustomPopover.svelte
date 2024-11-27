@@ -11,6 +11,10 @@
   export let sideOffset = 20
   export let forceOpen = false
   export let disabled = false
+  export let portal: string | HTMLElement | null | undefined = undefined
+  export let disableHover = false
+  export let triggerClassName = ''
+  export let disableTransition = false
 
   let timerBeforePopoverClose: NodeJS.Timeout
   let timerBeforePopoverOpen: NodeJS.Timeout
@@ -30,6 +34,14 @@
 
     dispatch('click', e.detail.originalEvent)
 
+    if (disableHover) {
+      clearTimeout(timerBeforePopoverClose)
+      timerBeforePopoverOpen = setTimeout(() => {
+        popoverOpened.set(true)
+      }, 50)
+      return
+    }
+
     popoverOpened.set(false)
     clearTimeout(timerBeforePopoverOpen)
 
@@ -41,6 +53,10 @@
   }
 
   const handleMouseOver = () => {
+    if (disableHover) {
+      return
+    }
+
     if (blockOpen) {
       return
     }
@@ -52,6 +68,10 @@
   }
 
   const handleMouseOut = () => {
+    if (disableHover) {
+      return
+    }
+
     clearTimeout(timerBeforePopoverOpen)
     timerBeforePopoverClose = setTimeout(() => {
       if (!forceOpen) {
@@ -90,13 +110,14 @@
     open={$popoverOpened}
     closeOnEscape
     closeOnOutsideClick
+    {portal}
     onOpenChange={(isOpen) => {
       if (!isOpen) {
         popoverOpened.set(false)
       }
     }}
   >
-    <Popover.Trigger on:click={handleClick}>
+    <Popover.Trigger on:click={handleClick} class={triggerClassName}>
       <div
         role="button"
         tabindex="0"
@@ -108,10 +129,11 @@
       </div>
     </Popover.Trigger>
     <Popover.Content
-      class="z-30 max-w-[400px] max-h-[500px] "
+      class="z-[100] max-w-[400px] max-h-[500px] "
       transition={flyAndScale}
       side={position}
       {sideOffset}
+      transitionConfig={disableTransition ? { duration: 0 } : undefined}
     >
       <div
         on:mouseenter={handleMouseEnter}

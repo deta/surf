@@ -6,6 +6,7 @@
     value: string
     icon?: string
     iconUrl?: string
+    iconSpaceId?: string
   }
 </script>
 
@@ -82,7 +83,7 @@
               type: 'space',
               label: space.dataValue.folderName,
               value: `space;;${space.id}`,
-              icon: space.id
+              iconSpaceId: space.id
             }) as TabItem
         )
 
@@ -103,7 +104,7 @@
               type: 'page',
               label: tab.title,
               value: `tab;;${tab.id}`,
-              ...(tab.type === 'space' ? { icon: tab.spaceId } : { iconUrl: tab.icon })
+              ...(tab.type === 'space' ? { iconSpaceId: tab.spaceId } : { iconUrl: tab.icon })
             }) as TabItem
         )
 
@@ -303,9 +304,7 @@
     </Command.Empty>
     {#each $tabItems as item, idx (item.id + idx)}
       <Command.Item value={item.value} on:click={handleSubmitItem}>
-        <div
-          style="width: 14px; aspect-ratio: 1 / 1; display: block; user-select: none; flex-shrink: 0;"
-        >
+        <div class="flex items-center justify-center select-none shrink-0 aspect-square w-4">
           {#if item.iconUrl}
             <img
               src={item.iconUrl}
@@ -314,16 +313,14 @@
               style="transition: transform 0.3s;"
               loading="lazy"
             />
+          {:else if item.iconSpaceId}
+            {#await oasis.getSpace(item.iconSpaceId) then fetchedSpace}
+              {#if fetchedSpace}
+                <SpaceIcon folder={fetchedSpace} size="sm" interactive={false} />
+              {/if}
+            {/await}
           {:else if item.icon}
-            {#if item.type === 'space'}
-              {#await oasis.getSpace(item.icon) then fetchedSpace}
-                {#if fetchedSpace}
-                  <SpaceIcon folder={fetchedSpace} />
-                {/if}
-              {/await}
-            {:else}
-              <FileIcon kind={item.icon} />
-            {/if}
+            <FileIcon kind={item.icon} />
           {:else}
             <Icon name="world" size="100%" />
           {/if}

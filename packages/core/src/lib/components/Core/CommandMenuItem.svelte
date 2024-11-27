@@ -17,7 +17,7 @@
       | 'general-search'
     icon?: Icons
     iconUrl?: string
-    iconColors?: [string, string]
+    data?: OasisSpace['data']
     value?: string // URL or command
     weight?: number
     score?: number
@@ -29,8 +29,11 @@
   import { Icon, type Icons } from '@horizon/icons'
   import * as Command from '../Command'
   import ColorIcon from '../Atoms/ColorIcon.svelte'
+  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let item: CMDMenuItem
+
+  $: itemData = item.data
 
   const dispatch = createEventDispatcher<{ select: CMDMenuItem }>()
 
@@ -83,10 +86,16 @@
     <div class="flex items-center gap-2 flex-grow min-w-0">
       {#if item.iconUrl}
         <img src={item.iconUrl} alt="favicon" class="w-4 h-4 flex-shrink-0" />
-      {:else if item.iconColors}
-        <div class="color-icon-wrapper w-fit h-fit flex-shrink-0">
-          <ColorIcon colors={item.iconColors} />
-        </div>
+      {:else if item.type === 'space' && itemData}
+        {#if $itemData?.imageIcon}
+          <img src={$itemData?.imageIcon} alt="icon" class="w-4 h-4 flex-shrink-0 rounded-sm" />
+        {:else if $itemData?.emoji}
+          <span class="text-lg">{$itemData?.emoji}</span>
+        {:else if $itemData?.colors}
+          <div class="color-icon-wrapper w-fit h-fit flex-shrink-0">
+            <ColorIcon colors={$itemData?.colors} />
+          </div>
+        {/if}
       {:else}
         <Icon name={item.icon ?? 'arrow.right'} class="w-4 h-4 flex-shrink-0" />
       {/if}

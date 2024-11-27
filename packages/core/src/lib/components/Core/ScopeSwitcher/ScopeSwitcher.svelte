@@ -261,7 +261,7 @@
   >
     {#if $activeSpace}
       <button class="context-icon" on:click|stopPropagation={() => handleOpenSpaceInOasis()}>
-        <SpaceIcon folder={$activeSpace} interactive={false} />
+        <SpaceIcon folder={$activeSpace} interactive={false} size="md" />
       </button>
     {:else}
       <Icon name={generalContext.icon} size="1.5rem" />
@@ -350,8 +350,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.3rem;
-    height: 1.3rem;
+    width: 1.5rem;
+    height: 1.5rem;
     cursor: pointer;
 
     div {

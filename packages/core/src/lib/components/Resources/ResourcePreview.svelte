@@ -114,6 +114,7 @@
     'blacklist-resource': string
     'set-resource-as-background': string
     'remove-from-homescreen': void
+    'set-resource-as-space-icon': string
   }>()
 
   const spaces = oasis.spaces
@@ -137,7 +138,7 @@
         (space) =>
           ({
             type: 'action',
-            icon: space.dataValue.colors,
+            icon: space,
             text: space.dataValue.folderName,
             action: async () => {
               try {
@@ -694,6 +695,10 @@
     }
   }
 
+  const handleUseAsSpaceIcon = () => {
+    dispatch('set-resource-as-space-icon', resource.id)
+  }
+
   const handleToggleBlacklisted = () => {
     resourceBlacklisted = !resourceBlacklisted
   }
@@ -819,6 +824,12 @@
       },
       { type: 'separator' }
     ]),
+    ...conditionalArrayItem(isInSpace && resource.type.startsWith('image/'), {
+      type: 'action',
+      icon: 'screenshot',
+      text: 'Use as Space Icon',
+      action: () => handleUseAsSpaceIcon()
+    }),
     ...conditionalArrayItem<CtxItem>(
       mode === 'full' ||
         mode === 'content' ||

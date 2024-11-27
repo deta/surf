@@ -7,7 +7,9 @@
     'update-existing-space': {
       space: OasisSpace
       name: string
-      colors: [string, string]
+      colors?: [string, string]
+      emoji?: string
+      imageIcon?: string
       processNaturalLanguage: boolean
       userPrompt: string
       blacklistedResourceIds: string[]
@@ -29,11 +31,13 @@
   import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
 
-  import { colorPairs, OasisSpace } from '../../service/oasis'
+  import { colorPairs, OasisSpace, useOasis } from '../../service/oasis'
   import ResourceOverlay from '../Core/ResourceOverlay.svelte'
   import SpacePreview from './SpacePreview.svelte'
   import LoadingParticles from '../Effects/LoadingParticles.svelte'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
+  import EmojiPicker from '../Atoms/EmojiPicker.svelte'
+  import type { SpaceIconChange } from './IconSelector.svelte'
 
   interface PromptConfig {
     name: string
@@ -70,13 +74,16 @@
   const resultHasSemanticSearch = writable(false)
   const activeFetchingQuery = writable<string | null>(null)
   const blacklistedResources = writable<string[]>([])
+  const selectedEmoji = writable<string | null>(null)
+  const selectedImage = writable<string | null>(null)
 
   let editor: Editor
   let shakeClass = ''
 
-  const log = useLogScope('OasisSpace')
+  const log = useLogScope('CreateNewSpace')
   const dispatch = createEventDispatcher<CreateNewSpaceEvents>()
   const resourceManager = useResourceManager()
+  const oasis = useOasis()
   const telemetry = resourceManager.telemetry
 
   export let space: OasisSpace
@@ -132,32 +139,8 @@
     }, 500) // Duration of the animation
   }
 
-  const newSpace = () => {
-    const now = new Date().toISOString()
-    return {
-      id: 'new',
-      name: {
-        folderName: '.tempspace',
-        colors: $colors,
-        showInSidebar: true,
-        sources: [],
-        liveModeEnabled: false,
-        hideViewed: false,
-        smartFilterQuery: null,
-        sortBy: 'created_at'
-      },
-      created_at: now,
-      updated_at: now,
-      deleted: 0
-    }
-  }
-
   const handleAbortSpaceCreation = () => {
     dispatch('abort-space-creation', space.id)
-  }
-
-  const handleColorChange = async (event: CustomEvent<[string, string]>) => {
-    colors.set(event.detail)
   }
 
   const handleSubmit = async () => {
@@ -168,6 +151,8 @@
       name: spaceName,
       space: space,
       colors: $colors,
+      emoji: $selectedEmoji ?? undefined,
+      imageIcon: $selectedImage ?? undefined,
       processNaturalLanguage: $aiEnabled,
       userPrompt: sanitizedUserPrompt,
 
@@ -323,7 +308,18 @@
     })
   }
 
-  onMount(() => {
+  const handleSpaceIconUpdate = (event: CustomEvent<SpaceIconChange>) => {
+    log.debug('Changed icon', event.detail)
+    const { colors: updatedColors, emoji, imageIcon } = event.detail
+    if (updatedColors) {
+      colors.set(updatedColors)
+    }
+
+    selectedEmoji.set(emoji ?? null)
+    selectedImage.set(imageIcon ?? null)
+  }
+
+  onMount(async () => {
     if (isCreatingNewSpace) {
       isCreatingNewSpace.set(true)
     }
@@ -386,58 +382,73 @@
     </div>
   </div>
   {#if !$fineTuneEnabled}
-    <ResourceOverlay
+    <!-- <ResourceOverlay
       caption="Click to change color."
       interactive={$previewIDs.length === 0 ? true : false}
+    > -->
+    <div
+      class="space-icon-wrapper transform active:scale-[98%] relative {shakeClass}"
+      class:has-preview={$previewIDs.length > 0}
+      transition:scale={{ duration: 300, easing: quartOut }}
     >
-      <div
-        slot="content"
-        class="space-icon-wrapper transform active:scale-[98%] relative {shakeClass}"
-        class:has-preview={$previewIDs.length > 0}
-        transition:scale={{ duration: 300, easing: quartOut }}
-      >
-        {#if $isLoading}
-          <div
-            class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
-          >
-            <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
-          </div>
-        {/if}
-        {#if $previewIDs.length > 0}
-          <div class="absolute inset-0 z-10">
-            {#key $previewIDs}
-              <SpacePreview
-                resourceIDs={$previewIDs.filter((id) => !id.blacklisted).map((id) => id.id)}
-                showHeader={false}
-              />
-            {/key}
-          </div>
-        {:else if $resultEmpty}
-          <div
-            class="fixed z-50 flex items-center justify-center w-full h-full flex-col pointer-events-none"
-          >
-            <div class="empty-state-icon text-gray-50 mb-2 mix-blend-darken opacity-100">
-              <Icon name="sparkles.fill" size="42px" color="#ffffff" />
-            </div>
-            <h3
-              class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
-              style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
-            >
-              Create empty space
-            </h3>
-            <p
-              class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
-              style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
-            >
-              future items will be<br /> dropped here.
-            </p>
-          </div>
-        {/if}
-        <div class="relative z-0">
-          <SpaceIcon on:change={handleColorChange} folder={newSpace()} />
+      {#if $isLoading}
+        <div
+          class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
+        >
+          <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
         </div>
+      {/if}
+      {#if $previewIDs.length > 0}
+        <div class="absolute inset-0 z-10">
+          {#key $previewIDs}
+            <SpacePreview
+              resourceIDs={$previewIDs.filter((id) => !id.blacklisted).map((id) => id.id)}
+              showHeader={false}
+            />
+          {/key}
+        </div>
+      {:else if $resultEmpty}
+        <div
+          class="fixed z-50 flex items-center justify-center w-full h-full flex-col pointer-events-none"
+        >
+          <div class="empty-state-icon text-gray-50 mb-2 mix-blend-darken opacity-100">
+            <Icon name="sparkles.fill" size="42px" color="#ffffff" />
+          </div>
+          <h3
+            class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
+            style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+          >
+            Create empty space
+          </h3>
+          <p
+            class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
+            style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+          >
+            future items will be<br /> dropped here.
+          </p>
+        </div>
+      {/if}
+      <div class="relative z-0">
+        {#if space}
+          <div
+            class="w-full h-full aspect-square bg-white dark:bg-gray-800/95 rounded-full flex items-center justify-center"
+          >
+            <SpaceIcon
+              on:update={handleSpaceIconUpdate}
+              folder={space}
+              size="xl"
+              round
+              isCreating
+            />
+          </div>
+
+          <p class="text-center py-6 text-gray-600 dark:text-gray-400">
+            Click the circle to change the icon
+          </p>
+        {/if}
       </div>
-    </ResourceOverlay>
+    </div>
+    <!-- </ResourceOverlay> -->
   {:else}
     {#key $loadingIndex}
       <div

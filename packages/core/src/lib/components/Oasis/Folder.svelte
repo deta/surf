@@ -5,6 +5,7 @@
   export type OpenSpaceAndChatEvent = { spaceId: string }
   export type UpdateFolderDataEvent = {
     folderName?: string
+    emoji?: string
     smartFilterQuery?: string
     colors?: [string, string]
   }
@@ -431,7 +432,7 @@
     >
       <div class="folder-leading">
         <div class="space-icon-wrapper" on:click|stopPropagation aria-hidden="true">
-          <SpaceIcon on:change={handleColorChange} {folder} />
+          <SpaceIcon on:change={handleColorChange} {folder} disablePopoverTransition />
         </div>
 
         {#if $editMode}
@@ -578,15 +579,22 @@
       .folder-leading {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 1rem;
         flex: 1;
         max-width: calc(100% - 1rem);
         overflow: visible;
+        padding-left: 0.5rem;
       }
 
       .space-icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 0.25rem;
+        margin: -0.25rem;
         border-radius: 4px;
+        max-width: 1.75rem;
+
         &:hover {
           background: #cee2ff;
         }

@@ -87,6 +87,7 @@
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import FilterSelector, { type FilterItem } from './FilterSelector.svelte'
+  import { blobToDataUrl, blobToSmallImageUrl } from '../../utils/screenshot'
 
   export let spaceId: string
   export let active: boolean = false
@@ -957,6 +958,13 @@
     }
   }
 
+  const handleUseResourceAsSpaceIcon = async (e: CustomEvent<string>) => {
+    const resourceId = e.detail
+    if (!$space) return
+    await $space.useResourceAsIcon(resourceId)
+    toasts.success('Space icon updated!')
+  }
+
   const handleItemClick = async (e: CustomEvent<string>) => {
     log.debug('Item clicked:', e.detail)
     selectedItem.set(e.detail)
@@ -1356,6 +1364,8 @@
       space,
       name,
       colors,
+      emoji,
+      imageIcon,
       processNaturalLanguage,
       userPrompt,
       blacklistedResourceIds,
@@ -1374,6 +1384,8 @@
       createdSpace = await oasis.createSpace({
         ...space.dataValue,
         colors: colors,
+        emoji: emoji,
+        imageIcon: imageIcon,
         folderName: name,
         smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
       })
@@ -1610,6 +1622,7 @@
         on:remove={handleResourceRemove}
         on:load={handleLoadResource}
         on:batch-remove={handleResourceRemove}
+        on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
         on:batch-open
         on:create-tab-from-space
         {searchValue}
@@ -1630,6 +1643,7 @@
         on:open-and-chat
         on:remove={handleResourceRemove}
         on:space-selected={handleSpaceSelected}
+        on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
         on:batch-remove
         on:batch-open
         on:open-space-as-tab

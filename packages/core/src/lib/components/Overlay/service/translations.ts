@@ -239,7 +239,7 @@ export const tabToTeletypeItem = (tab: Tab) => ({
 export const spaceToTeletypeItem = (space: OasisSpace) => ({
   id: space.id,
   name: get(space.data).folderName ?? 'Unnamed Space',
-  icon: 'space',
+  icon: `space;;${space.id}`,
   execute: TeletypeAction.OpenSpace,
   group: TeletypeActionGroup.Space,
   section: 'Space',

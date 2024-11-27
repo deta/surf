@@ -95,7 +95,7 @@
 
   let oasisSpace: OasisSpaceRenderer
 
-  let createSpaceRef: any
+  let createSpaceRef: SpacesView
   let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
   let selectFirstCommandItem: () => void
   let hasLoadedEverything = false
@@ -256,6 +256,17 @@
     if (spaceId !== 'inbox' && spaceId !== 'all') {
       loadEverything()
     }
+  }
+
+  const handleUseResourceAsSpaceIcon = async (e: CustomEvent<string>) => {
+    const resourceId = e.detail
+    const space = $spaces.find((x) => x.id === $selectedSpaceId)
+    if (!space) {
+      log.error('Space not found:', $selectedSpaceId)
+      return
+    }
+    await space.useResourceAsIcon(resourceId)
+    toasts.success('Space icon updated!')
   }
 
   const handleItemClick = (e: CustomEvent<string>) => {
@@ -582,7 +593,12 @@
     visible: $showTabSearch === 2
   }}
 >
-  <div class="stuff-wrapper no-drag" style="width: fit-content;" bind:this={stuffWrapperRef}>
+  <div
+    id="drawer-content"
+    class="stuff-wrapper no-drag"
+    style="width: fit-content;"
+    bind:this={stuffWrapperRef}
+  >
     <MiniBrowser service={scopedMiniBrowser} />
 
     <div class="w-[90vw] h-[calc(100vh-120px)] relative block overflow-hidden rounded-2xl">
@@ -619,7 +635,7 @@
           />
         {/if}
         {#if $showTabSearch === 2}
-          <div class="sidebar-wrap h-full bg-sky-500/40 w-[18rem] max-w-[18rem]">
+          <div id="stuff-sidebar" class="sidebar-wrap h-full bg-sky-500/40 w-[18rem] max-w-[18rem]">
             {#key $spaces}
               <SpacesView
                 bind:this={createSpaceRef}
@@ -712,6 +728,7 @@
                           on:open-space-as-tab
                           on:remove={handleResourceRemove}
                           on:batch-remove={handleResourceRemove}
+                          on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
                           on:batch-open
                           on:new-tab
                           {searchValue}

@@ -20,7 +20,7 @@
   import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
   import Folder, { type EditingStartEvent, type FolderEvents } from './Folder.svelte'
   import { Icon, type Icons } from '@horizon/icons'
-  import { OasisSpace, useOasis } from '../../service/oasis'
+  import { OasisSpace, pickRandomColorPair, useOasis } from '../../service/oasis'
 
   import { useToasts } from '../../service/toast'
   import {
@@ -109,7 +109,7 @@
     try {
       const newSpace = await oasis.createSpace({
         folderName: name ? name : '.tempspace',
-        colors: ['#FFBA76', '#FB8E4E'],
+        colors: pickRandomColorPair(),
         smartFilterQuery: userPrompt ? userPrompt : null,
         liveModeEnabled: !!userPrompt
       })
@@ -520,7 +520,10 @@
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="folders-header" on:click={toggleShowSpaces}>
       <div class="folders-header-left">
-        <Icon name="chevron.down" className={$showAllSpaces ? '' : '-rotate-90'} />
+        <Icon
+          name="chevron.down"
+          className="{$showAllSpaces ? '' : '-rotate-90'} text-[#3b578a] dark:text-gray-300"
+        />
         <div class="folders-header-text">All Your Spaces</div>
       </div>
 

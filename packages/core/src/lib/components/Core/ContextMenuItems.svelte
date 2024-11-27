@@ -3,6 +3,8 @@
   import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
   import { onMount, tick } from 'svelte'
   import ColorIcon from '../Atoms/ColorIcon.svelte'
+  import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  import SpaceIcon from '../Atoms/SpaceIcon.svelte'
 
   export let items: CtxItem[]
   export let subMenuRef: string | undefined = undefined
@@ -57,6 +59,10 @@
               <Icon name={item.icon} size="1.2em" />
             {:else if Array.isArray(item.icon)}
               <ColorIcon colors={item.icon} size="1.1em" />
+            {:else if item.icon instanceof OasisSpace}
+              <div class="space-icon">
+                <SpaceIcon folder={item.icon} interactive={false} size="sm" />
+              </div>
             {/if}
           {/if}
           <span class="truncate" style="flex: 1; width:100%; max-width: 20ch;">{item.text}</span>
@@ -68,6 +74,10 @@
               <Icon name={item.icon} size="1.2em" />
             {:else if Array.isArray(item.icon)}
               <ColorIcon colors={item.icon} size="1.1em" />
+            {:else if item.icon instanceof OasisSpace}
+              <div class="space-icon">
+                <SpaceIcon folder={item.icon} interactive={false} size="sm" />
+              </div>
             {/if}
           {/if}
           <span style="flex: 1; width:100%;">{item.text} </span>
@@ -217,5 +227,13 @@
       margin-block: 0.25rem;
       border-top: 0.07rem solid rgba(0, 0, 0, 0.15);
     }
+  }
+
+  .space-icon {
+    width: 1.1em;
+    height: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 </style>

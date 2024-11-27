@@ -72,6 +72,7 @@
         on:whitelist-resource
         on:set-resource-as-background
         on:remove-from-homescreen
+        on:set-resource-as-space-icon
       />
     {:else}
       <ResourcePreview
@@ -92,6 +93,7 @@
         on:blacklist-resource
         on:whitelist-resource
         on:remove-from-homescreen
+        on:set-resource-as-space-icon
       />
     {/if}
   {/if}

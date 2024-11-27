@@ -367,3 +367,13 @@
     filter: blur(25px);
   }
 }
+
+emoji-picker {
+  --border-size: 0;
+  --input-border-color: rgba(209, 209, 209, 0.764);
+  --indicator-color: rgba(62, 164, 232, 0.7);
+}
+
+.dark emoji-picker {
+  --background: rgb(26, 32, 44);
+}

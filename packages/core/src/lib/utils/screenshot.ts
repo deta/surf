@@ -45,7 +45,23 @@ export const blobToSmallImageUrl = (blob: Blob, size = 64) => {
     image.src = URL.createObjectURL(blob)
 
     image.onload = () => {
-      ctx.drawImage(image, 0, 0, size, size)
+      const aspectRatio = image.width / image.height
+      let drawWidth = size
+      let drawHeight = size
+      let offsetX = 0
+      let offsetY = 0
+
+      if (aspectRatio > 1) {
+        drawHeight = size
+        drawWidth = size * aspectRatio
+        offsetX = (drawWidth - size) / 2
+      } else {
+        drawWidth = size
+        drawHeight = size / aspectRatio
+        offsetY = (drawHeight - size) / 2
+      }
+
+      ctx.drawImage(image, -offsetX, -offsetY, drawWidth, drawHeight)
       const dataUrl = canvas.toDataURL()
 
       URL.revokeObjectURL(image.src)
