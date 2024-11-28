@@ -11,10 +11,13 @@ import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
 import { firefoxUA, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
 import { getWebRequestManager } from './webRequestManager'
+import electronDragClick from 'electron-drag-click'
 
 let mainWindow: BrowserWindow | undefined
 
 const log = useLogScope('MainWindow')
+
+electronDragClick()
 
 export function createWindow() {
   const winState = new WindowState(

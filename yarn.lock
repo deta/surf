@@ -3483,7 +3483,7 @@ binary@~0.3.0:
     buffers "~0.1.1"
     chainsaw "~0.1.0"
 
-bindings@^1.4.0:
+bindings@^1.4.0, bindings@^1.5.0:
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.5.0.tgz#10353c9e945334bc0511a6d90b38fbc7c9c504df"
   integrity sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==
@@ -4756,6 +4756,14 @@ electron-dl@^3.2.1:
     ext-name "^5.0.0"
     pupa "^2.0.1"
     unused-filename "^2.1.0"
+
+electron-drag-click@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/electron-drag-click/-/electron-drag-click-1.0.5.tgz#9af85536d0ed7b101e0d2255aa7c7596a770e95c"
+  integrity sha512-PLhV6VFsN+ZnZUf9mvsrnGTTfqo8EbLXap+I7jsP5hzvAuRKV0z3hT6nxCQwLzZaM3sSW6MY/z7UnQfCubV1RA==
+  dependencies:
+    bindings "^1.5.0"
+    node-addon-api "^3.0.2"
 
 electron-is-dev@^2.0.0:
   version "2.0.0"
@@ -8203,6 +8211,11 @@ node-addon-api@^1.6.3:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-1.7.2.tgz#3df30b95720b53c24e59948b49532b662444f54d"
   integrity sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==
+
+node-addon-api@^3.0.2:
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-3.2.1.tgz#81325e0a2117789c0128dab65e7e38f07ceba161"
+  integrity sha512-mmcei9JghVNDYydghQmeDX8KoAm0FAiYyIcUt/N4nhyAipB17pllZQDOJD2fotxABnt4Mdz+dKTO7eftLg4d0A==
 
 node-addon-api@^7.0.0:
   version "7.1.1"

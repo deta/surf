@@ -32,6 +32,7 @@
     "cross-fetch": "^4.0.0",
     "d3-drag": "^3.0.0",
     "d3-selection": "^3.0.0",
+    "electron-drag-click": "^1.0.5",
     "electron-updater": "^6.1.7",
     "iconify-icon": "^2.1.0",
     "mime-types": "^2.1.35",
