@@ -154,6 +154,7 @@
   import Tooltip from './Onboarding/Tooltip.svelte'
   import { launchTimeline, endTimeline, hasActiveTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
+  import { createSyncService } from '@horizon/core/src/lib/service/sync'
   import TabInvite from './Core/TabInvite.svelte'
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
   import { provideHomescreen } from './Oasis/homescreen/homescreen'
@@ -224,6 +225,7 @@
   const historyEntriesManager = new HistoryEntriesManager()
   const toasts = provideToasts()
   const config = provideConfig()
+  const syncService = createSyncService(resourceManager)
   const homescreen = provideHomescreen(telemetry, config.settings)
   const oasis = provideOasis(resourceManager, config)
   const tabsManager = createTabsManager(
@@ -3408,6 +3410,8 @@
         createOnboardingSpace(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
       }
     }
+
+    syncService.init()
   })
 
   const openFeedback = () => {

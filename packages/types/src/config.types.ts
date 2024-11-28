@@ -38,4 +38,6 @@ export type UserSettings = {
     completed_stuff: boolean
   }
   personas: string[]
+  sync_base_url?: string
+  sync_auth_token?: string
 }
