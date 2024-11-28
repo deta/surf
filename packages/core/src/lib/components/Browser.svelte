@@ -4564,10 +4564,18 @@
     <Homescreen
       newTabOverlayState={$showNewTabOverlay}
       on:click
-      on:space-selected={async (e) => {
-        const space = e.detail
-        showNewTabOverlay.set(2)
-        newTabSelectedSpaceId.set(space.id)
+      on:open-space={async (e) => {
+        const { space, background } = e.detail
+        if (!background) {
+          showNewTabOverlay.set(2)
+          newTabSelectedSpaceId.set(space.id)
+        } else {
+          const _space = await oasis.getSpace(space.id)
+          if (_space === null) return
+          await tabsManager.addSpaceTab(_space, {
+            active: false
+          })
+        }
       }}
       on:open={(e) => {
         openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Homescreeen)
@@ -4608,6 +4616,7 @@
     >}
     <div
       slot="sidebar"
+      style:view-transition-name={'app_sidebar_left'}
       id="left-sidebar"
       class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
       class:homescreenVisible={$homescreenVisible}

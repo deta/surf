@@ -423,11 +423,7 @@
         {item}
         on:remove-from-homescreen={handleRemoveItem}
         on:set-resource-as-background={handleSetResourceBackground}
-        on:select-space={(e) =>
-          dispatch(
-            'space-selected',
-            $spaces.find((s) => s.id === e.detail)
-          )}
+        on:open-space
         on:click
         on:open={handleOpenItem}
         on:open-and-chat

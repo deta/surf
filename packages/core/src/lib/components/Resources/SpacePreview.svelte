@@ -10,6 +10,7 @@
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import { useTabsManager } from '../../service/tabs'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import type { Space } from '@horizon/types'
 
   export let space: OasisSpace
   export let draggable: boolean | undefined
@@ -29,7 +30,7 @@
   $: spaceData = space?.data
 
   const dispatch = createEventDispatcher<{
-    'select-space': string
+    'open-space': { space: Space; background: boolean }
     'change-space-view-mode': 'list' | 'grid'
     'remove-from-homescreen': void
     'open-space-as-tab': OasisSpace
@@ -96,7 +97,13 @@
     }}
   >
     <div class="identity">
-      <div class="flex" style="gap: 1ch;" on:click={() => dispatch('select-space', space.id)}>
+      <div
+        class="flex"
+        style="gap: 1ch;"
+        on:click={(e) => {
+          dispatch('open-space', { space, background: e.metaKey || e.ctrlKey })
+        }}
+      >
         <span class="name">{$spaceData.folderName}</span>
         <SpaceIcon folder={space} interactive={false} />
       </div>

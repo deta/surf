@@ -7,10 +7,11 @@
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
   import SpacePreview from '../../Resources/SpacePreview.svelte'
-  import { UpdateHomescreenEventAction } from '@horizon/types'
+  import { CreateTabEventTrigger, UpdateHomescreenEventAction } from '@horizon/types'
   import { useHomescreen } from './homescreen'
   import type { Mode } from '../../Resources/Previews/Preview.svelte'
   import { useTelemetry } from '../../../service/telemetry'
+  import { useTabsManager } from '../../../service/tabs'
 
   export interface HomescreenItemData extends BentoItemData {
     resourceId?: string
@@ -29,6 +30,7 @@
   const oasis = useOasis()
   const spaces = oasis.spaces
   const resourceManager = oasis.resourceManager
+  const tabs = useTabsManager()
   const homescreen = useHomescreen()
   const dispatch = createEventDispatcher<{
     'remove-from-homescreen': string
@@ -101,9 +103,14 @@
   bind:this={bentoItemEl}
   use:BentoItem.action={{ data: item }}
   use:HTMLDragItem.action={{}}
-  on:mouseup={(e) => {
+  on:mouseup={async (e) => {
     if (e.shiftKey || e.ctrlKey || e.metaKey) return
-    //homescreen.setVisible(false)
+    if ($item.spaceId !== undefined && e.metaKey) {
+      // TODO: oepn backgroun tab
+      const _space = await oasis.getSpace($item.spaceId)
+      if (_space === null) return
+      tabs.addSpaceTab(_space, { active: false, trigger: CreateTabEventTrigger.Homescreen })
+    }
   }}
   on:DragStart={async (drag) => {
     drag.data.setData(DragTypeNames.BENTO_ITEM, item)
@@ -218,7 +225,7 @@ TODO: Fix resizing logic for other corners
         }}
         on:set-resource-as-background
         on:open
-        on:select-space
+        on:open-space
         on:open-and-chat
         on:open-space-as-tab
         on:remove-from-homescreen={() => {
