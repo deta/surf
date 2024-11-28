@@ -53,6 +53,7 @@ export type TelemetryConfig = {
   apiKey: string
   active: boolean
   trackHostnames: boolean
+  proxyUrl?: string
 }
 
 export enum HorizonActivationSource {
@@ -71,6 +72,7 @@ export class Telemetry {
   apiKey: string
   active: boolean
   trackHostnames: boolean
+  proxyUrl?: string
   userConfig: UserConfig | null
   configService: ConfigService | null
   appInfo: ElectronAppInfo | null
@@ -82,6 +84,7 @@ export class Telemetry {
     this.apiKey = config.apiKey
     this.active = config.active
     this.trackHostnames = config.trackHostnames
+    this.proxyUrl = config.proxyUrl
 
     this.userConfig = null
     this.configService = null
@@ -122,7 +125,8 @@ export class Telemetry {
         ipAddress: false,
         platform: true
       },
-      appVersion: this.appInfo?.version
+      appVersion: this.appInfo?.version,
+      serverUrl: this.proxyUrl
     }
 
     let userID = this.userConfig.user_id
@@ -137,6 +141,16 @@ export class Telemetry {
       this.log.warn('No user/anon ID found, disabling telemetry')
       this.active = false
       return
+    }
+
+    if (this.proxyUrl) {
+      this.log.debug('Using telemetry proxy', this.proxyUrl)
+      if (!this.userConfig.api_key) {
+        this.log.warn('No user API key found for telemetry proxy, disabling telemetry')
+        this.active = false
+        return
+      }
+      this.apiKey = this.userConfig.api_key
     }
     amplitude.init(this.apiKey, userID, initOptions)
     amplitude.setOptOut(!this.active)

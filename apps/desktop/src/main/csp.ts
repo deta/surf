@@ -26,7 +26,7 @@ const CSP_DIRECTIVES = [
   "media-src 'self' blob:",
 
   // Allow connections to same origin, localhost (HTTP/WS), and specific APIs
-  `connect-src 'self' surf: http://localhost:* ws://localhost:* https://*.sentry.io https://*.amplitude.com ${CSP_BACKEND_API} ${CSP_OPEN_AI}`,
+  `connect-src 'self' surf: http://localhost:* ws://localhost:* https://*.sentry.io https://telemetry.deta.surf ${CSP_BACKEND_API} ${CSP_OPEN_AI}`,
 
   // Allow web workers from same origin and blob: URLs
   "worker-src 'self' blob:"

@@ -151,7 +151,7 @@ jobs:
           CSC_LINK: ${{ secrets.CSC_LINK }}
 
           # R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ inputs.APP_VERSION }}
-          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
+          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
           P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
