@@ -725,14 +725,27 @@
 
       .separator {
         width: 2px;
+        border-radius: 2px;
         height: 25px;
         background: var(--border-color);
       }
 
       .shortcut {
-        padding: 2px 7px;
-        border-radius: var(--border-radius);
-        background: var(--background-accent);
+        font-family: 'Inter';
+        font-weight: 500;
+        -webkit-font-smoothing: antialiased;
+        font-smoothing: antialiased;
+        font-size: 0.95rem;
+        line-height: 0.925rem;
+        height: 24px;
+        width: 26px;
+        text-align: center;
+        padding: 6px 6px 7px 6px;
+        border-radius: 5px;
+        color: rgba(88, 104, 132, 1);
+        background: rgba(88, 104, 132, 0.2);
+        align-items: center;
+        justify-content: center;
       }
     }
 

@@ -85,6 +85,13 @@ class Logger {
     }
   }
 
+  trace(...data: any[]) {
+    const level = this.getLevel()
+    if (level <= levelMap.indexOf('debug')) {
+      console.trace(this.getScope(), ...data)
+    }
+  }
+
   static useLog(scope: string) {
     return new Logger(scope)
   }
@@ -103,5 +110,6 @@ export default {
   info: defaultLogger.info.bind(defaultLogger),
   warn: defaultLogger.warn.bind(defaultLogger),
   error: defaultLogger.error.bind(defaultLogger),
-  json: defaultLogger.json.bind(defaultLogger)
+  json: defaultLogger.json.bind(defaultLogger),
+  trace: defaultLogger.trace.bind(defaultLogger)
 }

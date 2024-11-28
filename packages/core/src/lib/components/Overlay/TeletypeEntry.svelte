@@ -1,9 +1,32 @@
+<script lang="ts" context="module">
+  // prettier-ignore
+  export type TeletypeEntryEvents = {
+    'ask': string | undefined
+    'open-url': string
+    'open-url-in-minibrowser': string
+    'open-space': any
+    'open-stuff': string
+    'create-chat': string
+    'activate-tab': string
+    'close-active-tab': void
+    'toggle-bookmark': void
+    'toggle-sidebar': void
+    'show-history-tab': void
+    'zoom-in': void
+    'zoom-out': void
+    'reset-zoom': void
+    'create-note': string | undefined
+    'reload': void
+    'create-new-space': void
+  };
+</script>
+
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte'
   import { get, readable, writable } from 'svelte/store'
-  import { TeletypeProvider, Teletype } from '@deta/teletype/src'
-  import { CreateTabEventTrigger } from '@horizon/types'
-  import { parseStringIntoBrowserLocation, useLogScope } from '@horizon/utils'
+  import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
+  import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
+  import { copyToClipboard, parseStringIntoBrowserLocation, useLogScope } from '@horizon/utils'
   import {
     type Action,
     type HandlerAction,
@@ -12,7 +35,7 @@
   } from '@deta/teletype/src'
   import { Icon } from '@horizon/icons'
   import { useCommandComposer } from '../Overlay/service/commandComposer'
-  import { useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
   import { useResourceManager } from '../../service/resources'
   import { teletypeActionStore, TeletypeAction } from './service/teletypeActions'
@@ -28,6 +51,7 @@
   import { createActionsFromResults } from './horizontal'
   import TeletypeHeader from './TeletypeHeader.svelte'
   import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
+  import { useToasts } from '@horizon/core/src/lib/service/toast'
 
   export let tabsManager: TabsManager
   export let open: boolean
@@ -35,11 +59,12 @@
   const log = useLogScope('TeletypeEntry')
   const config = useConfig()
   const oasis = useOasis()
+  const toasts = useToasts()
   const resourceManager = useResourceManager()
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<TeletypeEntryEvents>()
   const commandComposer = useCommandComposer(oasis, config)
   const userConfigSettings = config.settings
-  let teletype: TeletypeProvider
+  let teletype: TeletypeSystem
   let unsubscribe: () => void
 
   const searchEngine = writable($userConfigSettings.search_engine)
@@ -141,8 +166,39 @@
         SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
         SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
       if (!engine) throw new Error('No search engine / default engine found, config error?')
-      console.log('engine', engine)
+      log.debug('engine', engine)
       dispatch('open-url', engine.getUrl(encodeURIComponent(payload.query)))
+    }
+  }
+
+  function handleOpenGeneralSearchInMiniBrowser(payload: { query: string }) {
+    const isValidURL =
+      optimisticCheckIfURLOrIPorFile(payload.query) || optimisticCheckIfUrl(payload.query)
+    if (isValidURL) {
+      dispatch('open-url-in-minibrowser', prependProtocol(payload.query))
+    } else {
+      const engine =
+        SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
+        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      if (!engine) throw new Error('No search engine / default engine found, config error?')
+      log.debug('engine', engine)
+      dispatch('open-url-in-minibrowser', engine.getUrl(encodeURIComponent(payload.query)))
+    }
+  }
+
+  function handleCopyGeneralSearch(payload: { query: string }) {
+    const isValidURL =
+      optimisticCheckIfURLOrIPorFile(payload.query) || optimisticCheckIfUrl(payload.query)
+    if (isValidURL) {
+      copyToClipboard(prependProtocol(payload.query))
+      toasts.success('Copied URL to clipboard!')
+    } else {
+      const engine =
+        SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
+        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      if (!engine) throw new Error('No search engine / default engine found, config error?')
+      copyToClipboard(engine.getUrl(encodeURIComponent(payload.query)))
+      toasts.success('Copied URL to clipboard!')
     }
   }
 
@@ -166,13 +222,37 @@
     dispatch('open-url-in-minibrowser', validUrl)
   }
 
-  function handleSuggestion(payload: { suggestion: string }) {
+  function handleOpenSuggestionAsTab(payload: { suggestion: string }) {
     const engine =
       SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
       SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
     if (!engine) throw new Error('No search engine / default engine found, config error?')
 
     dispatch('open-url', engine.getUrl(encodeURIComponent(payload.suggestion)))
+  }
+
+  async function handleCopySuggestion(payload: { suggestion: string }) {
+    const engine =
+      SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
+      SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+    if (!engine) throw new Error('No search engine / default engine found, config error?')
+
+    copyToClipboard(engine.getUrl(encodeURIComponent(payload.suggestion)))
+    toasts.success('Copied URL to clipboard!')
+  }
+
+  function handleOpenSuggestionInMiniBrowser(payload: { suggestion: string }) {
+    const engine =
+      SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
+      SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+    if (!engine) throw new Error('No search engine / default engine found, config error?')
+
+    dispatch('open-url-in-minibrowser', engine.getUrl(encodeURIComponent(payload.suggestion)))
+  }
+
+  async function handleCopyURL(payload: { url: string }) {
+    copyToClipboard(payload.url)
+    toasts.success('Copied URL to clipboard!')
   }
 
   function handleHistory(payload: { entry: any }) {
@@ -201,10 +281,38 @@
     dispatch('activate-tab', payload.tab.id)
   }
 
-  function handleSpace(payload: { data: any; searchValue: string }) {
-    const space = payload.data
-    console.log('open-space', payload)
-    dispatch('open-space', space)
+  async function handleOpenSpaceInStuff(payload: { space: OasisSpace }) {
+    const space = payload.space
+    log.debug('open-space-in-stuff', payload)
+
+    tabsManager.showNewTabOverlay.set(2)
+    await tick()
+    oasis.selectedSpace.set(space.id)
+  }
+
+  async function handleOpenSpaceAsContext(payload: { space: OasisSpace }) {
+    const space = payload.space
+    log.debug('open-space-as-context', payload)
+
+    tabsManager.changeScope(space.id, ChangeContextEventTrigger.CommandMenu)
+
+    // sometimes tty doesn't close by itself, so we need to force it
+    await tick()
+    tabsManager.showNewTabOverlay.set(0)
+  }
+
+  async function handleOpenSpaceAsTab(payload: { space: OasisSpace }) {
+    const space = payload.space
+    log.debug('open-space-as-tab', payload)
+
+    tabsManager.addSpaceTab(space, {
+      active: true,
+      trigger: CreateTabEventTrigger.AddressBar
+    })
+
+    // sometimes tty doesn't close by itself, so we need to force it
+    await tick()
+    tabsManager.showNewTabOverlay.set(0)
   }
 
   function handleOpenStuff(payload: { data: any; searchValue: string }) {
@@ -214,9 +322,10 @@
 
   function handleBrowserCommand(payload: { command: string }) {
     if (payload.command === 'create-chat') {
-      dispatch('create-chat', teletype?.inputValue)
+      dispatch('create-chat', get(teletype?.inputValue))
     } else {
-      dispatch(payload.command)
+      // TODO: properly type the browser commands
+      dispatch(payload.command as keyof TeletypeEntryEvents)
     }
   }
 
@@ -239,7 +348,7 @@
       teletype.executeAction('create')
       teletype.open()
       await tick()
-      const inputElem = document.getElementById(`teletype-input-${teletype.key || 'default'}`)
+      const inputElem = document.getElementById(`teletype-input-default`)
       inputElem?.focus()
     }
   }
@@ -249,13 +358,20 @@
       [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
       [TeletypeAction.NavigateURL]: handleNavigate,
       [TeletypeAction.OpenURLInMiniBrowser]: handleOpenURLInMiniBrowser,
-      [TeletypeAction.NavigateSuggestion]: handleSuggestion,
+      [TeletypeAction.OpenGeneralSearchInMiniBrowser]: handleOpenGeneralSearchInMiniBrowser,
+      [TeletypeAction.OpenSuggestionInMiniBrowser]: handleOpenSuggestionInMiniBrowser,
+      [TeletypeAction.NavigateSuggestion]: handleOpenSuggestionAsTab,
       [TeletypeAction.NavigateHistoryElement]: handleHistory,
       [TeletypeAction.NavigateSuggestionHostname]: handleSuggestionHostname,
       [TeletypeAction.OpenResource]: handleResource,
       [TeletypeAction.OpenTab]: handleTab,
-      [TeletypeAction.OpenSpace]: handleSpace,
+      [TeletypeAction.OpenSpaceInStuff]: handleOpenSpaceInStuff,
+      [TeletypeAction.OpenSpaceAsContext]: handleOpenSpaceAsContext,
+      [TeletypeAction.OpenSpaceAsTab]: handleOpenSpaceAsTab,
       [TeletypeAction.OpenStuff]: handleOpenStuff,
+      [TeletypeAction.CopyURL]: handleCopyURL,
+      [TeletypeAction.CopySuggestion]: handleCopySuggestion,
+      [TeletypeAction.CopyGeneralSearch]: handleCopyGeneralSearch,
       [TeletypeAction.ExecuteBrowserCommand]: handleBrowserCommand,
       [TeletypeAction.Create]: handleCreate,
       [TeletypeAction.OpenSpaceItem]: handleSpaceItem,

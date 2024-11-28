@@ -4,7 +4,7 @@
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { slide, fade } from 'svelte/transition'
 
-  import type { Action } from '../Teletype'
+  import type { Action, ActionPanelOption } from '../Teletype'
   import Icon from './Icon.svelte'
   import { TagStatus } from './types'
 
@@ -20,6 +20,9 @@
   const teletype = useTeletype()
   const log = useLogScope('Teletype → Action')
   const { inputValue } = teletype
+
+  const modKeyShortcut =
+    navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'
 
   let elem
   let listElement: HTMLElement
@@ -73,6 +76,31 @@
 
   const dispatch = createEventDispatcher<Events>()
 
+  const executeAction = async (action: Action, e: MouseEvent | KeyboardEvent) => {
+    let options: ActionPanelOption[] = []
+    if (action.actionPanel) {
+      if (typeof action.actionPanel === 'function') {
+        options = await action.actionPanel()
+      } else {
+        options = action.actionPanel
+      }
+    }
+
+    const secondaryAction = options.find((a) => a.shortcutType === 'secondary')
+    if (e.shiftKey && secondaryAction) {
+      dispatch('execute', secondaryAction as Action)
+      return
+    }
+
+    const tertiaryAction = options.find((a) => a.shortcutType === 'tertiary')
+    if ((e.ctrlKey || e.metaKey) && tertiaryAction) {
+      dispatch('execute', tertiaryAction as Action)
+      return
+    }
+
+    dispatch('execute', action)
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     // Only handle if we have horizontal items and we're active
     if (!active || !horizontalItems.length) {
@@ -125,7 +153,7 @@
         // Execute the currently selected item immediately
         const selectedItem = horizontalItems[selectedItemIndex]
         if (selectedItem) {
-          dispatch('execute', selectedItem)
+          executeAction(selectedItem, e)
           return false
         } else {
           log.debug('No selected item to execute')
@@ -165,18 +193,14 @@
     }
   }
 
-  const handleClick = (e: MouseEvent, item?: Action) => {
+  const handleClick = async (e: MouseEvent, item?: Action) => {
     e.preventDefault()
     e.stopPropagation()
 
     if (item && horizontalItems.includes(item)) {
-      dispatch('execute', item)
+      executeAction(item, e)
     } else if (!item) {
-      if (active || !e.shiftKey) {
-        dispatch('execute', action)
-      } else {
-        dispatch('selected', action)
-      }
+      executeAction(action, e)
     }
   }
 
@@ -308,41 +332,73 @@
       </div>
     </div>
   {:else}
-    {#if action.icon}
-      <div class="icon" in:fade={{ duration: 200 }}>
-        <Icon icon={action.icon} />
+    <div class="panel-action">
+      <div class="leading">
+        {#if action.icon}
+          <div class="icon" in:fade={{ duration: 200 }}>
+            <Icon icon={action.icon} />
+          </div>
+        {/if}
+        <div class="name" in:fade={{ duration: 200 }}>
+          {action.name}
+        </div>
+        {#if action.description}
+          <div class="parent" in:fade={{ duration: 200 }}>
+            {action.description}
+          </div>
+        {/if}
+        {#if action?.tag}
+          <div
+            class="shortcut"
+            style="--tag-color: {tagStyle.color}; --tag-background: {tagStyle.background}"
+            in:fade={{ duration: 200 }}
+          >
+            {action.tag}
+          </div>
+        {/if}
       </div>
-    {/if}
-    <div class="name" in:fade={{ duration: 200 }}>
-      {action.name}
+      <div class="trailing">
+        {#if action?.shortcut}
+          <div
+            class="shortcut"
+            style="--tag-color: var(--background-accent)"
+            title="Press {modKeyShortcut} + {action.shortcut.toUpperCase()}"
+            in:fade={{ duration: 200 }}
+          >
+            {modKeyShortcut}
+            {action.shortcut.toUpperCase()}
+          </div>
+        {:else if action.shortcutType === 'primary'}
+          <div
+            class="shortcut"
+            style="--tag-color: var(--background-accent)"
+            title="Press Enter"
+            in:fade={{ duration: 200 }}
+          >
+            ⏎
+          </div>
+        {:else if action.shortcutType === 'secondary'}
+          <div
+            class="shortcut"
+            style="--tag-color: var(--background-accent)"
+            title="Press Shift + Enter"
+            in:fade={{ duration: 200 }}
+          >
+            Shift + ⏎
+          </div>
+        {:else if action.shortcutType === 'tertiary'}
+          <div
+            class="shortcut"
+            style="--tag-color: var(--background-accent)"
+            title="Press {modKeyShortcut} + Enter"
+            in:fade={{ duration: 200 }}
+          >
+            {modKeyShortcut}
+            + ⏎
+          </div>
+        {/if}
+      </div>
     </div>
-    {#if action.description}
-      <div class="parent" in:fade={{ duration: 200 }}>
-        {action.description}
-      </div>
-    {/if}
-    {#if action?.tag}
-      <div
-        class="shortcut"
-        style="--tag-color: {tagStyle.color}; --tag-background: {tagStyle.background}"
-        in:fade={{ duration: 200 }}
-      >
-        {action.tag}
-      </div>
-    {/if}
-    {#if action?.shortcut}
-      <div
-        class="shortcut"
-        style="--tag-color: var(--background-accent)"
-        title="Press {navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0
-          ? '⌘'
-          : 'Ctrl'} + key"
-        in:fade={{ duration: 200 }}
-      >
-        {navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'}
-        {action.shortcut.toUpperCase()}
-      </div>
-    {/if}
   {/if}
 </div>
 
@@ -369,6 +425,10 @@
         border-left-color: var(--text);
         background: var(--background-accent);
         background: var(--background-accent-p3);
+      }
+
+      &.option.active {
+        background: rgba(0, 0, 0, 0.06);
       }
 
       &:hover {
@@ -500,6 +560,25 @@
     color: var(--text-light);
   }
 
+  .panel-action {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .leading {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+  }
+
+  .trailing {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
   .icon {
     margin-right: 0.75rem;
     flex-shrink: 0;
@@ -509,14 +588,21 @@
   }
 
   .shortcut {
-    margin-left: auto;
-    padding: 2px 7px;
-    border-radius: var(--border-radius);
-    font-size: 0.8rem;
+    font-family: 'Inter';
     font-weight: 500;
-    color: var(--tag);
-    background: var(--tag-background);
-    opacity: 0.8;
-    flex-shrink: 0;
+    -webkit-font-smoothing: antialiased;
+    font-smoothing: antialiased;
+    font-size: 0.95rem;
+    line-height: 0.925rem;
+    height: 24px;
+    margin-left: 4px;
+    width: auto;
+    text-align: center;
+    padding: 6px 6px 7px 6px;
+    border-radius: 5px;
+    color: rgba(88, 104, 132, 1);
+    background: rgba(88, 104, 132, 0.2);
+    align-items: center;
+    justify-content: center;
   }
 </style>

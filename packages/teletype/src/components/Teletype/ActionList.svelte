@@ -1,7 +1,12 @@
 <script lang="ts">
   import { type Writable } from 'svelte/store'
   import { slide } from 'svelte/transition'
-  import { type Action, ActionSelectPriority, ActionDisplayPriority } from './types'
+  import {
+    type Action,
+    ActionSelectPriority,
+    ActionDisplayPriority,
+    type ActionPanelOption
+  } from './types'
   import ActionItem from './Action.svelte'
 
   import {
@@ -58,7 +63,7 @@
   $: parsedActions = Object.values(sectionedActions)
     .reduce((a, b) => a.concat(b), [])
     .filter((action) => !action.hiddenOnRoot)
-    .map((item, _index) => ({ _index, ...item }))
+    .map((item, _index) => ({ _index, ...item }) as Action)
 
   let activeActionIndex = 0
   $: activeAction = parsedActions[activeActionIndex]
@@ -111,7 +116,32 @@
 
   export const resetActiveIndex = () => (activeActionIndex = 0)
 
-  const onKeyDown = (e) => {
+  const executeAction = async (action: Action, e: MouseEvent | KeyboardEvent) => {
+    let options: ActionPanelOption[] = []
+    if (action.actionPanel) {
+      if (typeof action.actionPanel === 'function') {
+        options = await action.actionPanel()
+      } else {
+        options = action.actionPanel
+      }
+    }
+
+    const secondaryAction = options.find((a) => a.shortcutType === 'secondary')
+    if (e.shiftKey && secondaryAction) {
+      dispatch('execute', secondaryAction as Action)
+      return
+    }
+
+    const tertiaryAction = options.find((a) => a.shortcutType === 'tertiary')
+    if ((e.ctrlKey || e.metaKey) && tertiaryAction) {
+      dispatch('execute', tertiaryAction as Action)
+      return
+    }
+
+    dispatch('execute', action)
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
     if (freeze) return
 
     if (e.key === 'ArrowUp' || (e.shiftKey && e.key === 'Tab')) {
@@ -139,7 +169,8 @@
       if (activeActionIndex === undefined && parsedActions.length > 1) return
 
       const action = parsedActions.find((action) => action._index === activeActionIndex)
-      dispatch('execute', action)
+      if (!action) return
+      executeAction(action, e)
     }
   }
 
@@ -163,11 +194,6 @@
       const scrollNeeded = containerRect.top - elementRect.top
       listboxNode.scrollTop -= scrollNeeded + 8 // Add small padding
     }
-  }
-
-  const handleActionClick = (e) => {
-    const action = e.detail as Action
-    dispatch('execute', action)
   }
 
   const getActionIndex = (id: string) => {
@@ -236,7 +262,7 @@
           <ActionItem
             {action}
             {isOption}
-            on:execute={handleActionClick}
+            on:execute
             on:selected={() => (activeActionIndex = getActionIndex(action.id))}
             active={getActionIndex(action.id) === activeActionIndex}
             {animations}

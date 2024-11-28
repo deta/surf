@@ -1,7 +1,9 @@
 import { type SvelteComponent } from 'svelte'
 
 import {
+  type ActionBase,
   ActionDisplayPriority,
+  type ActionPanelOption,
   ActionSelectPriority
 } from '@deta/teletype/src/components/Teletype/types'
 
@@ -15,9 +17,16 @@ export enum TeletypeAction {
   NavigateSuggestionHostname = 'SUGGESTION_HOSTNAME',
   OpenResource = 'RESOURCE',
   OpenTab = 'TAB',
-  OpenSpace = 'SPACE',
+  OpenSpaceInStuff = 'SPACE_IN_STUFF',
+  OpenSpaceAsContext = 'SPACE_AS_CONTEXT',
+  OpenSpaceAsTab = 'SPACE_AS_TAB',
   OpenStuff = 'STUFF',
+  CopyURL = 'COPY_URL',
+  CopySuggestion = 'COPY_SUGGESTION',
+  CopyGeneralSearch = 'COPY_GENERAL_SEARCH',
   OpenURLInMiniBrowser = 'OPEN_URL_MINI_BROWSER',
+  OpenSuggestionInMiniBrowser = 'OPEN_SUGGESTION_MINI_BROWSER',
+  OpenGeneralSearchInMiniBrowser = 'OPEN_GENERAL_SEARCH_MINI_BROWSER',
   OpenResourceInMiniBrowser = 'OPEN_RESOURCE_MINI_BROWSER',
   ExecuteBrowserCommand = 'BROWSER_COMMAND',
   Create = 'CREATE',
@@ -43,9 +52,16 @@ export const TeletypeActionDisplayLabels = {
   [TeletypeAction.NavigateSuggestionHostname]: 'Suggestion Hostname',
   [TeletypeAction.OpenResource]: 'Resource',
   [TeletypeAction.OpenTab]: 'Open Tab',
-  [TeletypeAction.OpenSpace]: 'Open Space ↗',
+  [TeletypeAction.OpenSpaceInStuff]: 'Open Space in Stuff ↗',
+  [TeletypeAction.OpenSpaceAsContext]: 'Open Context ↗',
+  [TeletypeAction.OpenSpaceAsTab]: 'Open as Tab ↗',
   [TeletypeAction.OpenStuff]: 'Open Stuff',
+  [TeletypeAction.CopyURL]: 'Copy URL',
+  [TeletypeAction.CopySuggestion]: 'Copy Suggestion',
+  [TeletypeAction.CopyGeneralSearch]: 'Copy General Search',
   [TeletypeAction.OpenURLInMiniBrowser]: 'Open URL in Mini Browser',
+  [TeletypeAction.OpenSuggestionInMiniBrowser]: 'Open Suggestion in Mini Browser',
+  [TeletypeAction.OpenGeneralSearchInMiniBrowser]: 'Open General Search in Mini Browser',
   [TeletypeAction.OpenResourceInMiniBrowser]: 'Open Resource in Mini Browser',
   [TeletypeAction.ExecuteBrowserCommand]: 'Browser Command',
   [TeletypeAction.Create]: 'Create',
@@ -70,24 +86,11 @@ export enum TeletypeActionGroup {
   Space = 'SPACE'
 }
 
-export interface TeletypeStaticAction {
-  id: string
+export interface TeletypeStaticAction extends ActionBase {
   execute: TeletypeAction
-  name: string
   type?: string
-  keywords?: string[]
   group?: TeletypeActionGroup
-  description?: string
   component?: typeof SvelteComponent
-  view?: string
-  shortcut?: string
-  actionPanel?: [any]
-  section?: string
-  selectPriority?: ActionSelectPriority
-  displayPriority?: ActionDisplayPriority
-  icon?: string
-  ignoreFuse?: boolean
-  hiddenOnRoot?: boolean
   creationUrl?: string
 }
 
@@ -107,4 +110,20 @@ export const teletypeActionStore = writable<TeletypeActionEvent | null>(null)
 export function dispatchTeletypeEvent(event: TeletypeActionEvent) {
   teletypeActionStore.set(event)
   setTimeout(() => teletypeActionStore.set(null), 0)
+}
+
+export function createSecondaryAction(action: ActionPanelOption) {
+  return {
+    icon: 'eye',
+    shortcutType: 'secondary',
+    ...action
+  } as ActionPanelOption
+}
+
+export function createTertiaryAction(action: ActionPanelOption) {
+  return {
+    icon: 'arrow.up.right',
+    shortcutType: 'tertiary',
+    ...action
+  } as ActionPanelOption
 }

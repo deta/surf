@@ -80,7 +80,7 @@ const createSpaceAction = async (
     selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
     displayPriority: result.displayPriority || ActionDisplayPriority.HIGH,
     horizontalItems: validItems as unknown as Action[],
-    horizontalParentAction: TeletypeAction.OpenSpace,
+    horizontalParentAction: TeletypeAction.OpenSpaceInStuff,
     payload: space
   } as HorizontalAction
 
@@ -89,27 +89,24 @@ const createSpaceAction = async (
     name: result.name,
     selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
     displayPriority: result.displayPriority || ActionDisplayPriority.HIGHEST,
-    execute: TeletypeAction.OpenSpace,
+    execute: TeletypeAction.OpenSpaceAsContext,
     icon: result.icon,
+    actionIcon: result.actionIcon,
+    actionText: result.actionText,
+    actionPanel: result.actionPanel,
     section: 'Spaces',
     handler: () => {
       try {
         dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenSpace,
-          payload: {
-            data: space,
-            searchValue: ''
-          },
+          execute: TeletypeAction.OpenSpaceAsContext,
+          payload: { space },
           success: true
         })
         console.log('open-space', { space })
       } catch (error) {
         dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenSpace,
-          payload: {
-            data: space,
-            searchValue: ''
-          },
+          execute: TeletypeAction.OpenSpaceAsContext,
+          payload: { space },
           success: false,
           error: error as Error
         })

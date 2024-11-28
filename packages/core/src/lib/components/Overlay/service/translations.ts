@@ -6,20 +6,49 @@
 
 import { get } from 'svelte/store'
 import type { HistoryEntry, Space, Tab } from '../../../types'
-import { truncateURL, truncate, normalizeURL } from '@horizon/utils'
+import {
+  truncateURL,
+  truncate,
+  normalizeURL,
+  parseStringIntoBrowserLocation,
+  conditionalArrayItem
+} from '@horizon/utils'
 import { ResourceTagsBuiltInKeys } from '@horizon/types'
 import { Resource, ResourceJSON } from '../../../service/resources'
 import {
   ActionDisplayPriority,
-  ActionSelectPriority
+  ActionSelectPriority,
+  type Action
 } from '@deta/teletype/src/components/Teletype/types'
 import {
+  createSecondaryAction,
+  createTertiaryAction,
   dispatchTeletypeEvent,
   TeletypeAction,
   TeletypeActionGroup,
   type TeletypeStaticAction
 } from './teletypeActions'
 import type { OasisSpace } from '../../../service/oasis'
+
+// pls don't sue me for the name, just fit so well
+const createExecutioner = (action: TeletypeAction, payload: any) => {
+  return () => {
+    try {
+      dispatchTeletypeEvent({
+        execute: action,
+        payload: payload,
+        success: true
+      })
+    } catch (error) {
+      dispatchTeletypeEvent({
+        execute: action,
+        payload: payload,
+        success: true,
+        error
+      })
+    }
+  }
+}
 
 export const searchActionToTeletypeItem = (searchQuery: string) => ({
   id: 'search',
@@ -29,73 +58,53 @@ export const searchActionToTeletypeItem = (searchQuery: string) => ({
   section: 'Search',
   selectPriority: ActionSelectPriority.HIGH,
   displayPriority: ActionDisplayPriority.HIGH,
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateGeneralSearch,
-        payload: { query: searchQuery },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateGeneralSearch,
-        payload: { query: searchQuery },
-        success: false,
-        error
-      })
-    }
-  }
-})
-
-export const navigateActionToTeletypeItem = (url: string) => ({
-  id: 'navigate',
-  name: `Navigate to ${url}`,
-  icon: 'world',
-  execute: TeletypeAction.NavigateURL,
-  section: 'Navigate',
-  selectPriority: ActionSelectPriority.HIGH,
-  displayPriority: ActionDisplayPriority.HIGH,
+  actionText: 'Open as Tab',
   actionPanel: [
-    {
-      id: 'open-url-in-mini-browser',
+    createSecondaryAction({
+      id: 'open-history-in-mini-browser',
       name: 'Open in Mini-Browser',
-      icon: 'plus-square',
-      shortcut: 'return',
-      handler: async () => {
-        try {
-          dispatchTeletypeEvent({
-            execute: TeletypeAction.OpenURLInMiniBrowser,
-            payload: { url },
-            success: true
-          })
-        } catch (error) {
-          dispatchTeletypeEvent({
-            execute: TeletypeAction.OpenURLInMiniBrowser,
-            payload: { url },
-            success: true,
-            error
-          })
-        }
-      }
+      handler: createExecutioner(TeletypeAction.OpenGeneralSearchInMiniBrowser, {
+        query: searchQuery
+      })
+    }),
+    {
+      id: `copy-history`,
+      name: 'Copy URL',
+      icon: 'copy',
+      handler: createExecutioner(TeletypeAction.CopyGeneralSearch, { query: searchQuery })
     }
   ],
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateURL,
-        payload: { url },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateURL,
-        payload: { url },
-        success: false,
-        error
-      })
-    }
-  }
+  handler: createExecutioner(TeletypeAction.NavigateGeneralSearch, { query: searchQuery })
 })
+
+export const navigateActionToTeletypeItem = (searchValue: string) => {
+  const url = parseStringIntoBrowserLocation(searchValue)
+
+  return {
+    id: 'navigate',
+    name: `Navigate to ${searchValue}`,
+    icon: 'world',
+    execute: TeletypeAction.NavigateURL,
+    section: 'Navigate',
+    selectPriority: ActionSelectPriority.HIGH,
+    displayPriority: ActionDisplayPriority.HIGH,
+    actionText: 'Open as Tab',
+    actionPanel: [
+      createSecondaryAction({
+        id: 'open-url-in-mini-browser',
+        name: 'Open in Mini-Browser',
+        handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+      }),
+      {
+        id: `copy-url`,
+        name: 'Copy URL',
+        icon: 'copy',
+        handler: createExecutioner(TeletypeAction.CopyURL, { url })
+      }
+    ],
+    handler: createExecutioner(TeletypeAction.NavigateURL, { url })
+  }
+}
 
 export const searchEngineSuggestionToTeletypeItem = (suggestion: string) => ({
   id: `google-suggestion-${suggestion}`,
@@ -104,80 +113,83 @@ export const searchEngineSuggestionToTeletypeItem = (suggestion: string) => ({
   execute: TeletypeAction.NavigateSuggestion,
   displayPriority: ActionDisplayPriority.HIGH,
   section: 'Suggestion',
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateSuggestion,
-        payload: { suggestion },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateSuggestion,
-        payload: { suggestion },
-        success: false,
-        error
-      })
+  actionText: 'Open as Tab',
+  actionPanel: [
+    createSecondaryAction({
+      id: 'open-suggestion-in-mini-browser',
+      name: 'Open in Mini-Browser',
+      handler: createExecutioner(TeletypeAction.OpenSuggestionInMiniBrowser, { suggestion })
+    }),
+    {
+      id: `copy-suggestion`,
+      name: 'Copy URL',
+      icon: 'copy',
+      handler: createExecutioner(TeletypeAction.CopySuggestion, { suggestion })
     }
-  }
+  ],
+  handler: createExecutioner(TeletypeAction.NavigateSuggestion, { suggestion })
 })
 
 export const historyEntryToTeletypeItem = (
   entry: HistoryEntry,
   historyEntriesResults: HistoryEntry[]
-) => ({
-  id: `history-${entry.id}`,
-  name:
-    historyEntriesResults.filter((e) => e.title === entry.title).length > 1
-      ? `${truncate(entry.title ?? '', 25)}  —  ${truncateURL(entry.url ?? '', 15)}`
-      : (entry.title ?? ''),
-  icon: 'history',
-  imageIcon: '',
-  execute: TeletypeAction.NavigateHistoryElement,
-  section: 'History',
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateHistoryElement,
-        payload: { entry },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateHistoryElement,
-        payload: { entry },
-        success: false,
-        error
-      })
-    }
+) => {
+  const url = entry.url ?? ''
+  return {
+    id: `history-${entry.id}`,
+    name:
+      historyEntriesResults.filter((e) => e.title === entry.title).length > 1
+        ? `${truncate(entry.title ?? '', 25)}  —  ${truncateURL(entry.url ?? '', 15)}`
+        : (entry.title ?? ''),
+    icon: 'history',
+    imageIcon: '',
+    execute: TeletypeAction.NavigateHistoryElement,
+    section: 'History',
+    actionText: 'Open as Tab',
+    actionPanel: [
+      createSecondaryAction({
+        id: 'open-history-in-mini-browser',
+        name: 'Open in Mini-Browser',
+        handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+      }),
+      {
+        id: `copy-history`,
+        name: 'Copy URL',
+        icon: 'copy',
+        handler: createExecutioner(TeletypeAction.CopyURL, { url })
+      }
+    ],
+    handler: createExecutioner(TeletypeAction.NavigateHistoryElement, { entry })
   }
-})
+}
 
-export const hostnameHistoryEntryToTeletypeItem = (entry: HistoryEntry) => ({
-  id: `hostname-${entry.id}`,
-  name: normalizeURL(entry.url!),
-  icon: 'history',
-  execute: TeletypeAction.NavigateSuggestionHostname,
-  section: 'Hostname',
-  selectPriority: ActionSelectPriority.HIGHEST,
-  displayPriority: ActionDisplayPriority.HIGH,
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateSuggestionHostname,
-        payload: { entry },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.NavigateSuggestionHostname,
-        payload: { entry },
-        success: false,
-        error
-      })
-    }
+export const hostnameHistoryEntryToTeletypeItem = (entry: HistoryEntry) => {
+  const url = entry.url ?? ''
+  return {
+    id: `hostname-${entry.id}`,
+    name: normalizeURL(entry.url!),
+    icon: 'history',
+    execute: TeletypeAction.NavigateSuggestionHostname,
+    section: 'Hostname',
+    selectPriority: ActionSelectPriority.HIGHEST,
+    displayPriority: ActionDisplayPriority.HIGH,
+    actionText: 'Open as Tab',
+    actionPanel: [
+      createSecondaryAction({
+        id: 'open-history-in-mini-browser',
+        name: 'Open in Mini-Browser',
+        handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+      }),
+      {
+        id: `copy-history`,
+        name: 'Copy URL',
+        icon: 'copy',
+        handler: createExecutioner(TeletypeAction.CopyURL, { url })
+      }
+    ],
+    handler: createExecutioner(TeletypeAction.NavigateSuggestionHostname, { entry })
   }
-})
+}
 
 export const resourceToTeletypeItem = (resource: Resource) => {
   const url =
@@ -197,69 +209,74 @@ export const resourceToTeletypeItem = (resource: Resource) => {
     execute: TeletypeAction.OpenResource,
     group: TeletypeActionGroup.Resources,
     section: 'Resource',
-    handler: () => {
-      try {
-        dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenResource,
-          payload: { resource },
-          success: true
-        })
-      } catch (error) {
-        dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenResource,
-          payload: { resource },
-          success: false,
-          error
-        })
+    actionText: 'Open as Tab',
+    actionPanel: [
+      createSecondaryAction({
+        id: 'open-history-in-mini-browser',
+        name: 'Open in Mini-Browser',
+        handler: createExecutioner(TeletypeAction.OpenResourceInMiniBrowser, { resource })
+      }),
+      {
+        id: `copy-history`,
+        name: 'Copy URL',
+        icon: 'copy',
+        handler: createExecutioner(TeletypeAction.CopyURL, { url })
       }
-    }
+    ],
+    handler: createExecutioner(TeletypeAction.OpenResource, { resource })
   }
 }
 
-export const tabToTeletypeItem = (tab: Tab) => ({
-  id: tab.id,
-  name: tab.title,
-  icon: 'tab',
-  execute: TeletypeAction.OpenTab,
-  section: 'Tab',
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({ execute: TeletypeAction.OpenTab, payload: { tab }, success: true })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.OpenTab,
-        payload: { tab },
-        success: false,
-        error
-      })
-    }
+export const tabToTeletypeItem = (tab: Tab) => {
+  const url = tab.type === 'page' ? tab.currentLocation || tab.initialLocation : ''
+  return {
+    id: tab.id,
+    name: tab.title,
+    icon: 'tab',
+    execute: TeletypeAction.OpenTab,
+    section: 'Tab',
+    actionText: 'Open Tab',
+    actionPanel: conditionalArrayItem(tab.type === 'page', [
+      createSecondaryAction({
+        id: 'open-history-in-mini-browser',
+        name: 'Open in Mini-Browser',
+        handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+      }),
+      {
+        id: `copy-history`,
+        name: 'Copy URL',
+        icon: 'copy',
+        handler: createExecutioner(TeletypeAction.CopyURL, { url })
+      }
+    ]),
+    handler: createExecutioner(TeletypeAction.OpenTab, { tab })
   }
-})
+}
 
-export const spaceToTeletypeItem = (space: OasisSpace) => ({
-  id: space.id,
-  name: get(space.data).folderName ?? 'Unnamed Space',
-  icon: `space;;${space.id}`,
-  execute: TeletypeAction.OpenSpace,
-  group: TeletypeActionGroup.Space,
-  section: 'Space',
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.OpenSpace,
-        payload: { space },
-        success: true
+export const spaceToTeletypeItem = (space: OasisSpace) =>
+  ({
+    id: space.id,
+    name: get(space.data).folderName ?? 'Unnamed Space',
+    icon: `space;;${space.id}`,
+    execute: TeletypeAction.OpenSpaceAsContext,
+    group: TeletypeActionGroup.Space,
+    section: 'Space',
+    actionIcon: 'circle-dot',
+    actionText: 'Open as Context',
+    actionPanel: [
+      createSecondaryAction({
+        id: `open-space-in-overlay-${space.id}`,
+        name: 'Open in Overlay',
+        handler: createExecutioner(TeletypeAction.OpenSpaceInStuff, { space })
+      }),
+      createTertiaryAction({
+        id: `open-space-as-tab-${space.id}`,
+        name: 'Open as Tab',
+        handler: createExecutioner(TeletypeAction.OpenSpaceAsTab, { space })
       })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: TeletypeAction.OpenSpace,
-        payload: { space },
-        success: false,
-        error
-      })
-    }
-  }
-})
+    ],
+    handler: createExecutioner(TeletypeAction.OpenSpaceAsContext, { space })
+  }) as Action
 
 export const browserCommandToTeletypeItem = (command: TeletypeStaticAction) => ({
   id: command.id,
@@ -267,22 +284,7 @@ export const browserCommandToTeletypeItem = (command: TeletypeStaticAction) => (
   execute: command.execute,
   section: 'Browser Commands',
   icon: command.icon,
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: command.execute,
-        payload: { command },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: command.execute,
-        payload: { command },
-        success: false,
-        error
-      })
-    }
-  }
+  handler: createExecutioner(command.execute, { command })
 })
 
 export const staticActionToTeletypeItem = (action: TeletypeStaticAction) => ({
@@ -296,30 +298,10 @@ export const staticActionToTeletypeItem = (action: TeletypeStaticAction) => ({
   displayPriority: action.displayPriority,
   ignoreFuse: action.ignoreFuse,
   view: action.view,
-  handler: () => {
-    try {
-      dispatchTeletypeEvent({
-        execute: action.execute,
-        payload: {
-          id: action.id,
-          url: action.creationUrl,
-          component: action.component,
-          view: action.view
-        },
-        success: true
-      })
-    } catch (error) {
-      dispatchTeletypeEvent({
-        execute: action.execute,
-        payload: {
-          id: action.id,
-          url: action.creationUrl,
-          component: action.component,
-          view: action.view
-        },
-        success: false,
-        error
-      })
-    }
-  }
+  handler: createExecutioner(action.execute, {
+    id: action.id,
+    url: action.creationUrl,
+    component: action.component,
+    view: action.view
+  })
 })

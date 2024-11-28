@@ -2573,7 +2573,7 @@
     oasis.resetSelectedSpace()
   }
 
-  const handleCreateNote = async (e: CustomEvent<string>) => {
+  const handleCreateNote = async (e: CustomEvent<string | undefined>) => {
     const query = e.detail ?? ''
     log.debug('create note with query', query)
 

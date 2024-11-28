@@ -31,6 +31,8 @@ export type ActionView =
   | 'Inline'
   | 'InlineReplace'
 
+export type ActionShortcutType = 'primary' | 'secondary' | 'tertiary'
+
 export type ActionPanelOptionBase = {
   /** The unqiue identifier for the action */
   id: string
@@ -38,21 +40,26 @@ export type ActionPanelOptionBase = {
   /** The name of the action, will be shown in the command list */
   name: string
 
+  /** How the action can be activated */
+  shortcutType?: ActionShortcutType
+
   /** Icon for the action */
   icon?: typeof SvelteComponent | string
 }
 
-export type ActionPanelOption = ActionPanelOptionBase & {
-  /**
-   * Handler which gets executed when the action is selected
-   */
+export type ActionPanelOptionHandler = ActionPanelOptionBase & {
+  /** Handler which gets executed when the action is selected */
   handler: OptionHandler
-  action: never
-} & {
-  /** Show action when option is called */
-  action: Action
-  handler: never
+  action?: never
 }
+
+export type ActionPanelOptionAction = ActionPanelOptionBase & {
+  /** Action to show when the option is selected */
+  action: Action
+  handler?: never
+}
+
+export type ActionPanelOption = ActionPanelOptionHandler | ActionPanelOptionAction
 
 export enum TagStatus {
   DEFAULT = 'default',
@@ -76,7 +83,7 @@ export enum ActionDisplayPriority {
   HIGHEST = 3
 }
 
-type ActionBase = {
+export type ActionBase = {
   /** The unqiue identifier for the action */
   id: string
 
@@ -109,6 +116,9 @@ type ActionBase = {
 
   /** Keyboard shortcut to select action */
   shortcut?: string
+
+  /** How the action can be activated */
+  shortcutType?: ActionShortcutType
 
   /** Action description */
   description?: string
@@ -143,6 +153,7 @@ type ActionBase = {
   activationKey?: string
 
   /** Text that will be shown when the action is selected */
+  actionIcon?: string
   actionText?: string
   actionPanel?: ActionPanelOption[] | (() => Promise<ActionPanelOption[]>)
 
