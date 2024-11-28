@@ -16,6 +16,7 @@
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
   import AppStylePicker from './components/AppStylePicker.svelte'
+  import HomescreenOption from './components/HomescreenOption.svelte'
 
   // let error = ''
   // let loading = false
@@ -283,21 +284,11 @@
             on:update={handleSettingsUpdate}
           />
 
-          <SettingsOption
-            icon="home"
-            title="Homescreen"
-            description="Pin resources and spaces onto your personalizable homescreen. (This feature might change soon, so your homescreen state might reset at that point)."
-            bind:value={userConfigSettings.homescreen}
+          <HomescreenOption
+            bind:userConfigSettings
             on:update={handleSettingsUpdate}
-          >
-            {#if userConfigSettings.homescreen}
-              <section>
-                <button on:click={handleResetBackgroundImage} style="padding: 0.5em 0.75em;"
-                  >Reset Background Image</button
-                >
-              </section>
-            {/if}
-          </SettingsOption>
+            on:reset-background-image={handleResetBackgroundImage}
+          />
 
           <SettingsOption
             icon="circle-dot"

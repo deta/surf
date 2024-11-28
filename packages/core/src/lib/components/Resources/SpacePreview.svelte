@@ -11,6 +11,8 @@
   import { useTabsManager } from '../../service/tabs'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import type { Space } from '@horizon/types'
+  import LazyScroll from '../Utils/LazyScroll.svelte'
+  import { writable } from 'svelte/store'
 
   export let space: OasisSpace
   export let draggable: boolean | undefined
@@ -41,6 +43,7 @@
   const toasts = useToasts()
 
   let spaceContents: any[] = []
+  const renderedSpaceContents = writable<any[]>([])
 
   function handleDragStart(drag: DragculaDragEvent<DragTypes>) {
     drag.item?.data.setData(DragTypeNames.SURF_SPACE, space)
@@ -52,6 +55,17 @@
     spaceContents = (await oasis.getSpaceContents(space.id)).sort(
       (a, b) => a.updated_at - b.updated_at
     )
+    renderedSpaceContents.set(spaceContents.slice(0, 10))
+  }
+
+  async function handleLazyLoad(e: CustomEvent<[number, number, number]>) {
+    const [velocity, remainingAdjusted, remaining] = e.detail
+    const N_LOAD = 5
+    const newItems = spaceContents.slice(
+      $renderedSpaceContents.length,
+      $renderedSpaceContents.length + N_LOAD
+    )
+    renderedSpaceContents.set([...$renderedSpaceContents, ...newItems])
   }
 
   function getContextMenuItems() {
@@ -119,24 +133,26 @@
     </div>
     <div class="content mode-{contentViewMode}">
       {#if renderContents}
-        {#each spaceContents as item, i (item.resource_id + i)}
-          <LazyComponent this={() => import('../Oasis/OasisResourceLoader.svelte')}>
-            <svelte:fragment slot="component" let:Component>
-              <Component
-                style="--even: {i % 2 === 0 ? 0 : 1};"
-                resourceOrId={item.resource_id}
-                mode={contentMode}
-                frameless={true}
-                origin="homescreen-space"
-                on:open
-                on:click
-                on:open-and-chat
-                on:remove
-                on:set-resource-as-background
-              />
-            </svelte:fragment>
-          </LazyComponent>
-        {/each}
+        <LazyScroll baseItemHeight={200} on:lazyLoad={handleLazyLoad}>
+          {#each $renderedSpaceContents as item, i (item.resource_id)}
+            <LazyComponent this={() => import('../Oasis/OasisResourceLoader.svelte')}>
+              <svelte:fragment slot="component" let:Component>
+                <Component
+                  style="--even: {i % 2 === 0 ? 0 : 1};"
+                  resourceOrId={item.resource_id}
+                  mode={'compact'}
+                  frameless={true}
+                  origin="homescreen-space"
+                  on:open
+                  on:click
+                  on:open-and-chat
+                  on:remove
+                  on:set-resource-as-background
+                />
+              </svelte:fragment>
+            </LazyComponent>
+          {/each}
+        </LazyScroll>
       {/if}
     </div>
   </div>
@@ -265,13 +281,23 @@
           flex-direction: column;
           //gap: 0.5em;
 
-          > :global(.wrapper) {
+          :global(.wrapper) {
             padding: 0.5ch 1ch;
             background: rgba(250, 250, 250, var(--even));
 
             :global(.preview) {
               background: transparent;
             }
+            :global(.image) {
+              max-width: 15ch;
+              max-height: 15ch;
+            }
+            :global(.inner) {
+              flex-direction: row;
+            }
+          }
+          > :global(.lazyScroll-container > :nth-child(odd)) {
+            background: rgba(230, 230, 230, 0.3);
           }
         }
         &.mode-grid {

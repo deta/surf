@@ -9,6 +9,8 @@
   import { useDebounce, useLogScope } from '@horizon/utils'
 
   export let resourceId: string
+  export let autofocus: boolean = true
+  export let showTitle: boolean = true
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
@@ -110,9 +112,11 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div on:drop={handleDrop} class="wrapper text-gray-900 dark:text-gray-100">
   <div class="content">
-    <div class="details">
-      <input type="text" bind:value={title} on:blur={handleTitleBlur} />
-    </div>
+    {#if showTitle}
+      <div class="details">
+        <input type="text" bind:value={title} on:blur={handleTitleBlur} on:click />
+      </div>
+    {/if}
 
     {#if !initialLoad}
       <div class="notes-editor-wrapper">
@@ -120,7 +124,9 @@
           bind:focus={focusEditor}
           bind:content={$content}
           placeholder="Jot something down…"
-          autofocus
+          on:click
+          on:dragstart
+          {autofocus}
         />
       </div>
     {/if}

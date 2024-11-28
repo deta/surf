@@ -13,7 +13,7 @@ export enum DragTypeNames {
 
   SURF_SPACE = 'vnd/surf/space',
 
-  BENTO_ITEM = 'vnd/surf/bentoItem'
+  DESKTOP_ITEM = 'vnd/surf/desktop_item'
 }
 
 export interface DragTypes extends Record<DragTypeNames, unknown> {
@@ -25,6 +25,5 @@ export interface DragTypes extends Record<DragTypeNames, unknown> {
 
   'vnd/surf/space': OasisSpace
 
-  /// Used for homescreen
-  'vnd/surf/bentoItem': Writable<BentoItem>
+  'vnd/surf/desktop_item': Writable<BentoItem>
 }

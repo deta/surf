@@ -94,6 +94,7 @@ export const getUserConfig = (path?: string) => {
       live_spaces: false,
       annotations_sidebar: false,
       homescreen: false,
+      homescreen_link_cmdt: false,
       experimental_browsing_context: false,
       always_include_screenshot_in_chat: false,
       onboarding: {
@@ -164,6 +165,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.homescreen === undefined) {
     storedConfig.settings.homescreen = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.homescreen_link_cmdt === undefined) {
+    storedConfig.settings.homescreen_link_cmdt = false
     changedConfig = true
   }
 

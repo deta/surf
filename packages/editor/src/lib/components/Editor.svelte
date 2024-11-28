@@ -130,7 +130,7 @@
   })
 </script>
 
-<div class="editor" style="--data-placeholder: '{placeholder}';">
+<div class="editor" style="--data-placeholder: '{placeholder}';" on:click on:dragstart>
   <!-- {#if editor && !readOnly}
     <BubbleMenu {editor} />
   {/if} -->

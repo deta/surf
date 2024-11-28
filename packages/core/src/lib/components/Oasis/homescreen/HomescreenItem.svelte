@@ -3,7 +3,7 @@
   import { BentoController, BentoItem, type BentoItemData } from './BentoController'
   import { DragTypeNames } from '../../../types'
   import { useOasis } from '../../../service/oasis'
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, getContext, onMount } from 'svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
   import SpacePreview from '../../Resources/SpacePreview.svelte'
@@ -12,6 +12,7 @@
   import type { Mode } from '../../Resources/Previews/Preview.svelte'
   import { useTelemetry } from '../../../service/telemetry'
   import { useTabsManager } from '../../../service/tabs'
+  import { HomescreenController } from './homescreenController'
 
   export interface HomescreenItemData extends BentoItemData {
     resourceId?: string
@@ -25,6 +26,9 @@
 
 <script lang="ts">
   export let item: Writable<HomescreenItemData>
+  export let homescreenController: Writable<HomescreenController>
+
+  //const homescreenController = getContext<Writable<HomescreenController>>('homescreenController')
 
   const telemetry = useTelemetry()
   const oasis = useOasis()
@@ -37,16 +41,13 @@
   }>()
 
   let bentoItemEl: HTMLElement
-  let bentoItem: BentoItem
 
+  let resizing = false
   function handleResizeMouseDown(direction: 'nw' | 'ne' | 'se' | 'sw'): (e: MouseEvent) => void {
     return (e: MouseEvent) => {
-      // TODO: This should be generic parent?
-      const bentoController = document.querySelector('#homescreen')
-        .bentoController as BentoController<any>
-
       e.preventDefault()
       e.stopImmediatePropagation()
+      resizing = true
       const init = {
         x: e.clientX,
         y: e.clientY,
@@ -55,53 +56,50 @@
       }
 
       const handleMouseMove = (e: MouseEvent) => {
-        const dx = e.clientX - init.x
-        const dy = e.clientY - init.y
+        const clientX = e.clientX - $homescreenController.CELL_SIZE / 2
+        const clientY = e.clientY - $homescreenController.CELL_SIZE / 2
+        const targetCell = $homescreenController.cellAtXY(clientX, clientY)
 
-        const clientX = e.clientX - bentoController.CELL_SIZE / 2
-        const clientY = e.clientY - bentoController.CELL_SIZE / 2
-        const targetCell = bentoController.getCellAt(clientX, clientY)
-
-        if (direction === 'ne') {
-          bentoItem.spanX = Math.max(1, targetCell.cellX - bentoItem.cellX + 1)
-          bentoItem.cellY = targetCell.cellY + 1
-        } else if (direction === 'se') {
-          bentoItem.spanX = Math.max(1, targetCell.cellX - bentoItem.cellX + 1)
-          bentoItem.spanY = Math.max(1, targetCell.cellY - bentoItem.cellY + 1)
-        } else if (direction === 'sw') {
-          bentoItem.spanY = targetCell.cellY - bentoItem.cellY + 1
-          bentoItem.cellX = targetCell.cellX + 1
-        } else if (direction === 'nw') {
-        }
+        item.update((v) => {
+          if (direction === 'ne') {
+            v.spanX = Math.max(1, targetCell.x - v.cellX + 1)
+            v.cellY = targetCell.y + 1
+          } else if (direction === 'se') {
+            v.spanX = Math.max(1, targetCell.x - v.cellX + 1)
+            v.spanY = Math.max(1, targetCell.y - v.cellY + 1)
+          } else if (direction === 'sw') {
+            v.spanY = targetCell.y - v.cellY + 1
+            v.cellX = targetCell.x + 1
+          } else if (direction === 'nw') {
+          }
+          return v
+        })
       }
       const handleMouseUp = (e: MouseEvent) => {
         e.preventDefault()
         e.stopImmediatePropagation()
+        resizing = false
         homescreen.store()
-        e.target.classList.remove('active')
 
         window.removeEventListener('mousemove', handleMouseMove)
         telemetry.trackUpdateHomescreen(UpdateHomescreenEventAction.ResizeItem)
       }
 
-      e.target.classList.add('active')
-
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp, { capture: true, once: true })
     }
   }
-
-  onMount(() => {
-    bentoItem = bentoItemEl.bentoItem
-  })
 </script>
 
 <div
   id="homescreen-item-{$item.id}"
   class="homescreen-item item-type-{$item.resourceId ? 'resource' : 'space'}"
   draggable={true}
+  style:--cell-x={$item.cellX}
+  style:--cell-y={$item.cellY}
+  style:--span-x={$item.spanX}
+  style:--span-y={$item.spanY}
   bind:this={bentoItemEl}
-  use:BentoItem.action={{ data: item }}
   use:HTMLDragItem.action={{}}
   on:mouseup={async (e) => {
     if (e.shiftKey || e.ctrlKey || e.metaKey) return
@@ -113,7 +111,7 @@
     }
   }}
   on:DragStart={async (drag) => {
-    drag.data.setData(DragTypeNames.BENTO_ITEM, item)
+    drag.data.setData(DragTypeNames.DESKTOP_ITEM, item)
     if ($item.resourceId) {
       const resource = await resourceManager.getResource($item.resourceId)
       drag.data.setData(DragTypeNames.SURF_RESOURCE, resource)
@@ -183,6 +181,7 @@ TODO: Fix resizing logic for other corners
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     on:mousedown={handleResizeMouseDown('se')}
+    class:active={resizing}
   >
     <path
       d="M2 18C13 18 18 13 18 2"
@@ -201,6 +200,7 @@ TODO: Fix resizing logic for other corners
         draggable={false}
         frameless={true}
         interactive={true}
+        hideProcessing
         on:set-resource-as-background
         on:click
         on:open
@@ -237,10 +237,16 @@ TODO: Fix resizing logic for other corners
 </div>
 
 <style lang="scss">
+  :global(html:has(.resize-handle.active)) {
+    cursor: nwse-resize !important;
+  }
   .homescreen-item {
     position: relative;
     //overflow: hidden;
     isolation: isolate;
+
+    grid-column: var(--cell-x) / span var(--span-x);
+    grid-row: var(--cell-y) / span var(--span-y);
 
     border-radius: 1em;
     border: 1px solid rgba(0, 0, 0, 0.1);
@@ -248,6 +254,10 @@ TODO: Fix resizing logic for other corners
     --content-padding: 0.4em;
 
     font-size: 0.85em;
+
+    &:not(:hover) :global(*) {
+      user-select: none !important;
+    }
 
     > .content {
       overflow: hidden;
@@ -304,11 +314,12 @@ TODO: Fix resizing logic for other corners
         opacity 150ms ease-out,
         color 150ms ease-out;
       &:hover {
-        color: rgb(70 70 70);
+        color: rgb(140, 140, 140);
         opacity: 1;
       }
-      &:global(:has(.active)) {
-        color: rgb(140, 140, 140);
+      &.active {
+        color: rgb(70 70 70);
+        opacity: 1;
       }
 
       &.corner {

@@ -16,6 +16,7 @@
   export let origin: Origin = 'stuff'
   export let draggable: boolean = true
   export let frameless: boolean = false
+  export let hideProcessing: boolean = false
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -63,6 +64,7 @@
         {interactive}
         {draggable}
         {frameless}
+        {hideProcessing}
         on:load
         on:click
         on:open
@@ -85,6 +87,7 @@
         {interactive}
         {draggable}
         {frameless}
+        {hideProcessing}
         on:load
         on:click
         on:open

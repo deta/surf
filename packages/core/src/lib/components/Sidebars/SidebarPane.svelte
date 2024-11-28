@@ -321,7 +321,6 @@
     class:verticalTabs={!horizontalTabs}
     aria-labelledby="nav-heading"
     style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 502;"
-    style:view-transition-name={'app_sidebar_left'}
   >
     <div class="h-full w-full">
       <slot name="sidebar" />

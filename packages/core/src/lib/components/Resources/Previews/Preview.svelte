@@ -36,6 +36,7 @@
   import SourceItem from './Source.svelte'
   import { createEventDispatcher } from 'svelte'
   import { isDebugModeEnabled } from '../../../stores/debug'
+  import TextResource from './Text/TextResource.svelte'
 
   export let resource: Resource
 
@@ -314,7 +315,26 @@
                 {#if contentType === 'plain'}
                   {truncate(content, MAX_CONTENT_LENGTH)}
                 {:else if contentType === 'rich_text'}
-                  <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
+                  {#if origin === 'homescreen'}
+                    <TextResource
+                      resourceId={resource.id}
+                      autofocus={false}
+                      showTitle={false}
+                      on:click={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }}
+                      on:dragstart={(e) => {
+                        // TODO: proper prevention
+                        if (['#text', 'p'].includes(e.target?.nodeName.toLowerCase())) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                        }
+                      }}
+                    />
+                  {:else}
+                    <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
+                  {/if}
                 {:else if contentType === 'html'}
                   <iframe
                     title="Document Preview"
@@ -805,6 +825,25 @@
             display: none !important;
           }
         }
+      }
+    }
+  }
+  :global([data-resource-type='application/vnd.space.document.space-note']) {
+    :global(.inner > .details) {
+      overflow-y: scroll;
+      :global(> div:first-child) {
+        flex-shrink: 0;
+      }
+    }
+    :global(.content > .wrapper) {
+      padding: 0;
+      :global(.content) {
+        padding: 0;
+        padding-top: 1em;
+        padding-inline: 0.25em;
+      }
+      :global(*) {
+        user-select: none !important;
       }
     }
   }

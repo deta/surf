@@ -773,6 +773,9 @@
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) {
         showNewTabOverlay.set(0)
+        if ($userConfigSettings.homescreen && $userConfigSettings.homescreen_link_cmdt) {
+          homescreen.setVisible(false)
+        }
         return
       }
       if ($showScreenshotPicker) {
@@ -3141,9 +3144,17 @@
     window.api.onCreateNewTab(() => {
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
+        if ($userConfigSettings.homescreen && $userConfigSettings.homescreen_link_cmdt) {
+          homescreen.setVisible(false)
+        }
       } else {
         // THIS IS WHERE THE OLD COMMAND BAR GOT CALLED
         $showNewTabOverlay = 1
+        if ($userConfigSettings.homescreen && $userConfigSettings.homescreen_link_cmdt) {
+          homescreen.setVisible(true)
+          // TODO: (maxu/home): Only until felixes new cmdt merge
+          tick().then(() => document.querySelector('.drawer-overlay')?.remove())
+        }
       }
     })
 
@@ -4616,7 +4627,6 @@
     >}
     <div
       slot="sidebar"
-      style:view-transition-name={'app_sidebar_left'}
       id="left-sidebar"
       class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
       class:homescreenVisible={$homescreenVisible}
@@ -4783,6 +4793,7 @@
           {/if}
 
           <div
+            style:view-transition-name={'app_sidebar_unpinned_tabs'}
             class="relative w-full h-full no-scrollbar overflow-hidden py-2 {horizontalTabs
               ? 'flex-row overflow-y-hidden'
               : 'flex-col overflow-x-hidden'} {horizontalTabs
