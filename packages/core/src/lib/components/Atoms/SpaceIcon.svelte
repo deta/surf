@@ -19,7 +19,7 @@
   $: parsedColors = getColors($spaceData?.colors ?? ['#76E0FF', '#4EC9FB'])
 
   $: colorIconSize =
-    size === 'sm' ? '1.1em' : size === 'lg' ? '1.3em' : size === 'xl' ? '1.5em' : '1.2em'
+    size === 'sm' ? '1.1em' : size === 'lg' ? '1.3em' : size === 'xl' ? '6rem' : '1.2em'
 
   let pickedEmoji: string | null = null
 
