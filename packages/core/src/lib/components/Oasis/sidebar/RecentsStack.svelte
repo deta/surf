@@ -174,7 +174,7 @@
 
 <div
   id="stuff-stack"
-  class="wrapper stack-wrapper"
+  class="wrapper stack-wrapper no-drag"
   class:isMac={isMac()}
   class:wasMouseInside={$wasMouseInside}
   class:empty={$items.length <= 0}
@@ -206,7 +206,12 @@
     dragover = false
   }}
 >
-  <div class="stack" class:dragover bind:this={stackEl} style="--card-width: {stackCardWidth}px;">
+  <div
+    class="stack no-drag"
+    class:dragover
+    bind:this={stackEl}
+    style="--card-width: {stackCardWidth}px;"
+  >
     <!--{#if $items.length <= 0}
       <div class="card empty"></div>
       <div class="card empty"></div>
@@ -215,7 +220,7 @@
       {@const resource = item.resource.resource}
       {#if resource !== undefined}
         <div
-          class="card stack-card relative"
+          class="card stack-card relative no-drag"
           data-id={resource.id}
           use:originTransition={{ resourceId: resource.id }}
           style:--origin-x={item.fromOrigin
@@ -524,6 +529,7 @@
       left: 0;
       bottom: 0;
       width: calc(calc(var(--gridColumns) * calc(var(--cardWidth) + 20px)));
+      -webkit-app-region: no-drag;
     }
 
     &:hover::before,
@@ -631,6 +637,7 @@
         width: 200px !important;
         height: 100vh;
         background: linear-gradient(90deg, #cce1f900 0%, #cce1f977 80%);
+        -webkit-app-region: no-drag;
       }
       &:not(.isMac)::before {
         width: 300px !important;
