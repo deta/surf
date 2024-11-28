@@ -377,13 +377,7 @@
                     class="text-blue-500 hover:underline">Documentation</a
                   >
                 </li>
-                <li>
-                  <a
-                    href="mailto:support@deta.surf"
-                    target="_blank"
-                    class="text-blue-500 hover:underline">Email Support</a
-                  >
-                </li>
+                <li>support@deta.surf</li>
               </ul>
             </div>
           </div>
