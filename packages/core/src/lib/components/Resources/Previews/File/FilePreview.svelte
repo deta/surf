@@ -90,7 +90,7 @@
     overflow: hidden;
 
     &.preview {
-      border-radius: 16px;
+      //border-radius: 16px;
     }
   }
 </style>

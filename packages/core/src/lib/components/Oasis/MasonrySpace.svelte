@@ -175,10 +175,10 @@
 
     // NOTE: Using CSS Houdini Layout API -> Requires "CSSLayoutAPI" chrome flag!
     display: layout(masonry);
-    --padding-inline: 32;
-    --padding-block: 32;
+    --padding-inline: 46;
+    --padding-block: 46;
     --columns: 4;
-    --gap: 12;
+    --gap: 21;
   }
   .item {
     box-sizing: border-box;

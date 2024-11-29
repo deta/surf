@@ -502,7 +502,9 @@
     height: 100%;
     :global(.preview) {
       height: 100%;
-      border: 0 !important;
+      font-size: 0.8em;
+      --MAX_content_lines: 3 !important;
+      /*border: 0 !important;
       :global(.preview-card .inner) {
         height: 100%;
         :global(.image) {
@@ -513,7 +515,7 @@
             object-fit: cover;
           }
         }
-      }
+      }*/
     }
   }
 </style>

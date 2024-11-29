@@ -25,10 +25,11 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
     component: ResourcePreview,
     componentProps: {
       resource: resource,
-      mode: 'media',
+      mode: 'compact',
+      viewMode: 'responsive',
       interactive: false,
       frameless: true,
-      origin: 'stack',
+      origin: 'stuff',
       background: false
     },
     view: 'Inline',
@@ -150,7 +151,8 @@ const createResourceAction = async (entry: { id: string }, resourceManager: Reso
       component: ResourcePreview,
       componentProps: {
         resource,
-        mode: 'media',
+        mode: 'compact',
+        viewMode: 'responsive',
         interactive: false,
         frameless: true,
         origin: 'stuff',

@@ -237,8 +237,8 @@
       position: relative;
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      overflow-y: auto;
+      overflow: clip;
+      overflow-clip-margin: 2px;
 
       &.drawing * {
         transition: none !important;

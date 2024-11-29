@@ -12,13 +12,18 @@
     source: Source
     author?: Author
     theme?: [string, string]
+
+    metadata?: {
+      text?: string
+      icon?: string
+      imageUrl?: string
+    }[]
   }
 </script>
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { WebParser } from '@horizon/web-parser'
 
   import {
     ResourceJSON,
@@ -63,7 +68,7 @@
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
   import { useOasis } from '../../service/oasis'
-  import Preview, {
+  import {
     type Annotation,
     type Author,
     type ContentType,
@@ -71,6 +76,7 @@
     type Origin,
     type Source
   } from './Previews/Preview.svelte'
+  import Preview, { type ContentMode, type ViewMode } from './Previews/PreviewV2.svelte'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
@@ -83,14 +89,18 @@
   export let resource: Resource
   export let draggable = true
   export let selected: boolean = false
-  export let mode: Mode = 'full'
+  export let interactive: boolean = false
+  export let frameless: boolean = false
+
+  /// View
+  export let mode: ContentMode = 'full'
+  export let viewMode: ViewMode = 'card'
+
   export let origin: Origin = 'stuff'
   export let isInSpace: boolean = false // NOTE: Use to hint context menu (true -> all, delete, false -> inside space only remove link)
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
-  export let interactive: boolean = false
-  export let frameless: boolean = false
-  export let background: boolean
+
   export let processingText: string | undefined = undefined
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
@@ -557,6 +567,67 @@
           theme: undefined
         }
       }
+
+      if ($resourceState === 'extracting' && !hideProcessing) {
+        previewData.metadata = [
+          ...conditionalArrayItem(true, {
+            text: previewData?.author?.text,
+            icon: !canonicalUrl ? 'file' : undefined,
+            imageUrl: canonicalUrl
+              ? `https://www.google.com/s2/favicons?domain=${getHostname(canonicalUrl)}&sz=48`
+              : undefined
+          })
+        ]
+      } else {
+        previewData.metadata = [
+          ...conditionalArrayItem(
+            previewData.source !== undefined &&
+              resource.type !== 'application/vnd.space.post.youtube',
+            {
+              text: previewData.source?.text,
+              icon: previewData.source?.icon,
+              imageUrl: previewData.source?.imageUrl
+            }
+          ),
+          ...conditionalArrayItem(previewData.author?.text !== undefined, {
+            text: previewData.author?.text,
+            icon: previewData.author?.icon,
+            imageUrl: previewData.author?.imageUrl
+          })
+        ]
+      }
+
+      // Adjust preview data based on content view mode
+      if (mode === 'media') {
+        if (previewData.image !== undefined) {
+          //previewData.title = undefined
+          previewData.content = undefined
+        }
+      } else if (mode === 'compact') {
+        if (previewData.image !== undefined) {
+          previewData.content = undefined
+          previewData.metadata[0].text = previewData.title
+          previewData.title = ''
+        } else if (
+          (previewData.title !== undefined && previewData.title.length > 0) ||
+          previewData.content !== undefined
+        ) {
+          previewData.image = undefined
+        }
+      }
+
+      // Hide content if not showing annotations in stuff and we have annotations -> Content is hidden
+      if (
+        !$userConfigSettings.show_annotations_in_oasis &&
+        (previewData.annotations?.length ?? 0) > 0
+      ) {
+        previewData.content = undefined
+      }
+
+      // Hide metadata for all images by default
+      if (resource.type.startsWith('image/') || mode === 'media') {
+        previewData.metadata = []
+      }
     } catch (e) {
       log.error('Failed to load resource', e)
       previewData = {
@@ -875,20 +946,22 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div
+<article
   id="resource-preview-{resource.id}-{Math.floor(Math.random() * 100000)}"
-  {draggable}
-  use:HTMLDragItem.action={{}}
-  on:DragStart={handleDragStart}
-  on:click={handleClick}
-  class="resource-preview clickable relative preview-mode-{mode}"
-  class:frame={!frameless}
-  class:isSelected={selected}
   style="--id:{resource.id}; opacity: {resourceBlacklisted ? '20%' : '100%'};"
+  class="resource-preview content-{mode} view-{viewMode}"
+  class:frame={!frameless}
+  class:selected
+  data-resource-type={resource.type}
+  data-resource-id={resource.id}
   data-selectable
   data-selectable-id={resource.id}
   data-vaul-no-drag
   data-tooltip-target="stuff-example-resource"
+  on:DragStart={handleDragStart}
+  on:click={handleClick}
+  {draggable}
+  use:HTMLDragItem.action={{}}
   use:contextMenu={{
     canOpen: interactive,
     items: contextMenuItems
@@ -897,58 +970,43 @@
   {#if $resourceState === 'extracting' && !hideProcessing}
     <Preview
       {resource}
-      type={resource.type}
-      title=""
-      url={canonicalUrl}
-      author={{
-        text: processingSource,
-        imageUrl: canonicalUrl
-          ? `https://www.google.com/s2/favicons?domain=${getHostname(canonicalUrl)}&sz=48`
-          : undefined,
-        icon: !canonicalUrl ? 'file' : undefined
-      }}
-      source={{ text: 'Generating Preview...', icon: 'spinner' }}
       {interactive}
-      {frameless}
-      {processingText}
-      {failedText}
-      {hideProcessing}
       {origin}
-      mode="content"
+      {viewMode}
+      type={resource.type}
+      url={canonicalUrl}
+      media={previewData?.image}
+      title={previewData?.title}
+      content={previewData?.content}
+      contentType={previewData?.contentType}
+      annotations={previewData?.annotations}
+      status={failedText ? 'static' : 'processing'}
+      statusText={failedText}
+      metadata={previewData?.metadata}
     />
   {:else if previewData}
     <Preview
       {resource}
-      type={previewData.type}
-      title={previewData.title}
-      content={previewData.content}
-      contentType={previewData.contentType}
-      annotations={previewData.annotations}
-      image={previewData.image}
-      url={previewData.url}
-      source={previewData.source}
-      author={previewData.author}
-      theme={previewData.theme}
       {interactive}
-      {frameless}
-      {processingText}
-      {failedText}
-      {hideProcessing}
       {origin}
-      {background}
+      {viewMode}
+      type={previewData.type}
+      url={previewData.url}
+      media={previewData?.image}
+      title={previewData?.title}
+      content={previewData?.content}
+      contentType={previewData?.contentType}
+      annotations={previewData?.annotations}
+      metadata={previewData?.metadata}
       bind:editTitle={showEditMode}
       bind:titleValue={$customTitleValue}
       on:edit-title={handleEditTitle}
       on:start-edit-title={handleStartEditTitle}
       on:click={handleTitleClick}
-      {mode}
     />
   {:else}
-    <div class="preview background">
-      <div class="details">
-        <div class="title">Loading...</div>
-        <div class="subtitle">Please wait</div>
-      </div>
+    <div class="loading-box">
+      <span><!--<Icon name="spinner" size="12px" />-->Loading…</span>
     </div>
   {/if}
 
@@ -962,38 +1020,7 @@
       {/if}
     </div>
   {/if}
-
-  <!-- {#if true}
-    <div class="absolute z-[10000] top-4 right-4 bg-white/95 backdrop-blur-md text-gray-500 p-2 rounded-lg flex items-center gap-2">
-      <Icon name="spinner" size="14px" />
-      <div>
-        Processing…
-      </div>
-    </div>
-  {/if} -->
-
-  <!-- <div class="absolute z-[10000] top-2 right-2 bg-black text-white p-2 rounded-lg">
-    {resource.type}
-  </div> -->
-
-  <!-- {#if interactive}
-    <div class="remove-wrapper">
-      {#if showOpenAsFile}
-        <div class="remove" on:click|stopPropagation={handleOpenAsFile}>
-          <Icon name="file" color="#AAA7B1" />
-        </div>
-      {/if}
-
-      <div class="remove rotated" on:click|stopPropagation={handleOpenAsNewTab}>
-        <Icon name="arrow.right" color="#AAA7B1" />
-      </div>
-
-      <div class="remove" on:click|stopPropagation={handleRemove}>
-        <Icon name="close" color="#AAA7B1" />
-      </div>
-    </div>
-  {/if} -->
-</div>
+</article>
 
 <style lang="scss">
   @keyframes fade-in-up {
@@ -1005,105 +1032,6 @@
       opacity: 1;
       transform: translateY(0);
     }
-  }
-
-  .resource-preview {
-    position: relative;
-    display: flex;
-    gap: 8px;
-    flex-direction: column;
-    border-radius: 16px;
-    overflow: visible;
-    cursor: default;
-    width: 100%;
-    /* animation: 280ms fade-in-up cubic-bezier(0.25, 0.46, 0.45, 0.94); */
-    animation-delay: 20ms;
-    animation-fill-mode: forwards;
-    animation-iteration-count: 1;
-    &:hover {
-      .remove-wrapper {
-        animation: fade-in 120ms forwards;
-        animation-iteration-count: 1;
-        animation-delay: 60ms;
-      }
-    }
-
-    &.clickable {
-      cursor: pointer;
-    }
-
-    &.isSelected {
-      .preview {
-        outline: 4px solid rgba(0, 123, 255, 0.75);
-      }
-    }
-
-    &.background {
-      background: rgb(255, 255, 255);
-      border: 1px solid rgba(228, 228, 228, 0.75);
-      box-shadow:
-        0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-        0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-
-      .preview:not(.slack):not(.reddit):not(.twitter):not(.notion) {
-        background: red;
-        border: none;
-        box-shadow: none;
-      }
-    }
-
-    &.details {
-      .preview:hover {
-        outline: 0;
-      }
-    }
-
-    & * {
-      user-select: none;
-      -webkit-user-drag: none;
-    }
-  }
-
-  .frame .preview:hover {
-    outline: 3px solid rgba(0, 0, 0, 0.15);
-  }
-
-  .preview {
-    width: 100%;
-    border-radius: 16px;
-    border: 1px solid rgba(228, 228, 228, 0.75);
-    box-shadow:
-      0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-    transition: 60ms ease-out;
-    position: relative;
-    &.twitter {
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%) !important;
-    }
-    &.slack {
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: radial-gradient(100% 100% at 50% 0%, #d5ffed 0%, #ecf9ff 100%);
-    }
-    &.reddit {
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: radial-gradient(100% 100% at 50% 0%, #ff4500 0%, #ff7947 100%);
-    }
-    &.notion {
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: radial-gradient(100% 100% at 50% 0%, #fff 0%, #fafafa 100%);
-    }
-  }
-
-  .details {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.25rem 0.5rem 0.75rem 0.5rem;
-    gap: 0.5rem;
-    color: var(--color-text-muted);
-    width: 100%;
   }
 
   .resource-blacklistable {
@@ -1121,41 +1049,10 @@
     font-weight: 600;
     color: rgb(255, 255, 255);
 
-    &.hover {
+    /*&.hover {
       background: rgba(255, 255, 255);
       color: rgb(12 74 110);
-    }
-  }
-
-  .remove-wrapper {
-    position: absolute;
-    display: flex;
-    gap: 0.75rem;
-    top: 0;
-    padding: 1rem;
-    right: -2rem;
-    transform: translateY(-45%);
-    opacity: 0;
-    margin-left: 0.5rem;
-    cursor: default;
-    .remove {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 2rem;
-      height: 2rem;
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 0.5px solid rgba(0, 0, 0, 0.15);
-      transition: 60ms ease-out;
-      background: white;
-      &.rotated {
-        transform: rotate(-45deg);
-      }
-      &:hover {
-        outline: 3px solid rgba(0, 0, 0, 0.15);
-      }
-    }
+    }*/
   }
 
   @keyframes fade-in {
@@ -1167,105 +1064,137 @@
     }
   }
 
-  .type {
-    display: flex;
-    align-items: start;
-    gap: 0.5rem;
-    font-size: 1em;
-    font-weight: 500;
-    color: #281b53;
-  }
+  /// New resource previews // TODO: Clean up old styles
+  article.resource-preview {
+    --section-padding-inline: 1.4em;
+    --section-padding-block: 1.2em;
 
-  .label {
-    font-size: 1.1em;
-    line-height: 1.4;
-    padding: 0 0.25rem 0 0.25rem;
-    margin-bottom: 1.5rem;
-    text-wrap: balance;
-  }
+    --MAX_title_lines: 4;
+    --MAX_content_lines: 4;
 
-  .dragging {
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    max-width: 200px;
-    max-height: 200px;
-    opacity: 0.7;
-    pointer-events: none;
-    animation: initial-drag 0.2s ease-out;
-  }
+    --background: #fff;
+    --text-color: #281b53;
+    --text-muted-opacity: 0.7;
 
-  @keyframes initial-drag {
-    from {
-      transform: scale(0.8);
+    :global(.dark) & {
+      --background: #1f2937;
+      --text-color: #fff;
     }
-    to {
-      transform: scale(1);
+
+    position: relative;
+    width: 100%;
+    height: auto;
+    &.view-responsive {
+      height: 100%;
     }
-  }
 
-  .annotations {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9em;
-    color: rgb(12 74 110/0.9);
-  }
+    color: var(--text-color);
 
-  .resource-source {
-    position: absolute;
-    bottom: 1rem;
-    right: 1rem;
-    display: flex;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(4px);
-    box-shadow: 0px 0.425px 0px 0px rgba(65, 58, 86, 0.25);
-    padding: 0.4rem;
-    border-radius: 0.5rem;
-    font-size: 0.85em;
-    font-weight: 600;
-    color: rgb(12 74 110/0.9);
+    transition: outline 125ms ease;
 
-    &.hover {
-      background: rgba(255, 255, 255);
-      color: rgb(12 74 110);
+    :global(*) {
+      user-select: none;
+      -webkit-user-drag: none;
     }
-  }
 
-  .favicon {
-    width: 1rem;
-    height: 1rem;
-    border-radius: 5.1px;
-    box-shadow:
-      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
-  }
+    /// Special resource type overrides
+    &[data-resource-type='application/vnd.space.post.twitter'] {
+      --text-color: #fff;
+      --text-muted-opacity: 0.9;
+      --background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%);
+    }
+    &[data-resource-type='application/vnd.space.post.reddit'] {
+      --text-color: #fff;
+      --text-muted-opacity: 0.9;
+      --color1: #ff4500;
+      --color2: #ff7947;
+      --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+    }
+    &[data-resource-type^='application/vnd.space.document.notion'] {
+      --text-muted-opacity: 0.9;
+      --color1: #fff;
+      --color2: #fafafa;
+      :global(.dark) & {
+        --text-color: #fff;
+        --color1: #222;
+        --color2: #1a1a1a;
+      }
 
-  .summary-wrapper {
-    padding: 0.5rem 1rem;
-  }
+      --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+    }
+    &[data-resource-type^='application/vnd.space.chat-thread.slack'] {
+      --text-muted-opacity: 0.9;
+      --color1: #d5ffed;
+      --color2: #ecf9ff;
+      --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+    }
+    &[data-resource-type^='application/vnd.space.post.youtube'] {
+      // TODO: Custom Style
+    }
 
-  .summary {
-    font-size: 1em;
-    color: rgb(12 74 110/0.9);
-    letter-spacing: 0.0175rem;
-    font-weight: 500;
-    text-wrap: pretty;
-    display: -webkit-box;
-    overflow: hidden;
-    line-height: 1.5;
-    word-break: break-word;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-line-clamp: 15;
-    -webkit-box-orient: vertical;
+    &.frame {
+      background: var(--background);
+      border-radius: 1.1em;
+      border: 1px solid rgba(50, 50, 50, 0.075);
+      box-shadow:
+        0 0 0 1px rgba(50, 50, 93, 0.06),
+        0 2px 5px 0 rgba(50, 50, 93, 0.04),
+        0 1px 1.5px 0 rgba(0, 0, 0, 0.01);
+      overflow: hidden;
+      outline: 0px solid transparent;
+
+      &:not(.frameless):hover {
+        outline: 2px solid rgba(50, 50, 50, 0.175);
+      }
+
+      &:global(.selected) {
+        outline: 3px solid rgba(0, 123, 255, 0.4) !important;
+      }
+
+      :global(.dark) & {
+        border-color: rgba(250, 250, 250, 0.075);
+        box-shadow:
+          0 0 0 1px rgba(205, 205, 161, 0.06),
+          0 2px 5px 0 rgba(205, 205, 161, 0.04),
+          0 1px 1.5px 0 rgba(255, 255, 255, 0.01);
+
+        &:not(.frameless):hover {
+          outline-color: rgba(250, 250, 250, 0.2);
+        }
+
+        &:global(.selected) {
+          outline-color: rgba(10, 143, 255, 0.4) !important;
+        }
+      }
+    }
+
+    &.interactive {
+      cursor: pointer;
+    }
+
+    /// Loading state
+    .loading-box {
+      padding: var(--section-padding-block);
+      > span {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        font-size: 0.9em;
+        max-width: 100%;
+        font-weight: 500;
+        letter-spacing: 0.2px;
+        opacity: var(--text-muted-opacity);
+      }
+      &:not(:has(.failed)) {
+        animation: breathe 1.75s infinite ease;
+      }
+    }
   }
 
   /* Dragcula Dragging */
   :global(.resource-preview[data-drag-preview]) {
     box-shadow: none;
-    max-width: 25ch;
+    max-width: 27ch;
     border-radius: 14px;
     overflow: hidden;
     pointer-events: none;
@@ -1274,5 +1203,18 @@
     box-shadow:
       rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
       rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+
+  /// Animations
+  @keyframes breathe {
+    0% {
+      opacity: 0.8;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 0.8;
+    }
   }
 </style>

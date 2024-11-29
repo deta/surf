@@ -247,6 +247,10 @@
           font-weight: 500;
           letter-spacing: 0.05em;
           cursor: pointer;
+          flex-shrink: 0;
+        }
+        :global(.list) {
+          order: -1;
         }
         :global(.color-icon) {
           order: -1;

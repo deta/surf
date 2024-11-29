@@ -260,6 +260,7 @@
           <ResourcePreview
             {resource}
             mode="media"
+            viewMode="responsive"
             origin="stack"
             frameless={true}
             interactive
@@ -294,7 +295,7 @@
   /* NOTE: Overrides to make ResourcePreviews work at small card scale. */
   :global(.stack-card) {
     font-size: 0.5em;
-    :global(div.image) {
+    /*:global(div.image) {
       //position: unset !important;
       border-radius: 0px !important;
     }
@@ -303,23 +304,25 @@
     }
 
     :global(.resource-preview) {
-      height: 100%;
+      height: 100% !important;
       :global(.preview) {
         height: 100%;
         border: 0 !important;
-        :global(.preview-card .inner) {
+
+        :global(.file-card .icon > svg) {
+          --width: 2em !important;
+          --height: 2em !important;
+        }
+        :global(> .inner) {
           height: 100%;
-          :global(.image) {
-            height: 100%;
+          :global(.media img),
+          :global(.media > .wrapper) {
+            height: 100% !important;
             object-fit: cover;
-            :global(img) {
-              height: 100%;
-              object-fit: cover;
-            }
           }
         }
       }
-    }
+    }*/
   }
 
   :global(.stack-card[data-drag-preview]) {

@@ -40,18 +40,10 @@
   })
 </script>
 
-<div class="wrapper">
-  <div class="background">
-    <div
-      style="height: 100%; width: 100%; background-color: {generateRandomPastelColor(
-        resource.id
-      )}; opacity: 0.75;"
-    ></div>
-  </div>
-
+<div class="wrapper" style:--background={generateRandomPastelColor(resource.id)}>
   <div class="details">
     <div class="icon" style="color: {generateRandomPastelColor(resource.id, 0.2)}">
-      <FileIcon {kind} width="35px" height="35px" />
+      <FileIcon {kind} width="3em" height="3em" />
       <!-- <Icon name="file" size="25px" /> -->
     </div>
 
@@ -91,13 +83,22 @@
   .wrapper {
     position: relative;
     height: 100%;
-    min-height: 200px;
+    min-height: 14em;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      background: var(--background);
+      opacity: 0.35;
+    }
   }
 
   .background {
@@ -111,9 +112,10 @@
   }
 
   .details {
+    position: relative;
+    z-index: 2;
     padding: 1.25em;
     overflow: hidden;
-    border-radius: 0.75em;
     display: flex;
     flex-direction: column;
     justify-content: center;

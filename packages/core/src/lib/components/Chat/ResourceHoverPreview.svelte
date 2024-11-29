@@ -14,9 +14,7 @@
   const MAX_TITLE_LENGTH = 300
 </script>
 
-<div
-  class={resource ? (resource.type.startsWith(ResourceTypes.POST) ? '' : 'p-1') : 'p-4 space-y-2'}
->
+<div class={resource ? '' : 'p-4 space-y-2'}>
   {#if resource}
     <ResourcePreview
       {resource}

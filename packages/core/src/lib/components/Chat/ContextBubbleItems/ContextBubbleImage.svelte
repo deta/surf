@@ -69,7 +69,7 @@
     {/if}
   {/await}
 
-  <div slot="popover" class="p-1">
+  <div slot="popover">
     {#await getBigImage()}
       <Icon name="spinner" />
     {:then image}

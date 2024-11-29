@@ -57,6 +57,7 @@
       <ResourcePreview
         {resource}
         {mode}
+        viewMode="card"
         {origin}
         {selected}
         {isInSpace}
@@ -80,6 +81,7 @@
       <ResourcePreview
         {resource}
         {mode}
+        viewMode="card"
         {origin}
         {selected}
         {isInSpace}

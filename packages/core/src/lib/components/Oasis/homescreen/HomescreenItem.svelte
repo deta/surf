@@ -198,7 +198,7 @@ TODO: Fix resizing logic for other corners
         mode={'responsive'}
         origin="homescreen"
         draggable={false}
-        frameless={true}
+        frameless={false}
         interactive={true}
         hideProcessing
         on:set-resource-as-background
@@ -241,9 +241,15 @@ TODO: Fix resizing logic for other corners
     cursor: nwse-resize !important;
   }
   .homescreen-item {
+    --background: #fff;
+    :global(.dark) & {
+      --background: #1f2937;
+      --text-color: #fff;
+    }
+
     position: relative;
     //overflow: hidden;
-    isolation: isolate;
+    //isolation: isolate;
 
     grid-column: var(--cell-x) / span var(--span-x);
     grid-row: var(--cell-y) / span var(--span-y);
@@ -260,10 +266,8 @@ TODO: Fix resizing logic for other corners
     }
 
     > .content {
-      overflow: hidden;
       width: 100%;
       height: 100%;
-      border-radius: 1em;
     }
 
     &:global([data-dragging-item]) {
@@ -274,34 +278,69 @@ TODO: Fix resizing logic for other corners
     }
 
     &.item-type-resource {
-      &:global(.resource-preview.preview-mode-media .image) {
+      &:global(.resource-preview .image) {
         flex-direction: row !important;
       }
       > .content {
-        /* NOTE: Should be fixed in the resource previews themselves!! */
         > :global(.wrapper) {
           height: 100%;
+
+          :global(.media) {
+            object-fit: cover;
+            max-height: unset !important;
+            :global(img) {
+              object-fit: cover;
+              height: 100% !important;
+            }
+          }
 
           > :global(.resource-preview) {
             height: 100%;
             > :global(.preview) {
-              padding: var(--content-padding);
               height: 100%;
 
               & :global(.inner) {
                 height: 100%;
-              }
-
-              :global(.image) {
-                object-fit: cover;
-                max-height: unset !important;
-                > :global(img) {
-                  object-fit: cover;
-                  height: 100%;
-                }
+                justify-content: space-between;
               }
             }
           }
+        }
+      }
+    }
+
+    &.item-type-space {
+      background: var(--background);
+      border-radius: 1.1em;
+      border: 1px solid rgba(50, 50, 50, 0.075);
+      box-shadow:
+        0 0 0 1px rgba(50, 50, 93, 0.06),
+        0 2px 5px 0 rgba(50, 50, 93, 0.04),
+        0 1px 1.5px 0 rgba(0, 0, 0, 0.01);
+      overflow: hidden;
+      outline: 0px solid transparent;
+
+      &:not(.frameless):hover {
+        outline: 2px solid rgba(50, 50, 50, 0.175);
+      }
+
+      &:global(.selected) {
+        outline: 3px solid rgba(0, 123, 255, 0.4) !important;
+      }
+
+      :global(.dark) & {
+        border-color: rgba(250, 250, 250, 0.075);
+        box-shadow:
+          0 0 0 1px rgba(205, 205, 161, 0.06),
+          0 2px 5px 0 rgba(205, 205, 161, 0.04),
+          0 1px 1.5px 0 rgba(255, 255, 255, 0.01);
+
+        &:not(.frameless):hover {
+          outline-color: rgba(250, 250, 250, 0.2);
+        }
+
+        &:global(.selected) {
+          outline-color: rgba(10, 143, 255, 0.4) !important;
         }
       }
     }
@@ -355,7 +394,5 @@ TODO: Fix resizing logic for other corners
         }
       }
     }
-
-    @apply bg-gray-100 dark:bg-gray-800 border-[1px] border-gray-200 dark:border-gray-700;
   }
 </style>

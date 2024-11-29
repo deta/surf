@@ -672,43 +672,24 @@
   /////////// Responsive Mode overrides
 
   /// Make card image media use full height on homescreen
-  :global(.preview.mode-responsive[data-resource-type^='image/'] .inner > .image) {
+  /*:global(.preview.mode-responsive[data-resource-type^='image/'] .inner > .image) {
     flex-grow: 1;
   }
   /// Make card image media use full height on homescreen
   :global(.preview.mode-responsive[data-resource-type^='image/'] .inner .details) {
     display: none !important;
-  }
-
-  /// Make notion show more of the content
-  :global(
-      .preview.mode-responsive[data-resource-type^='application/vnd.space.document.notion']
-        .inner
-        .details
-        .content
-    ) {
-    flex-grow: 1;
-  }
+  }*/
 
   /// Container queries
   /// NOTE: All scoped to homescreen for now, not to break anthing and homescreen is a good place to
   /// try out the different sizes easily.
-
-  // Not setting them when not in preview mode will nuke Masonry.
-  .preview.mode-responsive {
-    container: preview-card / size;
-
-    .details {
-      //     container: card-details / size;
-    }
-  }
 
   // NOTE: For calculations:
   // cell: 50x50px
   // gap: 10px
 
   // Applies when wider > taller
-  @container preview-card (aspect-ratio > 1 / 1) {
+  /*@container preview-card (aspect-ratio > 1 / 1) {
     .mode-responsive {
       .title {
         // DBG
@@ -827,7 +808,8 @@
         }
       }
     }
-  }
+  }*/
+
   :global([data-resource-type='application/vnd.space.document.space-note']) {
     :global(.inner > .details) {
       overflow-y: scroll;
