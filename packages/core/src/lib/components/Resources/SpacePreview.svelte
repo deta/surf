@@ -32,10 +32,11 @@
   $: spaceData = space?.data
 
   const dispatch = createEventDispatcher<{
-    'open-space': { space: Space; background: boolean }
+    'open-space': { space: OasisSpace; background: boolean }
     'change-space-view-mode': 'list' | 'grid'
     'remove-from-homescreen': void
     'open-space-as-tab': OasisSpace
+    'open-space-as-context': OasisSpace
   }>()
   const oasis = useOasis()
   const resourceManager = oasis.resourceManager
@@ -43,6 +44,9 @@
   const toasts = useToasts()
 
   let spaceContents: any[] = []
+  let clickTimeout: ReturnType<typeof setTimeout>
+  let handledDoubleClick = false
+
   const renderedSpaceContents = writable<any[]>([])
 
   function handleDragStart(drag: DragculaDragEvent<DragTypes>) {
@@ -80,6 +84,15 @@
         }
       },
       {
+        type: 'action' as const,
+        icon: 'circle-dot',
+        text: 'Open as Context',
+        action: () => {
+          dispatch('open-space-as-context', space)
+          toasts.success('Opened space as context')
+        }
+      },
+      {
         type: 'separator' as const
       },
       {
@@ -98,6 +111,23 @@
     ]
   }
 
+  function handleClick(e: MouseEvent) {
+    clickTimeout = setTimeout(() => {
+      if (handledDoubleClick) {
+        handledDoubleClick = false
+        return
+      }
+
+      dispatch('open-space', { space, background: e.metaKey || e.ctrlKey })
+    }, 200)
+  }
+
+  function handleDoubleClick() {
+    handledDoubleClick = true
+    clearTimeout(clickTimeout)
+    dispatch('open-space-as-context', space)
+  }
+
   onMount(async () => {
     if (space) loadContents()
   })
@@ -111,13 +141,7 @@
     }}
   >
     <div class="identity">
-      <div
-        class="flex"
-        style="gap: 1ch;"
-        on:click={(e) => {
-          dispatch('open-space', { space, background: e.metaKey || e.ctrlKey })
-        }}
-      >
+      <div class="flex" style="gap: 1ch;" on:click={handleClick} on:dblclick={handleDoubleClick}>
         <span class="name">{$spaceData.folderName}</span>
         <SpaceIcon folder={space} interactive={false} />
       </div>

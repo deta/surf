@@ -283,6 +283,14 @@
     }
   }
 
+  const handleDoubleClick = (e: MouseEvent) => {
+    log.debug('handleDoubleClick', e)
+    if (tab.type === 'space') {
+      tabsManager.changeScope(tab.spaceId, ChangeContextEventTrigger.Tab)
+      return
+    }
+  }
+
   const handleRemoveSpaceFromSidebar = (_e: MouseEvent) => {
     dispatch('remove-from-sidebar', tab.id)
   }
@@ -601,6 +609,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }}
   on:Drop={handleDrop}
   on:click={handleClick}
+  on:dblclick={handleDoubleClick}
   on:mousedown={handleMouseDown}
   on:mouseenter={() => {
     hovered = true
@@ -763,7 +772,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else if tab.type === 'history'}
       <Icon name="history" size="16px" />
     {:else if tab.type === 'space' && space}
-      <SpaceIcon folder={space} interactive />
+      <SpaceIcon folder={space} interactive={false} />
     {:else if tab.type === 'resource'}
       {#if tab.resourceType === ResourceTypes.DOCUMENT_SPACE_NOTE}
         <Icon name="docs" size="16px" />

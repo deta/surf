@@ -156,7 +156,8 @@ export enum ChangeContextEventTrigger {
   ContextSwitcher = 'context_switcher',
   Tab = 'tab',
   SpaceInOasis = 'space_in_oasis',
-  CommandMenu = 'command_menu'
+  CommandMenu = 'command_menu',
+  Homescreen = 'homescreen'
 }
 
 export enum BrowserContextScope {

@@ -155,9 +155,10 @@
   }
 
   const handleDoubleClick = () => {
-    if (folder.id !== 'all') {
-      dispatch('editing-start', { id: folder.id })
-    }
+    // if (folder.id !== 'all') {
+    //   dispatch('editing-start', { id: folder.id })
+    // }
+    dispatch('use-as-context', folder.id)
   }
 
   const handleBlur = async () => {

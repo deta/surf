@@ -228,6 +228,7 @@ TODO: Fix resizing logic for other corners
         on:open-space
         on:open-and-chat
         on:open-space-as-tab
+        on:open-space-as-context
         on:remove-from-homescreen={() => {
           dispatch('remove-from-homescreen', $item.id)
         }}

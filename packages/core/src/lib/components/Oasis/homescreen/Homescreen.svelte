@@ -7,7 +7,11 @@
   import { useToasts } from '../../../service/toast'
   import { HTMLDragZone } from '@horizon/dragcula'
   import { useHomescreen } from './homescreen'
-  import { RemoveHomescreenItemEventTrigger, UpdateHomescreenEventAction } from '@horizon/types'
+  import {
+    ChangeContextEventTrigger,
+    RemoveHomescreenItemEventTrigger,
+    UpdateHomescreenEventAction
+  } from '@horizon/types'
   import HomescreenItem from './HomescreenItem.svelte'
   import { useMiniBrowserService } from '../../../service/miniBrowser'
   import MiniBrowser from '../../MiniBrowser/MiniBrowser.svelte'
@@ -85,6 +89,16 @@
     if (!scropedMinibrowser) return
     scropedMinibrowser?.openResource(e.detail)
   }
+
+  function handleOpenSpaceAsContext(e: CustomEvent<OasisSpace>) {
+    const space = e.detail
+
+    log.debug('open space as context', space)
+
+    tabsManager.changeScope(space.id, ChangeContextEventTrigger.Homescreen)
+    homescreen.setVisible(false)
+  }
+
   async function handleSetResourceBackground(e: CustomEvent<string>) {
     const resourceId = e.detail
 
@@ -208,6 +222,7 @@
         on:open={handleOpenItem}
         on:open-and-chat
         on:open-space-as-tab
+        on:open-space-as-context={handleOpenSpaceAsContext}
         on:remove
       />
     {/each}
