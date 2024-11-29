@@ -1085,6 +1085,19 @@ export class TabsManager {
     }
   }
 
+  export() {
+    const data = JSON.stringify(this.tabsValue)
+    return data
+  }
+
+  async import(data: string) {
+    const tabs = JSON.parse(data) as Tab[]
+
+    await Promise.all(tabs.map((tab) => this.db.create(tab)))
+
+    this.tabs.set(tabs)
+  }
+
   static provide(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
