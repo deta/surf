@@ -807,6 +807,38 @@
       }
     }
 
+    &.view-inline {
+      min-height: 10ch;
+
+      > .inner {
+        flex-direction: row !important;
+        align-items: center;
+
+        > .media {
+          max-width: 15ch;
+          width: 100%;
+          max-height: 75px;
+          :global(img) {
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+        > .content {
+          --MAX_title_lines: 2;
+          height: 100%;
+        }
+
+        > .metadata {
+          max-width: 20ch;
+          margin-bottom: 0;
+        }
+
+        > .metadata {
+          margin-bottom: calc(var(--section-padding-block) - 0.3em) !important;
+        }
+      }
+    }
+
     &.content-compact {
       gap: 0.8em;
       --section-padding-block: 0.8em;

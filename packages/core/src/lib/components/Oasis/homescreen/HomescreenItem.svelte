@@ -5,7 +5,6 @@
   import { createEventDispatcher } from 'svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
-  import SpacePreview from '../../Resources/SpacePreview.svelte'
   import { CreateTabEventTrigger, UpdateHomescreenEventAction } from '@horizon/types'
   import { useTelemetry } from '../../../service/telemetry'
   import { useTabsManager } from '../../../service/tabs'
@@ -14,6 +13,9 @@
 </script>
 
 <script lang="ts">
+  import HomescreenSpaceItem from './HomescreenSpaceItem.svelte'
+  import { clamp } from '../../../../../../dragcula/dist/utils/internal'
+
   export let desktop: DesktopService
   export let item: Writable<DesktopItemData>
 
@@ -81,10 +83,11 @@
   id="homescreen-item-{$item.id}"
   class="homescreen-item item-type-{$item.resourceId ? 'resource' : 'space'}"
   draggable={true}
-  style:--cell-x={$item.x}
-  style:--cell-y={$item.y}
+  style:--cell-x={clamp($item.x, 1, Infinity)}
+  style:--cell-y={clamp($item.y, 1, Infinity)}
   style:--span-x={$item.width}
   style:--span-y={$item.height}
+  style:--z={Math.floor(($item.z ?? 0) / 1000)}
   bind:this={bentoItemEl}
   use:HTMLDragItem.action={{}}
   on:mouseup={async (e) => {
@@ -197,28 +200,21 @@ TODO: Fix resizing logic for other corners
       />
     {:else if $item.spaceId}
       {@const space = $spaces.find((s) => s.id === $item.spaceId)}
-      <SpacePreview
-        {space}
-        mode="container"
-        contentViewMode={$item.contentViewMode}
-        contentMode={$item.contentMode}
-        renderContents={$item.width > 2 && $item.height > 2}
-        interactive={true}
-        draggable={false}
-        on:change-space-view-mode={(e) => {
-          $item.contentViewMode = e.detail
-          desktop.store()
-        }}
-        on:set-resource-as-background
-        on:open
-        on:open-space
-        on:open-and-chat
-        on:open-space-as-tab
-        on:open-space-as-context
-        on:remove-from-homescreen={() => {
-          dispatch('remove-from-homescreen', $item.id)
-        }}
-      />
+      {#if space}
+        <HomescreenSpaceItem
+          {space}
+          renderContents={$item.width > 2 && $item.height > 2}
+          on:set-resource-as-background
+          on:open
+          on:open-space
+          on:open-and-chat
+          on:open-space-as-tab
+          on:open-space-as-context
+          on:remove-from-homescreen={() => {
+            dispatch('remove-from-homescreen', $item.id)
+          }}
+        />
+      {/if}
     {/if}
   </div>
 </div>
@@ -235,6 +231,7 @@ TODO: Fix resizing logic for other corners
     }
 
     position: relative;
+    z-index: var(--z, 0);
     //overflow: hidden;
     //isolation: isolate;
 
@@ -307,7 +304,8 @@ TODO: Fix resizing logic for other corners
       overflow: hidden;
       outline: 0px solid transparent;
 
-      &:not(.frameless):hover {
+      &:not(.frameless):hover,
+      &:global(:not(.frameless):has([data-context-menu-anchor])) {
         outline: 2px solid rgba(50, 50, 50, 0.175);
       }
 

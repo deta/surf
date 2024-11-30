@@ -27,6 +27,7 @@ export interface DesktopResourceItemData extends DesktopBaseItemData {
 export interface DesktopSpaceItemData extends DesktopBaseItemData {
   type: 'space'
   spaceId: string
+  viewLayout: 'list' | 'masonry'
 }
 
 export interface DesktopData {

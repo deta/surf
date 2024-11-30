@@ -12,6 +12,7 @@
   import type { GridRect } from '../../../types/desktop.types'
   import { ChangeContextEventTrigger, OpenInMiniBrowserEventFrom } from '@horizon/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { clamp } from '../../../../../../dragcula/dist/utils/internal'
 
   export let desktop: DesktopService
   export let newTabOverlayState: number = 0
@@ -142,8 +143,8 @@
     {#if $gridTargetPreview && $gridTargetPreview.visible}
       <div
         class="drop-preview"
-        style:--cellX={$gridTargetPreview.x}
-        style:--cellY={$gridTargetPreview.y}
+        style:--cellX={clamp($gridTargetPreview.x, 1, Infinity)}
+        style:--cellY={clamp($gridTargetPreview.y, 1, Infinity)}
         style:--spanX={$gridTargetPreview.width}
         style:--spanY={$gridTargetPreview.height}
       />

@@ -659,7 +659,8 @@ export class DesktopService {
           ...this._dropTargetPreviewRaw,
           z: Date.now(),
           type: 'space',
-          spaceId: space.id
+          spaceId: space.id,
+          viewLayout: 'masonry'
         })
       )
       return items

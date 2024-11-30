@@ -65,7 +65,7 @@
     {isCreating}
     on:update
   >
-    <div class="list">
+    <div class="list space-icon">
       {#if pickedEmoji || ($spaceData && $spaceData.emoji)}
         <span class="emoji" data-size={size}>{pickedEmoji || $spaceData.emoji}</span>
       {:else if $spaceData && $spaceData.imageIcon}
@@ -76,7 +76,7 @@
     </div>
   </IconSelector>
 {:else}
-  <div class="list">
+  <div class="list space-icon">
     {#if pickedEmoji || ($spaceData && $spaceData.emoji)}
       <span class="emoji" data-size={size}>{pickedEmoji || $spaceData?.emoji}</span>
     {:else if $spaceData && $spaceData.imageIcon}

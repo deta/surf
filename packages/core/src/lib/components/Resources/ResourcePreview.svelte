@@ -614,6 +614,10 @@
         ) {
           previewData.image = undefined
         }
+      } else if (viewMode === 'inline') {
+        if (previewData.title !== undefined) {
+          previewData.content = undefined
+        }
       }
 
       // Hide content if not showing annotations in stuff and we have annotations -> Content is hidden
@@ -1143,7 +1147,8 @@
       overflow: hidden;
       outline: 0px solid transparent;
 
-      &:not(.frameless):hover {
+      &:not(.frameless):hover,
+      &:global(:not(.frameless)[data-context-menu-anchor]) {
         outline: 2px solid rgba(50, 50, 50, 0.175);
       }
 

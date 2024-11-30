@@ -214,6 +214,18 @@ export class HTMLDragItem extends DragItem {
       this.previewElement.style.setProperty("--drag-height", `${this.previewSize.y}px`);
       this.previewElement.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
       this.previewElement.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
+
+      // TODO: This should be not hard wired into dragcula
+      // TOOD: Add schnittstelle to do custom preview manipulation on dragstart
+      // HACK: For now it is
+      const prevEls = Array.from(
+        this.previewElement.querySelectorAll(".space-preview .resource-preview")
+      );
+      if (prevEls.length > 25) {
+        for (const e of prevEls) {
+          e.remove();
+        }
+      }
     }
 
     if (this.previewType === "clone") {
