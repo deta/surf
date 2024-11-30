@@ -154,7 +154,7 @@
   }
 
   :global(.dark .tiptap p) {
-    color: #e0e7ff !important;
+    //color: #e0e7ff !important;
   }
 
   /* HACK: This allows us to tap into svelte reacivity by getting placeholder from css variable. */

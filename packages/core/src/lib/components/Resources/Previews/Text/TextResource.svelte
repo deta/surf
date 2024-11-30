@@ -152,11 +152,14 @@
     :global(.dark) & {
       background: #181818;
     }
+
+    --text-color: #1f163c;
+    --text-color-dark: #fff;
   }
 
   .content {
     width: 100%;
-    max-width: 700px;
+    max-width: 82ch;
     height: 100%;
     overflow: hidden;
     position: relative;
@@ -173,12 +176,8 @@
     display: flex;
     flex-direction: column;
     gap: 1em;
-    padding-bottom: 0.5em;
-    border-bottom: 1px solid #ededed;
-
-    :global(.dark) & {
-      border-bottom: 1px solid #282828;
-    }
+    padding-bottom: 0.25em;
+    border-bottom: 1px dashed #ddd;
 
     input {
       font-size: 1.9em;
@@ -189,6 +188,31 @@
       padding: 0;
       margin: 0;
       width: 100%;
+
+      font-family: Gambarino;
+      letter-spacing: 0.3px;
+
+      color: var(--text-color);
+
+      :global(.dark) & {
+        color: var(--text-color-dark) !important;
+      }
+    }
+
+    &:active,
+    &:focus,
+    &:focus-within {
+      border-color: #aaa;
+    }
+
+    :global(.dark) & {
+      border-color: #444;
+
+      &:active,
+      &:focus,
+      &:focus-within {
+        border-color: #777;
+      }
     }
   }
 
@@ -202,5 +226,32 @@
 
   :global(.notes-editor-wrapper .editor-wrapper div.tiptap) {
     padding-bottom: 6em;
+  }
+
+  :global(.tiptap) {
+    :global(*) {
+      color: var(--text-color) !important;
+      overscroll-behavior: auto !important;
+    }
+
+    :global(ul) {
+      :global(li) {
+        margin-block: 0.25em !important;
+      }
+    }
+
+    :global(pre) {
+      background: #f8f8f8;
+    }
+    :global(.dark) & {
+      :global(*) {
+        color: var(--text-color-dark) !important;
+      }
+      :global(pre) {
+        background: #111;
+      }
+    }
+
+    color: red !important;
   }
 </style>
