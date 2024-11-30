@@ -4376,9 +4376,6 @@
       : derived(
           [$desktopBackgroundStore, userConfigSettings],
           ([$background, $userConfigSettings]) => {
-            if ($background === undefined) {
-              return ''
-            }
             // Custom
             if ($background !== undefined && $background !== 'transparent' && $background !== '') {
               return `url('surf://resource/${$background}')`
