@@ -4,7 +4,8 @@ import {
   type ActionBase,
   ActionDisplayPriority,
   type ActionPanelOption,
-  ActionSelectPriority
+  ActionSelectPriority,
+  type Handler
 } from '@deta/teletype/src/components/Teletype/types'
 
 // actionTypes.ts
@@ -92,6 +93,7 @@ export interface TeletypeStaticAction extends ActionBase {
   group?: TeletypeActionGroup
   component?: typeof SvelteComponent
   creationUrl?: string
+  handler: Handler
 }
 
 export interface TeletypeActionEvent {

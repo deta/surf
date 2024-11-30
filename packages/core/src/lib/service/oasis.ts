@@ -278,10 +278,24 @@ export class OasisService {
     return new OasisSpace(space, this)
   }
 
-  private createFakeSpace(data: SpaceData) {
+  createFakeSpace(data: Partial<SpaceData>, id?: string, skipUpdate = false) {
+    const fullData = {
+      showInSidebar: false,
+      liveModeEnabled: false,
+      hideViewed: false,
+      smartFilterQuery: null,
+      sql_query: null,
+      embedding_query: null,
+      sortBy: 'created_at',
+      builtIn: false,
+      index: this.spacesValue.length,
+      sources: [],
+      ...data
+    }
+
     const fakeSpace = {
-      name: data,
-      id: generateID(),
+      name: fullData,
+      id: id ?? generateID(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       deleted: 0
@@ -290,9 +304,11 @@ export class OasisService {
     const space = this.createSpaceObject(fakeSpace)
     this.log.debug('created fake space:', space)
 
-    this.spaces.update((spaces) => {
-      return [...spaces, space]
-    })
+    if (!skipUpdate) {
+      this.spaces.update((spaces) => {
+        return [...spaces, space]
+      })
+    }
 
     this.emit('created', space)
 

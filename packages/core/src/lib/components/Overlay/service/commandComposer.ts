@@ -38,7 +38,7 @@ import {
 } from '../../../service/resources'
 import { ResourceTagsBuiltInKeys, ResourceTypes, SearchOasisEventTrigger } from '@horizon/types'
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
-import type { HistoryEntry, Space, Tab } from '../../../types'
+import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '../../../types'
 import Fuse from 'fuse.js'
 import type { TabsManager } from '../../../service/tabs'
 
@@ -55,8 +55,8 @@ export class CommandComposer {
   private searchEngineSuggestionResults = writable<string[]>([])
   private historyEntriesResults = writable<HistoryEntry[]>([])
   private hostnameHistoryEntriesResults = writable<HistoryEntry[]>([])
+  private spaceSearchResults = writable<OasisSpace[]>([])
   private tabEntriesResults = writable<Tab[]>([])
-  private spaceSearchResults = writable<Space[]>([])
   private filteredCommandItems = writable<CMDMenuItem[]>([])
   private filteredBrowserCommands = writable<TeletypeStaticAction[]>([])
   private isFetchingOasisSearchResults = writable(false)
@@ -92,8 +92,18 @@ export class CommandComposer {
     this.resourceManager = this.oasis.resourceManager
     this.telemetry = this.resourceManager.telemetry
     this.userConfigSettings = this.config.settings
-    this.spaces = this.oasis.spaces
     this.tabsManager = this.tabsManager
+    this.spaces = derived(this.oasis.spaces, ($spaces) => {
+      const generalContext = this.oasis.createFakeSpace(
+        {
+          folderName: 'General Browsing'
+        },
+        GENERAL_CONTEXT_ID,
+        true
+      )
+
+      return [generalContext, ...$spaces]
+    })
 
     // Subscribe to search value changes
     this.searchValue.subscribe((value) => {

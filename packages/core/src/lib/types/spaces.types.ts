@@ -60,3 +60,5 @@ export interface AiSFFSQueryResponse {
   embedding_search_query: string | null
   embedding_search_results: string[] | null // narrowed down resource ids, is null if the query is null
 }
+
+export const GENERAL_CONTEXT_ID = '__general_context'

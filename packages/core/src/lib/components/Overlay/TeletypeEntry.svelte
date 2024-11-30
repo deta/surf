@@ -54,6 +54,7 @@
   import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useDebounce } from '@horizon/utils'
+  import { GENERAL_CONTEXT_ID } from '@horizon/core/src/lib/types'
 
   export let tabsManager: TabsManager
   export let open: boolean
@@ -293,14 +294,17 @@
 
     tabsManager.showNewTabOverlay.set(2)
     await tick()
-    oasis.selectedSpace.set(space.id)
+    oasis.selectedSpace.set(space.id === GENERAL_CONTEXT_ID ? 'all' : space.id)
   }
 
   async function handleOpenSpaceAsContext(payload: { space: OasisSpace }) {
     const space = payload.space
     log.debug('open-space-as-context', payload)
 
-    tabsManager.changeScope(space.id, ChangeContextEventTrigger.CommandMenu)
+    tabsManager.changeScope(
+      space.id === GENERAL_CONTEXT_ID ? null : space.id,
+      ChangeContextEventTrigger.CommandMenu
+    )
 
     // sometimes tty doesn't close by itself, so we need to force it
     await tick()

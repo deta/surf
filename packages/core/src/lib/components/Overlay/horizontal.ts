@@ -5,7 +5,7 @@ import {
   ActionSelectPriority
 } from '@deta/teletype/src/components/Teletype/types'
 import type { ResourceManager } from '../../service/resources'
-import type { SpaceEntry } from '../../types'
+import { GENERAL_CONTEXT_ID, type SpaceEntry } from '../../types'
 import {
   TeletypeAction,
   TeletypeActionGroup,
@@ -59,7 +59,7 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
 const createSpaceAction = async (
   result: TeletypeStaticAction,
   resourceManager: ResourceManager
-): Promise<[Action, HorizontalAction]> => {
+) => {
   const spaceContents = await resourceManager.getSpaceContents(result.id)
   const space = await resourceManager.getSpace(result.id)
 
@@ -96,26 +96,16 @@ const createSpaceAction = async (
     actionText: result.actionText,
     actionPanel: result.actionPanel,
     section: 'Spaces',
-    handler: () => {
-      try {
-        dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenSpaceAsContext,
-          payload: { space },
-          success: true
-        })
-        console.log('open-space', { space })
-      } catch (error) {
-        dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenSpaceAsContext,
-          payload: { space },
-          success: false,
-          error: error as Error
-        })
-      }
-    }
+    handler: result.handler
   } as Action
 
-  return [openSpaceAction, horizontalAction]
+  const actions: (Action | HorizontalAction)[] = [openSpaceAction]
+
+  if (result.id !== GENERAL_CONTEXT_ID) {
+    actions.push(horizontalAction)
+  }
+
+  return actions
 }
 
 const createDefaultAction = (result: TeletypeStaticAction): HandlerAction => {
@@ -226,7 +216,12 @@ export const createActionsFromResults = async (
             result,
             resourceManager
           )
-          return [openSpaceAction, horizontalAction]
+
+          if (horizontalAction) {
+            return [openSpaceAction, horizontalAction]
+          }
+
+          return [openSpaceAction]
         }
         default:
           return createDefaultAction(result)

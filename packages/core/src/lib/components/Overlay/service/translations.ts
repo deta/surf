@@ -5,7 +5,7 @@
  */
 
 import { get } from 'svelte/store'
-import type { HistoryEntry, Space, Tab, TabPage } from '../../../types'
+import { GENERAL_CONTEXT_ID, type HistoryEntry, type TabPage } from '../../../types'
 import {
   truncateURL,
   truncate,
@@ -262,23 +262,26 @@ export const spaceToTeletypeItem = (space: OasisSpace) =>
   ({
     id: space.id,
     name: get(space.data).folderName ?? 'Unnamed Space',
-    icon: `space;;${space.id}`,
+    icon: space.id === GENERAL_CONTEXT_ID ? 'circle-dot' : `space;;${space.id}`,
     execute: TeletypeAction.OpenSpaceAsContext,
     group: TeletypeActionGroup.Space,
     section: 'Space',
     actionIcon: 'circle-dot',
-    actionText: 'Open as Context',
+    actionText: space.id === GENERAL_CONTEXT_ID ? 'Open Context' : 'Open as Context',
     actionPanel: [
       createSecondaryAction({
         id: `open-space-in-overlay-${space.id}`,
         name: 'Open in Overlay',
         handler: createExecutioner(TeletypeAction.OpenSpaceInStuff, { space })
       }),
-      createTertiaryAction({
-        id: `open-space-as-tab-${space.id}`,
-        name: 'Open as Tab',
-        handler: createExecutioner(TeletypeAction.OpenSpaceAsTab, { space })
-      })
+      ...conditionalArrayItem(
+        space.id !== GENERAL_CONTEXT_ID,
+        createTertiaryAction({
+          id: `open-space-as-tab-${space.id}`,
+          name: 'Open as Tab',
+          handler: createExecutioner(TeletypeAction.OpenSpaceAsTab, { space })
+        })
+      )
     ],
     handler: createExecutioner(TeletypeAction.OpenSpaceAsContext, { space })
   }) as Action
