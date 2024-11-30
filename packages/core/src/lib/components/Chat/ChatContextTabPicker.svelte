@@ -30,13 +30,14 @@
     useDebounce,
     useLogScope
   } from '@horizon/utils'
-  import { useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { ResourceManager, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { derived, writable, type Readable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
   export let tabs: Readable<Tab[]>
   export let contextItems: Readable<ContextItem[]>
@@ -44,10 +45,12 @@
   const log = useLogScope('ChatContextTabPicker')
   const oasis = useOasis()
   const resourceManager = useResourceManager()
+  const tabsManager = useTabsManager()
   const config = useConfig()
 
   const userConfigSettings = config.settings
   const spaces = oasis.spaces
+  const activeScopeId = tabsManager.activeScopeId
 
   const dispatch = createEventDispatcher<{
     'include-tab': string
@@ -64,51 +67,62 @@
   const isSearching = writable(false)
   const searchValue = writable('')
 
+  function tabToTabItem(tab: Tab) {
+    return {
+      id: tab.id,
+      type: 'page',
+      label: tab.title,
+      value: `tab;;${tab.id}`,
+      ...(tab.type === 'space' ? { iconSpaceId: tab.spaceId } : { iconUrl: tab.icon })
+    } as TabItem
+  }
+
+  function spaceToTabItem(space: OasisSpace) {
+    return {
+      id: space.id,
+      type: 'space',
+      label: space.dataValue.folderName,
+      value: `space;;${space.id}`,
+      iconSpaceId: space.id
+    } as TabItem
+  }
+
   const tabItems = derived(
-    [searchResult, contextItems, tabs, searchValue],
-    ([searchResult, contextItems, tabs, searchValue]) => {
+    [searchResult, contextItems, tabs, searchValue, activeScopeId],
+    ([searchResult, contextItems, tabs, searchValue, activeScopeId]) => {
       const result: TabItem[] = []
 
-      if (searchValue.length > 0) {
-        const filteredSpaces = $spaces.filter(
-          (space) =>
-            contextItems.findIndex((ci) => ci.type === 'space' && ci.data.id === space.id) === -1 &&
-            space.dataValue.folderName.toLowerCase().includes(searchValue.toLowerCase())
-        )
-
-        const spaceItems = filteredSpaces.slice(0, 5).map(
-          (space) =>
-            ({
-              id: space.id,
-              type: 'space',
-              label: space.dataValue.folderName,
-              value: `space;;${space.id}`,
-              iconSpaceId: space.id
-            }) as TabItem
-        )
-
-        result.push(...spaceItems)
+      if (searchValue.length === 0) {
+        const currentScopeTabs = tabs.filter((tab) => tab.scopeId === (activeScopeId ?? undefined))
+        const tabItems = currentScopeTabs.map(tabToTabItem)
+        return tabItems
       }
 
-      const searchItems = searchResult.filter(
-        (item) =>
-          contextItems.findIndex((ci) => ci.type === 'resource' && ci.data.id === item.id) === -1
+      const tabMatches = tabs.filter(
+        (tab) =>
+          tab.title.toLowerCase().includes(searchValue.toLowerCase()) &&
+          contextItems.findIndex((ci) => ci.type === 'tab' && ci.data.id === tab.id) === -1
       )
 
-      const tabItems = tabs
-        .filter((tab) => tab.title.toLowerCase().includes(searchValue.toLowerCase()))
-        .map(
-          (tab) =>
-            ({
-              id: tab.id,
-              type: 'page',
-              label: tab.title,
-              value: `tab;;${tab.id}`,
-              ...(tab.type === 'space' ? { iconSpaceId: tab.spaceId } : { iconUrl: tab.icon })
-            }) as TabItem
-        )
+      const spaceMatches = $spaces.filter(
+        (space) =>
+          contextItems.findIndex((ci) => ci.type === 'space' && ci.data.id === space.id) === -1 &&
+          space.dataValue.folderName.toLowerCase().includes(searchValue.toLowerCase()) &&
+          tabMatches.findIndex((t) => t.type === 'space' && t.spaceId === space.id) === -1
+      )
 
-      return [...result, ...searchItems, ...tabItems]
+      const stuffMatches = searchResult.filter(
+        (item) =>
+          contextItems.findIndex((ci) => ci.type === 'resource' && ci.data.id === item.id) === -1 &&
+          tabMatches.findIndex((t) => t.type === 'page' && t.chatResourceBookmark === item.id) ===
+            -1
+      )
+
+      const tabItems = tabMatches.map(tabToTabItem)
+      const spaceItems = spaceMatches.slice(0, 5).map((space) => spaceToTabItem(space))
+      const stuffItems = stuffMatches
+
+      return [...tabItems, ...spaceItems, ...stuffItems]
     }
   )
 
@@ -298,8 +312,10 @@
     <Command.Empty>
       {#if $isSearching}
         Searching your stuff…
+      {:else if $searchValue.length > 0}
+        No results found.
       {:else}
-        No tabs to add.
+        No tabs open, try searching your stuff
       {/if}
     </Command.Empty>
     {#each $tabItems as item, idx (item.id + idx)}
