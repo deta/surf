@@ -472,32 +472,65 @@
     tab: Tab
     isSelected: boolean
   }) {
-    const baseClasses =
-      'tab no-drag flex items-center group transform active:scale-[98%] group cursor-pointer gap-3  justify-center relative text-sky-900 dark:text-sky-100 font-medium text-md overflow-hidden min-w-[48px]'
-    const activeClasses = isActive
-      ? 'active text-sky-950 dark:text-gray-100 bg-sky-200 dark:bg-gray-600 sticky shadow-inner ring-[0.5px]'
-      : pinned
-        ? ''
-        : horizontalTabs
-          ? 'bg-sky-100/60 dark:bg-gray-800/60'
-          : '' // Default background when not active if unpinned
-    const magicClasses = tab.magic && !isActive ? 'shadow-inner ring-[0] ring-pink-600' : ''
+    // Core tab styling classes
+    const baseClasses = [
+      'tab',
+      'no-drag',
+      'flex',
+      'items-center',
+      'group',
+      'transform',
+      'active:scale-[98%]',
+      'cursor-pointer',
+      'gap-3',
+      'justify-center',
+      'relative',
+      'text-sky-900 dark:text-sky-100',
+      'font-medium',
+      'text-md',
+      'overflow-hidden',
+      'min-w-[48px]'
+    ].join(' ')
+
+    // Active state classes
+    let activeClasses = ''
+    if (isActive) {
+      activeClasses = 'active text-sky-950 dark:text-gray-100 sticky'
+    } else if (!pinned && horizontalTabs) {
+      activeClasses = 'bg-sky-100/60 dark:bg-gray-800/60'
+    }
+
+    // Special state classes
+    const magicClasses = tab.magic && !isActive ? 'ring-[0] ring-pink-600' : ''
     const selectedClasses = isSelected && !isActive ? '' : ''
     const hoverClasses = 'hover:bg-sky-100 dark:hover:bg-gray-600'
 
+    // Layout classes based on pin state and orientation
     let styleClasses = ''
-    if (pinned && horizontalTabs) {
-      styleClasses =
-        'rounded-lg bg-sky-100/60 dark:bg-gray-700/60 w-full min-w-fit px-[0.563rem] py-[0.438rem]'
-    } else if (pinned && !horizontalTabs) {
-      styleClasses = 'w-full rounded-2xl p-3 border-2 border-white/10 bg-sky-100/10'
-    } else if (!pinned && horizontalTabs) {
-      styleClasses = 'px-[0.625rem] !rounded-[0.625rem] text-[0.938rem] h-full'
+    if (pinned) {
+      if (horizontalTabs) {
+        styleClasses =
+          'bg-sky-100/60 dark:bg-gray-700/60 w-full min-w-fit px-[0.563rem] py-[0.438rem]'
+      } else {
+        styleClasses = 'w-full p-3'
+      }
     } else {
-      styleClasses = 'px-4 py-2.5 rounded-2xl'
+      if (horizontalTabs) {
+        styleClasses = 'px-[0.625rem] text-[0.938rem] h-full'
+      } else {
+        styleClasses = 'px-4 py-2.5'
+      }
     }
 
-    return `${baseClasses} ${activeClasses} ${magicClasses} ${selectedClasses} ${styleClasses} ${hoverClasses}`
+    // Combine all classes
+    return [
+      baseClasses,
+      activeClasses,
+      magicClasses,
+      selectedClasses,
+      styleClasses,
+      hoverClasses
+    ].join(' ')
   }
 
   const contextMenuMoveTabsToSpaces = derived(
@@ -592,13 +625,16 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     $inputUrl !== 'surf.featurebase.app' &&
     !tab.magic &&
     !$desktopVisible}
+  class:active={tab.id === $activeTabId}
   class:pinned
   class:horizontalTabs
   {horizontalTabs}
   class:hovered
-  class:selected={isSelected && !$desktopVisible}
-  class:combine-border={(isMagicActive && tab.magic) ||
-    (!isMagicActive && (isSelected || isActive))}
+  class:selected={isSelected && !desktopVisible}
+  class:combine-border={// Combine border class if:
+  // 1. Magic is active and tab is magical, or
+  // 2. Magic is inactive but tab is selected/active
+  (isMagicActive && tab.magic) || (!isMagicActive && (isSelected || isActive))}
   class:magic={tab.magic}
   style={tabSize
     ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
@@ -639,15 +675,6 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     if (!popoverVisible) hovered = false
     dispatch('mouseleave', tab.id)
   }}
-  use:tooltip={pinned
-    ? {
-        content: sanitizedTitle,
-        action: 'hover',
-        position: 'top',
-        animation: 'fade',
-        delay: 500
-      }
-    : {}}
   use:contextMenu={{
     canOpen:
       isMagicActive ||
@@ -1024,18 +1051,305 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
 </div>
 
 <style lang="scss">
+  :root {
+    --red: rgba(255, 0, 0, 1);
+    --dark-on-pinned-surface: rgba(75, 85, 99, 1);
+    --dark-on-unpinned-surface-horizontal: rgba(25, 35, 55, 1);
+    --dark-on-unpinned-surface-horizontal-hover: rgba(30, 34, 39, 0.9);
+    --dark-on-unpinned-surface: rgba(45, 55, 69, 1);
+    --ring-color: rgba(59, 130, 246, 0.75);
+    --ring-color-muted: rgba(59, 130, 246, 0.5);
+    --ring-color-shade: rgba(59, 130, 246, 0.12);
+    --dark-on-unpinned-surface-ring: inset 0px 1.5px 0px -0.75px rgba(59, 130, 246, 0.33),
+      inset 1.5px 0px 0px -0.75px rgba(59, 130, 246, 0.33),
+      inset -1.5px 0px 0px -0.75px rgba(59, 130, 246, 0.33),
+      inset 0px -1.5px 0px -0.75px rgba(59, 130, 246, 0.33);
+  }
+
   .tab {
     view-transition-class: tab !important;
-
+    padding: 0.725rem 1rem;
+    font-weight: 400;
+    -webkit-font-smoothing: auto;
+    letter-spacing: 0.00925em;
     transition:
       0s ease-in-out,
       transform 0s;
+
+    &.active:not(.combine-border + .combine-border):not(.combine-border ~ .combine-border):not(
+        :has(+ .combine-border)
+      ) {
+      background: paint(squircle) !important;
+      --squircle-radius-top-left: 16px;
+      --squircle-radius-top-right: 16px;
+      --squircle-radius-bottom-left: 16px;
+      --squircle-radius-bottom-right: 16px;
+      --squircle-smooth: 0.33;
+      --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09);
+      --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+        inset 0px 1.25px 0px -1.25px rgba(255, 255, 255, 0.6),
+        inset 1.25px 0px 0px -1.25px rgba(255, 255, 255, 0.6),
+        inset -1.25px 0px 0px -1.25px rgba(255, 255, 255, 0.6),
+        inset 0px -1.25px 0px -1.25px rgba(255, 255, 255, 0.6);
+      --squircle-fill: rgba(255, 255, 255, 0.75);
+      border-radius: 0 !important;
+      :global(.dark) & {
+        --squircle-shadow: 0 !important;
+        --squircle-inner-shadow: 0 !important;
+        --squircle-outline-width: 1.25px !important;
+        --squircle-outline-color: var(--ring-color-muted) !important;
+        --squircle-fill: var(--dark-on-unpinned-surface) !important;
+      }
+    }
+
+    // Unpinned tabs
+    &:not(.pinned) {
+      // Vertical unpinned
+      &:not(.horizontalTabs) {
+        &:hover {
+          background: paint(squircle);
+          --squircle-radius: 16px;
+          --squircle-smooth: 0.33;
+          --squircle-fill: rgba(0, 0, 0, 0.09);
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0), 0px -2px 2px -1px rgba(0, 0, 0, 0);
+
+          :global(.dark) & {
+            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+          }
+        }
+      }
+
+      // Horizontal unpinned
+      &.horizontalTabs {
+        background: paint(squircle);
+        --squircle-radius: 8px;
+        --squircle-smooth: 0.28;
+        --squircle-fill: rgba(255, 255, 255, 0.33);
+
+        :global(.dark) & {
+          --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
+        }
+
+        &:hover {
+          --squircle-fill: rgba(255, 255, 255, 0.55);
+          :global(.dark) & {
+            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+          }
+        }
+
+        &.selected {
+          background: paint(squircle);
+          --squircle-outline-color: rgba(0, 0, 0, 0);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
+          --squircle-fill: rgba(255, 255, 255, 0.4);
+        }
+
+        &.active {
+          padding: 15.25px 1rem 15px 1rem;
+          margin-top: -1.25px;
+          background: paint(squircle);
+          --squircle-radius-top-left: 9px !important;
+          --squircle-radius-top-right: 9px !important;
+          --squircle-radius-bottom-left: 9px !important;
+          --squircle-radius-bottom-right: 9px !important;
+          --squircle-smooth: 0.25 !important;
+          --squircle-fill: rgba(255, 255, 255, 0.8);
+          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+            inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
+            inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
+            inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
+            inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
+          --squircle-shadow: 0px 2px 2px -1px rgba(88, 104, 132, 0.09),
+            0px -2px 0px -1px rgba(88, 104, 132, 0.03);
+        }
+      }
+    }
+
+    // Pinned tabs
+    &.pinned {
+      // Vertical pinned
+      &:not(.horizontalTabs) {
+        padding: 0.95rem;
+        background: paint(squircle);
+        --squircle-radius: 16px;
+        --squircle-smooth: 0.33;
+        --squircle-inner-shadow: inset 0px 0px 0px 0.75px rgba(255, 255, 255, 0.26);
+        --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0) !important;
+        --squircle-fill: rgba(255, 255, 255, 0.15);
+        :global(.dark) & {
+          --squircle-fill: rgba(255, 255, 255, 0.09) !important;
+        }
+
+        &.active {
+          background: paint(squircle) !important;
+          --squircle-radius: 16px !important;
+          --squircle-smooth: 0.33 !important;
+          // flag
+          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+            inset 0px 0px 0px 0.75px rgba(255, 255, 255, 0.26) !important;
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08) !important;
+          --squircle-fill: rgba(255, 255, 255, 0.6) !important;
+          :global(.dark) & {
+            --squircle-fill: var(--dark-on-pinned-surface) !important;
+          }
+        }
+
+        &.selected {
+          background: paint(squircle);
+          --squircle-smooth: 0.33;
+          --squircle-outline-color: rgba(0, 0, 0, 0);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08);
+          --squircle-fill: rgba(255, 255, 255, 0.4);
+        }
+
+        &:hover {
+          background: paint(squircle);
+          --squircle-radius: 16px !important;
+          --squircle-smooth: 0.33 !important;
+          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+            inset 0px 0px 0px 0.75px rgba(255, 255, 255, 0.26) !important;
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.01);
+          --squircle-fill: rgba(255, 255, 255, 0.6) !important;
+          :global(.dark) & {
+            --squircle-fill: var(--dark-on-pinned-surface) !important;
+          }
+        }
+      }
+
+      // Horizontal pinned
+      &.horizontalTabs {
+        padding: 0.5rem;
+        background: paint(squircle);
+        --squircle-radius: 8px;
+        --squircle-smooth: 0.28;
+        --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0) !important;
+        --squircle-fill: rgba(255, 255, 255, 0.33);
+        :global(.dark) & {
+          --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
+          --squircle-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 0) !important;
+        }
+
+        &.selected {
+          background: paint(squircle);
+          --squircle-outline-color: rgba(0, 0, 0, 0);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08);
+          --squircle-fill: rgba(255, 255, 255, 0.4);
+        }
+
+        &.active {
+          background: paint(squircle);
+          --squircle-radius-top-left: 8px !important;
+          --squircle-radius-top-right: 8px !important;
+          --squircle-radius-bottom-left: 8px !important;
+          --squircle-radius-bottom-right: 8px !important;
+          --squircle-smooth: 0.28 !important;
+          --squircle-fill: rgba(255, 255, 255, 0.65) !important;
+          --squircle-outline-width: 0px;
+          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+            inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
+            inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
+            inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
+            inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        &:hover {
+          --squircle-fill: rgba(255, 255, 255, 0.55);
+          :global(.dark) & {
+            --squircle-outline-width: 1.5px !important;
+            --squircle-outline-color: var(--ring-color-muted) !important;
+            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+          }
+        }
+      }
+
+      // Magic states
+      &.magic:not(.pinned) {
+        position: relative;
+        &::after {
+          position: absolute;
+          z-index: -1;
+          filter: blur(4px);
+          content: '';
+          inset: 0px;
+          border-radius: 15px;
+          @apply bg-gradient-to-r from-sky-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
+          animation: text-shimmer 2s infinite linear;
+        }
+      }
+
+      &.magic.pinned:not(.horizontalTabs) {
+        position: relative;
+        &::after {
+          position: absolute;
+          z-index: -1;
+          width: 22px;
+          height: 22px;
+          filter: blur(2px);
+          content: '';
+          inset: 50%;
+          transform: translate(-50%, -50%);
+          border-radius: 12px;
+          @apply bg-gradient-to-r from-sky-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
+          animation: text-shimmer 1.5s infinite linear;
+        }
+      }
+
+      &.magic.pinned.horizontalTabs {
+        position: relative;
+        &::after {
+          position: absolute;
+          z-index: -1;
+          margin: 5.5px 5.5px;
+          filter: blur(2px);
+          content: '';
+          inset: 0px;
+          border-radius: 8px;
+          @apply bg-gradient-to-r from-sky-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
+          animation: text-shimmer 1.5s infinite linear;
+        }
+      }
+    }
+
+    // Selected and active states
+    &.selected:not(.active) {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.55);
+      outline: none;
+
+      :global(.dark) & {
+        @apply bg-gray-700/70;
+      }
+    }
+
+    &.active {
+      background: #e9f5fd;
+      outline: none;
+
+      :global(.dark) & {
+        @apply bg-gray-600;
+      }
+    }
   }
+
+  // Global styles
   :global(.tab[data-context-menu-anchor]) {
     opacity: 1;
     background: rgba(255, 255, 255, 0.55);
     outline: none;
   }
+
   :global(.tab img) {
     user-select: none;
   }
@@ -1044,14 +1358,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     background: #e0f2fe;
     opacity: 1;
   }
-  :global(.tab[data-drag-preview]) {
-    background: rgba(255, 255, 255, 1);
-    opacity: 80%;
-    border: 2px solid rgba(10, 12, 24, 0.1);
-    box-shadow:
-      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
-      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
 
+  :global(.tab[data-drag-preview]) {
+    opacity: 80%;
+    background: paint(squircle);
+    --squircle-radius: 20px;
+    --squircle-smooth: 0.33;
+    --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09), 0px -2px 0px -1px rgba(0, 0, 0, 0.03);
+    --squircle-fill: white;
     width: var(--drag-width, auto);
     height: var(--drag-height, auto);
     transition:
@@ -1061,6 +1375,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       width 175ms cubic-bezier(0.4, 0, 0.2, 1),
       height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
+
   :global(.tab[data-drag-target='sidebar-pinned-tabs']) {
     width: 38px;
     height: 38px;
@@ -1069,24 +1384,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       display: none;
     }
   }
-  :global(.tab[data-drag-preview][data-drag-target^='webview']) {
-    //--scale: 0.88;
 
-    /*border-width: 1.5px;
-    border-color: rgba(5, 5, 25, 0.3);
-    border-style: dashed;*/
-    background: #fff;
-    border: 2px dotted rgba(5, 5, 25, 0.3);
-    opacity: 95%;
-    // https://getcssscan.com/css-box-shadow-examples
-    box-shadow:
-      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
-      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  :global(.tab[data-drag-preview][data-drag-target^='webview']) {
+    --squircle-fill: white;
+    opacity: 0.95;
   }
+
   :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
-    background: transparent !important;
-  }
-  :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
+    // background: transparent !important;
     box-shadow: none;
   }
 
@@ -1095,12 +1400,6 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     outline-offset: -1.5px;
   }
 
-  /*:global(.tab[data-dragcula-dragging-item='true'] .tmp-tab-drop-zone) {
-    pointer-events: none;
-  }
-  :global(body:not([data-dragcula-dragging='true']) .tmp-tab-drop-zone) {
-    display: none;
-  }*/
   .icon-wrapper {
     width: 16px;
     height: 16px;
@@ -1113,135 +1412,70 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     }
   }
 
-  .tab.selected:not(.active) {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.55);
-    outline: none;
-
-    :global(.dark) & {
-      @apply bg-gray-700/70;
-    }
-  }
-  /*.tab.magic:not(.active) {
-    //background: rgba(255, 205, 205, 0.55);
-    @apply bg-violet-600/25;
-  }*/
-
-  /* #FF729F */
-
-  /*.tab.magic {
-    background: #ff8cc6 !important;
-    color: #560027;
-    &:hover {
-      background: #ff578f !important;
-      color: #560027;
-    }
-  }
-
-  .tab.magic.active {
-    background: #ffccf1 !important;
-    color: #760042;
-  }*/
-
-  .tab.active {
-    background: #e9f5fd;
-    outline: none;
-
-    :global(.dark) & {
-      @apply bg-gray-600;
-    }
-  }
-
+  // Vertical tabs specific styles
   :global(.vertical-tabs) {
-    .tab.combine-border {
-      border-radius: 1rem 1rem 0 0;
+    .tab.combine-border:not(.horizontalTabs) {
+      &:has(+ :not(.combine-border)) {
+        --squircle-radius-bottom-right: 16px;
+        --squircle-radius-bottom-left: 16px;
+        --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09),
+          0px -2px 0px -1px rgba(0, 0, 0, 0.03);
+      }
     }
 
-    .tab.combine-border + .combine-border {
+    .tab:not(.combine-border):not(.horizontalTabs) + .combine-border:has(+ :not(.combine-border)) {
+      background: paint(squircle);
+      --squircle-radius: 16px;
+      --squircle-smooth: 0.33;
+      --squircle-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 0.09);
+      --squircle-fill: rgba(255, 255, 255, 0.8);
+    }
+
+    &.active:not(.horizontalTabs):not(.combine-border + .combine-border):not(
+        .combine-border ~ .combine-border
+      ):not(:has(+ .combine-border)) {
+      background: paint(squircle) !important;
+      --squircle-radius-top-left: 16px;
+      --squircle-radius-top-right: 16px;
+      --squircle-radius-bottom-left: 16px;
+      --squircle-radius-bottom-right: 16px;
+      --squircle-smooth: 0.33;
+      --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09), 0px -2px 0px -1px rgba(0, 0, 0, 0.03);
+      --squircle-fill: rgba(255, 255, 255, 0.8);
+    }
+
+    /*⚠️ DO NOT CHANGE THE ORDER OF THE FOLLOWING CSS RULES ⚠️*/
+    /* First tab of a group */
+    .tab.combine-border:not(.horizontalTabs):not(.tab.selected ~ .tab.combine-border):not(
+        .tab.combine-border ~ .tab.combine-border
+      ):not(:only-child) {
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      background: white;
+    }
+
+    /* Middle tabs in sequences */
+    .tab.combine-border:not(.horizontalTabs) + .tab.combine-border {
       border-radius: 0;
+      background: rgba(255, 255, 255, 0.4);
     }
 
-    .tab.combine-border:has(+ :not(.combine-border)) {
-      border-radius: 0 0 1rem 1rem;
+    /* Last tab of a group */
+    .tab.combine-border:not(.horizontalTabs):not(:has(+ .tab.combine-border)),
+    .tab.combine-border:not(.horizontalTabs):last-of-type {
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
     }
 
-    .tab:not(.combine-border) + .combine-border:has(+ :not(.combine-border)) {
-      border-radius: 1rem;
-    }
-
-    /* This fixes none borders for last element in list if selected. */
-    .tab:last-child.combine-border {
-      border-bottom-left-radius: 1rem;
-      border-bottom-right-radius: 1rem;
-    }
-    /* This fixes none borders for first element in list if selected. */
-    .tab:first-child.combine-border {
-      border-top-left-radius: 1rem;
-      border-top-right-radius: 1rem;
-    }
-  }
-
-  :global(.horizontal-tabs) {
-    .tab.combine-border {
-      border-radius: 0.75rem 0 0 0.75rem;
-
-      position: relative;
-      &::after {
-        content: '';
-        position: absolute;
-        right: -5px;
-        top: -1.5px;
-        bottom: -1.5px;
-        width: 3.5px;
-        background: inherit;
-      }
-    }
-
-    .tab.combine-border + .combine-border {
-      border-radius: 0;
-    }
-
-    .tab.combine-border:has(+ :not(.combine-border)) {
-      border-radius: 0 0.75rem 0.75rem 0;
-
-      &::after {
-        content: unset;
-      }
-    }
-
-    .tab:not(.combine-border) + .combine-border:has(+ :not(.combine-border)) {
-      border-radius: 0.75rem;
-    }
-
-    /* This fixes none borders for last element in list if selected. */
-    .tab:last-child.combine-border {
-      border-top-right-radius: 0.75rem;
-      border-bottom-right-radius: 0.75rem;
-
-      &::after {
-        content: unset;
-      }
-    }
-    /* This fixes none borders for first element in list if selected. */
-    .tab:first-child.combine-border {
-      border-top-left-radius: 0.75rem;
-      border-bottom-left-radius: 0.75rem;
-    }
-  }
-
-  .tab.pinned.magic {
-    position: relative;
-    &::after {
-      position: absolute;
-      z-index: -1;
-      filter: blur(4px);
-      content: '';
-      inset: 0px;
-      border-radius: 15px;
-
-      //@apply animate-text-shimmer;
-      @apply bg-gradient-to-r from-sky-600 to-blue-700 via-sky-400 bg-[length:250%_100%];
-      animation: text-shimmer 2s infinite linear;
+    /* Handle gaps */
+    .tab:not(.combine-border):not(.horizontalTabs) + .tab.combine-border {
+      background: paint(squircle);
+      --squircle-radius-top-left: 16px;
+      --squircle-radius-top-right: 16px;
+      --squircle-radius-bottom-left: 0px;
+      --squircle-radius-bottom-right: 0px;
+      --squircle-smooth: 0.33;
+      --squircle-fill: rgba(255, 255, 255, 0.4);
     }
   }
 </style>

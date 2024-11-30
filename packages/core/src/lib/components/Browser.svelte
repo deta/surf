@@ -5006,7 +5006,7 @@
                   class:pointer-events-none={$showEndMask}
                 >
                   <button
-                    class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
+                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-[0.625rem] p-1.5'
                       : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                     class:bg-sky-200={$showNewTabOverlay === 1}
@@ -5135,7 +5135,7 @@
                   class:pointer-events-none={$showEndMask}
                 >
                   <button
-                    class="transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
+                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
                       : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                     class:bg-sky-200={$showNewTabOverlay === 1}
@@ -5158,7 +5158,7 @@
               : 'flex-col'} flex-shrink-0"
           >
             <button
-              class="transform select-none no-drag active:scale-95 space-x-2
+              class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
               {horizontalTabs
                 ? 'w-fit rounded-xl p-2'
                 : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
@@ -6154,6 +6154,16 @@
     100% {
       box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
+  }
+
+  .new-tab-button:hover {
+    background: paint(squircle);
+    --squircle-radius-top-left: 16px;
+    --squircle-radius-top-right: 16px;
+    --squircle-radius-bottom-left: 16px;
+    --squircle-radius-bottom-right: 16px;
+    --squircle-smooth: 0.33;
+    --squircle-fill: rgba(255, 255, 255, 0.65);
   }
 
   .messi {
