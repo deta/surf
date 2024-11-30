@@ -553,6 +553,8 @@
       return unsubURLChangeEvent
     }
   })
+
+  let canEdit = false
 </script>
 
 <!--
@@ -811,7 +813,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   {/if}
   {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize && tabSize < 48))}
     <div class="title relative flex-grow truncate mr-1">
-      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && (hovered || isEditing)}
+      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && isEditing}
         <input
           draggable
           on:dragstart|preventDefault|stopPropagation
@@ -832,9 +834,21 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       {:else}
         <div
           aria-hidden="true"
-          class={`whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
+          on:mousedown={() => {
+            isEditing = true
+            tick().then(() => {
+              setTimeout(() => {
+                addressInputElem?.focus()
+              }, 175)
+            })
+          }}
+          class={hovered && isActive && tab.type === 'page'
+            ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60] cursor-text'
+            : `whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
         >
-          {#if tab.type === 'space'}
+          {#if hovered && isActive && tab.type === 'page'}
+            {$inputUrl}
+          {:else if tab.type === 'space'}
             {tab.title}
           {:else}
             {sanitizedTitle}
