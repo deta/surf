@@ -34,7 +34,7 @@
         if (!cur.section) cur.section = '_all'
         if (!(cur.section in pre)) pre[cur.section] = []
         if (!cur.horizontalParentAction) cur.horizontalParentAction = undefined
-        if (!cur.displayPriority) cur.displayPriority = ActionDisplayPriority.NORMAL
+        if (!cur.displayPriority) cur.displayPriority = ActionDisplayPriority.LOW
 
         pre[cur.section].push(cur)
         return pre
@@ -44,10 +44,10 @@
   )
     .sort(([, actionsA], [, actionsB]) => {
       const priorityA = Math.max(
-        ...actionsA.map((a) => a.displayPriority || ActionDisplayPriority.NORMAL)
+        ...actionsA.map((a) => a.displayPriority || ActionDisplayPriority.LOW)
       )
       const priorityB = Math.max(
-        ...actionsB.map((a) => a.displayPriority || ActionDisplayPriority.NORMAL)
+        ...actionsB.map((a) => a.displayPriority || ActionDisplayPriority.LOW)
       )
       return priorityB - priorityA
     })

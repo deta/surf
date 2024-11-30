@@ -131,7 +131,9 @@ export enum ActivateTabEventTrigger {
   /** Tab was activated by clicking a citation in the chat */
   ChatCitation = 'chat_citation',
   /** Tab was activated by opening a item in the search */
-  Search = 'search'
+  Search = 'search',
+  /** Tab was activated by selecting inside the command menu */
+  CommandMenu = 'command_menu'
 }
 
 export enum DeleteTabEventTrigger {

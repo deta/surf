@@ -81,20 +81,40 @@
 
   const createFuse = (actions: Action[]) => {
     return new Fuse(actions, {
-      minMatchCharLength: 1,
+      threshold: 0.4,
+      minMatchCharLength: 2,
       ignoreLocation: true,
+      findAllMatches: true,
+      distance: 100,
       keys: [
-        'name',
-        'section',
-        'keywords',
-        'horizontalItems.name',
+        {
+          name: 'keywords',
+          weight: 2
+        },
+        {
+          name: 'name',
+          weight: 1.5
+        },
+        {
+          name: 'section',
+          weight: 1
+        },
+        {
+          name: 'horizontalItems.name',
+          weight: 1
+        },
         {
           name: 'childName',
-          getFn: (action) => (action.nestedSearch ? action.name : ('' as string))
+          getFn: (action) => (action.nestedSearch ? action.name : ''),
+          weight: 1
         },
-        ...(teletype.options?.nestedSearch ? ['childActions.name', 'childActions.keywords'] : [])
-      ],
-      threshold: 0.3
+        ...(teletype.options?.nestedSearch
+          ? [
+              { name: 'childActions.name', weight: 1 },
+              { name: 'childActions.keywords', weight: 1.5 }
+            ]
+          : [])
+      ]
     })
   }
 

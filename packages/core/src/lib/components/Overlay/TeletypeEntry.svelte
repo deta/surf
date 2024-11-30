@@ -37,6 +37,7 @@
   import { useCommandComposer } from '../Overlay/service/commandComposer'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
+  import { useTabsManager } from '../../service/tabs'
   import { useResourceManager } from '../../service/resources'
   import { teletypeActionStore, TeletypeAction } from './service/teletypeActions'
   import type { TabsManager } from '../../service/tabs'
@@ -63,7 +64,7 @@
   const toasts = useToasts()
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<TeletypeEntryEvents>()
-  const commandComposer = useCommandComposer(oasis, config)
+  const commandComposer = useCommandComposer(oasis, config, tabsManager)
   const userConfigSettings = config.settings
   let teletype: TeletypeSystem
   let unsubscribe: () => void

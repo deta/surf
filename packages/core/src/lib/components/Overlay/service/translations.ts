@@ -5,7 +5,7 @@
  */
 
 import { get } from 'svelte/store'
-import type { HistoryEntry, Space, Tab } from '../../../types'
+import type { HistoryEntry, Space, Tab, TabPage } from '../../../types'
 import {
   truncateURL,
   truncate,
@@ -29,6 +29,8 @@ import {
   type TeletypeStaticAction
 } from './teletypeActions'
 import type { OasisSpace } from '../../../service/oasis'
+
+import { generateRootDomain } from '@horizon/utils'
 
 // pls don't sue me for the name, just fit so well
 const createExecutioner = (action: TeletypeAction, payload: any) => {
@@ -227,14 +229,17 @@ export const resourceToTeletypeItem = (resource: Resource) => {
   }
 }
 
-export const tabToTeletypeItem = (tab: Tab) => {
+export const tabToTeletypeItem = (tab: TabPage) => {
   const url = tab.type === 'page' ? tab.currentLocation || tab.initialLocation : ''
   return {
-    id: tab.id,
+    id: `tab-${tab.id}`,
     name: tab.title,
-    icon: 'tab',
+    icon: `favicon;;https://www.google.com/s2/favicons?domain=${tab.currentLocation}&sz=48`,
     execute: TeletypeAction.OpenTab,
-    section: 'Tab',
+    section: 'Open Tabs',
+    selectPriority: ActionSelectPriority.NORMAL,
+    displayPriority: ActionDisplayPriority.NORMAL,
+    keywords: ['tab', tab.title, generateRootDomain(tab.currentLocation ?? '')],
     actionText: 'Open Tab',
     actionPanel: conditionalArrayItem(tab.type === 'page', [
       createSecondaryAction({

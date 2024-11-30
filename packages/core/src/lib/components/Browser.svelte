@@ -1302,6 +1302,15 @@
       selectedTabs.set(new Set([{ id: tabId, userSelected: currentTab?.userSelected || false }]))
     }
 
+    // Switch to the tab's scope if needed and the tab is not pinned
+    const tab = tabsManager.tabsValue.find((tab) => tab.id === tabId)
+    if (tab && !tab.pinned) {
+      const scopeId = tab.scopeId ?? null
+      if (scopeId !== tabsManager.activeScopeIdValue) {
+        tabsManager.changeScope(scopeId)
+      }
+    }
+
     tabsManager.makeActive(tabId, trigger)
 
     // If chat mode is activated, update magic tabs
@@ -4501,6 +4510,7 @@
     on:toggle-sidebar={() => changeLeftSidebarState()}
     on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
     on:create-note={handleCreateNote}
+    on:activate-tab={(e) => selectTab(e.detail, ActivateTabEventTrigger.CommandMenu)}
     on:toggle-bookmark={() =>
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
     on:show-history-tab={handleCreateHistoryTab}

@@ -15,7 +15,6 @@
   import { useTabsManager } from '../../service/tabs'
   import { useHomescreen } from '../Oasis/homescreen/homescreen'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
-  import { useCommandComposer } from '../Overlay/service/commandComposer'
   import type { OverlayEvents } from '../Overlay/types'
   import { Icon } from '@horizon/icons'
   import { DragOperation, Dragcula, DragculaDragEvent } from '@horizon/dragcula'
@@ -83,7 +82,6 @@
   const toasts = useToasts()
   const miniBrowserService = useMiniBrowserService()
   const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`new-tab-overlay`)
-  const commandComposer = useCommandComposer(oasis, config)
 
   const resourceManager = oasis.resourceManager
   const telemetry = resourceManager.telemetry

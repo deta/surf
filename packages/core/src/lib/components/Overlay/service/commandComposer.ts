@@ -40,6 +40,7 @@ import { ResourceTagsBuiltInKeys, ResourceTypes, SearchOasisEventTrigger } from 
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
 import type { HistoryEntry, Space, Tab } from '../../../types'
 import Fuse from 'fuse.js'
+import type { TabsManager } from '../../../service/tabs'
 
 export class CommandComposer {
   private log = useLogScope('CommandComposer')
@@ -54,12 +55,14 @@ export class CommandComposer {
   private searchEngineSuggestionResults = writable<string[]>([])
   private historyEntriesResults = writable<HistoryEntry[]>([])
   private hostnameHistoryEntriesResults = writable<HistoryEntry[]>([])
+  private tabEntriesResults = writable<Tab[]>([])
   private spaceSearchResults = writable<Space[]>([])
   private filteredCommandItems = writable<CMDMenuItem[]>([])
   private filteredBrowserCommands = writable<TeletypeStaticAction[]>([])
   private isFetchingOasisSearchResults = writable(false)
   private isFetchingSearchEngineSuggestionResults = writable(false)
   private isFetchingHistoryEntriesResults = writable(false)
+  private isFetchingTabEntryResults = writable(false)
   private isFetchingHostnameHistoryEntriesResults = writable(false)
   private isFilteringCommandItems = writable(false)
   private isFilteringBrowserCommands = writable(false)
@@ -82,13 +85,15 @@ export class CommandComposer {
 
   constructor(
     private oasis: OasisService,
-    private config: ConfigService
+    private config: ConfigService,
+    private tabsManager: TabsManager
   ) {
     this.log.debug('CommandComposer: Initialized')
     this.resourceManager = this.oasis.resourceManager
     this.telemetry = this.resourceManager.telemetry
     this.userConfigSettings = this.config.settings
     this.spaces = this.oasis.spaces
+    this.tabsManager = this.tabsManager
 
     // Subscribe to search value changes
     this.searchValue.subscribe((value) => {
@@ -104,6 +109,7 @@ export class CommandComposer {
       this.searchEngineSuggestionResults,
       this.historyEntriesResults,
       this.hostnameHistoryEntriesResults,
+      this.tabEntriesResults,
       this.spaceSearchResults,
       this.filteredBrowserCommands
     ],
@@ -114,6 +120,7 @@ export class CommandComposer {
       searchEngineSuggestionResults,
       historyEntriesResults,
       hostnameHistoryEntriesResults,
+      tabEntriesResults,
       spaceSearchResults,
       filteredBrowserCommands
     ]) => {
@@ -122,6 +129,7 @@ export class CommandComposer {
           ? navigateActionToTeletypeItem(searchValue)
           : searchActionToTeletypeItem(searchValue),
         ...filteredBrowserCommands.map((command) => browserCommandToTeletypeItem(command)),
+        ...tabEntriesResults.map((tab) => tabToTeletypeItem(tab)),
         ...hostnameHistoryEntriesResults.map((entry) => hostnameHistoryEntryToTeletypeItem(entry)),
         ...spaceSearchResults.map((space) => spaceToTeletypeItem(space)),
         ...searchEngineSuggestionResults.map((suggestion) =>
@@ -208,6 +216,7 @@ export class CommandComposer {
           this.fetchSearchEngineSuggestions(value),
         !get(this.isFetchingHistoryEntriesResults) && this.fetchHistoryEntries(value),
         !get(this.isFetchingHostnameHistoryEntriesResults) && this.fetchHostnameEntries(value),
+        !get(this.isFetchingTabEntryResults) && this.fetchTabEntries(value),
         !get(this.isFilteringCommandItems) && this.filterBrowserCommands(value),
         !get(this.isFilteringBrowserCommands) && this.filterBrowserCommands(value),
         !get(this.isFetchingOasisSearchResults) && this.fetchOasisResults(value)
@@ -331,6 +340,39 @@ export class CommandComposer {
       this.historyEntriesResults.set([])
     } finally {
       this.isFetchingHistoryEntriesResults.set(false)
+    }
+  }
+
+  public async fetchTabEntries(searchValue: string): Promise<void> {
+    const ITEMS_LIMIT = 5
+    if (searchValue.length < 2) {
+      this.tabEntriesResults.set([])
+      return
+    }
+
+    try {
+      this.isFetchingTabEntryResults.set(true)
+
+      const allTabs = this.tabsManager.activeTabsValue
+
+      const filteredTabs = allTabs.filter((tab) => {
+        if (tab.type === 'page') {
+          return (
+            tab.title.toLowerCase().includes(searchValue.toLowerCase()) ||
+            (tab.currentLocation &&
+              tab.currentLocation.toLowerCase().includes(searchValue.toLowerCase()))
+          )
+        }
+        // Only return tabs that are pages, ignore spaces for now
+        return false
+      })
+
+      this.tabEntriesResults.set(filteredTabs.slice(0, ITEMS_LIMIT))
+    } catch (error) {
+      this.log.error('Error fetching tab entries:', error)
+      this.tabEntriesResults.set([])
+    } finally {
+      this.isFetchingTabEntryResults.set(false)
     }
   }
 
@@ -459,6 +501,7 @@ export class CommandComposer {
       this.isFetchingOasisSearchResults,
       this.isFetchingSearchEngineSuggestionResults,
       this.isFetchingHistoryEntriesResults,
+      this.isFetchingTabEntryResults,
       this.isFetchingHostnameHistoryEntriesResults,
       this.isFilteringCommandItems
     ],
@@ -481,6 +524,10 @@ export class CommandComposer {
   }
 }
 
-export const useCommandComposer = (oasis: OasisService, config: ConfigService) => {
-  return new CommandComposer(oasis, config)
+export const useCommandComposer = (
+  oasis: OasisService,
+  config: ConfigService,
+  tabsManager: TabsManager
+) => {
+  return new CommandComposer(oasis, config, tabsManager)
 }
