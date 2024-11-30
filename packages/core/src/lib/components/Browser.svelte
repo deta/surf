@@ -824,8 +824,17 @@
       selectedTabs.set(new Set())
     } else if (isModKeyAndKeyPressed(e, 'w')) {
       // Note: even though the electron menu handles the shortcut this is still needed here
-      if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
-      else tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
+      if ($showNewTabOverlay !== 0) {
+        setShowNewTabOverlay(0)
+      } else {
+        const activeTabMiniBrowserSelected = getActiveMiniBrowser()
+        if (activeTabMiniBrowserSelected) {
+          activeTabMiniBrowserSelected.miniBrowser.close()
+          return
+        }
+
+        tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
+      }
     } else if (isModKeyAndKeyPressed(e, 'e')) {
       if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       toggleRightSidebarTab('chat')
