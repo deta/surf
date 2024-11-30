@@ -1,41 +1,27 @@
 <script lang="ts" context="module">
   import { type Writable } from 'svelte/store'
-  import { BentoController, BentoItem, type BentoItemData } from './BentoController'
   import { DragTypeNames } from '../../../types'
   import { useOasis } from '../../../service/oasis'
-  import { createEventDispatcher, getContext, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
   import SpacePreview from '../../Resources/SpacePreview.svelte'
   import { CreateTabEventTrigger, UpdateHomescreenEventAction } from '@horizon/types'
-  import { useHomescreen } from './homescreen'
-  import type { Mode } from '../../Resources/Previews/Preview.svelte'
   import { useTelemetry } from '../../../service/telemetry'
   import { useTabsManager } from '../../../service/tabs'
-  import { HomescreenController } from './homescreenController'
-
-  export interface HomescreenItemData extends BentoItemData {
-    resourceId?: string
-    spaceId?: string
-
-    /// Views
-    contentViewMode: 'list' | 'grid'
-    contentMode: Mode
-  }
+  import type { DesktopService } from '../../../service/desktop'
+  import type { DesktopItemData } from '../../../types/desktop.types'
 </script>
 
 <script lang="ts">
-  export let item: Writable<HomescreenItemData>
-  export let homescreenController: Writable<HomescreenController>
-
-  //const homescreenController = getContext<Writable<HomescreenController>>('homescreenController')
+  export let desktop: DesktopService
+  export let item: Writable<DesktopItemData>
 
   const telemetry = useTelemetry()
   const oasis = useOasis()
   const spaces = oasis.spaces
   const resourceManager = oasis.resourceManager
   const tabs = useTabsManager()
-  const homescreen = useHomescreen()
   const dispatch = createEventDispatcher<{
     'remove-from-homescreen': string
   }>()
@@ -56,20 +42,20 @@
       }
 
       const handleMouseMove = (e: MouseEvent) => {
-        const clientX = e.clientX - $homescreenController.CELL_SIZE / 2
-        const clientY = e.clientY - $homescreenController.CELL_SIZE / 2
-        const targetCell = $homescreenController.cellAtXY(clientX, clientY)
+        const clientX = e.clientX - desktop.CELL_SIZE / 2
+        const clientY = e.clientY - desktop.CELL_SIZE / 2
+        const targetCell = desktop.cellAtXY(clientX, clientY)
 
         item.update((v) => {
           if (direction === 'ne') {
-            v.spanX = Math.max(1, targetCell.x - v.cellX + 1)
-            v.cellY = targetCell.y + 1
+            v.width = Math.max(1, targetCell.x - v.x + 1)
+            v.y = targetCell.y + 1
           } else if (direction === 'se') {
-            v.spanX = Math.max(1, targetCell.x - v.cellX + 1)
-            v.spanY = Math.max(1, targetCell.y - v.cellY + 1)
+            v.width = Math.max(1, targetCell.x - v.x + 1)
+            v.height = Math.max(1, targetCell.y - v.y + 1)
           } else if (direction === 'sw') {
-            v.spanY = targetCell.y - v.cellY + 1
-            v.cellX = targetCell.x + 1
+            v.height = targetCell.y - v.y + 1
+            v.x = targetCell.x + 1
           } else if (direction === 'nw') {
           }
           return v
@@ -79,7 +65,7 @@
         e.preventDefault()
         e.stopImmediatePropagation()
         resizing = false
-        homescreen.store()
+        desktop.store()
 
         window.removeEventListener('mousemove', handleMouseMove)
         telemetry.trackUpdateHomescreen(UpdateHomescreenEventAction.ResizeItem)
@@ -95,10 +81,10 @@
   id="homescreen-item-{$item.id}"
   class="homescreen-item item-type-{$item.resourceId ? 'resource' : 'space'}"
   draggable={true}
-  style:--cell-x={$item.cellX}
-  style:--cell-y={$item.cellY}
-  style:--span-x={$item.spanX}
-  style:--span-y={$item.spanY}
+  style:--cell-x={$item.x}
+  style:--cell-y={$item.y}
+  style:--span-x={$item.width}
+  style:--span-y={$item.height}
   bind:this={bentoItemEl}
   use:HTMLDragItem.action={{}}
   on:mouseup={async (e) => {
@@ -216,12 +202,12 @@ TODO: Fix resizing logic for other corners
         mode="container"
         contentViewMode={$item.contentViewMode}
         contentMode={$item.contentMode}
-        renderContents={$item.spanX > 2 && $item.spanY > 2}
+        renderContents={$item.width > 2 && $item.height > 2}
         interactive={true}
         draggable={false}
         on:change-space-view-mode={(e) => {
           $item.contentViewMode = e.detail
-          homescreen.store()
+          desktop.store()
         }}
         on:set-resource-as-background
         on:open

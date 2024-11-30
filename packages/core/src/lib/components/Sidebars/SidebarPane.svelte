@@ -1,8 +1,14 @@
+<script context="module">
+  export let leftSize = writable(0)
+  export let rightSize = writable(0)
+</script>
+
 <script lang="ts">
   import { useDebounce } from '@horizon/utils'
   import { onMount, createEventDispatcher, onDestroy, tick } from 'svelte'
 
   import './sidebars.scss'
+  import { writable } from 'svelte/store'
 
   export let horizontalTabs = false
   export let showLeftSidebar = true
@@ -28,8 +34,6 @@
   const BUFFER = 50
   const CLOSE_THRESHOLD = 75
 
-  let leftSize: number
-  let rightSize: number
   let leftIsOpen: SidebarState = State.Open
   let rightIsOpen: SidebarState = State.Open
   let isDraggingLeft = false
@@ -62,13 +66,13 @@
       Number(localStorage.getItem('panelSize-vertical-sidebar')) || MIN_VERTICAL_SIZE
     const savedHorizontalSize =
       Number(localStorage.getItem('panelSize-horizontal-sidebar')) || HORIZONTAL_SIZE
-    rightSize = Number(localStorage.getItem('panelSize-right-sidebar')) || MIN_VERTICAL_SIZE
-    leftSize = horizontalTabs ? savedHorizontalSize : savedVerticalSize
-    if (!horizontalTabs && (leftSize < MIN_VERTICAL_SIZE || leftSize > MAX_VERTICAL_SIZE)) {
-      leftSize = MIN_VERTICAL_SIZE
+    $rightSize = Number(localStorage.getItem('panelSize-right-sidebar')) || MIN_VERTICAL_SIZE
+    $leftSize = horizontalTabs ? savedHorizontalSize : savedVerticalSize
+    if (!horizontalTabs && ($leftSize < MIN_VERTICAL_SIZE || $leftSize > MAX_VERTICAL_SIZE)) {
+      $leftSize = MIN_VERTICAL_SIZE
     }
-    if (rightSize < MIN_VERTICAL_RIGHT_SIZE || rightSize > MAX_VERTICAL_RIGHT_SIZE) {
-      rightSize = MIN_VERTICAL_RIGHT_SIZE
+    if ($rightSize < MIN_VERTICAL_RIGHT_SIZE || $rightSize > MAX_VERTICAL_RIGHT_SIZE) {
+      $rightSize = MIN_VERTICAL_RIGHT_SIZE
     }
   }
 
@@ -80,7 +84,7 @@
       isDraggingRight = true
     }
     startPos = horizontalTabs && side === 'left' ? e.clientY : e.clientX
-    startSize = side === 'left' ? leftSize : rightSize
+    startSize = side === 'left' ? $leftSize : $rightSize
     ownerDocument.addEventListener('pointermove', handleGlobalPointerMove)
     ownerDocument.addEventListener('pointerup', handleGlobalPointerUp)
   }
@@ -90,33 +94,33 @@
         const newSize = startSize - (e.clientY - startPos)
         if (newSize < CLOSE_THRESHOLD) {
           leftIsOpen = State.Closed
-          leftSize = HORIZONTAL_SIZE
+          $leftSize = HORIZONTAL_SIZE
           dispatch('leftPeekClose')
         } else {
-          leftSize = HORIZONTAL_SIZE
+          $leftSize = HORIZONTAL_SIZE
         }
       } else {
         const newSize = startSize + (e.clientX - startPos)
         if (newSize < MIN_VERTICAL_SIZE - CLOSE_THRESHOLD) {
           leftIsOpen = State.Closed
-          leftSize = MIN_VERTICAL_SIZE
+          $leftSize = MIN_VERTICAL_SIZE
           dispatch('leftPeekClose')
         } else {
-          leftSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
+          $leftSize = Math.max(MIN_VERTICAL_SIZE, Math.min(MAX_VERTICAL_SIZE, newSize))
         }
       }
-      saveSizeToLocalStorage('left', leftSize)
+      saveSizeToLocalStorage('left', $leftSize)
     } else if (isDraggingRight) {
       const newSize = startSize - (e.clientX - startPos)
       if (newSize < MIN_VERTICAL_RIGHT_SIZE - CLOSE_THRESHOLD) {
         rightIsOpen = State.Closed
         showRightSidebar = false
-        rightSize = MIN_VERTICAL_RIGHT_SIZE
+        $rightSize = MIN_VERTICAL_RIGHT_SIZE
         dispatch('rightPeekClose')
       } else {
-        rightSize = Math.max(MIN_VERTICAL_RIGHT_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
+        $rightSize = Math.max(MIN_VERTICAL_RIGHT_SIZE, Math.min(MAX_VERTICAL_RIGHT_SIZE, newSize))
       }
-      saveSizeToLocalStorage('right', rightSize)
+      saveSizeToLocalStorage('right', $rightSize)
     }
   }
 
@@ -126,14 +130,14 @@
     ownerDocument.removeEventListener('pointermove', handleGlobalPointerMove)
     ownerDocument.removeEventListener('pointerup', handleGlobalPointerUp)
 
-    if (!horizontalTabs && leftIsOpen !== State.Closed && leftSize < MIN_VERTICAL_SIZE) {
+    if (!horizontalTabs && leftIsOpen !== State.Closed && $leftSize < MIN_VERTICAL_SIZE) {
       leftIsOpen = State.Closed
-      leftSize = MIN_VERTICAL_SIZE
+      $leftSize = MIN_VERTICAL_SIZE
       dispatch('leftPeekClose')
     }
-    if (rightIsOpen !== State.Closed && rightSize < MIN_VERTICAL_SIZE) {
+    if (rightIsOpen !== State.Closed && $rightSize < MIN_VERTICAL_SIZE) {
       rightIsOpen = State.Closed
-      rightSize = MIN_VERTICAL_SIZE
+      $rightSize = MIN_VERTICAL_SIZE
       dispatch('rightPeekClose')
     }
   }
@@ -159,14 +163,14 @@
         // peekTimeout = setTimeout(() => {
         //   peekBg = ''
         // }, 300)
-      } else if (!horizontalTabs && mouseX > leftSize + BUFFER && !isDraggingLeft) {
+      } else if (!horizontalTabs && mouseX > $leftSize + BUFFER && !isDraggingLeft) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
       }
     }
     if (
       rightIsOpen === State.Peek &&
-      mouseX < window.innerWidth - rightSize - BUFFER &&
+      mouseX < window.innerWidth - $rightSize - BUFFER &&
       !isDraggingRight
     ) {
       rightIsOpen = State.Closed
@@ -243,8 +247,8 @@
 
   $: mainStyle = `
     ${horizontalTabs ? `padding-top: ${leftIsOpen === State.Open ? HORIZONTAL_SIZE : 0}px;` : ''}
-    ${!horizontalTabs ? `padding-left: ${leftIsOpen === State.Open ? leftSize : 0}px;` : ''}
-    padding-right: ${rightIsOpen === State.Open ? rightSize : 0}px;
+    ${!horizontalTabs ? `padding-left: ${leftIsOpen === State.Open ? $leftSize : 0}px;` : ''}
+    padding-right: ${rightIsOpen === State.Open ? $rightSize : 0}px;
   `
 
   // transition-all ease-[cubic-bezier(0.165,0.84,0.44,1)] duration-300
@@ -267,10 +271,8 @@
     'right-0 w-4 h-full'
   ].join(' ')
 
-  //     width: ${rightIsOpen === State.Closed ? '16px' : rightSize + 'px'};
-
   $: rightSidebarStyle = `
-    width: ${rightSize + 'px'};
+    width: ${$rightSize + 'px'};
     ${
       horizontalTabs && (leftIsOpen === State.Open || leftIsOpen === State.Peek)
         ? `top: ${HORIZONTAL_SIZE}px;`
@@ -312,15 +314,15 @@
 
 <div
   class="flex w-screen h-screen justify-start items-start"
-  style:--left-sidebar-size={leftSize + 'px'}
-  style:--right-sidebar-size={rightSize + 'px'}
+  style:--left-sidebar-size={$leftSize + 'px'}
+  style:--right-sidebar-size={$rightSize + 'px'}
 >
   <nav
     class={leftBarClasses}
     class:horizontalTabs
     class:verticalTabs={!horizontalTabs}
     aria-labelledby="nav-heading"
-    style="{horizontalTabs ? 'height' : 'width'}: {leftSize}px; z-index: 502;"
+    style="{horizontalTabs ? 'height' : 'width'}: {$leftSize}px; z-index: 502;"
   >
     <div class="h-full w-full">
       <slot name="sidebar" />

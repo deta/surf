@@ -1,8 +1,8 @@
 import type { Writable } from 'svelte/store'
 import type { Tab } from '.'
 import type { Resource } from '../service/resources'
-import type { BentoItem } from '../components/Oasis/homescreen/BentoController'
 import type { OasisSpace } from '../service/oasis'
+import type { DesktopItemData } from './desktop.types'
 
 export enum DragTypeNames {
   SURF_TAB = 'vnd/surf/tab',
@@ -25,5 +25,5 @@ export interface DragTypes extends Record<DragTypeNames, unknown> {
 
   'vnd/surf/space': OasisSpace
 
-  'vnd/surf/desktop_item': Writable<BentoItem>
+  'vnd/surf/desktop_item': Writable<DesktopItemData>
 }

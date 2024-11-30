@@ -5,6 +5,7 @@ import type { Optional } from '../types'
 import type { Tab } from '../types/browser.types'
 import type { EditablePrompt } from '@horizon/types'
 import type { HomescreenData } from '../components/Oasis/homescreen/homescreen'
+import type { DesktopData } from '../types/desktop.types'
 
 export interface LegacyResource {
   id: string
@@ -166,6 +167,7 @@ export class HorizonDatabase extends Dexie {
   chatMessages: HorizonStore<any>
   prompts: HorizonStore<EditablePrompt>
   homescreen: HorizonStore<HomescreenData>
+  desktop: HorizonStore<DesktopData>
 
   constructor() {
     super('HorizonDatabase')
@@ -276,11 +278,71 @@ export class HorizonDatabase extends Dexie {
       homescreen: 'id, createdAt, updatedAt, bentoItems, customization'
     })
 
+    this.version(8)
+      .stores({
+        userData: 'id, user_id',
+        cards: 'id, horizon_id, stacking_order, type, createdAt, updatedAt',
+        horizons: 'id, name, stackingOrder, createdAt, updatedAt',
+        resources: 'id, createdAt, updatedAt',
+        sessions: 'id, userId, partition, createdAt, updatedAt',
+        historyEntries:
+          'id, *url, *title, *searchQuery, *inPageNavigation, sessionId, type, createdAt, updatedAt',
+        tabs: 'id, createdAt, updatedAt, archived, type, title, icon, section, initialLocation, historyStackIds, currentHistoryIndex, resourceBookmark, horizonId, query',
+        chats: 'id, createdAt, updatedAt, title, messageIds',
+        chatMessages: 'id, createdAt, updatedAt, role, content',
+        prompts: 'id, kind, title, description, content, createdAt, updatedAt',
+        homescreen: 'id, createdAt, updatedAt, bentoItems, customization',
+        desktop: 'id, createdAt, updatedAt, items, background_image'
+      })
+      .upgrade(async (transaction) => {
+        const desktopTable = transaction.table('desktop')
+        const homescreenTable = transaction.table('homescreen')
+        const homescreenItems = await homescreenTable.toArray()
+
+        const items: any[] = []
+
+        for (const homescreenItem of homescreenItems) {
+          console.warn('Upgrading item: ', homescreenItem)
+
+          const bentoItems = homescreenItem.bentoItems
+          for (const item of bentoItems) {
+            const datetime = new Date().toISOString()
+            const itm = {
+              id: item.id,
+              x: item.cellX,
+              y: item.cellY,
+              width: item.spanX,
+              height: item.spanY
+            }
+
+            if (item.resourceId !== undefined) {
+              itm.type = 'resource'
+              itm.resourceId = item.resourceId
+            } else if (item.spaceId !== undefined) {
+              itm.type = 'space'
+              itm.spaceId = item.spaceId
+            }
+
+            items.push(itm)
+          }
+        }
+
+        const datetime = new Date().toISOString()
+        desktopTable.add({
+          id: '$$default',
+          createdAt: datetime,
+          updatedAt: datetime,
+          background_image: (await homescreenTable.get('$$default')).customization?.background,
+          items
+        })
+      })
+
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
     this.tabs = new HorizonStore<Tab>(this.table('tabs'))
     this.chats = new HorizonStore<any>(this.table('chats'))
     this.chatMessages = new HorizonStore<any>(this.table('chatMessages'))
     this.prompts = new HorizonStore<EditablePrompt>(this.table('prompts'))
     this.homescreen = new HorizonStore<HomescreenData>(this.table('homescreen'))
+    this.desktop = new HorizonStore<DesktopData>(this.table('desktop'))
   }
 }

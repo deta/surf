@@ -36,7 +36,7 @@
     createResourcesFromMediaItems,
     processDrop
   } from '../service/mediaImporter'
-  import SidebarPane from './Sidebars/SidebarPane.svelte'
+  import SidebarPane, { leftSize, rightSize } from './Sidebars/SidebarPane.svelte'
 
   import type { PaneAPI } from 'paneforge'
   import {
@@ -157,19 +157,18 @@
   import { createSyncService } from '@horizon/core/src/lib/service/sync'
   import TabInvite from './Core/TabInvite.svelte'
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
-  import { provideHomescreen } from './Oasis/homescreen/homescreen'
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
   import {
     createMiniBrowserService,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
-  import HomescreenToggleButton from './Oasis/homescreen/HomescreenToggleButton.svelte'
   import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
   import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
   import { springVisibility } from './motion/springVisibility'
   import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { provideDesktopManager } from '../service/desktop'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -226,18 +225,25 @@
   const toasts = provideToasts()
   const config = provideConfig()
   const syncService = createSyncService(resourceManager)
-  const homescreen = provideHomescreen(telemetry, config.settings)
   const oasis = provideOasis(resourceManager, config)
+  const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
+  const desktopManager = provideDesktopManager({
+    telemetry,
+    oasis,
+    config,
+    toasts,
+    miniBrowserService
+  })
   const tabsManager = createTabsManager(
     resourceManager,
     historyEntriesManager,
     telemetry,
-    homescreen,
-    oasis
+    oasis,
+    desktopManager
   )
-  oasis.attachTabsManager(tabsManager)
 
-  const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
+  oasis.attachTabsManager(tabsManager)
+  desktopManager.attachTabsManager(tabsManager)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
   const userConfigSettings = config.settings
@@ -245,12 +251,16 @@
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
 
-  const homescreenVisible = homescreen.visible
-  const homescreenCustomization = homescreen.customization
+  const desktopEnabled = desktopManager.isEnabled
+  const desktopVisible = desktopManager.activeDesktopVisible
+  const activeDesktop = desktopManager.activeDesktop
 
-  const homescreenBackground = derived(homescreenCustomization, (homescreenCustomization) => {
-    return homescreenCustomization.background
+  const desktopBackgroundStore = derived(desktopManager.activeDesktop, (activeDesktop) => {
+    return activeDesktop?.background_image
   })
+  /* const desktopBackgroundImage = derived(desktopBackgroundStore, (backgroundStore) => {
+    return backgroundStore === undefined ? undefined : backgroundStore
+  })*/
 
   // NOTE: Make sure Dragcula is initialized
   Dragcula.get().isDragging.set(false)
@@ -299,12 +309,6 @@
   const additionalChatContextItems = writable<ContextItem[]>([])
   const newTabSelectedSpaceId = oasis.selectedSpace
   const updateSearchValue = writable('')
-
-  // NOTE: Intended for homescreen v1, as we want to auto close the homescreen when active tab changes
-  $: {
-    if ($userConfigSettings.homescreen && $activeTab === undefined && $tabs.length <= 0)
-      homescreen.setVisible(true)
-  }
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
@@ -774,10 +778,14 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) {
-        showNewTabOverlay.set(0)
-        if ($userConfigSettings.homescreen && $userConfigSettings.homescreen_link_cmdt) {
-          homescreen.setVisible(false)
+        if (
+          $desktopEnabled &&
+          $userConfigSettings.homescreen_link_cmdt &&
+          $showNewTabOverlay === 1
+        ) {
+          desktopManager.setCmdVisible(false)
         }
+        showNewTabOverlay.set(0)
         return
       }
       if ($showScreenshotPicker) {
@@ -841,7 +849,7 @@
     } else if (isModKeyAndKeyPressed(e, 'd')) {
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.Shortcut)
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
-      homescreen.setVisible(!$homescreenVisible)
+      desktopManager.setVisible(!$desktopVisible, { trigger: OpenHomescreenEventTrigger.Shortcut })
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       // this creates a new electron window
       // TEMPORARY: this is only used for testing the invites feature
@@ -886,12 +894,13 @@
       let key = parseInt(
         !window.api.disableTabSwitchingShortcuts ? e.key : e.code.match(/\d$/)?.[0] || '1'
       )
-      if (key == 1 && $userConfigSettings.homescreen && !window.api.disableTabSwitchingShortcuts) {
-        homescreen.setVisible(!$homescreenVisible)
+      if (key == 1 && $desktopEnabled && !window.api.disableTabSwitchingShortcuts) {
+        desktopManager.setVisible(!$desktopVisible, {
+          trigger: OpenHomescreenEventTrigger.Shortcut
+        })
         return
       }
-      const index =
-        key - ($userConfigSettings.homescreen && !window.api.disableTabSwitchingShortcuts ? 2 : 1)
+      const index = key - ($desktopEnabled && !window.api.disableTabSwitchingShortcuts ? 2 : 1)
       const tabs = [...$pinnedTabs, ...$unpinnedTabs]
 
       if (index < 8) {
@@ -3164,14 +3173,14 @@
     window.api.onCreateNewTab(() => {
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
-        if ($userConfigSettings.homescreen && $userConfigSettings.homescreen_link_cmdt) {
-          homescreen.setVisible(false)
+        if ($desktopEnabled && $userConfigSettings.homescreen_link_cmdt) {
+          desktopManager.setCmdVisible(false)
         }
       } else {
         // THIS IS WHERE THE OLD COMMAND BAR GOT CALLED
         $showNewTabOverlay = 1
-        if ($userConfigSettings.homescreen && $userConfigSettings.homescreen_link_cmdt) {
-          homescreen.setVisible(true)
+        if ($desktopEnabled && $userConfigSettings.homescreen_link_cmdt) {
+          desktopManager.setCmdVisible(true)
           // TODO: (maxu/home): Only until felixes new cmdt merge
           tick().then(() => document.querySelector('.drawer-overlay')?.remove())
         }
@@ -3378,12 +3387,32 @@
       window.api.appIsReady()
     }, 2000)
 
+    const desktopId = tabsManager.activeScopeIdValue ?? '$$default'
+    if (get(desktopManager.isEnabled)) {
+      desktopManager.setActive(desktopId)
+    }
+
+    await tick()
+
     const activeTabs = tabsList.filter((tab) => !tab.archived)
 
     if (activeTabs.length === 0) {
       tabsManager.showNewTab()
     } else if ($activeTabId) {
-      tabsManager.makeActive($activeTabId)
+      const tab = activeTabs.find((tab) => tab.id === $activeTabId)
+
+      if (tabsManager.activeScopeIdValue) {
+        if (tabsManager.activeScopeIdValue !== tab?.scopeId || tab.pinned) {
+          desktopManager.setVisible(true, { desktop: desktopId })
+        } else {
+          const desktopOpen = get(desktopManager.activeDesktopVisible)
+          tabsManager.makeActive($activeTabId, undefined, !desktopOpen)
+        }
+      } else if (tab?.scopeId) {
+        desktopManager.setVisible(true, { desktop: desktopId })
+      } else {
+        tabsManager.makeActive($activeTabId)
+      }
     } else {
       tabsManager.makeActive(activeTabs[activeTabs.length - 1].id)
     }
@@ -4341,23 +4370,25 @@
   let leftSidebarHeight = 0
   let rightSidebarWidth = 0
 
-  let backgroundImage = derived(
-    [homescreen.customization, userConfigSettings],
-    ([$customization, $userConfigSettings]) => {
-      // Custom
-      if (
-        $customization.background !== undefined &&
-        $customization.background !== 'transparent' &&
-        $customization.background !== ''
-      ) {
-        return `url('surf://resource/${$customization.background}')`
-      }
-      // Vendor
-      else {
-        return `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`
-      }
-    }
-  )
+  $: backgroundImage =
+    $desktopBackgroundStore === undefined
+      ? writable(undefined)
+      : derived(
+          [$desktopBackgroundStore, userConfigSettings],
+          ([$background, $userConfigSettings]) => {
+            if ($background === undefined) {
+              return ''
+            }
+            // Custom
+            if ($background !== undefined && $background !== 'transparent' && $background !== '') {
+              return `url('surf://resource/${$background}')`
+            }
+            // Vendor
+            else {
+              return `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`
+            }
+          }
+        )
 
   const contextMenuMoveTabsToSpaces = derived(
     [spaces, tabsManager.activeScopeId],
@@ -4536,25 +4567,25 @@
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
   style:--background-image={$backgroundImage}
-  style:--background-opacity={$backgroundImage.startsWith(`url('surf://`) ? 1 : 0.4}
+  style:--background-opacity={$backgroundImage?.startsWith(`url('surf://`) ? 1 : 0.4}
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
   class:horizontalTabs
+  class:verticalTabs={!horizontalTabs}
   class:showLeftSidebar
   class:showRightSidebar
-  style:--left-sidebar-size={leftSidebarWidth + 'px'}
-  style:--left-sidebar-height={leftSidebarHeight + 'px'}
-  style:--right-sidebar-size={(showRightSidebar ? rightSidebarWidth : 0) + 'px'}
+  style:--left-sidebar-size={$leftSize + 'px'}
+  style:--right-sidebar-size={$rightSize + 'px'}
 >
   {#if !horizontalTabs && showCustomWindowActions}
     <div
       class="vertical-window-bar flex flex-row flex-shrink-0 items-center justify-between p-1"
       style="position: relative; z-index: 9999999999;"
-      class:customBg={$userConfigSettings.homescreen &&
-        $homescreenBackground !== undefined &&
-        $homescreenBackground !== '' &&
-        $homescreenBackground !== 'transparent'}
-      class:mutedBg={$homescreenVisible}
+      class:customBg={$desktopEnabled &&
+        $backgroundImage !== undefined &&
+        $backgroundImage !== '' &&
+        $backgroundImage !== 'transparent'}
+      class:mutedBg={$desktopVisible}
     >
       <div>
         <BrowserActions
@@ -4563,12 +4594,10 @@
           {canGoBack}
           {canGoForward}
           {canReload}
-          showHomescreenToggle={$userConfigSettings.homescreen && !horizontalTabs}
           on:go-back={() => $activeBrowserTab?.goBack()}
           on:go-forward={() => $activeBrowserTab?.goForward()}
           on:reload={() => $activeBrowserTab?.reload()}
           on:toggle-sidebar={() => changeLeftSidebarState()}
-          on:toggle-homescreen={() => homescreen.setVisible(!$homescreenVisible)}
         />
       </div>
       <div class="flex flex-row items-center space-x-2 ml-5">
@@ -4594,38 +4623,32 @@
     </div>
   {/if}
 
-  {#if $userConfigSettings.homescreen}
-    <Homescreen
-      newTabOverlayState={$showNewTabOverlay}
-      on:click
-      on:open-space={async (e) => {
-        const { space, background } = e.detail
-        if (!background) {
-          showNewTabOverlay.set(2)
-          newTabSelectedSpaceId.set(space.id)
-        } else {
-          const _space = await oasis.getSpace(space.id)
-          if (_space === null) return
-          await tabsManager.addSpaceTab(_space, {
-            active: false
-          })
-        }
-      }}
-      on:open={(e) => {
-        openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Homescreeen)
-      }}
-      on:open-and-chat={handleOpenAndChat}
-      on:open-space-as-tab={handleCreateTabForSpace}
-      style="--padding: calc({horizontalTabs
-        ? showLeftSidebar
-          ? leftSidebarHeight
-          : 0
-        : 0}px + 1.5em) calc(var(--right-sidebar-size, 0) + 1.5em) 1.5em calc({horizontalTabs
-        ? 0
-        : showLeftSidebar
-          ? leftSidebarWidth
-          : 0}px + 1.5em);"
-    />
+  {#if $desktopEnabled && $desktopVisible && $activeDesktop}
+    {#key $activeDesktop}
+      <Homescreen
+        desktop={$activeDesktop}
+        newTabOverlayState={$showNewTabOverlay}
+        on:click
+        on:open-space={async (e) => {
+          const { space, background } = e.detail
+          if (!background) {
+            showNewTabOverlay.set(2)
+            newTabSelectedSpaceId.set(space.id)
+          } else {
+            const _space = await oasis.getSpace(space.id)
+            if (_space === null) return
+            await tabsManager.addSpaceTab(_space, {
+              active: false
+            })
+          }
+        }}
+        on:open={(e) => {
+          openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Homescreeen)
+        }}
+        on:open-and-chat={handleOpenAndChat}
+        on:open-space-as-tab={handleCreateTabForSpace}
+      />
+    {/key}
   {/if}
 
   <!--
@@ -4652,11 +4675,11 @@
       slot="sidebar"
       id="left-sidebar"
       class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
-      class:homescreenVisible={$homescreenVisible}
-      class:customBg={$userConfigSettings.homescreen &&
-        $homescreenBackground !== undefined &&
-        $homescreenBackground !== '' &&
-        $homescreenBackground !== 'transparent'}
+      class:homescreenVisible={$desktopVisible}
+      class:customBg={$desktopEnabled &&
+        $backgroundImage !== undefined &&
+        $backgroundImage !== '' &&
+        $backgroundImage !== 'transparent'}
       class:horizontalTabs
       bind:clientWidth={leftSidebarWidth}
       bind:clientHeight={leftSidebarHeight}
@@ -4719,30 +4742,25 @@
               {canGoBack}
               {canGoForward}
               {canReload}
-              showHomescreenToggle={$userConfigSettings.homescreen && !horizontalTabs}
               on:go-back={() => $activeBrowserTab?.goBack()}
               on:go-forward={() => $activeBrowserTab?.goForward()}
               on:reload={() => $activeBrowserTab?.reload()}
               on:toggle-sidebar={() => changeLeftSidebarState()}
-              on:toggle-homescreen={() => homescreen.setVisible(!$homescreenVisible)}
             />
           {/if}
 
           <div
             id="sidebar-pinned-tabs-wrapper"
-            class={$pinnedTabs.length !== 0 || (horizontalTabs && $userConfigSettings.homescreen)
+            class={$pinnedTabs.length !== 0 || (horizontalTabs && $desktopEnabled)
               ? 'relative no-drag my-auto rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
               : horizontalTabs
                 ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
                 : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
             class:horizontalTabs
-            class:empty={$pinnedTabs.length === 0 && !$userConfigSettings.homescreen}
+            class:empty={$pinnedTabs.length === 0 && !$desktopEnabled}
             bind:this={pinnedTabsWrapper}
             style="scroll-behavior: smooth;"
           >
-            {#if $userConfigSettings.homescreen && horizontalTabs}
-              <HomescreenToggleButton />
-            {/if}
             <div
               id="sidebar-pinned-tabs"
               class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between min-w-[1ch]`}
@@ -5308,7 +5326,7 @@
     <div
       slot="content"
       class="browser-content h-full w-full flex relative flex-row"
-      class:slide-hide={$homescreenVisible}
+      class:slide-hide={$desktopVisible}
       class:horizontalTabs
     >
       <div
@@ -5455,7 +5473,7 @@
     <div slot="right-sidebar" bind:clientWidth={rightSidebarWidth} class="w-full h-full">
       <Tabs.Root
         bind:value={$rightSidebarTab}
-        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag {$userConfigSettings.homescreen
+        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag {$desktopEnabled
           ? 'customBg'
           : ''}"
         id="sidebar-right"
@@ -5627,7 +5645,7 @@
     $activeBrowserTab?.resetZoom()
   }}
   on:toggle-homescreen={() => {
-    homescreen.setVisible(!$homescreenVisible, OpenHomescreenEventTrigger.CommandMenu)
+    desktopManager.setVisible(!$desktopVisible, { trigger: OpenHomescreenEventTrigger.CommandMenu })
   }}
   on:open-url={(e) => {
     tabsManager.addPageTab(e.detail, {
@@ -5687,12 +5705,6 @@
     & :global(#homescreen-wrapper) {
       position: fixed;
       inset: 0;
-    }
-    &:not(.horizontalTabs) {
-      & :global(#homescreen-wrapper) {
-        //z-index: -10;
-        padding-top: 3rem !important;
-      }
     }
   }
 

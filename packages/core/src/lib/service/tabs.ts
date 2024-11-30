@@ -1,5 +1,12 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { getFileType, isDev, normalizeURL, useLocalStorageStore, useLogScope } from '@horizon/utils'
+import {
+  getFileType,
+  isDev,
+  normalizeURL,
+  useLocalStorageStore,
+  useLogScope,
+  wait
+} from '@horizon/utils'
 import {
   ActivateTabEventTrigger,
   BrowserContextScope,
@@ -16,7 +23,6 @@ import type {
   CreateTabOptions,
   Optional,
   PageMagic,
-  Space,
   SpaceData,
   Tab,
   TabImporter,
@@ -34,7 +40,7 @@ import { getContext, setContext, tick } from 'svelte'
 import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
 import type { OasisService, OasisSpace } from './oasis'
-import type { Homescreen } from '../components/Oasis/homescreen/homescreen'
+import type { DesktopManager } from './desktop'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -86,11 +92,11 @@ export class TabsManager {
   private db: HorizonStore<Tab>
   private resourceManager: ResourceManager
   private telemetry: Telemetry
-  private homescreen: Homescreen
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
   private oasis: OasisService
   historyEntriesManager: HistoryEntriesManager
+  desktopManager: DesktopManager
 
   tabs: Writable<Tab[]>
   activeTabId: Writable<string>
@@ -114,22 +120,21 @@ export class TabsManager {
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
   magicTabs: Readable<(TabPage | TabSpace | TabResource)[]>
-  activeScopeTabId: Readable<string | null>
 
   constructor(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     telemetry: Telemetry,
-    homescreen: Homescreen,
-    oasis: OasisService
+    oasis: OasisService,
+    desktopManager: DesktopManager
   ) {
     const storage = new HorizonDatabase()
     this.db = storage.tabs
     this.resourceManager = resourceManager
     this.historyEntriesManager = historyEntriesManager
     this.telemetry = telemetry
-    this.homescreen = homescreen
     this.oasis = oasis
+    this.desktopManager = desktopManager
     this.log = useLogScope('TabsService')
     this.eventEmitter = new EventEmitter() as TypedEmitter<TabEvents>
     this.closedTabs = new ClosedTabs()
@@ -210,53 +215,6 @@ export class TabsManager {
         | TabSpace
         | TabResource
       )[]
-    })
-
-    // we use derived instead of subscribe so we can listen to changes for both stores, the actual returned value is not used
-    this.activeScopeTabId = derived(
-      [this.activeTabId, this.activeScopeId],
-      ([activeTabId, activeScopeId]) => {
-        const activeTab = this.tabsValue.find((tab) => tab.id === activeTabId)
-
-        if (activeTab?.pinned) return activeTab?.id ?? null
-
-        if (activeScopeId) {
-          if (activeTab?.scopeId === activeScopeId) {
-            return activeTab?.id ?? null
-          }
-
-          const newTabId =
-            this.scopedActiveTabsValue.find((tab) => tab.scopeId === activeScopeId)?.tabId ||
-            this.tabsValue.find((tab) => tab.scopeId === activeScopeId && !tab.pinned)?.id ||
-            this.pinnedTabsValue[0]?.id
-
-          if (newTabId) {
-            this.makeActive(newTabId)
-            return newTabId
-          }
-
-          return null
-        } else if (activeTab?.scopeId) {
-          const newTabId =
-            this.scopedActiveTabsValue.find((tab) => tab.scopeId === null)?.tabId ||
-            this.tabsValue.find((tab) => !tab.scopeId && !tab.pinned)?.id ||
-            this.pinnedTabsValue[0]?.id
-
-          if (newTabId) {
-            this.makeActive(newTabId)
-            return newTabId
-          }
-
-          return null
-        } else {
-          return activeTab?.id ?? null
-        }
-      }
-    )
-
-    // we only have this to make sure the above derived runs
-    this.activeScopeTabId.subscribe((tabId) => {
-      this.log.debug('Active scope tab id changed', tabId)
     })
 
     if (isDev) {
@@ -438,11 +396,13 @@ export class TabsManager {
     )
 
     this.activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
+    this.removeTabFromScopedActiveTabs(tabId)
 
     await tick()
 
-    if (this.homescreen.isEnabled && this.unpinnedTabsValue.length <= 0) {
-      this.homescreen.setVisible(true)
+    this.log.warn('Deleted tab', tabId, this.unpinnedTabsValue)
+    if (get(this.desktopManager.isEnabled) && this.unpinnedTabsValue.length <= 0) {
+      this.desktopManager.setVisible(true)
     } else if (this.activeTabIdValue === tabId) {
       const updatedTabsInOrder = tabsInOrder.filter((tab) => tab.id !== tabId)
       if (updatedTabsInOrder.length > 0) {
@@ -587,7 +547,13 @@ export class TabsManager {
     this.activatedTabs.update((tabs) => tabs.filter((id) => id !== tabId))
   }
 
-  addTabToScopedActiveTabs(tab: Tab) {
+  addTabToScopedActiveTabs(tabOrId: Tab | string) {
+    const tab = typeof tabOrId === 'string' ? this.tabsValue.find((t) => t.id === tabOrId) : tabOrId
+    if (!tab) {
+      this.log.error('Tab not found', tabOrId)
+      return
+    }
+
     const existingTabForSameSpace = this.scopedActiveTabsValue.find(
       (t) => t.scopeId === (tab.scopeId ?? null)
     )
@@ -605,7 +571,16 @@ export class TabsManager {
     })
   }
 
-  async makeActive(tabId: string, trigger?: ActivateTabEventTrigger) {
+  removeTabFromScopedActiveTabs(tabId: string) {
+    this.scopedActiveTabs.update((items) => items.filter((t) => t.tabId !== tabId))
+  }
+
+  removeActiveTabFromScopedActiveTabs(scopeId?: string) {
+    const targetScopeId = scopeId ?? this.activeScopeIdValue
+    this.scopedActiveTabs.update((items) => items.filter((t) => t.scopeId !== targetScopeId))
+  }
+
+  async makeActive(tabId: string, trigger?: ActivateTabEventTrigger, hideHomescreen = true) {
     this.log.debug('Making tab active', tabId)
 
     const tab = this.tabsValue.find((tab) => tab.id === tabId)
@@ -631,10 +606,16 @@ export class TabsManager {
 
     this.activateTab(tabId)
     this.activeTabId.set(tabId)
-    this.addTabToScopedActiveTabs(tab)
+
+    if (!tab.pinned) {
+      this.addTabToScopedActiveTabs(tab)
+    }
 
     this.addToActiveTabsHistory(tabId)
-    this.homescreen.setVisible(false)
+
+    if (hideHomescreen) {
+      this.desktopManager.setVisible(false)
+    }
 
     // TODO: make this work again
     // if ($showAppSidebar) {
@@ -787,7 +768,7 @@ export class TabsManager {
         icon: '',
         spaceId: space.id,
         type: 'space',
-        colors: space.dataValue.colors
+        colors: space.dataValue.colors ?? ['#fff', '#fff']
       },
       opts
     )
@@ -972,19 +953,17 @@ export class TabsManager {
     }
   }
 
-  changeScope(
+  async changeScope(
     scopeId: string | null,
     trigger: ChangeContextEventTrigger = ChangeContextEventTrigger.ContextSwitcher
   ) {
     const currentActiveScope = this.activeScopeIdValue
     this.log.debug('changing active scope from', currentActiveScope, 'to', scopeId)
 
-    if (scopeId === null) {
-      this.activeScopeId.set(null)
-      this.emit('changed-active-scope', null)
-    } else {
+    this.activeScopeId.set(scopeId)
+
+    if (scopeId !== null) {
       this.activeScopeId.set(scopeId)
-      this.emit('changed-active-scope', scopeId)
 
       this.lastUsedScopes.update((scopes) => {
         const filteredScopes = (scopes ?? []).filter((s) => s !== scopeId)
@@ -994,6 +973,51 @@ export class TabsManager {
       this.log.debug('preventing scoped tabs from being offloaded', scopeId)
       this.cancelScopedTabsOffloading(scopeId)
     }
+
+    const desktopId = scopeId ?? '$$default'
+    await this.desktopManager.setActive(desktopId)
+
+    await tick()
+
+    const activeTab = this.tabsValue.find((tab) => tab.id === this.activeTabIdValue)
+    this.log.warn('Active tab', activeTab, 'Active scope', this.activeTabIdValue)
+
+    if (!activeTab?.pinned && (!scopeId || scopeId !== activeTab?.scopeId)) {
+      const lastStoredActiveTab = this.scopedActiveTabsValue.find(
+        (tab) => tab.scopeId === scopeId
+      )?.tabId
+      const fallbackActiveTab = this.tabsValue.find((tab) => {
+        if (scopeId) {
+          return tab.scopeId === scopeId && !tab.pinned
+        } else {
+          return !tab.scopeId && !tab.pinned
+        }
+      })?.id
+
+      this.log.warn(
+        'lastStoredActiveTab',
+        lastStoredActiveTab,
+        'fallbackActiveTab',
+        fallbackActiveTab
+      )
+
+      const newTabId = lastStoredActiveTab || fallbackActiveTab
+
+      if (newTabId) {
+        this.log.warn('newTabId', newTabId)
+        await this.makeActive(newTabId, undefined, false)
+
+        // if the tab was not found in the scoped active tabs, make the desktop visible while using the fallback tab
+        if (!lastStoredActiveTab) {
+          this.desktopManager.setVisible(true, { desktop: desktopId })
+        }
+      } else {
+        this.log.warn('No tab found for default browsing context')
+        this.desktopManager.setVisible(true, { desktop: desktopId })
+      }
+    }
+
+    this.emit('changed-active-scope', scopeId)
 
     // offload tabs from the previous active scope (we intentionally skip it for the default browsing context e.g. no current active scope)
     if (currentActiveScope && currentActiveScope !== scopeId) {
@@ -1102,15 +1126,15 @@ export class TabsManager {
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
     telemetry: Telemetry,
-    homescreen: Homescreen,
-    oasis: OasisService
+    oasis: OasisService,
+    desktopManager: DesktopManager
   ) {
     const tabsService = new TabsManager(
       resourceManager,
       historyEntriesManager,
       telemetry,
-      homescreen,
-      oasis
+      oasis,
+      desktopManager
     )
     setContext(TABS_CONTEXT_KEY, tabsService)
     return tabsService

@@ -244,9 +244,11 @@ export class MiniBrowserService {
     })
   }
 
-  createScopedBrowser(scope: string) {
+  createScopedBrowser(scope: string, skipProviding = false) {
     const key = `${MINI_BROWSER_CONTEXT_KEY}-${scope}`
-    const miniBrowser = MiniBrowser.provide(this.resourceManager, key)
+    const miniBrowser = skipProviding
+      ? new MiniBrowser(key, this.resourceManager)
+      : MiniBrowser.provide(this.resourceManager, key)
 
     this.scopedBrowsers.update((browsers) => {
       browsers[key] = miniBrowser

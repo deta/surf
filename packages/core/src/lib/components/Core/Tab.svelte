@@ -12,7 +12,7 @@
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { BookmarkTabState, Tab, TabPage, TabSpace } from '../../types/browser.types'
-  import { derived, writable, type Writable } from 'svelte/store'
+  import { derived, get, writable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
@@ -30,7 +30,6 @@
   } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  import { useHomescreen } from '../Oasis/homescreen/homescreen'
   import {
     useGlobalMiniBrowser,
     useScopedMiniBrowserAsStore
@@ -39,6 +38,7 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
+  import { useDesktopManager } from '../../service/desktop'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -64,11 +64,12 @@
   const userConfig = useConfig()
   const oasis = useOasis()
   const toasts = useToasts()
-  const homescreen = useHomescreen()
+  const desktopManager = useDesktopManager()
   const globalMiniBrowser = useGlobalMiniBrowser()
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
 
-  const homescreenVisible = homescreen.visible
+  const desktopVisible = desktopManager.activeDesktopVisible
+  const activeDesktopId = desktopManager.activeDesktopId
   const userSettings = userConfig.settings
 
   // Why is there no better way in Svelte :/
@@ -173,7 +174,7 @@
   }
 
   // $: acceptDrop = tab.type === 'space'
-  $: isActive = tab.id === $activeTabId && !removeHighlight && !$homescreenVisible
+  $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
   $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
@@ -269,7 +270,7 @@
       e.preventDefault()
       e.stopPropagation()
 
-      homescreen.setVisible(false)
+      desktopManager.setVisible(false)
       dispatch('select', tab.id)
     }
 
@@ -285,6 +286,22 @@
 
   const handleDoubleClick = (e: MouseEvent) => {
     log.debug('handleDoubleClick', e)
+
+    // find the tab that was active before the first click
+    const lastTabId = get(tabsManager.activeTabsHistory)
+      .reverse()
+      .find((e) => e !== tab.id)
+
+    // Restore previous active tab from before the first click
+    if (lastTabId && tabsManager.activeTabIdValue !== lastTabId) {
+      tabsManager.addTabToScopedActiveTabs(lastTabId)
+    }
+
+    // remove the tab from the selected tabs as the first click will have selected it
+    if (isUserSelected || isSelected) {
+      dispatch('passive-select', tab.id)
+    }
+
     if (tab.type === 'space') {
       tabsManager.changeScope(tab.spaceId, ChangeContextEventTrigger.Tab)
       return
@@ -541,6 +558,7 @@
   )
 
   onMount(() => {
+    log.warn('onMount', tab.id, tab.type)
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
     } else if (tab.type === 'page') {
@@ -569,16 +587,16 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   class:bg-green-200={isActive &&
     $inputUrl === 'surf.featurebase.app' &&
     !tab.magic &&
-    !$homescreenVisible}
+    !$desktopVisible}
   class:bg-sky-200={isActive &&
     $inputUrl !== 'surf.featurebase.app' &&
     !tab.magic &&
-    !$homescreenVisible}
+    !$desktopVisible}
   class:pinned
   class:horizontalTabs
   {horizontalTabs}
   class:hovered
-  class:selected={isSelected && !$homescreenVisible}
+  class:selected={isSelected && !$desktopVisible}
   class:combine-border={(isMagicActive && tab.magic) ||
     (!isMagicActive && (isSelected || isActive))}
   class:magic={tab.magic}

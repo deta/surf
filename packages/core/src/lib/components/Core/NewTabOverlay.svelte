@@ -13,7 +13,6 @@
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
-  import { useHomescreen } from '../Oasis/homescreen/homescreen'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import type { OverlayEvents } from '../Overlay/types'
   import { Icon } from '@horizon/icons'
@@ -76,8 +75,6 @@
   const dispatch = createEventDispatcher<OverlayEvents>()
   const tabsManager = useTabsManager()
   const config = useConfig()
-  const homescreen = useHomescreen()
-  const homescreenVisible = homescreen.visible
   const oasis = useOasis()
   const toasts = useToasts()
   const miniBrowserService = useMiniBrowserService()

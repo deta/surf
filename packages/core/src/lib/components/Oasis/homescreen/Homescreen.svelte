@@ -1,25 +1,19 @@
 <script lang="ts">
-  import { useLogScope, wait } from '@horizon/utils'
-  import { createEventDispatcher, onDestroy, onMount, setContext } from 'svelte'
-  import { get, writable } from 'svelte/store'
+  import { useLogScope } from '@horizon/utils'
+  import { createEventDispatcher, onDestroy, onMount, setContext, tick } from 'svelte'
+  import { get } from 'svelte/store'
   import { useTelemetry } from '../../../service/telemetry'
   import { OasisSpace, useOasis } from '../../../service/oasis'
-  import { useToasts } from '../../../service/toast'
   import { HTMLDragZone } from '@horizon/dragcula'
-  import { useHomescreen } from './homescreen'
-  import {
-    ChangeContextEventTrigger,
-    RemoveHomescreenItemEventTrigger,
-    UpdateHomescreenEventAction
-  } from '@horizon/types'
   import HomescreenItem from './HomescreenItem.svelte'
-  import { useMiniBrowserService } from '../../../service/miniBrowser'
   import MiniBrowser from '../../MiniBrowser/MiniBrowser.svelte'
-  import { useTabsManager } from '../../../service/tabs'
   import { contextMenu } from '../../Core/ContextMenu.svelte'
-  import { useConfig } from '../../../service/config'
-  import { HomescreenController, type GridRect } from './homescreenController'
+  import { DesktopService, useDesktopManager } from '../../../service/desktop'
+  import type { GridRect } from '../../../types/desktop.types'
+  import { ChangeContextEventTrigger, OpenInMiniBrowserEventFrom } from '@horizon/types'
+  import { useToasts } from '@horizon/core/src/lib/service/toast'
 
+  export let desktop: DesktopService
   export let newTabOverlayState: number = 0
 
   const log = useLogScope('Homescreen')
@@ -28,90 +22,39 @@
   }>()
   const telemetry = useTelemetry()
   const oasis = useOasis()
-  const homescreen = useHomescreen()
-  const resourceManager = oasis.resourceManager
-  const tabsManager = useTabsManager()
   const toasts = useToasts()
-  const miniBrowserService = useMiniBrowserService()
-  const scropedMinibrowser = miniBrowserService.createScopedBrowser('homescreen')
+  const desktopManager = useDesktopManager()
+  const resourceManager = oasis.resourceManager
 
-  const spaces = oasis.spaces
-  const bentoItems = homescreen.bentoItems
-  const homescreenVisible = homescreen.visible
-
-  const HOMESCREEN_CONFIG = {
-    gap: 10,
-    cellSize: 50,
-
-    itemStore: $homescreen.bentoItems
-  }
+  const items = desktop.items
+  const desktopVisible = desktopManager.activeDesktopVisible
+  const miniBrowser = desktop.miniBrowser
 
   /// Refs
-  let bentoEl: HTMLElement
-  $: gridTargetPreview = $homescreenController?.gridTargetPreview
-  $: isDrawing = $homescreenController?.isDrawing
-
-  const homescreenController = writable<HomescreenController | null>(null)
+  let desktopEl: HTMLElement
+  const gridTargetPreview = desktop.gridTargetPreview
 
   /// Drag Handlers
   async function handleDrawEnd(e: CustomEvent<GridRect>) {
     // NOTE: Disabled for now
-    return
-    const { cellX, cellY, spanX, spanY } = e.detail
-    const resource = await resourceManager.createResourceNote('', {
-      name: `Untitled Note ${new Date().toLocaleString()}`
-    })
-    bentoItems.update((items) => {
-      items.push(
-        writable({
-          id: crypto.randomUUID(),
-          cellX: cellX,
-          cellY: cellY,
-          spanX: spanX,
-          spanY: spanY,
-          resourceId: resource.id
-        })
-      )
-      return items
-    })
-  }
-
-  function handleRemoveItem(e: CustomEvent<string>) {
-    const itemId = e.detail
-    bentoItems.update((items) => {
-      items = items.filter((i) => get(i).id !== itemId)
-      return items
-    })
-    telemetry.trackRemoveHomescreenItem(RemoveHomescreenItemEventTrigger.ContextMenu)
   }
 
   async function handleOpenItem(e: CustomEvent) {
-    if (!scropedMinibrowser) return
-    scropedMinibrowser?.openResource(e.detail)
+    miniBrowser.openResource(e.detail, { from: OpenInMiniBrowserEventFrom.Homescreeen })
   }
 
-  function handleOpenSpaceAsContext(e: CustomEvent<OasisSpace>) {
+  async function handleOpenSpaceAsContext(e: CustomEvent<OasisSpace>) {
     const space = e.detail
 
     log.debug('open space as context', space)
 
-    tabsManager.changeScope(space.id, ChangeContextEventTrigger.Homescreen)
-    homescreen.setVisible(false)
-  }
-
-  async function handleSetResourceBackground(e: CustomEvent<string>) {
-    const resourceId = e.detail
-
-    homescreen.customization.update((cfg) => {
-      cfg.background = `${resourceId}`
-      return cfg
-    })
-
-    telemetry.trackUpdateHomescreen(UpdateHomescreenEventAction.SetBackground)
+    // Make the currently active tab in the current context not active so the user lands back on the homescreen when they come back
+    desktopManager.tabsManager.removeActiveTabFromScopedActiveTabs()
+    await desktopManager.tabsManager.changeScope(space.id, ChangeContextEventTrigger.Homescreen)
   }
 
   function removeAllItemsLinking(to: { resourceId?: string; spaceId?: string }) {
-    bentoItems.update((v) => {
+    items.update((v) => {
       v = v.filter((e) => {
         if (to.resourceId !== undefined && get(e).resourceId === to.resourceId) return false
         if (to.spaceId !== undefined && get(e).spaceId === to.spaceId) return false
@@ -119,23 +62,27 @@
       })
       return v
     })
+    desktop.store()
   }
 
   function handleResetHomescreen() {
-    bentoItems.set([])
+    const confirmed = confirm(
+      `Are you sure you want to reset your homescreen? This can't be undone.`
+    )
+    if (!confirmed) return
+    items.set([])
+    desktop.store()
+    toasts.success('Homescreen reset successfully!')
   }
-
-  onDestroy(resourceManager.on('deleted', (resourceId) => removeAllItemsLinking({ resourceId })))
-  onDestroy(oasis.on('deleted', (spaceId) => removeAllItemsLinking({ spaceId })))
 
   onMount(async () => {
     // Make sure that all the items on the hoemscreen exists
-    for (const _item of get(bentoItems)) {
+    for (const _item of get(items)) {
       const item = get(_item)
-      if (item.resourceId !== undefined) {
+      if (item.type === 'resource') {
         const exists = (await resourceManager.getResource(item.resourceId)) !== null
         if (!exists) removeAllItemsLinking({ resourceId: item.resourceId })
-      } else if (item.spaceId !== undefined) {
+      } else if (item.type === 'space') {
         const exists = (await oasis.getSpace(item.spaceId)) !== null
         if (!exists) {
           removeAllItemsLinking({ spaceId: item.spaceId })
@@ -143,46 +90,42 @@
       }
     }
 
-    homescreenController.set(
-      new HomescreenController(bentoEl, HOMESCREEN_CONFIG, oasis, tabsManager, toasts, telemetry)
-    )
+    desktop.attachNode(desktopEl)
 
     window.api.onResetBackgroundImage(() => {
-      homescreen.customization.update((cfg) => {
-        cfg.background = ''
-        return cfg
-      })
+      desktop.setBackgroundImage(undefined)
     })
   })
 </script>
 
 <svelte:document
   on:keydown={(e) => {
-    if (get(homescreen.visible) && newTabOverlayState === 0 && e.key === 'Escape') {
-      scropedMinibrowser?.close()
+    if ($desktopVisible && newTabOverlayState === 0 && e.key === 'Escape') {
+      miniBrowser?.close()
     }
   }}
 />
 
-<div id="homescreen-wrapper" class:homescreenVisible={$homescreenVisible} style={$$restProps.style}>
-  <MiniBrowser service={scropedMinibrowser} />
+<div id="homescreen-wrapper" class:homescreenVisible={$desktopVisible} style={$$restProps.style}>
+  {#key miniBrowser.key}
+    <MiniBrowser service={miniBrowser} />
+  {/key}
 
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div
     id="homescreen"
     class="no-drag"
-    class:drawing={$isDrawing}
-    style:--grid_cell_size={HOMESCREEN_CONFIG.cellSize + 'px'}
-    style:--grid_gap={HOMESCREEN_CONFIG.gap + 'px'}
-    bind:this={bentoEl}
+    style:--grid_cell_size={desktop.CELL_SIZE + 'px'}
+    style:--grid_gap={desktop.CELL_GAP + 'px'}
+    bind:this={desktopEl}
     use:HTMLDragZone.action={{
       accepts: () => true
     }}
-    on:DragEnter={(e) => $homescreenController?.handleDragEnter(e)}
-    on:DragLeave={(e) => $homescreenController?.handleDragLeave(e)}
-    on:DragOver={(e) => $homescreenController?.handleDragOver(e)}
-    on:Drop={(e) => $homescreenController?.handleDrop(e)}
-    on:mousedown={(e) => $homescreenController?.handleMouseDown(e)}
+    on:DragEnter={(e) => desktop.handleDragEnter(e)}
+    on:DragLeave={(e) => desktop.handleDragLeave(e)}
+    on:DragOver={(e) => desktop.handleDragOver(e)}
+    on:Drop={(e) => desktop.handleDrop(e)}
+    on:mousedown={(e) => desktop.handleMouseDown(e)}
     on:drawend={(e) => handleDrawEnd(e)}
     use:contextMenu={{
       items: [
@@ -199,24 +142,24 @@
     {#if $gridTargetPreview && $gridTargetPreview.visible}
       <div
         class="drop-preview"
-        style:--cellX={$gridTargetPreview.cellX}
-        style:--cellY={$gridTargetPreview.cellY}
-        style:--spanX={$gridTargetPreview.spanX}
-        style:--spanY={$gridTargetPreview.spanY}
+        style:--cellX={$gridTargetPreview.x}
+        style:--cellY={$gridTargetPreview.y}
+        style:--spanX={$gridTargetPreview.width}
+        style:--spanY={$gridTargetPreview.height}
       />
     {/if}
-    {#if $bentoItems.length === 0}
+    {#if $items.length === 0}
       <div class="empty-state">
         <h3>Your homescreen is empty</h3>
         <p>Drag and drop tabs or items from your stuff onto here.</p>
       </div>
     {/if}
-    {#each $bentoItems as item (get(item))}
+    {#each $items as item (get(item))}
       <HomescreenItem
+        {desktop}
         {item}
-        {homescreenController}
-        on:remove-from-homescreen={handleRemoveItem}
-        on:set-resource-as-background={handleSetResourceBackground}
+        on:remove-from-homescreen={(e) => desktop.removeItem(e.detail)}
+        on:set-resource-as-background={(e) => desktop.setBackgroundImage(e.detail)}
         on:open-space
         on:click
         on:open={handleOpenItem}
@@ -238,10 +181,24 @@
     display: flex;
     flex-direction: column;
 
-    --padding: 1em;
-    padding: var(--padding, 0);
-
     contain: strict;
+
+    --base-padding: 1.5em;
+    :global(.verticalTabs) & {
+      padding: var(--base-padding);
+      padding-left: calc(var(--left-sidebar-size) + var(--base-padding));
+    }
+    :global(.verticalTabs:not(.showLeftSidebar)) & {
+      padding-left: var(--base-padding) !important;
+    }
+
+    :global(.horizontalTabs) & {
+      padding: 1.5em;
+      padding-top: calc(var(--left-sidebar-size) + var(--base-padding));
+    }
+    :global(.horizontalTabs:not(.showLeftSidebar)) & {
+      padding-top: var(--base-padding) !important;
+    }
 
     &:not(.homescreenVisible) {
       //display: none !important;
@@ -254,6 +211,14 @@
       height: 100%;
       overflow: clip;
       overflow-clip-margin: 2px;
+
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fill,
+        minmax(var(--grid_cell_size, 50px), var(--grid_cell_size, 50px))
+      );
+      grid-auto-rows: var(--grid_cell_size, 50px);
+      gap: var(--grid_gap, 10px);
 
       &.drawing * {
         transition: none !important;
@@ -327,8 +292,25 @@
       }
     }
   }
-  :global(#homescreen-wrapper .mini-browser-wrapper) {
-    padding: var(--padding);
+
+  :global(.verticalTabs #homescreen-wrapper .mini-browser-wrapper) {
+    padding: var(--base-padding) !important;
+    padding-left: calc(var(--left-sidebar-size) + var(--base-padding)) !important;
+  }
+  :global(.verticalTabs:not(.showLeftSidebar) #homescreen-wrapper .mini-browser-wrapper) {
+    padding-left: var(--base-padding) !important;
+  }
+
+  :global(.horizontalTabs #homescreen-wrapper .mini-browser-wrapper) {
+    padding: var(--base-padding) !important;
+    padding-top: calc(var(--left-sidebar-size) + var(--base-padding)) !important;
+  }
+  :global(.horizontalTabs:not(.showLeftSidebar) #homescreen-wrapper .mini-browser-wrapper) {
+    padding-top: var(--base-padding) !important;
+  }
+
+  :global(.showRightSidebar #homescreen-wrapper .mini-browser-wrapper) {
+    padding-right: calc(5em + var(--right-sidebar-size) + var(--base-padding)) !important;
   }
 
   :global(body:has(#homescreen-wrapper.homescreenVisible) .teletype-motion > .outer-wrapper) {

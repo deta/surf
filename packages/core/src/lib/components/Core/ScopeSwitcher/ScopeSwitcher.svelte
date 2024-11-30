@@ -1,7 +1,7 @@
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { conditionalArrayItem, useLogScope, wait } from '@horizon/utils'
+  import { conditionalArrayItem, isModKeyPressed, useLogScope, wait } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import {
     SelectDropdown,
@@ -10,11 +10,16 @@
   } from '../../Atoms/SelectDropdown/index'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { contextMenu, type CtxItem } from '../ContextMenu.svelte'
-  import { ChangeContextEventTrigger, DeleteSpaceEventTrigger } from '@horizon/types'
+  import {
+    ChangeContextEventTrigger,
+    DeleteSpaceEventTrigger,
+    OpenHomescreenEventTrigger
+  } from '@horizon/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { tick } from 'svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
 
   export let horizontalTabs = false
 
@@ -22,11 +27,13 @@
   const tabsManager = useTabsManager()
   const oasis = useOasis()
   const toasts = useToasts()
+  const desktopManager = useDesktopManager()
 
   const telemetry = oasis.telemetry
   const spaces = oasis.spaces
   const activeScopeId = tabsManager.activeScopeId
   const lastUsedScopes = tabsManager.lastUsedScopes
+  const desktopVisible = desktopManager.activeDesktopVisible
 
   const focused = writable(false)
   const editName = writable(false)
@@ -134,6 +141,19 @@
     }
   }
 
+  const handleClick = (e: PointerEvent) => {
+    log.debug('click', e)
+    if ($editName) return
+
+    if (isModKeyPressed(e) && $activeScopeId && $activeSpace) {
+      tabsManager.addSpaceTab($activeSpace, { scopeId: $activeScopeId, active: e.shiftKey })
+    } else if (e.shiftKey) {
+      handleOpenSpaceInOasis()
+    } else {
+      toggleHomescreen()
+    }
+  }
+
   const handleDeleteSpace = async (space: OasisSpace) => {
     try {
       const confirmed = confirm(`Are you sure you want to delete ${space.dataValue.folderName}?`)
@@ -195,6 +215,10 @@
     tabsManager.showNewTabOverlay.set(2)
   }
 
+  const toggleHomescreen = () => {
+    desktopManager.setVisible(!$desktopVisible, { trigger: OpenHomescreenEventTrigger.Click })
+  }
+
   const getSpaceContextItems = (space: OasisSpace, active: boolean) =>
     [
       {
@@ -231,6 +255,7 @@
 <div
   class="wrapper no-drag"
   class:horizontal={horizontalTabs}
+  class:activated={$desktopVisible}
   use:contextMenu={{
     canOpen: $activeScopeId !== null,
     items: [
@@ -257,11 +282,7 @@
   }}
 >
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div
-    class="title"
-    on:click={$editName ? null : () => handleOpenSpaceInOasis()}
-    on:dblclick={handleEditName}
-  >
+  <div class="title" on:click={handleClick} on:dblclick={handleEditName}>
     {#if $activeSpace}
       <button class="context-icon" on:click|stopPropagation={() => handleOpenSpaceInOasis()}>
         <SpaceIcon folder={$activeSpace} interactive={false} size="md" />
@@ -339,6 +360,18 @@
       padding: 0.1rem 0.1rem;
       padding-left: 0.5rem;
       border-radius: 0.75rem;
+    }
+
+    &.activated {
+      color: #465b86;
+      background-color: rgb(215, 238, 252);
+      border: 1px solid rgb(135, 207, 245); // border-sky-200
+
+      :global(.dark) & {
+        background-color: rgb(58, 68, 83);
+        border-color: rgb(58, 68, 83);
+        color: rgb(232, 235, 238);
+      }
     }
 
     :global(.dark) & {
