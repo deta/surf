@@ -391,7 +391,6 @@
             { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
             {
               type: 'action',
-              hidden: !$userSettings.experimental_browsing_context,
               icon: generalContext.icon,
               text: 'Open as Context',
               action: handleOpenAsContext

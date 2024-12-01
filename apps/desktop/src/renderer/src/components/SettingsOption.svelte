@@ -2,7 +2,7 @@
   import Switch from '@horizon/core/src/lib/components/Atoms/Switch.svelte'
   import { Icon, type Icons } from '@horizon/icons'
 
-  export let value: boolean
+  export let value: boolean | undefined = undefined
   export let title: string
   export let description: string
   export let icon: Icons | undefined = undefined
@@ -21,7 +21,9 @@
       <p>{description}</p>
     </div>
 
-    <Switch color="#ff4eed" bind:checked={value} on:update />
+    {#if value !== undefined}
+      <Switch color="#ff4eed" bind:checked={value} on:update />
+    {/if}
   </section>
   <slot />
 </div>

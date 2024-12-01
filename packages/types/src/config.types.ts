@@ -23,9 +23,7 @@ export type UserSettings = {
   go_wild_mode: boolean
   annotations_sidebar: boolean
   live_spaces: boolean
-  homescreen: boolean
   homescreen_link_cmdt: boolean
-  experimental_browsing_context: boolean
   /**
    * @deprecated use individual feature flags instead
    */

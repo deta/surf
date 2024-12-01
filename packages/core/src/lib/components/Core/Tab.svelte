@@ -700,7 +700,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       { type: 'separator', hidden: tab.type !== 'page' },
       {
         type: 'action',
-        hidden: tab.type !== 'space' || !$userSettings.experimental_browsing_context,
+        hidden: tab.type !== 'space',
         icon: generalContext.icon,
         text: 'Open as Context',
         action: () => {
@@ -743,10 +743,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           if (url) navigator.clipboard.writeText(url)
         }
       },
-      { type: 'separator', hidden: !$userSettings.experimental_browsing_context },
       {
         type: 'sub-menu',
-        hidden: !$userSettings.experimental_browsing_context,
         icon: 'circle.dot',
         text: 'Move Tabs to Space',
         items: $contextMenuMoveTabsToSpaces

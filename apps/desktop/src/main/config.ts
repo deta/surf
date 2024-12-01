@@ -93,9 +93,7 @@ export const getUserConfig = (path?: string) => {
       go_wild_mode: false,
       live_spaces: false,
       annotations_sidebar: false,
-      homescreen: false,
       homescreen_link_cmdt: false,
-      experimental_browsing_context: false,
       always_include_screenshot_in_chat: false,
       onboarding: {
         completed_welcome: false,
@@ -163,11 +161,6 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
 
-  if (storedConfig.settings.homescreen === undefined) {
-    storedConfig.settings.homescreen = false
-    changedConfig = true
-  }
-
   if (storedConfig.settings.homescreen_link_cmdt === undefined) {
     storedConfig.settings.homescreen_link_cmdt = false
     changedConfig = true
@@ -175,11 +168,6 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.save_to_user_downloads === undefined) {
     storedConfig.settings.save_to_user_downloads = true
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.experimental_browsing_context === undefined) {
-    storedConfig.settings.experimental_browsing_context = false
     changedConfig = true
   }
 

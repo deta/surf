@@ -4828,9 +4828,7 @@
             <div class="bg-sky-50/50 h-1/2 w-1.5 rounded-full"></div>
           {/if}
 
-          {#if $userConfigSettings.experimental_browsing_context}
-            <ScopeSwitcher {horizontalTabs} />
-          {/if}
+          <ScopeSwitcher {horizontalTabs} />
 
           <div
             style:view-transition-name={'app_sidebar_unpinned_tabs'}
@@ -4867,10 +4865,8 @@
                   text: 'Open Tabs in Chat',
                   action: () => startChatWithSelectedTabs()
                 },
-                { type: 'separator', hidden: !$userConfigSettings.experimental_browsing_context },
                 {
                   type: 'sub-menu',
-                  hidden: !$userConfigSettings.experimental_browsing_context,
                   text: 'Move Tabs to Space',
                   items: $contextMenuMoveTabsToSpaces
                 },

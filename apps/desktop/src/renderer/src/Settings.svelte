@@ -283,20 +283,6 @@
             bind:value={userConfigSettings.annotations_sidebar}
             on:update={handleSettingsUpdate}
           />
-
-          <HomescreenOption
-            bind:userConfigSettings
-            on:update={handleSettingsUpdate}
-            on:reset-background-image={handleResetBackgroundImage}
-          />
-
-          <SettingsOption
-            icon="circle-dot"
-            title="Spaces as Browsing Context"
-            description="Use Spaces to separate tabs into different browsing contexts."
-            bind:value={userConfigSettings.experimental_browsing_context}
-            on:update={handleSettingsUpdate}
-          />
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}
@@ -340,6 +326,12 @@
             description="Always include a screenshot of your current webpage when using Chat"
             bind:value={userConfigSettings.always_include_screenshot_in_chat}
             on:update={handleSettingsUpdate}
+          />
+
+          <HomescreenOption
+            bind:userConfigSettings
+            on:update={handleSettingsUpdate}
+            on:reset-background-image={handleResetBackgroundImage}
           />
         {/if}
 
