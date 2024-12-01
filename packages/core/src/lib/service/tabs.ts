@@ -1066,7 +1066,7 @@ export class TabsManager {
       this.scopedActiveTabs.update((items) => items.filter((t) => t.tabId !== tabId))
     }
 
-    await this.update(tabId, { scopeId: scopeId ?? undefined })
+    await this.update(tabId, { scopeId: scopeId ?? undefined, pinned: false })
 
     this.telemetry.trackMoveTabToContext(
       getBrowserContextScopeType(currentScopeId),
