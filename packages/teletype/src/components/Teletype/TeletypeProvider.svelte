@@ -29,23 +29,6 @@
 
       e.preventDefault()
       teletype.executeAction(action)
-    } else if (!e.metaKey && !e.ctrlKey && !e.altKey) {
-      // Prevent teletype from capturing keys targeting other inputs
-      const defaultTTY = document.getElementById('tty-default')
-
-      const shouldPreventCapture =
-        (['INPUT', 'TEXTAREA'].includes(target.tagName) &&
-          target.id !== 'teletype-input-default') ||
-        target.hasAttribute('contenteditable')
-      if (shouldPreventCapture) return
-
-      const letters = e.key.match(/[A-Za-z]/g)
-      const isLetter = e.key.length === 1 && letters !== null
-
-      if (!$isOpen && $captureKeys && isLetter) {
-        e.preventDefault()
-        teletype.openWithText(e.key)
-      }
     }
   }
 

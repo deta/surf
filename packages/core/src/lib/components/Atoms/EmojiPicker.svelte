@@ -4,7 +4,7 @@
   import type { EmojiClickEvent } from 'emoji-picker-element/shared'
   import data from 'emoji-picker-element-data/en/emojibase/data.json?url'
 
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope, wait } from '@horizon/utils'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   let wrapper: HTMLDivElement
@@ -26,6 +26,18 @@
       dispatch('select', emoji.unicode)
     }
   }
+
+  const focusInput = () => {
+    const root = picker.shadowRoot as ShadowRoot | undefined
+    if (!root) return
+
+    const elem = root.querySelector('#search') as HTMLInputElement | null
+    log.debug('Focusing input', elem)
+    if (elem) {
+      elem.focus()
+    }
+  }
+
   $: if ($userConfigSettings.app_style === 'light') {
     picker.classList.add('light')
     picker.classList.remove('dark')
@@ -34,10 +46,12 @@
     picker.classList.add('dark')
   }
 
-  onMount(() => {
+  onMount(async () => {
     picker.addEventListener('emoji-click', handleClick)
     picker.classList.add('no-drag')
     wrapper.appendChild(picker)
+    await wait(100)
+    focusInput()
   })
 
   onDestroy(() => {
