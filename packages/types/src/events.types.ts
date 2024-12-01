@@ -277,7 +277,9 @@ export enum AddResourceToSpaceEventTrigger {
   /** Resource was moved by selecting the space from the tab context menu */
   TabMenu = 'tab_menu',
   /** Tab was saved to a space from the space tab bar */
-  SpaceTabBar = 'space_tab_bar'
+  SpaceTabBar = 'space_tab_bar',
+  /** Resource was moved by dropping it on the space's homescreen */
+  DropHomescreen = 'drop_homescreen'
 }
 
 export enum DeleteSpaceEventTrigger {

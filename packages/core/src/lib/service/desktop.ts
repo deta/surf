@@ -6,6 +6,7 @@ import { tick } from 'svelte'
 import {
   AddHomescreenItemEventSource,
   AddHomescreenItemEventTrigger,
+  AddResourceToSpaceEventTrigger,
   EventContext,
   OpenHomescreenEventTrigger,
   RemoveHomescreenItemEventTrigger,
@@ -20,7 +21,7 @@ import type { TabsManager } from './tabs'
 import type { Toasts } from './toast'
 import type { Resource, ResourceManager } from './resources'
 import type { DragculaDragEvent, Vec2 } from '../../../../dragcula/dist'
-import { DragTypeNames, type DragTypes, type Tab } from '../types'
+import { DragTypeNames, SpaceEntryOrigin, type DragTypes, type Tab } from '../types'
 import { getResourceFromDrag } from '../utils/draganddrop'
 import { createResourcesFromMediaItems, processDrop } from './mediaImporter'
 import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@horizon/utils'
@@ -638,6 +639,22 @@ export class DesktopService {
     })
   }
   private async handleDropResource(drag: DragculaDragEvent<DragTypes>, resource: Resource) {
+    if (this.id !== '$$default') {
+      const space = await this.oasis.getSpace(this.id)
+      if (space) {
+        await this.oasis.addResourcesToSpace(
+          space.id,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+        this.telemetry.trackAddResourceToSpace(
+          resource.type,
+          AddResourceToSpaceEventTrigger.DropHomescreen,
+          false
+        )
+      }
+    }
+
     this.items.update((items) => {
       items.push(
         writable({
@@ -694,6 +711,22 @@ export class DesktopService {
       throw e
     }
     toast.dismiss()
+
+    if (this.id !== '$$default') {
+      const space = await this.oasis.getSpace(this.id)
+      if (space) {
+        await this.oasis.addResourcesToSpace(
+          space.id,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+        this.telemetry.trackAddResourceToSpace(
+          resource.type,
+          AddResourceToSpaceEventTrigger.DropHomescreen,
+          false
+        )
+      }
+    }
 
     this.telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Homescreen, false)
 
