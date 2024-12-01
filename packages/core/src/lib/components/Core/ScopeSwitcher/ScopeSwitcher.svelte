@@ -357,9 +357,12 @@
     // border: 1px solid hsla(0,0%,100%,.1); // border-white/10
 
     &.horizontal {
-      padding: 0.1rem 0.1rem;
+      padding: 0rem 0.2rem;
       padding-left: 0.5rem;
       border-radius: 0.75rem;
+      .input, .title {
+        font-size: 0.938rem;
+      }
     }
 
     &.activated {
@@ -454,8 +457,8 @@
     .trigger {
       padding: 0.15rem;
       font-size: 0.9rem;
-      height: 2rem;
-      width: 2rem;
+      height: 1.5rem;
+      width: 1.5rem;
       border-radius: calc(10px - 0.15rem);
     }
 
