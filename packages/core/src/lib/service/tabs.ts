@@ -340,7 +340,7 @@ export class TabsManager {
       pinned: false,
       magic: false,
       index: newIndex,
-      scopeId: this.activeScopeIdValue ?? undefined,
+      scopeId: opts?.scopeId ?? this.activeScopeIdValue ?? undefined,
       ...tab
     })
 
@@ -359,7 +359,7 @@ export class TabsManager {
         return selectedTabs
       })
 
-      this.makeActive(newTab.id)
+      this.makeActive(newTab.id, undefined, true, false)
     }
 
     this.emit('created', newTab, active)
@@ -580,7 +580,12 @@ export class TabsManager {
     this.scopedActiveTabs.update((items) => items.filter((t) => t.scopeId !== targetScopeId))
   }
 
-  async makeActive(tabId: string, trigger?: ActivateTabEventTrigger, hideHomescreen = true) {
+  async makeActive(
+    tabId: string,
+    trigger?: ActivateTabEventTrigger,
+    hideHomescreen = true,
+    closeOverlay = true
+  ) {
     this.log.debug('Making tab active', tabId)
 
     const tab = this.tabsValue.find((tab) => tab.id === tabId)
@@ -589,7 +594,13 @@ export class TabsManager {
       return
     }
 
-    this.showNewTabOverlay.set(0)
+    if (closeOverlay) {
+      this.showNewTabOverlay.set(0)
+    }
+
+    if (tab.scopeId !== (this.activeScopeIdValue ?? undefined)) {
+      this.changeScope(tab.scopeId ?? null, ChangeContextEventTrigger.Tab)
+    }
 
     const browserTab = this.browserTabsValue[tabId]
 
@@ -1005,7 +1016,7 @@ export class TabsManager {
 
       if (newTabId) {
         this.log.warn('newTabId', newTabId)
-        await this.makeActive(newTabId, undefined, false)
+        await this.makeActive(newTabId, undefined, false, false)
 
         // if the tab was not found in the scoped active tabs, make the desktop visible while using the fallback tab
         if (!lastStoredActiveTab) {
@@ -1033,7 +1044,7 @@ export class TabsManager {
     )
   }
 
-  async scopeTab(tabId: string, scopeId: string | null) {
+  async scopeTab(tabId: string, scopeId: string | null, closeOverlay?: boolean) {
     this.log.debug('Scoping tab', tabId, 'to', scopeId)
 
     const tab = this.tabsValue.find((tab) => tab.id === tabId)
@@ -1043,9 +1054,9 @@ export class TabsManager {
       this.log.debug('Changing active tab', tabId)
       const lastActiveTabId = this.unpinnedTabsValue.find((tab) => tab.id !== tabId)?.id
       if (lastActiveTabId) {
-        this.makeActive(lastActiveTabId)
+        this.makeActive(lastActiveTabId, undefined, closeOverlay)
       } else {
-        this.makeActive(this.pinnedTabsValue[0].id)
+        this.makeActive(this.pinnedTabsValue[0].id, undefined, closeOverlay)
       }
     }
 

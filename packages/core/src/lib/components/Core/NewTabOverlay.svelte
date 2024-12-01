@@ -63,6 +63,7 @@
   import { springVisibility } from '../motion/springVisibility'
   import { springAppear } from '../motion/springAppear'
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
+  import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
 
   export let activeTabs: Tab[] = []
   export let showTabSearch: Writable<number>
@@ -351,6 +352,12 @@
     openResourceDetailsModal(e.detail)
   }
 
+  const handleOpenPageInMiniBrowser = async (e: CustomEvent<string>) => {
+    scopedMiniBrowser.openWebpage(e.detail, {
+      from: OpenInMiniBrowserEventFrom.Oasis
+    })
+  }
+
   const handleCloseOverlay = () => {
     showTabSearch.set(0)
   }
@@ -484,6 +491,11 @@
 
   const closeOverlay = () => {
     showTabSearch.set(0)
+  }
+
+  const handleReload = async () => {
+    await tick()
+    await loadEverything()
   }
 
   const cleanupDragStuck = () => {
@@ -654,6 +666,15 @@
           <div class="stuff-view h-full w-full relative">
             <Tooltip rootID="stuff" />
 
+            {#if isInboxSpace}
+              <ContextTabsBar
+                on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                on:handled-drop={handlePostDropOnSpace}
+                on:select-space={handleSpaceSelected}
+                on:reload={handleReload}
+              />
+            {/if}
+
             {#if !$isBuiltInSpace}
               {#key $selectedSpaceId}
                 {#await new Promise((resolve) => setTimeout(resolve, 175))}
@@ -668,6 +689,7 @@
                     {historyEntriesManager}
                     on:open={handleOpen}
                     on:open-and-chat
+                    on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
                     on:go-back={() => oasis.changeSelectedSpace(defaultSpaceId)}
                     on:deleted={handleSpaceDeleted}
                     on:updated-space={handleUpdatedSpace}

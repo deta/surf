@@ -132,6 +132,8 @@ export enum ActivateTabEventTrigger {
   ChatCitation = 'chat_citation',
   /** Tab was activated by opening a item in the search */
   Search = 'search',
+  /** Tab was activated by clicking it in Oasis */
+  Oasis = 'oasis',
   /** Tab was activated by selecting inside the command menu */
   CommandMenu = 'command_menu'
 }
@@ -212,7 +214,9 @@ export enum SaveToOasisEventTrigger {
   /** Saved from the mini browser */
   MiniBrowser = 'mini_browser',
   /* When dropped onto homescreen -> Saving */
-  Homescreen = 'homescreen'
+  Homescreen = 'homescreen',
+  /* Saved from the space tab bar */
+  SpaceTabBar = 'space_tab_bar'
 }
 
 export enum EventContext {
@@ -271,7 +275,9 @@ export enum AddResourceToSpaceEventTrigger {
   /** Resource was dropped into the space */
   Drop = 'drop',
   /** Resource was moved by selecting the space from the tab context menu */
-  TabMenu = 'tab_menu'
+  TabMenu = 'tab_menu',
+  /** Tab was saved to a space from the space tab bar */
+  SpaceTabBar = 'space_tab_bar'
 }
 
 export enum DeleteSpaceEventTrigger {

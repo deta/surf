@@ -216,6 +216,7 @@ export type CreateTabOptions = {
   active?: boolean
   placeAtEnd?: boolean
   index?: number
+  scopeId?: string
   trigger?: CreateTabEventTrigger
 }
 

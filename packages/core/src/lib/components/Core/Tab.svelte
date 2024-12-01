@@ -58,6 +58,8 @@
   export let removeHighlight = false
   export let isSelected = false
   export let isMagicActive = false
+  export let disableContextmenu = false
+  export let inStuffBar = false
 
   const log = useLogScope('Tab')
   const tabsManager = useTabsManager()
@@ -628,6 +630,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   class:active={tab.id === $activeTabId}
   class:pinned
   class:horizontalTabs
+  class:inStuffBar
   {horizontalTabs}
   class:hovered
   class:selected={isSelected && !desktopVisible}
@@ -677,9 +680,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }}
   use:contextMenu={{
     canOpen:
-      isMagicActive ||
-      $selectedTabs.size <= 1 ||
-      Array.from($selectedTabs.values()).find((e) => e.id === tab.id) === undefined,
+      (isMagicActive ||
+        $selectedTabs.size <= 1 ||
+        Array.from($selectedTabs.values()).find((e) => e.id === tab.id) === undefined) &&
+      !disableContextmenu,
     items: [
       {
         type: 'action',
@@ -889,7 +893,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60] cursor-text'
             : `whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
         >
-          {#if hovered && isActive && tab.type === 'page'}
+          {#if hovered && isActive && tab.type === 'page' && !inStuffBar}
             {$inputUrl}
           {:else if tab.type === 'space'}
             {tab.title}
@@ -949,6 +953,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               inputPlaceholder="Select a Space to save to…"
               open={saveToSpacePopoverOpened}
               openOnHover={500}
+              disabled={disableContextmenu}
               side="right"
               keepHeightWhileSearching
               on:select={handleSaveResourceInSpace}
@@ -1074,9 +1079,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       0s ease-in-out,
       transform 0s;
 
-    &.active:not(.combine-border + .combine-border):not(.combine-border ~ .combine-border):not(
-        :has(+ .combine-border)
-      ) {
+    &.active:not(.inStuffBar):not(.combine-border + .combine-border):not(
+        .combine-border ~ .combine-border
+      ):not(:has(+ .combine-border)) {
       background: paint(squircle) !important;
       --squircle-radius-top-left: 16px;
       --squircle-radius-top-right: 16px;
@@ -1118,7 +1123,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       }
 
       // Horizontal unpinned
-      &.horizontalTabs {
+      &.horizontalTabs:not(.inStuffBar) {
         background: paint(squircle);
         --squircle-radius: 8px;
         --squircle-smooth: 0.28;
@@ -1162,6 +1167,52 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
           --squircle-shadow: 0px 2px 2px -1px rgba(88, 104, 132, 0.09),
             0px -2px 0px -1px rgba(88, 104, 132, 0.03);
+        }
+      }
+
+      &.inStuffBar {
+        background: paint(squircle);
+        --squircle-radius: 8px;
+        --squircle-smooth: 0.28;
+        --squircle-fill: rgba(224, 242, 254, 0.6);
+
+        :global(.dark) & {
+          --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
+        }
+
+        &:hover {
+          --squircle-fill: rgb(224 242 254);
+          :global(.dark) & {
+            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+          }
+        }
+
+        &.selected {
+          background: paint(squircle);
+          --squircle-outline-color: rgba(0, 0, 0, 0);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
+            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
+          --squircle-fill: rgb(190, 229, 255);
+        }
+
+        &.active {
+          margin-top: -1.25px;
+          background: paint(squircle);
+          --squircle-radius-top-left: 9px !important;
+          --squircle-radius-top-right: 9px !important;
+          --squircle-radius-bottom-left: 9px !important;
+          --squircle-radius-bottom-right: 9px !important;
+          --squircle-smooth: 0.25 !important;
+          --squircle-fill: rgb(221, 241, 255);
+          // --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+          //   inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
+          //   inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
+          //   inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
+          //   inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
+          // --squircle-shadow: 0px 2px 2px -1px rgba(88, 104, 132, 0.09),
+          //   0px -2px 0px -1px rgba(88, 104, 132, 0.03);
         }
       }
     }

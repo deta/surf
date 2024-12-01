@@ -22,13 +22,15 @@
     isModKeyAndKeyPressed,
     truncate,
     parseStringIntoUrl,
-    isMac
+    isMac,
+    hover,
+    flyAndScale
   } from '@horizon/utils'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import Chat from '../Chat/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
     Resource,
     ResourceManager,
@@ -57,18 +59,24 @@
     processDrop
   } from '../../service/mediaImporter'
 
-  import { useToasts } from '../../service/toast'
+  import { useToasts, type ToastItem } from '../../service/toast'
   import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
-  import { fly, slide } from 'svelte/transition'
+  import { fade, fly, slide } from 'svelte/transition'
   import OasisSpaceSettings from './OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
-  import { DragculaDragEvent } from '@horizon/dragcula'
-  import type { ChatWithSpaceEvent, Tab, TabPage } from '../../types/browser.types'
+  import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
+  import type {
+    BookmarkTabState,
+    ChatWithSpaceEvent,
+    Tab,
+    TabPage
+  } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
+    ActivateTabEventTrigger,
     AddResourceToSpaceEventTrigger,
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
@@ -88,6 +96,8 @@
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import FilterSelector, { type FilterItem } from './FilterSelector.svelte'
   import { blobToDataUrl, blobToSmallImageUrl } from '../../utils/screenshot'
+  import TabItem from '../Core/Tab.svelte'
+  import ContextTabsBar from './ContextTabsBar.svelte'
 
   export let spaceId: string
   export let active: boolean = false
@@ -115,6 +125,7 @@
     'open-space-and-chat': ChatWithSpaceEvent
     'handled-drop': void
     'created-space': OasisSpace
+    'open-page-in-mini-browser': string
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -140,6 +151,9 @@
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<OasisSpace | null>(null)
+  const showScopedTabs = writable(false)
+  const forceShowScopedTabs = writable(false)
+  const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
@@ -155,6 +169,8 @@
   const everythingContents = writable<ResourceSearchResultItem[]>([])
   const newlyLoadedResources = writable<string[]>([])
   const processingSourceItems = writable<string[]>([])
+
+  let showScopedTabsTimeout: ReturnType<typeof setTimeout>
 
   $: spaceData = $space?.data
 
@@ -174,6 +190,12 @@
       return ids
     }
   )
+
+  const scopedTabs = derived([tabsManager.tabs], ([$tabs]) => {
+    return $tabs.filter((tab) => !tab.pinned && tab.scopeId === spaceId)
+  })
+
+  $: log.debug('scoped tabs', $scopedTabs)
 
   // $: if (spaceId === 'all') {
   //   loadEverything()
@@ -1065,130 +1087,6 @@
 
     drag.continue()
     toast.success(`Resources saved to Space!`)
-    return
-    /*if (
-      ['sidebar-pinned-tabs', 'sidebar-unpinned-tabs', 'sidebar-magic-tabs'].includes(
-        drag.from?.id || ''
-      ) &&
-      !drag.metaKey
-    ) {
-      drag.item!.dragEffect = 'copy' // Make sure tabs are always copy from sidebar
-    }*/
-
-    let resourceIds: string[] = []
-    try {
-      if (drag.isNative) {
-        const event = new DragEvent('drop', { dataTransfer: drag.data })
-        log.debug('Dropped native', event)
-
-        const isOwnDrop = event.dataTransfer?.types.includes(MEDIA_TYPES.RESOURCE)
-        if (isOwnDrop) {
-          log.debug('Own drop detected, ignoring...')
-          log.debug(event.dataTransfer?.files)
-          return
-        }
-
-        const parsed = await processDrop(event)
-        log.debug('Parsed', parsed)
-
-        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
-        log.debug('Resources', newResources)
-
-        for (const r of newResources) {
-          resourceIds.push(r.id)
-          telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, true)
-        }
-      } else {
-        log.debug('Dropped dragcula', drag.data)
-
-        const existingResources: string[] = []
-
-        const dragData = drag.data as { 'surf/tab': Tab; 'horizon/resource/id': string }
-        if (dragData['surf/tab'] !== undefined) {
-          if (dragData['horizon/resource/id'] !== undefined) {
-            const resourceId = dragData['horizon/resource/id']
-            resourceIds.push(resourceId)
-            existingResources.push(resourceId)
-          } else if (dragData['surf/tab'].type === 'page') {
-            const tab = dragData['surf/tab'] as TabPage
-
-            if (tab.resourceBookmark) {
-              log.debug('Detected resource from dragged tab', tab.resourceBookmark)
-              resourceIds.push(tab.resourceBookmark)
-              existingResources.push(tab.resourceBookmark)
-            } else {
-              log.debug('Detected page from dragged tab', tab)
-              const newResources = await createResourcesFromMediaItems(
-                resourceManager,
-                [
-                  {
-                    type: 'url',
-                    data: new URL(tab.currentLocation || tab.initialLocation),
-                    metadata: {}
-                  }
-                ],
-                ''
-              )
-              log.debug('Resources', newResources)
-
-              for (const r of newResources) {
-                resourceIds.push(r.id)
-                telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, true)
-              }
-            }
-          }
-        }
-
-        if (existingResources.length > 0) {
-          await Promise.all(
-            existingResources.map(async (resourceId) => {
-              const resource = await resourceManager.getResource(resourceId)
-              if (!resource) {
-                log.error('Resource not found')
-                return
-              }
-
-              log.debug('Detected resource from dragged tab', resource)
-
-              const isSilent =
-                resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT) !==
-                undefined
-              if (isSilent) {
-                // remove silent tag if it exists sicne the user is explicitly adding it
-                log.debug('Removing silent tag from resource', resourceId)
-                await resourceManager.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.SILENT)
-                telemetry.trackSaveToOasis(resource.type, SaveToOasisEventTrigger.Drop, true)
-              }
-            })
-          )
-        }
-      }
-
-      if (spaceId !== 'all') {
-        await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.ManuallyAdded)
-        await loadSpaceContents(spaceId, true)
-
-        resourceIds.forEach((id) => {
-          resourceManager.getResource(id).then((resource) => {
-            if (resource) {
-              telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.Drop)
-            }
-          })
-        })
-      } else {
-        await loadEverything()
-      }
-    } catch (error) {
-      log.error('Error dropping:', error)
-      toast.error('Error dropping: ' + (error as Error).message)
-      drag.abort()
-      return
-    }
-    drag.continue()
-
-    toast.success(
-      `Resources ${drag.isNative ? 'added' : drag.effect === 'move' ? 'moved' : 'copied'}!`
-    )
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -1353,10 +1251,6 @@
     }
   }
 
-  const handleGoBack = () => {
-    dispatch('go-back')
-  }
-
   const handleUpdateExistingSpace = async (
     e: CustomEvent<CreateNewSpaceEvents['update-existing-space']>
   ) => {
@@ -1443,6 +1337,28 @@
     log.debug('Filter type change:', e.detail)
     loadSpaceContents(spaceId, true)
   }
+
+  const handleOpenPageMiniBrowser = async (e: CustomEvent<string>) => {
+    const url = e.detail
+    log.debug('Open page mini browser', url)
+
+    if (handleEventsOutside) {
+      dispatch('open-page-in-mini-browser', url)
+    } else {
+      // openResourceDetailsModal(tab.resourceBookmark || tab.chatResourceBookmark)
+      scopedMiniBrowser.openWebpage(url, { from: OpenInMiniBrowserEventFrom.PinnedTab })
+    }
+  }
+
+  const handleReload = async () => {
+    await loadSpaceContents(spaceId, true)
+  }
+
+  onDestroy(
+    tabsManager.showNewTabOverlay.subscribe((value) =>
+      console.trace('[OasisSpace]: showNewTabOverlay', value)
+    )
+  )
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1611,6 +1527,80 @@
       </div>
     {/if}
 
+    <ContextTabsBar
+      {spaceId}
+      on:open-page-in-mini-browser={handleOpenPageMiniBrowser}
+      on:handled-drop
+      on:select-space
+      on:reload={handleReload}
+    />
+
+    <!-- {#if $scopedTabs.length > 0}
+      <div
+        class="scoped-tabs-wrapper"
+        axis="horizontal"
+        class:show-tabs={$showScopedTabs || $forceShowScopedTabs}
+        on:mouseleave={handleScopedTabMouseLeave}
+        use:HTMLAxisDragZone.action={{
+          accepts: (drag) => {
+            if (
+              drag.isNative ||
+              drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+              drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+              drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+              drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
+            ) {
+              return true
+            }
+            return false
+          }
+        }}
+        on:Drop={handleDropTapBar}
+        on:DragEnter={() => showScopedTabs.set(true)}
+      >
+        {#if $showScopedTabs || $forceShowScopedTabs}
+          <div
+            id="scoped-tabs-list"
+            class="scoped-tabs-list-wrapper"
+            bind:clientWidth={maxWidth}
+            transition:flyAndScale={{ duration: 150 }}
+          >
+            <div class="scoped-tabs-list">
+              {#each $scopedTabs as tab (tab.id)}
+                <TabItem
+                  {tab}
+                  activeTabId={tabsManager.activeTabId}
+                  spaces={oasis.spaces}
+                  bookmarkingState={$bookmarkingTabsState[tab.id]}
+                  pinned={false}
+                  isUserSelected={false}
+                  horizontalTabs={true}
+                  disableContextmenu
+                  {tabSize}
+                  on:select={handleTabSelect}
+                  on:passive-select={handleTabSelectPassive}
+                  on:multi-select={handleTabMultiSelect}
+                  on:bookmark={(e) => handleBookmark(tab)}
+                />
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div
+            id="scoped-tabs-indicators"
+            class="scoped-tabs-indicators-wrapper"
+            in:fade={{ delay: 100, duration: 150 }}
+          >
+            <div class="scoped-tabs-indicators" on:mouseenter={handleScopedTabMouseEnter}>
+              {#each $scopedTabs as tab (tab.id)}
+                <div class="tab-indicator"></div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if} -->
+
     {#if $spaceResourceIds.length > 0 && !isEverythingSpace}
       <OasisResourcesView
         resourceIds={spaceResourceIds}
@@ -1688,7 +1678,6 @@
   .wrapper {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
     height: 100%;
     border-radius: 12px;
   }

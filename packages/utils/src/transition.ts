@@ -6,12 +6,12 @@ type FlyAndScaleParams = {
   x?: number
   start?: number
   duration?: number
+  delay?: number
 }
 
-export const flyAndScale = (
-  node: Element,
-  params: FlyAndScaleParams = { y: -8, x: 0, start: 0.95, duration: 150 }
-): TransitionConfig => {
+export const flyAndScale = (node: Element, params: FlyAndScaleParams = {}): TransitionConfig => {
+  const fullParams = Object.assign({ y: -8, x: 0, start: 0.95, duration: 150, delay: 0 }, params)
+
   const style = getComputedStyle(node)
   const transform = style.transform === 'none' ? '' : style.transform
 
@@ -33,12 +33,12 @@ export const flyAndScale = (
   }
 
   return {
-    duration: params.duration ?? 200,
-    delay: 0,
+    duration: fullParams.duration,
+    delay: fullParams.delay,
     css: (t) => {
-      const y = scaleConversion(t, [0, 1], [params.y ?? 5, 0])
-      const x = scaleConversion(t, [0, 1], [params.x ?? 0, 0])
-      const scale = scaleConversion(t, [0, 1], [params.start ?? 0.95, 1])
+      const y = scaleConversion(t, [0, 1], [fullParams.y, 0])
+      const x = scaleConversion(t, [0, 1], [fullParams.x, 0])
+      const scale = scaleConversion(t, [0, 1], [fullParams.start, 1])
 
       return styleToString({
         transform: `${transform} translate3d(${x}px, ${y}px, 0) scale(${scale})`,
