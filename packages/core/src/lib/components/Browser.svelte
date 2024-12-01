@@ -3910,7 +3910,7 @@
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
       tabs.update((oldTabs) => {
-        let unpinnedTabsArray = oldTabs.filter((t) => !t.pinned).sort((a, b) => a.index - b.index)
+        let unpinnedTabsArray = get(unpinnedTabs) // oldTabs.filter((t) => !t.pinned).sort((a, b) => a.index - b.index)
         let pinnedTabsArray = get(pinnedTabs)
         let magicTabsArray = get(magicTabs)
 
@@ -4003,7 +4003,9 @@
         magicTabsArray = updateIndices(magicTabsArray)
 
         // Combine all lists back together
-        const newTabs = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+        const combinedList = [...unpinnedTabsArray, ...pinnedTabsArray, ...magicTabsArray]
+        const missingTabs = oldTabs.filter((tab) => !combinedList.find((t) => t.id === tab.id))
+        const newTabs = [...combinedList, ...missingTabs]
 
         log.warn('New tabs', [...newTabs])
 
