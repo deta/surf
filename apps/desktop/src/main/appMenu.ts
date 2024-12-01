@@ -218,6 +218,11 @@ const template = [
         id: 'importFiles',
         label: 'Import Files',
         click: () => importFiles()
+      },
+      {
+        id: 'importBookmarks',
+        label: 'Import Bookmarks',
+        click: () => ipcSenders.openImporter()
       }
     ]
   },

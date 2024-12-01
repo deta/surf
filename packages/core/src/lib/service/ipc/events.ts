@@ -123,6 +123,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   openInvitePage: ipcService.addEvent<void>('open-invite-page'),
   openFeedbackPage: ipcService.addEvent<void>('open-feedback-page'),
   openWelcomePage: ipcService.addEvent<void>('open-welcome-page'),
+  openImporter: ipcService.addEvent<void>('open-importer'),
   browserFocusChange: ipcService.addEvent<BrowserFocusChange>('browser-focus-change'),
   adBlockerStateChange: ipcService.addEvent<AdblockerStateChange>('adblocker-state-change'),
   trackEvent: ipcService.addEvent<TrackEvent>('track-event'),

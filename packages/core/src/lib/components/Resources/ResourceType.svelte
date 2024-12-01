@@ -44,8 +44,4 @@
     font-weight: 500;
     color: inherit;
   }
-
-  .label {
-    background: red;
-  }
 </style>

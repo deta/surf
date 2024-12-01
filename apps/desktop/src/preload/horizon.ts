@@ -375,6 +375,14 @@ const api = {
     }
   },
 
+  onOpenImporter: (callback: () => void) => {
+    try {
+      IPC_EVENTS_RENDERER.openImporter.on(() => callback())
+    } catch (error) {
+      // noop
+    }
+  },
+
   onBrowserFocusChange: (callback: (state: 'focused' | 'unfocused') => void) => {
     IPC_EVENTS_RENDERER.browserFocusChange.on((_, { state }) => {
       callback(state)

@@ -813,7 +813,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else if tab.type === 'horizon'}
       <Icon name="grid" size="16px" />
     {:else if tab.type === 'importer'}
-      <Icon name="code" size="16px" />
+      <Icon name="save" size="16px" style="transform: rotate(180deg)" />
     {:else if tab.type === 'history'}
       <Icon name="history" size="16px" />
     {:else if tab.type === 'space' && space}

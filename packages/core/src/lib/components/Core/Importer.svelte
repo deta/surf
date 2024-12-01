@@ -14,6 +14,7 @@
   import ResourceType from '../Resources/ResourceType.svelte'
   import { ResourceTag, type ResourceManager } from '../../service/resources'
   import type { BatchFetcher } from '@horizon/web-parser/src/importers/batcher'
+  import { Icon } from '@horizon/icons'
 
   export let resourceManager: ResourceManager
 
@@ -39,14 +40,15 @@
 
   const running = writable(false)
   const fetchDone = writable(false)
-  const dryRun = writable(true)
+  const dryRun = writable(false)
   const processBatchSize = writable(PROCESS_BATCH_SIZE)
-  const tab = writable<'webcrate' | 'twitter' | 'csv' | 'browser' | 'youtube'>('twitter')
+  const tab = writable<'webcrate' | 'twitter' | 'csv' | 'chrome' | 'firefox' | 'youtube'>('chrome')
 
-  let showDebug = true
+  let showDebug = false
   let csvData = ''
   let htmlBookmarksData = ''
   let youtubePlaylistUrl = ''
+  let fileInput: HTMLInputElement
   let batchFetcher: BatchFetcher<DetectedResource>
 
   $: log.debug('Queue changed', $queue)
@@ -58,7 +60,7 @@
     log.debug('Import stopped')
   }
 
-  $: if ($processed.length + $failed.length === LIMIT) {
+  $: if ($queue.length + $processing.length === 0) {
     running.set(false)
     log.debug('Import finished')
   }
@@ -66,6 +68,22 @@
   $: if ($running && $queue.length > 0 && $processing.length === 0) {
     log.debug('Queue is not empty, processing next item')
     processNextItem()
+  }
+
+  const handleFileInputChange = (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+
+    log.debug('File input change', file)
+
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        htmlBookmarksData = reader.result as string
+        log.debug('Read file', htmlBookmarksData)
+      }
+      reader.readAsText(file)
+    }
   }
 
   const fillQueue = async () => {
@@ -116,7 +134,7 @@
       fetchDone.set(true)
 
       queue.update((prev) => [...prev, ...resources])
-    } else if ($tab === 'browser') {
+    } else if ($tab === 'chrome' || $tab === 'firefox') {
       const parser = new DOMParser()
       const doc = parser.parseFromString(htmlBookmarksData, 'text/html')
       const links = Array.from(doc.querySelectorAll('a'))
@@ -274,24 +292,27 @@
 <div class="wrapper">
   <div class="content">
     <div class="header">
-      <h1>Importer 5000™</h1>
+      <h1>Import Bookmarks</h1>
 
       <div class="tabs">
-        <button on:click={() => tab.set('twitter')} class="tab" class:active={$tab === 'twitter'}
-          >Twitter</button
+        <button on:click={() => tab.set('chrome')} class="tab" class:active={$tab === 'chrome'}
+          >Chrome</button
+        >
+        <button on:click={() => tab.set('firefox')} class="tab" class:active={$tab === 'firefox'}
+          >Firefox</button
         >
         <button on:click={() => tab.set('csv')} class="tab" class:active={$tab === 'csv'}
           >CSV</button
         >
-        <button on:click={() => tab.set('webcrate')} class="tab" class:active={$tab === 'webcrate'}
+        <!-- <button on:click={() => tab.set('twitter')} class="tab" class:active={$tab === 'twitter'}
+          >Twitter</button
+        > -->
+        <!-- <button on:click={() => tab.set('webcrate')} class="tab" class:active={$tab === 'webcrate'}
           >WebCrate</button
-        >
-        <button on:click={() => tab.set('youtube')} class="tab" class:active={$tab === 'youtube'}
+        > -->
+        <!-- <button on:click={() => tab.set('youtube')} class="tab" class:active={$tab === 'youtube'}
           >YouTube</button
-        >
-        <button on:click={() => tab.set('browser')} class="tab" class:active={$tab === 'browser'}
-          >Firefox/Chrome</button
-        >
+        > -->
       </div>
     </div>
 
@@ -361,15 +382,89 @@
 
         <textarea placeholder="csv data" bind:value={csvData}></textarea>
       </div>
-    {:else if $tab === 'browser'}
+    {:else if $tab === 'chrome'}
       <div class="service">
-        <h2>Firefox / Chrome</h2>
+        <h2>Import from Chrome</h2>
 
         <div class="explainer">
-          <p>Export your bookmarks from your browser and paste the HTML file exporterd below.</p>
+          <p>Start by exporting your bookmarks from Chrome by following these steps:</p>
+
+          <ol class="steps">
+            <li>Open Chrome</li>
+            <li>Click on the three dots in the top right corner</li>
+            <li>Click on Bookmarks</li>
+            <li>Click on Bookmark Manager</li>
+            <li>Click on the three dots in the top right corner</li>
+            <li>Click on Export Bookmarks</li>
+            <li>Save the file</li>
+          </ol>
         </div>
 
-        <textarea placeholder="exported html file" bind:value={htmlBookmarksData}></textarea>
+        <div class="explainer">
+          After you saved the file you can select it below and start the import.
+        </div>
+
+        <button class="file-picker">
+          <input
+            bind:this={fileInput}
+            type="file"
+            accept=".html"
+            on:change={handleFileInputChange}
+          />
+          <div class="file-picker-text">
+            {#if htmlBookmarksData}
+              <Icon name="check" />
+              <p>File Accepted</p>
+            {:else}
+              <Icon name="save" style="transform: rotate(180deg)" />
+              <p>Select the exported file or drop it here</p>
+            {/if}
+          </div>
+        </button>
+      </div>
+    {:else if $tab === 'firefox'}
+      <div class="service">
+        <h2>Import from Firefox</h2>
+
+        <div class="explainer">
+          <p>
+            To import your bookmarks from Firefox you have to export them first by following these
+            steps:
+          </p>
+
+          <ol class="steps">
+            <li>Open Firefox</li>
+            <li>Click on the three lines in the top right corner</li>
+            <li>Click on Library</li>
+            <li>Click on Bookmarks</li>
+            <li>Click on Show All Bookmarks</li>
+            <li>Click on the three lines in the top right corner</li>
+            <li>Click on Export Bookmarks to HTML</li>
+            <li>Save the file</li>
+          </ol>
+        </div>
+
+        <div class="explainer">
+          After you saved the file you can select it below and start the import.
+        </div>
+
+        <button class="file-picker">
+          <input
+            bind:this={fileInput}
+            type="file"
+            accept=".html"
+            on:change={handleFileInputChange}
+          />
+          <div class="file-picker-text">
+            {#if htmlBookmarksData}
+              <Icon name="check" />
+              <p>File Accepted</p>
+            {:else}
+              <Icon name="save" style="transform: rotate(180deg)" />
+              <p>Select the exported file or drop it here</p>
+            {/if}
+          </div>
+        </button>
       </div>
     {:else if $tab === 'youtube'}
       <div class="service">
@@ -400,6 +495,26 @@
     {/if}
 
     <div class="section">
+      <div class="disclaimer">
+        <div class="title-icon">
+          <Icon name="alert-triangle" />
+          <h2>Heads Up</h2>
+        </div>
+
+        <div class="explainer">
+          <p>Surf's import feature is still experimental and might not work as expected.</p>
+
+          <p>
+            Depending on the number of bookmarks to import it might take a while and the app might
+            become unresponsive during the import.
+          </p>
+
+          <p>Please do not use Surf while the import is running.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <button class="btn" on:click={() => ($running ? stopImport() : startImport())}>
         {#if $running}
           Importing Links…
@@ -411,7 +526,7 @@
       <div class="debug">
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <div class="debug-toggle" on:click={() => (showDebug = !showDebug)}>Debug Controls</div>
+        <div class="debug-toggle" on:click={() => (showDebug = !showDebug)}>Advanced Controls</div>
         {#if showDebug}
           <div class="controls">
             <label>
@@ -538,28 +653,28 @@
     font-weight: 500;
   }
 
+  h2 {
+    font-size: 1.2rem;
+    font-weight: 500;
+  }
+
+  .explainer {
+    font-size: 1rem;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
   .service {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 0.75rem;
     background: #f0f0f0;
     padding: 1rem;
     border-radius: 8px;
     border: 1px solid #ccc;
-
-    h2 {
-      font-size: 1.2rem;
-      font-weight: 500;
-    }
-
-    .explainer {
-      font-size: 1rem;
-      color: #666;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
 
     .inputs {
       display: flex;
@@ -595,6 +710,23 @@
       height: 200px;
       width: 100%;
     }
+  }
+
+  .disclaimer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: #fff7d4;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ffd683;
+  }
+
+  .title-icon {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .debug {
@@ -666,6 +798,7 @@
     margin: none;
     outline: none;
     font-size: 1rem;
+    font-weight: 500;
     width: 100%;
   }
 
@@ -731,7 +864,55 @@
     }
 
     &.failed {
-      back10ground-color: #f4cfcf;
+      background-color: #f4cfcf;
+    }
+  }
+
+  .steps {
+    margin-top: 0.5rem;
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .file-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: #fdfdfd;
+    color: rgb(29, 29, 29);
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    appearance: none;
+    margin: none;
+    outline: none;
+    position: relative;
+    cursor: pointer;
+
+    input {
+      opacity: 0;
+      width: 100%;
+      height: 100px;
+      cursor: pointer;
+    }
+
+    .file-picker-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1rem;
+      color: #444444;
+      user-select: none;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
   }
 </style>

@@ -3122,6 +3122,10 @@
       openWelcomeTab()
     })
 
+    window.api.onOpenImporter(() => {
+      openImporterTab()
+    })
+
     window.api.onOpenCheatSheet(() => {
       openCheatSheet()
     })
@@ -3467,7 +3471,10 @@
   }
 
   const openWelcomeTab = async () => {
-    const onboardingTab = $tabs.find((tab) => tab.type === 'onboarding')
+    const onboardingTab = $tabs.find(
+      (tab) =>
+        tab.type === 'onboarding' && tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
+    )
     if (onboardingTab) {
       tabsManager.makeActive(onboardingTab.id)
     } else {
@@ -3478,6 +3485,18 @@
       new Set([{ id: $tabs.find((t) => t.type === 'onboarding')?.id ?? '', userSelected: true }])
     )
     onboardingTabVisible.set(true)
+  }
+
+  const openImporterTab = async () => {
+    const tab = $tabs.find(
+      (tab) =>
+        tab.type === 'importer' && tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
+    )
+    if (tab) {
+      tabsManager.makeActive(tab.id)
+    } else {
+      await tabsManager.addImporterTab()
+    }
   }
 
   const openInvitePage = () => {

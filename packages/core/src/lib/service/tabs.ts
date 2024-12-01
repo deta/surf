@@ -836,7 +836,7 @@ export class TabsManager {
     this.log.debug('Creating new importer tab')
     const newTab = await this.create<TabImporter>(
       {
-        title: 'Importer',
+        title: 'Import Bookmarks',
         icon: '',
         type: 'importer',
         index: 0,
