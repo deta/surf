@@ -34,6 +34,7 @@ impl Worker {
         aiqueue_tx: crossbeam::Sender<AIMessage>,
         channel: Channel,
         event_bus_rx: Arc<Root<JsFunction>>,
+        run_migrations: bool,
     ) -> Self {
         let db_path = Path::new(&backend_root_path)
             .join("surf-0-01.sqlite")
@@ -52,7 +53,7 @@ impl Worker {
             .to_string();
 
         Self {
-            db: Database::new(&db_path, true).unwrap(),
+            db: Database::new(&db_path, run_migrations).unwrap(),
             ai: AI::new(api_base, api_key, local_ai_socket_path).unwrap(),
             channel,
             event_bus_rx,
@@ -101,6 +102,7 @@ pub fn worker_thread_entry_point(
     api_key: String,
     local_ai_mode: bool,
     language_setting: String,
+    run_migrations: bool,
 ) {
     let mut worker = Worker::new(
         app_path,
@@ -113,6 +115,7 @@ pub fn worker_thread_entry_point(
         aiqueue_tx,
         channel,
         event_bus_rx,
+        run_migrations
     );
 
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {

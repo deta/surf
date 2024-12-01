@@ -495,6 +495,52 @@ impl FromSql for ResourceTextContentMetadata {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PostProcessingJob {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub resource_id: String,
+    pub content_hash: String,
+    #[serde(default)]
+    pub state: ResourceProcessingState,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
+pub enum ResourceProcessingState {
+    Pending,
+    Started,
+    Failed { message: String },
+    Finished,
+}
+
+impl ToSql for ResourceProcessingState {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+        let json = serde_json::to_string(self)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+        Ok(rusqlite::types::ToSqlOutput::from(json))
+    }
+}
+
+impl FromSql for ResourceProcessingState {
+    fn column_result(value: rusqlite::types::ValueRef) -> rusqlite::types::FromSqlResult<Self> {
+        let str_value = String::column_result(value)?;
+        serde_json::from_str(&str_value)
+            .map_err(|e| rusqlite::types::FromSqlError::Other(Box::new(e)))
+    }
+}
+
+impl Default for ResourceProcessingState {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LegacyResourceTextContent {
     #[serde(default = "random_uuid")]
     pub id: String,

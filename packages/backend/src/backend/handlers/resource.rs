@@ -4,9 +4,7 @@ use tracing::{debug, instrument};
 
 use crate::{
     backend::{
-        message::{
-            AIMessage, ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot,
-        },
+        message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
     store::{
@@ -16,8 +14,8 @@ use crate::{
         },
         models::{
             current_time, random_uuid, EmbeddingResource, EmbeddingType, InternalResourceTagNames,
-            Resource, ResourceMetadata, ResourceTag, ResourceTagFilter,
-            ResourceTextContentMetadata, ResourceTextContentType,
+            PostProcessingJob, Resource, ResourceMetadata, ResourceProcessingState, ResourceTag,
+            ResourceTagFilter, ResourceTextContentMetadata, ResourceTextContentType,
         },
     },
     BackendError, BackendResult,
@@ -141,7 +139,7 @@ impl Worker {
     #[instrument(level = "trace", skip(self))]
     pub fn read_resource(
         &mut self,
-        id: String,
+        id: &str,
         include_annotations: bool,
     ) -> BackendResult<Option<CompositeResource>> {
         let resource = match self.db.get_resource(&id)? {
@@ -153,7 +151,7 @@ impl Worker {
         let resource_tags = (!resource_tags.is_empty()).then_some(resource_tags);
         let mut resource_annotations = None;
         if include_annotations {
-            let annotations = self.db.list_resource_annotations(&[id.as_str()])?;
+            let annotations = self.db.list_resource_annotations(&[id])?;
             if let Some((_, first_entry)) = annotations.into_iter().next() {
                 resource_annotations = Some(first_entry);
             }
@@ -374,26 +372,57 @@ impl Worker {
         })
     }
 
+    pub fn set_post_processing_job_state(
+        &mut self,
+        job_id: String,
+        state: ResourceProcessingState,
+    ) -> BackendResult<()> {
+        self.db.set_post_processing_job_state(job_id, state)
+    }
+
     #[instrument(level = "trace", skip(self))]
-    pub fn post_process_job(&mut self, resource_id: String) -> BackendResult<()> {
+    pub fn post_processing_job(&mut self, resource_id: String) -> BackendResult<PostProcessingJob> {
         let resource = self
-            .read_resource(resource_id, false)?
+            .read_resource(resource_id.as_str(), false)?
             // mb this should be a `DatabaseError`?
             .ok_or(BackendError::GenericError(
                 "resource does not exist".to_owned(),
             ))?;
+        let content_hash =
+            self.db
+                .get_resource_hash(&resource.resource.id)?
+                .ok_or(BackendError::GenericError(
+                    "resource content hash does not exist".to_owned(),
+                ))?;
+
+        let job = PostProcessingJob {
+            id: random_uuid(),
+            created_at: current_time(),
+            updated_at: current_time(),
+            resource_id,
+            content_hash,
+            state: ResourceProcessingState::Pending,
+        };
+        self.db.create_processing_job_entry(&job)?;
 
         self.tqueue_tx
-            .send(ProcessorMessage::ProcessResource(resource.clone()))
-            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+            .send(ProcessorMessage::ProcessResource(
+                job.clone(),
+                resource.clone(),
+            ))
+            .map_err(|err| {
+                let mut errors = vec![BackendError::GenericError(err.to_string())];
+                if let Err(err) = self.db.remove_processing_job_entry(job.id.clone()) {
+                    errors.push(err)
+                }
+                if errors.len() > 1 {
+                    BackendError::MultipleErrors(errors)
+                } else {
+                    errors.pop().unwrap()
+                }
+            })?;
 
-        if resource.resource.resource_type.starts_with("image/") {
-            self.aiqueue_tx
-                .send(AIMessage::DescribeImage(resource))
-                .map_err(|e| BackendError::GenericError(e.to_string()))?
-        }
-
-        Ok(())
+        Ok(job)
     }
 
     #[instrument(level = "trace", skip(self, resource))]
@@ -522,7 +551,10 @@ impl Worker {
             .db
             .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &resource_id)?;
 
-        let mut tx = self.db.begin()?;
+        let mut tx = self
+            .db
+            .conn
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
         let content_ids = Database::upsert_resource_text_content(
             &mut tx,
             &resource_id,
@@ -700,7 +732,7 @@ pub fn handle_resource_message(
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::GetResource(id, include_annotations) => {
-            let result = worker.read_resource(id, include_annotations);
+            let result = worker.read_resource(&id, include_annotations);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::RemoveResources(ids) => {
@@ -760,7 +792,7 @@ pub fn handle_resource_message(
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::PostProcessJob(id) => {
-            let result = worker.post_process_job(id);
+            let result = worker.post_processing_job(id);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::UpsertResourceTextContent {
@@ -779,12 +811,8 @@ pub fn handle_resource_message(
             content,
             metadata,
         } => {
-            let result = worker.batch_upsert_resource_text_content(
-                resource_id,
-                content_type,
-                content,
-                metadata,
-            );
+            let result = worker
+                .batch_upsert_resource_text_content(resource_id, content_type, content, metadata);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::UpsertResourceHash { resource_id, hash } => {
@@ -797,6 +825,10 @@ pub fn handle_resource_message(
         }
         ResourceMessage::DeleteResourceHash(resource_id) => {
             let result = worker.delete_resource_hash(resource_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::SetPostProcessingState { id, state } => {
+            let result = worker.set_post_processing_job_state(id, state);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
     }

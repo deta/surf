@@ -17,8 +17,8 @@ pub struct TunnelMessage(
 
 #[derive(Debug)]
 pub enum ProcessorMessage {
-    ProcessResource(CompositeResource),
     SetVisionTaggingFlag(bool),
+    ProcessResource(PostProcessingJob, CompositeResource),
 }
 
 #[derive(Debug)]
@@ -147,6 +147,10 @@ pub enum ResourceMessage {
     DeleteResourceHash(String),
     // ---
     PostProcessJob(String),
+    SetPostProcessingState {
+        id: String,
+        state: ResourceProcessingState,
+    }
 }
 
 #[derive(Debug)]
@@ -224,14 +228,6 @@ pub enum MiscMessage {
 pub enum EventBusMessage {
     ResourceProcessingMessage {
         resource_id: String,
-        status: ResourceProcessingStatus,
+        status: ResourceProcessingState,
     },
-}
-
-#[derive(Debug, serde::Serialize)]
-#[serde(tag = "type")]
-pub enum ResourceProcessingStatus {
-    Started,
-    Failed { message: String },
-    Finished,
 }

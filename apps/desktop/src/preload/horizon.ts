@@ -47,9 +47,9 @@ import { ControlWindow } from '@horizon/core/src/lib/types'
 import { PDFViewerEntryPoint, SettingsWindowEntrypoint } from '../main/utils'
 
 enum ResourceProcessingStatusType {
-  Started = 'Started',
-  Failed = 'Failed',
-  Finished = 'Finished'
+  Started = 'started',
+  Failed = 'failed',
+  Finished = 'finished'
 }
 
 enum EventBusMessageType {
@@ -629,8 +629,8 @@ export class ResourceHandle {
     if (this.writeHappened) {
       const newHash = await this.computeResourceHash()
       if (this.currentHash !== newHash) {
-        await (sffs as any).js__store_resource_post_process(this.resourceId)
         await (sffs as any).js__store_upsert_resource_hash(this.resourceId, newHash)
+        await (sffs as any).js__store_resource_post_process(this.resourceId)
       }
       this.currentHash = newHash
     }
@@ -705,7 +705,7 @@ const sffs = (() => {
       try {
         message = parseEventBusMessage(event)
       } catch (error) {
-        console.error('failed to parse event bus message', error)
+        console.error('failed to parse event bus message', error, event)
         return
       }
       handlers.forEach((handler) => handler(message))

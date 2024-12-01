@@ -266,6 +266,39 @@ impl Database {
         Ok(())
     }
 
+    pub fn remove_processing_job_entry(&mut self, id: String) -> BackendResult<()> {
+        self.conn
+            .execute("DELETE FROM post_processing_jobs WHERE id = ?1", rusqlite::params![id])?;
+        Ok(())
+    }
+
+    pub fn create_processing_job_entry(&mut self, job: &PostProcessingJob) -> BackendResult<()> {
+        self.conn.execute(
+            "INSERT INTO post_processing_jobs (id, created_at, updated_at, resource_id, content_hash, state) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params![
+                job.id,
+                job.created_at,
+                job.updated_at,
+                job.resource_id,
+                job.content_hash,
+                job.state
+            ]
+        )?;
+        Ok(())
+    }
+
+    pub fn set_post_processing_job_state(
+        &mut self,
+        job_id: String,
+        state: ResourceProcessingState,
+    ) -> BackendResult<()> {
+        self.conn.execute(
+            "UPDATE post_processing_jobs SET state = ?2, updated_at = ?3 WHERE id = ?1",
+            rusqlite::params![job_id, state, current_time()],
+        )?;
+        Ok(())
+    }
+
     pub fn delete_space_entry_tx(
         tx: &mut rusqlite::Transaction,
         space_entry_id: &str,

@@ -90,6 +90,7 @@ impl WorkerTunnel {
     ) where
         C: Context<'a>,
     {
+        let mut run_migrations = 1;
         for n in 0..NUM_WORKER_THREADS {
             let config = config.clone();
             let worker_rx = worker_rx.clone();
@@ -98,6 +99,9 @@ impl WorkerTunnel {
             let callback = Arc::clone(&event_bus_rx_callback);
             let libuv_ch = neon::event::Channel::new(cx);
             let thread_name = format!("W{n}");
+
+            let _run_migrations = run_migrations > 0;
+            run_migrations = run_migrations.saturating_sub(1);
 
             std::thread::Builder::new()
                 .name(thread_name.clone())
@@ -115,6 +119,7 @@ impl WorkerTunnel {
                             config.api_key.clone(),
                             config.local_ai_mode,
                             config.language_setting.clone(),
+                            _run_migrations
                         )
                     }));
 

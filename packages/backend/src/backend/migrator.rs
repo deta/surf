@@ -35,7 +35,7 @@ impl Worker {
         text_content: String,
         text_content_type: ResourceTextContentType,
     ) -> BackendResult<()> {
-        let resource = self.read_resource(resource_id.to_string(), false)?;
+        let resource = self.read_resource(&resource_id, false)?;
         if resource.is_none() {
             return Err(BackendError::GenericError(format!(
                 "Resource with id '{}' not found",

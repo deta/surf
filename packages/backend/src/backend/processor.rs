@@ -9,7 +9,7 @@ use crate::{
     embeddings::chunking::ContentChunker,
     store::{
         db::CompositeResource,
-        models::{ResourceTextContentMetadata, ResourceTextContentType},
+        models::{ResourceProcessingState, ResourceTextContentMetadata, ResourceTextContentType},
     },
     BackendError, BackendResult,
 };
@@ -54,20 +54,26 @@ impl Processor {
                 ProcessorMessage::SetVisionTaggingFlag(flag) => self
                     .vision_tagging_flag
                     .store(flag, std::sync::atomic::Ordering::Relaxed),
-                ProcessorMessage::ProcessResource(resource) => {
+                ProcessorMessage::ProcessResource(job, resource) => {
                     let resource_id = resource.resource.id.clone();
-                    self.emit_processing_status(&resource_id, ResourceProcessingStatus::Started);
+                    self.set_processing_state(
+                        &job.id,
+                        &resource_id,
+                        ResourceProcessingState::Started,
+                    );
 
                     match self.handle_process_resource(resource) {
-                        Ok(_) => self.emit_processing_status(
+                        Ok(_) => self.set_processing_state(
+                            &job.id,
                             &resource_id,
-                            ResourceProcessingStatus::Finished,
+                            ResourceProcessingState::Finished,
                         ),
                         Err(err) => {
                             tracing::error!("failed to process resource: {err}");
-                            self.emit_processing_status(
+                            self.set_processing_state(
+                                &job.id,
                                 &resource_id,
-                                ResourceProcessingStatus::Failed {
+                                ResourceProcessingState::Failed {
                                     message: format!("error while processing resource: {err:?}"),
                                 },
                             )
@@ -78,12 +84,24 @@ impl Processor {
         }
     }
 
-    fn emit_processing_status(&self, resource_id: &str, status: ResourceProcessingStatus) {
+    fn set_processing_state(
+        &self,
+        job_id: &str,
+        resource_id: &str,
+        state: ResourceProcessingState,
+    ) {
+        self.tunnel.worker_send_rust(
+            WorkerMessage::ResourceMessage(ResourceMessage::SetPostProcessingState {
+                id: job_id.to_string(),
+                state: state.clone(),
+            }),
+            None,
+        );
         self.tunnel.worker_send_rust(
             WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
                 EventBusMessage::ResourceProcessingMessage {
                     resource_id: resource_id.to_string(),
-                    status,
+                    status: state,
                 },
             )),
             None,

@@ -1,7 +1,7 @@
 export enum ResourceProcessingStatusType {
-  Started = 'Started',
-  Failed = 'Failed',
-  Finished = 'Finished'
+  Started = 'started',
+  Failed = 'failed',
+  Finished = 'finished'
 }
 
 export enum EventBusMessageType {
