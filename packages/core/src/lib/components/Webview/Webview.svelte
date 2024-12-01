@@ -722,9 +722,5 @@ Made with Deta Surf.`
     width: 100%;
     height: 100%;
     background: white;
-
-    :global(.dark) & {
-      background: #171717;
-    }
   }
 </style>
