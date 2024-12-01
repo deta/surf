@@ -1,3 +1,4 @@
+import type { ResourceProcessingState } from '@horizon/types'
 import type { Optional } from '.'
 
 export type SFFSSearchResultEngineRaw = 'Keyword' | 'Proximity' | 'Semantic'
@@ -51,12 +52,22 @@ export type SFFSRawResourceTextContent = {
   content: string
 }
 
+export interface SFFSRawPostProcessingJob {
+  id: string
+  created_at: string
+  updated_at: string
+  resource_id: string
+  content_hash: string
+  state: ResourceProcessingState
+}
+
 export interface SFFSRawCompositeResource {
   resource: SFFSRawResource
   metadata?: SFFSRawResourceMetadata
   text_content?: SFFSRawResourceTextContent
   resource_tags?: SFFSRawResourceTag[]
   resource_annotations?: SFFSRawResource[]
+  post_processing_job?: SFFSRawPostProcessingJob
 }
 
 export interface SFFSRawCard {

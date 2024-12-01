@@ -46,7 +46,8 @@ import {
 import { ControlWindow } from '@horizon/core/src/lib/types'
 import { PDFViewerEntryPoint, SettingsWindowEntrypoint } from '../main/utils'
 
-enum ResourceProcessingStatusType {
+enum ResourceProcessingStateType {
+  Pending = 'pending',
   Started = 'started',
   Failed = 'failed',
   Finished = 'finished'
@@ -56,15 +57,16 @@ enum EventBusMessageType {
   ResourceProcessingMessage = 'ResourceProcessingMessage'
 }
 
-type ResourceProcessingStatus =
-  | { type: ResourceProcessingStatusType.Started }
-  | { type: ResourceProcessingStatusType.Failed; message: string }
-  | { type: ResourceProcessingStatusType.Finished }
+type ResourceProcessingState =
+  | { type: ResourceProcessingStateType.Pending }
+  | { type: ResourceProcessingStateType.Started }
+  | { type: ResourceProcessingStateType.Failed; message: string }
+  | { type: ResourceProcessingStateType.Finished }
 
 type EventBusMessage = {
   type: EventBusMessageType.ResourceProcessingMessage
   resource_id: string
-  status: ResourceProcessingStatus
+  status: ResourceProcessingState
 }
 
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
@@ -666,10 +668,11 @@ const sffs = (() => {
     }
 
     switch (obj.status.type) {
-      case ResourceProcessingStatusType.Started:
-      case ResourceProcessingStatusType.Finished:
+      case ResourceProcessingStateType.Pending:
+      case ResourceProcessingStateType.Started:
+      case ResourceProcessingStateType.Finished:
         return true
-      case ResourceProcessingStatusType.Failed:
+      case ResourceProcessingStateType.Failed:
         return typeof obj.status.message === 'string'
     }
 
@@ -822,7 +825,7 @@ const sffs = (() => {
         res.end(JSON.stringify(result))
       } catch (error: any) {
         res.writeHead(500, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ error: error.message }))
+        res.end(JSON.stringify({ error }))
       }
     })
   }

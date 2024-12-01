@@ -1,3 +1,4 @@
+import { ResourceProcessingState } from './eventBus.types'
 import type {
   ResourceDataAnnotation,
   ResourceDataArticle,
@@ -72,6 +73,7 @@ export interface SFFSResource {
   metadata?: SFFSResourceMetadata
   tags?: SFFSResourceTag[]
   annotations?: SFFSResource[]
+  post_processing_state?: ResourceProcessingState
 }
 
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'

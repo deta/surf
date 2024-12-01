@@ -38,7 +38,7 @@ import {
 import type { Telemetry } from './telemetry'
 import {
   EventBusMessageType,
-  ResourceProcessingStatusType,
+  ResourceProcessingStateType,
   TelemetryEventTypes,
   type DetectedResource,
   type EventBusMessage,
@@ -241,7 +241,10 @@ export class Resource {
     this.dataUsed = 0
 
     this.extractionState = writable('idle')
-    this.postProcessingState = writable('idle')
+    // TODO: this should be more granular, e.g., not having a post_processing_state should be clearly indicated
+    this.postProcessingState = writable(
+      data.post_processing_state?.type === ResourceProcessingStateType.Failed ? 'error' : 'idle'
+    )
     this.state = derived(
       [this.extractionState, this.postProcessingState],
       ([extractionState, postProcessingState]) => {
@@ -575,7 +578,7 @@ export class ResourceManager {
     }
   }
 
-  private async handleResourceProcessingMessage(id: string, status: ResourceProcessingStatusType) {
+  private async handleResourceProcessingMessage(id: string, status: ResourceProcessingStateType) {
     this.log.debug('handling resource processing message', id, status)
 
     const resource = get(this.resources).find((r) => r.id === id)
@@ -584,11 +587,12 @@ export class ResourceManager {
       return
     }
 
-    if (status === ResourceProcessingStatusType.Started) {
+    if (status === ResourceProcessingStateType.Pending) {
+    } else if (status === ResourceProcessingStateType.Started) {
       resource.updatePostProcessingState('running')
-    } else if (status === ResourceProcessingStatusType.Finished) {
+    } else if (status === ResourceProcessingStateType.Finished) {
       resource.updatePostProcessingState('idle')
-    } else if (status === ResourceProcessingStatusType.Failed) {
+    } else if (status === ResourceProcessingStateType.Failed) {
       resource.updatePostProcessingState('error')
     }
   }
@@ -747,20 +751,20 @@ export class ResourceManager {
     return results
   }
 
-  async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
-    const rawResults = await this.sffs.searchForNearbyResources(resourceId, parameters)
-    const results = rawResults.map(
-      (item) =>
-        ({
-          id: item.resource.id,
-          engine: item.engine,
-          cardIds: item.card_ids,
-          resource: this.findOrCreateResourceObject(item.resource)
-        }) as ResourceSearchResultItem
-    )
+  // async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
+  //   const rawResults = await this.sffs.searchForNearbyResources(resourceId, parameters)
+  //   const results = rawResults.map(
+  //     (item) =>
+  //       ({
+  //         id: item.resource.id,
+  //         engine: item.engine,
+  //         cardIds: item.card_ids,
+  //         resource: this.findOrCreateResourceObject(item.resource)
+  //       }) as ResourceSearchResultItem
+  //   )
 
-    return results
-  }
+  //   return results
+  // }
 
   async getResourceAnnotations() {
     const rawResults = await this.listResourcesByTags([

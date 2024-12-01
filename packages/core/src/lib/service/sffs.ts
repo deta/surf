@@ -105,7 +105,8 @@ export class SFFS {
           updatedAt: annotation.updated_at,
           deleted: annotation.deleted === 1
         }
-      })
+      }),
+      post_processing_state: composite.post_processing_job?.state
     }
   }
 
@@ -165,7 +166,8 @@ export class SFFS {
     const parsedName = this.parseData<SpaceData>(raw.name)
     const nameData =
       parsedName === null
-        ? ({
+        ? // @ts-ignore
+          ({
             folderName: raw.name,
             colors: ['', ''],
             showInSidebar: false,
@@ -493,22 +495,21 @@ export class SFFS {
     await this.backend.js__store_delete_space_entries(entryIds)
   }
 
-  async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
-    const raw = await this.backend.js__store_proximity_search_resources(
-      resourceId,
-      parameters?.proximityDistanceThreshold,
-      parameters?.proximityLimit
-    )
-    const parsed = this.parseData<SFFSSearchResult>(raw)
-    const items = parsed?.items ?? []
-
-    this.log.debug('search results', items)
-    return items.map((item) => ({
-      ...item,
-      engine: item.engine.toLowerCase() as SFFSSearchResultEngine,
-      resource: this.convertCompositeResourceToResource(item.resource)
-    }))
-  }
+  // async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
+  //   const raw = await this.backend.js__store_proximity_search_resources(
+  //     resourceId,
+  //     parameters?.proximityDistanceThreshold,
+  //     parameters?.proximityLimit
+  //   )
+  //   const parsed = this.parseData<SFFSSearchResult>(raw)
+  //   const items = parsed?.items ?? []
+  //   this.log.debug('search results', items)
+  //   return items.map((item) => ({
+  //     ...item,
+  //     engine: item.engine.toLowerCase() as SFFSSearchResultEngine,
+  //     resource: this.convertCompositeResourceToResource(item.resource)
+  //   }))
+  // }
 
   async readDataFile(resourceId: string): Promise<Uint8Array> {
     // this.log.debug('reading data file', path)

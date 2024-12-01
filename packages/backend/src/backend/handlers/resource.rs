@@ -133,6 +133,7 @@ impl Worker {
             text_content: None,
             resource_tags: tags,
             resource_annotations: None,
+            post_processing_job: None,
         })
     }
 
@@ -147,6 +148,7 @@ impl Worker {
             None => return Ok(None),
         };
         let metadata = self.db.get_resource_metadata_by_resource_id(&resource.id)?;
+        let processing_state = self.db.get_resource_processing_state(&resource.id)?;
         let resource_tags = self.db.list_resource_tags(&resource.id)?;
         let resource_tags = (!resource_tags.is_empty()).then_some(resource_tags);
         let mut resource_annotations = None;
@@ -163,6 +165,7 @@ impl Worker {
             text_content: None,
             resource_tags,
             resource_annotations,
+            post_processing_job: processing_state,
         }))
     }
 

@@ -46,6 +46,7 @@ pub struct CompositeResource {
     pub text_content: Option<ResourceTextContent>,
     pub resource_tags: Option<Vec<ResourceTag>>,
     pub resource_annotations: Option<Vec<Resource>>,
+    pub post_processing_job: Option<PostProcessingJob>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -267,8 +268,10 @@ impl Database {
     }
 
     pub fn remove_processing_job_entry(&mut self, id: String) -> BackendResult<()> {
-        self.conn
-            .execute("DELETE FROM post_processing_jobs WHERE id = ?1", rusqlite::params![id])?;
+        self.conn.execute(
+            "DELETE FROM post_processing_jobs WHERE id = ?1",
+            rusqlite::params![id],
+        )?;
         Ok(())
     }
 
@@ -705,6 +708,37 @@ impl Database {
             rusqlite::params![id],
         )?;
         Ok(())
+    }
+
+    pub fn get_resource_processing_state(
+        &self,
+        resource_id: &str,
+    ) -> BackendResult<Option<PostProcessingJob>> {
+        let query = "
+        SELECT P.*
+        FROM resources R
+        LEFT JOIN resource_content_hashes H ON R.id = H.resource_id
+        LEFT JOIN post_processing_jobs P ON H.content_hash = P.content_hash
+        WHERE R.id = ?1
+        LIMIT 1";
+
+        self.conn
+            .query_row(query, rusqlite::params![resource_id], |row| {
+                let id: Option<String> = row.get(0)?;
+                match id {
+                    Some(id) => Ok(PostProcessingJob {
+                        id,
+                        created_at: row.get(1)?,
+                        updated_at: row.get(2)?,
+                        resource_id: row.get(3)?,
+                        content_hash: row.get(4)?,
+                        state: row.get(5)?,
+                    }),
+                    None => Err(rusqlite::Error::QueryReturnedNoRows),
+                }
+            })
+            .optional()
+            .map_err(|e| e.into())
     }
 
     pub fn get_resource_metadata_by_resource_id(
@@ -1510,6 +1544,7 @@ impl Database {
                     // TODO: should we populate the resource tags?
                     resource_tags: None,
                     resource_annotations: None,
+                    post_processing_job: None,
                 },
                 distance: row.get(12).unwrap_or(None),
                 ref_resource_id: ref_resource_id.clone(),
@@ -2142,6 +2177,7 @@ impl Database {
                 text_content: None,
                 resource_tags: None,
                 resource_annotations: None,
+                post_processing_job: None,
             })
         })?;
 
@@ -2203,6 +2239,7 @@ impl Database {
                     text_content: None,
                     resource_tags: None,
                     resource_annotations: None,
+                    post_processing_job: None,
                 })
             })?;
 
@@ -2218,9 +2255,11 @@ impl Database {
     ) -> BackendResult<Vec<CompositeResource>> {
         let placeholders = vec!["?"; resource_ids.len()].join(",");
         let query = format!(
-            "SELECT DISTINCT M.*, R.*, C.* FROM resources R
+            "SELECT DISTINCT M.*, R.*, C.*, P.* FROM resources R
             LEFT JOIN resource_metadata M ON M.resource_id = R.id
             LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id
+            LEFT JOIN resource_content_hashes H ON R.id = H.resource_id
+            LEFT JOIN post_processing_jobs P ON H.content_hash = P.content_hash
             WHERE R.id IN ({}) GROUP BY C.content ORDER BY R.created_at DESC",
             placeholders
         );
@@ -2239,6 +2278,8 @@ impl Database {
                     }),
                     None => None,
                 };
+
+                let job_id: Option<String> = row.get(17)?;
 
                 Ok(CompositeResource {
                     metadata: Some(ResourceMetadata {
@@ -2260,6 +2301,18 @@ impl Database {
                     text_content,
                     resource_tags: None,
                     resource_annotations: None,
+                    post_processing_job: if let Some(job_id) = job_id {
+                        Some(PostProcessingJob {
+                            id: job_id,
+                            created_at: row.get(18)?,
+                            updated_at: row.get(19)?,
+                            resource_id: row.get(20)?,
+                            content_hash: row.get(21)?,
+                            state: row.get(22)?,
+                        })
+                    } else {
+                        None
+                    },
                 })
             })?;
 
@@ -2288,17 +2341,25 @@ impl Database {
 
         let placeholders = vec!["?"; row_ids.len()].join(",");
         let query = format!(
-            "SELECT M.*, R.*, C.* FROM embedding_resources E
+            "SELECT
+            M.*, R.*, C.*, P.*
+            FROM embedding_resources E
             LEFT JOIN resource_text_content C ON E.content_id = C.rowid
             LEFT JOIN resources R ON E.resource_id = R.id
             LEFT JOIN resource_metadata M ON E.resource_id = M.resource_id
-            WHERE E.rowid IN ({}) ORDER BY {}",
+            LEFT JOIN resource_content_hashes H ON R.id = H.resource_id
+            LEFT JOIN post_processing_jobs P ON H.content_hash = P.content_hash
+            WHERE E.rowid IN ({})
+            ORDER BY {}",
             placeholders,
             Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)
         );
+
         let mut stmt = self.conn.prepare(&query)?;
         let mut results = vec![];
         let results_iter = stmt.query_map(rusqlite::params_from_iter(row_ids.iter()), |row| {
+            let job_id: Option<String> = row.get(17)?;
+
             Ok(CompositeResource {
                 metadata: Some(ResourceMetadata {
                     id: row.get(0)?,
@@ -2325,6 +2386,18 @@ impl Database {
                 }),
                 resource_tags: None,
                 resource_annotations: None,
+                post_processing_job: if let Some(job_id) = job_id {
+                    Some(PostProcessingJob {
+                        id: job_id,
+                        created_at: row.get(18)?,
+                        updated_at: row.get(19)?,
+                        resource_id: row.get(20)?,
+                        content_hash: row.get(21)?,
+                        state: row.get(22)?,
+                    })
+                } else {
+                    None
+                },
             })
         })?;
 
