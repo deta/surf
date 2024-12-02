@@ -688,6 +688,11 @@ impl Worker {
         tx.commit()?;
         Ok(())
     }
+
+    #[instrument(level = "trace", skip(self))]
+    pub fn fail_active_post_processing_jobs(&mut self) -> BackendResult<()> {
+        self.db.fail_active_post_processing_jobs(&self.created_at)
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(worker, oneshot))]
@@ -814,8 +819,12 @@ pub fn handle_resource_message(
             content,
             metadata,
         } => {
-            let result = worker
-                .batch_upsert_resource_text_content(resource_id, content_type, content, metadata);
+            let result = worker.batch_upsert_resource_text_content(
+                resource_id,
+                content_type,
+                content,
+                metadata,
+            );
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::UpsertResourceHash { resource_id, hash } => {
@@ -832,6 +841,10 @@ pub fn handle_resource_message(
         }
         ResourceMessage::SetPostProcessingState { id, state } => {
             let result = worker.set_post_processing_job_state(id, state);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::FailActivePostProcessingJobs => {
+            let result = worker.fail_active_post_processing_jobs();
             send_worker_response(&mut worker.channel, oneshot, result);
         }
     }

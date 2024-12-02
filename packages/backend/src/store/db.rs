@@ -5,6 +5,7 @@ use std::str::FromStr;
 use super::models::*;
 use crate::{BackendError, BackendResult};
 
+use chrono::{DateTime, Utc};
 use rusqlite::{Connection, OptionalExtension};
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
@@ -299,6 +300,33 @@ impl Database {
             "UPDATE post_processing_jobs SET state = ?2, updated_at = ?3 WHERE id = ?1",
             rusqlite::params![job_id, state, current_time()],
         )?;
+        Ok(())
+    }
+
+    pub fn fail_active_post_processing_jobs(&self, created_at: &DateTime<Utc>) -> BackendResult<()> {
+        let failed = ResourceProcessingState::Failed {
+            message: "job terminated without completion".to_owned(),
+        };
+
+        let update_query = r#"
+            UPDATE post_processing_jobs
+            SET state = ?1,
+                updated_at = datetime('now')
+            WHERE created_at < ?2
+            AND created_at = (
+                SELECT MAX(created_at)
+                FROM post_processing_jobs P2
+                WHERE P2.resource_id = post_processing_jobs.resource_id
+            )
+            AND (state LIKE '%pending%' OR state LIKE '%started%')
+            AND EXISTS (
+                SELECT 1
+                FROM resource_content_hashes
+                WHERE resource_id = post_processing_jobs.resource_id
+                AND content_hash = post_processing_jobs.content_hash
+            )"#;
+
+        self.conn.execute(update_query, rusqlite::params![failed, created_at])?;
         Ok(())
     }
 
@@ -720,6 +748,7 @@ impl Database {
         LEFT JOIN resource_content_hashes H ON R.id = H.resource_id
         LEFT JOIN post_processing_jobs P ON H.content_hash = P.content_hash
         WHERE R.id = ?1
+        ORDER BY P.created_at DESC
         LIMIT 1";
 
         self.conn
@@ -2255,12 +2284,22 @@ impl Database {
     ) -> BackendResult<Vec<CompositeResource>> {
         let placeholders = vec!["?"; resource_ids.len()].join(",");
         let query = format!(
-            "SELECT DISTINCT M.*, R.*, C.*, P.* FROM resources R
+            "SELECT DISTINCT M.*, R.*, C.*, P.*
+            FROM resources R
             LEFT JOIN resource_metadata M ON M.resource_id = R.id
             LEFT JOIN resource_text_content C ON M.resource_id = C.resource_id
             LEFT JOIN resource_content_hashes H ON R.id = H.resource_id
             LEFT JOIN post_processing_jobs P ON H.content_hash = P.content_hash
-            WHERE R.id IN ({}) GROUP BY C.content ORDER BY R.created_at DESC",
+            WHERE R.id IN ({})
+            AND (P.created_at IS NULL OR
+                 P.created_at = (
+                     SELECT MAX(P2.created_at)
+                     FROM post_processing_jobs P2
+                     JOIN resource_content_hashes H2 ON H2.content_hash = P2.content_hash
+                     WHERE H2.resource_id = R.id
+                 ))
+            GROUP BY C.content
+            ORDER BY R.created_at DESC",
             placeholders
         );
         let mut stmt = self.conn.prepare(&query)?;
@@ -2350,6 +2389,13 @@ impl Database {
             LEFT JOIN resource_content_hashes H ON R.id = H.resource_id
             LEFT JOIN post_processing_jobs P ON H.content_hash = P.content_hash
             WHERE E.rowid IN ({})
+            AND (P.created_at IS NULL OR
+                 P.created_at = (
+                     SELECT MAX(P2.created_at)
+                     FROM post_processing_jobs P2
+                     JOIN resource_content_hashes H2 ON H2.content_hash = P2.content_hash
+                     WHERE H2.resource_id = R.id
+                 ))
             ORDER BY {}",
             placeholders,
             Self::get_order_by_clause_for_embedding_row_ids("E.rowid", &row_ids)

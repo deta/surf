@@ -150,7 +150,8 @@ pub enum ResourceMessage {
     SetPostProcessingState {
         id: String,
         state: ResourceProcessingState,
-    }
+    },
+    FailActivePostProcessingJobs,
 }
 
 #[derive(Debug)]

@@ -1,5 +1,7 @@
 use super::{
-    message::{AIMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage},
+    message::{
+        AIMessage, ProcessorMessage, ResourceMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
+    },
     processor::processor_thread_entry_point,
     worker::worker_thread_entry_point,
 };
@@ -99,6 +101,8 @@ impl WorkerTunnel {
         };
 
         Self::spawn_threads(cx, config, worker_rx, tqueue_tx, aiqueue_tx, &tunnel);
+
+        tunnel.initiate_worker_startup_jobs();
         tunnel
     }
 
@@ -213,6 +217,19 @@ impl WorkerTunnel {
                 })
                 .expect("failed to spawn processor thread");
         }
+    }
+
+    fn initiate_worker_startup_jobs(&self) {
+        let (tx, rx) = crossbeam_channel::bounded(1);
+
+        self.worker_send_rust(
+            WorkerMessage::ResourceMessage(ResourceMessage::FailActivePostProcessingJobs),
+            Some(tx),
+        );
+
+        rx.recv()
+            .map_err(|e| tracing::error!("failed to initiate worker jobs: {e}"))
+            .ok();
     }
 
     pub fn worker_send_js(&self, message: WorkerMessage, deferred: Deferred) {

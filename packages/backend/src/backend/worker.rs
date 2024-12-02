@@ -4,8 +4,14 @@ use super::{
     },
     tunnel::SurfBackendHealth,
 };
-use crate::{ai::ai::AI, backend::handlers::*, store::db::Database, BackendError, BackendResult};
+use crate::{
+    ai::ai::AI,
+    backend::handlers::*,
+    store::{db::Database, models::current_time},
+    BackendError, BackendResult,
+};
 
+use chrono::{DateTime, Utc};
 use crossbeam_channel as crossbeam;
 use neon::prelude::*;
 use serde::Serialize;
@@ -24,6 +30,7 @@ pub struct Worker {
     pub language_setting: String,
     pub async_runtime: tokio::runtime::Runtime,
     pub surf_backend_health: SurfBackendHealth,
+    pub created_at: DateTime<Utc>,
 }
 
 impl Worker {
@@ -70,6 +77,7 @@ impl Worker {
             language_setting,
             async_runtime: tokio::runtime::Runtime::new().unwrap(),
             surf_backend_health,
+            created_at: current_time(),
         }
     }
 
