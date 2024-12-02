@@ -270,8 +270,6 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
   })
 
   contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-    log.debug('Window open request', details)
-
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
@@ -300,8 +298,6 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
   // 3. Allow opening new windows but deny other requests, and handle them within the renderer.
   contents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-      log.debug('Webview window open request', details)
-
       // If there is a frame name or features provided we assume the request
       // is part of a auth flow and we create a new isolated window for it
       const shouldCreateWindow =

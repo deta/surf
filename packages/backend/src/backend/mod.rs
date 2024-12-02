@@ -16,6 +16,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__backend_tunnel_init", js_tunnel_init)?;
     cx.export_function("js__backend_run_migration", js_run_migration)?;
     cx.export_function("js__backend_set_vision_tagging_flag", js_set_vision_tagging_flag)?;
+    cx.export_function(
+        "js__backend_set_surf_backend_health",
+        js_set_surf_backend_health,
+    )?;
     Ok(())
 }
 
@@ -51,6 +55,18 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
 
     tracing::info!("rust<->node tunnel bridge initialized");
     Ok(cx.boxed(tunnel))
+}
+
+fn js_set_surf_backend_health(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<tunnel::WorkerTunnel>>(0)?;
+    let surf_backend_state = cx.argument::<JsBoolean>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::SetSurfBackendHealth(surf_backend_state)),
+        deferred,
+    );
+    Ok(promise)
 }
 
 fn js_run_migration(mut cx: FunctionContext) -> JsResult<JsPromise> {

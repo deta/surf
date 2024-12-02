@@ -107,17 +107,24 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
     isDev ? CONFIG.embeddingModelMode : userConfig.settings?.embedding_model
   ])
 
-  // prettier-ignore
-  {
-    surfBackendManager
-      .on('stdout', data => log.info('[backend:stdout] ', data))
-      .on('stderr', data => log.error('[backend:stderr]', data))
-      .on('error', error => log.error('[backend:error ]', error))
-      .on('warn', msg => log.warn('[backend:warn  ]', msg))
-      .on('info', msg => log.info('[backend:info  ]', msg))
-      .on('exit', code => log.info('[backend:exit  ] code:', code))
-      .on('signal', signal => log.info('[backend:signal] signal:', signal))
-  }
+  surfBackendManager
+    .on('stdout', (data) => log.info('[backend:stdout] ', data))
+    .on('stderr', (data) => log.error('[backend:stderr]', data))
+    .on('error', (error) => log.error('[backend:error ]', error))
+    .on('warn', (msg) => log.warn('[backend:warn  ]', msg))
+    .on('info', (msg) => log.info('[backend:info  ]', msg))
+    .on('exit', (code) => log.info('[backend:exit  ] code:', code))
+    .on('signal', (signal) => log.info('[backend:signal] signal:', signal))
+
+  surfBackendManager
+    ?.on('ready', () => {
+      const webContents = getMainWindow()?.webContents
+      if (webContents) IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(webContents, true)
+    })
+    .on('close', () => {
+      const webContents = getMainWindow()?.webContents
+      if (webContents) IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(webContents, false)
+    })
 
   surfBackendManager.start()
   await surfBackendManager.waitForStart()
@@ -179,6 +186,11 @@ const initializeApp = async () => {
       handleOpenUrl(appOpenedWithURL)
     }
 
+    const webContents = getMainWindow()?.webContents
+    const isHealthy = surfBackendManager?.isHealthy
+    if (webContents && isHealthy)
+      IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(webContents, isHealthy)
+
     setInterval(silentCheckForUpdates, 1000 * 60 * 30) // 30 minutes
   })
 }
@@ -195,25 +207,26 @@ const setupApplication = () => {
   appOpenedWithURL =
     process.argv.find((arg) => arg.startsWith('http://') || arg.startsWith('https://')) ?? null
 
-  // prettier-ignore
-  {
-    app
-      .on('browser-window-blur', unregisterShortcuts)
-      .on('browser-window-focus', registerShortcuts)
-      .on('browser-window-blur', () => ipcSenders.browserFocusChanged('unfocused'))
-      .on('browser-window-focus', () => ipcSenders.browserFocusChanged('focused'))
-      .on('second-instance', (_event, commandLine) => handleOpenUrl(commandLine.pop() ?? ''))
-      .on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
-      .on('window-all-closed', () => {
-        unregisterShortcuts()
-        if (!isMac()) app.quit()
-      })
+  app
+    .on('browser-window-blur', unregisterShortcuts)
+    .on('browser-window-focus', registerShortcuts)
+    .on('browser-window-blur', () => ipcSenders.browserFocusChanged('unfocused'))
+    .on('browser-window-focus', () => ipcSenders.browserFocusChanged('focused'))
+    .on('second-instance', (_event, commandLine) => handleOpenUrl(commandLine.pop() ?? ''))
+    .on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
+    .on('window-all-closed', () => {
+      unregisterShortcuts()
+      if (!isMac()) app.quit()
+    })
 
-    app
-      .on('open-url', (_event, url) => isAppLaunched ? handleOpenUrl(url) : (appOpenedWithURL = url))
-      .on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
-      .on('will-quit', () => surfBackendManager?.stop())
-  }
+  app
+    .on('open-url', (_event, url) =>
+      isAppLaunched ? handleOpenUrl(url) : (appOpenedWithURL = url)
+    )
+    .on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+    .on('will-quit', () => surfBackendManager?.stop())
 
   registerProtocols()
   app.whenReady().then(initializeApp)

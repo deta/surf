@@ -151,6 +151,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   showAppMenuPopup: ipcService.addEvent<void>('show-app-menu-popup'),
   resetBackgroundImage: ipcService.addEvent<void>('reset-background-image'),
   importedFiles: ipcService.addEvent<string[]>('imported-files'),
+  setSurfBackendHealth: ipcService.addEvent<boolean>('set-surf-backend-health'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

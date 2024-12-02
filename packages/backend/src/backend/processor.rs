@@ -3,7 +3,10 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
-use super::{message::*, tunnel::WorkerTunnel};
+use super::{
+    message::*,
+    tunnel::{SurfBackendHealth, WorkerTunnel},
+};
 use crate::{
     backend::ai::AI,
     embeddings::chunking::ContentChunker,
@@ -24,6 +27,7 @@ pub struct Processor {
     ocr_engine: Option<OcrEngine>,
     language: Option<String>,
     vision_tagging_flag: Arc<AtomicBool>,
+    surf_backend_health: SurfBackendHealth
 }
 
 impl Processor {
@@ -34,6 +38,7 @@ impl Processor {
         api_key: String,
         api_base: String,
         vision_tagging_flag: Arc<AtomicBool>,
+        surf_backend_health: SurfBackendHealth,
     ) -> Self {
         let ai = AI::new(api_key, api_base);
         let ocr_engine = create_ocr_engine(&app_path)
@@ -45,6 +50,7 @@ impl Processor {
             ocr_engine,
             language,
             vision_tagging_flag,
+            surf_backend_health,
         }
     }
 
@@ -109,6 +115,8 @@ impl Processor {
     }
 
     fn handle_process_resource(&self, resource: CompositeResource) -> BackendResult<()> {
+        self.surf_backend_health.wait_until_healthy();
+
         if !needs_processing(&resource.resource.resource_type) {
             return Ok(());
         }
@@ -233,6 +241,7 @@ pub fn processor_thread_entry_point(
     api_key: String,
     api_base: String,
     vision_tagging_flag: Arc<AtomicBool>,
+    surf_backend_health: SurfBackendHealth,
 ) {
     let processor = Processor::new(
         tunnel,
@@ -241,6 +250,7 @@ pub fn processor_thread_entry_point(
         api_key,
         api_base,
         vision_tagging_flag,
+        surf_backend_health,
     );
     processor.run();
 }

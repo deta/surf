@@ -933,6 +933,11 @@ const resources = (() => {
   }
 })()
 
+IPC_EVENTS_RENDERER.setSurfBackendHealth.on((_, state) => {
+  // @ts-ignore
+  sffs.js__backend_set_surf_backend_health(state)
+})
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)

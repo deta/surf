@@ -1,5 +1,8 @@
-use super::message::{
-    AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
+use super::{
+    message::{
+        AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
+    },
+    tunnel::SurfBackendHealth,
 };
 use crate::{ai::ai::AI, backend::handlers::*, store::db::Database, BackendError, BackendResult};
 
@@ -20,6 +23,7 @@ pub struct Worker {
     pub resources_path: String,
     pub language_setting: String,
     pub async_runtime: tokio::runtime::Runtime,
+    pub surf_backend_health: SurfBackendHealth,
 }
 
 impl Worker {
@@ -35,6 +39,7 @@ impl Worker {
         channel: Channel,
         event_bus_rx: Arc<Root<JsFunction>>,
         run_migrations: bool,
+        surf_backend_health: SurfBackendHealth,
     ) -> Self {
         let db_path = Path::new(&backend_root_path)
             .join("surf-0-01.sqlite")
@@ -64,6 +69,7 @@ impl Worker {
             resources_path,
             language_setting,
             async_runtime: tokio::runtime::Runtime::new().unwrap(),
+            surf_backend_health,
         }
     }
 
@@ -103,6 +109,7 @@ pub fn worker_thread_entry_point(
     local_ai_mode: bool,
     language_setting: String,
     run_migrations: bool,
+    surf_backend_health: SurfBackendHealth,
 ) {
     let mut worker = Worker::new(
         app_path,
@@ -115,7 +122,8 @@ pub fn worker_thread_entry_point(
         aiqueue_tx,
         channel,
         event_bus_rx,
-        run_migrations
+        run_migrations,
+        surf_backend_health,
     );
 
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {

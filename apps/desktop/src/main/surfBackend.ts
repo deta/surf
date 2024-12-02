@@ -7,6 +7,7 @@ import { basename } from 'path'
 export class SurfBackendServerManager extends EventEmitter {
   private process: ChildProcess | null = null
   private isShuttingDown = false
+  private lastKnownHealth = false
   private restartAttempts = 0
   private readonly maxRestartAttempts = 5
   private readonly restartDelay = 1000
@@ -22,6 +23,10 @@ export class SurfBackendServerManager extends EventEmitter {
     private readonly options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}
   ) {
     super()
+  }
+
+  public get isHealthy(): boolean {
+    return this.lastKnownHealth
   }
 
   start(): void {
@@ -86,6 +91,7 @@ export class SurfBackendServerManager extends EventEmitter {
       lines.forEach((line) => {
         if (line.includes('healthy')) {
           this.restartAttempts = 0
+          this.lastKnownHealth = true
           this.emit('ready')
           if (this.startResolve) {
             this.startResolve()
@@ -107,7 +113,9 @@ export class SurfBackendServerManager extends EventEmitter {
 
     this.process.on('exit', (exit, signal) => {
       this.process = null
+      this.lastKnownHealth = false
 
+      this.emit('close', exit)
       if (exit) this.emit('exit', exit)
       if (signal) this.emit('signal', signal)
 

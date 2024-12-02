@@ -672,5 +672,10 @@ pub fn handle_misc_message(
                 .map_err(|err| BackendError::GenericError(format!("{err}")));
             send_worker_response(&mut worker.channel, oneshot, result)
         }
+        MiscMessage::SetSurfBackendHealth(state) => {
+            worker.surf_backend_health.set_health(state);
+            send_worker_response(&mut worker.channel, oneshot, Ok(()));
+            tracing::debug!("surf backend health: {state:?}");
+        }
     }
 }

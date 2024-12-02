@@ -10,10 +10,11 @@ use neon::{
     prelude::Context,
     types::{Deferred, Finalize, JsFunction},
 };
-use std::{panic, sync::{atomic::AtomicBool, Arc}};
+use std::panic;
 
 const NUM_WORKER_THREADS: usize = 8;
 const NUM_PROCESSOR_THREADS: usize = 8;
+use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
 
 #[derive(Clone)]
 pub struct WorkerTunnel {
@@ -21,6 +22,46 @@ pub struct WorkerTunnel {
     pub tqueue_rx: crossbeam::Receiver<ProcessorMessage>,
     pub aiqueue_rx: crossbeam::Receiver<AIMessage>,
     pub event_bus_rx_callback: Arc<Root<JsFunction>>,
+    pub surf_backend_health: SurfBackendHealth,
+}
+
+pub struct SurfBackendHealth(Arc<(Mutex<bool>, Condvar)>);
+
+impl SurfBackendHealth {
+    pub fn new(initial_state: Option<bool>) -> Self {
+        Self(Arc::new((
+            Mutex::new(initial_state.unwrap_or_default()),
+            Condvar::new(),
+        )))
+    }
+
+    pub fn wait_until_healthy(&self) {
+        let (lock, cvar) = &*self.0;
+        let mut healthy = lock.lock().unwrap();
+        if *healthy {
+            return
+        }
+        while !*healthy {
+            tracing::warn!("surf-backend server isn't healthy, sleeping the processor thread");
+            healthy = cvar.wait(healthy).unwrap();
+        }
+        tracing::info!("surf-backend server is healthy again, resuming processor thread");
+    }
+
+    pub fn set_health(&self, healthy: bool) {
+        let (lock, cvar) = &*self.0;
+        let mut status = lock.lock().unwrap();
+        *status = healthy;
+        if healthy {
+            cvar.notify_all();
+        }
+    }
+}
+
+impl Clone for SurfBackendHealth {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -47,12 +88,14 @@ impl WorkerTunnel {
         let (worker_tx, worker_rx) = crossbeam::unbounded();
         let (tqueue_tx, tqueue_rx) = crossbeam::unbounded();
         let (aiqueue_tx, aiqueue_rx) = crossbeam::unbounded();
-
+        let surf_backend_health = SurfBackendHealth::new(Some(false));
+        let event_bus_rx_callback = Arc::new(event_bus_rx_callback);
         let tunnel = Self {
             worker_tx,
             tqueue_rx,
             aiqueue_rx,
-            event_bus_rx_callback: Arc::new(event_bus_rx_callback),
+            event_bus_rx_callback: event_bus_rx_callback.clone(),
+            surf_backend_health: surf_backend_health.clone(),
         };
 
         Self::spawn_threads(cx, config, worker_rx, tqueue_tx, aiqueue_tx, &tunnel);
@@ -76,6 +119,7 @@ impl WorkerTunnel {
             tqueue_tx,
             aiqueue_tx,
             Arc::clone(&tunnel.event_bus_rx_callback),
+            tunnel.surf_backend_health.clone(),
         );
         Self::spawn_processor_threads(tunnel, &config);
     }
@@ -87,16 +131,19 @@ impl WorkerTunnel {
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
         event_bus_rx_callback: Arc<Root<JsFunction>>,
+        surf_backend_health: SurfBackendHealth
     ) where
         C: Context<'a>,
     {
-        let mut run_migrations = 1;
+        let mut run_migrations: i32 = 1;
+
         for n in 0..NUM_WORKER_THREADS {
             let config = config.clone();
             let worker_rx = worker_rx.clone();
             let tqueue_tx = tqueue_tx.clone();
             let aiqueue_tx = aiqueue_tx.clone();
             let callback = Arc::clone(&event_bus_rx_callback);
+            let surf_backend_health = surf_backend_health.clone();
             let libuv_ch = neon::event::Channel::new(cx);
             let thread_name = format!("W{n}");
 
@@ -119,7 +166,8 @@ impl WorkerTunnel {
                             config.api_key.clone(),
                             config.local_ai_mode,
                             config.language_setting.clone(),
-                            _run_migrations
+                            _run_migrations,
+                            surf_backend_health.clone()
                         )
                     }));
 
@@ -140,11 +188,13 @@ impl WorkerTunnel {
             let language = language.clone();
             let thread_name = format!("P{n}");
             let vision_tagging_flag = Arc::new(AtomicBool::new(false));
+            let surf_backend_health = tunnel.surf_backend_health.clone();
 
             std::thread::Builder::new()
                 .name(thread_name.clone())
                 .spawn(move || loop {
                     let vision_tagging_flag = vision_tagging_flag.clone();
+                    let surf_backend_health = surf_backend_health.clone();
                     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
                         processor_thread_entry_point(
                             tunnel.clone(),
@@ -153,6 +203,7 @@ impl WorkerTunnel {
                             config.api_key.clone(),
                             config.api_base.clone(),
                             vision_tagging_flag,
+                            surf_backend_health,
                         )
                     }));
 

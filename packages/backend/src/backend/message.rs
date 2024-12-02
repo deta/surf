@@ -221,6 +221,7 @@ pub enum MiscMessage {
     SendEventBusMessage(EventBusMessage),
     GetQuotas,
     SetVisionTaggingFlag(bool),
+    SetSurfBackendHealth(bool),
 }
 
 #[derive(Debug, serde::Serialize)]
