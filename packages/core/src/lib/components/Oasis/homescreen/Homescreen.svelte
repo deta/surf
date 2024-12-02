@@ -346,4 +346,13 @@
   :global(body:has(#homescreen-wrapper.homescreenVisible) .teletype-motion > .outer-wrapper) {
     pointer-events: none;
   }
+
+  :global(
+      body:has(#homescreen-wrapper.homescreenVisible)
+        .teletype-motion
+        > .outer-wrapper
+        > .inner-wrapper
+    ) {
+    pointer-events: all;
+  }
 </style>
