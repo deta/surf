@@ -568,6 +568,7 @@
     max-width: 90vw;
     height: calc(100vh - 120px);
     z-index: 100000;
+    overflow: hidden;
   }
 
   .header {
