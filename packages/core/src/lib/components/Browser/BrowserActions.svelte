@@ -64,35 +64,37 @@
     </Tooltip.Root>
   {/if}
   <div>
-    <!-- <Tooltip.Root openDelay={400} closeDelay={10}>
-      <Tooltip.Trigger>
-        <button
-          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
-          class:rotate-90={horizontalTabs}
-          on:click={() => dispatch('toggle-sidebar')}
+    {#if !horizontalTabs}
+      <Tooltip.Root openDelay={400} closeDelay={10}>
+        <Tooltip.Trigger>
+          <button
+            class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
+            class:rotate-90={horizontalTabs}
+            on:click={() => dispatch('toggle-sidebar')}
+          >
+            <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
+              <Icon name="sidebar.left" />
+            </span>
+          </button>
+        </Tooltip.Trigger>
+        <Tooltip.Content
+          transition={flyAndScale}
+          transitionConfig={{ y: 8, duration: 150 }}
+          sideOffset={8}
         >
-          <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
-            <Icon name="sidebar.left" />
-          </span>
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Content
-        transition={flyAndScale}
-        transitionConfig={{ y: 8, duration: 150 }}
-        sideOffset={8}
-      >
-        <div class="bg-gray-100 dark:bg-gray-800">
-          <Tooltip.Arrow
-            class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
-          />
-        </div>
-        <div
-          class="custom-button-color flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-        >
-          Toggle {horizontalTabs ? 'Topbar' : 'Sidebar'} (⌘ + Shift + B)
-        </div>
-      </Tooltip.Content>
-    </Tooltip.Root> -->
+          <div class="bg-gray-100 dark:bg-gray-800">
+            <Tooltip.Arrow
+              class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+            />
+          </div>
+          <div
+            class="custom-button-color flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+          >
+            Toggle {horizontalTabs ? 'Topbar' : 'Sidebar'} (⌘ + Shift + B)
+          </div>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    {/if}
   </div>
 
   <div class="flex flex-row items-center">
