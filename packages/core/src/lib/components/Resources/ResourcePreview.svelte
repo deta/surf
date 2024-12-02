@@ -87,9 +87,9 @@
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
 
   export let resource: Resource
-  export let draggable = true
   export let selected: boolean = false
   export let interactive: boolean = false
+  export let draggable = interactive
   export let frameless: boolean = false
 
   /// View

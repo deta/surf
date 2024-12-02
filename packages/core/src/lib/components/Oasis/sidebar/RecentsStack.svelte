@@ -253,7 +253,6 @@
             drag.item?.data.setData(DragTypeNames.SURF_RESOURCE, resource)
             drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
             drag.item?.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
-
             drag.continue()
           }}
         >
@@ -263,7 +262,6 @@
             viewMode="responsive"
             origin="stack"
             frameless={true}
-            interactive
             hideProcessing
             on:open
             on:open-and-chat
