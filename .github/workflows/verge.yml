@@ -55,7 +55,7 @@ jobs:
             const latestProMaxVersion = process.env.LATEST_PRO_MAX_VERSION;
             if (semver.valid(latestProMaxVersion)) {
                 const candidate = semver.inc(latestProMaxVersion, 'prerelease', 'pro-max');
-                nextProMaxVersion = semver.gt(candidate, nextproMaxVersion) ? candidate : nextproMaxVersion;
+                nextProMaxVersion = semver.gt(candidate, nextProMaxVersion) ? candidate : nextProMaxVersion;
             }
             console.log(`Next pro-max version: ${nextProMaxVersion}`);
             core.setOutput('version', nextProMaxVersion);
