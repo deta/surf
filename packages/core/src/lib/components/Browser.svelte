@@ -199,15 +199,20 @@
 
   let telemetryAPIKey = ''
   let telemetryActive = false
+  let telemetryProxyUrl: string | undefined = undefined
   if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
-    telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
     telemetryActive = true
+    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
+    if (!telemetryProxyUrl) {
+      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
+    }
   }
 
   const telemetry = createTelemetry({
     apiKey: telemetryAPIKey,
     active: telemetryActive,
-    trackHostnames: false
+    trackHostnames: false,
+    proxyUrl: telemetryProxyUrl
   })
 
   const downloadResourceMap = new Map<string, Download>()
@@ -2340,34 +2345,26 @@
     if (button) button.click()
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
-    log.debug('add resource to space', e.detail)
-
-    const toast = toasts.loading('Saving page to space...')
-
+  const saveTabInSpace = async (tabId: string, space: OasisSpace) => {
+    log.debug('save tab page to space', tabId, space)
     try {
-      const { resource } = await handleBookmark($activeTabId, true, SaveToOasisEventTrigger.Click)
+      const { resource } = await handleBookmark(tabId, true, SaveToOasisEventTrigger.Click)
       log.debug('bookmarked resource', resource)
-
       if (resource) {
-        log.debug('will add item', resource.id, 'to space', e.detail.id)
+        log.debug('will add item', resource.id, 'to space', space.id)
         await resourceManager.addItemsToSpace(
-          e.detail.id,
+          space.id,
           [resource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
-
         // new resources are already tracked in the bookmarking function
         await telemetry.trackAddResourceToSpace(
           resource.type,
           AddResourceToSpaceEventTrigger.TabMenu
         )
       }
-
-      toast.success('Page saved to space!')
     } catch (e) {
       log.error('Failed to add resource to space:', e)
-      toast.error('Failed to save page to space')
     }
   }
 
@@ -2625,7 +2622,7 @@
     oasis.resetSelectedSpace()
   }
 
-  const handleCreateNote = async (e: CustomEvent<string>) => {
+  const handleCreateNote = async (e: CustomEvent<string | undefined>) => {
     const query = e.detail ?? ''
     log.debug('create note with query', query)
 
@@ -3938,7 +3935,7 @@
 
         // NOTE: Should be opt? when creating tab, but currently api does not support and
         // adding into CreateTabOptions doesnt match other tab apis props
-        if (tab && pinned) tabsManager.update(tab!.id, { pinned })
+        if (tab && pinned) tabsManager.changeTabPinnedState(tab!.id, pinned)
 
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
@@ -3990,6 +3987,7 @@
           }
 
           if (drag.to?.id === 'sidebar-pinned-tabs') {
+            droppedTab.scopeId = undefined
             droppedTab.pinned = true
             droppedTab.magic = false
 
@@ -4022,6 +4020,7 @@
               telemetry.trackMoveTab(MoveTabEventAction.Unpin)
             }
 
+            droppedTab.scopeId = tabsManager.activeScopeIdValue ?? undefined
             droppedTab.pinned = false
             droppedTab.magic = false
             cachedMagicTabs.delete(droppedTab.id)
@@ -4048,7 +4047,12 @@
         tabsManager.bulkPersistChanges(
           newTabs.map((tab) => ({
             id: tab.id,
-            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
+            updates: {
+              pinned: tab.pinned,
+              magic: tab.magic,
+              index: tab.index,
+              scopeId: tab.scopeId
+            }
           }))
         )
 
@@ -4385,7 +4389,7 @@
       return
     }
 
-    tabsManager.update(tabId, { pinned: true })
+    tabsManager.pinTab(tabId)
   }
   const handleUnpinTab = (e: CustomEvent<string>) => {
     const tabId = e.detail
@@ -4395,7 +4399,7 @@
       return
     }
 
-    tabsManager.update(tabId, { pinned: false })
+    tabsManager.unpinTab(tabId)
   }
 
   let leftSidebarWidth = 0
@@ -4492,7 +4496,7 @@
             (space) =>
               ({
                 type: 'action',
-                icon: space.dataValue.colors,
+                icon: space,
                 text: space.dataValue.folderName,
                 action: () => handleMove(space.id, space.dataValue.folderName)
               }) as CtxItem
@@ -4992,7 +4996,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:create-new-space={handleOpenCreateSpaceMenu}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
@@ -5120,7 +5124,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:create-new-space={handleOpenCreateSpaceMenu}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
