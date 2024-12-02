@@ -171,6 +171,10 @@
     --text-color: #1c1c3b;
     --text-muted-opacity: 1;
 
+    :global(.dark) & {
+      --text-color: #fff;
+    }
+
     position: relative;
     height: 100%;
 
@@ -210,6 +214,10 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      :global(.dark) & {
+        background: #232e3e;
       }
     }
 
