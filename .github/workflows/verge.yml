@@ -55,7 +55,7 @@ jobs:
             const latestProMaxVersion = process.env.LATEST_PRO_MAX_VERSION;
             if (semver.valid(latestProMaxVersion)) {
                 const candidate = semver.inc(latestProMaxVersion, 'prerelease', 'pro-max');
-                nextProMaxVersion = semver.gt(candidate, nextpro-maxVersion) ? candidate : nextpro-maxVersion;
+                nextProMaxVersion = semver.gt(candidate, nextproMaxVersion) ? candidate : nextproMaxVersion;
             }
             console.log(`Next pro-max version: ${nextProMaxVersion}`);
             core.setOutput('version', nextProMaxVersion);
@@ -64,7 +64,7 @@ jobs:
     needs: next-pro-max-version
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -131,7 +131,7 @@ jobs:
 
           PRODUCT_NAME: 'Surf'
           M_VITE_PRODUCT_NAME: 'Surf'
-          BUILD_RESOURCES_DIR: build/resources/pro-max
+          BUILD_RESOURCES_DIR: build/resources/prod
 
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -139,7 +139,7 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
 
-          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
+          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
           P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
