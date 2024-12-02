@@ -1,3 +1,5 @@
+import type { DesktopBackgroundData } from '../service/desktop'
+
 export interface GridRect {
   x: number
   y: number
@@ -35,5 +37,5 @@ export interface DesktopData {
   createdAt: string
   updatedAt: string
   items: DesktopItemData[]
-  background_image?: string
+  background_image?: DesktopBackgroundData
 }

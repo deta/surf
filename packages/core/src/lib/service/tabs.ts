@@ -401,7 +401,7 @@ export class TabsManager {
     await tick()
 
     this.log.warn('Deleted tab', tabId, this.unpinnedTabsValue)
-    if (get(this.desktopManager.isEnabled) && this.unpinnedTabsValue.length <= 0) {
+    if (this.unpinnedTabsValue.length <= 0) {
       this.desktopManager.setVisible(true)
     } else if (this.activeTabIdValue === tabId) {
       const updatedTabsInOrder = tabsInOrder.filter((tab) => tab.id !== tabId)

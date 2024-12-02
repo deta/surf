@@ -68,12 +68,23 @@
 
   function handleResetHomescreen() {
     const confirmed = confirm(
-      `Are you sure you want to reset your homescreen? This can't be undone.`
+      `Are you sure you want to reset your Desktop layout? This can't be undone. Your resources won't be deleted.`
     )
     if (!confirmed) return
+    desktop.setBackgroundImage(undefined)
     items.set([])
     desktop.store()
-    toasts.success('Homescreen reset successfully!')
+    toasts.success('Desktop reset successfully!')
+  }
+
+  function handleResetBackgroundImage() {
+    const confirmed = confirm(
+      `Are you sure you want to reset your background? This can't be undone.`
+    )
+    if (!confirmed) return
+    desktop.setBackgroundImage(undefined)
+    desktop.store()
+    toasts.success('Background reset successfully!')
   }
 
   onMount(async () => {
@@ -92,10 +103,6 @@
     }
 
     desktop.attachNode(desktopEl)
-
-    window.api.onResetBackgroundImage(() => {
-      desktop.setBackgroundImage(undefined)
-    })
   })
 </script>
 
@@ -132,8 +139,15 @@
       items: [
         {
           type: 'action',
+          icon: 'close',
+          text: 'Remove Background',
+          kind: 'danger',
+          action: handleResetBackgroundImage
+        },
+        {
+          type: 'action',
           icon: 'trash',
-          text: 'Reset Homescreen',
+          text: 'Reset Desktop',
           kind: 'danger',
           action: handleResetHomescreen
         }
@@ -280,6 +294,14 @@
           background: rgba(0, 0, 0, 0.5);
           @apply text-sky-500/80;
         }
+        :global(.custom) & {
+          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+          color: var(--contrast-color) !important;
+        }
+        :global(.dark.custom) & {
+          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+          color: var(--contrast-color) !important;
+        }
       }
 
       p {
@@ -290,6 +312,13 @@
         max-width: 400px;
         text-wrap: pretty;
         @apply text-sky-600/80;
+
+        :global(.custom) & {
+          color: var(--contrast-color) !important;
+        }
+        :global(.dark.custom) & {
+          color: var(--contrast-color) !important;
+        }
       }
     }
   }

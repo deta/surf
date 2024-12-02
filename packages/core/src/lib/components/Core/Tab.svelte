@@ -22,6 +22,7 @@
   import { contextMenu, type CtxItem } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useTabsManager } from '../../service/tabs'
+  import { useColorService } from '../../service/colors'
   import {
     ChangeContextEventTrigger,
     DeleteTabEventTrigger,
@@ -67,11 +68,14 @@
   const oasis = useOasis()
   const toasts = useToasts()
   const desktopManager = useDesktopManager()
+  const colorService = useColorService()
   const globalMiniBrowser = useGlobalMiniBrowser()
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
 
   const desktopVisible = desktopManager.activeDesktopVisible
-  const activeDesktopId = desktopManager.activeDesktopId
+  const activeDesktopColorScheme = desktopManager.activeDesktopColorScheme
+
+  const colorScheme = colorService.colorScheme
   const userSettings = userConfig.settings
 
   // Why is there no better way in Svelte :/
@@ -627,22 +631,25 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     $inputUrl !== 'surf.featurebase.app' &&
     !tab.magic &&
     !$desktopVisible}
-  class:active={tab.id === $activeTabId}
+  class:active={tab.id === $activeTabId && !$desktopVisible}
   class:pinned
   class:horizontalTabs
   class:inStuffBar
   {horizontalTabs}
   class:hovered
-  class:selected={isSelected && !desktopVisible}
+  class:selected={isSelected && !$desktopVisible}
   class:combine-border={// Combine border class if:
   // 1. Magic is active and tab is magical, or
   // 2. Magic is inactive but tab is selected/active
-  (isMagicActive && tab.magic) || (!isMagicActive && (isSelected || isActive))}
+  !$desktopVisible &&
+    ((isMagicActive && tab.magic) || (!isMagicActive && (isSelected || isActive)))}
   class:magic={tab.magic}
   style={tabSize
     ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
     : ''}
   style:position="relative"
+  style:--custom-color={$colorScheme.color}
+  style:--contrast-color={$colorScheme.contrastColor}
   aria-hidden="true"
   use:HTMLDragItem.action={{}}
   on:DragStart={handleDragStart}
@@ -795,6 +802,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   {/if}-->
 
   <div
+    class="custom-text-color"
     class:icon-wrapper={true}
     class:flex-shrink-0={true}
     class:emoji-adjustment={$spaceData?.emoji}
@@ -837,7 +845,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+        class="custom-text-color items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -848,7 +856,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+        class="custom-text-color items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -960,7 +968,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             >
               <button
                 on:click|stopPropagation={() => handleBookmark()}
-                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+                class="custom-text-color flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
               >
                 {#if bookmarkingState === 'in_progress'}
                   <Icon name="spinner" size="16px" />
@@ -1054,6 +1062,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
 </div>
 
 <style lang="scss">
+  // TODO!!: We should move these to browser.svelte soon, as these will override the globals, so when
+  // we start theming the rest of the app, these should move!
   :root {
     --red: rgba(255, 0, 0, 1);
     --dark-on-pinned-surface: rgba(75, 85, 99, 1);
@@ -1067,6 +1077,35 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       inset 1.5px 0px 0px -0.75px rgba(59, 130, 246, 0.33),
       inset -1.5px 0px 0px -0.75px rgba(59, 130, 246, 0.33),
       inset 0px -1.5px 0px -0.75px rgba(59, 130, 246, 0.33);
+    --white: rgba(255, 255, 255, 1);
+    --white-95: rgba(255, 255, 255, 0.95);
+    --white-85: rgba(255, 255, 255, 0.85);
+    --white-80: rgba(255, 255, 255, 0.8);
+    --white-75: rgba(255, 255, 255, 0.75);
+    --white-65: rgba(255, 255, 255, 0.65);
+    --white-60: rgba(255, 255, 255, 0.6);
+    --white-55: rgba(255, 255, 255, 0.55);
+    --white-40: rgba(255, 255, 255, 0.4);
+    --white-33: rgba(255, 255, 255, 0.33);
+    --white-26: rgba(255, 255, 255, 0.26);
+    --white-15: rgba(255, 255, 255, 0.15);
+    --white-09: rgba(255, 255, 255, 0.09);
+
+    --black: rgba(0, 0, 0, 1);
+    --black-85: rgba(0, 0, 0, 0.85);
+    --black-45: rgba(0, 0, 0, 0.45);
+    --black-33: rgba(0, 0, 0, 0.33);
+
+    --black-09: rgba(0, 0, 0, 0.09);
+    --black-08: rgba(0, 0, 0, 0.08);
+    --black-01: rgba(0, 0, 0, 0.01);
+    --black-00: rgba(0, 0, 0, 0);
+    --sky-gray: rgba(88, 104, 132, 1);
+    --sky-gray-09: rgba(88, 104, 132, 0.09);
+    --sky-gray-03: rgba(88, 104, 132, 0.03);
+
+    --sky-blue: #e0f2fe;
+    --dark-outline: rgba(5, 5, 25, 0.3);
   }
 
   .tab {
@@ -1079,29 +1118,48 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       0s ease-in-out,
       transform 0s;
 
-    &.active:not(.inStuffBar):not(.combine-border + .combine-border):not(
-        .combine-border ~ .combine-border
-      ):not(:has(+ .combine-border)) {
+    .title {
+      color: var(--contrast-color) !important;
+    }
+    :global(.verticalTabs)
+      &.active:not(.combine-border + .combine-border):not(.combine-border ~ .combine-border):not(
+        :has(+ .combine-border)
+      ) {
       background: paint(squircle) !important;
       --squircle-radius-top-left: 16px;
       --squircle-radius-top-right: 16px;
       --squircle-radius-bottom-left: 16px;
       --squircle-radius-bottom-right: 16px;
       --squircle-smooth: 0.33;
-      --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09);
+      --squircle-shadow: 0px 2px 2px -1px var(--black-09);
       --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-        inset 0px 1.25px 0px -1.25px rgba(255, 255, 255, 0.6),
-        inset 1.25px 0px 0px -1.25px rgba(255, 255, 255, 0.6),
-        inset -1.25px 0px 0px -1.25px rgba(255, 255, 255, 0.6),
-        inset 0px -1.25px 0px -1.25px rgba(255, 255, 255, 0.6);
-      --squircle-fill: rgba(255, 255, 255, 0.75);
+        inset 0px 1.25px 0px -1.25px var(--white-60), inset 1.25px 0px 0px -1.25px var(--white-60),
+        inset -1.25px 0px 0px -1.25px var(--white-60), inset 0px -1.25px 0px -1.25px var(--white-60);
+      --squircle-fill: var(--white-75);
       border-radius: 0 !important;
-      :global(.dark) & {
+
+      :global(.dark:not(.custom)) & {
         --squircle-shadow: 0 !important;
         --squircle-inner-shadow: 0 !important;
-        --squircle-outline-width: 1.25px !important;
-        --squircle-outline-color: var(--ring-color-muted) !important;
+        --squircle-outline-width: 1.5px !important;
+        --squircle-outline-color: var(--ring-color) !important;
         --squircle-fill: var(--dark-on-unpinned-surface) !important;
+      }
+
+      :global(.custom) & {
+        --squircle-shadow: 0 !important;
+        --squircle-inner-shadow: 0 !important;
+        --squircle-outline-width: 1.5px !important;
+        --squircle-outline-color: transparent !important;
+        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+      }
+
+      :global(.custom.dark) & {
+        --squircle-shadow: 0 !important;
+        --squircle-inner-shadow: 0 !important;
+        --squircle-outline-width: 1.5px !important;
+        --squircle-outline-color: transparent !important;
+        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
       }
     }
 
@@ -1113,8 +1171,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           background: paint(squircle);
           --squircle-radius: 16px;
           --squircle-smooth: 0.33;
-          --squircle-fill: rgba(0, 0, 0, 0.09);
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0), 0px -2px 2px -1px rgba(0, 0, 0, 0);
+          --squircle-fill: var(--black-09);
+          // TODO: (MERGE) ?
+          //--squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0), 0px -2px 2px -1px rgba(0, 0, 0, 0);
 
           :global(.dark) & {
             --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
@@ -1127,27 +1186,43 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         background: paint(squircle);
         --squircle-radius: 8px;
         --squircle-smooth: 0.28;
-        --squircle-fill: rgba(255, 255, 255, 0.33);
+        --squircle-fill: var(--white-33);
 
-        :global(.dark) & {
+        :global(.dark:not(.custom)) & {
           --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
         }
 
+        :global(.custom) & {
+          --squircle-fill: color-mix(
+            in hsl,
+            var(--custom-color),
+            hsla(0, 80%, 70%, 0.65)
+          ) !important;
+        }
+
+        :global(.custom.dark) & {
+          --squircle-fill: color-mix(
+            in hsl,
+            var(--custom-color),
+            hsla(0, 40%, 33%, 0.8)
+          ) !important;
+        }
+
         &:hover {
-          --squircle-fill: rgba(255, 255, 255, 0.55);
+          --squircle-fill: var(--white-55);
+
           :global(.dark) & {
-            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+            --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
           }
         }
 
         &.selected {
           background: paint(squircle);
-          --squircle-outline-color: rgba(0, 0, 0, 0);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
-          --squircle-fill: rgba(255, 255, 255, 0.4);
+          --squircle-outline-color: var(--black-00);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
+            inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
+            inset 0px -2px 0px -1px var(--white-80);
+          --squircle-fill: var(--white-40);
         }
 
         &.active {
@@ -1159,14 +1234,12 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           --squircle-radius-bottom-left: 9px !important;
           --squircle-radius-bottom-right: 9px !important;
           --squircle-smooth: 0.25 !important;
-          --squircle-fill: rgba(255, 255, 255, 0.8);
+          --squircle-fill: var(--white-80);
           --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
-            inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
-            inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
-            inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
-          --squircle-shadow: 0px 2px 2px -1px rgba(88, 104, 132, 0.09),
-            0px -2px 0px -1px rgba(88, 104, 132, 0.03);
+            inset 0px 1.5px 0px -1px var(--white-85), inset 1.5px 0px 0px -1px var(--white-85),
+            inset -1.5px 0px 0px -1px var(--white-85), inset 0px -1.5px 0px -1px var(--white-85);
+          --squircle-shadow: 0px 2px 2px -1px var(--sky-gray-09),
+            0px -2px 0px -1px var(--sky-gray-03);
         }
       }
 
@@ -1225,11 +1298,11 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         background: paint(squircle);
         --squircle-radius: 16px;
         --squircle-smooth: 0.33;
-        --squircle-inner-shadow: inset 0px 0px 0px 0.75px rgba(255, 255, 255, 0.26);
-        --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0) !important;
-        --squircle-fill: rgba(255, 255, 255, 0.15);
+        --squircle-inner-shadow: inset 0px 0px 0px 0.75px var(--white-26);
+        --squircle-shadow: 0px 2px 2px -1px var(--black-00) !important;
+        --squircle-fill: var(--white-15);
         :global(.dark) & {
-          --squircle-fill: rgba(255, 255, 255, 0.09) !important;
+          --squircle-fill: var(--white-09) !important;
         }
 
         &.active {
@@ -1238,9 +1311,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           --squircle-smooth: 0.33 !important;
           // flag
           --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 0px 0px 0.75px rgba(255, 255, 255, 0.26) !important;
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08) !important;
-          --squircle-fill: rgba(255, 255, 255, 0.6) !important;
+            inset 0px 0px 0px 0.75px var(--white-26) !important;
+          --squircle-shadow: 0px 2px 2px -1px var(--black-08) !important;
+          --squircle-fill: var(--white-60) !important;
           :global(.dark) & {
             --squircle-fill: var(--dark-on-pinned-surface) !important;
           }
@@ -1249,13 +1322,12 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         &.selected {
           background: paint(squircle);
           --squircle-smooth: 0.33;
-          --squircle-outline-color: rgba(0, 0, 0, 0);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08);
-          --squircle-fill: rgba(255, 255, 255, 0.4);
+          --squircle-outline-color: var(--black-00);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
+            inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
+            inset 0px -2px 0px -1px var(--white-80);
+          --squircle-shadow: 0px 2px 2px -1px var(--black-08);
+          --squircle-fill: var(--white-40);
         }
 
         &:hover {
@@ -1263,9 +1335,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           --squircle-radius: 16px !important;
           --squircle-smooth: 0.33 !important;
           --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 0px 0px 0.75px rgba(255, 255, 255, 0.26) !important;
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.01);
-          --squircle-fill: rgba(255, 255, 255, 0.6) !important;
+            inset 0px 0px 0px 0.75px var(--white-26) !important;
+          --squircle-shadow: 0px 2px 2px -1px var(--black-01);
+          --squircle-fill: var(--white-60) !important;
           :global(.dark) & {
             --squircle-fill: var(--dark-on-pinned-surface) !important;
           }
@@ -1278,22 +1350,21 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         background: paint(squircle);
         --squircle-radius: 8px;
         --squircle-smooth: 0.28;
-        --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0) !important;
-        --squircle-fill: rgba(255, 255, 255, 0.33);
+        --squircle-shadow: 0px 2px 2px -1px var(--black-00) !important;
+        --squircle-fill: var(--white-33);
         :global(.dark) & {
           --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
-          --squircle-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 0) !important;
+          --squircle-shadow: 0px 0px 0px 0px var(--black-00) !important;
         }
 
         &.selected {
           background: paint(squircle);
-          --squircle-outline-color: rgba(0, 0, 0, 0);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08);
-          --squircle-fill: rgba(255, 255, 255, 0.4);
+          --squircle-outline-color: var(--black-00);
+          --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
+            inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
+            inset 0px -2px 0px -1px var(--white-80);
+          --squircle-shadow: 0px 2px 2px -1px var(--black-08);
+          --squircle-fill: var(--white-40);
         }
 
         &.active {
@@ -1303,18 +1374,25 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           --squircle-radius-bottom-left: 8px !important;
           --squircle-radius-bottom-right: 8px !important;
           --squircle-smooth: 0.28 !important;
-          --squircle-fill: rgba(255, 255, 255, 0.65) !important;
+          --squircle-fill: var(--white-65) !important;
           --squircle-outline-width: 0px;
+          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+            inset 0px 1.5px 0px -1px var(--white-85), inset 1.5px 0px 0px -1px var(--white-85),
+            inset -1.5px 0px 0px -1px var(--white-85), inset 0px -1.5px 0px -1px var(--white-85);
+          --squircle-shadow: 0px 2px 2px -1px var(--black-08) !important;
+        }
+
+        &:hover {
+          --squircle-fill: var(--white-55);
+          // TODO: (MERGE) ? prob using base styles so we can delete
+          /*--squircle-outline-width: 0px;
           --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
             inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
             inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
             inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
             inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08) !important;
-        }
+          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08) !important;*/
 
-        &:hover {
-          --squircle-fill: rgba(255, 255, 255, 0.55);
           :global(.dark) & {
             --squircle-outline-width: 1.5px !important;
             --squircle-outline-color: var(--ring-color-muted) !important;
@@ -1374,7 +1452,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     // Selected and active states
     &.selected:not(.active) {
       opacity: 1;
-      background: rgba(255, 255, 255, 0.55);
+      background: var(--white-55);
       outline: none;
 
       :global(.dark) & {
@@ -1383,7 +1461,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     }
 
     &.active {
-      background: #e9f5fd;
+      background: var(--hover-color);
       outline: none;
 
       :global(.dark) & {
@@ -1395,7 +1473,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   // Global styles
   :global(.tab[data-context-menu-anchor]) {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.55);
+    background: var(--white-55);
     outline: none;
   }
 
@@ -1404,7 +1482,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }
 
   :global(.tab[data-dragging-item]) {
-    background: #e0f2fe;
+    background: var(--sky-blue);
     opacity: 1;
   }
 
@@ -1413,8 +1491,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     background: paint(squircle);
     --squircle-radius: 20px;
     --squircle-smooth: 0.33;
-    --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09), 0px -2px 0px -1px rgba(0, 0, 0, 0.03);
-    --squircle-fill: white;
+    --squircle-shadow: 0px 2px 2px -1px var(--black-09), 0px -2px 0px -1px var(--black-03);
+    --squircle-fill: var(--white);
     width: var(--drag-width, auto);
     height: var(--drag-height, auto);
     transition:
@@ -1435,8 +1513,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }
 
   :global(.tab[data-drag-preview][data-drag-target^='webview']) {
-    --squircle-fill: white;
-    opacity: 0.95;
+    background: var(--white);
+    border: 2px dotted var(--dark-outline);
+    opacity: 95%;
   }
 
   :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
@@ -1445,7 +1524,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }
 
   :global(.tab[data-drag-target='true']) {
-    outline: 1.5px dashed rgba(5, 5, 25, 0.3) !important;
+    outline: 1.5px dashed var(--dark-outline) !important;
     outline-offset: -1.5px;
   }
 
@@ -1467,8 +1546,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       &:has(+ :not(.combine-border)) {
         --squircle-radius-bottom-right: 16px;
         --squircle-radius-bottom-left: 16px;
-        --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09),
-          0px -2px 0px -1px rgba(0, 0, 0, 0.03);
+        --squircle-shadow: 0px 2px 2px -1px var(--black-09), 0px -2px 0px -1px var(--black-03);
       }
     }
 
@@ -1476,8 +1554,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       background: paint(squircle);
       --squircle-radius: 16px;
       --squircle-smooth: 0.33;
-      --squircle-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 0.09);
-      --squircle-fill: rgba(255, 255, 255, 0.8);
+      --squircle-shadow: 0px 0px 0px 0px var(--black-09);
+      --squircle-fill: var(--white-80);
     }
 
     &.active:not(.horizontalTabs):not(.combine-border + .combine-border):not(
@@ -1489,8 +1567,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       --squircle-radius-bottom-left: 16px;
       --squircle-radius-bottom-right: 16px;
       --squircle-smooth: 0.33;
-      --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.09), 0px -2px 0px -1px rgba(0, 0, 0, 0.03);
-      --squircle-fill: rgba(255, 255, 255, 0.8);
+      --squircle-shadow: 0px 2px 2px -1px var(--black-09), 0px -2px 0px -1px var(--black-03);
+      --squircle-fill: var(--white-80);
     }
 
     /*⚠️ DO NOT CHANGE THE ORDER OF THE FOLLOWING CSS RULES ⚠️*/
@@ -1500,13 +1578,13 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       ):not(:only-child) {
       border-top-left-radius: 16px;
       border-top-right-radius: 16px;
-      background: white;
+      background: var(--white);
     }
 
     /* Middle tabs in sequences */
     .tab.combine-border:not(.horizontalTabs) + .tab.combine-border {
       border-radius: 0;
-      background: rgba(255, 255, 255, 0.4);
+      background: var(--white-40);
     }
 
     /* Last tab of a group */
@@ -1524,7 +1602,16 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       --squircle-radius-bottom-left: 0px;
       --squircle-radius-bottom-right: 0px;
       --squircle-smooth: 0.33;
-      --squircle-fill: rgba(255, 255, 255, 0.4);
+      --squircle-fill: var(--white-40);
+    }
+  }
+
+  // Buttons
+  .custom-text-color {
+    :global(.custom) & {
+      color: var(--contrast-color) !important;
+      // TODO: (MERGE) ?
+      //--squircle-fill: rgba(255, 255, 255, 0.4);
     }
   }
 </style>

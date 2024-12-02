@@ -27,13 +27,26 @@ import { createResourcesFromMediaItems, processDrop } from './mediaImporter'
 import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@horizon/utils'
 import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
+import EventEmitter from 'events'
+import type TypedEmitter from 'typed-emitter'
+import type { ColorService, CustomColorData } from './colors'
 
 const DEFAULT_CARD_SIZES: Record<ResourceTypes, { x: number; y: number }> = {
   [ResourceTypes.DOCUMENT_SPACE_NOTE]: { x: 5, y: 6 }
 }
 
+export type DesktopManagerEvents = {
+  //created: (space: OasisSpace) => void
+  //updated: (space: OasisSpace, changes: Partial<SpaceData>) => void
+  // deleted: (spaceId: string) => void
+  'changed-active-desktop': (desktop: DesktopService) => void
+  'changed-desktop-background': (desktop: DesktopService) => void
+}
+
 export class DesktopManager {
   // Refs
+  private readonly eventEmitter: TypedEmitter<DesktopManagerEvents>
+
   static self: DesktopManager
   private telemetry: Telemetry
   readonly oasis: OasisService
@@ -41,11 +54,11 @@ export class DesktopManager {
   readonly toasts: Toasts
   readonly resourceManager: ResourceManager
   private config: ConfigService
-  miniBrowserService: MiniBrowserService
+  protected colorService?: ColorService
+  private miniBrowserService: MiniBrowserService
   private storage: HorizonDatabase
 
   // State
-  isEnabled: Readable<boolean>
   protected _visible: Writable<boolean>
   get visible(): Readable<boolean> {
     return this._visible
@@ -53,6 +66,10 @@ export class DesktopManager {
   protected _activeDesktop: Writable<DesktopService | null>
   get activeDesktop(): Readable<DesktopService | null> {
     return this._activeDesktop as Readable<DesktopService | null>
+  }
+  protected _activeDesktopColorScheme: Readable<Readable<DesktopBackgroundData | null>>
+  get activeDesktopColorScheme(): Readable<Readable<DesktopBackgroundData | null>> {
+    return this._activeDesktopColorScheme
   }
   protected _cmdVisible: Writable<boolean>
   get cmdVisible(): Readable<boolean> {
@@ -71,6 +88,8 @@ export class DesktopManager {
     toasts: Toasts
     miniBrowserService: MiniBrowserService
   }) {
+    this.eventEmitter = new EventEmitter() as TypedEmitter<DesktopManagerEvents>
+
     this.telemetry = refs.telemetry
     this.config = refs.config
     this.oasis = refs.oasis
@@ -90,10 +109,6 @@ export class DesktopManager {
       return _activeDesktop?.id ?? null
     })
 
-    this.isEnabled = derived(this.config.settings, (_settings) => {
-      return _settings.homescreen
-    })
-
     this.activeDesktopVisible = derived(
       [this.activeDesktopId, this.openedDesktops, this._visible, this._cmdVisible],
       ([activeDesktopId, openedDesktops, visible, cmdVisible]) => {
@@ -102,25 +117,58 @@ export class DesktopManager {
       }
     )
 
+    this._activeDesktopColorScheme = derived(this.activeDesktop, (desktop) => {
+      return desktop
+        ? (desktop.background_image as Readable<DesktopBackgroundData | null>)
+        : (writable(null) as Readable<null>)
+    })
+
     this.loadDefault()
+
+    // TODO: This doesnt have unsubscribers.. thats fine? should we have them? maybe
+    window.api.onResetBackgroundImage(() => {
+      if (get(this.activeDesktop)) {
+        const desktop = get(this.activeDesktop)
+        desktop?.background_image.set(undefined)
+        desktop?.store()
+      }
+    })
+  }
+
+  on<E extends keyof DesktopManagerEvents>(
+    event: E,
+    listener: DesktopManagerEvents[E]
+  ): () => void {
+    this.eventEmitter.on(event, listener)
+
+    return () => {
+      this.eventEmitter.off(event, listener)
+    }
+  }
+
+  emit<E extends keyof DesktopManagerEvents>(
+    event: E,
+    ...args: Parameters<DesktopManagerEvents[E]>
+  ) {
+    this.eventEmitter.emit(event, ...args)
   }
 
   attachTabsManager(tabsManager: TabsManager) {
     this.tabsManager = tabsManager
   }
+  attachColorService(colorService: ColorService) {
+    this.colorService = colorService
+  }
 
   async loadDefault() {
-    // Load defautl desktop if enabled
-    if (get(this.isEnabled)) {
-      let desktop = await this.useDesktop('$$default')
-      if (!desktop) {
-        desktop = await this.createDesktop({
-          id: '$$default',
-          items: []
-        })
-      }
-      this._activeDesktop.set(desktop)
+    let desktop = await this.useDesktop('$$default')
+    if (!desktop) {
+      desktop = await this.createDesktop({
+        id: '$$default',
+        items: []
+      })
     }
+    this._activeDesktop.set(desktop)
   }
 
   /**
@@ -199,6 +247,8 @@ export class DesktopManager {
     if (shouldBeVisible) {
       await this.setVisible(true, { desktop: id })
     }
+
+    this.emit('changed-active-desktop', desktop)
   }
 
   async setVisible(
@@ -281,6 +331,11 @@ export const useDesktopManager = (): DesktopManager => {
   return DesktopManager.self
 }
 
+export interface DesktopBackgroundData {
+  resourceId: string
+  colorPalette: [number, number, number][]
+}
+
 export class DesktopService {
   // Refs
   private readonly unsubscribers: (() => void)[] = []
@@ -301,7 +356,7 @@ export class DesktopService {
   // State
   protected readonly nodeBounds: DOMRect | null = null
 
-  background_image: Writable<string | undefined>
+  background_image: Writable<DesktopBackgroundData | undefined>
   items: Writable<Writable<DesktopItemData>[]>
 
   /// UI State
@@ -336,7 +391,7 @@ export class DesktopService {
     this.id = data.id
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
-    this.background_image = writable(data.background_image)
+    this.background_image = writable(data.background_image ?? undefined)
 
     this.items = writable(
       data.items.map((desktopItemData) => {
@@ -415,16 +470,25 @@ export class DesktopService {
     this.telemetry.trackRemoveHomescreenItem(RemoveHomescreenItemEventTrigger.ContextMenu)
   }
 
-  setBackgroundImage(resourceOrId: Resource | string | undefined) {
+  async setBackgroundImage(resourceOrId: Resource | string | undefined) {
     if (resourceOrId === undefined) {
       this.background_image.set(undefined)
-    } else if (typeof resourceOrId === 'string') {
-      this.background_image.set(`${resourceOrId}`)
     } else {
-      this.background_image.set(`${resourceOrId.id}`)
+      let resourceId = ''
+      if (typeof resourceOrId === 'string') resourceId = resourceOrId
+      else resourceId = resourceOrId.id
+
+      const colorPalette =
+        (await this.desktopManager.colorService?.calculateImagePalette(resourceId)!)!
+      // TODO: Calc colors
+      this.background_image.set({
+        resourceId: `${resourceId}`,
+        colorPalette
+      })
     }
     this.store()
     this.telemetry.trackUpdateHomescreen(UpdateHomescreenEventAction.SetBackground)
+    this.desktopManager.emit('changed-desktop-background', this)
   }
 
   //====  GRID CONTROLLING LOGIC

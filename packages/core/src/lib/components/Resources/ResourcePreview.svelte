@@ -874,7 +874,7 @@
       origin === 'homescreen' && resource.type.startsWith('image/'),
       {
         type: 'action',
-        icon: '',
+        icon: 'screenshot',
         text: 'Set as Background',
         action: () => dispatch('set-resource-as-background', resource.id)
       }

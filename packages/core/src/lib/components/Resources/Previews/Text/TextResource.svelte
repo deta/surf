@@ -251,7 +251,5 @@
         background: #111;
       }
     }
-
-    color: red !important;
   }
 </style>

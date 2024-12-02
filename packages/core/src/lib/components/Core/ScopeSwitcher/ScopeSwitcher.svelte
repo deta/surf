@@ -348,39 +348,53 @@
     gap: 0.5rem;
     padding: 0.25rem;
     padding-left: 0.75rem;
-    border-radius: 1rem;
-    color: #465b86;
-    background-color: rgb(247, 252, 255);
-    border: 1px solid rgb(186 230 253); // border-sky-200
 
-    // background-color: rgba(224,242,254,.1); // bg-sky-100/10
-    // border: 1px solid hsla(0,0%,100%,.1); // border-white/10
+    color: var(--contrast-color);
+    background: paint(squircle) !important;
+    --squircle-radius: 16px;
+    --squircle-smooth: 0.33;
+    --squircle-shadow: 0px 2px 2px -1px var(--black-09);
+    --squircle-fill: var(--white-65);
+    border-radius: 0 !important;
+
+    :global(.custom) & {
+      --squircle-fill: var(--white-75) !important;
+      color: var(--black-85);
+    }
+
+    :global(.dark) & {
+      --squircle-fill: var(--black-33) !important;
+      --squircle-fill: var(--white-09) !important;
+      color: var(--contrast-color);
+    }
 
     &.horizontal {
       padding: 0rem 0.2rem;
       padding-left: 0.5rem;
       border-radius: 0.75rem;
-      .input, .title {
+      .input,
+      .title {
         font-size: 0.938rem;
       }
+
+      --squircle-radius: 8px;
+      --squircle-smooth: 0.28;
     }
 
     &.activated {
-      color: #465b86;
-      background-color: rgb(215, 238, 252);
-      border: 1px solid rgb(135, 207, 245); // border-sky-200
+      --squircle-fill: var(--white-95) !important;
 
       :global(.dark) & {
-        background-color: rgb(58, 68, 83);
-        border-color: rgb(58, 68, 83);
-        color: rgb(232, 235, 238);
+        --squircle-fill: var(--black-45) !important;
       }
-    }
 
-    :global(.dark) & {
-      background-color: rgb(58, 68, 83);
-      border-color: rgb(58, 68, 83);
-      color: rgb(232, 235, 238);
+      :global(.custom) & {
+        color: var(--contrast-color) !important;
+        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+      }
+      :global(.custom.dark) & {
+        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+      }
     }
   }
 
@@ -445,6 +459,14 @@
       :global(.dark) & {
         color: rgb(2 132 199); // text-sky-600
         background-color: rgb(59, 80, 111);
+      }
+
+      :global(.custom) & {
+        color: var(--contrast-color) !important;
+        background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 90%, 0.3)) !important;
+      }
+      :global(.custom.dark) & {
+        background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 00%, 0.65)) !important;
       }
     }
 

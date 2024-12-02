@@ -350,6 +350,13 @@
         opacity 230ms,
         background 230ms,
         border 230ms;
+
+      &:hover {
+        :global(.custom) & {
+          color: var(--contrast-color) !important;
+          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+        }
+      }
     }
 
     .stack {

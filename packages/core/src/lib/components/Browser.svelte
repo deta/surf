@@ -170,6 +170,8 @@
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
 
+  import { ColorMode, provideColorService } from '@horizon/core/src/lib/service/colors'
+
   /*
   NOTE: Funky notes on our z-index issue.
 
@@ -197,20 +199,15 @@
 
   let telemetryAPIKey = ''
   let telemetryActive = false
-  let telemetryProxyUrl: string | undefined = undefined
   if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
+    telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
     telemetryActive = true
-    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
-    if (!telemetryProxyUrl) {
-      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
-    }
   }
 
   const telemetry = createTelemetry({
     apiKey: telemetryAPIKey,
     active: telemetryActive,
-    trackHostnames: false,
-    proxyUrl: telemetryProxyUrl
+    trackHostnames: false
   })
 
   const downloadResourceMap = new Map<string, Download>()
@@ -245,22 +242,24 @@
   oasis.attachTabsManager(tabsManager)
   desktopManager.attachTabsManager(tabsManager)
 
+  const colorService = provideColorService(config, ColorMode.HSL)
+  onDestroy(colorService.destroy)
+  desktopManager.attachColorService(colorService)
+  const colorScheme = colorService.colorScheme
+
   const globalMiniBrowser = miniBrowserService.globalBrowser
   const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
 
-  const desktopEnabled = desktopManager.isEnabled
   const desktopVisible = desktopManager.activeDesktopVisible
   const activeDesktop = desktopManager.activeDesktop
+  const activeDesktopColorScheme = desktopManager.activeDesktopColorScheme
 
   const desktopBackgroundStore = derived(desktopManager.activeDesktop, (activeDesktop) => {
     return activeDesktop?.background_image
   })
-  /* const desktopBackgroundImage = derived(desktopBackgroundStore, (backgroundStore) => {
-    return backgroundStore === undefined ? undefined : backgroundStore
-  })*/
 
   // NOTE: Make sure Dragcula is initialized
   Dragcula.get().isDragging.set(false)
@@ -315,8 +314,23 @@
 
   const CHAT_DOWNLOAD_INTERCEPT_TIMEOUT = 1000 * 60 // 60s
 
+  $: desktopColorScheme = $activeDesktopColorScheme
+  $: {
+    const isDarkMode = $userConfigSettings.app_style === 'dark'
+    if (!desktopColorScheme || !$desktopColorScheme || !$desktopColorScheme.colorPalette) {
+      colorService.useDefaultPalette(isDarkMode)
+    } else {
+      colorService.usePalette($desktopColorScheme.colorPalette, isDarkMode)
+    }
+  }
+
   // Toggle dark mode
   $: document.body.classList[$userConfigSettings.app_style === 'dark' ? 'add' : 'remove']('dark')
+
+  // Toggle custom mode
+  $: document.body.classList[
+    $userConfigSettings.homescreen && isVendorBackground === false ? 'add' : 'remove'
+  ]('custom')
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
@@ -778,11 +792,7 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) {
-        if (
-          $desktopEnabled &&
-          $userConfigSettings.homescreen_link_cmdt &&
-          $showNewTabOverlay === 1
-        ) {
+        if ($userConfigSettings.homescreen_link_cmdt && $showNewTabOverlay === 1) {
           desktopManager.setCmdVisible(false)
         }
         showNewTabOverlay.set(0)
@@ -891,16 +901,18 @@
           isAltKeyAndKeysPressed(e, ['1', '2', '3', '4', '5', '6', '7', '8', '9']))) &&
       !e.shiftKey
     ) {
+      selectedTabs.set(new Set())
+      lastSelectedTabId.set(null)
       let key = parseInt(
         !window.api.disableTabSwitchingShortcuts ? e.key : e.code.match(/\d$/)?.[0] || '1'
       )
-      if (key == 1 && $desktopEnabled && !window.api.disableTabSwitchingShortcuts) {
+      if (key == 1 && !window.api.disableTabSwitchingShortcuts) {
         desktopManager.setVisible(!$desktopVisible, {
           trigger: OpenHomescreenEventTrigger.Shortcut
         })
         return
       }
-      const index = key - ($desktopEnabled && !window.api.disableTabSwitchingShortcuts ? 2 : 1)
+      const index = key - (!window.api.disableTabSwitchingShortcuts ? 2 : 1)
       const tabs = [...$pinnedTabs, ...$unpinnedTabs]
 
       if (index < 8) {
@@ -1473,7 +1485,7 @@
       }
 
       updateBookmarkingTabState(tabId, 'in_progress')
-      toast = toasts.loading(savedToSpace ? 'Saving Page to Space…' : 'Saving Page…')
+      toast = toasts.loading('Saving Page…')
 
       const isActivated = $activatedTabs.includes(tab.id)
       if (!isActivated) {
@@ -1517,8 +1529,6 @@
           SpaceEntryOrigin.ManuallyAdded
         )
         toast?.success(`Page saved to active space!`)
-      } else if (savedToSpace) {
-        toast?.success('Page Saved to Space!')
       } else {
         toast?.success('Page Saved!')
       }
@@ -2175,13 +2185,6 @@
     }
   }
 
-  const openCreateSpaceMenu = async () => {
-    showNewTabOverlay.set(2)
-    await tick()
-    const button = document.querySelector('.action-new-space')
-    if (button) button.click()
-  }
-
   const createPageAnnotation = async (
     text: string,
     html?: string,
@@ -2325,17 +2328,19 @@
     createHistoryTab()
   }
 
-  const saveTabInSpace = async (tabId: string, space: OasisSpace) => {
-    log.debug('save tab page to space', tabId, space)
+  const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
+    log.debug('add resource to space', e.detail)
+
+    const toast = toasts.loading('Saving page to space...')
 
     try {
-      const { resource } = await handleBookmark(tabId, true, SaveToOasisEventTrigger.Click)
+      const { resource } = await handleBookmark($activeTabId, true, SaveToOasisEventTrigger.Click)
       log.debug('bookmarked resource', resource)
 
       if (resource) {
-        log.debug('will add item', resource.id, 'to space', space.id)
+        log.debug('will add item', resource.id, 'to space', e.detail.id)
         await resourceManager.addItemsToSpace(
-          space.id,
+          e.detail.id,
           [resource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
@@ -2346,8 +2351,11 @@
           AddResourceToSpaceEventTrigger.TabMenu
         )
       }
+
+      toast.success('Page saved to space!')
     } catch (e) {
       log.error('Failed to add resource to space:', e)
+      toast.error('Failed to save page to space')
     }
   }
 
@@ -2605,7 +2613,7 @@
     oasis.resetSelectedSpace()
   }
 
-  const handleCreateNote = async (e: CustomEvent<string | undefined>) => {
+  const handleCreateNote = async (e: CustomEvent<string>) => {
     const query = e.detail ?? ''
     log.debug('create note with query', query)
 
@@ -3177,13 +3185,13 @@
     window.api.onCreateNewTab(() => {
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
-        if ($desktopEnabled && $userConfigSettings.homescreen_link_cmdt) {
+        if ($userConfigSettings.homescreen_link_cmdt) {
           desktopManager.setCmdVisible(false)
         }
       } else {
         // THIS IS WHERE THE OLD COMMAND BAR GOT CALLED
         $showNewTabOverlay = 1
-        if ($desktopEnabled && $userConfigSettings.homescreen_link_cmdt) {
+        if ($userConfigSettings.homescreen_link_cmdt) {
           desktopManager.setCmdVisible(true)
           // TODO: (maxu/home): Only until felixes new cmdt merge
           tick().then(() => document.querySelector('.drawer-overlay')?.remove())
@@ -3392,9 +3400,7 @@
     }, 2000)
 
     const desktopId = tabsManager.activeScopeIdValue ?? '$$default'
-    if (get(desktopManager.isEnabled)) {
-      desktopManager.setActive(desktopId)
-    }
+    desktopManager.setActive(desktopId)
 
     await tick()
 
@@ -3920,7 +3926,7 @@
 
         // NOTE: Should be opt? when creating tab, but currently api does not support and
         // adding into CreateTabOptions doesnt match other tab apis props
-        if (tab && pinned) tabsManager.changeTabPinnedState(tab!.id, pinned)
+        if (tab && pinned) tabsManager.update(tab!.id, { pinned })
 
         telemetry.trackSaveToOasis(r.type, SaveToOasisEventTrigger.Drop, false)
       }
@@ -3972,7 +3978,6 @@
           }
 
           if (drag.to?.id === 'sidebar-pinned-tabs') {
-            droppedTab.scopeId = undefined
             droppedTab.pinned = true
             droppedTab.magic = false
 
@@ -4005,7 +4010,6 @@
               telemetry.trackMoveTab(MoveTabEventAction.Unpin)
             }
 
-            droppedTab.scopeId = tabsManager.activeScopeIdValue ?? undefined
             droppedTab.pinned = false
             droppedTab.magic = false
             cachedMagicTabs.delete(droppedTab.id)
@@ -4032,12 +4036,7 @@
         tabsManager.bulkPersistChanges(
           newTabs.map((tab) => ({
             id: tab.id,
-            updates: {
-              pinned: tab.pinned,
-              magic: tab.magic,
-              index: tab.index,
-              scopeId: tab.scopeId
-            }
+            updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
           }))
         )
 
@@ -4374,7 +4373,7 @@
       return
     }
 
-    tabsManager.pinTab(tabId)
+    tabsManager.update(tabId, { pinned: true })
   }
   const handleUnpinTab = (e: CustomEvent<string>) => {
     const tabId = e.detail
@@ -4384,13 +4383,14 @@
       return
     }
 
-    tabsManager.unpinTab(tabId)
+    tabsManager.update(tabId, { pinned: false })
   }
 
   let leftSidebarWidth = 0
   let leftSidebarHeight = 0
   let rightSidebarWidth = 0
 
+  let isVendorBackground = true
   $: backgroundImage =
     $desktopBackgroundStore === undefined
       ? writable(undefined)
@@ -4398,15 +4398,28 @@
           [$desktopBackgroundStore, userConfigSettings],
           ([$background, $userConfigSettings]) => {
             // Custom
-            if ($background !== undefined && $background !== 'transparent' && $background !== '') {
-              return `url('surf://resource/${$background}')`
+            if (
+              $background?.resourceId !== undefined &&
+              $background?.resourceId !== 'transparent' &&
+              $background?.resourceId !== ''
+            ) {
+              isVendorBackground = false
+              return {
+                path: `url('surf://resource/${$background.resourceId}')`,
+                customColors: $background.colorScheme
+              }
             }
             // Vendor
             else {
-              return `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`
+              isVendorBackground = true
+              return {
+                path: `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`,
+                customColors: {}
+              }
             }
           }
         )
+  $: console.warn('BG IMA', $backgroundImage)
 
   const contextMenuMoveTabsToSpaces = derived(
     [spaces, tabsManager.activeScopeId],
@@ -4467,7 +4480,7 @@
             (space) =>
               ({
                 type: 'action',
-                icon: space,
+                icon: space.dataValue.colors,
                 text: space.dataValue.folderName,
                 action: () => handleMove(space.id, space.dataValue.folderName)
               }) as CtxItem
@@ -4563,7 +4576,12 @@
     on:toggle-bookmark={() =>
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
     on:show-history-tab={handleCreateHistoryTab}
-    on:create-new-space={() => openCreateSpaceMenu()}
+    on:create-new-space={async () => {
+      showNewTabOverlay.set(2)
+      await tick()
+      const button = document.querySelector('.action-new-space')
+      if (button) button.click()
+    }}
     on:open-space={async (e) => {
       const space = e.detail
       showNewTabOverlay.set(2)
@@ -4584,8 +4602,14 @@
 
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
-  style:--background-image={$backgroundImage}
-  style:--background-opacity={$backgroundImage?.startsWith(`url('surf://`) ? 1 : 0.4}
+  style:--background-image={$backgroundImage?.path}
+  style:--background-image-color={$colorScheme.color}
+  style:--bg-color-h={$colorScheme.h}
+  style:--bg-color-s={$colorScheme.s}
+  style:--bg-color-l={$colorScheme.l}
+  style:--custom-color={$colorScheme.color}
+  style:--contrast-color={$colorScheme.contrastColor}
+  style:--background-opacity={$backgroundImage?.path?.startsWith(`url('surf://`) ? 1 : 0.4}
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
   class:horizontalTabs
@@ -4599,10 +4623,7 @@
     <div
       class="vertical-window-bar flex flex-row flex-shrink-0 items-center justify-between p-1"
       style="position: relative; z-index: 9999999999;"
-      class:customBg={$desktopEnabled &&
-        $backgroundImage !== undefined &&
-        $backgroundImage !== '' &&
-        $backgroundImage !== 'transparent'}
+      class:customBg={isVendorBackground === false}
       class:mutedBg={$desktopVisible}
     >
       <div>
@@ -4641,7 +4662,7 @@
     </div>
   {/if}
 
-  {#if $desktopEnabled && $desktopVisible && $activeDesktop}
+  {#if $desktopVisible && $activeDesktop}
     {#key $activeDesktop}
       <Homescreen
         desktop={$activeDesktop}
@@ -4694,10 +4715,7 @@
       id="left-sidebar"
       class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
       class:homescreenVisible={$desktopVisible}
-      class:customBg={$desktopEnabled &&
-        $backgroundImage !== undefined &&
-        $backgroundImage !== '' &&
-        $backgroundImage !== 'transparent'}
+      class:customBg={isVendorBackground === false}
       class:horizontalTabs
       bind:clientWidth={leftSidebarWidth}
       bind:clientHeight={leftSidebarHeight}
@@ -4769,13 +4787,13 @@
 
           <div
             id="sidebar-pinned-tabs-wrapper"
-            class={$pinnedTabs.length !== 0 || (horizontalTabs && $desktopEnabled)
+            class={$pinnedTabs.length !== 0 || horizontalTabs
               ? 'relative no-drag my-auto rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
               : horizontalTabs
                 ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
                 : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
             class:horizontalTabs
-            class:empty={$pinnedTabs.length === 0 && !$desktopEnabled}
+            class:empty={$pinnedTabs.length === 0}
             bind:this={pinnedTabsWrapper}
             style="scroll-behavior: smooth;"
           >
@@ -4836,7 +4854,6 @@
                     on:pin={handlePinTab}
                     on:unpin={handleUnpinTab}
                     on:edit={handleEdit}
-                    on:create-new-space={() => openCreateSpaceMenu()}
                   />
                 {/each}
               {/if}
@@ -4850,7 +4867,6 @@
           <ScopeSwitcher {horizontalTabs} />
 
           <div
-            style:view-transition-name={'app_sidebar_unpinned_tabs'}
             class="relative w-full h-full no-scrollbar overflow-hidden py-2 {horizontalTabs
               ? 'flex-row overflow-y-hidden'
               : 'flex-col overflow-x-hidden'} {horizontalTabs
@@ -4961,7 +4977,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -4969,7 +4985,6 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
-                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {:else}
                     <TabItem
@@ -4997,7 +5012,6 @@
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5005,7 +5019,6 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
-                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {/if}
                 {/each}
@@ -5090,7 +5103,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
+                      on:save-resource-in-space={handleSaveResourceInSpace}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5098,7 +5111,6 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
-                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {:else}
                     <TabItem
@@ -5126,7 +5138,6 @@
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5134,7 +5145,6 @@
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
                       on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
                       on:edit={handleEdit}
-                      on:create-new-space={() => openCreateSpaceMenu()}
                     />
                   {/if}
                 {/each}
@@ -5344,11 +5354,11 @@
       class:horizontalTabs
     >
       <div
+        style:view-transition-name="active-content-wrapper"
         class="w-full h-full overflow-hidden flex-grow rounded-xl"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
-        style:view-transition-name="browser_content"
       >
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window flex-grow active no-drag" style="--scaling: 1;">
@@ -5487,9 +5497,7 @@
     <div slot="right-sidebar" bind:clientWidth={rightSidebarWidth} class="w-full h-full">
       <Tabs.Root
         bind:value={$rightSidebarTab}
-        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag {$desktopEnabled
-          ? 'customBg'
-          : ''}"
+        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag customBg"
         id="sidebar-right"
         let:minimal
       >
@@ -5670,38 +5678,6 @@
 />
 
 <style lang="scss">
-  // NOTE: Needed for the content to transition smoothly e.g. when toggling sidebars!
-  /*:global(::view-transition-group(browser_content)) {
-    animation-duration: 100ms;
-    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
-  }
-  :global(::view-transition-image-pair(browser_content)) {
-    animation-duration: 100ms;
-    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
-  }
-  :global(::view-transition-old(browser_content)) {
-    display: none;
-    opacity: 0;
-    height: 100%;
-    // width: 100%;
-    overflow: clip;
-    object-fit: none;
-    object-position: left top;
-    animation-duration: 100ms;
-    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
-  }
-
-  // NOTE: Needed for the content to transition smoothly e.g. when toggling sidebars!
-  :global(::view-transition-new(browser_content)) {
-    //width: 100%;
-    // height: 100%;
-    //overflow: clip;
-    // object-fit: none;
-    // object-position: left top;
-    animation-duration: 100ms;
-    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
-  }*/
-
   .app-contents {
     position: relative;
 
@@ -5758,19 +5734,48 @@
   }
   #left-sidebar {
     position: relative;
+    --mixed-bg: color-mix(
+      in hsl,
+      var(--background-image-color),
+      hsl(var(--bg-color-h) 100%, 100%, 0.65)
+    );
+
+    --mixed-bg-dark: color-mix(
+      in hsl,
+      var(--background-image-color),
+      hsl(var(--bg-color-h) 80%, 0%, 0.65)
+    );
+
+    &::before {
+      opacity: 0;
+      transition: background 245ms ease-out;
+    }
 
     &.customBg {
       &::before {
         content: '';
         position: absolute;
         inset: 0;
+        opacity: 1;
         width: calc(100% + 0px);
-        background: rgba(255, 255, 255, 0.35);
+        background: var(--mixed-bg);
+        :global(.dark) & {
+          background: var(--mixed-bg-dark) !important;
+        }
         backdrop-filter: blur(12px);
         z-index: -1;
-
-        transition: background 145ms ease-out;
       }
+
+      //&::after {
+      //  content: '';
+      //  position: fixed;
+      //  top: 2rem;
+      //  left: 2rem;
+      //  width: 20px;
+      //  height: 20px;
+      //  border-radius: 6px;
+      //  background: var(--contrast-color);
+      //}
       &.horizontalTabs {
         &::before {
           width: 100%;
@@ -5782,7 +5787,7 @@
         &::before {
           width: 100%;
           pointer-events: none;
-          background: rgba(255, 255, 255, 0.4);
+          background: var(--mixed-bg);
           backdrop-filter: blur(12px);
           mask-image: linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(0, 0, 0, 1) 100%);
           //mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 0) 70%);
@@ -5795,12 +5800,6 @@
           }
         }
       }
-    }
-  }
-  :global(body:has(.left-sidebar.homescreenVisible) .sidebar-meta) {
-    background: transparent;
-    &::after {
-      opacity: 0 !important;
     }
   }
 
@@ -6170,14 +6169,23 @@
     }
   }
 
-  .new-tab-button:hover {
-    background: paint(squircle);
-    --squircle-radius-top-left: 16px;
-    --squircle-radius-top-right: 16px;
-    --squircle-radius-bottom-left: 16px;
-    --squircle-radius-bottom-right: 16px;
-    --squircle-smooth: 0.33;
-    --squircle-fill: rgba(255, 255, 255, 0.65);
+  .new-tab-button {
+    :global(.custom) & {
+      color: var(--contrast-color) !important;
+    }
+    &:hover {
+      background: paint(squircle);
+      --squircle-radius-top-left: 16px;
+      --squircle-radius-top-right: 16px;
+      --squircle-radius-bottom-left: 16px;
+      --squircle-radius-bottom-right: 16px;
+      --squircle-smooth: 0.33;
+      --squircle-fill: var(--black-09);
+
+      :global(.dark) & {
+        --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+      }
+    }
   }
 
   .messi {
@@ -6823,6 +6831,12 @@
       border-radius: 50%;
       mix-blend-mode: soft-light;
       background: #ffffff;
+    }
+  }
+
+  .custom-button-color {
+    :global(.custom) & {
+      color: var(--contrast-color) !important;
     }
   }
 

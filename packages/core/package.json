@@ -20,8 +20,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@horizon/cmdk-sv": "*",
     "@deta/teletype": "*",
+    "@horizon/cmdk-sv": "*",
     "@horizon/dragcula": "*",
     "@horizon/editor": "*",
     "@horizon/eslint-config": "*",

@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { writable } from 'svelte/store'
+  import { writable, type Writable } from 'svelte/store'
   import RecentsStack from './RecentsStack.svelte'
   import dotNoiseLightGrey from '../../../../../public/assets/dotnoise-light-grey.png'
+  import { useColorService } from '../../../service/colors'
 
+  const colorsService = useColorService()
+  const colorScheme = colorsService.colorScheme
   const containerHeight = writable<null | string>(null)
 
   function handleUpdateContainerHeight(e: CustomEvent<string | null>) {
@@ -21,9 +24,15 @@
     mouseInside = false
     wasMouseInsideStack.set(false)
   }}
+  style:--custom-color={$colorScheme.color}
+  style:--contrast-color={$colorScheme.contrastColor}
+  style:--bg-color-h={$colorScheme.h}
+  style:--bg-color-s={$colorScheme.s}
+  style:--bg-color-l={$colorScheme.l}
   style={$containerHeight === null
     ? '--height-override: auto;'
     : `--height-override: ${$containerHeight}; --bg-url: url('${dotNoiseLightGrey}');`}
+  aria-hidden="true"
 >
   <div class="bottom" style="gap: 0.25em;">
     <RecentsStack
@@ -56,8 +65,30 @@
 
     background: linear-gradient(0deg, rgb(77 135 240 / 74%) 0%, rgba(0, 0, 0, 0) 100%);
 
-    :global(.dark) & {
+    :global(.dark:not(.custom)) & {
       background: linear-gradient(0deg, rgba(8, 16, 56, 0.74) 0%, rgba(22, 8, 8, 0) 100%);
+    }
+
+    :global(.custom) & {
+      // Light gradient colors
+      --mixed-bg: color-mix(in hsl, var(--custom-color), hsl(var(--bg-color-h) 100% 100% / 0.65));
+      --mixed-bg-transparent: color-mix(
+        in hsl,
+        hsl(var(--bg-color-h) var(--bg-color-s) var(--bg-color-l) / 0),
+        hsl(var(--bg-color-h) 100% 100% / 0)
+      );
+      background: linear-gradient(180deg, var(--mixed-bg-transparent), var(--mixed-bg));
+    }
+
+    :global(.custom.dark) & {
+      // Dark gradient colors
+      --mixed-bg-dark: color-mix(in hsl, var(--custom-color), hsl(var(--bg-color-h) 80% 0% / 0.65));
+      --mixed-bg-dark-transparent: color-mix(
+        in hsl,
+        hsl(var(--bg-color-h) var(--bg-color-s) var(--bg-color-l) / 0),
+        hsl(var(--bg-color-h) 80% 0% / 0)
+      );
+      background: linear-gradient(180deg, var(--mixed-bg-dark-transparent), var(--mixed-bg-dark));
     }
 
     transition: height 185ms ease-out;
@@ -104,6 +135,28 @@
     margin-right: -1rem;
 
     background: linear-gradient(to left, rgb(77 135 240 / 74%) 0%, #c8ddfa00 100%);
+
+    :global(.custom) & {
+      // Light gradient colors
+      --mixed-bg: color-mix(in hsl, var(--custom-color), hsl(var(--bg-color-h) 100% 100% / 0.65));
+      --mixed-bg-transparent: color-mix(
+        in hsl,
+        hsl(var(--bg-color-h) var(--bg-color-s) var(--bg-color-l) / 0),
+        hsl(var(--bg-color-h) 100% 100% / 0)
+      );
+      background: linear-gradient(90deg, var(--mixed-bg-transparent), var(--mixed-bg));
+    }
+
+    :global(.custom.dark) & {
+      // Dark gradient colors
+      --mixed-bg-dark: color-mix(in hsl, var(--custom-color), hsl(var(--bg-color-h) 80% 0% / 0.65));
+      --mixed-bg-dark-transparent: color-mix(
+        in hsl,
+        hsl(var(--bg-color-h) var(--bg-color-s) var(--bg-color-l) / 0),
+        hsl(var(--bg-color-h) 80% 0% / 0)
+      );
+      background: linear-gradient(90deg, var(--mixed-bg-dark-transparent), var(--mixed-bg-dark));
+    }
 
     transition: width 185ms ease-out;
 
