@@ -235,6 +235,18 @@ impl Database {
         Ok(result)
     }
 
+    pub fn delete_space_entry_by_resource_id_tx(
+        tx: &mut rusqlite::Transaction,
+        space_id: &str,
+        resource_id: &str,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "DELETE FROM space_entries WHERE space_id = ?1 AND resource_id = ?2",
+            rusqlite::params![space_id, resource_id],
+        )?;
+        Ok(())
+    }
+
     pub fn create_space_entry_tx(
         tx: &mut rusqlite::Transaction,
         space_entry: &SpaceEntry,

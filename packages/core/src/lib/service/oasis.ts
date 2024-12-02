@@ -146,7 +146,7 @@ export class OasisSpace {
   }
 
   async addResources(resourceIds: string[], origin: SpaceEntryOrigin) {
-    this.log.debug('adding resources to space', resourceIds)
+    this.log.debug('adding resources to space', resourceIds, origin)
     await this.resourceManager.addItemsToSpace(this.id, resourceIds, origin)
 
     this.log.debug('added resources to space, updating contents')
@@ -473,7 +473,7 @@ export class OasisService {
   }
 
   async addResourcesToSpace(spaceId: string, resourceIds: string[], origin: SpaceEntryOrigin) {
-    this.log.debug('adding resources to space', spaceId, resourceIds)
+    this.log.debug('adding resources to space', spaceId, resourceIds, origin)
 
     const space = await this.getSpace(spaceId)
     if (!space) {

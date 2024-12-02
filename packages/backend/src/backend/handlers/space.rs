@@ -51,6 +51,10 @@ impl Worker {
         let mut space_entries = Vec::new();
         let mut tx = self.db.begin()?;
         for entry in entries {
+            // check if the new entry was added by the user and only then delete the old entries
+            if entry.manually_added == 1 {
+                Database::delete_space_entry_by_resource_id_tx(&mut tx, &space_id, &entry.resource_id)?;
+            }
             let space_entry = SpaceEntry {
                 id: random_uuid(),
                 space_id: space_id.clone(),

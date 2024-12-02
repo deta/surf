@@ -466,15 +466,19 @@
         return
       }
 
-      const newResults = resourceIds.filter(
-        (x) => $spaceContents.findIndex((y) => y.resource_id === x) === -1
-      )
+      const fullSpaceContents = await oasis.getSpaceContents(spaceId)
+      const newResults = resourceIds.filter((x) => {
+        const entry = fullSpaceContents.find((y) => y.resource_id === x)
+        if (!entry) return true
+
+        return entry.manually_added !== SpaceEntryOrigin.Blacklisted
+      })
 
       log.debug('Adding resources to space', newResults)
 
       newlyLoadedResources.update((resources) => [...resources, ...newResults])
 
-      await oasis.addResourcesToSpace(spaceId, resourceIds, SpaceEntryOrigin.LlmQuery)
+      await oasis.addResourcesToSpace(spaceId, newResults, SpaceEntryOrigin.LlmQuery)
 
       // await loadSpaceContents(spaceId, true)
 

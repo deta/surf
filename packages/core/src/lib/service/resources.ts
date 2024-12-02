@@ -1243,9 +1243,12 @@ export class ResourceManager {
 
   async addItemsToSpace(space_id: string, resourceIds: string[], origin: SpaceEntryOrigin) {
     const existingItems = await this.getSpaceContents(space_id)
-    const existingResourceIds = existingItems.map((item) => item.resource_id)
-    const newItems = resourceIds.filter((id) => !existingResourceIds.includes(id))
-
+    const newItems = resourceIds.filter(
+      (id) =>
+        existingItems.findIndex(
+          (item) => item.resource_id === id && item.manually_added === origin
+        ) === -1
+    )
     return await this.sffs.addItemsToSpace(space_id, newItems, origin)
   }
 
