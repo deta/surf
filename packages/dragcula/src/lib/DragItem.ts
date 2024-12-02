@@ -215,6 +215,7 @@ export class HTMLDragItem extends DragItem {
       this.previewElement.style.setProperty("--drag-height", `${this.previewSize.y}px`);
       this.previewElement.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
       this.previewElement.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
+      this.previewElement.style.viewTransitionName = "dragcula-preview-element";
 
       // TODO: This should be not hard wired into dragcula
       // TOOD: Add schnittstelle to do custom preview manipulation on dragstart

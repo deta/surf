@@ -20,6 +20,7 @@
   import { tick } from 'svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
+  import { HTMLDragArea } from '@horizon/dragcula'
 
   export let horizontalTabs = false
 
@@ -256,6 +257,12 @@
   class="wrapper no-drag"
   class:horizontal={horizontalTabs}
   class:activated={$desktopVisible}
+  use:HTMLDragArea.use={{
+    accepts: () => true
+  }}
+  on:DragEnter={() => {
+    desktopManager.setVisible(true, { trigger: OpenHomescreenEventTrigger.DragOver })
+  }}
   use:contextMenu={{
     canOpen: $activeScopeId !== null,
     items: [
