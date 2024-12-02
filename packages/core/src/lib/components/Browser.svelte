@@ -4557,6 +4557,8 @@
       })
     }}
     on:open-url-in-minibrowser={openURLDetailsModal}
+    on:open-resource-in-minibrowser={(e) =>
+      openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.CommandMenu)}
     on:reload={() => {
       $activeBrowserTab?.reload()
     }}

@@ -29,6 +29,7 @@
   const selectedAction = teletype.selectedAction
   const animations = teletype.animations
   const showHelper = teletype.options?.showHelper
+  const showActionPanel = teletype.showActionPanel
 
   let showModalOverlay = false
   let modalContent: Action | null = null
@@ -40,8 +41,6 @@
 
   let inputElem: HTMLInputElement
   let filteredActions = $actions
-
-  let showActionPanel = false
 
   // Focus the input field on open (used when capturing keys)
   const handleOpen = async () => {
@@ -58,7 +57,7 @@
   const handleClose = () => {
     inputValue.set('')
     inputElem?.blur()
-    showActionPanel = false
+    $showActionPanel = false
     showModalOverlay = false
     modalContent = null
     selectedAction.set(null)
@@ -269,7 +268,7 @@
     teletype.showAction('teletype-helper')
   }
 
-  $: if (showActionPanel) {
+  $: if ($showActionPanel) {
     inputElem?.blur()
   }
 
@@ -279,9 +278,9 @@
 
   const handleActionOptionsKeyUp = (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
-      showActionPanel = !showActionPanel
+      $showActionPanel = !$showActionPanel
     } else if (e.key === 'Backspace') {
-      showActionPanel = false
+      $showActionPanel = false
     }
   }
 
@@ -291,20 +290,20 @@
     if (option.handler) {
       const result = await option.handler(option, teletype)
       if (typeof result === 'object' && result.preventClose) {
-        showActionPanel = false
+        $showActionPanel = false
         return
       }
       if (result?.afterClose) {
         result.afterClose(teletype)
       }
     } else if (option.action) {
-      showActionPanel = false
+      $showActionPanel = false
       callAction(option.action)
     }
   }
 
   $: if ($selectedAction) {
-    showActionPanel = false
+    $showActionPanel = false
     document.addEventListener('keydown', handleActionOptionsKeyUp)
   } else {
     document.removeEventListener('keydown', handleActionOptionsKeyUp)
@@ -390,7 +389,7 @@
             bind:resetActiveIndex={resetActionList}
             on:execute={handleActionClick}
             on:selected={handleSelectedAction}
-            freeze={showActionPanel}
+            freeze={$showActionPanel}
             animations={$animations}
             value={inputValue}
           />
@@ -472,7 +471,7 @@
         {/if}
 
         {#if $open && $selectedAction}
-          {#if showActionPanel}
+          {#if $showActionPanel}
             <ActionPanel
               options={$selectedAction.actionPanel || []}
               action={$selectedAction}
@@ -488,7 +487,7 @@
               class="selected-option"
               tabindex="0"
             >
-              {showActionPanel ? 'Select' : $selectedAction.actionText || 'Open'}
+              {$showActionPanel ? 'Select' : $selectedAction.actionText || 'Open'}
               <div class="shortcut">⏎</div>
             </div>
 
@@ -496,13 +495,13 @@
               <div class="separator"></div>
               <div
                 role="button"
-                on:click|stopPropagation={() => (showActionPanel = !showActionPanel)}
+                on:click|stopPropagation={() => ($showActionPanel = !$showActionPanel)}
                 on:keydown={handleInputKey}
                 class="selected-option"
-                class:active-option={showActionPanel}
+                class:active-option={$showActionPanel}
                 tabindex="0"
               >
-                {showActionPanel ? 'Close' : 'Actions'}
+                {$showActionPanel ? 'Close' : 'Actions'}
                 <div class="shortcut">
                   {window.navigator.userAgent.toLowerCase().includes('mac') ? '⌘' : 'Ctrl'}
                 </div>

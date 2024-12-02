@@ -19,12 +19,12 @@
 
   const teletype = useTeletype()
   const log = useLogScope('Teletype → Action')
-  const { inputValue } = teletype
+  const { inputValue, showActionPanel } = teletype
 
   const modKeyShortcut =
     navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'
 
-  let elem
+  let elem: HTMLElement
   let listElement: HTMLElement
   let hasLeftOverflow = false
   let hasRightOverflow = false
@@ -35,6 +35,13 @@
     action.breadcrumb ||
     (parentAction && parentAction.breadcrumb) ||
     (parentAction && parentAction.name)
+
+  $: selectedHorizontalItem =
+    horizontalItems.length > 0 ? (horizontalItems[selectedItemIndex] ?? null) : null
+
+  $: if (active && selectedHorizontalItem) {
+    teletype.selectedAction.set(selectedHorizontalItem)
+  }
 
   const tagColors = {
     [TagStatus.DEFAULT]: {
@@ -78,6 +85,7 @@
 
   const executeAction = async (action: Action, e: MouseEvent | KeyboardEvent) => {
     let options: ActionPanelOption[] = []
+
     if (action.actionPanel) {
       if (typeof action.actionPanel === 'function') {
         options = await action.actionPanel()
@@ -103,7 +111,7 @@
 
   function handleKeydown(e: KeyboardEvent) {
     // Only handle if we have horizontal items and we're active
-    if (!active || !horizontalItems.length) {
+    if (!active || !horizontalItems.length || $showActionPanel) {
       return
     }
 

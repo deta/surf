@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { fade } from 'svelte/transition'
-  import type { Action } from './types'
+  import type { Action, ActionPanelOption } from './types'
 
   export let items: Action[]
   export let active = false
@@ -21,6 +21,31 @@
 
     hasLeftOverflow = listElement.scrollLeft > 0
     hasRightOverflow = listElement.scrollLeft < listElement.scrollWidth - listElement.clientWidth
+  }
+
+  const executeAction = async (action: Action, e: MouseEvent | KeyboardEvent) => {
+    let options: ActionPanelOption[] = []
+    if (action.actionPanel) {
+      if (typeof action.actionPanel === 'function') {
+        options = await action.actionPanel()
+      } else {
+        options = action.actionPanel
+      }
+    }
+
+    const secondaryAction = options.find((a) => a.shortcutType === 'secondary')
+    if (e.shiftKey && secondaryAction) {
+      dispatch('execute', secondaryAction as Action)
+      return
+    }
+
+    const tertiaryAction = options.find((a) => a.shortcutType === 'tertiary')
+    if ((e.ctrlKey || e.metaKey) && tertiaryAction) {
+      dispatch('execute', tertiaryAction as Action)
+      return
+    }
+
+    dispatch('execute', action)
   }
 
   onMount(() => {
@@ -59,7 +84,7 @@
       }
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      dispatch('execute', items[selectedIndex])
+      executeAction(items[selectedIndex], e)
     }
   }
 
@@ -81,7 +106,7 @@
         class="item"
         class:selected={index === selectedIndex}
         in:fade={{ duration: 200 }}
-        on:click={() => dispatch('execute', item)}
+        on:click={(e) => executeAction(item, e)}
         aria-hidden="true"
       >
         {#if item.icon}

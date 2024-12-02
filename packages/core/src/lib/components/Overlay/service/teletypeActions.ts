@@ -68,7 +68,6 @@ export const TeletypeActionDisplayLabels = {
   [TeletypeAction.Create]: 'Create',
   [TeletypeAction.CreateNote]: 'Create Note',
   [TeletypeAction.CreateSpace]: 'Create Space',
-  [TeletypeAction.OpenSpaceItem]: 'Space Item',
   [TeletypeAction.CloseTab]: 'Close Tab',
   [TeletypeAction.ToggleBookmark]: 'Toggle Bookmark',
   [TeletypeAction.ToggleSidebar]: 'Toggle Sidebar',

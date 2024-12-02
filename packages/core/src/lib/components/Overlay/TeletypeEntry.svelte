@@ -4,6 +4,7 @@
     'ask': string | undefined
     'open-url': string
     'open-url-in-minibrowser': string
+    'open-resource-in-minibrowser': string
     'open-space': any
     'open-stuff': string
     'create-chat': string
@@ -235,6 +236,12 @@
     dispatch('open-url-in-minibrowser', validUrl)
   }
 
+  const handleOpenResourceInMiniBrowser: TeletypeActionHandler<{ resource: Resource }> = (
+    payload
+  ) => {
+    dispatch('open-resource-in-minibrowser', payload.resource.id)
+  }
+
   const handleOpenSuggestionAsTab: TeletypeActionHandler<{ suggestion: string }> = (payload) => {
     const engine =
       SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
@@ -283,13 +290,6 @@
   }
 
   const handleResource: TeletypeActionHandler<{ resource: Resource }> = async (payload) => {
-    await tabsManager.openResourceAsTab(payload.resource, {
-      active: true,
-      trigger: CreateTabEventTrigger.AddressBar
-    })
-  }
-
-  const handleSpaceItem: TeletypeActionHandler<{ resource: Resource }> = async (payload) => {
     await tabsManager.openResourceAsTab(payload.resource, {
       active: true,
       trigger: CreateTabEventTrigger.AddressBar
@@ -380,6 +380,7 @@
       [TeletypeAction.OpenURLInMiniBrowser]: handleOpenURLInMiniBrowser,
       [TeletypeAction.OpenGeneralSearchInMiniBrowser]: handleOpenGeneralSearchInMiniBrowser,
       [TeletypeAction.OpenSuggestionInMiniBrowser]: handleOpenSuggestionInMiniBrowser,
+      [TeletypeAction.OpenResourceInMiniBrowser]: handleOpenResourceInMiniBrowser,
       [TeletypeAction.NavigateSuggestion]: handleOpenSuggestionAsTab,
       [TeletypeAction.NavigateHistoryElement]: handleHistory,
       [TeletypeAction.NavigateSuggestionHostname]: handleSuggestionHostname,
@@ -394,7 +395,6 @@
       [TeletypeAction.CopyGeneralSearch]: handleCopyGeneralSearch,
       [TeletypeAction.ExecuteBrowserCommand]: handleBrowserCommand,
       [TeletypeAction.Create]: handleCreate,
-      [TeletypeAction.OpenSpaceItem]: handleSpaceItem,
       [TeletypeAction.Ask]: handleAsk,
       [TeletypeAction.Reload]: () => dispatch('reload'),
       [TeletypeAction.CloseTab]: () => dispatch('close-active-tab'),

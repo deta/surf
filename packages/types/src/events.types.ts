@@ -188,7 +188,8 @@ export enum OpenInMiniBrowserEventFrom {
   Chat = 'chat',
   PinnedTab = 'pinned_tab',
   WebPage = 'web_page',
-  Homescreeen = 'homescreen'
+  Homescreeen = 'homescreen',
+  CommandMenu = 'command_menu'
 }
 
 export enum DeleteResourceEventTrigger {

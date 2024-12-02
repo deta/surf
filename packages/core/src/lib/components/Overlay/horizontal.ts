@@ -1,11 +1,11 @@
 import { type HandlerAction, type HorizontalAction, type Action } from '@deta/teletype/src'
-import { type TeletypeStaticAction } from './service/teletypeActions'
+import { createSecondaryAction, type TeletypeStaticAction } from './service/teletypeActions'
 import {
   ActionDisplayPriority,
   ActionSelectPriority
 } from '@deta/teletype/src/components/Teletype/types'
 import type { ResourceManager } from '../../service/resources'
-import { GENERAL_CONTEXT_ID, type SpaceEntry } from '../../types'
+import { GENERAL_CONTEXT_ID, ResourceTagsBuiltInKeys, type SpaceEntry } from '../../types'
 import {
   TeletypeAction,
   TeletypeActionGroup,
@@ -14,14 +14,20 @@ import {
 import ResourcePreview from '../Resources/ResourcePreview.svelte'
 import { type Resource } from '../../service/resources'
 import { staticActions } from './service/staticActions'
+import { createExecutioner } from './service/translations'
+import { truncate } from '@horizon/utils'
 
 const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) => {
+  const url =
+    resource.metadata?.sourceURI ??
+    resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
+
   return {
     id: entry.id,
-    name: resource.metadata?.name || 'Untitled',
+    name: truncate(resource.metadata?.name || 'Untitled', 30),
     description: resource.metadata?.userContext || '',
     icon: getPrimaryResourceType(resource.type) || 'document',
-    execute: TeletypeAction.OpenSpaceItem,
+    execute: TeletypeAction.OpenResource,
     component: ResourcePreview,
     componentProps: {
       resource: resource,
@@ -33,26 +39,20 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
       background: false
     },
     view: 'Inline',
-    handler: () => {
-      try {
-        dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenSpaceItem,
-          payload: {
-            resource: resource
-          },
-          success: true
-        })
-      } catch (error) {
-        dispatchTeletypeEvent({
-          execute: TeletypeAction.OpenSpaceItem,
-          payload: {
-            resource: resource
-          },
-          success: false,
-          error: error as Error
-        })
+    actionPanel: [
+      createSecondaryAction({
+        id: 'open-history-in-mini-browser',
+        name: 'Open in Mini-Browser',
+        handler: createExecutioner(TeletypeAction.OpenResourceInMiniBrowser, { resource })
+      }),
+      {
+        id: `copy-history`,
+        name: 'Copy URL',
+        icon: 'copy',
+        handler: createExecutioner(TeletypeAction.CopyURL, { url })
       }
-    }
+    ],
+    handler: createExecutioner(TeletypeAction.OpenResource, { resource })
   }
 }
 
@@ -131,12 +131,16 @@ const createResourceAction = async (entry: { id: string }, resourceManager: Reso
     const resource = await resourceManager.getResource(entry.id)
     if (!resource) return null
 
+    const url =
+      resource.metadata?.sourceURI ??
+      resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
+
     return {
       id: entry.id,
       name: resource.metadata?.name || 'UNTITLED',
       description: resource.metadata?.userContext || '',
       icon: getPrimaryResourceType(resource.type) || 'document',
-      execute: TeletypeAction.OpenSpaceItem,
+      execute: TeletypeAction.OpenResource,
       group: TeletypeActionGroup.Resources,
       component: ResourcePreview,
       componentProps: {
@@ -149,22 +153,20 @@ const createResourceAction = async (entry: { id: string }, resourceManager: Reso
         background: false
       },
       view: 'Inline',
-      handler: () => {
-        try {
-          dispatchTeletypeEvent({
-            execute: TeletypeAction.OpenResource,
-            payload: { resource },
-            success: true
-          })
-        } catch (error) {
-          dispatchTeletypeEvent({
-            execute: TeletypeAction.OpenResource,
-            payload: { resource },
-            success: false,
-            error: error as Error
-          })
+      actionPanel: [
+        createSecondaryAction({
+          id: 'open-history-in-mini-browser',
+          name: 'Open in Mini-Browser',
+          handler: createExecutioner(TeletypeAction.OpenResourceInMiniBrowser, { resource })
+        }),
+        {
+          id: `copy-history`,
+          name: 'Copy URL',
+          icon: 'copy',
+          handler: createExecutioner(TeletypeAction.CopyURL, { url })
         }
-      }
+      ],
+      handler: createExecutioner(TeletypeAction.OpenResource, { resource })
     }
   } catch (error) {
     return null

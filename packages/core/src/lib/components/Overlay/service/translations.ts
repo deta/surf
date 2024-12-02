@@ -33,7 +33,7 @@ import type { OasisSpace } from '../../../service/oasis'
 import { generateRootDomain } from '@horizon/utils'
 
 // pls don't sue me for the name, just fit so well
-const createExecutioner = (action: TeletypeAction, payload: any) => {
+export const createExecutioner = (action: TeletypeAction, payload: any) => {
   return () => {
     try {
       dispatchTeletypeEvent({
@@ -201,12 +201,14 @@ export const resourceToTeletypeItem = (resource: Resource) => {
 
   return {
     id: resource.id,
-    name:
+    name: truncate(
       data?.title ||
-      resource.metadata?.name ||
-      url ||
-      `${resource.id} - ${resource.type}` ||
-      'Undefined',
+        resource.metadata?.name ||
+        url ||
+        `${resource.id} - ${resource.type}` ||
+        'Undefined',
+      30
+    ),
     icon: 'file',
     execute: TeletypeAction.OpenResource,
     group: TeletypeActionGroup.Resources,

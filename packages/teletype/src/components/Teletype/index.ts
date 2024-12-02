@@ -19,6 +19,7 @@ class TeletypeCore {
   captureKeys: Writable<boolean>
   isShown: Writable<boolean>
   isOpen: Writable<boolean>
+  showActionPanel: Writable<boolean>
   isLoading: Writable<boolean>
   placeholder: Writable<string>
   prefillInput: Writable<string>
@@ -54,6 +55,7 @@ class TeletypeCore {
     this.captureKeys = writable(this.options.captureKeys)
     this.isShown = writable(this.options.show)
     this.isOpen = writable(this.options.open)
+    this.showActionPanel = writable(false)
     this.isLoading = writable(this.options.loading)
     this.placeholder = writable(this.options.placeholder)
     this.prefillInput = writable('')
