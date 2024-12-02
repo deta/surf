@@ -226,6 +226,7 @@
       height: 100%;
       overflow: clip;
       overflow-clip-margin: 2px;
+      isolation: isolate;
 
       display: grid;
       grid-template-columns: repeat(
