@@ -580,6 +580,7 @@
 {#if $showTabSearch === 2}
   <div
     class="stuff-backdrop"
+    style:view-transition-name="stuff-drawer-backdrop"
     data-dragcula-ignore
     class:showing={!$drawerHide}
     aria-hidden="true"
@@ -594,6 +595,7 @@
 >
   <div
     id="drawer-content"
+    style:view-transition-name="stuff-drawer"
     class:hovering={!$drawerHide}
     class="stuff-wrapper no-drag"
     style="width: fit-content;"
