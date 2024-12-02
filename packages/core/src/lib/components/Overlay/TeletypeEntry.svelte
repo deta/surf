@@ -38,10 +38,14 @@
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
-  import { useResourceManager } from '../../service/resources'
+  import { Resource, useResourceManager } from '../../service/resources'
   import { teletypeActionStore, TeletypeAction } from './service/teletypeActions'
   import type { TabsManager } from '../../service/tabs'
-  import type { TeletypeActionEvent } from './service/teletypeActions'
+  import type {
+    TeletypeActionEvent,
+    TeletypeActionHandler,
+    TeletypeActionHandlerReturnValue
+  } from './service/teletypeActions'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
   import {
     optimisticCheckIfURLOrIPorFile,
@@ -54,7 +58,7 @@
   import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useDebounce } from '@horizon/utils'
-  import { GENERAL_CONTEXT_ID } from '@horizon/core/src/lib/types'
+  import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
   export let tabsManager: TabsManager
   export let open: boolean
@@ -163,7 +167,7 @@
   }
 
   // Event handlers for each action type
-  function handleGeneralSearch(payload: { query: string }) {
+  const handleGeneralSearch: TeletypeActionHandler<{ query: string }> = (payload) => {
     const isValidURL =
       optimisticCheckIfURLOrIPorFile(payload.query) || optimisticCheckIfUrl(payload.query)
     if (isValidURL) {
@@ -178,7 +182,9 @@
     }
   }
 
-  function handleOpenGeneralSearchInMiniBrowser(payload: { query: string }) {
+  const handleOpenGeneralSearchInMiniBrowser: TeletypeActionHandler<{ query: string }> = (
+    payload
+  ) => {
     const isValidURL =
       optimisticCheckIfURLOrIPorFile(payload.query) || optimisticCheckIfUrl(payload.query)
     if (isValidURL) {
@@ -193,7 +199,7 @@
     }
   }
 
-  function handleCopyGeneralSearch(payload: { query: string }) {
+  const handleCopyGeneralSearch: TeletypeActionHandler<{ query: string }> = (payload) => {
     const isValidURL =
       optimisticCheckIfURLOrIPorFile(payload.query) || optimisticCheckIfUrl(payload.query)
     if (isValidURL) {
@@ -209,7 +215,7 @@
     }
   }
 
-  function handleNavigate(payload: { url: string }) {
+  const handleNavigate: TeletypeActionHandler<{ url: string }> = (payload) => {
     const validUrl = parseStringIntoBrowserLocation(payload.url)
     if (!validUrl) {
       log.error('Invalid URL:', payload.url)
@@ -219,7 +225,7 @@
     dispatch('open-url', validUrl)
   }
 
-  function handleOpenURLInMiniBrowser(payload: { url: string }) {
+  const handleOpenURLInMiniBrowser: TeletypeActionHandler<{ url: string }> = (payload) => {
     const validUrl = parseStringIntoBrowserLocation(payload.url)
     if (!validUrl) {
       log.error('Invalid URL:', payload.url)
@@ -229,7 +235,7 @@
     dispatch('open-url-in-minibrowser', validUrl)
   }
 
-  function handleOpenSuggestionAsTab(payload: { suggestion: string }) {
+  const handleOpenSuggestionAsTab: TeletypeActionHandler<{ suggestion: string }> = (payload) => {
     const engine =
       SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
       SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
@@ -238,7 +244,7 @@
     dispatch('open-url', engine.getUrl(encodeURIComponent(payload.suggestion)))
   }
 
-  async function handleCopySuggestion(payload: { suggestion: string }) {
+  const handleCopySuggestion: TeletypeActionHandler<{ suggestion: string }> = async (payload) => {
     const engine =
       SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
       SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
@@ -248,7 +254,9 @@
     toasts.success('Copied URL to clipboard!')
   }
 
-  function handleOpenSuggestionInMiniBrowser(payload: { suggestion: string }) {
+  const handleOpenSuggestionInMiniBrowser: TeletypeActionHandler<{ suggestion: string }> = (
+    payload
+  ) => {
     const engine =
       SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
       SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
@@ -257,47 +265,57 @@
     dispatch('open-url-in-minibrowser', engine.getUrl(encodeURIComponent(payload.suggestion)))
   }
 
-  async function handleCopyURL(payload: { url: string }) {
+  const handleCopyURL: TeletypeActionHandler<{ url: string }> = async (payload) => {
     copyToClipboard(payload.url)
     toasts.success('Copied URL to clipboard!')
+
+    return {
+      preventClose: true
+    }
   }
 
-  function handleHistory(payload: { entry: any }) {
-    dispatch('open-url', payload.entry.url)
+  const handleHistory: TeletypeActionHandler<{ entry: HistoryEntry }> = (payload) => {
+    dispatch('open-url', payload.entry.url ?? '')
   }
 
-  function handleSuggestionHostname(payload: { entry: any }) {
-    dispatch('open-url', payload.entry.url)
+  const handleSuggestionHostname: TeletypeActionHandler<{ entry: HistoryEntry }> = (payload) => {
+    dispatch('open-url', payload.entry.url ?? '')
   }
 
-  async function handleResource(payload: { resource: any }) {
+  const handleResource: TeletypeActionHandler<{ resource: Resource }> = async (payload) => {
     await tabsManager.openResourceAsTab(payload.resource, {
       active: true,
       trigger: CreateTabEventTrigger.AddressBar
     })
   }
 
-  async function handleSpaceItem(payload: { resource: any }) {
+  const handleSpaceItem: TeletypeActionHandler<{ resource: Resource }> = async (payload) => {
     await tabsManager.openResourceAsTab(payload.resource, {
       active: true,
       trigger: CreateTabEventTrigger.AddressBar
     })
   }
 
-  function handleTab(payload: { tab: any }) {
+  const handleTab: TeletypeActionHandler<{ tab: Tab }> = (payload) => {
     dispatch('activate-tab', payload.tab.id)
   }
 
-  async function handleOpenSpaceInStuff(payload: { space: OasisSpace }) {
+  const handleOpenSpaceInStuff: TeletypeActionHandler<{ space: OasisSpace }> = async (payload) => {
     const space = payload.space
     log.debug('open-space-in-stuff', payload)
 
     tabsManager.showNewTabOverlay.set(2)
     await tick()
     oasis.selectedSpace.set(space.id === GENERAL_CONTEXT_ID ? 'all' : space.id)
+
+    return {
+      preventClose: true
+    }
   }
 
-  async function handleOpenSpaceAsContext(payload: { space: OasisSpace }) {
+  const handleOpenSpaceAsContext: TeletypeActionHandler<{ space: OasisSpace }> = async (
+    payload
+  ) => {
     const space = payload.space
     log.debug('open-space-as-context', payload)
 
@@ -305,13 +323,9 @@
       space.id === GENERAL_CONTEXT_ID ? null : space.id,
       ChangeContextEventTrigger.CommandMenu
     )
-
-    // sometimes tty doesn't close by itself, so we need to force it
-    await tick()
-    tabsManager.showNewTabOverlay.set(0)
   }
 
-  async function handleOpenSpaceAsTab(payload: { space: OasisSpace }) {
+  const handleOpenSpaceAsTab: TeletypeActionHandler<{ space: OasisSpace }> = async (payload) => {
     const space = payload.space
     log.debug('open-space-as-tab', payload)
 
@@ -319,18 +333,14 @@
       active: true,
       trigger: CreateTabEventTrigger.AddressBar
     })
-
-    // sometimes tty doesn't close by itself, so we need to force it
-    await tick()
-    tabsManager.showNewTabOverlay.set(0)
   }
 
-  function handleOpenStuff(payload: { data: any; searchValue: string }) {
+  const handleOpenStuff: TeletypeActionHandler<{ searchValue: string }> = (payload) => {
     const searchValue = payload.searchValue || ''
     dispatch('open-stuff', searchValue)
   }
 
-  function handleBrowserCommand(payload: { command: string }) {
+  const handleBrowserCommand: TeletypeActionHandler<{ command: string }> = (payload) => {
     if (payload.command === 'create-chat') {
       dispatch('create-chat', get(teletype?.inputValue))
     } else {
@@ -339,11 +349,11 @@
     }
   }
 
-  function handleAsk() {
+  const handleAsk: TeletypeActionHandler<{}> = () => {
     dispatch('ask', get(teletype?.inputValue))
   }
 
-  function handleCreate(payload: { id: string; url: string }) {
+  const handleCreate: TeletypeActionHandler<{ id: string; url: string }> = (payload) => {
     const validUrl = parseStringIntoBrowserLocation(payload.url)
     if (!validUrl) {
       log.error('Invalid URL:', payload.url)
@@ -398,7 +408,7 @@
       [TeletypeAction.CreateSpace]: () => dispatch('create-new-space')
     }
 
-    unsubscribe = teletypeActionStore.subscribe((event: TeletypeActionEvent | null) => {
+    unsubscribe = teletypeActionStore.subscribe(async (event: TeletypeActionEvent | null) => {
       if (!event) return
 
       if (!event.success) {
@@ -408,7 +418,13 @@
       const handler = handlers[event.execute as keyof typeof handlers]
 
       if (handler) {
-        handler(event.payload)
+        const returnValue = (await handler(event.payload)) as TeletypeActionHandlerReturnValue
+        if (returnValue?.preventClose) {
+          return
+        }
+
+        await tick()
+        tabsManager.showNewTabOverlay.set(0)
       } else {
         log.warn('Unknown action type:', event.execute)
       }

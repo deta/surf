@@ -104,6 +104,14 @@ export interface TeletypeActionEvent {
   error?: Error
 }
 
+export type TeletypeActionHandlerReturnValue = {
+  preventClose?: boolean
+}
+
+export type TeletypeActionHandler<T> = (
+  payload: T
+) => TeletypeActionHandlerReturnValue | void | Promise<TeletypeActionHandlerReturnValue | void>
+
 // actionEvents.ts
 import { writable } from 'svelte/store'
 
