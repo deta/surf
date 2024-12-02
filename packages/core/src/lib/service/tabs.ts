@@ -598,7 +598,7 @@ export class TabsManager {
       this.showNewTabOverlay.set(0)
     }
 
-    if (tab.scopeId !== (this.activeScopeIdValue ?? undefined)) {
+    if (!tab.pinned && tab.scopeId !== (this.activeScopeIdValue ?? undefined)) {
       this.changeScope(tab.scopeId ?? null, ChangeContextEventTrigger.Tab)
     }
 
