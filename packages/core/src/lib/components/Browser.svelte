@@ -2333,6 +2333,13 @@
     createHistoryTab()
   }
 
+  const handleOpenCreateSpaceMenu = async () => {
+    showNewTabOverlay.set(2)
+    await tick()
+    const button = document.querySelector('.action-new-space') as HTMLButtonElement | null
+    if (button) button.click()
+  }
+
   const handleSaveResourceInSpace = async (e: CustomEvent<Space>) => {
     log.debug('add resource to space', e.detail)
 
@@ -4583,12 +4590,7 @@
     on:toggle-bookmark={() =>
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
     on:show-history-tab={handleCreateHistoryTab}
-    on:create-new-space={async () => {
-      showNewTabOverlay.set(2)
-      await tick()
-      const button = document.querySelector('.action-new-space')
-      if (button) button.click()
-    }}
+    on:create-new-space={handleOpenCreateSpaceMenu}
     on:open-space={async (e) => {
       const space = e.detail
       showNewTabOverlay.set(2)
@@ -4991,6 +4993,7 @@
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:create-new-space={handleOpenCreateSpaceMenu}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5027,6 +5030,7 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
+                      on:create-new-space={handleOpenCreateSpaceMenu}
                       on:pin={handlePinTab}
                       on:unpin={handleUnpinTab}
                       on:DragEnd={(e) => handleTabDragEnd(e.detail)}
@@ -5117,6 +5121,7 @@
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
                       on:save-resource-in-space={handleSaveResourceInSpace}
+                      on:create-new-space={handleOpenCreateSpaceMenu}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -5150,6 +5155,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                      on:create-new-space={handleOpenCreateSpaceMenu}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:include-tab={handleIncludeTabInMagic}
                       on:chat-with-tab={handleOpenTabChat}
