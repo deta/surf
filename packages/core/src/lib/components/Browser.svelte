@@ -121,7 +121,7 @@
   import { scrollToTextCode } from '../constants/inline'
   import { onboardingSpace } from '../constants/examples'
   import { SFFS } from '../service/sffs'
-  import { provideOasis, colorPairs, OasisSpace } from '../service/oasis'
+  import { provideOasis, colorPairs, OasisSpace, DEFAULT_SPACE_ID } from '../service/oasis'
   import OasisSpaceRenderer from './Oasis/OasisSpace.svelte'
 
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
@@ -1485,7 +1485,7 @@
       }
 
       updateBookmarkingTabState(tabId, 'in_progress')
-      toast = toasts.loading('Saving Page…')
+      toast = toasts.loading(savedToSpace ? 'Saving Page to Context…' : 'Saving Page…')
 
       const isActivated = $activatedTabs.includes(tab.id)
       if (!isActivated) {
@@ -1528,7 +1528,9 @@
           [resource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
-        toast?.success(`Page saved to active space!`)
+        toast?.success(`Page saved to active Context!`)
+      } else if (savedToSpace) {
+        toast?.success('Page Saved to Context!')
       } else {
         toast?.success('Page Saved!')
       }
@@ -1626,7 +1628,7 @@
 
       // Create a new space
       const newSpace = await oasis.createSpace({
-        folderName: 'New Space',
+        folderName: 'New Context',
         showInSidebar: true,
         colors: ['#FFD700', '#FF8C00'], // Default colors, you can randomize this
         sources: [],
@@ -1696,7 +1698,7 @@
       $selectedTabs = new Set()
       for (const tab of targetTabs) tabsManager.delete(tab.id, DeleteTabEventTrigger.ContextMenu)
 
-      toast.success('Space created!')
+      toast.success('Context created!')
     } catch (e) {
       log.error('Failed to create space with tabs', e)
       toast.error('Failed to create space with tabs!')
@@ -2286,7 +2288,7 @@
 
     await tabsManager.create(tab, { active: active })
 
-    toasts.success('Space added to your Tabs!')
+    toasts.success('Context added to your Tabs!')
   }
 
   const handleCreateTabForSpace = async (e: CustomEvent<OasisSpace>) => {
@@ -2320,7 +2322,7 @@
       log.error('[Browser.svelte] Failed to add folder to sidebar:', error)
     }
 
-    toasts.success('Space added to your Tabs!')
+    toasts.success('Context added to your Tabs!')
   }
 
   const handleCreateHistoryTab = () => {
@@ -2478,7 +2480,7 @@
     } as SpaceSource
 
     return {
-      name: name ?? 'Space',
+      name: name ?? 'Context',
       source: spaceSource
     }
   }
@@ -2489,7 +2491,7 @@
       return
     }
 
-    const toast = toasts.loading('Creating Space...')
+    const toast = toasts.loading('Creating Context...')
 
     try {
       isCreatingLiveSpace.set(true)
@@ -2521,10 +2523,10 @@
         isLiveSpace: true
       })
 
-      toast.success('Space created!')
+      toast.success('Context created!')
     } catch (e) {
       log.error('Error creating live space', e)
-      toast.error('Failed to create Space')
+      toast.error('Failed to create Context')
     } finally {
       isCreatingLiveSpace.set(false)
     }
@@ -2536,7 +2538,7 @@
       return
     }
 
-    const toast = toasts.loading('Adding source to Space...')
+    const toast = toasts.loading('Adding source to Context...')
 
     try {
       isCreatingLiveSpace.set(true)
@@ -2580,10 +2582,10 @@
         UpdateSpaceSettingsEventTrigger.TabLiveSpaceButton
       )
 
-      toast.success('Page added as source to Space!')
+      toast.success('Page added as source to Context!')
     } catch (e) {
       log.error('Error creating live space', e)
-      toast.error('Failed to add source to Space')
+      toast.error('Failed to add source to Context')
     } finally {
       isCreatingLiveSpace.set(false)
     }
@@ -2762,8 +2764,8 @@
     const space = await oasis.getSpace(spaceId)
 
     if (!space) {
-      log.error('Space not found', spaceId)
-      toasts.error('Space not found')
+      log.error('Context not found', spaceId)
+      toasts.error('Context not found')
       return
     }
 
@@ -2865,8 +2867,8 @@
         toasts.error('Failed to open space')
       }
     } else {
-      log.error('Space not found', spaceId)
-      toasts.error('Space not found')
+      log.error('Context not found', spaceId)
+      toasts.error('Context not found')
     }
   }
 
@@ -4139,7 +4141,7 @@
     const toast = toasts.loading(
       !saveToSpace
         ? 'Saving to Your Stuff...'
-        : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Space...`
+        : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Context...`
     )
 
     try {
@@ -4593,7 +4595,7 @@
     }}
     on:open-stuff={async (e) => {
       const searchValue = e.detail
-      selectedSpace.set('all')
+      selectedSpace.set(DEFAULT_SPACE_ID)
       updateSearchValue.set(searchValue)
       await tick()
       showNewTabOverlay.set(2)
@@ -4738,10 +4740,10 @@
               {
                 type: 'action',
                 icon: generalContext.icon,
-                text: 'New Space',
+                text: 'New Context',
                 action: async () => {
                   await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab)
-                  toasts.success('New Space created!')
+                  toasts.success('New Context created!')
                 }
               },
               { type: 'separator' },
@@ -4888,7 +4890,7 @@
                 {
                   type: 'action',
                   icon: 'add',
-                  text: 'Save to new Space',
+                  text: 'Save to new Context',
                   action: () => {
                     const tabIds = $tabs
                       .filter((tab) => Array.from($selectedTabs).some((item) => item.id === tab.id))
@@ -4904,7 +4906,7 @@
                 },
                 {
                   type: 'sub-menu',
-                  text: 'Move Tabs to Space',
+                  text: 'Move Tabs to Context',
                   items: $contextMenuMoveTabsToSpaces
                 },
                 { type: 'separator' },
@@ -5636,7 +5638,7 @@
 </div>
 
 <NewTabOverlay
-  spaceId={'all'}
+  spaceId={DEFAULT_SPACE_ID}
   activeTab={$activeTab}
   {updateSearchValue}
   showTabSearch={showNewTabOverlay}

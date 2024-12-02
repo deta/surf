@@ -263,13 +263,13 @@ export const tabToTeletypeItem = (tab: TabPage) => {
 export const spaceToTeletypeItem = (space: OasisSpace) =>
   ({
     id: space.id,
-    name: get(space.data).folderName ?? 'Unnamed Space',
+    name: get(space.data).folderName ?? 'Unnamed Context',
     icon: space.id === GENERAL_CONTEXT_ID ? 'circle-dot' : `space;;${space.id}`,
     execute: TeletypeAction.OpenSpaceAsContext,
     group: TeletypeActionGroup.Space,
-    section: 'Space',
+    section: 'Context',
     actionIcon: 'circle-dot',
-    actionText: space.id === GENERAL_CONTEXT_ID ? 'Open Context' : 'Open as Context',
+    actionText: 'Open Context',
     actionPanel: [
       createSecondaryAction({
         id: `open-space-in-overlay-${space.id}`,

@@ -26,7 +26,7 @@
     hover,
     flyAndScale
   } from '@horizon/utils'
-  import { OasisSpace, useOasis } from '../../service/oasis'
+  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import Chat from '../Chat/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
@@ -223,7 +223,7 @@
       const fetchedSpace = await oasis.getSpace(id)
       if (!fetchedSpace) {
         log.error('Space not found')
-        toasts.error('Space not found')
+        toasts.error('Context not found')
         return
       }
 
@@ -984,7 +984,7 @@
     const resourceId = e.detail
     if (!$space) return
     await $space.useResourceAsIcon(resourceId)
-    toasts.success('Space icon updated!')
+    toasts.success('Context icon updated!')
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {
@@ -1086,7 +1086,7 @@
     }*/
 
     drag.continue()
-    toast.success(`Resources saved to Space!`)
+    toast.success(`Resources saved to Context!`)
   }
 
   const handleCreateResource = async (e: CustomEvent<string>) => {
@@ -1141,7 +1141,7 @@
     const resources = await oasis.getSpaceContents($space.id)
     await resourceManager.deleteSpaceEntries(resources.map((x) => x.id))
 
-    toasts.success('Space cleared!')
+    toasts.success('Context cleared!')
 
     await loadSpaceContents($space.id, true)
   }
@@ -1152,10 +1152,10 @@
   ) => {
     const confirmed = window.confirm(
       abortSpaceCreation
-        ? 'Are you sure you want to abort the creation of this space?'
+        ? 'Are you sure you want to abort the creation of this context?'
         : shouldDeleteAllResources
-          ? 'Are you sure you want to delete this space and all of its resources?'
-          : 'Are you sure you want to delete this space?'
+          ? 'Are you sure you want to delete this context and all of its resources?'
+          : 'Are you sure you want to delete this context?'
     )
 
     if (!confirmed) {
@@ -1181,11 +1181,11 @@
 
       await tabsManager.removeSpaceTabs(spaceId)
 
-      oasis.changeSelectedSpace('all')
+      oasis.changeSelectedSpace(DEFAULT_SPACE_ID)
       dispatch('deleted', spaceId)
 
       if (!abortSpaceCreation) {
-        toast?.success('Space deleted!')
+        toast?.success('Context deleted!')
       }
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
@@ -1195,7 +1195,8 @@
       log.error('Error deleting space:', error)
       if (!abortSpaceCreation) {
         toast?.error(
-          'Error deleting space: ' + (typeof error === 'string' ? error : (error as Error).message)
+          'Error deleting context: ' +
+            (typeof error === 'string' ? error : (error as Error).message)
         )
       }
     }
@@ -1306,12 +1307,12 @@
       $space = createdSpace
       await loadSpaceContents(createdSpace.id)
       showSettingsModal.set(false)
-      toasts.success('Space updated successfully!')
+      toasts.success('Context updated successfully!')
 
       dispatch('select-space', createdSpace.id)
     } catch (error) {
       log.error('Error updating space:', error)
-      toasts.error('Failed to update space: ' + (error as Error).message)
+      toasts.error('Failed to update context: ' + (error as Error).message)
     }
 
     dispatch('updated-space', createdSpace?.id)
@@ -1467,7 +1468,7 @@
                 bind:value={$searchValue}
                 on:search={handleSearch}
                 on:chat={handleChatWithSpace}
-                placeholder="Search this Space"
+                placeholder="Search this Context"
               />
 
               <div class="chat-with-space-wrapper">
@@ -1475,8 +1476,8 @@
                   use:tooltip={{
                     text:
                       $searchValue.length > 0
-                        ? 'Create new chat with this space'
-                        : `Create new chat with this space (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                        ? 'Create new chat with this context'
+                        : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
                   }}
                   class="chat-with-space"
                   class:activated={$searchValue.length > 0}
@@ -1486,7 +1487,7 @@
 
                   {#if $searchValue.length > 0}
                     <div transition:slide={{ axis: 'x' }} class="chat-text">
-                      Ask Space
+                      Ask Context
                       <span class="shortcut">{isMac() ? '⌘' : 'ctrl'}+↵</span>
                     </div>
                   {/if}
@@ -1665,7 +1666,7 @@
       <div class="content-wrapper">
         <div class="content">
           <Icon name="save" size="22px" />
-          <p>Oops! It seems like this Space is feeling a bit empty.</p>
+          <p>Oops! It seems like this Context is feeling a bit empty.</p>
         </div>
       </div>
     {/if}

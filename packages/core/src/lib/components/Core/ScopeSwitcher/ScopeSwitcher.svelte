@@ -101,7 +101,7 @@
 
     if (spaceId === 'new') {
       await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.ContextSwitcher)
-      toasts.success('New Space created!')
+      toasts.success('New Context created!')
       return
     }
 
@@ -171,7 +171,7 @@
       await tabsManager.removeSpaceTabs(space.id)
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
-      toasts.success('Space deleted!')
+      toasts.success('Context deleted!')
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
@@ -225,7 +225,7 @@
         type: 'action',
         icon: generalContext.icon,
         hidden: active,
-        text: 'Open as Context',
+        text: 'Open',
         action: () => switchSpace(space.id)
       },
       {
@@ -239,13 +239,13 @@
       {
         type: 'action',
         icon: 'edit',
-        text: 'Rename Space',
+        text: 'Rename Context',
         action: () => handleRenameSpace(space)
       },
       {
         type: 'action',
         icon: 'trash',
-        text: 'Delete Space',
+        text: 'Delete Context',
         kind: 'danger',
         action: () => handleDeleteSpace(space)
       }
@@ -268,13 +268,13 @@
       {
         type: 'action',
         icon: 'edit',
-        text: 'Rename Space',
+        text: 'Rename Context',
         action: () => $activeSpace && handleRenameSpace($activeSpace)
       },
       {
         type: 'action',
         icon: 'trash',
-        text: 'Delete Space',
+        text: 'Delete Context',
         kind: 'danger',
         action: () => $activeSpace && handleDeleteSpace($activeSpace)
       }
@@ -300,7 +300,7 @@
         on:focus={handleFocus}
         on:blur={handleBlur}
         on:keydown={handleKeyDown}
-        placeholder="Space Name"
+        placeholder="Context Name"
         disabled={$activeScopeId === null}
       />
     {:else if $activeSpaceData}
@@ -320,7 +320,7 @@
     footerItem={newContext}
     {searchValue}
     search="manual"
-    inputPlaceholder="Search your Spaces…"
+    inputPlaceholder="Search your Contexts…"
     on:select={handleChange}
   >
     <div class="trigger">

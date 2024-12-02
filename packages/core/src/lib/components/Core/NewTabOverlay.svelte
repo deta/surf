@@ -9,7 +9,7 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import Fuse from 'fuse.js'
   import { useLogScope, useDebounce, useLocalStorageStore, tooltip } from '@horizon/utils'
-  import { OasisSpace, useOasis } from '../../service/oasis'
+  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
@@ -101,8 +101,6 @@
   let showDragHint = writable(false)
   let filteredItems
   let drawerHide = writable(false) // Whether to slide the drawer away
-
-  const defaultSpaceId = 'all'
 
   const searchValue = writable('')
   const searchResults = writable<ResourceSearchResultItem[]>([])
@@ -248,7 +246,7 @@
       return
     }
     await space.useResourceAsIcon(resourceId)
-    toasts.success('Space icon updated!')
+    toasts.success('Context icon updated!')
   }
 
   const handleItemClick = (e: CustomEvent<string>) => {
@@ -260,7 +258,7 @@
 
   const handleDropOnSpace = async (spaceId: string, drag: DragculaDragEvent<DragTypes>) => {
     //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
-    const toast = toasts.loading(`Adding to space...`)
+    const toast = toasts.loading(`Adding to context...`)
 
     try {
       if (drag.isNative) {
@@ -352,7 +350,7 @@
     await tick()
     const spaceID = await createSpaceRef.handleCreateSpace('.tempspace', undefined, '')
     if (spaceID === null) {
-      toasts.error('Failed to create new space')
+      toasts.error('Failed to create new context')
       return
     }
 
@@ -366,7 +364,7 @@
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
-    oasis.changeSelectedSpace(defaultSpaceId)
+    oasis.changeSelectedSpace(DEFAULT_SPACE_ID)
   }
 
   const handleSpaceSelected = async (e: CustomEvent<string>) => {
@@ -630,7 +628,7 @@
               },
               {
                 title: '(Auto)-organize',
-                description: `<p>Create spaces and curate your items manually. Or let Surf do it for you.</p>`,
+                description: `<p>Create contexts and curate your items manually. Or let Surf do it for you.</p>`,
                 imgSrc: stuffSmart,
                 imgAlt: '(Auto)-organize',
                 iconName: 'rectangle-group'
@@ -695,7 +693,7 @@
                     on:open={handleOpen}
                     on:open-and-chat
                     on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                    on:go-back={() => oasis.changeSelectedSpace(defaultSpaceId)}
+                    on:go-back={() => oasis.changeSelectedSpace(DEFAULT_SPACE_ID)}
                     on:deleted={handleSpaceDeleted}
                     on:updated-space={handleUpdatedSpace}
                     on:creating-new-space={handleCreatingNewSpace}

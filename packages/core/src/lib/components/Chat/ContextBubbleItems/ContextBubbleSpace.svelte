@@ -30,7 +30,7 @@
   {/if}
 
   <div slot="popover" class="p-4 space-y-2 min-w-48">
-    <div class="text-gray-700 text-sm">Space</div>
+    <div class="text-gray-700 text-sm">Context</div>
 
     <div class="flex items-center gap-2">
       {#if space}

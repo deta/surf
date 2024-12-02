@@ -78,7 +78,7 @@ const OTHER_STUFF_DESCRIPTION = [
   'Find them in an instant and watch them organize themselves.'
 ]
 const OTHER_CHAT_EYEBROW = 'WHATS IN SURF'
-const OTHER_CHAT_HEADLINE = 'Chat with everything. Your Tabs, your Spaces, your Stuff.'
+const OTHER_CHAT_HEADLINE = 'Chat with everything. Your Tabs, your Contexts, your Stuff.'
 const OTHER_CHAT_DESCRIPTION = [
   "Surf's AI chat can power through dozens of tabs, hours of podcasts, and thousands of pages, in seconds."
 ]

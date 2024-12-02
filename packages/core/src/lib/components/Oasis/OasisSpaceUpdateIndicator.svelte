@@ -118,7 +118,7 @@
       {:else if $newlyLoadedResources.length > 0}
         {#await fetchNewlyAddedResourcePrevies()}
           <Icon name="reload" />
-          Update Space with {$newlyLoadedResources.length} items
+          Update Context with {$newlyLoadedResources.length} items
         {:then previews}
           <!-- <Icon name="reload" /> -->
           <div class="flex items-center -space-x-3 flex-shrink-0">

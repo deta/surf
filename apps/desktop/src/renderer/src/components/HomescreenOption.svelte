@@ -7,7 +7,7 @@
 <SettingsOption
   icon="home"
   title="Homescreen"
-  description="Pin resources and spaces onto your personalizable homescreen."
+  description="Pin resources and contexts onto your personalizable homescreen."
   on:update
 >
   <section>

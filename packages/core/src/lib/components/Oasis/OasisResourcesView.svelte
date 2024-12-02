@@ -98,7 +98,7 @@
       {
         type: 'sub-menu',
         icon: '',
-        text: 'Add to Space',
+        text: 'Add to Context',
         items: $spaces
           .filter(
             (e) =>
@@ -118,7 +118,7 @@
       {
         type: 'action',
         icon: 'trash',
-        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Context'}`,
         kind: 'danger',
         action: () => {
           dispatch('batch-remove', $selectedItemIds)

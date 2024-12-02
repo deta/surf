@@ -149,7 +149,7 @@
           : ''}"
         on:click={() => (activeTab = 'smartSpaces')}
       >
-        <span class="index">6.</span> <span>Smart Spaces</span>
+        <span class="index">6.</span> <span>Smart Contexts</span>
       </button>
       <button
         class="selector font-gambarino py-4 px-6 text-left flex flex-col text-2xl hover:text-blue-700 transition-colors duration-300 bg-white hover:bg-gray-100 border border-gray-300 rounded-2xl w-full {activeTab ===
@@ -306,7 +306,7 @@
             in seconds.
           </p>
           <p class="max-w-xl text-center">It's aware of what you think is important.</p>
-          <Button on:click={handleTryChat}>Try Chat with Space</Button>
+          <Button on:click={handleTryChat}>Try Chat with Context</Button>
         </div>
       {/if}
 
@@ -328,7 +328,7 @@
           </h1>
           <p class="max-w-xl text-center">Ask a folder what you want, and watch it fill itself.</p>
           <div class="flex gap-4">
-            <Button on:click={handleTrySmartSpaces}>Try Smart Spaces</Button>
+            <Button on:click={handleTrySmartSpaces}>Try Smart Contexts</Button>
           </div>
         </div>
       {/if}

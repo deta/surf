@@ -83,11 +83,11 @@
           <ul style="text-align:left;">
             <li>If you <b>save an image</b>, our servers tag them, to make them searchable.</li>
             <li>
-              If you <b>chat</b> with a website or a Space, content from the website or Space is sent
-              to OpenAI through Deta's servers.
+              If you <b>chat</b> with a website or a Context, content from the website or Context is
+              sent to OpenAI through Deta's servers.
             </li>
             <li>
-              Spaces can collect content from websites for you. If you add subscriptions, some of
+              Contexts can collect content from websites for you. If you add subscriptions, some of
               this content is sent to OpenAI through Deta's servers (to create summaries).
             </li>
           </ul>

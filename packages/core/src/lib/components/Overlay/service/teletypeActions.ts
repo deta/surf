@@ -53,7 +53,7 @@ export const TeletypeActionDisplayLabels = {
   [TeletypeAction.NavigateSuggestionHostname]: 'Suggestion Hostname',
   [TeletypeAction.OpenResource]: 'Resource',
   [TeletypeAction.OpenTab]: 'Open Tab',
-  [TeletypeAction.OpenSpaceInStuff]: 'Open Space in Stuff ↗',
+  [TeletypeAction.OpenSpaceInStuff]: 'Open Context in Stuff ↗',
   [TeletypeAction.OpenSpaceAsContext]: 'Open Context ↗',
   [TeletypeAction.OpenSpaceAsTab]: 'Open as Tab ↗',
   [TeletypeAction.OpenStuff]: 'Open Stuff',
@@ -67,7 +67,7 @@ export const TeletypeActionDisplayLabels = {
   [TeletypeAction.ExecuteBrowserCommand]: 'Browser Command',
   [TeletypeAction.Create]: 'Create',
   [TeletypeAction.CreateNote]: 'Create Note',
-  [TeletypeAction.CreateSpace]: 'Create Space',
+  [TeletypeAction.CreateSpace]: 'Create Context',
   [TeletypeAction.CloseTab]: 'Close Tab',
   [TeletypeAction.ToggleBookmark]: 'Toggle Bookmark',
   [TeletypeAction.ToggleSidebar]: 'Toggle Sidebar',
@@ -83,7 +83,7 @@ export enum TeletypeActionGroup {
   BrowserCommands = 'BROWSER_COMMANDS',
   CreateCommands = 'CREATE_SPACE',
   Resources = 'RESOURCES',
-  Space = 'SPACE'
+  Space = 'CONTEXT'
 }
 
 export interface TeletypeStaticAction extends ActionBase {

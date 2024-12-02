@@ -262,8 +262,8 @@
         {#if userConfigSettings}
           <SettingsOption
             icon="marker"
-            title="Live Spaces"
-            description="Subscribe to RSS feeds of websites and pull in their content into a space."
+            title="Live Contexts"
+            description="Subscribe to RSS feeds of websites and pull in their content into a context."
             bind:value={userConfigSettings.live_spaces}
             on:update={handleSettingsUpdate}
           />

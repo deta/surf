@@ -55,6 +55,8 @@ export type OptionalSpaceData = Optional<
   | 'builtIn'
 >
 
+export const DEFAULT_SPACE_ID = 'inbox'
+
 export class OasisSpace {
   id: string
   createdAt: string
@@ -241,7 +243,7 @@ export class OasisService {
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
     this.spaces = writable<OasisSpace[]>([])
-    this.selectedSpace = writable<string>('all')
+    this.selectedSpace = writable<string>(DEFAULT_SPACE_ID)
 
     this.everythingContents = writable([])
     this.loadingEverythingContents = writable(false)
@@ -445,7 +447,7 @@ export class OasisService {
     this.spaces.set(filtered)
 
     if (get(this.selectedSpace) === spaceId && spaceId !== '.tempspace') {
-      this.changeSelectedSpace('all')
+      this.changeSelectedSpace(DEFAULT_SPACE_ID)
     }
 
     await this.tabsManager.deleteScopedTabs(spaceId)
@@ -709,7 +711,7 @@ export class OasisService {
   }
 
   async resetSelectedSpace() {
-    this.changeSelectedSpace('all')
+    this.changeSelectedSpace(DEFAULT_SPACE_ID)
   }
 
   async createNewBrowsingSpace(

@@ -75,7 +75,7 @@ const createSpaceAction = async (
 
   const horizontalAction = {
     id: result.id,
-    section: result.name ? `Space → ${result.name}` : `Space → ${result.name}`,
+    section: result.name ? `Context → ${result.name}` : `Context → ${result.name}`,
     name: result.name,
     keywords: result.keywords || [],
     selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
@@ -95,7 +95,7 @@ const createSpaceAction = async (
     actionIcon: result.actionIcon,
     actionText: result.actionText,
     actionPanel: result.actionPanel,
-    section: 'Spaces',
+    section: 'Contexts',
     handler: result.handler
   } as Action
 

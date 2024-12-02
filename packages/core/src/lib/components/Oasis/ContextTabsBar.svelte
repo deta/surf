@@ -179,7 +179,7 @@
       }
 
       updateBookmarkingTabState(tab.id, 'in_progress')
-      toast = toasts.loading(spaceId ? 'Saving Page to Space…' : 'Saving Page…')
+      toast = toasts.loading(spaceId ? 'Saving Page to Context…' : 'Saving Page…')
 
       const isActivated = get(tabsManager.activatedTabs).includes(tab.id)
       if (!isActivated) {
@@ -225,7 +225,7 @@
       oasis.pushPendingStackAction(resource.id, { tabId: tab.id })
       oasis.reloadStack()
 
-      toast?.success(spaceId ? 'Page Saved to Space!' : 'Page Saved!')
+      toast?.success(spaceId ? 'Page Saved to Context!' : 'Page Saved!')
       updateBookmarkingTabState(tab.id, 'success')
 
       dispatch('reload', spaceId)

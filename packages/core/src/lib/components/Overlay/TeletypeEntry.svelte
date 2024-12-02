@@ -36,7 +36,7 @@
   } from '@deta/teletype/src'
   import { Icon } from '@horizon/icons'
   import { useCommandComposer } from '../Overlay/service/commandComposer'
-  import { OasisSpace, useOasis } from '../../service/oasis'
+  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
   import { Resource, useResourceManager } from '../../service/resources'
@@ -306,7 +306,7 @@
 
     tabsManager.showNewTabOverlay.set(2)
     await tick()
-    oasis.selectedSpace.set(space.id === GENERAL_CONTEXT_ID ? 'all' : space.id)
+    oasis.selectedSpace.set(space.id === GENERAL_CONTEXT_ID ? DEFAULT_SPACE_ID : space.id)
 
     return {
       preventClose: true

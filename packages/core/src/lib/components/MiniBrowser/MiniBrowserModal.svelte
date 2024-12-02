@@ -453,7 +453,7 @@
               <ShortcutSaveItem
                 on:save-resource-in-space={handleSaveResourceInSpace}
                 spaces={oasis.spaces}
-                infoText="Save page to Space:"
+                infoText="Save page to Context:"
               />
             </div>
           </CustomPopover>

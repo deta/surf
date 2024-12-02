@@ -713,7 +713,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         type: 'action',
         hidden: tab.type !== 'space',
         icon: generalContext.icon,
-        text: 'Open as Context',
+        text: 'Open Context',
         action: () => {
           if (tab.type !== 'space') return
           tabsManager.changeScope(tab.spaceId, ChangeContextEventTrigger.Tab)
@@ -733,7 +733,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         type: 'action',
         hidden: tab.type !== 'page' || !showLiveSpaceButton,
         icon: 'news',
-        text: 'Create Live Space',
+        text: 'Create Live Context',
         action: () => handleCreateLiveSpace()
       },
 
@@ -757,7 +757,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       {
         type: 'sub-menu',
         icon: 'circle.dot',
-        text: 'Move Tabs to Space',
+        text: 'Move Tabs to Context',
         items: $contextMenuMoveTabsToSpaces
       },
       { type: 'separator' },
@@ -942,10 +942,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               <ShortcutSaveItem
                 on:save-resource-in-space={handleAddSourceToSpace}
                 {spaces}
-                infoText="or add updates from this site as a source to existing Space:"
+                infoText="or add updates from this site as a source to existing Context:"
               />
               <span class="p-4 py-4 mt-8 w-full text-xs text-gray-500 text-center">
-                A Live Space will automatically pull in new <br /> items from the page
+                A Live Context will automatically pull in new <br /> items from the page
               </span>
             </div>
           </CustomPopover>
@@ -958,7 +958,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               search={$spaces.length > 0 ? 'manual' : 'disabled'}
               searchValue={spaceSearchValue}
               footerItem={newContext}
-              inputPlaceholder="Select a Space to save to…"
+              inputPlaceholder="Select a Context to save to…"
               open={saveToSpacePopoverOpened}
               openOnHover={500}
               disabled={disableContextmenu}
@@ -986,7 +986,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               <div slot="empty" class="flex flex-col justify-center gap-2 h-full">
                 {#if $spaceSearchValue.length > 0 || $saveToSpaceItems.length === 0}
                   <div class="h-full flex flex-col justify-center">
-                    <p class="text-gray-400 dark:text-gray-400 text-center py-6">No Spaces found</p>
+                    <p class="text-gray-400 dark:text-gray-400 text-center py-6">
+                      No Contexts found
+                    </p>
                   </div>
                 {/if}
               </div>

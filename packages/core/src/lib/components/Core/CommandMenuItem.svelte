@@ -66,7 +66,7 @@
       case 'resource':
         return 'Resource'
       case 'space':
-        return 'Space'
+        return 'Context'
       case 'navigate':
         return 'Navigate'
       case 'general-search':

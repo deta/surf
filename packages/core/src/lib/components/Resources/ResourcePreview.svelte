@@ -885,7 +885,7 @@
         type: 'sub-menu',
         icon: '',
         disabled: $contextMenuSpaces.length === 0,
-        text: 'Add to Space',
+        text: 'Add to Context',
         items: $contextMenuSpaces
       },
       { type: 'separator' }
@@ -902,7 +902,7 @@
     ...conditionalArrayItem(isInSpace && resource.type.startsWith('image/'), {
       type: 'action',
       icon: 'screenshot',
-      text: 'Use as Space Icon',
+      text: 'Use as Context Icon',
       action: () => handleUseAsSpaceIcon()
     }),
     ...conditionalArrayItem<CtxItem>(
@@ -924,7 +924,7 @@
           {
             type: 'action',
             icon: 'trash',
-            text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Space'}`,
+            text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Context'}`,
             kind: 'danger',
             action: () => handleRemove()
           }

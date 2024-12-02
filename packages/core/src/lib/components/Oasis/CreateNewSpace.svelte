@@ -359,7 +359,7 @@
         class="folder-name w-full text-xl font-medium text-gray-700 dark:text-gray-100 bg-transparent border-none focus:outline-none"
         id="folder-name"
         name="folder-name"
-        placeholder="Enter Space Name"
+        placeholder="Enter Context Name"
         bind:value={$name}
         on:input={handleNameInput}
         tabindex="0"
@@ -418,7 +418,7 @@
             class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
             style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
           >
-            Create empty space
+            Create empty context
           </h3>
           <p
             class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
@@ -514,7 +514,7 @@
           }}
         >
           <span
-            >Surf will from now automatically add content to your space that matches your
+            >Surf will from now automatically add content to your context that matches your
             description.</span
           >
           <Icon name="sparkles.fill" size="22px" className="text-[#29A6F3] dark:text-sky-100" />
@@ -556,7 +556,7 @@
                 bind:this={editor}
                 content={$userPrompt}
                 on:update={handleEditorUpdate}
-                placeholder="Describe your space and stuff will be auto-fetched."
+                placeholder="Describe your context and stuff will be auto-fetched."
                 tabindex="1"
                 submitOnEnter
                 autofocus={false}
@@ -631,7 +631,7 @@
         <Icon name="sparkles.fill" size="64px" color="#e5e5e5" />
       </div>
       <h3 class="empty-state-title text-2xl font-semibold text-gray-800 mb-2">
-        Create Empty Space
+        Create Empty Context
       </h3>
       <p class="empty-state-description text-gray-600 text-center max-w-md">
         future items will be<br /> dropped here.

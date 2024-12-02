@@ -2,14 +2,14 @@ import type { SelectItem } from '../components/Atoms/SelectDropdown/index'
 
 export const generalContext = {
   id: 'default',
-  label: 'General Browsing',
+  label: 'Home',
   icon: 'circle-dot',
   data: null
 } satisfies SelectItem
 
 export const newContext = {
   id: 'new',
-  label: 'Create New Space',
+  label: 'Create New Context',
   icon: 'add',
   data: null
 } satisfies SelectItem

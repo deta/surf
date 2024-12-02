@@ -255,7 +255,9 @@
               <h2>Subscriptions</h2>
             </div>
 
-            <p>Subscriptions automatically bring content into your Space from external sources.</p>
+            <p>
+              Subscriptions automatically bring content into your Context from external sources.
+            </p>
 
             <p>
               If auto-refresh is enabled, these sources will automatically be loaded, otherwise you
@@ -325,10 +327,12 @@
         <div class="smart-filter">
           <div class="title">
             <Icon name="sparkles" size="20px" />
-            <h2>Smart Space</h2>
+            <h2>Smart Context</h2>
           </div>
 
-          <p>Automatically add new items you save to this Space, if they match your description.</p>
+          <p>
+            Automatically add new items you save to this Context, if they match your description.
+          </p>
           <input
             placeholder="e.g. articles about electric cars"
             bind:value={smartFilterQuery}
@@ -359,7 +363,7 @@
           <p>Sort resources by when they were</p>
 
           <select bind:value={sortBy} on:change={handleSortingUpdate}>
-            <option value="created_at">added to the space</option>
+            <option value="created_at">added to the context</option>
             <option value="source_published_at">originally published</option>
           </select>
         </div>
@@ -398,19 +402,19 @@
 
             <div class="action">
               <div class="action-row">
-                <h3>Clear Space</h3>
-                <p>Remove all resources from this Space.</p>
+                <h3>Clear Context</h3>
+                <p>Remove all resources from this Context.</p>
               </div>
 
               <button on:click={handleClearSpace}>
                 <Icon name="close" />
-                Clear Space
+                Clear Context
               </button>
             </div>
 
             <div class="action">
               <div class="action-row">
-                <h3>Delete Space</h3>
+                <h3>Delete Context</h3>
                 <!-- <p>Deletes the Space and optionally its resources.</p> -->
 
                 <label>
@@ -421,7 +425,7 @@
 
               <button on:click={handleDeleteSpace}>
                 <Icon name="trash" />
-                Delete Space
+                Delete Context
               </button>
             </div>
           </div>

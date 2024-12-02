@@ -20,7 +20,7 @@
   import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
   import Folder, { type EditingStartEvent, type FolderEvents } from './Folder.svelte'
   import { Icon, type Icons } from '@horizon/icons'
-  import { OasisSpace, pickRandomColorPair, useOasis } from '../../service/oasis'
+  import { DEFAULT_SPACE_ID, OasisSpace, pickRandomColorPair, useOasis } from '../../service/oasis'
 
   import { useToasts } from '../../service/toast'
   import {
@@ -43,6 +43,7 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import BuiltInSpace from './BuiltInSpace.svelte'
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
+  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
 
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
@@ -91,14 +92,18 @@
     {
       id: 'all',
       name: 'All Your Stuff',
-      icon: 'leave'
+      icon: 'save'
     },
     {
       id: 'inbox',
-      name: 'Inbox',
-      icon: 'save'
+      name: generalContext.label,
+      icon: generalContext.icon
     }
   ] as { id: string; name: string; icon: Icons }[]
+
+  if ((DEFAULT_SPACE_ID as string) === 'inbox') {
+    builtInSpaces.reverse()
+  }
 
   export let onBack = () => {}
   export const handleCreateSpace = async (
@@ -473,7 +478,7 @@
     >
       {#if $pinnedSpaces.length === 0}
         <div class="pinned-list-drag-indicator-wrapper">
-          <div class="pinned-list-drag-indicator">Drop Space here to Pin</div>
+          <div class="pinned-list-drag-indicator">Drop Context here to Pin</div>
         </div>
       {:else}
         {#each $pinnedSpaces as folder, index (folder.id + index)}
@@ -524,7 +529,7 @@
           name="chevron.down"
           className="{$showAllSpaces ? '' : '-rotate-90'} text-[#3b578a] dark:text-gray-300"
         />
-        <div class="folders-header-text">All Your Spaces</div>
+        <div class="folders-header-text">All Your Contexts</div>
       </div>
 
       <button
@@ -535,7 +540,7 @@
         on:click|stopPropagation={handleCreateEmptySpace}
         data-tooltip-target="create-space"
         data-tooltip-action="action-new-space"
-        use:tooltip={{ position: 'left', text: 'Create a new space' }}
+        use:tooltip={{ position: 'left', text: 'Create a new Context' }}
       >
         <Icon name="add" size="17px" stroke-width="2" />
       </button>

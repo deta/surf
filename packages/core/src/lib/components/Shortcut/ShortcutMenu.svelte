@@ -192,7 +192,7 @@
   {:else}
     <span class="label" aria-hidden="true" on:click={startCreatingNewSpace} data-keep-open>
       <Icon name="add" color="#7d7448" />
-      Create new Space
+      Create new Context
     </span>
   {/if}
 </div>

@@ -8,7 +8,7 @@
 
   let tabs = [
     { id: 'tabs', label: 'Chat with Tabs' },
-    { id: 'spaces', label: 'Chat with Your Spaces' },
+    { id: 'spaces', label: 'Chat with Your Contexts' },
     { id: 'resources', label: 'Chat with Resources' }
   ]
   let activeTab = tabs[0].id

@@ -214,7 +214,7 @@
       await tabsManager.removeSpaceTabs(folder.id)
 
       await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
-      toast.success('Space deleted!')
+      toast.success('Context deleted!')
     } catch (error) {
       log.error('Failed to delete folder:', error)
     }
@@ -388,13 +388,13 @@
     items: [
       ...(folder.id !== 'all'
         ? [
-            { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
             {
               type: 'action',
               icon: generalContext.icon,
-              text: 'Open as Context',
+              text: 'Open Context',
               action: handleOpenAsContext
             },
+            { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
             {
               type: 'action',
               icon: 'chat',

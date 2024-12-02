@@ -93,7 +93,7 @@
 
     open.set(false)
 
-    toasts.success('Space icon updated!')
+    toasts.success('Context icon updated!')
   }
 
   onMount(() => {
@@ -163,10 +163,10 @@
           >
           <p class="info-text">
             {#if isCreating}
-              After the space is created right click any image saved and select "Use as Space Icon"
-              to change it
+              After the space is created right click any image saved and select "Use as Context
+              Icon" to change it
             {:else}
-              Tip: you can also right click any image saved in the space and select "Use as Space
+              Tip: you can also right click any image saved in the space and select "Use as Context
               Icon"
             {/if}
           </p>

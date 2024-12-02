@@ -56,7 +56,7 @@ export const chatWithSpaceOnboardingInStuffTimeline: OnboardingTimeline = {
   steps: [
     {
       target: '#chat.onboarding.stuff.1',
-      headline: 'Chatting with a Space',
+      headline: 'Chatting with a Context',
       content:
         "In Surf, you can chat with all of the items you save. This includes spaces, tabs, and bookmarks. Let's start by chatting with a space.",
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
@@ -66,9 +66,9 @@ export const chatWithSpaceOnboardingInStuffTimeline: OnboardingTimeline = {
     },
     {
       target: '#chat.onboarding.stuff.2',
-      headline: 'Add a Space into Context',
+      headline: 'Add a Context into Context',
       content:
-        'We created a demo space for you. Add the space into context by dragging it into the context bar. Alternatively, you could also do a right-click and select "Chat with Space".',
+        'We created a demo space for you. Add the space into context by dragging it into the context bar. Alternatively, you could also do a right-click and select "Chat with Context".',
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
       domTarget: 'demo-space',
       domRoot: 'stuff',
@@ -144,9 +144,9 @@ export const stuffOnboardingTimeline: OnboardingTimeline = {
     },
     {
       target: '#stuff.onboarding.2',
-      headline: 'Spaces',
+      headline: 'Contexts',
       content:
-        'You can have multiple spaces. You can also open a space as a tab and rename it (double-click).',
+        'You can have multiple contexts. You can also open a context as a tab and rename it (double-click).',
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
       domTarget: 'stuff-spaces-list',
       domRoot: 'stuff',
@@ -168,7 +168,7 @@ export const stuffOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#stuff.onboarding.3',
       headline: 'Managing Stuff',
-      content: 'Move items between spaces by simply right-clicking or dragging them.',
+      content: 'Move items between contexts by simply right-clicking or dragging them.',
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 380 },
       domRoot: 'stuff',
       domTarget: 'stuff-example-resource',
@@ -211,7 +211,7 @@ export const smartSpacesOnboardingTimeline: OnboardingTimeline = {
       target: '#smartspaces.stuff.1',
       headline: 'Premise',
       content:
-        "You know, stuff on your computer can get messy sometimes. That's why we created Smart Spaces. They help you to organize your stuff better.",
+        "You know, stuff on your computer can get messy sometimes. That's why we created Smart Contexts. They help you to organize your stuff better.",
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
       domTarget: '',
       domRoot: 'stuff',
@@ -219,7 +219,7 @@ export const smartSpacesOnboardingTimeline: OnboardingTimeline = {
     },
     {
       target: '#smartspaces.stuff.2',
-      headline: 'Chatting with a Space',
+      headline: 'Chatting with a Context',
       content: "Let's create a smart space together. Click the + button to create a new space.",
       position: { vertical: 'top', horizontal: 'left', offsetY: 120, offsetX: 10 },
       domTarget: 'create-space',

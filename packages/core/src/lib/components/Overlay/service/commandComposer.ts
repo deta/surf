@@ -41,6 +41,7 @@ import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/search
 import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '../../../types'
 import Fuse from 'fuse.js'
 import type { TabsManager } from '../../../service/tabs'
+import { generalContext } from '../../../constants/browsingContext'
 
 export class CommandComposer {
   private log = useLogScope('CommandComposer')
@@ -94,15 +95,15 @@ export class CommandComposer {
     this.userConfigSettings = this.config.settings
     this.tabsManager = this.tabsManager
     this.spaces = derived(this.oasis.spaces, ($spaces) => {
-      const generalContext = this.oasis.createFakeSpace(
+      const generalContextSpace = this.oasis.createFakeSpace(
         {
-          folderName: 'General Browsing'
+          folderName: generalContext.label
         },
         GENERAL_CONTEXT_ID,
         true
       )
 
-      return [generalContext, ...$spaces]
+      return [generalContextSpace, ...$spaces]
     })
 
     // Subscribe to search value changes

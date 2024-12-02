@@ -96,7 +96,7 @@ export const staticActions: TeletypeStaticAction[] = [
     id: 'create.space',
     execute: TeletypeAction.CreateSpace,
     group: TeletypeActionGroup.CreateCommands,
-    name: 'Create Space',
+    name: 'Create Context',
     keywords: ['smart', 'smart-space'],
     // component: CreateNewSpace,
     // view: 'ModalLarge',
