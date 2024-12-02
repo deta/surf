@@ -240,10 +240,17 @@ export class Resource {
     this.readDataPromise = null
     this.dataUsed = 0
 
+    const stateMap = {
+      [ResourceProcessingStateType.Pending]: 'running',
+      [ResourceProcessingStateType.Started]: 'running',
+      [ResourceProcessingStateType.Failed]: 'error',
+      [ResourceProcessingStateType.Finished]: 'idle'
+    }
     this.extractionState = writable('idle')
-    // TODO: this should be more granular, e.g., not having a post_processing_state should be clearly indicated
     this.postProcessingState = writable(
-      data.post_processing_state?.type === ResourceProcessingStateType.Failed ? 'error' : 'idle'
+      (data.postProcessingState
+        ? stateMap[data.postProcessingState.type] || 'idle'
+        : 'idle') as ResourceState
     )
     this.state = derived(
       [this.extractionState, this.postProcessingState],

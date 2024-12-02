@@ -73,7 +73,7 @@ export interface SFFSResource {
   metadata?: SFFSResourceMetadata
   tags?: SFFSResourceTag[]
   annotations?: SFFSResource[]
-  post_processing_state?: ResourceProcessingState
+  postProcessingState?: ResourceProcessingState
 }
 
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'

@@ -106,7 +106,7 @@ export class SFFS {
           deleted: annotation.deleted === 1
         }
       }),
-      post_processing_state: composite.post_processing_job?.state
+      postProcessingState: composite.post_processing_job?.state
     }
   }
 
