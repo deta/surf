@@ -646,8 +646,17 @@
         right: -0.5rem;
         width: 200px !important;
         height: 100vh;
-        background: linear-gradient(90deg, #cce1f900 0%, #cce1f977 80%);
+        --color: #cce1f977;
+        background: linear-gradient(
+          90deg,
+          color-mix(in srgb, var(--color), transparent 100%) 0%,
+          color-mix(in srgb, var(--color), transparent 65%) 80%
+        );
         -webkit-app-region: no-drag;
+
+        :global(.custom) & {
+          --color: var(--custom-color) !important;
+        }
       }
       &:not(.isMac)::before {
         width: 300px !important;
