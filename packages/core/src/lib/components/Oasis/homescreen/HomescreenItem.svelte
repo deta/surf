@@ -291,6 +291,12 @@ TODO: Fix resizing logic for other corners
           }
         }
       }
+      &:global(:has([data-resource-type^='application/vnd.space.document.space-note'])) {
+        // NOTE: Fuck this is hacky & is prob gonna break soon our editor styles suuuuuuc tho
+        :global(article .content > .wrapper) {
+          background: transparent !important;
+        }
+      }
     }
 
     &.item-type-space {
