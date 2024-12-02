@@ -517,14 +517,13 @@
           theme: undefined
         }
       } else if (resource.type.startsWith('image/')) {
-        const data = await resource.getData()
         const hostname = getHostname(canonicalUrl ?? '')
 
         previewData = {
           type: resource.type,
           title: undefined,
           content: undefined,
-          image: data,
+          image: `surf://resource/${resource.id}`,
           url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
           source: {
             text:

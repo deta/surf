@@ -25,7 +25,6 @@
   import { getFileKind, useLogScope } from '@horizon/utils'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import Link from '../../Atoms/Link.svelte'
-  import ImageView from './File/ImageView.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
@@ -42,7 +41,7 @@
 
   export let type: string
   export let title: string | undefined = undefined
-  export let image: string | Blob | undefined = undefined
+  export let image: string | undefined = undefined
   export let content: string | undefined = undefined
   export let contentType: ContentType = 'plain'
   export let annotations: Annotation[] | undefined = undefined
@@ -226,11 +225,7 @@
         {#if showMedia}
           {#if image}
             <div class="image">
-              {#if typeof image === 'string'}
-                <Image src={image} alt={title ?? ''} emptyOnError />
-              {:else}
-                <ImageView blob={image} />
-              {/if}
+              <Image src={image} alt={title ?? ''} emptyOnError />
             </div>
           {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
             <FilePreview {resource} preview />

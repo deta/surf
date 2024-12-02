@@ -1,19 +1,13 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
-
-  export let blob: Blob
+  export let resourceId: string
   export let border = false
   export let fit: 'contain' | 'cover' = 'cover'
 
-  const url = URL.createObjectURL(blob)
-
-  onDestroy(() => {
-    URL.revokeObjectURL(url)
-  })
+  $: src = `surf://resource/${resourceId}`
 </script>
 
 <div class="wrapper" class:border>
-  <img src={url} alt="" style="object-fit: {fit}" on:load />
+  <img {src} alt="" style="object-fit: {fit}" on:load />
 </div>
 
 <style lang="scss">

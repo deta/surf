@@ -30,7 +30,7 @@
   onMount(async () => {
     try {
       log.debug('Loading file data')
-      if (!preview || ALWAYS_LOAD_TYPES.some((type) => resource.type.startsWith(type))) {
+      if (!preview && !ALWAYS_LOAD_TYPES.some((type) => resource.type.startsWith(type))) {
         loading = true
         data = await resource.getData()
         dispatch('data', data)
@@ -57,15 +57,17 @@
   {:else if resource}
     {#if resource.type === 'application/pdf' && !preview}
       <PDFView {resource} on:load={handleLoad} />
-    {:else if data && resource.type.startsWith('image/')}
-      {#if preview}
+    {:else if resource.type.startsWith('image/')}
+      <ImageView resourceId={resource.id} fit="contain" on:load={handleLoad} />
+      <!-- {#if preview}
         <ImageView blob={data} on:load={handleLoad} />
       {:else}
-        <webview
-          src="file://{resource.path}"
-          webpreferences="autoplayPolicy=user-gesture-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
+        <img
+          src="surf://resource/{resource.id}"
+          alt={resource.name}
+          style="width: 100%; height: 100%; object-fit: contain;"
         />
-      {/if}
+      {/if} -->
     {:else if data && resource.type.startsWith('video/')}
       <VideoView {resource} blob={data} on:load={handleLoad} />
     {:else if data && resource.type.startsWith('audio/')}

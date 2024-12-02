@@ -63,7 +63,6 @@
    */
   import { getFileKind, truncate } from '@horizon/utils'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
-  import ImageView from './File/ImageView.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
@@ -89,7 +88,7 @@
   export let titleValue: string = ''
   export let editTitle: boolean = false
 
-  export let media: string | Blob | undefined = undefined
+  export let media: string | undefined = undefined
   export let content: string | undefined = undefined
   export let contentType: ContentType | undefined = undefined
   export let annotations: Annotation[] | undefined = undefined
@@ -271,11 +270,7 @@
     {#if showMediaBlock}
       <div class="media" class:processing={isProcessing} class:og={!type.startsWith('image/')}>
         {#if media}
-          {#if typeof media === 'string'}
-            <Image src={media} alt={title ?? ''} emptyOnError />
-          {:else}
-            <ImageView blob={media} />
-          {/if}
+          <Image src={media} alt={title ?? ''} emptyOnError />
         {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
           <FilePreview {resource} preview />
         {/if}
