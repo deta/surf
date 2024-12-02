@@ -975,7 +975,7 @@
     showNewTabOverlay.set(value)
   }
 
-  const handleToggleHorizontalTabs = () => {
+  const handleToggleHorizontalTabs = async () => {
     const t = document.startViewTransition(() => {
       horizontalTabs = !horizontalTabs
 
@@ -986,7 +986,10 @@
       // localStorage.setItem('horizontalTabs', horizontalTabs.toString())
       telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
-    checkScroll()
+
+    await tick().then(() => {
+      checkScroll()
+    })
   }
 
   const handleToggleTheme = () => {
@@ -4789,6 +4792,10 @@
             />
           {/if}
 
+          {#if horizontalTabs}
+            <ScopeSwitcher {horizontalTabs} />
+          {/if}
+
           <div
             id="sidebar-pinned-tabs-wrapper"
             class={$pinnedTabs.length !== 0 || horizontalTabs
@@ -4868,7 +4875,9 @@
             <div class="bg-sky-50/50 h-1/2 w-1.5 rounded-full"></div>
           {/if}
 
-          <ScopeSwitcher {horizontalTabs} />
+          {#if !horizontalTabs}
+            <ScopeSwitcher {horizontalTabs} />
+          {/if}
 
           <div
             class="relative w-full h-full no-scrollbar overflow-hidden py-2 {horizontalTabs
@@ -5027,7 +5036,7 @@
                   {/if}
                 {/each}
 
-                <div
+                <!-- <div
                   class:w-fit={horizontalTabs}
                   class:h-full={horizontalTabs}
                   class="select-none flex items-center justify-center"
@@ -5049,7 +5058,7 @@
                       <span class="label">New Tab</span>
                     {/if}
                   </button>
-                </div>
+                </div> -->
               </div>
             {:else}
               <div
@@ -5185,24 +5194,26 @@
               ? 'h-full flex-row items-center'
               : 'flex-col'} flex-shrink-0"
           >
-            <button
-              class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
+            {#if !horizontalTabs}
+              <button
+                class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
               {horizontalTabs
-                ? 'w-fit rounded-xl p-2'
-                : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
-              on:click|preventDefault={() => tabsManager.showNewTab()}
-              class:opacity-100={$showEndMask}
-              class:opacity-0={!$showEndMask}
-              class:pointer-events-auto={$showEndMask}
-              class:pointer-events-none={!$showEndMask}
-              class:bg-sky-200={$showNewTabOverlay === 1}
-              class:dark:bg-sky-900={$showNewTabOverlay === 1}
-            >
-              <Icon name="add" />
-              {#if !horizontalTabs}
-                <span class="label">New Tab</span>
-              {/if}
-            </button>
+                  ? 'w-fit rounded-xl p-2'
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                on:click|preventDefault={() => tabsManager.showNewTab()}
+                class:opacity-100={$showEndMask || horizontalTabs}
+                class:opacity-0={!$showEndMask}
+                class:pointer-events-auto={$showEndMask || horizontalTabs}
+                class:pointer-events-none={!$showEndMask}
+                class:bg-sky-200={$showNewTabOverlay === 1}
+                class:dark:bg-sky-900={$showNewTabOverlay === 1}
+              >
+                <Icon name="add" />
+                {#if !horizontalTabs}
+                  <span class="label">New Tab</span>
+                {/if}
+              </button>
+            {/if}
             <!-- This overlay will dynamically grow / shrink depending on the current state -->
             <SidebarMetaOverlay
               on:open-stuff={() => ($showNewTabOverlay = 2)}
@@ -5255,7 +5266,7 @@
                       </div>
                     </CustomPopover>
                   {/if}
-                {:else}
+                {:else if !horizontalTabs}
                   <button
                     use:tooltip={{
                       text: 'Chat (⌘ + E)',
@@ -5272,6 +5283,25 @@
                   >
                     <Icon name="face.light" />
                     <span class="text-xl font-medium text-white">Ask</span>
+                  </button>
+                {:else if horizontalTabs}
+                  <button
+                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
+                    {horizontalTabs
+                      ? 'w-fit rounded-xl p-2'
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                    on:click|preventDefault={() => tabsManager.showNewTab()}
+                    class:opacity-100={$showEndMask || horizontalTabs}
+                    class:opacity-0={!$showEndMask}
+                    class:pointer-events-auto={$showEndMask || horizontalTabs}
+                    class:pointer-events-none={!$showEndMask}
+                    class:bg-sky-200={$showNewTabOverlay === 1}
+                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
+                  >
+                    <Icon name="add" />
+                    {#if !horizontalTabs}
+                      <span class="label">New Tab</span>
+                    {/if}
                   </button>
                 {/if}
                 <!--<button

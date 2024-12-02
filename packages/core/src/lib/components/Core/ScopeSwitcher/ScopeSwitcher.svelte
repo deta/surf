@@ -284,33 +284,35 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="title" on:click={handleClick} on:dblclick={handleEditName}>
     {#if $activeSpace}
-      <button class="context-icon" on:click|stopPropagation={() => handleOpenSpaceInOasis()}>
+      <button class="context-icon">
         <SpaceIcon folder={$activeSpace} interactive={false} size="md" />
       </button>
     {:else}
       <Icon name={generalContext.icon} size="1.5rem" />
     {/if}
 
-    {#if $activeSpaceData && $editName}
-      <input
-        type="text"
-        class="input"
-        bind:this={inputElem}
-        bind:value={$activeSpaceData.folderName}
-        on:focus={handleFocus}
-        on:blur={handleBlur}
-        on:keydown={handleKeyDown}
-        placeholder="Context Name"
-        disabled={$activeScopeId === null}
-      />
-    {:else if $activeSpaceData}
-      <div class="input">
-        {$activeSpaceData.folderName}
-      </div>
-    {:else}
-      <div class="input">
-        {generalContext.label}
-      </div>
+    {#if !horizontalTabs}
+      {#if $activeSpaceData && $editName}
+        <input
+          type="text"
+          class="input"
+          bind:this={inputElem}
+          bind:value={$activeSpaceData.folderName}
+          on:focus={handleFocus}
+          on:blur={handleBlur}
+          on:keydown={handleKeyDown}
+          placeholder="Context Name"
+          disabled={$activeScopeId === null}
+        />
+      {:else if $activeSpaceData}
+        <div class="input">
+          {$activeSpaceData.folderName}
+        </div>
+      {:else}
+        <div class="input">
+          {generalContext.label}
+        </div>
+      {/if}
     {/if}
   </div>
 
@@ -377,6 +379,7 @@
         font-size: 0.938rem;
       }
 
+      @apply px-1.5 ml-2 gap-1.5 bg-white/70 py-1.5;
       --squircle-radius: 8px;
       --squircle-smooth: 0.28;
     }
