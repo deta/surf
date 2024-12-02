@@ -324,24 +324,23 @@
     }
   }
 
-  :global(.verticalTabs #homescreen-wrapper .mini-browser-wrapper) {
-    padding: var(--base-padding) !important;
-    padding-left: calc(var(--left-sidebar-size) + var(--base-padding)) !important;
+  :global(#homescreen-wrapper > .modal) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
   }
-  :global(.verticalTabs:not(.showLeftSidebar) #homescreen-wrapper .mini-browser-wrapper) {
-    padding-left: var(--base-padding) !important;
-  }
-
-  :global(.horizontalTabs #homescreen-wrapper .mini-browser-wrapper) {
-    padding: var(--base-padding) !important;
-    padding-top: calc(var(--left-sidebar-size) + var(--base-padding)) !important;
-  }
-  :global(.horizontalTabs:not(.showLeftSidebar) #homescreen-wrapper .mini-browser-wrapper) {
-    padding-top: var(--base-padding) !important;
+  :global(.verticalTabs.showLeftSidebar #homescreen-wrapper > .modal) {
+    left: var(--left-sidebar-size) !important;
   }
 
-  :global(.showRightSidebar #homescreen-wrapper .mini-browser-wrapper) {
-    padding-right: calc(5em + var(--right-sidebar-size) + var(--base-padding)) !important;
+  :global(.horizontalTabs.showLeftSidebar #homescreen-wrapper > .modal) {
+    top: var(--left-sidebar-size) !important;
+  }
+
+  :global(.showRightSidebar #homescreen-wrapper > .modal) {
+    right: var(--right-sidebar-size) !important;
   }
 
   :global(body:has(#homescreen-wrapper.homescreenVisible) .teletype-motion > .outer-wrapper) {

@@ -1503,6 +1503,13 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       outline 175ms cubic-bezier(0.4, 0, 0.2, 1),
       width 175ms cubic-bezier(0.4, 0, 0.2, 1),
       height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    :global(.custom) & {
+      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+    }
+    :global(.dark.custom) & {
+      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+    }
   }
 
   :global(.tab[data-drag-target='sidebar-pinned-tabs']) {
@@ -1515,9 +1522,15 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }
 
   :global(.tab[data-drag-preview][data-drag-target^='webview']) {
-    background: var(--white);
-    border: 2px dotted var(--dark-outline);
-    opacity: 95%;
+    --squircle-fill: var(--white) !important;
+    opacity: 100%;
+
+    :global(.custom) & {
+      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.75)) !important;
+    }
+    :global(.dark.custom) & {
+      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.55)) !important;
+    }
   }
 
   :global(body[data-dragging='true'] .tab:not([data-dragging-item])) {
