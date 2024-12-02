@@ -154,6 +154,12 @@
     }
   }
 
+  const handleStartEdit = () => {
+    if (folder.id !== 'all') {
+      dispatch('editing-start', { id: folder.id })
+    }
+  }
+
   const handleDoubleClick = () => {
     // if (folder.id !== 'all') {
     //   dispatch('editing-start', { id: folder.id })
@@ -409,7 +415,7 @@
               action: () =>
                 $folderDetails.pinned ? dispatch('unpin', folder.id) : dispatch('pin', folder.id)
             }),
-            { type: 'action', icon: 'edit', text: 'Rename', action: handleDoubleClick },
+            { type: 'action', icon: 'edit', text: 'Rename', action: handleStartEdit },
             { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
           ]
         : [])

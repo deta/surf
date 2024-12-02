@@ -1,7 +1,7 @@
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { conditionalArrayItem, isModKeyPressed, useLogScope, wait } from '@horizon/utils'
+  import { conditionalArrayItem, hover, isModKeyPressed, useLogScope, wait } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import {
     SelectDropdown,
@@ -21,6 +21,7 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { HTMLDragArea } from '@horizon/dragcula'
+  import { fade, fly } from 'svelte/transition'
 
   export let horizontalTabs = false
 
@@ -39,6 +40,8 @@
   const focused = writable(false)
   const editName = writable(false)
   const searchValue = writable('')
+  const titleHovered = writable(false)
+  const forceShowTitle = writable(false)
 
   let inputElem: HTMLInputElement
 
@@ -151,7 +154,13 @@
     } else if (e.shiftKey) {
       handleOpenSpaceInOasis()
     } else {
+      clearTimeout(hideTimeout)
+      forceShowTitle.set(true)
       toggleHomescreen()
+
+      setTimeout(() => {
+        forceShowTitle.set(false)
+      }, 300)
     }
   }
 
@@ -251,12 +260,27 @@
         action: () => handleDeleteSpace(space)
       }
     ] satisfies CtxItem[]
+
+  let hideTimeout: ReturnType<typeof setTimeout>
+
+  const handleTitleMouseEnter = () => {
+    clearTimeout(hideTimeout)
+    titleHovered.set(true)
+  }
+
+  const handleTitleMouseLeave = () => {
+    hideTimeout = setTimeout(() => {
+      titleHovered.set(false)
+    }, 200)
+  }
 </script>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   class="wrapper no-drag"
   class:horizontal={horizontalTabs}
   class:activated={$desktopVisible}
+  on:mouseleave={handleTitleMouseLeave}
   use:HTMLDragArea.use={{
     accepts: () => true
   }}
@@ -289,7 +313,12 @@
   }}
 >
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="title" on:click={handleClick} on:dblclick={handleEditName}>
+  <div
+    class="title"
+    on:click={handleClick}
+    on:dblclick={handleEditName}
+    on:mouseenter={handleTitleMouseEnter}
+  >
     {#if $activeSpace}
       <button class="context-icon">
         <SpaceIcon folder={$activeSpace} interactive={false} size="md" />
@@ -299,27 +328,43 @@
     {/if}
 
     {#if !horizontalTabs}
-      {#if $activeSpaceData && $editName}
-        <input
-          type="text"
-          class="input"
-          bind:this={inputElem}
-          bind:value={$activeSpaceData.folderName}
-          on:focus={handleFocus}
-          on:blur={handleBlur}
-          on:keydown={handleKeyDown}
-          placeholder="Context Name"
-          disabled={$activeScopeId === null}
-        />
-      {:else if $activeSpaceData}
-        <div class="input">
-          {$activeSpaceData.folderName}
-        </div>
-      {:else}
-        <div class="input">
-          {generalContext.label}
-        </div>
-      {/if}
+      <div class="name-wrapper">
+        {#if $activeSpaceData && $editName}
+          <input
+            type="text"
+            class="input"
+            bind:this={inputElem}
+            bind:value={$activeSpaceData.folderName}
+            on:focus={handleFocus}
+            on:blur={handleBlur}
+            on:keydown={handleKeyDown}
+            placeholder="Context Name"
+            disabled={$activeScopeId === null}
+          />
+        {:else if $titleHovered || $forceShowTitle}
+          <div
+            id="open-desktop-text"
+            class="open-desktop animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%]"
+            in:fly={{ delay: 33, duration: 120, y: 10 }}
+            out:fly={{ duration: 120, y: 10 }}
+          >
+            {#if $desktopVisible}
+              Hide Desktop
+            {:else}
+              View Desktop →
+            {/if}
+          </div>
+        {:else}
+          <div
+            id="context-name"
+            class="open-desktop"
+            in:fly={{ delay: 33, duration: 120, y: -10 }}
+            out:fly={{ duration: 120, y: -10 }}
+          >
+            {$activeSpaceData ? $activeSpaceData.folderName : generalContext.label}
+          </div>
+        {/if}
+      </div>
     {/if}
   </div>
 
@@ -332,7 +377,7 @@
     inputPlaceholder="Search your Contexts…"
     on:select={handleChange}
   >
-    <div class="trigger">
+    <div class="trigger" on:mouseenter={handleTitleMouseLeave}>
       <Icon name="chevron.down" />
     </div>
 
@@ -354,9 +399,9 @@
   .wrapper {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.1rem;
     padding: 0.25rem;
-    padding-left: 0.75rem;
+    padding-left: 0.5rem;
 
     color: var(--contrast-color);
     background: paint(squircle) !important;
@@ -413,9 +458,22 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    padding: 0.25rem 0.25rem;
+    padding-left: 0.25rem;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+    }
+  }
+
+  .name-wrapper {
+    width: 100%;
+    position: relative;
   }
 
   .context-icon {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -430,7 +488,6 @@
 
   .input {
     width: 100%;
-    padding: 0.25rem 0.25rem;
     border-radius: calc(10px - 0.25rem);
     font-size: 1rem;
     font-weight: 500;
@@ -444,6 +501,21 @@
     &:focus {
       outline: 1px solid rgb(2 132 199); // border-sky-600
     }
+  }
+
+  .open-desktop {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 100%;
+    padding: 0.25rem 0.25rem;
+    border-radius: calc(10px - 0.25rem);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
   }
 
   .trigger {
@@ -486,6 +558,10 @@
   }
 
   .horizontal {
+    .title {
+      padding: 0;
+    }
+
     .trigger {
       padding: 0.15rem;
       font-size: 0.9rem;
