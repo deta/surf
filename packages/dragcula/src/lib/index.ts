@@ -6,5 +6,6 @@ export * from "./Dragcula.js";
 export * from "./Event.js";
 export * from "./DragItem.js";
 export * from "./DragZone.js";
+export * from "./DragArea.js";
 
 export * from "./AxisDragZone.js";

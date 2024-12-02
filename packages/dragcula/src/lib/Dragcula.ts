@@ -1,7 +1,8 @@
-import { writable } from "svelte/store";
-import { HTMLDragZone, type DragItem, type DragZone } from "./index.js";
+import { get, writable } from "svelte/store";
+import { HTMLDragArea, HTMLDragZone, type DragItem, type DragZone } from "./index.js";
 import {
   genId,
+  getParentArea,
   getParentZone,
   ii_DRAGCULA,
   log,
@@ -46,7 +47,10 @@ export class Dragcula {
 
     // This should probably live somewhere else lol
     function handleDragUpdate(e: DragEvent) {
-      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const els = document
+        .elementsFromPoint(e.clientX, e.clientY)
+        .filter((e) => e.getAttribute("data-dragcula-ignore") === null);
+      const el = els.at(0);
 
       if (e.isTrusted && Dragcula.get().activeDrag === null) {
         Dragcula.get().activeDrag = DragOperation.new({
@@ -61,7 +65,32 @@ export class Dragcula {
         console.warn("handling drag event without activeDrag! This should not happen!");
         return;
       }
+      if (get(Dragcula.get().targetDomElement) === el) return;
       Dragcula.get().targetDomElement.set(el as HTMLElement);
+
+      const overArea = getParentArea(el as HTMLElement);
+      const newAreaId = overArea?.id ?? null;
+      const oldAreaId = activeDrag.area?.id ?? null;
+      if (newAreaId !== oldAreaId) {
+        if (oldAreaId !== null) {
+          const evt = new DragEvent("dragleave", {
+            dataTransfer: activeDrag.dataTransfer,
+            relatedTarget: el,
+            bubbles: true,
+            cancelable: true
+          });
+          activeDrag.area?._handleDragLeave(evt);
+        }
+        if (newAreaId !== null) {
+          const evt = new DragEvent("dragenter", {
+            dataTransfer: activeDrag.dataTransfer,
+            relatedTarget: activeDrag.area?.element ?? undefined,
+            bubbles: true,
+            cancelable: true
+          });
+          overArea?._handleDragEnter(evt);
+        }
+      }
 
       const overZone = getParentZone(el as HTMLElement);
       const newTargetId = overZone?.id ?? null;
@@ -157,6 +186,10 @@ export class Dragcula {
     });
     */
 
+    HTMLDragArea.AREAS.forEach((area) => {
+      area._handleDragEnd();
+    });
+
     // Make sure no previews are dnagling
     // FIX: Ideally this shouldnt happen in the first case.. but better save than sorry
     document.querySelectorAll("[data-drag-preview]").forEach((el) => el.remove());
@@ -205,6 +238,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
       document.body.removeAttribute("data-drag-target");
     }
   }
+  area: HTMLDragArea | null;
 
   item: DragItem<DataTypes> | null; // DragItem, null it native drag from outside
   dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
@@ -219,6 +253,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     id?: string;
     from?: DragZone;
     to?: DragZone;
+    area?: HTMLDragArea;
     item?: DragItem<any>;
     dataTransfer?: DataTransfer;
     index?: number;
@@ -226,6 +261,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     this.id = props.id ?? genId();
     this.from = props.from || null;
     this.#to = props.to || null;
+    this.area = props.area ?? null;
     this.item = props.item ?? null;
     this.dataTransfer = props.dataTransfer ?? null;
     this.index = props.index ?? null;
@@ -235,6 +271,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     id?: string;
     from?: DragZone;
     to?: DragZone;
+    area?: HTMLDragArea;
     item?: DragItem;
     dataTransfer?: DataTransfer;
   }): DragOperation {

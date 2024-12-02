@@ -16,7 +16,7 @@
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import type { OverlayEvents } from '../Overlay/types'
   import { Icon } from '@horizon/icons'
-  import { DragOperation, Dragcula, DragculaDragEvent } from '@horizon/dragcula'
+  import { DragOperation, Dragcula, DragculaDragEvent, HTMLDragArea } from '@horizon/dragcula'
   import {
     Resource,
     ResourceJSON,
@@ -63,6 +63,7 @@
   import { springVisibility } from '../motion/springVisibility'
   import { springAppear } from '../motion/springAppear'
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
+  import { fade } from 'svelte/transition'
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
 
   export let activeTabs: Tab[] = []
@@ -99,6 +100,7 @@
   let previousSearchValue = ''
   let showDragHint = writable(false)
   let filteredItems
+  let drawerHide = writable(false) // Whether to slide the drawer away
 
   const defaultSpaceId = 'all'
 
@@ -127,6 +129,7 @@
 
   $: if ($showTabSearch === 2) {
     loadEverything(true)
+    $drawerHide = false
   }
 
   $: if ($showTabSearch === 2 && $searchValue !== previousSearchValue) {
@@ -152,23 +155,6 @@
     loadEverything()
   }
 
-  let dragculaTargetUnsubscriber: Unsubscriber
-  $: {
-    if (showTabSearch) {
-      dragculaTargetUnsubscriber = Dragcula.get().targetDomElement.subscribe(
-        (el: HTMLElement | null) => {
-          if (stuffWrapperRef?.contains(el) && $showTabSearch === 2) {
-            stuffWrapperRef?.classList.add('hovering')
-          } else {
-            stuffWrapperRef?.classList.remove('hovering')
-            updateWebviewPointerEvents('unset')
-          }
-        }
-      )
-    } else {
-      dragculaTargetUnsubscriber()
-    }
-  }
   const everythingContents = derived(
     [everythingContentsResources],
     ([everythingContentsResources]) => {
@@ -513,11 +499,12 @@
     Dragcula.get().cleanupDragOperation()
   }
 
-  const handleDrag = (e: DragEvent) => {
+  const handleDrag = async (e: DragEvent) => {
     if ($showTabSearch !== 0) return
     if (e.clientY > window.innerHeight - 80) {
       stuffWrapperRef.classList.add('hovering')
       showTabSearch.set(2)
+      // await tick()
     }
   }
 
@@ -530,6 +517,7 @@
 
   const handleDragculaDragEnd = (drag: DragOperation | undefined) => {
     cleanupDragStuck()
+    updateWebviewPointerEvents('unset')
 
     // If there's no drag operation, it means the user just clicked somewhere
     if (!drag) return
@@ -592,7 +580,13 @@
 </div>
 
 {#if $showTabSearch === 2}
-  <div class="stuff-backdrop" aria-hidden="true" on:click={handleCloseOverlay}></div>
+  <div
+    class="stuff-backdrop"
+    data-dragcula-ignore
+    class:showing={!$drawerHide}
+    aria-hidden="true"
+    on:click={handleCloseOverlay}
+  ></div>
 {/if}
 <div
   class="stuff-motion-wrapper relative z-[100000000]"
@@ -602,9 +596,20 @@
 >
   <div
     id="drawer-content"
+    class:hovering={!$drawerHide}
     class="stuff-wrapper no-drag"
     style="width: fit-content;"
     bind:this={stuffWrapperRef}
+    use:HTMLDragArea.use={{
+      accepts: () => true
+    }}
+    on:DragEnter={() => {
+      $drawerHide = false
+    }}
+    on:DragLeave={() => {
+      $drawerHide = true
+      updateWebviewPointerEvents('unset')
+    }}
   >
     <MiniBrowser service={scopedMiniBrowser} />
 
@@ -928,7 +933,9 @@
     -webkit-font-smoothing: antialiased;
     -webkit-app-region: no-drag;
     overflow: hidden;
-    transition: translate 100ms ease-out;
+    transition:
+      translate 100ms ease-out,
+      transform 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
     @apply bg-white dark:bg-gray-700;
 
     box-shadow:
@@ -952,12 +959,19 @@
   .stuff-backdrop {
     position: fixed;
     inset: 0;
-    /* pointer-events: none; */
     z-index: 100001;
     -webkit-app-region: no-drag;
     opacity: 1;
-    transition: opacity 100ms ease-out;
+
+    transition: opacity 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
     @apply bg-black/40 dark:bg-gray-700/80;
+  }
+  :global(body[data-dragging='true'] .stuff-backdrop:not(.showing)) {
+    opacity: 0;
+    pointer-events: none !important;
+  }
+  :global(body[data-dragging='true'] .stuff-backdrop.showing) {
+    opacity: 1;
   }
 
   .page-background {
@@ -1050,23 +1064,12 @@
   }
 
   /* FIXES double drop as webview still consumes drop if pointer is inside overlay. */
-  :global(body:has(.stuff-wrapper.hovering) webview) {
+  :global(body[data-dragging='true']:has(.stuff-wrapper.hovering) webview) {
     pointer-events: none !important;
-  }
-  :global(body[data-dragging='true'] .stuff-backdrop) {
-    pointer-events: none;
-  }
-
-  :global(body[data-dragging='true']:not(:has(.stuff-wrapper.hovering)) .stuff-backdrop) {
-    opacity: 0 !important;
   }
 
   :global(body[data-dragging='true']:has(.stuff-wrapper:not(.hovering))) .stuff-wrapper {
     transform: translate(-50%, 100%) !important;
-  }
-
-  :global(body[data-dragging='true']:has(.stuff-wrapper:not(.hovering))) .stuff-backdrop {
-    display: none;
   }
 
   /* Hides the Drawer when dragging and not targeting it */

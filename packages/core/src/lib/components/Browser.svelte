@@ -5977,6 +5977,11 @@
     pointer-events: none !important;
   }
 
+  /* Necessary so that inputs dont go all janky wanky  */
+  :global(body[data-dragging] input:not([data-drag-zone])) {
+    pointer-events: none !important;
+  }
+
   :global(.dragcula-drop-indicator) {
     --color: #3765ee;
     --dotColor: white;

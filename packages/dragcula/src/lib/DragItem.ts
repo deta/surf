@@ -12,6 +12,7 @@ import {
 } from "./utils/internal.js";
 import { DragculaDragEvent } from "./Event.js";
 import { DragZone } from "./DragZone.js";
+import { HTMLDragArea } from "./DragArea.js";
 
 export class DragItem<DataTypes extends Record<string, any> = { [key: string]: any }> {
   static ITEMS = new Map<string, DragItem>();
@@ -273,11 +274,32 @@ export class HTMLDragItem extends DragItem {
 
     this.element.setAttribute("data-dragging-item", "");
 
+    const parentAreaEl = this.element.parentElement?.closest(
+      "[data-drag-area]"
+    ) as HTMLElement | null;
+
     Dragcula.get().activeDrag = DragOperation.new({
-      item: this
+      item: this,
+      area: parentAreaEl
+        ? HTMLDragArea.AREAS.get(parentAreaEl.getAttribute("data-drag-area")!)
+        : undefined
     });
     Dragcula.get().prepareDragOperation();
-    const drag = Dragcula.get().activeDrag;
+    const drag = Dragcula.get().activeDrag!;
+
+    const parentArea = parentAreaEl
+      ? HTMLDragArea.AREAS.get(parentAreaEl.getAttribute("data-drag-area")!)
+      : undefined;
+
+    if (parentArea) {
+      const evt = new DragEvent("dragenter", {
+        dataTransfer: drag.dataTransfer,
+        relatedTarget: drag.area?.element ?? undefined,
+        bubbles: true,
+        cancelable: true
+      });
+      parentArea?._handleDragEnter(evt);
+    }
 
     DragculaDragEvent.dispatch("DragStart", this.element, {
       metaKey: e?.metaKey,
@@ -375,6 +397,18 @@ export class HTMLDragItem extends DragItem {
       }
       drag.from = zone;
       Dragcula.get().targetDomElement.set(zone.element);
+    }
+
+    const parentAreaEl = this.element.parentElement?.closest(
+      "[data-drag-area]"
+    ) as HTMLElement | null;
+    if (parentAreaEl !== null) {
+      const area = HTMLDragArea.AREAS.get(parentAreaEl.getAttribute("data-drag-area")!);
+      if (area) {
+        drag.area = area;
+        area._handleDragEnter(e);
+        //Dragcula.get().targetDomElement.set(zone.element);
+      }
     }
 
     this.previewPosition.x = e?.clientX ?? 0;

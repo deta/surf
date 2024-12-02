@@ -1,4 +1,4 @@
-import { DragZone } from "$lib/index.js";
+import { DragZone, HTMLDragArea } from "$lib/index.js";
 
 /// === FEATURES
 export const SUPPORTS_VIEW_TRANSITIONS = document.startViewTransition !== undefined;
@@ -67,4 +67,12 @@ export function getParentZoneEl(el?: HTMLElement) {
 export function getParentZone(el?: HTMLElement) {
   const id = getParentZoneEl(el)?.getAttribute("data-drag-zone");
   return DragZone.ZONES.get(id ?? "") ?? null;
+}
+
+export function getParentAreaEl(el?: HTMLElement) {
+  return el?.closest("[data-drag-area]") as HTMLElement | null;
+}
+export function getParentArea(el?: HTMLElement) {
+  const id = getParentAreaEl(el)?.getAttribute("data-drag-area");
+  return HTMLDragArea.AREAS.get(id ?? "") ?? null;
 }
