@@ -5235,7 +5235,27 @@
                 openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Stack)}
               on:Drop={({ detail }) => handleDropOnSpaceTab(detail)}
             >
-              <div slot="tools">
+              <div slot="tools" class="flex flex-row items-center space-x-2">
+                {#if horizontalTabs && showSidebarTools}
+                  <button
+                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
+                    {horizontalTabs
+                      ? 'w-fit rounded-xl p-2'
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                    on:click|preventDefault={() => tabsManager.showNewTab()}
+                    class:opacity-100={$showEndMask || horizontalTabs}
+                    class:opacity-0={!$showEndMask}
+                    class:pointer-events-auto={$showEndMask || horizontalTabs}
+                    class:pointer-events-none={!$showEndMask}
+                    class:bg-sky-200={$showNewTabOverlay === 1}
+                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
+                  >
+                    <Icon name="add" />
+                    {#if !horizontalTabs}
+                      <span class="label">New Tab</span>
+                    {/if}
+                  </button>
+                {/if}
                 {#if showSidebarTools}
                   {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
