@@ -144,11 +144,11 @@ jobs:
           M_VITE_PRODUCT_NAME: 'Surf'
           BUILD_RESOURCES_DIR: build/resources/prod
 
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
+          APPLE_ID: ${{ secrets.APPLE_ID_NEW }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID_NEW }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD_NEW }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD_NEW }}
+          CSC_LINK: ${{ secrets.CSC_LINK_NEW }}
 
           # R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ inputs.b_app_version }}
           R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
