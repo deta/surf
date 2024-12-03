@@ -5788,17 +5788,39 @@
   }
 
   /* MAXU HOMESCREEN JANK TODO: Cleanup / move to correct places*/
-  :global(#sidebar-right) {
+  :global(body.custom .browser-content) {
+    --mixed-bg: color-mix(
+      in hsl,
+      var(--background-image-color),
+      hsl(var(--bg-color-h) 100%, 100%, 0.65)
+    );
+
+    --mixed-bg-dark: color-mix(
+      in hsl,
+      var(--background-image-color),
+      hsl(var(--bg-color-h) 80%, 0%, 0.65)
+    );
+
+    position: relative;
     &::before {
       content: '';
       position: absolute;
-      inset: 0;
-      left: -10px;
-      width: calc(100% + 10px);
-      z-index: -1;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      opacity: 1;
+      width: calc(100% + 7px);
+      pointer-events: none !important;
+
+      background: var(--mixed-bg);
+      :global(.dark) & {
+        background: var(--mixed-bg-dark) !important;
+      }
       backdrop-filter: blur(12px);
-      transition: background 145ms ease-out;
     }
+  }
+  :global(body:has(.homescreenVisible) .browser-content::before) {
+    display: none !important;
   }
   #left-sidebar {
     position: relative;
