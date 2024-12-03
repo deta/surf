@@ -14,7 +14,7 @@
   import { selectedFolder } from '../../stores/oasis'
   import { DragTypeNames } from '@horizon/core/src/lib/types'
   import { useLogScope, hover } from '@horizon/utils'
-  import { HTMLDragZone, DragculaDragEvent } from '@horizon/dragcula'
+  import { HTMLDragZone, DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
 
   export let id: string
   export let name: string
@@ -94,11 +94,10 @@
 
 <div
   id={`folder-${id}`}
-  class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
+  class="folder-wrapper select-none {processing ? 'magic-in-progress' : ''}"
   data-vaul-no-drag
   data-folder-id={id}
   aria-hidden="true"
-  draggable={true}
   use:HTMLDragZone.action={{
     accepts: (drag) => {
       if (
@@ -120,6 +119,11 @@
   on:DragEnter={handleDragEnter}
   on:DragLeave={handleDragLeave}
   on:Drop={handleDrop}
+  draggable={false}
+  use:HTMLDragItem.action={{}}
+  on:DragStart={(e) => {
+    e.data?.setData(DragTypeNames.SURF_SPACE, { id, name, icon })
+  }}
 >
   <div
     class="folder {selected
