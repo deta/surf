@@ -53,6 +53,8 @@
 
   let inviteId = writable<string>('')
   let remainingQuota = writable<number>(0)
+  let acceptedQuota = writable<number>(0)
+  let totalQuota = writable<number>(0)
   let inviteLink = writable<string>('')
   let api_key = writable<string>('')
 
@@ -99,6 +101,8 @@
       const data = await response.json()
       inviteId.set(data.id)
       remainingQuota.set(data.remaining_quota)
+      acceptedQuota.set(data.accepted)
+      totalQuota.set(data.remaining_quota + data.accepted)
       inviteLink.set(data.link)
       log.debug('Invite ID:', $inviteId)
       log.debug('Remaining quota:', $remainingQuota)
@@ -271,6 +275,7 @@
       }))
     } catch (error) {}
   }
+  import sparklesGif from '../../../../public/assets/sparkles.gif?url'
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -289,20 +294,21 @@
 
 <div
   class="flex h-full w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-8 overflow-y-auto relative justify-center items-center"
+  style:--sparkles={`url('${sparklesGif}')`}
 >
   <div class="flex flex-col w-full gap-8 relative z-10 max-w-7xl mx-auto">
     <div class="flex flex-col gap-2 overflow-y-scroll">
       <h1
-        class="font-gambarino text-3xl text-center animate-text-shimmer text-[#6C6C8D] dark:text-slate-200"
+        class="font-gambarino text-3xl text-center animate-text-shimmer text-[#6C6C8D] dark:text-slate-200 select-none"
       >
         Give Surf to a friend
       </h1>
-      <p class="text-lg text-center text-sky-900 dark:text-sky-100 text-balance">
+      <p class="text-lg text-center text-sky-900 dark:text-sky-100 text-balance select-none">
         Send them a personalized invite pass to Surf.
       </p>
     </div>
 
-    <div class="block max-w-[350px] mx-auto rounded-xl bg-[#BDD8FB] p-4 shadow-xl">
+    <div class="block max-w-[350px] mx-auto rounded-xl bg-[#BDD8FB] p-4 shadow-xl" id="card">
       <div
         class="flex flex-col rounded-lg bg-white w-full shadow-lg touchnone overscroll-none relative overflow-hidden"
         style="z-index: 2147;"
@@ -310,7 +316,7 @@
       >
         <span
           class="absolute top-0 left-0 w-full select-none h-full z-50 p-2 font-bold text-[#6C6C8D]/50 pointer-events-none"
-          >{$remainingQuota}</span
+          >{$acceptedQuota} / {$totalQuota}</span
         >
 
         <svg
@@ -436,7 +442,7 @@
           {/if}
         </div>
 
-        <div class="p-8 h-96 z-10">
+        <div class=" p-8 h-96 z-10">
           <img
             src={icon}
             alt="Stuff Feature"
@@ -575,7 +581,7 @@
 
       <div class="relative">
         <div
-          class="flex items-center space-x-2 overflow-x-auto max-w-[160px] px-1 py-2 scrollbar-hide"
+          class="flex items-center space-x-2 overflow-x-auto max-w-[220px] px-1 py-2 scrollbar-hide"
           id="colorScroller"
         >
           {#each predefinedColors as color}
@@ -619,6 +625,159 @@
 </div>
 
 <style lang="scss">
+  @keyframes holoSparkle {
+    0%,
+    5% {
+      opacity: 0.55;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.55;
+    }
+  }
+
+  @keyframes holoGradient {
+    0%,
+    100% {
+      opacity: 0.35;
+      background-position: 90% 90%;
+    }
+    8% {
+      opacity: 0.35;
+    }
+    10% {
+      background-position: 90% 90%;
+    }
+    19% {
+      background-position: 110% 110%;
+      opacity: 0.6;
+    }
+    35% {
+      background-position: 110% 110%;
+    }
+    55% {
+      background-position: 90% 90%;
+      opacity: 0.45;
+    }
+    75% {
+      opacity: 0.35;
+    }
+  }
+
+  @keyframes holoCard {
+    0%,
+    10% {
+      transform: rotate3d(0, 0, 0, -20deg);
+    }
+    20% {
+      transform: rotate3d(1, 1, 0.2, 30deg);
+    }
+    100% {
+      transform: rotate3d(0, 0, 0, -20deg);
+    }
+  }
+  @keyframes rotate-gradient {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes idle-card {
+    0%,
+    100% {
+      transform: perspective(1100px) rotateX(1.7deg) rotateY(-1.5deg) rotateZ(0.5deg) translateY(0);
+    }
+    50% {
+      transform: perspective(1100px) rotateX(-1.5deg) rotateY(1.7deg) rotateZ(-0.5deg)
+        translateY(-1.5px);
+    }
+    /*
+    0%,
+    100% {
+      transform: perspective(1100px) rotateX(2deg) rotateY(-2deg) rotateZ(0deg) translateY(0);
+    }
+    25% {
+      transform: perspective(1100px) rotateX(-1.5deg) rotateY(1.5deg) rotateZ(0.5deg)
+        translateY(-0.5px);
+    }
+    75% {
+      transform: perspective(1100px) rotateX(1.5deg) rotateY(-1.5deg) rotateZ(-0.5deg)
+        translateY(0.5px);
+    }*/
+  }
+
+  #card {
+    position: relative;
+    overflow: clip;
+    @apply rounded-lg;
+    outline: 1px solid rgba(255, 255, 255, 0.2);
+
+    transform-style: preserve-3d;
+    animation: idle-card 4s ease-in-out infinite forwards;
+    &:hover {
+      //animation: idle-card 4s ease-in-out infinite forwards;
+      animation-play-state: paused;
+    }
+    transform: perspective(1100px);
+    transition: transform 200ms ease-out;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      background-image: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgb(0, 231, 255) 30%,
+        rgb(255, 0, 231) 70%,
+        transparent 100%
+      );
+      background-position: 0% 0%;
+      background-repeat: no-repeat;
+      background-size: 300% 300%;
+      mix-blend-mode: color-dodge;
+      opacity: 0.2;
+      z-index: 1;
+      animation: holoGradient 15s ease infinite;
+    }
+    &::after {
+      background-image: var(
+        --sparkles
+      ); //url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/13471/sparkles.gif');
+      background-position: center;
+      background-size: 180%;
+      mix-blend-mode: color-dodge;
+      opacity: 1;
+      z-index: 2;
+      animation: holoSparkle 15s ease infinite;
+    }
+
+    &::before {
+      opacity: 1;
+      animation: none;
+      transition: none;
+      background-image: linear-gradient(
+        65deg,
+        rgb(92 78 255 / 76%) 0%,
+        #65fff24f 25%,
+        rgb(102 204 255 / 57%) 45%,
+        rgb(174 218 255) 55%,
+        transparent 70%,
+        transparent 100%
+      );
+      mix-blend-mode: luminosity;
+      scale: 2;
+      animation: rotate-gradient linear 4s infinite;
+    }
+  }
+  #doodle {
+    transition: transform 0.6s;
+  }
   :global(.font-gambarino) {
     font-family: 'Gambarino-Display', sans-serif;
     -webkit-font-smoothing: antialiased;
