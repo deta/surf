@@ -255,9 +255,9 @@ export class DesktopManager {
     visible: boolean,
     opts?: { trigger?: OpenHomescreenEventTrigger; desktop?: string }
   ) {
-    // TODO: Set default browsing desktop as visible one if none is set as a backup
-
     // TODO: Timeout if visibility changed to unload old one after 5 mins & call destroy()
+
+    if (this.tabsManager.unpinnedTabsValue.length <= 0 && !visible) return
 
     if (!visible) {
       this._cmdVisible.set(false)

@@ -9,6 +9,7 @@
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { useToasts } from '../../../service/toast'
   import { contextMenu } from '../../Core/ContextMenu.svelte'
+  import { SpaceEntryOrigin } from '../../../types'
 
   export let space: OasisSpace
   export let renderContents: boolean = true
@@ -28,6 +29,7 @@
   const renderedItemsCnt = writable(10)
 
   const renderedContents = derived([space.contents, renderedItemsCnt], ([contents, renderN]) => {
+    contents = contents.filter((e) => e.manually_added !== SpaceEntryOrigin.Blacklisted)
     if (!renderContents) return []
     return contents.slice(0, renderN)
   })
