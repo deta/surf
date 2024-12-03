@@ -16,6 +16,7 @@ import { type Resource } from '../../service/resources'
 import { staticActions } from './service/staticActions'
 import { createExecutioner } from './service/translations'
 import { truncate } from '@horizon/utils'
+import type { OasisService } from '../../service/oasis'
 
 const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) => {
   const url =
@@ -58,10 +59,11 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
 
 const createSpaceAction = async (
   result: TeletypeStaticAction,
-  resourceManager: ResourceManager
+  resourceManager: ResourceManager,
+  oasis: OasisService
 ) => {
   const spaceContents = await resourceManager.getSpaceContents(result.id)
-  const space = await resourceManager.getSpace(result.id)
+  const space = await oasis.getSpace(result.id)
 
   const horizontalItems = await Promise.all(
     spaceContents.map(async (entry: SpaceEntry) => {
@@ -82,7 +84,7 @@ const createSpaceAction = async (
     displayPriority: result.displayPriority || ActionDisplayPriority.HIGH,
     horizontalItems: validItems as unknown as Action[],
     horizontalParentAction: TeletypeAction.OpenSpaceInStuff,
-    payload: space
+    payload: { space }
   } as HorizontalAction
 
   const openSpaceAction = {
@@ -194,7 +196,8 @@ const createResourceActions = async (
 
 export const createActionsFromResults = async (
   results: TeletypeStaticAction[],
-  resourceManager: ResourceManager
+  resourceManager: ResourceManager,
+  oasis: OasisService
 ): Promise<(HandlerAction | HorizontalAction | Action)[]> => {
   if (!results?.length) return []
 
@@ -216,7 +219,8 @@ export const createActionsFromResults = async (
         case TeletypeActionGroup.Space: {
           const [openSpaceAction, horizontalAction] = await createSpaceAction(
             result,
-            resourceManager
+            resourceManager,
+            oasis
           )
 
           if (horizontalAction) {

@@ -264,11 +264,7 @@
   class:active
   class:option={isOption}
   class:horizontal={horizontalItems.length > 0}
-  on:click|stopPropagation={(e) => {
-    if (e.target === e.currentTarget) {
-      handleClick(e)
-    }
-  }}
+  on:click|stopPropagation={handleClick}
   aria-hidden="true"
 >
   {#if horizontalItems.length > 0}

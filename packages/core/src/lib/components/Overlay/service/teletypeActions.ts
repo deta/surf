@@ -108,7 +108,8 @@ export type TeletypeActionHandlerReturnValue = {
 }
 
 export type TeletypeActionHandler<T> = (
-  payload: T
+  payload: T,
+  searchValue?: string
 ) => TeletypeActionHandlerReturnValue | void | Promise<TeletypeActionHandlerReturnValue | void>
 
 // actionEvents.ts

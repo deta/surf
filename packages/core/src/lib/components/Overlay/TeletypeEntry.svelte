@@ -143,7 +143,11 @@
             if (value) {
               commandComposer.updateSearchValue(value)
               const searchResults = get(commandComposer.defaultActionsTeletype)
-              const dynamicActions = await createActionsFromResults(searchResults, resourceManager)
+              const dynamicActions = await createActionsFromResults(
+                searchResults,
+                resourceManager,
+                oasis
+              )
               await tick()
 
               teletype.setActions([
@@ -304,9 +308,9 @@
     const space = payload.space
     log.debug('open-space-in-stuff', payload)
 
-    tabsManager.showNewTabOverlay.set(2)
-    await tick()
     oasis.selectedSpace.set(space.id === GENERAL_CONTEXT_ID ? DEFAULT_SPACE_ID : space.id)
+    await tick()
+    tabsManager.showNewTabOverlay.set(2)
 
     return {
       preventClose: true
@@ -335,9 +339,16 @@
     })
   }
 
-  const handleOpenStuff: TeletypeActionHandler<{ searchValue: string }> = (payload) => {
-    const searchValue = payload.searchValue || ''
-    dispatch('open-stuff', searchValue)
+  const handleOpenStuff: TeletypeActionHandler<{ searchValue: string }> = (
+    payload,
+    searchValue
+  ) => {
+    log.debug('open-stuff', searchValue)
+    dispatch('open-stuff', searchValue || '')
+
+    return {
+      preventClose: true
+    }
   }
 
   const handleBrowserCommand: TeletypeActionHandler<{ command: string }> = (payload) => {
@@ -351,6 +362,14 @@
 
   const handleAsk: TeletypeActionHandler<{}> = () => {
     dispatch('ask', get(teletype?.inputValue))
+  }
+
+  const handleCreateSpace: TeletypeActionHandler<{}> = () => {
+    dispatch('create-new-space')
+
+    return {
+      preventClose: true
+    }
   }
 
   const handleCreate: TeletypeActionHandler<{ id: string; url: string }> = (payload) => {
@@ -396,6 +415,7 @@
       [TeletypeAction.ExecuteBrowserCommand]: handleBrowserCommand,
       [TeletypeAction.Create]: handleCreate,
       [TeletypeAction.Ask]: handleAsk,
+      [TeletypeAction.CreateSpace]: handleCreateSpace,
       [TeletypeAction.Reload]: () => dispatch('reload'),
       [TeletypeAction.CloseTab]: () => dispatch('close-active-tab'),
       [TeletypeAction.ToggleBookmark]: () => dispatch('toggle-bookmark'),
@@ -404,8 +424,7 @@
       [TeletypeAction.ZoomIn]: () => dispatch('zoom-in'),
       [TeletypeAction.ZoomOut]: () => dispatch('zoom-out'),
       [TeletypeAction.ResetZoom]: () => dispatch('reset-zoom'),
-      [TeletypeAction.CreateNote]: () => dispatch('create-note'),
-      [TeletypeAction.CreateSpace]: () => dispatch('create-new-space')
+      [TeletypeAction.CreateNote]: () => dispatch('create-note')
     }
 
     unsubscribe = teletypeActionStore.subscribe(async (event: TeletypeActionEvent | null) => {
@@ -416,9 +435,13 @@
         return
       }
       const handler = handlers[event.execute as keyof typeof handlers]
+      const searchValue = get(teletype?.inputValue)
 
       if (handler) {
-        const returnValue = (await handler(event.payload)) as TeletypeActionHandlerReturnValue
+        const returnValue = (await handler(
+          event.payload,
+          searchValue
+        )) as TeletypeActionHandlerReturnValue
         if (returnValue?.preventClose) {
           return
         }

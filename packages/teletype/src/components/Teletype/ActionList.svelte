@@ -233,7 +233,7 @@
               on:click={() => {
                 dispatchTeletypeEvent({
                   execute: actions[0].horizontalParentAction,
-                  payload: { data: actions[0].payload, searchValue: $value },
+                  payload: actions[0].payload,
                   success: true
                 })
               }}
