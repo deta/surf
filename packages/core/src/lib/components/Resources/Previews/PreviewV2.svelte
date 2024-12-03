@@ -887,6 +887,8 @@
       height: 100% !important;
 
       > .inner {
+        width: 100%;
+        height: 100%;
         .media {
           :global(img) {
             max-height: unset !important;
@@ -903,7 +905,7 @@
         }
       }
 
-      @container preview-card (height <= calc(50px * 1 + 0 * 10px)) {
+      @container preview-card (height <= calc(50px * 1 + 0 * 10px) and width > 150px) {
         .inner {
           flex-direction: row;
           gap: 0.2em;

@@ -601,6 +601,7 @@
         if (previewData.image !== undefined) {
           //previewData.title = undefined
           previewData.content = undefined
+          previewData.metadata = undefined
         }
       } else if (mode === 'compact') {
         if (previewData.image !== undefined) {

@@ -262,6 +262,8 @@
             viewMode="responsive"
             origin="stack"
             frameless={true}
+            interactive
+            draggable={false}
             hideProcessing
             on:open
             on:open-and-chat
