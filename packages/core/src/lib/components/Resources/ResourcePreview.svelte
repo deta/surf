@@ -1199,7 +1199,6 @@
   :global(.resource-preview[data-drag-preview]) {
     box-shadow: none;
     max-width: 27ch;
-    border-radius: 14px;
     overflow: hidden;
     pointer-events: none;
   }

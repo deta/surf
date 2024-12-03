@@ -3,7 +3,6 @@
   import { useLogScope } from '@horizon/utils'
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
-  import DragResourceWrapper from './DragResourceWrapper.svelte'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import type { Mode, Origin } from '../Resources/Previews/Preview.svelte'
   import type { ViewMode } from '../Resources/Previews/PreviewV2.svelte'

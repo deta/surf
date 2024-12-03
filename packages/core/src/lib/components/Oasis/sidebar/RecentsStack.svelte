@@ -328,14 +328,6 @@
     border: 1.5px solid #fff;
     border-radius: 6px;
     overflow: hidden;
-    box-shadow:
-      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
-      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
-    transition:
-      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
-      opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
-      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
-      box-shadow 165ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;
   }
 
   :global(.sidebar-meta .wrapper.stack-wrapper) {

@@ -481,11 +481,7 @@
 
     background: rgba(255, 255, 255, 1);
     border-radius: 16px;
-    opacity: 80%;
     border: 2px solid rgba(10, 12, 24, 0.1) !important;
-    box-shadow:
-      rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
-      rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
   }
   :global(.folder-wrapper:not([data-drag-preview])[data-drag-target]) {
     border-radius: 16px;

@@ -5894,24 +5894,45 @@
     animation-timing-function: ease;
   }
   :global(*[data-drag-preview]) {
+    overflow: clip !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+
     pointer-events: none !important;
     user-select: none !important;
+
     width: var(--drag-width, auto);
     height: var(--drag-height, auto);
-    transform-origin: center center;
+    opacity: 90%;
+    box-shadow:
+      0px 2px 3px 2px rgba(0, 0, 0, 0.045),
+      0px 1px 4px 0px rgba(0, 0, 0, 0.145);
+
+    transform-origin: center center !important;
+    translate: var(--drag-offsetX, 0px) var(--drag-offsetY, 0px) 0px !important;
+    transform: translate(-50%, -50%) scale(var(--drag-scale, 1)) rotate(var(--drag-tilt, 0)) !important;
+    will-change: transform !important;
+
+    transition:
+      //translate 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+     // translate 175ms cubic-bezier(0, 1, 0.73, 1.13),
+      translate 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      width 175ms cubic-bezier(0.4, 0, 0.2, 1),
+      height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    // NOTE: Old ones kept for future tinkering
+    /*transform-origin: center center;
     transform: translate(-50%, -50%) translate(var(--drag-offsetX, 0px), var(--drag-offsetY, 0px))
       scale(var(--drag-scale, 1)) scale(var(--drag-scaleX, 1), var(--drag-scaleY, 1))
       rotate(var(--drag-tilt, 0)) scale(var(--scale, 1)) !important;
     transition:
       transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
       opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
-      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
-      box-shadow 165ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;
-    opacity: 85%;
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
-    pointer-events: none !important;
-    overflow: hidden;
-    /*scale: var(--scaleX, 1) var(--scaleY, 1);*/
+      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;*/
   }
   :global(body[data-dragging]:has([data-drag-target^='webview'])) {
     // NOTE: Only kinda works sometimes, still ahve to debug how/if we can reliably

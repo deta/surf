@@ -3,8 +3,6 @@
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { getFileType, truncate } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
-  import DragResourceWrapper from '../Oasis/DragResourceWrapper.svelte'
-  import { ResourceTypes } from '@horizon/types'
 
   export let resource: Resource | null = null
   export let loading: boolean = false

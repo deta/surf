@@ -1489,20 +1489,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }
 
   :global(.tab[data-drag-preview]) {
-    opacity: 80%;
     background: paint(squircle);
     --squircle-radius: 20px;
     --squircle-smooth: 0.33;
     --squircle-shadow: 0px 2px 2px -1px var(--black-09), 0px -2px 0px -1px var(--black-03);
     --squircle-fill: var(--white);
-    width: var(--drag-width, auto);
-    height: var(--drag-height, auto);
-    transition:
-      0s ease-in-out,
-      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
-      outline 175ms cubic-bezier(0.4, 0, 0.2, 1),
-      width 175ms cubic-bezier(0.4, 0, 0.2, 1),
-      height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    box-shadow: none !important;
+    // TODO: Fix squircle shadow
 
     :global(.custom) & {
       --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;

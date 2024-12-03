@@ -215,6 +215,11 @@ export class HTMLDragItem extends DragItem {
       this.previewElement.style.setProperty("--drag-height", `${this.previewSize.y}px`);
       this.previewElement.style.setProperty("--drag-offsetX", `${this.previewPosition.x}px`);
       this.previewElement.style.setProperty("--drag-offsetY", `${this.previewPosition.y}px`);
+      this.previewElement.style.setProperty("--drag-scale", "1");
+
+      const scaleFactor = clamp(245 / Math.max(this.previewSize.x, this.previewSize.y), 0, 1);
+      this.previewElement.style.setProperty("--drag-scale", `${scaleFactor}`);
+
       this.previewElement.style.viewTransitionName = "dragcula-preview-element";
 
       // TODO: This should be not hard wired into dragcula
