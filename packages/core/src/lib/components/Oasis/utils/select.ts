@@ -233,6 +233,9 @@ export function selection(node: HTMLElement) {
       event.stopImmediatePropagation()
       handleSelectAll()
     }
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return
+    }
     if ((event.metaKey || event.ctrlKey) && event.key === 'a') {
       // Note: this only copies the visible items / only the loaded ones.
       event.preventDefault()
