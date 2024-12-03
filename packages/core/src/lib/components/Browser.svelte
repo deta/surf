@@ -170,7 +170,11 @@
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
 
-  import { ColorMode, provideColorService } from '@horizon/core/src/lib/service/colors'
+  import {
+    ColorMode,
+    ColorService,
+    provideColorService
+  } from '@horizon/core/src/lib/service/colors'
 
   /*
   NOTE: Funky notes on our z-index issue.

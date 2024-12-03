@@ -1,7 +1,6 @@
 import ColorThief from '../utils/colors/colorthief.mjs'
 import { get, type Readable, type Writable, writable, derived } from 'svelte/store'
 import { type LogScope, useLogScope } from '@horizon/utils'
-import { DesktopManager, type DesktopBackgroundData } from './desktop'
 import type { ConfigService } from './config'
 import type { UserSettings } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
@@ -9,6 +8,7 @@ import { getContext, setContext } from 'svelte'
 export const LIGHT_BG_COLOR = 'hsla(0, 80%, 98%, 0.5)'
 export const DARK_BG_COLOR = 'hsla(0, 0%, 2%, 0.5)'
 
+export type ColorRGB = [number, number, number]
 export enum ColorMode {
   HEX = 'hex',
   RGB = 'rgb',
@@ -44,6 +44,9 @@ export class ColorService {
     return this._colorScheme
   }
 
+  /// Calc config
+  thiefQuality = 5
+
   constructor(config: ConfigService, colorMode: ColorMode) {
     this.userConfig = config.settings
     this.colorMode = colorMode
@@ -71,7 +74,7 @@ export class ColorService {
     for (const f of this.unsubscribers) f()
   }
 
-  async calculateImagePalette(imageResourceId: string): Promise<[number, number, number][] | null> {
+  async calculateImagePalette(imageResourceId: string): Promise<ColorRGB[] | null> {
     try {
       const img = new Image()
 
@@ -80,7 +83,7 @@ export class ColorService {
 
       await img.decode()
 
-      const colors = this.colorThief.getPalette(img, 10) as [number, number, number][]
+      const colors = this.colorThief.getPalette(img, 5, this.thiefQuality) as ColorRGB[]
       this.log.debug('Palette extracted:', colors)
       return colors
     } catch (e) {
@@ -104,17 +107,22 @@ export class ColorService {
     })
   }
 
-  usePalette(palette: [number, number, number][], darkMode: boolean) {
-    const colors = this.calculateColors(palette, darkMode)
+  usePalette(palette: ColorRGB[], darkMode: boolean) {
+    const colors = this.calculateColors(!darkMode ? palette.at(0) : palette.at(-1), darkMode)
     this._colorScheme.set(colors)
   }
 
-  calculateColors(palette: [number, number, number][], isDarkMode: boolean): CustomColorData {
+  calculateColors(fromColor: ColorRGB, isDarkMode: boolean): CustomColorData {
     try {
-      const dominantColor = isDarkMode ? palette[0] : palette[palette.length - 1]
-      this.log.debug('Dominant color selected:', dominantColor)
+      const dominantColor = fromColor
+      this.log.debug(
+        'Dominant color selected:',
+        dominantColor,
+        'lightness: ',
+        isDarkMode ? 'dark' : 'light'
+      )
 
-      const hslValues = this.rgbToHslValues(dominantColor)
+      const hslValues = ColorService.rgbToHslValues(dominantColor)
       let colorString = `hsl(${hslValues.h}, ${hslValues.s}%, ${hslValues.l}%)`
 
       // Calculate relative luminance for contrast ratio
@@ -134,7 +142,7 @@ export class ColorService {
 
       switch (this.colorMode) {
         case ColorMode.HEX:
-          colorString = this.rgbToHex(dominantColor)
+          colorString = ColorService.rgbToHex(dominantColor)
           break
         case ColorMode.RGB:
           colorString = `rgb(${dominantColor.join(', ')})`
@@ -175,7 +183,7 @@ export class ColorService {
     this.debugHexColorStore.set(null)
   }
 
-  private hexToRgb(hex: string): number[] {
+  static hexToRgb(hex: string): ColorRGB {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
     if (!result) {
       throw new Error('Invalid hex color format')
@@ -183,7 +191,7 @@ export class ColorService {
     return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
   }
 
-  private isLightBackground(rgb: number[], isDarkMode: boolean): boolean {
+  private isLightBackground(rgb: ColorRGB, isDarkMode: boolean): boolean {
     const [r, g, b] = rgb.map((x) => x / 255)
     const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
     const darkModeThreshold = 0.65
@@ -216,16 +224,16 @@ export class ColorService {
     }
   }
 
-  private rgbToHex(rgb: number[]): string {
+  static rgbToHex(rgb: ColorRGB): string {
     return `#${rgb.map((x) => x.toString(16).padStart(2, '0')).join('')}`
   }
 
-  private rgbToHsl(rgb: number[]): string {
-    const hslValues = this.rgbToHslValues(rgb)
+  static rgbToHsl(rgb: ColorRGB): string {
+    const hslValues = ColorService.rgbToHslValues(rgb)
     return `hsl(${hslValues.h}, ${hslValues.s}%, ${hslValues.l}%)`
   }
 
-  private rgbToHslValues(rgb: number[]): { h: number; s: number; l: number } {
+  static rgbToHslValues(rgb: ColorRGB): { h: number; s: number; l: number } {
     const [r, g, b] = rgb.map((x) => x / 255)
     const max = Math.max(r, g, b)
     const min = Math.min(r, g, b)
@@ -255,6 +263,10 @@ export class ColorService {
       s: parseFloat((s * 100).toFixed(1)),
       l: parseFloat((l * 100).toFixed(1))
     }
+  }
+
+  static rgbToPerceivedBrightness([r, g, b]: ColorRGB): number {
+    return 0.299 * r + 0.587 * g + 0.114 * b
   }
 
   static provide(config: ConfigService, colorMode: ColorMode) {

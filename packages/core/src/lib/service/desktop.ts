@@ -29,7 +29,7 @@ import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
-import type { ColorService, CustomColorData } from './colors'
+import { ColorService, type CustomColorData } from './colors'
 
 const DEFAULT_CARD_SIZES: Record<ResourceTypes, { x: number; y: number }> = {
   [ResourceTypes.DOCUMENT_SPACE_NOTE]: { x: 5, y: 6 }
@@ -480,7 +480,12 @@ export class DesktopService {
 
       const colorPalette =
         (await this.desktopManager.colorService?.calculateImagePalette(resourceId)!)!
-      // TODO: Calc colors
+
+      // NOTE: Hacky way for now to get diff results & store in the same structure
+      colorPalette.sort((a, b) => {
+        return ColorService.rgbToPerceivedBrightness(b) - ColorService.rgbToPerceivedBrightness(a)
+      })
+
       this.background_image.set({
         resourceId: `${resourceId}`,
         colorPalette
