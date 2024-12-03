@@ -923,12 +923,29 @@ const resources = (() => {
     await (sffs as any).js__store_resource_post_process(resourceId)
   }
 
+  async function updateResourceHash(resourceId: string) {
+    let resourceHandle = resourceHandles.get(resourceId)
+    let needsClose = false
+
+    if (!resourceHandle) {
+      await openResource(resourceId, 'r+')
+      resourceHandle = resourceHandles.get(resourceId)
+      needsClose = true
+    }
+
+    const newHash = await resourceHandle?.computeResourceHash()
+    await (sffs as any).js__store_upsert_resource_hash(resourceId, newHash)
+
+    if (needsClose) await closeResource(resourceId)
+  }
+
   return {
     openResource,
     readResource,
     writeResource,
     flushResource,
     closeResource,
+    updateResourceHash,
     triggerPostProcessing
   }
 })()

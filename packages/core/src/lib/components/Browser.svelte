@@ -3397,11 +3397,6 @@
         return
       }
 
-      if (data.state === 'completed') {
-        resourceManager.reloadResource(downloadData.resourceId)
-        window.backend.resources.triggerPostProcessing(downloadData.resourceId)
-      }
-
       const toast = downloadToastsMap.get(data.id)
       if (toast) {
         if (data.state === 'completed') {
@@ -3411,6 +3406,12 @@
         } else if (data.state === 'cancelled') {
           toast.error(`Download of "${downloadData.filename}" cancelled`)
         }
+      }
+
+      if (data.state === 'completed') {
+        await window.backend.resources.updateResourceHash(downloadData.resourceId)
+        window.backend.resources.triggerPostProcessing(downloadData.resourceId)
+        resourceManager.reloadResource(downloadData.resourceId)
       }
 
       downloadResourceMap.delete(data.id)

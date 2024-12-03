@@ -47,7 +47,8 @@
     generateID,
     truncate,
     parseUrlIntoCanonical,
-    useTimeout
+    useTimeout,
+    compareURLs
   } from '@horizon/utils'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
@@ -537,7 +538,7 @@
           (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
         )
 
-        if (!isDeleted && fetchedCanonical?.value === url) {
+        if (!isDeleted && compareURLs(fetchedCanonical?.value || '', url)) {
           log.debug('already bookmarked', url, fetchedResource.id)
 
           if (!silent) {

@@ -308,3 +308,11 @@ export const isPDFViewerURL = (url: string, entryPoint: string) => {
     return true
   return false
 }
+
+export const compareURLs = (a: string, b: string) => {
+  try {
+    return new URL(a).href === new URL(b).href
+  } catch {
+    return a === b
+  }
+}
