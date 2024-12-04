@@ -5373,7 +5373,7 @@
       class:horizontalTabs
     >
       <div
-        class="w-full h-full overflow-hidden flex-grow rounded-xl"
+        class="w-full h-full overflow-hidden flex-grow"
         style="z-index: 0;"
         class:hasNoTab={!$activeBrowserTab}
         class:sidebarHidden={!showLeftSidebar}
@@ -5759,7 +5759,7 @@
       left: 0;
       bottom: 0;
       opacity: 1;
-      width: calc(100% + 7px);
+      width: calc(100% + 15px);
       pointer-events: none !important;
 
       background: var(--mixed-bg);
@@ -5840,6 +5840,17 @@
           }
         }
       }
+    }
+  }
+  :global(.sidebar-right) {
+    overflow: hidden !important;
+
+    :global(body:has(.horizontalTabs)) & {
+      border-top-left-radius: 0.75rem !important;
+    }
+    :global(body:not(:has(.horizontalTabs))) & {
+      border-top-left-radius: 0.75rem !important;
+      border-bottom-left-radius: 0.75rem !important;
     }
   }
 
@@ -6226,16 +6237,26 @@
   .browser-window {
     height: 100%;
     width: 100%;
-    border-radius: 0.5rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     position: absolute;
     top: 0;
     opacity: 0;
+    overflow: clip;
 
     &.active {
       z-index: 1;
       position: relative;
       opacity: 100%;
+    }
+
+    --corner-radii: 0.75rem;
+    :global(body:has(.horizontalTabs)) & {
+      border-top-left-radius: var(--corner-radii) !important;
+      border-top-right-radius: var(--corner-radii) !important;
+    }
+
+    :global(body:has(.verticalTabs)) & {
+      border-radius: var(--corner-radii) !important;
     }
 
     :global(webview) {

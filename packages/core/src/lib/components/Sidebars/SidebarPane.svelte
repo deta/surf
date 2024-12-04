@@ -232,7 +232,7 @@
     .join(' ')
 
   $: rightBarClasses = [
-    `fixed right-0 flex flex-shrink-0 rounded-xl bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-10 bottom-0 flex-col space-y-2 translate-x-0`,
+    `fixed right-0 flex flex-shrink-0 bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-10 bottom-0 flex-col space-y-2 translate-x-0`,
     isDraggingRight ? 'transition-none' : '',
     {
       'cursor-col-resize': isDraggingRight,
@@ -359,7 +359,7 @@
     <div
       class="sidebar-right {rightBarClasses}"
       aria-labelledby="nav-heading"
-      style="z-index: 490; {rightSidebarStyle}"
+      style="z-index: 501; {rightSidebarStyle}"
       style:view-transition-name="app_sidebar_right"
     >
       <div
