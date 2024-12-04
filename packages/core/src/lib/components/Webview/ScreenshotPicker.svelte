@@ -14,6 +14,9 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { EventContext, ResourceTypes, SaveToOasisEventTrigger } from '@horizon/types'
   import { AIChat, useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { handleQuotaDepletedError } from '@horizon/core/src/lib/service/ai/helpers'
+  import { ModelTiers } from '@horizon/types/src/ai.types'
+  import { QuotaDepletedError } from '@horizon/backend/types'
 
   export let mode: ScreenshotPickerMode = 'inline'
   export let onboarding = false
@@ -428,7 +431,7 @@
     scrollToBottom()
   }
 
-  async function handleAISubmit() {
+  async function handleAISubmit(tier?: ModelTiers) {
     if (prompt.length < 1) {
       return
     }
@@ -482,7 +485,8 @@
 
       await activeChat.sendMessage(chatCallback, prompt, {
         inlineImages: [dataUrl!],
-        general: true
+        general: true,
+        tier: tier ?? ModelTiers.Premium
       })
 
       clearInterval(intervalId)
@@ -492,6 +496,19 @@
       editor.clear()
       lastPrompt = savedInputValue
     } catch (e: any) {
+      log.error('Error getting resources via prompt', e)
+      if (e instanceof QuotaDepletedError) {
+        const res = handleQuotaDepletedError(e)
+        log.error('Quota depleted', res)
+        if (res.exceededTiers.length === 1 && res.exceededTiers.includes(ModelTiers.Premium)) {
+          log.debug('Retrying with standard model')
+          prompt = savedInputValue
+          editor.setContent(savedInputValue)
+          await tick()
+          return handleAISubmit(ModelTiers.Standard)
+        }
+      }
+
       aiResponse = 'Sorry encountered an error: ' + e
       prompt = savedInputValue
       editor.setContent(savedInputValue)
@@ -831,7 +848,7 @@
                   bind:this={editor}
                   bind:content={prompt}
                   bind:focused={editorFocused}
-                  on:submit={handleAISubmit}
+                  on:submit={() => handleAISubmit()}
                   submitOnEnter
                   autofocus={true}
                   placeholder="Ask a question..."
