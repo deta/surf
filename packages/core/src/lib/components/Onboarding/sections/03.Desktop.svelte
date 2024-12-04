@@ -60,7 +60,7 @@
       {/if}
     </div>
     <div
-      class="absolute w-full h-full top-1 md:!top-2 right-4 md:!right-2 flex flex-row gap-2 md:!gap-4 scale-[0.25] sm:scale-[0.35] lg:!scale-50 xl:scale-75 2xl:scale-90 origin-top-right"
+      class="absolute w-full h-full top-1 md:!top-2 right-4 md:!right-2 flex flex-row gap-2 md:!gap-4 scale-[0.25] sm:!scale-[0.35] lg:!scale-50 xl:scale-75 2xl:scale-90 origin-top-right"
     >
       {#each savedResources as item, index}
         <div

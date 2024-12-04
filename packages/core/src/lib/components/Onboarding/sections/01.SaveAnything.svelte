@@ -198,7 +198,7 @@
               >
                 {#if $savingTabs[tab.url]}
                   <div class="flex items-center gap-2 animate-pulse">
-                    <span class="text-blue-500 text-sm hidden sm:inline">
+                    <span class="text-blue-500 text-sm hidden sm:!inline">
                       {savingMessages[$savingTimeouts[tab.url] || 0]}
                     </span>
                   </div>

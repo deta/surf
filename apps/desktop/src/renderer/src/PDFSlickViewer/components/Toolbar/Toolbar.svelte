@@ -125,7 +125,7 @@
 
     <Splitter />
 
-    <div class="items-center space-x-1 hidden sm:flex">
+    <div class="items-center space-x-1 hidden sm:!flex">
       <!-- <button
         class="inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
         on:click={() => openPdfFileRef.click()}
