@@ -24,7 +24,7 @@
           <li><span class="text-gray-600">{modShortcut} + Shift + 1</span> - Vision</li>
           <li>
             <a
-              href="https://deta.notion.site/Shortcuts-10ca5244a71780a7ae1aee4b51fab009"
+              href="https://deta.notion.site/Shortcuts-152a5244a717810e88ecd1073f2a5b63?pvs=4"
               target="_blank"
               class="text-blue-500 hover:underline"
             >
@@ -54,7 +54,7 @@
               Documentation
             </a>
           </li>
-          <li>support@deta.surf</li>
+          <li>hello@deta.surf</li>
         </ul>
       </div>
     </div>
