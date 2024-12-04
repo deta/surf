@@ -1,6 +1,9 @@
 use reqwest::{blocking::Response, header};
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader};
+use std::{
+    io::{BufRead, BufReader},
+    time::{Duration, Instant},
+};
 
 use super::{models::TokenModel, tokens};
 use crate::{
@@ -21,6 +24,8 @@ pub struct ChatCompletionStream {
     reader: BufReader<Response>,
     buffer: String,
     provider: Provider,
+    last_update: Instant,
+    update_interval: Duration,
 }
 
 pub struct LLMClient {
@@ -184,6 +189,31 @@ fn truncate_messages(messages: Vec<Message>, model: &Model) -> Vec<Message> {
     let (_, messages) = tokens::truncate_messages(messages[1..].to_vec(), model);
     truncated_messages.extend(messages);
     truncated_messages
+}
+
+impl ChatCompletionStream {
+    fn new(reader: BufReader<Response>, provider: Provider, packets_per_second: u32) -> Self {
+        Self {
+            reader,
+            buffer: String::new(),
+            provider,
+            last_update: Instant::now(),
+            update_interval: Duration::from_secs_f64(1.0 / packets_per_second as f64),
+        }
+    }
+
+    pub fn set_packets_per_second(&mut self, pps: u32) {
+        self.update_interval = Duration::from_secs_f64(1.0 / pps as f64);
+    }
+
+    fn wait_for_next_update(&mut self) {
+        let now = Instant::now();
+        let elapsed = now.duration_since(self.last_update);
+        if elapsed < self.update_interval {
+            std::thread::sleep(self.update_interval - elapsed);
+        }
+        self.last_update = Instant::now();
+    }
 }
 
 impl Provider {
@@ -528,19 +558,22 @@ impl Iterator for ChatCompletionStream {
             Ok(0) => None,
             Ok(_) => {
                 self.buffer = self.buffer.trim().to_string();
-
                 if self.buffer.is_empty() {
                     return self.next();
                 }
 
-                match self.buffer.strip_prefix("data: ") {
-                    Some("[DONE]") => None,
-                    Some(data) => {
-                        match self.provider.parse_response_chunk(data, true).transpose() {
-                            Some(result) => Some(result),
-                            None => self.next(),
-                        }
+                let data = match self.buffer.strip_prefix("data: ") {
+                    None => return self.next(),
+                    Some("[DONE]") => return None,
+                    Some(data) => data,
+                };
+
+                match self.provider.parse_response_chunk(data, true).transpose() {
+                    Some(Ok(content)) => {
+                        self.wait_for_next_update();
+                        Some(Ok(content))
                     }
+                    Some(Err(e)) => Some(Err(e)),
                     None => self.next(),
                 }
             }
@@ -691,10 +724,10 @@ impl LLMClient {
         response: Response,
         provider: &Provider,
     ) -> BackendResult<ChatCompletionStream> {
-        Ok(ChatCompletionStream {
-            reader: BufReader::new(response),
-            buffer: String::new(),
-            provider: provider.clone(),
-        })
+        Ok(ChatCompletionStream::new(
+            BufReader::new(response),
+            provider.clone(),
+            120,
+        ))
     }
 }
