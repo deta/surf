@@ -1,21 +1,26 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import { nextStep, prevStep, launchTimeline, endTimeline, activeStep } from './timeline'
-  import { OnboardingFeature } from './onboardingScripts'
+  import { OnboardingAction } from './onboardingScripts'
   import { Icon } from '@horizon/icons'
   import { derived } from 'svelte/store'
   import { spring } from 'svelte/motion'
   import { fade } from 'svelte/transition'
-  import stuffOnboarding01 from '../../../../public/assets/onboarding/stuff.onboarding.01.png'
+  import stuffOnboarding01 from '../../../../public/assets/onboarding/stuff.onboarding.01.webp'
   import stuffOnboardingSelect from '../../../../public/assets/onboarding/stuff.onboarding.select.mp4'
   import stuffOnboardingSpaces from '../../../../public/assets/onboarding/stuff.onboarding.spaces.mp4'
   import chatWithSpace from '../../../../public/assets/onboarding/chat.with.space.mp4'
   import chatDragIntoContext from '../../../../public/assets/onboarding/chat.drag.into.context.mp4'
+  import desktopOnboardingStart from '../../../../public/assets/onboarding/desktop.onboarding.start.mp4'
+  import desktopOnboardingHowtodrop from '../../../../public/assets/onboarding/dektop.onboarding.howtodrop.mp4'
   import saving from '../../../../public/assets/onboarding/saving.mp4'
 
   export let rootID: string
 
   let tooltip: HTMLDivElement
+
+  const dispatch = createEventDispatcher<{ 'open-stuff': void }>()
 
   // Derived store to get the current step
   const currentStep = derived(activeStep, ($activeStep) => $activeStep)
@@ -30,6 +35,8 @@
     'stuff.onboarding.spaces': stuffOnboardingSpaces,
     'chat.with.space': chatWithSpace,
     'chat.drag.into.context': chatDragIntoContext,
+    'desktop.onboarding.start': desktopOnboardingStart,
+    'desktop.onboarding.howtodrop': desktopOnboardingHowtodrop,
     saving: saving
   }
 
@@ -40,7 +47,7 @@
 
   const handleCreateSpace = () => {
     const button = document.querySelector(
-      '[data-tooltip-action="action-new-space"]'
+      `[data-tooltip-action="${OnboardingAction.CreateSpace}"]`
     ) as HTMLButtonElement
     if (button) {
       button.click()
@@ -49,11 +56,15 @@
 
   const handleSendChatMessage = () => {
     const button = document.querySelector(
-      '[data-tooltip-action="send-chat-message"]'
+      `[data-tooltip-action="${OnboardingAction.SendChatMessage}"]`
     ) as HTMLButtonElement
     if (button) {
       button.click()
     }
+  }
+
+  const handleOpenStuff = () => {
+    dispatch('open-stuff')
   }
 
   onMount(() => {
@@ -118,7 +129,7 @@
     {/if}
 
     <div class="content">
-      <p>{$currentStep.content}</p>
+      <p>{@html $currentStep.content}<br /></p>
     </div>
     <div class="button-container">
       {#if $currentStep.prevButtonLabel}
@@ -131,12 +142,16 @@
         <button
           class="tooltip-button next"
           on:click={() => {
-            if ($currentStep.action === 'create-space') {
+            if ($currentStep.action === OnboardingAction.CreateSpace) {
               handleCreateSpace()
             }
 
-            if ($currentStep.action === 'send-chat-message') {
+            if ($currentStep.action === OnboardingAction.SendChatMessage) {
               handleSendChatMessage()
+            }
+
+            if ($currentStep.action === OnboardingAction.OpenStuff) {
+              handleOpenStuff()
             }
             nextStep()
           }}

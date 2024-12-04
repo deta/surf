@@ -1,0 +1,56 @@
+<script lang="ts">
+  import { Icon } from '@horizon/icons'
+  import Button from '../../Atoms/Button.svelte'
+  import { createEventDispatcher } from 'svelte'
+  import stuffOnboarding01 from '../../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
+  import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
+
+  export let modShortcut: string
+
+  const dispatch = createEventDispatcher<{
+    tryStuff: void
+    launchTimeline: OnboardingFeature
+  }>()
+
+  const handleTryStuff = () => {
+    dispatch('launchTimeline', OnboardingFeature.StuffOnboarding)
+    dispatch('tryStuff')
+  }
+</script>
+
+<section
+  class="min-h-screen flex flex-col items-center justify-center pt-12 md:pt-24 relative z-10 px-4"
+>
+  <div class="w-full max-w-7xl mx-auto flex flex-col items-center">
+    <div class="text-center mb-8 md:mb-12 px-4">
+      <h1
+        class="font-gambarino text-3xl md:text-5xl text-center text-white leading-tight mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+      >
+        All of your saved items are<br />now in Your Stuff!
+      </h1>
+      <p class="text-white text-lg md:text-xl [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
+        Save, find and (auto)-organize almost anything into Surf.
+      </p>
+    </div>
+
+    <div class="w-full max-w-[500px] px-4">
+      <img src={stuffOnboarding01} alt="Stuff Feature" class="w-full" />
+    </div>
+
+    <div class="flex flex-col items-center gap-4 mt-8">
+      <p
+        class="text-white text-lg md:text-xl px-4 text-center [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+      >
+        Organize the Tabs that we just saved into a Space.
+      </p>
+
+      <div class="w-48" on:click={handleTryStuff} aria-hidden="true">
+        <Button>Open Your stuff.</Button>
+      </div>
+
+      <p class="text-sm text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
+        or use {modShortcut} + O to open.
+      </p>
+    </div>
+  </div>
+</section>

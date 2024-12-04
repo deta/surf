@@ -33,23 +33,23 @@ export const builtInSpaces = [
     colors: ['#F74545', '#f22727'],
     liveModeEnabled: true,
     smartFilterQuery: 'All my articles and links',
-    sql_query: `SELECT r.id 
+    sql_query: `SELECT r.id
         FROM resources r
-        WHERE r.deleted = 0 
-        AND (r.resource_type IN ('application/vnd.space.link', 'application/vnd.space.article') 
+        WHERE r.deleted = 0
+        AND (r.resource_type IN ('application/vnd.space.link', 'application/vnd.space.article')
              OR r.resource_type LIKE 'application/vnd.space.post%')
         AND NOT EXISTS (
-            SELECT 1 
-            FROM resource_tags rt 
-            WHERE rt.resource_id = r.id 
-            AND rt.tag_name = 'silent' 
+            SELECT 1
+            FROM resource_tags rt
+            WHERE rt.resource_id = r.id
+            AND rt.tag_name = 'silent'
             AND rt.tag_value = 'true'
         )
         AND NOT EXISTS (
-            SELECT 1 
-            FROM resource_tags rt 
-            WHERE rt.resource_id = r.id 
-            AND rt.tag_name = 'hideInEverything' 
+            SELECT 1
+            FROM resource_tags rt
+            WHERE rt.resource_id = r.id
+            AND rt.tag_name = 'hideInEverything'
             AND rt.tag_value = 'true'
         )
         ORDER BY r.created_at;`
@@ -57,17 +57,36 @@ export const builtInSpaces = [
 ] as WithRequired<SpaceData, 'folderName' | 'colors'>[]
 
 export const onboardingSpace = {
-  name: 'Apple iPhone Keynotes',
-  query: 'What does Steve say about styluses?',
+  name: 'Alan Kay',
+  query: "Why hasn't the computer revolution happened yet and how is this tied to simplicity?",
   urls: [
-    'https://www.youtube.com/watch?v=VKpaK670U7s',
-    'https://www.youtube.com/watch?v=PugKQZHPut8'
+    'https://de.wikipedia.org/wiki/Xerox_PARC',
+    'https://www.youtube.com/watch?v=NdSD07U5uBs',
+    'https://www.youtube.com/watch?v=oKg1hTOQXoY',
+    'https://de.wikipedia.org/wiki/Alan_Kay'
   ]
 }
 
-export const onboardingTabs = [
-  'https://en.wikipedia.org/wiki/Vannevar_Bush',
-  'https://press.stripe.com/the-dream-machine'
+export interface OnboardingTab {
+  title: string
+  url: string
+}
+
+export const onboardingPDF: string = 'https://tinlizzie.org/VPRIPapers/Kay_How.pdf'
+
+export const onboardingYoutube: string = 'https://www.youtube.com/watch?v=VKpaK670U7s'
+
+export const onboardingTabs: string[] = ['https://en.wikipedia.org/wiki/PlayStation_(console)']
+
+export const onboardingResources: OnboardingTab[] = [
+  {
+    title: 'Vannevar Bush',
+    url: 'https://en.wikipedia.org/wiki/Vannevar_Bush'
+  },
+  {
+    title: 'The Dream Machine',
+    url: 'https://press.stripe.com/the-dream-machine'
+  }
 ]
 
 export const liveSpaces = [

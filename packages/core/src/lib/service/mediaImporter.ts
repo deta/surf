@@ -479,6 +479,7 @@ export const createResourcesFromMediaItems = async (
   return resources.filter((resource) => resource) as Resource[]
 }
 
+// @Felix: flag for extraction of factory tab
 export const extractAndCreateWebResource = async (
   resourceManager: ResourceManager,
   url: string,

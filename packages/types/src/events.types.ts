@@ -390,7 +390,9 @@ export enum OpenHomescreenEventTrigger {
   /** Open from command menu */
   CommandMenu = 'command_menu',
   /** By dragging over the home button / possible another drag touchpoint in the future */
-  DragOver = 'drag_over'
+  DragOver = 'drag_over',
+  /** Onboarding */
+  Onboarding = 'onboarding'
 }
 
 export enum AddHomescreenItemEventTrigger {

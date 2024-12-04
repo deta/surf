@@ -2862,14 +2862,33 @@
     endTimeline()
   }
 
-  const handleOpenOnboardingTabs = (e: CustomEvent<string[]>) => {
+  const handleOpenOnboardingTabs = async (e: CustomEvent<string[]>) => {
     const tabUrls = e.detail
     tabUrls.forEach(async (url) => {
-      const existingTab = $tabs.some(
+      const existingTab = $tabs.find(
         (tab) => tab.type === 'page' && (tab.initialLocation === url || tab.currentLocation === url)
       )
-      if (!existingTab) {
-        await tabsManager.addPageTab(url, { active: false })
+      if (existingTab) {
+        tabsManager.makeActive(existingTab.id)
+      } else {
+        const tab = await tabsManager.addPageTab(url, { active: true })
+
+        await wait(250)
+
+        if (tab) {
+          tabs.update((x) => {
+            return x.map((t) => {
+              if (t.id === tab.id) {
+                cachedMagicTabs.add(tab.id)
+                return {
+                  ...t,
+                  magic: true
+                }
+              }
+              return t
+            })
+          })
+        }
       }
     })
   }
@@ -4301,6 +4320,10 @@
     })
   }
 
+  const removeAllContextItems = () => {
+    additionalChatContextItems.set([])
+  }
+
   const handleAddContextItem = (e: CustomEvent<AddContextItemEvent>) => {
     const { item, trigger } = e.detail
 
@@ -4471,7 +4494,7 @@
 
 <ToastsProvider service={toasts} />
 
-<Tooltip rootID="body" />
+<Tooltip on:open-stuff={() => ($showNewTabOverlay = 2)} rootID="body" />
 <!-- <pre
   style="position: fixed; bottom: 1rem; right: 1rem; top:1rem; z-index: 10000; background: black; color: white; overflow-y: scroll;"
   aria-hidden={true}>
@@ -4648,6 +4671,10 @@
               active: false
             })
           }
+        }}
+        on:open-stuff={async (e) => {
+          await tick()
+          showNewTabOverlay.set(2)
         }}
         on:open={(e) => {
           openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Homescreeen)
@@ -5475,22 +5502,26 @@
               {:else if tab.type === 'resource'}
                 <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
               {:else if tab.type === 'onboarding'}
-                <TabOnboarding
-                  on:openChat={handleOnboardingChatWithQuery}
-                  on:openStuff={() => ($showNewTabOverlay = 2)}
-                  on:openScreenshot={() => openScreenshotPicker()}
-                  on:launchTimeline={(e) => handleLaunchOnboardingTooltips(e.detail)}
-                  on:endTimeline={() => handleEndOnboardingTooltips}
-                  on:batchOpenTabs={handleOpenOnboardingTabs}
-                  on:createOnboardingSpace={async () => {
-                    await createOnboardingSpace(
-                      tabsManager,
-                      oasis,
-                      tabsManager.addSpaceTab,
-                      resourceManager
-                    )
-                  }}
-                />
+                <div class="onboarding-wrapper">
+                  <TabOnboarding
+                    on:openChat={handleOnboardingChatWithQuery}
+                    on:openStuff={() => ($showNewTabOverlay = 2)}
+                    on:openScreenshot={() => openScreenshotPicker()}
+                    on:launchTimeline={(e) => handleLaunchOnboardingTooltips(e.detail)}
+                    on:endTimeline={() => handleEndOnboardingTooltips}
+                    on:wipecontext={removeAllContextItems}
+                    on:batchOpenTabs={handleOpenOnboardingTabs}
+                    on:createOnboardingSpace={async () => {
+                      await createOnboardingSpace(
+                        tabsManager,
+                        oasis,
+                        tabsManager.addSpaceTab,
+                        resourceManager
+                      )
+                    }}
+                    {resourceManager}
+                  />
+                </div>
               {:else if tab.type === 'invites'}
                 <TabInvite />
               {/if}

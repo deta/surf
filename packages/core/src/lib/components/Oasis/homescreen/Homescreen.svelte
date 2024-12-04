@@ -20,6 +20,7 @@
   const log = useLogScope('Homescreen')
   const dispatch = createEventDispatcher<{
     'space-selected': OasisSpace
+    'open-stuff': void
   }>()
   const telemetry = useTelemetry()
   const oasis = useOasis()
@@ -87,6 +88,10 @@
     toasts.success('Background reset successfully!')
   }
 
+  function handleOpenStuff() {
+    dispatch('open-stuff')
+  }
+
   onMount(async () => {
     // Make sure that all the items on the hoemscreen exists
     for (const _item of get(items)) {
@@ -125,6 +130,7 @@
     class="no-drag"
     style:--grid_cell_size={desktop.CELL_SIZE + 'px'}
     style:--grid_gap={desktop.CELL_GAP + 'px'}
+    data-tooltip-target="desktop-demo"
     bind:this={desktopEl}
     use:HTMLDragZone.action={{
       accepts: () => true
@@ -167,6 +173,13 @@
       <div class="empty-state">
         <h3>Your homescreen is empty</h3>
         <p>Drag and drop tabs or items from your stuff onto here.</p>
+        <button
+          class="open-stuff"
+          on:click={handleOpenStuff}
+          data-tooltip-target="open-stuff-desktop"
+          data-tooltip-action="open-stuff"
+          aria-hidden="true">Open your Stuff ↑</button
+        >
       </div>
     {/if}
     {#each $items as item (get(item))}
@@ -272,11 +285,12 @@
       display: flex;
       border-radius: 24px;
       background: rgba(255, 255, 255, 0.15);
-      justify-content: center;
+      justify-content: end;
       align-items: center;
       backdrop-filter: blur(10px);
       text-align: center;
       @apply select-none;
+      padding: 4rem;
 
       :global(.dark) & {
         background: rgba(0, 0, 0, 0.15);
@@ -286,21 +300,17 @@
         font-size: 1.875em;
         font-weight: 500;
         margin: 0 0 0.5em;
-        padding: 0.75rem 1.5rem;
         border-radius: 64px;
-        background: rgba(255, 255, 255, 0.5);
-        @apply text-sky-500/60;
+        // background: rgba(255, 255, 255, 0.5);
+        @apply text-sky-500/80;
 
         :global(.dark) & {
-          background: rgba(0, 0, 0, 0.5);
           @apply text-sky-500/80;
         }
         :global(.custom) & {
-          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
           color: var(--contrast-color) !important;
         }
         :global(.dark.custom) & {
-          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
           color: var(--contrast-color) !important;
         }
       }
@@ -319,6 +329,53 @@
         }
         :global(.dark.custom) & {
           color: var(--contrast-color) !important;
+        }
+      }
+
+      button {
+        font-size: 1.2em;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.5;
+        background: rgba(255, 255, 255, 0.5);
+        border: none;
+        border-radius: 64px;
+        padding: 0.75rem 1.5rem;
+        margin-top: 1em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        @apply text-sky-500/60;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.7);
+          transform: translateY(-2px);
+        }
+
+        :global(.dark) & {
+          background: rgba(0, 0, 0, 0.5);
+          @apply text-sky-500/80;
+
+          &:hover {
+            background: rgba(0, 0, 0, 0.7);
+          }
+        }
+
+        :global(.custom) & {
+          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+          color: var(--contrast-color) !important;
+
+          &:hover {
+            background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.3)) !important;
+          }
+        }
+
+        :global(.dark.custom) & {
+          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+          color: var(--contrast-color) !important;
+
+          &:hover {
+            background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.75)) !important;
+          }
         }
       }
     }
