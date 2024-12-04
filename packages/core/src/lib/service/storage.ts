@@ -332,7 +332,7 @@ export class HorizonDatabase extends Dexie {
           id: '$$default',
           createdAt: datetime,
           updatedAt: datetime,
-          background_image: (await homescreenTable.get('$$default')).customization?.background,
+          background_image: (await homescreenTable.get('$$default'))?.customization?.background,
           items
         })
       })
