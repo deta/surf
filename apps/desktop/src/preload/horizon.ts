@@ -80,7 +80,7 @@ const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
 
-const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space'
+const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
 const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
