@@ -1500,11 +1500,11 @@
           >
             <div class="">
               <div
-                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 p-4 rounded-xl w-fit mb-2"
+                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 p-3 rounded-xl w-fit mb-2"
               >
-                <div class="flex items-start gap-2">
-                  <div class="icon mt-0.5 bg-sky-50 rounded-full p-1">
-                    <Icon name="user" />
+                <div class="flex items-start gap-2.5">
+                  <div class="icon mt-0.5 bg-sky-50 rounded-full p-1.5">
+                    <Icon name="message" size="1em" />
                   </div>
 
                   <div class="query">
@@ -1610,11 +1610,11 @@
           <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
             <div class="">
               <div
-                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 p-4 rounded-xl w-fit mb-2 text-gray-900 dark:text-gray-100"
+                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 p-3 rounded-xl w-fit mb-2 text-gray-900 dark:text-gray-100"
               >
-                <div class="flex items-start gap-2">
-                  <div class="icon mt-0.5 bg-sky-50 rounded-full p-1">
-                    <Icon name="user" />
+                <div class="flex items-start gap-2.5">
+                  <div class="icon mt-0.5 rounded-full p-1">
+                    <Icon name="spinner" size="1.1em" />
                   </div>
 
                   <div class="query">
