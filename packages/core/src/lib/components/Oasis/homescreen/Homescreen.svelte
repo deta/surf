@@ -227,6 +227,9 @@
     :global(.horizontalTabs:not(.showLeftSidebar)) & {
       padding-top: var(--base-padding) !important;
     }
+    :global(body:has(.vertical-window-bar) :not(.horizontalTabs)) & {
+      padding-top: calc(var(--base-padding) + 1.75em) !important;
+    }
 
     &:not(.homescreenVisible) {
       //display: none !important;

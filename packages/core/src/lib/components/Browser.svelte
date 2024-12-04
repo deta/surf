@@ -5750,13 +5750,29 @@
   .vertical-window-bar {
     position: relative;
     &.customBg {
+      --mixed-bg: color-mix(
+        in hsl,
+        var(--background-image-color),
+        hsl(var(--bg-color-h) 100%, 100%, 0.65)
+      );
+
+      --mixed-bg-dark: color-mix(
+        in hsl,
+        var(--background-image-color),
+        hsl(var(--bg-color-h) 80%, 0%, 0.65)
+      );
+
       &::before {
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(255, 255, 255, 0.35);
-
+        //background: rgba(255, 255, 255, 0.35);
+        background: var(--mixed-bg) !important;
+        :global(.dark) & {
+          background: var(--mixed-bg-dark) !important;
+        }
         backdrop-filter: blur(12px);
+
         z-index: -1;
       }
       &.mutedBg::before {
@@ -5793,7 +5809,7 @@
       width: calc(100% + 15px);
       pointer-events: none !important;
 
-      background: var(--mixed-bg);
+      background: var(--mixed-bg) !important;
       :global(.dark) & {
         background: var(--mixed-bg-dark) !important;
       }
@@ -5875,6 +5891,9 @@
   }
   :global(.sidebar-right) {
     overflow: hidden !important;
+    :global(body:has(.vertical-window-bar)) & {
+      margin-top: 39px;
+    }
 
     :global(body:has(.horizontalTabs)) & {
       border-top-left-radius: 0.75rem !important;
