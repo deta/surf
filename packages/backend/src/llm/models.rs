@@ -36,6 +36,12 @@ impl MessageContent {
             image_url: MessageContentImageURL { url },
         })
     }
+    pub fn get_content(&self) -> String {
+        match self {
+            MessageContent::Text(text) => text.text.clone(),
+            MessageContent::Image(image) => image.image_url.url.clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, EnumString, PartialEq, Display)]

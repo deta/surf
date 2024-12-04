@@ -1,5 +1,6 @@
 use super::models::TokenModel;
 use crate::llm::models::{Message, MessageContent};
+use std::collections::HashSet;
 
 // reference: https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
 fn estimate_text_tokens(text: &str) -> usize {
@@ -84,6 +85,7 @@ pub fn truncate_messages(
     let mut remaining_tokens = max_tokens;
     let mut tokens_reserved = required_tokens;
 
+    let mut seen_messages: HashSet<String> = HashSet::new();
     for message in messages.iter() {
         if !message.truncatable {
             // non-truncatable messages are always included as we confirmed enough space above
@@ -94,28 +96,34 @@ pub fn truncate_messages(
         } else {
             // for truncatable messages, only use remaining non-reserved tokens
             let available_tokens = remaining_tokens - tokens_reserved;
-            let mut message_fits = true;
             let mut total_content_tokens = 0;
 
-            for content in &message.content {
-                let content_tokens = estimate_message_content_tokens(content);
-                if total_content_tokens + content_tokens > available_tokens {
-                    message_fits = false;
-                    truncated = true;
-                    break;
-                }
-                total_content_tokens += content_tokens;
+            if message.content.is_empty() {
+                continue;
             }
+            // Even though the content is a vector
+            // the presumption is there will always be only one content
+            // the conntent is a vector only because of API requirements
+            let content = &message.content[0];
+            if seen_messages.contains(&content.get_content()) {
+                truncated = true;
+                continue;
+            }
+            let content_tokens = estimate_message_content_tokens(content);
+            if total_content_tokens + content_tokens > available_tokens {
+                truncated = true;
+                continue;
+            }
+            total_content_tokens += content_tokens;
+            seen_messages.insert(content.get_content());
 
-            if message_fits {
-                remaining_tokens -= total_content_tokens;
-                truncated_messages.push(Message {
-                    role: message.role.clone(),
-                    content: message.content.clone(),
-                    truncatable: message.truncatable,
-                    is_context: message.is_context,
-                });
-            }
+            remaining_tokens -= total_content_tokens;
+            truncated_messages.push(Message {
+                role: message.role.clone(),
+                content: message.content.clone(),
+                truncatable: message.truncatable,
+                is_context: message.is_context,
+            });
         }
     }
     truncated_messages.reverse();
@@ -348,5 +356,29 @@ mod tests {
         assert_eq!(truncated_messages[1], message2);
         assert_eq!(truncated_messages[2], message3);
         assert_eq!(truncated_messages[3], message4);
+    }
+
+    #[test]
+    fn test_remove_duplicates() {
+        let should_be_removed = Message::new_user("First").with_truncatable(true);
+        let second = Message::new_user("Second").with_truncatable(false);
+        let third = Message::new_user("First").with_truncatable(true);
+        let fourth = Message::new_user("Fourth").with_truncatable(false);
+
+        let messages = vec![
+            should_be_removed.clone(),
+            second.clone(),
+            third.clone(),
+            fourth.clone(),
+        ];
+        let model = MockModel { max_tokens: 100 }; // enough for all messages
+
+        let (truncated, truncated_messages) = truncate_messages(messages, &model);
+
+        assert!(truncated);
+        assert_eq!(truncated_messages.len(), 3);
+        assert_eq!(truncated_messages[0], second);
+        assert_eq!(truncated_messages[1], third);
+        assert_eq!(truncated_messages[2], fourth);
     }
 }
