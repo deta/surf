@@ -595,6 +595,7 @@ export class ResourceManager {
     }
 
     if (status === ResourceProcessingStateType.Pending) {
+      resource.updatePostProcessingState('running')
     } else if (status === ResourceProcessingStateType.Started) {
       resource.updatePostProcessingState('running')
     } else if (status === ResourceProcessingStateType.Finished) {
