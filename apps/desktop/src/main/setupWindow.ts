@@ -2,6 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
+import { isDev } from '@horizon/utils'
 
 let setupWindow: BrowserWindow | undefined
 
@@ -20,7 +21,14 @@ export function createSetupWindow() {
     // ...(isLinux() ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
-      additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
+      additionalArguments: [
+        `--userDataPath=${app.getPath('userData')}`,
+        `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+        ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
+        ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS
+          ? ['--disable-tab-switching-shortcuts']
+          : [])
+      ],
       defaultFontSize: 14,
       session: setupWindowSession,
       webviewTag: false,

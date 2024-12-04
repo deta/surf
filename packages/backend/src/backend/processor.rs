@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 pub struct Processor {
     tunnel: WorkerTunnel,
     ai: AI,
-    ocr_engine: OcrEngine,
+    ocr_engine: Option<OcrEngine>,
     language: Option<String>,
     vision_tagging_flag: Arc<AtomicBool>,
 }
@@ -36,7 +36,9 @@ impl Processor {
         vision_tagging_flag: Arc<AtomicBool>,
     ) -> Self {
         let ai = AI::new(api_key, api_base);
-        let ocr_engine = create_ocr_engine(&app_path).expect("failed to create the OCR engine");
+        let ocr_engine = create_ocr_engine(&app_path)
+            .map_err(|e| tracing::error!("failed to create the OCR engine: {e}"))
+            .ok();
         Self {
             tunnel,
             ai,
@@ -101,7 +103,7 @@ impl Processor {
         match resource.resource.resource_type.as_str() {
             t if t.starts_with("image/") => {
                 if let Some((content_type, content)) =
-                    process_resource_data(&resource, "", &self.ocr_engine)
+                    process_resource_data(&resource, "", self.ocr_engine.as_ref())
                 {
                     result.insert(
                         content_type,
@@ -167,7 +169,7 @@ impl Processor {
             _ => {
                 let resource_data = std::fs::read_to_string(&resource.resource.resource_path)?;
                 if let Some((content_type, content)) =
-                    process_resource_data(&resource, &resource_data, &self.ocr_engine)
+                    process_resource_data(&resource, &resource_data, self.ocr_engine.as_ref())
                 {
                     result.insert(
                         content_type,
@@ -238,10 +240,14 @@ fn create_ocr_engine(app_path: &str) -> Result<OcrEngine, Box<dyn std::error::Er
     let ocrs_folder = std::path::PathBuf::from(ocrs_folder);
 
     let det_model_path = ocrs_folder.join("text-detection.rten");
-    let detection_model = Model::load_file(det_model_path)?;
+    let detection_model = Model::load_file(det_model_path.clone()).map_err(|e| {
+        BackendError::GenericError(format!("failed to load {det_model_path:?}: {e}"))
+    })?;
 
     let rec_model_path = ocrs_folder.join("text-recognition.rten");
-    let recognition_model = Model::load_file(rec_model_path)?;
+    let recognition_model = Model::load_file(rec_model_path.clone()).map_err(|e| {
+        BackendError::GenericError(format!("failed to load {rec_model_path:?}: {e}"))
+    })?;
 
     OcrEngine::new(OcrEngineParams {
         recognition_model: Some(recognition_model),
@@ -309,7 +315,7 @@ pub fn get_youtube_contents_metadatas(
 fn process_resource_data(
     resource: &CompositeResource,
     resource_data: &str,
-    ocr_engine: &OcrEngine,
+    ocr_engine: Option<&OcrEngine>,
 ) -> Option<(ResourceTextContentType, String)> {
     let resource_text_content_type =
         ResourceTextContentType::from_resource_type(&resource.resource.resource_type)?;
@@ -323,7 +329,10 @@ fn process_resource_data(
 
         ResourceTextContentType::Image => {
             match extract_text_from_image(&resource.resource.resource_path, ocr_engine) {
-                Ok(text) => Some((resource_text_content_type, text)),
+                Ok(Some(text)) => Some((resource_text_content_type, text)),
+                Ok(None) => {
+                    None
+                },
                 Err(e) => {
                     eprintln!("extracting text from image: {e:#?}");
                     None
@@ -491,18 +500,22 @@ fn normalize_html_data(data: &str) -> String {
 
 fn extract_text_from_image(
     image_path: &str,
-    engine: &OcrEngine,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let img = image::ImageReader::open(image_path)?
-        .with_guessed_format()?
-        .decode()
-        .map(|image| image.into_rgb8())?;
-    let img_source = ImageSource::from_bytes(img.as_raw(), img.dimensions())?;
+    engine: Option<&OcrEngine>,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    if let Some(engine) = engine {
+        let img = image::ImageReader::open(image_path)?
+            .with_guessed_format()?
+            .decode()
+            .map(|image| image.into_rgb8())?;
+        let img_source = ImageSource::from_bytes(img.as_raw(), img.dimensions())?;
 
-    let ocr_input = engine.prepare_input(img_source)?;
-    let ocr_text = engine.get_text(&ocr_input)?;
+        let ocr_input = engine.prepare_input(img_source)?;
+        let ocr_text = engine.get_text(&ocr_input)?;
 
-    Ok(ocr_text.trim().to_owned())
+        Ok(Some(ocr_text.trim().to_owned()))
+    } else {
+        Ok(None)
+    }
 }
 
 fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<Vec<(u32, String)>> {
