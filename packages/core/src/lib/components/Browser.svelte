@@ -5218,7 +5218,7 @@
               on:Drop={({ detail }) => handleDropOnSpaceTab(detail)}
             >
               <div slot="tools" class="flex flex-row items-center space-x-2">
-                {#if horizontalTabs}
+                {#if horizontalTabs && showSidebarTools}
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
@@ -5238,7 +5238,7 @@
                     {/if}
                   </button>
                 {/if}
-                <!-- {#if showSidebarTools}
+                {#if showSidebarTools}
                   {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                       <button
@@ -5278,27 +5278,87 @@
                       </div>
                     </CustomPopover>
                   {/if}
-                --->
+                {:else if !horizontalTabs}
+                  <button
+                    use:tooltip={{
+                      text: 'Chat (⌘ + E)',
+                      position: horizontalTabs ? 'left' : 'top'
+                    }}
+                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class:scale-90={horizontalTabs ?? false}
+                    on:click={() => {
+                      toggleRightSidebarTab('chat')
+                    }}
+                    style="gap: .25rem;"
+                    class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
+                    class:dark:bg-gray-800={showRightSidebar && $rightSidebarTab === 'chat'}
+                  >
+                    <Icon name="face.light" />
+                    <span class="text-xl font-medium text-white">Ask</span>
+                  </button>
+                {:else if horizontalTabs}
+                  <button
+                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
+                    {horizontalTabs
+                      ? 'w-fit rounded-xl p-2'
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                    on:click|preventDefault={() => tabsManager.showNewTab()}
+                    class:opacity-100={$showEndMask || horizontalTabs}
+                    class:opacity-0={!$showEndMask}
+                    class:pointer-events-auto={$showEndMask || horizontalTabs}
+                    class:pointer-events-none={!$showEndMask}
+                    class:bg-sky-200={$showNewTabOverlay === 1}
+                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
+                  >
+                    <Icon name="add" />
+                    {#if !horizontalTabs}
+                      <span class="label">New Tab</span>
+                    {/if}
+                  </button>
+                {/if}
+                <!--<button
+                use:tooltip={{
+                  text: 'My Stuff (⌘ + O)',
+                  position: horizontalTabs ? 'left' : 'top'
+                }}
+                class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                on:click={() => ($showNewTabOverlay = 2)}
+                class:bg-sky-200={$showNewTabOverlay === 2}
+              >
+                <div
+                  id="oasis-zone"
+                  class="oasis-drop-zone"
+                  style="position: absolute; inset-inline: 10%; inset-block: 20%;"
+                  use:HTMLDragZone.action={{
+                    accepts: (drag) => {
+                      if (
+                        drag.isNative ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                      ) {
+                        return true
+                      }
 
-                <button
-                  use:tooltip={{
-                    text: 'Chat (⌘ + E)',
-                    position: horizontalTabs ? 'left' : 'top'
+                      return false
+                    }
                   }}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
-                  class:scale-90={horizontalTabs ?? false}
-                  on:click={() => {
-                    toggleRightSidebarTab('chat')
-                  }}
-                  style="gap: .25rem;"
-                  class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
-                  class:dark:bg-gray-800={showRightSidebar && $rightSidebarTab === 'chat'}
-                >
-                  <Icon name="face.light" />
-                  <span class="text-xl font-medium text-white">Ask</span>
-                </button>
+                  on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
+                ></div>
+
+                <Icon name="save" />
+              </button>-->
               </div>
             </SidebarMetaOverlay>
+
+            <!--<div
+              class="flex flex-row flex-shrink-0 w-full mx-auto"
+              style="justify-content: space-between;"
+              class:space-x-4={!horizontalTabs}
+            >
+              <!--<SaveVisualizer />
+              <RecentsStack />--
+            </div>-->
 
             <!-- TODO: (maxu): Figure out what this is.. windiws.? -->
             {#if horizontalTabs && showCustomWindowActions}
