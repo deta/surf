@@ -27,7 +27,12 @@
   import { get, readable, writable } from 'svelte/store'
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
   import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
-  import { copyToClipboard, parseStringIntoBrowserLocation, useLogScope } from '@horizon/utils'
+  import {
+    copyToClipboard,
+    parseStringIntoBrowserLocation,
+    useCancelableDebounce,
+    useLogScope
+  } from '@horizon/utils'
   import {
     type Action,
     type HandlerAction,
@@ -74,7 +79,6 @@
   const userConfigSettings = config.settings
   let teletype: TeletypeSystem
   let unsubscribe: () => void
-  let searchDebounce: ReturnType<typeof useDebounce>
 
   const searchEngine = writable($userConfigSettings.search_engine)
 
@@ -104,69 +108,65 @@
     teletype?.close()
   }
 
+  const handleSearch = async (value: string) => {
+    log.debug('Search:', value)
+    const askActions = get(commandComposer.askActions)
+    const stuffActions = get(commandComposer.stuffActions)
+    const createActions = get(commandComposer.createActionsTeletype)
+
+    const createChildActions = createActions.map((action) => ({
+      id: action.id,
+      name: action.name,
+      description: action.description,
+      icon: action.icon,
+      keywords: action.keywords,
+      section: 'Create',
+      component: action.component,
+      view: action.view,
+      handler: async (_: any, tt: any) => {
+        try {
+          const result = action
+          await result.handler?.(result)
+          tt.closeWithSuccess(`Created ${result.name}`)
+        } catch (error) {
+          log.error('Failed to execute create action:', error)
+          tt.showError(`Failed to create: ${error.message}`)
+        }
+      }
+    }))
+
+    const updatedStaticActions = staticActions.map((action) =>
+      action.id === 'create' ? { ...action, childActions: createChildActions } : action
+    )
+
+    teletype.setLoading(true)
+    try {
+      if (value) {
+        commandComposer.updateSearchValue(value)
+        const searchResults = get(commandComposer.defaultActionsTeletype)
+        const dynamicActions = await createActionsFromResults(searchResults, resourceManager, oasis)
+        await tick()
+
+        teletype.setActions([
+          ...stuffActions,
+          ...updatedStaticActions,
+          ...dynamicActions,
+          ...askActions
+        ])
+      } else {
+        teletype.setActions(updatedStaticActions)
+      }
+    } finally {
+      teletype.setLoading(false)
+    }
+  }
+
+  const searchDebounce = useCancelableDebounce(handleSearch, 100)
+
   $: {
     if (teletype?.inputValue) {
-      // Initialize debounce function
-      if (!searchDebounce) {
-        searchDebounce = useDebounce(async (value: string) => {
-          const askActions = get(commandComposer.askActions)
-          const stuffActions = get(commandComposer.stuffActions)
-          const createActions = get(commandComposer.createActionsTeletype)
-
-          const createChildActions = createActions.map((action) => ({
-            id: action.id,
-            name: action.name,
-            description: action.description,
-            icon: action.icon,
-            keywords: action.keywords,
-            section: 'Create',
-            component: action.component,
-            view: action.view,
-            handler: async (_, tt) => {
-              try {
-                const result = action
-                await result.handler?.(result)
-                tt.closeWithSuccess(`Created ${result.name}`)
-              } catch (error) {
-                log.error('Failed to execute create action:', error)
-                tt.showError(`Failed to create: ${error.message}`)
-              }
-            }
-          }))
-
-          const updatedStaticActions = staticActions.map((action) =>
-            action.id === 'create' ? { ...action, childActions: createChildActions } : action
-          )
-
-          teletype.setLoading(true)
-          try {
-            if (value) {
-              commandComposer.updateSearchValue(value)
-              const searchResults = get(commandComposer.defaultActionsTeletype)
-              const dynamicActions = await createActionsFromResults(
-                searchResults,
-                resourceManager,
-                oasis
-              )
-              await tick()
-
-              teletype.setActions([
-                ...stuffActions,
-                ...updatedStaticActions,
-                ...dynamicActions,
-                ...askActions
-              ])
-            } else {
-              teletype.setActions(updatedStaticActions)
-            }
-          } finally {
-            teletype.setLoading(false)
-          }
-        }, 100)
-      }
-
       teletype.inputValue.subscribe((value: string) => {
-        searchDebounce(value)
+        searchDebounce.execute(value)
       })
     }
   }
