@@ -70,7 +70,7 @@
   <Menu class="relative" let:open>
     <MenuButton
       disabled={!$pdfSlickStore?.pdfSlick}
-      class="h-6 enabled:group-hover:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 rounded-sm transition-all focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
+      class="h-6 enabled:group-hover:hover:!bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 rounded-sm transition-all focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
       on:click={(e) => {
         e.preventDefault()
         e.stopPropagation()

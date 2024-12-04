@@ -1482,8 +1482,8 @@
         on:click={() => dispatch('close-chat')}
         class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-sky-100/50 rounded-lg hover:bg-sky-100 dark:hover:bg-gray-800 hover:text-sky-800 dark:hover:text-sky-100 group cursor-pointer"
       >
-        <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
-        <Icon name="close" class="hidden group-hover:block" size="20px" />
+        <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
+        <Icon name="close" class="hidden group-hover:!block" size="20px" />
       </div>
     </div>
   {/if}
@@ -1555,7 +1555,7 @@
             />
 
             <div
-              class="flex-row items-center mx-auto space-x-2 hidden group-hover:flex absolute text-sm -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
+              class="flex-row items-center mx-auto space-x-2 hidden group-hover:!flex absolute text-sm -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
             >
               {#if $savedChatResponses[response.id]}
                 <button

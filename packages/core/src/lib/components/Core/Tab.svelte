@@ -806,7 +806,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     class:icon-wrapper={true}
     class:flex-shrink-0={true}
     class:emoji-adjustment={$spaceData?.emoji}
-    class:group-hover:hidden={(!isActive &&
+    class:group-hover:!hidden={(!isActive &&
       showClose &&
       ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) &&
       !pinned &&
@@ -845,7 +845,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="custom-text-color items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+        class="custom-text-color items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -856,7 +856,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="custom-text-color items-center hidden group-hover:flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+        class="custom-text-color items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />

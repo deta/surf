@@ -109,7 +109,7 @@
         >
           <span
             class="inline-block translate-x-0 {canGoBack &&
-              'group-hover:-translate-x-1'} transition-transform ease-in-out duration-200"
+              'group-hover:!-translate-x-1'} transition-transform ease-in-out duration-200"
           >
             <Icon name="arrow.left" />
           </span>
@@ -144,7 +144,7 @@
         >
           <span
             class="inline-block translate-x-0 {canGoForward &&
-              'group-hover:translate-x-1'} transition-transform ease-in-out duration-200"
+              'group-hover:!translate-x-1'} transition-transform ease-in-out duration-200"
           >
             <Icon name="arrow.right" />
           </span>
@@ -177,7 +177,7 @@
           on:click={() => dispatch('reload')}
           disabled={!canReload}
         >
-          <span class="group-hover:rotate-180 transition-transform ease-in-out duration-200">
+          <span class="group-hover:!rotate-180 transition-transform ease-in-out duration-200">
             <Icon name="reload" />
           </span>
         </button>

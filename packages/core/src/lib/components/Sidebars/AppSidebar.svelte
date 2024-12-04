@@ -266,8 +266,8 @@
         on:click={() => dispatch('close')}
         class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
       >
-        <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
-        <Icon name="close" class="hidden group-hover:block" size="20px" />
+        <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
+        <Icon name="close" class="hidden group-hover:!block" size="20px" />
       </div>
     </div>
   {/if}

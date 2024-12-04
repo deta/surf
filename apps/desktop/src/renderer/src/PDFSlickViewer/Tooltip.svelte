@@ -11,7 +11,7 @@
     'absolute z-10 inline-block text-xs transition-opacity duration-300': true,
     'rounded-sm shadow opacity-0 invisible': true,
     'text-gray-500 bg-slate-50 border border-slate-300': true,
-    'group-hover:visible group-hover:opacity-100': true,
+    'group-hover:!visible group-hover:!opacity-100': true,
 
     'left-full top-1/2 -translate-y-1/2 ml-4': position === 'right',
     'top-full mt-2': position === 'bottom',
@@ -32,7 +32,7 @@
         "after:absolute after:w-[7px] after:h-[7px] after:bg-inherit after:visible after:rotate-45 after:content-['']": true,
         'before:border-b before:border-l before:border-solid before:border-slate-300': true,
         'after:border-b after:border-l after:border-solid after:border-slate-300': true,
-        'after:invisible before:invisible group-hover:after:visible group-hover:before:visible': true
+        'after:invisible before:invisible group-hover:after:!visible group-hover:before:!visible': true
       })}
     />
   {/if}
@@ -45,7 +45,7 @@
         "after:absolute after:w-[7px] after:h-[7px] after:bg-inherit after:visible after:rotate-45 after:content-['']": true,
         'before:border-t before:border-l before:border-solid before:border-slate-300': true,
         'after:border-t after:border-l after:border-solid after:border-slate-300': true,
-        'after:invisible before:invisible group-hover:after:visible group-hover:before:visible': true,
+        'after:invisible before:invisible group-hover:after:!visible group-hover:before:!visible': true,
 
         'left-1/2 -ml-[6px]': alignX === 'center',
         'right-0 mr-[12px]': alignX === 'right',

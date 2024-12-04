@@ -122,21 +122,21 @@
 </script>
 
 <section
-  class="w-full min-h-screen flex flex-col items-center justify-center relative z-10 p-4 md:p-8 lg:p-32"
+  class="w-full min-h-screen flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
 >
   <div
-    class="flex flex-col lg:flex-row gap-8 lg:gap-24 w-full max-w-full lg:max-w-7xl mx-auto z-50"
+    class="flex flex-col lg:!flex-row gap-8 lg:!gap-24 w-full max-w-full lg:!max-w-7xl mx-auto z-50"
   >
     <div
-      class="flex flex-col items-start justify-center gap-6 rounded-3xl p-8 w-full lg:w-1/3 shrink-0"
+      class="flex flex-col items-start justify-center gap-6 rounded-3xl p-8 w-full lg:!w-1/3 shrink-0"
     >
       <Icon name="save" color="white" size="44" />
       <h1
-        class="font-gambarino text-3xl md:text-4xl text-white leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+        class="font-gambarino text-3xl md:!text-4xl text-white leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
       >
         Save Anything.
       </h1>
-      <p class="text-white text-lg md:text-xl [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
+      <p class="text-white text-lg md:!text-xl [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
         Save and organize what you think is important.
       </p>
       <div class="relative h-10 w-64">
@@ -185,7 +185,7 @@
                   alt=""
                   class="w-4 h-4 flex-shrink-0"
                 />
-                <span class="text-gray-700 truncate text-sm md:text-base">{tab.title}</span>
+                <span class="text-gray-700 truncate text-sm md:!text-base">{tab.title}</span>
               </div>
               <div
                 class="flex items-center gap-2 flex-shrink-0 hover:scale-110 transform-gpu transition-transform cursor-pointer {!$savingTabs[
@@ -219,7 +219,7 @@
           <div class="relative w-full">
             {#each $savedStack as savedTab, i}
               <div
-                class="absolute top-8 left-1/2 rounded-xl p-6 shadow-lg transition-all duration-500 bg-white border-l-4 border-green-500 w-full max-w-[calc(100vw-2rem)] lg:max-w-[500px]"
+                class="absolute top-8 left-1/2 rounded-xl p-6 shadow-lg transition-all duration-500 bg-white border-l-4 border-green-500 w-full max-w-[calc(100vw-2rem)] lg:!max-w-[500px]"
                 style="
                   transform: rotate({Math.random() * 6 - 2}deg) translate(-50%, {i * -4}px);
                   z-index: {i};
@@ -235,7 +235,7 @@
                     />
                   </div>
                   <div class="flex-1 min-w-0">
-                    <span class="text-gray-900 font-medium text-sm md:text-base block truncate"
+                    <span class="text-gray-900 font-medium text-sm md:!text-base block truncate"
                       >{savedTab.title}</span
                     >
                     <p class="text-gray-500 text-sm truncate">{savedTab.url}</p>

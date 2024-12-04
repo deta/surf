@@ -220,17 +220,17 @@
   <div class="h-screen overflow-y-auto">
     <section
       id="welcome"
-      class="hero h-[90vh] flex flex-col items-center justify-center relative z-10 p-4 md:p-8 lg:p-32"
+      class="hero h-[90vh] flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
       style="background-image: url({onboardingSky})"
     >
       <div class="flex flex-col gap-4 w-full max-w-7xl mx-auto px-4" style="z-index: 2147483647">
         <h1
-          class="font-gambarino text-3xl md:text-5xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+          class="font-gambarino text-3xl md:!text-5xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
         >
           Welcome to Surf
         </h1>
         <p
-          class="text-lg md:text-xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+          class="text-lg md:!text-xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
         >
           It's a browser, file manager, and AI assistant — all in one.
         </p>
@@ -316,11 +316,11 @@
 </div>
 
 <div
-  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white z-50 shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200 w-full md:w-auto mx-4"
+  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white z-50 shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200 w-full md:!w-auto mx-4"
   style="box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-top-left-radius: 12px; border-top-right-radius: 12px;"
 >
   <div class="flex flex-col items-center justify-center">
-    <p class="text-center text-gray-700 text-sm md:text-base">
+    <p class="text-center text-gray-700 text-sm md:!text-base">
       Need help? Check out our <a
         rel="noopener noreferrer"
         target="_blank"

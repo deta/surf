@@ -5166,7 +5166,7 @@
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                     class:bg-sky-200={$showNewTabOverlay === 1}
                     class:dark:bg-sky-900={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
@@ -5191,7 +5191,7 @@
                 class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
               {horizontalTabs
                   ? 'w-fit rounded-xl p-2'
-                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                 on:click|preventDefault={() => tabsManager.showNewTab()}
                 class:opacity-100={$showEndMask || horizontalTabs}
                 class:opacity-0={!$showEndMask}
@@ -5223,7 +5223,7 @@
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
@@ -5504,8 +5504,8 @@
                 on:click={() => toggleRightSidebar()}
                 class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group cursor-pointer"
               >
-                <Icon name="sidebar.right" class="group-hover:hidden" size="20px" />
-                <Icon name="close" class="hidden group-hover:block" size="20px" />
+                <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
+                <Icon name="close" class="hidden group-hover:!block" size="20px" />
               </div>
             </div>
 
