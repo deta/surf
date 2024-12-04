@@ -258,6 +258,7 @@ export class DesktopManager {
     // TODO: Timeout if visibility changed to unload old one after 5 mins & call destroy()
 
     if (this.tabsManager.unpinnedTabsValue.length <= 0 && !visible) return
+    if (this.tabsManager.activeTabIdValue === '' && !visible) return
 
     if (!visible) {
       this._cmdVisible.set(false)

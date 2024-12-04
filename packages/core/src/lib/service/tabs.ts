@@ -400,7 +400,7 @@ export class TabsManager {
 
     await tick()
 
-    this.log.warn('Deleted tab', tabId, this.unpinnedTabsValue)
+    this.log.warn('Deleted tab', tabId, this.unpinnedTabsValue, this.activeTabIdValue, tabId)
     if (this.unpinnedTabsValue.length <= 0) {
       this.desktopManager.setVisible(true)
     } else if (this.activeTabIdValue === tabId) {
@@ -409,6 +409,9 @@ export class TabsManager {
         const newActiveTab =
           updatedTabsInOrder[Math.min(currentIndex, updatedTabsInOrder.length - 1)]
         this.makeActive(newActiveTab.id)
+      } else {
+        this.desktopManager.setVisible(true)
+        this.activeTabId.set('')
       }
     }
 
