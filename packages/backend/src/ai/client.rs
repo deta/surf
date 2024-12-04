@@ -42,6 +42,7 @@ pub struct UpsertEmbeddingsRequest {
     pub chunks: Vec<String>,
 }
 
+#[allow(dead_code)]
 impl LocalAIStream {
     pub fn new(stream: UnixStream) -> Self {
         Self {
@@ -300,6 +301,7 @@ impl LocalAIClient {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn create_chat_completion(
         &self,
         messages: Vec<Message>,

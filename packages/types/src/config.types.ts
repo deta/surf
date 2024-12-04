@@ -1,3 +1,5 @@
+import { Model } from './ai.types'
+
 export type UserConfig = {
   user_id?: string
   api_key?: string
@@ -38,4 +40,7 @@ export type UserSettings = {
   personas: string[]
   sync_base_url?: string
   sync_auth_token?: string
+  selected_model: string
+  model_settings: Model[]
+  vision_image_tagging: boolean
 }

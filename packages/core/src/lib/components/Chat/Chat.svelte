@@ -65,26 +65,25 @@
     AIChatMessageSource,
     TabChat
   } from '../../types/browser.types'
-  import { parseChatResponseSources } from '../../service/ai'
-  import { SFFS } from '../../service/sffs'
+  import { parseChatResponseSources } from '@horizon/core/src/lib/service/ai/helpers'
   import ChatResponseSource from './ChatResponseSource.svelte'
   import { Icon } from '@horizon/icons'
   import ChatMessage from './ChatMessage.svelte'
   import { oasisAPIEndpoint } from '../Browser/BrowserHomescreen.svelte'
   import { ResourceTypes, type ResourceDataPost } from '../../types'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let tab: TabChat
   export let resourceManager: ResourceManager
   export let resourceIds: string[]
 
   const log = useLogScope('Chat')
+  const ai = useAI()
   const dispatch = createEventDispatcher<{
     navigate: NavigateEvent
     updateTab: UpdateTab
     openResource: string
   }>()
-
-  const sffs = new SFFS()
 
   const messages = writable<AIChatMessageParsed[]>([])
   const isHeaderVisible = writable(false)
@@ -167,41 +166,41 @@
 
     loadingResponse = true
 
-    const response = await sffs.sendAIChatMessage(
-      chat.id,
-      query,
-      (chunk: string) => {
-        if (step === 'idle') {
-          log.debug('sources chunk', chunk)
+    const chatCallback = (chunk: string) => {
+      if (step === 'idle') {
+        log.debug('sources chunk', chunk)
 
-          content += chunk
+        content += chunk
 
-          if (content.includes('</sources>')) {
-            const sources = parseChatResponseSources(content)
-            log.debug('Sources', sources)
+        if (content.includes('</sources>')) {
+          const sources = parseChatResponseSources(content)
+          log.debug('Sources', sources)
 
-            step = 'sources'
-            content = ''
-
-            updateActiveMessage({
-              sources
-            })
-          }
-        } else {
-          content += chunk
+          step = 'sources'
+          content = ''
 
           updateActiveMessage({
-            content: content
-              .replace('<answer>', '')
-              .replace('</answer>', '')
-              .replace('<citation>', '')
-              .replace('</citation>', '')
-              .replace('<br>', '\n')
+            sources
           })
         }
-      },
-      { limit: confirmedSearchSourceLimit, resourceIds, ragOnly: tab.ragOnly }
-    )
+      } else {
+        content += chunk
+
+        updateActiveMessage({
+          content: content
+            .replace('<answer>', '')
+            .replace('</answer>', '')
+            .replace('<citation>', '')
+            .replace('</citation>', '')
+            .replace('<br>', '\n')
+        })
+      }
+    }
+    const response = await ai.sendChatMessage(chatCallback, chat.id, query, {
+      limit: confirmedSearchSourceLimit,
+      resourceIds,
+      ragOnly: tab.ragOnly
+    })
 
     log.debug('response is done', response, content)
     // const parsed = parseChatResponseContent(content)
@@ -217,7 +216,7 @@
   }
 
   async function createNewChat() {
-    const chatId = await sffs.createAIChat('')
+    const chatId = await ai.createChat('')
 
     const apiEndpoint: string = get(oasisAPIEndpoint)
 
@@ -233,7 +232,7 @@
   }
 
   async function loadExistingChat(chatId: string) {
-    const storedChat = await sffs.getAIChat(chatId)
+    const storedChat = await ai.getChat(chatId)
     if (!storedChat) {
       log.error('Chat not found', chatId)
       return

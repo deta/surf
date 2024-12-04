@@ -38,6 +38,7 @@
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
   import EmojiPicker from '../Atoms/EmojiPicker.svelte'
   import type { SpaceIconChange } from './IconSelector.svelte'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   interface PromptConfig {
     name: string
@@ -84,6 +85,7 @@
   const dispatch = createEventDispatcher<CreateNewSpaceEvents>()
   const resourceManager = useResourceManager()
   const oasis = useOasis()
+  const ai = useAI()
   const telemetry = resourceManager.telemetry
 
   export let space: OasisSpace
@@ -195,14 +197,14 @@
       log.debug('Requesting preview with prompt', prompt)
 
       const options: {
-        embedding_query?: string
-        embedding_distance_threshold?: number
+        embeddingQuery?: string
+        embeddingDistanceThreshold?: number
       } = {
-        embedding_query: prompt,
-        embedding_distance_threshold: semanticThreshold
+        embeddingQuery: prompt,
+        embeddingDistanceThreshold: semanticThreshold
       }
 
-      const response = await resourceManager.getResourcesViaPrompt(prompt, options)
+      const response = await ai.getResourcesViaPrompt(prompt, options)
 
       if (prompt !== $userPrompt) {
         log.debug(`Outdated Preview Response`, response)

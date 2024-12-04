@@ -55,6 +55,7 @@
   const dispatch = createEventDispatcher<{
     'include-tab': string
     'add-context-item': AddContextItemEvent
+    'pick-screenshot': void
     close: void
   }>()
 
@@ -291,23 +292,34 @@
     'bg-sky-100 dark:bg-gray-900 shadow-xl p-2 border-sky-200 dark:border-gray-800 border-2 rounded-xl relative'
   )}
 >
-  {#if $tabItems.length > 0}
+  <div class="picker-actions">
+    {#if $tabItems.length > 0}
+      <button
+        on:click={() => {
+          for (const t of $tabItems) {
+            dispatch('include-tab', t.id)
+          }
+          dispatch('close')
+        }}
+        class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
+        use:tooltip={{
+          text: '⌘ + Shift + A',
+          position: 'left'
+        }}
+      >
+        Add All Tabs
+      </button>
+    {/if}
+
     <button
       on:click={() => {
-        for (const t of $tabItems) {
-          dispatch('include-tab', t.id)
-        }
-        dispatch('close')
+        dispatch('pick-screenshot')
       }}
-      class="add-app-btn active:scale-95 shadow-xl appearance-none w-fit mx-auto border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-200/50 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
-      use:tooltip={{
-        text: '⌘ + Shift + A',
-        position: 'left'
-      }}
+      class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
     >
-      Add all
+      Take Screenshot
     </button>
-  {/if}
+  </div>
   <Command.List>
     <Command.Empty>
       {#if $isSearching}
@@ -412,12 +424,20 @@
       background-color: rgba(0, 0, 0, 0.1);
     }
 
-    :global(.add-app-btn) {
+    :global(.picker-actions) {
       position: absolute;
       top: 0;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding-block: 0.3rem;
+      left: 0;
+      width: 100%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+
+      button {
+        flex-shrink: 0;
+      }
     }
   }
 </style>

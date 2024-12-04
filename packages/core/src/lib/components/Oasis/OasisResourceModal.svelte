@@ -37,13 +37,13 @@
 
   import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
-  import { handleInlineAI } from '../../service/ai'
-  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
+  import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
   import { useTabsManager } from '../../service/tabs'
   import Image from '../Atoms/Image.svelte'
   import { derived, writable } from 'svelte/store'
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let resource: Resource
   export let active: boolean = true
@@ -60,6 +60,7 @@
   const tabsManager = useTabsManager()
   const historyEntriesManager = new HistoryEntriesManager()
   const toast = useToasts()
+  const ai = useAI()
 
   const canonicalUrl = resource?.tags?.find(
     (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
@@ -341,7 +342,7 @@
       return
     }
 
-    const transformation = await handleInlineAI(event, detectedResource)
+    const transformation = await handleInlineAI(ai, event, detectedResource)
 
     log.debug('transformation output', transformation)
 

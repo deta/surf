@@ -81,7 +81,7 @@
   } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
-  import { handleInlineAI } from '../../service/ai'
+  import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
   import {
@@ -89,6 +89,7 @@
     type MiniBrowserSelected
   } from '@horizon/core/src/lib/service/miniBrowser'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let tab: TabPage
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
@@ -114,6 +115,7 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabs = useTabsManager()
+  const ai = useAI()
   const miniBrowserService = useMiniBrowserService()
   const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`tab-${tab.id}`)
 
@@ -814,7 +816,7 @@
       return
     }
 
-    const transformation = await handleInlineAI(e, detectedResource)
+    const transformation = await handleInlineAI(ai, e, detectedResource)
     log.debug('transformation output', transformation)
 
     webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {

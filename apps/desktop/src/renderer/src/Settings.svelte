@@ -1,22 +1,23 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, tick } from 'svelte'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
 
   import appIcon from './assets/icon_512.png'
   import inlineAIScreenshot from './assets/inline-ai.png'
-  import pageInsightsScreenshot from './assets/page-insights.png'
-  import customPromptsScreenshot from './assets/custom-prompts.png'
 
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
   import { useDebounce } from '@horizon/utils'
-  import type { EditablePrompt, UserConfig, UserSettings } from '@horizon/types'
+  import type { EditablePrompt, SettingsWindowTab, UserSettings } from '@horizon/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
   import AppStylePicker from './components/AppStylePicker.svelte'
   import HomescreenOption from './components/HomescreenOption.svelte'
+  import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
+  import type { Model } from '@horizon/types/src/ai.types'
+  import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
 
   // let error = ''
   // let loading = false
@@ -28,33 +29,42 @@
   let migrationOutput: HTMLParagraphElement
   let migrating = false
   let userConfigSettings: UserSettings | undefined = undefined
-  let userConfig: UserConfig | undefined = undefined
   let checkInterval: NodeJS.Timeout
   let showLicenses = false
   let licenses: string
 
-  const isDefaultBrowser = writable(false)
+  const tabParam = new URLSearchParams(window.location.search).get(
+    'tab'
+  ) as SettingsWindowTab | null
 
-  const activeTab = writable<'general' | 'appearance' | 'experiments' | 'advanced'>('general')
+  const isDefaultBrowser = writable(false)
+  const activeTab = writable<SettingsWindowTab>(tabParam ?? 'general')
+  const models = writable<Model[]>([])
+  const selectedModel = writable<string>('')
 
   const debouncedPromptUpdate = useDebounce((id: string, content: string) => {
+    // @ts-ignore
     window.api.updatePrompt(id, content)
   }, 500)
 
   const getAppInfo = async () => {
+    // @ts-ignore
     const info = await window.api.getAppInfo()
     version = info.version
   }
 
   const checkForUpdates = async () => {
+    // @ts-ignore
     await window.api.checkForUpdates()
   }
 
   const useAsDefaultBrowser = async () => {
+    // @ts-ignore
     await window.api.useAsDefaultBrowser()
 
     // This is needed because we do not know if the user accepted the prompt
     checkInterval = setInterval(async () => {
+      // @ts-ignore
       isDefaultBrowser.set(await window.api.isDefaultBrowser())
     }, 1000)
   }
@@ -74,7 +84,55 @@
 
   const handleSettingsUpdate = async () => {
     console.log('updating settings', userConfigSettings)
+    // @ts-ignore
     await window.api.updateUserConfigSettings(userConfigSettings)
+  }
+
+  const handleSelectModel = (e: CustomEvent<string>) => {
+    console.log('selected model', e.detail)
+    selectedModel.set(e.detail)
+    userConfigSettings.selected_model = e.detail
+    handleSettingsUpdate()
+  }
+
+  const handleUpdateModel = async (e: CustomEvent<ModelUpdate>) => {
+    const { id, updates } = e.detail
+
+    console.log('updating model', id, updates)
+    models.update((models) => {
+      const index = models.findIndex((model) => model.id === id)
+      if (index === -1) return models
+
+      models[index] = { ...models[index], ...updates }
+      return models
+    })
+
+    await tick()
+
+    userConfigSettings.model_settings = $models
+    handleSettingsUpdate()
+  }
+
+  const handleCreatedModel = async (e: CustomEvent<Model>) => {
+    console.log('created model', e.detail)
+    models.update((models) => [...models, e.detail])
+    await tick()
+
+    selectedModel.set(e.detail.id)
+    userConfigSettings.model_settings = $models
+    userConfigSettings.selected_model = e.detail.id
+
+    handleSettingsUpdate()
+  }
+
+  const handleDeleteModel = async (e: CustomEvent<string>) => {
+    const id = e.detail
+    console.log('deleting model', id)
+    models.update((models) => models.filter((model) => model.id !== id))
+    await tick()
+
+    userConfigSettings.model_settings = $models
+    handleSettingsUpdate()
   }
 
   // const handleStart = () => {
@@ -83,6 +141,7 @@
   // }
 
   const fetchLicenses = async () => {
+    // @ts-ignore
     const data = await fetch(window.api.SettingsWindowEntrypoint + '/assets/dependencies.txt')
     const text = await data.text()
     if (text) {
@@ -91,31 +150,43 @@
   }
 
   const handleResetBackgroundImage = () => {
+    // @ts-ignore
     window.api.resetBackgroundImage()
   }
 
   onMount(async () => {
+    // @ts-ignore
     userConfigSettings = window.api.getUserConfigSettings()
-    userConfig = await window.api.getUserConfig()
+    // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
     console.log('loaded settings', userConfigSettings)
 
+    models.set(userConfigSettings.model_settings)
+    selectedModel.set(userConfigSettings.selected_model)
+
     getAppInfo()
 
-    window.api.onSetPrompts((data) => {
+    // @ts-ignore
+    window.api.onSetPrompts((data: EditablePrompt[]) => {
       prompts = data
     })
 
+    // @ts-ignore
     window.api.getPrompts()
 
+    // @ts-ignore
     window.api.onUserConfigSettingsChange((settings: UserSettings) => {
       console.log('user config settings change', settings)
       userConfigSettings = settings
+      models.set(userConfigSettings.model_settings)
+      selectedModel.set(userConfigSettings.selected_model)
     })
 
     if (!isDev) {
       fetchLicenses()
     }
+
+    prepareContextMenu()
   })
 
   onDestroy(() => {
@@ -138,6 +209,17 @@
     </div>
 
     <div
+      on:click={() => activeTab.set('ai')}
+      role="tab"
+      tabindex="0"
+      class="tab no-drag"
+      class:active={$activeTab === 'ai'}
+    >
+      <Icon name="sparkles" size="24" />
+      <h1>AI</h1>
+    </div>
+
+    <div
       on:click={() => activeTab.set('appearance')}
       role="tab"
       tabindex="0"
@@ -155,7 +237,7 @@
       class="tab no-drag"
       class:active={$activeTab === 'experiments'}
     >
-      <Icon name="sparkles" size="24" />
+      <Icon name="code" size="24" />
       <h1>Experiments</h1>
     </div>
 
@@ -213,7 +295,12 @@
 
         <div class="dev-wrapper">
           <h3>Invite Friends</h3>
-          <button on:click={() => window.api.openInvitePage(() => {})}>Create Invite Link</button>
+          <button
+            on:click={() => {
+              // @ts-ignore
+              return window.api.openInvitePage(() => {})
+            }}>Create Invite Link</button
+          >
         </div>
 
         <div class="license-wrapper">
@@ -231,6 +318,19 @@
             </div>
           {/if}
         </div>
+      </article>
+    {:else if $activeTab === 'ai'}
+      <article class="general">
+        {#if $models && $selectedModel}
+          <ModelSettings
+            selectedModelId={selectedModel}
+            {models}
+            on:select-model={handleSelectModel}
+            on:update-model={handleUpdateModel}
+            on:created-model={handleCreatedModel}
+            on:delete-model={handleDeleteModel}
+          />
+        {/if}
       </article>
     {:else if $activeTab === 'appearance'}
       <article class="general">
@@ -321,11 +421,25 @@
           />
 
           <SettingsOption
+            icon="rectangle"
+            title="Auto Tag Images with AI"
+            description="Use AI vision to automatically detect and tag the content of your saved images for better organization"
+            bind:value={userConfigSettings.vision_image_tagging}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
             icon="eye"
             title="Always Include Screenshot in Chat"
             description="Always include a screenshot of your current webpage when using Chat"
             bind:value={userConfigSettings.always_include_screenshot_in_chat}
             on:update={handleSettingsUpdate}
+          />
+
+          <HomescreenOption
+            bind:userConfigSettings
+            on:update={handleSettingsUpdate}
+            on:reset-background-image={handleResetBackgroundImage}
           />
 
           <HomescreenOption
@@ -405,7 +519,7 @@
     -webkit-app-region: no-drag;
   }
 
-  a {
+  :global(a) {
     color: var(--color-link);
     text-decoration: none;
 
@@ -673,6 +787,87 @@
 
     &:focus {
       border-color: var(--color-brand-light);
+    }
+  }
+
+  .custom-model-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.5rem 0;
+  }
+
+  .form-field {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    align-items: center;
+    gap: 1rem;
+
+    label {
+      font-size: 0.9rem;
+      color: var(--color-text);
+    }
+  }
+
+  .input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: var(--color-background-light);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-brand-light);
+      box-shadow: 0 0 0 2px rgba(255, 167, 246, 0.1);
+    }
+
+    &::placeholder {
+      color: var(--color-text-muted);
+    }
+  }
+
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .checkbox {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    background: var(--color-background-light);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+
+    &:checked {
+      background: var(--color-brand);
+      border-color: var(--color-brand);
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-brand-light);
+      box-shadow: 0 0 0 2px rgba(255, 167, 246, 0.1);
     }
   }
 </style>

@@ -3,12 +3,13 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
 import { isMac } from '@horizon/utils'
+import { SettingsWindowTab } from '@horizon/types/src/window.types'
 
 let settingsWindow: BrowserWindow | undefined
 
 export const settingsEntryPoint = join(__dirname, '../renderer')
 
-export function createSettingsWindow() {
+export function createSettingsWindow(tab?: SettingsWindowTab) {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show()
     return
@@ -66,10 +67,12 @@ export function createSettingsWindow() {
     return { action: 'deny' }
   })
 
+  const tabParam = tab ? `?tab=${tab}` : ''
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    settingsWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/settings.html`)
+    settingsWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/settings.html${tabParam}`)
   } else {
-    settingsWindow.loadFile(join(settingsEntryPoint, 'settings.html'))
+    settingsWindow.loadFile(join(settingsEntryPoint, 'settings.html') + tabParam)
   }
 }
 

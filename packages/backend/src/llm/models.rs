@@ -5,8 +5,6 @@ use crate::{BackendError, BackendResult};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct MessageContentText {
-    #[serde(rename = "type")]
-    typ: String,
     pub text: String,
 }
 
@@ -17,41 +15,26 @@ pub struct MessageContentImageURL {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct MessageContentImage {
-    #[serde(rename = "type")]
-    typ: String,
     pub image_url: MessageContentImageURL,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "type")]
 pub enum MessageContent {
+    #[serde(rename = "text")]
     Text(MessageContentText),
+    #[serde(rename = "image_url")]
     Image(MessageContentImage),
 }
 
 impl MessageContent {
     pub fn new_text(text: String) -> MessageContent {
-        MessageContent::Text(MessageContentText {
-            typ: "text".to_string(),
-            text,
-        })
+        MessageContent::Text(MessageContentText { text })
     }
     pub fn new_image(url: String) -> MessageContent {
         MessageContent::Image(MessageContentImage {
-            typ: "image_url".to_string(),
             image_url: MessageContentImageURL { url },
         })
-    }
-}
-
-impl Serialize for MessageContent {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        match self {
-            MessageContent::Text(text) => text.serialize(serializer),
-            MessageContent::Image(image) => image.serialize(serializer),
-        }
     }
 }
 
@@ -151,4 +134,43 @@ impl Message {
 pub struct ChatCompletionMessage {
     pub role: String,
     pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QuotaUsageType {
+    DailyInputTokens,
+    DailyOutputTokens,
+    MonthlyInputTokens,
+    MonthlyOutputTokens,
+    MonthlyVisionRequests,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QuotaTier {
+    Premium,
+    PremiumVision,
+    Standard,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Quota {
+    pub tier: QuotaTier,
+    pub usage_type: QuotaUsageType,
+    pub used: u64,
+    pub total: u64,
+    pub updated_at: String,
+    pub resets_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QuotaResponse {
+    pub quotas: Vec<Quota>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QuotasDepletedResponse {
+    pub detail: String,
+    pub quotas: Vec<Quota>,
 }

@@ -7,18 +7,17 @@
   import { Icon } from '@horizon/icons'
   import { tick } from 'svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
-  import { SFFS } from '../../service/sffs'
   import { tooltip, truncate, useLogScope } from '@horizon/utils'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import { debounce } from 'lodash'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { EventContext, ResourceTypes, SaveToOasisEventTrigger } from '@horizon/types'
+  import { AIChat, useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let mode: ScreenshotPickerMode = 'inline'
   export let onboarding = false
 
-  const sffs = new SFFS()
   const dispatch = createEventDispatcher<{
     save: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
     copy: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
@@ -53,6 +52,7 @@
   let editorFocused = false
   let editor: Editor
   let savedChatId = ''
+  let activeChat: AIChat | null = null
   let isShiftPressed = false
   let hoverHandle = ''
   let aiResponse: string = ''
@@ -73,6 +73,7 @@
   let autoScrollChat = true
 
   const MIN_SIZE = 20
+  const ai = useAI()
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
   const log = useLogScope('ScreenshotPicker')
@@ -456,7 +457,20 @@
         baseMedia: 'image'
       })
 
-      if (!savedChatId) savedChatId = (await sffs.createAIChat()) as string
+      if (!savedChatId) {
+        activeChat = await ai.createChat()
+        if (!activeChat) {
+          throw new Error('Failed to create chat')
+        }
+
+        savedChatId = activeChat.id
+      } else {
+        activeChat = await ai.getChat(savedChatId)
+      }
+
+      if (!activeChat) {
+        throw new Error('Failed to create chat')
+      }
 
       const debouncedHeightCheck = debounce(() => {
         updateMenuHeight()
@@ -466,7 +480,7 @@
 
       aiResponse = ''
 
-      await sffs.sendAIChatMessage(savedChatId, prompt, chatCallback, {
+      await activeChat.sendMessage(chatCallback, prompt, {
         inlineImages: [dataUrl!],
         general: true
       })

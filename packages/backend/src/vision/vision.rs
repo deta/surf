@@ -1,9 +1,11 @@
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 
+use crate::ai::_AI_API_ENDPOINT;
+
 pub struct Vision {
     api_key: String,
-    api_endpoint: String,
+    api_base: String,
     client: Client,
 }
 
@@ -35,20 +37,19 @@ pub struct DescribeImageOutput {
 }
 
 impl Vision {
-    pub fn new(api_key: String, api_endpoint: String) -> Self {
-        // TODO: the client is blocking, we should use async?
+    pub fn new(api_key: String, api_base: String) -> Self {
         let client = Client::new();
         Self {
             api_key,
-            api_endpoint,
+            api_base,
             client,
         }
     }
 
     pub fn describe_image(&self, image: Vec<u8>) -> Result<DescribeImageOutput, reqwest::Error> {
         let url = format!(
-            "{}/computervision/imageanalysis:analyze?api-version=2024-02-01&features=tags,denseCaptions",
-            &self.api_endpoint
+            "{}/{}/vision/computervision/imageanalysis:analyze?api-version=2024-02-01&features=tags,denseCaptions",
+            self.api_base, _AI_API_ENDPOINT,
         );
         let response = self
             .client

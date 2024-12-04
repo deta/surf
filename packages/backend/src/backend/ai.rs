@@ -10,9 +10,9 @@ pub struct AI {
 }
 
 impl AI {
-    pub fn new(vision_api_key: &str, vision_api_endpoint: &str) -> Self {
+    pub fn new(api_key: String, api_endpoint: String) -> Self {
         Self {
-            vision: Vision::new(vision_api_key.to_string(), vision_api_endpoint.to_string()),
+            vision: Vision::new(api_key, api_endpoint),
         }
     }
 

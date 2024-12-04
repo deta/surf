@@ -25,6 +25,10 @@ export class ConfigService {
     })
   }
 
+  get settingsValue() {
+    return get(this.settings)
+  }
+
   getSettings() {
     return get(this.settings)
   }

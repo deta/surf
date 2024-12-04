@@ -18,10 +18,10 @@
   import type { Tab } from '../../types'
   import { minifyHTML, sanitizeHTML } from '@horizon/web-parser/src/utils'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let activeBrowserTab: BrowserTab
   export let activeTab: Tab
-  export let sffs: SFFS
   export let appId: string
   export let horizontalTabs = false
 
@@ -38,6 +38,7 @@
   const log = useLogScope('AppsSidebar')
   const telemetry = useTelemetry()
   const toasts = useToasts()
+  const ai = useAI()
   const dispatch = createEventDispatcher<{
     clear: void
     'execute-tab-code': ExecuteCodeInTabEvent
@@ -165,7 +166,9 @@
         appId
       )
 
-      const appCode = await sffs.createAIApp(appId, savedInputValue, { contexts: [tabContext] })
+      const appCode = await ai.createApp(appId, savedInputValue, {
+        contexts: [tabContext]
+      })
       if (!appCode) {
         throw new Error('no app code returned from backend call')
       }
@@ -225,19 +228,19 @@
       log.error('no app id')
       alert('No app id')
     }
-    const history = await sffs.getAIChat(appId)
+    const history = await ai.getChat(appId)
     log.debug('history', history)
     if (!history) {
       log.error('no history')
       return
     }
-    const l = history.messages.length
+    const l = history.messagesValue.length
     if (l < 2) {
       log.debug('no history')
       return
     }
-    prompt = history.messages[l - 2].content
-    const code = cleanSource(history.messages[l - 1].content)
+    prompt = history.messagesValue[l - 2].content
+    const code = cleanSource(history.messagesValue[l - 1].content)
     if (prompt.toLowerCase().startsWith('app:')) {
       app.srcdoc = code
     } else {

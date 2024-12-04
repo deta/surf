@@ -1,5 +1,13 @@
 import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+
+import path from 'path'
+import http from 'http'
+import mime from 'mime-types'
+import fetch from 'cross-fetch'
+
+import EventEmitter from 'events'
+import * as crypto from 'crypto'
 import {
   mkdirSync,
   promises as fsp,
@@ -8,15 +16,8 @@ import {
   ReadStream,
   WriteStream
 } from 'fs'
-import mime from 'mime-types'
-import path from 'path'
-import http from 'http'
-import fetch from 'cross-fetch'
-import OpenAI, { toFile } from 'openai'
 import { createAPI } from '@horizon/api'
-import { actionsToRunnableTools } from './actions'
 import {
-  type HorizonAction,
   type EditablePrompt,
   type UserSettings,
   type RightSidebarTab,
@@ -25,12 +26,16 @@ import {
   type DownloadDoneMessage,
   type TelemetryEventTypes,
   type SFFSResource,
-  type DownloadPathResponseMessage
-  // Note: we can't import the types as that breaks building the preload scripts as Vite/Rollup will bundle things together
-  // ResourceProcessingStatusType,
-  // EventBusMessage,
-  // EventBusMessageType
+  type DownloadPathResponseMessage,
+  SettingsWindowTab
 } from '@horizon/types'
+import type {
+  Model,
+  Message,
+  CreateChatCompletionOptions,
+  QuotasResponse
+} from '@horizon/backend/types'
+import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 
 import { getUserConfig } from '../main/config'
 import {
@@ -38,10 +43,7 @@ import {
   NewWindowRequest,
   OpenURL
 } from '@horizon/core/src/lib/service/ipc/events'
-import { ChatCompletion } from 'openai/resources'
 import { ControlWindow } from '@horizon/core/src/lib/types'
-import EventEmitter from 'events'
-import * as crypto from 'crypto'
 import { PDFViewerEntryPoint, SettingsWindowEntrypoint } from '../main/utils'
 
 enum ResourceProcessingStatusType {
@@ -65,9 +67,6 @@ type EventBusMessage = {
   status: ResourceProcessingStatus
 }
 
-// Note: we can't import this from @horizon/utils as that breaks building the preload scripts as Vite/Rollup will bundle things together
-const isDev = import.meta.env.DEV
-
 const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -81,29 +80,12 @@ const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
 
-// TODO: do we need to handle the case where api_key is undefined?
-const OPENAI_API_ENDPOINT = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT || ''
-const OPENAI_API_KEY = isDev
-  ? (import.meta.env.P_VITE_OPEN_AI_API_KEY ?? userConfig.api_key)
-  : userConfig.api_key
-
-const VISION_API_ENDPOINT = import.meta.env.P_VITE_VISION_API_ENDPOINT || ''
-const VISION_API_KEY = isDev
-  ? (import.meta.env.P_VITE_VISION_API_KEY ?? userConfig.api_key)
-  : userConfig.api_key
+const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space'
+const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
 const webviewNewWindowHandlers: Record<number, (details: NewWindowRequest) => void> = {}
-
-let openai: OpenAI | null = null
-if (OPENAI_API_KEY) {
-  openai = new OpenAI({
-    baseURL: OPENAI_API_ENDPOINT,
-    apiKey: OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true
-  })
-}
 
 const api = {
   disableTabSwitchingShortcuts: DISABLE_TAB_SWITCHING_SHORTCUTS,
@@ -142,8 +124,8 @@ const api = {
     IPC_EVENTS_RENDERER.controlWindow.send(action)
   },
 
-  openSettings: () => {
-    IPC_EVENTS_RENDERER.openSettings.send()
+  openSettings: (tab?: SettingsWindowTab) => {
+    IPC_EVENTS_RENDERER.openSettings.send(tab)
   },
 
   registerNewWindowHandler: (
@@ -203,88 +185,6 @@ const api = {
     } catch (error) {
       throw error
     }
-  },
-
-  createAIChatCompletion: async (
-    userPrompt: string | string[],
-    systemPrompt?: string,
-    opts: Partial<OpenAI.ChatCompletionCreateParams> = {}
-  ) => {
-    if (!openai) {
-      return null
-    }
-
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = []
-
-    if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt })
-    }
-
-    if (typeof userPrompt === 'string') {
-      messages.push({ role: 'user', content: userPrompt })
-    } else {
-      userPrompt.forEach((prompt) => {
-        messages.push({ role: 'user', content: prompt })
-      })
-    }
-
-    const chatCompletion = (await openai.chat.completions.create({
-      messages: messages,
-      model: 'gpt-4o',
-      ...opts
-    })) as unknown as OpenAI.Chat.Completions.ChatCompletion
-
-    return chatCompletion.choices[0].message.content
-  },
-
-  createFolderBasedOnPrompt: async (
-    userPrompt: string,
-    systemPrompt?: string,
-    opts: OpenAI.RequestOptions<unknown> = {}
-  ) => {
-    if (!openai) {
-      return null
-    }
-
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = []
-
-    if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt })
-    }
-
-    messages.push({ role: 'user', content: userPrompt })
-
-    const chatCompletion = await openai.chat.completions.create({
-      messages: messages,
-      model: 'gpt-4o',
-      response_format: { type: 'json_object' },
-      ...opts
-    })
-
-    return (chatCompletion as ChatCompletion).choices[0].message.content
-  },
-
-  aiFunctionCalls: async (userPrompt: string, actions: HorizonAction[]) => {
-    if (!openai) {
-      return null
-    }
-    const runner = openai.beta.chat.completions
-      .runTools({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ],
-        tools: actionsToRunnableTools(actions)
-      })
-      .on('message', (message) => {
-        console.log(message)
-      })
-
-    const finalMessage = await runner.finalContent()
-    return finalMessage
   },
 
   onOpenURL: (callback: (details: OpenURL) => void) => {
@@ -437,15 +337,6 @@ const api = {
 
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })
-  },
-
-  transcribeAudioFile: async (path: string) => {
-    const transcription = await openai?.audio.transcriptions.create({
-      file: await toFile(createReadStream(path), 'audio.mp3'),
-      model: 'whisper-1'
-    })
-
-    return transcription?.text
   },
 
   activateAppUsingKey: async (key: string, acceptedTerms: boolean) => {
@@ -825,20 +716,16 @@ const sffs = (() => {
 
   const init = (
     root_path: string,
-    vision_api_key: string,
-    vision_api_endpoint: string,
-    openai_api_key: string,
-    openai_api_endpoint: string,
+    api_base: string,
+    api_key: string,
     local_ai_mode: boolean = false,
     language_setting: string
   ) => {
     handle = sffs.js__backend_tunnel_init(
       root_path,
       APP_PATH,
-      vision_api_key,
-      vision_api_endpoint,
-      openai_api_key,
-      openai_api_endpoint,
+      api_base,
+      api_key,
       local_ai_mode,
       language_setting,
       js__backend_event_bus_callback
@@ -987,15 +874,7 @@ const sffs = (() => {
     }
   }
 
-  return init(
-    BACKEND_ROOT_PATH,
-    VISION_API_KEY || '',
-    VISION_API_ENDPOINT,
-    OPENAI_API_KEY || '',
-    OPENAI_API_ENDPOINT,
-    false,
-    LANGUAGE_SETTING
-  )
+  return init(BACKEND_ROOT_PATH, API_BASE || '', API_KEY || '', false, LANGUAGE_SETTING)
 })()
 
 const resources = (() => {

@@ -169,7 +169,7 @@
   import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
-
+  import { provideAI } from '@horizon/core/src/lib/service/ai/ai'
   import {
     ColorMode,
     ColorService,
@@ -232,6 +232,7 @@
   const config = provideConfig()
   const syncService = createSyncService(resourceManager)
   const oasis = provideOasis(resourceManager, config)
+  const aiService = provideAI(resourceManager, config)
   const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
   const desktopManager = provideDesktopManager({
     telemetry,
@@ -347,6 +348,8 @@
     const isActiveTabOnboarding = $activeTab?.type === 'onboarding'
     onboardingActive.set(isActiveTabOnboarding)
   }
+
+  $: sffs.setVisionTaggingFlag($userConfigSettings.vision_image_tagging)
 
   // Set global context
   setContext('selectedFolder', 'inbox')
@@ -1911,10 +1914,11 @@
     log.debug('clearing app sidebar')
     try {
       let appId: string | null = null
-      await sffs.deleteAIChat($activeAppId)
+      await aiService.deleteChat($activeAppId)
       //await deleteAppIdsForAppSidebar()
       if (createNewAppId) {
-        appId = await sffs.createAIChat('')
+        const chat = await aiService.createChat('')
+        appId = chat?.id ?? null
         if (!appId) {
           log.error('Failed to create new app id aftering clearing the old one')
           return
@@ -2159,7 +2163,8 @@
     let appId = tab.appId
     if (!appId) {
       // TODO: a different way to create app id? not sure yet, single chat id should be fine
-      appId = await sffs.createAIChat('')
+      const chat = await aiService.createChat('')
+      appId = chat?.id
       if (!appId) {
         log.error('Failed to create an app id')
         toasts.error('Error: Failed to create an pp id')
@@ -2371,62 +2376,6 @@
       log.error('Failed to add resource to space:', e)
     }
   }
-
-  // const handleCreateNewSpace = async (e: CustomEvent<ShortcutMenuEvents['create-new-space']>) => {
-  //   const { name, processNaturalLanguage } = e.detail
-  //   const toast = toasts.loading(
-  //     processNaturalLanguage ? 'Creating Space with AI...' : 'Creating Space...'
-  //   )
-
-  //   try {
-  //     log.debug('Create new Space with Name', name, processNaturalLanguage)
-
-  //     const newSpace = await oasis.createSpace({
-  //       folderName: name,
-  //       colors: ['#FFBA76', '#FB8E4E'],
-  //       smartFilterQuery: processNaturalLanguage ? name : null
-  //     })
-
-  //     log.debug('New Folder:', newSpace)
-
-  //     if (processNaturalLanguage) {
-  //       const userPrompt = JSON.stringify(name)
-
-  //       const response = await resourceManager.getResourcesViaPrompt(userPrompt)
-
-  //       log.debug(`Automatic Folder Generation request`, response)
-
-  //       const results = response.embedding_search_query
-  //         ? response.embedding_search_results
-  //         : response.sql_query_results
-  //       log.debug('Automatic Folder generated with', results)
-
-  //       if (!results) {
-  //         log.warn('No results found for', userPrompt, response)
-  //         return
-  //       }
-
-  //       await oasis.addResourcesToSpace(newSpace.id, results)
-  //     }
-
-  //     if (newSpace) {
-  //       await tabsManager.addSpaceTab(newSpace, { active: true })
-  //     }
-
-  //     await telemetry.trackCreateSpace(CreateSpaceEventFrom.SpaceHoverMenu, {
-  //       createdUsingAI: processNaturalLanguage
-  //     })
-
-  //     toast.success('Space created!')
-  //   } catch (error) {
-  //     log.error('Failed to create new space:', error)
-  //     toast.error(
-  //       processNaturalLanguage
-  //         ? 'Failed to create new space with AI, try again with a different name'
-  //         : 'Failed to create new space'
-  //     )
-  //   }
-  // }
 
   const createSpaceSourceFromActiveTab = async (tab: TabPage) => {
     if (!tab.currentDetectedApp) {
@@ -5680,7 +5629,6 @@
         <Tabs.Content value="go-wild" class="flex-grow overflow-hidden">
           {#if $activeTab && $activeTab.type === 'page' && $showAppSidebar}
             <AppSidebar
-              {sffs}
               appId={$activeAppId}
               activeTab={$activeTab}
               activeBrowserTab={$activeBrowserTab}

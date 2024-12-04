@@ -347,8 +347,12 @@ export enum MultiSelectResourceEventAction {
 }
 
 export enum PageChatMessageSentEventError {
-  RAGEmptyContext = 'RAG_EMPTY_CONTEXT',
-  Other = 'OTHER'
+  RAGEmptyContext = 'rag_empty_context',
+  QuotaExceeded = 'quota_exceeded',
+  QuotaExceededStandard = 'quota_exceeded_standard',
+  QuotaExceededPremium = 'quota_exceeded_premium',
+  TooManyRequests = 'too_many_requests',
+  Other = 'other'
 }
 
 export type UpdateSpaceSettingsEventChange = {

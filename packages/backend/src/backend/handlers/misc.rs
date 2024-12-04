@@ -4,10 +4,13 @@ use crate::{
         YoutubeTranscriptPiece,
     },
     backend::{
-        message::{MiscMessage, TunnelOneshot},
+        message::{MiscMessage, ProcessorMessage, TunnelOneshot},
         worker::{send_worker_response, Worker},
     },
-    llm::models::{Message, MessageContent},
+    llm::{
+        client::client::Model,
+        models::{Message, MessageContent, Quota},
+    },
     store::{
         db::{CompositeResource, Database},
         models::{
@@ -17,7 +20,6 @@ use crate::{
     },
     BackendError, BackendResult,
 };
-use futures::StreamExt;
 use neon::prelude::*;
 use std::collections::HashSet;
 
@@ -65,6 +67,8 @@ impl Worker {
     pub fn create_app(
         &mut self,
         prompt: String,
+        model: &Model,
+        custom_key: Option<&str>,
         session_id: String,
         contexts: Option<Vec<String>>,
     ) -> BackendResult<String> {
@@ -78,7 +82,9 @@ impl Worker {
             is_context: false,
             sources: None,
         };
-        let result = self.ai.create_app(prompt, session_id.clone(), contexts)?;
+        let result = self
+            .ai
+            .create_app(prompt, model, custom_key, session_id.clone(), contexts)?;
         let mut tx = self.db.begin()?;
         Database::create_ai_session_message_tx(&mut tx, &user_message)?;
         Database::create_ai_session_message_tx(
@@ -98,9 +104,23 @@ impl Worker {
         Ok(result)
     }
 
+    pub fn create_chat_completion(
+        &mut self,
+        messages: Vec<Message>,
+        model: Model,
+        custom_key: Option<&str>,
+        _response_format: Option<&str>,
+    ) -> BackendResult<String> {
+        self.ai
+            .client
+            .create_chat_completion(messages, &model, custom_key, None)
+    }
+
     pub fn send_chat_query(
         &mut self,
         query: String,
+        model: Model,
+        custom_key: Option<&str>,
         session_id: String,
         number_documents: i32,
         rag_only: bool,
@@ -114,7 +134,6 @@ impl Worker {
             Some(q) => q.to_string(),
             None => query,
         };
-
         if rag_only {
             return self.handle_rag_only_query(query, number_documents, resource_ids, callback);
         }
@@ -127,6 +146,8 @@ impl Worker {
 
         self.handle_full_chat_query(
             query,
+            &model,
+            custom_key,
             session_id,
             number_documents,
             resource_ids.unwrap_or(vec![]),
@@ -212,6 +233,8 @@ impl Worker {
     fn handle_full_chat_query(
         &mut self,
         query: String,
+        model: &Model,
+        custom_key: Option<&str>,
         session_id: String,
         number_documents: i32,
         mut resource_ids: Vec<String>,
@@ -224,13 +247,14 @@ impl Worker {
             .parse_chat_history(self.db.list_ai_session_messages_skip_sources(&session_id)?)?;
 
         let mut should_cluster = false;
-
         let send_cluster_query = !general && self.should_send_cluster_query(&resource_ids)?;
 
         if send_cluster_query {
             let composite_resources = self.db.list_resources_metadata_by_ids(&resource_ids)?;
             let should_cluster_result = self.ai.should_cluster(
                 &query,
+                model,
+                custom_key,
                 self.ai
                     .llm_metadata_messages_from_sources(&composite_resources),
             )?;
@@ -256,38 +280,29 @@ impl Worker {
             }
         }
 
-        let (assistant_message, chat_result) = match self.async_runtime.block_on(async {
-            tokio::time::timeout(
-                std::time::Duration::from_secs(100),
-                self.process_chat_stream(
-                    callback,
-                    query,
-                    number_documents,
-                    resource_ids,
-                    inline_images,
-                    general,
-                    should_cluster,
-                    history,
-                ),
-            )
-            .await
-        }) {
-            Ok(Ok(result)) => result,
-            Ok(Err(err)) => return Err(err),
-            Err(_) => {
-                return Err(BackendError::GenericError(
-                    "Timeout while processing chat stream".to_string(),
-                ))
-            }
-        };
+        let (assistant_message, chat_result) = self.process_chat_stream(
+            callback,
+            query,
+            model,
+            custom_key,
+            number_documents,
+            resource_ids,
+            inline_images,
+            general,
+            should_cluster,
+            history,
+        )?;
         self.save_messages(session_id, assistant_message, chat_result)?;
+
         Ok(())
     }
 
-    async fn process_chat_stream(
+    fn process_chat_stream(
         &self,
         mut callback: Root<JsFunction>,
         query: String,
+        model: &Model,
+        custom_key: Option<&str>,
         number_documents: i32,
         resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
@@ -295,24 +310,23 @@ impl Worker {
         should_cluster: bool,
         history: Vec<Message>,
     ) -> BackendResult<(String, ChatResult)> {
-        let mut chat_result = self
-            .ai
-            .chat(
-                &self.db,
-                query,
-                number_documents,
-                resource_ids,
-                inline_images,
-                general,
-                should_cluster,
-                history,
-            )
-            .await?;
+        let mut chat_result = self.ai.chat(
+            &self.db,
+            query,
+            model,
+            custom_key,
+            number_documents,
+            resource_ids,
+            inline_images,
+            general,
+            should_cluster,
+            history,
+        )?;
 
         callback = self.send_callback(callback, chat_result.sources_xml.clone())?;
 
         let mut assistant_message = String::new();
-        while let Some(chunk) = chat_result.stream.next().await {
+        while let Some(chunk) = chat_result.stream.next() {
             match chunk {
                 Ok(data) => {
                     assistant_message.push_str(&data);
@@ -427,6 +441,8 @@ impl Worker {
     pub fn query_sffs_resources(
         &self,
         prompt: String,
+        model: &Model,
+        custom_key: Option<&str>,
         sql_query: Option<String>,
         embedding_query: Option<String>,
         embedding_distance_threshold: Option<f32>,
@@ -451,7 +467,7 @@ impl Worker {
             },
             None => serde_json::from_str::<JsonResult>(
                 self.ai
-                    .get_sql_query(prompt)?
+                    .get_sql_query(prompt, model, custom_key)?
                     .replace("```json", "")
                     .replace("```", "")
                     .as_str(),
@@ -523,6 +539,10 @@ impl Worker {
     ) -> BackendResult<Option<ResourceTextContent>> {
         Ok(self.db.get_resource_text_content(&source_id)?)
     }
+
+    pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {
+        self.ai.get_quotas()
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(worker, oneshot))]
@@ -544,8 +564,24 @@ pub fn handle_misc_message(
             let result = worker.create_ai_chat_message(system_prompot);
             send_worker_response(&mut worker.channel, oneshot, result)
         }
+        MiscMessage::CreateChatCompletion {
+            messages,
+            model,
+            custom_key,
+            response_format,
+        } => {
+            let result = worker.create_chat_completion(
+                messages,
+                model,
+                custom_key.as_deref(),
+                response_format.as_deref(),
+            );
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
         MiscMessage::ChatQuery {
             query,
+            model,
+            custom_key,
             session_id,
             number_documents,
             callback,
@@ -556,6 +592,8 @@ pub fn handle_misc_message(
         } => {
             let result = worker.send_chat_query(
                 query,
+                model,
+                custom_key.as_deref(),
                 session_id,
                 number_documents,
                 rag_only,
@@ -568,20 +606,27 @@ pub fn handle_misc_message(
         }
         MiscMessage::CreateApp {
             prompt,
+            model,
+            custom_key,
             session_id,
             contexts,
         } => {
-            let result = worker.create_app(prompt, session_id, contexts);
+            let result =
+                worker.create_app(prompt, &model, custom_key.as_deref(), session_id, contexts);
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::QuerySFFSResources(
             prompt,
+            model,
+            custom_key,
             sql_query,
             embedding_query,
             embedding_distance_threshold,
         ) => {
             let result = worker.query_sffs_resources(
                 prompt,
+                &model,
+                custom_key.as_deref(),
                 sql_query,
                 embedding_query,
                 embedding_distance_threshold,
@@ -616,5 +661,16 @@ pub fn handle_misc_message(
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::SendEventBusMessage(message) => worker.send_event_bus_message(message),
+        MiscMessage::GetQuotas => {
+            let result = worker.get_quotas();
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::SetVisionTaggingFlag(bool) => {
+            let result = worker
+                .tqueue_tx
+                .try_send(ProcessorMessage::SetVisionTaggingFlag(bool))
+                .map_err(|err| BackendError::GenericError(format!("{err}")));
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
     }
 }

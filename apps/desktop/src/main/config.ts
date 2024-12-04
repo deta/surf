@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import type { UserConfig } from '@horizon/types'
+import { BuiltInModelIDs } from '@horizon/types/src/ai.types'
 
 export type Config = {
   [key: string]: any
@@ -101,7 +102,10 @@ export const getUserConfig = (path?: string) => {
         completed_chat: false,
         completed_stuff: false
       },
-      personas: []
+      personas: [],
+      selected_model: BuiltInModelIDs.GPT4o,
+      model_settings: [],
+      vision_image_tagging: false
     }
     setUserConfig(storedConfig as UserConfig)
   }
@@ -173,6 +177,22 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.always_include_screenshot_in_chat === undefined) {
     storedConfig.settings.always_include_screenshot_in_chat = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.selected_model === undefined) {
+    storedConfig.settings.selected_model = BuiltInModelIDs.GPT4o
+  }
+
+  if (
+    storedConfig.settings.model_settings === undefined ||
+    !Array.isArray(storedConfig.settings.model_settings)
+  ) {
+    storedConfig.settings.model_settings = []
+  }
+
+  if (storedConfig.settings.vision_image_tagging === undefined) {
+    storedConfig.settings.vision_image_tagging = false
     changedConfig = true
   }
 

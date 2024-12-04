@@ -3,7 +3,11 @@ import plugin from 'tailwindcss/plugin'
 
 const config: Config = {
   jit: true,
-  content: ['./src/**/*.{html,js,svelte,ts}', '../editor/src/**/*.{html,js,svelte,ts}'],
+  content: [
+    './src/**/*.{html,js,svelte,ts}',
+    '../editor/src/**/*.{html,js,svelte,ts}',
+    '../../apps/desktop/src/renderer/**/*.{html,js,svelte,ts}'
+  ],
   plugins: [
     require('@tailwindcss/typography'),
     plugin(({ addVariant }) => {

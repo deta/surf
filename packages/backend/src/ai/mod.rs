@@ -1,20 +1,26 @@
 pub mod ai;
-
 mod client;
 mod prompts;
 
-use crate::backend::{message::*, tunnel::WorkerTunnel};
+use crate::{
+    backend::{message::*, tunnel::WorkerTunnel},
+    llm::{client::client::Model, models::Message},
+};
 use neon::prelude::*;
+use serde::{Deserialize, Serialize};
 
-const _MODULE_PREFIX: &'static str = "ai";
+pub const _MODULE_PREFIX: &'static str = "ai";
+pub const _AI_API_ENDPOINT: &'static str = "v1/deta-os-ai";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
+    cx.export_function("js__ai_create_chat_completion", js_create_chat_completion)?;
     cx.export_function("js__ai_send_chat_message", js_send_chat_message)?;
     cx.export_function("js__ai_create_app", js_create_app)?;
     cx.export_function("js__ai_query_sffs_resources", js_query_sffs_resources)?;
     cx.export_function("js__ai_get_chat_data_source", js_get_ai_chat_data_source)?;
     cx.export_function("js__ai_get_docs_similarity", js_get_ai_docs_similarity)?;
     cx.export_function("js__ai_get_youtube_transcript", js_get_youtube_transcript)?;
+    cx.export_function("js__ai_get_quotas", js_get_quotas)?;
     Ok(())
 }
 
@@ -63,36 +69,6 @@ fn js_get_ai_docs_similarity(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
-fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let prompt = cx.argument::<JsString>(1)?.value(&mut cx);
-    let sql_query = cx
-        .argument_opt(2)
-        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
-        .map(|js_string| js_string.value(&mut cx));
-    let embedding_query = cx
-        .argument_opt(3)
-        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
-        .map(|js_string| js_string.value(&mut cx));
-    let embedidng_distance_threshold = cx
-        .argument_opt(4)
-        .and_then(|arg| arg.downcast::<JsNumber, FunctionContext>(&mut cx).ok())
-        .map(|js_number| js_number.value(&mut cx) as f32);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(
-            prompt,
-            sql_query,
-            embedding_query,
-            embedidng_distance_threshold,
-        )),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
 fn js_get_youtube_transcript(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let video_url = cx.argument::<JsString>(1)?.value(&mut cx);
@@ -106,98 +82,159 @@ fn js_get_youtube_transcript(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
-fn js_create_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
+fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    #[derive(Serialize, Deserialize, Debug)]
+    struct QueryResourcesOptions {
+        pub query: String,
+        pub model: Model,
+        pub custom_key: Option<String>,
+        pub sql_query: Option<String>,
+        pub embedding_query: Option<String>,
+        pub embedding_distance_threshold: Option<f32>,
+    }
+
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let prompt = cx.argument::<JsString>(1)?.value(&mut cx);
-    let session_id = cx.argument::<JsString>(2)?.value(&mut cx);
-    let contexts = match cx.argument_opt(3).filter(|arg| {
-        !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
-            || arg.is_a::<JsNull, FunctionContext>(&mut cx))
-    }) {
-        Some(arg) => Some(
-            arg.downcast_or_throw::<JsArray, FunctionContext>(&mut cx)?
-                .to_vec(&mut cx)?
-                .iter()
-                .map(|value| {
-                    value
-                        .downcast_or_throw::<JsString, FunctionContext>(&mut cx)
-                        .map(|js_str| js_str.value(&mut cx))
-                })
-                .collect::<NeonResult<Vec<String>>>()?,
-        ),
-        None => None,
+    let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let mut opts: QueryResourcesOptions = match serde_json::from_str(&json_opt) {
+        Ok(opts) => opts,
+        Err(err) => return cx.throw_error(format!("failed to parse options: {err}")),
     };
+    opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::QuerySFFSResources(
+            opts.query,
+            opts.model,
+            opts.custom_key,
+            opts.sql_query,
+            opts.embedding_query,
+            opts.embedding_distance_threshold,
+        )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_create_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    #[derive(Serialize, Deserialize, Debug)]
+    struct CreateAppOptions {
+        pub prompt: String,
+        pub chat_id: String,
+        pub model: Model,
+        pub custom_key: Option<String>,
+        pub contexts: Option<Vec<String>>,
+    }
+
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let mut opts: CreateAppOptions = match serde_json::from_str(&json_opt) {
+        Ok(opts) => opts,
+        Err(err) => return cx.throw_error(format!("failed to parse options: {err}")),
+    };
+    opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::MiscMessage(MiscMessage::CreateApp {
-            prompt,
-            session_id,
-            contexts,
+            prompt: opts.prompt,
+            model: opts.model,
+            custom_key: opts.custom_key,
+            session_id: opts.chat_id,
+            contexts: opts.contexts,
         }),
         deferred,
     );
     Ok(promise)
 }
 
+fn js_create_chat_completion(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    #[derive(Serialize, Deserialize, Debug)]
+    struct Options {
+        messages: Vec<Message>,
+        model: Model,
+        custom_key: Option<String>,
+        response_format: Option<String>,
+    }
+
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let mut opts: Options = match serde_json::from_str(&json_opt) {
+        Ok(opts) => opts,
+        Err(err) => return cx.throw_error(format!("failed to parse options: {err}")),
+    };
+    opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::CreateChatCompletion {
+            messages: opts.messages,
+            model: opts.model,
+            custom_key: opts.custom_key,
+            response_format: opts.response_format,
+        }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
 fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    fn default_limit() -> i32 {
+        20
+    }
+    #[derive(Serialize, Deserialize, Debug)]
+    struct ChatMessageOptions {
+        pub query: String,
+        pub chat_id: String,
+        pub model: Model,
+        pub custom_key: Option<String>,
+        pub resource_ids: Option<Vec<String>>,
+        pub inline_images: Option<Vec<String>>,
+        #[serde(default = "default_limit")]
+        pub limit: i32,
+        #[serde(default)]
+        pub rag_only: bool,
+        #[serde(default)]
+        pub general: bool,
+    }
+
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
-    let query = cx.argument::<JsString>(1)?.value(&mut cx);
-    let session_id = cx.argument::<JsString>(2)?.value(&mut cx);
-    let callback = cx.argument::<JsFunction>(3)?.root(&mut cx);
-    let number_documents = cx.argument::<JsNumber>(4)?.value(&mut cx) as i32;
-    let rag_only = cx.argument::<JsBoolean>(5)?.value(&mut cx);
-    let resource_ids = match cx.argument_opt(6).filter(|arg| {
-        !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
-            || arg.is_a::<JsNull, FunctionContext>(&mut cx))
-    }) {
-        Some(arg) => Some(
-            arg.downcast_or_throw::<JsArray, FunctionContext>(&mut cx)?
-                .to_vec(&mut cx)?
-                .iter()
-                .map(|value| {
-                    value
-                        .downcast_or_throw::<JsString, FunctionContext>(&mut cx)
-                        .map(|js_str| js_str.value(&mut cx))
-                })
-                .collect::<NeonResult<Vec<String>>>()?,
-        ),
-        None => None,
+    let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let callback = cx.argument::<JsFunction>(2)?.root(&mut cx);
+    let mut opts: ChatMessageOptions = match serde_json::from_str(&json_opt) {
+        Ok(opts) => opts,
+        Err(err) => return cx.throw_error(format!("failed to parse options: {err}")),
     };
-    let inline_images = match cx.argument_opt(7).filter(|arg| {
-        !(arg.is_a::<JsUndefined, FunctionContext>(&mut cx)
-            || arg.is_a::<JsNull, FunctionContext>(&mut cx))
-    }) {
-        Some(arg) => Some(
-            arg.downcast_or_throw::<JsArray, FunctionContext>(&mut cx)?
-                .to_vec(&mut cx)?
-                .iter()
-                .map(|value| {
-                    value
-                        .downcast_or_throw::<JsString, FunctionContext>(&mut cx)
-                        .map(|js_str| js_str.value(&mut cx))
-                })
-                .collect::<NeonResult<Vec<String>>>()?,
-        ),
-        None => None,
-    };
-    let general = cx.argument::<JsBoolean>(8)?.value(&mut cx);
+    opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::MiscMessage(MiscMessage::ChatQuery {
-            query,
-            session_id,
-            number_documents,
             callback,
-            rag_only,
-            resource_ids,
-            inline_images,
-            general,
+            query: opts.query,
+            session_id: opts.chat_id,
+            model: opts.model,
+            custom_key: opts.custom_key,
+            resource_ids: opts.resource_ids,
+            inline_images: opts.inline_images,
+            number_documents: opts.limit,
+            rag_only: opts.rag_only,
+            general: opts.general,
         }),
         deferred,
     );
+
+    Ok(promise)
+}
+
+fn js_get_quotas(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(WorkerMessage::MiscMessage(MiscMessage::GetQuotas), deferred);
 
     Ok(promise)
 }

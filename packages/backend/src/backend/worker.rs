@@ -26,9 +26,9 @@ impl Worker {
     fn new(
         app_path: String,
         backend_root_path: String,
-        openai_api_key: String,
-        openai_api_endpoint: String,
-        local_ai_mode: bool,
+        api_base: String,
+        api_key: String,
+        _local_ai_mode: bool,
         language_setting: String,
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
@@ -50,20 +50,10 @@ impl Worker {
             .as_os_str()
             .to_string_lossy()
             .to_string();
-        let openai_api_endpoint = match openai_api_endpoint.is_empty() {
-            true => None, // uses default if None
-            false => Some(openai_api_endpoint),
-        };
 
         Self {
             db: Database::new(&db_path, true).unwrap(),
-            ai: AI::new(
-                openai_api_key,
-                local_ai_mode,
-                local_ai_socket_path,
-                openai_api_endpoint,
-            )
-            .unwrap(),
+            ai: AI::new(api_base, api_key, local_ai_socket_path).unwrap(),
             channel,
             event_bus_rx,
             tqueue_tx,
@@ -107,16 +97,16 @@ pub fn worker_thread_entry_point(
     event_bus_rx: Arc<Root<JsFunction>>,
     app_path: String,
     backend_root_path: String,
-    openai_api_key: String,
-    openai_api_endpoint: String,
+    api_base: String,
+    api_key: String,
     local_ai_mode: bool,
     language_setting: String,
 ) {
     let mut worker = Worker::new(
         app_path,
         backend_root_path,
-        openai_api_key,
-        openai_api_endpoint,
+        api_base,
+        api_key,
         local_ai_mode,
         language_setting,
         tqueue_tx,

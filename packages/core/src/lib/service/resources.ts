@@ -51,6 +51,7 @@ import {
 import type TypedEmitter from 'typed-emitter'
 import { getContext, onDestroy, setContext, tick } from 'svelte'
 import EventEmitter from 'events'
+import type { Model } from '@horizon/backend/types'
 
 /*
  TODO:
@@ -1300,13 +1301,15 @@ export class ResourceManager {
 
   async getResourcesViaPrompt(
     query: string,
+    model: Model,
     opts?: {
-      sql_query?: string
-      embedding_query?: string
-      embedding_distance_threshold?: number
+      customKey?: string
+      sqlQuery?: string
+      embeddingQuery?: string
+      embeddingDistanceThreshold?: number
     }
   ): Promise<AiSFFSQueryResponse> {
-    return await this.sffs.getResourcesViaPrompt(query, opts)
+    return await this.sffs.getResourcesViaPrompt(query, model, opts)
   }
 
   async getResourceData(resourceId: string) {

@@ -2,21 +2,19 @@ use std::str::FromStr;
 
 use crate::ai::client::FilteredSearchRequest;
 use crate::embeddings::chunking::ContentChunker;
-use crate::llm::models::{ContextMessage, Message, MessageContent, MessageRole};
-use crate::llm::openai::{models, openai};
+use crate::llm::client::client;
+use crate::llm::client::client::{ChatCompletionStream, Model};
+use crate::llm::models::{ContextMessage, Message, MessageContent, MessageRole, Quota};
 use crate::store::db::{CompositeResource, Database};
 use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource};
 use crate::{BackendError, BackendResult};
-use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 
 use super::client::{DocsSimilarityRequest, LocalAIClient, UpsertEmbeddingsRequest};
 use super::prompts::{
     chat_prompt, command_prompt, create_app_prompt, general_chat_prompt,
-    should_narrow_search_prompt, sql_query_generator_prompt, transcript_chunking_prompt,
+    should_narrow_search_prompt, should_narrow_search_prompt_simple, sql_query_generator_prompt,
 };
-
-use std::pin::Pin;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DocsSimilarity {
@@ -48,7 +46,7 @@ pub struct ChatResult {
     pub messages: Vec<Message>,
     pub sources: Vec<AIChatSessionMessageSource>,
     pub sources_xml: String,
-    pub stream: Pin<Box<dyn Stream<Item = BackendResult<String>>>>,
+    pub stream: ChatCompletionStream,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,11 +56,9 @@ pub struct ShouldClusterResult {
 }
 
 pub struct AI {
-    pub llm: openai::OpenAI, // TODO: use a trait
+    pub client: client::LLMClient,
     pub chunker: ContentChunker,
-    local_mode: bool,
     local_ai_client: LocalAIClient,
-    async_runtime: tokio::runtime::Runtime,
 }
 
 fn human_readable_current_time() -> String {
@@ -74,23 +70,15 @@ fn human_readable_current_time() -> String {
 
 impl AI {
     pub fn new(
+        api_base: String,
         api_key: String,
-        local_mode: bool,
         local_ai_socket_path: String,
-        openai_api_endpoint: Option<String>,
     ) -> BackendResult<Self> {
-        let local_ai_client = LocalAIClient::new(local_ai_socket_path);
         Ok(Self {
-            llm: openai::OpenAI::new(models::Model::GPT4o, api_key, openai_api_endpoint)?,
+            client: client::LLMClient::new(api_base, api_key)?,
             chunker: ContentChunker::new(2000, 1),
-            local_mode,
-            local_ai_client,
-            async_runtime: tokio::runtime::Runtime::new()?,
+            local_ai_client: LocalAIClient::new(local_ai_socket_path),
         })
-    }
-
-    pub fn toggle_local_mode(&mut self) {
-        self.local_mode = !self.local_mode;
     }
 
     pub fn parse_chat_history(
@@ -147,57 +135,68 @@ impl AI {
     pub fn should_cluster(
         &self,
         query: &str,
+        model: &Model,
+        custom_key: Option<&str>,
         context: Vec<ContextMessage>,
     ) -> BackendResult<ShouldClusterResult> {
-        let prompt = should_narrow_search_prompt(&human_readable_current_time());
-        let mut messages = vec![Message::new_system(&prompt), Message::new_user(query)];
+        // TODO(@nullptropy): temporary measure to make local model UX better
+        let (prompt, response_format) = match model {
+            Model::Custom { .. } => (should_narrow_search_prompt_simple(), None),
+            _ => (
+                should_narrow_search_prompt(&human_readable_current_time()),
+                Some(serde_json::json!({
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "should_cluster_response",
+                        "strict": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "embeddings_search_needed": {
+                                    "type": "boolean"
+                                },
+                                "relevant_context_ids": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "required": ["embeddings_search_needed", "relevant_context_ids"],
+                            "additionalProperties": false
+                        }
+                    }
+                })),
+            ),
+        };
+
+        let mut messages = vec![Message::new_system(&prompt)];
         for msg in context {
             messages.push(Message::new_context(&msg)?);
         }
-
-        let response_format = serde_json::json!({
-            "type": "json_schema",
-            "json_schema": {
-                "name": "should_cluster_response",
-                "strict": true,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "embeddings_search_needed": {
-                            "type": "boolean"
-                        },
-                        "relevant_context_ids": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "required": ["embeddings_search_needed", "relevant_context_ids"],
-                    "additionalProperties": false
-                }
-            }
-        });
+        messages.push(Message::new_user(&format!(
+            "{}\n\nUSER QUERY: {}",
+            prompt, query
+        )));
 
         let answer =
-            self.llm
-                .create_chat_completion_blocking(messages, None, Some(response_format))?;
+            self.client
+                .create_chat_completion(messages, model, custom_key, response_format)?;
 
-        let response: ShouldClusterResult = serde_json::from_str(&answer).map_err(|e| {
-            BackendError::GenericError(format!("failed to parse should_cluster response: {}", e))
-        })?;
-        Ok(response)
-    }
-
-    #[allow(dead_code)]
-    pub fn chunk_transcript(&self, transcript: &str) -> BackendResult<Vec<String>> {
-        let prompt = transcript_chunking_prompt(transcript);
-        let messages = vec![Message::new_system(&prompt)];
-        let output = self
-            .llm
-            .create_chat_completion_blocking(messages, None, None)?;
-
-        Ok(output.split("\n").map(|chunk| chunk.to_string()).collect())
+        if let Model::Custom { .. } = model {
+            Ok(ShouldClusterResult {
+                embeddings_search_needed: answer.trim().to_lowercase() == "true",
+                relevant_context_ids: Some(vec![]),
+            })
+        } else {
+            let response: ShouldClusterResult = serde_json::from_str(&answer).map_err(|e| {
+                BackendError::GenericError(format!(
+                    "failed to parse should_cluster response: {}",
+                    e
+                ))
+            })?;
+            Ok(response)
+        }
     }
 
     pub fn upsert_embeddings(
@@ -212,6 +211,10 @@ impl AI {
                 new_keys,
                 chunks,
             })
+    }
+
+    pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
+        self.local_ai_client.encode_sentences(&sentences)
     }
 
     // TODO: what behavior if no num_docs and no resource_ids?
@@ -346,9 +349,11 @@ impl AI {
         (sources, sources_xml)
     }
 
-    async fn general_chat(
+    fn general_chat(
         &self,
         query: String,
+        model: &Model,
+        custom_key: Option<&str>,
         history: Vec<Message>,
         inline_images: Option<Vec<String>>,
     ) -> BackendResult<ChatResult> {
@@ -363,16 +368,12 @@ impl AI {
             }
         }
         messages.push(Message::new_user(&query));
-        let preamble = "<sources></sources>".to_string();
 
-        let stream = match self.local_mode {
-            true => {
-                self.local_ai_client
-                    .create_chat_completion(messages)
-                    .await?
-            }
-            false => self.llm.create_chat_completion(messages).await?,
-        };
+        let preamble = "<sources></sources>".to_string();
+        let stream = self
+            .client
+            .create_streaming_chat_completion(messages, model, custom_key, None)?;
+
         Ok(ChatResult {
             messages: vec![Message::new_user(&query)],
             sources: vec![],
@@ -381,14 +382,12 @@ impl AI {
         })
     }
 
-    pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
-        self.local_ai_client.encode_sentences(&sentences)
-    }
-
-    pub async fn chat(
+    pub fn chat(
         &self,
         contents_store: &Database,
         query: String,
+        model: &Model,
+        custom_key: Option<&str>,
         number_documents: i32,
         resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
@@ -397,7 +396,7 @@ impl AI {
         history: Vec<Message>,
     ) -> BackendResult<ChatResult> {
         if general {
-            return self.general_chat(query, history, inline_images).await;
+            return self.general_chat(query, model, custom_key, history, inline_images);
         }
 
         if resource_ids.is_empty() {
@@ -455,19 +454,13 @@ impl AI {
                 messages.push(Message::new_image(&image));
             }
         }
-        // finally user query
+
         messages.push(Message::new_user(&query));
-
         let messages_slice = messages[history_len + 1..].to_vec().clone();
+        let stream = self
+            .client
+            .create_streaming_chat_completion(messages, model, custom_key, None)?;
 
-        let stream = match self.local_mode {
-            true => {
-                self.local_ai_client
-                    .create_chat_completion(messages)
-                    .await?
-            }
-            false => self.llm.create_chat_completion(messages).await?,
-        };
         Ok(ChatResult {
             messages: messages_slice,
             sources,
@@ -477,54 +470,25 @@ impl AI {
     }
 
     // TODO: migrate
-    pub fn get_sql_query(&self, prompt: String) -> BackendResult<String> {
+    pub fn get_sql_query(
+        &self,
+        prompt: String,
+        model: &Model,
+        custom_key: Option<&str>,
+    ) -> BackendResult<String> {
         let messages = vec![
             Message::new_system(&sql_query_generator_prompt()),
             Message::new_user(&prompt),
         ];
-
-        match self.local_mode {
-            true => {
-                let mut result = String::new();
-                self.async_runtime.block_on(async {
-                    let mut stream = self
-                        .local_ai_client
-                        .create_chat_completion(messages)
-                        .await?;
-                    while let Some(chunk) = stream.next().await {
-                        match chunk {
-                            Ok(chunk) => {
-                                result.push_str(&chunk);
-                            }
-                            Err(e) => return Err(e),
-                        }
-                    }
-                    Ok(())
-                })?;
-                Ok(result)
-            }
-            false => {
-                let mut result = String::new();
-                self.async_runtime.block_on(async {
-                    let mut stream = self.llm.create_chat_completion(messages).await?;
-                    while let Some(chunk) = stream.next().await {
-                        match chunk {
-                            Ok(chunk) => {
-                                result.push_str(&chunk);
-                            }
-                            Err(e) => return Err(e),
-                        }
-                    }
-                    Ok(())
-                })?;
-                Ok(result)
-            }
-        }
+        self.client
+            .create_chat_completion(messages, model, custom_key, None)
     }
 
     pub fn create_app(
         &self,
         prompt: String,
+        model: &Model,
+        custom_key: Option<&str>,
         _session_id: String,
         contexts: Option<Vec<String>>,
     ) -> BackendResult<String> {
@@ -549,32 +513,11 @@ impl AI {
             Message::new_user(&prompt),
         ];
 
-        // TODO: is this the best way to use tokio async runtime?
-        let runtime = tokio::runtime::Runtime::new()
-            .map_err(|e| BackendError::GenericError(e.to_string()))?;
-        let mut result = String::new();
+        self.client
+            .create_chat_completion(messages, model, custom_key, None)
+    }
 
-        if self.local_mode {
-            runtime.block_on(async {
-                let mut stream = self
-                    .local_ai_client
-                    .create_chat_completion(messages)
-                    .await?;
-                while let Some(chunk) = stream.next().await {
-                    match chunk {
-                        Ok(chunk) => {
-                            result.push_str(&chunk);
-                        }
-                        Err(e) => return Err(e),
-                    }
-                }
-                Ok(())
-            })?;
-        } else {
-            result = self
-                .llm
-                .create_chat_completion_blocking(messages, None, None)?;
-        }
-        Ok(result)
+    pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {
+        self.client.get_quotas()
     }
 }

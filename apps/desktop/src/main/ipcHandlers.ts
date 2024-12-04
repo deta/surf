@@ -162,10 +162,10 @@ function setupIpcHandlers(backendRootPath: string) {
     }
   })
 
-  IPC_EVENTS_MAIN.openSettings.on((event) => {
+  IPC_EVENTS_MAIN.openSettings.on((event, tab) => {
     if (!validateIPCSender(event)) return
 
-    createSettingsWindow()
+    createSettingsWindow(tab)
   })
 
   IPC_EVENTS_MAIN.screenshotPage.handle(async (event, rect) => {

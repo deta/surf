@@ -1,4 +1,11 @@
 import './assets/style.css'
+import './assets/fonts/Bayshore.woff2'
+import './assets/fonts/Bayshore.woff'
+import './assets/fonts/Gambarino-Regular.woff'
+import './assets/fonts/Gambarino-Regular.woff2'
+import '../../output.css'
+import '../../../../../packages/core/src/output.css'
+import '../../../../../packages/core/src/lib/components/index.scss'
 import Settings from './Settings.svelte'
 
 /*

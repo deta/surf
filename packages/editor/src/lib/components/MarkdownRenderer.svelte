@@ -20,6 +20,21 @@
   export let size: 'sm' | 'lg' = 'lg'
   export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
 
+  const cleanContent = (content: string) => {
+    const trimmed = content.trim()
+    if (trimmed.startsWith('```markdown')) {
+      const cleanBeginning = trimmed.replace('```markdown', '')
+
+      if (cleanBeginning.endsWith('```')) {
+        return cleanBeginning.replace(/```$/, '')
+      }
+
+      return cleanBeginning
+    }
+
+    return trimmed
+  }
+
   const createRehypePlugin = (plugin: any, opts?: any): Plugin => {
     return { rehypePlugin: opts ? [plugin, opts] : [plugin] }
   }
@@ -56,6 +71,8 @@
       ? [{ renderer: { citation: citationComponent, pre: CodeBlock, h4: 'h3', h5: 'h3' } }]
       : [{ renderer: { pre: CodeBlock, h4: 'h3', h5: 'h3' } }])
   ]
+
+  $: cleanedContent = cleanContent(content)
 </script>
 
 <div
@@ -63,5 +80,5 @@
   bind:this={element}
   class="prose prose-{size} prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
 >
-  <Markdown md={content} {plugins} />
+  <Markdown md={cleanedContent} {plugins} />
 </div>

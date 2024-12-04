@@ -68,10 +68,10 @@ export const getHumanDistanceToNow = (timestamp: number | string) => {
   })
 }
 
-export const getFormattedTime = (timestamp: number | string) => {
+export const getFormattedTime = (timestamp: number | string, exact = true) => {
   const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
 
-  return format(ms, 'HH:mm:ss.SSS')
+  return format(ms, exact ? 'HH:mm:ss.SSS' : 'HH:mm')
 }
 
 export const getFormattedDate = (timestamp: number | string) => {

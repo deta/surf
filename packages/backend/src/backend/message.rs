@@ -1,4 +1,5 @@
 use crate::{
+    llm::{client::client::Model, models::Message},
     store::{db::CompositeResource, models::*},
     BackendResult,
 };
@@ -17,6 +18,7 @@ pub struct TunnelMessage(
 #[derive(Debug)]
 pub enum ProcessorMessage {
     ProcessResource(CompositeResource),
+    SetVisionTaggingFlag(bool),
 }
 
 #[derive(Debug)]
@@ -167,10 +169,18 @@ pub enum UserdataMessage {
 
 #[derive(Debug)]
 pub enum MiscMessage {
+    CreateChatCompletion {
+        messages: Vec<Message>,
+        model: Model,
+        custom_key: Option<String>,
+        response_format: Option<String>,
+    },
     ChatQuery {
         callback: Root<JsFunction>,
         number_documents: i32,
         query: String,
+        model: Model,
+        custom_key: Option<String>,
         session_id: String,
         rag_only: bool,
         resource_ids: Option<Vec<String>>,
@@ -179,6 +189,8 @@ pub enum MiscMessage {
     },
     CreateApp {
         prompt: String,
+        model: Model,
+        custom_key: Option<String>,
         session_id: String,
         contexts: Option<Vec<String>>,
     },
@@ -186,7 +198,14 @@ pub enum MiscMessage {
     CreateAIChatMessage(String),
     GetAIChatMessage(String),
     DeleteAIChatMessage(String),
-    QuerySFFSResources(String, Option<String>, Option<String>, Option<f32>),
+    QuerySFFSResources(
+        String,
+        Model,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<f32>,
+    ),
     GetAIChatDataSource(String),
     GetAIDocsSimilarity {
         query: String,
@@ -196,6 +215,8 @@ pub enum MiscMessage {
     GetYoutubeTranscript(String),
     RunMigration,
     SendEventBusMessage(EventBusMessage),
+    GetQuotas,
+    SetVisionTaggingFlag(bool),
 }
 
 #[derive(Debug, serde::Serialize)]

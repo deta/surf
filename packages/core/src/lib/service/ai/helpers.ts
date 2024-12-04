@@ -1,22 +1,18 @@
-import type { DetectedResource, WebViewEventSendNames, WebViewSendEvents } from '@horizon/types'
-import type { ChatMessageContentItem, AIChatMessageSource } from '../types/browser.types'
-import { SIMPLE_SUMMARIZER_PROMPT } from '../constants/prompts'
+import {
+  PageChatMessageSentEventError,
+  type DetectedResource,
+  type WebViewEventSendNames,
+  type WebViewSendEvents
+} from '@horizon/types'
+import type { ChatMessageContentItem, AIChatMessageSource } from '../../types/browser.types'
 import { useLogScope } from '@horizon/utils'
 import { WebParser } from '@horizon/web-parser'
-import { PromptIDs, getPrompt } from './prompts'
+import { PromptIDs, getPrompt } from '../prompts'
+import type { AIService } from './ai'
+import type { QuotaDepletedError } from '@horizon/backend/types'
+import { ModelTiers } from '@horizon/types/src/ai.types'
 
 const log = useLogScope('AI')
-
-export const summarizeText = async (text: string, additionalSystemPrompt?: string) => {
-  const summary = await window.api.createAIChatCompletion(
-    text,
-    SIMPLE_SUMMARIZER_PROMPT + (additionalSystemPrompt ? ' ' + additionalSystemPrompt : '')
-  )
-
-  log.debug('Summarized text', summary)
-
-  return summary
-}
 
 export const DUMMY_CHAT_RESPONSE = `
 <id>{message_id}</id>
@@ -184,6 +180,7 @@ export const parseChatResponseSources = (response: string) => {
 }
 
 export const handleInlineAI = async (
+  ai: AIService,
   data: WebViewSendEvents[WebViewEventSendNames.Transform],
   detectedResource: DetectedResource
 ) => {
@@ -203,20 +200,20 @@ export const handleInlineAI = async (
   let transformation: string | null = ''
   if (type === 'summarize') {
     const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
-    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
+    transformation = await ai.createChatCompletion(userMessages, prompt.content)
   } else if (type === 'explain') {
     const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
-    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
+    transformation = await ai.createChatCompletion(userMessages, prompt.content)
   } else if (type === 'translate') {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
     log.debug('translate prompt', prompt)
-    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
+    transformation = await ai.createChatCompletion(userMessages, prompt.content)
   } else if (type === 'grammar') {
     const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
-    transformation = await window.api.createAIChatCompletion(userMessages, prompt.content)
+    transformation = await ai.createChatCompletion(userMessages, prompt.content)
   } else if (query) {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
-    transformation = await window.api.createAIChatCompletion(
+    transformation = await ai.createChatCompletion(
       [
         query,
         text,
@@ -227,4 +224,50 @@ export const handleInlineAI = async (
   }
 
   return transformation
+}
+
+export const handleQuotaDepletedError = (e: QuotaDepletedError) => {
+  let error = PageChatMessageSentEventError.Other
+  let content = ''
+  let exceededTiers: ModelTiers[] = []
+
+  const premiumQuotas = e.quotas.filter((quota) => quota.tier === ModelTiers.Premium)
+  const standardQuotas = e.quotas.filter((quota) => quota.tier === ModelTiers.Standard)
+
+  const premiumMonthlyUsed = premiumQuotas.find((quota) => quota.usage_type.startsWith('monthly'))
+  const standardMonthlyUsed = standardQuotas.find((quota) => quota.usage_type.startsWith('monthly'))
+
+  const premiumCycleString = premiumMonthlyUsed ? 'monthly' : 'daily'
+  const standardCycleString = standardMonthlyUsed ? 'monthly' : 'daily'
+  const bothCyleString = premiumMonthlyUsed && standardMonthlyUsed ? 'monthly' : 'daily'
+
+  if (standardQuotas.length > 0) {
+    if (premiumQuotas.length > 0) {
+      error = PageChatMessageSentEventError.QuotaExceeded
+      content = `All your ${bothCyleString} quotas are depleted. Please try again at a later time or setup your own models in the settings.`
+    } else {
+      error = PageChatMessageSentEventError.QuotaExceededStandard
+      content = `Your ${standardCycleString} quota for the standard models is depleted, you can still chat with the premium models like GPT-4o and Claude Sonnet.`
+    }
+  } else if (premiumQuotas.length > 0) {
+    error = PageChatMessageSentEventError.QuotaExceededPremium
+    content = `Your ${premiumCycleString} quota for the premium models is depleted, you can still chat with the standard models like GPT-4o Mini and Claude Haiku.`
+  } else {
+    error = PageChatMessageSentEventError.QuotaExceeded
+    content = 'Quota depleted. Please try again later.'
+  }
+
+  if (premiumQuotas.length > 0) {
+    exceededTiers.push(ModelTiers.Premium)
+  }
+
+  if (standardQuotas.length > 0) {
+    exceededTiers.push(ModelTiers.Standard)
+  }
+
+  return {
+    exceededTiers,
+    error,
+    content
+  }
 }

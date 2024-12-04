@@ -541,6 +541,8 @@ export class Telemetry {
     numPreviousMessages: number
     tookPageScreenshot: boolean
     embeddingModel?: string
+    chatModelProvider?: string
+    chatModelName?: string
     error?: PageChatMessageSentEventError
   }) {
     await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
@@ -552,6 +554,8 @@ export class Telemetry {
       num_messages: stats.numPreviousMessages,
       took_page_screen: stats.tookPageScreenshot,
       embedding_model: stats.embeddingModel,
+      chat_model_provider: stats.chatModelProvider,
+      chat_model_name: stats.chatModelName,
       error: stats.error
     })
   }

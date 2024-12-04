@@ -22,8 +22,6 @@ const env = {
   // R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
 
   R_VITE_TELEMETRY_API_KEY: '',
-  P_VITE_OPEN_AI_API_ENDPOINT: 'https://deta.space/api/v0/deta-os-ai/openai',
-  P_VITE_VISION_API_ENDPOINT: 'https://deta.space/api/v0/deta-os-ai/vision',
   P_VITE_API_BASE: 'https://deta.space/api',
   M_VITE_API_BASE: 'https://deta.space/api'
 

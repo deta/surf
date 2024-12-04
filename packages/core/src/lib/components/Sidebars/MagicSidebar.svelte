@@ -50,7 +50,10 @@
     type ResourceLink
   } from '../../service/resources'
   import { getPrompt, PromptIDs } from '../../service/prompts'
-  import { parseChatResponseSources } from '../../service/ai'
+  import {
+    handleQuotaDepletedError,
+    parseChatResponseSources
+  } from '@horizon/core/src/lib/service/ai/helpers'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import ChatContextTabPicker from '../Chat/ChatContextTabPicker.svelte'
@@ -69,6 +72,10 @@
   import PromptItem from '../Chat/PromptItem.svelte'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
+  import { AIChat, useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
+  import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
+  import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 
   export let inputValue = ''
   export let magicPage: Writable<PageMagic>
@@ -102,6 +109,7 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabsManager = useTabsManager()
+  const ai = useAI()
   const globalMiniBrowser = useGlobalMiniBrowser()
 
   const tabs = tabsManager.tabs
@@ -115,10 +123,12 @@
   const aPressed = writable(false)
   const hasError = writable(false)
   const errorMessage = writable('')
+  const quotaError = writable(false)
   const optToggled = writable(false)
   const toggleSelectAll = writable(false)
   const prevSelectedTabs: Writable<Tab[]> = writable([])
   const tabPickerOpen = writable(false)
+  const modelSelectorOpen = writable(false)
   const savedResponse = writable(false)
   const savedChatResponses = writable<Record<string, string>>({})
   const examplePrompts = writable<ExamplePrompt[]>([])
@@ -127,6 +137,8 @@
   const resourceToGeneratePromptsForState = writable<ResourceStateCombined | null>(null)
   const cachedPagePrompts = new Map<string, ExamplePrompt[]>()
   const processingUnsubs = new Map<string, () => void>()
+
+  let activeChat: AIChat | null = null
 
   const CMD_A_DELAY = 300
 
@@ -137,6 +149,33 @@
   let autoScrollChat = true
   let abortController: AbortController | null = null
   let onboardingOpen = writable($userConfigSettings.onboarding.completed_chat === false)
+
+  const selectConfigureItem = {
+    id: 'configure',
+    label: 'Configure Models',
+    icon: 'settings'
+  } as SelectItem
+
+  const modelItems = derived([ai.models], ([models]) => {
+    return models.map(
+      (model) =>
+        ({
+          id: model.id,
+          label: model.label,
+          icon: model.icon
+        }) as SelectItem
+    )
+  })
+
+  const selectedModelItem = derived(
+    [ai.selectedModelId, modelItems],
+    ([selectedModelId, modelItems]) => {
+      const model = modelItems.find((model) => model.id === selectedModelId)
+      if (!model) return null
+
+      return model
+    }
+  )
 
   const tabsInContext = derived(contextItems, (contextItems) => {
     return contextItems.filter((item) => item.type === 'tab').map((item) => item.data)
@@ -243,6 +282,24 @@
   export const addChatWithQuery = async (query: string) => {
     const value = '<blockquote>' + query + '</blockquote>' + '</br>'
     updateChatInput(value)
+  }
+
+  const openModelSettings = () => {
+    window.api.openSettings('ai')
+  }
+
+  const handleModelSelect = async (e: CustomEvent<string>) => {
+    const modelId = e.detail
+    log.debug('Selected model', modelId)
+
+    if (modelId === 'configure') {
+      openModelSettings()
+      modelSelectorOpen.set(false)
+      return
+    }
+
+    await ai.changeSelectedModel(modelId)
+    modelSelectorOpen.set(false)
   }
 
   const updateMagicPage = (data: Partial<PageMagic>) => {
@@ -746,21 +803,34 @@
     return result
   }
 
-  const isScreenshotNeededForPromptAndTab = async (prompt: string, tab: TabPage) => {
+  const isScreenshotNeededForPromptAndTab = async (
+    prompt: string,
+    tab: TabPage,
+    tier?: ModelTiers
+  ) => {
     try {
+      if ($userConfigSettings.always_include_screenshot_in_chat) {
+        return true
+      }
+
+      const model = ai.selectedModelValue
+      const supportsStructuredOutput = model.supports_json_format
+      if (!supportsStructuredOutput) {
+        log.debug('Model does not support structured output', model)
+        return false
+      }
+
       const title = tab.title
       const url = tab.currentLocation || tab.currentDetectedApp?.canonicalUrl || tab.initialLocation
 
-      const screenshotNeededRaw = await window.api.createAIChatCompletion(
+      const screenshotNeededRaw = await ai.createChatCompletion(
         JSON.stringify({
           prompt: prompt,
           title: title,
           url: url
         }),
         CLASSIFY_SCREENSHOT_PROMPT,
-        {
-          model: 'gpt-4o-mini'
-        }
+        { tier: tier ?? ModelTiers.Standard }
       )
 
       if (!screenshotNeededRaw) {
@@ -769,119 +839,133 @@
       }
 
       const response = JSON.parse(screenshotNeededRaw)
-
-      // log.debug('Screenshot needed response', response)
-
-      // if (response.reason) {
-      //   toasts.info(response.reason)
-      // }
-
-      /*
-        Respond with the following format:
-
-        ```json
-        {
-            "needsScreenshot": true,
-            "reason": "The prompt refers to a specific part of the page, the hero section, that can only be seen visually."
-        }
-        ```
-
-        Only respond with the JSON itself as a string, no Markdown or other formatting.
-      */
-
-      // return response.needsScreenshot
-
       return response
     } catch (e) {
       log.error('Error determining if a screenshot is needed', e)
+      if (e instanceof QuotaDepletedError) {
+        const res = handleQuotaDepletedError(e)
+        log.error('Quota depleted', res)
+        if (res.exceededTiers.length === 1 && res.exceededTiers.includes(ModelTiers.Standard)) {
+          log.debug('Retrying with premium model')
+          return isScreenshotNeededForPromptAndTab(prompt, tab, ModelTiers.Premium)
+        }
+      }
       return false
     }
   }
 
-  const generateExamplePromptsForPage = useDebounce(async (resourceId: string, tab: TabPage) => {
-    generatingExamplePrompts.set(true)
-    resourceToGeneratePromptsFor.set(resourceId)
-    examplePrompts.set([])
+  const generateExamplePromptsForPage = useDebounce(
+    async (resourceId: string, tab: TabPage, tier?: ModelTiers) => {
+      try {
+        generatingExamplePrompts.set(true)
+        resourceToGeneratePromptsFor.set(resourceId)
+        examplePrompts.set([])
 
-    const resource = await resourceManager.getResource(resourceId)
-    if (!(resource instanceof ResourceJSON)) {
-      log.debug('No resource content')
-      generatingExamplePrompts.set(false)
-      resourceToGeneratePromptsFor.set(null)
-      resourceToGeneratePromptsForState.set(null)
-      return null
-    }
+        const resource = await resourceManager.getResource(resourceId)
+        if (!(resource instanceof ResourceJSON)) {
+          log.debug('No resource content')
+          generatingExamplePrompts.set(false)
+          resourceToGeneratePromptsFor.set(null)
+          resourceToGeneratePromptsForState.set(null)
+          return null
+        }
 
-    const resourceState = get(resource.state)
-    resourceToGeneratePromptsForState.set(resourceState)
-    if (resourceState !== 'idle') {
-      log.debug('Resource is still extracting')
-      generatingExamplePrompts.set(false)
+        const resourceState = get(resource.state)
+        resourceToGeneratePromptsForState.set(resourceState)
+        if (resourceState !== 'idle') {
+          log.debug('Resource is still extracting')
+          generatingExamplePrompts.set(false)
 
-      if (resourceState === 'extracting' || resourceState === 'post-processing') {
-        const unsubscribe = resource.state.subscribe((state) => {
-          resourceToGeneratePromptsForState.set(state)
-          const processingUnsub = processingUnsubs.get(resourceId)
-          if (processingUnsub) {
-            processingUnsub()
-            processingUnsubs.delete(resourceId)
+          if (resourceState === 'extracting' || resourceState === 'post-processing') {
+            const unsubscribe = resource.state.subscribe((state) => {
+              resourceToGeneratePromptsForState.set(state)
+              const processingUnsub = processingUnsubs.get(resourceId)
+              if (processingUnsub) {
+                processingUnsub()
+                processingUnsubs.delete(resourceId)
+              }
+
+              if (state === 'idle') {
+                generateExamplePromptsForPage(resourceId, tab)
+              } else {
+                resourceToGeneratePromptsFor.set(null)
+                resourceToGeneratePromptsForState.set(null)
+              }
+            })
+
+            processingUnsubs.set(resourceId, unsubscribe)
           }
 
-          if (state === 'idle') {
-            generateExamplePromptsForPage(resourceId, tab)
-          } else {
-            resourceToGeneratePromptsFor.set(null)
-            resourceToGeneratePromptsForState.set(null)
+          return null
+        }
+
+        const data = await resource.getParsedData()
+        const content = WebParser.getResourceContent(resource?.type, data)
+
+        log.debug('Generating prompts for page', tab.title, resource.id, content.plain?.length)
+        const promptsRaw = await ai.createChatCompletion(
+          JSON.stringify({
+            title: tab.title,
+            url: tab.currentLocation,
+            content: content.plain
+          }),
+          PAGE_PROMPTS_GENERATOR_PROMPT,
+          { tier: tier ?? ModelTiers.Standard }
+        )
+
+        log.debug('Prompts raw', promptsRaw)
+
+        if (!promptsRaw) {
+          log.error('Failed to generate prompts')
+          examplePrompts.set([])
+          generatingExamplePrompts.set(false)
+          resourceToGeneratePromptsFor.set(null)
+          resourceToGeneratePromptsForState.set(null)
+          return null
+        }
+
+        const prompts = JSON.parse(promptsRaw.replace('```json', '').replace('```', ''))
+        const parsedPrompts = prompts.filter(
+          (p: any) => p.label !== undefined && p.prompt !== undefined
+        )
+
+        log.debug('Generated prompts', parsedPrompts)
+
+        examplePrompts.set(parsedPrompts)
+        cachedPagePrompts.set(resource.id, parsedPrompts)
+        await tick()
+      } catch (e) {
+        log.error('Error generating prompts', e)
+        if (e instanceof QuotaDepletedError) {
+          const res = handleQuotaDepletedError(e)
+          log.error('Quota depleted', res)
+          if (res.exceededTiers.length === 1 && res.exceededTiers.includes(ModelTiers.Standard)) {
+            log.debug('Retrying with premium model')
+            generateExamplePromptsForPage(resourceId, tab, ModelTiers.Premium)
           }
-        })
-
-        processingUnsubs.set(resourceId, unsubscribe)
+        } else {
+          log.error('Error generating prompts', e)
+          toasts.error('Error generating prompts', e)
+        }
+      } finally {
+        generatingExamplePrompts.set(false)
       }
-
-      return null
-    }
-
-    const data = await resource.getParsedData()
-    const content = WebParser.getResourceContent(resource?.type, data)
-
-    log.debug('Generating prompts for page', tab.title, resource.id, content.plain?.length)
-    const promptsRaw = await window.api.createAIChatCompletion(
-      JSON.stringify({
-        title: tab.title,
-        url: tab.currentLocation,
-        content: content.plain
-      }),
-      PAGE_PROMPTS_GENERATOR_PROMPT,
-      {
-        model: 'gpt-4o-mini'
-      }
-    )
-
-    log.debug('Prompts raw', promptsRaw)
-
-    if (!promptsRaw) {
-      log.error('Failed to generate prompts')
-      examplePrompts.set([])
-      generatingExamplePrompts.set(false)
-      resourceToGeneratePromptsFor.set(null)
-      resourceToGeneratePromptsForState.set(null)
-      return null
-    }
-
-    const prompts = JSON.parse(promptsRaw)
-    const parsedPrompts = prompts.filter(
-      (p: any) => p.label !== undefined && p.prompt !== undefined
-    )
-
-    log.debug('Generated prompts', parsedPrompts)
-
-    examplePrompts.set(parsedPrompts)
-    cachedPagePrompts.set(resource.id, parsedPrompts)
-    await tick()
-    generatingExamplePrompts.set(false)
-  }, 600)
+    },
+    600
+  )
 
   const handleTabPromptGeneration = async (tab: TabPage) => {
+    // TODO(@nullptropy): temporary measure to make local model UX better
+    const model = ai.selectedModelValue
+    const supportsJsonFormat = model.supports_json_format
+    if (!supportsJsonFormat) {
+      log.debug('Model does not support JSON format', model)
+      examplePrompts.set([])
+      resourceToGeneratePromptsFor.set(null)
+      resourceToGeneratePromptsForState.set(null)
+      return null
+    }
+
     const resourceId = tab.chatResourceBookmark
     if (!resourceId) {
       log.debug('No chat resource bookmark')
@@ -931,8 +1015,18 @@
       return
     }
 
+    if (!activeChat || activeChat?.id !== chatId) {
+      activeChat = await ai.getChat(chatId)
+    }
+
+    if (!activeChat) {
+      log.error('Error: Chat not found')
+      return
+    }
+
     errorMessage.set('')
     hasError.set(false)
+    quotaError.set(false)
 
     const itemsInContext = getItemsInContext(selectedMode, $contextItems, activeTab)
     if (itemsInContext.length === 0) {
@@ -990,8 +1084,9 @@
             return
           }
 
-          const blob = await resource?.getData()
-          resource?.releaseData()
+          resourceIds.push(resource.id)
+          const blob = await resource.getData()
+          resource.releaseData()
           if (blob) {
             const dataUrl = await blobToDataUrl(blob)
             inlineImages.push(dataUrl)
@@ -1030,9 +1125,11 @@
         )
 
         if (tab) {
-          const screenshotNeeded = $userConfigSettings.always_include_screenshot_in_chat
-            ? true
-            : await isScreenshotNeededForPromptAndTab(query ?? prompt, tab as TabPage)
+          // TODO(@nullptropy): temporary measure to make local model UX better
+          const screenshotNeeded = await isScreenshotNeededForPromptAndTab(
+            query ?? prompt,
+            tab as TabPage
+          )
           log.debug('Screenshot needed:', screenshotNeeded)
 
           if (screenshotNeeded) {
@@ -1075,45 +1172,42 @@
 
       abortController = new AbortController()
 
-      await resourceManager.sffs.sendAIChatMessage(
-        chatId!,
-        prompt,
-        (chunk: string) => {
-          if (step === 'idle') {
-            log.debug('sources chunk', chunk)
+      const chatCallback = (chunk: string) => {
+        if (step === 'idle') {
+          log.debug('sources chunk', chunk)
 
-            content += chunk
+          content += chunk
 
-            if (content.includes('</sources>')) {
-              const sources = parseChatResponseSources(content)
-              log.debug('Sources', sources)
+          if (content.includes('</sources>')) {
+            const sources = parseChatResponseSources(content)
+            log.debug('Sources', sources)
 
-              step = 'sources'
-              content = ''
+            step = 'sources'
+            content = ''
 
-              updatePageMagicResponse(response?.id ?? '', {
-                sources
-              })
-            }
-          } else {
-            content += chunk
-            updatePageMagicResponse(response?.id!, {
-              content: content
-                .replace('<answer>', '')
-                .replace('</answer>', '')
-                // .replace('<citation>', '')
-                // .replace('</citation>', '')
-                .replace('<br>', '\n')
+            updatePageMagicResponse(response?.id ?? '', {
+              sources
             })
           }
-        },
-        {
-          limit: 30,
-          resourceIds: resourceIds,
-          inlineImages: inlineImages,
-          general: resourceIds.length === 0
+        } else {
+          content += chunk
+          updatePageMagicResponse(response?.id!, {
+            content: content
+              .replace('<answer>', '')
+              .replace('</answer>', '')
+              // .replace('<citation>', '')
+              // .replace('</citation>', '')
+              .replace('<br>', '\n')
+          })
         }
-      )
+      }
+
+      const { model } = await activeChat.sendMessage(chatCallback, prompt, {
+        limit: 30,
+        resourceIds: resourceIds,
+        inlineImages: inlineImages,
+        general: resourceIds.length === 0
+      })
 
       updatePageMagicResponse(response.id, {
         status: 'success',
@@ -1128,21 +1222,36 @@
         numScreenshots: inlineImages.length,
         numPreviousMessages: previousMessages.length,
         tookPageScreenshot: usedPageScreenshot,
-        embeddingModel: $userConfigSettings.embedding_model
+        embeddingModel: $userConfigSettings.embedding_model,
+        chatModelProvider: model.provider,
+        chatModelName:
+          model.provider === Provider.Custom ? (model.custom_model_name ?? 'custom') : model.id
       })
 
       if (numSpaces > 0) {
         await telemetry.trackChatWithSpace()
       }
     } catch (e) {
-      log.error('Error doing magic', e)
+      log.error('Error doing magic', typeof e, e)
       let content = 'Failed to generate response.'
+      let error = PageChatMessageSentEventError.Other
+
+      if (e instanceof TooManyRequestsError) {
+        error = PageChatMessageSentEventError.TooManyRequests
+        content = 'Too many requests. Please try again later.'
+      } else if (e instanceof QuotaDepletedError) {
+        log.error('Quota depleted')
+        const res = handleQuotaDepletedError(e)
+        error = res.error
+        content = res.content
+        quotaError.set(true)
+      } else {
+        content = 'Failed to generate response.'
+      }
 
       if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
         content = 'The content is too long to process. Please try a more specific question.'
       }
-
-      let error = PageChatMessageSentEventError.Other
 
       if (typeof e === 'string' && e.includes('RAG Empty Context')) {
         content = `Unfortunately, we failed to find relevant information to answer your query.
@@ -1157,10 +1266,14 @@
       }
       hasError.set(true)
       errorMessage.set(content)
-      setTimeout(() => {
-        hasError.set(false)
-      }, 10000)
 
+      if (!$quotaError) {
+        setTimeout(() => {
+          hasError.set(false)
+        }, 10000)
+      }
+
+      // TODO: track model for errors as well
       await telemetry.trackPageChatMessageSent({
         contextSize: contextSize,
         numTabs: tabsInContext.length,
@@ -1188,48 +1301,18 @@
     log.debug('Clearing chat', id)
 
     $magicPage.responses = []
-
-    await resourceManager.sffs.deleteAIChat(id)
+    await ai.deleteChat(id)
 
     log.debug('Old chat deleted, creating new chat...')
-    const newChatId = await resourceManager.sffs.createAIChat('')
-    if (!newChatId) {
-      log.error('Failed to create new chat aftering clearing the old one')
-      return
-    }
-
-    updateMagicPage({
-      chatId: newChatId,
-      responses: []
-    })
+    await createNewChat()
   }
 
   const fetchExistingChat = async (id: string) => {
-    const chat = await resourceManager.sffs.getAIChat(id)
-    if (chat) {
-      log.debug('Chat fetched', chat)
-      const userMessages = chat.messages.filter((message) => message.role === 'user')
-      const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-      const systemMessages = chat.messages.filter((message) => message.role === 'assistant')
-
-      log.debug('User messages', userMessages)
-      log.debug('System messages', systemMessages)
-
-      const responses = systemMessages.map((message, idx) => {
-        message.sources = message.sources
-        log.debug('Message', message)
-        return {
-          id: generateID(),
-          role: 'user',
-          query: queries[idx],
-          content: message.content.replace('<answer>', '').replace('</answer>', ''),
-          sources: message.sources,
-          status: 'success'
-        } as AIChatMessageParsed
-      })
-
+    activeChat = await ai.getChat(id)
+    if (activeChat) {
+      log.debug('Chat fetched', activeChat)
       updateMagicPage({
-        responses
+        responses: activeChat.responsesValue
       })
     } else {
       log.error('Failed to fetch chat', id)
@@ -1237,15 +1320,15 @@
   }
 
   const createNewChat = async () => {
-    const chatId = await resourceManager.sffs.createAIChat('')
-    if (!chatId) {
+    activeChat = await ai.createChat('')
+    if (!activeChat) {
       log.error('Failed to create chat')
       return
     }
 
-    log.debug('Chat created', chatId)
+    log.debug('Chat created', activeChat)
 
-    updateMagicPage({ chatId })
+    updateMagicPage({ chatId: activeChat.id, responses: [] })
   }
 
   const stopGeneration = async () => {
@@ -1602,9 +1685,16 @@
 
       {#if $hasError}
         <div
-          class="flex flex-col bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
+          class="flex flex-col justify-start bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
         >
           {$errorMessage}
+
+          {#if $quotaError}
+            <button class="w-fit" on:click={() => openModelSettings()}
+              >View Your Chat Quotas →</button
+            >
+          {/if}
+
           <button
             class="absolute top-5 right-4 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
             on:click={() => hasError.set(false)}
@@ -1746,6 +1836,7 @@
             tabs={contextPickerTabs}
             on:include-tab
             on:add-context-item
+            on:pick-screenshot={handlePickScreenshot}
             on:close={() => {
               $tabPickerOpen = false
               if (editor) {
@@ -1755,7 +1846,7 @@
           />
         {/if}
 
-        <button
+        <!-- <button
           class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
           on:click={handlePickScreenshot}
           use:tooltip={{
@@ -1764,7 +1855,7 @@
           }}
         >
           <Icon name="screenshot" className="opacity-60" />
-        </button>
+        </button> -->
 
         <button
           disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
@@ -1780,6 +1871,28 @@
         >
           <Icon name={'add'} size={'18px'} className="opacity-60" />
         </button>
+
+        <SelectDropdown
+          items={modelItems}
+          search="disabled"
+          selected={$selectedModelItem ? $selectedModelItem.id : null}
+          footerItem={selectConfigureItem}
+          open={modelSelectorOpen}
+          side="top"
+          closeOnMouseLeave={false}
+          keepHeightWhileSearching
+          on:select={handleModelSelect}
+        >
+          <button
+            class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
+          >
+            {#if $selectedModelItem}
+              <Icon name={$selectedModelItem.icon} />
+            {:else}
+              <Icon name="settings" className="opacity-60" />
+            {/if}
+          </button>
+        </SelectDropdown>
 
         <button
           class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"

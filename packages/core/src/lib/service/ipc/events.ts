@@ -8,7 +8,8 @@ import type {
   DownloadRequestMessage,
   DownloadUpdatedMessage,
   TelemetryEventTypes,
-  SFFSResource
+  SFFSResource,
+  SettingsWindowTab
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -145,7 +146,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   openURL: ipcService.addEvent<OpenURL>('open-url'),
   openHistory: ipcService.addEvent<void>('open-history'),
   controlWindow: ipcService.addEvent<ControlWindow>('control-window'),
-  openSettings: ipcService.addEvent<void>('open-settings'),
+  openSettings: ipcService.addEvent<SettingsWindowTab | undefined>('open-settings'),
   openResourceLocally: ipcService.addEvent<SFFSResource>('open-resource-locally'),
   showAppMenuPopup: ipcService.addEvent<void>('show-app-menu-popup'),
   resetBackgroundImage: ipcService.addEvent<void>('reset-background-image'),

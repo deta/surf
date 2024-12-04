@@ -31,6 +31,17 @@ import type {
   YoutubeTranscript
 } from '../types/browser.types'
 import type { EventBusMessage } from '@horizon/types'
+import type {
+  Model,
+  ChatMessageOptions,
+  CreateAppOptions,
+  QueryResourcesOptions,
+  Quota,
+  QuotasResponse,
+  Message,
+  CreateChatCompletionOptions
+} from '@horizon/backend/types'
+import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 
 export type HorizonToCreate = Optional<
   HorizonData,
@@ -482,37 +493,6 @@ export class SFFS {
     await this.backend.js__store_delete_space_entries(entryIds)
   }
 
-  async getResourcesViaPrompt(
-    query: string,
-    opts?: {
-      sql_query?: string
-      embedding_query?: string
-      embedding_distance_threshold?: number
-    }
-  ): Promise<AiSFFSQueryResponse> {
-    this.log.debug('querying SFFS resources with AI', query)
-    const rawResponse = await this.backend.js__ai_query_sffs_resources(
-      query,
-      opts?.sql_query,
-      opts?.embedding_query,
-      opts?.embedding_distance_threshold
-    )
-    this.log.debug('raw response', rawResponse)
-    let response = this.parseData<AiSFFSQueryResponse>(rawResponse)
-    if (!response) {
-      throw new Error('failed to query SFFS resources, invalid response data', rawResponse)
-    }
-
-    if (typeof response === 'string') {
-      response = this.parseData<AiSFFSQueryResponse>(response)
-      if (!response) {
-        throw new Error('failed to query SFFS resources, invalid response data', rawResponse)
-      }
-    }
-
-    return response
-  }
-
   async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
     const raw = await this.backend.js__store_proximity_search_resources(
       resourceId,
@@ -680,23 +660,139 @@ export class SFFS {
     return this.parseData<YoutubeTranscript>(raw)
   }
 
+  async withErrorHandling<T>(
+    context: any,
+    fn: (...args: any[]) => Promise<T>,
+    ...args: any[]
+  ): Promise<T> {
+    try {
+      return await fn.apply(context, args)
+    } catch (error) {
+      this.log.debug('error', error)
+      const message =
+        typeof error === 'string' ? error : error instanceof Error ? error.message : undefined
+      if (message) {
+        if (message.includes('LLM Quota Depleted error')) {
+          const jsonStr = message.substring(message.indexOf('{'))
+
+          const resp = this.parseData<QuotasResponse>(jsonStr)
+          if (!resp) {
+            throw new Error('failed to parse quota depleted error')
+          }
+
+          this.log.debug('quota error', resp)
+          throw new QuotaDepletedError(resp.quotas)
+        }
+        if (message.includes('LLM Too Many Requests error')) {
+          throw new TooManyRequestsError()
+        }
+      }
+      throw error
+    }
+  }
+
+  async getResourcesViaPrompt(
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      sqlQuery?: string
+      embeddingQuery?: string
+      embeddingDistanceThreshold?: number
+    }
+  ): Promise<AiSFFSQueryResponse> {
+    this.log.debug(
+      'querying SFFS resources with AI',
+      query,
+      'model:',
+      model,
+      'custom_key:',
+      !!opts?.customKey,
+      'sql_query:',
+      opts?.sqlQuery,
+      'embedding_query:',
+      opts?.embeddingQuery,
+      'embedding_distance_threshold:',
+      opts?.embeddingDistanceThreshold
+    )
+
+    const data: QueryResourcesOptions = {
+      query,
+      model,
+      custom_key: opts?.customKey,
+      sql_query: opts?.sqlQuery,
+      embedding_query: opts?.embeddingQuery,
+      embedding_distance_threshold: opts?.embeddingDistanceThreshold
+    }
+
+    const rawResponse: string = await this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_query_sffs_resources,
+      JSON.stringify(data)
+    )
+    this.log.debug('raw response', rawResponse)
+
+    let response = this.parseData<AiSFFSQueryResponse>(rawResponse)
+    if (!response) {
+      throw new Error(`failed to query SFFS resources, invalid response data: ${rawResponse}`)
+    }
+
+    if (typeof response === 'string') {
+      response = this.parseData<AiSFFSQueryResponse>(response)
+      if (!response) {
+        throw new Error(`failed to query SFFS resources, invalid response data: ${rawResponse}`)
+      }
+    }
+
+    return response
+  }
+
   async createAIApp(
     chatId: string,
     prompt: string,
+    model: Model,
     opts?: {
+      customKey?: string
       contexts?: string[]
     }
   ): Promise<string | null> {
-    this.log.debug('creating ai app with chat id', chatId, ' and prompt', prompt)
-    const raw = await this.backend.js__ai_create_app(prompt, chatId, opts?.contexts)
+    this.log.debug(
+      'creating ai app',
+      'chat_id:',
+      chatId,
+      'prompt:',
+      prompt,
+      'model:',
+      model,
+      'custom_key:',
+      !!opts?.customKey,
+      'contexts:',
+      opts?.contexts
+    )
+
+    const data: CreateAppOptions = {
+      prompt,
+      chat_id: chatId,
+      model,
+      custom_key: opts?.customKey,
+      contexts: opts?.contexts
+    }
+
+    const raw = await this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_create_app,
+      JSON.stringify(data)
+    )
     return String(raw)
   }
 
   async sendAIChatMessage(
+    callback: (chunk: string) => void,
     chatId: string,
     query: string,
-    callback: (chunk: string) => void,
+    model: Model,
     opts?: {
+      customKey?: string
       limit?: number
       ragOnly?: boolean
       resourceIds?: string[]
@@ -709,6 +805,10 @@ export class SFFS {
       chatId,
       'query:',
       query,
+      'model',
+      model,
+      'custom_key',
+      !!opts?.customKey,
       'limit:',
       opts?.limit,
       'resource ids filter:',
@@ -716,19 +816,61 @@ export class SFFS {
       'inline images length:',
       opts?.inlineImages?.length
     )
-    return await this.backend.js__ai_send_chat_message(
+    const data: ChatMessageOptions = {
       query,
-      chatId,
-      callback,
-      opts?.limit ?? 20,
-      opts?.ragOnly ?? false,
-      opts?.resourceIds,
-      opts?.inlineImages,
-      opts?.general ?? false
+      chat_id: chatId,
+      model,
+      custom_key: opts?.customKey,
+      resource_ids: opts?.resourceIds,
+      inline_images: opts?.inlineImages,
+      limit: opts?.limit ?? 20,
+      rag_only: opts?.ragOnly,
+      general: opts?.general
+    }
+    return this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_send_chat_message,
+      JSON.stringify(data),
+      callback
     )
+  }
+
+  async createAIChatCompletion(
+    messages: Message[],
+    model: Model,
+    opts?: {
+      customKey?: string
+      responseFormat?: string
+    }
+  ) {
+    const data = {
+      messages,
+      model,
+      custom_key: opts?.customKey,
+      response_format: opts?.responseFormat
+    } as CreateChatCompletionOptions
+
+    return JSON.parse(
+      await this.withErrorHandling(
+        this.backend,
+        this.backend.js__ai_create_chat_completion,
+        JSON.stringify(data)
+      )
+    )
+  }
+
+  async getQuotas(): Promise<Quota[]> {
+    this.log.debug('getting quotas')
+    const raw = await this.backend.js__ai_get_quotas()
+    const parsed = this.parseData<Quota[]>(raw)
+    return parsed ?? []
   }
 
   registerEventBustHandler(handler: (event: EventBusMessage) => void) {
     return this.backend.js__backend_event_bus_register(handler) as () => void
+  }
+
+  setVisionTaggingFlag(flag: boolean) {
+    return this.backend.js__backend_set_vision_tagging_flag(flag)
   }
 }

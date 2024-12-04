@@ -1,7 +1,6 @@
 import { getWebRequestManager } from './webRequestManager'
 
-const CSP_BACKEND_API = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space'
-const CSP_OPEN_AI = import.meta.env.P_VITE_OPEN_AI_API_ENDPOINT ?? 'https://api.openai.com'
+const CSP_API_ENDPOINTS = [import.meta.env.P_VITE_API_BASE ?? 'https://deta.space', 'https://telemetry.deta.surf']
 
 const CSP_DIRECTIVES = [
   // Only allow resources to be loaded from the same origin (domain)
@@ -26,7 +25,7 @@ const CSP_DIRECTIVES = [
   "media-src 'self' blob:",
 
   // Allow connections to same origin, localhost (HTTP/WS), and specific APIs
-  `connect-src 'self' surf: http://localhost:* ws://localhost:* https://*.sentry.io https://telemetry.deta.surf ${CSP_BACKEND_API} ${CSP_OPEN_AI}`,
+  `connect-src 'self' surf: http://localhost:* ws://localhost:* https://*.sentry.io ${CSP_API_ENDPOINTS.join(' ')}`,
 
   // Allow web workers from same origin and blob: URLs
   "worker-src 'self' blob:"

@@ -99,6 +99,8 @@ import AdjustmentsHorizontal from './Icons/AdjustmentsHorizontal.svelte'
 import Ticket from './Icons/Ticket.svelte'
 import Save from './Icons/Save.svelte'
 import PlusBoxed from './Icons/PlusBoxed.svelte'
+import OpenAI from './Icons/OpenAI.svelte'
+import Claude from './Icons/Claude.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -202,7 +204,9 @@ export const icons = {
   'adjustments.horizontal': AdjustmentsHorizontal,
   ticket: Ticket,
   save: Save,
-  'plus.boxed': PlusBoxed
+  'plus.boxed': PlusBoxed,
+  'open-ai': OpenAI,
+  claude: Claude
 }
 
 export type Icons = keyof typeof icons
@@ -307,5 +311,7 @@ export {
   AdjustmentsHorizontal,
   Ticket,
   Save,
-  PlusBoxed
+  PlusBoxed,
+  OpenAI,
+  Claude
 }

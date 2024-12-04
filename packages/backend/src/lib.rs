@@ -6,6 +6,7 @@ pub mod store;
 pub mod vision;
 
 use neon::{prelude::ModuleContext, result::NeonResult};
+use serde_json;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {
@@ -19,8 +20,13 @@ pub enum BackendError {
     // RustBertError(#[from] rust_bert::RustBertError),
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
-    #[error("Error: {0}")]
-    OpenAIError(String),
+    #[error("LLM Error: {r#type}: {message}")]
+    LLMClientError { r#type: String, message: String },
+    #[error("LLM Too Many Requests error")]
+    LLMClientErrorTooManyRequests,
+    // TODO: fix this monstrosity
+    #[error("LLM Quota Depleted error: {quotas}")]
+    LLMClientErrorQuotasDepleted { quotas: serde_json::Value },
     #[error("RAG Empty Context error: {0}")]
     RAGEmptyContextError(String),
     #[error("Generic error: {0}")]

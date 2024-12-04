@@ -33,6 +33,11 @@ The current date and time in UTC is: {}
 ", current_time).to_string()
 }
 
+// TODO(@nullptropy): temporary measure to make local model UX better
+pub fn should_narrow_search_prompt_simple() -> String {
+    "Evaluate if this query needs a search for specific information. Return only 'true' for specific questions (like 'what did X say about Y'), or 'false' for general analysis (like 'summarize this', 'what are the key points').".to_string()
+}
+
 pub fn create_app_prompt(context: &str) -> String {
     format!("
 You are a developer that creates web-based apps in JavaScript, HTML, and CSS based on a user request.

@@ -44,12 +44,14 @@
   import BuiltInSpace from './BuiltInSpace.svelte'
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
   import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
   const toast = useToasts()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
+  const ai = useAI()
   const dispatch = createEventDispatcher<SpacesViewEvents>()
 
   let sidebarElement: HTMLElement
@@ -156,7 +158,7 @@
       const toasty = toast.loading('Creating Space with AI...')
       log.debug('Creating folder with AI', userPrompt)
 
-      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+      const response = await ai.getResourcesViaPrompt(userPrompt)
 
       log.debug(`Automatic Folder Generation request`, response)
 

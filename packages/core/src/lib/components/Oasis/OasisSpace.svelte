@@ -64,7 +64,6 @@
   import { fade, fly, slide } from 'svelte/transition'
   import OasisSpaceSettings from './OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
-  import { summarizeText } from '../../service/ai'
   import type { ResourceContent } from '@horizon/web-parser'
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
   import type {
@@ -98,6 +97,7 @@
   import { blobToDataUrl, blobToSmallImageUrl } from '../../utils/screenshot'
   import TabItem from '../Core/Tab.svelte'
   import ContextTabsBar from './ContextTabsBar.svelte'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let spaceId: string
   export let active: boolean = false
@@ -129,6 +129,7 @@
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
+  const ai = useAI()
 
   const miniBrowserService = useMiniBrowserService()
   const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`space-${spaceId}`)
@@ -440,9 +441,9 @@
       // )
       log.debug('AI prompt:', query, sql_query, embedding_query)
 
-      const response = await resourceManager.getResourcesViaPrompt(query, {
-        sql_query: sql_query || undefined,
-        embedding_query: embedding_query || undefined
+      const response = await ai.getResourcesViaPrompt(query, {
+        sqlQuery: sql_query || undefined,
+        embeddingQuery: embedding_query || undefined
       })
       log.debug('AI response:', response)
 
@@ -786,7 +787,7 @@
 
         if (contentToSummarize) {
           log.debug('Summarizing content:', truncate(contentToSummarize, 100))
-          let summary = await summarizeText(
+          let summary = await ai.summarizeText(
             contentToSummarize,
             'Summarize the given text into a single paragraph with a maximum of 400 characters. Make sure you are still conveying the main idea of the text while keeping it concise. If possible try to be as close to 400 characters as possible. Do not go over 400 characters in any case.'
           )

@@ -55,6 +55,7 @@
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   import { onboardingSpace } from '../../constants/examples'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let folder: OasisSpace
   export let selected: boolean
@@ -69,6 +70,7 @@
   const resourceManager = useResourceManager()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
+  const ai = useAI()
   const config = useConfig()
   const userSettings = config.settings
 
@@ -237,7 +239,7 @@
 
       dispatch('update-data', { smartFilterQuery: query })
 
-      const response = await resourceManager.getResourcesViaPrompt(userPrompt)
+      const response = await ai.getResourcesViaPrompt(userPrompt)
 
       log.debug(`Automatic Folder Generation request`, response)
 
