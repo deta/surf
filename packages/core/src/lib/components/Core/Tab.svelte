@@ -1489,6 +1489,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   }
 
   :global(.tab[data-drag-preview]) {
+    width: var(--drag-width, auto) !important;
+    height: var(--drag-height, auto) !important;
+
     background: paint(squircle);
     --squircle-radius: 20px;
     --squircle-smooth: 0.33;
