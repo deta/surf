@@ -441,12 +441,6 @@
             on:update={handleSettingsUpdate}
             on:reset-background-image={handleResetBackgroundImage}
           />
-
-          <HomescreenOption
-            bind:userConfigSettings
-            on:update={handleSettingsUpdate}
-            on:reset-background-image={handleResetBackgroundImage}
-          />
         {/if}
 
         <PromptSection
