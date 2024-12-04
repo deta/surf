@@ -856,6 +856,8 @@
       // Note: even though the electron menu handles the shortcut this is still needed here
       if ($showNewTabOverlay !== 0) {
         setShowNewTabOverlay(0)
+      } else if ($desktopVisible) {
+        desktopManager.setVisible(false, { trigger: OpenHomescreenEventTrigger.Shortcut })
       } else {
         const activeTabMiniBrowserSelected = getActiveMiniBrowser()
         if (activeTabMiniBrowserSelected) {
