@@ -14,7 +14,7 @@ import { ipcSenders, setupIpc } from './ipcHandlers'
 import { getUserConfig, updateUserConfig } from './config'
 import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
-import { isDefaultBrowser } from './utils'
+import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 import { silentCheckForUpdates } from './appUpdates'
 
@@ -64,6 +64,11 @@ const registerProtocols = () => {
 
 const handleOpenUrl = (url: string) => {
   try {
+    if (!isAppSetup) {
+      log.warn('App not setup yet, cannot handle open URL')
+      return
+    }
+
     const mainWindow = getMainWindow()
 
     if (!mainWindow || mainWindow?.isDestroyed()) {
@@ -148,6 +153,7 @@ const initializeApp = async () => {
     app.dock?.setIcon(join(app.getAppPath(), 'build/resources/dev/icon.png'))
   }
 
+  markAppAsSetup()
   await setupAdblocker()
   setAppMenu()
   createWindow()

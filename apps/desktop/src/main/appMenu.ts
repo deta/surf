@@ -4,7 +4,7 @@ import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
 import { join } from 'path'
-import { isDefaultBrowser } from './utils'
+import { isAppSetup, isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
 import { toggleHistorySwipeGestureConfig } from './historySwipe'
@@ -64,6 +64,11 @@ const setAsDefaultBrowserLinux = async (): Promise<boolean> => {
 }
 
 export const useAsDefaultBrowser = async (): Promise<void> => {
+  if (!isAppSetup) {
+    log.warn('App is not setup, not setting as default browser')
+    return
+  }
+
   let isSet = false
 
   if (isWindows()) {

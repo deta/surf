@@ -2,6 +2,12 @@ import { app } from 'electron'
 import { execSync } from 'child_process'
 import path from 'path'
 
+export let isAppSetup = false
+
+export const markAppAsSetup = () => {
+  isAppSetup = true
+}
+
 const isDefaultBrowserWindows = async () => {
   try {
     const httpProgId = execSync(

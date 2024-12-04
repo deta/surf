@@ -9,7 +9,13 @@ import { isDev, isMac, isPDFViewerURL, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
-import { firefoxUA, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
+import {
+  firefoxUA,
+  isAppSetup,
+  isPathSafe,
+  normalizeElectronUserAgent,
+  PDFViewerEntryPoint
+} from './utils'
 import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
 
@@ -20,6 +26,11 @@ const log = useLogScope('MainWindow')
 electronDragClick()
 
 export function createWindow() {
+  if (!isAppSetup) {
+    log.warn('App is not setup, not allowed to create main window')
+    return
+  }
+
   const winState = new WindowState(
     {
       saveImmediately: is.dev
