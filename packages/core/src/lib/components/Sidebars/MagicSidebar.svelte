@@ -285,7 +285,8 @@
   }
 
   const openModelSettings = () => {
-    window.api.openSettings('ai')
+    // window.api.openSettings('ai')
+    window.api.openSettings()
   }
 
   const handleModelSelect = async (e: CustomEvent<string>) => {
