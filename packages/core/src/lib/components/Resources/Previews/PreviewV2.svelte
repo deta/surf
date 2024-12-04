@@ -87,6 +87,7 @@
   export let title: string | undefined = undefined
   export let titleValue: string = ''
   export let editTitle: boolean = false
+  export let titleEditable: boolean = interactive
 
   export let media: string | undefined = undefined
   export let content: string | undefined = undefined
@@ -261,10 +262,12 @@
 
 <div
   class="preview view-{viewMode}"
+  data-origin={origin}
   data-resource-type={type}
   data-resource-id={resource.id}
   class:interactive
   class:processing={isProcessing}
+  class:titleEditable
 >
   <div class="inner">
     {#if showMediaBlock}
@@ -524,6 +527,25 @@
     border-radius: 0;
   }
 
+  .preview.titleEditable > .inner > .content > h1 {
+    &:hover {
+      border-bottom: 1px dashed rgba(50, 50, 50, 0.2);
+      :global(.dark) & {
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+    }
+    &:focus,
+    &:active {
+      outline: none;
+      border: none;
+      border-bottom: 1px dashed rgba(50, 50, 50, 0.75);
+      cursor: text;
+
+      :global(.dark) & {
+        border-color: rgba(255, 255, 255, 0.75);
+      }
+    }
+  }
   .preview {
     width: 100%;
     height: 100%;
@@ -645,6 +667,8 @@
           -moz-osx-font-smoothing: grayscale;
           overflow-wrap: break-word;
           text-wrap: balance;
+          text-overflow: ellipsis;
+
           margin-bottom: 0.15em;
           border-bottom: 1px solid transparent;
           transition: border-bottom 125ms ease;
@@ -654,24 +678,6 @@
           //:global(.interactive) & {
           pointer-events: unset;
           //}
-
-          &:hover {
-            border-bottom: 1px dashed rgba(50, 50, 50, 0.2);
-            :global(.dark) & {
-              border-color: rgba(255, 255, 255, 0.4);
-            }
-          }
-          &:focus,
-          &:active {
-            outline: none;
-            border: none;
-            border-bottom: 1px dashed rgba(50, 50, 50, 0.75);
-            cursor: text;
-
-            :global(.dark) & {
-              border-color: rgba(255, 255, 255, 0.75);
-            }
-          }
 
           &:empty:before {
             content: attr(placeholder);
@@ -692,6 +698,8 @@
           -webkit-line-clamp: var(--MAX_content_lines, 4);
           overflow-wrap: break-word;
           text-wrap: pretty;
+
+          text-overflow: ellipsis;
         }
 
         mark {
@@ -893,6 +901,19 @@
           :global(img) {
             max-height: unset !important;
             height: 100%;
+            object-fit: cover;
+          }
+        }
+        .content,
+        .annotation {
+          min-height: 0;
+          overflow: hidden;
+          > h1 {
+            //min-height: 0;
+            flex-shrink: 0;
+          }
+          > p {
+            min-height: 0;
           }
         }
       }

@@ -91,6 +91,7 @@
   export let interactive: boolean = false
   export let draggable = interactive
   export let frameless: boolean = false
+  export let titleEditable = interactive
 
   /// View
   export let mode: ContentMode = 'full'
@@ -814,6 +815,7 @@
   }
 
   const handleStartEditTitle = async () => {
+    if (!titleEditable) return
     log.debug('Starting to edit title', resource.id, interactive)
     if (interactive) {
       showEditMode = true
@@ -956,6 +958,7 @@
   class="resource-preview content-{mode} view-{viewMode}"
   class:frame={!frameless}
   class:selected
+  data-origin={origin}
   data-resource-type={resource.type}
   data-resource-id={resource.id}
   data-selectable
@@ -994,6 +997,7 @@
       {interactive}
       {origin}
       {viewMode}
+      {titleEditable}
       type={previewData.type}
       url={previewData.url}
       media={previewData?.image}
@@ -1101,41 +1105,6 @@
       -webkit-user-drag: none;
     }
 
-    /// Special resource type overrides
-    &[data-resource-type='application/vnd.space.post.twitter'] {
-      --text-color: #fff;
-      --text-muted-opacity: 0.9;
-      --background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%);
-    }
-    &[data-resource-type='application/vnd.space.post.reddit'] {
-      --text-color: #fff;
-      --text-muted-opacity: 0.9;
-      --color1: #ff4500;
-      --color2: #ff7947;
-      --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
-    }
-    &[data-resource-type^='application/vnd.space.document.notion'] {
-      --text-muted-opacity: 0.9;
-      --color1: #fff;
-      --color2: #fafafa;
-      :global(.dark) & {
-        --text-color: #fff;
-        --color1: #222;
-        --color2: #1a1a1a;
-      }
-
-      --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
-    }
-    &[data-resource-type^='application/vnd.space.chat-thread.slack'] {
-      --text-muted-opacity: 0.9;
-      --color1: #d5ffed;
-      --color2: #ecf9ff;
-      --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
-    }
-    &[data-resource-type^='application/vnd.space.post.youtube'] {
-      // TODO: Custom Style
-    }
-
     &.frame {
       background: var(--background);
       border-radius: 1.1em;
@@ -1171,6 +1140,43 @@
           outline-color: rgba(10, 143, 255, 0.4) !important;
         }
       }
+
+      /// Special resource type overrides
+      // NOTE: I only override them in the framed mode, so that the color changes etc dont override sth
+      // e.g. inside the command menu.
+      &[data-resource-type='application/vnd.space.post.twitter'] {
+        --text-color: #fff;
+        --text-muted-opacity: 0.9;
+        --background: radial-gradient(100% 100% at 50% 0%, #000 0%, #252525 100%);
+      }
+      &[data-resource-type='application/vnd.space.post.reddit'] {
+        --text-color: #fff;
+        --text-muted-opacity: 0.9;
+        --color1: #ff4500;
+        --color2: #ff7947;
+        --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+      }
+      &[data-resource-type^='application/vnd.space.document.notion'] {
+        --text-muted-opacity: 0.9;
+        --color1: #fff;
+        --color2: #fafafa;
+        :global(.dark) & {
+          --text-color: #fff;
+          --color1: #222;
+          --color2: #1a1a1a;
+        }
+
+        --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+      }
+      &[data-resource-type^='application/vnd.space.chat-thread.slack'] {
+        --text-muted-opacity: 0.9;
+        --color1: #d5ffed;
+        --color2: #ecf9ff;
+        --background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+      }
+      &[data-resource-type^='application/vnd.space.post.youtube'] {
+        // TODO: Custom Style
+      }
     }
 
     &.interactive {
@@ -1202,6 +1208,9 @@
     max-width: 27ch;
     overflow: hidden;
     pointer-events: none;
+
+    //width: var(--drag-width, auto) !important;
+    //height: var(--drag-height, auto) !important;
   }
   :global(.drag-item[data-drag-preview] .resource-preview .preview) {
     box-shadow:

@@ -12,7 +12,7 @@
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny' | 'responsive'
-  export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space'
+  export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space' | 'cmdt'
   export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
 
   export type Annotation = {
@@ -180,6 +180,7 @@
   class:background
   style="--color1: {theme && theme[0]}; --color2: {theme && theme[1]}"
   data-resource-type={type}
+  data-origin={origin}
 >
   <div class="preview-card relative">
     <!-- <div class="absolute top-1 right-1 z-50 {theme ? 'text-white/50' : 'text-black/50'}">

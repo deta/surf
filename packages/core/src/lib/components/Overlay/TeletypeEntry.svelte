@@ -544,10 +544,16 @@
 
   :global(#tty-default .resource-preview) {
     height: 100%;
+    // TODO: This override is dumb
+    --text-color: currentColor !important;
     :global(.preview) {
       height: 100%;
       font-size: 0.8em;
-      --MAX_content_lines: 3 !important;
+      --MAX_title_lines: 3 !important;
+      --MAX_content_lines: 6 !important;
+      :global(> .inner :last-child:not(.media)) {
+        margin-bottom: 0.3em;
+      }
       /*border: 0 !important;
       :global(.preview-card .inner) {
         height: 100%;
@@ -561,5 +567,12 @@
         }
       }*/
     }
+  }
+  :global(.resource-preview[data-origin='cmdt'][data-drag-preview]) {
+    background: #fff !important;
+    width: var(--drag-width, auto) !important;
+    height: var(--drag-height, auto) !important;
+    border-radius: 0.75em !important;
+    overflow: clip !important;
   }
 </style>

@@ -36,8 +36,9 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
       viewMode: 'responsive',
       interactive: false,
       frameless: true,
-      origin: 'stuff',
-      background: false
+      draggable: true,
+      titleEditable: false,
+      origin: 'cmdt'
     },
     view: 'Inline',
     actionPanel: [
@@ -150,9 +151,10 @@ const createResourceAction = async (entry: { id: string }, resourceManager: Reso
         mode: 'compact',
         viewMode: 'responsive',
         interactive: false,
+        draggable: true,
         frameless: true,
-        origin: 'stuff',
-        background: false
+        titleEditable: false,
+        origin: 'cmdt'
       },
       view: 'Inline',
       actionPanel: [
