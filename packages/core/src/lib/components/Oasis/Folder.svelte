@@ -369,6 +369,13 @@
   aria-hidden="true"
   draggable={true}
   use:HTMLDragItem.action={{}}
+  on:mouseup={(e) => {
+    if (e.button === 1) {
+      // Middle mouse button
+      e.preventDefault()
+      addItemToTabs()
+    }
+  }}
   on:DragStart={handleDragStart}
   use:HTMLDragZone.action={{
     accepts: (drag) => {

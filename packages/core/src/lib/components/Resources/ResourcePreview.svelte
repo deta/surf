@@ -967,6 +967,13 @@
   data-tooltip-target="stuff-example-resource"
   on:DragStart={handleDragStart}
   on:click={handleClick}
+  on:mouseup={(e) => {
+    if (e.button === 1) {
+      // Middle mouse button
+      e.preventDefault()
+      openResourceAsTab(resource.id)
+    }
+  }}
   {draggable}
   use:HTMLDragItem.action={{}}
   use:contextMenu={{
