@@ -1504,7 +1504,7 @@
                 class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 p-3 rounded-xl w-fit mb-2"
               >
                 <div class="flex items-start gap-2.5">
-                  <div class="icon mt-0.5 bg-sky-50 rounded-full p-1.5">
+                  <div class="icon mt-0.5 bg-sky-50 dark:bg-gray-700 rounded-full p-1.5">
                     <Icon name="message" size="1em" />
                   </div>
 
