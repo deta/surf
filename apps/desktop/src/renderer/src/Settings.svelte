@@ -375,14 +375,6 @@
             bind:value={userConfigSettings.go_wild_mode}
             on:update={handleSettingsUpdate}
           />
-
-          <SettingsOption
-            icon="marker"
-            title="Annotations Sidebar"
-            description="View and create annotations from the page sidebar."
-            bind:value={userConfigSettings.annotations_sidebar}
-            on:update={handleSettingsUpdate}
-          />
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}
