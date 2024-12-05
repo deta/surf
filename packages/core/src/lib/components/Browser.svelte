@@ -63,6 +63,7 @@
 
   import TeletypeEntry from './Overlay/TeletypeEntry.svelte'
 
+  import './colors.scss'
   import './index.scss'
   import type {
     PageMagic,
@@ -5821,11 +5822,14 @@
       width: calc(100% + 15px);
       pointer-events: none !important;
 
-      background: var(--mixed-bg) !important;
-      :global(.dark) & {
-        background: var(--mixed-bg-dark) !important;
-      }
       backdrop-filter: blur(12px);
+      background: var(--mixed-bg);
+    }
+  }
+  :global(body.custom.dark .browser-content) {
+    &::before {
+      transition: background 245ms ease-out;
+      background: var(--mixed-bg-dark) !important;
     }
   }
   :global(body:has(.homescreenVisible) .browser-content::before) {
@@ -6299,7 +6303,6 @@
   .browser-window {
     height: 100%;
     width: 100%;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     position: absolute;
     top: 0;
     opacity: 0;
