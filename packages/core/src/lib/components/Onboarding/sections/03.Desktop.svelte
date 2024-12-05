@@ -111,7 +111,7 @@
   <div class="text-center text-white text-lg">
     Surf lets you create unlimited desktops and hyperlink them together. More
     <a
-      href="https://www.notion.so/deta/Surf-Zero-One-151a5244a7178006a12de67eafdb3e5a?pvs=4#151a5244a71781eb8fb9eda39ed3eb34"
+      href="https://deta.notion.site/Surf-Zero-One-e9c49ddf02a8476fb3c53b7efdc7e0fd#152a5244a7178034abb9ecf6fa2986ac"
       target="_blank"
       class="text-white-400 hover:text-white-300 underline">here</a
     >.
