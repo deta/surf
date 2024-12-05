@@ -220,9 +220,28 @@
   <div class="h-screen overflow-y-auto">
     <section
       id="welcome"
-      class="hero h-[90vh] flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
+      class="hero h-[80vh] flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
       style="background-image: url({onboardingSky})"
     >
+      <div class="absolute top-4 right-1 p-3 bg-white/90 z-50 rounded-xl w-full md:!w-auto mx-4">
+        <div class="flex flex-col items-center justify-center">
+          <p class="text-center text-gray-700 text-sm md:!text-base">
+            Need help? Check out our <a
+              rel="noopener noreferrer"
+              target="_blank"
+              href="https://deta.notion.site/Surf-Zero-e9c49ddf02a8476fb3c53b7efdc7e0fd"
+              class="text-[#2497e9] underline">documentation</a
+            >
+            or join our
+            <a
+              rel="noopener noreferrer"
+              target="_blank"
+              href="https://deta.surf/discord"
+              class="text-[#2497e9] underline">Discord community</a
+            >.
+          </p>
+        </div>
+      </div>
       <div class="flex flex-col gap-4 w-full max-w-7xl mx-auto px-4" style="z-index: 2147483647">
         <h1
           class="font-gambarino text-3xl md:!text-5xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
@@ -312,29 +331,6 @@
     </section> -->
 
     <Done {modShortcut} />
-  </div>
-</div>
-
-<div
-  class="fixed bottom-0 left-1/2 transform -translate-x-1/2 p-4 bg-white z-50 shadow-lg rounded-tl-2xl rounded-tr-2xl border border-gray-200 w-full md:!w-auto mx-4"
-  style="box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-top-left-radius: 12px; border-top-right-radius: 12px;"
->
-  <div class="flex flex-col items-center justify-center">
-    <p class="text-center text-gray-700 text-sm md:!text-base">
-      Need help? Check out our <a
-        rel="noopener noreferrer"
-        target="_blank"
-        href="https://deta.notion.site/Surf-Zero-e9c49ddf02a8476fb3c53b7efdc7e0fd"
-        class="text-[#2497e9] underline">documentation</a
-      >
-      or join our
-      <a
-        rel="noopener noreferrer"
-        target="_blank"
-        href="https://deta.surf/discord"
-        class="text-[#2497e9] underline">Discord community</a
-      >.
-    </p>
   </div>
 </div>
 

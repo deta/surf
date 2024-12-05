@@ -124,6 +124,13 @@
 <section
   class="w-full min-h-screen flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
 >
+  <div class="absolute top-[5vh]">
+    <h1
+      class="font-gambarino text-3xl md:!text-4xl text-white leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+    >
+      Surf Playground
+    </h1>
+  </div>
   <div
     class="flex flex-col lg:!flex-row gap-8 lg:!gap-24 w-full max-w-full lg:!max-w-7xl mx-auto z-50"
   >

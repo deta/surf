@@ -108,4 +108,12 @@
       <p class="text-xs md:!text-sm text-sky-900/70">or use {modShortcut} + 1 to open.</p>
     </div>
   </div>
+  <div class="text-center text-white text-lg">
+    Surf lets you create unlimited desktops and hyperlink them together. More
+    <a
+      href="https://www.notion.so/deta/Surf-Zero-One-151a5244a7178006a12de67eafdb3e5a?pvs=4#151a5244a71781eb8fb9eda39ed3eb34"
+      target="_blank"
+      class="text-white-400 hover:text-white-300 underline">here</a
+    >.
+  </div>
 </section>

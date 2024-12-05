@@ -85,7 +85,7 @@ export const onboardingResources: OnboardingTab[] = [
   },
   {
     title: 'The Dream Machine',
-    url: 'https://press.stripe.com/the-dream-machine'
+    url: 'https://www.goodreads.com/book/show/722412.The_Dream_Machine'
   }
 ]
 
