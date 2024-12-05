@@ -4667,7 +4667,7 @@
   {/if}
 
   {#if $desktopVisible && $activeDesktop}
-    {#key $activeDesktop}
+    {#key $activeDesktop.id}
       <Homescreen
         desktop={$activeDesktop}
         newTabOverlayState={$showNewTabOverlay}
