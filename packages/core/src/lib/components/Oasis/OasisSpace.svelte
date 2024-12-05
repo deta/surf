@@ -30,7 +30,7 @@
   import { Icon } from '@horizon/icons'
   import Chat from '../Chat/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
-  import { createEventDispatcher, onDestroy, tick } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import {
     Resource,
     ResourceManager,
@@ -1359,12 +1359,6 @@
   const handleReload = async () => {
     await loadSpaceContents(spaceId, true)
   }
-
-  onDestroy(
-    tabsManager.showNewTabOverlay.subscribe((value) =>
-      console.trace('[OasisSpace]: showNewTabOverlay', value)
-    )
-  )
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
