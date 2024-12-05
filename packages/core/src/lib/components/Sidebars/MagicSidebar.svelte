@@ -807,7 +807,8 @@
   const isScreenshotNeededForPromptAndTab = async (
     prompt: string,
     tab: TabPage,
-    tier?: ModelTiers
+    tier?: ModelTiers,
+    isRetry = false
   ) => {
     try {
       if ($userConfigSettings.always_include_screenshot_in_chat) {
@@ -846,17 +847,22 @@
       if (e instanceof QuotaDepletedError) {
         const res = handleQuotaDepletedError(e)
         log.error('Quota depleted', res)
-        if (res.exceededTiers.length === 1 && res.exceededTiers.includes(ModelTiers.Standard)) {
+        if (
+          !isRetry &&
+          res.exceededTiers.length === 1 &&
+          res.exceededTiers.includes(ModelTiers.Standard)
+        ) {
           log.debug('Retrying with premium model')
-          return isScreenshotNeededForPromptAndTab(prompt, tab, ModelTiers.Premium)
+          return isScreenshotNeededForPromptAndTab(prompt, tab, ModelTiers.Premium, true)
         }
       }
+
       return false
     }
   }
 
   const generateExamplePromptsForPage = useDebounce(
-    async (resourceId: string, tab: TabPage, tier?: ModelTiers) => {
+    async (resourceId: string, tab: TabPage, tier?: ModelTiers, isRetry = false) => {
       try {
         generatingExamplePrompts.set(true)
         resourceToGeneratePromptsFor.set(resourceId)
@@ -940,14 +946,24 @@
         if (e instanceof QuotaDepletedError) {
           const res = handleQuotaDepletedError(e)
           log.error('Quota depleted', res)
-          if (res.exceededTiers.length === 1 && res.exceededTiers.includes(ModelTiers.Standard)) {
+          if (
+            !isRetry &&
+            res.exceededTiers.length === 1 &&
+            res.exceededTiers.includes(ModelTiers.Standard)
+          ) {
             log.debug('Retrying with premium model')
-            generateExamplePromptsForPage(resourceId, tab, ModelTiers.Premium)
+            return generateExamplePromptsForPage(resourceId, tab, ModelTiers.Premium, true)
           }
         } else {
           log.error('Error generating prompts', e)
           toasts.error('Error generating prompts', e)
         }
+
+        examplePrompts.set([])
+        generatingExamplePrompts.set(false)
+        resourceToGeneratePromptsFor.set(null)
+        resourceToGeneratePromptsForState.set(null)
+        return null
       } finally {
         generatingExamplePrompts.set(false)
       }

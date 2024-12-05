@@ -308,7 +308,8 @@ export class AIService {
       sqlQuery?: string
       embeddingQuery?: string
       embeddingDistanceThreshold?: number
-    }
+    },
+    isRetry = false
   ): Promise<AiSFFSQueryResponse> {
     const tier = opts?.tier ?? ModelTiers.Premium
     try {
@@ -329,12 +330,13 @@ export class AIService {
         const res = handleQuotaDepletedError(e)
         this.log.error('Quota depleted', res)
         if (
+          !isRetry &&
           tier === ModelTiers.Premium &&
           res.exceededTiers.length === 1 &&
           res.exceededTiers.includes(ModelTiers.Premium)
         ) {
           this.log.debug('Retrying with standard model')
-          return this.getResourcesViaPrompt(prompt, { ...opts, tier: ModelTiers.Standard })
+          return this.getResourcesViaPrompt(prompt, { ...opts, tier: ModelTiers.Standard }, true)
         }
       }
 

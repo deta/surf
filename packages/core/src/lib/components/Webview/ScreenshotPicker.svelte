@@ -431,7 +431,7 @@
     scrollToBottom()
   }
 
-  async function handleAISubmit(tier?: ModelTiers) {
+  async function handleAISubmit(tier?: ModelTiers, isRetry = false) {
     if (prompt.length < 1) {
       return
     }
@@ -500,12 +500,16 @@
       if (e instanceof QuotaDepletedError) {
         const res = handleQuotaDepletedError(e)
         log.error('Quota depleted', res)
-        if (res.exceededTiers.length === 1 && res.exceededTiers.includes(ModelTiers.Premium)) {
+        if (
+          !isRetry &&
+          res.exceededTiers.length === 1 &&
+          res.exceededTiers.includes(ModelTiers.Premium)
+        ) {
           log.debug('Retrying with standard model')
           prompt = savedInputValue
           editor.setContent(savedInputValue)
           await tick()
-          return handleAISubmit(ModelTiers.Standard)
+          return handleAISubmit(ModelTiers.Standard, true)
         }
       }
 
