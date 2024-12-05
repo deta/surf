@@ -44,8 +44,8 @@
     >
       <h2 class="text-xl md:!text-2xl font-medium mb-4 md:!mb-6">Your new Desktop</h2>
       <p class="text-gray-700 mb-4 md:!mb-6 text-sm md:!text-base">
-        On your Desktop you can drop links, notes spaces or whatever you want on it to make it
-        yours.
+        On your Desktop you can drop links, notes, files, whole contexts — whatever you want on it
+        to make it yours.
       </p>
       <p class="text-gray-700 text-sm md:!text-base">
         Personalize your space by dropping in your favorite images or GIFs as custom backgrounds.

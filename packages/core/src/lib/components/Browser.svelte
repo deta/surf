@@ -3403,7 +3403,7 @@
     const activeTabs = tabsList.filter((tab) => !tab.archived)
 
     if (activeTabs.length === 0) {
-      tabsManager.showNewTab()
+      // tabsManager.showNewTab()
     } else if ($activeTabId) {
       const tab = activeTabs.find((tab) => tab.id === $activeTabId)
 

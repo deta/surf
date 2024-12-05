@@ -38,12 +38,6 @@
     </div>
 
     <div class="flex flex-col items-center gap-4 mt-8">
-      <p
-        class="text-white text-lg md:!text-xl px-4 text-center [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
-      >
-        Organize the Tabs that we just saved into a Space.
-      </p>
-
       <div class="w-48" on:click={handleTryStuff} aria-hidden="true">
         <Button>Open Your stuff.</Button>
       </div>
