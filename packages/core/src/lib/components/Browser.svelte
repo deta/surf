@@ -937,6 +937,15 @@
         // if 9 is pressed, go to the last tab
         tabsManager.makeActive(tabs[tabs.length - 1].id, ActivateTabEventTrigger.Shortcut)
       }
+    } else if (
+      e.altKey &&
+      e.metaKey &&
+      // Check arrow keys based on tab orientation
+      (horizontalTabs
+        ? e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+        : e.key === 'ArrowUp' || e.key === 'ArrowDown')
+    ) {
+      cycleActiveTab(e.key === 'ArrowLeft' || e.key === 'ArrowUp')
     } else if (e.key === 'ArrowLeft' && e.metaKey) {
       if (canGoBack) {
         $activeBrowserTab?.goBack()
@@ -1017,9 +1026,12 @@
 
   const debounceToggleHorizontalTabs = useDebounce(handleToggleHorizontalTabs, 100)
   const debouncedCycleActiveTab = useDebounce((previous) => {
+    cycleActiveTab(previous)
+  }, 100)
+  const cycleActiveTab = (previous: boolean) => {
     const tabId = tabsManager.cycle(previous)
     if (tabId && tabId != $activeTabId) selectTab(tabId, ActivateTabEventTrigger.Shortcut)
-  }, 100)
+  }
 
   const openUrlHandler = (url: string, active = true) => {
     log.debug('open url', url, active)
