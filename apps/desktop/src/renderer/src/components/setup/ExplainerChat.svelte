@@ -9,8 +9,6 @@
   import { fade, fly } from 'svelte/transition'
   import DemoChat from './DemoChat.svelte'
 
-  import stuff from './assets/stuff.svg'
-
   export let persona: string[]
   const dispatch = createEventDispatcher()
 

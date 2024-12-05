@@ -1,5 +1,5 @@
 <script lang="ts">
-  import stuff from './assets/stuff.svg'
+  import stuff from './assets/hero.png'
   import stuffHeader from './assets/stuff.png'
   import stuffSave from './assets/stuff.save.mp4'
   import stuffSmartSpace from './assets/stuff.smart.space.mp4'
