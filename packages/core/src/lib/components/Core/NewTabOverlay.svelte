@@ -613,7 +613,7 @@
   >
     <MiniBrowser service={scopedMiniBrowser} />
 
-    <div class="w-[90vw] h-[calc(100vh-120px)] relative block overflow-hidden rounded-2xl">
+    <div class="stuff-outer w-[90vw] h-[calc(100vh-120px)] relative block overflow-hidden">
       <div class="flex h-full">
         {#if $onboardingOpen}
           <Onboarding
@@ -929,7 +929,7 @@
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%) translateZ(0);
-    border-radius: 32px;
+    border-radius: 24px 24px 16px 16px;
     -webkit-font-smoothing: antialiased;
     -webkit-app-region: no-drag;
     overflow: hidden;
@@ -985,6 +985,10 @@
 
   .background {
     background: linear-gradient(180deg, #e6ddda 0%, #f8f7f1 100%);
+  }
+
+  .stuff-outer {
+    border-radius: 24px 24px 16px 16px;
   }
 
   .modal-wrapper {
