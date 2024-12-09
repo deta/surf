@@ -10,7 +10,6 @@ import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
 import {
-  firefoxUA,
   isAppSetup,
   isPathSafe,
   normalizeElectronUserAgent,
@@ -43,11 +42,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-          x: winState.state.x,
-          y: winState.state.y,
-          width: winState.state.width,
-          height: winState.state.height
-        })
+        x: winState.state.x,
+        y: winState.state.y,
+        width: winState.state.width,
+        height: winState.state.height
+      })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -113,7 +112,8 @@ export function createWindow() {
   })
 
   const webviewSession = session.fromPartition('persist:horizon')
-  const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent())
+  const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent(), false)
+  const webviewSessionUserAgentGoogle = normalizeElectronUserAgent(webviewSession.getUserAgent(), true)
   const webRequestManager = getWebRequestManager()
 
   webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
@@ -128,12 +128,26 @@ export function createWindow() {
   })
   webRequestManager.addBeforeSendHeaders(webviewSession, (details, callback) => {
     const { requestHeaders, url } = details
-    const isGoogleAccounts = new URL(url).hostname === 'accounts.google.com'
-    requestHeaders['User-Agent'] = isGoogleAccounts ? firefoxUA : webviewSessionUserAgent
+    const parsedURL = new URL(url)
+    const isTwitch = parsedURL.hostname === 'twitch.tv' || parsedURL.hostname.endsWith('.twitch.tv')
+    const isGoogleAccounts = parsedURL.hostname === 'accounts.google.com'
 
-    const chromiumVersion = process.versions.chrome.split('.')[0]
-    requestHeaders['Sec-CH-UA'] = `"Chromium";v="${chromiumVersion}", " Not A;Brand";v="99"`
-    requestHeaders['Sec-CH-UA-Mobile'] = '?0'
+    // Do not modify any request headers for `*.twitch.tv`
+    if (isTwitch) {
+      return 
+    }
+
+    if (isGoogleAccounts) {
+      requestHeaders['User-Agent'] = webviewSessionUserAgentGoogle
+    } else {
+      requestHeaders['User-Agent'] = webviewSessionUserAgent
+    }
+
+    // These headers seem to be breaking Google Sign-in with "secure browser warnings".
+    //
+    // const chromiumVersion = process.versions.chrome.split('.')[0]
+    // requestHeaders['Sec-CH-UA'] = `"Chromium";v="${chromiumVersion}", " Not A;Brand";v="99"`
+    // requestHeaders['Sec-CH-UA-Mobile'] = '?0'
 
     callback({ requestHeaders })
   })

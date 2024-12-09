@@ -74,10 +74,19 @@ export const isPathSafe = (basePath: string, filePath: string): boolean => {
   return path.resolve(basePath, filePath).startsWith(path.resolve(basePath))
 }
 
-export const normalizeElectronUserAgent = (current: string): string => {
-  return current
+export const normalizeElectronUserAgent = (current: string, isGoogleAccounts: boolean): string => {
+  // For Google sign-in pages, we keep the Surf version at the end of the User-Agent
+  // to avoid "secure browser" warnings. For everything else, we strip out both
+  // Electron and Surf versions.
+  const surfVersion =
+    current
+      .split(' ')
+      .find((part) => part.startsWith('Surf/'))
+      ?.replace('Surf/', '') || ''
+
+  let result = current
     .split(' ')
-    .filter((part) => !part.startsWith('Surf/') && !part.startsWith('Electron/'))
+    .filter((part) => !part.startsWith('Electron/') && !part.startsWith('Surf/'))
     .join(' ')
     .replace(
       process.versions.chrome || '',
@@ -88,6 +97,12 @@ export const normalizeElectronUserAgent = (current: string): string => {
             .join('.')
         : ''
     )
+
+  if (isGoogleAccounts && surfVersion) {
+    result += ` Surf/${surfVersion}`
+  }
+
+  return result
 }
 
 export const firefoxUA = (() => {
