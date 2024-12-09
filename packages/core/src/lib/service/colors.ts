@@ -74,6 +74,22 @@ export class ColorService {
     for (const f of this.unsubscribers) f()
   }
 
+  applyColorVariables(scheme: CustomColorData) {
+    const root = document.querySelector(':root') as HTMLElement
+    if (!root) {
+      this.log.error('No :root? This shouldnt happen')
+      return
+    }
+    const defs: Record<string, string | number> = {
+      '--base-color': scheme.color,
+      '--base-color-hue': scheme.h,
+      '--base-color-saturation': scheme.s,
+      '--base-color-lightness': scheme.l,
+      '--contrast-color': scheme.contrastColor
+    }
+    Object.entries(defs).forEach((v) => root.style.setProperty(v[0], v[1].toString(), 'important'))
+  }
+
   async calculateImagePalette(imageResourceId: string): Promise<ColorRGB[] | null> {
     try {
       const img = new Image()
@@ -105,11 +121,13 @@ export class ColorService {
       s: 92,
       l: 50
     })
+    this.applyColorVariables(get(this._colorScheme))
   }
 
   usePalette(palette: ColorRGB[], darkMode: boolean) {
     const colors = this.calculateColors(!darkMode ? palette.at(0) : palette.at(-1), darkMode)
     this._colorScheme.set(colors)
+    this.applyColorVariables(get(this._colorScheme))
   }
 
   calculateColors(fromColor: ColorRGB, isDarkMode: boolean): CustomColorData {

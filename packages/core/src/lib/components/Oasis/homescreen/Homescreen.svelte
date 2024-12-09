@@ -364,20 +364,20 @@
         }
 
         :global(.custom) & {
-          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+          background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
           color: var(--contrast-color) !important;
 
           &:hover {
-            background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.3)) !important;
+            background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.3)) !important;
           }
         }
 
         :global(.dark.custom) & {
-          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+          background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.65)) !important;
           color: var(--contrast-color) !important;
 
           &:hover {
-            background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.75)) !important;
+            background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.75)) !important;
           }
         }
       }

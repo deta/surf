@@ -445,10 +445,10 @@
 
       :global(.custom) & {
         color: var(--contrast-color) !important;
-        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+        --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
       }
       :global(.custom.dark) & {
-        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+        --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.65)) !important;
       }
     }
   }
@@ -545,10 +545,10 @@
 
       :global(.custom) & {
         color: var(--contrast-color) !important;
-        background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 90%, 0.3)) !important;
+        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 90%, 0.3)) !important;
       }
       :global(.custom.dark) & {
-        background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 00%, 0.65)) !important;
+        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 00%, 0.65)) !important;
       }
     }
 

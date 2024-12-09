@@ -22,7 +22,6 @@
   import { contextMenu, type CtxItem } from './ContextMenu.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useTabsManager } from '../../service/tabs'
-  import { useColorService } from '../../service/colors'
   import {
     ChangeContextEventTrigger,
     DeleteTabEventTrigger,
@@ -68,14 +67,12 @@
   const oasis = useOasis()
   const toasts = useToasts()
   const desktopManager = useDesktopManager()
-  const colorService = useColorService()
   const globalMiniBrowser = useGlobalMiniBrowser()
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
 
   const desktopVisible = desktopManager.activeDesktopVisible
   const activeDesktopColorScheme = desktopManager.activeDesktopColorScheme
 
-  const colorScheme = colorService.colorScheme
   const userSettings = userConfig.settings
 
   // Why is there no better way in Svelte :/
@@ -648,8 +645,6 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
     : ''}
   style:position="relative"
-  style:--custom-color={$colorScheme.color}
-  style:--contrast-color={$colorScheme.contrastColor}
   aria-hidden="true"
   use:HTMLDragItem.action={{}}
   on:DragStart={handleDragStart}
@@ -1107,7 +1102,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         --squircle-inner-shadow: 0 !important;
         --squircle-outline-width: 1.5px !important;
         --squircle-outline-color: transparent !important;
-        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+        --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
       }
 
       :global(.custom.dark) & {
@@ -1115,7 +1110,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         --squircle-inner-shadow: 0 !important;
         --squircle-outline-width: 1.5px !important;
         --squircle-outline-color: transparent !important;
-        --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+        --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.65)) !important;
       }
     }
 
@@ -1149,19 +1144,11 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         }
 
         :global(.custom) & {
-          --squircle-fill: color-mix(
-            in hsl,
-            var(--custom-color),
-            hsla(0, 80%, 70%, 0.65)
-          ) !important;
+          --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 70%, 0.65)) !important;
         }
 
         :global(.custom.dark) & {
-          --squircle-fill: color-mix(
-            in hsl,
-            var(--custom-color),
-            hsla(0, 40%, 33%, 0.8)
-          ) !important;
+          --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 40%, 33%, 0.8)) !important;
         }
 
         &:hover {
@@ -1456,10 +1443,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     // TODO: Fix squircle shadow
 
     :global(.custom) & {
-      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+      --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
     }
     :global(.dark.custom) & {
-      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.65)) !important;
+      --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.65)) !important;
     }
   }
 
@@ -1477,10 +1464,10 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     opacity: 100%;
 
     :global(.custom) & {
-      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.75)) !important;
+      --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.75)) !important;
     }
     :global(.dark.custom) & {
-      --squircle-fill: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 50%, 0.55)) !important;
+      --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.55)) !important;
     }
   }
 

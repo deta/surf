@@ -346,7 +346,7 @@
       &:hover {
         :global(.custom) & {
           color: var(--contrast-color) !important;
-          background: color-mix(in hsl, var(--custom-color), hsla(0, 80%, 0%, 0.2)) !important;
+          background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
         }
       }
     }
@@ -647,7 +647,7 @@
         -webkit-app-region: no-drag;
 
         :global(.custom) & {
-          --color: var(--custom-color) !important;
+          --color: var(--base-color) !important;
         }
       }
       &:not(.isMac)::before {

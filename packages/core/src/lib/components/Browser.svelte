@@ -4607,12 +4607,6 @@
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
   style:--background-image={$backgroundImage?.path}
-  style:--background-image-color={$colorScheme.color}
-  style:--bg-color-h={$colorScheme.h}
-  style:--bg-color-s={$colorScheme.s}
-  style:--bg-color-l={$colorScheme.l}
-  style:--custom-color={$colorScheme.color}
-  style:--contrast-color={$colorScheme.contrastColor}
   style:--background-opacity={$backgroundImage?.path?.startsWith(`url('surf://`) ? 1 : 0.4}
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
@@ -5763,18 +5757,6 @@
   .vertical-window-bar {
     position: relative;
     &.customBg {
-      --mixed-bg: color-mix(
-        in hsl,
-        var(--background-image-color),
-        hsl(var(--bg-color-h) 100%, 100%, 0.65)
-      );
-
-      --mixed-bg-dark: color-mix(
-        in hsl,
-        var(--background-image-color),
-        hsl(var(--bg-color-h) 80%, 0%, 0.65)
-      );
-
       &::before {
         content: '';
         position: absolute;
@@ -5799,18 +5781,6 @@
 
   /* MAXU HOMESCREEN JANK TODO: Cleanup / move to correct places*/
   :global(body.custom .browser-content) {
-    --mixed-bg: color-mix(
-      in hsl,
-      var(--background-image-color),
-      hsl(var(--bg-color-h) 100%, 100%, 0.65)
-    );
-
-    --mixed-bg-dark: color-mix(
-      in hsl,
-      var(--background-image-color),
-      hsl(var(--bg-color-h) 80%, 0%, 0.65)
-    );
-
     position: relative;
     &::before {
       content: '';
@@ -5837,17 +5807,6 @@
   }
   #left-sidebar {
     position: relative;
-    --mixed-bg: color-mix(
-      in hsl,
-      var(--background-image-color),
-      hsl(var(--bg-color-h) 100%, 100%, 0.65)
-    );
-
-    --mixed-bg-dark: color-mix(
-      in hsl,
-      var(--background-image-color),
-      hsl(var(--bg-color-h) 80%, 0%, 0.65)
-    );
 
     &::before {
       opacity: 0;

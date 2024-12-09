@@ -3,17 +3,12 @@
   import { flyAndScale } from '@horizon/utils'
   import { Tooltip } from 'bits-ui'
   import { createEventDispatcher } from 'svelte'
-  import { provideConfig } from '../../service/config'
-  import { useColorService } from '../../service/colors'
 
   export let horizontalTabs: boolean
   export let showCustomWindowActions: boolean
   export let canGoBack: boolean
   export let canGoForward: boolean
   export let canReload: boolean
-
-  const colorService = useColorService()
-  const colorScheme = colorService.colorScheme
 
   const dispatch = createEventDispatcher<{
     'go-back': void
@@ -25,8 +20,6 @@
 </script>
 
 <div
-  style:--custom-color={$colorScheme.color}
-  style:--contrast-color={$colorScheme.contrastColor}
   class="flex flex-row items-center flex-shrink-0 {horizontalTabs
     ? 'pl-3'
     : showCustomWindowActions
@@ -208,10 +201,10 @@
       color: var(--contrast-color) !important;
       // This is a hack since i have no idea where the active class is set.
       &.bg-sky-200 {
-        background-color: var(--custom-color) !important;
+        background-color: var(--base-color) !important;
       }
       &:hover {
-        background-color: var(--custom-color) !important;
+        background-color: var(--base-color) !important;
       }
     }
   }

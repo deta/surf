@@ -51,4 +51,19 @@
   // TODO: (@maxu): Theming
   //--base-color-primary: #E0F2FE;
   //--base-color-secondary: #eee;
+
+  // Current Theming
+  --base-color: inherit;
+  --base-color-hue: inherit;
+  --base-color-saturation: inherit;
+  --base-color-lightness: inherit;
+  --contrast-color: inherit;
+
+  --mixed-bg: color-mix(in hsl,
+      var(--base-color),
+      hsl(var(--base-color-hue) 100%, 100%, 0.65));
+  --mixed-bg-dark: color-mix(in hsl,
+      var(--base-color),
+      hsl(var(--base-color-hue) 80%, 0%, 0.65));
+
 }
