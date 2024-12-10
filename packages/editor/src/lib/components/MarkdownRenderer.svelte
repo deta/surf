@@ -22,8 +22,17 @@
 
   const cleanContent = (content: string) => {
     const trimmed = content.trim()
-    if (trimmed.startsWith('```markdown')) {
-      const cleanBeginning = trimmed.replace('```markdown', '')
+    // first we escape dollar signs, like $44 st it does not trigger math mode
+    const escapedDollars = trimmed.replace(/\$(\d)/g, '\\$$$1')
+    // then replace latex groups that dont work on katex, like \( \) to $ $, and \[ \] to $$ $$
+    const replacedDelimiters = escapedDollars
+      .replace(/\\\(/g, '$ ')
+      .replace(/\\\)/g, ' $')
+      .replace(/\\\[/g, '$$')
+      .replace(/\\\]/g, '$$')
+
+    if (replacedDelimiters.startsWith('```markdown')) {
+      const cleanBeginning = replacedDelimiters.replace('```markdown', '')
 
       if (cleanBeginning.endsWith('```')) {
         return cleanBeginning.replace(/```$/, '')
@@ -32,7 +41,7 @@
       return cleanBeginning
     }
 
-    return trimmed
+    return replacedDelimiters
   }
 
   const createRehypePlugin = (plugin: any, opts?: any): Plugin => {
