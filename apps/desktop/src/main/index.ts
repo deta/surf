@@ -126,6 +126,17 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
       if (webContents) IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(webContents, false)
     })
 
+  IPC_EVENTS_MAIN.appReady.on(() => {
+    if (surfBackendManager) {
+      const webContents = getMainWindow()?.webContents
+      if (webContents)
+        IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(
+          webContents,
+          surfBackendManager.isHealthy
+        )
+    }
+  })
+
   surfBackendManager.start()
   await surfBackendManager.waitForStart()
 }
