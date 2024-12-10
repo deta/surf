@@ -8,6 +8,7 @@ use crate::server::server::LocalAIServer;
 use std::path::Path;
 use std::str::FromStr;
 use tracing::info;
+use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
 #[derive(thiserror::Error, Debug)]
@@ -35,7 +36,11 @@ fn main() {
         .with_target(false)
         .with_line_number(true)
         .with_thread_names(true)
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
         .try_init()
         .map_err(|err| eprintln!("failed to init tracing: {:?}", err))
         .ok();

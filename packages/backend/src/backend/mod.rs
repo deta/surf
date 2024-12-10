@@ -8,14 +8,18 @@ pub mod worker;
 
 use crate::backend::message::{MiscMessage, WorkerMessage};
 use neon::prelude::*;
-use tracing_subscriber::fmt::format::FmtSpan;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 const _MODULE_PREFIX: &'static str = "backend";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__backend_tunnel_init", js_tunnel_init)?;
     cx.export_function("js__backend_run_migration", js_run_migration)?;
-    cx.export_function("js__backend_set_vision_tagging_flag", js_set_vision_tagging_flag)?;
+    cx.export_function(
+        "js__backend_set_vision_tagging_flag",
+        js_set_vision_tagging_flag,
+    )?;
     cx.export_function(
         "js__backend_set_surf_backend_health",
         js_set_surf_backend_health,
@@ -30,7 +34,11 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
         .with_line_number(true)
         .with_thread_names(true)
         .with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER)
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
         .try_init()
         .map_err(|err| eprintln!("failed to init tracing: {:?}", err))
         .ok();
