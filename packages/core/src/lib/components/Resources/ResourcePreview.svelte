@@ -116,7 +116,7 @@
 
   const dispatch = createEventDispatcher<{
     click: string
-    remove: string
+    remove: { ids: string; deleteFromStuff: boolean }
     load: string
     open: string
     'open-and-chat': string
@@ -722,9 +722,9 @@
     handleClick(e.detail)
   }
 
-  const handleRemove = (e?: MouseEvent) => {
+  const handleRemove = async (e?: MouseEvent, deleteFromStuff = false) => {
     e?.stopImmediatePropagation()
-    dispatch('remove', resource.id)
+    dispatch('remove', { ids: resource.id, deleteFromStuff })
   }
 
   const handleBlacklisting = () => {
@@ -924,11 +924,30 @@
     ...(origin !== 'homescreen'
       ? [
           {
-            type: 'action',
+            type: isInSpace ? 'sub-menu' : 'action',
             icon: 'trash',
-            text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Context'}`,
+            text: isInSpace ? 'Delete' : 'Delete from Stuff',
             kind: 'danger',
-            action: () => handleRemove()
+            ...(isInSpace
+              ? {
+                  items: [
+                    {
+                      type: 'action',
+                      icon: 'close',
+                      text: 'Remove from Context',
+                      kind: 'danger',
+                      action: () => handleRemove(undefined, false)
+                    },
+                    {
+                      type: 'action',
+                      icon: 'trash',
+                      text: 'Delete from Stuff',
+                      kind: 'danger',
+                      action: () => handleRemove(undefined, true)
+                    }
+                  ]
+                }
+              : { action: () => handleRemove(undefined, true) })
           }
         ]
       : [

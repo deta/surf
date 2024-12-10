@@ -957,10 +957,12 @@
     searchResults.set(result.map((r) => r.resource.id))
   }
 
-  const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
-    const ids = e.detail
+  const handleResourceRemove = async (e: CustomEvent<{ ids: string | string[]; deleteFromStuff: boolean }>) => {
+    const ids = e.detail.ids
+    const deleteFromStuff = e.detail.deleteFromStuff
+
     try {
-      const res = await oasis.removeResourcesFromSpaceOrOasis(ids, spaceId)
+      const res = await oasis.removeResourcesFromSpaceOrOasis(ids, deleteFromStuff ? undefined : spaceId)
       if (!res) {
         return
       }

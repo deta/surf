@@ -5258,7 +5258,7 @@
               on:open-stuff={() => ($showNewTabOverlay = 2)}
               on:open={(e) =>
                 miniBrowserService.globalBrowser.openResource(e.detail, { from: 'stack' })}
-              on:remove={(e) => oasis.removeResourcesFromSpaceOrOasis(e.detail)}
+              on:remove={(e) => oasis.removeResourcesFromSpaceOrOasis(e.detail.ids)}
               on:open-and-chat={handleOpenAndChat}
               on:open-resource-in-mini-browser={(e) =>
                 openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.Stack)}

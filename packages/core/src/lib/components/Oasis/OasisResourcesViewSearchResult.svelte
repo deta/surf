@@ -60,8 +60,8 @@
     scrollTop = event.detail.scrollTop
   }
 
-  const handleBatchRemove = () => {
-    dispatch('batch-remove', $selectedItemIds)
+  const handleBatchRemove = (deleteFromStuff = false) => {
+    dispatch('batch-remove', { ids: $selectedItemIds, deleteFromStuff })
     deselectAll()
   }
 

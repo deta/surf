@@ -652,11 +652,10 @@ export class OasisService {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
     this.log.debug('removing resources from', spaceId ?? 'oasis', resourceIds)
 
-    if (spaceId) {
-      return this.removeResourcesFromSpace(spaceId, resourceIds)
-    } else {
+    if (!spaceId) {
       return this.deleteResourcesFromOasis(resourceIds)
     }
+    return this.removeResourcesFromSpace(spaceId, resourceIds)
   }
 
   async loadEverything(initialLoad = false) {

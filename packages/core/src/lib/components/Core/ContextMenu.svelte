@@ -26,6 +26,7 @@
   }
   export interface CtxItemSubMenu extends CtxItemBase {
     type: 'sub-menu'
+    kind?: 'danger'
     disabled?: boolean
     text: string
     icon?: string | [string, string] | OasisSpace // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class

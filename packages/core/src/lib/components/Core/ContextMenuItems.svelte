@@ -68,7 +68,7 @@
           <span class="truncate" style="flex: 1; width:100%; max-width: 20ch;">{item.text}</span>
         </button>
       {:else if item.type === 'sub-menu'}
-        <li class="sub-item" style="anchor-name: --sub-{i};">
+        <li class="sub-item" class:danger={item.kind === 'danger'} style="anchor-name: --sub-{i};">
           {#if item.icon}
             {#if typeof item.icon === 'string'}
               <Icon name={item.icon} size="1.2em" />
@@ -154,10 +154,10 @@
   ul.sub-menu:hover {
     display: flex;
   }
-  :global(ul:has(li.sub-item:hover) .sub-menu) {
+  :global(li.sub-item:hover + .sub-menu) {
     display: flex;
   }
-  :global(ul:has(.sub-menu:hover) .sub-item) {
+  :global(li.sub-item:has(+ .sub-menu:hover)) {
     background: var(--ctx-item-submenu-open);
   }
 

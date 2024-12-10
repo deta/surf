@@ -40,6 +40,11 @@
     return resourceIds.slice(0, renderLimit)
   })
 
+  const handleRemove = async (e?: MouseEvent, deleteFromStuff = false) => {
+    e?.stopImmediatePropagation()
+    dispatch('batch-remove', { ids: $selectedItemIds, deleteFromStuff })
+  }
+
   const handleLoadChunk = (e: CustomEvent) => {
     if ($renderContents.length === 0) {
       renderLimit.set(40)
@@ -115,16 +120,49 @@
           }))
       },
       { type: 'separator' },
-      {
-        type: 'action',
-        icon: 'trash',
-        text: `${!isInSpace ? 'Delete from Stuff' : 'Remove from Context'}`,
-        kind: 'danger',
-        action: () => {
-          dispatch('batch-remove', $selectedItemIds)
-          deselectAll()
-        }
-      }
+      ...(isInSpace
+        ? [
+            {
+              type: 'sub-menu',
+              icon: 'trash',
+              text: 'Delete',
+              kind: 'danger',
+              items: [
+                {
+                  type: 'action',
+                  icon: 'close',
+                  text: 'Remove from Context',
+                  kind: 'danger',
+                  action: () => {
+                    handleRemove()
+                    deselectAll()
+                  }
+                },
+                {
+                  type: 'action',
+                  icon: 'trash',
+                  text: 'Delete from Stuff',
+                  kind: 'danger',
+                  action: () => {
+                    handleRemove(undefined, true)
+                    deselectAll()
+                  }
+                }
+              ]
+            }
+          ]
+        : [
+            {
+              type: 'action',
+              icon: 'trash',
+              text: 'Delete from Stuff',
+              kind: 'danger',
+              action: () => {
+                handleRemove(undefined, true)
+                deselectAll()
+              }
+            }
+          ])
     ]
   }}
 >

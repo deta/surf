@@ -189,9 +189,12 @@
     await oasis.loadEverything(initialLoad)
   }
 
-  const handleResourceRemove = async (e: CustomEvent<string | string[]>) => {
+  const handleResourceRemove = async (
+    e: CustomEvent<{ ids: string; deleteFromStuff: boolean }>
+  ) => {
+    const ids = e.detail.ids
     try {
-      const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
+      const resourceIds = Array.isArray(ids) ? ids : [ids]
       log.debug('removing resources', resourceIds)
 
       if (resourceIds.length === 0) {
