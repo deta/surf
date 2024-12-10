@@ -27,7 +27,7 @@ pub struct Processor {
     ocr_engine: Option<OcrEngine>,
     language: Option<String>,
     vision_tagging_flag: Arc<AtomicBool>,
-    surf_backend_health: SurfBackendHealth
+    surf_backend_health: SurfBackendHealth,
 }
 
 impl Processor {
@@ -129,7 +129,7 @@ impl Processor {
         match resource.resource.resource_type.as_str() {
             t if t.starts_with("image/") => {
                 if let Some((content_type, content)) =
-                    process_resource_data(&resource, "", self.ocr_engine.as_ref())
+                    process_resource_data(&resource, "", self.ocr_engine.as_ref())?
                 {
                     result.insert(
                         content_type,
@@ -195,7 +195,7 @@ impl Processor {
             _ => {
                 let resource_data = std::fs::read_to_string(&resource.resource.resource_path)?;
                 if let Some((content_type, content)) =
-                    process_resource_data(&resource, &resource_data, self.ocr_engine.as_ref())
+                    process_resource_data(&resource, &resource_data, self.ocr_engine.as_ref())?
                 {
                     result.insert(
                         content_type,
@@ -344,166 +344,117 @@ fn process_resource_data(
     resource: &CompositeResource,
     resource_data: &str,
     ocr_engine: Option<&OcrEngine>,
-) -> Option<(ResourceTextContentType, String)> {
+) -> BackendResult<Option<(ResourceTextContentType, String)>> {
     let resource_text_content_type =
-        ResourceTextContentType::from_resource_type(&resource.resource.resource_type)?;
+        ResourceTextContentType::from_resource_type(&resource.resource.resource_type)
+            .ok_or_else(|| BackendError::GenericError("invalid resource type".to_string()))?;
 
     match resource_text_content_type {
-        // TODO: mb we should have this use the same format as the post resources?
-        ResourceTextContentType::Note => Some((
+        ResourceTextContentType::Note => Ok(Some((
             resource_text_content_type,
             normalize_html_data(resource_data),
-        )),
+        ))),
 
         ResourceTextContentType::Image => {
-            match extract_text_from_image(&resource.resource.resource_path, ocr_engine) {
-                Ok(Some(text)) => Some((resource_text_content_type, text)),
-                Ok(None) => {
-                    None
-                },
-                Err(e) => {
-                    eprintln!("extracting text from image: {e:#?}");
-                    None
-                }
+            match extract_text_from_image(&resource.resource.resource_path, ocr_engine)
+                .map_err(|e| BackendError::GenericError(format!("image processing error: {}", e)))?
+            {
+                Some(text) => Ok(Some((resource_text_content_type, text))),
+                None => Ok(None),
             }
         }
 
         ResourceTextContentType::Post => {
-            match serde_json::from_str::<PostData>(resource_data)
-                .map_err(|e| eprintln!("deserializing post data: {e:#?}"))
-                .ok()
-                .map(|post_data| {
-                    format!(
-                        "{} {} {} {} {}",
-                        post_data.title.unwrap_or_default(),
-                        post_data.excerpt.unwrap_or_default(),
-                        post_data.content_plain.unwrap_or_default(),
-                        post_data.author.unwrap_or_default(),
-                        post_data.site_name.unwrap_or_default()
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
+            process_json_data::<PostData>(resource_data, resource_text_content_type, |post_data| {
+                let title = post_data.title.as_deref().unwrap_or_default();
+                let excerpt = post_data.excerpt.as_deref().unwrap_or_default();
+                let content = post_data.content_plain.as_deref().unwrap_or_default();
+                let author = post_data.author.as_deref().unwrap_or_default();
+                let site = post_data.site_name.as_deref().unwrap_or_default();
+                format!("{title} {excerpt} {content} {author} {site}")
+            })
         }
+
         ResourceTextContentType::ChatMessage => {
-            match serde_json::from_str::<ChatMessageData>(resource_data)
-                .map_err(|e| eprintln!("deserializing chat message data: {e:#?}"))
-                .ok()
-                .map(|message_data| {
-                    format!(
-                        "{} {} {}",
-                        message_data.author.unwrap_or_default(),
-                        message_data.content_plain.unwrap_or_default(),
-                        message_data.platform_name.unwrap_or_default()
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
+            process_json_data::<ChatMessageData>(resource_data, resource_text_content_type, |msg| {
+                let author = msg.author.as_deref().unwrap_or_default();
+                let content = msg.content_plain.as_deref().unwrap_or_default();
+                let platform = msg.platform_name.as_deref().unwrap_or_default();
+                format!("{author} {content} {platform}")
+            })
         }
+
         ResourceTextContentType::Document => {
-            match serde_json::from_str::<DocumentData>(resource_data)
-                .map_err(|e| eprintln!("deserializing document data: {e:#?}"))
-                .ok()
-                .map(|document_data| {
-                    format!(
-                        "{} {} {}",
-                        document_data.author.unwrap_or_default(),
-                        document_data.content_plain.unwrap_or_default(),
-                        document_data.editor_name.unwrap_or_default()
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
+            process_json_data::<DocumentData>(resource_data, resource_text_content_type, |doc| {
+                let author = doc.author.as_deref().unwrap_or_default();
+                let content = doc.content_plain.as_deref().unwrap_or_default();
+                let editor = doc.editor_name.as_deref().unwrap_or_default();
+                format!("{author} {content} {editor}")
+            })
         }
+
         ResourceTextContentType::Article => {
-            match serde_json::from_str::<ArticleData>(resource_data)
-                .map_err(|e| eprintln!("deserializing article data: {e:#?}"))
-                .ok()
-                .map(|article_data| {
-                    format!(
-                        "{} {} {}",
-                        article_data.title.unwrap_or_default(),
-                        article_data.excerpt.unwrap_or_default(),
-                        article_data.content_plain.unwrap_or_default(),
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
+            process_json_data::<ArticleData>(resource_data, resource_text_content_type, |article| {
+                let title = article.title.as_deref().unwrap_or_default();
+                let excerpt = article.excerpt.as_deref().unwrap_or_default();
+                let content = article.content_plain.as_deref().unwrap_or_default();
+                format!("{title} {excerpt} {content}")
+            })
         }
+
         ResourceTextContentType::Link => {
-            match serde_json::from_str::<LinkData>(resource_data)
-                .map_err(|e| eprintln!("deserializing link data: {e:#?}"))
-                .ok()
-                .map(|link_data| {
-                    format!(
-                        "{} {} {}\n{}",
-                        link_data.title.unwrap_or_default(),
-                        link_data.description.unwrap_or_default(),
-                        link_data.url.unwrap_or_default(),
-                        link_data.content_plain.unwrap_or_default()
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
+            process_json_data::<LinkData>(resource_data, resource_text_content_type, |link| {
+                let title = link.title.as_deref().unwrap_or_default();
+                let desc = link.description.as_deref().unwrap_or_default();
+                let url = link.url.as_deref().unwrap_or_default();
+                let content = link.content_plain.as_deref().unwrap_or_default();
+                format!("{title} {desc} {url}\n{content}")
+            })
         }
-        ResourceTextContentType::ChatThread => {
-            match serde_json::from_str::<ChatThreadData>(resource_data)
-                .map_err(|e| eprintln!("deserializing chat thread data: {e:#?}"))
-                .ok()
-                .map(|thread_data| {
-                    let messages_content = thread_data
-                        .messages
-                        .unwrap_or_default()
-                        .iter()
-                        .map(|msg| msg.content_plain.clone().unwrap_or_default())
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    format!(
-                        "{} {}",
-                        thread_data.title.unwrap_or_default(),
-                        messages_content
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
-        }
-        ResourceTextContentType::Annotation => {
-            match serde_json::from_str::<ResourceDataAnnotation>(resource_data)
-                .map_err(|e| eprintln!("deserializing annotation data: {e:#?}"))
-                .ok()
-                .map(|annotation_data| {
-                    let content = match &annotation_data.data {
-                        AnnotationData::Comment(comment_data) => {
-                            Some(comment_data.content_plain.clone())
-                        }
-                        _ => None,
-                    };
 
-                    let content_plain = match &annotation_data.anchor {
-                        Some(AnnotationAnchor {
-                            data: AnnotationAnchorData::Range(range_data),
-                            ..
-                        }) => range_data.content_plain.clone(),
-                        _ => None,
-                    };
+        ResourceTextContentType::ChatThread => process_json_data::<ChatThreadData>(
+            resource_data,
+            resource_text_content_type,
+            |thread| {
+                let messages_content = thread
+                    .messages
+                    .as_deref()
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|msg| msg.content_plain.as_deref().unwrap_or_default())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let title = thread.title.as_deref().unwrap_or_default();
+                format!("{title} {messages_content}")
+            },
+        ),
 
-                    format!(
-                        "{} {}",
-                        content_plain.unwrap_or_default(),
-                        content.unwrap_or_default()
-                    )
-                }) {
-                Some(text) => Some((resource_text_content_type, text)),
-                None => None,
-            }
-        }
-        _ => None,
+        ResourceTextContentType::Annotation => process_json_data::<ResourceDataAnnotation>(
+            resource_data,
+            resource_text_content_type,
+            |ann| {
+                let content = match &ann.data {
+                    AnnotationData::Comment(comment) => Some(comment.content_plain.clone()),
+                    _ => None,
+                };
+
+                let content_plain = match &ann.anchor {
+                    Some(AnnotationAnchor {
+                        data: AnnotationAnchorData::Range(range),
+                        ..
+                    }) => range.content_plain.as_deref(),
+                    _ => None,
+                };
+
+                format!(
+                    "{} {}",
+                    content_plain.unwrap_or_default(),
+                    content.unwrap_or_default()
+                )
+            },
+        ),
+
+        _ => Ok(None),
     }
 }
 
@@ -563,6 +514,19 @@ fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<Vec<(u32, String)>> {
     }
 
     Ok(result)
+}
+
+fn process_json_data<T>(
+    data: &str,
+    content_type: ResourceTextContentType,
+    formatter: impl FnOnce(&T) -> String,
+) -> BackendResult<Option<(ResourceTextContentType, String)>>
+where
+    T: serde::de::DeserializeOwned,
+{
+    serde_json::from_str::<T>(data)
+        .map(|parsed_data| Some((content_type, formatter(&parsed_data))))
+        .map_err(|err| BackendError::GenericError(format!("failed to deserialize data: {err}")))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -55,6 +55,7 @@
     "@rgossiaux/svelte-headlessui": "^2.0.0",
     "@svelte-plugins/tooltips": "^3.0.1",
     "@sveltejs/vite-plugin-svelte": "^2.4.5",
+    "@types/mime-types": "^2.1.4",
     "@types/node": "^18.17.5",
     "autoprefixer": "^10.4.19",
     "electron": "33.2.1",

@@ -29,13 +29,6 @@ import {
   type DownloadPathResponseMessage,
   SettingsWindowTab
 } from '@horizon/types'
-import type {
-  Model,
-  Message,
-  CreateChatCompletionOptions,
-  QuotasResponse
-} from '@horizon/backend/types'
-import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 
 import { getUserConfig } from '../main/config'
 import {
