@@ -332,6 +332,8 @@
                     e.stopPropagation()
                   }
                 }}
+                on:highlightWebviewText
+                on:seekToTimestamp
               />
             {:else}
               <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />

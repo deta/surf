@@ -197,6 +197,8 @@ TODO: Fix resizing logic for other corners
         on:remove-from-homescreen={() => {
           dispatch('remove-from-homescreen', $item.id)
         }}
+        on:highlightWebviewText
+        on:seekToTimestamp
       />
     {:else if $item.spaceId}
       {@const space = $spaces.find((s) => s.id === $item.spaceId)}

@@ -77,6 +77,8 @@
         on:set-resource-as-background
         on:remove-from-homescreen
         on:set-resource-as-space-icon
+        on:highlightWebviewText
+        on:seekToTimestamp
       />
     {:else}
       <ResourcePreview
@@ -100,6 +102,8 @@
         on:whitelist-resource
         on:remove-from-homescreen
         on:set-resource-as-space-icon
+        on:highlightWebviewText
+        on:seekToTimestamp
       />
     {/if}
   {/if}

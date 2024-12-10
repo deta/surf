@@ -1,5 +1,11 @@
 <script lang="ts" context="module">
   export type CitationType = 'image' | 'resource'
+
+  // prettier-ignore
+  export type CitationInfo = { id: string; source?: AIChatMessageSource; renderID: string; text?: string };
+
+  // prettier-ignore
+  export type CitationClickData = { citationID: string; uniqueID: string; preview?: boolean, source?: AIChatMessageSource };
 </script>
 
 <script lang="ts">
@@ -49,18 +55,24 @@
   export let skipParsing: boolean = false
   export let allowRemove: boolean = false
   export let maxTitleLength = 42
+  export let skipContext = false
+  export let info: CitationInfo | undefined = undefined
+
+  export let tabsManager = useTabsManager()
+  export let toasts = useToasts()
 
   const log = useLogScope('CitationItem')
-  const resourceManager = useResourceManager()
-  const toasts = useToasts()
-  const tabsManager = useTabsManager()
+  const resourceManager = tabsManager.resourceManager
 
   const dispatch = createEventDispatcher<{
+    click: CitationClickData
     'rerun-without-source': void
   }>()
 
-  const citationHandler = getContext<CitationHandlerContext>(CITATION_HANDLER_CONTEXT)
-  const highlightedCitation = citationHandler.highlightedCitation
+  const citationHandler = skipContext
+    ? undefined
+    : getContext<CitationHandlerContext>(CITATION_HANDLER_CONTEXT)
+  const highlightedCitation = citationHandler?.highlightedCitation
 
   const uniqueID = generateID()
   const opened = writable(false)
@@ -76,6 +88,7 @@
   let citationType: CitationType
   let resource: Resource | null = null
   let loadingResource = false
+  let citationElem: HTMLElement
 
   $: canonicalUrl =
     (resource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
@@ -103,6 +116,24 @@
     return 'resource'
   }
 
+  const getInfo = (citationID: string) => {
+    if (info) {
+      return info
+    }
+
+    if (citationHandler) {
+      return citationHandler.getCitationInfo(citationID)
+    }
+
+    const infoAttr = citationElem.getAttribute('data-info')
+    log.debug('infoAttr', infoAttr)
+    if (infoAttr) {
+      return JSON.parse(decodeURIComponent(infoAttr)) as CitationInfo
+    }
+
+    return undefined
+  }
+
   const getURL = (source: AIChatMessageSource) => {
     const url = parseStringIntoUrl(canonicalUrl || source?.metadata?.url || '')
     if (!url) return null
@@ -115,13 +146,21 @@
     }
   }
 
+  const dispatchClick = (data: CitationClickData) => {
+    if (citationHandler) {
+      citationHandler.citationClick(data)
+    } else {
+      dispatch('click', data)
+    }
+  }
+
   const handleClick = (e?: MouseEvent) => {
     if (general) {
       if (!source) return
       log.debug('General citation clicked', citationID)
 
       if (e?.shiftKey && !isModKeyPressed(e)) {
-        citationHandler.citationClick({ citationID, uniqueID, preview: true })
+        dispatchClick({ citationID, uniqueID, source, preview: true })
         return
       }
 
@@ -189,9 +228,10 @@
       return
     }
 
-    citationHandler.citationClick({
+    dispatchClick({
       citationID,
       uniqueID,
+      source,
       preview: e?.shiftKey && !isModKeyPressed(e)
     })
   }
@@ -306,7 +346,18 @@
 
     citationID = getID()
 
-    const info = citationHandler.getCitationInfo(citationID)
+    info = getInfo(citationID)
+    log.debug('info', info)
+    if (!info) {
+      log.error('Citation item does not have info', citationID)
+      return
+    }
+
+    if (!skipContext) {
+      log.debug('Setting citation element data-info', info)
+      citationElem.setAttribute('data-info', encodeURIComponent(JSON.stringify(info)))
+    }
+
     source = info.source
     renderID = info.renderID
 
@@ -350,10 +401,11 @@
     source?.metadata?.url ||
     (citationType === 'image' && !skipParsing)) &&
     !general}
-  class:active={$highlightedCitation === uniqueID}
+  class:active={highlightedCitation && $highlightedCitation === uniqueID}
   class:icon={citationType === 'image' && !skipParsing}
   class={`${className} ${general ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-700' : ''}`}
   data-tooltip-target="chat-citation"
+  bind:this={citationElem}
   use:contextMenu={contextMenuData}
   draggable={true}
   use:HTMLDragItem.action={{}}
@@ -370,17 +422,8 @@
     <slot />
   </span>
 
-  <CustomPopover
-    position="top"
-    openDelay={350}
-    sideOffset={10}
-    popoverOpened={opened}
-    forceOpen={$CONTEXT_MENU_KEY === contextMenuKey}
-    disabled={(general && !resource?.type.startsWith('image/')) ||
-      citationType === 'image' ||
-      ($isDraggingSomething && !$hoveringPreview)}
-  >
-    <div slot="trigger" class="inline-flex items-center justify-center gap-2 select-none">
+  {#if skipContext}
+    <div class="inline-flex items-center justify-center gap-2 select-none">
       {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
         <img
           src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
@@ -440,17 +483,90 @@
         </div>
       {/if}
     </div>
-
-    <div
-      slot="content"
-      class="no-drag bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 relative max-w-96 cursor-pointer"
-      on:click={() => handleClick()}
-      use:contextMenu={contextMenuData}
-      use:hover={hoveringPreview}
+  {:else}
+    <CustomPopover
+      position="top"
+      openDelay={350}
+      sideOffset={10}
+      popoverOpened={opened}
+      forceOpen={$CONTEXT_MENU_KEY === contextMenuKey}
+      disabled={skipContext ||
+        (general && !resource?.type.startsWith('image/')) ||
+        citationType === 'image' ||
+        ($isDraggingSomething && !$hoveringPreview)}
     >
-      <ResourceHoverPreview {resource} loading={loadingResource} title={tooltipText} />
-    </div>
-  </CustomPopover>
+      <div slot="trigger" class="inline-flex items-center justify-center gap-2 select-none">
+        {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
+          <img
+            src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
+            alt="YouTube icon"
+          />
+          <div class="select-none">
+            {#if general}
+              {tooltipText}
+            {:else}
+              {formatTimestamp(source.metadata.timestamp)}
+            {/if}
+          </div>
+        {:else if source?.metadata?.url}
+          {#if resource?.type.startsWith('image/')}
+            <ResourceSmallImagePreview {resource} />
+          {:else if canonicalUrl || isURL(source.metadata.url)}
+            <img
+              src="https://www.google.com/s2/favicons?domain={canonicalUrl ||
+                source.metadata.url}&sz=40"
+              alt="source icon"
+            />
+          {:else if resource?.type}
+            <FileIcon kind={getFileKind(resource.type)} width="15px" height="15px" />
+          {:else}
+            <Icon name="world" size="15px" />
+          {/if}
+          <div class="font-sans text-xs tracking-wide select-none">
+            {#if general}
+              {tooltipText}
+            {:else}
+              <span class="uppercase">#{renderID}</span>
+            {/if}
+          </div>
+        {:else if citationType === 'image'}
+          <div class="file-icon">
+            <FileIcon kind="image" />
+          </div>
+
+          {#if skipParsing}
+            <slot></slot>
+          {/if}
+        {:else}
+          {#if resource?.type}
+            {#if resource.type.startsWith('image/')}
+              <ResourceSmallImagePreview {resource} />
+            {:else}
+              <FileIcon kind={getFileKind(resource.type)} width="15px" height="15px" />
+            {/if}
+          {/if}
+
+          <div class="font-sans text-xs tracking-wide select-none">
+            {#if general}
+              {tooltipText}
+            {:else}
+              <span class="uppercase">#{renderID}</span>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <div
+        slot="content"
+        class="no-drag bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 relative max-w-96 cursor-pointer"
+        on:click={() => handleClick()}
+        use:contextMenu={contextMenuData}
+        use:hover={hoveringPreview}
+      >
+        <ResourceHoverPreview {resource} loading={loadingResource} title={tooltipText} />
+      </div>
+    </CustomPopover>
+  {/if}
 </citation>
 
 <style lang="scss">

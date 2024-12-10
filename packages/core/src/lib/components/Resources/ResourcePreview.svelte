@@ -1018,6 +1018,8 @@
       on:edit-title={handleEditTitle}
       on:start-edit-title={handleStartEditTitle}
       on:click={handleTitleClick}
+      on:highlightWebviewText
+      on:seekToTimestamp
     />
   {:else}
     <div class="loading-box">

@@ -275,3 +275,15 @@ export type ChatWithSpaceEvent = {
   spaceId: string
   text?: string
 }
+
+export type HighlightWebviewTextEvent = {
+  resourceId: string
+  answerText: string
+  sourceUid?: string
+  preview: boolean
+}
+export type JumpToWebviewTimestampEvent = {
+  resourceId: string
+  timestamp: number
+  preview: boolean
+}

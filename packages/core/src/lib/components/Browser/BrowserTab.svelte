@@ -1025,7 +1025,16 @@
       let bookmarkedResource = matchingResources.find(
         (resource) =>
           resource.type !== ResourceTypes.ANNOTATION &&
-          resource.type !== ResourceTypes.HISTORY_ENTRY
+          resource.type !== ResourceTypes.HISTORY_ENTRY &&
+          !(
+            (resource.tags ?? []).find(
+              (tag) =>
+                tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING && tag.value === 'true'
+            ) &&
+            (resource.tags ?? []).find(
+              (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT && tag.value === 'true'
+            )
+          )
       )
 
       const annotationResources = matchingResources.filter(

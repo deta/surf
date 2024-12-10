@@ -31,7 +31,12 @@
 <div class="wrapper bg-[#f8f7f2] dark:bg-[#181818]">
   {#if resource}
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-      <TextResource {resourceId} on:update-title={handleUpdateTitle} />
+      <TextResource
+        {resourceId}
+        on:update-title={handleUpdateTitle}
+        on:highlightWebviewText
+        on:seekToTimestamp
+      />
     {:else}
       <FilePreview {resource} preview={false} />
     {/if}

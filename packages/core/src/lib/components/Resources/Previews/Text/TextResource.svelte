@@ -7,6 +7,15 @@
 
   import { ResourceNote, useResourceManager } from '../../../../service/resources'
   import { useDebounce, useLogScope } from '@horizon/utils'
+  import CitationItem, { type CitationClickData } from '../../../Chat/CitationItem.svelte'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { mapCitationsToText } from '@horizon/core/src/lib/service/ai/helpers'
+  import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
+  import { OpenInMiniBrowserEventFrom, ResourceTypes } from '@horizon/types'
+  import type {
+    HighlightWebviewTextEvent,
+    JumpToWebviewTimestampEvent
+  } from '@horizon/core/src/lib/types'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -14,7 +23,13 @@
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
-  const dispatch = createEventDispatcher<{ 'update-title': string }>()
+  const tabsManager = useTabsManager()
+  const globalMiniBrowser = useGlobalMiniBrowser()
+  const dispatch = createEventDispatcher<{
+    'update-title': string
+    seekToTimestamp: JumpToWebviewTimestampEvent
+    highlightWebviewText: HighlightWebviewTextEvent
+  }>()
 
   const content = writable('')
 
@@ -22,6 +37,7 @@
   let resource: ResourceNote | null = null
   let focusEditor: () => void
   let title = ''
+  let editorWrapperElem: HTMLElement
 
   const debouncedSaveContent = useDebounce((value: string) => {
     log.debug('saving content', value)
@@ -60,6 +76,61 @@
   //     }
   //   })
   // )
+
+  const handleCitationClick = async (e: CustomEvent<CitationClickData>) => {
+    const { citationID, uniqueID, preview, source } = e.detail
+    log.debug('Citation clicked', citationID, uniqueID, source, preview)
+
+    if (!source) {
+      log.error('No source found for citation', citationID)
+      return
+    }
+
+    let text = ''
+    if (source.metadata?.timestamp === undefined || source.metadata?.timestamp === null) {
+      const contentElem = editorWrapperElem.querySelector(
+        '.editor-wrapper div.tiptap'
+      ) as HTMLElement
+      const citationsToText = mapCitationsToText(contentElem || editorWrapperElem)
+      text = citationsToText.get(uniqueID) ?? ''
+      log.debug('Citation text', text)
+    }
+
+    const resource = await resourceManager.getResource(source.resource_id)
+    if (!resource) {
+      log.error('Resource not found', source.resource_id)
+      return
+    }
+
+    log.debug('Resource linked to citation', resource)
+
+    if (
+      resource.type === ResourceTypes.PDF ||
+      resource.type === ResourceTypes.LINK ||
+      resource.type === ResourceTypes.ARTICLE ||
+      resource.type.startsWith(ResourceTypes.POST)
+    ) {
+      if (
+        resource.type === ResourceTypes.POST_YOUTUBE &&
+        source.metadata?.timestamp !== undefined &&
+        source.metadata?.timestamp !== null
+      ) {
+        const timestamp = source.metadata.timestamp
+        dispatch('seekToTimestamp', {
+          resourceId: resource.id,
+          timestamp: timestamp,
+          preview: preview ?? false
+        })
+      } else {
+        dispatch('highlightWebviewText', {
+          resourceId: resource.id,
+          answerText: text,
+          sourceUid: source.uid,
+          preview: preview ?? false
+        })
+      }
+    }
+  }
 
   let unsubscribeValue: () => void
   let unsubscribeContent: () => void
@@ -119,13 +190,16 @@
     {/if}
 
     {#if !initialLoad}
-      <div class="notes-editor-wrapper">
+      <div class="notes-editor-wrapper" bind:this={editorWrapperElem}>
         <Editor
           bind:focus={focusEditor}
           bind:content={$content}
           placeholder="Jot something down…"
+          citationComponent={CitationItem}
+          {tabsManager}
           on:click
           on:dragstart
+          on:citation-click={handleCitationClick}
           {autofocus}
         />
       </div>

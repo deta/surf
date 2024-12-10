@@ -8,13 +8,9 @@
 
   export const CITATION_HANDLER_CONTEXT = 'citation-handler'
 
-  export type CitationClickData = { citationID: string; uniqueID: string; preview?: boolean }
-
   export type CitationHandlerContext = {
     citationClick: (data: CitationClickData) => void
-    getCitationInfo: (
-      id: string
-    ) => { id: string; source?: AIChatMessageSource; renderID: string; text?: string }
+    getCitationInfo: (id: string) => CitationInfo
     highlightedCitation: Writable<string | null>
   }
 </script>
@@ -24,9 +20,10 @@
   import { tooltip, useLogScope } from '@horizon/utils'
 
   import type { AIChatMessageSource } from '../../types/browser.types'
-  import CitationItem from './CitationItem.svelte'
+  import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
+  import { mapCitationsToText } from '@horizon/core/src/lib/service/ai/helpers'
 
   export let id: string = ''
   export let content: string
@@ -86,117 +83,6 @@
       source,
       renderID
     }
-  }
-
-  const aggregateTextNodes = (node: Node, text: string, stopCitationId: string) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const textNode = node as Text
-      text += textNode.textContent
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const elem = node as HTMLElement
-
-      if (elem.tagName === 'CITATION') {
-        const uid = elem.getAttribute('data-uid')
-        if (uid === stopCitationId) {
-          return text
-        }
-      } else {
-        for (const child of elem.childNodes) {
-          text = aggregateTextNodes(child, text, stopCitationId)
-        }
-      }
-    }
-
-    return text
-  }
-
-  // concatenate text nodes that come before the citation node within the same parent node
-  const getCitationParentTextContent = (citation: HTMLElement) => {
-    let text = ''
-
-    const parent = citation.parentNode
-
-    if (!parent) {
-      return ''
-    }
-
-    for (const child of parent.childNodes) {
-      if (child === citation) {
-        break
-      }
-
-      text = aggregateTextNodes(child, text, citation.id)
-    }
-
-    return text
-  }
-
-  const mapCitationsToText = (content: HTMLDivElement) => {
-    log.debug('Mapping citations to text', content)
-    let citationsToText = new Map<string, string>()
-
-    /*
-        For each citation node, we need to find the text that corresponds to it.
-        We do this by finding the text node that comes before the citation node.
-        We need to make sure we only use the relevant text not the entire text content between the last citation and the current citation.
-        We do this by only taking the text nodes of elements that are directly in front of the citation node.
-
-        Example:
-        <p>First text with a citation <citation>1</citation></p>
-        <p>Second text with a citation <citation>2</citation></p>
-        <p>Third text with no citation</p>
-        <p>Forth <strong>text</strong> with a citation <citation>3</citation></p>
-
-        Parsed mapping:
-
-        1: First text with a citation
-        2: Second text with a citation
-        3: Forth text with a citation
-    */
-
-    let lastText = ''
-
-    /*
-        loop through all child nodes to find the citation node
-        take all text nodes that come before the citation within the same parent node and concatenate them
-        if the citation node is inside a styled node like <strong> or <em> we need to take the text node of the styled node
-    */
-
-    const mapCitationsToTextRecursive = (node: Node, citationsToText: Map<string, string>) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const elem = node as HTMLElement
-
-        if (elem.tagName === 'CITATION') {
-          const citationID = elem.getAttribute('data-uid')
-          const text = getCitationParentTextContent(elem)
-
-          if (!citationID) {
-            log.error('ChatMessage: No citation ID found for citation', elem)
-            return
-          }
-
-          if (text) {
-            if (citationsToText.has(citationID)) {
-              citationsToText.set(citationID, citationsToText.get(citationID) + ' | ' + text)
-            } else {
-              citationsToText.set(citationID, text)
-            }
-          }
-        } else {
-          for (const child of elem.childNodes) {
-            mapCitationsToTextRecursive(child, citationsToText)
-          }
-        }
-      }
-    }
-
-    mapCitationsToTextRecursive(content, citationsToText)
-
-    log.debug('Mapped citations to text', citationsToText)
-
-    log.debug('Mapping sources', sources)
-
-    return citationsToText
   }
 
   const handleCitationClick = (data: CitationClickData) => {

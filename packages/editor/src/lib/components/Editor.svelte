@@ -2,13 +2,14 @@
 
 <script lang="ts">
   import type { Readable } from 'svelte/store'
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, SvelteComponent, type ComponentType } from 'svelte'
 
   import { createEditor, Editor, EditorContent } from 'svelte-tiptap'
-  import { Extension } from '@tiptap/core'
+  import { Extension, Node } from '@tiptap/core'
+  import Placeholder from '@tiptap/extension-placeholder'
+  import { conditionalArrayItem } from '@horizon/utils'
 
   import { createEditorExtensions } from '../editor'
-  import Placeholder from '@tiptap/extension-placeholder'
   // import BubbleMenu from './BubbleMenu.svelte'
 
   export let content: string
@@ -18,8 +19,15 @@
   export let focused: boolean = false
   export let parseHashtags: boolean = false
   export let submitOnEnter: boolean = false
+  export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
+  export let tabsManager: any | undefined = undefined
 
-  const dispatch = createEventDispatcher<{ update: string; submit: void; hashtags: string[] }>()
+  const dispatch = createEventDispatcher<{
+    update: string
+    submit: void
+    hashtags: string[]
+    'citation-click': any
+  }>()
 
   export const focus = () => {
     if ($editor) {
@@ -85,6 +93,74 @@
     }
   })
 
+  const createCitationNode = (CitationItem: any) => {
+    return Node.create({
+      name: 'citation',
+      group: 'inline',
+      inline: true,
+      atom: true,
+      addAttributes() {
+        return {
+          id: {
+            default: null,
+            parseHTML: (element) => element.textContent
+          },
+          info: {
+            default: null,
+            parseHTML: (element) => {
+              let rawData = element.getAttribute('data-info')
+              if (rawData) {
+                return JSON.parse(decodeURIComponent(rawData))
+              }
+            }
+          }
+        }
+      },
+      parseHTML() {
+        return [
+          {
+            tag: 'citation'
+          }
+        ]
+      },
+      renderHTML({ node }) {
+        console.warn('node.attrs html', node.attrs)
+        return [
+          'citation',
+          {
+            'data-id': node.attrs.id,
+            'data-info': encodeURIComponent(JSON.stringify(node.attrs.info)),
+            ...node.attrs
+          },
+          node.attrs.id
+        ]
+      },
+      addNodeView() {
+        return ({ node }) => {
+          const container = document.createElement('span')
+          container.setAttribute('data-citation-id', node.attrs.id)
+          const component = new CitationItem({
+            target: container,
+            props: {
+              ...node.attrs,
+              skipContext: true,
+              tabsManager
+            }
+          })
+          component.$on('click', (event: CustomEvent<any>) => {
+            dispatch('citation-click', event.detail)
+          })
+          return {
+            dom: container,
+            destroy: () => {
+              component.$destroy()
+            }
+          }
+        }
+      }
+    })
+  }
+
   onMount(() => {
     editor = createEditor({
       extensions: [
@@ -92,7 +168,8 @@
         extendKeyboardHandler,
         Placeholder.configure({
           placeholder: placeholder ?? "Write something or type '/' for options…"
-        })
+        }),
+        ...conditionalArrayItem(!!citationComponent, createCitationNode(citationComponent))
       ],
       content: content,
       editable: !readOnly,

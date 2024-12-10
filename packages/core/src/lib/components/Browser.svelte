@@ -79,7 +79,9 @@
     ContextItem,
     AddContextItemEvent,
     ChatWithSpaceEvent,
-    TabInvites
+    TabInvites,
+    JumpToWebviewTimestampEvent,
+    HighlightWebviewTextEvent
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import Chat from './Chat/Chat.svelte'
@@ -1818,12 +1820,17 @@
     return tab
   }
 
-  const highlightWebviewText = async (
-    resourceId: string,
-    answerText: string,
-    sourceUid?: string
-  ) => {
+  const highlightWebviewText = async (e: CustomEvent<HighlightWebviewTextEvent>) => {
+    let { resourceId, answerText, sourceUid, preview } = e.detail
     log.debug('highlighting text', resourceId, answerText, sourceUid)
+
+    if (preview) {
+      globalMiniBrowser.openResource(resourceId, {
+        from: OpenInMiniBrowserEventFrom.Chat,
+        highlightSimilarText: answerText
+      })
+      return
+    }
 
     const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
     let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) || null
@@ -1841,7 +1848,27 @@
     }
 
     if (tab) {
-      const browserTab = $browserTabs[tab.id]
+      let browserTab: BrowserTab
+      const isActivated = $activatedTabs.includes(tab.id)
+      if (!isActivated) {
+        log.debug('Tab not activated, activating first', tab.id)
+        tabsManager.activateTab(tab.id)
+
+        // give the tab some time to load
+        await wait(200)
+
+        browserTab = $browserTabs[tab.id]
+        if (!browserTab) {
+          log.error('Browser tab not found', tab.id)
+          throw Error(`Browser tab not found`)
+        }
+
+        log.debug('Waiting for tab to become active', tab.id)
+        await browserTab.waitForAppDetection(3000)
+      } else {
+        browserTab = $browserTabs[tab.id]
+      }
+
       if (!browserTab) {
         log.error('Browser tab not found', tab.id)
         toasts.error('Failed to highlight citation')
@@ -1868,38 +1895,58 @@
     }
   }
 
-  const handleSeekToTimestamp = async (resourceId: string, timestamp: number) => {
-    log.info('seeking to timestamp', resourceId, timestamp)
+  const handleSeekToTimestamp = async (e: CustomEvent<JumpToWebviewTimestampEvent>) => {
+    const { resourceId, timestamp, preview } = e.detail
+    log.info('seeking to timestamp', resourceId, timestamp, preview)
+
+    if (preview) {
+      globalMiniBrowser.openResource(resourceId, {
+        from: OpenInMiniBrowserEventFrom.Chat,
+        jumptToTimestamp: timestamp
+      })
+      return
+    }
 
     const tabs = [...getTabsInChatContext(), ...$unpinnedTabs]
     let tab = tabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) || null
 
     if (!tab) {
-      const resource = await resourceManager.getResource(resourceId)
-      const url = resource?.tags?.find(
-        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-      )?.value
-
-      if (!url) {
-        log.error('no url found for resource', resourceId)
-        toasts.error('Failed to open citation')
+      tab = (await openResourcFromContextAsPageTab(resourceId)) ?? null
+      if (!tab) {
+        log.error('failed to open resource from context', resourceId)
+        toasts.error('Failed to highlight citation')
         return
       }
-
-      tab = await tabsManager.addPageTab(url, {
-        active: false,
-        trigger: CreateTabEventTrigger.OasisChat
-      })
 
       // give the new tab some time to load
       await wait(1000)
     }
 
     if (tab) {
-      const browserTab = $browserTabs[tab.id]
+      let browserTab: BrowserTab
+      const isActivated = $activatedTabs.includes(tab.id)
+      if (!isActivated) {
+        log.debug('Tab not activated, activating first', tab.id)
+        tabsManager.activateTab(tab.id)
+
+        // give the tab some time to load
+        await wait(200)
+
+        browserTab = $browserTabs[tab.id]
+        if (!browserTab) {
+          log.error('Browser tab not found', tab.id)
+          throw Error(`Browser tab not found`)
+        }
+
+        log.debug('Waiting for tab to become active', tab.id)
+        await browserTab.waitForAppDetection(3000)
+      } else {
+        browserTab = $browserTabs[tab.id]
+      }
+
       if (!browserTab) {
         log.error('Browser tab not found', tab.id)
-        alert('Error: Browser tab not found')
+        toasts.error('Failed to highlight citation')
         return
       }
 
@@ -4679,6 +4726,8 @@
         }}
         on:open-and-chat={handleOpenAndChat}
         on:open-space-as-tab={handleCreateTabForSpace}
+        on:highlightWebviewText={highlightWebviewText}
+        on:seekToTimestamp={handleSeekToTimestamp}
       />
     {/key}
   {/if}
@@ -5498,7 +5547,12 @@
               {:else if tab.type === 'history'}
                 <BrowserHistory {tab} active={$activeTabId === tab.id} />
               {:else if tab.type === 'resource'}
-                <ResourceTab {tab} on:update-tab={(e) => tabsManager.update(tab.id, e.detail)} />
+                <ResourceTab
+                  {tab}
+                  on:update-tab={(e) => tabsManager.update(tab.id, e.detail)}
+                  on:highlightWebviewText={highlightWebviewText}
+                  on:seekToTimestamp={handleSeekToTimestamp}
+                />
               {:else if tab.type === 'onboarding'}
                 <div class="onboarding-wrapper">
                   <TabOnboarding
@@ -5604,14 +5658,8 @@
                 bind:this={magicSidebar}
                 bind:inputValue={$magicInputValue}
                 on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-                on:highlightWebviewText={(e) =>
-                  highlightWebviewText(
-                    e.detail.resourceId,
-                    e.detail.answerText,
-                    e.detail.sourceUid
-                  )}
-                on:seekToTimestamp={(e) =>
-                  handleSeekToTimestamp(e.detail.resourceId, e.detail.timestamp)}
+                on:highlightWebviewText={highlightWebviewText}
+                on:seekToTimestamp={handleSeekToTimestamp}
                 on:navigate={(e) => {
                   $browserTabs[$activeTabId].navigate(e.detail.url)
                 }}

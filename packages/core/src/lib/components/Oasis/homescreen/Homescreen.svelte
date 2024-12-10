@@ -195,6 +195,8 @@
         on:open-space-as-tab
         on:open-space-as-context={handleOpenSpaceAsContext}
         on:remove
+        on:highlightWebviewText
+        on:seekToTimestamp
       />
     {/each}
   </div>

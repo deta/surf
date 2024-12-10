@@ -90,7 +90,7 @@ class ClosedTabs {
 export class TabsManager {
   private log: ReturnType<typeof useLogScope>
   private db: HorizonStore<Tab>
-  private resourceManager: ResourceManager
+  resourceManager: ResourceManager
   private telemetry: Telemetry
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs

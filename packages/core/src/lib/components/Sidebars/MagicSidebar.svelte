@@ -21,6 +21,7 @@
     OpenInMiniBrowserEventFrom,
     PageChatMessageSentEventError,
     PageChatUpdateContextEventTrigger,
+    ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger,
     type ResourceDataPost,
@@ -36,7 +37,9 @@
     Tab,
     ContextItem,
     AddContextItemEvent,
-    TabPage
+    TabPage,
+    JumpToWebviewTimestampEvent,
+    HighlightWebviewTextEvent
   } from '../../types/browser.types'
   import ChatMessage from '../Chat/ChatMessage.svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
@@ -86,8 +89,8 @@
 
   const dispatch = createEventDispatcher<{
     highlightText: { tabId: string; text: string }
-    highlightWebviewText: { resourceId: string; answerText: string; sourceUid?: string }
-    seekToTimestamp: { resourceId: string; timestamp: number }
+    highlightWebviewText: HighlightWebviewTextEvent
+    seekToTimestamp: JumpToWebviewTimestampEvent
     navigate: { url: string }
     saveText: string
     updateActiveChatId: string
@@ -355,6 +358,8 @@
       content = element.innerHTML
     }
 
+    log.debug('Saving chat response', content)
+
     const resource = await resourceManager.createResourceNote(content, {
       name: truncate(cleanQuery(response.query), 50)
     })
@@ -363,6 +368,43 @@
       responses[response.id] = resource.id
       return responses
     })
+
+    const chatOutputResources = response.sources
+      ? [...new Set(response.sources.map((source) => source.resource_id))]
+      : []
+
+    log.debug('Chat output resources', chatOutputResources)
+
+    // make sure the resource used by the chat response doesn't get auto deleted
+    if (chatOutputResources.length === 1) {
+      const chatOutputResource = await resourceManager.getResource(chatOutputResources[0])
+      log.debug('Chat output resource', chatOutputResource)
+      if (chatOutputResource) {
+        const isSilent =
+          (chatOutputResource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+            ?.value === 'true'
+        const isHideInEverything =
+          (chatOutputResource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+          )?.value === 'true'
+
+        log.debug('isSilent', isSilent)
+        if (isSilent) {
+          log.debug('Removing silent tag from chat output resource')
+          await resourceManager.deleteResourceTag(
+            chatOutputResource.id,
+            ResourceTagsBuiltInKeys.SILENT
+          )
+          if (!isHideInEverything) {
+            await resourceManager.createResourceTag(
+              chatOutputResource.id,
+              ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING,
+              'true'
+            )
+          }
+        }
+      }
+    }
 
     await resourceManager.telemetry.trackSaveToOasis(
       ResourceTypes.DOCUMENT_SPACE_NOTE,
@@ -423,20 +465,6 @@
     )
     const sourceTabType = sourceTab?.type === 'page' ? 'page' : 'space'
 
-    if (preview && source) {
-      globalMiniBrowser.openResource(source.resource_id, {
-        from: OpenInMiniBrowserEventFrom.Chat,
-        highlightSimilarText: answerText || source.content,
-        jumptToTimestamp: source.metadata?.timestamp
-      })
-
-      await telemetry.trackPageChatCitationClick(
-        source.metadata?.timestamp !== undefined ? 'timestamp' : 'text',
-        sourceTabType
-      )
-      return
-    }
-
     if (
       resource.type === ResourceTypes.PDF ||
       resource.type === ResourceTypes.LINK ||
@@ -448,7 +476,11 @@
         source.metadata?.timestamp !== undefined
       ) {
         const timestamp = source.metadata.timestamp
-        dispatch('seekToTimestamp', { resourceId: resource.id, timestamp: timestamp })
+        dispatch('seekToTimestamp', {
+          resourceId: resource.id,
+          timestamp: timestamp,
+          preview: preview ?? false
+        })
 
         await telemetry.trackPageChatCitationClick('timestamp', sourceTabType)
 
@@ -459,7 +491,8 @@
         dispatch('highlightWebviewText', {
           resourceId: resource.id,
           answerText: answerText,
-          sourceUid: sourceUid
+          sourceUid: sourceUid,
+          preview: preview ?? false
         })
 
         await telemetry.trackPageChatCitationClick('text', sourceTabType)
