@@ -2922,17 +2922,8 @@
     tabSize = availableSpace / (numberOfTabs - 1)
   }
 
-  const handleOasisResize = useThrottle(async () => {
-    const previousValue = $showNewTabOverlay
-    showNewTabOverlay.set(-1)
-    await tick()
-    showNewTabOverlay.set(previousValue)
-  }, 100)
-
   const handleResize = async () => {
     maxWidth = window.innerWidth
-
-    handleOasisResize()
 
     checkScroll()
   }
