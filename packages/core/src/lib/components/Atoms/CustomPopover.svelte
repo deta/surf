@@ -138,7 +138,7 @@
       <div
         on:mouseenter={handleMouseEnter}
         on:mouseleave={handleMouseOut}
-        class="w-full h-full rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 overflow-y-scroll focus:outline-none"
+        class="w-full h-full rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 overflow-y-auto focus:outline-none"
         role="menu"
         tabindex="0"
       >

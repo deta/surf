@@ -224,6 +224,10 @@
   .editor-wrapper {
     height: 100%;
     overflow-y: auto;
+    :global(#stuff-stack) &,
+    :global(#tty-default) & {
+      overflow-y: hidden;
+    }
   }
 
   :global(.editor-wrapper > div) {

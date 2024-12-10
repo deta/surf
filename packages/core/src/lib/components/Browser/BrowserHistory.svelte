@@ -169,7 +169,7 @@
       </div>
     </div>
 
-    <div class="overflow-y-scroll p-4 -m-4" bind:this={containerElement} on:scroll={handleScroll}>
+    <div class="overflow-y-auto p-4 -m-4" bind:this={containerElement} on:scroll={handleScroll}>
       {#if $filteredEntries.length > 0}
         <div style="height: {totalHeight}px; position: relative">
           {#each visibleItems as item (item.id)}

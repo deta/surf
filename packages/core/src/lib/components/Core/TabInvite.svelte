@@ -297,7 +297,7 @@
   style:--sparkles={`url('${sparklesGif}')`}
 >
   <div class="flex flex-col w-full gap-8 relative z-10 max-w-7xl mx-auto">
-    <div class="flex flex-col gap-2 overflow-y-scroll">
+    <div class="flex flex-col gap-2">
       <h1
         class="font-gambarino text-3xl text-center animate-text-shimmer text-[#6C6C8D] dark:text-slate-200 select-none"
       >

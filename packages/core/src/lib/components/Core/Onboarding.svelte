@@ -29,7 +29,7 @@
 
 {#if title && sections}
   <div
-    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-10 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24 overflow-y-scroll"
+    class="absolute top-0 left-0 w-full h-full flex border border-gray-300 border-opacity-10 shadow-md shadow-gray-200 flex-col items-center justify-center bg-white/95 dark:bg-gray-800/95 rounded-xl backdrop-blur-sm select-none text-lg gap-8 px-24"
     style="z-index: 1234567;"
   >
     <div class="gap-4 flex flex-col items-center max-w-md text-gray-900 dark:text-gray-100">

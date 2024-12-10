@@ -489,7 +489,7 @@
 
   main {
     height: 100vh;
-    width: 100vw;
+    width: calc(100vw - (100vw - 100%));
     color: var(--color-text);
     background-color: var(--color-background);
     display: flex;
