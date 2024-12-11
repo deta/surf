@@ -9,7 +9,14 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { derived, get, readable, writable, type Readable, type Writable } from 'svelte/store'
   import { fly, slide } from 'svelte/transition'
-  import { htmlToMarkdown, tooltip, truncate, useDebounce, useThrottle } from '@horizon/utils'
+  import {
+    htmlToMarkdown,
+    isMac,
+    tooltip,
+    truncate,
+    useDebounce,
+    useThrottle
+  } from '@horizon/utils'
   import { DropdownMenu } from 'bits-ui'
   import chatContextDemo from '../../../../public/assets/demo/chatcontext.gif'
   import chatAdd from '../../../../public/assets/demo/chatadd.gif'
@@ -151,7 +158,8 @@
   let lastCmdATime = 0
   let autoScrollChat = true
   let abortController: AbortController | null = null
-  let onboardingOpen = writable($userConfigSettings.onboarding.completed_chat === false)
+  let onboardingOpen = writable(false)
+  const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
 
   const selectConfigureItem = {
     id: 'configure',
@@ -1420,11 +1428,11 @@
   }
 </script>
 
-<!-- {#if $onboardingOpen}
+{#if $onboardingOpen}
   <Onboarding
     on:close={closeOnboarding}
     title="What you see is what you chat"
-    tip="Tip: Hover over any element to see how it works."
+    tip=""
     sections={[
       {
         description: `
@@ -1445,9 +1453,9 @@
             chat.
           </p>
           <p class="opacity-70">
-            Hint: you can also <kbd class="px-2 py-0.5 text-lg font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">${navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl'}</kbd> or <kbd class="px-2 py-1.5 text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">Shift</kbd>
+            Hint: you can also <kbd class="px-2 py-0.5 text-lg font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">${modKeyShortcut}</kbd> or <kbd class="px-2 py-1.5 text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg">Shift</kbd>
             + click to
-            select multiple items.
+            select multiple items (tabs).
           </p>
           `,
         imgAlt: 'Add Context',
@@ -1469,7 +1477,7 @@
     warning="Chat can make mistakes. Verify results."
     buttonText="Continue"
   />
-{/if} -->
+{/if}
 
 <div
   class="flex flex-col h-full relative overflow-hidden"
