@@ -9,7 +9,14 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { derived, get, readable, writable, type Readable, type Writable } from 'svelte/store'
   import { fly, slide } from 'svelte/transition'
-  import { htmlToMarkdown, tooltip, truncate, useDebounce, useThrottle } from '@horizon/utils'
+  import {
+    htmlToMarkdown,
+    isMac,
+    tooltip,
+    truncate,
+    useDebounce,
+    useThrottle
+  } from '@horizon/utils'
   import { DropdownMenu } from 'bits-ui'
   import chatContextDemo from '../../../../public/assets/demo/chatcontext.gif'
   import chatAdd from '../../../../public/assets/demo/chatadd.gif'
@@ -151,9 +158,8 @@
   let lastCmdATime = 0
   let autoScrollChat = true
   let abortController: AbortController | null = null
-  let onboardingOpen = writable($userConfigSettings.onboarding.completed_chat === false)
-  const modKeyShortcut =
-    navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'
+  let onboardingOpen = writable(false)
+  const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
 
   const selectConfigureItem = {
     id: 'configure',
