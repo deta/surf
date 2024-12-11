@@ -1063,7 +1063,7 @@
           freshWebview: false
         })
       } else {
-        if (detectedResourceType !== 'application/pdf') {
+        if (detectedResourceType === ResourceTypes.DOCUMENT_NOTION) {
           log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
           await refreshResourceWithPage(bookmarkedResource, url, false)
         }
