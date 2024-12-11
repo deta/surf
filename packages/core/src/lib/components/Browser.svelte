@@ -4887,6 +4887,7 @@
                     isUserSelected={Array.from($selectedTabs).some(
                       (item) => item.id === tab.id && item.userSelected
                     )}
+                    isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
                     on:select={(e) => selectTab(e.detail)}
                     on:remove-from-sidebar={handleRemoveFromSidebar}
                     on:delete-tab={handleDeleteTab}
@@ -5014,6 +5015,7 @@
                       isUserSelected={Array.from($selectedTabs).some(
                         (item) => item.id === tab.id && item.userSelected
                       )}
+                      isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
                       on:multi-select={handleMultiSelect}
                       on:passive-select={handlePassiveSelect}
                       on:select={(e) => selectTab(e.detail)}
@@ -5052,6 +5054,7 @@
                       )}
                       isMagicActive={$magicTabs.length > 0}
                       bookmarkingState={$bookmarkingTabsState[tab.id]}
+                      isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
                       on:multi-select={handleMultiSelect}
                       on:passive-select={handlePassiveSelect}
                       on:select={(e) => selectTab(e.detail)}
@@ -5141,6 +5144,7 @@
                       isUserSelected={Array.from($selectedTabs).some(
                         (item) => item.id === tab.id && item.userSelected
                       )}
+                      isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
                       on:multi-select={handleMultiSelect}
                       on:passive-select={handlePassiveSelect}
                       on:select={(e) => selectTab(e.detail)}
@@ -5180,6 +5184,7 @@
                       )}
                       isMagicActive={$magicTabs.length > 0}
                       bookmarkingState={$bookmarkingTabsState[tab.id]}
+                      isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
                       on:multi-select={handleMultiSelect}
                       on:passive-select={handlePassiveSelect}
                       on:select={(e) => selectTab(e.detail)}

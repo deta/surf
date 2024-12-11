@@ -342,6 +342,15 @@
           bind:style={userConfigSettings.app_style}
           on:update={handleSettingsUpdate}
         />
+        <div style="width: 100%;   max-width: 62ch;">
+          <SettingsOption
+            icon="unmute"
+            title="Turntable Favicons"
+            description="Tabs will have their favicons spinning to indicate media playing."
+            bind:value={userConfigSettings.turntable_favicons}
+            on:update={handleSettingsUpdate}
+          />
+        </div>
       </article>
     {:else if $activeTab === 'experiments'}
       <article class="list">

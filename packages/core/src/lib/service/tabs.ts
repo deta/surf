@@ -1096,6 +1096,10 @@ export class TabsManager {
     if (tabsToUpdate.length > 0) {
       this.log.debug('Triggering offloading of tabs', tabsToUpdate)
       for (const tab of tabsToUpdate) {
+        // A bit crude for now, as it wont offload them if media stopped playing but this is a bit
+        // of an edge case for now.
+        const browserTab = this.browserTabsValue[tab.id]
+        if (browserTab && get(browserTab.getMediaPlaybackState())) continue
         const timeout = setTimeout(() => {
           this.offloadTabsTimeouts.delete(tab.id)
           this.deactivateTab(tab.id)

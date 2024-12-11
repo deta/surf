@@ -16,6 +16,7 @@
     'title-change': string
     'favicon-change': string
     'history-change': WebviewHistoryChangeEvent
+    'media-playback-changed': boolean
   }
 </script>
 
@@ -74,7 +75,6 @@
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
-  export const playback = writable(false)
   export const isMuted = writable(false)
   export const didFinishLoad = writable(false)
 
@@ -603,8 +603,10 @@ Made with Deta Surf.`
     /*
       Handle media playback events
     */
-    webview.addEventListener('media-started-playing', () => playback.set(true))
-    webview.addEventListener('media-paused', () => playback.set(false))
+    webview.addEventListener('media-started-playing', () =>
+      dispatch('media-playback-changed', true)
+    )
+    webview.addEventListener('media-paused', () => dispatch('media-playback-changed', false))
 
     /*
       Handle page metadata events

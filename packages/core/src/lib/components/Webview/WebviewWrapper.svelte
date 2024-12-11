@@ -432,6 +432,7 @@
     on:title-change
     on:favicon-change
     on:history-change
+    on:media-playback-changed
   />
 
   {#if $error}

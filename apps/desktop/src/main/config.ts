@@ -105,7 +105,8 @@ export const getUserConfig = (path?: string) => {
       personas: [],
       selected_model: BuiltInModelIDs.GPT4o,
       model_settings: [],
-      vision_image_tagging: false
+      vision_image_tagging: false,
+      turntable_favicons: true
     }
     setUserConfig(storedConfig as UserConfig)
   }
@@ -193,6 +194,10 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.vision_image_tagging === undefined) {
     storedConfig.settings.vision_image_tagging = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.turntable_favicons === undefined) {
+    storedConfig.settings.turntable_favicons = true
     changedConfig = true
   }
 

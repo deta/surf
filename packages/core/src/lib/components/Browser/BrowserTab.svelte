@@ -122,6 +122,7 @@
   const activeTabId = tabs.activeTabId
   const showNewTabOverlay = tabs.showNewTabOverlay
   const userConfigSettings = config.settings
+  const isMediaPlaying = writable(false)
 
   export const goBack = () => webview.goBack()
   export const goForward = () => webview.goForward()
@@ -146,6 +147,7 @@
   export const canGoBack = webview?.canGoBack
   export const canGoForward = webview?.canGoForward
   export const getInitialSrc = () => initialSrc
+  export const getMediaPlaybackState = () => isMediaPlaying
 
   let app: DetectedWebApp | null = null
 
@@ -1223,4 +1225,5 @@
   on:did-finish-load={debouncedAppDetection}
   on:new-window={handleWebviewNewWindow}
   on:navigation
+  on:media-playback-changed={(e) => isMediaPlaying.set(e.detail)}
 />

@@ -43,4 +43,5 @@ export type UserSettings = {
   selected_model: string
   model_settings: Model[]
   vision_image_tagging: boolean
+  turntable_favicons: boolean
 }

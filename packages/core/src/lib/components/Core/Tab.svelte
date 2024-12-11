@@ -39,6 +39,7 @@
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
   import { useDesktopManager } from '../../service/desktop'
+  import SoundVisualizerBars from '../Effects/SoundVisualizerBars.svelte'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -60,6 +61,7 @@
   export let isMagicActive = false
   export let disableContextmenu = false
   export let inStuffBar = false
+  export let isMediaPlaying: Readable<boolean> = writable(false)
 
   const log = useLogScope('Tab')
   const tabsManager = useTabsManager()
@@ -797,7 +799,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   {/if}-->
 
   <div
-    class="custom-text-color"
+    class="tab-favicon custom-text-color"
+    class:media-playing={$userSettings.turntable_favicons && $isMediaPlaying}
     class:icon-wrapper={true}
     class:flex-shrink-0={true}
     class:emoji-adjustment={$spaceData?.emoji}
@@ -1042,6 +1045,11 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           </button>
         {/if}
       </div>
+    {:else if !hovered && $isMediaPlaying}
+      <SoundVisualizerBars
+        style="flex-shrink: 0; opacity: 0.35; color: var(--contrast-color) !important;"
+        size="1.5ch"
+      />
     {/if}
 
     {#if isScopedMiniBrowserOpen}
@@ -1059,6 +1067,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
 </div>
 
 <style lang="scss">
+  @keyframes spin {
+    from {
+      rotate: 0deg;
+    }
+    to {
+      rotate: 360deg;
+    }
+  }
   .tab {
     view-transition-class: tab !important;
     padding: 0.725rem 1rem;
@@ -1068,6 +1084,12 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     transition:
       0s ease-in-out,
       transform 0s;
+
+    .tab-favicon {
+      &.media-playing {
+        animation: spin 13.5s linear infinite;
+      }
+    }
 
     .title {
       color: var(--contrast-color) !important;
