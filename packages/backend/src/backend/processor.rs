@@ -498,8 +498,8 @@ fn extract_text_from_image(
 }
 
 fn extract_text_from_pdf(pdf_path: &str) -> BackendResult<Vec<(u32, String)>> {
-    let doc =
-        lopdf::Document::load(pdf_path).map_err(|e| BackendError::GenericError(e.to_string()))?;
+    let doc = lopdf::Document::load(pdf_path)
+        .map_err(|err| BackendError::GenericError(format!("failed to load pdf: {err}")))?;
     let mut result = Vec::new();
 
     for (page_num, _object_id) in doc.get_pages() {

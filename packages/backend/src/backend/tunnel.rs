@@ -14,8 +14,8 @@ use neon::{
 };
 use std::panic;
 
-const NUM_WORKER_THREADS: usize = 8;
-const NUM_PROCESSOR_THREADS: usize = 8;
+const NUM_WORKER_THREADS: usize = 12;
+const NUM_PROCESSOR_THREADS: usize = 12;
 use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
 
 #[derive(Clone)]
