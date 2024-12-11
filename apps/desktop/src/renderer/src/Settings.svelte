@@ -353,7 +353,7 @@
           <p>
             The following features are still under development and may not work as expected. Feel
             free to try them out and give us feedback. <a
-              href="https://deta.notion.site/Experimental-Mode-10ca5244a7178061a9fadc2434c6e666"
+              href="https://deta.notion.site/Experimental-Mode-152a5244a717801587dfcb374536b73d"
               target="_blank">More info in our docs ↗</a
             >
           </p>
@@ -460,6 +460,9 @@
 </main>
 
 <style lang="scss">
+  * {
+    user-select: none;
+  }
   :global(:root) {
     --color-text: #0c081a;
     --color-text-muted: #262332a2;

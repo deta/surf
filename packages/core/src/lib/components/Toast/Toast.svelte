@@ -25,7 +25,7 @@
     {/if}
   </div>
 
-  <div class="text">
+  <div class="text select-none">
     <slot>
       {toast.message}
     </slot>

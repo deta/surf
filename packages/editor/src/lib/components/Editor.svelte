@@ -213,7 +213,7 @@
   {/if} -->
 
   <div
-    class="editor-wrapper prose prose-lg prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
+    class="editor-wrapper select-text prose prose-lg prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
     class:cursor-text={!readOnly}
   >
     <EditorContent editor={$editor} />

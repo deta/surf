@@ -5773,6 +5773,10 @@
 />
 
 <style lang="scss">
+  * {
+    user-select: none;
+  }
+
   .app-contents {
     position: relative;
 
