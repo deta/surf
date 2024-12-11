@@ -85,6 +85,7 @@
     addSelectionById
   } from '@horizon/core/src/lib/components/Oasis/utils/select'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { WebParser } from '@horizon/web-parser'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -199,6 +200,13 @@
       interactive = interactiveProp
     }
   }
+
+  $: canBeRefreshed =
+    resource.type !== 'application/pdf' &&
+    !resource.type.startsWith('image/') &&
+    !resource.type.startsWith('video/') &&
+    !resource.type.startsWith('audio/') &&
+    canonicalUrl !== undefined
 
   $: sourceURL = parseStringIntoUrl(resource.metadata?.sourceURI ?? '')
 
@@ -822,6 +830,52 @@
     }
   }
 
+  const refreshResourceData = async () => {
+    if (!canBeRefreshed || !canonicalUrl) {
+      log.debug('skipping refresh for PDF or missing URL', resource.id)
+      return
+    }
+
+    if ($resourceState === 'extracting') {
+      log.debug('skipping refresh for running resource', resource.id)
+      return
+    }
+
+    const resourceType = getFileType(resource.type)
+    const toast = toasts.loading(`Refreshing ${resourceType}`)
+
+    try {
+      log.debug('refreshing resource', resource.id)
+
+      resource.updateExtractionState('running')
+
+      // TODO: add support for refreshing PDFs, currently not possible without the full BrowserTab logic
+      const webParser = new WebParser(canonicalUrl)
+      const detectedResource = await webParser.extractResourceUsingWebview(document)
+
+      log.debug('extracted resource data', detectedResource)
+
+      if (detectedResource) {
+        log.debug('updating resource with fresh data', detectedResource.data)
+        await resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+
+        if ((detectedResource.data as any)?.title) {
+          await resourceManager.updateResourceMetadata(resource.id, {
+            name: (detectedResource.data as any).title
+          })
+        }
+      }
+
+      resource.updateExtractionState('idle')
+
+      toast.success(`Refreshed ${resourceType}!`)
+    } catch (e) {
+      log.error('error refreshing resource', e)
+      resource.updateExtractionState('idle') // TODO: support error state
+      toast.error(`Failed to refresh ${resourceType}`)
+    }
+  }
+
   const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
     drag.item!.data.setData(DragTypeNames.SURF_RESOURCE, resource)
     drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
@@ -921,6 +975,13 @@
         }
       }
     ),
+    ...conditionalArrayItem<CtxItem>(canBeRefreshed, {
+      type: 'action',
+      disabled: $resourceState === 'extracting',
+      icon: 'reload',
+      text: 'Refresh Content',
+      action: () => refreshResourceData()
+    }),
     ...(origin !== 'homescreen'
       ? [
           {
