@@ -7,9 +7,10 @@
   import './assets/fonts/Gambarino-Regular.woff2'
   import '../../output.css'
   import '../../../../../packages/core/src/output.css'
+  import { isMac, isWindows } from '@horizon/utils'
 </script>
 
-<div class="main">
+<div class="main" class:os__windows={isWindows()} class:os__mac={isMac()}>
   <Browser />
 </div>
 

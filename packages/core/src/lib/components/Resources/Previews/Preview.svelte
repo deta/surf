@@ -159,7 +159,6 @@
     html {
       font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif;
       color: #6b7280;
-      scrollbar-width: none;
       -ms-overflow-style: none;
 
     }

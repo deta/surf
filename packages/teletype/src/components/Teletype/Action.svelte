@@ -478,7 +478,6 @@
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
-    scrollbar-width: none;
     width: 100%;
 
     &::-webkit-scrollbar {

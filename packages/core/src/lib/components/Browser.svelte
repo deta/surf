@@ -6158,11 +6158,6 @@
     z-index: 100;
   }
 
-  :global(*) {
-    scrollbar-color: rgb(130, 130, 130) transparent;
-    scrollbar-width: thin;
-  }
-
   /* Pulse effect for tooltip targets */
   :global(.tooltip-target[data-tooltip-target]) {
     position: relative;
@@ -6503,11 +6498,6 @@
   .masked-content::-webkit-scrollbar {
     display: none;
   }
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .masked-content {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
 
   .tabs {
     position: relative;
@@ -6537,7 +6527,6 @@
       align-items: center;
       overflow-y: hidden;
       -ms-overflow-style: none;
-      scrollbar-width: none;
       position: relative;
       max-width: calc(100% - 120px);
     }

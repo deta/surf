@@ -606,8 +606,6 @@
     gap: 1.5rem;
     height: 100%;
     flex: 1;
-    scrollbar-width: none;
-    scrollbar-color: transparent transparent;
     backdrop-filter: blur(24px);
     overflow: hidden;
   }

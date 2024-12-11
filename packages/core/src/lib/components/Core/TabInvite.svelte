@@ -810,7 +810,6 @@
   // Add this to hide scrollbar but keep functionality
   .scrollbar-hide {
     -ms-overflow-style: none;
-    scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;
     }

@@ -151,7 +151,6 @@
     gap: 0.5rem;
     padding: 0;
     overflow-x: auto;
-    scrollbar-width: none;
     -ms-overflow-style: none;
 
     &::-webkit-scrollbar {

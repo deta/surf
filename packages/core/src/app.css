@@ -9,14 +9,6 @@
     display: none;
   }
 
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
-  }
-
   .drag {
     -webkit-app-region: drag;
   }
@@ -32,5 +24,65 @@
 
   .select-text {
     user-select: text;
+  }
+}
+
+/*::-webkit-scrollbar {
+  width: 7px;
+  background-color: lime;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(130, 130, 130);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}*/
+
+
+
+.os__windows {
+
+  /* We only style the scrollbars on windows, as doing this on OSX results in the scrollbars being 
+   * forced shown always.
+   */
+  ::-webkit-scrollbar {
+    width: 6px;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  /* Dark scrollbar handle that turns brighter on hover */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+}
+
+.dark .os__windows {
+  ::-webkit-scrollbar {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Dark scrollbar handle that turns brighter on hover */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
   }
 }
