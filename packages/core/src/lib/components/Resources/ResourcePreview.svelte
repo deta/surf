@@ -182,7 +182,9 @@
     (x) => x.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
   )
 
-  $: showOpenAsFile = !(Object.values(ResourceTypes) as string[]).includes(resource.type)
+  $: showOpenAsFile =
+    resource.type === ResourceTypes.PDF ||
+    !(Object.values(ResourceTypes) as string[]).includes(resource.type)
 
   $: processingSource =
     (canonicalUrl
