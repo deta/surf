@@ -5362,7 +5362,7 @@
                     class:bg-sky-200={$showNewTabOverlay === 1}
                     class:dark:bg-sky-900={$showNewTabOverlay === 1}
                   >
-                    <Icon name="add" />
+                    <Icon name="add" size="20px" stroke-width="2" />
                     {#if !horizontalTabs}
                       <span class="label">New Tab</span>
                     {/if}
