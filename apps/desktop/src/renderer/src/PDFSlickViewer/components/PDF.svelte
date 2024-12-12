@@ -24,7 +24,12 @@
   })
 
   const urlParams = new URLSearchParams(window.location.search)
-  export const url = decodeURIComponent(urlParams.get('path'))
+  export const path = urlParams.get('path') ? decodeURIComponent(urlParams.get('path')) : ''
+  export const pathOverride = urlParams.get('pathOverride')
+    ? decodeURIComponent(urlParams.get('pathOverride'))
+    : ''
+  export const loading = urlParams.get('loading') === 'true'
+  export const error = urlParams.get('error') ? decodeURIComponent(urlParams.get('error')) : ''
   export const page = urlParams.get('page') ? parseInt(urlParams.get('page'), 10) : null
 
   let RO: ResizeObserver
@@ -62,24 +67,30 @@
       }
     })
 
-    pdfSlick.loadDocument(url).then(async () => {
-      if (pdfSlickReady) pdfSlickReady(pdfSlick)
+    if (!loading && !error) {
+      const url = pathOverride || path
+      if (url) {
+        const response = await fetch(url)
+        const pdfBuffer = await response.arrayBuffer()
 
-      // do not update the title for Surf resource URLs, these are handled
-      // by the browser itself
-      if (!url.startsWith('surf://resource')) {
-        const title = await getDocumentTitle(pdfSlick)
-        if (title && title !== 'document.pdf') document.title = title
-      }
+        pdfSlick.loadDocument(pdfBuffer).then(async () => {
+          if (pdfSlickReady) pdfSlickReady(pdfSlick)
 
-      if (page) {
-        try {
-          pdfSlick.gotoPage(page)
-        } catch (err) {
-          console.error(`failed to go to page ${page}: ${err}`)
-        }
+          if (!path.startsWith('surf://resource')) {
+            const title = await getDocumentTitle(pdfSlick)
+            if (title && title !== 'document.pdf') document.title = title
+          }
+
+          if (page) {
+            try {
+              pdfSlick.gotoPage(page)
+            } catch (err) {
+              console.error(`failed to go to page ${page}: ${err}`)
+            }
+          }
+        })
       }
-    })
+    }
     store.setState({ pdfSlick })
 
     RO = new ResizeObserver(() => {
@@ -109,7 +120,7 @@
     const getFilename = new Promise<string | null>((resolve) => {
       try {
         const xhr = new XMLHttpRequest()
-        xhr.open('HEAD', url)
+        xhr.open('HEAD', pathOverride || path)
         xhr.timeout = 5000
 
         xhr.onload = () => {

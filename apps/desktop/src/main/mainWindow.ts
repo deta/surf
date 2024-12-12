@@ -12,6 +12,7 @@ import { applyCSPToSession } from './csp'
 import { isAppSetup, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
 import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
+import { writeFile } from 'fs/promises'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -114,6 +115,25 @@ export function createWindow() {
   )
   const webRequestManager = getWebRequestManager()
 
+  const requestHeaderMap = (() => {
+    const MAP_MAX_SIZE = 50
+    const map: Map<number, { url: string; headers: Record<string, string> }> = new Map()
+
+    return {
+      map,
+      set: (id: number, url: string, headers: Record<string, string>) => {
+        if (map.size >= MAP_MAX_SIZE) {
+          map.delete(map.keys().next().value as number)
+        }
+        map.set(id, { url, headers })
+      },
+      pop: (id: number) => {
+        const headers = map.get(id)
+        map.delete(id)
+        return headers
+      }
+    }
+  })()
   webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
     const shouldBlockRequest =
       details.url.startsWith('surf:') &&
@@ -125,30 +145,21 @@ export function createWindow() {
     callback({ cancel: shouldBlockRequest })
   })
   webRequestManager.addBeforeSendHeaders(webviewSession, (details, callback) => {
-    const { requestHeaders, url } = details
+    const { requestHeaders, url, id } = details
     const parsedURL = new URL(url)
     const isTwitch = parsedURL.hostname === 'twitch.tv' || parsedURL.hostname.endsWith('.twitch.tv')
     const isGoogleAccounts = parsedURL.hostname === 'accounts.google.com'
 
-    // Do not modify any request headers for `*.twitch.tv`
-    if (isTwitch) {
-      return
+    if (!isTwitch) {
+      requestHeaders['User-Agent'] = isGoogleAccounts
+        ? webviewSessionUserAgentGoogle
+        : webviewSessionUserAgent
     }
 
-    if (isGoogleAccounts) {
-      requestHeaders['User-Agent'] = webviewSessionUserAgentGoogle
-    } else {
-      requestHeaders['User-Agent'] = webviewSessionUserAgent
-    }
-
-    // These headers seem to be breaking Google Sign-in with "secure browser warnings".
-    //
-    // const chromiumVersion = process.versions.chrome.split('.')[0]
-    // requestHeaders['Sec-CH-UA'] = `"Chromium";v="${chromiumVersion}", " Not A;Brand";v="99"`
-    // requestHeaders['Sec-CH-UA-Mobile'] = '?0'
-
+    requestHeaderMap.set(id, url, { ...requestHeaders })
     callback({ requestHeaders })
   })
+
   webRequestManager.addHeadersReceived(webviewSession, (details, callback) => {
     if (details.resourceType !== 'mainFrame') {
       callback({ cancel: false })
@@ -171,11 +182,36 @@ export function createWindow() {
     if (isPDF && !isAttachment) {
       callback({ cancel: true })
 
-      if (details.webContents)
-        details.webContents.loadURL(
-          `${PDFViewerEntryPoint}?path=${encodeURIComponent(details.url)}`
-        )
+      const requestData = requestHeaderMap.pop(details.id)
+      const tmpFile = join(app.getPath('temp'), crypto.randomUUID())
 
+      const params = new URLSearchParams({
+        path: details.url,
+        loading: 'true'
+      })
+      details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
+
+      fetch(requestData?.url ?? details.url, {
+        headers: requestData?.headers,
+        credentials: 'include'
+      })
+        .then(async (resp) => {
+          const buffer = await resp.arrayBuffer()
+          await writeFile(tmpFile, Buffer.from(buffer))
+
+          const params = new URLSearchParams({
+            path: details.url,
+            pathOverride: `file://${tmpFile}`
+          })
+          details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
+        })
+        .catch((err) => {
+          const params = new URLSearchParams({
+            path: details.url,
+            error: err.message
+          })
+          details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
+        })
       return
     }
 
