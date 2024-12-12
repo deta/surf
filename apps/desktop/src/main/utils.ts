@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { execSync } from 'child_process'
 import path from 'path'
+import { promises as fsp } from 'fs'
 
 export let isAppSetup = false
 
@@ -132,3 +133,12 @@ export const PDFViewerEntryPoint = (() => {
     return `file://${path.join(__dirname, '../renderer/pdf.html')}`
   }
 })()
+
+export async function checkFileExists(path: string) {
+  try {
+    await fsp.access(path)
+    return true
+  } catch {
+    return false
+  }
+}

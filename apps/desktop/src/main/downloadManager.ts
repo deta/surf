@@ -2,19 +2,19 @@ import { useLogScope } from '@horizon/utils'
 import { session, ipcMain, app, shell } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
-import fs from 'fs'
+import fs, { promises as fsp } from 'fs'
 import path from 'path'
 import mime from 'mime-types'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import type { DownloadPathResponseMessage, SFFSResource } from '@horizon/types'
-import { isPathSafe } from './utils'
+import { isPathSafe, checkFileExists } from './utils'
 
 const log = useLogScope('Download Manager')
 
 export function initDownloadManager(partition: string) {
   const targetSession = session.fromPartition(partition)
 
-  targetSession.on('will-download', (_event, downloadItem) => {
+  targetSession.on('will-download', async (_event, downloadItem) => {
     let finalPath = ''
     let copyToUserDownloadsDirectory = false
 
@@ -30,17 +30,17 @@ export function initDownloadManager(partition: string) {
 
     log.debug('will-download', downloadItem.getURL(), filename)
 
-    const moveTempFile = (finalPath: string) => {
+    const moveTempFile = async (finalPath: string) => {
       // copy to downloads folder
       const downloadsPath = app.getPath('downloads')
 
       let downloadFileName = filename
       let downloadFilePath = path.join(downloadsPath, downloadFileName)
-      if (fs.existsSync(downloadFilePath)) {
+      if (await checkFileExists(downloadFilePath)) {
         const ext = path.extname(downloadFileName)
         const base = path.basename(downloadFileName, ext)
         let i = 1
-        while (fs.existsSync(downloadFilePath)) {
+        while (await checkFileExists(downloadFilePath)) {
           downloadFileName = `${base} (${i})${ext}`
           downloadFilePath = path.join(downloadsPath, downloadFileName)
           i++
@@ -49,23 +49,23 @@ export function initDownloadManager(partition: string) {
 
       if (copyToUserDownloadsDirectory) {
         log.debug('saving download to system downloads', downloadFilePath)
-        fs.copyFile(tempDownloadPath, downloadFilePath, (err) => {
-          if (err) {
-            log.error(`error copying file to downloads: ${err}`)
-            return
-          }
-        })
+        try {
+          await fsp.copyFile(tempDownloadPath, downloadFilePath)
+        } catch (err) {
+          log.error(`error copying file to downloads: ${err}`)
+          return
+        }
       } else {
         log.debug('skip saving download to system downloads')
       }
 
       log.debug('moving download to oasis directory', finalPath)
-      fs.rename(tempDownloadPath, finalPath, (err) => {
-        if (err) {
-          log.error(`error moving file: ${err}`)
-          return
-        }
-      })
+      try {
+        await fsp.rename(tempDownloadPath, finalPath)
+      } catch (err) {
+        log.error(`error moving file: ${err}`)
+        return
+      }
     }
 
     const webContents = getMainWindow()?.webContents
@@ -87,7 +87,7 @@ export function initDownloadManager(partition: string) {
 
     ipcMain.once(
       `download-path-response-${downloadId}`,
-      (_event, data: DownloadPathResponseMessage) => {
+      async (_event, data: DownloadPathResponseMessage) => {
         const { path, copyToDownloads } = data
 
         copyToUserDownloadsDirectory = copyToDownloads
@@ -96,7 +96,7 @@ export function initDownloadManager(partition: string) {
         log.debug(`download-path-response-${downloadId}`, path)
 
         if (downloadItem.getState() === 'completed') {
-          moveTempFile(finalPath)
+          await moveTempFile(finalPath)
         }
       }
     )
@@ -119,14 +119,14 @@ export function initDownloadManager(partition: string) {
       })
     })
 
-    downloadItem.once('done', (_event, state) => {
+    downloadItem.once('done', async (_event, state) => {
       let path: string
 
       log.debug('download-done', state, downloadItem.getFilename())
 
       if (state === 'completed' && finalPath) {
         path = finalPath
-        moveTempFile(finalPath)
+        await moveTempFile(finalPath)
       } else {
         path = tempDownloadPath
       }
