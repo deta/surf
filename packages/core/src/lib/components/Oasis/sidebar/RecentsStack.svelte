@@ -644,6 +644,32 @@
           color-mix(in srgb, var(--color), transparent 100%) 0%,
           color-mix(in srgb, var(--color), transparent 65%) 80%
         );
+        mask-image: linear-gradient(
+          to bottom,
+          color-mix(in srgb, var(--color), transparent 0%) 0%,
+          color-mix(in srgb, var(--color), transparent 0%) 15%,
+          color-mix(in srgb, var(--color), transparent 5%) 20%,
+          color-mix(in srgb, var(--color), transparent 15%) 25%,
+          color-mix(in srgb, var(--color), transparent 25%) 30%,
+          color-mix(in srgb, var(--color), transparent 40%) 35%,
+          color-mix(in srgb, var(--color), transparent 55%) 40%,
+          color-mix(in srgb, var(--color), transparent 70%) 45%,
+          color-mix(in srgb, var(--color), transparent 85%) 50%,
+          color-mix(in srgb, var(--color), transparent 100%) 55%
+        );
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          color-mix(in srgb, var(--color), transparent 0%) 0%,
+          color-mix(in srgb, var(--color), transparent 0%) 15%,
+          color-mix(in srgb, var(--color), transparent 5%) 20%,
+          color-mix(in srgb, var(--color), transparent 15%) 25%,
+          color-mix(in srgb, var(--color), transparent 25%) 30%,
+          color-mix(in srgb, var(--color), transparent 40%) 35%,
+          color-mix(in srgb, var(--color), transparent 55%) 40%,
+          color-mix(in srgb, var(--color), transparent 70%) 45%,
+          color-mix(in srgb, var(--color), transparent 85%) 50%,
+          color-mix(in srgb, var(--color), transparent 100%) 55%
+        );
         -webkit-app-region: no-drag;
 
         :global(.custom) & {

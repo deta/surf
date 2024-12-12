@@ -55,36 +55,82 @@
     justify-content: flex-end;
     align-items: stretch;
 
-    background: linear-gradient(0deg, rgb(77 135 240 / 74%) 0%, rgba(0, 0, 0, 0) 100%);
+    /* smooth scrim gradients, no hard cutoff
+    https://toward.studio/latest/making-css-gradients-smooth
+    */
+
+    background: linear-gradient(
+      0deg,
+      rgba(77, 135, 240, 1) 0%,
+      rgba(77, 135, 240, 0.738) 19%,
+      rgba(77, 135, 240, 0.541) 34%,
+      rgba(77, 135, 240, 0.382) 47%,
+      rgba(77, 135, 240, 0.278) 56.5%,
+      rgba(77, 135, 240, 0.194) 65%,
+      rgba(77, 135, 240, 0.126) 73%,
+      rgba(77, 135, 240, 0.075) 80.2%,
+      rgba(77, 135, 240, 0.042) 86.1%,
+      rgba(77, 135, 240, 0.021) 91%,
+      rgba(77, 135, 240, 0.008) 95.2%,
+      rgba(77, 135, 240, 0.002) 98.2%,
+      rgba(77, 135, 240, 0) 100%
+    );
 
     :global(.dark:not(.custom)) & {
-      background: linear-gradient(0deg, rgba(8, 16, 56, 0.74) 0%, rgba(22, 8, 8, 0) 100%);
+      background: linear-gradient(
+        0deg,
+        rgba(8, 16, 56, 1) 0%,
+        rgba(8, 16, 56, 0.738) 19%,
+        rgba(8, 16, 56, 0.541) 34%,
+        rgba(8, 16, 56, 0.382) 47%,
+        rgba(8, 16, 56, 0.278) 56.5%,
+        rgba(8, 16, 56, 0.194) 65%,
+        rgba(8, 16, 56, 0.126) 73%,
+        rgba(8, 16, 56, 0.075) 80.2%,
+        rgba(8, 16, 56, 0.042) 86.1%,
+        rgba(8, 16, 56, 0.021) 91%,
+        rgba(8, 16, 56, 0.008) 95.2%,
+        rgba(8, 16, 56, 0.002) 98.2%,
+        rgba(8, 16, 56, 0) 100%
+      );
     }
 
     :global(.custom) & {
-      // Light gradient colors
-      --mixed-bg: color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.65));
-      --mixed-bg-transparent: color-mix(
-        in hsl,
-        hsl(var(--base-color-hue) var(--base-color-saturation) var(--base-color-lightness) / 0),
-        hsl(var(--base-color-hue) 100% 100% / 0)
+      background: linear-gradient(
+        180deg,
+        var(--mixed-bg-transparent) 0%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.002)) 1.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.008)) 4.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.021)) 9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.042)) 13.9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.075)) 19.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.126)) 27%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.194)) 35%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.278)) 43.5%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.382)) 53%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.541)) 66%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.738)) 81%,
+        var(--mixed-bg) 100%
       );
-      background: linear-gradient(180deg, var(--mixed-bg-transparent), var(--mixed-bg));
     }
 
     :global(.custom.dark) & {
-      // Dark gradient colors
-      --mixed-bg-dark: color-mix(
-        in hsl,
-        var(--base-color),
-        hsl(var(--base-color-hue) 80% 0% / 0.65)
+      background: linear-gradient(
+        180deg,
+        var(--mixed-bg-dark-transparent) 0%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.002)) 1.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.008)) 4.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.021)) 9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.042)) 13.9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.075)) 19.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.126)) 27%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.194)) 35%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.278)) 43.5%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.382)) 53%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.541)) 66%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.738)) 81%,
+        var(--mixed-bg-dark) 100%
       );
-      --mixed-bg-dark-transparent: color-mix(
-        in hsl,
-        hsl(var(--base-color-hue) var(--base-color-saturation) var(--base-color-lightness) / 0),
-        hsl(var(--base-color-hue) 80% 0% / 0)
-      );
-      background: linear-gradient(180deg, var(--mixed-bg-dark-transparent), var(--mixed-bg-dark));
     }
 
     transition: height 185ms ease-out;
@@ -130,26 +176,78 @@
     margin: unset;
     margin-right: -1rem;
 
-    background: linear-gradient(to left, rgb(77 135 240 / 74%) 0%, #c8ddfa00 100%);
+    background: linear-gradient(
+      90deg,
+      rgba(77, 135, 240, 0) 0%,
+      rgba(77, 135, 240, 0.002) 1.8%,
+      rgba(77, 135, 240, 0.008) 4.8%,
+      rgba(77, 135, 240, 0.021) 9%,
+      rgba(77, 135, 240, 0.042) 13.9%,
+      rgba(77, 135, 240, 0.075) 19.8%,
+      rgba(77, 135, 240, 0.126) 27%,
+      rgba(77, 135, 240, 0.194) 35%,
+      rgba(77, 135, 240, 0.278) 43.5%,
+      rgba(77, 135, 240, 0.382) 53%,
+      rgba(77, 135, 240, 0.541) 66%,
+      rgba(77, 135, 240, 0.738) 81%,
+      rgba(77, 135, 240, 1) 100%
+    );
+
+    :global(.dark:not(.custom)) & {
+      background: linear-gradient(
+        90deg,
+        rgba(8, 16, 56, 0) 0%,
+        rgba(8, 16, 56, 0.002) 1.8%,
+        rgba(8, 16, 56, 0.008) 4.8%,
+        rgba(8, 16, 56, 0.021) 9%,
+        rgba(8, 16, 56, 0.042) 13.9%,
+        rgba(8, 16, 56, 0.075) 19.8%,
+        rgba(8, 16, 56, 0.126) 27%,
+        rgba(8, 16, 56, 0.194) 35%,
+        rgba(8, 16, 56, 0.278) 43.5%,
+        rgba(8, 16, 56, 0.382) 53%,
+        rgba(8, 16, 56, 0.541) 66%,
+        rgba(8, 16, 56, 0.738) 81%,
+        rgba(8, 16, 56, 1) 100%
+      );
+    }
 
     :global(.custom) & {
-      // Light gradient colors
-      --mixed-bg-transparent: color-mix(
-        in hsl,
-        hsl(var(--base-color-hue) var(--base-color-saturation) var(--base-color-ligntness) / 0),
-        hsl(var(--base-color-hue) 100% 100% / 0)
+      background: linear-gradient(
+        90deg,
+        var(--mixed-bg-transparent) 0%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.002)) 1.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.008)) 4.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.021)) 9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.042)) 13.9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.075)) 19.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.126)) 27%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.194)) 35%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.278)) 43.5%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.382)) 53%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.541)) 66%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 100% 100% / 0.738)) 81%,
+        var(--mixed-bg) 100%
       );
-      background: linear-gradient(90deg, var(--mixed-bg-transparent), var(--mixed-bg));
     }
 
     :global(.custom.dark) & {
-      // Dark gradient colors
-      --mixed-bg-dark-transparent: color-mix(
-        in hsl,
-        hsl(var(--base-color-hue) var(--base-color-saturation) var(--base-color-lightness) / 0),
-        hsl(var(--base-color-hue) 80% 0% / 0)
+      background: linear-gradient(
+        90deg,
+        var(--mixed-bg-dark-transparent) 0%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.002)) 1.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.008)) 4.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.021)) 9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.042)) 13.9%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.075)) 19.8%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.126)) 27%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.194)) 35%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.278)) 43.5%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.382)) 53%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.541)) 66%,
+        color-mix(in hsl, var(--base-color), hsl(var(--base-color-hue) 80% 0% / 0.738)) 81%,
+        var(--mixed-bg-dark) 100%
       );
-      background: linear-gradient(90deg, var(--mixed-bg-dark-transparent), var(--mixed-bg-dark));
     }
 
     transition: width 185ms ease-out;
