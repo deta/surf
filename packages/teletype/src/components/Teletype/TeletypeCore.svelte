@@ -239,8 +239,6 @@
         teletype.showParentAction()
         return
       }
-
-      closeTeletype()
     }
 
     if (e.metaKey && filteredActions) {
