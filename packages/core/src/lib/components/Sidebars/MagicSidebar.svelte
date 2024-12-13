@@ -609,6 +609,10 @@
       await clearChat($magicPage.chatId)
       toast.success('Chat cleared!')
 
+      await tick().then(() => {
+        editor.focus()
+      })
+
       await telemetry.trackPageChatClear(messagesLength)
     } catch (e) {
       log.error('Error clearing chat:', e)
