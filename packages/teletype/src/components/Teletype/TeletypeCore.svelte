@@ -419,7 +419,7 @@
                 fallbackAction?.loadingPlaceholder ||
                 'Loading actions...'}
             </div>
-          {:else if !$currentAction?.requireInput && $inputValue.length > 0}
+          {:else if !$currentAction?.requireInput && $inputValue.length > 0 && $currentAction !== null}
             <div transition:slide class="empty">
               {fallbackAction?.placeholder
                 ? fallbackAction.placeholder
