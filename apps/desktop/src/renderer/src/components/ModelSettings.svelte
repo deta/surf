@@ -225,7 +225,6 @@
   }
 
   const handleModelChange = (changes: Partial<Model>) => {
-    if (!customModelName) return
     updateModel($selectedModel.id, changes)
   }
 

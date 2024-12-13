@@ -16,7 +16,7 @@
   import AppStylePicker from './components/AppStylePicker.svelte'
   import HomescreenOption from './components/HomescreenOption.svelte'
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
-  import type { Model } from '@horizon/types/src/ai.types'
+  import { BUILT_IN_MODELS, type Model } from '@horizon/types/src/ai.types'
   import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
 
   // let error = ''
@@ -101,7 +101,16 @@
     console.log('updating model', id, updates)
     models.update((models) => {
       const index = models.findIndex((model) => model.id === id)
-      if (index === -1) return models
+      if (index === -1) {
+        const model = BUILT_IN_MODELS.find((model) => model.id === id)
+        if (!model) {
+          return models
+        }
+
+        models.push({ ...model, ...updates })
+
+        return models
+      }
 
       models[index] = { ...models[index], ...updates }
       return models
