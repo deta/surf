@@ -40,10 +40,15 @@
     position: fixed;
     z-index: 1000000000;
     top: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
-    :global(body:has(.horizontalTabs)) & {
+    transition: top 245ms ease-in-out;
+
+    :global(body:has(.app-contents.horizontalTabs):not(:has(.stuff-backdrop))) & {
       top: 2.5em !important;
     }
   }
