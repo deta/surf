@@ -1,7 +1,9 @@
-import { writable, type Writable } from 'svelte/store'
+import { get, writable, type Writable } from 'svelte/store'
 import type { Optional } from '../types'
 import { useLogScope, generateID } from '@horizon/utils'
 import { getContext, setContext } from 'svelte'
+import EventEmitter from 'events'
+import type TypedEmitter from 'typed-emitter'
 
 export type Toast = {
   id: string
@@ -23,13 +25,20 @@ export type ToastItem = {
 
 const DEFAULT_TIMEOUT = 3000
 
+export type ToastsEvents = {
+  'will-dismiss': (toast: Toast) => void
+}
+
 export class Toasts {
   toasts: Writable<Toast[]>
   log: ReturnType<typeof useLogScope>
+  eventEmitter: TypedEmitter<ToastsEvents>
 
   constructor() {
     this.toasts = writable([])
     this.log = useLogScope('Toasts')
+    // Svelte 5 would solve needing this event shit to notify
+    this.eventEmitter = new EventEmitter() as TypedEmitter<ToastsEvents>
   }
 
   create(data: Optional<Toast, 'id' | 'timeout' | 'type'>) {
@@ -42,7 +51,10 @@ export class Toasts {
 
     const toast = Object.assign({}, defaults, data)
 
-    this.toasts.update((all) => [toast, ...all])
+    this.toasts.update((v) => {
+      v.push(toast)
+      return v
+    })
     if (toast.timeout) {
       setTimeout(() => this.dismiss(id), toast.timeout)
     }
@@ -107,7 +119,10 @@ export class Toasts {
 
   dismiss(id: string) {
     this.log.debug('Dismissing toast', id)
-    this.toasts.update((all) => all.filter((t) => t.id !== id))
+    const toast = get(this.toasts).find((e) => e.id === id)
+    if (!toast) return
+    this.eventEmitter.emit('will-dismiss', toast)
+    setTimeout(() => this.toasts.update((all) => all.filter((t) => t.id !== id)), 300)
   }
 
   static provide() {
