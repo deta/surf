@@ -15,6 +15,8 @@ export function initDownloadManager(partition: string) {
   const targetSession = session.fromPartition(partition)
 
   targetSession.on('will-download', async (_event, downloadItem) => {
+    downloadItem.pause()
+
     let finalPath = ''
     let copyToUserDownloadsDirectory = false
 
@@ -26,7 +28,6 @@ export function initDownloadManager(partition: string) {
     const mimeType = mime.lookup(fileExtension) || downloadItem.getMimeType()
 
     downloadItem.setSavePath(tempDownloadPath)
-    downloadItem.resume()
 
     log.debug('will-download', downloadItem.getURL(), filename)
 
@@ -68,6 +69,24 @@ export function initDownloadManager(partition: string) {
       }
     }
 
+    ipcMain.once(
+      `download-path-response-${downloadId}`,
+      async (_event, data: DownloadPathResponseMessage) => {
+        downloadItem.resume()
+
+        const { path, copyToDownloads } = data
+
+        copyToUserDownloadsDirectory = copyToDownloads
+        finalPath = path
+
+        log.debug(`download-path-response-${downloadId}`, path)
+
+        if (downloadItem.getState() === 'completed') {
+          await moveTempFile(finalPath)
+        }
+      }
+    )
+
     const webContents = getMainWindow()?.webContents
     if (!webContents) {
       log.error('No main window found')
@@ -84,22 +103,6 @@ export function initDownloadManager(partition: string) {
       startTime: downloadItem.getStartTime(),
       hasUserGesture: downloadItem.hasUserGesture()
     })
-
-    ipcMain.once(
-      `download-path-response-${downloadId}`,
-      async (_event, data: DownloadPathResponseMessage) => {
-        const { path, copyToDownloads } = data
-
-        copyToUserDownloadsDirectory = copyToDownloads
-        finalPath = path
-
-        log.debug(`download-path-response-${downloadId}`, path)
-
-        if (downloadItem.getState() === 'completed') {
-          await moveTempFile(finalPath)
-        }
-      }
-    )
 
     downloadItem.on('updated', (_event, state) => {
       log.debug(
