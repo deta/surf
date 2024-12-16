@@ -489,7 +489,7 @@
   .save-buttons button {
     border: none;
     background: none;
-    cursor: pointer;
+
     padding: 0;
     margin: 0;
     user-select: none;
@@ -541,7 +541,7 @@
   .bar-wrapper button {
     border: none;
     background: none;
-    cursor: pointer;
+
     padding: 0;
     margin: 0;
     user-select: none;

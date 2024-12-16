@@ -69,8 +69,6 @@
   }
 
   .clickable {
-    cursor: pointer;
-
     &:hover {
       filter: brightness(98%);
     }
@@ -103,7 +101,7 @@
     padding: 0.5rem 0.75rem;
     color: var(--text);
     font-family: inherit;
-    cursor: pointer;
+
     border-left: 1px solid var(--text-light);
   }
 

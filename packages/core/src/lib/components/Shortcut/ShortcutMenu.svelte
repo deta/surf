@@ -209,7 +209,7 @@
       align-items: center;
       padding: 1rem 0.75rem 1rem 1rem;
       border-radius: 12px;
-      cursor: pointer;
+
       gap: 10px;
       position: relative;
       color: #7d7448;
@@ -256,7 +256,6 @@
     padding: 8px;
     font-size: 1.1rem;
     text-align: left;
-    cursor: pointer;
   }
   .active {
     background-color: #ffffff;

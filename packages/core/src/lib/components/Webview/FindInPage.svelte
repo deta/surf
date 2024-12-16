@@ -228,7 +228,7 @@
       height: 2rem;
       border-radius: 8px;
       border: none;
-      cursor: pointer;
+
       transition: background-color 0.2s;
 
       &:hover {

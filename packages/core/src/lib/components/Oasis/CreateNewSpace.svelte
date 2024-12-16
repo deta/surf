@@ -593,7 +593,7 @@
             on:change={() => {
               previewAISpace($userPrompt, $semanticInputValue)
             }}
-            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            class="w-full h-2 bg-gray-200 rounded-lg appearance-none "
           />
           <div class="flex justify-between text-xs text-gray-600 mt-1">
             <span>Ignore Semantic</span>
@@ -859,7 +859,6 @@
     padding: 1rem 1.5rem;
     border: none;
     border-radius: 12px;
-    cursor: pointer;
   }
 
   .cancel-button {

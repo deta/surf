@@ -301,7 +301,7 @@
           }
           dispatch('close')
         }}
-        class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
+        class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 text-xs"
         use:tooltip={{
           text: '⌘ + Shift + A',
           position: 'left'
@@ -315,7 +315,7 @@
       on:click={() => {
         dispatch('pick-screenshot')
       }}
-      class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
+      class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 text-xs"
     >
       Take Screenshot
     </button>

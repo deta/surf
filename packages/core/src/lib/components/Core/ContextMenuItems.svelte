@@ -185,7 +185,6 @@
       color: var(--ctx-item-text);
       font-family: system-ui;
       -webkit-font-smoothing: antialiased;
-      cursor: pointer;
 
       &:hover {
         background: var(--ctx-item-hover);

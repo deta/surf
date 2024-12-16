@@ -407,7 +407,7 @@
       font-family: inherit;
       font-size: 1.25rem;
       font-weight: 500;
-      cursor: pointer;
+
       transition: 60ms ease-out;
       &:hover {
         outline: 3px solid rgba(0, 0, 0, 0.15);
@@ -465,7 +465,6 @@
         display: flex;
         align-items: center;
         gap: 0.25rem;
-        cursor: pointer;
       }
 
       .hashtag {
@@ -485,7 +484,7 @@
         padding: 0.5rem 1rem;
         border-radius: 12px;
         color: #666;
-        cursor: pointer;
+
         transition: 240ms ease-out;
 
         &:hover {

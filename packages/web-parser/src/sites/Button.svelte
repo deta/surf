@@ -17,7 +17,7 @@
     display: inline-block;
     font-size: 14px;
     margin: 4px 2px;
-    cursor: pointer;
+
     border-radius: 8px;
     transition: background-color 0.3s;
   }

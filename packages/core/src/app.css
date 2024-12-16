@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 @layer utilities {
-
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -25,6 +24,13 @@
   .select-text {
     user-select: text;
   }
+
+  *,
+  a,
+  button {
+    cursor: default;
+    user-select: none;
+  }
 }
 
 /*::-webkit-scrollbar {
@@ -45,10 +51,7 @@
   display: none;
 }*/
 
-
-
 .os__windows {
-
   /* We only style the scrollbars on windows, as doing this on OSX results in the scrollbars being 
    * forced shown always.
    */

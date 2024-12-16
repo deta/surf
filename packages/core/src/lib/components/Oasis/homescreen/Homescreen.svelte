@@ -347,7 +347,7 @@
         border-radius: 64px;
         padding: 0.75rem 1.5rem;
         margin-top: 1em;
-        cursor: pointer;
+
         transition: all 0.2s ease;
         @apply text-sky-500/60;
 

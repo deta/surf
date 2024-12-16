@@ -624,7 +624,7 @@
     padding: 0.5rem;
     background: none;
     border: none;
-    cursor: pointer;
+
     appearance: none;
     margin: none;
     outline: none;
@@ -739,7 +739,6 @@
     padding: 0.5rem 1rem;
     border: 1px solid #ccc;
     border-radius: 8px;
-    cursor: pointer;
 
     .debug-toggle {
       width: 100%;
@@ -793,7 +792,7 @@
     color: white;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
+
     appearance: none;
     margin: none;
     outline: none;
@@ -805,7 +804,7 @@
   .link {
     color: #1da1f2;
     border: none;
-    cursor: pointer;
+
     appearance: none;
     margin: none;
     outline: none;
@@ -887,18 +886,16 @@
     color: rgb(29, 29, 29);
     border: 1px dashed #ccc;
     border-radius: 8px;
-    cursor: pointer;
+
     appearance: none;
     margin: none;
     outline: none;
     position: relative;
-    cursor: pointer;
 
     input {
       opacity: 0;
       width: 100%;
       height: 100px;
-      cursor: pointer;
     }
 
     .file-picker-text {

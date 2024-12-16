@@ -75,7 +75,6 @@
       }
 
       .create-trigger {
-        cursor: pointer;
         display: flex;
         align-items: center;
         padding: 1rem;

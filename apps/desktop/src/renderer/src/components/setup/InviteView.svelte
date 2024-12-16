@@ -189,7 +189,6 @@
     border: none;
     border-radius: 8px;
     font-size: 16px;
-    cursor: pointer;
 
     &:disabled {
       background-color: #ccc;

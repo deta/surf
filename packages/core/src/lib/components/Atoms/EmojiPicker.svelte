@@ -50,6 +50,20 @@
     picker.addEventListener('emoji-click', handleClick)
     picker.classList.add('no-drag')
     wrapper.appendChild(picker)
+
+    const root = picker.shadowRoot
+    if (root) {
+      const style = document.createElement('style')
+      style.textContent = `
+        .emoji, 
+        .nav-button,
+        button[role="tab"] {
+          cursor: default !important;
+        }
+      `
+      root.appendChild(style)
+    }
+
     await wait(100)
     focusInput()
   })

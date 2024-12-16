@@ -66,7 +66,6 @@
 
   .radio-item {
     label {
-      cursor: pointer;
     }
   }
 

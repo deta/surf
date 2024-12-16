@@ -168,7 +168,6 @@
 <style lang="scss">
   button {
     padding: 0.5rem;
-    cursor: pointer;
   }
 
   .live-mode {

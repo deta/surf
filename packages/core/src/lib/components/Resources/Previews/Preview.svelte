@@ -579,7 +579,6 @@
   }
 
   .interactive .title {
-    cursor: pointer;
     pointer-events: unset;
   }
 

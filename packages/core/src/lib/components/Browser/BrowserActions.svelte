@@ -30,7 +30,7 @@
     <Tooltip.Root openDelay={400} closeDelay={10}>
       <Tooltip.Trigger>
         <button
-          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
+          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
           on:click={window.api.showAppMenuPopup}
         >
           <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
@@ -61,7 +61,7 @@
       <Tooltip.Root openDelay={400} closeDelay={10}>
         <Tooltip.Trigger>
           <button
-            class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
+            class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
             class:rotate-90={horizontalTabs}
             on:click={() => dispatch('toggle-sidebar')}
           >
@@ -96,7 +96,7 @@
         <button
           class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 {!canGoBack
             ? 'opacity-30 cursor-not-allowed'
-            : 'cursor-pointer'}"
+            : ''}"
           disabled={!canGoBack}
           on:click={() => dispatch('go-back')}
         >
@@ -131,7 +131,7 @@
         <button
           class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 {!canGoForward
             ? 'opacity-30 cursor-not-allowed'
-            : 'cursor-pointer'}"
+            : ''}"
           disabled={!canGoForward}
           on:click={() => dispatch('go-forward')}
         >
@@ -166,7 +166,7 @@
         <button
           class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 {!canReload
             ? 'opacity-30 cursor-not-allowed'
-            : 'cursor-pointer'}"
+            : ''}"
           on:click={() => dispatch('reload')}
           disabled={!canReload}
         >

@@ -140,7 +140,7 @@
   .back-button {
     background: none;
     border: none;
-    cursor: pointer;
+
     padding: 4px;
     margin-bottom: 20px;
 

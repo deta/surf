@@ -416,7 +416,7 @@
     border-radius: 11px;
     display: flex;
     align-items: center;
-    cursor: pointer;
+
     user-select: none;
     overflow: hidden;
 

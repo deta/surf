@@ -237,7 +237,7 @@
       font-size: 1rem;
       font-weight: 500;
       color: #7d7448;
-      cursor: pointer;
+
       flex-shrink: 0;
 
       :global(.dark) & {

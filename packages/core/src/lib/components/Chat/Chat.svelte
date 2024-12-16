@@ -545,7 +545,7 @@
       appearance: none;
       border: none;
       border-radius: 5px;
-      cursor: pointer;
+
       font-size: 1rem;
       display: flex;
       align-items: center;
@@ -561,7 +561,7 @@
     appearance: none;
     border: none;
     border-radius: 5px;
-    cursor: pointer;
+
     font-size: 1rem;
   }
 
@@ -662,7 +662,6 @@
       background: rgb(255, 164, 164);
       border-radius: 100%;
       user-select: none;
-      cursor: pointer;
     }
 
     .resource-item {
@@ -792,7 +791,7 @@
     color: #fff;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
+
     font-size: 1rem;
   }
 </style>

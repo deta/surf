@@ -264,7 +264,7 @@
         role="button"
         tabindex="0"
         on:click={() => dispatch('close')}
-        class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+        class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group"
       >
         <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
         <Icon name="close" class="hidden group-hover:!block" size="20px" />
@@ -405,7 +405,7 @@
     .tab {
       padding: 0.5rem 1rem;
       border-radius: 8px;
-      cursor: pointer;
+
       transition: background 0.2s;
       background: #fff;
       color: #3f3f3f;
@@ -470,7 +470,7 @@
     border-radius: 8px;
     background: #fff;
     color: #353535;
-    cursor: pointer;
+
     font-size: 1rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     transition: background 0.2s;
@@ -529,7 +529,7 @@
       padding: 0.75rem;
       border: none;
       border-radius: 8px;
-      cursor: pointer;
+
       transition: background-color 0.2s;
       height: min-content;
       display: flex;
@@ -574,7 +574,7 @@
       border-radius: 8px;
       background: #fff;
       color: #353535;
-      cursor: pointer;
+
       font-size: 1rem;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       transition: background 0.2s;
@@ -606,7 +606,7 @@
     border: none;
     background: none;
     color: #616179;
-    cursor: pointer;
+
     font-size: 1rem;
 
     &:hover {

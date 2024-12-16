@@ -221,7 +221,7 @@
     color: white;
     border: none;
     padding: 5px 10px;
-    cursor: pointer;
+
     margin: 5px;
     display: flex;
     align-items: center;

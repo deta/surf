@@ -562,7 +562,7 @@
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     color: var(--color-text-muted);
-    cursor: pointer;
+
     transition: all 0.1s ease-in-out;
 
     &.active {
@@ -634,7 +634,7 @@
       border-radius: 0.5rem;
       background: none;
       color: var(--color-link);
-      cursor: pointer;
+
       transition: color 0.2s;
       font-size: 1.1rem;
 
@@ -668,7 +668,7 @@
       border-radius: 0.75rem;
       font-size: 0.9rem;
       font-weight: 500;
-      cursor: pointer;
+
       transition: all 0.3s ease;
       background: radial-gradient(
         circle at 50% -50%,
@@ -760,7 +760,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    cursor: pointer;
+
     transition: color 0.2s;
 
     &:hover {
@@ -850,7 +850,7 @@
     border: 1px solid var(--color-border);
     border-radius: 0.25rem;
     background: var(--color-background-light);
-    cursor: pointer;
+
     position: relative;
     transition: all 0.2s ease;
 

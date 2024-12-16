@@ -148,7 +148,7 @@
         role="button"
         tabindex="0"
         on:click={() => dispatch('close')}
-        class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group cursor-pointer"
+        class="flex items-center gap-2 p-1 text-sky-800/50 rounded-lg hover:bg-sky-100 hover:text-sky-800 group"
       >
         <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
         <Icon name="close" class="hidden group-hover:!block" size="20px" />
@@ -347,7 +347,7 @@
       padding: 0.75rem;
       border: none;
       border-radius: 8px;
-      cursor: pointer;
+
       transition: background-color 0.2s;
       height: min-content;
       display: flex;

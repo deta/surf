@@ -19,7 +19,7 @@
         <div class="flex items-start peer-checked:[&>label]:rotate-90">
           <label
             for={`${item.title}-${ix}`}
-            class="cursor-pointer mt-1 hover:text-slate-900 rounded p-1 hover:bg-slate-200"
+            class=" mt-1 hover:text-slate-900 rounded p-1 hover:bg-slate-200"
           >
             <iconify-icon height={16} icon="codicon:triangle-right" />
           </label>

@@ -133,6 +133,5 @@
 
   .embla__slide {
     min-width: 0;
-    cursor: pointer;
   }
 </style>

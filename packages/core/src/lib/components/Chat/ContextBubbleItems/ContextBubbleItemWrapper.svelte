@@ -136,7 +136,7 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
     slot="content"
-    class="no-drag bg-white dark:bg-gray-800 hover:bg-gray-100 w-fit relative max-w-96 max-h-[50ch] cursor-pointer"
+    class="no-drag bg-white dark:bg-gray-800 hover:bg-gray-100 w-fit relative max-w-96 max-h-[50ch]"
     on:click={() => handleSelect(pill.contextItemId)}
     use:contextMenu={contextMenuData}
   >

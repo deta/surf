@@ -486,7 +486,6 @@
       'group',
       'transform',
       'active:scale-[98%]',
-      'cursor-pointer',
       'gap-3',
       'justify-center',
       'relative',
@@ -799,7 +798,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   {/if}-->
 
   <div
-    class="tab-favicon custom-text-color"
+    class="tab-favicon custom-text-color cursor-default"
     class:media-playing={$userSettings.turntable_favicons && $isMediaPlaying}
     class:icon-wrapper={true}
     class:flex-shrink-0={true}
@@ -843,7 +842,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="custom-text-color items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+        class="custom-text-color cursor-default items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -854,7 +853,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="custom-text-color items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+        class="custom-text-color items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -916,7 +915,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
             >
               <Icon name="news" />
             </button>
@@ -930,7 +929,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               </span>
               <div class="flex w-full">
                 <button
-                  class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 cursor-pointer rounded-md"
+                  class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-md"
                   on:click={handleCreateLiveSpace}
                 >
                   <Icon name="check" size="16px" />
@@ -966,7 +965,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             >
               <button
                 on:click|stopPropagation={() => handleBookmark()}
-                class="custom-text-color flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+                class="custom-text-color flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
               >
                 {#if bookmarkingState === 'in_progress'}
                   <Icon name="spinner" size="16px" />
@@ -997,7 +996,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         <!-- {#if tab.magic}
           <button
             on:click|stopPropagation={handleExcludeTab}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full cursor-pointer"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full "
             use:tooltip={{
               content: 'Add Tab to Context',
               action: 'hover',
@@ -1015,7 +1014,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         {#if showExcludeOthersButton}
           <button
             on:click|stopPropagation={handleExcludeOthers}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none text-sky-900 dark:text-gray-200 transition-colors hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full cursor-pointer"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none text-sky-900 dark:text-gray-200 transition-colors hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
             use:tooltip={{
               content: 'Only use this tab',
               action: 'hover',

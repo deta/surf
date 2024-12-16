@@ -274,7 +274,7 @@
     {/each}
   </div>
   <button
-    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-700 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-200 cursor-pointer flex active:outline-none focus:outline-none"
+    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-700 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-200 flex active:outline-none focus:outline-none"
     on:click={() => dispatch('open-stuff')}
   >
     <Icon name="arrow.up.right" size="18px" />

@@ -168,7 +168,7 @@
     border-radius: var(--border-radius-xs);
     background: var(--background-light);
     border: 2px solid var(--border);
-    cursor: pointer;
+
     min-width: 80px;
     transition: all 0.2s ease;
 

@@ -18,7 +18,7 @@
     color: white;
     border: none;
     border-radius: 0.825rem;
-    cursor: pointer;
+
     font-size: 1.25rem;
     width: 100%;
     min-width: 12rem;

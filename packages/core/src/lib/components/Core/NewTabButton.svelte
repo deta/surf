@@ -94,7 +94,7 @@
 <DropdownMenu.Root open={isOpen} loop typeahead={!isCreatingNewSpace}>
   <DropdownMenu.Trigger class="select-none items-center justify-center ">
     <button
-      class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+      class="transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800"
     >
       <Icon name="save" />
     </button>
@@ -106,7 +106,7 @@
       {#if $filteredSpaces.length > 0}
         {#each $filteredSpaces as space, index}
           <DropdownMenu.Item
-            class="flex  select-none items-center group  py-4 pl-3 pr-1.5 cursor-pointer space-x-4 justify-between  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 data-[state=open]:bg-gray-200"
+            class="flex  select-none items-center group  py-4 pl-3 pr-1.5  space-x-4 justify-between  font-medium outline-none rounded-xl !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 data-[state=open]:bg-gray-200"
             on:click={() => handleClick(index)}
           >
             <div class="truncate">{space.dataValue.folderName}</div>

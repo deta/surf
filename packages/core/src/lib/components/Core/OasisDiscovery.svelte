@@ -462,7 +462,7 @@
     color: white;
     border: none;
     border-radius: 0.25rem;
-    cursor: pointer;
+
     width: 100px;
   }
 

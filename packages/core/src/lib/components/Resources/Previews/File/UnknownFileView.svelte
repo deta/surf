@@ -69,7 +69,7 @@
       <div class="mt-6 flex items-center justify-center">
         <button
           on:click={openFile}
-          class="flex items-center gap-2 px-4 py-3 bg-sky-300/60 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000 cursor-pointer"
+          class="flex items-center gap-2 px-4 py-3 bg-sky-300/60 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-1000"
         >
           <Icon name="download" size="22px" />
           {isMacOs ? 'Reveal in System Downloads' : 'Open in File Explorer'}

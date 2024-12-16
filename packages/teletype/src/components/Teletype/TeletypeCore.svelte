@@ -732,7 +732,7 @@
         display: flex;
         align-items: center;
         gap: 0.25rem;
-        cursor: pointer;
+
         transition: transform 0.3s ease;
       }
 
@@ -768,7 +768,7 @@
 
     & .helper {
       margin-left: auto;
-      cursor: pointer;
+
       opacity: 0.8;
 
       :global(svg) {
@@ -789,7 +789,6 @@
       margin-left: auto;
       font-size: 1.25rem;
       color: var(--text-light);
-      cursor: pointer;
     }
   }
 
@@ -809,7 +808,6 @@
     border-radius: var(--border-radius);
     overflow: hidden;
     font-size: 1rem;
-    cursor: pointer;
   }
 
   .title {

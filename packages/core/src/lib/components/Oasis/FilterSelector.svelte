@@ -110,7 +110,7 @@
     border-radius: calc(10px - 0.25rem);
     font-size: 1rem;
     font-weight: 400;
-    cursor: pointer;
+
     transition: background-color 0.2s;
 
     &:hover {
@@ -127,7 +127,7 @@
     border-radius: calc(10px - 0.25rem);
     font-size: 1rem;
     font-weight: 400;
-    cursor: pointer;
+
     transition: background-color 0.2s;
     border: none;
     background: none;

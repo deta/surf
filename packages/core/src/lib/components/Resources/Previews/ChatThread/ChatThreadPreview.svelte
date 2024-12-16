@@ -90,7 +90,6 @@
   }
 
   .toggle-messages {
-    cursor: pointer;
     /* Add more styling as needed */
   }
 

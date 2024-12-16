@@ -284,7 +284,7 @@
             on:select={handleSelectedModelChange}
           >
             <button
-              class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer"
+              class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
             >
               {#if $selectedProviderItem}
                 <Icon name={$selectedProviderItem.icon} />

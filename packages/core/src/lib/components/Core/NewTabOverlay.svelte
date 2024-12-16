@@ -905,7 +905,7 @@
     justify-content: center;
     gap: 0.5rem;
     transition: all 200ms;
-    cursor: pointer;
+
     height: fit-content;
     width: fit-content;
     background: white;

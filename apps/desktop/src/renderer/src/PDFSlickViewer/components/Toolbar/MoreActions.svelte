@@ -72,7 +72,7 @@
               }}
               class={({ active, disabled }) =>
                 clsx(
-                  'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                  'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                   {
                     'text-gray-900 bg-slate-100': active,
                     'text-gray-700': !active,
@@ -89,7 +89,7 @@
             <!-- <MenuItem
               class={({ active, disabled }) =>
                 clsx(
-                  'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                  'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                   {
                     'text-gray-900 bg-slate-100': active,
                     'text-gray-700': !active,
@@ -109,7 +109,7 @@
               }}
               class={({ active, disabled }) =>
                 clsx(
-                  'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                  'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                   {
                     'text-gray-900 bg-slate-100': active,
                     'text-gray-700': !active,
@@ -126,7 +126,7 @@
               }}
               class={({ active, disabled }) =>
                 clsx(
-                  'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                  'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                   {
                     'text-gray-900 bg-slate-100': active,
                     'text-gray-700': !active,
@@ -152,7 +152,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -170,7 +170,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -190,7 +190,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -207,7 +207,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -227,7 +227,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -247,7 +247,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -267,7 +267,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -287,7 +287,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -310,7 +310,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -330,7 +330,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -350,7 +350,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,
@@ -373,7 +373,7 @@
                 }}
                 class={({ active, disabled }) =>
                   clsx(
-                    'w-full cursor-pointer items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
+                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
                     {
                       'text-gray-900 bg-slate-100': active,
                       'text-gray-700': !active,

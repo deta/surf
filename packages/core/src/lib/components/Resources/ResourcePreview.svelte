@@ -1271,7 +1271,6 @@
     }
 
     &.interactive {
-      cursor: pointer;
     }
 
     /// Loading state

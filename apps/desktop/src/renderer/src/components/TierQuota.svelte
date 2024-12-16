@@ -55,7 +55,7 @@
     color: var(--color-text);
     border-bottom: 2px solid transparent;
     outline: none;
-    cursor: pointer;
+
     opacity: 0.5;
     transition: opacity 0.2s ease;
 

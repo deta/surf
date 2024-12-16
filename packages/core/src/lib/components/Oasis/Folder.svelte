@@ -505,7 +505,6 @@
     justify-content: space-between;
     padding: 0.525rem 0.75rem;
     border-radius: 16px;
-    cursor: pointer;
 
     position: relative;
     color: #244581;
@@ -670,7 +669,7 @@
         height: min-content;
         background: none;
         color: #5c77a8;
-        cursor: pointer;
+
         transition: color 0.2s ease;
 
         &:hover {

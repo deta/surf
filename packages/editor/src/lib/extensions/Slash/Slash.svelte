@@ -121,7 +121,7 @@
     user-select: none;
     padding: 0.25rem;
     font-size: 0.875rem;
-    cursor: pointer;
+
     display: flex;
     align-items: center;
     gap: 0.5rem;

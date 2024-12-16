@@ -371,7 +371,7 @@
           use:tooltip={{ text: 'Go Back' }}
           disabled={!canGoBack}
           on:click={() => browserTab.goBack()}
-          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg cursor-pointer"
+          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
         >
           <span
             class="transition-transform group-hover/nav-btn:-translate-x-1 ease-in-out duration-200"
@@ -384,7 +384,7 @@
           use:tooltip={{ text: 'Go Forward' }}
           disabled={!canGoForward}
           on:click={() => browserTab.goForward()}
-          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg cursor-pointer"
+          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
         >
           <span
             class="transition-transform group-hover/nav-btn:translate-x-1 ease-in-out duration-200"
@@ -396,7 +396,7 @@
         <button
           use:tooltip={{ text: 'Reload Page' }}
           on:click={() => browserTab.reload()}
-          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg cursor-pointer"
+          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
         >
           <span
             class="transition-transform group-hover/nav-btn:rotate-180 ease-in-out duration-200"
@@ -414,7 +414,7 @@
         <button
           use:tooltip={{ text: 'Open in new tab' }}
           on:click={() => openAsNewTab()}
-          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg cursor-pointer"
+          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
         >
           <Icon name="arrow.diagonal" />
         </button>
@@ -423,7 +423,7 @@
           <button
             use:tooltip={{ text: 'Copy URL' }}
             on:click={handleCopy}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg "
           >
             <IconConfirmation bind:this={copyConfirmation} name="copy" />
           </button>
@@ -434,7 +434,7 @@
             <button
               slot="trigger"
               on:click={() => handleBookmark()}
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg cursor-pointer"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
             >
               {#if $bookmarkingState === 'in_progress'}
                 <Icon name="spinner" size="16px" />
@@ -462,7 +462,7 @@
         <button
           use:tooltip={{ text: 'Close' }}
           on:click={close}
-          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg cursor-pointer"
+          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
         >
           <Icon name="close" />
         </button>

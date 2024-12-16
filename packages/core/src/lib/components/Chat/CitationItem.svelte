@@ -558,7 +558,7 @@
 
       <div
         slot="content"
-        class="no-drag bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 relative max-w-96 cursor-pointer"
+        class="no-drag bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 relative max-w-96"
         on:click={() => handleClick()}
         use:contextMenu={contextMenuData}
         use:hover={hoveringPreview}
@@ -571,7 +571,6 @@
 
 <style lang="scss">
   citation {
-    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;

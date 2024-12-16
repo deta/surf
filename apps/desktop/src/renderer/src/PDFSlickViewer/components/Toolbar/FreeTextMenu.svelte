@@ -72,7 +72,7 @@
               <div class="flex space-x-1">
                 {#each colorNames as name}
                   <button
-                    class="p-2 cursor-pointer block rounded-full origin-center border border-transparent hover:scale-125 hover:border-blue-300 focus:ring-0 focus:outline-none focus:scale-125 focus:border-blue-300"
+                    class="p-2 block rounded-full origin-center border border-transparent hover:scale-125 hover:border-blue-300 focus:ring-0 focus:outline-none focus:scale-125 focus:border-blue-300"
                     style={`background-color: ${colors[name][s]}`}
                     on:click={(e) => {
                       e.preventDefault()
@@ -101,7 +101,7 @@
               </label>
               <div class="w-full flex flex-1 items-center">
                 <input
-                  class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                  class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none dark:bg-gray-700"
                   bind:value={fontSize}
                   id="fontSize"
                   type="range"

@@ -113,7 +113,7 @@
     border-radius: 12px;
     background-color: rgba(255, 255, 255, 0.75);
     transition: background-color 0.2s;
-    cursor: pointer;
+
     position: relative;
     overflow: visible;
 
@@ -170,7 +170,6 @@
     border-radius: 50%;
     width: 2rem;
     height: 2rem;
-    cursor: pointer;
 
     &:hover {
       background: #ecebe5c6;

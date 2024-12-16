@@ -195,7 +195,7 @@
                 <span class="text-gray-700 truncate text-sm md:!text-base">{tab.title}</span>
               </div>
               <div
-                class="flex items-center gap-2 flex-shrink-0 hover:scale-110 transform-gpu transition-transform cursor-pointer {!$savingTabs[
+                class="flex items-center gap-2 flex-shrink-0 hover:scale-110 transform-gpu transition-transform {!$savingTabs[
                   tab.url
                 ]
                   ? 'tooltip-target'

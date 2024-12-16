@@ -63,7 +63,7 @@
     <div class="bg-white/40 backdrop-blur-sm rounded-3xl p-4">
       <div class="grid grid-cols-1 sm:!grid-cols-2 gap-4">
         <div
-          class="bg-white rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all hover:shadow-lg h-52"
+          class="bg-white rounded-2xl p-4 relative overflow-hidden transition-all hover:shadow-lg h-52"
           role="button"
           tabindex="0"
           on:click={handleTryChatWithTabs}
@@ -78,7 +78,7 @@
         </div>
 
         <div
-          class="bg-white rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all hover:shadow-lg h-52"
+          class="bg-white rounded-2xl p-4 relative overflow-hidden transition-all hover:shadow-lg h-52"
           role="button"
           tabindex="0"
           on:click={handleTryChatWithSpace}
@@ -93,7 +93,7 @@
         </div>
 
         <div
-          class="bg-white rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all hover:shadow-lg h-52"
+          class="bg-white rounded-2xl p-4 relative overflow-hidden transition-all hover:shadow-lg h-52"
           role="button"
           tabindex="0"
           on:click={handleTryChatWithPDF}
@@ -108,7 +108,7 @@
         </div>
 
         <div
-          class="bg-white rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all hover:shadow-lg h-52"
+          class="bg-white rounded-2xl p-4 relative overflow-hidden transition-all hover:shadow-lg h-52"
           role="button"
           tabindex="0"
           on:click={handleTryChatWithYoutubeVideo}

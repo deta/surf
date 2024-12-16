@@ -66,7 +66,7 @@
               }
             }}
             class={({ active }) =>
-              clsx(`cursor-pointer block w-full text-left px-2 py-1.5 text-xs`, {
+              clsx(` block w-full text-left px-2 py-1.5 text-xs`, {
                 'bg-slate-100 text-slate-900': active,
                 'text-slate-700': !active
               })}
@@ -85,7 +85,7 @@
               }
             }}
             class={({ active }) =>
-              clsx(`cursor-pointer block w-full text-left px-2 py-1.5 text-xs`, {
+              clsx(` block w-full text-left px-2 py-1.5 text-xs`, {
                 'bg-slate-100 text-slate-900': active,
                 'text-slate-700': !active
               })}

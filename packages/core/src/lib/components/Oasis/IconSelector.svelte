@@ -184,7 +184,7 @@
     background-color: white;
     position: relative;
     width: 320px;
-    cursor: pointer;
+
     padding: 0.5rem 0;
     z-index: 10;
     pointer-events: auto;
@@ -212,7 +212,7 @@
       padding: 0.25rem 0.5rem;
       font-size: 1rem;
       opacity: 0.65;
-      cursor: pointer;
+
       border-radius: 8px;
       transition:
         opacity 0.2s,
@@ -237,7 +237,7 @@
     padding: 0.25rem 0.5rem;
     margin: 0.75rem;
     margin-right: 0.75rem;
-    cursor: pointer;
+
     border-radius: 8px;
     opacity: 0.65;
     transition:
@@ -294,7 +294,6 @@
       background-color: rgb(59 130 246);
       color: white;
       border-radius: 8px;
-      cursor: pointer;
     }
 
     p {

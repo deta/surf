@@ -4678,19 +4678,19 @@
       <div class="flex flex-row items-center space-x-2 ml-5">
         <button
           on:click={() => controlWindow('minimize')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-x text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-x text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
         >
           <Icon name="minus" />
         </button>
         <button
           on:click={() => controlWindow('toggle-maximize')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
         >
           <Icon name="rectangle" />
         </button>
         <button
           on:click={() => controlWindow('close')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 cursor-pointer"
+          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
         >
           <Icon name="close" />
         </button>
@@ -5088,7 +5088,7 @@
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-[0.625rem] p-1.5'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
                     class:bg-sky-200={$showNewTabOverlay === 1}
                     class:dark:bg-sky-900={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
@@ -5218,7 +5218,7 @@
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
                     class:bg-sky-200={$showNewTabOverlay === 1}
                     class:dark:bg-sky-900={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
@@ -5243,7 +5243,7 @@
                 class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
               {horizontalTabs
                   ? 'w-fit rounded-xl p-2'
-                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
                 on:click|preventDefault={() => tabsManager.showNewTab()}
                 class:opacity-100={$showEndMask || horizontalTabs}
                 class:opacity-0={!$showEndMask}
@@ -5275,7 +5275,7 @@
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
@@ -5295,7 +5295,7 @@
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                       <button
                         slot="trigger"
-                        class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 dark:hover:bg-gray-800 dark:text-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                        class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 dark:hover:bg-gray-800 dark:text-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800"
                         on:click={() => toggleRightSidebar()}
                       >
                         <Icon name="triangle-square-circle" />
@@ -5336,7 +5336,7 @@
                       text: 'Chat (⌘ + E)',
                       position: horizontalTabs ? 'left' : 'top'
                     }}
-                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
                     class:scale-90={horizontalTabs ?? false}
                     on:click={() => {
                       toggleRightSidebarTab('chat')
@@ -5353,7 +5353,7 @@
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100 cursor-pointer"
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
@@ -5373,7 +5373,7 @@
                   text: 'My Stuff (⌘ + O)',
                   position: horizontalTabs ? 'left' : 'top'
                 }}
-                class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 "
                 on:click={() => ($showNewTabOverlay = 2)}
                 class:bg-sky-200={$showNewTabOverlay === 2}
               >
@@ -5420,19 +5420,19 @@
               >
                 <button
                   on:click={() => controlWindow('minimize')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
                 >
                   <Icon name="minus" />
                 </button>
                 <button
                   on:click={() => controlWindow('toggle-maximize')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
                 >
                   <Icon name="rectangle" />
                 </button>
                 <button
                   on:click={() => controlWindow('close')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer"
+                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
                 >
                   <Icon name="close" />
                 </button>
@@ -5489,13 +5489,13 @@
 
               <!-- {#if $onboardingTabVisible && $onboardingTabOpened && !$userConfigSettings?.onboarding?.ignore_back_to_onboarding_button}
                 <button
-                  class="transform no-drag active:scale-95 appearance-none select-none outline-none border-2 border-sky-100 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 cursor-pointer bg-white w-fit fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
+                  class="transform no-drag active:scale-95 appearance-none select-none outline-none border-2 border-sky-100 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800  bg-white w-fit fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
                   on:click={() => openWelcomeTab()}
                 >
                   <span>← Back to Surf Onboarding</span>
                 </button>
                 <span
-                  class="transform no-drag active:scale-95 appearance-none select-none outline-none margin-0 group flex items-center justify-center p-2 transition-colors duration-200 text-sky-800 cursor-pointer w-fit fixed bottom-16 left-1/2 -translate-x-1/2 z-50 underline"
+                  class="transform no-drag active:scale-95 appearance-none select-none outline-none margin-0 group flex items-center justify-center p-2 transition-colors duration-200 text-sky-800  w-fit fixed bottom-16 left-1/2 -translate-x-1/2 z-50 underline"
                 >
                   <span>Dismiss this</span>
                 </span>
@@ -5619,7 +5619,7 @@
                 role="button"
                 tabindex="0"
                 on:click={() => toggleRightSidebar()}
-                class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group cursor-pointer"
+                class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
               >
                 <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
                 <Icon name="close" class="hidden group-hover:!block" size="20px" />
@@ -5634,7 +5634,7 @@
               {#each $sidebarTools as tool}
                 <Tabs.Trigger
                   value={tool.id}
-                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-300 cursor-pointer opacity-75 data-[state='active']:opacity-100 dark:data-[state='active']:bg-gray-700 hover:bg-sky-100 dark:hover:bg-gray-700 data-[state='active']:hover:bg-sky-200/50"
+                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-300  opacity-75 data-[state='active']:opacity-100 dark:data-[state='active']:bg-gray-700 hover:bg-sky-100 dark:hover:bg-gray-700 data-[state='active']:hover:bg-sky-200/50"
                   disabled={tool.disabled}
                 >
                   {#if tool.icon}
@@ -5779,6 +5779,13 @@
 
 <style lang="scss">
   * {
+    user-select: none;
+  }
+
+  *,
+  a,
+  button {
+    cursor: default;
     user-select: none;
   }
 
@@ -6262,7 +6269,7 @@
     background: rgba(175, 238, 238, 0.292);
     border-radius: 8px;
     padding: 0.7rem;
-    cursor: pointer;
+
     border-top: 1px solid #e4e2d4;
     border-bottom: 1px solid #e4e2d4;
     border-left: 1px solid #e4e2d4;
@@ -6274,7 +6281,7 @@
     background: rgba(175, 238, 238, 0.292);
     border-radius: 8px;
     padding: 0.7rem;
-    cursor: pointer;
+
     border-top: 1px solid #e4e2d4;
     border-bottom: 1px solid #e4e2d4;
     border-left: 1px solid #e4e2d4;
@@ -6390,7 +6397,6 @@
       justify-content: center;
       gap: 5px;
       border-radius: 5px;
-      cursor: pointer;
 
       background-color: #fff;
       padding: 10px;
@@ -6688,7 +6694,6 @@
       justify-content: center;
       gap: 5px;
       border-radius: 5px;
-      cursor: pointer;
 
       &:not(.nav-button) {
         flex: 1;
@@ -6732,7 +6737,6 @@
   }
 
   .icon-button {
-    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -6767,7 +6771,7 @@
       align-items: center;
       justify-content: center;
       gap: 5px;
-      cursor: pointer;
+
       font-size: 1rem;
       color: #777777;
       padding: 10px;
@@ -6805,7 +6809,7 @@
   //   border: 1px solid rgb(183 198 218);
   //   border-radius: 100%;
   //   user-select: none;
-  //   cursor: pointer;
+  //
   //   overflow: hidden;
   // }
 
@@ -6877,7 +6881,7 @@
     border: none;
     border-radius: 8px;
     padding: 10px;
-    cursor: pointer;
+
     margin-top: 1rem;
     font-size: 1rem;
     font-weight: 500;

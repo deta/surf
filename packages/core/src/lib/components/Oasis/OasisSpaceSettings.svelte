@@ -654,7 +654,7 @@
         opacity: 0.5;
         font-size: 1rem;
         font-weight: 500;
-        cursor: pointer;
+
         font-smooth: always;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -679,7 +679,7 @@
       color: inherit;
       font-size: 1.1rem;
       font-weight: 500;
-      cursor: pointer;
+
       font-smooth: always;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -769,7 +769,6 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      cursor: pointer;
 
       h2 {
         font-size: 1.2rem;
@@ -828,7 +827,7 @@
         color: inherit;
         font-size: 1.1rem;
         font-weight: 500;
-        cursor: pointer;
+
         font-smooth: always;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -847,7 +846,6 @@
         opacity: 0.75;
 
         input {
-          cursor: pointer;
         }
       }
     }

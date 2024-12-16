@@ -1542,7 +1542,7 @@
         role="button"
         tabindex="0"
         on:click={() => dispatch('close-chat')}
-        class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-sky-100/50 rounded-lg hover:bg-sky-100 dark:hover:bg-gray-800 hover:text-sky-800 dark:hover:text-sky-100 group cursor-pointer"
+        class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-sky-100/50 rounded-lg hover:bg-sky-100 dark:hover:bg-gray-800 hover:text-sky-800 dark:hover:text-sky-100 group cursor-default"
       >
         <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
         <Icon name="close" class="hidden group-hover:!block" size="20px" />
@@ -1626,7 +1626,7 @@
                     text: 'Open as tab',
                     position: 'left'
                   }}
-                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 dark:bg-gray-800 hover:bg-sky-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 dark:bg-gray-800 hover:bg-sky-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
                 >
                   <Icon name="check" />
                   Saved
@@ -1638,7 +1638,7 @@
                     text: 'Save to My Stuff',
                     position: 'left'
                   }}
-                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer"
+                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
                 >
                   <Icon name="save" />
                   Save
@@ -1658,7 +1658,7 @@
                   text: 'Copy to Clipboard',
                   position: 'left'
                 }}
-                class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center py-2.5 px-2.5 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer"
+                class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center py-2.5 px-2.5 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
               >
                 {#if $copied}
                   <Icon name="check" size="16px" />
@@ -1796,7 +1796,7 @@
             handleClearChat()
           }
         }}
-        class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 cursor-pointer text-xs"
+        class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 text-xs"
       >
         {#if navigator.platform.toLowerCase().indexOf('mac') > -1}
           Clear Chat
@@ -1909,7 +1909,7 @@
         {/if}
 
         <!-- <button
-          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
+          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100  text-sm"
           on:click={handlePickScreenshot}
           use:tooltip={{
             text: 'Add Screenshot',
@@ -1922,7 +1922,7 @@
         <button
           disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
           popovertarget="chat-add-context-tabs"
-          class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
+          class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
           on:click={(e) => {
             $tabPickerOpen = !$tabPickerOpen
           }}
@@ -1946,7 +1946,7 @@
           on:select={handleModelSelect}
         >
           <button
-            class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
+            class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
           >
             {#if $selectedModelItem}
               <Icon name={$selectedModelItem.icon} />
@@ -1957,7 +1957,7 @@
         </SelectDropdown>
 
         <button
-          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 cursor-pointer text-sm"
+          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
           on:click={() => {
             selectedMode = 'active'
             handleChatSubmit()
@@ -2046,7 +2046,7 @@
   //   display: flex;
   //   align-items: center;
   //   justify-content: center;
-  //   cursor: pointer;
+  //
   //   flex-shrink: 0;
 
   //   // secondary styles
@@ -2130,7 +2130,7 @@
       appearance: none;
       border: none;
       background: none;
-      cursor: pointer;
+
       margin: 0;
       display: flex;
       align-items: center;
@@ -2184,7 +2184,7 @@
       border-radius: 8px;
       background: #fff;
       color: #353535;
-      cursor: pointer;
+
       font-size: 1rem;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       transition: background 0.2s;
@@ -2203,7 +2203,7 @@
     border: none;
     background: none;
     color: #616179;
-    cursor: pointer;
+
     font-size: 1rem;
 
     &:hover {

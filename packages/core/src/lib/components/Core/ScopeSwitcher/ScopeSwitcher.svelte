@@ -377,7 +377,7 @@
     inputPlaceholder="Search your Contexts…"
     on:select={handleChange}
   >
-    <div class="trigger" on:mouseenter={handleTitleMouseLeave}>
+    <div class="trigger cursor-default" on:mouseenter={handleTitleMouseLeave}>
       <Icon name="chevron.down" />
     </div>
 
@@ -462,8 +462,26 @@
     padding-left: 0.25rem;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.05);
+      color: rgb(2 132 199); // text-sky-600
+      background: rgba(2, 132, 199, 0.1);
       border-radius: 8px;
+
+      :global(.dark) & {
+        color: rgb(2 132 199); // text-sky-600
+        background-color: rgb(59, 80, 111);
+      }
+
+      :global(.custom) & {
+        color: var(--contrast-color) !important;
+        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 90%, 0.3)) !important;
+      }
+      :global(.custom.dark) & {
+        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 00%, 0.65)) !important;
+      }
+    }
+
+    &:focus {
+      outline: none;
     }
   }
 
@@ -479,7 +497,6 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
-    cursor: pointer;
 
     div {
       pointer-events: none;
@@ -491,7 +508,7 @@
     border-radius: calc(10px - 0.25rem);
     font-size: 1rem;
     font-weight: 500;
-    cursor: pointer;
+
     transition: background-color 0.2s;
     border: none;
     background: none;
@@ -513,7 +530,7 @@
     border-radius: calc(10px - 0.25rem);
     font-size: 1rem;
     font-weight: 500;
-    cursor: pointer;
+
     border: none;
     white-space: nowrap;
   }
@@ -526,7 +543,7 @@
     border-radius: calc(1rem - 0.25rem);
     font-size: 1rem;
     font-weight: 400;
-    cursor: pointer;
+
     transition: background-color 0.2s;
     border: none;
     background: none;

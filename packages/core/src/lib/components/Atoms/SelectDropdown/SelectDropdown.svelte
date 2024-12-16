@@ -181,7 +181,7 @@
             {#each $filterdItems as item, idx (item.id + idx)}
               <DropdownMenu.Item
                 on:click={() => dispatch('select', item.id)}
-                class="flex h-10 select-none items-center rounded-lg py-3 pl-3 pr-1.5 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none cursor-pointer {selected ===
+                class="flex h-10 select-none items-center rounded-lg py-3 pl-3 pr-1.5 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
                 item.id
                   ? 'text-sky-600 dark:text-sky-400'
                   : 'dark:text-gray-100'}"
@@ -207,7 +207,7 @@
           >
             <DropdownMenu.Item
               on:click={() => dispatch('select', footerItem.id)}
-              class="flex h-10 select-none items-center rounded-lg py-3 pl-3 pr-1.5 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none cursor-pointer {selected ===
+              class="flex h-10 select-none items-center rounded-lg py-3 pl-3 pr-1.5 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
               footerItem.id
                 ? 'text-sky-600 dark:text-sky-400'
                 : 'dark:text-gray-100'}"

@@ -92,7 +92,7 @@
       border-radius: 8px;
       background: #f73b95;
       color: #fff;
-      cursor: pointer;
+
       transition: color 0.2s;
       font-size: 1.1rem;
       width: fit-content;

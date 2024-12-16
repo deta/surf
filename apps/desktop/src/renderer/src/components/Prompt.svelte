@@ -56,7 +56,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    cursor: pointer;
 
     h1 {
       font-size: 1.2rem;

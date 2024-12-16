@@ -754,7 +754,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    cursor: pointer;
+
     transition: all 0.2s ease;
     border-radius: 8px;
     padding: 0.25rem 0.5rem;
@@ -784,7 +784,7 @@
     background-color: transparent;
     border: 0;
     border-radius: 8px;
-    cursor: pointer;
+
     border-radius: 16px;
     background: var(--Black, #fff);
     background: var(--Black, color(display-p3 1 1 1));

@@ -41,7 +41,7 @@
     border: none;
     padding: 0.875rem 2rem 0.95rem 2rem;
     border-radius: 2rem;
-    cursor: pointer;
+
     font-family: 'Inter', sans-serif;
     font-size: 1.25rem;
     line-height: 1;

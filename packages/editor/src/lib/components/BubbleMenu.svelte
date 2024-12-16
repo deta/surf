@@ -137,7 +137,6 @@
     }
 
     button {
-      cursor: pointer;
       display: flex;
       background: none;
       border: none;

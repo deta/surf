@@ -474,7 +474,7 @@
         <button
           use:tooltip={{ text: 'Open in new tab' }}
           on:click={handleNewTab}
-          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg"
         >
           <Icon name="arrow.diagonal" />
         </button>
@@ -483,12 +483,12 @@
           <button
             use:tooltip={{ text: 'Copy URL' }}
             on:click={handleCopy}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg"
           >
             <IconConfirmation bind:this={copyConfirmation} name="copy" />
           </button>
           <!-- {:else}
-        <button on:click={handleDownload} class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer">
+        <button on:click={handleDownload} class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg ">
           <IconConfirmation bind:this={copyConfirmation} name="download" />
         </button> -->
         {/if}
@@ -496,7 +496,7 @@
         <button
           use:tooltip={{ text: 'Close' }}
           on:click={close}
-          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg cursor-pointer"
+          class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg"
         >
           <Icon name="close" />
         </button>

@@ -957,12 +957,17 @@
     searchResults.set(result.map((r) => r.resource.id))
   }
 
-  const handleResourceRemove = async (e: CustomEvent<{ ids: string | string[]; deleteFromStuff: boolean }>) => {
+  const handleResourceRemove = async (
+    e: CustomEvent<{ ids: string | string[]; deleteFromStuff: boolean }>
+  ) => {
     const ids = e.detail.ids
     const deleteFromStuff = e.detail.deleteFromStuff
 
     try {
-      const res = await oasis.removeResourcesFromSpaceOrOasis(ids, deleteFromStuff ? undefined : spaceId)
+      const res = await oasis.removeResourcesFromSpaceOrOasis(
+        ids,
+        deleteFromStuff ? undefined : spaceId
+      )
       if (!res) {
         return
       }
@@ -1398,7 +1403,7 @@
             >
               <!-- <button
               on:click={handleGoBack}
-              class="z-10 flex items-center justify-center space-x-2 transition-transform cursor-pointer hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
+              class="z-10 flex items-center justify-center space-x-2 transition-transform  hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
             >
               <Icon name="arrow.left" size="20px" />
             </button> -->
@@ -1691,7 +1696,6 @@
 
   button {
     padding: 0.5rem;
-    cursor: pointer;
   }
 
   .search-input-wrapper {

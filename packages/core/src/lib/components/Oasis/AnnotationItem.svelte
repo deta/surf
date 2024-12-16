@@ -390,7 +390,7 @@
       color: #3e3e46;
       font-size: 1rem;
       font-weight: 500;
-      cursor: pointer;
+
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -439,7 +439,6 @@
     background: #ff9cca21;
     padding: 0.55rem;
     padding-left: 1rem;
-    cursor: pointer;
 
     :global(.dark) & {
       color: #fff;
@@ -462,7 +461,6 @@
       color: inherit;
       font-size: 1rem;
       font-weight: 500;
-      cursor: pointer;
     }
   }
 

@@ -93,7 +93,6 @@
     background: none;
     border: none;
     font-size: 20px;
-    cursor: pointer;
   }
 
   .dialog-body {
@@ -121,7 +120,7 @@
     padding: 1.4rem 1.875rem;
     border: none;
     border-radius: 12px;
-    cursor: pointer;
+
     transition: background-color 0.3s;
   }
 

@@ -44,7 +44,7 @@
       border-radius: 11px;
       line-height: 1;
       color: var(--text);
-      cursor: pointer;
+
       &:hover {
         color: var(--text-accent);
         filter: brightness(0.95);
