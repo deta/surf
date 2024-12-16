@@ -3398,9 +3398,18 @@
       }
 
       if (data.state === 'completed') {
-        await window.backend.resources.updateResourceHash(downloadData.resourceId)
-        await window.backend.resources.triggerPostProcessing(downloadData.resourceId)
-        resourceManager.reloadResource(downloadData.resourceId)
+        const resource = await resourceManager.reloadResource(downloadData.resourceId)
+        if (resource) {
+          const isValidType =
+            (Object.values(ResourceTypes) as string[]).includes(resource.type) ||
+            resource.type.startsWith('image/')
+
+          if (isValidType) {
+            await window.backend.resources.updateResourceHash(downloadData.resourceId)
+            await window.backend.resources.triggerPostProcessing(downloadData.resourceId)
+            resourceManager.reloadResource(downloadData.resourceId)
+          }
+        }
       }
 
       const toast = downloadToastsMap.get(data.id)
