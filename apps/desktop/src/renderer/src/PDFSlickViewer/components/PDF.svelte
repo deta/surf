@@ -70,12 +70,8 @@
     if (!loading && !error) {
       const url = pathOverride || path
       if (url) {
-        const response = await fetch(url)
-        const pdfBuffer = await response.arrayBuffer()
-
-        pdfSlick.loadDocument(pdfBuffer).then(async () => {
+        pdfSlick.loadDocument(url).then(async () => {
           if (pdfSlickReady) pdfSlickReady(pdfSlick)
-
           if (!path.startsWith('surf://resource')) {
             const title = await getDocumentTitle(pdfSlick)
             if (title && title !== 'document.pdf') document.title = title

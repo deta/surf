@@ -185,13 +185,22 @@ export function createWindow() {
       const requestData = requestHeaderMap.pop(details.id)
       const tmpFile = join(app.getPath('temp'), crypto.randomUUID())
 
+      const url = requestData?.url ?? details.url
+      if (url.startsWith('surf:')) {
+        const params = new URLSearchParams({
+          path: details.url
+        })
+        details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
+        return
+      }
+
       const params = new URLSearchParams({
         path: details.url,
         loading: 'true'
       })
       details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
 
-      fetch(requestData?.url ?? details.url, {
+      fetch(url, {
         headers: requestData?.headers,
         credentials: 'include'
       })
@@ -208,7 +217,7 @@ export function createWindow() {
         .catch((err) => {
           const params = new URLSearchParams({
             path: details.url,
-            error: err.message
+            error: String(err)
           })
           details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
         })
