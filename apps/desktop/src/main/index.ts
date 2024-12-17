@@ -1,5 +1,6 @@
 import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { readdir, unlink, stat } from 'fs/promises'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 import { isDev, isMac, isWindows, useLogScope } from '@horizon/utils'
@@ -40,6 +41,23 @@ let surfBackendManager: SurfBackendServerManager | null = null
 process.on('uncaughtException', (error: any) => {
   log.error('Uncaught exception:', error)
 })
+
+async function cleanupTempFiles() {
+  try {
+    const files = await readdir(join(app.getPath('temp'), CONFIG.appName))
+    const now = Date.now()
+    await Promise.all(files.map(file =>
+      stat(join(app.getPath('temp'), CONFIG.appName, file))
+        .then(stats => {
+          if (now - stats.mtimeMs > 24 * 60 * 60 * 1000) {
+            return unlink(join(app.getPath('temp'), CONFIG.appName, file))
+          }
+          return Promise.resolve()
+        })
+        .catch(() => { })
+    ))
+  } catch { }
+}
 
 const initializePaths = () => {
   const userDataPath = CONFIG.useTmpDataDir
@@ -146,6 +164,7 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
 
 const initializeApp = async () => {
   isAppLaunched = true
+  setInterval(cleanupTempFiles, 60 * 60 * 1000)
   electronApp.setAppUserModelId('ea.browser.deta.surf')
 
   const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
@@ -250,7 +269,10 @@ const setupApplication = () => {
     .on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
-    .on('will-quit', () => surfBackendManager?.stop())
+    .on('will-quit', async () => {
+      surfBackendManager?.stop()
+      await cleanupTempFiles()
+    })
 
   registerProtocols()
   app.whenReady().then(initializeApp)
