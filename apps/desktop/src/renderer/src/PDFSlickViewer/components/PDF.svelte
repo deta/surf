@@ -5,7 +5,7 @@
   import Toolbar from './Toolbar/Toolbar.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../store'
   import { WebViewEventReceiveNames, type WebViewReceiveEvents } from '@horizon/types'
-  import { isDev } from '@horizon/utils'
+  import { isDev, parsePDFViewerParams } from '@horizon/utils'
 
   let debugInfo = {
     anchorWord: '',
@@ -23,15 +23,8 @@
     pdfSlickReady = resolve
   })
 
-  const urlParams = new URLSearchParams(window.location.search)
-  export const path = urlParams.get('path') ? decodeURIComponent(urlParams.get('path')) : ''
-  export const pathOverride = urlParams.get('pathOverride')
-    ? decodeURIComponent(urlParams.get('pathOverride'))
-    : ''
-  export const loading = urlParams.get('loading') === 'true'
-  export const error = urlParams.get('error') ? decodeURIComponent(urlParams.get('error')) : ''
-  export const page = urlParams.get('page') ? parseInt(urlParams.get('page'), 10) : null
-
+  const params = parsePDFViewerParams(window.location.href)
+  const { path, pathOverride, loading, error, page, filename } = params
   const pdfURL = path
   const pdfDownloadURL = pathOverride || path
 
@@ -75,7 +68,7 @@
         pdfSlick.loadDocument(pdfDownloadURL).then(async () => {
           if (pdfSlickReady) pdfSlickReady(pdfSlick)
           if (!path.startsWith('surf://resource')) {
-            const title = await getDocumentTitle(pdfSlick)
+            const title = filename ?? (await getDocumentTitle(pdfSlick))
             if (title && title !== 'document.pdf') document.title = title
           }
 

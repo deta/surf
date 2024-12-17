@@ -325,3 +325,34 @@ export const compareURLs = (a: string, b: string) => {
     return a === b
   }
 }
+
+export interface PDFViewerParams {
+  path: string
+  pathOverride?: string
+  loading?: boolean
+  error?: string
+  page?: number
+  filename?: string
+}
+
+export const parsePDFViewerParams = (url: string | URL): PDFViewerParams => {
+  const searchParams =
+    typeof url === 'string'
+      ? new URLSearchParams(new URL(url).search)
+      : new URLSearchParams(url.search)
+
+  const params = Object.fromEntries(searchParams)
+
+  if (!params.path) {
+    throw new Error('missing required path parameter')
+  }
+
+  return {
+    path: decodeURIComponent(params.path),
+    pathOverride: params.pathOverride ? decodeURIComponent(params.pathOverride) : undefined,
+    loading: params.loading === 'true',
+    error: params.error ? decodeURIComponent(params.error) : undefined,
+    page: params.page ? parseInt(params.page, 10) : undefined,
+    filename: params.filename ? decodeURIComponent(params.filename) : undefined
+  }
+}

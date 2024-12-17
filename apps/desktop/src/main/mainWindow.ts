@@ -5,7 +5,7 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { isDev, isMac, isPDFViewerURL, useLogScope } from '@horizon/utils'
+import { isDev, isMac, isPDFViewerURL, PDFViewerParams, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
@@ -174,31 +174,43 @@ export function createWindow() {
       return key ? details.responseHeaders[key] : undefined
     }
 
+    const getFilename = (header: string | undefined): string | undefined => {
+      if (!header) return
+      const filenameMatch = header.match(/filename\*?=['"]?(?:UTF-\d['"])?([^"';]+)['"]?/i)
+      return filenameMatch ? decodeURIComponent(filenameMatch[1]) : undefined
+    }
+
+    const loadPDFViewer = (params: Partial<PDFViewerParams>) => {
+      const searchParams = new URLSearchParams()
+      searchParams.set('path', params.path!)
+      if (params.pathOverride) searchParams.set('pathOverride', params.pathOverride)
+      if (params.loading) searchParams.set('loading', 'true')
+      if (params.error) searchParams.set('error', params.error)
+      if (params.page) searchParams.set('page', params.page.toString())
+      if (params.filename) searchParams.set('filename', params.filename)
+
+      details.webContents?.loadURL(`${PDFViewerEntryPoint}?${searchParams}`)
+    }
+
     const contentTypeHeader = getHeaderValue('content-type')
     const dispositionHeader = getHeaderValue('content-disposition')
     const isPDF = contentTypeHeader?.[0]?.includes('application/pdf') ?? false
     const isAttachment = dispositionHeader?.[0]?.toLowerCase().includes('attachment') ?? false
+    const filename = getFilename(dispositionHeader?.[0])
 
     if (isPDF && !isAttachment) {
       callback({ cancel: true })
 
       const requestData = requestHeaderMap.pop(details.id)
       const tmpFile = join(app.getPath('temp'), crypto.randomUUID())
-
       const url = requestData?.url ?? details.url
+
       if (url.startsWith('surf:')) {
-        const params = new URLSearchParams({
-          path: details.url
-        })
-        details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
+        loadPDFViewer({ path: details.url, filename })
         return
       }
 
-      const params = new URLSearchParams({
-        path: details.url,
-        loading: 'true'
-      })
-      details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
+      loadPDFViewer({ path: details.url, loading: true, filename })
 
       fetch(url, {
         headers: requestData?.headers,
@@ -207,19 +219,18 @@ export function createWindow() {
         .then(async (resp) => {
           const buffer = await resp.arrayBuffer()
           await writeFile(tmpFile, Buffer.from(buffer))
-
-          const params = new URLSearchParams({
+          loadPDFViewer({
             path: details.url,
-            pathOverride: `file://${tmpFile}`
+            pathOverride: `file://${tmpFile}`,
+            filename
           })
-          details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
         })
         .catch((err) => {
-          const params = new URLSearchParams({
+          loadPDFViewer({
             path: details.url,
-            error: String(err)
+            error: String(err),
+            filename
           })
-          details.webContents?.loadURL(`${PDFViewerEntryPoint}?${params}`)
         })
       return
     }

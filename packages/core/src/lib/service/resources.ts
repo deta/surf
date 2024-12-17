@@ -1074,6 +1074,7 @@ export class ResourceManager {
     await this.sffs.updateResourceTag(resourceId, tagName, tagValue)
 
     resource.updateTag(tagName, tagValue)
+    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async createResourceTag(resourceId: string, tagName: string, tagValue: string) {
