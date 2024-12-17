@@ -45,40 +45,61 @@ if (!import.meta.env.DEV) {
   console.debug = console.log = console.warn = console.error = () => {}
 }
 
-function pdfViewerCheck(): { url: URL; isPDFPage: boolean } {
-  let url = new URL(window.location.href)
-  if (isPDFViewerURL(url.href, PDFViewerEntryPoint)) {
-    const path = url.searchParams.get('path')
-    if (path) return { url: new URL(decodeURIComponent(path)), isPDFPage: true }
-  }
-
-  return { url, isPDFPage: false }
+interface PDFInfo {
+  path: URL
+  pathOverride?: URL
+  isPDFPage: true
 }
 
-function runAppDetection() {
-  const { url, isPDFPage } = pdfViewerCheck()
+interface WebAppInfo {
+  isPDFPage: false
+  parser: WebAppExtractor
+}
 
-  console.debug('Running app detection on', url.href)
+type AppDetectionResult = PDFInfo | WebAppInfo
 
-  const isWebPage = !isPDFPage && document.contentType === 'text/html'
-  if (!isWebPage) {
+function pdfViewerCheck(): PDFInfo | { isPDFPage: false } {
+  const url = new URL(window.location.href)
+  if (!isPDFViewerURL(url.href, PDFViewerEntryPoint)) {
+    return { isPDFPage: false as const }
+  }
+
+  const params = new URLSearchParams(url.search)
+  const path = params.get('path')
+  if (!path) throw new Error('Missing path param')
+
+  return {
+    path: new URL(decodeURIComponent(path)),
+    pathOverride: params.get('pathOverride')
+      ? new URL(decodeURIComponent(params.get('pathOverride')!))
+      : undefined,
+    isPDFPage: true as const
+  }
+}
+
+function runAppDetection(): AppDetectionResult | undefined {
+  const webParser = new WebParser(window.location.href)
+  const pdfCheck = pdfViewerCheck()
+
+  console.debug('Running app detection on', window.location.href)
+
+  if (pdfCheck.isPDFPage) {
     const appInfo: DetectedWebApp = {
-      appId: url.hostname,
-      appName: url.hostname,
-      hostname: url.hostname,
-      canonicalUrl: url.href,
-      resourceType: isPDFPage ? 'application/pdf' : document.contentType,
+      appId: pdfCheck.path.hostname,
+      appName: pdfCheck.path.hostname,
+      hostname: pdfCheck.path.hostname,
+      canonicalUrl: pdfCheck.path.href,
+      downloadUrl: pdfCheck.pathOverride?.href,
+      resourceType: 'application/pdf',
       appResourceIdentifier: window.location.pathname,
       resourceNeedsPicking: false
     }
 
     console.debug('App detected:', appInfo)
     sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)
-    return { url, isPDFPage }
+    return pdfCheck
   }
 
-  // TODO: pass the URL to the detection function so we don't have to initialize a new WebParser
-  const webParser = new WebParser(url.href)
   const isSupported = webParser.isSupportedApp()
   console.debug('Is supported app', isSupported)
 
@@ -91,7 +112,7 @@ function runAppDetection() {
 
   if (!appParser) {
     console.error('No app parser found for', window.location.href)
-    return
+    return undefined
   }
 
   const appInfo = appParser.getInfo()
@@ -103,29 +124,32 @@ function runAppDetection() {
   console.debug('App detected:', appInfo)
   sendPageEvent(WebViewEventSendNames.DetectedApp, appInfo)
 
-  return appParser
+  return { isPDFPage: false as const, parser: appParser }
 }
 
-function runResourceDetection() {
-  // We are intentionally re-running the app detection here since the user might have navigated to a different page since the last detection
-  const appParser = runAppDetection()
-  if (appParser && typeof (appParser as any).isPDFPage === 'boolean') {
+function runResourceDetection(): void {
+  const result = runAppDetection()
+  if (!result) {
+    console.error('No app parser found for', window.location.href)
+    return
+  }
+
+  if (result.isPDFPage) {
     sendPageEvent(WebViewEventSendNames.DetectedResource, {
       type: ResourceTypes.PDF,
-      data: { url: appParser.url.href } as ResourceDataPDF
+      data: {
+        url: result.path.href,
+        downloadURL: result.pathOverride?.href
+      } as ResourceDataPDF
     } as DetectedResource)
     return
   }
 
-  if (appParser) {
-    ;(appParser as WebAppExtractor)?.extractResourceFromDocument(document).then((resource) => {
-      console.debug('Resource', resource)
-      console.debug('Sending detected-resource event')
-      sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
-    })
-  } else {
-    console.error('No app parser found for', window.location.href)
-  }
+  result.parser.extractResourceFromDocument(document).then((resource) => {
+    console.debug('Resource', resource)
+    console.debug('Sending detected-resource event')
+    sendPageEvent(WebViewEventSendNames.DetectedResource, resource)
+  })
 }
 
 function startResourcePicker() {

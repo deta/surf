@@ -358,20 +358,23 @@
       let filename = null
       try {
         if (isPDFPage) {
+          const resourceData = detectedResource.data as ResourceDataPDF
+          const url = resourceData.url
+          const pdfDownloadURL = resourceData?.downloadURL ?? url
           const downloadData = await new Promise<Download | null>((resolveDownload) => {
             const timeout = setTimeout(() => {
               downloadIntercepters.update((intercepters) => {
-                intercepters.delete(url)
+                intercepters.delete(pdfDownloadURL)
                 return intercepters
               })
               resolveDownload(null)
             }, 1000 * 60)
 
             downloadIntercepters.update((intercepters) => {
-              intercepters.set(url, (data) => {
+              intercepters.set(pdfDownloadURL, (data) => {
                 clearTimeout(timeout)
                 downloadIntercepters.update((intercepters) => {
-                  intercepters.delete(url)
+                  intercepters.delete(pdfDownloadURL)
                   return intercepters
                 })
                 resolveDownload(data)
@@ -379,13 +382,20 @@
               return intercepters
             })
 
-            downloadURL((detectedResource.data as ResourceDataPDF).url)
+            downloadURL(pdfDownloadURL)
           })
 
           if (downloadData) {
             filename = downloadData.filename
             const resource = (await resourceManager.getResource(downloadData.resourceId))!
 
+            if (url !== pdfDownloadURL) {
+              await resourceManager.updateResourceTag(
+                resource.id,
+                ResourceTagsBuiltInKeys.CANONICAL_URL,
+                url
+              )
+            }
             const hasSilentTag = (resource.tags ?? []).find(
               (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
             )

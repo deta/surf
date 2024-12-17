@@ -148,6 +148,7 @@ export enum ResourceTypes {
 
 export interface ResourceDataPDF {
   url: string
+  downloadURL?: string
   // TODO: parse more from pdf.js
 }
 
@@ -177,6 +178,7 @@ export type DetectedWebApp = {
   appName: string | null
   hostname: string
   canonicalUrl: string
+  downloadUrl?: string
   resourceType: string | null
   appResourceIdentifier: string | null // e.g. tweet ID
   resourceNeedsPicking: boolean
