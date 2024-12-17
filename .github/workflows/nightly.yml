@@ -147,6 +147,9 @@ jobs:
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_APP_UPDATES_PROXY_URL: ${{ secrets.APP_UPDATES_PROXY_URL_NIGHTLY }}
+          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
+          M_VITE_APP_UPDATES_CHANNEL: surf-nightly
 
           RELEASE_CHANNEL: surf-nightly
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

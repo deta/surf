@@ -7,7 +7,8 @@ import { getUserConfig, updateUserConfig, updateUserConfigSettings } from './con
 import { handleDragStart } from './drag'
 import { ElectronAppInfo, RightSidebarTab, SFFSResource, UserSettings } from '@horizon/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
-import { checkForUpdates } from './appUpdates'
+import { checkForUpdates, getAnnouncements } from './appUpdates'
+import { getAnnouncementsWindow } from './announcementsWindow'
 import { useAsDefaultBrowser } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
@@ -38,6 +39,7 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
   const mainWindow = getMainWindow()
   const settingsWindow = getSettingsWindow()
   const setupWindow = getSetupWindow()
+  const announcementsWindow = getAnnouncementsWindow()
 
   if (!mainWindow) {
     log.warn('Main window not found')
@@ -53,6 +55,10 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
 
   if (setupWindow && !setupWindow.isDestroyed()) {
     validIDs.push(setupWindow.webContents.id)
+  }
+
+  if (announcementsWindow && !announcementsWindow.isDestroyed()) {
+    validIDs.push(announcementsWindow.webContents.id)
   }
 
   if (!validIDs.includes(event.sender.id)) {
@@ -320,6 +326,11 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     ipcSenders.resetBackgroundImage()
+  })
+
+  IPC_EVENTS_MAIN.getAnnouncements.handle((event) => {
+    if (!validateIPCSender(event)) return []
+    return getAnnouncements()
   })
 }
 

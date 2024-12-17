@@ -16,7 +16,7 @@ import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
-import { silentCheckForUpdates } from './appUpdates'
+import { AppUpdater, silentCheckForUpdates } from './appUpdates'
 
 const log = useLogScope('Main Index')
 
@@ -27,7 +27,10 @@ const CONFIG = {
   disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true',
   embeddingModelMode: import.meta.env.M_VITE_EMBEDDING_MODEL_MODE || 'default',
   forceSetupWindow: import.meta.env.M_VITE_CREATE_SETUP_WINDOW === 'true',
-  sentryDSN: import.meta.env.M_VITE_SENTRY_DSN
+  sentryDSN: import.meta.env.M_VITE_SENTRY_DSN,
+  appUpdatesProxyUrl: import.meta.env.M_VITE_APP_UPDATES_PROXY_URL,
+  appUpdatesChannel: import.meta.env.M_VITE_APP_UPDATES_CHANNEL,
+  announcementsUrl: import.meta.env.M_VITE_ANNOUNCEMENTS_URL
 }
 
 let isAppLaunched = false
@@ -179,6 +182,16 @@ const initializeApp = async () => {
   if (CONFIG.forceSetupWindow) {
     createSetupWindow()
   }
+
+  AppUpdater.initialize({
+    authToken: userConfig.api_key || '',
+    proxyUrl: CONFIG.appUpdatesProxyUrl || '',
+    channel: CONFIG.appUpdatesChannel,
+    announcementsUrl: CONFIG.announcementsUrl,
+    currentAppVersion: CONFIG.appVersion || ''
+    // Uncomment to see test announcements
+    // showTestAnnouncements: true
+  })
 
   try {
     await setupBackendServer(appPath, backendRootPath, userConfig)

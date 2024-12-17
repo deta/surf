@@ -9,7 +9,8 @@ import type {
   DownloadUpdatedMessage,
   TelemetryEventTypes,
   SFFSResource,
-  SettingsWindowTab
+  SettingsWindowTab,
+  Announcement
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -98,6 +99,11 @@ export interface DefaultBrowserCheck extends IPCEvent {
   output: boolean
 }
 
+export interface GetAnnouncements extends IPCEvent {
+  payload: void
+  output: Announcement[]
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -166,7 +172,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   webviewReadResourceData: ipcService.addEventWithReturn<WebviewReadResourceData>(
     'webview-read-resource-data'
   ),
-  isDefaultBrowser: ipcService.addEventWithReturn<DefaultBrowserCheck>('is-default-browser')
+  isDefaultBrowser: ipcService.addEventWithReturn<DefaultBrowserCheck>('is-default-browser'),
+  getAnnouncements: ipcService.addEventWithReturn<GetAnnouncements>('get-announcements')
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

@@ -78,7 +78,8 @@ export default defineConfig({
         input: {
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
           webview: resolve(__dirname, 'src/preload/webview.ts'),
-          updates: resolve(__dirname, 'src/preload/updates.ts')
+          updates: resolve(__dirname, 'src/preload/updates.ts'),
+          announcements: resolve(__dirname, 'src/preload/announcements.ts')
         },
         plugins: [
           ...(!disableAllObfuscation
@@ -123,7 +124,8 @@ export default defineConfig({
           setup: resolve(__dirname, 'src/renderer/setup.html'),
           settings: resolve(__dirname, 'src/renderer/settings.html'),
           updates: resolve(__dirname, 'src/renderer/updates.html'),
-          pdf: resolve(__dirname, 'src/renderer/pdf.html')
+          pdf: resolve(__dirname, 'src/renderer/pdf.html'),
+          announcements: resolve(__dirname, 'src/renderer/announcements.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         plugins: [

@@ -155,6 +155,7 @@ jobs:
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
 
           M_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_DEV }}
           R_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_DEV }}

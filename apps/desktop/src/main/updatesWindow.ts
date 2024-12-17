@@ -34,6 +34,8 @@ export function createUpdatesWindow() {
     }
   })
 
+  updatesWindow.setMenu(null)
+
   updatesWindow.on('ready-to-show', () => {
     updatesWindow?.show()
   })

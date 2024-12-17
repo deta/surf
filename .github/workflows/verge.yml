@@ -145,6 +145,7 @@ jobs:
           P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
 
           RELEASE_CHANNEL: surf-verge
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

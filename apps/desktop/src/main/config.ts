@@ -27,6 +27,7 @@ export type PermissionCache = {
 const BROWSER_CONFIG_NAME = 'browser.json'
 const USER_CONFIG_NAME = 'user.json'
 const PERMISSION_CONFIG_NAME = 'permissions.json'
+const SEEN_ANNOUNCEMENTS_STATE = 'seen_announcements.json'
 
 export const getConfig = <T extends Config>(
   configPath: string,
@@ -68,6 +69,14 @@ export const getBrowserConfig = () => {
 
 export const setBrowserConfig = (config: BrowserConfig) => {
   setConfig(app.getPath('userData'), config, BROWSER_CONFIG_NAME)
+}
+
+export const getAnnouncementsState = () => {
+  return getConfig(app.getPath('userData'), SEEN_ANNOUNCEMENTS_STATE)
+}
+
+export const setAnnouncementsState = (state: any) => {
+  setConfig(app.getPath('userData'), state, SEEN_ANNOUNCEMENTS_STATE)
 }
 
 let userConfig: UserConfig | null = null

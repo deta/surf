@@ -97,6 +97,7 @@ jobs:
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
 
       - uses: actions/upload-artifact@v4
         with:

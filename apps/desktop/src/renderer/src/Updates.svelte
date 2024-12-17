@@ -25,8 +25,8 @@
   })
 </script>
 
-<main class="main-container">
-  <div class="content-wrapper">
+<main class="main-container drag">
+  <div class="content-wrapper no-drag">
     <div class="icon-container">
       <img src={appIcon} alt="App Icon" />
     </div>
@@ -54,9 +54,19 @@
 </main>
 
 <style lang="scss">
+  .drag {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
   img {
     width: 100px;
     height: 100px;
+    user-select: none;
+    pointer-events: none;
   }
 
   .main-container {
