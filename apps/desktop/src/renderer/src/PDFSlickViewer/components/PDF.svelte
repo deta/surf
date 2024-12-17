@@ -32,6 +32,9 @@
   export const error = urlParams.get('error') ? decodeURIComponent(urlParams.get('error')) : ''
   export const page = urlParams.get('page') ? parseInt(urlParams.get('page'), 10) : null
 
+  const pdfURL = path
+  const pdfDownloadURL = pathOverride || path
+
   let RO: ResizeObserver
 
   let container: HTMLDivElement
@@ -68,9 +71,8 @@
     })
 
     if (!loading && !error) {
-      const url = pathOverride || path
-      if (url) {
-        pdfSlick.loadDocument(url).then(async () => {
+      if (pdfDownloadURL) {
+        pdfSlick.loadDocument(pdfDownloadURL).then(async () => {
           if (pdfSlickReady) pdfSlickReady(pdfSlick)
           if (!path.startsWith('surf://resource')) {
             const title = await getDocumentTitle(pdfSlick)
@@ -116,7 +118,7 @@
     const getFilename = new Promise<string | null>((resolve) => {
       try {
         const xhr = new XMLHttpRequest()
-        xhr.open('HEAD', pathOverride || path)
+        xhr.open('HEAD', pdfURL)
         xhr.timeout = 5000
 
         xhr.onload = () => {
