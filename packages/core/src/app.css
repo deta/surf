@@ -25,7 +25,6 @@
     user-select: text;
   }
 
-  *,
   a,
   button {
     cursor: default;
