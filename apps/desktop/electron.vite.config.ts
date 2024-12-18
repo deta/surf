@@ -1,6 +1,6 @@
 import { defineConfig, externalizeDepsPlugin, bytecodePlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { resolve } from 'path'
+import { resolve, sep } from 'path'
 import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 // import { sentryVitePlugin } from '@sentry/vite-plugin'
 import replace from '@rollup/plugin-replace'
@@ -22,17 +22,32 @@ const svelteOptions = silenceWarnings
     }
   : {}
 
+// NOTE: These need to be in this vite config **AND** the packages using it's vite config!
+// Otherwise it will work inside the dev server but not the build!
+const SCSS_INJECTS = {
+  additionalData: `
+    @use '${resolve(__dirname, '../../packages/core/src/lib/styles/colors').split(sep).join('/')}' as colors;
+    @use '${resolve(__dirname, '../../packages/core/src/lib/styles/motion').split(sep).join('/')}' as motion;
+    @use '${resolve(__dirname, '../../packages/core/src/lib/styles/utils').split(sep).join('/')}' as utils;
+  `
+}
+
 const cssConfig = silenceWarnings
   ? {
       preprocessorOptions: {
         scss: {
-          silenceDeprecations: ['legacy-js-api', 'mixed-decls']
+          silenceDeprecations: ['legacy-js-api', 'mixed-decls'],
+          ...SCSS_INJECTS
         }
       }
     }
-  : {}
-// END TODO
-///////////
+  : {
+      preprocessorOptions: {
+        scss: {
+          ...SCSS_INJECTS
+        }
+      }
+    }
 
 export default defineConfig({
   main: {
@@ -52,7 +67,23 @@ export default defineConfig({
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     },
-    css: cssConfig
+    css: cssConfig,
+    resolve: {
+      alias: [
+        {
+          find: '$styles',
+          replacement: resolve(__dirname, '../../packages/core/src/lib/styles')
+        },
+        {
+          find: '$service',
+          replacement: '@horizon/core/src/lib/service'
+        },
+        {
+          find: '$utils',
+          replacement: '@horizon/core/src/lib/utils'
+        }
+      ]
+    }
   },
   preload: {
     envPrefix: 'P_VITE_',
@@ -145,6 +176,22 @@ export default defineConfig({
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     },
-    css: cssConfig
+    css: cssConfig,
+    resolve: {
+      alias: [
+        {
+          find: '$styles',
+          replacement: resolve(__dirname, '../../packages/core/src/lib/styles')
+        },
+        {
+          find: '$service',
+          replacement: '@horizon/core/src/lib/service'
+        },
+        {
+          find: '$utils',
+          replacement: '@horizon/core/src/lib/utils'
+        }
+      ]
+    }
   }
 })

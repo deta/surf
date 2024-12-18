@@ -1,3 +1,8 @@
+/*
+ * Defines colors & theme data.
+ * NOTE: DO NOT PUT ACTUAL SELECTORS IN HERE! They might get included multiple times!
+ */
+
 :root {
 
   // Black / White shades
@@ -65,5 +70,4 @@
   --mixed-bg-dark: color-mix(in hsl,
       var(--base-color),
       hsl(var(--base-color-hue) 80%, 0%, 0.65));
-
 }

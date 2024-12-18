@@ -63,7 +63,6 @@
 
   import TeletypeEntry from './Overlay/TeletypeEntry.svelte'
 
-  import './colors.scss'
   import './index.scss'
   import type {
     PageMagic,
@@ -178,6 +177,8 @@
     ColorService,
     provideColorService
   } from '@horizon/core/src/lib/service/colors'
+
+  import '$styles/app.scss'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -341,9 +342,7 @@
   $: document.body.classList[$userConfigSettings.app_style === 'dark' ? 'add' : 'remove']('dark')
 
   // Toggle custom mode
-  $: document.body.classList[
-    $userConfigSettings.homescreen && isVendorBackground === false ? 'add' : 'remove'
-  ]('custom')
+  $: document.body.classList[isVendorBackground === false ? 'add' : 'remove']('custom')
 
   $: log.debug('right sidebar tab', $rightSidebarTab)
 
@@ -4654,8 +4653,6 @@
 
 <div
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
-  style:--background-image={$backgroundImage?.path}
-  style:--background-opacity={$backgroundImage?.path?.startsWith(`url('surf://`) ? 1 : 0.4}
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}
   class:horizontalTabs
@@ -4664,13 +4661,13 @@
   class:showRightSidebar
   style:--left-sidebar-size={$leftSize + 'px'}
   style:--right-sidebar-size={$rightSize + 'px'}
+  style:--background-image={$backgroundImage?.path}
+  style:--background-opacity={$backgroundImage?.path?.startsWith(`url('surf://`) ? 1 : 0.4}
 >
   {#if !horizontalTabs && showCustomWindowActions}
     <div
       class="vertical-window-bar flex flex-row flex-shrink-0 items-center justify-between p-1"
       style="position: relative; z-index: 9999999999;"
-      class:customBg={isVendorBackground === false}
-      class:mutedBg={$desktopVisible}
     >
       <div>
         <BrowserActions
@@ -4767,7 +4764,6 @@
       id="left-sidebar"
       class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
       class:homescreenVisible={$desktopVisible}
-      class:customBg={isVendorBackground === false}
       class:horizontalTabs
       bind:clientWidth={leftSidebarWidth}
       bind:clientHeight={leftSidebarHeight}
@@ -5228,7 +5224,7 @@
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
+                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center"
                     class:bg-sky-200={$showNewTabOverlay === 1}
                     class:dark:bg-sky-900={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
@@ -5253,7 +5249,7 @@
                 class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
               {horizontalTabs
                   ? 'w-fit rounded-xl p-2'
-                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
+                  : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
                 on:click|preventDefault={() => tabsManager.showNewTab()}
                 class:opacity-100={$showEndMask || horizontalTabs}
                 class:opacity-0={!$showEndMask}
@@ -5285,7 +5281,7 @@
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
@@ -5363,7 +5359,7 @@
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-2 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
@@ -5614,7 +5610,7 @@
     <div slot="right-sidebar" bind:clientWidth={rightSidebarWidth} class="w-full h-full">
       <Tabs.Root
         bind:value={$rightSidebarTab}
-        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag customBg"
+        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag"
         id="sidebar-right"
         let:minimal
       >
@@ -5788,15 +5784,35 @@
 />
 
 <style lang="scss">
-  * {
-    user-select: none;
-  }
-
   *,
   a,
   button {
     cursor: default;
     user-select: none;
+  }
+
+  .ai-wrapper {
+    position: relative;
+    outline: 2px solid rgba(73, 82, 242, 0.4);
+    border-radius: 16px;
+  }
+
+  /// App Scaffolding
+
+  .vertical-window-bar {
+    position: relative;
+
+    :global(.custom) & {
+      &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        @include utils.material-frosted;
+
+        z-index: -1;
+      }
+    }
   }
 
   .app-contents {
@@ -5816,131 +5832,6 @@
     & :global(#homescreen-wrapper) {
       position: fixed;
       inset: 0;
-    }
-  }
-
-  .vertical-window-bar {
-    position: relative;
-    &.customBg {
-      &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        //background: rgba(255, 255, 255, 0.35);
-        background: var(--mixed-bg) !important;
-        :global(.dark) & {
-          background: var(--mixed-bg-dark) !important;
-        }
-        backdrop-filter: blur(12px);
-
-        z-index: -1;
-      }
-      &.mutedBg::before {
-        width: 100%;
-        pointer-events: none;
-        background: rgba(255, 255, 255, 0.4);
-        backdrop-filter: blur(12px);
-      }
-    }
-  }
-
-  /* MAXU HOMESCREEN JANK TODO: Cleanup / move to correct places*/
-  :global(body.custom .browser-content) {
-    position: relative;
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      opacity: 1;
-      width: calc(100% + 15px);
-      pointer-events: none !important;
-
-      backdrop-filter: blur(12px);
-      background: var(--mixed-bg);
-    }
-  }
-  :global(body.custom.dark .browser-content) {
-    &::before {
-      transition: background 245ms ease-out;
-      background: var(--mixed-bg-dark) !important;
-    }
-  }
-  :global(body:has(.homescreenVisible) .browser-content::before) {
-    display: none !important;
-  }
-  #left-sidebar {
-    position: relative;
-
-    &::before {
-      opacity: 0;
-      transition: background 245ms ease-out;
-    }
-
-    &.customBg {
-      &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        opacity: 1;
-        width: calc(100% + 0px);
-        background: var(--mixed-bg);
-        :global(.dark) & {
-          background: var(--mixed-bg-dark) !important;
-        }
-        backdrop-filter: blur(12px);
-        z-index: -1;
-      }
-
-      //&::after {
-      //  content: '';
-      //  position: fixed;
-      //  top: 2rem;
-      //  left: 2rem;
-      //  width: 20px;
-      //  height: 20px;
-      //  border-radius: 6px;
-      //  background: var(--contrast-color);
-      //}
-      &.horizontalTabs {
-        &::before {
-          width: 100%;
-          height: calc(100% + 0px);
-        }
-      }
-
-      &.homescreenVisible {
-        &::before {
-          width: 100%;
-          pointer-events: none;
-          background: var(--mixed-bg);
-          backdrop-filter: blur(12px);
-          mask-image: linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(0, 0, 0, 1) 100%);
-          //mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 0) 70%);
-        }
-        &.horizontalTabs {
-          &::before {
-            height: 100%;
-            border-bottom-left-radius: 0.25em;
-            border-bottom-right-radius: 0.25em;
-          }
-        }
-      }
-    }
-  }
-  :global(.sidebar-right) {
-    overflow: hidden !important;
-    :global(body:has(.vertical-window-bar)) & {
-      margin-top: 39px;
-    }
-
-    :global(body:has(.horizontalTabs)) & {
-      border-top-left-radius: 0.75rem !important;
-    }
-    :global(body:not(:has(.horizontalTabs))) & {
-      border-top-left-radius: 0.75rem !important;
-      border-bottom-left-radius: 0.75rem !important;
     }
   }
 
@@ -5965,11 +5856,91 @@
       }
     }
   }
-  /// DRAGCULA STATES NOTE: these should be @horizon/dragcula/dist/styles.css import, but this doesnt work currently!
+
+  :global(body.custom .browser-content) {
+    position: relative;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      opacity: 1;
+      width: calc(100% + 15px);
+      pointer-events: none !important;
+
+      @include utils.material-frosted;
+    }
+  }
+  :global(body:has(.homescreenVisible) .browser-content::before) {
+    display: none !important;
+  }
+
+  .browser-window {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    opacity: 0;
+    overflow: clip;
+
+    &.active {
+      z-index: 1;
+      position: relative;
+      opacity: 100%;
+    }
+
+    --corner-radii: 0.75rem;
+    :global(body:has(.horizontalTabs)) & {
+      border-top-left-radius: var(--corner-radii) !important;
+      border-top-right-radius: var(--corner-radii) !important;
+    }
+
+    :global(body:has(.verticalTabs)) & {
+      border-radius: var(--corner-radii) !important;
+    }
+
+    :global(webview) {
+      height: 100%;
+      width: 100%;
+      // border-radius: 0.5rem;
+      // overflow: hidden;
+    }
+  }
+
+  /// SIDEBARS
+  // TODO: (maxu): Revive sidebar refactor and throw these out!
+
+  #left-sidebar {
+    position: relative;
+
+    :global(.custom) & {
+      @include utils.material-frosted;
+    }
+  }
+
+  :global(.sidebar-right) {
+    overflow: hidden !important;
+    :global(body:has(.vertical-window-bar)) & {
+      margin-top: 39px;
+    }
+
+    :global(body:has(.horizontalTabs)) & {
+      border-top-left-radius: 0.75rem !important;
+    }
+    :global(body:not(:has(.horizontalTabs))) & {
+      border-top-left-radius: 0.75rem !important;
+      border-bottom-left-radius: 0.75rem !important;
+    }
+  }
+
+  /// DRAG AND DROP
+
   :global(::view-transition-group(*)) {
     animation-duration: 170ms;
     animation-timing-function: ease;
   }
+
   :global(*[data-drag-preview]) {
     overflow: clip !important;
     position: fixed !important;
@@ -6096,80 +6067,12 @@
     background: var(--dotColor);
     border: 2px solid var(--color);
   }
-  /// === END OF MAXU DRAGCULA STUFF
 
-  // Disables pointer events on all body elements if a drag operation is active
-  // except, other drag zones.
-  /*:global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
-    pointer-events: none;
-  }
-
-  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
-    pointer-events: all;
-  }
-
-  // Disables pointer events on all elements inside a drop target
-  // except, nested drag zones.
-  // This is also useful when supporting native dnd, as there won't
-  // be a body class!
-  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone] *:not([data-dragcula-zone])) {
-    pointer-events: none;
-  }
-  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone] *[data-dragcula-zone]) {
-    pointer-events: all;
-  }
-  :global([data-dragcula-dragging-item='true']) {
-  }
-
-  // Disable the zone of the drag item itself
-  :global(body *[data-dragcula-dragging-item]) {
-    pointer-events: none !important;
-    object-fit: cover;
-    max-width: 25ch;
-    max-height: 25ch;
-    opacity: 0.7;
-  }
-  :global(body *[data-dragcula-dragging-item].tab) {
-    pointer-events: none !important;
-    object-fit: cover;
-    max-width: 35ch;
-    max-height: 35ch;
-  }
-
-  :global(
-      body[data-dragcula-target]:not(
-          [data-dragcula-target^='sidebar']
-        )[data-dragcula-drag-effect='copy']
-    ) {
-    cursor: copy;
-  }*/
-
-  /*:global(body[data-dragcula-dragging='true']) {
-    cursor: grabbing;
-    user-select: none;
-  }*/
-  /*:global(body[data-dragcula-dragging='true'] *:not([data-dragcula-zone])) {
-    pointer-events: none;
-  }
-  :global(body[data-dragcula-dragging='true'] *[data-dragcula-zone]) {
-    pointer-events: all;
-  }*/
   :global([data-drag-zone][axis='vertical']) {
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
     padding-top: 1px;
     margin-top: -1px;
   }
-  :global([data-drag-zone='sidebar-pinned-tabs']) {
-    min-height: 24px;
-  }
-  :global(.magic-tabs-wrapper [data-drag-zone]) {
-    min-height: 4rem !important;
-    height: fit-content !important;
-  }
-  /*:global(div[data-dragcula-zone]) {
-    overflow: visible !important;
-    background: transparent !important;
-  }*/
 
   :global(body[data-dragging='true'] .chat-hint-tooltop) {
     opacity: 0;
@@ -6180,483 +6083,13 @@
     z-index: 100;
   }
 
-  /* Pulse effect for tooltip targets */
-  :global(.tooltip-target[data-tooltip-target]) {
-    position: relative;
-    outline: 2px solid rgba(73, 82, 242, 0.4);
-    border-radius: 16px;
-  }
-
-  :global(.tooltip-target[data-tooltip-target]::after) {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
-    display: block;
-    border-radius: inherit;
-    border-radius: calc(inherit + 8px);
-    z-index: -1;
-    animation: pulse 2s infinite;
-    filter: blur(4px);
-  }
-
-  @keyframes pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-    }
-    70% {
-      box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-    }
-  }
-
-  .new-tab-button {
-    :global(.custom) & {
-      color: var(--contrast-color) !important;
-    }
-    &:hover {
-      background: paint(squircle);
-      --squircle-radius-top-left: 16px;
-      --squircle-radius-top-right: 16px;
-      --squircle-radius-bottom-left: 16px;
-      --squircle-radius-bottom-right: 16px;
-      --squircle-smooth: 0.33;
-      --squircle-fill: var(--black-09);
-
-      :global(.dark) & {
-        --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
-      }
-    }
-  }
-
-  .messi {
-    backdrop-filter: blur(10px);
-  }
-  .hide-btn {
-    display: none !important;
-    background-color: transparent;
-  }
-
-  .sidebar {
-    &.magic {
-      background: linear-gradient(0deg, #ffeffd 0%, #ffe5fb 4.18%),
-        linear-gradient(180deg, #fef4fe 0%, #fff0fa 10.87%),
-        radial-gradient(41.69% 35.32% at 16.92% 87.63%, rgba(255, 208, 232, 0.85) 0%, #fee6f5 100%),
-        linear-gradient(129deg, #fef7fd 0.6%, #ffe8ef 44.83%, #ffe3f4 100%), #fff;
-      background: linear-gradient(
-          0deg,
-          color(display-p3 0.9922 0.9412 0.9879) 0%,
-          color(display-p3 0.9843 0.902 0.9775 / 0) 4.18%
-        ),
-        linear-gradient(
-          180deg,
-          color(display-p3 0.9892 0.9569 0.9922) 0%,
-          color(display-p3 0.9922 0.9451 0.9796 / 0) 10.87%
-        ),
-        radial-gradient(
-          41.69% 35.32% at 16.92% 87.63%,
-          color(display-p3 0.9735 0.8222 0.9054 / 0.85) 0%,
-          color(display-p3 0.9804 0.9059 0.958 / 0) 100%
-        ),
-        linear-gradient(
-          129deg,
-          color(display-p3 0.9922 0.9686 0.9906) 0.6%,
-          color(display-p3 0.9922 0.9137 0.9373) 44.83%,
-          color(display-p3 0.9882 0.8941 0.9522) 100%
-        ),
-        color(display-p3 1 1 1);
-      box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
-      box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
-    }
-  }
-
-  .sidebar-magic-toggle {
-    z-index: 100000;
-    background: rgba(175, 238, 238, 0.292);
-    border-radius: 8px;
-    padding: 0.7rem;
-
-    border-top: 1px solid #e4e2d4;
-    border-bottom: 1px solid #e4e2d4;
-    border-left: 1px solid #e4e2d4;
-  }
-
-  .sidebar-annotations-toggle {
-    right: 0.45rem;
-    z-index: 100000;
-    background: rgba(175, 238, 238, 0.292);
-    border-radius: 8px;
-    padding: 0.7rem;
-
-    border-top: 1px solid #e4e2d4;
-    border-bottom: 1px solid #e4e2d4;
-    border-left: 1px solid #e4e2d4;
-  }
-
-  .sidebar-magic {
-    flex: 1;
-    width: 300px;
-    z-index: 1;
-    height: 96%;
-  }
-  :global(.magic-horizontal .tab) {
-    flex: 1 1 0px;
-    min-width: 120px;
-  }
-
-  .browser-window-wrapper {
-    flex: 1;
-    padding: 0rem 0.4rem 0.4rem 0.4rem;
-    height: 100vh;
-    position: relative;
-
-    &.sidebarHidden {
-      padding: 0.4rem;
-    }
-  }
-
-  .browser-window {
-    height: 100%;
-    width: 100%;
-    position: absolute;
-    top: 0;
-    opacity: 0;
-    overflow: clip;
-
-    &.active {
-      z-index: 1;
-      position: relative;
-      opacity: 100%;
-    }
-
-    --corner-radii: 0.75rem;
-    :global(body:has(.horizontalTabs)) & {
-      border-top-left-radius: var(--corner-radii) !important;
-      border-top-right-radius: var(--corner-radii) !important;
-    }
-
-    :global(body:has(.verticalTabs)) & {
-      border-radius: var(--corner-radii) !important;
-    }
-
-    :global(webview) {
-      height: 100%;
-      width: 100%;
-      // border-radius: 0.5rem;
-      // overflow: hidden;
-    }
-  }
-  .link-preview-content {
-    padding: 0.4rem;
-    border-radius: 0.375rem;
-    background-color: paleturquoise;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .address-bar-wrapper {
-    border-radius: 12px;
-    padding: 0.5rem;
-    background: paleturquoise;
-    display: flex;
-    flex-direction: column;
-    box-shadow:
-      0 10px 15px -3px rgba(0, 0, 0, 0.1),
-      0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    gap: 15px;
-    position: relative;
-    z-index: 50000;
-  }
-
-  .address-bar-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .popover-content {
-    background-color: red;
-    width: 100vh;
-    height: 100vh;
-  }
-
-  .bar-wrapper {
-    width: 100%;
-    margin-top: 0.5rem;
-
-    .hitarea {
-      position: absolute;
-      z-index: 30000;
-      top: -1rem;
-      width: 100%;
-      height: 5rem;
-      background: red;
-    }
-
-    button {
-      appearance: none;
-      border: none;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      border-radius: 5px;
-
-      background-color: #fff;
-      padding: 10px;
-
-      &:hover {
-        background: #eeece0;
-      }
-    }
-  }
-
   #sidebar-pinned-tabs {
     gap: 6px;
   }
 
-  input {
-    flex: 1;
-    width: 400px;
-    padding: 10px;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    font-size: 1rem;
-    background-color: rgb(218, 239, 239);
-    color: #3f3f3f;
-
-    &:hover {
-      background: #eeece0;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: #f73b95;
-      color: #000;
-      background-color: rgb(218, 239, 239);
-    }
-  }
-
-  .hide {
-    display: none;
-  }
-
-  .hover-line {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 15px;
-    z-index: 10000;
-    width: 100%;
-    transition: height 0.2s ease-in-out;
-    &:after {
-      content: '';
-      position: absolute;
-      bottom: -5px;
-      left: 50%;
-      transform: translateX(-50%);
-      height: 10px;
-      border-radius: 5px;
-      /* background-color: #f73b95; */
-      width: 30rem;
-    }
-
-    .line {
-      height: 5px;
-      border-radius: 5px;
-      background-color: #ccc;
-      width: 4rem;
-    }
-  }
-
-  .masked-scroll-container {
-    --mask-direction: to right;
-    --mask-size: 100% 100%;
-    --mask-repeat: no-repeat;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-  .masked-content {
-    width: 100%;
-    height: 100%;
-    -webkit-mask-image: linear-gradient(
-      var(--mask-direction),
-      transparent,
-      black 2%,
-      black 98%,
-      transparent
-    );
-    -webkit-mask-size: var(--mask-size);
-    -webkit-mask-repeat: var(--mask-repeat);
-    mask-image: linear-gradient(
-      var(--mask-direction),
-      transparent,
-      black 2%,
-      black 98%,
-      transparent
-    );
-    mask-size: var(--mask-size);
-    mask-repeat: var(--mask-repeat);
-  }
-  .masked-content.horizontal {
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  .masked-content.vertical {
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .masked-content::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tabs {
-    position: relative;
-    flex: 1;
-    overflow: auto;
-    gap: 0.5rem;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    margin-left: 8rem;
-    width: 100%;
-    h2 {
-      font-size: 1.1rem;
-      font-weight: 500;
-      margin-top: 15px;
-      margin-bottom: 10px;
-      color: #a9a9a9;
-    }
-
-    #tabs {
-      overflow-x: auto;
-    }
-
-    .unpinned-tabs-wrapper {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      overflow-y: hidden;
-      -ms-overflow-style: none;
-      position: relative;
-      max-width: calc(100% - 120px);
-    }
-
-    .unpinned-tabs-wrapper::-webkit-scrollbar {
-      display: none;
-    }
-
-    .magic-tabs-wrapper {
-      border-radius: 12px;
-      // padding: 0.5rem;
-      border: 1px dashed rgba(88, 81, 48, 0.4);
-
-      &.magic {
-        background: linear-gradient(0deg, #ffeffd 0%, #ffe5fb 4.18%),
-          linear-gradient(180deg, #fef4fe 0%, #fff0fa 10.87%),
-          radial-gradient(
-            41.69% 35.32% at 16.92% 87.63%,
-            rgba(255, 208, 232, 0.85) 0%,
-            #fee6f5 100%
-          ),
-          linear-gradient(129deg, #fef7fd 0.6%, #ffe8ef 44.83%, #ffe3f4 100%), #fff;
-        background: linear-gradient(
-            0deg,
-            color(display-p3 0.9922 0.9412 0.9879) 0%,
-            color(display-p3 0.9843 0.902 0.9775 / 0) 4.18%
-          ),
-          linear-gradient(
-            180deg,
-            color(display-p3 0.9892 0.9569 0.9922) 0%,
-            color(display-p3 0.9922 0.9451 0.9796 / 0) 10.87%
-          ),
-          radial-gradient(
-            41.69% 35.32% at 16.92% 87.63%,
-            color(display-p3 0.9735 0.8222 0.9054 / 0.85) 0%,
-            color(display-p3 0.9804 0.9059 0.958 / 0) 100%
-          ),
-          linear-gradient(
-            129deg,
-            color(display-p3 0.9922 0.9686 0.9906) 0.6%,
-            color(display-p3 0.9922 0.9137 0.9373) 44.83%,
-            color(display-p3 0.9882 0.8941 0.9522) 100%
-          ),
-          color(display-p3 1 1 1);
-        box-shadow: 0px 0.933px 2.8px 0px rgba(0, 0, 0, 0.1);
-        box-shadow: 0px 0.933px 2.8px 0px color(display-p3 0 0 0 / 0.1);
-      }
-    }
-
-    .add-tab-button {
-      display: flex;
-      gap: 0.75rem;
-      padding: 1rem 1.125rem;
-      border: 0;
-      background: transparent;
-      border-radius: 12px;
-
-      &:hover {
-        background-color: #d1dae0;
-      }
-      .label {
-        flex: 1;
-        text-align: left;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-size: 1.1rem;
-        color: #7d7448;
-        font-weight: 500;
-        letter-spacing: 0.0025em;
-        font-smooth: always;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-    }
-  }
-
-  .pinned-tabs-wrapper {
-    position: relative;
-    gap: 1rem;
-
-    background: #f7f7f7;
-    border-radius: 18px;
-
-    background: #f7f7f7;
-    border-radius: 12px;
-    overflow-y: visible;
-    box-shadow:
-      0px 0px 32px -1px rgba(0, 0, 0, 0.05),
-      0px 14px 4px 0px #000,
-      0px 9px 3px 0px rgba(0, 0, 0, 0.01),
-      0px 5px 3px 0px rgba(0, 0, 0, 0.03),
-      0px 2px 2px 0px rgba(0, 0, 0, 0.06),
-      0px 1px 1px 0px rgba(0, 0, 0, 0.07);
-
-    box-shadow:
-      0px 0px 32px -1px color(display-p3 0 0 0 / 0.05),
-      0px 14px 4px 0px color(display-p3 0 0 0 / 0),
-      0px 9px 3px 0px color(display-p3 0 0 0 / 0.01),
-      0px 5px 3px 0px color(display-p3 0 0 0 / 0.03),
-      0px 2px 2px 0px color(display-p3 0 0 0 / 0.06),
-      0px 1px 1px 0px color(display-p3 0 0 0 / 0.07);
-
-    .description-text {
-      opacity: 0.4;
-    }
-  }
   :global([data-drag-zone='sidebar-pinned-tabs']) {
     height: fit-content !important;
+    min-height: 24px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -6672,212 +6105,67 @@
     flex-direction: row;
   }
 
-  .divider {
-    margin: 10px 8px;
-    border-bottom: 1px solid #cacaca;
-  }
+  /// RANDOM UI STUFF
 
-  .icon-wrapper {
-    width: 20px;
-    height: 20px;
-    display: block;
-  }
+  .new-tab-button {
+    transition: color 300ms ease-out;
 
-  .tab {
-    transition:
-      0.2s ease-out,
-      transform 0ms;
-  }
+    color: light-dark(var(--contrast-color), var(--contrast-color));
 
-  .actions {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    width: 100%;
+    &:hover {
+      --bg: var(--black-09);
 
-    button {
-      appearance: none;
-      border: none;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      border-radius: 5px;
-
-      &:not(.nav-button) {
-        flex: 1;
-        background-color: transparent;
-        padding: 10px;
+      :global(.dark) & {
+        --bg: var(--dark-on-unpinned-surface-horizontal-hover) !important;
       }
-
-      &.nav-button {
-        padding: 5px;
-        background: none;
-        color: #5e5e5e;
-
-        &:disabled {
-          color: #a9a9a9;
-        }
-      }
-
-      &:hover {
-        background: #eeece0;
-      }
+      @include utils.squircle($fill: var(--bg), $radius: 16px);
     }
   }
 
-  .nav-buttons {
-    position: absolute;
-    z-index: 10000;
-    top: 50%;
-    transform: translateY(-50%);
-    right: 3.5rem;
-    width: min-content;
-    margin: 0;
+  .hide-btn {
+    display: none !important;
+    background-color: transparent;
   }
 
-  .page-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 10px;
-    background-color: #fdf2f7;
-    border-radius: 5px;
+  .hide-btn {
+    display: none !important;
+    background-color: transparent;
   }
 
-  .icon-button {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    appearance: none;
-    background: none;
-    outline: none;
-    border: none;
-  }
-
-  .tabs-list {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .tab-selector {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    z-index: 10;
-    padding-top: 5px;
-    padding-bottom: 5px;
-
-    button {
-      flex: 1;
-      appearance: none;
-      border: none;
-      background: none;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-
-      font-size: 1rem;
-      color: #777777;
-      padding: 10px;
-
-      &.active {
-        color: #000;
-        font-weight: 500;
-      }
-
-      &:hover {
-        color: #000;
-      }
+  /* Pulse effect for tooltip targets */
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
   }
 
-  .action-back-to-tabs {
-    flex: none !important;
-    flex-shrink: 0;
-    padding-right: 1rem !important;
-
-    .label {
-      letter-spacing: 0.04rem;
-    }
-  }
-
-  // :global(citation) {
-  //   display: inline-flex;
-  //   align-items: center;
-  //   justify-content: center;
-  //   width: 1.75rem;
-  //   height: 1.75rem;
-  //   font-size: 0.9rem;
-  //   font-weight: 500;
-  //   background: rgb(226 240 255);
-  //   border: 1px solid rgb(183 198 218);
-  //   border-radius: 100%;
-  //   user-select: none;
-  //
-  //   overflow: hidden;
-  // }
-
-  .tab-bar-selector {
-    display: flex;
-    flex-direction: row;
-  }
-
-  :global(.magic-tabs-wrapper [data-drag-zone]) {
-    min-height: 4rem !important;
-    height: fit-content !important;
-  }
-
-  .debug {
-    display: flex;
-    align-items: center;
-    span {
-      background: transparent;
-      font-weight: 500;
-      outline: none;
-      width: fit-content;
-    }
-  }
-
-  .ai-wrapper {
+  :global(.tooltip-target[data-tooltip-target]) {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: calc(32px);
-    height: calc(32px);
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: 86%;
-    background-image: url('../../../public/assets/ai.png');
-    z-index: 10;
-    &:before {
-      content: '';
-      position: absolute;
-      width: 60%;
-      height: 60%;
-      z-index: -1;
-      border-radius: 50%;
-      mix-blend-mode: soft-light;
-      background: #ffffff;
-    }
-    &:after {
-      content: '';
-      position: absolute;
-      width: 60%;
-      height: 60%;
-      z-index: -1;
-      opacity: 0.8;
-      border-radius: 50%;
-      mix-blend-mode: soft-light;
-      background: #ffffff;
-    }
+    outline: 2px solid rgba(73, 82, 242, 0.4);
+    border-radius: 16px;
   }
+  :global(.tooltip-target[data-tooltip-target]::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    display: block;
+    border-radius: inherit;
+    border-radius: calc(inherit + 8px);
+    z-index: -1;
+    animation: pulse 2s infinite;
+    filter: blur(4px);
+  }
+
+  /// UTILS
 
   .custom-button-color {
     :global(.custom) & {

@@ -1,0 +1,7 @@
+html {
+  color-scheme: light;
+}
+
+html:has(body.dark) {
+  color-scheme: dark !important;
+}

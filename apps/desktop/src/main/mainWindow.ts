@@ -9,12 +9,7 @@ import { isDev, isMac, isPDFViewerURL, useLogScope } from '@horizon/utils'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
-import {
-  isAppSetup,
-  isPathSafe,
-  normalizeElectronUserAgent,
-  PDFViewerEntryPoint
-} from './utils'
+import { isAppSetup, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
 import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
 
@@ -42,11 +37,11 @@ export function createWindow() {
   const currentDisplay =
     winState.state.x && winState.state.y
       ? screen.getDisplayMatching({
-        x: winState.state.x,
-        y: winState.state.y,
-        width: winState.state.width,
-        height: winState.state.height
-      })
+          x: winState.state.x,
+          y: winState.state.y,
+          width: winState.state.width,
+          height: winState.state.height
+        })
       : screen.getPrimaryDisplay()
   const screenBounds = currentDisplay.bounds
 
@@ -113,7 +108,10 @@ export function createWindow() {
 
   const webviewSession = session.fromPartition('persist:horizon')
   const webviewSessionUserAgent = normalizeElectronUserAgent(webviewSession.getUserAgent(), false)
-  const webviewSessionUserAgentGoogle = normalizeElectronUserAgent(webviewSession.getUserAgent(), true)
+  const webviewSessionUserAgentGoogle = normalizeElectronUserAgent(
+    webviewSession.getUserAgent(),
+    true
+  )
   const webRequestManager = getWebRequestManager()
 
   webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
@@ -134,7 +132,7 @@ export function createWindow() {
 
     // Do not modify any request headers for `*.twitch.tv`
     if (isTwitch) {
-      return 
+      return
     }
 
     if (isGoogleAccounts) {
