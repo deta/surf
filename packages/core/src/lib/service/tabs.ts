@@ -12,8 +12,11 @@ import {
   BrowserContextScope,
   ChangeContextEventTrigger,
   CreateTabEventTrigger,
+  PageChatUpdateContextEventAction,
+  PageChatUpdateContextEventTrigger,
   ResourceTagsBuiltInKeys,
   ResourceTypes,
+  SelectTabEventAction,
   type DeleteTabEventTrigger
 } from '@horizon/types'
 import EventEmitter from 'events'
@@ -41,6 +44,7 @@ import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
 import type { OasisService, OasisSpace } from './oasis'
 import type { DesktopManager } from './desktop'
+import type { AIService } from './ai/ai'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -94,9 +98,10 @@ export class TabsManager {
   private telemetry: Telemetry
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
-  private oasis: OasisService
+  oasis: OasisService
   historyEntriesManager: HistoryEntriesManager
   desktopManager: DesktopManager
+  ai!: AIService
 
   tabs: Writable<Tab[]>
   activeTabId: Writable<string>
@@ -119,7 +124,6 @@ export class TabsManager {
   activeTabs: Readable<Tab[]>
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
-  magicTabs: Readable<(TabPage | TabSpace | TabResource)[]>
 
   constructor(
     resourceManager: ResourceManager,
@@ -209,18 +213,14 @@ export class TabsManager {
         .sort((a, b) => a.index - b.index)
     })
 
-    this.magicTabs = derived([this.activeTabs], ([tabs]) => {
-      return tabs.filter((tab) => tab.magic).sort((a, b) => a.index - b.index) as (
-        | TabPage
-        | TabSpace
-        | TabResource
-      )[]
-    })
-
     if (isDev) {
       // @ts-ignore
       window.tabsManager = this
     }
+  }
+
+  attachAIService(ai: AIService) {
+    this.ai = ai
   }
 
   get tabsValue() {
@@ -255,8 +255,8 @@ export class TabsManager {
     return get(this.unpinnedTabs)
   }
 
-  get magicTabsValue() {
-    return get(this.magicTabs)
+  get activatedTabsValue() {
+    return get(this.activatedTabs)
   }
 
   get activeTabsHistoryValue() {
@@ -1028,6 +1028,7 @@ export class TabsManager {
       } else {
         this.log.warn('No tab found for default browsing context')
         this.desktopManager.setVisible(true, { desktop: desktopId })
+        this.activeTabId.set('')
       }
     }
 
@@ -1125,6 +1126,257 @@ export class TabsManager {
         }
       }
     }
+  }
+
+  getTabSelection(tabId: string) {
+    const currentSelectedTabs = Array.from(this.selectedTabsValue)
+    const currentTab = currentSelectedTabs.find((item) => item.id === tabId)
+
+    return currentTab
+  }
+
+  addTabToSelection(
+    tabId: string,
+    userSelected = false,
+    trigger?: PageChatUpdateContextEventTrigger
+  ) {
+    const tab = this.tabsValue.find((t) => t.id === tabId)
+    if (!tab) {
+      this.log.debug('tab not found', tabId)
+      return null
+    }
+
+    this.selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+      newSelection.add({ id: tabId, userSelected: userSelected })
+      return newSelection
+    })
+
+    if (userSelected) {
+      this.lastSelectedTabId.set(tabId)
+    }
+
+    const showChatSidebar = this.ai.showChatSidebarValue
+    if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
+      this.ai.contextManager.addTab(tab, trigger)
+    } else {
+      tick().then(() => {
+        this.telemetry.trackSelectTab(SelectTabEventAction.Add, this.selectedTabsValue.size)
+      })
+    }
+  }
+
+  toggleTabSelection(
+    tabId: string,
+    userSelected = true,
+    trigger?: PageChatUpdateContextEventTrigger
+  ) {
+    const tab = this.tabsValue.find((t) => t.id === tabId)
+    if (!tab) {
+      this.log.debug('tab not found', tabId)
+      return null
+    }
+
+    const isTabSelected = this.getTabSelection(tabId)
+    if (isTabSelected) {
+      this.removeTabFromSelection(tabId, trigger)
+    } else {
+      this.addTabToSelection(tabId, userSelected, trigger)
+    }
+  }
+
+  onlyUseTabInSelection(
+    tabId: string,
+    userSelected?: boolean,
+    trigger?: PageChatUpdateContextEventTrigger
+  ) {
+    const tab = this.tabsValue.find((t) => t.id === tabId)
+    if (!tab) {
+      this.log.debug('tab not found', tabId)
+      return null
+    }
+
+    const currentTab = this.getTabSelection(tabId)
+    const shouldBeUserSelected = userSelected ?? currentTab?.userSelected ?? false
+    this.selectedTabs.set(new Set([{ id: tabId, userSelected: shouldBeUserSelected }]))
+
+    if (shouldBeUserSelected) {
+      this.lastSelectedTabId.set(tabId)
+    }
+
+    const showChatSidebar = this.ai.showChatSidebarValue
+    if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
+      this.ai.contextManager.addTab(tab, trigger)
+    } else {
+      tick().then(() => {
+        this.telemetry.trackSelectTab(SelectTabEventAction.Add, this.selectedTabsValue.size)
+      })
+    }
+  }
+
+  async selectTabRange(
+    targetTab: string,
+    sourceTab?: string,
+    trigger?: PageChatUpdateContextEventTrigger
+  ) {
+    const lastSelectedTabId = get(this.lastSelectedTabId)
+    const unpinnedTabsArray = this.unpinnedTabsValue
+    const tabsInContext = this.ai.contextManager.tabsInContextValue
+    const showChatSidebar = this.ai.showChatSidebarValue
+
+    this.log.debug('multi select', {
+      targetTab,
+      sourceTab,
+      lastSelectedTabId,
+      activeTabId: this.activeTabIdValue
+    })
+
+    const startTab = sourceTab ?? lastSelectedTabId ?? this.activeTabIdValue
+    const endTab = targetTab
+
+    const startIndex = unpinnedTabsArray.findIndex((tab) => tab.id === startTab)
+    const endIndex = unpinnedTabsArray.findIndex((tab) => tab.id === endTab)
+
+    const [start, end] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex]
+    this.log.debug('multi select range', startTab, endTab, start, end)
+
+    let numChanged = 0
+    this.selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+
+      const selectionArray = Array.from(newSelection)
+
+      // Calculate the list of tabs that are connected together as a visible group so we can cleanup the selection
+      const connectedSelectedTabs: typeof selectionArray = []
+
+      // First we walk from the start tab all the way to the end of the new selection and aggregate all the tabs that are connected as part of the group
+      for (let i = startIndex; i <= unpinnedTabsArray.length; i++) {
+        const id = unpinnedTabsArray[i]?.id
+        if (id) {
+          const item = selectionArray.find((item) => item.id === id)
+          if (item) {
+            if (!connectedSelectedTabs.includes(item)) {
+              connectedSelectedTabs.push(item)
+            }
+          } else if (i < end) {
+            continue
+          } else {
+            break
+          }
+        }
+      }
+
+      // Then we walk from the end tab all the way to the start of the new selection and aggregate all the tabs that are connected as part of the group in that direction
+      // This is to handle the case where the user selects a range of tabs in the opposite direction
+      for (let i = endIndex; i >= 0; i--) {
+        const id = unpinnedTabsArray[i]?.id
+        if (id) {
+          const item = selectionArray.find((item) => item.id === id)
+          if (item) {
+            if (!connectedSelectedTabs.includes(item)) {
+              connectedSelectedTabs.push(item)
+            }
+          } else if (i > start) {
+            continue
+          } else {
+            break
+          }
+        }
+      }
+
+      // After that we cleanup the selection by removing all tabs that are part of the connected group
+      for (const item of connectedSelectedTabs) {
+        newSelection.delete(item)
+        numChanged--
+      }
+
+      // Finally we add the new selection
+      for (let i = start; i <= end; i++) {
+        const id = unpinnedTabsArray[i]?.id
+        if (id) {
+          const item = Array.from(newSelection).find((item) => item.id === id)
+          if (!item) {
+            newSelection.add({ id, userSelected: false })
+            numChanged++
+          }
+        }
+      }
+
+      return newSelection
+    })
+
+    await tick()
+
+    const newSelection = Array.from(get(this.selectedTabs))
+
+    this.lastSelectedTabId.set(startTab)
+
+    if (showChatSidebar) {
+      for (const tab of tabsInContext) {
+        const shouldBeMagic = newSelection.findIndex((item) => item.id === tab.id) >= 0
+        if (!shouldBeMagic) {
+          this.ai.contextManager.removeTabItem(tab.id, trigger)
+        }
+      }
+
+      const newTabs = newSelection
+        .map((item) => item.id)
+        .filter((id) => tabsInContext.findIndex((tab) => tab.id === id) === -1)
+
+      this.ai.contextManager.addTabs(newTabs, trigger)
+    } else {
+      // Ensure no gaps in selection when switching modes (still needed?)
+      this.selectedTabs.update((t) => new Set(t))
+
+      tick().then(() => {
+        this.telemetry.trackSelectTab(
+          SelectTabEventAction.MultiSelect,
+          this.selectedTabsValue.size,
+          numChanged
+        )
+      })
+    }
+
+    return this.selectedTabsValue
+  }
+
+  async removeTabFromSelection(tabId: string, trigger?: PageChatUpdateContextEventTrigger) {
+    const tab = this.tabsValue.find((t) => t.id === tabId)
+    if (!tab) {
+      this.log.debug('tab not found', tabId)
+      return null
+    }
+
+    const currentTab = this.getTabSelection(tabId)
+
+    this.selectedTabs.update((t) => {
+      const newSelection = new Set(t)
+      Array.from(newSelection).forEach((item) => {
+        if (item.id === tabId) {
+          newSelection.delete(item)
+        }
+      })
+      return newSelection
+    })
+
+    if (currentTab?.userSelected) {
+      this.lastSelectedTabId.set(this.activeTabIdValue)
+    }
+
+    const showChatSidebar = this.ai.showChatSidebarValue
+    if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
+      await tick()
+      this.ai.contextManager.removeTabItem(tab.id, trigger)
+    } else {
+      tick().then(() => {
+        this.telemetry.trackSelectTab(SelectTabEventAction.Remove, this.selectedTabsValue.size)
+      })
+    }
+  }
+
+  clearTabSelection() {
+    this.selectedTabs.set(new Set())
+    this.lastSelectedTabId.set(null)
   }
 
   export() {

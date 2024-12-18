@@ -1,73 +1,34 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import type { PillImage } from '../ContextBubbles.svelte'
-  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import ContextBubbleItemWrapper, { type PillProperties } from './ContextBubbleItemWrapper.svelte'
-  import { blobToDataUrl, blobToSmallImageUrl } from '../../../utils/screenshot'
+  import { blobToDataUrl } from '../../../utils/screenshot'
+  import type { ContextItemScreenshot } from '@horizon/core/src/lib/service/ai/contextManager'
 
-  export let pill: PillImage
+  export let item: ContextItemScreenshot
   export let pillProperties: PillProperties
 
-  const resourceManager = useResourceManager()
-
-  let blob: Blob | null = null
-  let previewImage: string | null = null
-  let fullImage: string | null = null
-
-  async function getSmallImage() {
-    if (typeof pill.data === 'string') {
-      const resource = await resourceManager.getResource(pill.data)
-      if (!resource) {
-        return null
-      }
-
-      blob = await resource.getData()
-      resource.releaseData()
-    } else {
-      blob = pill.data
-    }
-
-    // if (screenshotPreviews.has(pill.id)) {
-    //   return screenshotPreviews.get(pill.id) ?? null
-    // }
-
-    const dataUrl = await blobToSmallImageUrl(blob)
-    if (!dataUrl) {
-      return null
-    }
-
-    previewImage = dataUrl
-
-    // screenshotPreviews.set(pill.id, dataUrl)
-
-    return dataUrl
-  }
+  $: label = item.label
+  $: icon = item.icon
 
   async function getBigImage() {
-    if (!blob) {
-      return null
-    }
-
-    return blobToDataUrl(blob)
+    return blobToDataUrl(item.data)
   }
 </script>
 
-<ContextBubbleItemWrapper {pill} {pillProperties} on:remove-item on:select on:retry>
-  {#await getSmallImage()}
-    <Icon name="spinner" />
-  {:then image}
-    {#if image}
-      <img
-        src={image}
-        alt={pill.title}
-        class="w-full h-full object-contain rounded"
-        style="transition: transform 0.3s;"
-        loading="lazy"
-      />
-    {:else}
-      <Icon name="screenshot" size="20px" color="black" />
-    {/if}
-  {/await}
+<ContextBubbleItemWrapper {item} {pillProperties} on:remove-item on:select on:retry>
+  {#if $icon.type === 'image'}
+    <img
+      src={$icon.data}
+      alt={$label}
+      class="w-full h-full object-contain rounded"
+      style="transition: transform 0.3s;"
+      loading="lazy"
+    />
+  {:else if $icon.type === 'icon'}
+    <Icon name={$icon.data} size="20px" color="black" />
+  {:else}
+    <Icon name="screenshot" size="20px" color="black" />
+  {/if}
 
   <div slot="popover">
     {#await getBigImage()}
@@ -76,7 +37,7 @@
       {#if image}
         <img
           src={image}
-          alt={pill.title}
+          alt={$label}
           class="w-full h-full object-contain rounded-lg"
           style="transition: transform 0.3s;"
         />

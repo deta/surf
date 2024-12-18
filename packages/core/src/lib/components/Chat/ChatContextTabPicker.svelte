@@ -1,13 +1,14 @@
 <script lang="ts" context="module">
+  // prettier-ignore
   export type TabItem = {
     id: string
-    type: 'page' | 'space' | 'resource'
+    type: 'page' | 'space' | 'resource' | 'built-in'
     label: string
     value: string
     icon?: string
     iconUrl?: string
     iconSpaceId?: string
-  }
+  };
 </script>
 
 <script lang="ts">
@@ -17,7 +18,6 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     type AddContextItemEvent,
-    type ContextItem,
     type Tab
   } from '../../types'
   import { createEventDispatcher, onMount } from 'svelte'
@@ -38,9 +38,10 @@
   import { Icon } from '@horizon/icons'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import type { ContextManager } from '@horizon/core/src/lib/service/ai/contextManager'
 
   export let tabs: Readable<Tab[]>
-  export let contextItems: Readable<ContextItem[]>
+  export let contextManager: ContextManager
 
   const log = useLogScope('ChatContextTabPicker')
   const oasis = useOasis()
@@ -52,8 +53,12 @@
   const spaces = oasis.spaces
   const activeScopeId = tabsManager.activeScopeId
 
+  const contextItems = contextManager.items
+  const tabsInContext = contextManager.tabsInContext
+  const spacesInContext = contextManager.spacesInContext
+  const resourcesInContext = contextManager.resourcesInContext
+
   const dispatch = createEventDispatcher<{
-    'include-tab': string
     'add-context-item': AddContextItemEvent
     'pick-screenshot': void
     close: void
@@ -67,6 +72,24 @@
   const searchResult = writable<TabItem[]>([])
   const isSearching = writable(false)
   const searchValue = writable('')
+
+  const activeTabItem = {
+    id: 'active-tab',
+    type: 'built-in',
+    label: 'Active Tab',
+    value: `active-tab`,
+    icon: 'sparkles'
+  } as TabItem
+
+  const activeContextItem = {
+    id: 'active-space',
+    type: 'built-in',
+    label: 'Active Context',
+    value: `active-space`,
+    icon: 'circle-dot'
+  } as TabItem
+
+  const builtInItems: TabItem[] = [activeTabItem, activeContextItem]
 
   function tabToTabItem(tab: Tab) {
     return {
@@ -89,41 +112,65 @@
   }
 
   const tabItems = derived(
-    [searchResult, contextItems, tabs, searchValue, activeScopeId],
-    ([searchResult, contextItems, tabs, searchValue, activeScopeId]) => {
-      const result: TabItem[] = []
+    [
+      searchResult,
+      contextItems,
+      tabsInContext,
+      spacesInContext,
+      resourcesInContext,
+      tabs,
+      searchValue,
+      activeScopeId
+    ],
+    ([
+      searchResult,
+      contextItems,
+      tabsInContext,
+      spacesInContext,
+      resourcesInContext,
+      tabs,
+      searchValue,
+      activeScopeId
+    ]) => {
+      const filteredBuiltInItems = builtInItems.filter(
+        (item) => contextItems.findIndex((ci) => ci.id === item.id) === -1
+      )
 
       if (searchValue.length === 0) {
         const currentScopeTabs = tabs.filter((tab) => tab.scopeId === (activeScopeId ?? undefined))
         const tabItems = currentScopeTabs.map(tabToTabItem)
-        return tabItems
+        return [...filteredBuiltInItems, ...tabItems]
       }
 
       const tabMatches = tabs.filter(
         (tab) =>
           tab.title.toLowerCase().includes(searchValue.toLowerCase()) &&
-          contextItems.findIndex((ci) => ci.type === 'tab' && ci.data.id === tab.id) === -1
+          tabsInContext.findIndex((ci) => ci.id === tab.id) === -1
       )
 
       const spaceMatches = $spaces.filter(
         (space) =>
-          contextItems.findIndex((ci) => ci.type === 'space' && ci.data.id === space.id) === -1 &&
+          spacesInContext.findIndex((ci) => ci.id === space.id) === -1 &&
           space.dataValue.folderName.toLowerCase().includes(searchValue.toLowerCase()) &&
           tabMatches.findIndex((t) => t.type === 'space' && t.spaceId === space.id) === -1
       )
 
       const stuffMatches = searchResult.filter(
         (item) =>
-          contextItems.findIndex((ci) => ci.type === 'resource' && ci.data.id === item.id) === -1 &&
+          resourcesInContext.findIndex((ci) => ci.id === item.id) === -1 &&
           tabMatches.findIndex((t) => t.type === 'page' && t.chatResourceBookmark === item.id) ===
             -1
+      )
+
+      const builtInMatches = filteredBuiltInItems.filter((item) =>
+        item.label.toLowerCase().includes(searchValue.toLowerCase())
       )
 
       const tabItems = tabMatches.map(tabToTabItem)
       const spaceItems = spaceMatches.slice(0, 5).map((space) => spaceToTabItem(space))
       const stuffItems = stuffMatches
 
-      return [...tabItems, ...spaceItems, ...stuffItems]
+      return [...builtInMatches, ...tabItems, ...spaceItems, ...stuffItems]
     }
   )
 
@@ -136,38 +183,15 @@
     log.debug('submitting item', type, id)
 
     if (type === 'tab') {
-      dispatch('include-tab', id)
-      $searchValue = ''
+      contextManager.addTab(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
     } else if (type === 'space') {
-      const space = await oasis.getSpace(id)
-      if (!space) {
-        log.error('space not found', id)
-        return
-      }
-
-      dispatch('add-context-item', {
-        item: {
-          id,
-          type: 'space',
-          data: space
-        },
-        trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
-      })
-    } else {
-      const resource = await resourceManager.getResource(id)
-      if (!resource) {
-        log.error('resource not found', id)
-        return
-      }
-
-      dispatch('add-context-item', {
-        item: {
-          id,
-          type: 'resource',
-          data: resource
-        },
-        trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
-      })
+      contextManager.addSpace(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+    } else if (type === 'resource') {
+      contextManager.addResource(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+    } else if (type === 'active-tab') {
+      contextManager.addActiveTab(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+    } else if (type === 'active-space') {
+      contextManager.addActiveSpaceContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
     }
 
     // $searchValue = ''
@@ -297,7 +321,7 @@
       <button
         on:click={() => {
           for (const t of $tabItems) {
-            dispatch('include-tab', t.id)
+            contextManager.addTab(t.id)
           }
           dispatch('close')
         }}
@@ -347,6 +371,8 @@
                 <SpaceIcon folder={fetchedSpace} size="sm" interactive={false} />
               {/if}
             {/await}
+          {:else if item.icon && item.type === 'built-in'}
+            <Icon name={item.icon} />
           {:else if item.icon}
             <FileIcon kind={item.icon} />
           {:else}

@@ -319,15 +319,31 @@ export enum PageChatUpdateContextEventAction {
   ExcludeOthers = 'exclude_others',
   /** The active tab changed and was added to the context */
   ActiveChanged = 'active_changed',
+  /** The active context changed or was added to the context */
+  ActiveContextChanged = 'active_context_changed',
   /** Multiple tabs were selected */
-  MultiSelect = 'multi_select'
+  MultiSelect = 'multi_select',
+  /** Context was cleared completely */
+  Clear = 'clear'
 }
 
 export enum PageChatUpdateContextEventTrigger {
   DragAndDrop = 'drag_and_drop',
   TabSelection = 'tab_selection',
   ChatAddContextMenu = 'chat_add_context_menu',
-  Onboarding = 'onboarding'
+  ChatContextItem = 'chat_context_item',
+  Onboarding = 'onboarding',
+  ContextSwitch = 'context_switch',
+  ActiveTabChanged = 'active_tab_changed'
+}
+
+export enum PageChatUpdateContextItemType {
+  PageTab = 'page_tab',
+  Resource = 'resource',
+  Space = 'space',
+  Screeenshot = 'screenshot',
+  ActiveTab = 'active_tab',
+  ActiveSpace = 'active_space'
 }
 
 export enum SelectTabEventAction {

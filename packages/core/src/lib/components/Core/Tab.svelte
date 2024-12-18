@@ -12,7 +12,7 @@
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { BookmarkTabState, Tab, TabPage, TabSpace } from '../../types/browser.types'
-  import { derived, get, writable, type Writable } from 'svelte/store'
+  import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
@@ -26,6 +26,7 @@
     ChangeContextEventTrigger,
     DeleteTabEventTrigger,
     OpenInMiniBrowserEventFrom,
+    PageChatUpdateContextEventTrigger,
     SaveToOasisEventTrigger
   } from '@horizon/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
@@ -40,6 +41,7 @@
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
   import { useDesktopManager } from '../../service/desktop'
   import SoundVisualizerBars from '../Effects/SoundVisualizerBars.svelte'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -68,14 +70,16 @@
   const userConfig = useConfig()
   const oasis = useOasis()
   const toasts = useToasts()
+  const ai = useAI()
   const desktopManager = useDesktopManager()
   const globalMiniBrowser = useGlobalMiniBrowser()
   const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
 
   const desktopVisible = desktopManager.activeDesktopVisible
   const activeDesktopColorScheme = desktopManager.activeDesktopColorScheme
-
   const userSettings = userConfig.settings
+  const chatContext = ai.contextManager
+  const tabsInContext = chatContext.tabsInContext
 
   // Why is there no better way in Svelte :/
   $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
@@ -113,9 +117,6 @@
     'save-resource-in-space': OasisSpace
     'create-live-space': void
     'add-source-to-space': OasisSpace
-    'exclude-other-tabs': string
-    'exclude-tab': string
-    'include-tab': string
     'chat-with-tab': string
     'remove-bookmark': string
     Drop: { drag: DragculaDragEvent; spaceId: string }
@@ -180,6 +181,7 @@
 
   // $: acceptDrop = tab.type === 'space'
   $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
+  $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
   $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
@@ -406,15 +408,17 @@
   }
 
   const handleExcludeOthers = () => {
-    dispatch('exclude-other-tabs', tab.id)
+    chatContext.removeAllExcept(tab.id)
   }
 
   const handleExcludeTab = () => {
-    dispatch('exclude-tab', tab.id)
+    chatContext.removeTabItem(tab.id, PageChatUpdateContextEventTrigger.TabSelection)
   }
 
   const handleIncludeTab = () => {
-    dispatch('include-tab', tab.id)
+    if (tab.type === 'page' || tab.type === 'space') {
+      chatContext.addTab(tab, PageChatUpdateContextEventTrigger.TabSelection)
+    }
   }
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
@@ -505,7 +509,8 @@
     }
 
     // Special state classes
-    const magicClasses = tab.magic && !isActive ? 'ring-[0] ring-pink-600' : ''
+    const magicClasses =
+      isInChatContext && isMagicActive && !isActive ? 'ring-[0] ring-pink-600' : ''
     const selectedClasses = isSelected && !isActive ? '' : ''
     const hoverClasses = 'hover:bg-sky-100 dark:hover:bg-gray-600'
 
@@ -623,11 +628,11 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   class={$tabStyles}
   class:bg-green-200={isActive &&
     $inputUrl === 'surf.featurebase.app' &&
-    !tab.magic &&
+    !isInChatContext &&
     !$desktopVisible}
   class:bg-sky-200={isActive &&
     $inputUrl !== 'surf.featurebase.app' &&
-    !tab.magic &&
+    !isInChatContext &&
     !$desktopVisible}
   class:active={tab.id === $activeTabId && !$desktopVisible}
   class:pinned
@@ -636,12 +641,13 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   {horizontalTabs}
   class:hovered
   class:selected={isSelected && !$desktopVisible}
+  class:user-selected={isUserSelected && !$desktopVisible}
   class:combine-border={// Combine border class if:
   // 1. Magic is active and tab is magical, or
   // 2. Magic is inactive but tab is selected/active
   !$desktopVisible &&
-    ((isMagicActive && tab.magic) || (!isMagicActive && (isSelected || isActive)))}
-  class:magic={tab.magic}
+    ((isMagicActive && isInChatContext) || (!isMagicActive && (isSelected || isActive)))}
+  class:magic={isInChatContext && isMagicActive}
   style={tabSize
     ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
     : ''}
@@ -737,9 +743,8 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         type: 'action',
         hidden: !isMagicActive,
         icon: '',
-        text: `${tab.magic ? 'Remove from' : 'Add to'} Chat`,
-        action: () =>
-          tab.magic ? dispatch('exclude-tab', tab.id) : dispatch('include-tab', tab.id)
+        text: `${isInChatContext ? 'Remove from' : 'Add to'} Chat`,
+        action: () => (isInChatContext ? handleExcludeTab() : handleIncludeTab())
       },
       {
         type: 'action',
@@ -896,7 +901,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           }}
           class={hovered && isActive && tab.type === 'page'
             ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60] cursor-text'
-            : `whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && tab.magic ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
+            : `whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && isInChatContext ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
         >
           {#if hovered && isActive && tab.type === 'page' && !inStuffBar}
             {$inputUrl}
@@ -1552,13 +1557,16 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       ):not(:only-child) {
       border-top-left-radius: 16px;
       border-top-right-radius: 16px;
-      background: var(--white);
     }
 
     /* Middle tabs in sequences */
     .tab.combine-border:not(.horizontalTabs) + .tab.combine-border {
       border-radius: 0;
       background: var(--white-40);
+
+      &.user-selected {
+        background: var(--white-55);
+      }
     }
 
     /* Last tab of a group */
@@ -1577,6 +1585,14 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       --squircle-radius-bottom-right: 0px;
       --squircle-smooth: 0.33;
       --squircle-fill: var(--white-40);
+    }
+
+    .tab.active {
+      background: var(--white-75) !important;
+    }
+
+    .tab.user-selected {
+      --squircle-fill: var(--white-55) !important;
     }
   }
 

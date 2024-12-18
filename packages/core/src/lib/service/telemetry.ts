@@ -40,7 +40,8 @@ import {
   RemoveHomescreenItemEventTrigger,
   AddHomescreenItemEventTrigger,
   AddHomescreenItemEventSource,
-  UpdateHomescreenEventAction
+  UpdateHomescreenEventAction,
+  PageChatUpdateContextItemType
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -583,10 +584,12 @@ export class Telemetry {
     action: PageChatUpdateContextEventAction,
     numResources: number,
     numChanged: number = 1,
+    type?: PageChatUpdateContextItemType,
     trigger: PageChatUpdateContextEventTrigger = PageChatUpdateContextEventTrigger.TabSelection
   ) {
     await this.trackEvent(TelemetryEventTypes.PageChatContextUpdate, {
       action: action,
+      item_type: type,
       context_size: numResources,
       changed: numChanged,
       trigger: trigger

@@ -248,6 +248,15 @@ export const getHostname = (raw: string) => {
   }
 }
 
+export const getURLBase = (raw: string) => {
+  try {
+    const url = new URL(raw)
+    return `${url.protocol}//${url.hostname}`
+  } catch (error) {
+    return null
+  }
+}
+
 export const checkIfSecureURL = (url: string) => {
   try {
     const isLocalhost = checkIfLocalhost(url)

@@ -12,7 +12,6 @@
     'update-tab': Partial<TabPage>
     'open-resource': string
     'reload-annotations': boolean
-    'update-page-magic': PageMagic
 
     // forwarded webview events
     'app-detection': DetectedWebApp
@@ -24,7 +23,6 @@
     'annotation-remove': WebViewSendEvents[WebViewEventSendNames.RemoveAnnotation]
     'annotation-update': WebViewSendEvents[WebViewEventSendNames.UpdateAnnotation]
     'add-to-chat': WebViewSendEvents[WebViewEventSendNames.AddToChat]
-    'prepare-tab-for-chat': TabPage
     'open-mini-browser': string
   }
 
@@ -96,7 +94,6 @@
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
   export let historyEntriesManager: HistoryEntriesManager
   export let webview: WebviewWrapper
-  export let pageMagic: PageMagic | undefined = undefined
   export let id: string = `webview-${tab.id}`
   export let active: boolean = false
   export let isLoading = writable(false)

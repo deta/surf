@@ -19,6 +19,19 @@ export const getValue = <T>(key: string, parse = false) => {
   return stringValue as T
 }
 
+export const useLocalStorage = <T extends Value>(key: string, defaultValue: T, parse = false) => {
+  const get = () => {
+    const stored = getValue<T>(key, parse)
+    return stored !== null ? stored : defaultValue
+  }
+
+  const set = (value: T) => {
+    setValue(key, value)
+  }
+
+  return { get, set }
+}
+
 export const useLocalStorageItem = <T extends Value>(
   itemId: string,
   scope?: string,

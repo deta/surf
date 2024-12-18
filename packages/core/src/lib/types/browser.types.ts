@@ -5,6 +5,7 @@ import type {
 } from '@horizon/types'
 import type { Resource, ResourceHistoryEntry } from '../service/resources'
 import type { OasisSpace } from '../service/oasis'
+import type { ContextItem } from '../service/ai/context'
 
 export interface BaseTab {
   id: string
@@ -235,36 +236,6 @@ export type NewResourceTabEvent = {
 }
 
 export type BookmarkTabState = 'idle' | 'in_progress' | 'success' | 'error'
-
-export type ContextItem =
-  | ContextItemScreenshot
-  | ContextItemTab
-  | ContextItemResource
-  | ContextItemSpace
-
-export type ContextItemScreenshot = {
-  id: string
-  type: 'screenshot'
-  data: Blob
-}
-
-export type ContextItemTab = {
-  id: string
-  type: 'tab'
-  data: Tab
-}
-
-export type ContextItemResource = {
-  id: string
-  type: 'resource'
-  data: Resource
-}
-
-export type ContextItemSpace = {
-  id: string
-  type: 'space'
-  data: OasisSpace
-}
 
 export type AddContextItemEvent = {
   item: ContextItem

@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from '../config'
-import type { ResourceManager } from '../resources'
+import { type ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
 import {
   QuotaDepletedError,
@@ -9,133 +9,43 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { generateID, useLogScope } from '@horizon/utils'
+import { useLogScope } from '@horizon/utils'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
-import type { AIChatMessage, AIChatMessageParsed, AiSFFSQueryResponse } from '../../types'
+import { type AiSFFSQueryResponse } from '../../types'
 import { BUILT_IN_MODELS, ModelTiers, type Model } from '@horizon/types/src/ai.types'
 import { handleQuotaDepletedError } from './helpers'
-
-export class AIChat {
-  id: string
-  messages: Writable<AIChatMessage[]>
-
-  userMessages: Readable<AIChatMessage[]>
-  systemMessages: Readable<AIChatMessage[]>
-  responses: Readable<AIChatMessageParsed[]>
-
-  ai: AIService
-  sffs: SFFS
-  log: ReturnType<typeof useLogScope>
-
-  constructor(id: string, messages: AIChatMessage[], ai: AIService) {
-    this.id = id
-    this.messages = writable(messages)
-
-    this.ai = ai
-    this.sffs = ai.sffs
-    this.log = useLogScope('AIChat')
-
-    this.userMessages = derived([this.messages], ([messages]) => {
-      return messages.filter((msg) => msg.role === 'user')
-    })
-
-    this.systemMessages = derived([this.messages], ([messages]) => {
-      return messages.filter((msg) => msg.role === 'assistant')
-    })
-
-    this.responses = derived(
-      [this.userMessages, this.systemMessages],
-      ([userMessages, systemMessages]) => {
-        const queries = userMessages.map((message) => message.content) // TODO: persist the query saved in the AIChatMessageParsed instead of using the actual content
-
-        return systemMessages.map((message, idx) => {
-          message.sources = message.sources
-          this.log.debug('Message', message)
-          return {
-            id: generateID(),
-            role: 'user',
-            query: queries[idx],
-            content: message.content.replace('<answer>', '').replace('</answer>', ''),
-            sources: message.sources,
-            status: 'success'
-          } as AIChatMessageParsed
-        })
-      }
-    )
-  }
-
-  get messagesValue() {
-    return get(this.messages)
-  }
-
-  get responsesValue() {
-    return get(this.responses)
-  }
-
-  async sendMessage(
-    callback: (chunk: string) => void,
-    query: string,
-    opts?: {
-      modelId?: Model['id']
-      tier?: ModelTiers
-      limit?: number
-      ragOnly?: boolean
-      resourceIds?: string[]
-      inlineImages?: string[]
-      general?: boolean
-    }
-  ) {
-    let model: Model | undefined = undefined
-
-    this.log.debug('sending chat message to chat with id', this.id, opts)
-
-    if (opts?.modelId) {
-      model = this.ai.modelsValue.find((m) => m.id === opts.modelId)
-    }
-
-    if (!model) {
-      model = this.ai.getMatchingModel(opts?.tier ?? ModelTiers.Premium)
-    }
-
-    const backendModel = this.ai.modelToBackendModel(model)
-    const customKey = model.custom_key
-
-    this.log.debug('sending chat message to chat with id', this.id, model, opts, query)
-
-    await this.sffs.sendAIChatMessage(callback, this.id, query, backendModel, {
-      customKey: customKey,
-      limit: opts?.limit,
-      ragOnly: opts?.ragOnly,
-      resourceIds: opts?.resourceIds,
-      inlineImages: opts?.inlineImages,
-      general: opts?.general
-    })
-
-    return {
-      model
-    }
-  }
-
-  delete() {
-    return this.ai.deleteChat(this.id)
-  }
-}
+import type { TabsManager } from '../tabs'
+import type { Telemetry } from '../telemetry'
+import { AIChat } from './chat'
+import { type ContextItem, ContextManager } from './contextManager'
 
 export class AIService {
   resourceManager: ResourceManager
   sffs: SFFS
+  tabsManager: TabsManager
   config: ConfigService
+  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
+  contextManager: ContextManager
+
+  showChatSidebar: Writable<boolean>
 
   selectedModelId: Readable<string>
   selectedModel: Readable<Model>
   models: Readable<Model[]>
+  alwaysIncludeScreenshotInChat: Readable<boolean>
+  contextItems: Readable<ContextItem[]>
 
-  constructor(resourceManager: ResourceManager, config: ConfigService) {
+  constructor(resourceManager: ResourceManager, tabsManager: TabsManager, config: ConfigService) {
     this.resourceManager = resourceManager
     this.sffs = resourceManager.sffs
+    this.tabsManager = tabsManager
     this.config = config
+    this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
+    this.contextManager = new ContextManager(this, tabsManager, resourceManager)
+
+    this.showChatSidebar = writable(false)
 
     this.selectedModelId = derived([this.config.settings], ([settings]) => {
       return settings.selected_model
@@ -162,6 +72,18 @@ export class AIService {
         return models.find((m) => m.id === selectedModelId) || models[0]
       }
     )
+
+    this.alwaysIncludeScreenshotInChat = derived([this.config.settings], ([settings]) => {
+      return settings.always_include_screenshot_in_chat
+    })
+
+    this.contextItems = derived([this.contextManager.items], ([$contextItems]) => {
+      return $contextItems
+    })
+  }
+
+  get showChatSidebarValue() {
+    return get(this.showChatSidebar)
   }
 
   get customKeyValue() {
@@ -382,8 +304,12 @@ export class AIService {
     return quotas
   }
 
-  static provide(resourceManager: ResourceManager, config: ConfigService) {
-    const service = new AIService(resourceManager, config)
+  static provide(
+    resourceManager: ResourceManager,
+    tabsManager: TabsManager,
+    config: ConfigService
+  ) {
+    const service = new AIService(resourceManager, tabsManager, config)
 
     setContext('ai', service)
 
@@ -397,3 +323,5 @@ export class AIService {
 
 export const useAI = AIService.use
 export const provideAI = AIService.provide
+
+export * from './chat'

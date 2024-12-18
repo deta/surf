@@ -1,69 +1,59 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-
   import { Icon } from '@horizon/icons'
-  import { getFileKind, getFileType, truncate, getHostname } from '@horizon/utils'
-  import { ResourceTypes } from '@horizon/types'
+  import { getFileKind } from '@horizon/utils'
 
-  import type { PillResource } from '../ContextBubbles.svelte'
   import FileIcon from '../../Resources/Previews/File/FileIcon.svelte'
-  import { type Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import ContextBubbleItemWrapper, { type PillProperties } from './ContextBubbleItemWrapper.svelte'
   import ResourceHoverPreview from '../ResourceHoverPreview.svelte'
+  import type { ContextItemResource } from '@horizon/core/src/lib/service/ai/contextManager'
+  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
 
-  export let pill: PillResource
+  export let item: ContextItemResource
   export let pillProperties: PillProperties
+  export let additionalLabel: string | undefined = undefined
 
   const resourceManager = useResourceManager()
+  const resources = resourceManager.resources
 
-  let resource: Resource | null = null
-  let loading = false
-  let iconUrl: string | undefined = pill.icon
+  $: label = item.label
+  $: icon = item.icon
+
+  // for some reason the resource that gets passed in is not the same as the one in the store
+  // so the resource state in some cases doesn't properly update (only noticed it for PDFs)
+  $: resource = $resources.find((r) => r.id === item.id)
 
   $: resourceState = resource ? resource.state : null
-  $: isProcessing = resourceState !== null ? $resourceState === 'post-processing' : false
+  $: isProcessing =
+    resourceState !== null
+      ? $resourceState === 'post-processing' || $resourceState === 'extracting'
+      : false
   $: processingFailed = resourceState !== null ? $resourceState === 'error' : false
-
-  $: if (resource && resource.type === 'application/pdf') {
-    iconUrl = resource.metadata?.sourceURI
-      ? `https://www.google.com/s2/favicons?domain=${getHostname(resource.metadata.sourceURI)}&sz=48`
-      : pill.icon
-  }
-
-  onMount(async () => {
-    if (pill.data.id) {
-      loading = true
-      resource = await resourceManager.getResource(pill.data.id)
-      loading = false
-    }
-  })
 </script>
 
 <ContextBubbleItemWrapper
-  {pill}
+  {item}
   {pillProperties}
   loading={isProcessing}
   failed={processingFailed}
+  {additionalLabel}
   on:remove-item
   on:select
   on:retry
 >
   <div class="w-full h-full relative">
     <div class="w-full h-full {isProcessing || processingFailed ? 'p-1' : ''}">
-      {#if pill.data.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-        <Icon name="docs" size="16px" />
-      {:else if iconUrl}
+      {#if $icon.type === 'icon'}
+        <Icon name={$icon.data} size="16px" />
+      {:else if $icon.type === 'image'}
         <img
-          src={iconUrl}
-          alt={pill.title}
+          src={$icon.data}
+          alt={$label}
           class="w-full h-full object-contain"
           style="transition: transform 0.3s;"
           loading="lazy"
         />
-      {:else if pill.data.type}
-        <FileIcon kind={getFileKind(pill.data.type)} />
-      {:else}
-        <Icon name="world" size="20px" color="black" />
+      {:else if resource}
+        <FileIcon kind={getFileKind(resource.type)} />
       {/if}
     </div>
 
@@ -82,11 +72,5 @@
     {/if}
   </div>
 
-  <ResourceHoverPreview
-    {resource}
-    {loading}
-    title={pill.title}
-    type={pill.data.type}
-    slot="popover"
-  />
+  <ResourceHoverPreview {resource} title={$label} type={resource?.type} slot="popover" />
 </ContextBubbleItemWrapper>

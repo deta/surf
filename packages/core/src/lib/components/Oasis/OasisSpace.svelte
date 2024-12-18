@@ -28,7 +28,6 @@
   } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
-  import Chat from '../Chat/Chat.svelte'
   import SearchInput from './SearchInput.svelte'
   import { createEventDispatcher, tick } from 'svelte'
   import {
@@ -1512,25 +1511,6 @@
             </div>
           </div>
         {/if}
-      </div>
-    {/if}
-
-    {#if $showChat}
-      <div class="chat-wrapper">
-        <button class="close-button" on:click={handleCloseChat}>
-          <Icon name="close" size="15px" />
-        </button>
-
-        <Chat
-          tab={{
-            type: 'chat',
-            query: $chatPrompt
-          }}
-          {resourceManager}
-          resourceIds={!isEverythingSpace ? $resourceIds : []}
-          on:navigate={(e) => {}}
-          on:updateTab={(e) => {}}
-        />
       </div>
     {/if}
 

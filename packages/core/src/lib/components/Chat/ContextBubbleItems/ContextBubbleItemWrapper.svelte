@@ -3,8 +3,6 @@
     x: number
     y: number
     rotate: number
-    width: number
-    height: number
     borderRadius: number
     textOpacity: number
     textBlur: number
@@ -17,7 +15,6 @@
   import { writable, type Writable } from 'svelte/store'
 
   import { Icon } from '@horizon/icons'
-  import type { Pill } from '../ContextBubbles.svelte'
   import CustomPopover from '../../Atoms/CustomPopover.svelte'
   import {
     CONTEXT_MENU_KEY,
@@ -26,12 +23,18 @@
     type CtxMenuProps
   } from '../../Core/ContextMenu.svelte'
   import { conditionalArrayItem } from '@horizon/utils'
+  import {
+    ContextItemResource,
+    type ContextItem
+  } from '@horizon/core/src/lib/service/ai/contextManager'
+  import { ResourceTypes } from '@horizon/types'
 
-  export let pill: Pill
+  export let item: ContextItem
   export let pillProperties: PillProperties
   export let loading: boolean = false
   export let failed: boolean = false
   export let opened: Writable<boolean> = writable(false)
+  export let additionalLabel: string | undefined = undefined
 
   const dispatch = createEventDispatcher<{
     select: string
@@ -51,29 +54,35 @@
     dispatch('retry', id)
   }
 
-  $: contextMenuKey = `context-item-${pill.id}`
+  $: label = item.label
+  $: contextMenuKey = `context-item-${item.id}`
+
+  $: canRetry =
+    item instanceof ContextItemResource &&
+    ((Object.values(ResourceTypes) as string[]).includes(item.data.type) ||
+      item.data.type === 'application/pdf')
 
   $: contextMenuData = {
-    key: `context-item-${pill.id}`,
+    key: `context-item-${item.id}`,
     items: [
       {
         type: 'action',
         icon: 'arrow.up.right',
         text: 'Open as Tab',
-        action: () => handleSelect(pill.contextItemId)
+        action: () => handleSelect(item.id)
       },
-      ...conditionalArrayItem<CtxItem>(failed, {
+      ...conditionalArrayItem<CtxItem>(canRetry, {
         type: 'action',
         icon: 'reload',
-        text: 'Retry Processing',
-        action: () => handleRety(pill.contextItemId)
+        text: failed ? 'Retry Processing' : 'Rerun Processing',
+        action: () => handleRety(item.id)
       }),
       {
         type: 'action',
         icon: 'close',
         text: 'Remove from context',
         kind: 'danger',
-        action: () => handleExcludeItem(pill.contextItemId)
+        action: () => handleExcludeItem(item.id)
       }
     ]
   } satisfies CtxMenuProps
@@ -90,30 +99,30 @@
     <div
       aria-hidden="true"
       class="shine-border pill transform hover:translate-y-[-6px] group/pill"
-      on:click={() => handleSelect(pill.contextItemId)}
+      on:click={() => handleSelect(item.id)}
       use:contextMenu={contextMenuData}
       style="transform: rotate({pillProperties.rotate}deg); transform-origin: center center;"
     >
       <div
         aria-hidden="true"
-        class="pill flex items-center border-[1px] border-gray-200 {failed
-          ? 'bg-red-50'
-          : 'bg-white'} z-0 shadow-md {pill.type === 'image'
+        class="pill flex items-center border-[1px] border-gray-200 dark:border-gray-600 {failed
+          ? 'bg-red-50 hover:bg-red-100 dark:bg-red-800 dark:hover:bg-red-700'
+          : 'bg-white dark:bg-gray-800'} z-0 shadow-md {item.type === 'screenshot'
           ? 'pl-[5px]'
-          : 'pl-[11px]'} hover:bg-red-100 transform hover:translate-y-[-6px]"
-        style="width: 40px; height: 40px; border-radius: {pillProperties.borderRadius}px; transition: transform 0.3s, background-color 0.3s;"
+          : 'pl-[11px]'} hover:bg-gray-50 dark:hover:bg-gray-700 transform hover:translate-y-[-6px]"
+        style="min-width: 40px; height: 40px; border-radius: {pillProperties.borderRadius}px; transition: transform 0.3s, background-color 0.3s;"
       >
         <button
           class="remove absolute top-0 left-0 shadow-sm transform"
           style="background: white; border: 1px solid rgb(220,220,220); transform: translate(-20%, -20%); z-index: 10; width: 16px; aspect-ratio: 1 / 1; border-radius: 100%;"
-          on:click|stopPropagation={() => handleExcludeItem(pill.contextItemId)}
+          on:click|stopPropagation={() => handleExcludeItem(item.id)}
         >
           <Icon name="close" size="11px" color="black" />
         </button>
 
         <div
-          class="flex items-center justify-center flex-shrink-0 group-hover/pill:opacity-100 {pill.type ===
-          'image'
+          class="flex items-center justify-center flex-shrink-0 group-hover/pill:opacity-100 {item.type ===
+          'screenshot'
             ? 'w-8 h-8'
             : 'w-5 h-5'}"
           class:loading
@@ -123,12 +132,18 @@
           <slot></slot>
         </div>
 
-        <span
+        {#if additionalLabel}
+          <div class="px-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+            {additionalLabel}
+          </div>
+        {/if}
+
+        <!-- <span
           class="ml-2 whitespace-nowrap overflow-hidden text-sm"
           style="opacity: {pillProperties.textOpacity}; filter: blur({pillProperties.textBlur}px); transform: translateX({pillProperties.textX}px); transition: opacity 0.3s, filter 0.3s;"
         >
-          {pill.title}
-        </span>
+          {$label}
+        </span> -->
       </div>
     </div>
   </div>
@@ -137,7 +152,7 @@
   <div
     slot="content"
     class="no-drag bg-white dark:bg-gray-800 hover:bg-gray-100 w-fit relative max-w-96 max-h-[50ch]"
-    on:click={() => handleSelect(pill.contextItemId)}
+    on:click={() => handleSelect(item.id)}
     use:contextMenu={contextMenuData}
   >
     <slot name="popover"></slot>

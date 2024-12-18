@@ -5,9 +5,9 @@ import {
   type ScopedLogger,
   generateID,
   getFormattedDate,
-  normalizeURL,
   parseUrlIntoCanonical,
-  isDev
+  isDev,
+  parseStringIntoUrl
 } from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
@@ -52,6 +52,7 @@ import type TypedEmitter from 'typed-emitter'
 import { getContext, onDestroy, setContext, tick } from 'svelte'
 import EventEmitter from 'events'
 import type { Model } from '@horizon/backend/types'
+import { WebParser } from '@horizon/web-parser'
 
 /*
  TODO:
@@ -268,6 +269,14 @@ export class Resource {
         }
       }
     )
+
+    this.state.subscribe((state) => {
+      this.log.debug('state changed', state, this)
+    })
+  }
+
+  get stateValue() {
+    return get(this.state)
   }
 
   private async readDataAsBlob() {
@@ -388,6 +397,7 @@ export class Resource {
   }
 
   updatePostProcessingState(state: ResourceState) {
+    this.log.debug('updating post processing state', state)
     this.postProcessingState.set(state)
   }
 }
@@ -603,6 +613,8 @@ export class ResourceManager {
     } else if (status === ResourceProcessingStateType.Failed) {
       resource.updatePostProcessingState('error')
     }
+
+    this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
   }
 
   async createDummyResource(
@@ -1334,6 +1346,69 @@ export class ResourceManager {
       return resource.getParsedData(true)
     } else {
       return resource.getData()
+    }
+  }
+
+  async refreshResourceData(resourceOrId: ResourceObject | string) {
+    const resource =
+      typeof resourceOrId === 'string' ? await this.getResource(resourceOrId) : resourceOrId
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    const canBeRefreshed =
+      (Object.values(ResourceTypes) as string[]).includes(resource.type) ||
+      resource.type === 'application/pdf'
+    const canonicalUrl = parseStringIntoUrl(
+      resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
+        resource.metadata?.sourceURI ||
+        ''
+    )?.href
+
+    if (!canBeRefreshed || !canonicalUrl) {
+      this.log.debug('skipping refresh for non-refreshable resource', resource.id)
+      return
+    }
+
+    if (resource.stateValue === 'extracting') {
+      this.log.debug('skipping refresh as resource is already refreshing', resource.id)
+      return
+    }
+
+    try {
+      if (resource.type === 'application/pdf') {
+        this.log.debug('refreshing PDF resource by only re-running post processing', resource.id)
+        await this.sffs.backend.js__store_resource_post_process(resource.id)
+        return
+      }
+
+      this.log.debug('refreshing resource', resource.id, resource.type)
+
+      resource.updateExtractionState('running')
+
+      // TODO: add support for refreshing PDFs, currently not possible without the full BrowserTab logic
+      const webParser = new WebParser(canonicalUrl)
+      const detectedResource = await webParser.extractResourceUsingWebview(document)
+
+      this.log.debug('extracted resource data', detectedResource)
+
+      if (detectedResource) {
+        this.log.debug('updating resource with fresh data', detectedResource.data)
+        await this.updateResourceParsedData(resource.id, detectedResource.data)
+
+        if ((detectedResource.data as any)?.title) {
+          await this.updateResourceMetadata(resource.id, {
+            name: (detectedResource.data as any).title
+          })
+        }
+      }
+
+      resource.updateExtractionState('idle')
+    } catch (e) {
+      this.log.error('error refreshing resource', e)
+      resource.updateExtractionState('idle') // TODO: support error state
+
+      throw e
     }
   }
 
