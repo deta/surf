@@ -121,7 +121,7 @@
 
 <div id="homescreen-wrapper" class:homescreenVisible={$desktopVisible} style={$$restProps.style}>
   {#key miniBrowser.key}
-    <MiniBrowser service={miniBrowser} />
+    <MiniBrowser service={miniBrowser} on:seekToTimestamp on:highlightWebviewText />
   {/key}
 
   <!-- svelte-ignore a11y-no-static-element-interactions -->

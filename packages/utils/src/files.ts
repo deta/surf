@@ -83,7 +83,15 @@ export const getFileType = (fileType: string): string => {
 }
 
 export const getFileKind = (fileType: string) => {
-  return fromMime(fileType)
+  const parsed = fromMime(fileType)
+  if (!parsed || parsed === 'unknown') {
+    const match = Object.entries(humanFileTypes).find((x) => fileType.includes(x[0]))
+    if (match) {
+      return match[1].toLowerCase().replace(/\s/g, '-')
+    }
+  }
+
+  return parsed || 'unknown'
 }
 
 export const toHumanFileSize = (bytes: number, si = true, dp = 1) => {

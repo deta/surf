@@ -480,6 +480,13 @@
     showTabSearch.set(0)
   }
 
+  const handleMiniBrowserClose = (e: CustomEvent<boolean>) => {
+    const completeley = e.detail
+    if (completeley) {
+      closeOverlay()
+    }
+  }
+
   const handleReload = async () => {
     await tick()
     await loadEverything()
@@ -614,7 +621,12 @@
       updateWebviewPointerEvents('unset')
     }}
   >
-    <MiniBrowser service={scopedMiniBrowser} />
+    <MiniBrowser
+      service={scopedMiniBrowser}
+      on:seekToTimestamp
+      on:highlightWebviewText
+      on:close={handleMiniBrowserClose}
+    />
 
     <div class="stuff-outer w-[90vw] h-[calc(100vh-120px)] relative block overflow-hidden">
       <div class="flex h-full">
@@ -708,6 +720,8 @@
                     on:batch-remove={handleResourceRemove}
                     on:handled-drop={handlePostDropOnSpace}
                     on:created-space={handleCreatedSpace}
+                    on:seekToTimestamp
+                    on:highlightWebviewText
                     on:open-space-and-chat
                     insideDrawer={true}
                     bind:this={oasisSpace}

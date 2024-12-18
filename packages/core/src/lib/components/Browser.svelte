@@ -4582,7 +4582,11 @@
   />
 {/if}
 
-<MiniBrowser service={globalMiniBrowser} />
+<MiniBrowser
+  service={globalMiniBrowser}
+  on:seekToTimestamp={handleSeekToTimestamp}
+  on:highlightWebviewText={highlightWebviewText}
+/>
 
 <!-- {#if $showNewTabOverlay == 1} -->
 <div
@@ -5466,13 +5470,15 @@
       >
         {#if $sidebarTab === 'oasis'}
           <div class="browser-window flex-grow active no-drag" style="--scaling: 1;">
-            <OasisSpace
+            <OasisSpaceRenderer
               spaceId={$selectedSpace}
               active
               on:create-resource-from-oasis={handeCreateResourceFromOasis}
               on:deleted={handleDeletedSpace}
               on:open-space-as-tab={handleCreateTabForSpace}
               on:open-space-and-chat={handleOpenSpaceAndChat}
+              on:seekToTimestamp={handleSeekToTimestamp}
+              on:highlightWebviewText={highlightWebviewText}
               hideBar={$showNewTabOverlay !== 0}
               {historyEntriesManager}
             />
@@ -5524,6 +5530,8 @@
                   on:keydown={(e) => handleKeyDown(e.detail)}
                   on:add-to-chat={(e) => handleAddToChat(e)}
                   on:prepare-tab-for-chat={handlePrepareTabForChat}
+                  on:seekToTimestamp={handleSeekToTimestamp}
+                  on:highlightWebviewText={highlightWebviewText}
                 />
               {:else if tab.type === 'chat'}
                 <Chat
@@ -5552,6 +5560,8 @@
                   on:batch-open={handleOpenTabs}
                   on:deleted={handleDeletedSpace}
                   on:open-space-and-chat={handleOpenSpaceAndChat}
+                  on:seekToTimestamp={handleSeekToTimestamp}
+                  on:highlightWebviewText={highlightWebviewText}
                   hideBar={$showNewTabOverlay !== 0}
                   {historyEntriesManager}
                 />
@@ -5762,6 +5772,8 @@
   on:open-and-chat={handleOpenAndChat}
   on:batch-open={handleOpenTabs}
   on:open-space-and-chat={handleOpenSpaceAndChat}
+  on:seekToTimestamp={handleSeekToTimestamp}
+  on:highlightWebviewText={highlightWebviewText}
   on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
   on:zoom={() => {
     $activeBrowserTab?.zoomIn()

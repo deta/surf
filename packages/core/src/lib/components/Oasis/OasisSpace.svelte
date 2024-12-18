@@ -1370,7 +1370,7 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<MiniBrowser service={scopedMiniBrowser} {active} />
+<MiniBrowser service={scopedMiniBrowser} {active} on:seekToTimestamp on:highlightWebviewText />
 
 <DropWrapper
   {spaceId}

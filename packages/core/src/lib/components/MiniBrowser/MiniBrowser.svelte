@@ -7,11 +7,15 @@
   } from '@horizon/core/src/lib/service/miniBrowser'
   import MiniBrowserModal from './MiniBrowserModal.svelte'
   import BrowserTab from '../Browser/BrowserTab.svelte'
-
-  const log = useLogScope('MiniBrowser')
+  import { createEventDispatcher } from 'svelte'
 
   export let service: MiniBrowser
   export let active: boolean = true
+
+  const log = useLogScope('MiniBrowser')
+  const dispatch = createEventDispatcher<{
+    close: boolean
+  }>()
 
   const { isOpen, selected } = service
 
@@ -21,9 +25,12 @@
     $selected.browserTab = browserTab
   }
 
-  const handleClose = () => {
-    log.debug('handling close')
+  const handleClose = (e: CustomEvent<boolean>) => {
+    const completeley = e.detail
+    log.debug('handling close', completeley)
+
     service.close()
+    dispatch('close', completeley)
   }
 
   const handleOpenMiniBrowserFromWebview = (e: CustomEvent<string>) => {
@@ -47,6 +54,8 @@
         {active}
         on:close={handleClose}
         on:open-mini-browser={handleOpenMiniBrowserFromWebview}
+        on:highlightWebviewText
+        on:seekToTimestamp
       />
     {/key}
   {/if}

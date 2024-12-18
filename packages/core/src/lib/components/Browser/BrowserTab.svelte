@@ -1202,7 +1202,7 @@
   })
 </script>
 
-<MiniBrowser service={scopedMiniBrowser} {active} />
+<MiniBrowser service={scopedMiniBrowser} {active} on:seekToTimestamp on:highlightWebviewText />
 
 <WebviewWrapper
   {id}

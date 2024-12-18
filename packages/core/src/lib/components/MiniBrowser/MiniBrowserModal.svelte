@@ -7,7 +7,9 @@
     OpenInMiniBrowserEventFrom,
     ResourceTagsBuiltInKeys,
     SaveToOasisEventTrigger,
-    type WebViewEventKeyDown
+    type WebViewEventKeyDown,
+    ResourceTypes,
+    CreateTabEventTrigger
   } from '@horizon/types'
   import {
     useLogScope,
@@ -31,13 +33,16 @@
     type TabPage
   } from '@horizon/core/src/lib/types'
   import type { WebviewNavigationEvent } from '../Webview/Webview.svelte'
-  import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
-  import CustomPopover from '../Atoms/CustomPopover.svelte'
-  import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import {
     useMiniBrowserService,
     type MiniBrowserSelected
   } from '@horizon/core/src/lib/service/miniBrowser'
+  import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
+  import {
+    SelectDropdown,
+    type SelectItem
+  } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
 
   export let tab: TabPage
   // export let url: Writable<string>
@@ -53,7 +58,7 @@
   let copyConfirmation: IconConfirmation
 
   const dispatch = createEventDispatcher<{
-    close: void
+    close: boolean
   }>()
   const log = useLogScope('MiniBrowserResource')
   const resourceManager = useResourceManager()
@@ -61,6 +66,8 @@
   const historyEntriesManager = tabsManager.historyEntriesManager
   const toasts = useToasts()
   const oasis = useOasis()
+
+  const spaces = oasis.spaces
   const telemetry = resourceManager.telemetry
 
   const injectYouTubeTimestamp = (value: string, timestamp: number) => {
@@ -85,6 +92,7 @@
   const bookmarkingState = writable<BookmarkTabState | null>(null)
   const saveToSpacePopoverOpened = writable(false)
   const isLoadingPage = writable(false)
+  const spaceSearchValue = writable<string>('')
 
   const miniBrowserService = useMiniBrowserService()
 
@@ -97,29 +105,30 @@
     }
   })
 
+  const saveToSpaceItems = derived([spaces, spaceSearchValue], ([spaces, searchValue]) => {
+    const spaceItems = spaces
+      .sort((a, b) => {
+        return a.indexValue - b.indexValue
+      })
+      .map(
+        (space) =>
+          ({
+            id: space.id,
+            label: space.dataValue.folderName,
+            data: space
+          }) as SelectItem
+      )
+
+    if (!searchValue) return spaceItems
+
+    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
+  })
+
   $: canGoBack = tab?.currentHistoryIndex > 0
   $: canGoForward = tab?.currentHistoryIndex < tab.historyStackIds.length - 1
 
-  $: log.debug('scope', selected.from)
-
-  // $: if (webview) {
-  //   webview.focus()
-  // }
-
-  const createTabUrl = () => {
-    if (!$url) {
-      return undefined
-    }
-
-    if (jumpToTimestamp && checkIfYoutubeUrl($url)) {
-      return injectYouTubeTimestamp($url, jumpToTimestamp)
-    }
-
-    return $url
-  }
-
-  function close() {
-    dispatch('close')
+  function close(completely = false) {
+    dispatch('close', completely)
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -159,24 +168,19 @@
   }
 
   const openAsNewTab = (active = true) => {
-    // if (resource) {
-    //   tabsManager.openResourceAsTab(resource, {
-    //     active: active,
-    //     trigger: CreateTabEventTrigger.OasisItem
-    //   })
-    // } else {
-    //   tabsManager.addPageTab($url, {
-    //     active: active,
-    //     trigger: CreateTabEventTrigger.OasisItem
-    //   })
-    // }
-
-    // create proper tab from our dummy one by excluding the fields that will be set by the tabsManager
-    const { id, createdAt, updatedAt, archived, index, pinned, magic, ...newTab } = tab
-    tabsManager.create(newTab, { active: active })
+    if (!$url && resource) {
+      tabsManager.openResourceAsTab(resource, {
+        active: active,
+        trigger: CreateTabEventTrigger.OasisItem
+      })
+    } else {
+      // create proper tab from our dummy one by excluding the fields that will be set by the tabsManager
+      const { id, createdAt, updatedAt, archived, index, pinned, magic, ...newTab } = tab
+      tabsManager.create(newTab, { active: active })
+    }
 
     if (active) {
-      close()
+      close(true)
     }
   }
 
@@ -189,6 +193,12 @@
     savedToSpace = false
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
     let toast: ToastItem | null = null
+
+    if (resource?.type === ResourceTypes.DOCUMENT) {
+      log.debug('cannot bookmark document resources')
+      bookmarkingState.set('success')
+      return { resource: null, isNew: false }
+    }
 
     saveToSpacePopoverOpened.set(false)
 
@@ -259,39 +269,51 @@
     }
   }
 
-  const handleSaveResourceInSpace = async (e: CustomEvent<OasisSpace>) => {
-    log.debug('add resource to space', e.detail)
+  const handleSaveResourceInSpace = async (e: CustomEvent<string>) => {
+    const spaceId = e.detail
+    log.debug('add resource to space', spaceId)
 
-    const toast = toasts.loading('Adding resource to space...')
+    const toast = toasts.loading('Adding resource to context...')
 
     try {
-      const { resource } = await handleBookmark(true)
-      log.debug('bookmarked resource', resource)
+      let bookmarkedResource: Resource | null = null
+      if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+        bookmarkedResource = resource
+      } else {
+        const { resource } = await handleBookmark(true)
+        bookmarkedResource = resource
+      }
 
-      if (resource) {
-        log.debug('will add item', resource.id, 'to space', e.detail.id)
+      log.debug('bookmarked resource', bookmarkedResource)
+
+      if (bookmarkedResource) {
+        log.debug('will add item', bookmarkedResource.id, 'to space', spaceId)
         await resourceManager.addItemsToSpace(
-          e.detail.id,
-          [resource.id],
+          spaceId,
+          [bookmarkedResource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
 
         // new resources are already tracked in the bookmarking function
         await telemetry.trackAddResourceToSpace(
-          resource.type,
+          bookmarkedResource.type,
           AddResourceToSpaceEventTrigger.TabMenu
         )
       }
 
-      toast.success('Page saved to space!')
+      toast.success('Saved to Context!')
     } catch (e) {
-      log.error('Failed to add resource to space:', e)
-      toast.error('Failed to add resource to space')
+      log.error('Failed to add resource to context:', e)
+      toast.error('Failed to add resource to context')
     }
   }
 
   const handleDownload = () => {
     // TODO
+  }
+
+  const handleUpdateNoteTitle = (e: CustomEvent<string>) => {
+    tab.title = e.detail
   }
 
   onMount(async () => {
@@ -336,7 +358,11 @@
 <svelte:window on:keydown|capture={handleKeydown} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="mini-browser-wrapper no-drag" class:global-modal={isGlobal} on:click|self={close}>
+<div
+  class="mini-browser-wrapper no-drag"
+  class:global-modal={isGlobal}
+  on:click|self={() => close()}
+>
   <!-- <div class="close-hitarea" on:click={close} aria-hidden="true">
     <span class="label">Click or ESC to close</span>
   </div> -->
@@ -367,49 +393,51 @@
       </div>
 
       <div class="flex items-center gap-4">
-        <button
-          use:tooltip={{ text: 'Go Back' }}
-          disabled={!canGoBack}
-          on:click={() => browserTab.goBack()}
-          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
-        >
-          <span
-            class="transition-transform group-hover/nav-btn:-translate-x-1 ease-in-out duration-200"
+        {#if $url}
+          <button
+            use:tooltip={{ text: 'Go Back' }}
+            disabled={!canGoBack}
+            on:click={() => browserTab.goBack()}
+            class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
           >
-            <Icon name="arrow.left" />
-          </span>
-        </button>
+            <span
+              class="transition-transform group-hover/nav-btn:-translate-x-1 ease-in-out duration-200"
+            >
+              <Icon name="arrow.left" />
+            </span>
+          </button>
 
-        <button
-          use:tooltip={{ text: 'Go Forward' }}
-          disabled={!canGoForward}
-          on:click={() => browserTab.goForward()}
-          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
-        >
-          <span
-            class="transition-transform group-hover/nav-btn:translate-x-1 ease-in-out duration-200"
+          <button
+            use:tooltip={{ text: 'Go Forward' }}
+            disabled={!canGoForward}
+            on:click={() => browserTab.goForward()}
+            class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
           >
-            <Icon name="arrow.right" />
-          </span>
-        </button>
+            <span
+              class="transition-transform group-hover/nav-btn:translate-x-1 ease-in-out duration-200"
+            >
+              <Icon name="arrow.right" />
+            </span>
+          </button>
 
-        <button
-          use:tooltip={{ text: 'Reload Page' }}
-          on:click={() => browserTab.reload()}
-          class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
-        >
-          <span
-            class="transition-transform group-hover/nav-btn:rotate-180 ease-in-out duration-200"
+          <button
+            use:tooltip={{ text: 'Reload Page' }}
+            on:click={() => browserTab.reload()}
+            class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
           >
-            {#if $isLoadingPage}
-              <Icon name="spinner" />
-            {:else}
-              <Icon name="reload" />
-            {/if}
-          </span>
-        </button>
+            <span
+              class="transition-transform group-hover/nav-btn:rotate-180 ease-in-out duration-200"
+            >
+              {#if $isLoadingPage}
+                <Icon name="spinner" />
+              {:else}
+                <Icon name="reload" />
+              {/if}
+            </span>
+          </button>
 
-        <div class="w-[2px] h-5 bg-sky-900/20 dark:bg-gray-300/50 mx-3"></div>
+          <div class="w-[2px] h-5 bg-sky-900/20 dark:bg-gray-300/50 mx-3"></div>
+        {/if}
 
         <button
           use:tooltip={{ text: 'Open in new tab' }}
@@ -430,9 +458,18 @@
         {/if} -->
 
         {#key tab.resourceBookmarkedManually}
-          <CustomPopover position="right" popoverOpened={saveToSpacePopoverOpened}>
+          <SelectDropdown
+            items={saveToSpaceItems}
+            search={$spaces.length > 0 ? 'manual' : 'disabled'}
+            searchValue={spaceSearchValue}
+            inputPlaceholder="Select a Context to save to…"
+            open={saveToSpacePopoverOpened}
+            openOnHover={500}
+            side="right"
+            keepHeightWhileSearching
+            on:select={handleSaveResourceInSpace}
+          >
             <button
-              slot="trigger"
               on:click={() => handleBookmark()}
               class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
             >
@@ -442,26 +479,26 @@
                 <Icon name="check" size="16px" />
               {:else if $bookmarkingState === 'error'}
                 <Icon name="close" size="16px" />
-              {:else if tab.resourceBookmarkedManually}
+              {:else if tab.resourceBookmarkedManually || resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
                 <Icon name="bookmarkFilled" size="16px" />
               {:else}
                 <Icon name="save" size="16px" />
               {/if}
             </button>
 
-            <div slot="content" class="no-drag p-1">
-              <ShortcutSaveItem
-                on:save-resource-in-space={handleSaveResourceInSpace}
-                spaces={oasis.spaces}
-                infoText="Save page to Context:"
-              />
+            <div slot="empty" class="flex flex-col justify-center gap-2 h-full">
+              {#if $spaceSearchValue.length > 0 || $saveToSpaceItems.length === 0}
+                <div class="h-full flex flex-col justify-center">
+                  <p class="text-gray-400 dark:text-gray-400 text-center py-6">No Contexts found</p>
+                </div>
+              {/if}
             </div>
-          </CustomPopover>
+          </SelectDropdown>
         {/key}
 
         <button
           use:tooltip={{ text: 'Close' }}
-          on:click={close}
+          on:click={() => close()}
           class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
         >
           <Icon name="close" />
@@ -493,8 +530,20 @@
           on:prepare-tab-for-chat={(e) => log.debug(e)}
           on:open-mini-browser
         />
-      {:else}
+      {:else if resource && resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+        <TextResource
+          resourceId={resource.id}
+          on:update-title={handleUpdateNoteTitle}
+          on:highlightWebviewText
+          on:seekToTimestamp
+        />
+      {:else if resource}
         <FilePreview {resource} preview={false} />
+      {:else}
+        <div class="loading">
+          <Icon name="spinner" size="24px" />
+          <span>Loading...</span>
+        </div>
       {/if}
     </div>
   </div>
