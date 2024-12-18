@@ -1,13 +1,13 @@
-import { isMac, isWindows, isLinux, useLogScope } from '@horizon/utils'
 import { app, Menu, shell } from 'electron'
+import { isMac, isWindows, isLinux, useLogScope } from '@horizon/utils'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
-import { toggleAdblocker } from './adblocker'
+import { getAdblockerState, toggleAdblocker } from './adblocker'
 import { join } from 'path'
 import { isAppSetup, isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
 import { createSettingsWindow } from './settingsWindow'
-import { toggleHistorySwipeGestureConfig } from './historySwipe'
+import { getHistorySwipeGestureConfig, toggleHistorySwipeGestureConfig } from './historySwipe'
 import { updateUserConfig } from './config'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -16,9 +16,360 @@ import { importFiles } from './importer'
 const log = useLogScope('Main App Menu')
 const execFileAsync = promisify(execFile)
 
-let menu: Electron.Menu | null = null
+let appMenu: AppMenu | null = null
 
-const checkForChangeWithTimeout = async (checkFn: any, interval: number, timeout: number) => {
+interface MenuConfig {
+  id?: string
+  label?: string
+  role?: string
+  type?: 'separator' | 'submenu' | 'checkbox' | 'radio' | undefined
+  accelerator?: string
+  click?: () => void
+  submenu?: MenuConfig[]
+}
+
+class AppMenu {
+  private menu: Electron.Menu | null = null
+  private template: MenuConfig[] = []
+
+  constructor() {
+    this.initializeTemplate()
+  }
+
+  private initializeTemplate(): void {
+    this.template = [
+      this.getSurfMenu(),
+      this.getFileMenu(),
+      this.getEditMenu(),
+      this.getViewMenu(),
+      this.getNavigateMenu(),
+      this.getWindowMenu(),
+      this.getToolsMenu(),
+      this.getHelpMenu()
+    ]
+  }
+
+  public buildMenu(): void {
+    this.menu = Menu.buildFromTemplate(this.template as any)
+    Menu.setApplicationMenu(this.menu)
+  }
+
+  public updateMenuItem(id: string, newLabel: string): void {
+    for (const menuItem of this.template) {
+      if (menuItem.submenu) {
+        const item = menuItem.submenu.find((item) => item.id === id)
+        if (item) {
+          item.label = newLabel
+          break
+        }
+      }
+    }
+    this.buildMenu()
+  }
+
+  public getMenu(): Electron.Menu | null {
+    return this.menu
+  }
+
+  private createDataLocationMenuItem(): MenuConfig {
+    const userDataPath = app.getPath('userData')
+    const surfDataPath = join(userDataPath, 'sffs_backend')
+    const label = isMac() ? 'Show Surf Data in Finder' : 'Show Surf Data in File Manager'
+
+    return {
+      label,
+      click: () => shell.openPath(surfDataPath)
+    }
+  }
+
+  private getSurfMenu(isMacApp = isMac()): MenuConfig {
+    const surfItems = [
+      ...(isMacApp
+        ? ([{ label: 'About Surf', role: 'about' }, { type: 'separator' }] as MenuConfig[])
+        : []),
+      {
+        label: 'Preferences',
+        accelerator: 'CmdOrCtrl+,',
+        click: () => createSettingsWindow()
+      },
+      { type: 'separator' },
+      this.createDataLocationMenuItem(),
+      {
+        label: 'Use as Default Browser',
+        click: useAsDefaultBrowser
+      },
+      {
+        label: 'Check for Updates',
+        click: checkUpdatesMenuClickHandler
+      },
+      {
+        label: 'Invite Friends',
+        click: () => ipcSenders.openInvitePage()
+      },
+      ...(isMacApp
+        ? [
+            { type: 'separator' },
+            { role: 'services', label: 'Services' },
+            { type: 'separator' },
+            {
+              label: 'Hide Surf',
+              accelerator: 'CmdOrCtrl+H',
+              role: 'hide'
+            },
+            {
+              label: 'Hide Others',
+              accelerator: 'CmdOrCtrl+Shift+H',
+              role: 'hideOthers'
+            },
+            { label: 'Show All', role: 'unhide' }
+          ]
+        : []),
+      { type: 'separator' },
+      { label: 'Quit Surf', role: 'quit' }
+    ]
+
+    return {
+      label: isMacApp ? app.name : 'Surf',
+      submenu: surfItems as MenuConfig[]
+    }
+  }
+
+  private getFileMenu(): MenuConfig {
+    return {
+      label: 'File',
+      submenu: [
+        ...(isMac() ? ([{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }] as MenuConfig[]) : []),
+        {
+          label: 'New Tab',
+          accelerator: 'CmdOrCtrl+T',
+          click: () => ipcSenders.createNewTab()
+        },
+        {
+          label: 'Close Tab',
+          accelerator: 'CmdOrCtrl+W',
+          click: () => ipcSenders.closeActiveTab()
+        },
+        { type: 'separator' },
+        {
+          label: 'Take Screenshot',
+          accelerator: 'CmdOrCtrl+Shift+1',
+          click: () => ipcSenders.startScreenshotPicker()
+        },
+        {
+          id: 'importFiles',
+          label: 'Import Files',
+          click: () => importFiles()
+        },
+        {
+          id: 'importBookmarks',
+          label: 'Import Bookmarks',
+          click: () => ipcSenders.openImporter()
+        },
+        ...(isMac() ? [] : [{ type: 'separator' }, { role: 'quit' }])
+      ] as MenuConfig[]
+    }
+  }
+
+  private getEditMenu(): MenuConfig {
+    return {
+      label: 'Edit',
+      submenu: [
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'delete' },
+        { role: 'selectAll' },
+        { type: 'separator' },
+        {
+          label: 'Copy URL',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => ipcSenders.copyActiveTabURL()
+        }
+      ]
+    }
+  }
+
+  private getViewMenu(): MenuConfig {
+    return {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle Tabs',
+          accelerator: 'CmdOrCtrl+Shift+B',
+          click: () => ipcSenders.toggleSidebar()
+        },
+        {
+          label: 'Toggle Right Sidebar',
+          accelerator: 'Alt+X',
+          click: () => ipcSenders.toggleRightSidebar()
+        },
+        {
+          label: 'Toggle Chat Sidebar',
+          accelerator: 'CmdOrCtrl+E',
+          click: () => ipcSenders.toggleRightSidebarTab('chat')
+        },
+        {
+          label: 'Toggle Annotations Sidebar',
+          accelerator: 'Alt+A',
+          click: () => ipcSenders.toggleRightSidebarTab('annotations')
+        },
+        {
+          label: 'Toggle Go Wild',
+          accelerator: 'Alt+g',
+          click: () => ipcSenders.toggleRightSidebarTab('go-wild')
+        },
+        { type: 'separator' },
+        {
+          label: 'Change Tabs Orientation',
+          accelerator: 'CmdOrCtrl+Shift+Alt+B',
+          click: () => ipcSenders.toggleTabsPosition()
+        },
+        {
+          id: 'toggleTheme',
+          label: 'Switch Theme',
+          click: () => ipcSenders.toggleTheme()
+        },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: isMac() ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
+          click: () => ipcSenders.openDevTools()
+        },
+      ]
+    }
+  }
+
+  private getNavigateMenu(): MenuConfig {
+    return {
+      label: 'Navigate',
+      submenu: [
+        {
+          label: 'My Stuff',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => ipcSenders.openOasis()
+        },
+        {
+          label: 'Browsing History',
+          accelerator: 'CmdOrCtrl+Y',
+          click: () => ipcSenders.openHistory()
+        },
+        { type: 'separator' },
+        {
+          label: 'Reload Tab',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => ipcSenders.reloadActiveTab()
+        },
+        {
+          label: 'Force Reload Tab',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => ipcSenders.reloadActiveTab(true)
+        }
+      ]
+    }
+  }
+
+  private getToolsMenu(): MenuConfig {
+    return {
+      label: 'Tools',
+      submenu: [
+        {
+          id: 'adblocker',
+          label: getAdblockerState('persist:horizon') ? 'Disable Adblocker' : 'Enable Adblocker',
+          click: () => toggleAdblocker('persist:horizon')
+        },
+        {
+          id: 'historySwipe',
+          label: getHistorySwipeGestureConfig()
+            ? 'Disable History Swipe Gesture'
+            : 'Enable History Swipe Gesture',
+          click: () => toggleHistorySwipeGestureConfig()
+        },
+
+        { type: 'separator' },
+        {
+          label: 'Reload App',
+          role: 'reload',
+          accelerator: 'CmdOrCtrl+Alt+R'
+        },
+        {
+          label: 'Force Reload App',
+          role: 'forceReload',
+          accelerator: 'CmdOrCtrl+Alt+Shift+R'
+        },
+        {
+          label: 'Toggle Developer Tools for Surf',
+          accelerator: isMac() ? 'Cmd+Shift+I' : 'Option+Shift+I',
+          role: 'toggleDevTools'
+        }
+      ]
+    }
+  }
+
+  private getWindowMenu(): MenuConfig {
+    return {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(isMac()
+          ? ([
+              { type: 'separator' },
+              { role: 'front' },
+              { type: 'separator' },
+              { role: 'window' }
+            ] as MenuConfig[])
+          : [{ role: 'close' }])
+      ]
+    }
+  }
+
+  private getHelpMenu(): MenuConfig {
+    return {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Open Cheat Sheet',
+          click: () => ipcSenders.openCheatSheet(),
+          accelerator: 'F1'
+        },
+        {
+          label: 'Open Welcome Page',
+          click: () => ipcSenders.openWelcomePage()
+        },
+        {
+          label: 'Give Feedback',
+          click: () => ipcSenders.openFeedbackPage(),
+          accelerator: 'CmdOrCtrl+Shift+H'
+        }
+      ]
+    }
+  }
+}
+
+export const getAppMenu = (): Electron.Menu | null => {
+  if (!appMenu) return null
+  return appMenu.getMenu()
+}
+
+export const setAppMenu = (): void => {
+  appMenu = new AppMenu()
+  appMenu.buildMenu()
+}
+
+export const changeMenuItemLabel = (id: string, newLabel: string): void => {
+  appMenu?.updateMenuItem(id, newLabel)
+}
+
+const checkForChangeWithTimeout = async (
+  checkFn: () => Promise<boolean>,
+  interval: number,
+  timeout: number
+): Promise<boolean> => {
   return new Promise(async (resolve) => {
     let elapsed = 0
     const initialResult = await checkFn()
@@ -39,10 +390,9 @@ const setAsDefaultBrowserWindows = async (): Promise<boolean> => {
   try {
     const command = 'start ms-settings:defaultapps?registeredAppMachine=Surf'
     await execFileAsync('cmd', ['/c', command])
-
-    return (await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)) as boolean
+    return await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)
   } catch (error) {
-    log.error('error setting as default browser on Windows:', error)
+    log.error('Error setting as default browser on Windows:', error)
     return false
   }
 }
@@ -51,16 +401,11 @@ const setAsDefaultBrowserMac = async (): Promise<boolean> => {
   try {
     app.setAsDefaultProtocolClient('http')
     app.setAsDefaultProtocolClient('https')
-
-    return (await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)) as boolean
+    return await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)
   } catch (error) {
-    log.error('error setting as default browser on macOS:', error)
+    log.error('Error setting as default browser on macOS:', error)
     return false
   }
-}
-
-const setAsDefaultBrowserLinux = async (): Promise<boolean> => {
-  return false
 }
 
 export const useAsDefaultBrowser = async (): Promise<void> => {
@@ -76,323 +421,9 @@ export const useAsDefaultBrowser = async (): Promise<void> => {
   } else if (isMac()) {
     isSet = await setAsDefaultBrowserMac()
   } else if (isLinux()) {
-    isSet = await setAsDefaultBrowserLinux()
-  } else {
-    return
+    isSet = false
   }
 
   updateUserConfig({ defaultBrowser: isSet })
   ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: isSet })
-}
-
-const showSurfDataInFinder = () => {
-  const userDataPath = app.getPath('userData')
-  const surfDataPath = join(userDataPath, 'sffs_backend')
-  shell.openPath(surfDataPath)
-}
-
-const template = [
-  ...(isMac()
-    ? [
-        {
-          label: app.name,
-          submenu: [
-            {
-              label: 'About Surf',
-              role: 'about'
-            },
-            { type: 'separator' },
-            {
-              label: 'Preferences...',
-              accelerator: 'CmdOrCtrl+,',
-              click: () => createSettingsWindow()
-            },
-            { type: 'separator' },
-            {
-              label: 'Check for Updates...',
-              click: checkUpdatesMenuClickHandler
-            },
-            {
-              label: 'Use as Default Browser',
-              click: useAsDefaultBrowser
-            },
-            {
-              label: 'Invite Friends',
-              click: () => ipcSenders.openInvitePage()
-            },
-            {
-              label: 'Show Surf Data in Finder',
-              click: showSurfDataInFinder
-            },
-            { type: 'separator' },
-            {
-              id: 'adblocker',
-              label: 'Toggle Adblocker',
-              click: () => toggleAdblocker('persist:horizon')
-            },
-            { type: 'separator' },
-            {
-              role: 'services',
-              id: 'services',
-              label: 'Services'
-            },
-            { type: 'separator' },
-            {
-              id: 'hide-window',
-              label: 'Hide Surf',
-              accelerator: 'CmdOrCtrl+H',
-              role: 'hide'
-            },
-            {
-              id: 'hide-others',
-              label: 'Hide Others',
-              accelerator: 'CmdOrCtrl+Shift+H',
-              role: 'hideOthers'
-            },
-            {
-              id: 'unhide',
-              label: 'Show All',
-              role: 'unhide'
-            },
-            { type: 'separator' },
-            {
-              label: 'Quit Surf',
-              role: 'quit'
-            }
-          ]
-        }
-      ]
-    : []),
-  {
-    label: 'File',
-    submenu: [
-      ...(isMac()
-        ? [{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }]
-        : [
-            { label: 'Check for Updates...', click: checkUpdatesMenuClickHandler },
-            {
-              label: 'Use as Default Browser',
-              click: useAsDefaultBrowser
-            },
-            {
-              label: 'Invite Friends',
-              click: () => ipcSenders.openInvitePage()
-            },
-            { type: 'separator' },
-            {
-              id: 'adblocker',
-              label: 'Toggle Adblocker',
-              click: () => toggleAdblocker('persist:horizon')
-            },
-            { type: 'separator' },
-            { role: 'quit' }
-          ]),
-      { type: 'separator' },
-      {
-        label: 'New Tab',
-        accelerator: 'CmdOrCtrl+T',
-        click: () => ipcSenders.createNewTab()
-      },
-      {
-        label: 'Close Tab',
-        accelerator: 'CmdOrCtrl+W',
-        click: () => {
-          log.log('Close Tab')
-          ipcSenders.closeActiveTab()
-        }
-      },
-      { type: 'separator' },
-      {
-        label: 'My Stuff',
-        accelerator: 'CmdOrCtrl+O',
-        click: () => {
-          log.log('Open Oasis')
-          ipcSenders.openOasis()
-        }
-      },
-      {
-        label: 'Browsing History',
-        accelerator: 'CmdOrCtrl+Y',
-        click: () => {
-          log.log('Open History')
-          ipcSenders.openHistory()
-        }
-      },
-      { type: 'separator' },
-      {
-        id: 'importFiles',
-        label: 'Import Files',
-        click: () => importFiles()
-      },
-      {
-        id: 'importBookmarks',
-        label: 'Import Bookmarks',
-        click: () => ipcSenders.openImporter()
-      }
-    ]
-  },
-  {
-    label: 'Edit',
-    submenu: [
-      { role: 'cut' },
-      { role: 'copy' },
-      { role: 'paste' },
-      { role: 'delete' },
-      { role: 'selectAll' },
-      { type: 'separator' },
-      // {
-      //   label: 'Find in Page',
-      //   accelerator: 'CmdOrCtrl+F',
-      //   click: () => ipcSenders.startFindInPage()
-      // },
-      {
-        label: 'Toggle Screenshot...',
-        accelerator: 'CmdOrCtrl+Shift+1',
-        click: () => ipcSenders.startScreenshotPicker()
-      },
-      {
-        label: 'Copy URL',
-        accelerator: 'CmdOrCtrl+Shift+C',
-        click: () => ipcSenders.copyActiveTabURL()
-      },
-      { type: 'separator' },
-      ...(!isMac()
-        ? [
-            {
-              label: 'Settings...',
-              accelerator: 'CmdOrCtrl+,',
-              click: () => {
-                createSettingsWindow()
-              }
-            }
-          ]
-        : [])
-    ]
-  },
-  {
-    label: 'View',
-    submenu: [
-      { label: 'Reload App', role: 'reload', accelerator: 'CmdOrCtrl+Alt+R' },
-      { label: 'Force Reload App', role: 'forceReload', accelerator: 'CmdOrCtrl+Alt+Shift+R' },
-      {
-        label: 'Toggle Developer Tools for Surf',
-        accelerator: isMac() ? 'Cmd+Shift+I' : 'Option+Shift+I',
-        role: 'toggleDevTools'
-      },
-      // { role: 'toggleDevTools' },
-      { type: 'separator' },
-      {
-        label: 'Reload Tab',
-        accelerator: 'CmdOrCtrl+R',
-        click: () => ipcSenders.reloadActiveTab()
-      },
-      {
-        label: 'Force Reload Tab',
-        accelerator: 'CmdOrCtrl+Shift+R',
-        click: () => ipcSenders.reloadActiveTab(true)
-      },
-      {
-        label: 'Toggle Developer Tools',
-        accelerator: isMac() ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
-        click: () => ipcSenders.openDevTools()
-      },
-      {
-        id: 'historySwipe',
-        label: 'Toggle History Swipe Gesture',
-        click: () => toggleHistorySwipeGestureConfig()
-      },
-      { type: 'separator' },
-      {
-        label: 'Toggle Sidebar',
-        accelerator: 'CmdOrCtrl+Shift+B',
-        click: () => ipcSenders.toggleSidebar()
-      },
-      {
-        label: 'Toggle Tabs Orientation',
-        accelerator: 'CmdOrCtrl+Shift+Alt+B',
-        click: () => ipcSenders.toggleTabsPosition()
-      },
-      {
-        id: 'toggleTheme',
-        label: 'Toggle Theme',
-        click: () => ipcSenders.toggleTheme()
-      },
-      { type: 'separator' },
-      {
-        label: 'Toggle Right Sidebar',
-        accelerator: 'Alt+X',
-        click: () => ipcSenders.toggleRightSidebar()
-      },
-      {
-        label: 'Toggle Chat Mode',
-        accelerator: 'CmdOrCtrl+E',
-        click: () => ipcSenders.toggleRightSidebarTab('chat')
-      },
-      {
-        label: 'Toggle Annotations',
-        accelerator: 'Alt+A',
-        click: () => ipcSenders.toggleRightSidebarTab('annotations')
-      },
-      {
-        label: 'Toggle Go Wild',
-        accelerator: 'Alt+g',
-        click: () => ipcSenders.toggleRightSidebarTab('go-wild')
-      },
-      { type: 'separator' },
-      { role: 'resetZoom' },
-      { role: 'zoomIn' },
-      { role: 'zoomOut' },
-      { type: 'separator' },
-      { role: 'togglefullscreen' }
-    ]
-  },
-  {
-    label: 'Window',
-    submenu: [
-      { role: 'minimize' },
-      { role: 'zoom' },
-      ...(isMac()
-        ? [{ type: 'separator' }, { role: 'front' }, { type: 'separator' }, { role: 'window' }]
-        : [{ role: 'close' }])
-    ]
-  },
-  {
-    label: 'Help',
-    submenu: [
-      { label: 'Open Cheat Sheet', click: () => ipcSenders.openCheatSheet(), accelerator: 'F1' },
-      {
-        label: 'Open Welcome Page',
-        click: () => ipcSenders.openWelcomePage()
-      },
-      {
-        label: 'Give Feedback',
-        click: () => ipcSenders.openFeedbackPage(),
-        accelerator: 'CmdOrCtrl+Shift+H'
-      }
-    ]
-  }
-]
-
-export function getAppMenu(): Electron.Menu | null {
-  return menu
-}
-
-export function setAppMenu(): void {
-  menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
-  Menu.setApplicationMenu(menu)
-}
-
-export function changeMenuItemLabel(id: string, newLabel: string): void {
-  for (let i = 0; i < template.length; i++) {
-    if (template[i] && template[i].submenu) {
-      const item = template[i].submenu.find((item) => (item as any).id === id)
-      if (item && item.label) {
-        item.label = newLabel
-        break
-      }
-    }
-  }
-
-  menu = Menu.buildFromTemplate(<Electron.MenuItemConstructorOptions[]>template)
-  Menu.setApplicationMenu(menu)
 }
