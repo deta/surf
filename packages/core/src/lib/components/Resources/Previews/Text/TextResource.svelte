@@ -216,7 +216,6 @@
     height: 100%;
     overflow: hidden;
     position: relative;
-    padding: 1rem;
     padding-bottom: 0;
     background: #fff;
     display: flex;
