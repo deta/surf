@@ -1047,15 +1047,19 @@
     if (contextItem instanceof ContextItemPageTab && contextItem.dataValue) {
       selectTabWhileKeepingOthersSelected(contextItem.dataValue.id)
     } else if (contextItem instanceof ContextItemResource) {
-      const existingTab = $tabs.find(
-        (tab) => tab.type === 'resource' && tab.resourceId === contextItem.data.id
-      )
-      if (existingTab) {
-        selectTabWhileKeepingOthersSelected(existingTab.id)
+      if (contextItem.sourceTab) {
+        selectTabWhileKeepingOthersSelected(contextItem.sourceTab.id)
       } else {
-        const tab = await openResourcFromContextAsPageTab(contextItem.data.id)
-        if (tab) {
-          selectTabWhileKeepingOthersSelected(tab.id)
+        const existingTab = $tabs.find(
+          (tab) => tab.type === 'resource' && tab.resourceId === contextItem.data.id
+        )
+        if (existingTab) {
+          selectTabWhileKeepingOthersSelected(existingTab.id)
+        } else {
+          const tab = await openResourcFromContextAsPageTab(contextItem.data.id)
+          if (tab) {
+            selectTabWhileKeepingOthersSelected(tab.id)
+          }
         }
       }
     } else if (contextItem instanceof ContextItemSpace) {
