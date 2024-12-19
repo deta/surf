@@ -1,5 +1,39 @@
 @use './motion';
 
+// Needed as we cannot use light-dark inside css variables used by houdini worklets :'((
+@mixin light-dark-custom($propertyName, $light, $dark, $custom-light: null, $custom-dark: null) {
+  /* @media (prefers-color-scheme: light) {
+    --#{$propertyName}: #{$light};
+  }*/
+
+  :global(body:not(.dark):not(.custom)) & {
+    --#{$propertyName}: #{$light};
+  }
+
+  /*@media (prefers-color-scheme: dark) {
+    --#{$propertyName}: #{$dark};
+  }*/
+
+  :global(body.dark:not(.custom)) & {
+    --#{$propertyName}: #{$dark};
+  }
+
+  :global(body:not(.dark).custom) & {
+    --#{$propertyName}: #{$custom-light};
+  }
+
+  :global(body.dark.custom) & {
+    @if not $custom-dark {
+      --#{$propertyName}: #{$custom-light};
+    }
+
+    @else {
+      --#{$propertyName}: #{$custom-dark};
+    }
+  }
+
+}
+
 @mixin squircle($fill: transparent,
   $smooth: 0.33,
   $radius: 0px,
@@ -33,6 +67,45 @@
   @if $radius-bottom-right {
     --squircle-radius-bottom-right: #{$radius-bottom-right};
   }
+}
+
+@mixin squricle-radii($radius: 0px, $top-left: null,
+  $top-right: null,
+  $bottom-left: null,
+  $bottom-right: null) {
+
+  @if not $top-left {
+    --squircle-radius-top-left: #{$radius};
+  }
+
+  @if not $top-right {
+    --squircle-radius-top-right: #{$radius};
+  }
+
+  @if not $bottom-left {
+    --squircle-radius-bottom-left: #{$radius};
+  }
+
+  @if not $bottom-right {
+    --squircle-radius-bottom-right: #{$radius};
+  }
+
+  @if $top-left {
+    --squircle-radius-top-left: #{$top-left};
+  }
+
+  @if $top-right {
+    --squircle-radius-top-right: #{$top-right};
+  }
+
+  @if $bottom-left {
+    --squircle-radius-bottom-left: #{$bottom-left};
+  }
+
+  @if $bottom-right {
+    --squircle-radius-bottom-right: #{$bottom-right};
+  }
+
 }
 
 

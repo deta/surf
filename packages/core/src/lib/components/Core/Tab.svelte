@@ -7,11 +7,10 @@
     checkIfSecureURL
   } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
-  import { slide } from 'svelte/transition'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import type { BookmarkTabState, Tab, TabPage, TabSpace } from '../../types/browser.types'
+  import type { BookmarkTabState, Tab, TabSpace } from '../../types/browser.types'
   import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
@@ -45,64 +44,29 @@
 
   export let tab: Tab
   export let activeTabId: Writable<string>
-  export let pinned: boolean
-  export let showButtons: boolean = true
-  export let showExcludeOthersButton: boolean = false
-  export let showIncludeButton: boolean = false
   export let bookmarkingState: BookmarkTabState = 'idle'
-  export let isUserSelected: boolean
-  export let enableEditing = false
-  export let showClose = false
-  export let spaces: Writable<OasisSpace[]>
-  export const inputUrl = writable<string>('')
-  export let hibernated = false
-  export let tabSize: number | undefined = undefined
+
   export let horizontalTabs = true
-  export let removeHighlight = false
-  export let isSelected = false
-  export let isMagicActive = false
-  export let disableContextmenu = false
-  export let inStuffBar = false
   export let isMediaPlaying: Readable<boolean> = writable(false)
 
-  const log = useLogScope('Tab')
-  const tabsManager = useTabsManager()
-  const userConfig = useConfig()
-  const oasis = useOasis()
-  const toasts = useToasts()
-  const ai = useAI()
-  const desktopManager = useDesktopManager()
-  const globalMiniBrowser = useGlobalMiniBrowser()
-  const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
+  export let pinned: boolean
+  export let isSelected = false
+  export let isUserSelected: boolean
+  export let isMagicActive = false
 
-  const desktopVisible = desktopManager.activeDesktopVisible
-  const activeDesktopColorScheme = desktopManager.activeDesktopColorScheme
-  const userSettings = userConfig.settings
-  const chatContext = ai.contextManager
-  const tabsInContext = chatContext.tabsInContext
+  export let showButtons: boolean = true
+  export let inStuffBar = false
+  export let disableContextmenu = false
+  export let showClose = false
+  export let enableEditing = false
+  export let showExcludeOthersButton: boolean = false
+  export let showIncludeButton: boolean = false
 
-  // Why is there no better way in Svelte :/
-  $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
-  $: isScopedMiniBrowserOpen = $isScopedMiniBrowserOpenStore ?? false
+  export const inputUrl = writable<string>('')
+  export let tabSize: number | undefined = undefined
+  export let removeHighlight = false
 
-  export const editAddress = async () => {
-    isEditing = true
-    await tick()
-    if (addressInputElem) {
-      addressInputElem.focus()
-      // Set cursor to end of input
-      addressInputElem.setSelectionRange(
-        addressInputElem.value.length,
-        addressInputElem.value.length
-      )
-    } else {
-      log.error('addressInputElem is not defined')
-    }
-  }
-
-  export const blur = () => {
-    addressInputElem?.blur()
-  }
+  export let spaces: Writable<OasisSpace[]>
 
   const dispatch = createEventDispatcher<{
     select: string
@@ -126,7 +90,24 @@
     mouseleave: string
     'create-new-space': void
   }>()
+
+  const SHOW_INSECURE_WARNING_TIMEOUT = 3000
+
+  const log = useLogScope(`Tab::${tab.id}`)
   const resourceManager = useResourceManager()
+  const tabsManager = useTabsManager()
+  const userConfig = useConfig()
+  const oasis = useOasis()
+  const toasts = useToasts()
+  const ai = useAI()
+  const desktopManager = useDesktopManager()
+  const globalMiniBrowser = useGlobalMiniBrowser()
+  const scopedMiniBrowser = useScopedMiniBrowserAsStore(`tab-${tab.id}`)
+
+  const desktopVisible = desktopManager.activeDesktopVisible
+  const userSettings = userConfig.settings
+  const chatContext = ai.contextManager
+  const tabsInContext = chatContext.tabsInContext
 
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
@@ -134,37 +115,34 @@
   const tabStyles = writable<string>('')
   const spaceSearchValue = writable<string>('')
 
-  const SHOW_INSECURE_WARNING_TIMEOUT = 3000
-
-  let addressInputElem: HTMLInputElement
-  let space: OasisSpace | null = null
+  let addressInputEl: HTMLInputElement
   let spaceData: OasisSpace['data'] | null = null
+  let insecureWarningTimeout: ReturnType<typeof setTimeout>
+
   let isDragging = false
   let isEditing = false
   let hovered = false
   let popoverVisible = false
-  let popoverLiveSpaceVisible = false
   let showInsecureWarningText = false
+
+  // TODO: CAN WE NUKE THIS SHIT?
+  let space: OasisSpace | null = null
   let pdfResource: Resource | null = null
 
-  const saveToSpaceItems = derived([spaces, spaceSearchValue], ([spaces, searchValue]) => {
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            label: space.dataValue.folderName,
-            data: space
-          }) as SelectItem
-      )
+  // Why is there no better way in Svelte :/
+  $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
+  $: isScopedMiniBrowserOpen = $isScopedMiniBrowserOpenStore ?? false
 
-    if (!searchValue) return spaceItems
+  $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
+  $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
+  $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
+  $: url =
+    (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
+  $: isInsecureUrl = tab.type === 'page' && url && !checkIfSecureURL(url)
+  $: hostname = url ? getHostname(url) : null
+  $: sanitizedTitle = tab.type === 'space' ? '' : tab.title
 
-    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
-  })
+  $: showLiveSpaceButton = $userSettings.live_spaces && checkIfLiveSpacePossible(tab)
 
   $: {
     if (
@@ -178,17 +156,6 @@
         .catch((error) => console.error('error loading PDF resource:', error))
     }
   }
-
-  // $: acceptDrop = tab.type === 'space'
-  $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
-  $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
-  $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
-  $: url =
-    (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
-
-  $: isInsecureUrl = tab.type === 'page' && url && !checkIfSecureURL(url)
-  $: hostname = url ? getHostname(url) : null
-
   $: if (tab.type === 'page' && !isEditing) {
     if (hostname) {
       $inputUrl = isInsecureUrl ? `http://${hostname}` : hostname
@@ -196,57 +163,49 @@
       $inputUrl = tab.title
     }
   }
-
-  $: showLiveSpaceButton = $userSettings.live_spaces && checkIfLiveSpacePossible(tab)
   $: tabStyles.set(getTabStyles({ isActive, pinned, horizontalTabs, tab, isSelected }))
 
-  // $: if (tab.type === 'space') {
-  //   fetchSpace(tab.spaceId)
-  // }
+  /// INPUT EDITING
 
-  $: sanitizedTitle = tab.type === 'space' ? '' : tab.title
-  // $: sanitizedTitle = tab.title
-  //   ? tab.type !== 'space'
-  //     ? (() => {
-  //         if (tab.title.startsWith('http') || tab.title.startsWith('surf://')) {
-  //           return tab.title
-  //         }
-  //         let title = tab.title
-  //           .replace(/\[.*?\]|\(.*?\)|\{.*?\}|\<.*?\>/g, '')
-  //           .replace(/[\/\\]/g, '–')
-  //         return title !== tab.title ? title.replace(/^\w/, (c) => c.toUpperCase()) : title
-  //       })()
-  //     : tab.title
-  //   : ''
+  export const editAddress = async () => {
+    isEditing = true
+    await tick()
 
-  let insecureWarningTimeout: ReturnType<typeof setTimeout>
-  const handleTabUrlChange = (url: string | null) => {
-    log.debug('handleTabUrlChange', url)
-    if (insecureWarningTimeout) {
-      clearTimeout(insecureWarningTimeout)
+    addressInputEl?.focus()
+    // Set cursor to end of input
+    addressInputEl?.setSelectionRange(addressInputEl.value.length, addressInputEl.value.length)
+  }
+
+  export const blur = () => {
+    addressInputEl?.blur()
+  }
+
+  const handleInputBlur = () => {
+    isEditing = false
+  }
+
+  const handleInputFocus = () => {
+    isEditing = true
+    if (url) {
+      $inputUrl = url
     }
-    if (url && !checkIfSecureURL(url)) {
-      showInsecureWarningText = true
 
-      insecureWarningTimeout = setTimeout(() => {
-        showInsecureWarningText = false
-      }, SHOW_INSECURE_WARNING_TIMEOUT)
-    } else {
-      showInsecureWarningText = false
+    // Use setTimeout to ensure this runs after the input value has been updated
+    setTimeout(() => {
+      addressInputEl.setSelectionRange(0, addressInputEl.value.length)
+      addressInputEl.scrollLeft = addressInputEl.scrollWidth
+    }, 0)
+  }
+
+  const handleInputKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      dispatch('input-enter', $inputUrl)
+    } else if (event.key === 'Escape') {
+      addressInputEl?.blur()
     }
   }
 
-  const checkIfLiveSpacePossible = (tab: Tab) => {
-    if (tab.type !== 'page') return false
-
-    if (tab.currentDetectedApp?.rssFeedUrl) return true
-
-    if (tab.currentDetectedApp?.appId === 'youtube') {
-      return true
-    }
-
-    return false
-  }
+  /// EVENT HANDLERS
 
   const handleClick = (e: MouseEvent) => {
     const clickedElement = e.target as HTMLElement
@@ -273,7 +232,7 @@
 
       dispatch('passive-select', tab.id)
       return
-    } else if (clickedElement !== addressInputElem) {
+    } else if (clickedElement !== addressInputEl) {
       e.preventDefault()
       e.stopPropagation()
 
@@ -281,7 +240,7 @@
       dispatch('select', tab.id)
     }
 
-    if (clickedElement === addressInputElem) {
+    if (clickedElement === addressInputEl) {
       // && (e.shiftKey || e.metaKey || e.ctrlKey)
       e.preventDefault()
       //e.stopImmediatePropagation()
@@ -315,52 +274,48 @@
     }
   }
 
+  // TODO: Can we nuke?
+  const handleMouseDown = (e: MouseEvent) => {
+    if (e.button === 1 && !pinned) {
+      e.preventDefault()
+      handleArchive(DeleteTabEventTrigger.Click)
+    }
+  }
+
+  const handleTabUrlChange = (url: string | null) => {
+    log.debug('handleTabUrlChange', url)
+    if (insecureWarningTimeout) {
+      clearTimeout(insecureWarningTimeout)
+    }
+    if (url && !checkIfSecureURL(url)) {
+      showInsecureWarningText = true
+
+      insecureWarningTimeout = setTimeout(() => {
+        showInsecureWarningText = false
+      }, SHOW_INSECURE_WARNING_TIMEOUT)
+    } else {
+      showInsecureWarningText = false
+    }
+  }
+
+  const checkIfLiveSpacePossible = (tab: Tab) => {
+    if (tab.type !== 'page') return false
+
+    if (tab.currentDetectedApp?.rssFeedUrl) return true
+
+    if (tab.currentDetectedApp?.appId === 'youtube') {
+      return true
+    }
+
+    return false
+  }
+
   const handleRemoveSpaceFromSidebar = (_e: MouseEvent) => {
     dispatch('remove-from-sidebar', tab.id)
   }
 
   const handleArchive = (trigger: DeleteTabEventTrigger = DeleteTabEventTrigger.Click) => {
     dispatch('delete-tab', { tabId: tab.id, trigger })
-  }
-
-  const handleInputFocus = () => {
-    isEditing = true
-    if (url) {
-      $inputUrl = url
-    }
-
-    // Use setTimeout to ensure this runs after the input value has been updated
-    setTimeout(() => {
-      addressInputElem.setSelectionRange(0, addressInputElem.value.length)
-      addressInputElem.scrollLeft = addressInputElem.scrollWidth
-    }, 0)
-  }
-
-  const handleInputBlur = () => {
-    isEditing = false
-  }
-
-  const handleInputKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'Enter') {
-      dispatch('input-enter', $inputUrl)
-    } else if (event.key === 'Escape') {
-      if (addressInputElem) {
-        addressInputElem.blur()
-      } else {
-        log.error('addressInputElem is not defined')
-      }
-    }
-  }
-
-  const fetchSpace = async (id: string) => {
-    try {
-      space = await oasis.getSpace(id)
-      if (space) {
-        spaceData = space.data
-      }
-    } catch (error) {
-      log.error('Failed to fetch space:', error)
-    }
   }
 
   const handleBookmark = (trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
@@ -461,86 +416,7 @@
     dispatch('Drop', { drag, spaceId: (tab as TabSpace).spaceId })
   }
 
-  const handleMouseDown = (e: MouseEvent) => {
-    if (e.button === 1 && !pinned) {
-      e.preventDefault()
-      handleArchive(DeleteTabEventTrigger.Click)
-    }
-  }
-
-  function getTabStyles({
-    isActive,
-    pinned,
-    horizontalTabs,
-    tab,
-    isSelected
-  }: {
-    isActive: boolean
-    pinned: boolean
-    horizontalTabs: boolean
-    tab: Tab
-    isSelected: boolean
-  }) {
-    // Core tab styling classes
-    const baseClasses = [
-      'tab',
-      'no-drag',
-      'flex',
-      'items-center',
-      'group',
-      'transform',
-      'active:scale-[98%]',
-      'gap-3',
-      'justify-center',
-      'relative',
-      'text-sky-900 dark:text-sky-100',
-      'font-medium',
-      'text-md',
-      'overflow-hidden',
-      'min-w-[48px]'
-    ].join(' ')
-
-    // Active state classes
-    let activeClasses = ''
-    if (isActive) {
-      activeClasses = 'active text-sky-950 dark:text-gray-100 sticky'
-    } else if (!pinned && horizontalTabs) {
-      activeClasses = 'bg-sky-100/60 dark:bg-gray-800/60'
-    }
-
-    // Special state classes
-    const magicClasses =
-      isInChatContext && isMagicActive && !isActive ? 'ring-[0] ring-pink-600' : ''
-    const selectedClasses = isSelected && !isActive ? '' : ''
-    const hoverClasses = 'hover:bg-sky-100 dark:hover:bg-gray-600'
-
-    // Layout classes based on pin state and orientation
-    let styleClasses = ''
-    if (pinned) {
-      if (horizontalTabs) {
-        styleClasses =
-          'bg-sky-100/60 dark:bg-gray-700/60 w-full min-w-fit px-[0.563rem] py-[0.438rem]'
-      } else {
-        styleClasses = 'w-full p-3'
-      }
-    } else {
-      if (horizontalTabs) {
-        styleClasses = 'px-[0.625rem] text-[0.938rem] h-full'
-      } else {
-        styleClasses = 'px-4 py-2.5'
-      }
-    }
-
-    // Combine all classes
-    return [
-      baseClasses,
-      activeClasses,
-      magicClasses,
-      selectedClasses,
-      styleClasses,
-      hoverClasses
-    ].join(' ')
-  }
+  /// MISC
 
   const contextMenuMoveTabsToSpaces = derived(
     [spaces, tabsManager.activeScopeId],
@@ -599,8 +475,100 @@
     }
   )
 
+  const saveToSpaceItems = derived([spaces, spaceSearchValue], ([spaces, searchValue]) => {
+    const spaceItems = spaces
+      .sort((a, b) => {
+        return a.indexValue - b.indexValue
+      })
+      .map(
+        (space) =>
+          ({
+            id: space.id,
+            label: space.dataValue.folderName,
+            data: space
+          }) as SelectItem
+      )
+
+    if (!searchValue) return spaceItems
+
+    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
+  })
+
+  const fetchSpace = async (id: string) => {
+    try {
+      space = await oasis.getSpace(id)
+      if (space) {
+        spaceData = space.data
+      }
+    } catch (error) {
+      log.error('Failed to fetch space:', error)
+    }
+  }
+
+  function getTabStyles({
+    isActive,
+    pinned,
+    horizontalTabs,
+    tab,
+    isSelected
+  }: {
+    isActive: boolean
+    pinned: boolean
+    horizontalTabs: boolean
+    tab: Tab
+    isSelected: boolean
+  }) {
+    // Core tab styling classes
+    const baseClasses = [
+      'tab',
+      'no-drag',
+      'flex',
+      'items-center',
+      'group',
+      'transform',
+      'active:scale-[98%]',
+      'gap-3',
+      'justify-center',
+      'relative',
+      'text-sky-900 dark:text-sky-100',
+      'font-medium',
+      'text-md',
+      'overflow-hidden',
+      'min-w-[48px]'
+    ].join(' ')
+
+    // Active state classes
+    let activeClasses = ''
+    if (isActive) {
+      activeClasses = 'active sticky'
+    } else if (!pinned && horizontalTabs) {
+      //activeClasses = 'bg-sky-100/60 dark:bg-gray-800/60'
+    }
+
+    // Special state classes
+    const selectedClasses = isSelected && !isActive ? '' : ''
+
+    // Layout classes based on pin state and orientation
+    let styleClasses = ''
+    if (pinned) {
+      if (horizontalTabs) {
+        styleClasses = 'w-full min-w-fit px-[0.563rem] py-[0.438rem]'
+      } else {
+        styleClasses = 'w-full p-3'
+      }
+    } else {
+      if (horizontalTabs) {
+        styleClasses = 'px-[0.625rem] text-[0.938rem] h-full'
+      } else {
+        styleClasses = 'px-4 py-2.5'
+      }
+    }
+
+    // Combine all classes
+    return [baseClasses, activeClasses, selectedClasses, styleClasses].join(' ')
+  }
+
   onMount(() => {
-    log.warn('onMount', tab.id, tab.type)
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
     } else if (tab.type === 'page') {
@@ -613,45 +581,26 @@
       return unsubURLChangeEvent
     }
   })
-
-  let canEdit = false
 </script>
 
-<!--
-NOTE: need to disabled if for now and add back in future -> ONly apply to tabs full yvisible  not scrolled outside
-  style:view-transition-name="tab-{tab.id}"
-
--->
 <div
   draggable={true}
   id="tab-{tab.id}"
   class={$tabStyles}
-  class:bg-green-200={isActive &&
-    $inputUrl === 'surf.featurebase.app' &&
-    !isInChatContext &&
-    !$desktopVisible}
-  class:bg-sky-200={isActive &&
-    $inputUrl !== 'surf.featurebase.app' &&
-    !isInChatContext &&
-    !$desktopVisible}
-  class:active={tab.id === $activeTabId && !$desktopVisible}
   class:pinned
-  class:horizontalTabs
-  class:inStuffBar
-  {horizontalTabs}
+  class:active={isActive}
   class:hovered
-  class:selected={isSelected && !$desktopVisible}
+  class:selected={isSelected}
   class:user-selected={isUserSelected && !$desktopVisible}
   class:combine-border={// Combine border class if:
   // 1. Magic is active and tab is magical, or
   // 2. Magic is inactive but tab is selected/active
-  !$desktopVisible &&
-    ((isMagicActive && isInChatContext) || (!isMagicActive && (isSelected || isActive)))}
+  !$desktopVisible && isSelected}
   class:magic={isInChatContext && isMagicActive}
+  class:inStuffBar
   style={tabSize
     ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
     : ''}
-  style:position="relative"
   role="none"
   use:HTMLDragItem.action={{}}
   on:DragStart={handleDragStart}
@@ -778,35 +727,9 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     ]
   }}
 >
-  <!-- Temporary DragZone overlay to allow dropping onto space tabs -->
-  <!--{#if tab.type === 'space' && tab.spaceId !== 'all'}
-    <div
-      id="tabZone-{tab.id}"
-      class="tmp-tab-drop-zone"
-      style="position: absolute; inset-inline: 10%; inset-block: 20%;"
-      on:DragEnter={(drag) => {
-        /*const dragData = drag.data
-        if (
-          drag.isNative ||
-          (dragData['surf/tab'] !== undefined && dragData['surf/tab'].type !== 'space') ||
-          dragData['oasis/resource'] !== undefined
-        ) {
-          drag.continue() // Allow the drag
-          return
-        }
-        drag.abort()*/
-        // TODO: FIX
-        drag.continue()
-      }}
-      on:Drop={handleDrop}
-    ></div>
-  {/if}-->
-
   <div
-    class="tab-favicon custom-text-color cursor-default"
+    class="tab-favicon icon-wrapper flex-shrink-0"
     class:media-playing={$userSettings.turntable_favicons && $isMediaPlaying}
-    class:icon-wrapper={true}
-    class:flex-shrink-0={true}
     class:emoji-adjustment={$spaceData?.emoji}
     class:group-hover:!hidden={(!isActive &&
       showClose &&
@@ -847,7 +770,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="custom-text-color cursor-default items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
+        class="items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -858,7 +781,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="custom-text-color items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
+        class="items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -872,21 +795,21 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     <div class="title relative flex-grow truncate mr-1">
       {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && isEditing}
         <input
-          draggable
-          on:dragstart|preventDefault|stopPropagation
-          type="text"
+          bind:this={addressInputEl}
           bind:value={$inputUrl}
-          on:focus={handleInputFocus}
-          on:blur={handleInputBlur}
+          draggable
+          type="text"
           placeholder="Enter URL or search query"
-          on:keydown={handleInputKeydown}
-          bind:this={addressInputElem}
           class={`w-full h-full bg-transparent focus:outline-none group-active:select-none
           ${
             !isEditing && !isMagicActive
               ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60]'
               : ''
           }`}
+          on:dragstart|preventDefault|stopPropagation
+          on:focus={handleInputFocus}
+          on:blur={handleInputBlur}
+          on:keydown={handleInputKeydown}
         />
       {:else}
         <div
@@ -895,7 +818,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             isEditing = true
             tick().then(() => {
               setTimeout(() => {
-                addressInputElem?.focus()
+                addressInputEl?.focus()
               }, 175)
             })
           }}
@@ -920,7 +843,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
             >
               <Icon name="news" />
             </button>
@@ -934,7 +857,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
               </span>
               <div class="flex w-full">
                 <button
-                  class="flex items-center justify-center w-full p-2 m-1 transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-md"
+                  class="flex items-center justify-center w-full p-2 m-1 transition-colors rounded-md"
                   on:click={handleCreateLiveSpace}
                 >
                   <Icon name="check" size="16px" />
@@ -970,7 +893,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             >
               <button
                 on:click|stopPropagation={() => handleBookmark()}
-                class="custom-text-color flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 dark:text-gray-200 hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
+                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
               >
                 {#if bookmarkingState === 'in_progress'}
                   <Icon name="spinner" size="16px" />
@@ -997,29 +920,13 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
             </SelectDropdown>
           {/key}
         {/if}
-
-        <!-- {#if tab.magic}
-          <button
-            on:click|stopPropagation={handleExcludeTab}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-full "
-            use:tooltip={{
-              content: 'Add Tab to Context',
-              action: 'hover',
-              position: 'left',
-              animation: 'fade',
-              delay: 500
-            }}
-          >
-            <Icon name="minus" size="16px" />
-          </button>
-        {/if} -->
       </div>
     {:else if (showExcludeOthersButton || showIncludeButton) && hovered}
       <div class="items-center flex justify-end flex-row space-x-2 right-0">
         {#if showExcludeOthersButton}
           <button
             on:click|stopPropagation={handleExcludeOthers}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none text-sky-900 dark:text-gray-200 transition-colors hover:text-sky-950 dark:hover:text-gray-50 hover:bg-sky-200/80 dark:hover:bg-gray-700/80 rounded-full"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
             use:tooltip={{
               content: 'Only use this tab',
               action: 'hover',
@@ -1050,15 +957,13 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         {/if}
       </div>
     {:else if !hovered && $isMediaPlaying}
-      <SoundVisualizerBars
-        style="flex-shrink: 0; opacity: 0.35; color: var(--contrast-color) !important;"
-        size="1.5ch"
-      />
+      <SoundVisualizerBars style="flex-shrink: 0; opacity: 0.35;" size="1.5ch" />
     {/if}
 
+    <!-- TODO (maxi): This is broken (on base already as well) -->
     {#if isScopedMiniBrowserOpen}
       <div
-        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content text-sky-950 dark:text-gray-200 bg-sky-200/80 dark:bg-gray-700/80 rounded-full"
+        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
       >
         <Icon name="eye" />
       </div>
@@ -1079,297 +984,238 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
       rotate: 360deg;
     }
   }
+
+  .icon-wrapper {
+    width: 16px;
+    height: 16px;
+    display: block;
+    user-select: none;
+    flex-shrink: 0;
+
+    &.emoji-adjustment {
+      margin-top: -1.5px;
+    }
+  }
+
   .tab {
     view-transition-class: tab !important;
     padding: 0.725rem 1rem;
     font-weight: 400;
     -webkit-font-smoothing: auto;
     letter-spacing: 0.00925em;
-    transition:
-      0s ease-in-out,
-      transform 0s;
+    position: relative;
+    overflow: visible;
+
+    @include utils.light-dark-custom(
+      'color',
+      rgb(2, 19, 39),
+      rgb(216, 233, 253),
+      var(--contrast-color)
+    );
+    color: var(--color);
 
     .tab-favicon {
+      @apply cursor-default;
+
       &.media-playing {
         animation: spin 13.5s linear infinite;
       }
     }
 
-    .title {
-      color: var(--contrast-color) !important;
-    }
-    :global(.verticalTabs)
-      &.active:not(.combine-border + .combine-border):not(.combine-border ~ .combine-border):not(
-        :has(+ .combine-border)
-      ) {
-      background: paint(squircle) !important;
-      --squircle-radius-top-left: 16px;
-      --squircle-radius-top-right: 16px;
-      --squircle-radius-bottom-left: 16px;
-      --squircle-radius-bottom-right: 16px;
-      --squircle-smooth: 0.33;
-      --squircle-shadow: 0px 2px 2px -1px var(--black-09);
-      --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-        inset 0px 1.25px 0px -1.25px var(--white-60), inset 1.25px 0px 0px -1.25px var(--white-60),
-        inset -1.25px 0px 0px -1.25px var(--white-60), inset 0px -1.25px 0px -1.25px var(--white-60);
-      --squircle-fill: var(--white-75);
-      border-radius: 0 !important;
+    &.active {
+      @include utils.light-dark-custom(
+        'fill',
+        var(--white-88),
+        var(--dark-on-unpinned-surface),
+        var(--white-55),
+        var(--dark-on-unpinned-surface)
+      );
 
-      :global(.dark:not(.custom)) & {
-        --squircle-shadow: 0 !important;
-        --squircle-inner-shadow: 0 !important;
-        --squircle-outline-width: 1.5px !important;
-        --squircle-outline-color: var(--ring-color) !important;
-        --squircle-fill: var(--dark-on-unpinned-surface) !important;
+      :global(body:not(.dark)) & {
+        --squircle-shadow: 0px 2px 2px -1px var(--black-09);
+        --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
+          inset 0px 1.25px 0px -1.25px var(--white-60), inset 1.25px 0px 0px -1.25px var(--white-60),
+          inset -1.25px 0px 0px -1.25px var(--white-60),
+          inset 0px -1.25px 0px -1.25px var(--white-60);
       }
-
-      :global(.custom) & {
-        --squircle-shadow: 0 !important;
-        --squircle-inner-shadow: 0 !important;
-        --squircle-outline-width: 1.5px !important;
-        --squircle-outline-color: transparent !important;
-        --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
-      }
-
-      :global(.custom.dark) & {
-        --squircle-shadow: 0 !important;
-        --squircle-inner-shadow: 0 !important;
-        --squircle-outline-width: 1.5px !important;
-        --squircle-outline-color: transparent !important;
-        --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.65)) !important;
+      :global(body.dark) & {
+        --squircle-outline-width: 1.5px;
+        --squircle-outline-color: var(--ring-color);
       }
     }
 
-    // Unpinned tabs
-    &:not(.pinned) {
-      // Vertical unpinned
-      &:not(.horizontalTabs) {
-        &:hover {
-          background: paint(squircle);
-          --squircle-radius: 16px;
-          --squircle-smooth: 0.33;
-          --squircle-fill: var(--black-09);
-          // TODO: (MERGE) ?
-          //--squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0), 0px -2px 2px -1px rgba(0, 0, 0, 0);
+    button {
+      color: var(--color);
+      --fill: none;
+      @apply cursor-default;
 
-          :global(.dark) & {
-            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
-          }
-        }
-      }
-
-      // Horizontal unpinned
-      &.horizontalTabs:not(.inStuffBar) {
-        background: paint(squircle);
-        --squircle-radius: 8px;
-        --squircle-smooth: 0.28;
-        --squircle-fill: var(--white-33);
-
-        :global(.dark:not(.custom)) & {
-          --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
-        }
-
-        :global(.custom) & {
-          --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 80%, 70%, 0.65)) !important;
-        }
-
-        :global(.custom.dark) & {
-          --squircle-fill: color-mix(in hsl, var(--base-color), hsla(0, 40%, 33%, 0.8)) !important;
-        }
-
-        &:hover {
-          --squircle-fill: var(--white-55);
-
-          :global(.dark) & {
-            --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
-          }
-        }
-
-        &.selected {
-          background: paint(squircle);
-          --squircle-outline-color: var(--black-00);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
-            inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
-            inset 0px -2px 0px -1px var(--white-80);
-          --squircle-fill: var(--white-40);
-        }
-
-        &.active {
-          padding: 15.25px 1rem 15px 1rem;
-          margin-top: -1.25px;
-          background: paint(squircle);
-          --squircle-radius-top-left: 9px !important;
-          --squircle-radius-top-right: 9px !important;
-          --squircle-radius-bottom-left: 9px !important;
-          --squircle-radius-bottom-right: 9px !important;
-          --squircle-smooth: 0.25 !important;
-          --squircle-fill: var(--white-80);
-          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 1.5px 0px -1px var(--white-85), inset 1.5px 0px 0px -1px var(--white-85),
-            inset -1.5px 0px 0px -1px var(--white-85), inset 0px -1.5px 0px -1px var(--white-85);
-          --squircle-shadow: 0px 2px 2px -1px var(--sky-gray-09),
-            0px -2px 0px -1px var(--sky-gray-03);
-        }
-      }
-
-      &.inStuffBar {
-        background: paint(squircle);
-        --squircle-radius: 8px;
-        --squircle-smooth: 0.28;
-        --squircle-fill: rgba(224, 242, 254, 0.6);
-
-        :global(.dark) & {
-          --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
-        }
-
-        &:hover {
-          --squircle-fill: rgb(224 242 254);
-          :global(.dark) & {
-            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
-          }
-        }
-
-        &.selected {
-          background: paint(squircle);
-          --squircle-outline-color: rgba(0, 0, 0, 0);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset -2px 0px 0px -1px rgba(255, 255, 255, 0.8),
-            inset 0px -2px 0px -1px rgba(255, 255, 255, 0.8);
-          --squircle-fill: rgb(190, 229, 255);
-        }
-
-        &.active {
-          margin-top: -1.25px;
-          background: paint(squircle);
-          --squircle-radius-top-left: 9px !important;
-          --squircle-radius-top-right: 9px !important;
-          --squircle-radius-bottom-left: 9px !important;
-          --squircle-radius-bottom-right: 9px !important;
-          --squircle-smooth: 0.25 !important;
-          --squircle-fill: rgb(221, 241, 255);
-          // --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-          //   inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
-          //   inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
-          //   inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
-          //   inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
-          // --squircle-shadow: 0px 2px 2px -1px rgba(88, 104, 132, 0.09),
-          //   0px -2px 0px -1px rgba(88, 104, 132, 0.03);
-        }
+      &:hover {
+        background: var(--fill);
+        @include utils.light-dark-custom('fill', var(--black-09), var(--white-15), var(--black-09));
       }
     }
+  }
 
-    // Pinned tabs
-    &.pinned {
-      // Vertical pinned
-      &:not(.horizontalTabs) {
-        padding: 0.95rem;
-        background: paint(squircle);
-        --squircle-radius: 16px;
-        --squircle-smooth: 0.33;
-        --squircle-inner-shadow: inset 0px 0px 0px 0.75px var(--white-26);
-        --squircle-shadow: 0px 2px 2px -1px var(--black-00) !important;
-        --squircle-fill: var(--white-15);
-        :global(.dark) & {
-          --squircle-fill: var(--white-09) !important;
-        }
+  // Horizontal Tabs
+  :global(.app-contents.horizontalTabs) {
+    .tab {
+      --radius: 8px;
+      @include utils.squircle($fill: var(--fill), $radius: 8px, $smooth: 0.28);
 
-        &.active {
-          background: paint(squircle) !important;
-          --squircle-radius: 16px !important;
-          --squircle-smooth: 0.33 !important;
-          // flag
-          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 0px 0px 0.75px var(--white-26) !important;
-          --squircle-shadow: 0px 2px 2px -1px var(--black-08) !important;
-          --squircle-fill: var(--white-60) !important;
-          :global(.dark) & {
-            --squircle-fill: var(--dark-on-pinned-surface) !important;
-          }
-        }
-
-        &.selected {
-          background: paint(squircle);
-          --squircle-smooth: 0.33;
-          --squircle-outline-color: var(--black-00);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
-            inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
-            inset 0px -2px 0px -1px var(--white-80);
-          --squircle-shadow: 0px 2px 2px -1px var(--black-08);
-          --squircle-fill: var(--white-40);
-        }
-
-        &:hover {
-          background: paint(squircle);
-          --squircle-radius: 16px !important;
-          --squircle-smooth: 0.33 !important;
-          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 0px 0px 0.75px var(--white-26) !important;
-          --squircle-shadow: 0px 2px 2px -1px var(--black-01);
-          --squircle-fill: var(--white-60) !important;
-          :global(.dark) & {
-            --squircle-fill: var(--dark-on-pinned-surface) !important;
-          }
-        }
+      &:not(.active) {
+        @include utils.light-dark-custom(
+          'fill',
+          var(--white-33),
+          var(--dark-on-unpinned-surface-horizontal),
+          var(--white-33),
+          var(--dark-on-unpinned-surface-horizontal)
+        );
       }
 
-      // Horizontal pinned
-      &.horizontalTabs {
+      &.hovered:not(.active) {
+        // TODO: THis should be lighter in dark mode to highligt hover state
+        @include utils.light-dark-custom(
+          'fill',
+          var(--white-55),
+          var(--dark-on-unpinned-surface-horizontal),
+          var(--white-55),
+          var(--dark-on-unpinned-surface-horizontal)
+        );
+      }
+
+      &.pinned {
         padding: 0.5rem;
-        background: paint(squircle);
-        --squircle-radius: 8px;
-        --squircle-smooth: 0.28;
-        --squircle-shadow: 0px 2px 2px -1px var(--black-00) !important;
-        --squircle-fill: var(--white-33);
-        :global(.dark) & {
-          --squircle-fill: var(--dark-on-unpinned-surface-horizontal) !important;
-          --squircle-shadow: 0px 0px 0px 0px var(--black-00) !important;
-        }
+        --fill: var(--white-15);
+        --squircle-inner-shadow: inset 0px 0px 0px 0.75px var(--white-26);
+        --squircle-shadow: 0px 2px 2px -1px var(--black-01);
+      }
 
-        &.selected {
-          background: paint(squircle);
-          --squircle-outline-color: var(--black-00);
-          --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
-            inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
-            inset 0px -2px 0px -1px var(--white-80);
-          --squircle-shadow: 0px 2px 2px -1px var(--black-08);
-          --squircle-fill: var(--white-40);
-        }
+      /// Radii definitions
+      &:not(.pinned) {
+        &.combine-border {
+          &:not(.active) {
+            @include utils.light-dark-custom(
+              'fill',
+              var(--white-65),
+              var(--black-45),
+              var(--white-40),
+              var(--black-45)
+            );
+          }
 
-        &.active {
-          background: paint(squircle);
-          --squircle-radius-top-left: 8px !important;
-          --squircle-radius-top-right: 8px !important;
-          --squircle-radius-bottom-left: 8px !important;
-          --squircle-radius-bottom-right: 8px !important;
-          --squircle-smooth: 0.28 !important;
-          --squircle-fill: var(--white-65) !important;
-          --squircle-outline-width: 0px;
-          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 1.5px 0px -1px var(--white-85), inset 1.5px 0px 0px -1px var(--white-85),
-            inset -1.5px 0px 0px -1px var(--white-85), inset 0px -1.5px 0px -1px var(--white-85);
-          --squircle-shadow: 0px 2px 2px -1px var(--black-08) !important;
-        }
-
-        &:hover {
-          --squircle-fill: var(--white-55);
-          // TODO: (MERGE) ? prob using base styles so we can delete
-          /*--squircle-outline-width: 0px;
-          --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-            inset 0px 1.5px 0px -1px rgba(255, 255, 255, 0.85),
-            inset 1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
-            inset -1.5px 0px 0px -1px rgba(255, 255, 255, 0.85),
-            inset 0px -1.5px 0px -1px rgba(255, 255, 255, 0.85);
-          --squircle-shadow: 0px 2px 2px -1px rgba(0, 0, 0, 0.08) !important;*/
-
-          :global(.dark) & {
-            --squircle-outline-width: 1.5px !important;
-            --squircle-outline-color: var(--ring-color-muted) !important;
-            --squircle-fill: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+          &:not(.active) {
+            :global(body:not(.dark)) & {
+              --squircle-inner-shadow: inset 0px 2px 0px -1px var(--white-80),
+                inset 2px 0px 0px -1px var(--white-80), inset -2px 0px 0px -1px var(--white-80),
+                inset 0px -2px 0px -1px var(--white-80);
+            }
+            :global(body.dark) & {
+              --squircle-outline-width: 1.5px;
+              --squircle-outline-color: color-mix(in srgb, var(--ring-color), 20% transparent);
+            }
           }
         }
       }
+    }
+  }
 
+  // Vertical Tabs
+  :global(.app-contents.verticalTabs) {
+    .tab {
+      --fill: transparent;
+      --radius: 16px;
+      @include utils.squircle($fill: var(--fill), $radius: var(--radius), $smooth: 0.33);
+
+      &.hovered:not(.active) {
+        @include utils.light-dark-custom(
+          'fill',
+          var(--white-60),
+          var(--dark-on-unpinned-surface-horizontal-hover),
+          var(--black-26),
+          var(--dark-on-unpinned-surface-horizontal-hover)
+        );
+      }
+
+      &.pinned {
+        padding: 0.95rem;
+        --fill: var(--white-15);
+        --squircle-inner-shadow: inset 0px 0px 0px 0.75px var(--white-26);
+        --squircle-shadow: 0px 2px 2px -1px var(--black-01);
+      }
+
+      /// Radii definitions
+      &:not(.pinned) {
+        &.combine-border {
+          &:not(.active) {
+            @include utils.light-dark-custom(
+              'fill',
+              var(--white-55),
+              var(--black-45),
+              var(--white-40)
+            );
+          }
+
+          & {
+            @include utils.squricle-radii($radius: 0px);
+          }
+
+          &:not(.combine-border + .combine-border) {
+            @include utils.squricle-radii(
+              $top-left: var(--radius),
+              $top-right: var(--radius),
+              $bottom-left: 0px,
+              $bottom-right: 0px
+            );
+          }
+
+          &:not(:has(+ .combine-border)) {
+            @include utils.squricle-radii(
+              $top-left: 0px,
+              $top-right: 0px,
+              $bottom-left: var(--radius),
+              $bottom-right: var(--radius)
+            );
+          }
+
+          &:not(.combine-border + .combine-border):not(:has(+ .combine-border)) {
+            @include utils.squricle-radii($radius: var(--radius));
+          }
+        }
+      }
+    }
+  }
+
+  // Weirdo inside stuff
+  :global(.stuff-outer) {
+    .tab {
+      --radius: 8px;
+      @include utils.squircle($fill: var(--fill), $radius: 8px, $smooth: 0.28);
+
+      &:not(.active) {
+        @include utils.light-dark-custom(
+          'fill',
+          var(--black-03),
+          var(--dark-on-unpinned-surface-horizontal),
+          var(--black-03),
+          var(--dark-on-unpinned-surface-horizontal)
+        );
+      }
+
+      &.hovered:not(.active) {
+        // TODO: THis should be lighter in dark mode to highligt hover state
+        @include utils.light-dark-custom(
+          'fill',
+          var(--black-09),
+          var(--dark-on-unpinned-surface-horizontal),
+          var(--black-09),
+          var(--dark-on-unpinned-surface-horizontal)
+        );
+      }
+    }
+  }
+
+  /*
+// TODO: Move the magic shit & animations into here
       // Magic states
       &.magic:not(.pinned) {
         position: relative;
@@ -1417,33 +1263,16 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         }
       }
     }
-
-    // Selected and active states
-    &.selected:not(.active) {
-      opacity: 1;
-      background: var(--white-55);
-      outline: none;
-
-      :global(.dark) & {
-        @apply bg-gray-700/70;
-      }
-    }
-
-    &.active {
-      background: var(--hover-color);
-      outline: none;
-
-      :global(.dark) & {
-        @apply bg-gray-600;
-      }
-    }
-  }
+  }*/
 
   // Global styles
-  :global(.tab[data-context-menu-anchor]) {
-    opacity: 1;
-    background: var(--white-55);
-    outline: none;
+  :global(.tab:not(.active)[data-context-menu-anchor]) {
+    @include utils.light-dark-custom(
+      'fill',
+      var(--white-55),
+      var(--dark-on-unpinned-surface),
+      var(--white-33)
+    );
   }
 
   :global(.tab img) {
@@ -1505,103 +1334,5 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
   :global(.tab[data-drag-target='true']) {
     outline: 1.5px dashed var(--dark-outline) !important;
     outline-offset: -1.5px;
-  }
-
-  .icon-wrapper {
-    width: 16px;
-    height: 16px;
-    display: block;
-    user-select: none;
-    flex-shrink: 0;
-
-    &.emoji-adjustment {
-      margin-top: -1.5px;
-    }
-  }
-
-  // Vertical tabs specific styles
-  :global(.vertical-tabs) {
-    .tab.combine-border:not(.horizontalTabs) {
-      &:has(+ :not(.combine-border)) {
-        --squircle-radius-bottom-right: 16px;
-        --squircle-radius-bottom-left: 16px;
-        --squircle-shadow: 0px 2px 2px -1px var(--black-09), 0px -2px 0px -1px var(--black-03);
-      }
-    }
-
-    .tab:not(.combine-border):not(.horizontalTabs) + .combine-border:has(+ :not(.combine-border)) {
-      background: paint(squircle);
-      --squircle-radius: 16px;
-      --squircle-smooth: 0.33;
-      --squircle-shadow: 0px 0px 0px 0px var(--black-09);
-      --squircle-fill: var(--white-80);
-    }
-
-    &.active:not(.horizontalTabs):not(.combine-border + .combine-border):not(
-        .combine-border ~ .combine-border
-      ):not(:has(+ .combine-border)) {
-      background: paint(squircle) !important;
-      --squircle-radius-top-left: 16px;
-      --squircle-radius-top-right: 16px;
-      --squircle-radius-bottom-left: 16px;
-      --squircle-radius-bottom-right: 16px;
-      --squircle-smooth: 0.33;
-      --squircle-shadow: 0px 2px 2px -1px var(--black-09), 0px -2px 0px -1px var(--black-03);
-      --squircle-fill: var(--white-80);
-    }
-
-    /*⚠️ DO NOT CHANGE THE ORDER OF THE FOLLOWING CSS RULES ⚠️*/
-    /* First tab of a group */
-    .tab.combine-border:not(.horizontalTabs):not(.tab.selected ~ .tab.combine-border):not(
-        .tab.combine-border ~ .tab.combine-border
-      ):not(:only-child) {
-      border-top-left-radius: 16px;
-      border-top-right-radius: 16px;
-    }
-
-    /* Middle tabs in sequences */
-    .tab.combine-border:not(.horizontalTabs) + .tab.combine-border {
-      border-radius: 0;
-      background: var(--white-40);
-
-      &.user-selected {
-        background: var(--white-55);
-      }
-    }
-
-    /* Last tab of a group */
-    .tab.combine-border:not(.horizontalTabs):not(:has(+ .tab.combine-border)),
-    .tab.combine-border:not(.horizontalTabs):last-of-type {
-      border-bottom-left-radius: 16px;
-      border-bottom-right-radius: 16px;
-    }
-
-    /* Handle gaps */
-    .tab:not(.combine-border):not(.horizontalTabs) + .tab.combine-border {
-      background: paint(squircle);
-      --squircle-radius-top-left: 16px;
-      --squircle-radius-top-right: 16px;
-      --squircle-radius-bottom-left: 0px;
-      --squircle-radius-bottom-right: 0px;
-      --squircle-smooth: 0.33;
-      --squircle-fill: var(--white-40);
-    }
-
-    .tab.active {
-      background: var(--white-75) !important;
-    }
-
-    .tab.user-selected {
-      --squircle-fill: var(--white-55) !important;
-    }
-  }
-
-  // Buttons
-  .custom-text-color {
-    :global(.custom) & {
-      color: var(--contrast-color) !important;
-      // TODO: (MERGE) ?
-      //--squircle-fill: rgba(255, 255, 255, 0.4);
-    }
   }
 </style>
