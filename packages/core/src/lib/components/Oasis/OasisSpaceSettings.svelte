@@ -18,6 +18,7 @@
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let space: OasisSpace | null
   const config = useConfig()
@@ -114,9 +115,10 @@
   const removeSource = async (source: SpaceSource) => {
     if (!space) return
 
-    const confirmed = window.confirm(
-      `Are you sure you want to remove the source "${getSourceName(source)}"?`
-    )
+    const { closeType: confirmed } = await openDialog({
+      message: `Are you sure you want to remove the source "${getSourceName(source)}"?`
+    })
+
     if (!confirmed) return
 
     await space.updateData({ sources: space.dataValue.sources?.filter((s) => s.id !== source.id) })

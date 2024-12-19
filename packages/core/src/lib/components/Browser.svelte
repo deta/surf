@@ -158,6 +158,7 @@
   } from '@horizon/core/src/lib/service/ai/contextManager'
 
   import '$styles/app.scss'
+  import { DIALOG_OASIS_REF } from './Core/Dialog/Dialog.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -236,6 +237,7 @@
   tabsManager.attachAIService(aiService)
   oasis.attachTabsManager(tabsManager)
   desktopManager.attachTabsManager(tabsManager)
+  DIALOG_OASIS_REF.set(oasis)
 
   const colorService = provideColorService(config, ColorMode.HSL)
   onDestroy(colorService.destroy)
@@ -1268,7 +1270,10 @@
       return
     }
 
-    const confirmed = await confirm('Are you sure you want to delete this page from your stuff?')
+    const { closeType: confirmed } = await openDialog({
+      message: 'Are you sure you want to delete this page from your stuff?'
+    })
+
     if (!confirmed) {
       return
     }
@@ -3668,6 +3673,7 @@
 <!-- {/if} -->
 
 <div
+  id="app-contents"
   class="app-contents antialiased w-screen h-screen will-change-auto transform-gpu relative drag flex flex-col bg-blue-300/40 dark:bg-gray-950/80"
   class:drag={$showScreenshotPicker === false}
   class:no-drag={$showScreenshotPicker === true}

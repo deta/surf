@@ -19,6 +19,7 @@
   import { minifyHTML, sanitizeHTML } from '@horizon/web-parser/src/utils'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let activeBrowserTab: BrowserTab
   export let activeTab: Tab
@@ -196,7 +197,11 @@
       log.error('Failed to create app:', error)
       inputValue = savedInputValue
       editor.setContent(savedInputValue)
-      alert(error)
+      openDialog({
+        title: 'Failed to create app!',
+        message: `${error}`,
+        actions: [{ title: 'Close', type: 'reset' }]
+      })
     } finally {
       fetching = false
     }
@@ -226,7 +231,11 @@
   onMount(async () => {
     if (!appId) {
       log.error('no app id')
-      alert('No app id')
+      await openDialog({
+        title: 'No app id',
+        message: '',
+        actions: [{ title: 'Close', type: 'reset' }]
+      })
     }
     const history = await ai.getChat(appId)
     log.debug('history', history)

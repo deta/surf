@@ -51,6 +51,7 @@
   import PromptItem from './PromptItem.svelte'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
   import { type ContextItem } from '@horizon/core/src/lib/service/ai/contextManager'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let chat: AIChat
   export let inputValue = ''
@@ -430,9 +431,15 @@
     const lastQuery = lastResponse.query
     const lastRole = lastResponse.role
 
-    const confirmed = await confirm(
-      'Removing the screenshot will clear the chat and rerun the chat message without the screenshot in the context. \n\nAre you sure you want to proceed?'
-    )
+    const { closeType: confirmed } = await openDialog({
+      message:
+        'Removing the screenshot will clear the chat and rerun the chat message without the screenshot in the context. \n\nAre you sure you want to proceed?',
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'OK', type: 'submit' }
+      ]
+    })
+
     if (!confirmed) {
       return
     }

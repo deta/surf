@@ -203,10 +203,13 @@
       }
 
       const isInSpace = $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox'
-      await oasis.removeResourcesFromSpaceOrOasis(
+      const res = await oasis.removeResourcesFromSpaceOrOasis(
         resourceIds,
         isInSpace ? $selectedSpaceId : undefined
       )
+      if (!res) {
+        return
+      }
 
       if (resourceIds.length > 1) {
         await telemetry.trackMultiSelectResourceAction(

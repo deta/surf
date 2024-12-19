@@ -13,6 +13,7 @@
   import { ChangeContextEventTrigger, OpenInMiniBrowserEventFrom } from '@horizon/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { clamp } from '../../../../../../dragcula/dist/utils/internal'
+  import { openDialog } from '../../Core/Dialog/Dialog.svelte'
 
   export let desktop: DesktopService
   export let newTabOverlayState: number = 0
@@ -67,10 +68,15 @@
     desktop.store()
   }
 
-  function handleResetHomescreen() {
-    const confirmed = confirm(
-      `Are you sure you want to reset your Desktop layout? This can't be undone. Your resources won't be deleted.`
-    )
+  async function handleResetHomescreen() {
+    const { closeType: confirmed } = await openDialog({
+      title: 'Reset Desktop',
+      message: `This can't be undone. <br>Your resources won't be deleted.`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Reset', type: 'submit', kind: 'danger' }
+      ]
+    })
     if (!confirmed) return
     desktop.setBackgroundImage(undefined)
     items.set([])
@@ -78,10 +84,15 @@
     toasts.success('Desktop reset successfully!')
   }
 
-  function handleResetBackgroundImage() {
-    const confirmed = confirm(
-      `Are you sure you want to reset your background? This can't be undone.`
-    )
+  async function handleResetBackgroundImage() {
+    const { closeType: confirmed } = await openDialog({
+      title: 'Remove Background',
+      message: `This can't be undone.`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Remove', type: 'submit', kind: 'danger' }
+      ]
+    })
     if (!confirmed) return
     desktop.setBackgroundImage(undefined)
     desktop.store()

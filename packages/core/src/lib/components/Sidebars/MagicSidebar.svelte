@@ -23,6 +23,10 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { AIChat, useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
+  import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
+  import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let inputValue = ''
 
@@ -57,9 +61,14 @@
     const messagesLength = ($activeChat?.responsesValue ?? []).length
 
     if (messagesLength > 0) {
-      const confirmed = await confirm(
-        'Are you sure you want to start a new chat? This will clear the current chat.'
-      )
+      const { closeType: confirmed } = await openDialog({
+        title: 'Start New Chat',
+        message: 'Are you sure you want to start a new chat? This will clear the current chat.',
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'OK', type: 'submit' }
+        ]
+      })
 
       if (!confirmed) {
         log.debug('User cancelled new chat')

@@ -6,6 +6,7 @@
   import { useLogScope } from '@horizon/utils'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
+  import { openDialog } from './Dialog/Dialog.svelte'
 
   export let resourceManager: ResourceManager
 
@@ -126,7 +127,11 @@
         const resource = await resourceManager.getResource(d.resource_id)
         if (!resource) {
           log.error('Resource with id ${d.resource_id} not found')
-          alert('Resource not found')
+          await openDialog({
+            title: 'Resource not found',
+            message: '',
+            actions: [{ title: 'Close', type: 'reset' }]
+          })
           return
         }
         hoveredResource.set(resource)
@@ -138,7 +143,12 @@
         const resource = await resourceManager.getResource(d.resource_id)
         if (!resource) {
           log.error('Resource with id ${d.resource_id} not found')
-          alert('Resource not found')
+          await openDialog({
+            title: 'Resource not found',
+            message: '',
+            actions: [{ title: 'Close', type: 'reset' }]
+          })
+
           return
         }
         clickedResource.set(resource)

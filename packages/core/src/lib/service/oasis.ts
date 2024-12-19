@@ -2,6 +2,7 @@ import { getContext, setContext, tick } from 'svelte'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
+import { openDialog } from '../components/Core/Dialog/Dialog.svelte'
 
 import {
   conditionalArrayItem,
@@ -532,9 +533,19 @@ export class OasisService {
     const confirmMessage =
       totalNumberOfReferences > 0
         ? `${validResourceIDs.length > 1 ? `These ${validResourceIDs.length} resources` : `This resource`} will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
-        : `This resource will be deleted permanently.`
+        : `${validResourceIDs.length > 1 ? 'These' : 'This'} resource${validResourceIDs.length > 1 ? 's' : ''} will be deleted permanently.`
 
-    const confirmed = !confirmAction || window.confirm(confirmMessage)
+    const { closeType: confirmed } = !confirmAction
+      ? { closeType: true }
+      : await openDialog({
+          title: `Delete ${validResourceIDs.length} Resource${validResourceIDs.length > 1 ? 's' : ''}`,
+          message: confirmMessage,
+          actions: [
+            { title: 'Cancel', type: 'reset' },
+            { title: 'Delete', type: 'submit', kind: 'danger' }
+          ]
+        })
+
     if (!confirmed) {
       return false
     }
@@ -615,7 +626,13 @@ export class OasisService {
     }
 
     const confirmMessage = `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${space?.dataValue.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
-    const confirmed = !confirmAction || window.confirm(confirmMessage)
+    const { closeType: confirmed } = !confirmAction
+      ? { closeType: true }
+      : await openDialog({
+          title: `Remove ${validResources.length} Resource${validResources.length > 1 ? 's' : ''}`,
+          message: confirmMessage
+        })
+
     if (!confirmed) {
       return false
     }

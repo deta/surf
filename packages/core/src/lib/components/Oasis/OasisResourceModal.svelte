@@ -44,6 +44,7 @@
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let resource: Resource
   export let active: boolean = true
@@ -164,7 +165,10 @@
   const handleAnnotationDelete = async (e: CustomEvent<string>) => {
     log.debug('Annotation delete', e.detail)
 
-    const confirmed = window.confirm('Are you sure you want to delete the annotation?')
+    const { closeType: confirmed } = await openDialog({
+      message: 'Are you sure you want to delete the annotation?'
+    })
+
     if (!confirmed) return
 
     log.debug('Deleting annotation', e.detail)

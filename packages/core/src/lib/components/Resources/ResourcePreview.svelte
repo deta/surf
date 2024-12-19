@@ -86,6 +86,7 @@
   } from '@horizon/core/src/lib/components/Oasis/utils/select'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
   import { WebParser } from '@horizon/web-parser'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -773,7 +774,11 @@
         updatedAt: resource.updatedAt
       })
     } else {
-      alert('Failed to open file')
+      openDialog({
+        title: 'Resource not found',
+        message: '',
+        actions: [{ title: 'Close', type: 'reset' }]
+      })
     }
   }
 

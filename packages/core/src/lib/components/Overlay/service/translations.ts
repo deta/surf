@@ -236,7 +236,7 @@ export const tabToTeletypeItem = (tab: TabPage) => {
   return {
     id: `tab-${tab.id}`,
     name: tab.title,
-    icon: `favicon;;https://www.google.com/s2/favicons?domain=${tab.currentLocation}&sz=48`,
+    icon: `favicon;;${tab.currentLocation}`,
     execute: TeletypeAction.OpenTab,
     section: 'Open Tabs',
     selectPriority: ActionSelectPriority.NORMAL,

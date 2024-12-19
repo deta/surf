@@ -18,6 +18,7 @@
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
@@ -85,7 +86,10 @@
       return
     }
 
-    const confirmed = window.confirm('Are you sure you want to delete the annotation?')
+    const { closeType: confirmed } = await openDialog({
+      message: 'Are you sure you want to delete the annotation?'
+    })
+
     if (!confirmed) return
 
     const annotationData = await annotation.getParsedData()

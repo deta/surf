@@ -22,6 +22,7 @@
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { HTMLDragArea } from '@horizon/dragcula'
   import { fade, fly } from 'svelte/transition'
+  import { openDialog } from '../Dialog/Dialog.svelte'
 
   export let horizontalTabs = false
 
@@ -166,7 +167,15 @@
 
   const handleDeleteSpace = async (space: OasisSpace) => {
     try {
-      const confirmed = confirm(`Are you sure you want to delete ${space.dataValue.folderName}?`)
+      const { closeType: confirmed } = await openDialog({
+        icon: `space;;${space.id}`,
+        message: `Are you sure you want to delete "${space.dataValue.folderName}?"`,
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'Delete', type: 'submit', kind: 'danger' }
+        ]
+      })
+
       if (!confirmed) {
         return
       }

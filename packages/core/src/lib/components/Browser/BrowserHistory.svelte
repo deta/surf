@@ -7,6 +7,7 @@
   import BrowserHistoryEntry from './BrowserHistoryEntry.svelte'
   import { Icon } from '@horizon/icons'
   import { useToasts } from '../../service/toast'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let tab: TabHistory
   export let active: boolean = false
@@ -77,9 +78,14 @@
 
   const handleClearHistory = async () => {
     try {
-      const confirmed = window.confirm(
-        'Are you sure you want to clear your history? This cannot be undone.'
-      )
+      const { closeType: confirmed } = await openDialog({
+        title: 'Clear History',
+        message: 'Are you sure you want to clear your history? This cannot be undone.',
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'OK', type: 'submit', kind: 'danger' }
+        ]
+      })
       if (!confirmed) {
         return
       }

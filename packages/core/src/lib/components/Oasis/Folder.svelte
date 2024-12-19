@@ -56,6 +56,7 @@
 
   import { onboardingSpace } from '../../constants/examples'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let folder: OasisSpace
   export let selected: boolean
@@ -211,7 +212,14 @@
 
   const handleDelete = async () => {
     try {
-      const confirmed = confirm(`Are you sure you want to delete ${folder.dataValue.folderName}?`)
+      const { closeType: confirmed } = await openDialog({
+        icon: `space;;${folder.id}`,
+        message: `Are you sure you want to delete "${folder.dataValue.folderName}?"`,
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'Delete', type: 'submit', kind: 'danger' }
+        ]
+      })
       if (!confirmed) {
         return
       }

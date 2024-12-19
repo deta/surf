@@ -97,6 +97,7 @@
   import TabItem from '../Core/Tab.svelte'
   import ContextTabsBar from './ContextTabsBar.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let spaceId: string
   export let active: boolean = false
@@ -1109,9 +1110,9 @@
   }
 
   const handleDeleteAutoSaved = async () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete all auto-saved resources from Your Stuff?'
-    )
+    const { closeType: confirmed } = await openDialog({
+      message: 'Are you sure you want to delete all auto-saved resources from Your Stuff?'
+    })
     if (!confirmed) {
       return
     }
@@ -1140,9 +1141,10 @@
       return
     }
 
-    const confirmed = window.confirm(
-      'Are you sure you want to clear all resources from this space?'
-    )
+    const { closeType: confirmed } = await openDialog({
+      message: 'Are you sure you want to clear all resources from this space?'
+    })
+
     if (!confirmed) {
       return
     }
@@ -1161,13 +1163,19 @@
     shouldDeleteAllResources: boolean = false,
     abortSpaceCreation: boolean = false
   ) => {
-    const confirmed = window.confirm(
-      abortSpaceCreation
+    const { closeType: confirmed } = await openDialog({
+      message: abortSpaceCreation
         ? 'Are you sure you want to abort the creation of this context?'
         : shouldDeleteAllResources
           ? 'Are you sure you want to delete this context and all of its resources?'
-          : 'Are you sure you want to delete this context?'
-    )
+          : 'Are you sure you want to delete this context?',
+      actions: abortSpaceCreation
+        ? undefined
+        : [
+            { title: 'Cancel', type: 'reset' },
+            { title: 'Delete', type: 'submit', kind: 'danger' }
+          ]
+    })
 
     if (!confirmed) {
       return false
