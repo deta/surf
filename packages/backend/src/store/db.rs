@@ -303,7 +303,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn fail_active_post_processing_jobs(&self, created_at: &DateTime<Utc>) -> BackendResult<()> {
+    pub fn fail_active_post_processing_jobs(
+        &self,
+        created_at: &DateTime<Utc>,
+    ) -> BackendResult<()> {
         let failed = ResourceProcessingState::Failed {
             message: "job terminated without completion".to_owned(),
         };
@@ -326,7 +329,8 @@ impl Database {
                 AND content_hash = post_processing_jobs.content_hash
             )"#;
 
-        self.conn.execute(update_query, rusqlite::params![failed, created_at])?;
+        self.conn
+            .execute(update_query, rusqlite::params![failed, created_at])?;
         Ok(())
     }
 
@@ -1593,7 +1597,7 @@ impl Database {
         let escaped_keyword = escape_fts_query(keyword);
 
         let base_query = "
-            SELECT DISTINCT M.*, R.* 
+            SELECT DISTINCT M.*, R.*
             FROM resource_metadata M
             LEFT JOIN resources R ON M.resource_id = R.id
             WHERE (
@@ -1989,6 +1993,41 @@ impl Database {
         let mut results = Vec::new();
         for item in items {
             results.push(item?);
+        }
+        Ok(results)
+    }
+
+    pub fn search_history_by_hostname(&self, url: &str) -> BackendResult<Vec<HistoryEntry>> {
+        let query = "SELECT id, entry_type, url, title, search_query, created_at, updated_at
+                    FROM history_entries
+                    WHERE url LIKE ?1 OR url LIKE ?2 OR url LIKE ?3 OR url LIKE ?4
+                    ORDER BY created_at DESC";
+
+        let mut stmt = self.conn.prepare(query)?;
+        let https_prefix = format!("%{}%", url);
+        let http_prefix = format!("http://{}%", url);
+        let www_https_prefix = format!("https://www.{}%", url);
+        let www_http_prefix = format!("http://www.{}%", url);
+
+        let history_entries = stmt.query_map(
+            rusqlite::params![https_prefix, http_prefix, www_https_prefix, www_http_prefix],
+            |row| {
+                Ok(HistoryEntry {
+                    id: row.get(0)?,
+                    entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
+                        .unwrap(),
+                    url: row.get(2)?,
+                    title: row.get(3)?,
+                    search_query: row.get(4)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
+                })
+            },
+        )?;
+
+        let mut results = Vec::new();
+        for entry in history_entries {
+            results.push(entry?);
         }
         Ok(results)
     }
@@ -2563,7 +2602,7 @@ impl Database {
             None => "".to_string(),
         };
         tx.execute(
-            "INSERT INTO ai_session_messages (ai_session_id, role, content, truncatable, is_context, msg_type, sources, created_at) 
+            "INSERT INTO ai_session_messages (ai_session_id, role, content, truncatable, is_context, msg_type, sources, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             rusqlite::params![
                 msg.ai_session_id,

@@ -1,6 +1,9 @@
 import { getWebRequestManager } from './webRequestManager'
 
-const CSP_API_ENDPOINTS = [import.meta.env.P_VITE_API_BASE ?? 'https://deta.space', 'https://telemetry.deta.surf']
+const CSP_API_ENDPOINTS = [
+  import.meta.env.P_VITE_API_BASE ?? 'https://deta.space',
+  'https://telemetry.deta.surf'
+]
 
 const CSP_DIRECTIVES = [
   // Only allow resources to be loaded from the same origin (domain)

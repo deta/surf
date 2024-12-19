@@ -247,6 +247,7 @@ export class SFFS {
     }
 
     const result = this.convertCompositeResourceToResource(composite)
+
     return result
   }
 
@@ -591,6 +592,13 @@ export class SFFS {
       prefix,
       since
     )
+    const parsed = this.parseData<HistoryEntry[]>(raw)
+    return parsed ?? []
+  }
+
+  async searchHistoryEntriesByHostname(url: string): Promise<HistoryEntry[]> {
+    this.log.debug('searching history entries by hostname prefix', url)
+    const raw = await this.backend.js__store_search_history_entries_by_hostname(url)
     const parsed = this.parseData<HistoryEntry[]>(raw)
     return parsed ?? []
   }

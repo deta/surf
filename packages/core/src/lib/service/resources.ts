@@ -884,6 +884,11 @@ export class ResourceManager {
     return this.sffs.getHistoryEntries()
   }
 
+  async findHistoryEntriesByHostname(url: string) {
+    const result = await this.sffs.searchHistoryEntriesByHostname(url)
+    return result
+  }
+
   addAnnotationToLoadedResource(resourceId: string, annotation: ResourceAnnotation) {
     const loadedResources = get(this.resources)
     const loadedResource = loadedResources.find((r) => r.id === resourceId)

@@ -93,6 +93,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_search_history_entries_by_hostname_prefix,
     )?;
     cx.export_function(
+        "js__store_search_history_entries_by_hostname",
+        js_search_history_entries_by_hostname,
+    )?;
+    cx.export_function(
         "js__store_search_history_entries_by_url_and_title",
         js_search_history_entries_by_url_and_title,
     )?;
@@ -810,6 +814,18 @@ fn js_search_history_entries_by_hostname_prefix(mut cx: FunctionContext) -> JsRe
         WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByHostnamePrefix(
             prefix, since,
         )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_search_history_entries_by_hostname(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let url = cx.argument::<JsString>(1)?.value(&mut cx);
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByHostname(url)),
         deferred,
     );
 

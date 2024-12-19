@@ -39,6 +39,7 @@ export enum TeletypeAction {
   ToggleSidebar = 'TOGGLE_SIDEBAR',
   Reload = 'TOGGLE_RELOAD',
   ShowHistoryTab = 'SHOW_HISTORY',
+  RemoveHostnameSuggestion = 'REMOVE_HOSTNAME_SUGGESTION',
   ZoomIn = 'ZOOM_IN',
   ZoomOut = 'ZOOM_OUT',
   ResetZoom = 'RESET_ZOOM'
@@ -73,6 +74,7 @@ export const TeletypeActionDisplayLabels = {
   [TeletypeAction.ToggleSidebar]: 'Toggle Sidebar',
   [TeletypeAction.Reload]: 'Reload',
   [TeletypeAction.ShowHistoryTab]: 'Show History',
+  [TeletypeAction.RemoveHostnameSuggestion]: 'Remove Hostname Suggestion',
   [TeletypeAction.ZoomIn]: 'Zoom In',
   [TeletypeAction.ZoomOut]: 'Zoom Out',
   [TeletypeAction.ResetZoom]: 'Reset Zoom'

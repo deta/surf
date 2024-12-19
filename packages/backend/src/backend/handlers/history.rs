@@ -64,6 +64,10 @@ impl Worker {
         Ok(unique_results)
     }
 
+    pub fn search_history_by_hostname(&mut self, url: String) -> BackendResult<Vec<HistoryEntry>> {
+        self.db.search_history_by_hostname(&url)
+    }
+
     pub fn search_history_by_url_and_title(
         &mut self,
         prefix: String,
@@ -102,6 +106,10 @@ pub fn handle_history_message(
         }
         HistoryMessage::SearchHistoryEntriesByHostnamePrefix(prefix, since) => {
             let result = worker.search_history_by_hostname_prefix(prefix, since);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        HistoryMessage::SearchHistoryEntriesByHostname(url) => {
+            let result = worker.search_history_by_hostname(url);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::SearchHistoryEntriesByUrlAndTitle(prefix, since) => {

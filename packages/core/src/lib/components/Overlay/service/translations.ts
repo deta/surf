@@ -187,6 +187,12 @@ export const hostnameHistoryEntryToTeletypeItem = (entry: HistoryEntry) => {
         name: 'Copy URL',
         icon: 'copy',
         handler: createExecutioner(TeletypeAction.CopyURL, { url })
+      },
+      {
+        id: 'remove-history-entry',
+        name: 'Remove from History',
+        icon: 'trash',
+        handler: createExecutioner(TeletypeAction.RemoveHostnameSuggestion, { entry })
       }
     ],
     handler: createExecutioner(TeletypeAction.NavigateSuggestionHostname, { entry })

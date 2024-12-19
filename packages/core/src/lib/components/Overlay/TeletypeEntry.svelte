@@ -27,6 +27,7 @@
   import { get, readable, writable } from 'svelte/store'
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
   import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
+
   import {
     copyToClipboard,
     parseStringIntoBrowserLocation,
@@ -382,6 +383,19 @@
     dispatch('open-url', validUrl)
   }
 
+  const handleRemoveHostnameSuggestion = async (payload: { entry: HistoryEntry }) => {
+    try {
+      const entries = await resourceManager.findHistoryEntriesByHostname(payload.entry.url || '')
+      for (const entry of entries) {
+        await resourceManager.deleteHistoryEntry(entry.id)
+      }
+
+      teletype.close()
+    } catch (error) {
+      log.error('Failed to delete history entries:', error)
+    }
+  }
+
   const handleShowCreate = async () => {
     if (teletype) {
       teletype.executeAction('create')
@@ -415,6 +429,7 @@
       [TeletypeAction.ExecuteBrowserCommand]: handleBrowserCommand,
       [TeletypeAction.Create]: handleCreate,
       [TeletypeAction.Ask]: handleAsk,
+      [TeletypeAction.RemoveHostnameSuggestion]: handleRemoveHostnameSuggestion,
       [TeletypeAction.CreateSpace]: handleCreateSpace,
       [TeletypeAction.Reload]: () => dispatch('reload'),
       [TeletypeAction.CloseTab]: () => dispatch('close-active-tab'),
