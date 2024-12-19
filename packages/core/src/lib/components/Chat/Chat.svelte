@@ -196,7 +196,7 @@
     })
   })
 
-  const updateChatInput = (text: string, focus = true) => {
+  export const updateChatInput = (text: string, focus = true) => {
     inputValue = text
     editor.setContent(text)
 
@@ -936,7 +936,7 @@
     {/if}
 
     <div class="overflow-hidden">
-      {#if $showExamplePrompts && $promptsContextItem}
+      {#if $showExamplePrompts && $promptsContextItem && ($filteredBuiltInPrompts.length > 0 || $filteredExamplePrompts.length > 0 || $generatingPrompts)}
         <div
           transition:fly={{ y: 200 }}
           class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto no-scrollbar z-0"

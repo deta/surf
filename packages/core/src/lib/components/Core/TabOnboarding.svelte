@@ -255,7 +255,7 @@
         </p>
       </div>
       <div
-        class="flex flex-col my-8 gap-4 w-full max-w-7xl aspect-video"
+        class="flex flex-col my-8 gap-4 w-full max-w-7xl max-h-full aspect-video"
         style="z-index: 2147483647;"
       >
         <webview

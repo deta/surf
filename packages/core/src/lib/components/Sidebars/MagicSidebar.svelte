@@ -78,6 +78,8 @@
     }
 
     await handleClearChat()
+
+    log.debug('Starting new chat with query', query)
     chatComponent?.updateChatInput(query)
     chatComponent?.submitChatMessage('active')
   }

@@ -10,6 +10,7 @@
     'delete-space': DeleteSpaceEvent
     'handled-drop': void
     'close-oasis': void
+    'open-space-and-chat': { spaceId: string }
   }
 </script>
 
@@ -400,6 +401,11 @@
     }
   }
 
+  const handleOpenSpaceAndChat = (e: CustomEvent<{ spaceId: string }>) => {
+    dispatch('open-space-and-chat', e.detail)
+    dispatch('close-oasis')
+  }
+
   const checkOverflowPinned = () => {
     if (!pinnedList) return
     if (pinnedList.scrollHeight > pinnedList.clientHeight) {
@@ -491,7 +497,7 @@
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
             on:use-as-context={() => handleUseAsContext(folder.id)}
-            on:open-space-and-chat
+            on:open-space-and-chat={handleOpenSpaceAndChat}
             on:Drop
             on:editing-start={handleEditingStart}
             on:editing-end={handleEditingEnd}
@@ -573,7 +579,7 @@
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
             on:use-as-context={() => handleUseAsContext(folder.id)}
-            on:open-space-and-chat
+            on:open-space-and-chat={handleOpenSpaceAndChat}
             on:Drop
             on:editing-start={handleEditingStart}
             on:editing-end={handleEditingEnd}

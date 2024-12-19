@@ -531,7 +531,7 @@ export class ContextManager {
     }
 
     const item = new ContextItemResource(this, resource)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, trigger, index)
   }
 
   async addSpace(
@@ -547,7 +547,7 @@ export class ContextManager {
     }
 
     const item = new ContextItemSpace(this, space)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, trigger, index)
   }
 
   async addTab(

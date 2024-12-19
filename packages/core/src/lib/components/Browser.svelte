@@ -2213,9 +2213,9 @@
   }
 
   const handleOpenSpaceAndChat = async (e: CustomEvent<ChatWithSpaceEvent>) => {
-    const { spaceId, text = '' } = e.detail
+    let { spaceId, text = '' } = e.detail
 
-    log.debug('create chat with space', spaceId)
+    log.debug('create chat with space', spaceId, text)
 
     const space = await oasis.getSpace(spaceId)
 
@@ -2225,36 +2225,48 @@
       return
     }
 
-    // When the user drops the onboarding space into the chat we start the onboarding
-    const ONBOARDING_SPACE_NAME = onboardingSpace.name
-    if (space.dataValue.folderName === ONBOARDING_SPACE_NAME) {
-      chatContext.addSpace(space, PageChatUpdateContextEventTrigger.Onboarding)
-      return
-    }
+    openRightSidebarTab('chat')
 
     let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
     if (tab) {
+      log.debug('Found existing space tab', tab.id)
       tabsManager.makeActive(tab.id)
-    } else if (!tab) {
-      tab = await tabsManager.addSpaceTab(space, { active: true })
+      await chatContext.onlyUseTabInContext(tab.id)
+    } else {
+      // When the user drops the onboarding space into the chat we start the onboarding
+      const ONBOARDING_SPACE_NAME = onboardingSpace.name
+      const isOnboarding = space.dataValue.folderName === ONBOARDING_SPACE_NAME
+
+      log.debug('Adding space to chat context', space, isOnboarding)
+      const spaceContextItem = await chatContext.addSpace(
+        space,
+        isOnboarding
+          ? PageChatUpdateContextEventTrigger.Onboarding
+          : PageChatUpdateContextEventTrigger.Onboarding
+      )
+
+      if (isOnboarding) {
+        await chatContext.removeAllExcept(spaceContextItem.id)
+      }
+
+      if (isOnboarding && !text) {
+        text = onboardingSpace.query
+      }
     }
 
-    if (tab) {
-      openRightSidebarTab('chat')
-      await chatContext.onlyUseTabInContext(tab.id)
+    /* else if (!tab) {
+      tab = await tabsManager.addSpaceTab(space, { active: true })
+    }*/
 
-      // Wait for the chat to be ready
-      await wait(500)
+    // Wait for the chat to be ready
+    await wait(500)
 
-      if (magicSidebar) {
-        magicSidebar.startChatWithQuery(text)
-      } else {
-        log.error('Magic sidebar not found')
-        toasts.error('Failed to start chat with space')
-      }
+    if (magicSidebar) {
+      log.debug('Inserting query into chat', text)
+      magicSidebar.startChatWithQuery(text)
     } else {
-      log.error('Failed to open space as tab')
-      toasts.error('Failed to open space')
+      log.error('Magic sidebar not found')
+      toasts.error('Failed to start chat with space')
     }
   }
 
@@ -2321,6 +2333,10 @@
 
     openRightSidebarTab('chat')
 
+    await tick()
+
+    chatContext.clear()
+
     const attemptInsertQuery = (retries = 3) => {
       if (magicSidebar) {
         magicSidebar.insertQueryIntoChat(query)
@@ -2347,14 +2363,20 @@
   const handleOpenOnboardingTabs = async (e: CustomEvent<string[]>) => {
     const tabUrls = e.detail
     tabUrls.forEach(async (url) => {
-      const existingTab = $tabs.find(
-        (tab) => tab.type === 'page' && (tab.initialLocation === url || tab.currentLocation === url)
-      )
+      let existingTab =
+        $tabs.find(
+          (tab) =>
+            tab.type === 'page' && (tab.initialLocation === url || tab.currentLocation === url)
+        ) ?? null
       if (existingTab) {
         tabsManager.makeActive(existingTab.id)
       } else {
-        await tabsManager.addPageTab(url, { active: true })
+        existingTab = await tabsManager.addPageTab(url, { active: true })
         await wait(250)
+      }
+
+      if (existingTab) {
+        await chatContext.addTab(existingTab.id)
       }
     })
   }

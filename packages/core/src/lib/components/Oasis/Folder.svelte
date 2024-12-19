@@ -313,6 +313,10 @@
     dispatch('use-as-context', folder.id)
   }
 
+  const handleChatWithSpace = () => {
+    dispatch('open-space-and-chat', { spaceId: folder.id })
+  }
+
   const handleKeyDown = async (e: KeyboardEvent) => {
     e.stopPropagation()
 
@@ -422,7 +426,7 @@
               type: 'action',
               icon: 'chat',
               text: 'Open in Chat',
-              action: () => dispatch('open-space-and-chat', { spaceId: folder.id })
+              action: () => handleChatWithSpace()
             },
             { type: 'separator' },
             ...conditionalArrayItem(allowPinning, {
