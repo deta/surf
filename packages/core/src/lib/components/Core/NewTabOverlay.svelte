@@ -723,6 +723,7 @@
                     on:batch-remove={handleResourceRemove}
                     on:handled-drop={handlePostDropOnSpace}
                     on:created-space={handleCreatedSpace}
+                    on:close={closeOverlay}
                     on:seekToTimestamp
                     on:highlightWebviewText
                     on:open-space-and-chat

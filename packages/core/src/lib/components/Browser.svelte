@@ -1657,7 +1657,15 @@
         for (const id of selectedTabIds) {
           await chatContext.addTab(id)
         }
-      } else if ($desktopVisible) {
+
+        return
+      }
+
+      if ($chatContextItems.length > 0) {
+        return
+      }
+
+      if ($desktopVisible) {
         chatContext.clear()
         await chatContext.addActiveSpaceContext()
       } else if (tab) {
@@ -2225,8 +2233,6 @@
       return
     }
 
-    openRightSidebarTab('chat')
-
     let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
     if (tab) {
       log.debug('Found existing space tab', tab.id)
@@ -2245,18 +2251,16 @@
           : PageChatUpdateContextEventTrigger.Onboarding
       )
 
-      if (isOnboarding) {
-        await chatContext.removeAllExcept(spaceContextItem.id)
-      }
+      await chatContext.removeAllExcept(spaceContextItem.id)
 
       if (isOnboarding && !text) {
         text = onboardingSpace.query
       }
     }
 
-    /* else if (!tab) {
-      tab = await tabsManager.addSpaceTab(space, { active: true })
-    }*/
+    await tick()
+
+    openRightSidebarTab('chat')
 
     // Wait for the chat to be ready
     await wait(500)

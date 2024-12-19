@@ -702,8 +702,9 @@
       dispatch('open', resourceToOpen)
     } else {
       log.debug('opening resource in new tab', resourceToOpen)
+      const active = !isModKeyPressed(e) || e.shiftKey
       openResourceAsTab(resourceToOpen, {
-        active: !isModKeyPressed(e) || e.shiftKey,
+        active: active,
         trigger:
           origin === 'homescreen'
             ? CreateTabEventTrigger.Homescreen
@@ -711,6 +712,10 @@
               ? CreateTabEventTrigger.HomescreenSpace
               : CreateTabEventTrigger.OasisItem
       })
+
+      if (active) {
+        tabsManager.showNewTabOverlay.set(0)
+      }
     }
 
     resourceManager.telemetry.trackOpenResource(

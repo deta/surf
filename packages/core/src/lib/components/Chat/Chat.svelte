@@ -34,7 +34,7 @@
     JumpToWebviewTimestampEvent,
     HighlightWebviewTextEvent
   } from '../../types/browser.types'
-  import { DragTypeNames, type DragTypes } from '../../types'
+  import { DragTypeNames, SpaceEntryOrigin, type DragTypes } from '../../types'
 
   import { Resource, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
@@ -52,6 +52,7 @@
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
   import { type ContextItem } from '@horizon/core/src/lib/service/ai/contextManager'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
 
   export let chat: AIChat
   export let inputValue = ''
@@ -77,6 +78,7 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabsManager = useTabsManager()
+  const oasis = useOasis()
   const ai = useAI()
   const globalMiniBrowser = useGlobalMiniBrowser()
 
@@ -249,6 +251,14 @@
     const resource = await resourceManager.createResourceNote(content, {
       name: truncate(cleanQuery(response.query), 50)
     })
+
+    if (tabsManager.activeScopeIdValue) {
+      await oasis.addResourcesToSpace(
+        tabsManager.activeScopeIdValue,
+        [resource.id],
+        SpaceEntryOrigin.ManuallyAdded
+      )
+    }
 
     savedChatResponses.update((responses) => {
       responses[response.id] = resource.id

@@ -126,6 +126,7 @@
     'handled-drop': void
     'created-space': OasisSpace
     'open-page-in-mini-browser': string
+    close: void
   }>()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -1350,6 +1351,7 @@
     if (!$space) return
 
     dispatch('open-space-and-chat', { spaceId: $space.id, text: $searchValue })
+    dispatch('close')
     searchValue.set('')
   }
 

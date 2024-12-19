@@ -11,8 +11,11 @@ import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './
 import {
   PageChatUpdateContextEventAction,
   PageChatUpdateContextEventTrigger,
-  PageChatUpdateContextItemType
+  PageChatUpdateContextItemType,
+  ResourceTagsBuiltInKeys,
+  ResourceTypes
 } from '@horizon/types'
+import { ResourceManager } from '../../resources'
 
 export class ContextItemActiveSpaceContext extends ContextItemBase {
   type = ContextItemTypes.ACTIVE_SPACE
@@ -125,9 +128,18 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
       )
       const scopedTabResourceIds = preparedResources.filter(Boolean).map((resource) => resource!.id)
 
-      // TODO: use resources from the home context i.e. all resources that are not in a context
+      const resourceIds = await this.manager.resourceManager.listResourceIDsByTags(
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+        ],
+        true
+      )
 
-      return scopedTabResourceIds
+      return [...new Set([...resourceIds, ...scopedTabResourceIds])]
     }
   }
 
