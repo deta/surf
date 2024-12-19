@@ -112,7 +112,7 @@
     class="w-[400px] p-6 relative"
     on:mouseenter={handleMouseEnter}
     on:mouseleave={handleMouseLeave}
-    aria-hidden="true"
+    role="none"
   >
     {#if showHeader}
       <div class="flex justify-between items-center mb-6">

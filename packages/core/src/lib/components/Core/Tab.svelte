@@ -652,7 +652,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
     ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
     : ''}
   style:position="relative"
-  aria-hidden="true"
+  role="none"
   use:HTMLDragItem.action={{}}
   on:DragStart={handleDragStart}
   on:DragEnd={handleDragEnd}
@@ -890,7 +890,7 @@ NOTE: need to disabled if for now and add back in future -> ONly apply to tabs f
         />
       {:else}
         <div
-          aria-hidden="true"
+          role="none"
           on:mousedown={() => {
             isEditing = true
             tick().then(() => {

@@ -107,7 +107,7 @@
         class:selected={index === selectedIndex}
         in:fade={{ duration: 200 }}
         on:click={(e) => executeAction(item, e)}
-        aria-hidden="true"
+        role="none"
       >
         {#if item.icon}
           <div class="icon">

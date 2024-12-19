@@ -67,7 +67,6 @@
           role="button"
           tabindex="0"
           on:click={handleTryChatWithTabs}
-          aria-hidden="true"
           style="background-image: url({chatBackground01}); background-size: cover; background-position: center;"
         >
           <p
@@ -82,7 +81,6 @@
           role="button"
           tabindex="0"
           on:click={handleTryChatWithSpace}
-          aria-hidden="true"
           style="background-image: url({chatBackground02}); background-size: cover; background-position: center;"
         >
           <p
@@ -97,7 +95,6 @@
           role="button"
           tabindex="0"
           on:click={handleTryChatWithPDF}
-          aria-hidden="true"
           style="background-image: url({chatBackground03}); background-size: cover; background-position: center;"
         >
           <p
@@ -112,7 +109,6 @@
           role="button"
           tabindex="0"
           on:click={handleTryChatWithYoutubeVideo}
-          aria-hidden="true"
           style="background-image: url({chatBackground04}); background-size: cover; background-position: center;"
         >
           <p

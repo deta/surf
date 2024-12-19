@@ -97,7 +97,7 @@
   class="folder-wrapper select-none {processing ? 'magic-in-progress' : ''}"
   data-vaul-no-drag
   data-folder-id={id}
-  aria-hidden="true"
+  role="none"
   use:HTMLDragZone.action={{
     accepts: (drag) => {
       if (
@@ -130,21 +130,21 @@
       ? 'bg-sky-100 dark:bg-gray-700'
       : 'hover:bg-sky-50 dark:hover:bg-gray-800'}"
     on:click={handleSpaceSelect}
-    aria-hidden="true"
+    role="none"
     use:hover={hovered}
     bind:this={previewContainer}
     data-tooltip-target={id === 'inbox' ? 'stuff-spaces-inbox' : ''}
   >
     <div class="folder-label">
       <div class="folder-leading">
-        <div class="space-icon-wrapper" aria-hidden="true">
+        <div class="space-icon-wrapper" role="none">
           <Icon name={icon} size="20px" />
         </div>
 
         <div
           class="folder-input text-[#244581] dark:text-sky-100/90"
           style={`width: ${inputWidth};`}
-          aria-hidden="true"
+          role="none"
           on:click|stopPropagation={handleSpaceSelect}
         >
           {name}

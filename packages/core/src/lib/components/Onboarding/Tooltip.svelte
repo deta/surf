@@ -105,7 +105,7 @@
     style={tooltipStyle}
     in:fade={{ duration: 400 }}
     out:fade={{ duration: 400 }}
-    aria-hidden="true"
+    role="none"
   >
     <div class="headline-container">
       <p>{$currentStep.headline}</p>

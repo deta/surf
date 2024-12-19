@@ -5,5 +5,10 @@ export default {
   // for more information about preprocessors
   preprocess: vitePreprocess({
     postCss: true
-  })
+  }),
+
+  onwarn: (warning, handler) => {
+    if (warning.code.toLowerCase().includes('a11y')) return
+    handler(warning)
+  }
 }

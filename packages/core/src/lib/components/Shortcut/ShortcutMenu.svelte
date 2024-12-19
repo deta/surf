@@ -155,13 +155,13 @@
         class="label"
         class:active={index === selectedSpaceIndex}
         on:click={() => handleClick(index)}
-        aria-hidden="true">{space.dataValue.folderName}</span
+        role="none">{space.dataValue.folderName}</span
       >
     {/each}
   {:else}
     <span>No spaces available</span>
   {/if}
-  <!-- <span class="label" aria-hidden="true"> Show All Spaces</span> -->
+  <!-- <span class="label" role="none"> Show All Spaces</span> -->
   {#if $isCreatingNewSpace}
     <div class="create-input-wrapper">
       <input
@@ -190,7 +190,7 @@
       </button> -->
     </div>
   {:else}
-    <span class="label" aria-hidden="true" on:click={startCreatingNewSpace} data-keep-open>
+    <span class="label" role="none" on:click={startCreatingNewSpace} data-keep-open>
       <Icon name="add" color="#7d7448" />
       Create new Context
     </span>

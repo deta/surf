@@ -265,7 +265,6 @@
   class:option={isOption}
   class:horizontal={horizontalItems.length > 0}
   on:click|stopPropagation={handleClick}
-  aria-hidden="true"
 >
   {#if horizontalItems.length > 0}
     <div
@@ -277,7 +276,7 @@
         {#each horizontalItems as item, index}
           {#if isItemInline(item)}
             <div
-              aria-hidden="true"
+              role="none"
               class="horizontal-item component permanent"
               class:selected={active && index === selectedItemIndex}
               on:mouseenter={() => handleHover(index)}
@@ -295,7 +294,7 @@
             </div>
           {:else if isItemInlineReplace(item) && active && index === selectedItemIndex}
             <div
-              aria-hidden="true"
+              role="none"
               class="horizontal-item component replace"
               on:mouseenter={() => handleHover(index)}
               on:click|stopPropagation={(e) => {
@@ -319,7 +318,7 @@
                 e.preventDefault()
                 handleClick(e, item)
               }}
-              aria-hidden="true"
+              role="none"
             >
               {#if item.icon}
                 <div class="item-icon">

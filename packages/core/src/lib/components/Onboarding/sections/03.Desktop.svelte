@@ -102,7 +102,7 @@
     <div
       class="absolute bottom-4 md:!bottom-8 left-0 w-full flex flex-col items-center gap-2 md:!gap-3"
     >
-      <div class="w-48 md:!w-64" on:click={handleTryDesktop} aria-hidden="true">
+      <div class="w-48 md:!w-64" on:click={handleTryDesktop} role="none">
         <Button>Open your Desktop</Button>
       </div>
       <p class="text-xs md:!text-sm text-sky-900/70">or use {modShortcut} + 1 to open.</p>

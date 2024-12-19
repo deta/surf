@@ -79,7 +79,7 @@
   })
 </script>
 
-<div class="relative w-full" style="height: 54px;" aria-hidden="true">
+<div class="relative w-full" style="height: 54px;" role="none">
   <div
     class="flex items-center -space-x-3 h-full relative"
     style="width: {$containerWidth}px; height: 64px; min-width: 100%;"

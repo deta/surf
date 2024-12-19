@@ -46,17 +46,19 @@ async function cleanupTempFiles() {
   try {
     const files = await readdir(join(app.getPath('temp'), CONFIG.appName))
     const now = Date.now()
-    await Promise.all(files.map(file =>
-      stat(join(app.getPath('temp'), CONFIG.appName, file))
-        .then(stats => {
-          if (now - stats.mtimeMs > 24 * 60 * 60 * 1000) {
-            return unlink(join(app.getPath('temp'), CONFIG.appName, file))
-          }
-          return Promise.resolve()
-        })
-        .catch(() => { })
-    ))
-  } catch { }
+    await Promise.all(
+      files.map((file) =>
+        stat(join(app.getPath('temp'), CONFIG.appName, file))
+          .then((stats) => {
+            if (now - stats.mtimeMs > 24 * 60 * 60 * 1000) {
+              return unlink(join(app.getPath('temp'), CONFIG.appName, file))
+            }
+            return Promise.resolve()
+          })
+          .catch(() => {})
+      )
+    )
+  } catch {}
 }
 
 const initializePaths = () => {

@@ -189,7 +189,7 @@
           on:click={handleOpenStuff}
           data-tooltip-target="open-stuff-desktop"
           data-tooltip-action="open-stuff"
-          aria-hidden="true">Open your Stuff ↑</button
+          role="none">Open your Stuff ↑</button
         >
       </div>
     {/if}

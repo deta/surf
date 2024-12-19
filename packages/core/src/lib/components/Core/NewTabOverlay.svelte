@@ -596,7 +596,7 @@
     style:view-transition-name="stuff-drawer-backdrop"
     data-dragcula-ignore
     class:showing={!$drawerHide}
-    aria-hidden="true"
+    role="none"
     on:click={handleCloseOverlay}
   ></div>
 {/if}

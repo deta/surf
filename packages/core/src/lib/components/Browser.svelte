@@ -3898,7 +3898,7 @@
               class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between min-w-[1ch]`}
               axis="horizontal"
               dragdeadzone="5"
-              aria-hidden="true"
+              role="none"
               bind:this={pinnedTabsScrollArea}
               use:useResizeObserver
               on:resize={() => {

@@ -67,7 +67,7 @@
 
   {#if $filteredSpaces && $filteredSpaces.length > 0}
     {#each $filteredSpaces as space, index}
-      <span class="label" on:click={() => handleClick(index)} aria-hidden="true"
+      <span class="label" on:click={() => handleClick(index)} role="none"
         >{space.dataValue.folderName}</span
       >
     {/each}

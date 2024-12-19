@@ -430,12 +430,7 @@
       {/if}
     {/if}
     <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-    <div
-      class="footer"
-      on:click={() => !isModal && openTeletype()}
-      tabindex={-1}
-      aria-hidden="true"
-    >
+    <div class="footer" on:click={() => !isModal && openTeletype()} tabindex={-1} role="none">
       <!-- svelte-ignore a11y-missing-attribute -->
       <div class="icon-wrapper">
         <Icon name="search" size="24" color="--(text)" />

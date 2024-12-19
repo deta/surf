@@ -38,7 +38,7 @@
     </div>
 
     <div class="flex flex-col items-center gap-4 mt-8">
-      <div class="w-48" on:click={handleTryStuff} aria-hidden="true">
+      <div class="w-48" on:click={handleTryStuff} role="none">
         <Button>Open Your stuff.</Button>
       </div>
 

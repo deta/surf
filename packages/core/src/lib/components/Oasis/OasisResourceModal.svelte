@@ -447,7 +447,7 @@
 <svelte:window on:keydown|capture={handleKeydown} />
 
 <div class="mini-browser-wrapper">
-  <div class="close-hitarea" on:click={close} aria-hidden="true">
+  <div class="close-hitarea" on:click={close} role="none">
     <span class="label">Click or ESC to close</span>
   </div>
   <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">

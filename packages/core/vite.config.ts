@@ -5,7 +5,15 @@ import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [Markdown({ mode: [Mode.MARKDOWN] }), svelte()],
+  plugins: [
+    Markdown({ mode: [Mode.MARKDOWN] }),
+    svelte({
+      onwarn: (warning, handler) => {
+        if (warning.code.toLowerCase().includes('a11y')) return
+        handler(warning)
+      }
+    })
+  ],
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points

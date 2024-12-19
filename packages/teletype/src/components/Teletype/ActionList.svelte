@@ -229,7 +229,7 @@
           {#if actions[0]?.horizontalParentAction}
             <button
               class="trailing"
-              aria-hidden="true"
+              role="none"
               on:click={() => {
                 dispatchTeletypeEvent({
                   execute: actions[0].horizontalParentAction,

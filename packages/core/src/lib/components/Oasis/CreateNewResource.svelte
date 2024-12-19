@@ -26,7 +26,7 @@
             <div
               class="create-trigger"
               on:click|preventDefault={() => handleClick(item.browserActionUrl)}
-              aria-hidden="true"
+              role="none"
             >
               <Create service={item.id} index={i} />
             </div>

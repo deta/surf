@@ -22,12 +22,11 @@
 </script>
 
 <div
-  aria-hidden="true"
   class="shine-border pill transform hover:translate-y-[-6px] group/pill"
   style="transform: rotate({pillProperties.rotate}deg); transform-origin: center center;"
 >
   <div
-    aria-hidden="true"
+    role="none"
     class="pill flex items-center gap-2 px-3 border-[1px] border-gray-200 dark:border-gray-600 {failed
       ? 'bg-red-50 hover:bg-red-100 dark:bg-red-800 dark:hover:bg-red-700'
       : 'bg-white dark:bg-gray-800'} z-0 shadow-md transform hover:translate-y-[-6px]"

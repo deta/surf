@@ -10,7 +10,7 @@
   class="color-icon"
   on:click
   style="--color1: {colors[0]}; --color2: {colors[1]}; --size: {size}; --min-size: {minSize}; {style}"
-  aria-hidden="true"
+  role="none"
 ></div>
 
 <style lang="scss">

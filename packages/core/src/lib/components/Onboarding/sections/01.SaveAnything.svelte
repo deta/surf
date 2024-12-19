@@ -183,7 +183,7 @@
               class="flex items-center justify-between rounded-xl p-4 shadow-md transition-transform hover:-translate-y-1 bg-white relative"
               style="transform: rotate({(remainingTabs.length - 1 - i) *
                 1.5}deg); transform-origin: center right; margin-top: {i * 0.1 * 8 + 10}px;"
-              aria-hidden="true"
+              role="none"
               transition:fly={{ y: -50, duration: 300, delay: i * 100, easing: quintOut }}
             >
               <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -201,7 +201,7 @@
                   ? 'tooltip-target'
                   : ''} relative"
                 on:click={() => handleSaveTab(tab)}
-                aria-hidden="true"
+                role="none"
               >
                 {#if $savingTabs[tab.url]}
                   <div class="flex items-center gap-2 animate-pulse">

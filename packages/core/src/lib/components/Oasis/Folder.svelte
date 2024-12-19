@@ -378,7 +378,7 @@
   class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
   data-vaul-no-drag
   data-folder-id={folder.id}
-  aria-hidden="true"
+  role="none"
   draggable={true}
   use:HTMLDragItem.action={{}}
   on:mouseup={(e) => {
@@ -449,7 +449,7 @@
       : 'hover:bg-sky-50 dark:hover:bg-gray-600'}"
     on:click={$editMode ? null : handleSpaceSelect}
     on:dblclick={handleDoubleClick}
-    aria-hidden="true"
+    role="none"
     use:hover={hovered}
     bind:this={previewContainer}
   >
@@ -458,7 +458,7 @@
       data-tooltip-target={$folderDetails.folderName === onboardingSpace.name ? 'demo-space' : ''}
     >
       <div class="folder-leading">
-        <div class="space-icon-wrapper" on:click|stopPropagation aria-hidden="true">
+        <div class="space-icon-wrapper" on:click|stopPropagation role="none">
           <SpaceIcon on:change={handleColorChange} {folder} disablePopoverTransition />
         </div>
 
@@ -477,7 +477,7 @@
           <div
             class="folder-input text-[#244581] dark:text-sky-100/90"
             style={`width: ${inputWidth};`}
-            aria-hidden="true"
+            role="none"
             on:click|stopPropagation={handleSpaceSelect}
           >
             {$folderDetails.folderName}

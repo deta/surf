@@ -24,7 +24,7 @@
   style={$containerHeight === null
     ? '--height-override: auto;'
     : `--height-override: ${$containerHeight}; --bg-url: url('${dotNoiseLightGrey}');`}
-  aria-hidden="true"
+  role="none"
 >
   <div class="bottom" style="gap: 0.25em;">
     <RecentsStack

@@ -213,7 +213,7 @@
     on:click={handleBackdropClick}
     in:fade={{ duration: 300 }}
     out:fade={{ duration: 300 }}
-    aria-hidden="true"
+    role="none"
   ></div>
 {/if}
 

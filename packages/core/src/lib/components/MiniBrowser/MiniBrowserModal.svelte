@@ -363,7 +363,7 @@
   class:global-modal={isGlobal}
   on:click|self={() => close()}
 >
-  <!-- <div class="close-hitarea" on:click={close} aria-hidden="true">
+  <!-- <div class="close-hitarea" on:click={close}>
     <span class="label">Click or ESC to close</span>
   </div> -->
   <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">

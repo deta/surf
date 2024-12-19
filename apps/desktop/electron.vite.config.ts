@@ -8,16 +8,17 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import obfuscator from 'rollup-plugin-obfuscator'
 import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 
-const disableAllObfuscation =
-  process.env.DISABLE_ALL_OBFUSCATION === 'true' || process.env.NODE_ENV === 'development'
+const IS_DEV = process.env.NODE_ENV === 'development'
+const disableAllObfuscation = process.env.DISABLE_ALL_OBFUSCATION === 'true' || IS_DEV
 
 // TODO: actually fix the warnings in the code
-const silenceWarnings = process.env.SILENCE_WARNINGS === 'true'
+const silenceWarnings = IS_DEV || process.env.SILENCE_WARNINGS === 'true'
 
 const svelteOptions = silenceWarnings
   ? {
-      onwarn: (_warning: any, _handler: any) => {
-        return
+      onwarn: (warning, handler) => {
+        if (warning.code.toLowerCase().includes('a11y')) return
+        handler(warning)
       }
     }
   : {}

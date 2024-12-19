@@ -56,7 +56,7 @@
   class:modal-large={$currentAction?.view === 'ModalLarge'}
   class:loading={$loading}
   on:click|self={handleClickOutside}
-  aria-hidden="true"
+  role="none"
 >
   <div class="inner-wrapper">
     <Notifications {teletype} />
