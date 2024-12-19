@@ -89,6 +89,8 @@
   } from '@horizon/core/src/lib/service/miniBrowser'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
+  import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 
   export let tab: TabPage
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
@@ -113,6 +115,7 @@
   const toasts = useToasts()
   const config = useConfig()
   const tabs = useTabsManager()
+  const oasis = useOasis()
   const ai = useAI()
   const miniBrowserService = useMiniBrowserService()
   const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`tab-${tab.id}`)
@@ -890,6 +893,14 @@
         name: truncate(annotationData.data.content_plain, 20)
       })
 
+      if (tabs.activeScopeIdValue) {
+        await oasis.addResourcesToSpace(
+          tabs.activeScopeIdValue,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+      }
+
       log.debug('Saved response', resource)
 
       toasts.success('Saved to My Stuff!')
@@ -942,6 +953,22 @@
         ...hashtags.map((tag) => ResourceTag.hashtag(tag))
       ]
     )
+
+    if (tabs.activeScopeIdValue) {
+      await oasis.addResourcesToSpace(
+        tabs.activeScopeIdValue,
+        [annotationResource.id],
+        SpaceEntryOrigin.ManuallyAdded
+      )
+
+      if (bookmarkedResource) {
+        await oasis.addResourcesToSpace(
+          tabs.activeScopeIdValue,
+          [bookmarkedResource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+      }
+    }
 
     log.debug('created annotation resource', annotationResource)
 

@@ -2844,6 +2844,8 @@
         return
       }
 
+      let savedToSpace = false
+
       if (data.state === 'completed') {
         const resource = await resourceManager.reloadResource(downloadData.resourceId)
         if (resource) {
@@ -2856,13 +2858,24 @@
             await window.backend.resources.triggerPostProcessing(downloadData.resourceId)
             resourceManager.reloadResource(downloadData.resourceId)
           }
+
+          if (tabsManager.activeScopeIdValue) {
+            await oasis.addResourcesToSpace(
+              tabsManager.activeScopeIdValue,
+              [resource.id],
+              SpaceEntryOrigin.ManuallyAdded
+            )
+            savedToSpace = true
+          }
         }
       }
 
       const toast = downloadToastsMap.get(data.id)
       if (toast) {
         if (data.state === 'completed') {
-          toast.success(`"${downloadData.filename}" saved to My Stuff!`)
+          toast.success(
+            `"${downloadData.filename}" saved to ${savedToSpace ? 'active Context' : 'My Stuff'}!`
+          )
         } else if (data.state === 'interrupted') {
           toast.error(`Download of "${downloadData.filename}" interrupted`)
         } else if (data.state === 'cancelled') {
