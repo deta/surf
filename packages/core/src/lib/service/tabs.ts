@@ -416,6 +416,7 @@ export class TabsManager {
     }
 
     await this.db.delete(tabId)
+    await this.ai.contextManager.removeTabItem(tabId)
 
     this.emit('deleted', tab)
 
