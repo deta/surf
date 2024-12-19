@@ -2117,18 +2117,18 @@
     toasts.success('Note created!')
   }
 
-  const handleCreateChatWithQuery = async (e: CustomEvent<string>) => {
+  const handleCreateChatWithQuery = async (e: CustomEvent<string | undefined>) => {
     const query = e.detail
     log.debug('create chat with query', query)
+
+    showNewTabOverlay.set(0)
 
     openRightSidebarTab('chat')
 
     await wait(500)
 
-    await chatContext.removeAllExcept($activeTabId)
-
     if (magicSidebar) {
-      magicSidebar.startChatWithQuery(query)
+      magicSidebar.startChatWithQuery(query ?? '')
     } else {
       log.error('Magic sidebar not found')
       toasts.error('Failed to start chat with query')
@@ -3657,13 +3657,7 @@
     on:close={() => {
       showNewTabOverlay.set(0)
     }}
-    on:ask={(e) => {
-      let query = e.detail
-      console.log('create chat')
-
-      showNewTabOverlay.set(0)
-      handleCreateChatWithQuery(e)
-    }}
+    on:ask={handleCreateChatWithQuery}
     on:open-url={(e) => {
       tabsManager.addPageTab(e.detail, {
         active: true,
