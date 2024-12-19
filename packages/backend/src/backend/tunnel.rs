@@ -140,6 +140,7 @@ impl WorkerTunnel {
         C: Context<'a>,
     {
         let mut run_migrations: i32 = 1;
+        let libuv_ch = neon::event::Channel::new(cx);
 
         for n in 0..NUM_WORKER_THREADS {
             let config = config.clone();
@@ -148,7 +149,7 @@ impl WorkerTunnel {
             let aiqueue_tx = aiqueue_tx.clone();
             let callback = Arc::clone(&event_bus_rx_callback);
             let surf_backend_health = surf_backend_health.clone();
-            let libuv_ch = neon::event::Channel::new(cx);
+            let libuv_ch = libuv_ch.clone();
             let thread_name = format!("W{n}");
 
             let _run_migrations = run_migrations > 0;

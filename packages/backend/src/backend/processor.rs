@@ -96,13 +96,17 @@ impl Processor {
         resource_id: &str,
         state: ResourceProcessingState,
     ) {
+        let (tx, rx) = crossbeam_channel::bounded(1);
+
         self.tunnel.worker_send_rust(
             WorkerMessage::ResourceMessage(ResourceMessage::SetPostProcessingState {
                 id: job_id.to_string(),
                 state: state.clone(),
             }),
-            None,
+            Some(tx.clone()),
         );
+        rx.recv().ok();
+
         self.tunnel.worker_send_rust(
             WorkerMessage::MiscMessage(MiscMessage::SendEventBusMessage(
                 EventBusMessage::ResourceProcessingMessage {
@@ -110,8 +114,9 @@ impl Processor {
                     status: state,
                 },
             )),
-            None,
+            Some(tx),
         );
+        rx.recv().ok();
     }
 
     fn handle_process_resource(&self, resource: CompositeResource) -> BackendResult<()> {
