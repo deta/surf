@@ -31,7 +31,6 @@ export class AIChat {
   id: string
   messages: Writable<AIChatMessage[]>
   currentParsedMessages: Writable<AIChatMessageParsed[]>
-  generatedPrompts: Writable<ChatPrompt[]>
   error: Writable<ChatError | null>
   status: Writable<'idle' | 'running' | 'error'>
 
@@ -53,7 +52,6 @@ export class AIChat {
     this.id = id
     this.messages = writable(messages)
     this.currentParsedMessages = writable([])
-    this.generatedPrompts = writable([])
     this.error = writable(null)
     this.status = writable('idle')
 
@@ -189,18 +187,7 @@ export class AIChat {
   }
 
   async getChatPrompts(contextItem: ContextItem) {
-    this.log.debug('Getting chat prompts for contextItem', contextItem)
-    const model = this.ai.selectedModelValue
-    const supportsJsonFormat = model.supports_json_format
-    if (!supportsJsonFormat) {
-      this.log.debug('Model does not support JSON format', model)
-      this.generatedPrompts.set([])
-      return null
-    }
-
-    const prompts = await contextItem.getPrompts()
-    this.generatedPrompts.set(prompts)
-    return prompts
+    return this.contextManager.getPromptsForItem(contextItem)
   }
 
   async isScreenshotNeededForPromptAndTab(

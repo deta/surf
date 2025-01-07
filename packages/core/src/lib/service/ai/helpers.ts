@@ -36,9 +36,15 @@ An answer text. The citation will follow one of more sentences if present like t
 </answer>
 `
 
+export const escapeXML = (xml: string) => {
+  return xml.replace(/&(?!(amp;|lt;|gt;|quot;|apos;))/g, '&amp;')
+}
+
 export const parseXML = (xml: string) => {
   const parser = new DOMParser()
-  const xmlDoc = parser.parseFromString(`<xml>${xml}</xml>`, 'text/xml')
+
+  const escapedXML = escapeXML(xml)
+  const xmlDoc = parser.parseFromString(`<xml>${escapedXML}</xml>`, 'text/xml')
 
   const parseError = xmlDoc.getElementsByTagName('parsererror')
   if (parseError.length > 0) {

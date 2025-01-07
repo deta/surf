@@ -14,6 +14,7 @@ import { ContextItemResource } from './resource'
 import { ContextItemSpace } from './space'
 import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './types'
 import type { ChatPrompt } from '../chat'
+import { useDebounce } from '@horizon/utils'
 
 export class ContextItemActiveTab extends ContextItemBase {
   type = ContextItemTypes.ACTIVE_TAB
@@ -24,6 +25,8 @@ export class ContextItemActiveTab extends ContextItemBase {
   item: Writable<ContextItemResource | ContextItemSpace | null>
 
   activeTab: Readable<Tab | null>
+
+  activeTabUnsub: () => void
 
   constructor(manager: ContextManager) {
     super(manager, ContextItemTypes.ACTIVE_TAB, 'browser')
@@ -41,7 +44,7 @@ export class ContextItemActiveTab extends ContextItemBase {
       }
 
       if (!this.currentTabValue || !this.compareTabs(activeTab, this.currentTabValue)) {
-        this.updateItem(activeTab)
+        this.debounceUpdateItem(activeTab)
         return activeTab
       } else {
         return null
@@ -65,10 +68,10 @@ export class ContextItemActiveTab extends ContextItemBase {
     })
 
     // This is a hack to make sure the derived function above actually runs
-    this.activeTab.subscribe(async (activeTab) => {
+    this.activeTabUnsub = this.activeTab.subscribe(async (activeTab) => {
       if (activeTab) {
+        this.log.debug('Active tab changed', activeTab.id)
         await tick()
-        // this.log.debug('Active tab changed', activeTab.id)
       }
     })
   }
@@ -107,9 +110,12 @@ export class ContextItemActiveTab extends ContextItemBase {
 
     this.currentTab.set(tab)
 
+    this.log.debug('Updating active tab', tab)
+
     await tick()
 
     if (tab.type === 'page') {
+      this.log.debug('Preparing page tab', tab)
       const resource = await this.manager.preparePageTab(tab)
       if (!resource) {
         this.log.error('Failed to prepare page tab', tab.id)
@@ -120,8 +126,13 @@ export class ContextItemActiveTab extends ContextItemBase {
       const newItem = new ContextItemResource(this.manager, resource, tab)
       this.item.set(newItem)
 
+      const showChatSidebar = this.manager.ai.showChatSidebarValue
+      if (showChatSidebar) {
+        this.manager.getPromptsForItem(newItem)
+      }
+
       // Only track if the item is new and a completely different tab
-      if (existingItem && tab.id !== existingTab?.id) {
+      if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
         this.manager.telemetry.trackPageChatContextUpdate(
           PageChatUpdateContextEventAction.ActiveChanged,
           this.manager.itemsValue.length,
@@ -131,6 +142,7 @@ export class ContextItemActiveTab extends ContextItemBase {
         )
       }
     } else if (tab.type === 'space') {
+      this.log.debug('Preparing space tab', tab)
       const space = await this.manager.tabsManager.oasis.getSpace(tab.spaceId)
       if (!space) {
         this.item.set(null)
@@ -141,7 +153,8 @@ export class ContextItemActiveTab extends ContextItemBase {
       this.item.set(newItem)
 
       // Only track if the item is new and a completely different tab
-      if (existingItem && tab.id !== existingTab?.id) {
+      const showChatSidebar = this.manager.ai.showChatSidebarValue
+      if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
         this.manager.telemetry.trackPageChatContextUpdate(
           PageChatUpdateContextEventAction.ActiveChanged,
           this.manager.itemsValue.length,
@@ -154,6 +167,8 @@ export class ContextItemActiveTab extends ContextItemBase {
       this.item.set(null)
     }
   }
+
+  debounceUpdateItem = useDebounce((tab: Tab) => this.updateItem(tab), 1000)
 
   async getResourceIds() {
     const item = get(this.item)
@@ -200,5 +215,10 @@ export class ContextItemActiveTab extends ContextItemBase {
     this.cachedItemPrompts.set(item.id, generatedPrompts)
     this.prompts.set(generatedPrompts)
     return generatedPrompts
+  }
+
+  onDestroy(): void {
+    this.log.debug('Destroying active tab context item')
+    this.activeTabUnsub()
   }
 }

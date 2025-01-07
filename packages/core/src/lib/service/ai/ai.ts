@@ -9,7 +9,7 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { isDev, useLogScope } from '@horizon/utils'
 import { SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
 import { type AiSFFSQueryResponse } from '../../types'
 import { BUILT_IN_MODELS, ModelTiers, type Model } from '@horizon/types/src/ai.types'
@@ -80,6 +80,11 @@ export class AIService {
     this.contextItems = derived([this.contextManager.items], ([$contextItems]) => {
       return $contextItems
     })
+
+    if (isDev) {
+      // @ts-ignore
+      window.aiService = this
+    }
   }
 
   get showChatSidebarValue() {

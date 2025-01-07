@@ -26,7 +26,7 @@ import {
   ContextItemScreenshot,
   ContextItemSpace
 } from './context/index'
-import type { AIService } from './ai'
+import type { AIService, ChatPrompt } from './ai'
 
 export class ContextManager {
   key = 'active_chat_context'
@@ -34,6 +34,7 @@ export class ContextManager {
   private _storage: ReturnType<typeof useLocalStorage<StoredContextItem[]>>
   private _items: Writable<ContextItem[]>
   generatingPrompts: Writable<boolean>
+  generatedPrompts: Writable<ChatPrompt[]>
 
   items: Readable<ContextItem[]>
 
@@ -58,6 +59,7 @@ export class ContextManager {
     this.log = useLogScope('ContextManager')
 
     this.generatingPrompts = writable(false)
+    this.generatedPrompts = writable([])
     this._storage = useLocalStorage<StoredContextItem[]>(this.key, [], true)
     this._items = writable([])
 
@@ -174,7 +176,7 @@ export class ContextManager {
 
     this.log.debug('Restoring context items', storedItems)
 
-    const items = []
+    const items: ContextItem[] = []
     let encounteredMalformedType = false
 
     for (const storedItem of storedItems) {
@@ -213,7 +215,7 @@ export class ContextManager {
 
     this.log.debug('Restored context items', items)
 
-    this._items.set(items)
+    this.updateItems(() => items)
 
     await tick()
 
@@ -296,7 +298,7 @@ export class ContextManager {
       return existingItem
     }
 
-    this._items.update((items) => {
+    this.updateItems((items) => {
       if (index !== undefined) {
         return [...items.slice(0, index), item, ...items.slice(index)]
       }
@@ -334,7 +336,7 @@ export class ContextManager {
     }
 
     const currentContextLength = this.itemsValue.length
-    this._items.update((items) =>
+    this.updateItems((items) =>
       items.filter((item) => {
         if (item.id === id) {
           const linkedTab = this.getTabFromItem(item)
@@ -366,7 +368,8 @@ export class ContextManager {
     const idsArray = Array.isArray(ids) ? ids : [ids]
     this.log.debug('Removing all context items except', idsArray)
     const currentContextLength = this.itemsValue.length
-    this._items.update((items) => items.filter((item) => idsArray.includes(item.id)))
+
+    this.updateItems((items) => items.filter((item) => idsArray.includes(item.id)))
 
     this.persistItems()
 
@@ -715,7 +718,8 @@ export class ContextManager {
 
   clear(trigger?: PageChatUpdateContextEventTrigger) {
     const currentContextLength = this.itemsValue.length
-    this._items.set([])
+
+    this.updateItems(() => [])
     this.persistItems()
 
     this.tabsManager.clearTabSelection()
@@ -731,6 +735,18 @@ export class ContextManager {
     }
   }
 
+  updateItems(updateFn: (items: ContextItem[]) => ContextItem[]) {
+    const currentItems = this.itemsValue
+    const updatedItems = updateFn(currentItems)
+
+    const deletedItems = currentItems.filter((item) => !updatedItems.includes(item))
+    deletedItems.forEach((item) => {
+      item.onDestroy()
+    })
+
+    this._items.set(updatedItems)
+  }
+
   async getResourceIds() {
     const items = get(this._items)
     const resourceIds = await Promise.all(items.map((item) => item.getResourceIds()))
@@ -743,13 +759,28 @@ export class ContextManager {
     return [...new Set(imageItems.flat())]
   }
 
-  async getPromptsForItem(id: string, fresh = false) {
-    const item = get(this._items).find((item) => item.id === id)
+  async getPromptsForItem(idOrItem: string | ContextItem, fresh = false) {
+    const item =
+      typeof idOrItem === 'string'
+        ? get(this._items).find((item) => item.id === idOrItem)
+        : idOrItem
     if (!item) {
       return []
     }
 
-    return item.getPrompts(fresh)
+    this.log.debug('Getting chat prompts for contextItem', item)
+    const model = this.ai.selectedModelValue
+    const supportsJsonFormat = model.supports_json_format
+    if (!supportsJsonFormat) {
+      this.log.debug('Model does not support JSON format', model)
+      this.generatedPrompts.set([])
+      return []
+    }
+
+    const prompts = await item.getPrompts(fresh)
+    this.log.debug('Got chat prompts for contextItem', item, prompts)
+    this.generatedPrompts.set(prompts)
+    return prompts
   }
 }
 

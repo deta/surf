@@ -9,8 +9,7 @@
     truncate,
     useClipboard,
     useLogScope,
-    flyAndScale,
-    useDebounce
+    flyAndScale
   } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
@@ -50,7 +49,10 @@
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import PromptItem from './PromptItem.svelte'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
-  import { type ContextItem } from '@horizon/core/src/lib/service/ai/contextManager'
+  import {
+    ContextItemActiveTab,
+    type ContextItem
+  } from '@horizon/core/src/lib/service/ai/contextManager'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
 
@@ -86,13 +88,9 @@
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
   const activeTabId = tabsManager.activeTabId
-  const activeTab = tabsManager.activeTab
 
-  const { contextManager, contextItems, responses, status, error, generatedPrompts } = chat
-
-  const tabsInContext = contextManager.tabsInContext
-  const generatingPrompts = contextManager.generatingPrompts
-  const activeTabContextItem = contextManager.activeTabContextItem
+  const { contextManager, contextItems, responses, status, error } = chat
+  const { tabsInContext, generatingPrompts, generatedPrompts } = contextManager
 
   const optPressed = writable(false)
   const cmdPressed = writable(false)
@@ -102,7 +100,6 @@
   const tabPickerOpen = writable(false)
   const modelSelectorOpen = writable(false)
   const savedChatResponses = writable<Record<string, string>>({})
-  const promptsContextItem = writable<ContextItem | null>(null)
 
   let listElem: HTMLDivElement
   let editorFocused = false
@@ -638,9 +635,10 @@
 
   let selectedMode: 'general' | 'all' | 'active' | 'context' = 'general'
 
-  const generateChatPrompts = useDebounce(async (contextItem: ContextItem) => {
-    await chat.getChatPrompts(contextItem)
-  }, 500)
+  // const generateChatPrompts = useDebounce(async (contextItem: ContextItem) => {
+  //   await tick()
+  //   await chat.getChatPrompts(contextItem)
+  // }, 500)
 
   const runPrompt = async (prompt: ChatPrompt) => {
     try {
@@ -673,29 +671,7 @@
     })
   }
 
-  const handlePromptGeneration = async ([$showExamplePrompts, $activeTabContextItem, $activeTab]: [
-    boolean,
-    ContextItem | undefined,
-    Tab | undefined
-  ]) => {
-    if (!$showExamplePrompts) return null
-
-    await tick()
-
-    if ($activeTabContextItem) {
-      promptsContextItem.set($activeTabContextItem)
-    } else {
-      promptsContextItem.set(null)
-    }
-  }
-
   $: smallSize = inputValue.length < 75
-
-  $: if ($promptsContextItem) {
-    generateChatPrompts($promptsContextItem)
-  }
-
-  $: handlePromptGeneration([$showExamplePrompts, $activeTabContextItem, $activeTab])
 </script>
 
 <div
@@ -946,7 +922,7 @@
     {/if}
 
     <div class="overflow-hidden">
-      {#if $showExamplePrompts && $promptsContextItem && ($filteredBuiltInPrompts.length > 0 || $filteredExamplePrompts.length > 0 || $generatingPrompts)}
+      {#if $showExamplePrompts && ($filteredBuiltInPrompts.length > 0 || $filteredExamplePrompts.length > 0 || $generatingPrompts)}
         <div
           transition:fly={{ y: 200 }}
           class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto no-scrollbar z-0"

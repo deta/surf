@@ -454,7 +454,7 @@
           {#if general}
             {tooltipText}
           {:else}
-            <span class="uppercase">#{renderID}</span>
+            <span class="uppercase">#{renderID ?? citationID}</span>
           {/if}
         </div>
       {:else if citationType === 'image'}
@@ -478,7 +478,7 @@
           {#if general}
             {tooltipText}
           {:else}
-            <span class="uppercase">#{renderID}</span>
+            <span class="uppercase">#{renderID ?? citationID}</span>
           {/if}
         </div>
       {/if}
@@ -526,7 +526,7 @@
             {#if general}
               {tooltipText}
             {:else}
-              <span class="uppercase">#{renderID}</span>
+              <span class="uppercase">#{renderID ?? citationID}</span>
             {/if}
           </div>
         {:else if citationType === 'image'}
@@ -550,7 +550,7 @@
             {#if general}
               {tooltipText}
             {:else}
-              <span class="uppercase">#{renderID}</span>
+              <span class="uppercase">#{renderID ?? citationID}</span>
             {/if}
           </div>
         {/if}

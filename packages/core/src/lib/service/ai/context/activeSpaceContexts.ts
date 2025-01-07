@@ -24,6 +24,8 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
   currentSpaceId: Writable<string | null>
   item: Writable<ContextItemSpace | null>
 
+  activeSpaceUnsub: () => void
+
   constructor(manager: ContextManager) {
     super(manager, ContextItemTypes.ACTIVE_SPACE, 'browser')
 
@@ -71,10 +73,11 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
       }
     })
 
-    this.activeSpace.subscribe(async (activeSpace) => {
+    // This is a hack to make sure the derived function above actually runs
+    this.activeSpaceUnsub = this.activeSpace.subscribe(async (activeSpace) => {
       if (activeSpace) {
-        await tick()
         this.log.debug('Active space changed', activeSpace.id)
+        await tick()
       }
     })
   }
@@ -159,5 +162,10 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
     } else {
       return []
     }
+  }
+
+  onDestroy() {
+    this.log.debug('Destroying active space context item')
+    this.activeSpaceUnsub()
   }
 }

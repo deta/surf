@@ -139,7 +139,7 @@ export class ContextItemResource extends ContextItemBase {
           this.manager.generatingPrompts.set(false)
 
           if (resourceState === 'extracting' || resourceState === 'post-processing') {
-            const unsubscribe = this.data.state.subscribe((state) => {
+            const unsubscribe = this.data.state.subscribe(async (state) => {
               const processingUnsub = get(this.processingUnsub)
               if (processingUnsub) {
                 processingUnsub()
@@ -147,14 +147,15 @@ export class ContextItemResource extends ContextItemBase {
               }
 
               if (state === 'idle') {
-                this.generatePrompts(tier, isRetry)
+                const res = await this.generatePrompts(tier, isRetry)
+                resolve(res)
+              } else if (state === 'error') {
+                resolve([])
               }
             })
 
             this.processingUnsub.set(unsubscribe)
           }
-
-          resolve([])
           return
         }
 

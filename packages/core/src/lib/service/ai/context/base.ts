@@ -86,6 +86,11 @@ export abstract class ContextItemBase {
     return generatedPrompts
   }
 
+  onDestroy() {
+    this.log.debug('Destroying context item')
+    // no-op
+  }
+
   abstract getResourceIds(): Promise<string[]>
   abstract getInlineImages(): Promise<string[]>
   abstract generatePrompts(): Promise<ChatPrompt[]>

@@ -1676,6 +1676,7 @@
       }
     } else {
       showChatSidebar.set(false)
+      chatContext.clear()
     }
   }
 
