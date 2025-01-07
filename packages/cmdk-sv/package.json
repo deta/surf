@@ -69,6 +69,6 @@
 	"type": "module",
 	"dependencies": {
 		"bits-ui": "^0.9.0",
-		"nanoid": "^5.0.2"
+		"nanoid": "^5.0.9"
 	}
 }
