@@ -37,7 +37,6 @@ import {
   OpenURL
 } from '@horizon/core/src/lib/service/ipc/events'
 import { ControlWindow } from '@horizon/core/src/lib/types'
-import { PDFViewerEntryPoint, SettingsWindowEntrypoint } from '../main/utils'
 
 enum ResourceProcessingStateType {
   Pending = 'pending',
@@ -77,6 +76,11 @@ const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') 
 
 const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
 const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
+
+const PDFViewerEntryPoint =
+  process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
+const SettingsWindowEntrypoint =
+  process.argv.find((arg) => arg.startsWith('--settings-window-entry-point='))?.split('=')[1] || ''
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 

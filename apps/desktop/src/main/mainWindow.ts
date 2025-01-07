@@ -9,7 +9,7 @@ import { isDev, isMac, isPDFViewerURL, PDFViewerParams, useLogScope } from '@hor
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
-import { isAppSetup, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint } from './utils'
+import { isAppSetup, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint, SettingsWindowEntrypoint } from './utils'
 import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
@@ -91,6 +91,8 @@ export function createWindow() {
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+        `--pdf-viewer-entry-point=${PDFViewerEntryPoint}`,
+        `--settings-window-entry-point=${SettingsWindowEntrypoint}`,
         ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
         ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS
           ? ['--disable-tab-switching-shortcuts']
