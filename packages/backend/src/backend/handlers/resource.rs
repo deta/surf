@@ -8,14 +8,13 @@ use crate::{
         worker::{send_worker_response, Worker},
     },
     store::{
-        db::{
-            CompositeResource, Database, SearchEngine, SearchResult, SearchResultItem,
-            SearchResultSimple,
-        },
+        db::Database,
         models::{
-            current_time, random_uuid, EmbeddingResource, EmbeddingType, InternalResourceTagNames,
-            PostProcessingJob, Resource, ResourceMetadata, ResourceProcessingState, ResourceTag,
-            ResourceTagFilter, ResourceTextContentMetadata, ResourceTextContentType,
+            current_time, random_uuid, CompositeResource, EmbeddingResource, EmbeddingType,
+            InternalResourceTagNames, PostProcessingJob, Resource, ResourceMetadata,
+            ResourceProcessingState, ResourceTag, ResourceTagFilter, ResourceTextContentMetadata,
+            ResourceTextContentType, SearchEngine, SearchResult, SearchResultItem,
+            SearchResultSimple,
         },
     },
     BackendError, BackendResult,
@@ -42,7 +41,7 @@ impl Worker {
                 .to_string_lossy()
                 .to_string(),
             resource_type: resource_type.clone(),
-            created_at: ct.clone(),
+            created_at: ct,
             updated_at: ct,
             deleted: 0,
         };
@@ -52,7 +51,7 @@ impl Worker {
             metadata.id = random_uuid();
             metadata.resource_id = resource.id.clone();
 
-            Database::create_resource_metadata_tx(&mut tx, &metadata)?;
+            Database::create_resource_metadata_tx(&mut tx, metadata)?;
 
             metadata
                 .get_tags()
@@ -117,7 +116,7 @@ impl Worker {
                 tag.id = random_uuid();
                 tag.resource_id = resource.id.clone();
 
-                Database::create_resource_tag_tx(&mut tx, &tag)?;
+                Database::create_resource_tag_tx(&mut tx, tag)?;
             }
         }
         Database::create_resource_tag_tx(&mut tx, &ResourceTag::new_deleted(&resource.id, false))?;
@@ -143,7 +142,7 @@ impl Worker {
         id: &str,
         include_annotations: bool,
     ) -> BackendResult<Option<CompositeResource>> {
-        let resource = match self.db.get_resource(&id)? {
+        let resource = match self.db.get_resource(id)? {
             Some(data) => data,
             None => return Ok(None),
         };
@@ -223,31 +222,6 @@ impl Worker {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn proximity_search_resources(
-        &mut self,
-        resource_id: String,
-        proximity_distance_threshold: Option<f32>,
-        proximity_limit: Option<i64>,
-    ) -> BackendResult<SearchResult> {
-        // TODO: find sane defaults for these
-        let proximity_distance_threshold = match proximity_distance_threshold {
-            Some(threshold) => threshold,
-            None => 500.0,
-        };
-
-        let proximity_limit = match proximity_limit {
-            Some(limit) => limit,
-            None => 10,
-        };
-
-        self.db.proximity_search_resources(
-            &resource_id,
-            proximity_distance_threshold,
-            proximity_limit,
-        )
-    }
-
-    #[instrument(level = "trace", skip(self))]
     // Only return resource ids
     pub fn list_resources_by_tags(
         &mut self,
@@ -310,19 +284,10 @@ impl Worker {
         }
         let include_annotations = include_annotations.unwrap_or(false);
 
-        let semantic_search_enabled = match semantic_search_enabled {
-            Some(enabled) => enabled,
-            None => false,
-        };
+        let semantic_search_enabled = semantic_search_enabled.unwrap_or_default();
 
-        let embeddings_distance_threshold = match embeddings_distance_threshold {
-            Some(threshold) => threshold,
-            None => 0.4,
-        };
-        let embeddings_limit = match embeddings_limit {
-            Some(limit) => limit,
-            None => 100,
-        };
+        let embeddings_distance_threshold = embeddings_distance_threshold.unwrap_or(0.4);
+        let embeddings_limit = embeddings_limit.unwrap_or(100);
 
         let mut seen_keys: HashSet<String> = HashSet::new();
         let mut results: Vec<SearchResultItem> = vec![];
@@ -545,7 +510,7 @@ impl Worker {
         let mut metadatas: Vec<ResourceTextContentMetadata> = vec![];
 
         for (c, m) in content.iter().zip(metadata.iter()) {
-            let embedding_chunks = self.ai.chunker.chunk(&c);
+            let embedding_chunks = self.ai.chunker.chunk(c);
             // same metadata for each chunk
             metadatas.extend(std::iter::repeat(m.clone()).take(embedding_chunks.len()));
             chunks.extend(embedding_chunks);
@@ -749,18 +714,6 @@ pub fn handle_resource_message(
         }
         ResourceMessage::RecoverResource(id) => {
             let result = worker.recover_resource(id);
-            send_worker_response(&mut worker.channel, oneshot, result);
-        }
-        ResourceMessage::ProximitySearchResources {
-            resource_id,
-            proximity_distance_threshold,
-            proximity_limit,
-        } => {
-            let result = worker.proximity_search_resources(
-                resource_id,
-                proximity_distance_threshold,
-                proximity_limit,
-            );
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ListResourcesByTags(tags) => {

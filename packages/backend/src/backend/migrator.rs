@@ -1,5 +1,5 @@
 use crate::backend::worker::Worker;
-use crate::store::db::{CompositeResource, Database};
+use crate::store::db::Database;
 use crate::store::models::*;
 use crate::{BackendError, BackendResult};
 
@@ -35,7 +35,7 @@ impl Worker {
         text_content: String,
         text_content_type: ResourceTextContentType,
     ) -> BackendResult<()> {
-        let resource = self.read_resource(&resource_id, false)?;
+        let resource = self.read_resource(resource_id, false)?;
         if resource.is_none() {
             return Err(BackendError::GenericError(format!(
                 "Resource with id '{}' not found",
@@ -91,7 +91,7 @@ impl Worker {
                 i + 1,
                 non_deleted_resources.len()
             );
-            Database::create_resource_tx(&mut tx, &resource)?;
+            Database::create_resource_tx(&mut tx, resource)?;
             println!("\tcreated resource");
 
             let tags = old_db.list_resource_tags(&resource.id)?;
@@ -109,7 +109,7 @@ impl Worker {
         let spaces = old_db.list_spaces()?;
         for (i, space) in spaces.iter().enumerate() {
             println!("migrating space {}/{}...", i + 1, spaces.len());
-            Database::create_space_tx(&mut tx, &space)?;
+            Database::create_space_tx(&mut tx, space)?;
             println!("\tcreated space");
 
             let space_entries = old_db.list_space_entries(&space.id)?;

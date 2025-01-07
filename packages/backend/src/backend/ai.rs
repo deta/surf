@@ -1,8 +1,4 @@
-use crate::{
-    store::{db::CompositeResource, models},
-    vision::vision::Vision,
-    BackendError, BackendResult,
-};
+use crate::{store::models, vision::vision::Vision, BackendError, BackendResult};
 
 // TODO: use a single AI struct/abstraction in the codebase
 pub struct AI {
@@ -18,7 +14,7 @@ impl AI {
 
     pub fn process_vision_message(
         &self,
-        composite_resource: &CompositeResource,
+        composite_resource: &models::CompositeResource,
     ) -> BackendResult<Vec<(models::ResourceTextContentType, Vec<String>)>> {
         let image = std::fs::read(&composite_resource.resource.resource_path)
             .map_err(|e| BackendError::GenericError(format!("failed to read image: {}", e)))?;

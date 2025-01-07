@@ -62,12 +62,12 @@ fn send_to_main_thread(
 )]
 pub fn handle_get_docs_similarity(
     main_thread_tx: Sender<Message>,
-    mut stream: &UnixStream,
+    stream: &UnixStream,
     embedding_model: &EmbeddingModel,
     client_message: &str,
 ) -> BackendResult<()> {
     debug!("parsing docs similarity request");
-    let request = serde_json::from_str::<DocsSimilarityRequest>(&client_message)?;
+    let request = serde_json::from_str::<DocsSimilarityRequest>(client_message)?;
     debug!(
         docs_count = ?request.docs.len(),
         threshold = ?request.threshold,
@@ -91,7 +91,7 @@ pub fn handle_get_docs_similarity(
             request.threshold,
             request.num_docs,
         ),
-        &mut stream,
+        stream,
     )?;
 
     debug!("waiting for similarity results");
@@ -110,7 +110,7 @@ pub fn handle_get_docs_similarity(
     debug!("serializing similarity results");
     let docs_similarity = serde_json::to_vec(&docs_similarity)?;
     debug!(response_size = ?docs_similarity.len(), "sending response");
-    try_stream_write_all_bytes(&mut stream, &docs_similarity);
+    try_stream_write_all_bytes(stream, &docs_similarity);
     send_done(stream);
     debug!("docs similarity request completed");
     Ok(())
@@ -118,12 +118,12 @@ pub fn handle_get_docs_similarity(
 
 #[instrument(level = "trace", skip(stream, embedding_model, client_message))]
 pub fn handle_encode_sentences(
-    mut stream: &UnixStream,
+    stream: &UnixStream,
     embedding_model: &EmbeddingModel,
     client_message: &str,
 ) -> BackendResult<()> {
     debug!("parsing sentences request");
-    let sentences = serde_json::from_str::<Vec<String>>(&client_message)?;
+    let sentences = serde_json::from_str::<Vec<String>>(client_message)?;
     debug!(sentence_count = ?sentences.len(), "encoding sentences");
 
     let embeddings = embedding_model.encode(&sentences)?;
@@ -131,7 +131,7 @@ pub fn handle_encode_sentences(
     let embeddings = serde_json::to_vec(&embeddings)?;
 
     debug!(response_size = ?embeddings.len(), "sending response");
-    try_stream_write_all_bytes(&mut stream, &embeddings);
+    try_stream_write_all_bytes(stream, &embeddings);
     send_done(stream);
     debug!("encode sentences request completed");
     Ok(())
@@ -143,12 +143,12 @@ pub fn handle_encode_sentences(
 )]
 pub fn handle_filtered_search(
     main_thread_tx: Sender<Message>,
-    mut stream: &UnixStream,
+    stream: &UnixStream,
     embedding_model: &EmbeddingModel,
     client_message: &str,
 ) -> BackendResult<()> {
     debug!("parsing filtered search request");
-    let request = serde_json::from_str::<FilteredSearchRequest>(&client_message)?;
+    let request = serde_json::from_str::<FilteredSearchRequest>(client_message)?;
     debug!(
         num_docs = ?request.num_docs,
         keys_count = ?request.keys.len(),
@@ -167,10 +167,10 @@ pub fn handle_filtered_search(
             response_tx,
             query_embedding,
             request.num_docs,
-            request.keys.iter().map(|&x| x as u64).collect(),
+            request.keys.iter().copied().collect(),
             request.threshold,
         ),
-        &mut stream,
+        stream,
     )?;
 
     debug!("waiting for search results");
@@ -190,7 +190,7 @@ pub fn handle_filtered_search(
     let search_results = serde_json::to_vec(&search_results)?;
 
     debug!(response_size = ?search_results.len(), "sending response");
-    try_stream_write_all_bytes(&mut stream, &search_results);
+    try_stream_write_all_bytes(stream, &search_results);
     send_done(stream);
     debug!("filtered search request completed");
     Ok(())
@@ -202,12 +202,12 @@ pub fn handle_filtered_search(
 )]
 pub fn handle_upsert_embeddings(
     main_thread_tx: Sender<Message>,
-    mut stream: &UnixStream,
+    stream: &UnixStream,
     embedding_model: &EmbeddingModel,
     client_message: &str,
 ) -> BackendResult<()> {
     debug!("parsing upsert embeddings request");
-    let request = serde_json::from_str::<UpsertEmbeddingsRequest>(&client_message)?;
+    let request = serde_json::from_str::<UpsertEmbeddingsRequest>(client_message)?;
     debug!(
         old_keys_count = ?request.old_keys.len(),
         new_keys_count = ?request.new_keys.len(),
@@ -226,7 +226,7 @@ pub fn handle_upsert_embeddings(
             response_tx.clone(),
             request.old_keys.iter().map(|&x| x as u64).collect(),
         ),
-        &mut stream,
+        stream,
     )?;
 
     debug!("waiting for removal confirmation");
@@ -238,7 +238,7 @@ pub fn handle_upsert_embeddings(
         }
     };
 
-    if request.new_keys.len() > 0 {
+    if !request.new_keys.is_empty() {
         debug!(keys_to_add = ?request.new_keys.len(), "adding new embeddings");
         send_to_main_thread(
             &main_thread_tx,
@@ -248,7 +248,7 @@ pub fn handle_upsert_embeddings(
                 embeddings,
                 10,
             ),
-            &mut stream,
+            stream,
         )?;
 
         debug!("waiting for add confirmation");
@@ -262,7 +262,7 @@ pub fn handle_upsert_embeddings(
     }
 
     debug!("sending success response");
-    try_stream_write_all(&mut stream, "ok");
+    try_stream_write_all(stream, "ok");
     send_done(stream);
     debug!("upsert embeddings request completed");
     Ok(())

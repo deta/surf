@@ -1,6 +1,6 @@
 use crate::{
     llm::{client::client::Model, models::Message},
-    store::{db::CompositeResource, models::*},
+    store::models::*,
     BackendResult,
 };
 use neon::prelude::{JsFunction, Root};
@@ -28,27 +28,11 @@ pub enum AIMessage {
 
 #[derive(Debug)]
 pub enum WorkerMessage {
-    CardMessage(CardMessage),
     HistoryMessage(HistoryMessage),
-    HorizonMessage(HorizonMessage),
     MiscMessage(MiscMessage),
     ResourceMessage(ResourceMessage),
     ResourceTagMessage(ResourceTagMessage),
     SpaceMessage(SpaceMessage),
-    UserdataMessage(UserdataMessage),
-}
-
-#[derive(Debug)]
-pub enum CardMessage {
-    CreateCard(Card),
-    GetCard(String),
-    RemoveCard(String),
-    UpdateCardData(String, Vec<u8>),
-    UpdateCardDimensions(String, i64, i64, i32, i32),
-    UpdateCardResourceID(String, String),
-    UpdateCardStackingOrder(String),
-    ListCardsInHorizon(String),
-    ListCardsbyResourceID(String),
 }
 
 #[derive(Debug)]
@@ -61,14 +45,6 @@ pub enum HistoryMessage {
     SearchHistoryEntriesByHostnamePrefix(String, Option<f64>),
     SearchHistoryEntriesByHostname(String),
     SearchHistoryEntriesByUrlAndTitle(String, Option<f64>),
-}
-
-#[derive(Debug)]
-pub enum HorizonMessage {
-    CreateHorizon(String),
-    ListHorizons,
-    UpdateHorizon(Horizon),
-    RemoveHorizon(String),
 }
 
 #[derive(Debug)]
@@ -110,11 +86,6 @@ pub enum ResourceMessage {
     GetResource(String, bool),
     RemoveResources(Vec<String>),
     RecoverResource(String),
-    ProximitySearchResources {
-        resource_id: String,
-        proximity_distance_threshold: Option<f32>,
-        proximity_limit: Option<i64>,
-    },
     ListResourcesByTags(Vec<ResourceTagFilter>),
     ListResourcesByTagsNoSpace(Vec<ResourceTagFilter>),
     SearchResources {
@@ -164,13 +135,6 @@ pub enum ResourceTagMessage {
         tag_name: String,
     },
     UpdateResourceTag(ResourceTag),
-}
-
-#[derive(Debug)]
-pub enum UserdataMessage {
-    CreateUserdata(String),
-    GetUserdataByUserId(String),
-    RemoveUserdata(String),
 }
 
 #[derive(Debug)]

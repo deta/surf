@@ -324,7 +324,7 @@ impl EmbeddingsStore {
             if *similarity <= *threshold {
                 docs_similarity.push(DocsSimilarity {
                     index: *key,
-                    similarity: similarity.clone(),
+                    similarity: *similarity,
                 });
             }
         }

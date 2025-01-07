@@ -26,14 +26,14 @@ pub fn estimate_message_token(message: &Message) -> usize {
     message
         .content
         .iter()
-        .map(|content| estimate_message_content_tokens(&content))
+        .map(estimate_message_content_tokens)
         .sum()
 }
 
 pub fn estimate_messages_tokens(messages: &[Message]) -> usize {
     messages
         .iter()
-        .map(|message| estimate_message_token(message))
+        .map(estimate_message_token)
         .sum()
 }
 
@@ -183,8 +183,8 @@ mod tests {
         let should_truncate = &"a".repeat(50);
         let should_not_truncate = &"b".repeat(50);
 
-        let message1 = Message::new_system(&should_truncate).with_truncatable(true);
-        let message2 = Message::new_system(&should_not_truncate).with_truncatable(true);
+        let message1 = Message::new_system(should_truncate).with_truncatable(true);
+        let message2 = Message::new_system(should_not_truncate).with_truncatable(true);
         let messages = vec![message1.clone(), message2.clone()];
 
         let model = MockModel { max_tokens: 15 };

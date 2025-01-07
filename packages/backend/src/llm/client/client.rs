@@ -169,11 +169,7 @@ fn filter_unsupported_content(messages: Vec<Message>, model: &Model) -> Vec<Mess
         messages
             .into_iter()
             .map(|mut msg| {
-                msg.content = msg
-                    .content
-                    .into_iter()
-                    .filter(|c| matches!(c, MessageContent::Text(_)))
-                    .collect();
+                msg.content.retain(|c| matches!(c, MessageContent::Text(_)));
                 msg
             })
             .filter(|msg| !msg.content.is_empty())
@@ -442,8 +438,7 @@ impl Provider {
             return Err(BackendError::LLMClientError {
                 r#type: error.error.r#type,
                 message: error.error.message,
-            }
-            .into());
+            });
         }
 
         Ok(())
@@ -461,16 +456,14 @@ impl Provider {
                     })?;
 
                 Ok(resp
-                    .choices
-                    .get(0)
-                    .map(|choice| {
+                    .choices.first()
+                    .and_then(|choice| {
                         if delta {
-                            choice.delta.clone().map(|d| d.content).flatten()
+                            choice.delta.clone().and_then(|d| d.content)
                         } else {
                             choice.message.clone().map(|m| m.content)
                         }
-                    })
-                    .flatten())
+                    }))
             }
             Self::Anthropic => serde_json::from_str::<anthropic::ChunkResponse>(data)
                 .map_err(|e| {
@@ -494,7 +487,7 @@ impl Provider {
                         "error response from anthropic: {err:?}"
                     ))),
                     anthropic::Response::Message(message) => {
-                        message.content.get(0).map(|c| Some(c.text.clone())).ok_or(
+                        message.content.first().map(|c| Some(c.text.clone())).ok_or(
                             BackendError::GenericError(
                                 "no content found in anthropic response".to_owned(),
                             ),
@@ -670,7 +663,7 @@ impl LLMClient {
         let mut builder = self.client.post(&url);
         for (name, value) in headers.iter() {
             if let Ok(header_name) = header::HeaderName::from_bytes(name.as_bytes()) {
-                if let Ok(header_value) = header::HeaderValue::from_str(&value) {
+                if let Ok(header_value) = header::HeaderValue::from_str(value) {
                     builder = builder.header(header_name, header_value);
                 }
             }

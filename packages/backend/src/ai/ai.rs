@@ -5,8 +5,8 @@ use crate::embeddings::chunking::ContentChunker;
 use crate::llm::client::client;
 use crate::llm::client::client::{ChatCompletionStream, Model};
 use crate::llm::models::{ContextMessage, Message, MessageContent, MessageRole, Quota};
-use crate::store::db::{CompositeResource, Database};
-use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource};
+use crate::store::db::Database;
+use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource, CompositeResource};
 use crate::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
 
@@ -214,7 +214,7 @@ impl AI {
     }
 
     pub fn encode_sentences(&self, sentences: &Vec<String>) -> BackendResult<Vec<Vec<f32>>> {
-        self.local_ai_client.encode_sentences(&sentences)
+        self.local_ai_client.encode_sentences(sentences)
     }
 
     // TODO: what behavior if no num_docs and no resource_ids?

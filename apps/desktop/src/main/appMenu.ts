@@ -239,7 +239,7 @@ class AppMenu {
           label: 'Toggle Developer Tools',
           accelerator: isMac() ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
           click: () => ipcSenders.openDevTools()
-        },
+        }
       ]
     }
   }

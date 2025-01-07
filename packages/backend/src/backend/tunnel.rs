@@ -250,7 +250,7 @@ impl WorkerTunnel {
         self.worker_tx
             .send(TunnelMessage(
                 message,
-                oneshot.map(|oneshot| TunnelOneshot::Rust(oneshot)),
+                oneshot.map(TunnelOneshot::Rust),
             ))
             .expect("unbound channel send failed on worker queue");
     }

@@ -6,7 +6,6 @@ pub mod store;
 pub mod vision;
 
 use neon::{prelude::ModuleContext, result::NeonResult};
-use serde_json;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BackendError {

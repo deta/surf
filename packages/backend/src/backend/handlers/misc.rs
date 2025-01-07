@@ -12,10 +12,10 @@ use crate::{
         models::{Message, MessageContent, Quota},
     },
     store::{
-        db::{CompositeResource, Database},
+        db::Database,
         models::{
             random_uuid, AIChatHistory, AIChatSession, AIChatSessionMessage,
-            AIChatSessionMessageSource, ResourceTextContent,
+            AIChatSessionMessageSource, CompositeResource, ResourceTextContent,
         },
     },
     BackendError, BackendResult,
@@ -60,7 +60,7 @@ impl Worker {
         docs: Vec<String>,
         threshold: Option<f32>,
     ) -> BackendResult<Vec<DocsSimilarity>> {
-        Ok(self.ai.get_docs_similarity(query, docs, threshold)?)
+        self.ai.get_docs_similarity(query, docs, threshold)
     }
 
     // TODO: store history
@@ -150,7 +150,7 @@ impl Worker {
             custom_key,
             session_id,
             number_documents,
-            resource_ids.unwrap_or(vec![]),
+            resource_ids.unwrap_or_default(),
             inline_images,
             general,
             callback,
@@ -204,7 +204,7 @@ impl Worker {
     // 'true' if single resource and text content is more than 24k characters
     // 'false' otherwise
     fn should_send_cluster_query(&self, ids: &[String]) -> BackendResult<bool> {
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             if ids.len() == 1 {
                 // TODO: count the number of text content
                 let resource = match self.db.get_resource(&ids[0])? {
@@ -262,7 +262,7 @@ impl Worker {
             // we are already narrowing down the search space
             // if the llm pre-determines the search space
             if let Some(search_space) = should_cluster_result.relevant_context_ids {
-                if search_space.len() > 0 {
+                if !search_space.is_empty() {
                     let mut pruned_resources_ids: Vec<String> = vec![];
 
                     // the relevant context ids are the indices of the resources for llm efficiency
@@ -326,7 +326,7 @@ impl Worker {
         callback = self.send_callback(callback, chat_result.sources_xml.clone())?;
 
         let mut assistant_message = String::new();
-        while let Some(chunk) = chat_result.stream.next() {
+        for chunk in chat_result.stream.by_ref() {
             match chunk {
                 Ok(data) => {
                     assistant_message.push_str(&data);
@@ -537,7 +537,7 @@ impl Worker {
         &self,
         source_id: String,
     ) -> BackendResult<Option<ResourceTextContent>> {
-        Ok(self.db.get_resource_text_content(&source_id)?)
+        self.db.get_resource_text_content(&source_id)
     }
 
     pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {

@@ -118,7 +118,7 @@ impl EmbeddingModel {
                 error!("Failed to encode sentences: {}", e);
                 Err(BackendError::GenericError(format!(
                     "Error encoding sentences: {}",
-                    e.to_string()
+                    e
                 )))
             }
         }

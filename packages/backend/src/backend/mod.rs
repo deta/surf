@@ -11,7 +11,7 @@ use neon::prelude::*;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
-const _MODULE_PREFIX: &'static str = "backend";
+const _MODULE_PREFIX: &str = "backend";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__backend_tunnel_init", js_tunnel_init)?;

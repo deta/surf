@@ -32,7 +32,7 @@ impl LocalAIServer {
     ) -> BackendResult<Self> {
         if socket_path.exists() {
             debug!("removing existing socket file");
-            fs::remove_file(&socket_path)?;
+            fs::remove_file(socket_path)?;
         }
 
         debug!("binding to unix socket");
@@ -139,7 +139,7 @@ impl LocalAIServer {
         let (tx, rx) = mpsc::channel();
 
         let index_path = self.index_path.clone();
-        let embedding_dim = self.embedding_model.get_embedding_dim().clone();
+        let embedding_dim = self.embedding_model.get_embedding_dim();
 
         debug!("spawning main message handler thread");
         std::thread::spawn(move || {

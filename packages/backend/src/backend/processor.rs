@@ -10,9 +10,9 @@ use super::{
 use crate::{
     backend::ai::AI,
     embeddings::chunking::ContentChunker,
-    store::{
-        db::CompositeResource,
-        models::{ResourceProcessingState, ResourceTextContentMetadata, ResourceTextContentType},
+    store::models::{
+        CompositeResource, ResourceProcessingState, ResourceTextContentMetadata,
+        ResourceTextContentType,
     },
     BackendError, BackendResult,
 };
@@ -312,12 +312,9 @@ pub fn get_youtube_contents_metadatas(
     language: Option<String>,
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
     let runtime = tokio::runtime::Runtime::new()?;
-    let transcript_config = match language {
-        Some(language) => Some(ytranscript::TranscriptConfig {
+    let transcript_config = language.map(|language| ytranscript::TranscriptConfig {
             lang: Some(language),
-        }),
-        _ => None,
-    };
+        });
     let transcripts = runtime
         .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
             source_uri,
@@ -335,7 +332,7 @@ pub fn get_youtube_contents_metadatas(
             contents.push(ContentChunker::normalize(&transcript_chunk));
             metadatas.push(ResourceTextContentMetadata {
                 page: None,
-                timestamp: Some(prev_offset.clone() as f32),
+                timestamp: Some(prev_offset as f32),
                 url: Some(source_uri.to_string()),
             });
             prev_offset = transcript.offset;

@@ -95,7 +95,7 @@ impl Worker {
             let this = cx.undefined();
             let event_bus_rx = event_bus_rx.to_inner(&mut cx);
             let string = cx.string(message).as_value(&mut cx);
-            if let Err(e) = event_bus_rx.call(&mut cx, this, &[string]) {
+            if let Err(e) = event_bus_rx.call(&mut cx, this, [string]) {
                 tracing::debug!("event bus callback failed: {e:?}");
             }
 
@@ -136,15 +136,6 @@ pub fn worker_thread_entry_point(
 
     while let Ok(TunnelMessage(message, oneshot)) = worker_rx.recv() {
         match message {
-            WorkerMessage::CardMessage(_message) => {
-                // handle_card_message(&mut worker, oneshot, message)
-            }
-            WorkerMessage::HorizonMessage(_message) => {
-                // handle_horizon_message(&mut worker, oneshot, message)
-            }
-            WorkerMessage::UserdataMessage(_message) => {
-                // handle_userdata_message(&mut worker, oneshot, message)
-            }
             WorkerMessage::MiscMessage(message) => {
                 handle_misc_message(&mut worker, oneshot, message)
             }

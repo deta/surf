@@ -1,56 +1,29 @@
+pub mod ai_sessions;
 pub mod db;
+pub mod embedding_resources;
+pub mod history_entries;
 pub mod models;
+pub mod post_processing_jobs;
+pub mod resource_content_hash;
+pub mod resource_metadata;
+pub mod resource_tags;
+pub mod resource_text_content;
+pub mod resources;
+pub mod search;
+pub mod spaces;
 
 use crate::backend::{message::*, tunnel::WorkerTunnel};
 use neon::prelude::*;
 use neon::types::JsDate;
 
-const _MODULE_PREFIX: &'static str = "store";
+const _MODULE_PREFIX: &str = "store";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
-    cx.export_function("js__store_list_horizons", js_list_horizons)?;
-    cx.export_function("js__store_create_horizon", js_create_horizon)?;
-    cx.export_function("js__store_update_horizon", js_update_horizon)?;
-    cx.export_function("js__store_remove_horizon", js_remove_horizon)?;
-
-    cx.export_function("js__store_list_cards_in_horizon", js_list_cards_in_horizon)?;
-    cx.export_function("js__store_get_card", js_get_card)?;
-    cx.export_function("js__store_create_card", js_create_card)?;
-    cx.export_function(
-        "js__store_update_card_resource_id",
-        js_update_card_resource_id,
-    )?;
-    cx.export_function("js__store_update_card_data", js_update_card_data)?;
-    cx.export_function(
-        "js__store_update_card_dimensions",
-        js_update_card_dimensions,
-    )?;
-    cx.export_function(
-        "js__store_update_card_stacking_order",
-        js_update_card_stacking_order,
-    )?;
-    cx.export_function("js__store_remove_card", js_remove_card)?;
-    cx.export_function(
-        "js__store_list_cards_by_resource_id",
-        js_list_cards_by_resource_id,
-    )?;
-
-    cx.export_function("js__store_create_userdata", js_create_userdata)?;
-    cx.export_function(
-        "js__store_get_userdata_by_user_id",
-        js_get_userdata_by_user_id,
-    )?;
-    cx.export_function("js__store_remove_userdata", js_remove_userdata)?;
-
     cx.export_function("js__store_create_resource", js_create_resource)?;
     cx.export_function("js__store_get_resource", js_get_resource)?;
     // cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function("js__store_remove_resources", js_remove_resources)?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
-    cx.export_function(
-        "js__store_proximity_search_resources",
-        js_proximity_search_resources,
-    )?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
     cx.export_function(
         "js__store_list_resources_by_tags",
@@ -272,14 +245,14 @@ fn js_create_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .transpose()
     {
         Ok(tags) => tags,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
     let resource_metadata: Option<models::ResourceMetadata> = match resource_metadata_json
         .map(|json_str| serde_json::from_str(&json_str))
         .transpose()
     {
         Ok(meta) => meta,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -346,161 +319,6 @@ fn js_recover_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
-fn js_list_horizons(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::HorizonMessage(HorizonMessage::ListHorizons),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_create_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let horizon_name = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::HorizonMessage(HorizonMessage::CreateHorizon(horizon_name)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_remove_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let horizon_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::HorizonMessage(HorizonMessage::RemoveHorizon(horizon_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_list_cards_in_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let horizon_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::ListCardsInHorizon(horizon_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_list_cards_by_resource_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::ListCardsbyResourceID(resource_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_get_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::GetCard(card_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_create_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_json = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let card: models::Card = match serde_json::from_str(&card_json) {
-        Ok(card) => card,
-        Err(err) => return cx.throw_error(&err.to_string()),
-    };
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::CreateCard(card)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_update_card_data(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let data = cx
-        .argument::<JsString>(2)?
-        .value(&mut cx)
-        .as_bytes()
-        .to_vec();
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::UpdateCardData(card_id, data)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_update_card_resource_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let resource_id = cx.argument::<JsString>(2)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::UpdateCardResourceID(card_id, resource_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_proximity_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-
-    let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let proximity_distance_threshold = cx.argument_opt(2).and_then(|arg| {
-        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
-            .ok()
-            .map(|js_number| js_number.value(&mut cx) as f32)
-    });
-    let proximity_limit = cx.argument_opt(3).and_then(|arg| {
-        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
-            .ok()
-            .map(|js_number| js_number.value(&mut cx) as i64)
-    });
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ProximitySearchResources {
-            resource_id,
-            proximity_distance_threshold,
-            proximity_limit,
-        }),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
 fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
@@ -514,7 +332,7 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
     {
         Ok(Some(tags)) => tags,
         Ok(None) => return cx.throw_error("Resource tags must be provided"),
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -539,7 +357,7 @@ fn js_list_resources_by_tags_no_space(mut cx: FunctionContext) -> JsResult<JsPro
     {
         Ok(Some(tags)) => tags,
         Ok(None) => return cx.throw_error("Resource tags must be provided"),
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -564,12 +382,12 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         .transpose()
     {
         Ok(tags) => tags,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
     let semantic_search_enabled = cx.argument_opt(3).and_then(|arg| {
         arg.downcast::<JsBoolean, FunctionContext>(&mut cx)
             .ok()
-            .map(|js_boolean| js_boolean.value(&mut cx) as bool)
+            .map(|js_boolean| js_boolean.value(&mut cx))
     });
 
     let embeddings_distance_threshold = cx.argument_opt(4).and_then(|arg| {
@@ -610,90 +428,6 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
-fn js_update_card_dimensions(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let position_x = cx.argument::<JsNumber>(2)?.value(&mut cx) as i64;
-    let position_y = cx.argument::<JsNumber>(3)?.value(&mut cx) as i64;
-    let width = cx.argument::<JsNumber>(4)?.value(&mut cx) as i32;
-    let height = cx.argument::<JsNumber>(5)?.value(&mut cx) as i32;
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::UpdateCardDimensions(
-            card_id, position_x, position_y, width, height,
-        )),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_update_card_stacking_order(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::UpdateCardStackingOrder(card_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_remove_card(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let card_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::CardMessage(CardMessage::RemoveCard(card_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_create_userdata(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let user_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::UserdataMessage(UserdataMessage::CreateUserdata(user_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_get_userdata_by_user_id(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let user_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::UserdataMessage(UserdataMessage::GetUserdataByUserId(user_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_remove_userdata(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let user_id = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::UserdataMessage(UserdataMessage::RemoveUserdata(user_id)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
 fn js_resource_post_process(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let resource_id = cx.argument::<JsString>(1)?.value(&mut cx);
@@ -707,31 +441,13 @@ fn js_resource_post_process(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
-fn js_update_horizon(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let horizon_json = cx.argument::<JsString>(1)?.value(&mut cx);
-
-    let horizon: models::Horizon = match serde_json::from_str(&horizon_json) {
-        Ok(horizon) => horizon,
-        Err(err) => return cx.throw_error(&err.to_string()),
-    };
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::HorizonMessage(HorizonMessage::UpdateHorizon(horizon)),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
 fn js_create_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let entry_json = cx.argument::<JsString>(1)?.value(&mut cx);
 
     let entry: models::HistoryEntry = match serde_json::from_str(&entry_json) {
         Ok(entry) => entry,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -762,7 +478,7 @@ fn js_update_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let entry: models::HistoryEntry = match serde_json::from_str(&entry_json) {
         Ok(entry) => entry,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -806,7 +522,7 @@ fn js_search_history_entries_by_hostname_prefix(mut cx: FunctionContext) -> JsRe
     let since = cx.argument_opt(2).and_then(|arg| {
         arg.downcast::<JsDate, FunctionContext>(&mut cx)
             .ok()
-            .map(|js_date| js_date.value(&mut cx) as f64)
+            .map(|js_date| js_date.value(&mut cx))
     });
 
     let (deferred, promise) = cx.promise();
@@ -839,7 +555,7 @@ fn js_search_history_entries_by_url_and_title(mut cx: FunctionContext) -> JsResu
     let since = cx.argument_opt(2).and_then(|arg| {
         arg.downcast::<JsDate, FunctionContext>(&mut cx)
             .ok()
-            .map(|js_date| js_date.value(&mut cx) as f64)
+            .map(|js_date| js_date.value(&mut cx))
     });
 
     let (deferred, promise) = cx.promise();
@@ -859,7 +575,7 @@ fn js_update_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let resource: models::Resource = match serde_json::from_str(&resource_json) {
         Ok(resource) => resource,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -877,7 +593,7 @@ fn js_update_resource_metadata(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let metadata: models::ResourceMetadata = match serde_json::from_str(&metadata_json) {
         Ok(metadata) => metadata,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -895,7 +611,7 @@ fn js_create_resource_tag(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let tag: models::ResourceTag = match serde_json::from_str(&tag_json) {
         Ok(tag) => tag,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();
@@ -943,7 +659,7 @@ fn js_update_resource_tag_by_name(mut cx: FunctionContext) -> JsResult<JsPromise
 
     let tag: models::ResourceTag = match serde_json::from_str(&tag_json) {
         Ok(tag) => tag,
-        Err(err) => return cx.throw_error(&err.to_string()),
+        Err(err) => return cx.throw_error(err.to_string()),
     };
 
     let (deferred, promise) = cx.promise();

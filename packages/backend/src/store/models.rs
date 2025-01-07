@@ -7,8 +7,6 @@ use std::str::FromStr;
 use std::string::ToString;
 use strum_macros::EnumString;
 
-use super::db::CompositeResource;
-
 pub fn default_horizon_tint() -> String {
     "hsl(275, 40%, 80%)".to_owned()
 }
@@ -349,7 +347,9 @@ impl ResourceTag {
 #[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
 #[strum(ascii_case_insensitive)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum ResourceTagFilterOp {
+    #[default]
     Eq,
     Ne,
     Prefix,
@@ -359,11 +359,6 @@ pub enum ResourceTagFilterOp {
     NeSuffix,
 }
 
-impl Default for ResourceTagFilterOp {
-    fn default() -> Self {
-        ResourceTagFilterOp::Eq
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResourceTagFilter {
@@ -436,11 +431,11 @@ impl EmbeddableContent for ResourceMetadata {
     fn get_embeddable_content(&self) -> Vec<String> {
         let mut content = vec![];
         let alt = self.alt.trim();
-        if alt != "" {
+        if !alt.is_empty() {
             content.push(alt.to_string());
         }
         let user_context = self.user_context.trim();
-        if user_context != "" {
+        if !user_context.is_empty() {
             content.push(user_context.to_string());
         }
         content
@@ -459,7 +454,7 @@ impl EmbeddableContent for ResourceMetadata {
 impl ResourceMetadata {
     pub fn get_tags(&self) -> Vec<ResourceTag> {
         let mut tags: Vec<ResourceTag> = Vec::new();
-        if self.source_uri != "" {
+        if !self.source_uri.is_empty() {
             if let Some(hostname) = get_hostname_from_uri(&self.source_uri) {
                 tags.push(ResourceTag {
                     id: random_uuid(),
@@ -637,14 +632,14 @@ impl Embedding {
     pub fn new(embedding: &Vec<f32>) -> Embedding {
         Embedding {
             rowid: None,
-            embedding: Self::format_embedding(&embedding),
+            embedding: Self::format_embedding(embedding),
         }
     }
 
     pub fn new_with_rowid(rowid: i64, embedding: &Vec<f32>) -> Embedding {
         Embedding {
             rowid: Some(rowid),
-            embedding: Self::format_embedding(&embedding),
+            embedding: Self::format_embedding(embedding),
         }
     }
 }
@@ -819,4 +814,49 @@ mod tests {
         );
         assert_eq!(tags[0].tag_value, "www.google.com".to_string());
     }
+}
+
+pub struct PaginatedResources {
+    pub resources: Vec<Resource>,
+    pub total: i64,
+    pub limit: i64,
+    pub offset: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CompositeResource {
+    pub resource: Resource,
+    pub metadata: Option<ResourceMetadata>,
+    pub text_content: Option<ResourceTextContent>,
+    pub resource_tags: Option<Vec<ResourceTag>>,
+    pub resource_annotations: Option<Vec<Resource>>,
+    pub post_processing_job: Option<PostProcessingJob>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum SearchEngine {
+    Keyword,
+    Proximity,
+    Embeddings,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchResultItem {
+    pub resource: CompositeResource,
+    pub card_ids: Vec<String>,
+    pub ref_resource_id: Option<String>,
+    pub distance: Option<f32>,
+    pub engine: SearchEngine,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub items: Vec<SearchResultItem>,
+    pub total: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchResultSimple {
+    pub items: Vec<String>,
+    pub total: i64,
 }

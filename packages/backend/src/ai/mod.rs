@@ -9,8 +9,8 @@ use crate::{
 use neon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-pub const _MODULE_PREFIX: &'static str = "ai";
-pub const _AI_API_ENDPOINT: &'static str = "v1/deta-os-ai";
+pub const _MODULE_PREFIX: &str = "ai";
+pub const _AI_API_ENDPOINT: &str = "v1/deta-os-ai";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_create_chat_completion", js_create_chat_completion)?;

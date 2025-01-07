@@ -61,7 +61,7 @@ impl Worker {
                 resource_id: entry.resource_id,
                 created_at: current_time,
                 updated_at: current_time,
-                manually_added: entry.manually_added as i32,
+                manually_added: entry.manually_added,
             };
             Database::create_space_entry_tx(&mut tx, &space_entry)?;
             space_entries.push(space_entry);
