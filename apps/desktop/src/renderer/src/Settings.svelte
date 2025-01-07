@@ -31,6 +31,7 @@
   let userConfigSettings: UserSettings | undefined = undefined
   let checkInterval: NodeJS.Timeout
   let showLicenses = false
+  let showMiscInfo = false
   let licenses: string
 
   const tabParam = new URLSearchParams(window.location.search).get(
@@ -51,6 +52,16 @@
     // @ts-ignore
     const info = await window.api.getAppInfo()
     version = info.version
+  }
+
+  const getUserId = () => {
+    return window.api
+      .getUserConfig()
+      .then((cfg) => (cfg.anon_telemetry ? cfg.anon_id : cfg.user_id))
+      .catch((e) => {
+        console.error(e)
+        return 'Could not get user ID!'
+      })
   }
 
   const checkForUpdates = async () => {
@@ -325,6 +336,24 @@
             <div class="license-output">
               <pre>{licenses ?? 'Loading...'}</pre>
             </div>
+          {/if}
+        </div>
+
+        <div class="license-wrapper">
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div class="license-trigger" on:click={() => (showMiscInfo = !showMiscInfo)}>
+            <div class="license-icon" class:open={showMiscInfo}>
+              <Icon name="chevron.down" />
+            </div>
+            Miscellaneous
+          </div>
+
+          {#if showMiscInfo}
+            {#await getUserId() then id}
+              <div style="display: flex; gap: 1ch; align-items: center;">
+                <span><b>Surf ID:</b></span> <span style="user-select: text;">{id}</span>
+              </div>
+            {/await}
           {/if}
         </div>
       </article>
