@@ -81,10 +81,10 @@ export class ContextManager {
               return item.sourceTab
             } else if (item instanceof ContextItemActiveTab) {
               // Since we can't directly subscribe to the activeTab store in the context item we rely on the store in the tabsManager
-              if (get(item.activeTab)?.id !== $activeTab?.id) {
+              if (item.currentTabValue?.id !== $activeTab?.id) {
                 return $activeTab
               }
-              return get(item.activeTab)
+              return item.currentTabValue
             } else if (item instanceof ContextItemPageTab) {
               return item.dataValue
             } else {
@@ -693,7 +693,7 @@ export class ContextManager {
       } else if (item instanceof ContextItemActiveTab) {
         if (includeActive) {
           this.log.debug('Checking active tab item', item.id, tabId)
-          return get(item.activeTab)?.id === tabId
+          return item.currentTabValue?.id === tabId
         }
 
         return false

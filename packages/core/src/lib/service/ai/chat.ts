@@ -349,7 +349,7 @@ export class AIChat {
         const activeTabInContext = this.contextManager.tabsInContextValue.find(
           (tab) => tab.id === this.ai.tabsManager.activeTabValue?.id
         )
-        const activeTab = activeTabItem ? get(activeTabItem.activeTab) : activeTabInContext
+        const activeTab = activeTabItem ? activeTabItem.currentTabValue : activeTabInContext
 
         const desktopVisible = get(this.ai.tabsManager.desktopManager.activeDesktopVisible)
 

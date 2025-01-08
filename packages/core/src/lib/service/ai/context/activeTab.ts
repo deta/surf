@@ -24,8 +24,6 @@ export class ContextItemActiveTab extends ContextItemBase {
   currentTab: Writable<Tab | null>
   item: Writable<ContextItemResource | ContextItemSpace | null>
 
-  activeTab: Readable<Tab | null>
-
   activeTabUnsub: () => void
 
   constructor(manager: ContextManager) {
@@ -35,21 +33,6 @@ export class ContextItemActiveTab extends ContextItemBase {
     this.currentTab = writable(null)
 
     this.cachedItemPrompts = new Map()
-
-    this.activeTab = derived([manager.tabsManager.activeTab], ([activeTab]) => {
-      if (!activeTab) {
-        this.item.set(null)
-        this.currentTab.set(null)
-        return null
-      }
-
-      if (!this.currentTabValue || !this.compareTabs(activeTab, this.currentTabValue)) {
-        this.debounceUpdateItem(activeTab)
-        return activeTab
-      } else {
-        return null
-      }
-    })
 
     this.label = derived([this.item], ([item]) => {
       if (item) {
@@ -67,11 +50,17 @@ export class ContextItemActiveTab extends ContextItemBase {
       }
     })
 
-    // This is a hack to make sure the derived function above actually runs
-    this.activeTabUnsub = this.activeTab.subscribe(async (activeTab) => {
-      if (activeTab) {
-        this.log.debug('Active tab changed', activeTab.id)
-        await tick()
+    this.activeTabUnsub = this.manager.tabsManager.activeTab.subscribe((activeTab) => {
+      this.log.debug('Active tab changed', activeTab?.id)
+
+      if (!activeTab) {
+        this.item.set(null)
+        this.currentTab.set(null)
+        return
+      }
+
+      if (!this.currentTabValue || !this.compareTabs(activeTab, this.currentTabValue)) {
+        this.debounceUpdateItem()
       }
     })
   }
@@ -104,7 +93,13 @@ export class ContextItemActiveTab extends ContextItemBase {
     return true
   }
 
-  async updateItem(tab: Tab) {
+  async updateItem() {
+    const tab = this.manager.tabsManager.activeTabValue
+    if (!tab) {
+      this.item.set(null)
+      return
+    }
+
     const existingItem = this.itemValue
     const existingTab = this.currentTabValue
 
@@ -168,7 +163,7 @@ export class ContextItemActiveTab extends ContextItemBase {
     }
   }
 
-  debounceUpdateItem = useDebounce((tab: Tab) => this.updateItem(tab), 1000)
+  debounceUpdateItem = useDebounce(() => this.updateItem(), 750)
 
   async getResourceIds() {
     const item = get(this.item)
