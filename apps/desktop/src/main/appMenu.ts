@@ -2,7 +2,7 @@ import { app, Menu, shell } from 'electron'
 import { isMac, isWindows, isLinux, useLogScope } from '@horizon/utils'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
-import { getAdblockerState, toggleAdblocker } from './adblocker'
+import { toggleAdblocker } from './adblocker'
 import { join } from 'path'
 import { isAppSetup, isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@horizon/types'
@@ -279,7 +279,9 @@ class AppMenu {
       submenu: [
         {
           id: 'adblocker',
-          label: getAdblockerState('persist:horizon') ? 'Disable Adblocker' : 'Enable Adblocker',
+          // this will automatically change to the correct label on startup
+          // based on the previous stored state when the adblocker is initialized
+          label: 'Enable Adblocker',
           click: () => toggleAdblocker('persist:horizon')
         },
         {
