@@ -66,6 +66,8 @@ interface UserProperties {
   personas: string[]
   email?: string
   app_style?: string
+  tabs_orientation?: string
+  default_browser?: boolean
 }
 
 // TODO: how much does telemetry hurt performance?
@@ -196,7 +198,10 @@ export class Telemetry {
 
     let user_properties: UserProperties = {
       personas: this.personas,
-      app_style: userSettings?.app_style || this.userConfig?.settings.app_style
+      app_style: userSettings?.app_style || this.userConfig?.settings.app_style,
+      tabs_orientation:
+        userSettings?.tabs_orientation ?? this.userConfig?.settings.tabs_orientation,
+      default_browser: this.userConfig?.defaultBrowser
     }
 
     if (!this.isActive()) {
