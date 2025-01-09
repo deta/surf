@@ -168,8 +168,6 @@
   export let items: CtxItem[] = []
 
   let ref: HTMLDialogElement | null = null
-  let canClickOutside = false
-
   onMount(async () => {
     if (targetEl) {
       targetEl.setAttribute('data-context-menu-anchor', '')
@@ -196,10 +194,6 @@
       const edgeOffset = window.innerHeight - targetY
       targetY = window.innerHeight - height - edgeOffset
     }
-
-    setTimeout(() => {
-      canClickOutside = true
-    }, 200)
   })
   onDestroy(() => {
     if (ref) {
@@ -219,9 +213,6 @@
     closeContextMenu()
   }}
   on:contextmenu={(e) => {
-    // A bug introduced in Electron v33.3.0 leads to two contextmenu events being fired for a single right click, so we need to prevent the second one from closing the menu again
-    // More info: https://github.com/electron/electron/pull/44953
-    if (!canClickOutside) return
     closeContextMenu()
   }}
   on:keydown={(e) => {
