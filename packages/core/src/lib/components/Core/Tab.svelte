@@ -1062,6 +1062,8 @@
       --radius: 8px;
       @include utils.squircle($fill: var(--fill), $radius: 8px, $smooth: 0.28);
 
+      padding: 0.5rem 0.6rem;
+
       &:not(.active) {
         @include utils.light-dark-custom(
           'fill',
