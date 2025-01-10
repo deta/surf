@@ -104,10 +104,6 @@
     }
   ] as { id: string; name: string; icon: Icons }[]
 
-  if ((DEFAULT_SPACE_ID as string) === 'inbox') {
-    builtInSpaces.reverse()
-  }
-
   export let onBack = () => {}
   export const handleCreateSpace = async (
     name: string,
@@ -467,6 +463,8 @@
       </div>
     {/each}
 
+    <hr />
+
     <div
       bind:this={pinnedList}
       on:scroll={() => checkOverflowPinned()}
@@ -614,6 +612,18 @@
     flex: 1;
     backdrop-filter: blur(24px);
     overflow: hidden;
+
+    hr {
+      margin-inline: 1rem;
+      margin-block: 0.35rem;
+      @include utils.light-dark-custom(
+        'border-color',
+        var(--black-09),
+        var(--white-15) var(--black-09),
+        var(--white-15)
+      );
+      border-color: var(--border-color);
+    }
   }
 
   .folders-sidebar::-webkit-scrollbar {
