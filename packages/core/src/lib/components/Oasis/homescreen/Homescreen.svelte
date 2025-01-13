@@ -139,6 +139,7 @@
   <div
     id="homescreen"
     class="no-drag"
+    class:empty={$items.length <= 0}
     style:--grid_cell_size={desktop.CELL_SIZE + 'px'}
     style:--grid_gap={desktop.CELL_GAP + 'px'}
     data-tooltip-target="desktop-demo"
@@ -182,15 +183,48 @@
     {/if}
     {#if $items.length === 0}
       <div class="empty-state">
-        <h3>Your homescreen is empty</h3>
-        <p>Drag and drop tabs or items from your stuff onto here.</p>
-        <button
-          class="open-stuff"
-          on:click={handleOpenStuff}
-          data-tooltip-target="open-stuff-desktop"
-          data-tooltip-action="open-stuff"
-          role="none">Open your Stuff ↑</button
-        >
+        <div class="text">
+          <svg
+            width="100%"
+            height="141"
+            viewBox="-70 0 198 121"
+            xmlns="http://www.w3.org/2000/svg"
+            color="currentColor"
+            opacity="0.4"
+            stroke-width="4"
+            stroke-linecap="round"
+          >
+            <g fill="none">
+              <path
+                id="svg_1"
+                d="m176.81118,18.18184c-75.48311,4.19185 -132.95322,45.40562 -148,87"
+                stroke="currentColor"
+              />
+              <line
+                id="svg_4"
+                y2="82.81239"
+                x2="28.85533"
+                y1="105.10472"
+                x1="28.85533"
+                stroke="currentColor"
+              />
+              <line
+                id="svg_5"
+                y2="94.11079"
+                x2="47.59595"
+                y1="104.92583"
+                x1="28.63045"
+                stroke="currentColor"
+              />
+            </g>
+          </svg>
+          <h3>Your desktop is empty</h3>
+          <p class="mb-3">
+            Drag and drop tabs, contexts and other items from your Stuff and almost any place onto
+            here.
+          </p>
+          <p>Place images and gifs and set them as your theme from the context menu.</p>
+        </div>
       </div>
     {/if}
     {#each $items as item (get(item))}
@@ -301,12 +335,41 @@
       display: flex;
       border-radius: 24px;
       background: rgba(255, 255, 255, 0.15);
-      justify-content: end;
-      align-items: center;
+      justify-content: start;
+      align-items: end;
       backdrop-filter: blur(10px);
       text-align: center;
       @apply select-none;
       padding: 4rem;
+      padding-top: 4rem;
+      padding-right: 14rem;
+
+      :global(body:has(#app-contents.verticalTabs)) & {
+        align-items: start;
+        justify-content: end;
+
+        .text {
+          svg {
+            order: 45;
+            transform: scale(-1) translate(-1rem, -1rem);
+          }
+        }
+      }
+
+      @apply text-sky-600/80;
+
+      :global(.custom) & {
+        color: var(--contrast-color) !important;
+      }
+      :global(.dark.custom) & {
+        color: var(--contrast-color) !important;
+      }
+
+      .text {
+        display: flex;
+        flex-direction: column;
+        max-width: 37ch;
+      }
 
       :global(.dark) & {
         background: rgba(0, 0, 0, 0.15);
@@ -318,7 +381,7 @@
         margin: 0 0 0.5em;
         border-radius: 64px;
         // background: rgba(255, 255, 255, 0.5);
-        @apply text-sky-500/80;
+        @apply text-sky-500/90;
 
         :global(.dark) & {
           @apply text-sky-500/80;
@@ -339,7 +402,11 @@
         max-width: 400px;
         text-wrap: pretty;
         @apply text-sky-600/80;
+        opacity: 0.85;
 
+        :global(.dark) & {
+          opacity: 1;
+        }
         :global(.custom) & {
           color: var(--contrast-color) !important;
         }
