@@ -9,7 +9,7 @@
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
   import { useDebounce } from '@horizon/utils'
-  import type { EditablePrompt, SettingsWindowTab, UserSettings } from '@horizon/types'
+  import type { EditablePrompt, SettingsWindowTab, UserConfig, UserSettings } from '@horizon/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
@@ -18,6 +18,7 @@
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
   import { BUILT_IN_MODELS, type Model } from '@horizon/types/src/ai.types'
   import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
+  import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
 
   // let error = ''
   // let loading = false
@@ -28,6 +29,7 @@
   let prompts: EditablePrompt[] = []
   let migrationOutput: HTMLParagraphElement
   let migrating = false
+  let userConfig: UserConfig | undefined = undefined
   let userConfigSettings: UserSettings | undefined = undefined
   let checkInterval: NodeJS.Timeout
   let showLicenses = false
@@ -155,6 +157,25 @@
     handleSettingsUpdate()
   }
 
+  const helpUsImproveSurf = async () => {
+    window.api.deanonymizeUser()
+    // TODO: (maxu): Enable again when we get telemetry to work inside settings.svelte
+    //telemetry.trackChangeTelemetryAnonymization(false)
+
+    const { closeType: confirmed } = await openDialog({
+      title: 'Share your email with us',
+      message:
+        'Accepting will share your email with us, and allow us to contact you based on your Surf usage. No spam, we promise.<br><br> (Surf will restart after accepting)',
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Accept', type: 'submit' }
+      ]
+    })
+    if (confirmed) {
+      window.api.restartApp()
+    }
+  }
+
   // const handleStart = () => {
   //   // @ts-expect-error
   //   window.api.restartApp()
@@ -175,8 +196,9 @@
   }
 
   onMount(async () => {
-    // @ts-ignore
-    userConfigSettings = window.api.getUserConfigSettings()
+    userConfig = await window.api.getUserConfig()
+    console.log('loaded user config', userConfig)
+    userConfigSettings = userConfig.settings
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
     console.log('loaded settings', userConfigSettings)
@@ -194,7 +216,6 @@
     // @ts-ignore
     window.api.getPrompts()
 
-    // @ts-ignore
     window.api.onUserConfigSettingsChange((settings: UserSettings) => {
       console.log('user config settings change', settings)
       userConfigSettings = settings
@@ -276,13 +297,6 @@
   <div class="content-wrapper">
     {#if $activeTab === 'general'}
       <article class="general">
-        {#if !$isDefaultBrowser}
-          <div class="default-wrapper">
-            Surf is not set as your default browser.
-            <button on:click={useAsDefaultBrowser}>Set as your default browser</button>
-          </div>
-        {/if}
-
         <img src={appIcon} alt="App Icon" />
         <div class="app-id">
           <h1>Surf</h1>
@@ -291,6 +305,37 @@
         </div>
 
         <button on:click={checkForUpdates}>Check for Updates</button>
+
+        {#if !$isDefaultBrowser}
+          <div class="default-wrapper">
+            Surf is not set as your default browser.
+            <button on:click={useAsDefaultBrowser}>Set as your default browser</button>
+          </div>
+        {/if}
+
+        {#if userConfig && userConfig.anon_telemetry}
+          <div
+            class="default-wrapper"
+            style="flex-direction: column;align-items: stretch;text-align: left;"
+          >
+            <div style="display: flex;align-items: center;justify-content: space-between;">
+              <span style="max-width:40ch; text-align: left;"
+                >Help us improve Surf by allowing us to contact you via email based on your usage
+                behavior.
+              </span>
+              <button on:click={helpUsImproveSurf}>Help us improve Surf</button>
+            </div>
+            <small style="opacity: 0.7;"
+              >Note, that even with this enabled, we don't have any insights into any private
+              contents you are accessing.<br /><a
+                style="cursor: pointer;"
+                target="_blank"
+                href="https://deta.notion.site/Analytics-152a5244a717812281f7cf4037bb66d7"
+                >Learn More</a
+              ></small
+            >
+          </div>
+        {/if}
 
         {#if isDev}
           <div class="dev-wrapper">
@@ -724,6 +769,7 @@
 
       &:hover {
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        color: rgb(237, 237, 237);
 
         &::before {
           left: 100%;

@@ -63,6 +63,7 @@ export enum HorizonActivationSource {
 }
 
 interface UserProperties {
+  anon_telemetry: boolean
   personas: string[]
   email?: string
   app_style?: string
@@ -132,14 +133,11 @@ export class Telemetry {
       serverUrl: this.proxyUrl
     }
 
-    let userID = this.userConfig.user_id
-    if (this.userConfig.anon_telemetry) {
-      // use the anonID as the user ID for telemetry
-      // which will not be tied to any user identifiable information
-      // and is generated & stored locally
-      this.log.debug('Using anon telemetry')
-      userID = this.userConfig.anon_id
-    }
+    // HACK: We always use the anon_id if present, as if that was used at any time,
+    // we have to keep it so that we dont loose the Amplitude unique user references…
+    // We can never change the user_id after it was in use once!
+    let userID = this.userConfig.anon_id ?? this.userConfig.user_id
+
     if (!userID) {
       this.log.warn('No user/anon ID found, disabling telemetry')
       this.active = false
@@ -161,6 +159,10 @@ export class Telemetry {
     window.api.onTrackEvent((eventName, properties) => {
       this.log.debug('Received track event from main process', eventName, properties)
       this.trackEvent(eventName, properties)
+    })
+    window.api.onUserConfigSettingsChange((settings) => {
+      if (!this.userConfig) return
+      this.userConfig.settings = settings
     })
   }
 
@@ -197,6 +199,7 @@ export class Telemetry {
     const userSettings = this.configService?.getSettings()
 
     let user_properties: UserProperties = {
+      anon_telemetry: this.userConfig?.anon_telemetry,
       personas: this.personas,
       app_style: userSettings?.app_style || this.userConfig?.settings.app_style,
       tabs_orientation:
@@ -214,14 +217,15 @@ export class Telemetry {
       return
     }
 
-    this.log.debug('Tracking event', eventName, eventProperties, user_properties)
-
     if (!this.userConfig?.anon_telemetry) {
       user_properties = {
-        ...user_properties,
-        email: this.userConfig?.email
+        ...user_properties
+        // NOTE: Not doing this any more -> we just notify baclkend of our anon_id / email
+        //email: this.userConfig?.email
       }
     }
+
+    this.log.debug('Tracking event', eventName, eventProperties, user_properties)
 
     amplitude.track({
       event_type: eventName,
@@ -682,6 +686,12 @@ export class Telemetry {
   async trackUpdateHomescreen(action: UpdateHomescreenEventAction) {
     await this.trackEvent(TelemetryEventTypes.UpdateHomescreen, {
       action
+    })
+  }
+
+  async trackChangeTelemetryAnonymization(anonymize: boolean) {
+    await this.trackEvent(TelemetryEventTypes.ChangeTelemetryAnonymization, {
+      anonymize
     })
   }
 

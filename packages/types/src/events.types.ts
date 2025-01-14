@@ -84,7 +84,10 @@ export enum TelemetryEventTypes {
   OpenHomescreen = 'Open Homescreen',
   AddHomescreenItem = 'Add Item to Homescreen',
   RemoveHomescreenItem = 'Remove Item from Homescreen',
-  UpdateHomescreen = 'Update Homescreen'
+  UpdateHomescreen = 'Update Homescreen',
+
+  // Misc
+  ChangeTelemetryAnonymization = 'Change Telemetry Anonymization'
 }
 
 export type AIMessageContext = 'inline' | 'chat'

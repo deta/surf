@@ -18,7 +18,7 @@
 
         <h2>{title}</h2>
       </div>
-      <p>{description}</p>
+      <p>{@html description}</p>
     </div>
 
     {#if value !== undefined}
@@ -41,7 +41,7 @@
 
     & :global(> section) {
       display: flex;
-      align-items: center;
+      align-items: start;
       justify-content: space-between;
       gap: 0.5rem;
     }

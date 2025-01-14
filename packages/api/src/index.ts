@@ -2,7 +2,8 @@ import { AppActivationResponse, UserDataResponse } from './types'
 
 export const ENDPOINTS = {
   app_activations: '/v0/deta-os-auth/activations',
-  userdata: '/v0/deta-os-auth/userdata'
+  userdata: '/v0/deta-os-auth/userdata',
+  userdata_telemetry_id: '/v0/deta-os-auth/userdata/tel-id'
 }
 
 export class API {
@@ -94,6 +95,17 @@ export class AuthenticatedAPI extends API {
     } catch (error) {
       console.error('Error getting user data:', error)
       return null
+    }
+  }
+
+  async setUserTelemetryId(telemetryId: string) {
+    try {
+      const res = (await this.postJSON(ENDPOINTS.userdata_telemetry_id, {
+        telemetry_id: telemetryId
+      })) as Promise<unknown>
+      console.warn('DBG patch user tlem id res: ', await res)
+    } catch (error) {
+      console.error('Error patching user telemetry id:', error)
     }
   }
 

@@ -8,24 +8,24 @@ export const checkIfAppIsActivated = async (apiKey: string) => {
 
   const user = await api.getUserData()
   if (!user) return false
+
+  const existingUserConfig = getUserConfig()
+  let anon_id = existingUserConfig.anon_id
+
   if (user.anon_telemetry) {
-    const existingUserConfig = getUserConfig()
-    let anonId = existingUserConfig.anon_id
-    if (!anonId) {
-      anonId = uuidv4()
+    if (!anon_id) {
+      anon_id = uuidv4()
     }
-    updateUserConfig({
-      user_id: user?.id,
-      anon_id: anonId,
-      anon_telemetry: user?.anon_telemetry
-    })
-  } else {
-    updateUserConfig({
-      user_id: user?.id,
-      email: user?.email,
-      anon_telemetry: user?.anon_telemetry
-    })
   }
+
+  // NOTE: We still use the anon_id if the telemetry is non-anon, so we dont lose unique users
+  // in Amplitude! The amplitude User id is NEVER allowed to change.
+  updateUserConfig({
+    user_id: user?.id,
+    anon_id,
+    email: user?.email,
+    anon_telemetry: user?.anon_telemetry
+  })
 
   return !!user
 }

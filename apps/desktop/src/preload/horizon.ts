@@ -16,7 +16,7 @@ import {
   ReadStream,
   WriteStream
 } from 'fs'
-import { createAPI } from '@horizon/api'
+import { createAPI, createAuthenticatedAPI } from '@horizon/api'
 import {
   type EditablePrompt,
   type UserSettings,
@@ -310,6 +310,19 @@ const api = {
 
   getUserConfig: () => {
     return IPC_EVENTS_RENDERER.getUserConfig.invoke()
+  },
+
+  deanonymizeUser: async () => {
+    const api = createAuthenticatedAPI(API_BASE, API_KEY)
+
+    // Figure out what id to use:
+    let userId = userConfig.anon_id ?? userConfig.user_id
+    if (userId === undefined) {
+      console.error('Could not get valid user id... something is misconfigured!')
+      return
+    }
+
+    await api.setUserTelemetryId(userId)
   },
 
   onRequestDownloadPath: (
