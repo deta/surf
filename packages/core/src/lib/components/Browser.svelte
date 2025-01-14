@@ -1465,7 +1465,8 @@
     if (preview) {
       globalMiniBrowser.openResource(resourceId, {
         from: OpenInMiniBrowserEventFrom.Chat,
-        highlightSimilarText: answerText
+        highlightSimilarText: answerText,
+        citationSourceUid: sourceUid
       })
       return
     }

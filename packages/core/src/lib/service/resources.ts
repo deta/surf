@@ -1371,7 +1371,7 @@ export class ResourceManager {
         ''
     )?.href
 
-    if (!canBeRefreshed || !canonicalUrl) {
+    if (!canBeRefreshed) {
       this.log.debug('skipping refresh for non-refreshable resource', resource.id)
       return
     }
@@ -1385,6 +1385,11 @@ export class ResourceManager {
       if (resource.type === 'application/pdf') {
         this.log.debug('refreshing PDF resource by only re-running post processing', resource.id)
         await this.sffs.backend.js__store_resource_post_process(resource.id)
+        return
+      }
+
+      if (!canonicalUrl) {
+        this.log.debug('skipping refresh as resource has no canonical URL', resource.id)
         return
       }
 

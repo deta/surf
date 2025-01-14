@@ -1,7 +1,7 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { Resource, ResourceManager } from './resources'
 import { generateID, useLogScope } from '@horizon/utils'
-import { OpenInMiniBrowserEventFrom, ResourceTagsBuiltInKeys } from '@horizon/types'
+import { OpenInMiniBrowserEventFrom, ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
 import type { Download, TabPage } from '../types'
 import type BrowserTab from '../components/Browser/BrowserTab.svelte'
@@ -28,10 +28,20 @@ export type MiniBrowserSelected = {
   from?: OpenInMiniBrowserEventFrom
   resource?: Resource
   browserTab?: BrowserTab
-  selection?: {
-    text?: string
-    timestamp?: number
-  }
+  selection?: MiniBrowserSelection
+}
+
+export type MiniBrowserSelection = {
+  text?: string
+  timestamp?: number
+  sourceUid?: string
+}
+
+export type OpenMiniBrowserOptions = {
+  highlightSimilarText?: string
+  jumptToTimestamp?: number
+  citationSourceUid?: string
+  from?: OpenInMiniBrowserEventFrom
 }
 
 export const MINI_BROWSER_SERVICE_CONTEXT_KEY = 'miniBrowserService'
@@ -84,14 +94,7 @@ export class MiniBrowser {
     return tab
   }
 
-  async openResource(
-    resourceOrId: string | Resource,
-    opts?: {
-      highlightSimilarText?: string
-      jumptToTimestamp?: number
-      from?: OpenInMiniBrowserEventFrom
-    }
-  ) {
+  async openResource(resourceOrId: string | Resource, opts?: OpenMiniBrowserOptions) {
     let resource: Resource | null
     if (typeof resourceOrId === 'string') {
       resource = await this.resourceManager.getResource(resourceOrId)
@@ -110,7 +113,12 @@ export class MiniBrowser {
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
     )?.value
 
-    const url = canonicalUrl || canonicalUrl || resource?.metadata?.sourceURI
+    let url = canonicalUrl || resource?.metadata?.sourceURI
+
+    if (resource.type === ResourceTypes.PDF) {
+      url = `surf://resource/${resource.id}`
+    }
+
     const tab = this.createTab(url, resource)
 
     this.selected.set({
@@ -121,7 +129,8 @@ export class MiniBrowser {
       resource: resource,
       selection: {
         text: opts?.highlightSimilarText,
-        timestamp: opts?.jumptToTimestamp
+        timestamp: opts?.jumptToTimestamp,
+        sourceUid: opts?.citationSourceUid
       }
     })
 
@@ -130,14 +139,7 @@ export class MiniBrowser {
     this.telemetry.trackOpenInMiniBrowser('resource', opts?.from)
   }
 
-  openWebpage(
-    url: string,
-    opts?: {
-      highlightSimilarText?: string
-      jumptToTimestamp?: number
-      from?: OpenInMiniBrowserEventFrom
-    }
-  ) {
+  openWebpage(url: string, opts?: OpenMiniBrowserOptions) {
     this.log.debug('Opening webpage', url)
 
     const tab = this.createTab(url)
@@ -150,7 +152,8 @@ export class MiniBrowser {
       resource: undefined,
       selection: {
         text: opts?.highlightSimilarText,
-        timestamp: opts?.jumptToTimestamp
+        timestamp: opts?.jumptToTimestamp,
+        sourceUid: opts?.citationSourceUid
       }
     })
 
@@ -159,14 +162,7 @@ export class MiniBrowser {
     this.telemetry.trackOpenInMiniBrowser('page', opts?.from)
   }
 
-  openTab(
-    tab: TabPage,
-    opts?: {
-      highlightSimilarText?: string
-      jumptToTimestamp?: number
-      from?: OpenInMiniBrowserEventFrom
-    }
-  ) {
+  openTab(tab: TabPage, opts?: OpenMiniBrowserOptions) {
     this.selected.set({
       id: generateID(),
       type: 'tab',
@@ -174,7 +170,8 @@ export class MiniBrowser {
       from: opts?.from,
       selection: {
         text: opts?.highlightSimilarText,
-        timestamp: opts?.jumptToTimestamp
+        timestamp: opts?.jumptToTimestamp,
+        sourceUid: opts?.citationSourceUid
       }
     })
 

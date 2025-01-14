@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import WebviewWrapper from '../Webview/WebviewWrapper.svelte'
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
@@ -43,13 +43,13 @@
     SelectDropdown,
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
+  import type { MiniBrowserSelection } from '@horizon/core/src/lib/service/miniBrowser'
 
   export let tab: TabPage
   // export let url: Writable<string>
   export let resource: Resource | undefined = undefined
   export let active: boolean = true
-  export let highlightSimilarText: string | undefined = undefined
-  export let jumpToTimestamp: number | undefined = undefined
+  export let selection: MiniBrowserSelection | undefined = undefined
   export let browserTab: BrowserTab
   export let selected: MiniBrowserSelected
   export let isGlobal: boolean = false
@@ -79,8 +79,8 @@
 
   const getInitialUrl = () => {
     const baseUrl = tab.currentLocation || tab.initialLocation
-    if (jumpToTimestamp && checkIfYoutubeUrl(baseUrl)) {
-      return injectYouTubeTimestamp(baseUrl, jumpToTimestamp)
+    if (selection?.timestamp && checkIfYoutubeUrl(baseUrl)) {
+      return injectYouTubeTimestamp(baseUrl, selection?.timestamp)
     }
 
     return baseUrl
@@ -317,7 +317,7 @@
   }
 
   onMount(async () => {
-    log.debug('Resource modal mounted', resource, jumpToTimestamp, $url)
+    log.debug('Resource modal mounted', resource, selection?.timestamp, $url)
 
     if (resource) {
       const viewedByUserTag = (resource.tags ?? []).find(
@@ -347,8 +347,14 @@
         }
       }
 
-      if (highlightSimilarText && !jumpToTimestamp) {
-        await browserTab.highlightWebviewText(resource.id, highlightSimilarText)
+      if (selection?.text && !selection?.timestamp) {
+        let source = null
+        if (selection.sourceUid)
+          source = await resourceManager.sffs.getAIChatDataSource(selection.sourceUid)
+
+        if (browserTab) {
+          await browserTab.highlightWebviewText(resource.id, selection?.text, source)
+        }
       }
     }
   })

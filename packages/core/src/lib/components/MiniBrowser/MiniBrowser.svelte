@@ -49,8 +49,7 @@
         selected={$selected}
         {isGlobal}
         resource={$selected.resource}
-        highlightSimilarText={$selected.selection?.text}
-        jumpToTimestamp={$selected.selection?.timestamp}
+        selection={$selected.selection}
         {active}
         on:close={handleClose}
         on:open-mini-browser={handleOpenMiniBrowserFromWebview}

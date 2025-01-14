@@ -399,6 +399,7 @@
   on:click|preventDefault={handleClick}
   class:wide={((source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null) ||
     source?.metadata?.url ||
+    resource ||
     (citationType === 'image' && !skipParsing)) &&
     !general}
   class:active={highlightedCitation && $highlightedCitation === uniqueID}
@@ -423,7 +424,7 @@
   </span>
 
   {#if skipContext}
-    <div class="inline-flex items-center justify-center gap-2 select-none">
+    <div class="inline-flex items-center justify-center gap-1 select-none">
       {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
         <img
           src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
@@ -495,7 +496,7 @@
         citationType === 'image' ||
         ($isDraggingSomething && !$hoveringPreview)}
     >
-      <div slot="trigger" class="inline-flex items-center justify-center gap-2 select-none">
+      <div slot="trigger" class="inline-flex items-center justify-center gap-1 select-none">
         {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
           <img
             src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
