@@ -344,6 +344,10 @@
       padding-top: 4rem;
       padding-right: 14rem;
 
+      :global(#app .main.os__windows) & {
+        padding-right: 24rem !important;
+      }
+
       :global(body:has(#app-contents.verticalTabs)) & {
         align-items: start;
         justify-content: end;
