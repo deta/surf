@@ -115,7 +115,8 @@ export const getUserConfig = (path?: string) => {
       selected_model: BuiltInModelIDs.GPT4o,
       model_settings: [],
       vision_image_tagging: false,
-      turntable_favicons: true
+      turntable_favicons: true,
+      auto_toggle_pip: true
     }
     setUserConfig(storedConfig as UserConfig)
   }
@@ -207,6 +208,10 @@ export const getUserConfig = (path?: string) => {
   }
   if (storedConfig.settings.turntable_favicons === undefined) {
     storedConfig.settings.turntable_favicons = true
+    changedConfig = true
+  }
+  if (storedConfig.settings.auto_toggle_pip === undefined) {
+    storedConfig.settings.auto_toggle_pip = true
     changedConfig = true
   }
 

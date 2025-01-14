@@ -19,6 +19,7 @@
     CreateTabEventTrigger,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
+    WebViewGestureRequiredEventNames,
     type WebViewEventWheel,
     type WebViewReceiveEvents,
     type WebViewSendEvents
@@ -71,6 +72,18 @@
   let findInPageComp: FindInPage
   let hoverTargetUrl: string
   let zoomTimer: number
+
+  // Temporary hold for request callback NTOE: Ideally use .once instead of this junk, but is svelte
+  // component event, so cannot easilly do that
+  let pipRequestCallback: {
+    res: ((v: boolean) => void) | null
+    rej: (() => void) | null
+    ttl: NodeJS.Timeout | null
+  } = {
+    res: null,
+    rej: null,
+    ttl: null
+  }
 
   const { swipeDirection, swipeProgress, ...historySwipeRecognizer } = createHistorySwipeRecognizer(
     canGoBack,
@@ -128,6 +141,15 @@
       const drag = Dragcula.get().activeDrag
       if (drag) {
         drag.item?.onDrag(drag, data)
+      }
+    } else if (type === WebViewEventSendNames.PIPState) {
+      if (pipRequestCallback.res !== null) {
+        const { pip: value } = data as { pip: boolean }
+        let cbk = pipRequestCallback.res
+        if (pipRequestCallback.ttl) clearTimeout(pipRequestCallback.ttl)
+        pipRequestCallback.res = null
+        pipRequestCallback.rej = null
+        cbk(value)
       }
     }
 
@@ -202,6 +224,35 @@
   // Needs to be timed out to get accurate value
   export const isCurrentlyAudible = (): Promise<boolean> => {
     return new Promise((res, _) => setTimeout(() => res(webview.isCurrentlyAudible()), 500))
+  }
+
+  export const requestEnterPip = () => {
+    // If we have to use this more, this should be it's own util function,
+    // generating these strings!
+    webview.executeJavaScript(
+      `window.dispatchEvent(new CustomEvent('${WebViewGestureRequiredEventNames.RequestEnterPIP}'));`,
+      true
+    )
+  }
+
+  export const requestExitPip = () => {
+    sendEvent(WebViewEventReceiveNames.RequestExitPIP)
+  }
+
+  export const isUsingPictureInPicture = (): Promise<boolean> => {
+    return new Promise((res, rej) => {
+      pipRequestCallback.ttl = setTimeout(() => {
+        pipRequestCallback.res = null
+        pipRequestCallback.rej = null
+        pipRequestCallback.ttl = null
+        rej()
+      }, 2000)
+
+      pipRequestCallback.res = res
+      pipRequestCallback.rej = rej
+
+      sendEvent(WebViewEventReceiveNames.RequestPIPState)
+    })
   }
 
   export const sendEvent = <T extends keyof WebViewReceiveEvents>(

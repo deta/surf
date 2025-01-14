@@ -4,7 +4,8 @@
     tooltip as tooltip2,
     getFileKind,
     getHostname,
-    checkIfSecureURL
+    checkIfSecureURL,
+    conditionalArrayItem
   } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -568,81 +569,8 @@
     return [baseClasses, activeClasses, selectedClasses, styleClasses].join(' ')
   }
 
-  onMount(() => {
-    if (tab.type === 'space') {
-      fetchSpace(tab.spaceId)
-    } else if (tab.type === 'page') {
-      const unsubURLChangeEvent = tabsManager.on('url-changed', (updatedTab, newUrl) => {
-        if (tab.id === updatedTab.id) {
-          handleTabUrlChange(newUrl)
-        }
-      })
-
-      return unsubURLChangeEvent
-    }
-  })
-</script>
-
-<div
-  draggable={true}
-  id="tab-{tab.id}"
-  class={$tabStyles}
-  class:pinned
-  class:active={isActive}
-  class:hovered
-  class:selected={isSelected}
-  class:user-selected={isUserSelected && !$desktopVisible}
-  class:combine-border={// Combine border class if:
-  // 1. Magic is active and tab is magical, or
-  // 2. Magic is inactive but tab is selected/active
-  !$desktopVisible && isSelected}
-  class:magic={isInChatContext && isMagicActive}
-  class:inStuffBar
-  style={tabSize
-    ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
-    : ''}
-  role="none"
-  use:HTMLDragItem.action={{}}
-  on:DragStart={handleDragStart}
-  on:DragEnd={handleDragEnd}
-  use:HTMLDragZone.action={{
-    accepts: (drag) => {
-      if (tab.type !== 'space' || tab.spaceId === 'all') return false
-      if (
-        drag.isNative ||
-        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-      ) {
-        // Cancel if tab dragged is a space itself
-        if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
-          return false
-        }
-
-        return true
-      }
-      return false
-    }
-  }}
-  on:Drop={handleDrop}
-  on:click={handleClick}
-  on:dblclick={handleDoubleClick}
-  on:mousedown={handleMouseDown}
-  on:mouseenter={() => {
-    hovered = true
-    dispatch('mouseenter', tab.id)
-  }}
-  on:mouseleave={() => {
-    if (!popoverVisible) hovered = false
-    dispatch('mouseleave', tab.id)
-  }}
-  use:contextMenu={{
-    canOpen:
-      (isMagicActive ||
-        $selectedTabs.size <= 1 ||
-        Array.from($selectedTabs.values()).find((e) => e.id === tab.id) === undefined) &&
-      !disableContextmenu,
-    items: [
+  const getContextMenuItems = async (): Promise<CtxItem[]> => {
+    return [
       {
         type: 'action',
         hidden: tab.type !== 'page',
@@ -725,6 +653,83 @@
         action: () => handleArchive(DeleteTabEventTrigger.ContextMenu)
       }
     ]
+  }
+
+  onMount(() => {
+    if (tab.type === 'space') {
+      fetchSpace(tab.spaceId)
+    } else if (tab.type === 'page') {
+      const unsubURLChangeEvent = tabsManager.on('url-changed', (updatedTab, newUrl) => {
+        if (tab.id === updatedTab.id) {
+          handleTabUrlChange(newUrl)
+        }
+      })
+
+      return unsubURLChangeEvent
+    }
+  })
+</script>
+
+<div
+  draggable={true}
+  id="tab-{tab.id}"
+  class={$tabStyles}
+  class:pinned
+  class:active={isActive}
+  class:hovered
+  class:selected={isSelected}
+  class:user-selected={isUserSelected && !$desktopVisible}
+  class:combine-border={// Combine border class if:
+  // 1. Magic is active and tab is magical, or
+  // 2. Magic is inactive but tab is selected/active
+  !$desktopVisible && isSelected}
+  class:magic={isInChatContext && isMagicActive}
+  class:inStuffBar
+  style={tabSize
+    ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
+    : ''}
+  role="none"
+  use:HTMLDragItem.action={{}}
+  on:DragStart={handleDragStart}
+  on:DragEnd={handleDragEnd}
+  use:HTMLDragZone.action={{
+    accepts: (drag) => {
+      if (tab.type !== 'space' || tab.spaceId === 'all') return false
+      if (
+        drag.isNative ||
+        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        // Cancel if tab dragged is a space itself
+        if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
+          return false
+        }
+
+        return true
+      }
+      return false
+    }
+  }}
+  on:Drop={handleDrop}
+  on:click={handleClick}
+  on:dblclick={handleDoubleClick}
+  on:mousedown={handleMouseDown}
+  on:mouseenter={() => {
+    hovered = true
+    dispatch('mouseenter', tab.id)
+  }}
+  on:mouseleave={() => {
+    if (!popoverVisible) hovered = false
+    dispatch('mouseleave', tab.id)
+  }}
+  use:contextMenu={{
+    canOpen:
+      (isMagicActive ||
+        $selectedTabs.size <= 1 ||
+        Array.from($selectedTabs.values()).find((e) => e.id === tab.id) === undefined) &&
+      !disableContextmenu,
+    items: getContextMenuItems
   }}
 >
   <div

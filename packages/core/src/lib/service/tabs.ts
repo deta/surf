@@ -17,7 +17,8 @@ import {
   ResourceTagsBuiltInKeys,
   ResourceTypes,
   SelectTabEventAction,
-  type DeleteTabEventTrigger
+  type DeleteTabEventTrigger,
+  type UserSettings
 } from '@horizon/types'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
@@ -45,6 +46,7 @@ import type { Resource, ResourceManager } from './resources'
 import type { OasisService, OasisSpace } from './oasis'
 import type { DesktopManager } from './desktop'
 import type { AIService } from './ai/ai'
+import type { ConfigService } from './config'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -98,6 +100,7 @@ export class TabsManager {
   private telemetry: Telemetry
   private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
+  private config: ConfigService
   oasis: OasisService
   historyEntriesManager: HistoryEntriesManager
   desktopManager: DesktopManager
@@ -130,13 +133,15 @@ export class TabsManager {
     historyEntriesManager: HistoryEntriesManager,
     telemetry: Telemetry,
     oasis: OasisService,
-    desktopManager: DesktopManager
+    desktopManager: DesktopManager,
+    config: ConfigService
   ) {
     const storage = new HorizonDatabase()
     this.db = storage.tabs
     this.resourceManager = resourceManager
     this.historyEntriesManager = historyEntriesManager
     this.telemetry = telemetry
+    this.config = config
     this.oasis = oasis
     this.desktopManager = desktopManager
     this.log = useLogScope('TabsService')
@@ -598,6 +603,14 @@ export class TabsManager {
       return
     }
 
+    // Request pip on old tab if enabled and media playing
+    if (this.config.settingsValue.auto_toggle_pip) {
+      const oldTab = this.browserTabsValue[this.activeTabValue?.id ?? '']
+      if (oldTab && get(oldTab.getMediaPlaybackState())) {
+        oldTab.requestEnterPip()
+      }
+    }
+
     if (closeOverlay) {
       this.showNewTabOverlay.set(0)
     }
@@ -650,6 +663,13 @@ export class TabsManager {
         })
       }
     }, 0)
+
+    // If new active was using pip, exit it
+    if (this.config.settingsValue.auto_toggle_pip && browserTab) {
+      browserTab.isUsingPictureInPicture().then((v: boolean) => {
+        if (v) browserTab.requestExitPip()
+      })
+    }
 
     this.emit('selected', tab)
 
@@ -1398,14 +1418,16 @@ export class TabsManager {
     historyEntriesManager: HistoryEntriesManager,
     telemetry: Telemetry,
     oasis: OasisService,
-    desktopManager: DesktopManager
+    desktopManager: DesktopManager,
+    config: ConfigService
   ) {
     const tabsService = new TabsManager(
       resourceManager,
       historyEntriesManager,
       telemetry,
       oasis,
-      desktopManager
+      desktopManager,
+      config
     )
     setContext(TABS_CONTEXT_KEY, tabsService)
     return tabsService

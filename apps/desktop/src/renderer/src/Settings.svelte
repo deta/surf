@@ -525,6 +525,14 @@
             on:update={handleSettingsUpdate}
             on:reset-background-image={handleResetBackgroundImage}
           />
+
+          <SettingsOption
+            icon="picture-in-picture"
+            title="Automatic Picture-in-Picture"
+            description="Switching away from the active tab while a video is playing, it will continue playing the video inside a floating window."
+            bind:value={userConfigSettings.auto_toggle_pip}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
 
         <PromptSection

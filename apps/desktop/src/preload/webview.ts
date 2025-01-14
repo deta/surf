@@ -19,7 +19,8 @@ import {
   WebViewSendEvents,
   WebViewEventReceiveNames,
   WebViewEventSendNames,
-  ResourceTypes
+  ResourceTypes,
+  WebViewGestureRequiredEventNames
 } from '@horizon/types'
 
 import Menu from './components/Menu.svelte'
@@ -586,6 +587,50 @@ function handleScrollToAnnotation(
   }
 }
 
+async function handleReuqestEnterPictureInPicture() {
+  try {
+    const videoEl = Array.from(document.getElementsByTagName('video'))
+      .filter((e) => !e.paused && !e.muted)
+      .at(0)
+    if (!videoEl) {
+      console.warn("Didn't find valid video for PiP!")
+      return
+    }
+
+    await videoEl.requestPictureInPicture()
+
+    // NOTE: These currently don't work properly in Electron/Chromium. Will impl as soon as they work.
+    /*videoEl.addEventListener('enterpictureinpicture', (e: PictureInPictureEvent) => {})
+    videoEl.addEventListener('leavepictureinpicture', async (e: PictureInPictureEvent) => {
+      await document.exitPictureInPicture()
+      // Video left Picture-in-Picture.
+      // User may have played a Picture-in-Picture video from a different page.
+      // const was_playing = !vid.paused;
+      setTimeout(() => {
+        if (!videoEl.paused) {
+          console.log('came Back to Tab')
+        } else if (videoEl) {
+          console.log('clicked the close button')
+        } else {
+          console.log('was already paused, no way to know')
+        }
+      }, 0)
+    })
+    navigator.mediaSession.setActionHandler('play', function () {})
+    navigator.mediaSession.setActionHandler('pause', function () {})*/
+  } catch (e) {
+    console.error('Could not use pip: ', e)
+  }
+}
+async function handleReuqestExitPictureInPicture() {
+  if (!document.pictureInPictureElement) return
+  try {
+    await document.exitPictureInPicture()
+  } catch (e) {
+    console.error('Could not exit pip: ', e)
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async (_) => {
   // document.body.addEventListener('dragover', (e: DragEvent) => e.preventDefault())
   window.addEventListener('mouseup', (e: MouseEvent) => {
@@ -884,10 +929,15 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
   sendPageEvent(WebViewEventSendNames.KeyUp, { key: event.key })
 })
 
-window.addEventListener('keydown', (event: KeyboardEvent) => {
+window.addEventListener('keydown', async (event: KeyboardEvent) => {
   // Ignore synthetic events that are not user generated
   if (!event.isTrusted) {
     return
+  }
+
+  if (event.altKey && event.code === 'KeyP') {
+    if (!document.pictureInPictureElement) handleReuqestEnterPictureInPicture()
+    else handleReuqestExitPictureInPicture()
   }
 
   if (event.key === 'd' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
@@ -1281,13 +1331,17 @@ ipcRenderer.on('webview-event', (_event, payload) => {
     handleSeekToTimestamp(data)
   } else if (type === WebViewEventReceiveNames.GoToPDFPage) {
     handleGoToPDFPage(data)
-  } /*else if (type === WebViewEventReceiveNames.SimulateDragStart) {
-    handleSimulateDragStart(data)
-  } else if (type === WebViewEventReceiveNames.SimulateDragUpdate) {
-    handleSimulateDragUpdate(data)
-  } else if (type === WebViewEventReceiveNames.SimulateDragEnd) {
-    handleSimulateDragEnd(data)
-  }*/
+  } else if (type === WebViewEventReceiveNames.RequestExitPIP) {
+    handleReuqestExitPictureInPicture()
+  } else if (type === WebViewEventReceiveNames.RequestPIPState) {
+    sendPageEvent(WebViewEventSendNames.PIPState, {
+      pip: document.pictureInPictureElement !== null
+    })
+  }
+})
+// Handle special permission events
+window.addEventListener(WebViewGestureRequiredEventNames.RequestEnterPIP, (e) => {
+  handleReuqestEnterPictureInPicture()
 })
 
 // @ts-expect-error

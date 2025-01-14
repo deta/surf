@@ -19,7 +19,10 @@ export enum WebViewEventReceiveNames {
   SimulateDragStart = 'simulate_drag_start',
   SimulateDragUpdate = 'simulate_drag_update',
   SimulateDragEnd = 'simulate_drag_end',
-  GoToPDFPage = 'go_to_pdf_page'
+  GoToPDFPage = 'go_to_pdf_page',
+  // NOTE: There is no PIP enter, as it needs user gesture "workaround"
+  RequestExitPIP = 'request_exit_picture_in_picture',
+  RequestPIPState = 'request_picture_in_picture_state'
 }
 
 export enum WebViewEventSendNames {
@@ -48,7 +51,17 @@ export enum WebViewEventSendNames {
   AnnotationClick = 'annotation_click',
   RemoveAnnotation = 'remove_annotation',
   UpdateAnnotation = 'update_annotation',
-  AddToChat = 'add_to_chat'
+  AddToChat = 'add_to_chat',
+  PIPState = 'picture_in_picture_state'
+}
+
+// NOTE: This is separate from the IPC events, as some actions
+// (such as requesting PIP) require special user interaction.
+// Electron can circumvent this by calling
+// `webview.executeJavaScript(..., true)` but this means that it sadly
+// works separate from our other IPC events.
+export enum WebViewGestureRequiredEventNames {
+  RequestEnterPIP = 'surf__request_enter_pip'
 }
 
 export type WebViewEventTransformationOutput = {
@@ -164,6 +177,9 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.SimulateDragUpdate]: WebViewEventSimulateDragUpdate
   [WebViewEventReceiveNames.SimulateDragEnd]: WebViewEventSimulateDragEnd
   [WebViewEventReceiveNames.GoToPDFPage]: WebViewEventGoToPDFPage
+  [WebViewEventReceiveNames.RequestEnterPIP]: void
+  [WebViewEventReceiveNames.RequestExitPIP]: void
+  [WebViewEventReceiveNames.RequestPIPState]: void
 }
 
 export type WebViewSendEvents = {
@@ -192,6 +208,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.UpdateAnnotation]: WebViewEventUpdateAnnotation
   [WebViewEventSendNames.AddToChat]: string
   [WebViewEventSendNames.Copy]: string
+  [WebViewEventSendNames.PIPState]: { pip: boolean }
 }
 
 export enum WebviewAnnotationEventNames {

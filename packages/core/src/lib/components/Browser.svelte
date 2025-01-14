@@ -230,7 +230,8 @@
     historyEntriesManager,
     telemetry,
     oasis,
-    desktopManager
+    desktopManager,
+    config
   )
   const aiService = provideAI(resourceManager, tabsManager, config)
 

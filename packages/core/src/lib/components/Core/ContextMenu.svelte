@@ -38,12 +38,12 @@
   export type CtxMenuProps = {
     key?: string
     canOpen?: boolean
-    items: CtxItem[]
+    items: CtxItem[] | (() => Promise<CtxItem[]>)
   }
 
   declare global {
     interface HTMLElement {
-      contextMenuItems?: CtxItem[]
+      contextMenuItems?: CtxItem[] | (() => Promise<CtxItem[]>)
       contextMenuKey?: string
     }
   }
@@ -65,7 +65,7 @@
     if (setupComplete) return
     window.addEventListener(
       'contextmenu',
-      (e) => {
+      async (e) => {
         // Find closest element which has contextMenuHint property set
         let target = e.target as HTMLElement | null
         while (target && !target.contextMenuItems) {
@@ -76,12 +76,19 @@
         e.preventDefault()
         e.stopImmediatePropagation()
 
+        let items: CtxItem[]
+        if (Array.isArray(target.contextMenuItems)) {
+          items = target.contextMenuItems
+        } else {
+          items = await target.contextMenuItems!()
+        }
+
         // TODO: give target ref
         openContextMenu({
           x: e.clientX,
           y: e.clientY,
           targetEl: target,
-          items: target.contextMenuItems,
+          items,
           key: target.contextMenuKey
         })
       },
@@ -132,7 +139,11 @@
   // NOTE: We allow undefined for more easy items construction (ternary)
   export function contextMenu(node: HTMLElement, props: CtxMenuProps): ActionReturn<any, any> {
     node.contextMenuKey = props.key
-    node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
+    if (Array.isArray(props.items)) {
+      node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
+    } else {
+      node.contextMenuItems = props.items
+    }
 
     if (props.canOpen === false) {
       node.contextMenuItems = undefined

@@ -101,6 +101,7 @@ import Save from './Icons/Save.svelte'
 import PlusBoxed from './Icons/PlusBoxed.svelte'
 import OpenAI from './Icons/OpenAI.svelte'
 import Claude from './Icons/Claude.svelte'
+import PictureInPicture from './Icons/PictureInPicture.svelte'
 
 export const icons = {
   adblockoff: AdblockOff,
@@ -206,7 +207,8 @@ export const icons = {
   save: Save,
   'plus.boxed': PlusBoxed,
   'open-ai': OpenAI,
-  claude: Claude
+  claude: Claude,
+  'picture-in-picture': PictureInPicture
 }
 
 export type Icons = keyof typeof icons
@@ -313,5 +315,6 @@ export {
   Save,
   PlusBoxed,
   OpenAI,
-  Claude
+  Claude,
+  PictureInPicture
 }

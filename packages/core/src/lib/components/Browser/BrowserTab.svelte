@@ -149,6 +149,9 @@
   export const canGoForward = webview?.canGoForward
   export const getInitialSrc = () => initialSrc
   export const getMediaPlaybackState = () => isMediaPlaying
+  export const requestEnterPip = () => webview?.requestEnterPip()
+  export const requestExitPip = () => webview?.requestExitPip()
+  export const isUsingPictureInPicture = () => webview?.isUsingPictureInPicture()
 
   let app: DetectedWebApp | null = null
 
