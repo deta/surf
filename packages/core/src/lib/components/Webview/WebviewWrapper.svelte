@@ -199,6 +199,11 @@
     }
   }
 
+  // Needs to be timed out to get accurate value
+  export const isCurrentlyAudible = (): Promise<boolean> => {
+    return new Promise((res, _) => setTimeout(() => res(webview.isCurrentlyAudible()), 500))
+  }
+
   export const sendEvent = <T extends keyof WebViewReceiveEvents>(
     name: T,
     data?: WebViewReceiveEvents[T]

@@ -1228,6 +1228,13 @@
     }
   }
 
+  const handleWebviewMediaPlaybackChanged = (e: CustomEvent<boolean>) => {
+    webview.isCurrentlyAudible().then((v) => {
+      if (e.detail && !v) return
+      isMediaPlaying.set(e.detail)
+    })
+  }
+
   onMount(() => {
     if (!webview) return
 
@@ -1260,5 +1267,5 @@
   on:did-finish-load={debouncedAppDetection}
   on:new-window={handleWebviewNewWindow}
   on:navigation
-  on:media-playback-changed={(e) => isMediaPlaying.set(e.detail)}
+  on:media-playback-changed={handleWebviewMediaPlaybackChanged}
 />
