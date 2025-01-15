@@ -15,7 +15,6 @@ const params = {
 
 function electronBuilderConfig() {
   return {
-    electronVersion: '34.0.0-beta.15',
     appId: 'ea.browser.deta.surf',
     productName: params.buildName,
     directories: {
