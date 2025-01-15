@@ -4764,7 +4764,6 @@
 
 <NewTabOverlay
   spaceId={DEFAULT_SPACE_ID}
-  activeTab={$activeTab}
   {updateSearchValue}
   showTabSearch={showNewTabOverlay}
   selectedSpaceId={newTabSelectedSpaceId}

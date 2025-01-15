@@ -1,13 +1,6 @@
 <script lang="ts">
-  import {
-    type Writable,
-    derived,
-    writable,
-    type Subscriber,
-    type Unsubscriber
-  } from 'svelte/store'
+  import { type Writable, derived, writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import Fuse from 'fuse.js'
   import { useLogScope, useDebounce, useLocalStorageStore, tooltip } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
@@ -17,41 +10,28 @@
   import type { OverlayEvents } from '../Overlay/types'
   import { Icon } from '@horizon/icons'
   import { DragOperation, Dragcula, DragculaDragEvent, HTMLDragArea } from '@horizon/dragcula'
-  import {
-    Resource,
-    ResourceJSON,
-    ResourceManager,
-    type ResourceSearchResultItem
-  } from '../../service/resources'
+  import { Resource, ResourceManager, type ResourceSearchResultItem } from '../../service/resources'
   import {
     DragTypeNames,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SpaceEntryOrigin,
-    type DragTypes,
-    type Space
+    type DragTypes
   } from '../../types'
-  import type { Tab, TabPage, TabSpace } from '../../types/browser.types'
+  import type { Tab } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
   import {
-    CreateTabEventTrigger,
-    DeleteResourceEventTrigger,
     MultiSelectResourceEventAction,
     OpenInMiniBrowserEventFrom,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger
   } from '@horizon/types'
-  import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
-  import { CONTEXT_MENU_OPEN } from './ContextMenu.svelte'
-  import * as Command from '../Command'
-  import CommandMenuItem, { type CMDMenuItem } from './CommandMenuItem.svelte'
   import DropWrapper from '../Oasis/DropWrapper.svelte'
   import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
   import OasisSpaceRenderer from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/SpacesView.svelte'
   import Onboarding from './Onboarding.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
-  import { Drawer } from 'vaul-svelte'
   import stuffAdd from '../../../../public/assets/demo/stuffsave.gif'
   import stuffSmart from '../../../../public/assets/demo/stuffsmart.gif'
   import stuffSearch from '../../../../public/assets/demo/stuffsearch.gif'
@@ -60,22 +40,19 @@
   import SearchField from '../Atoms/SearchField.svelte'
   import Select from '../Atoms/Select.svelte'
   import { createResourcesFromMediaItems, processDrop } from '../../service/mediaImporter'
-  import { springVisibility } from '../motion/springVisibility'
   import { springAppear } from '../motion/springAppear'
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
-  import { fade } from 'svelte/transition'
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
 
-  export let activeTabs: Tab[] = []
   export let showTabSearch: Writable<number>
   export let spaceId: string
   export let historyEntriesManager: HistoryEntriesManager
-  export let activeTab: Tab | undefined = undefined
   export let updateSearchValue: Writable<string>
+
+  const SEARCH_RESET_TIMEOUT = 8000
 
   const log = useLogScope('NewTabOverlay')
   const dispatch = createEventDispatcher<OverlayEvents>()
-  const tabsManager = useTabsManager()
   const config = useConfig()
   const oasis = useOasis()
   const toasts = useToasts()
@@ -89,18 +66,6 @@
   const everythingContentsResources = oasis.everythingContents
   const userConfigSettings = config.settings
   const selectedFilterTypeId = oasis.selectedFilterTypeId
-
-  let oasisSpace: OasisSpaceRenderer
-
-  let createSpaceRef: SpacesView
-  let page: 'tabs' | 'oasis' | 'history' | 'spaces' | null = null
-  let selectFirstCommandItem: () => void
-  let hasLoadedEverything = false
-  let searchTimeout: NodeJS.Timeout | null = null
-  let previousSearchValue = ''
-  let showDragHint = writable(false)
-  let filteredItems
-  let drawerHide = writable(false) // Whether to slide the drawer away
 
   const searchValue = writable('')
   const searchResults = writable<ResourceSearchResultItem[]>([])
@@ -116,12 +81,20 @@
   )
 
   let stuffWrapperRef: HTMLElement
+  let createSpaceRef: SpacesView
+  let hasLoadedEverything = false
+  let oasisSpace: OasisSpaceRenderer
+
+  let searchTimeout: NodeJS.Timeout | null = null
+  let searchResetTimeout: NodeJS.Timeout | null = null
+  let previousSearchValue = ''
+  let showDragHint = writable(false)
+  let drawerHide = writable(false) // Whether to slide the drawer away
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
   $: isInboxSpace = $selectedSpaceId === 'inbox'
 
   $: if (updateSearchValue) {
-    //console.log('updateSearchValue', $updateSearchValue)
     searchValue.set($updateSearchValue)
   }
 
@@ -584,6 +557,25 @@
     Dragcula.get().off('dragstart', handleDragculaDragStart)
     Dragcula.get().off('dragend', handleDragculaDragEnd)
   })
+
+  onDestroy(
+    showTabSearch.subscribe((v) => {
+      if (v === 0) {
+        if (searchResetTimeout !== null) clearTimeout(searchResetTimeout)
+        searchResetTimeout = setTimeout(() => {
+          searchValue.set('')
+          selectedSpaceId.set('inbox')
+          selectedFilterTypeId.set(null)
+          searchResetTimeout = null
+        }, SEARCH_RESET_TIMEOUT)
+      } else {
+        if (searchResetTimeout) {
+          clearTimeout(searchResetTimeout)
+          searchResetTimeout = null
+        }
+      }
+    })
+  )
 </script>
 
 <div id="drawer-hint" class:show={$showDragHint && $showTabSearch === 0} use:portal={'body'}>
