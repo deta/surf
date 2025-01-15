@@ -177,7 +177,6 @@ export type WebViewReceiveEvents = {
   [WebViewEventReceiveNames.SimulateDragUpdate]: WebViewEventSimulateDragUpdate
   [WebViewEventReceiveNames.SimulateDragEnd]: WebViewEventSimulateDragEnd
   [WebViewEventReceiveNames.GoToPDFPage]: WebViewEventGoToPDFPage
-  [WebViewEventReceiveNames.RequestEnterPIP]: void
   [WebViewEventReceiveNames.RequestExitPIP]: void
   [WebViewEventReceiveNames.RequestPIPState]: void
 }
