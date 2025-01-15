@@ -122,8 +122,12 @@ export class ContextItemActiveTab extends ContextItemBase {
       this.item.set(newItem)
 
       const showChatSidebar = this.manager.ai.showChatSidebarValue
-      if (showChatSidebar) {
+      const autoGeneratePrompts =
+        this.manager.ai.config.settingsValue.automatic_chat_prompt_generation
+      if (showChatSidebar && autoGeneratePrompts) {
         this.manager.getPromptsForItem(newItem)
+      } else {
+        this.log.debug('Skipping auto prompt generation for page tab as it is disabled', tab.id)
       }
 
       // Only track if the item is new and a completely different tab
