@@ -116,7 +116,7 @@ export const getUserConfig = (path?: string) => {
       model_settings: [],
       vision_image_tagging: false,
       turntable_favicons: true,
-      auto_toggle_pip: true
+      auto_toggle_pip: false
     }
     setUserConfig(storedConfig as UserConfig)
   }
@@ -211,7 +211,7 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
   if (storedConfig.settings.auto_toggle_pip === undefined) {
-    storedConfig.settings.auto_toggle_pip = true
+    storedConfig.settings.auto_toggle_pip = false
     changedConfig = true
   }
 
