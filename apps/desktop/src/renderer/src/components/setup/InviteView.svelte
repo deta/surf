@@ -14,11 +14,15 @@
   let loading = false
   let error = ''
 
+  const sanitizeInvite = (invite: string): string => {
+    return invite.trim()
+  }
+
   const handleSubmit = async () => {
     try {
       loading = true
 
-      const data = await window.api.activateAppUsingKey(inviteCode, acceptedTerms)
+      const data = await window.api.activateAppUsingKey(sanitizeInvite(inviteCode), acceptedTerms)
 
       if (!data) {
         error = 'Invalid invite code.'
