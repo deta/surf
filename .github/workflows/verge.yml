@@ -1,0 +1,194 @@
+name: Verge Build
+
+permissions:
+  id-token: write
+  contents: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  latest-pro-max-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.latest-pro-max-version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get latest pro-max version
+        id: latest-pro-max-version
+        run: |
+          git fetch --prune --unshallow --tags
+          echo "version=$(git tag -l | grep pro-max | grep -v pre | sort -rV | head -n 1)" >> "$GITHUB_OUTPUT"
+
+  next-pro-max-version:
+    needs: latest-pro-max-version
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.next-pro-max-version.outputs.version }}
+
+    steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - run: npm install semver
+
+      - name: Set pro-max version
+        id: next-pro-max-version
+        uses: actions/github-script@v7
+        env:
+          LATEST_PRO_MAX_VERSION: ${{ needs.latest-pro-max-version.outputs.version }}
+        with:
+          script: |
+            const semver = require('semver');
+            const release = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+
+            const latestStableVersion = release.data.tag_name;
+            let nextProMaxVersion = semver.inc(latestStableVersion, 'prerelease', 'pro-max');
+
+            const latestProMaxVersion = process.env.LATEST_PRO_MAX_VERSION;
+            if (semver.valid(latestProMaxVersion)) {
+                const candidate = semver.inc(latestProMaxVersion, 'prerelease', 'pro-max');
+                nextProMaxVersion = semver.gt(candidate, nextProMaxVersion) ? candidate : nextProMaxVersion;
+            }
+            console.log(`Next pro-max version: ${nextProMaxVersion}`);
+            core.setOutput('version', nextProMaxVersion);
+
+  build:
+    needs: next-pro-max-version
+    strategy:
+      matrix:
+        os: [macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            **/target
+          key: ${{ runner.os }}-pro-max-build-cache-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pro-max-build-cache-
+
+      - name: Set up Windows Sign Tool
+        if: matrix.os == 'windows-latest'
+        run: dotnet tool install --no-cache --global AzureSignTool --version 5.0.0
+
+      - name: Azure Login
+        if: matrix.os == 'windows-latest'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure Key Vault Access Token
+        if: matrix.os == 'windows-latest'
+        run: |
+          $az_token=$(az account get-access-token --scope https://vault.azure.net/.default --query accessToken -o tsv)
+          echo "::add-mask::$az_token"
+          echo "AZURE_KEYVAULT_ACCESS_TOKEN=$az_token" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: build for ${{ matrix.os }}
+        run: yarn build:desktop:${{ matrix.os == 'macos-latest' && 'mac:arm' || 'win:x64' }}
+        env:
+          APP_VERSION: ${{ needs.next-pro-max-version.outputs.version }}
+          M_VITE_APP_VERSION: ${{ needs.next-pro-max-version.outputs.version }}
+          P_VITE_APP_VERSION: ${{ needs.next-pro-max-version.outputs.version }}
+
+          HUSKY: 0
+          NODE_OPTIONS: --max_old_space_size=8192
+          SHOULD_NOTARIZE: 'true'
+          DISABLE_ALL_OBFUSCATION: 'false'
+
+          PRODUCT_NAME: 'Surf'
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/prod
+
+          APPLE_ID: ${{ secrets.APPLE_ID_NEW }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID_NEW }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD_NEW }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD_NEW }}
+          CSC_LINK: ${{ secrets.CSC_LINK_NEW }}
+
+          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
+          R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
+          P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
+          P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
+          P_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
+
+          RELEASE_CHANNEL: surf-verge
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_UPDATES_BUCKET_NAME: ${{ secrets.S3_VERGE_UPDATES_BUCKET_NAME }}
+          S3_UPDATES_BUCKET_REGION: ${{ secrets.S3_VERGE_UPDATES_BUCKET_REGION }}
+
+          # windows code signing configuration
+          SIGN_WINDOWS: 'true'
+          AZURE_KEYVAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEYVAULT_CERTIFICATE_NAME }}
+          AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_KEYVAULT_ACCESS_TOKEN: ${{ env.AZURE_KEYVAULT_ACCESS_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pro-max-build-${{ matrix.os }}
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.tar.gz
+            apps/desktop/dist/surf-*.yml
+
+  create-release:
+    needs: [next-pro-max-version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: build/
+      - name: create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: true
+          tag_name: ${{ needs.next-pro-max-version.outputs.version }}
+          files: |
+            build/**/*.dmg
+            build/**/*.exe
+            build/**/*.AppImage
+            build/**/*.tar.gz
+            build/**/surf-*.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
