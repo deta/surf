@@ -139,13 +139,13 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD_NEW }}
           CSC_LINK: ${{ secrets.CSC_LINK_NEW }}
 
-          R_VITE_TELEMETRY_API_KEY: ${{ secrets.TELEMETRY_API_KEY_EA }}
+          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
-          P_VITE_OPEN_AI_API_ENDPOINT: ${{ secrets.OPEN_AI_API_ENDPOINT }}
-          P_VITE_VISION_API_ENDPOINT: ${{ secrets.VISION_API_ENDPOINT }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
+          M_VITE_APP_UPDATES_PROXY_URL: ${{ secrets.APP_UPDATES_PROXY_URL }}
           M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
+          M_VITE_APP_UPDATES_CHANNEL: surf-verge
 
           RELEASE_CHANNEL: surf-verge
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
