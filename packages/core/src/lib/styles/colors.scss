@@ -78,4 +78,14 @@
   --mixed-bg-dark: color-mix(in hsl,
       var(--base-color),
       hsl(var(--base-color-hue) 80%, 0%, 0.65));
+
+  body.custom ::selection {
+    color: var(--mixed-bg);
+    background: var(--contrast-color);
+  }
+
+  body.custom.dark ::selection {
+    color: var(--mixed-bg-dark);
+    background: var(--contrast-color);
+  }
 }
