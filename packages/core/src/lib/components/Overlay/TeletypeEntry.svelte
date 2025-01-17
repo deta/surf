@@ -501,7 +501,12 @@
 >
   <Teletype on:close>
     <div slot="header" class="custom-header">
-      <TeletypeHeader on:ask={handleAsk} on:create={handleShowCreate} />
+      <TeletypeHeader
+        on:ask={handleAsk}
+        on:create={handleShowCreate}
+        on:open-chat-with-tab
+        on:open-space-and-chat
+      />
     </div>
   </Teletype>
 </TeletypeProvider>

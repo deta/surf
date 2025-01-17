@@ -210,7 +210,7 @@
   }
 
   $: leftBarClasses = [
-    'fixed left-0 right-0 h-full flex flex-shrink-0',
+    'fixed left-0 right-0 h-full flex flex-shrink-0 z-50',
     peekBg,
     isDraggingLeft
       ? 'transition-none'

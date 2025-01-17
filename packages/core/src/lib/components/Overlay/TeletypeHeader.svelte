@@ -1,7 +1,51 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
-  const dispatch = createEventDispatcher()
+
+  import { floatyButtons } from '../../components/Atoms/floatyButtons'
+  import FloatyButton from '../Atoms/FloatyButton.svelte'
+  import { useTabsManager } from '../../service/tabs'
+  import { conditionalArrayItem } from '@horizon/utils'
+
+  const dispatch = createEventDispatcher<{
+    'open-space-and-chat': { spaceId: string }
+    'open-chat-with-tab': string
+  }>()
+  const tabsManager = useTabsManager()
+
+  const scope = tabsManager.activeScopeId
+
+  $: buttonConfigs = {
+    buttons: [
+      ...conditionalArrayItem($scope !== null, {
+        component: FloatyButton,
+        offsetX: -120,
+        offsetY: -70,
+        props: {
+          text: 'Ask this Context',
+          onClick: () => {
+            dispatch('open-space-and-chat', { spaceId: $scope as string })
+          }
+        }
+      }),
+      {
+        component: FloatyButton,
+        offsetX: 80,
+        offsetY: -70,
+        props: {
+          text: 'Ask this Tab',
+          onClick: () => {
+            const activeTabId = tabsManager.activeTabIdValue
+            dispatch('open-chat-with-tab', activeTabId)
+          }
+        }
+      }
+    ],
+    springConfig: {
+      stiffness: 0.15,
+      damping: 0.6
+    }
+  }
 </script>
 
 <div class="tty-header-wrapper">
@@ -10,10 +54,12 @@
       <span>Create</span>
       <Icon name="plus.boxed" />
     </button>
-    <button class="header-btn" on:click={() => dispatch('ask')}>
-      <Icon name="face" />
-      <span>Ask</span>
-    </button>
+    {#key $scope}
+      <button class="header-btn" on:click={() => dispatch('ask')} use:floatyButtons={buttonConfigs}>
+        <Icon name="face" />
+        <span>Ask</span>
+      </button>
+    {/key}
   </div>
 </div>
 

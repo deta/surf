@@ -135,6 +135,7 @@
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import { createSyncService } from '@horizon/core/src/lib/service/sync'
   import TabInvite from './Core/TabInvite.svelte'
+  import Ask from './Core/Ask.svelte'
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
@@ -274,6 +275,7 @@
     activeTabId,
     activeTab,
     activeTabLocation,
+    activeScopeId,
     activeBrowserTab,
     activeTabs,
     browserTabs,
@@ -2228,6 +2230,11 @@
 
     log.debug('create chat with space', spaceId, text)
 
+    if (spaceId === null) {
+      log.warn('Cannot chat with space id null!')
+      return
+    }
+
     const space = await oasis.getSpace(spaceId)
 
     if (!space) {
@@ -3690,6 +3697,8 @@
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
     on:show-history-tab={handleCreateHistoryTab}
     on:create-new-space={handleOpenCreateSpaceMenu}
+    on:open-chat-with-tab={handleOpenTabChat}
+    on:open-space-and-chat={handleOpenSpaceAndChat}
     on:open-space={async (e) => {
       const space = e.detail
       showNewTabOverlay.set(2)
@@ -4384,23 +4393,15 @@
                     </CustomPopover>
                   {/if}
                 {:else if !horizontalTabs}
-                  <button
-                    use:tooltip={{
-                      text: 'Chat (⌘ + E)',
-                      position: horizontalTabs ? 'left' : 'top'
-                    }}
-                    class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
-                    class:scale-90={horizontalTabs ?? false}
-                    on:click={() => {
-                      toggleRightSidebarTab('chat')
-                    }}
-                    style="gap: .25rem;"
-                    class:bg-sky-200={showRightSidebar && $rightSidebarTab === 'chat'}
-                    class:dark:bg-gray-800={showRightSidebar && $rightSidebarTab === 'chat'}
-                  >
-                    <Icon name="face.light" />
-                    <span class="text-xl font-medium text-white">Ask</span>
-                  </button>
+                  <Ask
+                    {horizontalTabs}
+                    {showRightSidebar}
+                    scope={activeScopeId}
+                    rightSidebarTab={$rightSidebarTab}
+                    on:click={() => toggleRightSidebarTab('chat')}
+                    on:open-chat-with-tab={handleOpenTabChat}
+                    on:open-space-and-chat={handleOpenSpaceAndChat}
+                  />
                 {:else if horizontalTabs}
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
