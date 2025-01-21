@@ -4281,8 +4281,7 @@
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                       ? 'w-fit rounded-xl p-2'
                       : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center"
-                    class:bg-sky-200={$showNewTabOverlay === 1}
-                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
+                    class:active={$showNewTabOverlay === 1}
                     on:click|preventDefault={() => tabsManager.showNewTab()}
                   >
                     <Icon name="add" />
@@ -4307,12 +4306,11 @@
                   ? 'w-fit rounded-xl p-2'
                   : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
                 on:click|preventDefault={() => tabsManager.showNewTab()}
+                class:active={$showNewTabOverlay === 1}
                 class:opacity-100={$showEndMask || horizontalTabs}
                 class:opacity-0={!$showEndMask}
                 class:pointer-events-auto={$showEndMask || horizontalTabs}
                 class:pointer-events-none={!$showEndMask}
-                class:bg-sky-200={$showNewTabOverlay === 1}
-                class:dark:bg-sky-900={$showNewTabOverlay === 1}
               >
                 <Icon name="add" />
                 {#if !horizontalTabs}
@@ -4339,14 +4337,13 @@
                       ? 'w-fit rounded-xl p-2'
                       : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
+                    class:active={$showNewTabOverlay === 1}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
                     class:pointer-events-auto={$showEndMask || horizontalTabs}
                     class:pointer-events-none={!$showEndMask}
-                    class:bg-sky-200={$showNewTabOverlay === 1}
-                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
                   >
-                    <Icon name="add" />
+                    <Icon name="add" stroke-width="2" />
                     {#if !horizontalTabs}
                       <span class="label">New Tab</span>
                     {/if}
@@ -4357,10 +4354,10 @@
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                       <button
                         slot="trigger"
-                        class="no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 dark:hover:bg-gray-800 dark:text-sky-100 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800"
+                        class="toolsButton no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2"
                         on:click={() => toggleRightSidebar()}
                       >
-                        <Icon name="triangle-square-circle" />
+                        <Icon name="triangle-square-circle" stroke-width="1.75" />
                       </button>
 
                       <div
@@ -4383,6 +4380,7 @@
                               <Icon
                                 name={tool.icon}
                                 class="text-xl text-gray-800 dark:text-gray-100"
+                                stroke-width="1"
                               />
                             </div>
                             <span class="text-xs text-gray-800 dark:text-gray-100">{tool.name}</span
@@ -4409,12 +4407,11 @@
                       ? 'w-fit rounded-xl p-2'
                       : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-"
                     on:click|preventDefault={() => tabsManager.showNewTab()}
+                    class:active={$showNewTabOverlay === 1}
                     class:opacity-100={$showEndMask || horizontalTabs}
                     class:opacity-0={!$showEndMask}
                     class:pointer-events-auto={$showEndMask || horizontalTabs}
                     class:pointer-events-none={!$showEndMask}
-                    class:bg-sky-200={$showNewTabOverlay === 1}
-                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
                   >
                     <Icon name="add" size="20px" stroke-width="2" />
                     {#if !horizontalTabs}
@@ -5136,6 +5133,26 @@
     transition: color 300ms ease-out;
 
     color: light-dark(var(--contrast-color), var(--contrast-color));
+
+    &:hover,
+    &.active {
+      --bg: var(--black-09);
+
+      :global(.dark) & {
+        --bg: var(--dark-on-unpinned-surface-horizontal-hover) !important;
+      }
+      @include utils.squircle($fill: var(--bg), $radius: 16px);
+    }
+    &.active {
+      --bg: var(--black-13);
+    }
+  }
+
+  .toolsButton {
+    transition: color 300ms ease-out;
+
+    color: light-dark(var(--contrast-color), var(--contrast-color)) !important;
+    background: var(--bg);
 
     &:hover {
       --bg: var(--black-09);

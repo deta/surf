@@ -274,7 +274,7 @@
     {/each}
   </div>
   <button
-    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-700 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-200 flex active:outline-none focus:outline-none"
+    class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 transition-colors duration-200 rounded-xl flex active:outline-none focus:outline-none"
     on:click={() => dispatch('open-stuff')}
   >
     <Icon name="arrow.up.right" size="18px" />
@@ -343,7 +343,10 @@
         background 230ms,
         border 230ms;
 
+      color: var(--contrast-color) !important;
+
       &:hover {
+        background: light-dark(#cae3f5f0, #717e887a);
         :global(.custom) & {
           color: var(--contrast-color) !important;
           background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
