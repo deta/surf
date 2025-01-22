@@ -860,7 +860,7 @@
     } else if (isModKeyAndKeyPressed(e, 'l') && !e.shiftKey) {
       handleEdit()
     } else if (isModKeyAndKeyPressed(e, 'j')) {
-      // showTabSearch = !showTabSearch
+      handleRename()
     } else if (isModKeyAndKeyPressed(e, 'y')) {
       handleCreateHistoryTab()
     } else if (
@@ -3068,6 +3068,13 @@
     await tick()
     setShowNewTabOverlay(0)
     activeTabComponent?.editAddress()
+    handleFocus()
+  }
+
+  const handleRename = async () => {
+    await tick()
+    setShowNewTabOverlay(0)
+    activeTabComponent?.renameTab()
     handleFocus()
   }
 

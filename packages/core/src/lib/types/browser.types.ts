@@ -14,6 +14,7 @@ export interface BaseTab {
   updatedAt: string
   section?: string
   title: string
+  customTitle?: string
   icon: string
   type:
     | 'page'

@@ -90,6 +90,7 @@
     mouseenter: string
     mouseleave: string
     'create-new-space': void
+    'rename-tab': string
   }>()
 
   const SHOW_INSECURE_WARNING_TIMEOUT = 3000
@@ -122,9 +123,10 @@
 
   let isDragging = false
   let isEditing = false
-  let hovered = false
+  let isHovered = false
   let popoverVisible = false
   let showInsecureWarningText = false
+  let isContextMenuOpen = false
 
   // TODO: CAN WE NUKE THIS SHIT?
   let space: OasisSpace | null = null
@@ -157,7 +159,7 @@
         .catch((error) => console.error('error loading PDF resource:', error))
     }
   }
-  $: if (tab.type === 'page' && !isEditing) {
+  $: if (tab.type === 'page' && !isEditing && !isRenamingTab) {
     if (hostname) {
       $inputUrl = isInsecureUrl ? `http://${hostname}` : hostname
     } else {
@@ -166,7 +168,7 @@
   }
   $: tabStyles.set(getTabStyles({ isActive, pinned, horizontalTabs, tab, isSelected }))
 
-  /// INPUT EDITING
+  $: hovered = isHovered && !isContextMenuOpen
 
   export const editAddress = async () => {
     isEditing = true
@@ -177,15 +179,26 @@
     addressInputEl?.setSelectionRange(addressInputEl.value.length, addressInputEl.value.length)
   }
 
+  export const renameTab = async () => {
+    if (tab.type !== 'page' || tab.pinned) return
+    isRenamingTab = true
+    editableTitle = tab.customTitle || tab.title
+    await tick()
+    titleInputEl?.focus()
+    titleInputEl?.setSelectionRange(0, titleInputEl.value.length)
+  }
+
   export const blur = () => {
     addressInputEl?.blur()
   }
 
   const handleInputBlur = () => {
+    if (isRenamingTab) return // Don't affect rename state when URL input loses focus
     isEditing = false
   }
 
   const handleInputFocus = () => {
+    if (isRenamingTab) return // Don't switch to URL editing if we're renaming
     isEditing = true
     if (url) {
       $inputUrl = url
@@ -572,6 +585,46 @@
     return [baseClasses, activeClasses, selectedClasses, styleClasses].join(' ')
   }
 
+  let isRenamingTab = false
+  let titleInputEl: HTMLInputElement
+  let editableTitle = tab.customTitle || tab.title
+
+  const startRenameTab = async () => {
+    if (tab.pinned) return
+    isRenamingTab = true
+    editableTitle = tab.customTitle || tab.title
+    await tick()
+
+    if (titleInputEl) {
+      titleInputEl.focus()
+      titleInputEl.select()
+      // Backup selection in case the first one doesn't work
+      setTimeout(() => titleInputEl?.select(), 0)
+    }
+  }
+
+  const handleTitleInputBlur = () => {
+    if (editableTitle !== tab.title || editableTitle !== tab.customTitle) {
+      tabsManager.update(tab.id, { customTitle: editableTitle })
+    }
+    isRenamingTab = false
+    isEditing = false
+    isHovered = false
+  }
+
+  const handleTitleInputKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (editableTitle !== tab.title || editableTitle !== tab.customTitle) {
+        tabsManager.update(tab.id, { customTitle: editableTitle })
+      }
+      isRenamingTab = false
+    } else if (event.key === 'Escape') {
+      editableTitle = tab.customTitle || tab.title
+      isRenamingTab = false
+    }
+  }
+
   const getContextMenuItems = async (): Promise<CtxItem[]> => {
     return [
       {
@@ -618,7 +671,6 @@
         text: 'Create Live Context',
         action: () => handleCreateLiveSpace()
       },
-
       {
         type: 'action',
         hidden: !isMagicActive,
@@ -647,6 +699,14 @@
         icon: tab.pinned ? `pinned-off` : `pin`,
         text: tab.pinned ? 'Unpin' : 'Pin',
         action: () => (tab.pinned ? dispatch('unpin', tab.id) : dispatch('pin', tab.id))
+      },
+      {
+        type: 'action',
+        icon: 'edit',
+        text: 'Rename Tab',
+        disabled: tab.pinned,
+        hidden: tab.type !== 'page',
+        action: startRenameTab
       },
       {
         type: 'action',
@@ -719,11 +779,11 @@
   on:dblclick={handleDoubleClick}
   on:mousedown={handleMouseDown}
   on:mouseenter={() => {
-    hovered = true
+    isHovered = true
     dispatch('mouseenter', tab.id)
   }}
   on:mouseleave={() => {
-    if (!popoverVisible) hovered = false
+    if (!popoverVisible) isHovered = false
     dispatch('mouseleave', tab.id)
   }}
   use:contextMenu={{
@@ -801,7 +861,22 @@
   {/if}
   {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize && tabSize < 48))}
     <div class="title relative flex-grow truncate mr-1">
-      {#if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && isEditing}
+      {#if isRenamingTab && !tab.pinned && tab.type === 'page'}
+        <input
+          bind:this={titleInputEl}
+          bind:value={editableTitle}
+          on:blur={handleTitleInputBlur}
+          on:keydown={handleTitleInputKeydown}
+          on:click|stopPropagation
+          class="w-full bg-transparent outline-none text-inherit font-inherit px-0.5"
+          spellcheck="false"
+          placeholder="Enter tab name"
+          on:focus|preventDefault={() => {
+            titleInputEl?.select()
+            setTimeout(() => titleInputEl?.select(), 0)
+          }}
+        />
+      {:else if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && isEditing && !isRenamingTab}
         <input
           bind:this={addressInputEl}
           bind:value={$inputUrl}
@@ -823,23 +898,25 @@
         <div
           role="none"
           on:mousedown={() => {
-            isEditing = true
-            tick().then(() => {
-              setTimeout(() => {
-                addressInputEl?.focus()
-              }, 175)
-            })
+            if (tab.type === 'page' && !isRenamingTab) {
+              isEditing = true
+              tick().then(() => {
+                setTimeout(() => {
+                  addressInputEl?.focus()
+                }, 175)
+              })
+            }
           }}
-          class={hovered && isActive && tab.type === 'page'
+          class={hovered && isActive && tab.type === 'page' && !isRenamingTab
             ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60] cursor-text'
             : `whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && isInChatContext ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
         >
-          {#if hovered && isActive && tab.type === 'page' && !inStuffBar}
+          {#if hovered && isActive && tab.type === 'page' && !isRenamingTab && !inStuffBar}
             {$inputUrl}
           {:else if tab.type === 'space'}
             {tab.title}
           {:else}
-            {sanitizedTitle}
+            {tab.customTitle || sanitizedTitle}
           {/if}
         </div>
       {/if}
@@ -1344,5 +1421,21 @@
   :global(.tab[data-drag-target='true']) {
     outline: 1.5px dashed var(--dark-outline) !important;
     outline-offset: -1.5px;
+  }
+
+  .title {
+    input {
+      height: 100%;
+      min-width: 0;
+      font-size: inherit;
+      line-height: inherit;
+      font-family: inherit;
+
+      &:focus {
+        outline: none;
+        background: var(--color-input-bg);
+        border-radius: 4px;
+      }
+    }
   }
 </style>
