@@ -315,6 +315,7 @@
                       resourceId={resource.id}
                       autofocus={false}
                       showTitle={false}
+                      minimal
                       on:click={(e) => {
                         e.preventDefault()
                         e.stopPropagation()

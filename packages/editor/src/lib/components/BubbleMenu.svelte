@@ -12,8 +12,10 @@
   export let editor: Readable<Editor>
   export let mentionItems: MentionItem[] = []
   export let autosearch = false
+  export let showRewrite = false
 
   const dispatch = createEventDispatcher<{
+    'open-bubble-menu': void
     'close-bubble-menu': void
     rewrite: EditorRewriteEvent
     'similarity-search': EditorSimilaritiesSearchEvent
@@ -129,6 +131,8 @@
     inputType = 'rewrite'
     loading = false
 
+    dispatch('open-bubble-menu')
+
     if (autosearch) {
       handleFindSimilar(false)
     }
@@ -208,11 +212,13 @@
       <div class="divider"></div>
 
       <div class="menu-section">
-        <button on:click={handleShowRewrite} id="editor-bubble-rewrite-btn">
-          <Icon name="wand" size="17px" />
-        </button>
+        {#if showRewrite}
+          <button on:click={handleShowRewrite} id="editor-bubble-rewrite-btn">
+            <Icon name="wand" size="17px" />
+          </button>
+        {/if}
 
-        <button on:click={handleFindSimilar}>
+        <button on:click={handleFindSimilar} id="editor-bubble-similarity-btn">
           <Icon name="file-text-ai" size="17px" />
         </button>
 

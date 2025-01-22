@@ -30,8 +30,8 @@
   )
 
   const saveToSpaceItems = derived(
-    [spaces, searchValue, selectedSpace, selectedContext],
-    ([spaces, searchValue, selectedSpace, selectedContext]) => {
+    [spaces, searchValue, selectedSpace, selectedContext, activeSpace],
+    ([spaces, searchValue, selectedSpace, selectedContext, activeSpace]) => {
       const spaceItems = spaces
         .filter((space) => space.id !== selectedSpace?.id)
         .sort((a, b) => {
@@ -46,7 +46,9 @@
             }) as SelectItem
         )
 
-      if (selectedContext !== generalContext.id) {
+      const hideGeneral =
+        selectedContext === generalContext.id || (!activeSpace && !selectedContext)
+      if (!hideGeneral) {
         spaceItems.unshift(generalContext)
       }
 
@@ -113,7 +115,7 @@
     {:else if $selectedSpace}
       <DynamicIcon name={$selectedSpace.getIconString()} />
     {:else}
-      <Icon name="save" />
+      <Icon name="circle-dot" />
     {/if}
   </button>
 

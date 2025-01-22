@@ -34,6 +34,7 @@
   export let bubbleMenu: boolean = false
   export let bubbleMenuLoading: boolean = false
   export let autoSimilaritySearch: boolean = false
+  export let enableRewrite: boolean = false
 
   let editor: Readable<Editor>
   let editorWidth: number = 350
@@ -422,9 +423,11 @@
       {mentionItems}
       loading={bubbleMenuLoading}
       autosearch={autoSimilaritySearch}
+      showRewrite={enableRewrite}
       on:rewrite
       on:similarity-search
       on:close-bubble-menu
+      on:open-bubble-menu
     />
   {/if}
 

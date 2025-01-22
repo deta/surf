@@ -9,7 +9,7 @@
 </script>
 
 <div class="setting">
-  <section>
+  <section class="section">
     <div class="info">
       <div class="title">
         {#if icon}
@@ -42,7 +42,7 @@
     border-radius: 12px;
     width: 100%;
 
-    & :global(> section) {
+    & :global(.section) {
       display: flex;
       align-items: start;
       justify-content: space-between;

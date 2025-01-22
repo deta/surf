@@ -2,7 +2,11 @@
   import Switch from '@horizon/core/src/lib/components/Atoms/Switch.svelte'
   import SettingsOption from './SettingsOption.svelte'
   import type { UserSettings } from '@horizon/types'
+  import Exandable from './Exandable.svelte'
+
   export let userConfigSettings: UserSettings
+
+  let expanded = false
 </script>
 
 <SettingsOption
@@ -20,19 +24,35 @@
   </p>
 
   {#if userConfigSettings.experimental_smart_notes}
-    <section>
-      <div class="info">
-        <div class="title">
-          <h4>Automatically search for similar sources on text selection</h4>
+    <Exandable title="Advanced (more unstable)" {expanded}>
+      <section class="section">
+        <div class="info">
+          <div class="title">
+            <h4>Automatically search for similar sources on text selection</h4>
+          </div>
         </div>
-      </div>
 
-      <Switch
-        color="#ff4eed"
-        bind:checked={userConfigSettings.auto_note_similarity_search}
-        on:update
-      />
-    </section>
+        <Switch
+          color="#ff4eed"
+          bind:checked={userConfigSettings.auto_note_similarity_search}
+          on:update
+        />
+      </section>
+
+      <section class="section">
+        <div class="info">
+          <div class="title">
+            <h4>Select text in your note and let Surf AI rewrite it for you</h4>
+          </div>
+        </div>
+
+        <Switch
+          color="#ff4eed"
+          bind:checked={userConfigSettings.experimental_note_inline_rewrite}
+          on:update
+        />
+      </section>
+    </Exandable>
   {/if}
 </SettingsOption>
 

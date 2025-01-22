@@ -160,6 +160,7 @@
   } from '@horizon/core/src/lib/service/ai/contextManager'
 
   import '$styles/app.scss'
+  import '$styles/tippy.scss'
   import { DIALOG_OASIS_REF } from './Core/Dialog/Dialog.svelte'
 
   /*

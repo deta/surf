@@ -105,8 +105,9 @@ export const getUserConfig = (path?: string) => {
       annotations_sidebar: false,
       homescreen_link_cmdt: false,
       always_include_screenshot_in_chat: false,
-      experimental_smart_notes: false,
-      auto_note_similarity_search: true,
+      experimental_smart_notes: true,
+      auto_note_similarity_search: false,
+      experimental_note_inline_rewrite: false,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -218,12 +219,17 @@ export const getUserConfig = (path?: string) => {
   }
 
   if (storedConfig.settings.experimental_smart_notes === undefined) {
-    storedConfig.settings.experimental_smart_notes = false
+    storedConfig.settings.experimental_smart_notes = true
     changedConfig = true
   }
 
   if (storedConfig.settings.auto_note_similarity_search === undefined) {
-    storedConfig.settings.auto_note_similarity_search = true
+    storedConfig.settings.auto_note_similarity_search = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_note_inline_rewrite === undefined) {
+    storedConfig.settings.experimental_note_inline_rewrite = false
     changedConfig = true
   }
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { writable, derived, get } from 'svelte/store'
   import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte'
+  import tippy, { type Instance, type Placement, type Props } from 'tippy.js'
 
   import {
     Editor,
@@ -81,6 +82,7 @@
   export let autofocus: boolean = true
   export let showTitle: boolean = true
   export let showOnboarding: boolean = false
+  export let minimal: boolean = false
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
@@ -91,7 +93,7 @@
   const oasis = useOasis()
   const telemetry = useTelemetry()
   const config = useConfig()
-  const onboarding = useOnboardingNote()
+  const onboarding = useOnboardingNote(oasis)
 
   const dispatch = createEventDispatcher<{
     'update-title': string
@@ -123,6 +125,7 @@
 
   let clientWidth = 0
   let disableSimilaritySearch = false
+  let tippyPopover: Instance<Props> | null = null
 
   const builtInMentions = [
     {
@@ -148,6 +151,8 @@
     }
   ]
 
+  const emptyPlaceholder = 'Start typing or hit space for suggestions…'
+
   const activeSpace = derived(
     [oasis.spaces, tabsManager.activeScopeId],
     ([spaces, activeScopeId]) => {
@@ -166,7 +171,9 @@
       generatingPrompts,
       activeSpace,
       autocompleting,
-      isSmartNotesEnabled
+      isSmartNotesEnabled,
+      selectedContext,
+      onboardingNote
     ],
     ([
       $floatingMenuShown,
@@ -174,7 +181,9 @@
       $generatingPrompts,
       $activeSpace,
       $autocompleting,
-      $isSmartNotesEnabled
+      $isSmartNotesEnabled,
+      $selectedContext,
+      $onboardingNote
     ]) => {
       if ($autocompleting) {
         return ''
@@ -184,20 +193,43 @@
         return `Jot something down…`
       }
 
-      const contextName = $activeSpace?.dataValue.folderName ?? generalContext.label
+      if (showOnboarding) {
+        if ($onboardingNote.id === 'intro') {
+          return ``
+        } else if ($onboardingNote.id === 'basics') {
+          return `Press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf continue writing…`
+        } else if ($onboardingNote.id === 'suggestions') {
+          return `Press space to generate suggestions…`
+        }
+      }
+
+      let contextName = generalContext.label
+      if ($selectedContext) {
+        if ($selectedContext === 'everything') {
+          contextName = 'all your stuff'
+        } else if ($selectedContext === generalContext.id) {
+          contextName = `"${generalContext.label}"`
+        } else if ($selectedContext === 'tabs') {
+          contextName = 'your tabs'
+        } else if ($selectedContext === 'active-context') {
+          contextName = 'the active context'
+        }
+      } else if ($activeSpace) {
+        contextName = `"${$activeSpace?.dataValue.folderName}"`
+      }
 
       if ($floatingMenuShown) {
         if ($generatingPrompts) {
           const mentions = editorElem.getMentions()
           return `Generating suggestions based on "${contextName}"${mentions.length > 0 ? ' and the mentioned contexts' : ''}…`
         } else if ($showPrompts) {
-          return `Select a suggestion or press ${isMac() ? 'opt' : 'alt'} + ↵ to let Surf write based on "${contextName}"`
+          return `Select a suggestion or press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
         } else {
-          return `Press space for suggestions or ${isMac() ? 'opt' : 'alt'} + ↵ to let Surf write based on "${contextName}"`
+          return `Press space for suggestions or ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
         }
       }
 
-      return `Press ${isMac() ? 'opt' : 'alt'} + enter to autocomplete based on ${contextName}`
+      return `Press ${isMac() ? '⌥' : 'alt'} + ↵ to autocomplete based on ${contextName}`
     }
   )
 
@@ -816,6 +848,8 @@
     try {
       log.debug('autocomplete', e.detail)
 
+      hideInfoPopover()
+
       const { query, mentions } = e.detail
       const spaces = (mentions ?? []).map((mention) => mention.id)
       await generateAndInsertAIOutput(
@@ -890,6 +924,8 @@
       const spaces = mentions.map((mention) => mention.id)
 
       telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note)
+
+      hideInfoPopover()
 
       await generateAndInsertAIOutput(
         prompt.prompt,
@@ -993,6 +1029,8 @@
       const spaces = (mentions ?? []).map((mention) => mention.id)
 
       log.debug('Rewriting', prompt, text, range, spaces)
+
+      hideInfoPopover()
 
       const chat = await createNewNoteChat(spaces)
       if (!chat) {
@@ -1169,11 +1207,21 @@
     similarityResults.set(null)
   }
 
+  const handleOpenBubbleMenu = () => {
+    if (showOnboarding && $onboardingNote.id === 'similarity') {
+      showInfoPopover('#editor-bubble-similarity-btn', `Click to search`, 'right')
+    }
+  }
+
   const handleCloseBubbleMenu = () => {
     const editor = editorElem.getEditor()
     const currentSelection = editor.view.state.selection
     if (currentSelection.from === currentSelection.to) {
       closeSimilarities()
+    }
+
+    if (showOnboarding && $onboardingNote.id === 'similarity') {
+      hideInfoPopover()
     }
   }
 
@@ -1214,6 +1262,8 @@
         onboarding.start()
       } else if (action === 'onboarding-create-note') {
         createNewNote()
+      } else if (action === 'onboarding-open-stuff') {
+        openSpaceInStuff('all')
       } else if (action === 'onboarding-select-text') {
         selectElemText('output[data-id="similarity-selection"]')
       } else if (action === 'onboarding-generate-suggestions') {
@@ -1258,14 +1308,46 @@
     launchTimeline(OnboardingFeature.SmartNotesOnboarding)
   }
 
+  const showInfoPopover = async (selector: string, content: string, placement: Placement) => {
+    await wait(500)
+    const elem = document.querySelector(selector)
+    if (!elem) {
+      log.debug('No basics query found')
+      return
+    }
+
+    tippyPopover = tippy(elem, {
+      appendTo: () => document.body,
+      content: content,
+      trigger: 'manual',
+      placement: placement,
+      theme: 'dark'
+    })
+
+    tippyPopover.show()
+  }
+
+  const hideInfoPopover = () => {
+    if (tippyPopover) {
+      tippyPopover.destroy()
+      tippyPopover = null
+    }
+  }
+
+  const showBasicsPopover = async () => {
+    showInfoPopover('output[data-id="basics-query"]', `Press ${isMac() ? '⌥' : 'Alt'} + ↵`, 'right')
+  }
+
+  const showSimilarityPopover = async () => {
+    showInfoPopover('output[data-id="similarity-selection"]', `Select Text`, 'left')
+  }
+
   let unsubscribeValue: () => void
   let unsubscribeContent: () => void
 
   $: if (!$floatingMenuShown) {
     $showPrompts = false
   }
-
-  $: log.debug('content', $content)
 
   onMount(async () => {
     if (showOnboarding) {
@@ -1279,6 +1361,14 @@
         content.set(note.html)
 
         log.debug('onboarding note', note.title, note.html)
+
+        hideInfoPopover()
+
+        if (note.id === 'basics') {
+          showBasicsPopover()
+        } else if (note.id === 'similarity') {
+          showSimilarityPopover()
+        }
 
         // if (editorElem) {
         //   editorElem.setContent(note.html)
@@ -1384,16 +1474,17 @@
             bind:focus={focusEditor}
             bind:content={$content}
             bind:floatingMenuShown={$floatingMenuShown}
-            placeholder={$editorPlaceholder}
+            placeholder={emptyPlaceholder}
             placeholderNewLine={$editorPlaceholder}
             citationComponent={CitationItem}
             mentionItems={$mentionItems}
             autocomplete={$isSmartNotesEnabled}
             floatingMenu={$isSmartNotesEnabled}
             readOnlyMentions={!$isSmartNotesEnabled}
-            bubbleMenu={$showBubbleMenu && $isSmartNotesEnabled}
+            bubbleMenu={$showBubbleMenu && $isSmartNotesEnabled && !minimal}
             bubbleMenuLoading={$bubbleMenuLoading}
-            autoSimilaritySearch={$userSettings.auto_note_similarity_search}
+            autoSimilaritySearch={$userSettings.auto_note_similarity_search && !minimal}
+            enableRewrite={$userSettings.experimental_note_inline_rewrite}
             parseMentions
             {tabsManager}
             on:click
@@ -1406,6 +1497,7 @@
             on:rewrite={handleRewrite}
             on:similarity-search={handleSimilaritySearch}
             on:close-bubble-menu={handleCloseBubbleMenu}
+            on:open-bubble-menu={handleOpenBubbleMenu}
             on:button-click={handleNoteButtonClick}
             {autofocus}
           >
@@ -1437,39 +1529,41 @@
     </div>
   {/if}
 
-  {#if $similarityResults}
-    <SimilarityResults
-      {activeSpace}
-      {selectedContext}
-      sources={$similarityResults.sources}
-      floating={clientWidth > 1400}
-      loading={$generatingSimilarities}
-      bind:collapsed={$collapsedSources}
-      on:close={() => closeSimilarities()}
-      on:insert={handleInsertSimilarity}
-      on:change-context={handleSelectContext}
-      on:highlightWebviewText
-      on:seekToTimestamp
-    />
-  {:else}
-    <div class="change-context-wrapper">
-      <ChangeContextBtn
-        spaces={oasis.spaces}
-        {selectedContext}
+  {#if !minimal}
+    {#if $similarityResults}
+      <SimilarityResults
         {activeSpace}
-        on:select={handleSelectContext}
+        {selectedContext}
+        sources={$similarityResults.sources}
+        floating={clientWidth > 1400}
+        loading={$generatingSimilarities}
+        bind:collapsed={$collapsedSources}
+        on:close={() => closeSimilarities()}
+        on:insert={handleInsertSimilarity}
+        on:change-context={handleSelectContext}
+        on:highlightWebviewText
+        on:seekToTimestamp
       />
-    </div>
-  {/if}
+    {:else}
+      <div class="change-context-wrapper">
+        <ChangeContextBtn
+          spaces={oasis.spaces}
+          {selectedContext}
+          {activeSpace}
+          on:select={handleSelectContext}
+        />
+      </div>
+    {/if}
 
-  {#if !showOnboarding}
-    <button
-      on:click={() => showOnboardingNote()}
-      class="info-btn"
-      use:tooltip={{ text: 'Intro to Smart Notes', position: 'right' }}
-    >
-      <Icon name="info" />
-    </button>
+    {#if !showOnboarding}
+      <button
+        on:click={() => showOnboardingNote()}
+        class="info-btn"
+        use:tooltip={{ text: 'Intro to Smart Notes', position: 'right' }}
+      >
+        <Icon name="info" />
+      </button>
+    {/if}
   {/if}
 </div>
 

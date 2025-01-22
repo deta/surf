@@ -1,11 +1,10 @@
 import { derived, writable } from 'svelte/store'
 import type { TabPage } from '../types/browser.types'
-import type { SpaceData } from '../types'
 import { SpaceEntryOrigin } from '../types'
 import { ResourceManager, ResourceTag } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
-import type { useOasis } from './oasis'
-import { builtInSpaces, onboardingSpace } from '../constants/examples'
+import type { OasisService, useOasis } from './oasis'
+import { onboardingSpace } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
 import { ONBOARDING_NOTES } from '../constants/notes'
@@ -130,14 +129,43 @@ export async function createOnboardingSpace(
   }
 }
 
-export function useOnboardingNote() {
+export function useOnboardingNote(oasis: OasisService) {
+  const spaces = oasis.spacesValue
+  const space = spaces.find((space) => space.name.folderName === onboardingSpace.name)
+
   const currentNoteIdx = writable(0)
   const noteContent = writable('')
 
+  const processNote = (note: (typeof ONBOARDING_NOTES)[0]) => {
+    if (!space) {
+      const html = note.html
+        .replaceAll('$SPACE_NAME', 'Surf')
+        .replaceAll('$SPACE_ID', 'everything')
+        .replaceAll('$SPACE_QUERY', onboardingSpace.query)
+
+      return {
+        ...note,
+        html
+      }
+    }
+
+    const html = note.html
+      .replaceAll('$SPACE_NAME', space.name.folderName)
+      .replaceAll('$SPACE_ID', space.id)
+      .replaceAll('$SPACE_QUERY', onboardingSpace.query)
+
+    return {
+      ...note,
+      html
+    }
+  }
+
+  const notes = ONBOARDING_NOTES.map((note) => processNote(note))
+
   const currentNote = derived(currentNoteIdx, ($currentNoteIdx) => {
-    const note = ONBOARDING_NOTES[$currentNoteIdx]
+    const note = notes[$currentNoteIdx]
     if (!note) {
-      return ONBOARDING_NOTES[0]
+      return notes[0]
     }
 
     noteContent.set(note.html)
@@ -145,21 +173,18 @@ export function useOnboardingNote() {
     return note
   })
 
-  const canGoNext = derived(
-    currentNoteIdx,
-    ($currentNoteIdx) => $currentNoteIdx < ONBOARDING_NOTES.length - 1
-  )
+  const canGoNext = derived(currentNoteIdx, ($currentNoteIdx) => $currentNoteIdx < notes.length - 1)
   const canGoPrev = derived(currentNoteIdx, ($currentNoteIdx) => $currentNoteIdx > 0)
 
   const next = () => {
     currentNoteIdx.update(($currentNoteIdx) => {
-      return ($currentNoteIdx + 1) % ONBOARDING_NOTES.length
+      return ($currentNoteIdx + 1) % notes.length
     })
   }
 
   const prev = () => {
     currentNoteIdx.update(($currentNoteIdx) => {
-      return ($currentNoteIdx - 1 + ONBOARDING_NOTES.length) % ONBOARDING_NOTES.length
+      return ($currentNoteIdx - 1 + notes.length) % notes.length
     })
   }
 
@@ -172,7 +197,7 @@ export function useOnboardingNote() {
   }
 
   return {
-    notes: ONBOARDING_NOTES,
+    notes: notes,
     idx: currentNoteIdx,
     note: currentNote,
     content: noteContent,

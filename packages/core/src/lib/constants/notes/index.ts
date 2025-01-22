@@ -9,13 +9,16 @@ import ImageSmartNotes from '../../../../public/assets/onboarding/notes/smart-no
 import ImageSuggestions from '../../../../public/assets/onboarding/notes/suggestions.png?url'
 import ImageRewrite from '../../../../public/assets/onboarding/notes/rewrite.png?url'
 import ImageAutocomplete from '../../../../public/assets/onboarding/notes/autocomplete.png?url'
+import { isMac } from '@horizon/utils'
 
 const prepareHTML = (html: string) => {
   return html
-    .replace('smart-notes.png', ImageSmartNotes)
-    .replace('smart-notes-suggestions.png', ImageSuggestions)
-    .replace('smart-notes-rewrite.png', ImageRewrite)
-    .replace('smart-notes-autocomplete.png', ImageAutocomplete)
+    .replaceAll('smart-notes.png', ImageSmartNotes)
+    .replaceAll('smart-notes-suggestions.png', ImageSuggestions)
+    .replaceAll('smart-notes-rewrite.png', ImageRewrite)
+    .replaceAll('smart-notes-autocomplete.png', ImageAutocomplete)
+    .replaceAll('$MOD', isMac() ? '⌘' : 'Ctrl')
+    .replaceAll('$OPT', isMac() ? '⌥' : 'Alt')
 }
 
 const createNote = (note: typeof OnboardingNote1, idx: number) => {
@@ -32,7 +35,7 @@ const notes = [
   OnboardingNote1,
   OnboardingNote2,
   OnboardingNote3,
-  OnboardingNote4,
+  //   OnboardingNote4, // Disabled for now since the feature is not reliable enough
   OnboardingNote5
 ]
 
