@@ -17,18 +17,22 @@ import {
 } from '@horizon/types'
 import { ResourceManager } from '../../resources'
 
+export type ActiveSpaceContextInclude = 'everything' | 'tabs' | 'resources'
+
 export class ContextItemActiveSpaceContext extends ContextItemBase {
   type = ContextItemTypes.ACTIVE_SPACE
   activeSpace: Readable<OasisSpace | null>
+  include: ActiveSpaceContextInclude
 
   currentSpaceId: Writable<string | null>
   item: Writable<ContextItemSpace | null>
 
   activeSpaceUnsub: () => void
 
-  constructor(manager: ContextManager) {
+  constructor(manager: ContextManager, include: ActiveSpaceContextInclude = 'everything') {
     super(manager, ContextItemTypes.ACTIVE_SPACE, 'browser')
 
+    this.include = include
     this.item = writable(null)
     this.currentSpaceId = writable(null)
 
@@ -108,41 +112,62 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
   async getResourceIds() {
     const item = get(this.item)
     if (item) {
-      const spaceResources = await item.getResourceIds()
+      let contentResources: string[] = []
+      let tabResources: string[] = []
 
-      // Combine the saved resources with the resources from the tabs that are open in the context
-      const scopedTabs = this.manager.tabsManager.tabsValue.filter(
-        (tab) => tab.type === 'page' && tab.scopeId === item.id
-      ) as TabPage[]
+      if (this.include === 'everything' || this.include === 'resources') {
+        const spaceResources = await item.getResourceIds()
+        contentResources.push(...spaceResources)
+      }
 
-      const preparedResources = await Promise.all(
-        scopedTabs.map((tab) => this.manager.preparePageTab(tab))
-      )
-      const scopedTabResourceIds = preparedResources.filter(Boolean).map((resource) => resource!.id)
+      if (this.include === 'everything' || this.include === 'tabs') {
+        const scopedTabs = this.manager.tabsManager.tabsValue.filter(
+          (tab) => tab.type === 'page' && tab.scopeId === item.id
+        ) as TabPage[]
 
-      return [...new Set([...spaceResources, ...scopedTabResourceIds])]
+        const preparedResources = await Promise.all(
+          scopedTabs.map((tab) => this.manager.preparePageTab(tab))
+        )
+        const scopedTabResourceIds = preparedResources
+          .filter(Boolean)
+          .map((resource) => resource!.id)
+        tabResources.push(...scopedTabResourceIds)
+      }
+
+      return [...new Set([...contentResources, ...tabResources])]
     } else {
-      const unscopedTabs = this.manager.tabsManager.tabsValue.filter(
-        (tab) => tab.type === 'page' && !tab.scopeId
-      ) as TabPage[]
+      let contentResources: string[] = []
+      let tabResources: string[] = []
 
-      const preparedResources = await Promise.all(
-        unscopedTabs.map((tab) => this.manager.preparePageTab(tab))
-      )
-      const scopedTabResourceIds = preparedResources.filter(Boolean).map((resource) => resource!.id)
+      if (this.include === 'everything' || this.include === 'resources') {
+        const resourceIds = await this.manager.resourceManager.listResourceIDsByTags(
+          [
+            ResourceManager.SearchTagDeleted(false),
+            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+          ],
+          true
+        )
+        contentResources.push(...resourceIds)
+      }
 
-      const resourceIds = await this.manager.resourceManager.listResourceIDsByTags(
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
-        ],
-        true
-      )
+      if (this.include === 'everything' || this.include === 'tabs') {
+        const unscopedTabs = this.manager.tabsManager.tabsValue.filter(
+          (tab) => tab.type === 'page' && !tab.scopeId
+        ) as TabPage[]
 
-      return [...new Set([...resourceIds, ...scopedTabResourceIds])]
+        const preparedResources = await Promise.all(
+          unscopedTabs.map((tab) => this.manager.preparePageTab(tab))
+        )
+        const scopedTabResourceIds = preparedResources
+          .filter(Boolean)
+          .map((resource) => resource!.id)
+        tabResources.push(...scopedTabResourceIds)
+      }
+
+      return [...new Set([...contentResources, ...tabResources])]
     }
   }
 

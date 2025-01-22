@@ -3,23 +3,7 @@ import { WebViewEventTransform } from './ipc.webview.types'
 import { AnnotationCommentData, AnnotationType } from './resources.types'
 
 export enum TelemetryEventTypes {
-  // --- OLD LEGACY EVENTS
-  // CreateHorizon = 'Create Horizon',
-  // DeleteHorizon = 'Delete Horizon',
-  // ActivateHorizon = 'Activate Horizon',
-  // AddCard = 'Add Card',
-  // DeleteCard = 'Delete Card',
-  // DuplicateCard = 'Duplicate Card',
-  // UpdateCard = 'Update Card',
-  // VisorSearch = 'Visor Search',
-  // OasisOpen = 'Open Oasis',
-  // OasisSearch = 'Search Oasis',
-  // OasisDrag = 'Drag from Oasis',
-  // OasisOpenResourceDetails = 'Open Oasis Resource Details',
-  // CreateResource = 'Create Resource',
-  // DeleteResource = 'Delete Resource',
-
-  // --- NEW EVENTS
+  // Tabs
   CreateTab = 'Create Tab',
   ActivateTab = 'Activate Tab',
   ActivateTabSpace = 'Activate Tab Space',
@@ -27,17 +11,27 @@ export enum TelemetryEventTypes {
   DeleteTab = 'Delete Tab',
   DeleteTabSpace = 'Delete Tab Space',
   MoveTab = 'Move Tab',
-  OpenInMiniBrowser = 'Open in Mini Browser',
-  SwitchContext = 'Switch Context',
   MoveTabToContext = 'Move Tab to Context',
 
-  // CreateResource = 'Create Resource',
+  // Core
+  OpenInMiniBrowser = 'Open in Mini Browser',
+  SwitchContext = 'Switch Context',
+  FileDownload = 'File Download',
+
+  // UI
+  OpenRightSidebar = 'Open Right Sidebar',
+  ToggleSidebar = 'Toggle Sidebar',
+  ToggleTabsOrientation = 'Toggle Tabs Orientation',
+
+  // Oasis
   SaveToOasis = 'Save to Oasis',
   OpenOasis = 'Open Oasis',
   DeleteResource = 'Delete Resource',
   SearchOasis = 'Search Oasis',
   OpenResource = 'Open Resource',
+  MultiSelectResourceAction = 'Multi Select Resource Action',
 
+  // Spaces
   CreateSpace = 'Create Space',
   OpenSpace = 'Open Space',
   DeleteSpace = 'Delete Space',
@@ -47,38 +41,37 @@ export enum TelemetryEventTypes {
   ChatWithSpace = 'Chat with Space',
   OpenResourceInChat = 'Open Resource in Chat',
 
+  // AI
   UseInlineAI = 'Use Inline AI',
-  CreateAnnotation = 'Create Annotation',
-  DeleteAnnotation = 'Delete Annotation',
-  OpenAnnotationSidebar = 'Open Annotations',
-  OpenAnnotationResource = 'Open Annotation Resource',
-  DropAnnotationResource = 'Drop Annotation Resource',
   PageChatMessageSent = 'Page Chat Message Sent',
   PageChatCitationClick = 'Page Chat Citation Click',
   PageChatCitationClickResourceFromSpace = 'Open Space Resource from Chat',
   PageChatClear = 'Page Chat Clear',
   PageChatContextUpdate = 'Page Chat Context Update',
   OpenPageChatSidebar = 'Open Page Chat',
+  SummarizeText = 'Summarize Text',
+  GeneratePrompts = 'Generate Prompts',
+  UsePrompt = 'Use Prompt',
+  UpdatePrompt = 'Update Prompt',
+  ResetPrompt = 'Reset Prompt',
+  AskInlineAI = 'Ask Inline AI',
+  CopyScreenshot = 'Copy Screenshot',
+  SaveAIResponse = 'Save AI Response',
+  SimilaritySearch = 'Similarity Search',
+
+  // Go Wild
   GoWildModifyPage = 'Go Wild Modify Page',
   GoWildCreateApp = 'Go Wild Create App',
   GoWildRerun = 'Go Wild Rerun',
   GoWildClear = 'Go Wild Clear',
   OpenGoWildSidebar = 'Open Go Wild',
 
-  UpdatePrompt = 'Update Prompt',
-  ResetPrompt = 'Reset Prompt',
-
-  OpenRightSidebar = 'Open Right Sidebar',
-  ToggleSidebar = 'Toggle Sidebar',
-  ToggleTabsOrientation = 'Toggle Tabs Orientation',
-  FileDownload = 'File Download',
-  SetDefaultBrowser = 'Set Default Browser',
-
-  AskInlineAI = 'Ask Inline AI',
-  CopyScreenshot = 'Copy Screenshot',
-  SaveAIResponse = 'Save AI Response',
-
-  MultiSelectResourceAction = 'Multi Select Resource Action',
+  // Annotations
+  CreateAnnotation = 'Create Annotation',
+  DeleteAnnotation = 'Delete Annotation',
+  OpenAnnotationSidebar = 'Open Annotations',
+  OpenAnnotationResource = 'Open Annotation Resource',
+  DropAnnotationResource = 'Drop Annotation Resource',
 
   // Homescreen
   OpenHomescreen = 'Open Homescreen',
@@ -86,7 +79,16 @@ export enum TelemetryEventTypes {
   RemoveHomescreenItem = 'Remove Item from Homescreen',
   UpdateHomescreen = 'Update Homescreen',
 
+  // Notes
+  CreateNote = 'Create Note',
+  UpdateNote = 'Update Note',
+  NoteCreateMention = 'Note Create Mention',
+  NoteOpenMention = 'Note Open Mention',
+  NoteInsertSimilarSource = 'Note Insert Similar Source',
+  NoteChangeContext = 'Note Change Context',
+
   // Misc
+  SetDefaultBrowser = 'Set Default Browser',
   ChangeTelemetryAnonymization = 'Change Telemetry Anonymization'
 }
 
@@ -122,6 +124,8 @@ export enum CreateTabEventTrigger {
   Homescreen = 'homescreen',
   /** Tab was created from inside a space on the homescreen */
   HomescreenSpace = 'homescreen_space',
+  /** Tab was created from a note */
+  NoteCitation = 'note_citation',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
 }
@@ -164,7 +168,8 @@ export enum ChangeContextEventTrigger {
   Tab = 'tab',
   SpaceInOasis = 'space_in_oasis',
   CommandMenu = 'command_menu',
-  Homescreen = 'homescreen'
+  Homescreen = 'homescreen',
+  Note = 'note'
 }
 
 export enum BrowserContextScope {
@@ -192,7 +197,8 @@ export enum OpenInMiniBrowserEventFrom {
   PinnedTab = 'pinned_tab',
   WebPage = 'web_page',
   Homescreeen = 'homescreen',
-  CommandMenu = 'command_menu'
+  CommandMenu = 'command_menu',
+  Note = 'note'
 }
 
 export enum DeleteResourceEventTrigger {
@@ -226,10 +232,24 @@ export enum SaveToOasisEventTrigger {
 export enum EventContext {
   /** Inline menu */
   Inline = 'inline',
+  /** Sidebar chat */
   Chat = 'chat',
+  /** Tab items */
   Tabs = 'tabs',
-  Overlay = 'overlay',
-  Homescreen = 'homescreen'
+  /** Stuff Overlay */
+  StuffOverlay = 'stuff_overlay',
+  /** Resource Overlay aka Mini Browser */
+  ResourceOverlay = 'resource_overlay',
+  /** Homescreen */
+  Homescreen = 'homescreen',
+  /** Command menu */
+  CommandMenu = 'command_menu',
+  /** Space View  */
+  Space = 'space',
+  /** Notes */
+  Note = 'note',
+  /** Within a webpage */
+  Webpage = 'webpage'
 }
 
 export enum SearchOasisEventTrigger {
@@ -374,6 +394,27 @@ export enum PageChatMessageSentEventError {
   Other = 'other'
 }
 
+export enum PageChatMessageSentEventTrigger {
+  SidebarChat = 'sidebar_chat',
+  InlineAI = 'inline_ai',
+  NoteAutocompletion = 'note_autocompletion',
+  NoteUseSuggestion = 'note_use_suggestion',
+  NoteRewrite = 'note_rewrite',
+  NoteSimilaritySearch = 'note_similarity_search'
+}
+
+export enum PromptType {
+  BuiltIn = 'built_in',
+  Custom = 'custom',
+  Generated = 'generated'
+}
+
+export enum GeneratePromptsEventTrigger {
+  ActiveTabChange = 'active_tab_change',
+  Click = 'click',
+  Shortcut = 'shortcut'
+}
+
 export type UpdateSpaceSettingsEventChange = {
   setting: 'name' | 'live_mode' | 'sort_by' | 'source' | 'hide_viewed' | 'smart_filter'
   change: boolean | null | 'added' | 'removed' | 'created_at' | 'source_published_at'
@@ -444,4 +485,17 @@ export enum UpdateHomescreenEventAction {
   MoveItem = 'move_item',
   ResizeItem = 'resize_item',
   SetBackground = 'set_background'
+}
+
+export enum MentionEventType {
+  Context = 'context',
+  GeneralContext = 'general_context',
+  ActiveContext = 'active_context',
+  Everything = 'everything',
+  Tabs = 'tabs'
+}
+
+export enum SummarizeEventContentSource {
+  Resource = 'resource',
+  Citation = 'citation'
 }

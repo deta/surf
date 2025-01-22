@@ -3,13 +3,16 @@
 	--color-text-muted: #8a8a8a;
 	--color-text-secondary: #4D4B4D;
 	--color-menu: #000000;
-	--color-menu-muted: #868686;
-	--color-link: rgb(4, 84, 255);
-	--color-link-muted: rgb(61, 123, 255);
-	--color-brand: #F73B95;
+	--color-menu-muted: #696969;
+	--color-link: #d52b7d;
+	--color-link-muted: #ac1a61;
+	--color-brand: #b7065c;
+	--color-brand-dark: #ff4fa4;
 	--background: #fff;
 	--background-menu: #f6f6f6;
 	--background-menu-muted: #dedede;
+	--background-brand: #ff54a724;
+	--background-brand-dark: #ea1e8053;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 
@@ -32,11 +35,15 @@
 	a {
 		font-weight: 500;
 		color: var(--color-link);
-		text-decoration: inherit;
+		text-decoration: underline;
 	}
 
 	a:hover {
 		color: var(--color-link-muted);
+	}
+
+	.prose {
+		max-width: unset;
 	}
 }
 
@@ -53,10 +60,31 @@
 
 	p.is-editor-empty:first-child::before {
 		color: var(--color-text-muted);
-		content: attr(data-placeholder);
+		content: var(--data-placeholder);
 		float: left;
 		height: 0;
 		pointer-events: none;
+	}
+
+	p.is-empty::before {
+		color: var(--color-text-muted);
+		content: var(--data-placeholder-new-line);
+		float: left;
+		height: 0;
+		pointer-events: none;
+	}
+
+	.mention {
+		background-color: var(--background-brand);
+		border-radius: 0.4rem;
+		box-decoration-break: clone;
+		color: var(--color-brand) !important;
+		padding: 0.1rem 0.3rem;
+		cursor: default;
+
+		&::after {
+			content: "\200B";
+		}
 	}
 
 	// p.is-empty, h1.is-empty, h2.is-empty, h3.is-empty {
@@ -88,6 +116,16 @@
 
 	p {
 		margin: 0.3em 0;
+	}
+
+	img {
+		border-radius: 12px;
+		margin: 2px;
+		width: calc(100% - 4px);
+	
+		&.ProseMirror-selectednode {
+		  outline: 2px solid var(--color-brand-dark);
+		}
 	}
 
 	.ProseMirror-selectednode {
@@ -136,7 +174,7 @@
 
 	ul,
 	ol {
-		padding: 0 1rem;
+		padding: 0 1.25rem;
 		margin: unset;
 	}
 
@@ -180,6 +218,20 @@
 	}
 }
 
+.dark .tiptap {
+	.mention {
+		background-color: var(--background-brand-dark);
+		color: var(--color-brand-dark) !important;
+	}
+
+	a {
+		color: var(--color-link);
+	}
+
+	a:hover {
+		color: var(--color-link-muted);
+	}
+}
 
 .drag-handle {
 	position: fixed;

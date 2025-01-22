@@ -19,7 +19,9 @@
   import {
     EventContext,
     PageChatMessageSentEventError,
+    PageChatMessageSentEventTrigger,
     PageChatUpdateContextEventTrigger,
+    PromptType,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger
@@ -245,9 +247,14 @@
 
     log.debug('Saving chat response', content)
 
-    const resource = await resourceManager.createResourceNote(content, {
-      name: truncate(cleanQuery(response.query), 50)
-    })
+    const resource = await resourceManager.createResourceNote(
+      content,
+      {
+        name: truncate(cleanQuery(response.query), 50)
+      },
+      undefined,
+      EventContext.Chat
+    )
 
     if (tabsManager.activeScopeIdValue) {
       await oasis.addResourcesToSpace(
@@ -646,6 +653,13 @@
       autoScrollChat = true
       selectedMode = 'active'
 
+      const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
+      telemetry.trackUsePrompt(
+        builtIn ? PromptType.BuiltIn : PromptType.Generated,
+        EventContext.Chat,
+        builtIn ? prompt.label.toLowerCase() : undefined
+      )
+
       await sendChatMessage(prompt.prompt, 'user', prompt.label)
     } catch (e) {
       log.error('Error doing magic', e)
@@ -658,7 +672,13 @@
     query?: string,
     skipScreenshot = false
   ) => {
-    await chat.sendMessageAndHandle(prompt, selectedMode !== 'general', role, query, skipScreenshot)
+    await chat.sendMessageAndHandle(prompt, {
+      trigger: PageChatMessageSentEventTrigger.SidebarChat,
+      useContext: selectedMode !== 'general',
+      role,
+      query,
+      skipScreenshot
+    })
   }
 
   const clearChat = async () => {

@@ -8,6 +8,8 @@
     icon?: string
     iconUrl?: string
     iconSpaceId?: string
+    searchOnly?: boolean
+    aliases?: string[]
   };
 </script>
 
@@ -89,7 +91,31 @@
     icon: 'circle-dot'
   } as TabItem
 
-  const builtInItems: TabItem[] = [activeTabItem, activeContextItem]
+  const homeContextItem = {
+    id: 'home',
+    type: 'built-in',
+    label: 'Home Context',
+    value: `home`,
+    searchOnly: true,
+    icon: 'circle-dot',
+    aliases: ['inbox', 'general']
+  } as TabItem
+
+  const everythingContextItem = {
+    id: 'everything',
+    type: 'built-in',
+    label: 'All My Stuff',
+    value: `everything`,
+    icon: 'save',
+    aliases: ['everything']
+  } as TabItem
+
+  const builtInItems: TabItem[] = [
+    activeTabItem,
+    activeContextItem,
+    homeContextItem,
+    everythingContextItem
+  ]
 
   function tabToTabItem(tab: Tab) {
     return {
@@ -139,7 +165,7 @@
       if (searchValue.length === 0) {
         const currentScopeTabs = tabs.filter((tab) => tab.scopeId === (activeScopeId ?? undefined))
         const tabItems = currentScopeTabs.map(tabToTabItem)
-        return [...filteredBuiltInItems, ...tabItems]
+        return [...filteredBuiltInItems.filter((item) => !item.searchOnly), ...tabItems]
       }
 
       const tabMatches = tabs.filter(
@@ -162,8 +188,10 @@
             -1
       )
 
-      const builtInMatches = filteredBuiltInItems.filter((item) =>
-        item.label.toLowerCase().includes(searchValue.toLowerCase())
+      const builtInMatches = filteredBuiltInItems.filter(
+        (item) =>
+          item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+          item.aliases?.some((alias) => alias.toLowerCase().includes(searchValue.toLowerCase()))
       )
 
       const tabItems = tabMatches.map(tabToTabItem)
@@ -177,26 +205,36 @@
   $: handleSearchValueChange($searchValue)
 
   async function handleSubmitItem() {
-    const value = $state.value
-    const [type, id] = value.split(';;')
+    try {
+      const value = $state.value
+      const [type, id] = value.split(';;')
 
-    log.debug('submitting item', type, id)
+      log.debug('submitting item', type, id)
 
-    if (type === 'tab') {
-      contextManager.addTab(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
-    } else if (type === 'space') {
-      contextManager.addSpace(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
-    } else if (type === 'resource') {
-      contextManager.addResource(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
-    } else if (type === 'active-tab') {
-      contextManager.addActiveTab(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
-    } else if (type === 'active-space') {
-      contextManager.addActiveSpaceContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      if (type === 'tab') {
+        contextManager.addTab(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      } else if (type === 'space') {
+        contextManager.addSpace(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      } else if (type === 'resource') {
+        contextManager.addResource(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+
+        // for built-in items 'type' is the value
+      } else if (type === 'active-tab') {
+        contextManager.addActiveTab(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      } else if (type === 'active-space') {
+        contextManager.addActiveSpaceContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      } else if (type === 'home') {
+        contextManager.addHomeContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      } else if (type === 'everything') {
+        contextManager.addEverythingContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      }
+
+      // $searchValue = ''
+      const inpEl = ref.querySelector('input') as HTMLInputElement
+      inpEl?.focus()
+    } catch (e) {
+      log.error('submit error', e)
     }
-
-    // $searchValue = ''
-    const inpEl = ref.querySelector('input') as HTMLInputElement
-    inpEl?.focus()
   }
 
   async function searchStuff(value: string) {

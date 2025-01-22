@@ -56,7 +56,8 @@ export enum OnboardingFeature {
   ChatWithYoutubeVideoOnboarding = 'chatWithYoutubeVideoOnboarding',
   StuffOnboarding = 'stuffOnboarding',
   SmartSpacesOnboarding = 'smartSpacesOnboarding',
-  DesktopOnboarding = 'desktopOnboarding'
+  DesktopOnboarding = 'desktopOnboarding',
+  SmartNotesOnboarding = 'smartNotesOnboarding'
 }
 
 export const savingTimeline: OnboardingTimeline = {
@@ -294,6 +295,21 @@ export const desktopTimeline: OnboardingTimeline = {
       mediaID: 'desktop.onboarding.howtodrop',
       action: OnboardingAction.OpenStuff,
       mediaType: 'video'
+    }
+  ]
+}
+
+export const smartNotesTimeline: OnboardingTimeline = {
+  name: OnboardingFeature.SmartNotesOnboarding,
+  steps: [
+    {
+      target: '#notes.onboarding.1',
+      headline: 'Generated Output',
+      content: "This is the output from Surf AI. It's generated from the input that was provided.",
+      position: { vertical: 'top', horizontal: 'left', offsetY: 300, offsetX: 200 },
+      domTarget: 'onboarding-output-basics',
+      domRoot: 'body',
+      nextButtonLabel: "Alright, let's go!"
     }
   ]
 }

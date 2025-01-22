@@ -1,17 +1,40 @@
-import { type JSONContent, generateHTML, generateText, generateJSON } from '@tiptap/core'
+import { type JSONContent, generateHTML, generateText, generateJSON, Editor } from '@tiptap/core'
 import Link from '@tiptap/extension-link'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
+import ListKeymap from '@tiptap/extension-list-keymap'
+import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import Slash from './extensions/Slash/SlashExtension'
-import suggestion from './extensions/Hashtag/suggestion'
+import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
+import Mention, { type MentionAction } from './extensions/Mention/index'
+// import Mention from '@tiptap/extension-mention'
+import mentionSuggestion from './extensions/Mention/suggestion'
+import Loading from './extensions/Loading'
+import AIOutput from './extensions/AIOutput'
+import type { MentionItem } from './types'
+import type { SuggestionOptions } from '@tiptap/suggestion'
+import Button from './extensions/Button'
 
-export type ExtensionOptions = { placeholder?: string; disableHashtag?: boolean }
+export type ExtensionOptions = {
+  placeholder?: string
+  disableHashtag?: boolean
+  parseMentions?: boolean
+  readOnlyMentions?: boolean
+  searchMentions?: (props: {
+    query: string
+    editor: Editor
+  }) => MentionItem[] | Promise<MentionItem[]>
+  mentionClick?: (item: MentionItem, action: MentionAction) => void
+  mentionInsert?: (item: MentionItem) => void
+  buttonClick?: (action: string) => void
+}
+
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
@@ -46,11 +69,37 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     ? []
     : [
         Hashtag.configure({
-          suggestion: suggestion
+          suggestion: hashtagSuggestion
         })
       ]),
+  ...(opts?.parseMentions
+    ? [
+        Mention.configure({
+          HTMLAttributes: {
+            class: 'mention'
+          },
+          suggestion: {
+            ...mentionSuggestion,
+            items: opts.searchMentions
+          },
+          renderText({ options, node }) {
+            return `${options.suggestion.char}${node.attrs.label ?? node.attrs.id}`
+          },
+          onClick: opts.mentionClick,
+          onInsert: opts.mentionInsert,
+          readOnly: opts.readOnlyMentions
+        })
+      ]
+    : []),
   TaskItem,
-  TaskList
+  TaskList,
+  ListKeymap,
+  Loading,
+  AIOutput,
+  Image,
+  Button.configure({
+    onClick: opts?.buttonClick
+  })
   // Markdown,
   // DragHandle,
   // Slash.configure({

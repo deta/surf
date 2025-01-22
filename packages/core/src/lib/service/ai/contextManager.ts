@@ -27,6 +27,9 @@ import {
   ContextItemSpace
 } from './context/index'
 import type { AIService, ChatPrompt } from './ai'
+import { ContextItemHome } from './context/home'
+import { ContextItemEverything } from './context/everything'
+import type { ActiveSpaceContextInclude } from './context/activeSpaceContexts'
 
 export class ContextManager {
   key = 'active_chat_context'
@@ -51,7 +54,12 @@ export class ContextManager {
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
-  constructor(ai: AIService, tabsManager: TabsManager, resourceManager: ResourceManager) {
+  constructor(
+    ai: AIService,
+    tabsManager: TabsManager,
+    resourceManager: ResourceManager,
+    items?: ContextItem[]
+  ) {
     this.ai = ai
     this.tabsManager = tabsManager
     this.resourceManager = resourceManager
@@ -61,7 +69,7 @@ export class ContextManager {
     this.generatingPrompts = writable(false)
     this.generatedPrompts = writable([])
     this._storage = useLocalStorage<StoredContextItem[]>(this.key, [], true)
-    this._items = writable([])
+    this._items = writable(items ?? [])
 
     this.items = derived(this._items, ($items) => $items)
 
@@ -586,6 +594,14 @@ export class ContextManager {
 
         const item = new ContextItemSpace(this, space, tab as TabSpace)
         return this.addContextItem(item, trigger, index)
+      } else if (tab.type === 'resource') {
+        const resource = await this.resourceManager.getResource(tab.resourceId)
+        if (!resource) {
+          throw new Error(`Resource not found: ${tab.resourceId}`)
+        }
+
+        const item = new ContextItemResource(this, resource, tab)
+        return this.addContextItem(item, trigger, index)
       } else {
         throw new Error(`Unsupported tab type: ${tab.type}`)
       }
@@ -637,14 +653,40 @@ export class ContextManager {
     this.addContextItem(item, trigger, index)
   }
 
-  async addActiveSpaceContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+  async addActiveSpaceContext(
+    trigger?: PageChatUpdateContextEventTrigger,
+    index?: number,
+    include?: ActiveSpaceContextInclude
+  ) {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_SPACE)
     if (existingItem) {
       this.log.debug('Active space context already in context')
       return
     }
 
-    const item = new ContextItemActiveSpaceContext(this)
+    const item = new ContextItemActiveSpaceContext(this, include)
+    this.addContextItem(item, trigger, index)
+  }
+
+  async addHomeContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+    const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.HOME)
+    if (existingItem) {
+      this.log.debug('Home context already in context')
+      return
+    }
+
+    const item = new ContextItemHome(this)
+    this.addContextItem(item, trigger, index)
+  }
+
+  async addEverythingContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+    const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.EVERYTHING)
+    if (existingItem) {
+      this.log.debug('Everything context already in context')
+      return
+    }
+
+    const item = new ContextItemEverything(this)
     this.addContextItem(item, trigger, index)
   }
 
@@ -716,6 +758,25 @@ export class ContextManager {
     }
   }
 
+  getResourceItem(resourceId: string) {
+    const item = this.itemsValue.find((item) => {
+      if (item instanceof ContextItemResource) {
+        return item.data.id === resourceId
+      } else if (item instanceof ContextItemPageTab) {
+        return get(item.item)?.data?.id === resourceId
+      } else if (item instanceof ContextItemActiveTab) {
+        return get(item.item)?.data?.id === resourceId
+      }
+    })
+
+    return (item ?? null) as ContextItemResource | ContextItemPageTab | ContextItemActiveTab | null
+  }
+
+  getActiveSpaceContextItem() {
+    const item = this.itemsValue.find((item) => item instanceof ContextItemActiveSpaceContext)
+    return item as ContextItemActiveSpaceContext | undefined
+  }
+
   clear(trigger?: PageChatUpdateContextEventTrigger) {
     const currentContextLength = this.itemsValue.length
 
@@ -781,6 +842,17 @@ export class ContextManager {
     this.log.debug('Got chat prompts for contextItem', item, prompts)
     this.generatedPrompts.set(prompts)
     return prompts
+  }
+
+  // Clone the context manager into a new instance
+  clone() {
+    const clone = new ContextManager(
+      this.ai,
+      this.tabsManager,
+      this.resourceManager,
+      this.itemsValue
+    )
+    return clone
   }
 }
 

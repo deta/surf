@@ -100,7 +100,8 @@
     OpenHomescreenEventTrigger,
     OpenInMiniBrowserEventFrom,
     ChangeContextEventTrigger,
-    PageChatUpdateContextItemType
+    PageChatUpdateContextItemType,
+    PromptType
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -1061,7 +1062,7 @@
         if (existingTab) {
           selectTabWhileKeepingOthersSelected(existingTab.id)
         } else {
-          const tab = await openResourcFromContextAsPageTab(contextItem.data.id)
+          const tab = await tabsManager.openResourcFromContextAsPageTab(contextItem.data.id)
           if (tab) {
             selectTabWhileKeepingOthersSelected(tab.id)
           }
@@ -1130,7 +1131,7 @@
       chatContext.clear()
     }
 
-    activeTabId.set('')
+    // activeTabId.set('')
     showChatSidebar.set(false)
 
     if (showRightSidebar) {
@@ -1419,55 +1420,21 @@
     })
   }
 
-  const openResourcFromContextAsPageTab = async (resourceId: string) => {
-    const existingContextTab = $chatContextItems.find(
-      (item) => item.type === 'resource' && item.data.id === resourceId
-    )
-    const resource = await resourceManager.getResource(resourceId)
-    if (resource?.type === ResourceTypes.PDF) {
-      return await tabsManager.addPageTab(`surf://resource/${resourceId}`, {
-        active: true,
-        trigger: CreateTabEventTrigger.OasisChat
-      })
-    }
-    const url = resource?.tags?.find(
-      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-    )?.value
-    let tab: Tab | null = null
-    if (url) {
-      tab = await tabsManager.addPageTab(url, {
-        active: false,
-        trigger: CreateTabEventTrigger.OasisChat
-      })
-    } else {
-      log.debug('no url found for resource, using resource tab as fallback', resourceId)
-      const resource = await resourceManager.getResource(resourceId)
-      if (resource) {
-        tab = await tabsManager.openResourceAsTab(resource, {
-          active: false,
-          trigger: CreateTabEventTrigger.OasisChat
-        })
-      }
-    }
-    if (!tab) {
-      log.error('failed to open resource from context', resourceId)
-      toasts.error('Failed to open as tab')
-      return null
-    }
-    if (existingContextTab) {
-      log.debug('removing existing context item for same resource', existingContextTab.id)
-      chatContext.removeContextItem(existingContextTab.id)
-    }
-    return tab
-  }
-
   const highlightWebviewText = async (e: CustomEvent<HighlightWebviewTextEvent>) => {
-    let { resourceId, answerText, sourceUid, preview } = e.detail
+    let { resourceId, answerText, sourceUid, preview, context } = e.detail
     log.debug('highlighting text', resourceId, answerText, sourceUid)
+
+    let from = OpenInMiniBrowserEventFrom.Chat
+    let trigger = CreateTabEventTrigger.OasisChat
+
+    if (context === EventContext.Note) {
+      from = OpenInMiniBrowserEventFrom.Note
+      trigger = CreateTabEventTrigger.NoteCitation
+    }
 
     if (preview) {
       globalMiniBrowser.openResource(resourceId, {
-        from: OpenInMiniBrowserEventFrom.Chat,
+        from: from,
         highlightSimilarText: answerText,
         citationSourceUid: sourceUid
       })
@@ -1479,7 +1446,7 @@
       null
 
     if (!tab) {
-      tab = (await openResourcFromContextAsPageTab(resourceId)) ?? null
+      tab = (await tabsManager.openResourcFromContextAsPageTab(resourceId, { trigger })) ?? null
       if (!tab) {
         log.error('failed to open resource from context', resourceId)
         toasts.error('Failed to highlight citation')
@@ -1555,7 +1522,7 @@
       null
 
     if (!tab) {
-      tab = (await openResourcFromContextAsPageTab(resourceId)) ?? null
+      tab = (await tabsManager.openResourcFromContextAsPageTab(resourceId)) ?? null
       if (!tab) {
         log.error('failed to open resource from context', resourceId)
         toasts.error('Failed to highlight citation')
@@ -2117,7 +2084,12 @@
     const query = e.detail ?? ''
     log.debug('create note with query', query)
 
-    const resource = await resourceManager.createResourceNote(query)
+    const resource = await resourceManager.createResourceNote(
+      query,
+      undefined,
+      undefined,
+      EventContext.CommandMenu
+    )
     await tabsManager.openResourceAsTab(resource, { active: true })
     toasts.success('Note created!')
   }
@@ -2587,13 +2559,13 @@
     })
 
     window.api.onUpdatePrompt((id, content) => {
-      telemetry.trackUpdatePrompt(id)
+      telemetry.trackUpdatePrompt(PromptType.BuiltIn, id)
 
       return updatePrompt(id as PromptIDs, content)
     })
 
     window.api.onResetPrompt((id) => {
-      telemetry.trackResetPrompt(id)
+      telemetry.trackResetPrompt(PromptType.BuiltIn, id)
       return resetPrompt(id as PromptIDs)
     })
 
@@ -2952,6 +2924,24 @@
     prepareContextMenu()
 
     initializedApp = true
+
+    // @ts-ignore
+    window.showOnboardingNote = async () => {
+      const newTab = await tabsManager.create<TabResource>(
+        {
+          title: 'Intro to Smart Notes',
+          icon: '',
+          type: 'resource',
+          resourceId: 'onboarding',
+          resourceType: ResourceTypes.DOCUMENT_SPACE_NOTE
+        },
+        {
+          active: true
+        }
+      )
+
+      log.debug('show onboarding note', newTab)
+    }
 
     if (userConfig && !userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
@@ -4778,7 +4768,6 @@
   on:reload-window={() => $activeBrowserTab?.reload()}
   on:open-space={handleCreateTabForSpace}
   on:create-chat={handleCreateChatWithQuery}
-  on:create-note={handleCreateNote}
   on:open-and-chat={handleOpenAndChat}
   on:batch-open={handleOpenTabs}
   on:open-space-and-chat={handleOpenSpaceAndChat}

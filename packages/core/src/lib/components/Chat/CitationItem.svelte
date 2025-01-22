@@ -2,10 +2,10 @@
   export type CitationType = 'image' | 'resource'
 
   // prettier-ignore
-  export type CitationInfo = { id: string; source?: AIChatMessageSource; renderID: string; text?: string };
+  export type CitationInfo = { id: string; source?: AIChatMessageSource; renderID: string; text?: string, skipHighlight?: boolean, hideText?: boolean };
 
   // prettier-ignore
-  export type CitationClickData = { citationID: string; uniqueID: string; preview?: boolean, source?: AIChatMessageSource };
+  export type CitationClickData = { citationID: string; uniqueID: string; preview?: boolean, source?: AIChatMessageSource, skipHighlight?: boolean };
 </script>
 
 <script lang="ts">
@@ -85,6 +85,8 @@
   let source: AIChatMessageSource | undefined
   let renderID: string
   let tooltipText: string
+  let hideText = false
+  let skipHighlight = false
   let citationType: CitationType
   let resource: Resource | null = null
   let loadingResource = false
@@ -155,12 +157,19 @@
   }
 
   const handleClick = (e?: MouseEvent) => {
+    if (skipHighlight && source) {
+      source.content = ''
+      if (source.metadata) {
+        source.metadata.timestamp = undefined
+      }
+    }
+
     if (general) {
       if (!source) return
       log.debug('General citation clicked', citationID)
 
       if (e?.shiftKey && !isModKeyPressed(e)) {
-        dispatchClick({ citationID, uniqueID, source, preview: true })
+        dispatchClick({ citationID, uniqueID, source, preview: true, skipHighlight })
         return
       }
 
@@ -232,6 +241,7 @@
       citationID,
       uniqueID,
       source,
+      skipHighlight,
       preview: e?.shiftKey && !isModKeyPressed(e)
     })
   }
@@ -285,7 +295,7 @@
 
     log.debug('open item', source?.metadata?.timestamp)
 
-    if (general) {
+    if (general || skipHighlight) {
       return {
         ...base,
         icon: 'arrow.up.right',
@@ -361,6 +371,17 @@
     source = info.source
     renderID = info.renderID
 
+    if (info.skipHighlight !== undefined) {
+      skipHighlight = info.skipHighlight
+    }
+
+    if (
+      info.hideText !== undefined &&
+      (typeof source?.metadata?.timestamp !== 'number' || skipHighlight)
+    ) {
+      hideText = info.hideText
+    }
+
     if (source?.metadata?.url) {
       tooltipText = `Source: ${truncateURL(source.metadata.url, maxTitleLength)}`
     } else if (citationType === 'image') {
@@ -404,6 +425,7 @@
     !general}
   class:active={highlightedCitation && $highlightedCitation === uniqueID}
   class:icon={citationType === 'image' && !skipParsing}
+  class:compact={hideText}
   class={`${className} ${general ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-700' : ''}`}
   data-tooltip-target="chat-citation"
   bind:this={citationElem}
@@ -430,13 +452,15 @@
           src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
           alt="YouTube icon"
         />
-        <div class="select-none">
-          {#if general}
-            {tooltipText}
-          {:else}
-            {formatTimestamp(source.metadata.timestamp)}
-          {/if}
-        </div>
+        {#if !hideText}
+          <div class="select-none">
+            {#if general}
+              {tooltipText}
+            {:else}
+              {formatTimestamp(source.metadata.timestamp)}
+            {/if}
+          </div>
+        {/if}
       {:else if source?.metadata?.url}
         {#if resource?.type.startsWith('image/')}
           <ResourceSmallImagePreview {resource} />
@@ -451,13 +475,15 @@
         {:else}
           <Icon name="world" size="15px" />
         {/if}
-        <div class="font-sans text-xs tracking-wide select-none">
-          {#if general}
-            {tooltipText}
-          {:else}
-            <span class="uppercase">#{renderID ?? citationID}</span>
-          {/if}
-        </div>
+        {#if !hideText}
+          <div class="font-sans text-xs tracking-wide select-none">
+            {#if general}
+              {tooltipText}
+            {:else}
+              <span class="uppercase">#{renderID ?? citationID}</span>
+            {/if}
+          </div>
+        {/if}
       {:else if citationType === 'image'}
         <div class="file-icon">
           <FileIcon kind="image" />
@@ -475,13 +501,15 @@
           {/if}
         {/if}
 
-        <div class="font-sans text-xs tracking-wide select-none">
-          {#if general}
-            {tooltipText}
-          {:else}
-            <span class="uppercase">#{renderID ?? citationID}</span>
-          {/if}
-        </div>
+        {#if !hideText}
+          <div class="font-sans text-xs tracking-wide select-none">
+            {#if general}
+              {tooltipText}
+            {:else}
+              <span class="uppercase">#{renderID ?? citationID}</span>
+            {/if}
+          </div>
+        {/if}
       {/if}
     </div>
   {:else}
@@ -502,13 +530,15 @@
             src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
             alt="YouTube icon"
           />
-          <div class="select-none">
-            {#if general}
-              {tooltipText}
-            {:else}
-              {formatTimestamp(source.metadata.timestamp)}
-            {/if}
-          </div>
+          {#if !hideText}
+            <div class="select-none">
+              {#if general}
+                {tooltipText}
+              {:else}
+                {formatTimestamp(source.metadata.timestamp)}
+              {/if}
+            </div>
+          {/if}
         {:else if source?.metadata?.url}
           {#if resource?.type.startsWith('image/')}
             <ResourceSmallImagePreview {resource} />
@@ -523,13 +553,16 @@
           {:else}
             <Icon name="world" size="15px" />
           {/if}
-          <div class="font-sans text-xs tracking-wide select-none">
-            {#if general}
-              {tooltipText}
-            {:else}
-              <span class="uppercase">#{renderID ?? citationID}</span>
-            {/if}
-          </div>
+
+          {#if !hideText}
+            <div class="font-sans text-xs tracking-wide select-none">
+              {#if general}
+                {tooltipText}
+              {:else}
+                <span class="uppercase">#{renderID ?? citationID}</span>
+              {/if}
+            </div>
+          {/if}
         {:else if citationType === 'image'}
           <div class="file-icon">
             <FileIcon kind="image" />
@@ -547,13 +580,15 @@
             {/if}
           {/if}
 
-          <div class="font-sans text-xs tracking-wide select-none">
-            {#if general}
-              {tooltipText}
-            {:else}
-              <span class="uppercase">#{renderID ?? citationID}</span>
-            {/if}
-          </div>
+          {#if !hideText}
+            <div class="font-sans text-xs tracking-wide select-none">
+              {#if general}
+                {tooltipText}
+              {:else}
+                <span class="uppercase">#{renderID ?? citationID}</span>
+              {/if}
+            </div>
+          {/if}
         {/if}
       </div>
 
@@ -606,6 +641,8 @@
       border-radius: 5px;
       margin: 0;
       margin-top: -1px;
+      user-select: none;
+      pointer-events: none;
     }
 
     .file-icon {
@@ -624,6 +661,11 @@
       padding: 0.25rem 0.5rem;
       position: relative;
       top: 2px;
+    }
+
+    &.compact {
+      height: 2rem;
+      min-width: 2rem;
     }
 
     &.icon {

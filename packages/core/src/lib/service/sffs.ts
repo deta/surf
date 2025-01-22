@@ -823,7 +823,9 @@ export class SFFS {
       'resource ids filter:',
       opts?.resourceIds,
       'inline images length:',
-      opts?.inlineImages?.length
+      opts?.inlineImages?.length,
+      'rag only:',
+      opts?.ragOnly
     )
     const data: ChatMessageOptions = {
       query,

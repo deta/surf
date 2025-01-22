@@ -836,7 +836,7 @@
     log.debug('transformation output', transformation)
 
     webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {
-      text: transformation ?? ''
+      text: transformation ?? 'Failed to generate output'
     })
 
     await resourceManager.telemetry.trackAskInlineAI({
@@ -863,11 +863,16 @@
 
     if (event.text) {
       log.debug('creating note for bookmark', event.text)
-      const resource = await resourceManager.createResourceNote(event.text, {
-        name: tab.title ?? '',
-        sourceURI: event.url,
-        alt: ''
-      })
+      const resource = await resourceManager.createResourceNote(
+        event.text,
+        {
+          name: tab.title ?? '',
+          sourceURI: event.url,
+          alt: ''
+        },
+        undefined,
+        EventContext.Webpage
+      )
       log.debug('created resource', resource)
     }
   }
@@ -892,9 +897,14 @@
         content = element.innerHTML
       }
 
-      const resource = await resourceManager.createResourceNote(annotationData.data.content_plain, {
-        name: truncate(annotationData.data.content_plain, 20)
-      })
+      const resource = await resourceManager.createResourceNote(
+        annotationData.data.content_plain,
+        {
+          name: truncate(annotationData.data.content_plain, 20)
+        },
+        undefined,
+        EventContext.Inline
+      )
 
       if (tabs.activeScopeIdValue) {
         await oasis.addResourcesToSpace(

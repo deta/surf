@@ -41,7 +41,12 @@ import {
   AddHomescreenItemEventTrigger,
   AddHomescreenItemEventSource,
   UpdateHomescreenEventAction,
-  PageChatUpdateContextItemType
+  PageChatUpdateContextItemType,
+  PageChatMessageSentEventTrigger,
+  PromptType,
+  GeneratePromptsEventTrigger,
+  MentionEventType,
+  SummarizeEventContentSource
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -49,6 +54,7 @@ import type { Tab } from '../types/browser.types'
 import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
+import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -472,8 +478,14 @@ export class Telemetry {
     })
   }
 
-  async trackChatWithSpace() {
-    await this.trackEvent(TelemetryEventTypes.ChatWithSpace, {})
+  async trackChatWithSpace(
+    trigger?: PageChatMessageSentEventTrigger,
+    error?: PageChatMessageSentEventError
+  ) {
+    await this.trackEvent(TelemetryEventTypes.ChatWithSpace, {
+      error,
+      trigger
+    })
   }
 
   async trackOpenResourceInChat() {
@@ -554,6 +566,7 @@ export class Telemetry {
     chatModelProvider?: string
     chatModelName?: string
     error?: PageChatMessageSentEventError
+    trigger?: PageChatMessageSentEventTrigger
   }) {
     await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
       context_size: stats.contextSize,
@@ -566,7 +579,38 @@ export class Telemetry {
       embedding_model: stats.embeddingModel,
       chat_model_provider: stats.chatModelProvider,
       chat_model_name: stats.chatModelName,
-      error: stats.error
+      error: stats.error,
+      trigger: stats.trigger
+    })
+  }
+
+  async trackSimilaritySearch(stats: {
+    contextSize: number
+    numSpaces: number
+    numTabs: number
+    numResources: number
+    numScreenshots: number
+    numPreviousMessages: number
+    tookPageScreenshot: boolean
+    embeddingModel?: string
+    chatModelProvider?: string
+    chatModelName?: string
+    error?: PageChatMessageSentEventError
+    trigger?: PageChatMessageSentEventTrigger
+  }) {
+    await this.trackEvent(TelemetryEventTypes.SimilaritySearch, {
+      context_size: stats.contextSize,
+      num_spaces: stats.numSpaces,
+      num_tabs: stats.numTabs,
+      num_resources: stats.numResources,
+      num_screenshots: stats.numScreenshots,
+      num_messages: stats.numPreviousMessages,
+      took_page_screen: stats.tookPageScreenshot,
+      embedding_model: stats.embeddingModel,
+      chat_model_provider: stats.chatModelProvider,
+      chat_model_name: stats.chatModelName,
+      error: stats.error,
+      trigger: stats.trigger
     })
   }
 
@@ -629,14 +673,38 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.OpenGoWildSidebar, {})
   }
 
-  async trackUpdatePrompt(type: string) {
+  async trackSummarizeText(contentSource: SummarizeEventContentSource, context: EventContext) {
+    await this.trackEvent(TelemetryEventTypes.SummarizeText, {
+      content_source: contentSource,
+      context: context
+    })
+  }
+
+  async trackGeneratePrompts(context: EventContext, trigger: GeneratePromptsEventTrigger) {
+    await this.trackEvent(TelemetryEventTypes.GeneratePrompts, {
+      trigger,
+      context: context
+    })
+  }
+
+  async trackUsePrompt(type: PromptType, context: EventContext, name?: string) {
+    await this.trackEvent(TelemetryEventTypes.UsePrompt, {
+      type: type,
+      context: context,
+      name
+    })
+  }
+
+  async trackUpdatePrompt(type: PromptType, name?: string) {
     await this.trackEvent(TelemetryEventTypes.UpdatePrompt, {
+      name: name,
       type: type
     })
   }
 
-  async trackResetPrompt(type: string) {
+  async trackResetPrompt(type: PromptType, name?: string) {
     await this.trackEvent(TelemetryEventTypes.ResetPrompt, {
+      name: name,
       type: type
     })
   }
@@ -692,6 +760,45 @@ export class Telemetry {
   async trackChangeTelemetryAnonymization(anonymize: boolean) {
     await this.trackEvent(TelemetryEventTypes.ChangeTelemetryAnonymization, {
       anonymize
+    })
+  }
+
+  async trackCreateNote(context: EventContext) {
+    await this.trackEvent(TelemetryEventTypes.CreateNote, {
+      context
+    })
+  }
+
+  async trackUpdateNote(context: EventContext = EventContext.Note) {
+    await this.trackEvent(TelemetryEventTypes.UpdateNote, {
+      context
+    })
+  }
+
+  async trackNoteCreateMention(type: MentionEventType) {
+    await this.trackEvent(TelemetryEventTypes.NoteCreateMention, {
+      type
+    })
+  }
+
+  async trackNoteOpenMention(type: MentionEventType, target: MentionAction) {
+    await this.trackEvent(TelemetryEventTypes.NoteOpenMention, {
+      type,
+      target
+    })
+  }
+
+  async trackNoteInsertSimilarSource(resourceType: string, summarized: boolean) {
+    await this.trackEvent(TelemetryEventTypes.NoteInsertSimilarSource, {
+      type: resourceType,
+      kind: getPrimaryResourceType(resourceType),
+      summarized
+    })
+  }
+
+  async trackNoteChangeContext(type: MentionEventType) {
+    await this.trackEvent(TelemetryEventTypes.NoteChangeContext, {
+      type
     })
   }
 

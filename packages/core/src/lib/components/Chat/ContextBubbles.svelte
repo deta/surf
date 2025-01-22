@@ -17,6 +17,7 @@
   import ContextBubbleActiveTab from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubbleActiveTab.svelte'
   import ContextBubbleActiveContext from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubbleActiveContext.svelte'
   import ContextBubblePageTab from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubblePageTab.svelte'
+  import ContextBubbleBasic from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubbleBasic.svelte'
 
   export let contextManager: ContextManager
 
@@ -127,6 +128,14 @@
         />
       {:else if item instanceof ContextItemActiveSpaceContext}
         <ContextBubbleActiveContext
+          {item}
+          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
+          on:remove-item
+          on:select
+          on:retry
+        />
+      {:else}
+        <ContextBubbleBasic
           {item}
           pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
           on:remove-item

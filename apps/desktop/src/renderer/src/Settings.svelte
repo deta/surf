@@ -19,6 +19,7 @@
   import { BUILT_IN_MODELS, type Model } from '@horizon/types/src/ai.types'
   import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
+  import SmartNotesOptions from './components/SmartNotesOptions.svelte'
 
   // let error = ''
   // let loading = false
@@ -452,6 +453,8 @@
         </div>
 
         {#if userConfigSettings}
+          <SmartNotesOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
+
           <SettingsOption
             icon="marker"
             title="Live Contexts"

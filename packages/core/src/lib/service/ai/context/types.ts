@@ -1,5 +1,7 @@
 import type { ContextItemActiveSpaceContext } from './activeSpaceContexts'
 import type { ContextItemActiveTab } from './activeTab'
+import type { ContextItemEverything } from './everything'
+import type { ContextItemHome } from './home'
 import type { ContextItemPageTab } from './pageTab'
 import type { ContextItemResource } from './resource'
 import type { ContextItemScreenshot } from './screenshot'
@@ -11,7 +13,9 @@ export enum ContextItemTypes {
   SPACE = 'space',
   PAGE_TAB = 'page-tab',
   ACTIVE_TAB = 'active-tab',
-  ACTIVE_SPACE = 'active-space'
+  ACTIVE_SPACE = 'active-space',
+  HOME = 'home',
+  EVERYTHING = 'everything'
 }
 
 export enum ContextItemIconTypes {
@@ -60,3 +64,5 @@ export type ContextItem =
   | ContextItemActiveTab
   | ContextItemActiveSpaceContext
   | ContextItemPageTab
+  | ContextItemHome
+  | ContextItemEverything

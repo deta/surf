@@ -58,6 +58,17 @@ export type OptionalSpaceData = Optional<
 
 export const DEFAULT_SPACE_ID = 'inbox'
 
+export const getSpaceIconString = (space: SpaceData) => {
+  if (space.emoji) {
+    return `emoji;;${space.emoji}`
+  } else if (space.imageIcon) {
+    return `image;;${space.imageIcon}`
+  } else {
+    const [color1, color2] = space.colors ?? pickRandomColorPair()
+    return `colors;;${color1};;${color2}`
+  }
+}
+
 export class OasisSpace {
   id: string
   createdAt: string
@@ -214,6 +225,10 @@ export class OasisSpace {
       emoji: undefined,
       imageIcon: base64
     })
+  }
+
+  getIconString() {
+    return getSpaceIconString(this.dataValue)
   }
 }
 

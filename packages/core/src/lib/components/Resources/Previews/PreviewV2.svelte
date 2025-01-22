@@ -1,56 +1,3 @@
-<script lang="ts" context="module">
-  export type Source = {
-    text: string
-    imageUrl?: string
-    icon?: Icons
-  }
-
-  export type Author = {
-    text?: string
-    imageUrl?: string
-    icon?: Icons
-  }
-
-  export type ContentMode =
-    | 'full' // Try to show all available content
-    | 'media' // Try to only show media if available
-    | 'compact' // Try to condense the content into smaller space
-    | 'inline' // Try to fit everything into a horizonal layout
-  export type ViewMode =
-    | 'card' // Layout with auto height based on content size
-    | 'responsive' // Layout filling max available width & height
-    | 'inline'
-  export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space'
-  export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
-
-  export type Annotation = {
-    type: 'highlight' | 'comment'
-    content: string
-  }
-
-  export type PreviewData = {
-    title?: string
-    media?: string | Blob
-    content?: string
-    contentType?: ContentType
-    annotations?: Annotation[]
-
-    url?: string
-
-    metadata?: {
-      text?: string
-      icon?: Icons
-      imageUrl?: string
-    }[]
-
-    status?: {
-      type: 'processing' | 'static'
-      icon?: Icons
-      text?: string
-    }
-  }
-</script>
-
 <script lang="ts">
   /**
    * Our new Resource preview has 3 big sections:
@@ -73,6 +20,8 @@
   import { createEventDispatcher } from 'svelte'
   import TextResource from './Text/TextResource.svelte'
   import { useConfig } from '../../../service/config'
+  import type { PreviewMetadata, ViewMode } from '@horizon/core/src/lib/utils/resourcePreview'
+  import type { ContentType, Annotation, Origin } from './Preview.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -94,9 +43,7 @@
   export let contentType: ContentType | undefined = undefined
   export let annotations: Annotation[] | undefined = undefined
   export let url: string | undefined = undefined
-  export let metadata:
-    | { text: string | undefined; icon: string | undefined; imageUrl: string | undefined }[]
-    | undefined = undefined
+  export let metadata: PreviewMetadata[] | undefined = undefined
 
   export let status: 'processing' | 'static' | undefined = undefined
   export let statusText: string | undefined = undefined

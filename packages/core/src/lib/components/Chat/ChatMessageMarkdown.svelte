@@ -248,7 +248,7 @@
     font-size: 0.9rem;
     border-radius: 100%;
     user-select: none;
-    cursor: pointer;
+    cursor: default;
 
     @apply border-[1px] border-gray-200 dark:bg-[#006eff] dark:border-[#006eff];
   }
@@ -270,7 +270,7 @@
     font-weight: 500;
     border-radius: 10px;
     user-select: none;
-    cursor: pointer;
+    cursor: default;
     width: fit-content;
     height: auto;
 

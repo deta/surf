@@ -1,3 +1,4 @@
+import { derived, writable } from 'svelte/store'
 import type { TabPage } from '../types/browser.types'
 import type { SpaceData } from '../types'
 import { SpaceEntryOrigin } from '../types'
@@ -7,6 +8,7 @@ import type { useOasis } from './oasis'
 import { builtInSpaces, onboardingSpace } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
+import { ONBOARDING_NOTES } from '../constants/notes'
 
 const log = useLogScope('DemoItems')
 
@@ -125,5 +127,60 @@ export async function createOnboardingSpace(
     )
 
     await oasis.addResourcesToSpace(space.id, resources, SpaceEntryOrigin.ManuallyAdded)
+  }
+}
+
+export function useOnboardingNote() {
+  const currentNoteIdx = writable(0)
+  const noteContent = writable('')
+
+  const currentNote = derived(currentNoteIdx, ($currentNoteIdx) => {
+    const note = ONBOARDING_NOTES[$currentNoteIdx]
+    if (!note) {
+      return ONBOARDING_NOTES[0]
+    }
+
+    noteContent.set(note.html)
+
+    return note
+  })
+
+  const canGoNext = derived(
+    currentNoteIdx,
+    ($currentNoteIdx) => $currentNoteIdx < ONBOARDING_NOTES.length - 1
+  )
+  const canGoPrev = derived(currentNoteIdx, ($currentNoteIdx) => $currentNoteIdx > 0)
+
+  const next = () => {
+    currentNoteIdx.update(($currentNoteIdx) => {
+      return ($currentNoteIdx + 1) % ONBOARDING_NOTES.length
+    })
+  }
+
+  const prev = () => {
+    currentNoteIdx.update(($currentNoteIdx) => {
+      return ($currentNoteIdx - 1 + ONBOARDING_NOTES.length) % ONBOARDING_NOTES.length
+    })
+  }
+
+  const start = () => {
+    currentNoteIdx.set(1)
+  }
+
+  const reset = () => {
+    currentNoteIdx.set(0)
+  }
+
+  return {
+    notes: ONBOARDING_NOTES,
+    idx: currentNoteIdx,
+    note: currentNote,
+    content: noteContent,
+    canGoNext,
+    canGoPrev,
+    next,
+    prev,
+    start,
+    reset
   }
 }

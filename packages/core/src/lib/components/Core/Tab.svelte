@@ -385,8 +385,11 @@
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
 
-    if (tab.type === 'page' && tab.currentLocation)
+    if (tab.type === 'page' && tab.currentLocation) {
       drag.dataTransfer?.setData('text/uri-list', tab.currentLocation)
+      drag.dataTransfer?.setData('text/plain', tab.currentLocation)
+      drag.dataTransfer?.setData('text/html', `<a href="${tab.currentLocation}">${tab.title}</a>`)
+    }
 
     // @ts-ignore
     const resourceId = tab.resourceBookmark ?? tab.resourceId

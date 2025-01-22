@@ -10,14 +10,19 @@ import {
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { isDev, useLogScope } from '@horizon/utils'
-import { SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
+import { PAGE_PROMPTS_GENERATOR_PROMPT, SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
 import { type AiSFFSQueryResponse } from '../../types'
 import { BUILT_IN_MODELS, ModelTiers, type Model } from '@horizon/types/src/ai.types'
-import { handleQuotaDepletedError } from './helpers'
+import { handleQuotaDepletedError, parseAIError } from './helpers'
 import type { TabsManager } from '../tabs'
 import type { Telemetry } from '../telemetry'
-import { AIChat } from './chat'
+import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
 import { type ContextItem, ContextManager } from './contextManager'
+import {
+  EventContext,
+  GeneratePromptsEventTrigger,
+  SummarizeEventContentSource
+} from '@horizon/types'
 
 export class AIService {
   resourceManager: ResourceManager
@@ -161,7 +166,14 @@ export class AIService {
     return this.modelToBackendModel(model)
   }
 
-  async createChat(system_prompt?: string): Promise<AIChat | null> {
+  createContextManager() {
+    return new ContextManager(this, this.tabsManager, this.resourceManager)
+  }
+
+  async createChat(
+    system_prompt?: string,
+    contextManager?: ContextManager
+  ): Promise<AIChat | null> {
     this.log.debug('creating ai chat (custom system prompt:', system_prompt, ')')
     const chatId = await this.sffs.createAIChat(system_prompt)
 
@@ -171,10 +183,10 @@ export class AIService {
     }
 
     this.log.debug('created ai chat with id', chatId)
-    return new AIChat(chatId, [], this)
+    return new AIChat(chatId, [], this, contextManager ?? this.contextManager)
   }
 
-  async getChat(id: string): Promise<AIChat | null> {
+  async getChat(id: string, contextManager?: ContextManager): Promise<AIChat | null> {
     this.log.debug('getting ai chat with id', id)
     const chatData = await this.sffs.getAIChat(id)
 
@@ -184,7 +196,7 @@ export class AIService {
     }
 
     this.log.debug('got ai chat', chatData)
-    return new AIChat(chatData.id, chatData.messages, this)
+    return new AIChat(chatData.id, chatData.messages, this, contextManager ?? this.contextManager)
   }
 
   async deleteChat(id: string): Promise<void> {
@@ -200,32 +212,89 @@ export class AIService {
       responseFormat?: string
     }
   ) {
-    const model = this.getMatchingBackendModel(opts?.tier ?? ModelTiers.Premium)
-    const customKey = this.customKeyValue
-    const responseFormat = opts?.responseFormat
+    try {
+      const model = this.getMatchingBackendModel(opts?.tier ?? ModelTiers.Premium)
+      const customKey = this.customKeyValue
+      const responseFormat = opts?.responseFormat
 
-    let messages: Message[] = []
+      let messages: Message[] = []
 
-    if (systemPrompt) {
-      messages.push({ role: 'system', content: [{ type: 'text', text: systemPrompt }] })
-    }
+      if (systemPrompt) {
+        messages.push({ role: 'system', content: [{ type: 'text', text: systemPrompt }] })
+      }
 
-    if (typeof userPrompt === 'string') {
-      messages.push({ role: 'user', content: [{ type: 'text', text: userPrompt }] })
-    } else {
-      userPrompt.forEach((prompt) => {
-        messages.push({ role: 'user', content: [{ type: 'text', text: prompt }] })
+      if (typeof userPrompt === 'string') {
+        messages.push({ role: 'user', content: [{ type: 'text', text: userPrompt }] })
+      } else {
+        userPrompt.forEach((prompt) => {
+          messages.push({ role: 'user', content: [{ type: 'text', text: prompt }] })
+        })
+      }
+
+      this.log.debug('creating chat completion', model, opts, messages)
+      const result = await this.sffs.createAIChatCompletion(messages, model, {
+        customKey,
+        responseFormat
       })
+
+      this.log.debug('created chat completion', result)
+      return {
+        output: result as string,
+        error: null
+      } as ChatCompletionResponse
+    } catch (e) {
+      const parsedError = parseAIError(e)
+      this.log.error('Error creating chat completion', parsedError)
+      return {
+        output: null,
+        error: parsedError
+      } as ChatCompletionResponse
+    }
+  }
+
+  async generatePrompts(
+    data: Record<string, any>,
+    opts?: {
+      tier?: ModelTiers
+      systemPrompt?: string
+      context?: EventContext
+      trigger?: GeneratePromptsEventTrigger
+    }
+  ) {
+    this.log.debug('Generating prompts for resource', data)
+    const completion = await this.createChatCompletion(
+      JSON.stringify(data),
+      opts?.systemPrompt ?? PAGE_PROMPTS_GENERATOR_PROMPT,
+      { tier: opts?.tier ?? ModelTiers.Standard }
+    )
+
+    this.log.debug('Prompts completion', completion)
+
+    if (completion.error) {
+      this.log.error('Failed to generate prompts', completion.error)
+      return null
     }
 
-    this.log.debug('creating chat completion', model, opts, messages)
-    const result = await this.sffs.createAIChatCompletion(messages, model, {
-      customKey,
-      responseFormat
-    })
+    if (!completion.output) {
+      this.log.error('Failed to generate prompts')
+      return null
+    }
 
-    this.log.debug('created chat completion', result)
-    return result
+    const prompts = JSON.parse(completion.output.replace('```json', '').replace('```', ''))
+    const parsedPrompts = prompts.filter(
+      (p: any) => p.label !== undefined && p.prompt !== undefined
+    ) as ChatPrompt[]
+
+    this.log.debug('Generated prompts', parsedPrompts)
+
+    if (opts?.context || opts?.trigger) {
+      this.telemetry.trackGeneratePrompts(
+        opts.context ?? EventContext.Chat,
+        opts.trigger ?? GeneratePromptsEventTrigger.Click
+      )
+    }
+
+    return parsedPrompts
   }
 
   async getResourcesViaPrompt(
@@ -290,16 +359,27 @@ export class AIService {
     })
   }
 
-  async summarizeText(text: string, additionalSystemPrompt?: string) {
-    const summary = await this.createChatCompletion(
+  async summarizeText(
+    text: string,
+    opts?: {
+      systemPrompt?: string
+      context?: EventContext
+      contentSource?: SummarizeEventContentSource
+    }
+  ) {
+    const completion = await this.createChatCompletion(
       text,
-      SIMPLE_SUMMARIZER_PROMPT + (additionalSystemPrompt ? ' ' + additionalSystemPrompt : ''),
+      SIMPLE_SUMMARIZER_PROMPT + (opts?.systemPrompt ? ' ' + opts.systemPrompt : ''),
       { tier: ModelTiers.Standard }
     )
 
-    this.log.debug('Summarized text', summary)
+    this.log.debug('Summarized completion', completion)
 
-    return summary
+    if (opts?.context && opts?.contentSource) {
+      this.telemetry.trackSummarizeText(opts.contentSource, opts.context)
+    }
+
+    return completion
   }
 
   async getQuotas(): Promise<Quota[]> {

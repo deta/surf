@@ -38,6 +38,7 @@ import {
 import type { Telemetry } from './telemetry'
 import {
   EventBusMessageType,
+  EventContext,
   ResourceProcessingStateType,
   TelemetryEventTypes,
   type DetectedResource,
@@ -277,6 +278,14 @@ export class Resource {
 
   get stateValue() {
     return get(this.state)
+  }
+
+  get url() {
+    return parseStringIntoUrl(
+      this.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
+        this.metadata?.sourceURI ||
+        ''
+    )?.href
   }
 
   private async readDataAsBlob() {
@@ -1124,7 +1133,8 @@ export class ResourceManager {
   async createResourceNote(
     content: string,
     metadata?: Partial<SFFSResourceMetadata>,
-    tags?: SFFSResourceTag[]
+    tags?: SFFSResourceTag[],
+    eventContext?: EventContext
   ) {
     const defaultMetadata = {
       name: `Untitled ${getFormattedDate(Date.now())}`
@@ -1132,12 +1142,18 @@ export class ResourceManager {
 
     const fullMetadata = Object.assign(defaultMetadata, metadata)
     const blob = new Blob([content], { type: ResourceTypes.DOCUMENT_SPACE_NOTE })
-    return this.createResource(
+    const resource = await this.createResource(
       ResourceTypes.DOCUMENT_SPACE_NOTE,
       blob,
       fullMetadata,
       tags
-    ) as Promise<ResourceNote>
+    )
+
+    if (eventContext) {
+      this.telemetry.trackCreateNote(eventContext)
+    }
+
+    return resource as ResourceNote
   }
 
   async createResourceLink(

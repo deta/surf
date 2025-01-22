@@ -4,7 +4,7 @@
 
   export let value: boolean | undefined = undefined
   export let title: string
-  export let description: string
+  export let description: string | undefined = undefined
   export let icon: Icons | undefined = undefined
 </script>
 
@@ -18,7 +18,10 @@
 
         <h2>{title}</h2>
       </div>
-      <p>{@html description}</p>
+
+      <slot name="description">
+        <p>{@html description}</p>
+      </slot>
     </div>
 
     {#if value !== undefined}

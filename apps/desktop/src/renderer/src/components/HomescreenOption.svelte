@@ -1,7 +1,8 @@
 <script lang="ts">
   import Switch from '@horizon/core/src/lib/components/Atoms/Switch.svelte'
   import SettingsOption from './SettingsOption.svelte'
-  export let userConfigSettings: any
+  import type { UserSettings } from '@horizon/types'
+  export let userConfigSettings: UserSettings
 </script>
 
 <SettingsOption

@@ -26,7 +26,6 @@ export type OverlayEvents = {
   'activate-tab': string
   'create-chat': string
   'open-space': Space
-  'create-note': string
   'toggle-homescreen': void
   open: string
   'create-resource-from-oasis': string

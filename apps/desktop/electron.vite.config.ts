@@ -143,7 +143,7 @@ export default defineConfig({
         telemetry: false
       }),
       */
-      Markdown({ mode: [Mode.MARKDOWN] }),
+      Markdown({ mode: [Mode.MARKDOWN, Mode.HTML] }),
       svelte(svelteOptions),
       createLicensePlugin('renderer'),
       createConcatLicensesPlugin()

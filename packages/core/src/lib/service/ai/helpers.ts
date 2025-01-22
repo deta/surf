@@ -1,5 +1,7 @@
 import {
+  EventContext,
   PageChatMessageSentEventError,
+  PromptType,
   type DetectedResource,
   type WebViewEventSendNames,
   type WebViewSendEvents
@@ -8,8 +10,8 @@ import type { ChatMessageContentItem, AIChatMessageSource } from '../../types/br
 import { useLogScope } from '@horizon/utils'
 import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
-import type { AIService } from './ai'
-import type { QuotaDepletedError } from '@horizon/backend/types'
+import type { AIService, ChatError } from './ai'
+import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 import { ModelTiers } from '@horizon/types/src/ai.types'
 
 const log = useLogScope('AI')
@@ -203,23 +205,53 @@ export const handleInlineAI = async (
     ...(includePageContext ? [`Additional context from the page: "${pageContext}"`] : [])
   ]
 
+  if (type === 'custom') {
+    ai.telemetry.trackUsePrompt(PromptType.Custom, EventContext.Inline)
+  } else {
+    ai.telemetry.trackUsePrompt(PromptType.BuiltIn, EventContext.Inline, type)
+  }
+
   let transformation: string | null = ''
   if (type === 'summarize') {
     const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)
-    transformation = await ai.createChatCompletion(userMessages, prompt.content)
+    const completion = await ai.createChatCompletion(userMessages, prompt.content)
+    if (completion.error) {
+      log.error('Failed to generate completion', completion.error)
+      return null
+    }
+
+    transformation = completion.output
   } else if (type === 'explain') {
     const prompt = await getPrompt(PromptIDs.INLINE_EXPLAINER)
-    transformation = await ai.createChatCompletion(userMessages, prompt.content)
+    const completion = await ai.createChatCompletion(userMessages, prompt.content)
+    if (completion.error) {
+      log.error('Failed to generate completion', completion.error)
+      return null
+    }
+
+    transformation = completion.output
   } else if (type === 'translate') {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSLATE)
     log.debug('translate prompt', prompt)
-    transformation = await ai.createChatCompletion(userMessages, prompt.content)
+    const completion = await ai.createChatCompletion(userMessages, prompt.content)
+    if (completion.error) {
+      log.error('Failed to generate completion', completion.error)
+      return null
+    }
+
+    transformation = completion.output
   } else if (type === 'grammar') {
     const prompt = await getPrompt(PromptIDs.INLINE_GRAMMAR)
-    transformation = await ai.createChatCompletion(userMessages, prompt.content)
+    const completion = await ai.createChatCompletion(userMessages, prompt.content)
+    if (completion.error) {
+      log.error('Failed to generate completion', completion.error)
+      return null
+    }
+
+    transformation = completion.output
   } else if (query) {
     const prompt = await getPrompt(PromptIDs.INLINE_TRANSFORM_USER)
-    transformation = await ai.createChatCompletion(
+    const completion = await ai.createChatCompletion(
       [
         query,
         text,
@@ -227,6 +259,13 @@ export const handleInlineAI = async (
       ],
       prompt.content
     )
+
+    if (completion.error) {
+      log.error('Failed to generate completion', completion.error)
+      return null
+    }
+
+    transformation = completion.output
   }
 
   return transformation
@@ -276,6 +315,37 @@ export const handleQuotaDepletedError = (e: QuotaDepletedError) => {
     error,
     content
   }
+}
+
+export const parseAIError = (e: any) => {
+  let content = 'Failed to generate response.'
+  let error = PageChatMessageSentEventError.Other
+
+  if (e instanceof TooManyRequestsError) {
+    error = PageChatMessageSentEventError.TooManyRequests
+    content = 'Too many requests. Please try again later.'
+  } else if (e instanceof QuotaDepletedError) {
+    const res = handleQuotaDepletedError(e)
+    error = res.error
+    content = res.content
+  } else {
+    content = 'Failed to generate response.'
+  }
+
+  if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
+    content = 'The content is too long to process. Please try a more specific question.'
+  }
+
+  if (typeof e === 'string' && e.includes('RAG Empty Context')) {
+    content = `Unfortunately, we failed to find relevant information to answer your query.
+\nThere might have been an issue with extracting all information from your current context.
+\nPlease try asking a different question or let us know if the issue persists.`
+  }
+
+  return {
+    type: error,
+    message: content
+  } as ChatError
 }
 
 const aggregateTextNodes = (node: Node, text: string, stopCitationId: string) => {

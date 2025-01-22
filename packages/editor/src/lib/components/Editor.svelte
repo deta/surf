@@ -4,30 +4,55 @@
   import type { Readable } from 'svelte/store'
   import { createEventDispatcher, onMount, SvelteComponent, type ComponentType } from 'svelte'
 
-  import { createEditor, Editor, EditorContent } from 'svelte-tiptap'
-  import { Extension, Node } from '@tiptap/core'
+  import { createEditor, Editor, EditorContent, FloatingMenu } from 'svelte-tiptap'
+  import { Extension, generateJSON, generateText, Node, nodePasteRule } from '@tiptap/core'
   import Placeholder from '@tiptap/extension-placeholder'
   import { conditionalArrayItem } from '@horizon/utils'
 
-  import { createEditorExtensions } from '../editor'
-  // import BubbleMenu from './BubbleMenu.svelte'
+  import { createEditorExtensions, getEditorContentText, type ExtensionOptions } from '../editor'
+  import type { EditorAutocompleteEvent, MentionItem } from '../types'
+  import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
+  import type { MentionAction } from '../extensions/Mention'
+  import BubbleMenu from './BubbleMenu.svelte'
 
   export let content: string
   export let readOnly: boolean = false
   export let placeholder: string = `Write something or type '/' for options…`
+  export let placeholderNewLine: string = ''
   export let autofocus: boolean = true
   export let focused: boolean = false
   export let parseHashtags: boolean = false
   export let submitOnEnter: boolean = false
   export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let tabsManager: any | undefined = undefined
+  export let autocomplete: boolean = false
+  export let floatingMenu: boolean = false
+  export let floatingMenuShown: boolean = false
+  export let parseMentions: boolean = false
+  export let readOnlyMentions: boolean = false
+  export let mentionItems: MentionItem[] = []
+  export let bubbleMenu: boolean = false
+  export let bubbleMenuLoading: boolean = false
+  export let autoSimilaritySearch: boolean = false
+
+  let editor: Readable<Editor>
+  let editorWidth: number = 350
 
   const dispatch = createEventDispatcher<{
     update: string
     submit: void
     hashtags: string[]
     'citation-click': any
+    autocomplete: EditorAutocompleteEvent
+    suggestions: void
+    'mention-click': { item: MentionItem; action: MentionAction }
+    'mention-insert': MentionItem
+    'button-click': string
   }>()
+
+  export const getEditor = () => {
+    return $editor
+  }
 
   export const focus = () => {
     if ($editor) {
@@ -53,13 +78,111 @@
     }
   }
 
-  let editor: Readable<Editor>
+  export const generateJSONFromHTML = (html: string) => {
+    return generateJSON(html, extensions)
+  }
+
+  export const getMentions = (node?: typeof $editor.state.doc) => {
+    if (!$editor) {
+      return []
+    }
+
+    const mentions: MentionItem[] = []
+
+    let selectedNode = node || $editor.state.doc
+    selectedNode.descendants((node) => {
+      if (node.type.name === 'mention') {
+        const id = node.attrs.id as string
+        const label = node.attrs.label as string
+        mentions.push({ id, label })
+      }
+    })
+
+    return mentions
+  }
+
+  export const getParsedEditorContent = () => {
+    const selectedNode = $editor.state.doc
+    const mentions: MentionItem[] = []
+
+    selectedNode.descendants((node) => {
+      if (node.type.name === 'mention') {
+        const id = node.attrs.id as string
+        const label = node.attrs.label as string
+        mentions.push({ id, label })
+      }
+    })
+
+    console.warn('mentions', mentions)
+
+    const json = selectedNode.toJSON()
+    const text = generateText(json, extensions)
+    return { text, mentions }
+  }
 
   const onSubmit = () => {
     if (focused) {
       dispatch('submit')
     }
   }
+
+  const shouldShowFloatingMenu: Exclude<FloatingMenuPluginProps['shouldShow'], null> = ({
+    view,
+    state,
+    editor
+  }) => {
+    const { selection } = state
+    const { $anchor, empty } = selection
+    const isRootDepth = $anchor.depth === 1
+    const isEmptyTextBlock =
+      $anchor.parent.isTextblock && !$anchor.parent.type.spec.code && !$anchor.parent.textContent
+
+    if (!view.hasFocus() || !empty || !isRootDepth || !isEmptyTextBlock || !editor.isEditable) {
+      floatingMenuShown = false
+      return false
+    }
+
+    floatingMenuShown = true
+    return true
+  }
+
+  const searchMentions: ExtensionOptions['searchMentions'] = ({ query }) => {
+    const compare = (a: string, b: string) => a.toLowerCase().includes(b.toLowerCase())
+
+    return mentionItems.filter((item) => {
+      if (compare(item.label, query)) {
+        return true
+      }
+
+      if (item.aliases && item.aliases.some((alias) => compare(alias, query))) {
+        return true
+      }
+
+      return false
+    })
+  }
+
+  const handleMentionClick = (item: MentionItem, action: MentionAction) => {
+    dispatch('mention-click', { item, action })
+  }
+
+  const handleMentionInsert = (item: MentionItem) => {
+    dispatch('mention-insert', item)
+  }
+
+  const handleButtonClick = (action: string) => {
+    dispatch('button-click', action)
+  }
+
+  const baseExtensions = createEditorExtensions({
+    disableHashtag: !parseHashtags,
+    parseMentions,
+    searchMentions,
+    mentionClick: handleMentionClick,
+    mentionInsert: handleMentionInsert,
+    readOnlyMentions: readOnlyMentions,
+    buttonClick: handleButtonClick
+  })
 
   const KeyboardHandler = Extension.create({
     name: 'keyboardHandler'
@@ -88,7 +211,75 @@
             () => commands.liftEmptyBlock(),
             () => commands.splitBlock()
           ])
-        }
+        },
+
+        ...(autocomplete
+          ? {
+              'Alt-Enter': () => {
+                if (!autocomplete) {
+                  return false
+                }
+
+                const getText = () => {
+                  const { from, to } = this.editor.view.state.selection
+                  if (from === to) {
+                    const currentNode = this.editor.view.state.selection.$from.node()
+                    const previousNode = this.editor.view.state.selection.$from.nodeBefore
+
+                    const selectedNode = currentNode || previousNode
+                    if (selectedNode && selectedNode.textContent.length > 0) {
+                      const mentions: MentionItem[] = []
+                      selectedNode.descendants((node) => {
+                        if (node.type.name === 'mention') {
+                          const id = node.attrs.id as string
+                          const label = node.attrs.label as string
+                          mentions.push({ id, label })
+                        }
+                      })
+
+                      const json = selectedNode.toJSON()
+                      const text = generateText(json, extensions)
+                      return { text, mentions }
+                    }
+
+                    const textUntilPos = this.editor.view.state.doc.textBetween(0, to)
+                    if (textUntilPos) {
+                      return {
+                        text: textUntilPos
+                      }
+                    }
+
+                    return { text: this.editor.getText() }
+                  } else {
+                    const node = this.editor.view.state.doc.cut(from, to)
+                    const mentions = getMentions(node)
+                    return {
+                      text: this.editor.view.state.doc.textBetween(from, to),
+                      mentions
+                    }
+                  }
+                }
+
+                const data = getText()
+                dispatch('autocomplete', { query: data.text, mentions: data.mentions })
+
+                return false
+              }
+            }
+          : {}),
+
+        ...(autocomplete
+          ? {
+              Space: () => {
+                if (floatingMenuShown) {
+                  dispatch('suggestions')
+                  return true
+                }
+
+                return false
+              }
+            }
+          : {})
       }
     }
   })
@@ -124,7 +315,6 @@
         ]
       },
       renderHTML({ node }) {
-        console.warn('node.attrs html', node.attrs)
         return [
           'citation',
           {
@@ -157,20 +347,31 @@
             }
           }
         }
+      },
+      addPasteRules() {
+        return [
+          nodePasteRule({
+            // reges for <resource id=""></resource> tags
+            find: /<citation>([^<]+)<\/citation>/g,
+            type: this.type
+          })
+        ]
       }
     })
   }
 
+  const extensions = [
+    ...baseExtensions,
+    extendKeyboardHandler,
+    Placeholder.configure({
+      placeholder: placeholder ?? "Write something or type '/' for options…"
+    }),
+    ...conditionalArrayItem(!!citationComponent, createCitationNode(citationComponent))
+  ]
+
   onMount(() => {
     editor = createEditor({
-      extensions: [
-        ...createEditorExtensions({ disableHashtag: !parseHashtags }),
-        extendKeyboardHandler,
-        Placeholder.configure({
-          placeholder: placeholder ?? "Write something or type '/' for options…"
-        }),
-        ...conditionalArrayItem(!!citationComponent, createCitationNode(citationComponent))
-      ],
+      extensions: extensions,
       content: content,
       editable: !readOnly,
       autofocus: !autofocus || readOnly ? false : 'end',
@@ -207,15 +408,40 @@
   })
 </script>
 
-<div class="editor" style="--data-placeholder: '{placeholder}';" on:click on:dragstart>
-  <!-- {#if editor && !readOnly}
-    <BubbleMenu {editor} />
-  {/if} -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<div
+  class="editor"
+  style="--data-placeholder: '{placeholder}'; --data-placeholder-new-line: '{placeholderNewLine}';"
+  on:click
+  on:dragstart
+>
+  {#if editor && !readOnly && bubbleMenu}
+    <BubbleMenu
+      {editor}
+      {mentionItems}
+      loading={bubbleMenuLoading}
+      autosearch={autoSimilaritySearch}
+      on:rewrite
+      on:similarity-search
+      on:close-bubble-menu
+    />
+  {/if}
 
   <div
     class="editor-wrapper select-text prose prose-lg prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg"
     class:cursor-text={!readOnly}
+    bind:clientWidth={editorWidth}
   >
+    {#if floatingMenu && $editor}
+      <FloatingMenu
+        editor={$editor}
+        shouldShow={shouldShowFloatingMenu}
+        tippyOptions={{ maxWidth: `${editorWidth - 15}px`, placement: 'bottom' }}
+      >
+        <slot name="floating-menu"></slot>
+      </FloatingMenu>
+    {/if}
     <EditorContent editor={$editor} />
   </div>
 </div>
@@ -230,16 +456,11 @@
     }
   }
 
-  :global(.editor-wrapper > div) {
+  :global(.editor-wrapper > div:not([data-tippy-root])) {
     height: 100%;
   }
 
   :global(.dark .tiptap p) {
     //color: #e0e7ff !important;
-  }
-
-  /* HACK: This allows us to tap into svelte reacivity by getting placeholder from css variable. */
-  :global(.tiptap p.is-editor-empty:first-child::before) {
-    content: var(--data-placeholder);
   }
 </style>

@@ -46,6 +46,7 @@ import type { Resource, ResourceManager } from './resources'
 import type { OasisService, OasisSpace } from './oasis'
 import type { DesktopManager } from './desktop'
 import type { AIService } from './ai/ai'
+import { ContextItemResource } from './ai/context'
 import type { ConfigService } from './config'
 
 export type TabEvents = {
@@ -313,6 +314,10 @@ export class TabsManager {
 
   emit<E extends keyof TabEvents>(event: E, ...args: Parameters<TabEvents[E]>) {
     this.eventEmitter.emit(event, ...args)
+  }
+
+  get(id: string) {
+    return this.tabsValue.find((tab) => tab.id === id)
   }
 
   async create<T extends Tab>(
@@ -1398,6 +1403,51 @@ export class TabsManager {
   clearTabSelection() {
     this.selectedTabs.set(new Set())
     this.lastSelectedTabId.set(null)
+  }
+
+  async openResourcFromContextAsPageTab(resourceId: string, opts?: CreateTabOptions) {
+    const options = {
+      active: true,
+      trigger: CreateTabEventTrigger.OasisChat,
+      ...opts
+    } as CreateTabOptions
+
+    const existingContextTab = this.ai.contextManager.itemsValue.find(
+      (item) => item instanceof ContextItemResource && item.data.id === resourceId
+    )
+
+    const resource = await this.resourceManager.getResource(resourceId)
+    if (resource?.type === ResourceTypes.PDF) {
+      return await this.addPageTab(`surf://resource/${resourceId}`, options)
+    }
+
+    const url = resource?.tags?.find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+    )?.value
+
+    let tab: Tab | null = null
+    if (url) {
+      tab = await this.addPageTab(url, options)
+    } else {
+      this.log.debug('no url found for resource, using resource tab as fallback', resourceId)
+
+      const resource = await this.resourceManager.getResource(resourceId)
+      if (resource) {
+        tab = await this.openResourceAsTab(resource, options)
+      }
+    }
+
+    if (!tab) {
+      this.log.error('failed to open resource from context', resourceId)
+      return null
+    }
+
+    if (existingContextTab) {
+      this.log.debug('removing existing context item for same resource', existingContextTab.id)
+      this.ai.contextManager.removeContextItem(existingContextTab.id)
+    }
+
+    return tab
   }
 
   export() {

@@ -1,8 +1,8 @@
-import { ResourceTagsBuiltInKeys } from '@horizon/types'
+import { EventContext, GeneratePromptsEventTrigger, ResourceTagsBuiltInKeys } from '@horizon/types'
 import { truncateURL, getFileType, getURLBase } from '@horizon/utils'
 import { get, type Writable, writable } from 'svelte/store'
 
-import type { TabPage } from '../../../types'
+import type { TabPage, TabResource } from '../../../types'
 import { blobToDataUrl } from '../../../utils/screenshot'
 import { ResourceJSON, type Resource } from '../../resources'
 
@@ -11,7 +11,7 @@ import { type ContextItemIcon, ContextItemIconTypes, ContextItemTypes } from './
 import { ContextItemBase } from './base'
 import { ModelTiers } from '@horizon/types/src/ai.types'
 import type { ChatPrompt } from '../chat'
-import { WebParser } from '@horizon/web-parser'
+import { WebParser, type ResourceContent } from '@horizon/web-parser'
 import { PAGE_PROMPTS_GENERATOR_PROMPT } from '../../../constants/prompts'
 import { QuotaDepletedError } from '@horizon/backend/types'
 import { handleQuotaDepletedError } from '../helpers'
@@ -24,11 +24,11 @@ export class ContextItemResource extends ContextItemBase {
   generatingPromptsPromise: Promise<ChatPrompt[]> | null
   processingUnsub: Writable<(() => void) | null>
 
-  sourceTab?: TabPage
+  sourceTab?: TabPage | TabResource
   data: Resource
   url: string | null
 
-  constructor(manager: ContextManager, resource: Resource, sourceTab?: TabPage) {
+  constructor(manager: ContextManager, resource: Resource, sourceTab?: TabPage | TabResource) {
     super(manager, resource.id, 'file')
 
     this.sourceTab = sourceTab
@@ -77,6 +77,22 @@ export class ContextItemResource extends ContextItemBase {
       // TODO: use icon based on resource type
       this.icon.set({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
     }
+  }
+
+  async getContent() {
+    if (this.data instanceof ResourceJSON) {
+      const data = await this.data.getParsedData()
+      const content = WebParser.getResourceContent(this.data.type, data)
+      return content
+    }
+
+    const blob = await this.data.getData()
+    const text = await blob.text()
+
+    return {
+      plain: null,
+      html: text
+    } as ResourceContent
   }
 
   async getResourceIds() {
@@ -129,7 +145,7 @@ export class ContextItemResource extends ContextItemBase {
 
         const metadata = {
           title: this.sourceTab?.title ?? this.data.metadata?.name ?? '',
-          url: this.sourceTab?.currentLocation ?? this.url
+          url: (this.sourceTab?.type === 'page' && this.sourceTab?.currentLocation) || this.url
         }
 
         const resourceState = this.data.stateValue
@@ -159,38 +175,33 @@ export class ContextItemResource extends ContextItemBase {
           return
         }
 
-        const data = await this.data.getParsedData()
-        const content = WebParser.getResourceContent(this.data.type, data)
+        const content = await this.getContent()
 
-        this.log.debug('Generating prompts for resource', metadata.title, content.plain?.length)
-        const promptsRaw = await this.manager.ai.createChatCompletion(
-          JSON.stringify({
-            title: metadata.title,
-            url: metadata.url,
-            content: content.plain
-          }),
-          PAGE_PROMPTS_GENERATOR_PROMPT,
-          { tier: tier ?? ModelTiers.Standard }
+        this.log.debug(
+          'Generating prompts for resource',
+          metadata.title,
+          (content.plain ?? content.html)?.length
+        )
+        const prompts = await this.manager.ai.generatePrompts(
+          {
+            title: metadata.title ?? '',
+            url: metadata.url ?? '',
+            content: content.plain ?? content.html ?? ''
+          },
+          {
+            context: EventContext.Chat,
+            trigger: GeneratePromptsEventTrigger.ActiveTabChange
+          }
         )
 
-        this.log.debug('Prompts raw', promptsRaw)
-
-        if (!promptsRaw) {
-          this.log.error('Failed to generate prompts')
+        if (!prompts) {
           this.generatingPrompts.set(false)
           this.manager.generatingPrompts.set(false)
           resolve([])
           return
         }
 
-        const prompts = JSON.parse(promptsRaw.replace('```json', '').replace('```', ''))
-        const parsedPrompts = prompts.filter(
-          (p: any) => p.label !== undefined && p.prompt !== undefined
-        ) as ChatPrompt[]
-
-        this.log.debug('Generated prompts', parsedPrompts)
-
-        resolve(parsedPrompts)
+        resolve(prompts)
       } catch (e) {
         this.log.error('Error generating prompts', e)
         if (e instanceof QuotaDepletedError) {

@@ -99,3 +99,26 @@ export function focus(node: HTMLElement, store: Writable<boolean>) {
     }
   }
 }
+
+/**
+ * Scroll horizontally no matter how the user scrolls (e.g. shift/no shift)
+ * @param node
+ * @returns
+ */
+export function horizontalScroll(node: HTMLElement) {
+  function handleScroll(event: WheelEvent) {
+    if (event.shiftKey) {
+      node.scrollLeft += event.deltaX
+    } else {
+      node.scrollLeft += event.deltaY
+    }
+  }
+
+  node.addEventListener('wheel', handleScroll, { passive: true })
+
+  return {
+    destroy() {
+      node.removeEventListener('wheel', handleScroll)
+    }
+  }
+}

@@ -16,6 +16,9 @@
   let resource: Resource | null = null
 
   const loadResource = async () => {
+    if (!resourceId || resourceId === 'onboarding') {
+      return
+    }
     resource = await resourceManager.getResource(resourceId)
   }
 
@@ -40,6 +43,14 @@
     {:else}
       <FilePreview {resource} preview={false} />
     {/if}
+  {:else if resourceId === 'onboarding'}
+    <TextResource
+      {resourceId}
+      showOnboarding
+      on:update-title={handleUpdateTitle}
+      on:highlightWebviewText
+      on:seekToTimestamp
+    />
   {:else}
     <div class="loading">Loading...</div>
   {/if}

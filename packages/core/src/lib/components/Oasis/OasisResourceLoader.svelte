@@ -4,15 +4,14 @@
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
-  import type { Mode, Origin } from '../Resources/Previews/Preview.svelte'
-  import type { ViewMode } from '../Resources/Previews/PreviewV2.svelte'
+  import type { ContentMode, Origin, ViewMode } from '@horizon/core/src/lib/utils/resourcePreview'
 
   export let resourceOrId: string | Resource
   export let selected: boolean = false
   export let isInSpace: boolean = false
   export let resourcesBlacklistable: boolean = false
   export let interactive: boolean = true
-  export let mode: Mode = 'full'
+  export let mode: ContentMode = 'full'
   export let viewMode: ViewMode = 'card'
   export let origin: Origin = 'stuff'
   export let draggable: boolean = true

@@ -398,9 +398,14 @@
       content = element.innerHTML
     }
 
-    const resource = await resourceManager.createResourceNote(content, {
-      name: truncate(lastPrompt, 50)
-    })
+    const resource = await resourceManager.createResourceNote(
+      content,
+      {
+        name: truncate(lastPrompt, 50)
+      },
+      undefined,
+      EventContext.Inline
+    )
 
     log.debug('Saved response', resource)
 

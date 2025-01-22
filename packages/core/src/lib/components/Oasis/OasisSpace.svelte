@@ -78,10 +78,12 @@
     AddResourceToSpaceEventTrigger,
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
+    EventContext,
     OpenInMiniBrowserEventFrom,
     RefreshSpaceEventTrigger,
     SaveToOasisEventTrigger,
-    SearchOasisEventTrigger
+    SearchOasisEventTrigger,
+    SummarizeEventContentSource
   } from '@horizon/types'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
@@ -788,10 +790,19 @@
 
         if (contentToSummarize) {
           log.debug('Summarizing content:', truncate(contentToSummarize, 100))
-          let summary = await ai.summarizeText(
-            contentToSummarize,
-            'Summarize the given text into a single paragraph with a maximum of 400 characters. Make sure you are still conveying the main idea of the text while keeping it concise. If possible try to be as close to 400 characters as possible. Do not go over 400 characters in any case.'
-          )
+          const completion = await ai.summarizeText(contentToSummarize, {
+            systemPrompt:
+              'Summarize the given text into a single paragraph with a maximum of 400 characters. Make sure you are still conveying the main idea of the text while keeping it concise. If possible try to be as close to 400 characters as possible. Do not go over 400 characters in any case.',
+            context: EventContext.Space,
+            contentSource: SummarizeEventContentSource.Resource
+          })
+
+          if (completion.error) {
+            log.error('Error generating AI output', completion.error)
+            return null
+          }
+
+          let summary = completion.output
 
           log.debug('summary:', summary)
 

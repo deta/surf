@@ -8,12 +8,13 @@ import {
   type AIChatMessage,
   type AIChatMessageParsed,
   type AIChatMessageRole,
+  type AIChatMessageSource,
   type TabPage
 } from '../../types'
 import { ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
-import { handleQuotaDepletedError, parseChatResponseSources } from './helpers'
+import { handleQuotaDepletedError, parseAIError, parseChatResponseSources } from './helpers'
 import type { Telemetry } from '../telemetry'
-import { PageChatMessageSentEventError } from '@horizon/types'
+import { PageChatMessageSentEventError, PageChatMessageSentEventTrigger } from '@horizon/types'
 import type { AIService } from './ai'
 import { ContextItemActiveTab, type ContextItem, type ContextManager } from './contextManager'
 
@@ -25,6 +26,21 @@ export type ChatPrompt = {
 export type ChatError = {
   message: string
   type: PageChatMessageSentEventError
+}
+
+export type ChatMessageOptions = {
+  useContext?: boolean
+  role?: AIChatMessageRole
+  query?: string
+  skipScreenshot?: boolean
+  limit?: number
+  ragOnly?: boolean
+  trigger?: PageChatMessageSentEventTrigger
+}
+
+export type ChatCompletionResponse = {
+  output: string | null
+  error: ChatError | null
 }
 
 export class AIChat {
@@ -48,7 +64,12 @@ export class AIChat {
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
-  constructor(id: string, messages: AIChatMessage[], ai: AIService) {
+  constructor(
+    id: string,
+    messages: AIChatMessage[],
+    ai: AIService,
+    contextManager: ContextManager
+  ) {
     this.id = id
     this.messages = writable(messages)
     this.currentParsedMessages = writable([])
@@ -56,7 +77,7 @@ export class AIChat {
     this.status = writable('idle')
 
     this.ai = ai
-    this.contextManager = ai.contextManager
+    this.contextManager = contextManager
     this.sffs = ai.sffs
     this.resourceManager = ai.resourceManager
     this.telemetry = ai.telemetry
@@ -77,7 +98,6 @@ export class AIChat {
 
         const parsed = systemMessages.map((message, idx) => {
           message.sources = message.sources
-          this.log.debug('Message', message)
           return {
             id: generateID(),
             role: 'user',
@@ -127,30 +147,23 @@ export class AIChat {
   }
 
   updateParsedResponse(id: string, response: Partial<AIChatMessageParsed>) {
+    let message: AIChatMessageParsed | null = null
+
     this.currentParsedMessages.update((messages) => {
       return messages.map((msg) => {
         if (msg.id === id) {
-          return { ...msg, ...response }
+          message = { ...msg, ...response }
+          return message
         }
 
         return msg
       })
     })
+
+    return message as AIChatMessageParsed | null
   }
 
-  async sendMessage(
-    callback: (chunk: string) => void,
-    query: string,
-    opts?: {
-      modelId?: Model['id']
-      tier?: ModelTiers
-      limit?: number
-      ragOnly?: boolean
-      resourceIds?: string[]
-      inlineImages?: string[]
-      general?: boolean
-    }
-  ) {
+  getModel(opts?: { modelId?: Model['id']; tier?: ModelTiers }) {
     let model: Model | undefined = undefined
 
     this.log.debug('sending chat message to chat with id', this.id, opts)
@@ -162,6 +175,25 @@ export class AIChat {
     if (!model) {
       model = this.ai.getMatchingModel(opts?.tier ?? ModelTiers.Premium)
     }
+
+    return model
+  }
+
+  async sendMessage(
+    callback: (chunk: string) => void,
+    query: string,
+    opts?: {
+      model?: Model
+      modelId?: Model['id']
+      tier?: ModelTiers
+      limit?: number
+      ragOnly?: boolean
+      resourceIds?: string[]
+      inlineImages?: string[]
+      general?: boolean
+    }
+  ) {
+    const model = opts?.model ?? this.getModel(opts)
 
     const backendModel = this.ai.modelToBackendModel(model)
     const customKey = model.custom_key
@@ -211,7 +243,7 @@ export class AIChat {
       const title = tab.title
       const url = tab.currentLocation || tab.currentDetectedApp?.canonicalUrl || tab.initialLocation
 
-      const screenshotNeededRaw = await this.ai.createChatCompletion(
+      const completion = await this.ai.createChatCompletion(
         JSON.stringify({
           prompt: prompt,
           title: title,
@@ -221,12 +253,12 @@ export class AIChat {
         { tier: tier ?? ModelTiers.Standard }
       )
 
-      if (!screenshotNeededRaw) {
+      if (completion.error || !completion.output) {
         this.log.error('Error determining if a screenshot is needed')
         return false
       }
 
-      const response = JSON.parse(screenshotNeededRaw) as boolean
+      const response = JSON.parse(completion.output) as boolean
       return response
     } catch (e) {
       this.log.error('Error determining if a screenshot is needed', e)
@@ -288,11 +320,19 @@ export class AIChat {
 
   async sendMessageAndHandle(
     prompt: string,
-    useContext = true,
-    role: AIChatMessageRole = 'user',
-    query?: string,
-    skipScreenshot = false
+    opts?: ChatMessageOptions,
+    callback?: (message: AIChatMessageParsed) => void
   ) {
+    const options = {
+      useContext: true,
+      role: 'user',
+      query: undefined,
+      skipScreenshot: false,
+      limit: 30,
+      ragOnly: false,
+      ...opts
+    } as Required<ChatMessageOptions>
+
     this.error.set(null)
 
     const contextItems = this.contextItemsValue
@@ -309,16 +349,32 @@ export class AIChat {
     //   .filter((item) => item.type === 'tab')
     //   .map((item) => item.data)
 
-    const generalMode = !useContext
+    const generalMode = !options.useContext
     const previousMessages = this.responsesValue.filter(
       (message) => message.id !== (response?.id ?? '')
     )
 
     const contextItemCount = this.countContextItems(generalMode)
+    const model = this.getModel()
 
     let contextSize = generalMode ? 0 : contextItems.length
     let usedPageScreenshot = false
     let numInlineImages = 0
+
+    const basicTelemtryData = {
+      trigger: options.trigger,
+      contextSize: contextSize,
+      numTabs: contextItemCount.tabs,
+      numSpaces: contextItemCount.spaces,
+      numResources: contextItemCount.resources,
+      numScreenshots: numInlineImages,
+      numPreviousMessages: previousMessages.length,
+      tookPageScreenshot: usedPageScreenshot,
+      embeddingModel: this.ai.config.settingsValue.embedding_model,
+      chatModelProvider: model?.provider,
+      chatModelName:
+        model.provider === Provider.Custom ? (model.custom_model_name ?? 'custom') : model.id
+    }
 
     try {
       const { resourceIds, inlineImages, usedInlineScreenshot } = await this.processContextItems()
@@ -328,8 +384,8 @@ export class AIChat {
 
       response = {
         id: generateID(),
-        role: role,
-        query: query ?? prompt,
+        role: options.role,
+        query: options.query ?? prompt,
         status: 'pending',
         usedPageScreenshot: usedPageScreenshot,
         usedInlineScreenshot: usedInlineScreenshot,
@@ -340,7 +396,7 @@ export class AIChat {
       this.status.set('running')
       this.addParsedResponse(response)
 
-      if (inlineScreenshots.length === 0 && !skipScreenshot) {
+      if (inlineScreenshots.length === 0 && !options.skipScreenshot) {
         this.log.debug('No context images found, determining if a screenshot is needed')
 
         const activeTabItem = this.contextItemsValue.find(
@@ -355,7 +411,7 @@ export class AIChat {
 
         if (activeTab && activeTab.type === 'page' && !desktopVisible) {
           const screenshotNeeded = await this.isScreenshotNeededForPromptAndTab(
-            query ?? prompt,
+            options.query ?? prompt,
             activeTab as TabPage
           )
           this.log.debug('Screenshot needed:', screenshotNeeded)
@@ -409,7 +465,7 @@ export class AIChat {
           }
         } else {
           content += chunk
-          this.updateParsedResponse(response?.id!, {
+          const updatedMessage = this.updateParsedResponse(response?.id!, {
             content: content
               .replace('<answer>', '')
               .replace('</answer>', '')
@@ -417,11 +473,17 @@ export class AIChat {
               // .replace('</citation>', '')
               .replace('<br>', '\n')
           })
+
+          if (callback && updatedMessage) {
+            callback(updatedMessage)
+          }
         }
       }
 
-      const { model } = await this.sendMessage(chatCallback, prompt, {
-        limit: 30,
+      await this.sendMessage(chatCallback, prompt, {
+        model,
+        limit: options.limit,
+        ragOnly: options.ragOnly,
         resourceIds: resourceIds,
         inlineImages: inlineImages,
         general: resourceIds.length === 0
@@ -434,57 +496,32 @@ export class AIChat {
 
       this.status.set('idle')
 
-      await this.telemetry.trackPageChatMessageSent({
-        contextSize: contextSize,
-        numTabs: contextItemCount.tabs,
-        numSpaces: contextItemCount.spaces,
-        numResources: contextItemCount.resources,
-        numScreenshots: inlineImages.length,
-        numPreviousMessages: previousMessages.length,
-        tookPageScreenshot: usedPageScreenshot,
-        embeddingModel: this.ai.config.settingsValue.embedding_model,
-        chatModelProvider: model.provider,
-        chatModelName:
-          model.provider === Provider.Custom ? (model.custom_model_name ?? 'custom') : model.id
-      })
-
-      if (contextItemCount.spaces > 0) {
-        await this.telemetry.trackChatWithSpace()
+      if (options.trigger) {
+        if (options.ragOnly) {
+          await this.telemetry.trackSimilaritySearch(basicTelemtryData)
+        } else {
+          await this.telemetry.trackPageChatMessageSent(basicTelemtryData)
+          if (
+            contextItemCount.spaces > 0 &&
+            options.trigger === PageChatMessageSentEventTrigger.SidebarChat
+          ) {
+            await this.telemetry.trackChatWithSpace(options.trigger)
+          }
+        }
       }
     } catch (e) {
       this.log.error('Error doing magic', typeof e, e)
-      let content = 'Failed to generate response.'
-      let error = PageChatMessageSentEventError.Other
 
-      if (e instanceof TooManyRequestsError) {
-        error = PageChatMessageSentEventError.TooManyRequests
-        content = 'Too many requests. Please try again later.'
-      } else if (e instanceof QuotaDepletedError) {
-        this.log.error('Quota depleted')
-        const res = handleQuotaDepletedError(e)
-        error = res.error
-        content = res.content
-      } else {
-        content = 'Failed to generate response.'
-      }
+      const parsedError = parseAIError(e)
 
-      if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
-        content = 'The content is too long to process. Please try a more specific question.'
-      }
-
-      if (typeof e === 'string' && e.includes('RAG Empty Context')) {
-        content = `Unfortunately, we failed to find relevant information to answer your query.
-  \nThere might have been an issue with extracting all information from your current context.
-  \nPlease try asking a different question or let us know if the issue persists.`
-      }
       if (response) {
         this.updateParsedResponse(response.id, {
-          content: content,
+          content: parsedError.message,
           status: 'error'
         })
       }
 
-      this.error.set({ message: content, type: error })
+      this.error.set(parsedError)
 
       if (!this.errorValue?.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
         setTimeout(() => {
@@ -492,26 +529,98 @@ export class AIChat {
         }, 10000)
       }
 
-      // TODO: track model for errors as well
-      await this.telemetry.trackPageChatMessageSent({
-        contextSize: contextSize,
-        numTabs: contextItemCount.tabs,
-        numSpaces: contextItemCount.spaces,
-        numResources: contextItemCount.resources,
-        numScreenshots: numInlineImages,
-        numPreviousMessages: previousMessages.length,
-        tookPageScreenshot: usedPageScreenshot,
-        embeddingModel: this.ai.config.settingsValue.embedding_model,
-        error: error
-      })
+      if (options.trigger) {
+        if (options.ragOnly) {
+          await this.telemetry.trackSimilaritySearch({
+            ...basicTelemtryData,
+            error: parsedError.type
+          })
+        } else {
+          await this.telemetry.trackPageChatMessageSent({
+            ...basicTelemtryData,
+            error: parsedError.type
+          })
 
-      if (contextItemCount.spaces > 0) {
-        await this.telemetry.trackChatWithSpace()
+          if (
+            contextItemCount.spaces > 0 &&
+            options.trigger === PageChatMessageSentEventTrigger.SidebarChat
+          ) {
+            await this.telemetry.trackChatWithSpace(options.trigger, parsedError.type)
+          }
+        }
       }
 
       throw e
     } finally {
       this.status.set('idle')
     }
+  }
+
+  async createChatCompletion(
+    prompt: string,
+    opts?: ChatMessageOptions,
+    callback?: (message: AIChatMessageParsed) => void
+  ) {
+    try {
+      const options = {
+        useContext: true,
+        skipScreenshot: true,
+        ...opts
+      }
+
+      const promise = this.sendMessageAndHandle(prompt, options, callback)
+
+      let previousContent = ''
+
+      // const content = derived(this.responses, ($responses) => {
+      //   const lastResponse = $responses[$responses.length - 1]
+      //   if (lastResponse) {
+      //     const fullContent = lastResponse.content
+      //     const newContent = fullContent.replace(previousContent, '')
+      //     previousContent = fullContent
+
+      //     return lastResponse
+      //   }
+      // })
+
+      // content.subscribe(() => {})
+
+      await promise
+
+      return {
+        chat: this,
+        output: this.responsesValue[this.responsesValue.length - 1],
+        error: this.errorValue
+      }
+    } catch (e) {
+      this.log.error('Error creating chat completion', e)
+      return {
+        chat: this,
+        output: null,
+        error: this.errorValue
+      }
+    }
+  }
+
+  async similaritySearch(text: string, opts?: ChatMessageOptions) {
+    const result = await this.createChatCompletion(text, {
+      ragOnly: true,
+      limit: 10,
+      ...opts
+    })
+
+    const rawSources = result.output?.sources ?? []
+
+    const sources = await Promise.all(
+      rawSources.map(async (source) => {
+        const res = await this.resourceManager.getAIChatDataSource(source.uid ?? source.id)
+        return {
+          ...source,
+          content: res?.content
+        } as AIChatMessageSource
+      })
+    )
+
+    return sources
   }
 }

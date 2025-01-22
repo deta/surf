@@ -103,6 +103,8 @@ import OpenAI from './Icons/OpenAI.svelte'
 import Claude from './Icons/Claude.svelte'
 import PictureInPicture from './Icons/PictureInPicture.svelte'
 
+import DynamicIcon from './DynamicIcon.svelte'
+
 export const icons = {
   adblockoff: AdblockOff,
   adblockon: AdblockOn,
@@ -208,7 +210,8 @@ export const icons = {
   'plus.boxed': PlusBoxed,
   'open-ai': OpenAI,
   claude: Claude,
-  'picture-in-picture': PictureInPicture
+  'picture-in-picture': PictureInPicture,
+  dynamic: DynamicIcon
 }
 
 export type Icons = keyof typeof icons
@@ -316,5 +319,6 @@ export {
   PlusBoxed,
   OpenAI,
   Claude,
-  PictureInPicture
+  PictureInPicture,
+  DynamicIcon
 }

@@ -26,6 +26,8 @@ export type UserSettings = {
   annotations_sidebar: boolean
   live_spaces: boolean
   homescreen_link_cmdt: boolean
+  experimental_smart_notes: boolean
+  auto_note_similarity_search: boolean
   /**
    * @deprecated use individual feature flags instead
    */

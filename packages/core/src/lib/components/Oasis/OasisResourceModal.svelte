@@ -351,7 +351,7 @@
     log.debug('transformation output', transformation)
 
     webview.sendEvent(WebViewEventReceiveNames.TransformationOutput, {
-      text: transformation
+      text: transformation ?? 'Failed to generate output'
     })
   }
 

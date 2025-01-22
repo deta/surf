@@ -1,6 +1,7 @@
 import type {
   CreateTabEventTrigger,
   DetectedWebApp,
+  EventContext,
   PageChatUpdateContextEventTrigger
 } from '@horizon/types'
 import type { Resource, ResourceHistoryEntry } from '../service/resources'
@@ -252,9 +253,11 @@ export type HighlightWebviewTextEvent = {
   answerText: string
   sourceUid?: string
   preview: boolean
+  context?: EventContext
 }
 export type JumpToWebviewTimestampEvent = {
   resourceId: string
   timestamp: number
   preview: boolean
+  context?: EventContext
 }
