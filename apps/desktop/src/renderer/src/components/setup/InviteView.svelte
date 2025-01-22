@@ -5,33 +5,71 @@
 
   const dispatch = createEventDispatcher()
 
-  const REQUEST_INVITE_URL = 'https://deta.surf/'
+  const REQUEST_INVITE_URL = 'https://deta.surf'
   const TERMS_URL = 'https://deta.surf/terms'
   const PRIVACY_URL = 'https://deta.surf/privacy'
 
+  let state = 'invite'
   let inviteCode = ''
+  let resendInviteEmail = ''
+  let allowResend = false
+  let resentEmail = false
   let acceptedTerms = false
   let loading = false
   let error = ''
 
-  const sanitizeInvite = (invite: string): string => {
-    return invite.trim()
+  const sanitize = (input: string): string => {
+    return input.trim()
   }
 
-  const handleSubmit = async () => {
+  const toggleResendState = () => {
+    state = state === 'invite' ? 'resend' : 'invite'
+    error = ''
+    resentEmail = false
+    loading = false
+    resendInviteEmail = ''
+  }
+
+  const handleSubmitInvite = async () => {
     try {
       loading = true
 
-      const data = await window.api.activateAppUsingKey(sanitizeInvite(inviteCode), acceptedTerms)
-
-      if (!data) {
-        error = 'Invalid invite code.'
+      const res = await window.api.activateAppUsingKey(sanitize(inviteCode), acceptedTerms)
+      if (!res.ok) {
+        error = 'Sorry, the invite code is invalid.'
+        switch (res.status) {
+          case 409:
+            error = 'Sorry, the invite code has already been used.'
+            allowResend = true
+            break
+          default:
+            error = 'Sorry, the invite code is invalid.'
+            break
+        }
         return
       }
       dispatch('viewChange', 'persona')
     } catch (e) {
       console.error(e)
-      error = 'Failed to check invite code, please try again.'
+      error = `Sorry, we countered an error: ${e}`
+    } finally {
+      loading = false
+    }
+  }
+
+  const handleSubmitResend = async () => {
+    try {
+      loading = true
+      const res = await window.api.resendInviteCode(sanitize(resendInviteEmail))
+      if (!res.ok) {
+        const detail = res.data.detail || 'unexpected error'
+        error = `Sorry, we countered an error: ${detail}`
+        return
+      }
+      resentEmail = true
+    } catch (e) {
+      console.error(e)
+      error = `Sorry, we countered an error: ${e}`
     } finally {
       loading = false
     }
@@ -41,41 +79,98 @@
 <div class="container">
   <div class="content">
     <img class="surf-logo" src={icon} alt="Surf icon" />
-    <h1 class="title">Welcome to Surf!</h1>
+    <h1 class="title">
+      {#if state === 'invite'}
+        Welcome to Surf!
+      {:else}
+        Request Invite Code
+      {/if}
+    </h1>
 
-    <form on:submit|preventDefault={handleSubmit}>
-      <input
-        bind:value={inviteCode}
-        class="invite-input"
-        placeholder="Enter your Invite Code"
-        required
-      />
+    {#if error}
+      <p class="error">{error}</p>
+      {#if allowResend}
+        <p class="info">
+          <a href="#" on:click|preventDefault={toggleResendState}>Request a new code</a>
+        </p>
+      {:else}
+        <p class="info">Please send us an email (<i>hello@deta.surf</i>) if the issue persists.</p>
+      {/if}
+    {/if}
 
-      <p class="info">
-        Surf is under active development — you need to be part of our early access program to use
-        it. No invite code? <a href={REQUEST_INVITE_URL} class="apply-link">Apply here</a>.
-      </p>
+    {#if state === 'invite'}
+      <form on:submit|preventDefault={handleSubmitInvite}>
+        <input
+          bind:value={inviteCode}
+          class="invite-input"
+          placeholder="Enter your Invite Code"
+          required
+        />
 
-      <div class="bottom">
-        <label class="terms-checkbox">
-          <input bind:checked={acceptedTerms} type="checkbox" required />
-          <span class="terms-info">
-            I agree to the <a href={TERMS_URL} target="_blank">Terms and Conditions</a> and
-            <a href={PRIVACY_URL} target="_blank">Privacy Policy</a>.
-          </span>
-        </label>
+        <p class="info">
+          Surf is under active development — you need to be part of our early access program to use
+          it.
+        </p>
 
-        {#if error}
-          <p class="error">{error}</p>
+        <p class="info">
+          No invite code? <a href={REQUEST_INVITE_URL} target="_blank" class="apply-link"
+            >Apply here</a
+          >
+          <br />
+          Forgot code?
+          <a href="#" on:click|preventDefault={toggleResendState} class="apply-link"
+            >Request a new code</a
+          >
+        </p>
+
+        <div class="bottom">
+          <label class="terms-checkbox">
+            <input bind:checked={acceptedTerms} type="checkbox" required />
+            <span class="terms-info">
+              I agree to the <a href={TERMS_URL} target="_blank">Terms and Conditions</a> and
+              <a href={PRIVACY_URL} target="_blank">Privacy Policy</a>.
+            </span>
+          </label>
+
+          <div class="button-warpper">
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Checking Invite…' : 'Get Started'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    {:else}
+      <form on:submit|preventDefault={handleSubmitResend}>
+        <p class="info">Please enter your email address you used for Surf's waitlist.</p>
+        <input
+          type="email"
+          bind:value={resendInviteEmail}
+          class="invite-input"
+          placeholder="Enter your email"
+          disabled={resentEmail}
+          required
+        />
+        {#if resentEmail}
+          <p class="info" style="color: green">
+            Thank you, you will receive an email from us shortly (if you have access).
+          </p>
+          <p class="info">
+            Please send us an email (<i>hello@deta.surf</i>) for any issues.
+          </p>
+          <p class="info">
+            <a href="#" on:click|preventDefault={toggleResendState} class="apply-link">Go back</a>
+          </p>
         {/if}
 
-        <div class="button-warpper">
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Checking Invite…' : 'Get Started'}
-          </Button>
+        <div class="bottom">
+          <div class="button-warpper">
+            <Button type="submit" disabled={loading || resentEmail}>
+              {loading ? 'Requesting...' : 'Request Invite Code'}
+            </Button>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    {/if}
   </div>
 </div>
 
@@ -180,9 +275,12 @@
   }
 
   .error {
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
     color: red;
-    font-size: 14px;
     margin-bottom: 1rem;
+    padding: 0 4rem;
+    text-align: center;
   }
 
   .submit-button {

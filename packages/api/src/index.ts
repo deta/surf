@@ -1,7 +1,8 @@
-import { AppActivationResponse, UserDataResponse } from './types'
+import { UserDataResponse } from './types'
 
 export const ENDPOINTS = {
   app_activations: '/v0/deta-os-auth/activations',
+  resend_invite_code: '/v0/deta-os-auth/activation-keys/resend',
   userdata: '/v0/deta-os-auth/userdata',
   userdata_telemetry_id: '/v0/deta-os-auth/userdata/tel-id'
 }
@@ -22,6 +23,11 @@ export class API {
       throw new Error(`Request failed: ${res.statusText}`)
     }
 
+    return res
+  }
+
+  async requestRaiseNoError(path: string, options: RequestInit = {}) {
+    const res = await this.fetch(`${this.base}${path}`, options)
     return res
   }
 
@@ -51,17 +57,33 @@ export class API {
     return res.json()
   }
 
-  async activateAppUsingKey(key: string, acceptedTerms: boolean) {
-    try {
-      const data = (await this.postJSON(ENDPOINTS.app_activations, {
-        key: key,
-        accepted_terms: acceptedTerms
-      })) as Promise<AppActivationResponse>
-      return data
-    } catch (error) {
-      console.error('Error activating app:', error)
-      return null
+  async postJSONReturnRes(path: string, data: any, options: RequestInit = {}) {
+    const res = await this.requestRaiseNoError(path, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      ...options
+    })
+    return {
+      ok: res.ok,
+      status: res.status,
+      data: await res.json()
     }
+  }
+
+  async activateAppUsingKey(key: string, acceptedTerms: boolean) {
+    return await this.postJSONReturnRes(ENDPOINTS.app_activations, {
+      key: key,
+      accepted_terms: acceptedTerms
+    })
+  }
+
+  async resendInviteCode(email: string) {
+    return await this.postJSONReturnRes(ENDPOINTS.resend_invite_code, {
+      email: email
+    })
   }
 
   static createAPI(base: string) {

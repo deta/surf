@@ -16,7 +16,7 @@ import {
   ReadStream,
   WriteStream
 } from 'fs'
-import { createAPI, createAuthenticatedAPI } from '@horizon/api'
+import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@horizon/api'
 import {
   type EditablePrompt,
   type UserSettings,
@@ -354,12 +354,16 @@ const api = {
   activateAppUsingKey: async (key: string, acceptedTerms: boolean) => {
     const api = createAPI(import.meta.env.P_VITE_API_BASE)
 
-    const data = await api.activateAppUsingKey(key, acceptedTerms)
-    if (data !== null) {
-      IPC_EVENTS_RENDERER.storeAPIKey.send(data.api_key)
+    const res = await api.activateAppUsingKey(key, acceptedTerms)
+    if (res.ok && (res.data as AppActivationResponse)) {
+      IPC_EVENTS_RENDERER.storeAPIKey.send(res.data.api_key)
     }
+    return res
+  },
 
-    return data
+  resendInviteCode: async (email: string) => {
+    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+    return await api.resendInviteCode(email)
   },
 
   getUserConfigSettings: () => userConfig.settings,
