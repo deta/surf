@@ -160,8 +160,10 @@
   } from '@horizon/core/src/lib/service/ai/contextManager'
 
   import '$styles/app.scss'
+  import { DIALOG_OASIS_REF, openDialog } from './Core/Dialog/Dialog.svelte'
+  import { provideNotifications } from '../service/notifications'
+  import { UserStatsService } from '../service/userStats'
   import '$styles/tippy.scss'
-  import { DIALOG_OASIS_REF } from './Core/Dialog/Dialog.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -242,6 +244,7 @@
   oasis.attachTabsManager(tabsManager)
   desktopManager.attachTabsManager(tabsManager)
   DIALOG_OASIS_REF.set(oasis)
+  provideNotifications()
 
   const colorService = provideColorService(config, ColorMode.HSL)
   onDestroy(colorService.destroy)
@@ -2967,6 +2970,16 @@
     }
 
     syncService.init()
+  })
+
+  onMount(async () => {
+    window.addEventListener('beforeunload', UserStatsService.endSession)
+    await UserStatsService.startSession()
+    UserStatsService.startCheckDefaultBrowserInterval()
+  })
+  onDestroy(() => {
+    window.removeEventListener('beforeunload', UserStatsService.endSession)
+    UserStatsService.stopCheckDefaultBrowserInterval()
   })
 
   const openFeedback = () => {

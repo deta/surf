@@ -27,10 +27,11 @@ import {
   type TelemetryEventTypes,
   type SFFSResource,
   type DownloadPathResponseMessage,
-  SettingsWindowTab
+  SettingsWindowTab,
+  UserStats
 } from '@horizon/types'
 
-import { getUserConfig } from '../main/config'
+import { getUserConfig, getUserStats, updateUserConfig } from '../main/config'
 import {
   IPC_EVENTS_RENDERER,
   NewWindowRequest,
@@ -72,6 +73,7 @@ const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+let userStats = getUserStats(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
 
 const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
@@ -312,6 +314,10 @@ const api = {
     return IPC_EVENTS_RENDERER.getUserConfig.invoke()
   },
 
+  getUserStats: () => {
+    return IPC_EVENTS_RENDERER.getUserStats.invoke()
+  },
+
   deanonymizeUser: async () => {
     const api = createAuthenticatedAPI(API_BASE, API_KEY)
 
@@ -357,6 +363,9 @@ const api = {
     const res = await api.activateAppUsingKey(key, acceptedTerms)
     if (res.ok && (res.data as AppActivationResponse)) {
       IPC_EVENTS_RENDERER.storeAPIKey.send(res.data.api_key)
+      updateUserConfig({
+        activation_timestamp: Date.now()
+      })
     }
     return res
   },
@@ -372,10 +381,21 @@ const api = {
     IPC_EVENTS_RENDERER.updateUserConfigSettings.send(settings)
   },
 
+  updateUserStats: async (stats: Partial<UserStats>) => {
+    IPC_EVENTS_RENDERER.updateUserStats.send(stats)
+  },
+
   onUserConfigSettingsChange: (callback: (settings: UserSettings) => void) => {
     IPC_EVENTS_RENDERER.userConfigSettingsChange.on((_, settings) => {
       userConfig.settings = settings
       callback(settings)
+    })
+  },
+
+  onUserStatsChange: (callback: (stats: UserStats) => void) => {
+    IPC_EVENTS_RENDERER.userStatsChange.on((_, stats) => {
+      userStats = stats
+      callback(stats)
     })
   },
 

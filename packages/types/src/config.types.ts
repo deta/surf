@@ -9,6 +9,7 @@ export type UserConfig = {
   defaultBrowser: boolean
   initialized_tabs: boolean
   settings: UserSettings
+  activation_timestamp?: number
 }
 
 export type UserSettings = {
@@ -48,4 +49,34 @@ export type UserSettings = {
   vision_image_tagging: boolean
   turntable_favicons: boolean
   auto_toggle_pip: boolean
+}
+
+interface UserSession {
+  startedAt: number
+  endedAt?: number
+  duration?: number
+  events: unknown[]
+}
+export type UserStats = {
+  // General App usage
+  sessions: UserSession[]
+
+  // Prompt default browser
+  timestamp_last_prompt_set_default_browser: number
+  dont_show_prompt_set_default_browser: boolean
+
+  // Grooves
+  global_n_context_switches: number
+  global_n_contexts_created: number
+
+  global_n_saves_to_oasis: number
+  global_n_open_resource: number
+
+  global_n_chat_message_sent: number
+  global_n_chatted_with_space: number
+
+  global_n_use_inline_tools: number
+  global_n_create_annotation: number
+  global_n_open_homescreen: number
+  global_n_update_homescreen: number
 }

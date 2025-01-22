@@ -54,6 +54,7 @@ import type { Tab } from '../types/browser.types'
 import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
+import { UserStatsService } from './userStats'
 import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
 
 export type TelemetryConfig = {
@@ -326,6 +327,8 @@ export class Telemetry {
       from: from,
       to: to
     })
+
+    UserStatsService.incStat('global_n_context_switches')
   }
 
   async trackMoveTabToContext(from: BrowserContextScope, to: BrowserContextScope) {
@@ -397,6 +400,8 @@ export class Telemetry {
   }
 
   async trackOpenResource(type: string, from: OpenResourceEventFrom = OpenResourceEventFrom.Oasis) {
+    UserStatsService.incStat('global_n_open_resource')
+
     await this.trackEvent(TelemetryEventTypes.OpenResource, {
       type: type,
       kind: getPrimaryResourceType(type),
@@ -424,6 +429,8 @@ export class Telemetry {
     context?: EventContext,
     baseMedia?: 'image' | 'text'
   ) {
+    UserStatsService.incStat('global_n_saves_to_oasis')
+
     await this.trackEvent(TelemetryEventTypes.SaveToOasis, {
       type,
       kind: getPrimaryResourceType(type),
@@ -447,6 +454,8 @@ export class Telemetry {
       numberOfBlacklistedItems?: number
     }
   ) {
+    UserStatsService.incStat('global_n_contexts_created')
+
     await this.trackEvent(TelemetryEventTypes.CreateSpace, {
       from: from,
       isLiveSpace: metadata?.isLiveSpace ?? false,
@@ -482,6 +491,7 @@ export class Telemetry {
     trigger?: PageChatMessageSentEventTrigger,
     error?: PageChatMessageSentEventError
   ) {
+    UserStatsService.incStat('global_n_chatted_with_space')
     await this.trackEvent(TelemetryEventTypes.ChatWithSpace, {
       error,
       trigger
@@ -534,6 +544,8 @@ export class Telemetry {
     type: CreateAnnotationEventType,
     trigger: CreateAnnotationEventTrigger
   ) {
+    UserStatsService.incStat('global_n_create_annotation')
+
     await this.trackEvent(TelemetryEventTypes.CreateAnnotation, {
       type: type,
       trigger: trigger
@@ -568,6 +580,8 @@ export class Telemetry {
     error?: PageChatMessageSentEventError
     trigger?: PageChatMessageSentEventTrigger
   }) {
+    UserStatsService.incStat('global_n_chat_message_sent')
+
     await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
       context_size: stats.contextSize,
       num_spaces: stats.numSpaces,
@@ -710,6 +724,8 @@ export class Telemetry {
   }
 
   async trackAskInlineAI(data: { isFollowUp: boolean; baseMedia: AIMessageBaseMedia }) {
+    UserStatsService.incStat('global_n_use_inline_tools')
+
     await this.trackEvent(TelemetryEventTypes.AskInlineAI, {
       is_follow_up: data.isFollowUp,
       base_media: data.baseMedia
@@ -728,6 +744,8 @@ export class Telemetry {
   }
 
   async trackOpenHomescreen(trigger: OpenHomescreenEventTrigger) {
+    UserStatsService.incStat('global_n_open_homescreen')
+
     await this.trackEvent(TelemetryEventTypes.OpenHomescreen, {
       trigger
     })
@@ -752,6 +770,8 @@ export class Telemetry {
   }
 
   async trackUpdateHomescreen(action: UpdateHomescreenEventAction) {
+    UserStatsService.incStat('global_n_update_homescreen')
+
     await this.trackEvent(TelemetryEventTypes.UpdateHomescreen, {
       action
     })

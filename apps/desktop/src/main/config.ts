@@ -2,7 +2,7 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import type { UserConfig } from '@horizon/types'
+import type { UserConfig, UserStats } from '@horizon/types'
 import { BuiltInModelIDs } from '@horizon/types/src/ai.types'
 
 export type Config = {
@@ -26,6 +26,7 @@ export type PermissionCache = {
 
 const BROWSER_CONFIG_NAME = 'browser.json'
 const USER_CONFIG_NAME = 'user.json'
+const USER_STATS_NAME = 'user_stats.json'
 const PERMISSION_CONFIG_NAME = 'permissions.json'
 const SEEN_ANNOUNCEMENTS_STATE = 'seen_announcements.json'
 
@@ -80,6 +81,7 @@ export const setAnnouncementsState = (state: any) => {
 }
 
 let userConfig: UserConfig | null = null
+let userStats: UserStats | null = null
 
 export const getUserConfig = (path?: string) => {
   const storedConfig = getConfig<UserConfig>(path ?? app.getPath('userData'), USER_CONFIG_NAME)
@@ -258,6 +260,54 @@ export const updateUserConfig = (config: Partial<UserConfig>) => {
   const newConfig = { ...currentConfig, ...config }
   setUserConfig(newConfig)
   return newConfig
+}
+
+export const getUserStats = (path?: string) => {
+  const storedConfig = getConfig<UserStats>(path ?? app.getPath('userData'), USER_STATS_NAME)
+
+  const value: UserStats = {
+    sessions: [],
+
+    timestamp_last_prompt_set_default_browser: 9999999999999,
+    dont_show_prompt_set_default_browser: false,
+
+    // Grooves
+    global_n_context_switches: 0,
+    global_n_contexts_created: 0,
+
+    global_n_saves_to_oasis: 0,
+    global_n_open_resource: 0,
+
+    global_n_chat_message_sent: 0,
+    global_n_chatted_with_space: 0,
+
+    global_n_use_inline_tools: 0,
+    global_n_create_annotation: 0,
+    global_n_open_homescreen: 0,
+    global_n_update_homescreen: 0,
+
+    ...storedConfig
+  }
+
+  // Store if deep different
+  if (JSON.stringify(value) !== JSON.stringify(storedConfig)) {
+    setUserStats(value)
+  }
+
+  userStats = value
+  return userStats
+}
+
+export const setUserStats = (stats: UserStats) => {
+  userStats = stats
+  setConfig(app.getPath('userData'), stats, USER_STATS_NAME)
+}
+
+export const updateUserStats = (stats: Partial<UserStats>) => {
+  const current = getUserStats()
+  const newStats = { ...current, ...stats }
+  setUserStats(newStats as UserStats)
+  return newStats
 }
 
 let inMemoryPermissionConfig: PermissionCache | null = null

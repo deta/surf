@@ -12,7 +12,7 @@ import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
 import { ipcSenders, setupIpc } from './ipcHandlers'
-import { getUserConfig, updateUserConfig } from './config'
+import { getUserConfig, getUserStats, updateUserConfig } from './config'
 import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
@@ -173,6 +173,7 @@ const initializeApp = async () => {
   const userDataPath = app.getPath('userData')
   const backendRootPath = join(userDataPath, 'sffs_backend')
   const userConfig = getUserConfig()
+  const userStats = getUserStats()
 
   setupIpc(backendRootPath)
 

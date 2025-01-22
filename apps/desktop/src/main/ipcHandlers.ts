@@ -3,9 +3,21 @@ import { app, session } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
-import { getUserConfig, updateUserConfig, updateUserConfigSettings } from './config'
+import {
+  getUserConfig,
+  getUserStats,
+  updateUserConfig,
+  updateUserConfigSettings,
+  updateUserStats
+} from './config'
 import { handleDragStart } from './drag'
-import { ElectronAppInfo, RightSidebarTab, SFFSResource, UserSettings } from '@horizon/types'
+import {
+  ElectronAppInfo,
+  RightSidebarTab,
+  SFFSResource,
+  UserSettings,
+  UserStats
+} from '@horizon/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { checkForUpdates, getAnnouncements } from './appUpdates'
 import { getAnnouncementsWindow } from './announcementsWindow'
@@ -190,6 +202,12 @@ function setupIpcHandlers(backendRootPath: string) {
     return getUserConfig()
   })
 
+  IPC_EVENTS_MAIN.getUserStats.handle(async (event) => {
+    if (!validateIPCSender(event)) return null
+
+    return getUserStats()
+  })
+
   IPC_EVENTS_MAIN.startDrag.on(async (event, { resourceId, filePath, fileType }) => {
     if (!validateIPCSender(event)) return
 
@@ -211,6 +229,15 @@ function setupIpcHandlers(backendRootPath: string) {
 
     // notify other windows of the change
     ipcSenders.userConfigSettingsChange(updatedSettings)
+  })
+
+  IPC_EVENTS_MAIN.updateUserStats.on(async (event, stats) => {
+    if (!validateIPCSender(event)) return
+
+    const updatedStats = updateUserStats(stats)
+
+    // notify other windows of the change
+    ipcSenders.userStatsChange(updatedStats)
   })
 
   IPC_EVENTS_MAIN.updateInitializedTabs.on(async (event, value) => {
@@ -614,6 +641,16 @@ export const ipcSenders = {
       if (!window || window.isDestroyed()) return
 
       IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
+    })
+  },
+
+  userStatsChange(stats: UserStats) {
+    const windows = [getMainWindow(), getSettingsWindow()]
+
+    windows.forEach((window) => {
+      if (!window || window.isDestroyed()) return
+
+      IPC_EVENTS_MAIN.userStatsChange.sendToWebContents(window.webContents, stats)
     })
   },
 

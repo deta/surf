@@ -18,7 +18,7 @@
     type: 'reset' | 'submit'
 
     // The kind is used to visually style the action buttons
-    kind?: 'reset' | 'submit' | 'danger'
+    kind?: 'reset' | 'submit' | 'danger' | 'muted'
 
     value?: string
   }
