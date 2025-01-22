@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { conditionalArrayItem, tooltip } from '@horizon/utils'
+  import { conditionalArrayItem, isMac, tooltip } from '@horizon/utils'
   import { floatyButtons } from '../../components/Atoms/floatyButtons'
   import FloatyButton from '../Atoms/FloatyButton.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
@@ -63,7 +63,7 @@
   <div use:floatyButtons={buttonConfigs} class="relative">
     <button
       use:tooltip={{
-        text: 'Chat (⌘ + E)',
+        text: `Chat (${isMac() ? '⌘' : 'Ctrl'} + E)`,
         position: horizontalTabs ? 'left' : 'top'
       }}
       class="ask-button transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200/40 dark:hover:bg-gray-800/40 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800 {customClasses}"
