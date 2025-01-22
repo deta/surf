@@ -11,6 +11,13 @@ import ImageRewrite from '../../../../public/assets/onboarding/notes/rewrite.png
 import ImageAutocomplete from '../../../../public/assets/onboarding/notes/autocomplete.png?url'
 import { isMac } from '@horizon/utils'
 
+export type OnboardingNote = {
+  id: string
+  title: string
+  html: string
+  attributes: Record<string, unknown>
+}
+
 const prepareHTML = (html: string) => {
   return html
     .replaceAll('smart-notes.png', ImageSmartNotes)
@@ -27,7 +34,7 @@ const createNote = (note: typeof OnboardingNote1, idx: number) => {
     title: note.attributes.title as string,
     html: prepareHTML(note.html),
     attributes: note.attributes
-  }
+  } as OnboardingNote
 }
 
 const notes = [

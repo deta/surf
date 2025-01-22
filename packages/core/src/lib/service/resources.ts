@@ -1137,7 +1137,7 @@ export class ResourceManager {
     eventContext?: EventContext
   ) {
     const defaultMetadata = {
-      name: `Untitled ${getFormattedDate(Date.now())}`
+      name: `Note - ${getFormattedDate(Date.now())}`
     }
 
     const fullMetadata = Object.assign(defaultMetadata, metadata)

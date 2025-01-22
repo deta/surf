@@ -7,7 +7,7 @@ import type { OasisService, useOasis } from './oasis'
 import { onboardingSpace } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
-import { ONBOARDING_NOTES } from '../constants/notes'
+import { ONBOARDING_NOTES, type OnboardingNote } from '../constants/notes'
 
 const log = useLogScope('DemoItems')
 
@@ -160,7 +160,7 @@ export function useOnboardingNote(oasis: OasisService) {
     }
   }
 
-  const notes = ONBOARDING_NOTES.map((note) => processNote(note))
+  const notes = ONBOARDING_NOTES.map((note) => processNote(note)) as OnboardingNote[]
 
   const currentNote = derived(currentNoteIdx, ($currentNoteIdx) => {
     const note = notes[$currentNoteIdx]

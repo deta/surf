@@ -249,7 +249,9 @@ export enum EventContext {
   /** Notes */
   Note = 'note',
   /** Within a webpage */
-  Webpage = 'webpage'
+  Webpage = 'webpage',
+  /** Shortcut */
+  Shortcut = 'shortcut'
 }
 
 export enum SearchOasisEventTrigger {

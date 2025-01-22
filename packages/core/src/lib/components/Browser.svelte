@@ -849,8 +849,7 @@
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
       desktopManager.setVisible(!$desktopVisible, { trigger: OpenHomescreenEventTrigger.Shortcut })
     } else if (isModKeyAndKeyPressed(e, 'n')) {
-      // this creates a new electron window
-      // TEMPORARY: this is only used for testing the invites feature
+      createNewNote(EventContext.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'o')) {
       console.log('OPEN STUFF', e, $showNewTabOverlay)
       if ($showNewTabOverlay === 2) {
@@ -2084,16 +2083,16 @@
     oasis.resetSelectedSpace()
   }
 
-  const handleCreateNote = async (e: CustomEvent<string | undefined>) => {
-    const query = e.detail ?? ''
-    log.debug('create note with query', query)
+  const createNewNote = async (context: EventContext, name?: string) => {
+    log.debug('create note', name)
 
     const resource = await resourceManager.createResourceNote(
-      query,
+      '',
+      name ? { name: name } : {},
       undefined,
-      undefined,
-      EventContext.CommandMenu
+      context
     )
+
     await tabsManager.openResourceAsTab(resource, { active: true })
     toasts.success('Note created!')
   }
@@ -3706,7 +3705,7 @@
     }}
     on:toggle-sidebar={() => changeLeftSidebarState()}
     on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
-    on:create-note={handleCreateNote}
+    on:create-note={() => createNewNote(EventContext.CommandMenu)}
     on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.CommandMenu)}
     on:toggle-bookmark={() =>
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
@@ -4623,6 +4622,8 @@
                     on:endTimeline={() => handleEndOnboardingTooltips}
                     on:wipecontext={removeAllContextItems}
                     on:batchOpenTabs={handleOpenOnboardingTabs}
+                    on:highlightWebviewText={highlightWebviewText}
+                    on:seekToTimestamp={handleSeekToTimestamp}
                     on:createOnboardingSpace={async () => {
                       await createOnboardingSpace(
                         tabsManager,

@@ -8,6 +8,9 @@
   export let canGoNext: Readable<boolean>
   export let idx: Readable<number>
   export let total: number
+  export let title: string | undefined = undefined
+
+  $: titleToShow = title || 'Intro to Smart Notes'
 
   const dispatch = createEventDispatcher<{
     next: void
@@ -27,7 +30,7 @@
   </button>
 
   <div class="content">
-    <div class="text">Intro to Smart Notes</div>
+    <div class="text">{titleToShow}</div>
 
     <div class="steps">
       Step <RollingNumber {value} pad={0} /> of {total} steps

@@ -77,6 +77,7 @@
   import { launchTimeline } from '../../../Onboarding/timeline'
   import { OnboardingFeature } from '../../../Onboarding/onboardingScripts'
   import { Icon } from '@horizon/icons'
+  import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -99,6 +100,7 @@
     'update-title': string
     seekToTimestamp: JumpToWebviewTimestampEvent
     highlightWebviewText: HighlightWebviewTextEvent
+    'change-onboarding-note': OnboardingNote
   }>()
 
   const onboardingNote = onboarding.note
@@ -1361,6 +1363,7 @@
         content.set(note.html)
 
         log.debug('onboarding note', note.title, note.html)
+        dispatch('change-onboarding-note', note)
 
         hideInfoPopover()
 
@@ -1523,6 +1526,7 @@
         total={onboarding.notes.length}
         canGoPrev={onboarding.canGoPrev}
         canGoNext={onboarding.canGoNext}
+        title={showTitle ? undefined : title}
         on:prev={onboarding.prev}
         on:next={onboarding.next}
       />
@@ -1594,7 +1598,7 @@
     overflow: hidden;
     position: relative;
     padding: 2em;
-    padding-top: 4em;
+    padding-top: 3em;
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
@@ -1683,10 +1687,10 @@
   }
 
   .onboarding-wrapper {
-    position: fixed;
+    position: absolute;
     z-index: 100;
     left: 50%;
-    bottom: 2.5rem;
+    bottom: 1.5rem;
     transform: translateX(-50%);
   }
 

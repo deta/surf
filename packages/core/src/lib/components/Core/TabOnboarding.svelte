@@ -52,6 +52,7 @@
   import VisionSection from '../Onboarding/sections/04.Vision.svelte'
   import ChatSection from '../Onboarding/sections/05.Chat.svelte'
   import ContextsSection from '../Onboarding/sections/06.Contexts.svelte'
+  import SmartNotesSection from '../Onboarding/sections/07.SmartNotes.svelte'
   import Done from '../Onboarding/sections/00.Done.svelte'
   import { OpenHomescreenEventTrigger } from '@horizon/types'
 
@@ -72,7 +73,8 @@
     { id: 'your-stuff', label: 'Your Stuff' },
     { id: 'desktop', label: 'Desktop' },
     { id: 'vision', label: 'Vision' },
-    { id: 'chat', label: 'Chat' }
+    { id: 'chat', label: 'Chat' },
+    { id: 'smart-notes', label: 'Smart Notes' }
     // { id: 'contexts', label: 'Contexts' }
   ]
 
@@ -324,6 +326,10 @@
         on:tryChatWithYoutubeVideo={handleTryChatWithYoutubeVideo}
         on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
       />
+    </section>
+
+    <section id="smart-notes">
+      <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
     </section>
 
     <!-- <section id="contexts">
