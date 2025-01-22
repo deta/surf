@@ -28,6 +28,8 @@
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
   import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
 
+  import DesktopPreview from '../Chat/DesktopPreview.svelte'
+
   import {
     copyToClipboard,
     parseStringIntoBrowserLocation,
@@ -40,14 +42,12 @@
     type ParentAction,
     type HorizontalAction
   } from '@deta/teletype/src'
-  import { Icon } from '@horizon/icons'
   import { useCommandComposer } from '../Overlay/service/commandComposer'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
-  import { useTabsManager } from '../../service/tabs'
   import { Resource, useResourceManager } from '../../service/resources'
   import { teletypeActionStore, TeletypeAction } from './service/teletypeActions'
-  import type { TabsManager } from '../../service/tabs'
+  import { useTabsManager, type TabsManager } from '../../service/tabs'
   import type {
     TeletypeActionEvent,
     TeletypeActionHandler,
@@ -67,13 +67,14 @@
   import { useDebounce } from '@horizon/utils'
   import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
-  export let tabsManager: TabsManager
   export let open: boolean
+  export let backgroundImage: Readable<{ path: string; customColors: unknown[] }>
 
   const log = useLogScope('TeletypeEntry')
   const config = useConfig()
   const oasis = useOasis()
   const toasts = useToasts()
+  const tabsManager = useTabsManager()
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<TeletypeEntryEvents>()
   const commandComposer = useCommandComposer(oasis, config, tabsManager)
@@ -508,6 +509,9 @@
         on:open-space-and-chat
       />
     </div>
+    <div slot="sidecar-right" class="tty-sidecar-right">
+      <DesktopPreview {backgroundImage} />
+    </div>
   </Teletype>
 </TeletypeProvider>
 
@@ -558,8 +562,8 @@
     --border-radius: 8px;
   }
 
-  :global(.tty-default) {
-    max-width: 100%;
+  :global(#tty-default) {
+    anchor-name: --teletype;
   }
 
   :global(#tty-default .resource-preview) {
@@ -594,5 +598,30 @@
     height: var(--drag-height, auto) !important;
     border-radius: 0.75em !important;
     overflow: clip !important;
+  }
+
+  :global(.desktop-preview-wrapper) {
+    position: absolute;
+    right: 4rem;
+    bottom: 4rem;
+    width: 12rem;
+    height: 8rem;
+    padding: 0.25rem;
+
+    background: var(--white);
+    border-radius: 24px;
+    box-shadow:
+      0px 2px 4px rgba(0, 0, 0, 0.01),
+      0px 2px 3px rgba(0, 0, 0, 0.02),
+      0px 4px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  :global(.tty-sidecar-right) {
+    position: absolute;
+
+    bottom: anchor(--teletype bottom);
+    left: calc(anchor(--teletype right) + 1.25em);
+
+    z-index: -1;
   }
 </style>

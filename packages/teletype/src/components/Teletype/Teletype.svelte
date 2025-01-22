@@ -63,6 +63,8 @@
     <TeletypeCore>
       <slot name="header" slot="header" />
     </TeletypeCore>
+
+    <slot name="sidecar-right" />
   </div>
 </div>
 
@@ -81,7 +83,7 @@
     width: 100%;
     height: 100vh;
     z-index: 100;
-    margin-top: -100vh;
+    //margin-top: -100vh;
   }
 
   .inner-wrapper {

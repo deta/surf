@@ -18,6 +18,8 @@
 
   export let desktop: DesktopService
   export let item: Writable<DesktopItemData>
+  export let interactive: boolean = true
+  export let skeleton = false
 
   const telemetry = useTelemetry()
   const oasis = useOasis()
@@ -82,7 +84,8 @@
 <div
   id="homescreen-item-{$item.id}"
   class="homescreen-item item-type-{$item.resourceId ? 'resource' : 'space'}"
-  draggable={true}
+  class:interactive
+  draggable={interactive}
   style:--cell-x={clamp($item.x, 1, Infinity)}
   style:--cell-y={clamp($item.y, 1, Infinity)}
   style:--span-x={$item.width}
@@ -188,7 +191,7 @@ TODO: Fix resizing logic for other corners
         origin="homescreen"
         draggable={false}
         frameless={false}
-        interactive={true}
+        {interactive}
         hideProcessing
         on:set-resource-as-background
         on:click
@@ -204,6 +207,7 @@ TODO: Fix resizing logic for other corners
       {@const space = $spaces.find((s) => s.id === $item.spaceId)}
       {#if space}
         <HomescreenSpaceItem
+          {interactive}
           {space}
           renderContents={$item.width > 2 && $item.height > 2}
           on:set-resource-as-background
@@ -246,6 +250,11 @@ TODO: Fix resizing logic for other corners
     --content-padding: 0.4em;
 
     font-size: 0.85em;
+
+    pointer-events: none;
+    &.interactive {
+      pointer-events: all;
+    }
 
     &:not(:hover) :global(*) {
       user-select: none !important;

@@ -3659,7 +3659,7 @@
   }}
 >
   <TeletypeEntry
-    {tabsManager}
+    {backgroundImage}
     open={$showNewTabOverlay == 1}
     on:close={() => {
       showNewTabOverlay.set(0)
