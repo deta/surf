@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { derived, writable } from 'svelte/store'
+  import { derived, writable, type Readable } from 'svelte/store'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import { conditionalArrayItem, hover, isModKeyPressed, useLogScope, wait } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
@@ -21,10 +21,11 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { HTMLDragArea } from '@horizon/dragcula'
-  import { fade, fly } from 'svelte/transition'
+  import { fly } from 'svelte/transition'
   import { openDialog } from '../Dialog/Dialog.svelte'
 
   export let horizontalTabs = false
+  export let backgroundImage: Readable<{ path: string } | undefined>
 
   const log = useLogScope('SpaceSwitcher')
   const tabsManager = useTabsManager()
@@ -297,6 +298,7 @@
   class:horizontal={horizontalTabs}
   class:activated={$desktopVisible}
   on:mouseleave={handleTitleMouseLeave}
+  style:--background-image={$backgroundImage?.path}
   use:HTMLDragArea.use={{
     accepts: () => true
   }}
@@ -415,7 +417,8 @@
   .wrapper {
     display: flex;
     align-items: center;
-    gap: 0.1rem;
+    position: relative;
+    gap: 0.5rem;
     padding: 0.25rem;
     padding-left: 0.5rem;
 
@@ -428,8 +431,14 @@
     border-radius: 0 !important;
 
     :global(.custom) & {
-      --squircle-fill: var(--white-75) !important;
       color: var(--black-85);
+
+      border-radius: 12px !important;
+      background-image: var(--background-image) !important;
+      background-size: cover !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+      outline: 1.5px solid var(--base-color);
     }
 
     :global(.dark) & {
@@ -476,6 +485,26 @@
     gap: 0.25rem;
     padding: 0.25rem 0.25rem;
     padding-left: 0.25rem;
+    z-index: 2;
+
+    :global(.custom) & {
+      &:before {
+        content: '';
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 66%;
+        top: 7px;
+        left: 4px;
+        bottom: 4px;
+        background: linear-gradient(to right, var(--base-color) 0%, transparent 100%);
+        z-index: -1;
+        filter: blur(3.3px);
+        mix-blend-mode: screen;
+        pointer-events: none;
+        border-radius: 8px;
+      }
+    }
 
     &:hover {
       color: rgb(2 132 199); // text-sky-600
@@ -566,6 +595,17 @@
     color: inherit;
     height: 2.5rem;
     width: 2.5rem;
+
+    :global(.custom) & {
+      color: var(--contrast-color) !important;
+      background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 90%, 0.1)) !important;
+      opacity: 0.8;
+    }
+
+    :global(.custom.dark) & {
+      background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 00%, 0.1)) !important;
+      opacity: 0.8;
+    }
 
     &:hover {
       color: rgb(2 132 199); // text-sky-600

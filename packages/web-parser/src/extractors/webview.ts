@@ -43,6 +43,7 @@ export class WebViewExtractor {
       this.destroyWebview()
     })
 
+    // TODO: THis dupe can be removed
     this.webview.addEventListener('destroyed', () => {
       this.destroyWebview()
     })

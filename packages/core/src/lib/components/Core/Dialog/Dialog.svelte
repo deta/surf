@@ -105,7 +105,7 @@
   }
 </script>
 
-<!-- HACK: The dialog element should handle this itself EIGENTLICH, but web standards seem to succ 
+<!-- HACK: The dialog element should handle this itself EIGENTLICH, but web standards seem to succ
 again, as always and this doesnt actually happen. -->
 <svelte:window
   on:keydown|capture={(e) => {

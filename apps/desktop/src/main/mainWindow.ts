@@ -9,7 +9,13 @@ import { isDev, isMac, isPDFViewerURL, PDFViewerParams, useLogScope } from '@hor
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
-import { isAppSetup, isPathSafe, normalizeElectronUserAgent, PDFViewerEntryPoint, SettingsWindowEntrypoint } from './utils'
+import {
+  isAppSetup,
+  isPathSafe,
+  normalizeElectronUserAgent,
+  PDFViewerEntryPoint,
+  SettingsWindowEntrypoint
+} from './utils'
 import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'

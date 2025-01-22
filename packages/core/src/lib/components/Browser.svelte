@@ -140,6 +140,7 @@
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
+  import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
   import {
     createMiniBrowserService,
     useScopedMiniBrowserAsStore
@@ -147,7 +148,6 @@
   import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
   import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
   import { springVisibility } from './motion/springVisibility'
-  import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
   import { provideAI } from '@horizon/core/src/lib/service/ai/ai'
@@ -3898,7 +3898,7 @@
           {/if}
 
           {#if horizontalTabs}
-            <ScopeSwitcher {horizontalTabs} />
+            <ScopeSwitcher {horizontalTabs} {backgroundImage} />
           {/if}
 
           <div
@@ -3980,7 +3980,7 @@
           {/if}
 
           {#if !horizontalTabs}
-            <ScopeSwitcher {horizontalTabs} />
+            <ScopeSwitcher {horizontalTabs} {backgroundImage} />
           {/if}
 
           <div

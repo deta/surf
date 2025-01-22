@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-
   import SpaceIcon from '../SpaceIcon.svelte'
   import type { SelectItem } from '.'
 
@@ -41,7 +40,6 @@
     align-items: center;
     justify-content: center;
   }
-
   .name {
     overflow: hidden;
     text-overflow: ellipsis;
