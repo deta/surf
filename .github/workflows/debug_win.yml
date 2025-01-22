@@ -1,0 +1,31 @@
+name: Debug Electron Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug-electron:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+
+      - name: Install dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: Debug Electron paths
+        run: |
+          echo "Listing electron directory:"
+          dir node_modules\electron
+          echo "Checking path.txt:"
+          type node_modules\electron\path.txt
+          echo "Listing dist directory:" 
+          dir node_modules\electron\dist
+        shell: cmd
