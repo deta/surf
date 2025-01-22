@@ -105,8 +105,13 @@
     }
 
     if (spaceId === 'new') {
+      // Hide any overlay when creating new context
       await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.ContextSwitcher)
       toasts.success('New Context created!')
+      await tick()
+      tabsManager.showNewTabOverlay.set(0)
+      await wait(100)
+      handleEditName()
       return
     }
 
@@ -135,6 +140,8 @@
     $focused = false
     $editName = false
     await updateSpaceName()
+    // Show command menu after name update
+    tabsManager.showNewTabOverlay.set(1)
   }
 
   const handleKeyDown = async (e: KeyboardEvent) => {
@@ -215,7 +222,7 @@
     $editName = true
     await tick()
     inputElem.focus()
-    inputElem.click()
+    inputElem.select()
   }
 
   const handleOpenSpaceInOasis = async (spaceId?: string) => {

@@ -139,7 +139,7 @@
   <div
     id="homescreen"
     class="no-drag"
-    class:empty={$items.length <= 0}
+    class:empty={$items.length <= 0 && newTabOverlayState === 0}
     style:--grid_cell_size={desktop.CELL_SIZE + 'px'}
     style:--grid_gap={desktop.CELL_GAP + 'px'}
     data-tooltip-target="desktop-demo"
