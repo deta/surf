@@ -34,9 +34,9 @@ jobs:
       version: ${{ steps.next-nightly-version.outputs.version }}
 
     steps:
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.18.1
 
       - run: npm install semver
 
