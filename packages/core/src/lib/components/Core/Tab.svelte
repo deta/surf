@@ -24,6 +24,7 @@
   import { useTabsManager } from '../../service/tabs'
   import {
     ChangeContextEventTrigger,
+    CreateSpaceEventFrom,
     DeleteTabEventTrigger,
     OpenInMiniBrowserEventFrom,
     PageChatUpdateContextEventTrigger,
@@ -464,9 +465,13 @@
           icon: newContext.icon,
           text: newContext.label,
           action: async () => {
-            const space = await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab, {
-              newTab: false
-            })
+            const space = await oasis.createNewBrowsingSpace(
+              ChangeContextEventTrigger.Tab,
+              CreateSpaceEventFrom.ContextMenu,
+              {
+                newTab: false
+              }
+            )
             await handleMove(space.id, space.dataValue.folderName, true)
           }
         } as CtxItem,

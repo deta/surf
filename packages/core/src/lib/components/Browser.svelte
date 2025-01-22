@@ -3578,9 +3578,13 @@
           icon: newContext.icon,
           text: newContext.label,
           action: async () => {
-            const space = await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab, {
-              newTab: false
-            })
+            const space = await oasis.createNewBrowsingSpace(
+              ChangeContextEventTrigger.Tab,
+              CreateSpaceEventFrom.ContextMenu,
+              {
+                newTab: false
+              }
+            )
             await handleMove(space.id, space.dataValue.folderName, true)
           }
         } as CtxItem,
@@ -3850,7 +3854,10 @@
                 icon: generalContext.icon,
                 text: 'New Context',
                 action: async () => {
-                  await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.Tab)
+                  await oasis.createNewBrowsingSpace(
+                    ChangeContextEventTrigger.Tab,
+                    CreateSpaceEventFrom.ContextMenu
+                  )
                   toasts.success('New Context created!')
                 }
               },

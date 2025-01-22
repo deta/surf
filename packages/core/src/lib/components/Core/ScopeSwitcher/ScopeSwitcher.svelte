@@ -12,6 +12,7 @@
   import { contextMenu, type CtxItem } from '../ContextMenu.svelte'
   import {
     ChangeContextEventTrigger,
+    CreateSpaceEventFrom,
     DeleteSpaceEventTrigger,
     OpenHomescreenEventTrigger
   } from '@horizon/types'
@@ -106,9 +107,14 @@
     }
 
     if (spaceId === 'new') {
+      await oasis.createNewBrowsingSpace(
+        ChangeContextEventTrigger.ContextSwitcher,
+        CreateSpaceEventFrom.ContextSwitcher
+      )
+
       // Hide any overlay when creating new context
-      await oasis.createNewBrowsingSpace(ChangeContextEventTrigger.ContextSwitcher)
       toasts.success('New Context created!')
+
       await tick()
       tabsManager.showNewTabOverlay.set(0)
       await wait(100)

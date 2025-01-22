@@ -137,8 +137,6 @@
         inputElement.select()
       }
 
-      await telemetry.trackCreateSpace(CreateSpaceEventFrom.OasisSpacesView)
-
       return newSpace.id
     } catch (error) {
       log.error('Failed to create folder:', error)

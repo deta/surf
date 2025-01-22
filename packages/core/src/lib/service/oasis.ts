@@ -14,6 +14,7 @@ import {
 } from '@horizon/utils'
 import {
   ChangeContextEventTrigger,
+  CreateSpaceEventFrom,
   DeleteResourceEventTrigger,
   ResourceTagsBuiltInKeys,
   ResourceTypes
@@ -747,11 +748,19 @@ export class OasisService {
 
   async createNewBrowsingSpace(
     trigger: ChangeContextEventTrigger,
+    createFrom: CreateSpaceEventFrom,
     opts?: { switch?: boolean; newTab?: boolean }
   ) {
     const space = await this.createSpace({
       folderName: getFormattedDate(Date.now()),
       colors: pickRandomColorPair()
+    })
+
+    this.telemetry.trackCreateSpace(createFrom, {
+      isLiveSpace: false,
+      createdUsingAI: false,
+      numberOfPrompts: 0,
+      numberOfBlacklistedItems: 0
     })
 
     const options = Object.assign({ switch: true, newTab: true }, opts)

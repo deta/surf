@@ -260,6 +260,8 @@ export enum SearchOasisEventTrigger {
 }
 
 export enum CreateSpaceEventFrom {
+  // Created from context switcher inside tabs
+  ContextSwitcher = 'context_switcher',
   /** Space was created from the spaces view in Oasis */
   OasisSpacesView = 'oasis_spaces_view',
   /** Space was created from the space hover menu in the sidebar */

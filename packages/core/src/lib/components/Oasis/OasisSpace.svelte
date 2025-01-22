@@ -1219,7 +1219,8 @@
         toast?.success('Context deleted!')
       }
 
-      await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
+      if ($spaceData?.folderName !== '.tempspace')
+        telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
 
       return true
     } catch (error) {
