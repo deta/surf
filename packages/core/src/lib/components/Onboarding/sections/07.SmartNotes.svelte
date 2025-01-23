@@ -7,6 +7,8 @@
   import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
 
+  import { completedFeatures } from '../featured'
+
   export let modShortcut: string
 
   const dispatch = createEventDispatcher<{
@@ -20,6 +22,7 @@
   const handleChangeOnboardingNote = (e: CustomEvent<OnboardingNote>) => {
     if (e.detail.id === 'basics') {
       showLiveTip = false
+      $completedFeatures = [...$completedFeatures, '0.1.8']
     } else if (e.detail.id === 'usecases') {
       showHelperText = false
     }
@@ -111,7 +114,7 @@
       </div>
 
       <p class="text-sm text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
-        or try the intro above. 
+        or try the intro above.
       </p>
     </div> -->
   </div>
