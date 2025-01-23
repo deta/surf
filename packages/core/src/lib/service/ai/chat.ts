@@ -36,6 +36,7 @@ export type ChatMessageOptions = {
   limit?: number
   ragOnly?: boolean
   trigger?: PageChatMessageSentEventTrigger
+  onboarding?: boolean
 }
 
 export type ChatCompletionResponse = {
@@ -363,6 +364,7 @@ export class AIChat {
 
     const basicTelemtryData = {
       trigger: options.trigger,
+      onboarding: options.onboarding ?? false,
       contextSize: contextSize,
       numTabs: contextItemCount.tabs,
       numSpaces: contextItemCount.spaces,

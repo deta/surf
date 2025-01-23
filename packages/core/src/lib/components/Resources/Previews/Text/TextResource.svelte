@@ -39,6 +39,7 @@
     EventContext,
     GeneratePromptsEventTrigger,
     MentionEventType,
+    NoteCreateCitationEventTrigger,
     OpenInMiniBrowserEventFrom,
     PageChatMessageSentEventError,
     PageChatMessageSentEventTrigger,
@@ -84,6 +85,7 @@
   export let showTitle: boolean = true
   export let showOnboarding: boolean = false
   export let minimal: boolean = false
+  export let hideContextSwitcher: boolean = false
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
@@ -104,6 +106,7 @@
   }>()
 
   const onboardingNote = onboarding.note
+  const onboardingIndex = onboarding.idx
   const userSettings = config.settings
 
   const content = writable('')
@@ -365,6 +368,12 @@
 
         editor.commands.insertContentAt(position, citationElem)
       }
+
+      telemetry.trackNoteCreateCitation(
+        resource.type,
+        NoteCreateCitationEventTrigger.Drop,
+        showOnboarding
+      )
     }
 
     const processDropSpace = (space: OasisSpace) => {
@@ -385,6 +394,12 @@
           }
         ])
         .run()
+
+      telemetry.trackNoteCreateCitation(
+        DragTypeNames.SURF_SPACE,
+        NoteCreateCitationEventTrigger.Drop,
+        showOnboarding
+      )
     }
 
     if (drag.isNative) {
@@ -791,7 +806,7 @@
 
       const response = await chat.createChatCompletion(
         `${query} \n ${systemPrompt ?? ''}`,
-        { trigger },
+        { trigger, onboarding: showOnboarding },
         renderFunction
       )
 
@@ -899,7 +914,8 @@
         {
           systemPrompt: SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT,
           trigger: GeneratePromptsEventTrigger.Shortcut,
-          context: EventContext.Note
+          context: EventContext.Note,
+          onboarding: showOnboarding
         }
       )
 
@@ -925,7 +941,7 @@
       const mentions = editorElem.getMentions()
       const spaces = mentions.map((mention) => mention.id)
 
-      telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note)
+      telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, showOnboarding)
 
       hideInfoPopover()
 
@@ -968,7 +984,7 @@
       const { item, action } = e.detail
       const { id } = item
 
-      telemetry.trackNoteOpenMention(getMentionType(id), action)
+      telemetry.trackNoteOpenMention(getMentionType(id), action, showOnboarding)
 
       if (id === 'tabs') {
         return
@@ -1013,7 +1029,7 @@
     const { id } = e.detail
     log.debug('mention insert', id)
 
-    telemetry.trackNoteCreateMention(getMentionType(id))
+    telemetry.trackNoteCreateMention(getMentionType(id), showOnboarding)
   }
 
   const handleRewrite = async (e: CustomEvent<EditorRewriteEvent>) => {
@@ -1118,7 +1134,8 @@
       // await chat.contextManager.addEverythingContext()
 
       const result = await chat.similaritySearch(text, {
-        trigger: PageChatMessageSentEventTrigger.NoteSimilaritySearch
+        trigger: PageChatMessageSentEventTrigger.NoteSimilaritySearch,
+        onboarding: showOnboarding
       })
       const sources = result.filter((source) => source.resource_id !== resourceId)
 
@@ -1196,7 +1213,7 @@
 
       resourceManager.getResource(resourceId).then((resource) => {
         if (resource) {
-          telemetry.trackNoteInsertSimilarSource(resource?.type, summarized)
+          telemetry.trackNoteInsertSimilarSource(resource?.type, summarized, showOnboarding)
         }
       })
     } catch (e) {
@@ -1236,7 +1253,7 @@
         runSimilaritySearch($similarityResults.text, $similarityResults.range, false)
       }
 
-      telemetry.trackNoteChangeContext(getMentionType(e.detail))
+      telemetry.trackNoteChangeContext(getMentionType(e.detail), showOnboarding)
     } catch (e) {
       log.error('Error selecting context', e)
       toasts.error('Failed to select context')
@@ -1358,6 +1375,8 @@
       title = get(onboarding.note)?.title ?? 'Onboarding'
       content.set(get(onboarding.note)?.html ?? '')
 
+      let currentIdx = get(onboarding.idx)
+
       unsubscribeContent = onboarding.note.subscribe((note) => {
         title = note.title
         content.set(note.html)
@@ -1373,9 +1392,13 @@
           showSimilarityPopover()
         }
 
-        // if (editorElem) {
-        //   editorElem.setContent(note.html)
-        // }
+        const newIdx = get(onboarding.idx)
+        if (newIdx !== currentIdx) {
+          autofocus = true
+          showPrompts.set(false)
+          telemetry.trackNoteOnboardingChangeStep(newIdx, currentIdx)
+          currentIdx = newIdx
+        }
       })
 
       contentHash.set(generateContentHash($content))
@@ -1456,16 +1479,18 @@
 >
   <div class="content">
     {#if showTitle}
-      <div class="details">
-        <input
-          type="text"
-          placeholder="Note Title"
-          disabled={showOnboarding}
-          bind:value={title}
-          on:blur={handleTitleBlur}
-          on:keydown={handleTitleKeydown}
-          on:click
-        />
+      <div class="details-wrapper">
+        <div class="details">
+          <input
+            type="text"
+            placeholder="Note Title"
+            disabled={showOnboarding}
+            bind:value={title}
+            on:blur={handleTitleBlur}
+            on:keydown={handleTitleKeydown}
+            on:click
+          />
+        </div>
       </div>
     {/if}
 
@@ -1484,7 +1509,10 @@
             autocomplete={$isSmartNotesEnabled}
             floatingMenu={$isSmartNotesEnabled}
             readOnlyMentions={!$isSmartNotesEnabled}
-            bubbleMenu={$showBubbleMenu && $isSmartNotesEnabled && !minimal}
+            bubbleMenu={$showBubbleMenu &&
+              $isSmartNotesEnabled &&
+              !minimal &&
+              (showOnboarding ? $onboardingIndex > 2 : true)}
             bubbleMenuLoading={$bubbleMenuLoading}
             autoSimilaritySearch={$userSettings.auto_note_similarity_search && !minimal}
             enableRewrite={$userSettings.experimental_note_inline_rewrite}
@@ -1548,7 +1576,7 @@
         on:highlightWebviewText
         on:seekToTimestamp
       />
-    {:else}
+    {:else if !hideContextSwitcher}
       <div class="change-context-wrapper">
         <ChangeContextBtn
           spaces={oasis.spaces}
@@ -1593,16 +1621,23 @@
 
   .content {
     width: 100%;
-    max-width: 86ch;
     height: 100%;
     overflow: hidden;
     position: relative;
-    padding: 2em;
     padding-top: 3em;
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 2em;
+  }
+
+  .details-wrapper {
+    max-width: 730px;
+    width: 100%;
+    margin: auto;
+    padding: 0 2em;
+    box-sizing: content-box;
   }
 
   .details {
@@ -1612,6 +1647,7 @@
     gap: 1em;
     padding-bottom: 0.25em;
     border-bottom: 1px dashed #ddd;
+    width: 100%;
 
     input {
       font-size: 1.9em;
@@ -1680,7 +1716,7 @@
   }
 
   .change-context-wrapper {
-    position: fixed;
+    position: absolute;
     top: 1rem;
     right: 1rem;
     z-index: 100;
@@ -1725,9 +1761,14 @@
     flex-direction: column;
     gap: 1em;
     overflow: hidden;
+    width: 100%;
   }
 
   :global(.notes-editor-wrapper .editor-wrapper div.tiptap) {
+    max-width: 730px;
+    margin: auto;
+    padding: 0 2em;
+    box-sizing: content-box;
     padding-bottom: 12rem;
   }
 

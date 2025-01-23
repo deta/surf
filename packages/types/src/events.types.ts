@@ -86,6 +86,8 @@ export enum TelemetryEventTypes {
   NoteOpenMention = 'Note Open Mention',
   NoteInsertSimilarSource = 'Note Insert Similar Source',
   NoteChangeContext = 'Note Change Context',
+  NoteOnboardingChangeStep = 'Note Onboarding Change Step',
+  NoteCreateCitation = 'Note Create Citation',
 
   // Misc
   SetDefaultBrowser = 'Set Default Browser',
@@ -502,4 +504,8 @@ export enum MentionEventType {
 export enum SummarizeEventContentSource {
   Resource = 'resource',
   Citation = 'citation'
+}
+
+export enum NoteCreateCitationEventTrigger {
+  Drop = 'drop'
 }

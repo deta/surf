@@ -15,10 +15,13 @@
   }>()
 
   let showLiveTip = true
+  let showHelperText = true
 
   const handleChangeOnboardingNote = (e: CustomEvent<OnboardingNote>) => {
     if (e.detail.id === 'basics') {
       showLiveTip = false
+    } else if (e.detail.id === 'usecases') {
+      showHelperText = false
     }
   }
 </script>
@@ -43,7 +46,7 @@
 
       {#if showLiveTip}
         <div
-          class="absolute top-12 right-28 z-[10000] text-base md:!text-lg text-sky-900 bg-sky-500/20 rounded-full px-3 py-1"
+          class="absolute top-12 right-10 z-[10000] text-base md:!text-lg text-sky-900 bg-sky-500/20 rounded-full px-3 py-1"
         >
           This is live, try it out!
         </div>
@@ -52,13 +55,15 @@
       <TextResource
         resourceId="onboarding"
         showOnboarding
+        hideContextSwitcher
+        autofocus={false}
         on:change-onboarding-note={handleChangeOnboardingNote}
         on:highlightWebviewText
         on:seekToTimestamp
       />
     </div>
 
-    <div class="flex items-end gap-6 pr-6">
+    <div class="flex items-end gap-6 pr-6" class:opacity-0={!showHelperText}>
       <div class="flex-shrink-0 text-xl font-medium text-white pb-2">
         Go through the intro to learn more
       </div>

@@ -46,7 +46,8 @@ import {
   PromptType,
   GeneratePromptsEventTrigger,
   MentionEventType,
-  SummarizeEventContentSource
+  SummarizeEventContentSource,
+  NoteCreateCitationEventTrigger
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -56,6 +57,7 @@ import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'
 import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
+import { DragTypeNames } from '../types'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -579,6 +581,7 @@ export class Telemetry {
     chatModelName?: string
     error?: PageChatMessageSentEventError
     trigger?: PageChatMessageSentEventTrigger
+    onboarding?: boolean
   }) {
     UserStatsService.incStat('global_n_chat_message_sent')
 
@@ -594,7 +597,8 @@ export class Telemetry {
       chat_model_provider: stats.chatModelProvider,
       chat_model_name: stats.chatModelName,
       error: stats.error,
-      trigger: stats.trigger
+      trigger: stats.trigger,
+      onboarding: stats.onboarding
     })
   }
 
@@ -611,6 +615,7 @@ export class Telemetry {
     chatModelName?: string
     error?: PageChatMessageSentEventError
     trigger?: PageChatMessageSentEventTrigger
+    onboarding?: boolean
   }) {
     await this.trackEvent(TelemetryEventTypes.SimilaritySearch, {
       context_size: stats.contextSize,
@@ -624,7 +629,8 @@ export class Telemetry {
       chat_model_provider: stats.chatModelProvider,
       chat_model_name: stats.chatModelName,
       error: stats.error,
-      trigger: stats.trigger
+      trigger: stats.trigger,
+      onboarding: stats.onboarding
     })
   }
 
@@ -694,18 +700,24 @@ export class Telemetry {
     })
   }
 
-  async trackGeneratePrompts(context: EventContext, trigger: GeneratePromptsEventTrigger) {
+  async trackGeneratePrompts(
+    context: EventContext,
+    trigger: GeneratePromptsEventTrigger,
+    onboarding = false
+  ) {
     await this.trackEvent(TelemetryEventTypes.GeneratePrompts, {
       trigger,
-      context: context
+      context: context,
+      onboarding
     })
   }
 
-  async trackUsePrompt(type: PromptType, context: EventContext, name?: string) {
+  async trackUsePrompt(type: PromptType, context: EventContext, name?: string, onboarding = false) {
     await this.trackEvent(TelemetryEventTypes.UsePrompt, {
       type: type,
       context: context,
-      name
+      name,
+      onboarding
     })
   }
 
@@ -795,30 +807,61 @@ export class Telemetry {
     })
   }
 
-  async trackNoteCreateMention(type: MentionEventType) {
+  async trackNoteCreateMention(type: MentionEventType, onboarding = false) {
     await this.trackEvent(TelemetryEventTypes.NoteCreateMention, {
-      type
+      type,
+      onboarding
     })
   }
 
-  async trackNoteOpenMention(type: MentionEventType, target: MentionAction) {
+  async trackNoteOpenMention(type: MentionEventType, target: MentionAction, onboarding = false) {
     await this.trackEvent(TelemetryEventTypes.NoteOpenMention, {
       type,
-      target
+      target,
+      onboarding
     })
   }
 
-  async trackNoteInsertSimilarSource(resourceType: string, summarized: boolean) {
+  async trackNoteInsertSimilarSource(
+    resourceType: string,
+    summarized: boolean,
+    onboarding = false
+  ) {
     await this.trackEvent(TelemetryEventTypes.NoteInsertSimilarSource, {
       type: resourceType,
       kind: getPrimaryResourceType(resourceType),
-      summarized
+      summarized,
+      onboarding
     })
   }
 
-  async trackNoteChangeContext(type: MentionEventType) {
+  async trackNoteChangeContext(type: MentionEventType, onboarding = false) {
     await this.trackEvent(TelemetryEventTypes.NoteChangeContext, {
-      type
+      type,
+      onboarding
+    })
+  }
+
+  async trackNoteOnboardingChangeStep(to: number, from: number) {
+    await this.trackEvent(TelemetryEventTypes.NoteOnboardingChangeStep, {
+      to,
+      from
+    })
+  }
+
+  async trackNoteCreateCitation(
+    resourceTypeOrSpace: string,
+    trigger: NoteCreateCitationEventTrigger,
+    onboarding = false
+  ) {
+    await this.trackEvent(TelemetryEventTypes.NoteCreateCitation, {
+      type: resourceTypeOrSpace,
+      kind:
+        resourceTypeOrSpace === DragTypeNames.SURF_SPACE
+          ? 'space'
+          : getPrimaryResourceType(resourceTypeOrSpace),
+      trigger,
+      onboarding
     })
   }
 

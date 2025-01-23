@@ -259,6 +259,7 @@ export class AIService {
       systemPrompt?: string
       context?: EventContext
       trigger?: GeneratePromptsEventTrigger
+      onboarding?: boolean
     }
   ) {
     this.log.debug('Generating prompts for resource', data)
@@ -290,7 +291,8 @@ export class AIService {
     if (opts?.context || opts?.trigger) {
       this.telemetry.trackGeneratePrompts(
         opts.context ?? EventContext.Chat,
-        opts.trigger ?? GeneratePromptsEventTrigger.Click
+        opts.trigger ?? GeneratePromptsEventTrigger.Click,
+        opts.onboarding ?? false
       )
     }
 

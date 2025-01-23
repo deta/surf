@@ -14,6 +14,7 @@
   import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
   import type { MentionAction } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
+  import { TextSelection } from '@tiptap/pm/state'
 
   export let content: string
   export let readOnly: boolean = false
@@ -406,6 +407,20 @@
         focused = false
       }
     })
+
+    if (!autofocus) {
+      // place the cursor at the end of the content without effecting page focus
+      const { state } = $editor
+      const { tr } = state
+
+      const endPos = state.doc.content.size
+      const resolvedPos = tr.doc.resolve(endPos)
+      const selection = new TextSelection(resolvedPos)
+
+      tr.setSelection(selection)
+
+      $editor.view.dispatch(tr)
+    }
   })
 </script>
 
@@ -453,6 +468,8 @@
   .editor-wrapper {
     height: 100%;
     overflow-y: auto;
+    overscroll-behavior: auto;
+
     :global(#stuff-stack) &,
     :global(#tty-default) & {
       overflow-y: hidden;
