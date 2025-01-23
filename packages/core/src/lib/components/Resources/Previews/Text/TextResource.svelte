@@ -921,6 +921,7 @@
 
       if (!generatedPrompts) {
         log.error('Failed to generate prompts')
+        toasts.error('Failed to generate suggestions')
         generatingPrompts.set(false)
         return
       }
@@ -1405,6 +1406,8 @@
 
       contextManager = ai.createContextManager()
       contextManager.clear()
+
+      selectedContext.set('everything')
       return
     }
 

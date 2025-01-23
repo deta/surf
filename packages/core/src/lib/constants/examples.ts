@@ -57,13 +57,14 @@ export const builtInSpaces = [
 ] as WithRequired<SpaceData, 'folderName' | 'colors'>[]
 
 export const onboardingSpace = {
-  name: 'Alan Kay',
-  query: "Why hasn't the computer revolution happened yet and how is this tied to simplicity?",
+  name: 'Computing History',
+  query: "Why hasn't the computer revolution happened yet?",
   urls: [
     'https://de.wikipedia.org/wiki/Xerox_PARC',
     'https://www.youtube.com/watch?v=NdSD07U5uBs',
     'https://www.youtube.com/watch?v=oKg1hTOQXoY',
-    'https://de.wikipedia.org/wiki/Alan_Kay'
+    'https://de.wikipedia.org/wiki/Alan_Kay',
+    'https://arstechnica.com/gadgets/2023/03/plato-how-an-educational-computer-system-from-the-60s-shaped-the-future'
   ]
 }
 
