@@ -31,7 +31,7 @@ import {
   UserStats
 } from '@horizon/types'
 
-import { getUserConfig, getUserStats, updateUserConfig } from '../main/config'
+import { getUserConfig, getUserStats } from '../main/config'
 import {
   IPC_EVENTS_RENDERER,
   NewWindowRequest,
@@ -363,9 +363,6 @@ const api = {
     const res = await api.activateAppUsingKey(key, acceptedTerms)
     if (res.ok && (res.data as AppActivationResponse)) {
       IPC_EVENTS_RENDERER.storeAPIKey.send(res.data.api_key)
-      updateUserConfig({
-        activation_timestamp: Date.now()
-      })
     }
     return res
   },
