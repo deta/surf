@@ -49,6 +49,27 @@
 
 <style lang="scss">
   article {
+    @include utils.light-dark-custom(
+      'background-fill-mix',
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1),
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1)
+    );
+    @include utils.light-dark-custom(
+      'background-fill-mix-inverted',
+      rgba(0, 0, 0, 1),
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1),
+      rgba(255, 255, 255, 1)
+    );
+    @include utils.light-dark-custom(
+      'fill',
+      #fbf5ef,
+      rgba(0, 0, 0, 1),
+      color-mix(in srgb, var(--base-color), 55% var(--background-fill-mix))
+    );
+
     display: flex;
     align-items: center;
     justify-items: center;
@@ -61,14 +82,9 @@
       0 2px 5px 0 rgba(50, 50, 93, 0.04),
       0 1px 1.5px 0 rgba(0, 0, 0, 0.01);
 
-    color: var(--theme-text, var(--contrast-color));
-    background: #fffdf9;
-    border: 1px solid rgba(50, 50, 50, 0.25);
-
-    :global(.dark) & {
-      background: #1e293b;
-      border-color: #1e293b;
-    }
+    color: var(--contrast-color);
+    background: var(--fill);
+    border: 1px solid color-mix(in srgb, var(--fill), 25% var(--background-fill-mix-inverted));
 
     interpolate-size: allow-keywords;
     position: absolute;
