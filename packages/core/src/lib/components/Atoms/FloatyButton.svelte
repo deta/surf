@@ -1,6 +1,9 @@
 <!-- MagneticButton.svelte -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
+  import { generateUUID } from '@horizon/utils'
+
+  export let id: string = generateUUID()
 
   // Props with default configuration
   export let config = {
@@ -109,9 +112,16 @@
   })
 </script>
 
-<button bind:this={button} class={`magnetic-button ${class_name}`} on:click={onClick}>
+<button
+  bind:this={button}
+  class={`magnetic-button ${class_name}`}
+  on:click={onClick}
+  style={`view-transition-name: ${id}`}
+>
   {#if text}
     <span>{text}</span>
+  {:else}
+    <slot />
   {/if}
 </button>
 

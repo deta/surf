@@ -116,6 +116,7 @@
     height: fit-content;
     background: transparent;
     transform: translateX(-30px);
+    view-transition-name: desktop-preview-hitarea;
     &:hover {
       .desktop-preview {
         outline: 4px solid white;

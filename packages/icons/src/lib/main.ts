@@ -6,6 +6,7 @@ import Archive from './Icons/Archive.svelte'
 import Arrow from './Icons/Arrow.svelte'
 import ArrowBackUp from './Icons/ArrowBackUp.svelte'
 import ArrowAutoFitUp from './Icons/ArrowAutoFitUp.svelte'
+import Bolt from './Icons/Bolt.svelte'
 import Chat from './Icons/Chat.svelte'
 import ChevronLeft from './Icons/ChevronLeft.svelte'
 import ChevronRight from './Icons/ChevronRight.svelte'
@@ -114,6 +115,7 @@ export const icons = {
   arrow: Arrow,
   arrowbackup: ArrowBackUp,
   'arrow.autofit.up': ArrowAutoFitUp,
+  bolt: Bolt,
   'chevron.left': ChevronLeft,
   'chevron.right': ChevronRight,
   close: Close,
@@ -225,6 +227,7 @@ export {
   Add,
   AI,
   ArrowAutoFitUp,
+  Bolt,
   ChevronLeft,
   ChevronRight,
   Close,

@@ -60,7 +60,7 @@
 >
   <div class="inner-wrapper">
     <Notifications {teletype} />
-    <TeletypeCore>
+    <TeletypeCore on:input>
       <slot name="header" slot="header" />
     </TeletypeCore>
 

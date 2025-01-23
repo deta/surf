@@ -12,7 +12,9 @@
   import { Icon } from '@horizon/icons'
   import ActionPanel from './ActionPanel.svelte'
   import Lazy from './Lazy.svelte'
-  import { onMount, tick } from 'svelte'
+  import { onMount, tick, createEventDispatcher } from 'svelte'
+
+  const dispatch = createEventDispatcher()
 
   export let key: string | undefined = undefined
 
@@ -230,7 +232,7 @@
     inputElem?.focus()
   }
 
-  const handleInputKey = (e: KeyboardEvent) => {
+  const handleInputKey = async (e: KeyboardEvent) => {
     if (e.key === 'Backspace' && $inputValue.length === 0) {
       if ($currentAction?.forceSelection === true) return
 
@@ -260,6 +262,10 @@
         callAction(fallbackAction)
       }
     }
+  }
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    dispatch('input', inputElem.value)
   }
 
   const handleHelperClick = () => {
@@ -458,6 +464,7 @@
             bind:value={$inputValue}
             bind:this={inputElem}
             on:keydown={handleInputKey}
+            on:keyup={handleKeyUp}
             on:paste={(e) => e.stopPropagation()}
             {placeholder}
           />

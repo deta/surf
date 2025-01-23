@@ -24,9 +24,14 @@
 
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte'
-  import { get, readable, writable } from 'svelte/store'
+  import { get, readable, writable, derived } from 'svelte/store'
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
   import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
+  import NewFeatureDialog from '../Onboarding/Dialog/NewFeatureDialog.svelte'
+  import FloatyButton from '../Atoms/FloatyButton.svelte'
+  import { useLocalStorageStore } from '@horizon/utils'
+  import { Icon } from '@horizon/icons'
+  import { versions, completedFeatures, showFeatureModal } from '../Onboarding/featured'
 
   import DesktopPreview from '../Chat/DesktopPreview.svelte'
 
@@ -79,8 +84,16 @@
   const dispatch = createEventDispatcher<TeletypeEntryEvents>()
   const commandComposer = useCommandComposer(oasis, config, tabsManager)
   const userConfigSettings = config.settings
+
   let teletype: TeletypeSystem
   let unsubscribe: () => void
+
+  const inputValue = writable('')
+  const showWhatsNew = showFeatureModal
+
+  const hasUntriedFeatures = derived(completedFeatures, ($completedFeatures) =>
+    versions.some((v) => !$completedFeatures.includes(v.featureID))
+  )
 
   const searchEngine = writable($userConfigSettings.search_engine)
 
@@ -108,6 +121,11 @@
     teletype?.open()
   } else {
     teletype?.close()
+  }
+
+  const handleInput = (e: CustomEvent) => {
+    const input = e.detail
+    inputValue.set(input)
   }
 
   const handleSearch = async (value: string) => {
@@ -500,7 +518,7 @@
     nestedSearch: true
   }}
 >
-  <Teletype on:close>
+  <Teletype on:close on:input={handleInput}>
     <div slot="header" class="custom-header">
       <TeletypeHeader
         on:ask={handleAsk}
@@ -514,6 +532,42 @@
     </div>
   </Teletype>
 </TeletypeProvider>
+
+{#if $hasUntriedFeatures && $inputValue == ''}
+  {#if $showWhatsNew}
+    <NewFeatureDialog
+      on:dismiss={() => {
+        document.startViewTransition(() => {
+          showWhatsNew.set(false)
+        })
+      }}
+    />
+  {:else}
+    <div class="floaty-button">
+      <FloatyButton
+        onClick={() => {
+          document.startViewTransition(() => {
+            showWhatsNew.set(!$showWhatsNew)
+          })
+        }}
+        id="whatsnew"
+        config={{
+          attractionThreshold: 80,
+          snapThreshold: 90,
+          friction: 0.25,
+          attraction: 0.05,
+          maxVelocity: 12,
+          movementScale: 1.15,
+          scaleFactor: 1.075
+        }}
+      >
+        <div class="label">
+          <Icon name="bolt" /> <span>Whats New in Surf</span>
+        </div>
+      </FloatyButton>
+    </div>
+  {/if}
+{/if}
 
 <style lang="scss" is:global>
   :root {
@@ -563,6 +617,8 @@
   }
 
   :global(#tty-default) {
+    view-transition-name: teletype;
+    max-width: 100%;
     anchor-name: --teletype;
   }
 
@@ -598,6 +654,22 @@
     height: var(--drag-height, auto) !important;
     border-radius: 0.75em !important;
     overflow: clip !important;
+  }
+
+  .floaty-button {
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+
+    .label {
+      display: flex;
+      align-items: center;
+      margin-top: 2px;
+      gap: 2px;
+      height: 100%;
+    }
   }
 
   :global(.desktop-preview-wrapper) {
