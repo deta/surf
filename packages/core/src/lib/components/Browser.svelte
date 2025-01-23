@@ -25,7 +25,8 @@
     tooltip,
     type LogLevel,
     isMac,
-    isDev
+    isDev,
+    conditionalArrayItem
   } from '@horizon/utils'
   import {
     createResourcesFromFiles,
@@ -164,6 +165,8 @@
   import { provideNotifications } from '../service/notifications'
   import { UserStatsService } from '../service/userStats'
   import '$styles/tippy.scss'
+  import { floatyButtons } from './Atoms/floatyButtons'
+  import FloatyButton from './Atoms/FloatyButton.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -4347,7 +4350,7 @@
               on:Drop={({ detail }) => handleDropOnSpaceTab(detail)}
             >
               <div slot="tools" class="flex flex-row items-center space-x-2">
-                {#if horizontalTabs && showSidebarTools}
+                {#if horizontalTabs}
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
@@ -4365,8 +4368,84 @@
                       <span class="label">New Tab</span>
                     {/if}
                   </button>
+                  <button
+                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
+                    {horizontalTabs
+                      ? 'w-fit rounded-xl p-2'
+                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-"
+                    on:click|preventDefault={() => {
+                      toggleRightSidebar()
+                      $rightSidebarTab = 'chat'
+                    }}
+                    class:active={showRightSidebar}
+                    class:opacity-100={$showEndMask || horizontalTabs}
+                    class:opacity-0={!$showEndMask}
+                    class:pointer-events-auto={$showEndMask || horizontalTabs}
+                    class:pointer-events-none={!$showEndMask}
+                    use:floatyButtons={{
+                      buttons: [
+                        ...conditionalArrayItem($activeScopeId !== null, {
+                          component: FloatyButton,
+
+                          offsetX: -80,
+                          offsetY: 110,
+                          props: {
+                            text: 'Ask this Context',
+                            onClick: async () => {
+                              await new Promise((resolve) => setTimeout(resolve, 400))
+                              handleOpenSpaceAndChat(
+                                new CustomEvent('open-space-and-chat', {
+                                  detail: {
+                                    spaceId: $activeScopeId
+                                  }
+                                })
+                              )
+                            }
+                          }
+                        }),
+                        {
+                          component: FloatyButton,
+                          offsetX: -160,
+                          offsetY: 50,
+                          props: {
+                            text: 'Ask this Tab',
+                            onClick: async () => {
+                              await new Promise((resolve) => setTimeout(resolve, 400))
+                              const activeTabId = tabsManager.activeTabIdValue
+                              handleOpenTabChat(
+                                new CustomEvent('open-chat-with-tab', {
+                                  detail: activeTabId
+                                })
+                              )
+                            }
+                          }
+                        }
+                      ],
+                      springConfig: {
+                        stiffness: 0.15,
+                        damping: 0.6
+                      }
+                    }}
+                  >
+                    <Icon name="chat" size="20px" stroke-width="2" />
+                    {#if !horizontalTabs}
+                      <span class="label">New Tab</span>
+                    {/if}
+                  </button>
+                {:else if !horizontalTabs}
+                  <Ask
+                    {horizontalTabs}
+                    {showRightSidebar}
+                    scope={activeScopeId}
+                    rightSidebarTab={$rightSidebarTab}
+                    on:click={() => toggleRightSidebarTab('chat')}
+                    on:open-chat-with-tab={handleOpenTabChat}
+                    on:open-space-and-chat={handleOpenSpaceAndChat}
+                  />
                 {/if}
-                {#if showSidebarTools}
+
+                <!-- For now always shot chat button with floaty buttons -->
+                <!--{#if false && showSidebarTools}
                   {#if !horizontalTabs || (horizontalTabs && !showRightSidebar)}
                     <CustomPopover position={horizontalTabs ? 'top' : 'bottom'}>
                       <button
@@ -4374,6 +4453,7 @@
                         class="toolsButton no-drag transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2"
                         on:click={() => toggleRightSidebar()}
                       >
+                        kekw
                         <Icon name="triangle-square-circle" stroke-width="1.75" />
                       </button>
 
@@ -4407,78 +4487,9 @@
                       </div>
                     </CustomPopover>
                   {/if}
-                {:else if !horizontalTabs}
-                  <Ask
-                    {horizontalTabs}
-                    {showRightSidebar}
-                    scope={activeScopeId}
-                    rightSidebarTab={$rightSidebarTab}
-                    on:click={() => toggleRightSidebarTab('chat')}
-                    on:open-chat-with-tab={handleOpenTabChat}
-                    on:open-space-and-chat={handleOpenSpaceAndChat}
-                  />
-                {:else if horizontalTabs}
-                  <button
-                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
-                    {horizontalTabs
-                      ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center p-"
-                    on:click|preventDefault={() => tabsManager.showNewTab()}
-                    class:active={$showNewTabOverlay === 1}
-                    class:opacity-100={$showEndMask || horizontalTabs}
-                    class:opacity-0={!$showEndMask}
-                    class:pointer-events-auto={$showEndMask || horizontalTabs}
-                    class:pointer-events-none={!$showEndMask}
-                  >
-                    <Icon name="add" size="20px" stroke-width="2" />
-                    {#if !horizontalTabs}
-                      <span class="label">New Tab</span>
-                    {/if}
-                  </button>
-                {/if}
-                <!--<button
-                use:tooltip={{
-                  text: 'My Stuff (⌘ + O)',
-                  position: horizontalTabs ? 'left' : 'top'
-                }}
-                class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 "
-                on:click={() => ($showNewTabOverlay = 2)}
-                class:bg-sky-200={$showNewTabOverlay === 2}
-              >
-                <div
-                  id="oasis-zone"
-                  class="oasis-drop-zone"
-                  style="position: absolute; inset-inline: 10%; inset-block: 20%;"
-                  use:HTMLDragZone.action={{
-                    accepts: (drag) => {
-                      if (
-                        drag.isNative ||
-                        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-                        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-                        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-                      ) {
-                        return true
-                      }
-
-                      return false
-                    }
-                  }}
-                  on:Drop={(drag) => handleDropOnSpaceTab(drag, 'all')}
-                ></div>
-
-                <Icon name="save" />
-              </button>-->
+                {/if}-->
               </div>
             </SidebarMetaOverlay>
-
-            <!--<div
-              class="flex flex-row flex-shrink-0 w-full mx-auto"
-              style="justify-content: space-between;"
-              class:space-x-4={!horizontalTabs}
-            >
-              <!--<SaveVisualizer />
-              <RecentsStack />--
-            </div>-->
 
             <!-- TODO: (maxu): Figure out what this is.. windiws.? -->
             {#if horizontalTabs && showCustomWindowActions}
