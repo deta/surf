@@ -28,6 +28,7 @@ interface FloatyButtonsConfig {
     stiffness?: number
     damping?: number
   }
+  origin: string
   containerClass?: string
   buttonClass?: string
   trigger?: 'hover' | 'click'
@@ -58,6 +59,7 @@ export function floatyButtons(
   {
     buttons = [],
     springConfig = DEFAULT_SPRING_CONFIG,
+    origin = '',
     containerClass = '',
     buttonClass = '',
     trigger = 'hover',
@@ -148,7 +150,9 @@ export function floatyButtons(
       height: `${bounds.bottom - bounds.top}px`,
       pointerEvents: isExpanded ? 'auto' : 'none',
       zIndex: '100',
-      clipPath: `polygon(
+      clipPath:
+        origin === 'sidebar'
+          ? `polygon(
         0 0,
         100% 0,
         100% 100%,
@@ -156,6 +160,7 @@ export function floatyButtons(
         ${SAFE_AREA.width}px ${bounds.bottom - bounds.top - SAFE_AREA.height}px,
         0 ${bounds.bottom - bounds.top - SAFE_AREA.height}px
       )`
+          : undefined
     })
 
     node.appendChild(hitArea)
@@ -216,7 +221,10 @@ export function floatyButtons(
       })
     })
 
-    createSafeArea()
+    if (origin === 'sidebar') {
+      createSafeArea()
+    }
+
     createHitArea()
   }
 

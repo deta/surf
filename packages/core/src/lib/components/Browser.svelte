@@ -4389,6 +4389,7 @@
 
                           offsetX: -80,
                           offsetY: 110,
+                          origin: 'sidebar',
                           props: {
                             text: 'Ask this Context',
                             onClick: async () => {
