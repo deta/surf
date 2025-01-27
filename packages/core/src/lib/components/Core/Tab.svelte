@@ -139,7 +139,8 @@
 
   $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
   $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
-  $: isBookmarkedByUser = tab.type === 'page' && tab.resourceBookmarkedManually
+  $: isBookmarkedByUser =
+    tab.type === 'page' ? tab.resourceBookmarkedManually : tab.type === 'resource'
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
   $: isInsecureUrl = tab.type === 'page' && url && !checkIfSecureURL(url)
@@ -966,7 +967,7 @@
           </CustomPopover>
         {/if}
 
-        {#if tab.type === 'page'}
+        {#if tab.type === 'page' || tab.type === 'resource'}
           {#key isBookmarkedByUser}
             <SelectDropdown
               items={saveToSpaceItems}

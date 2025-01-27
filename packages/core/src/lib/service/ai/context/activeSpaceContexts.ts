@@ -1,7 +1,7 @@
 import { tick } from 'svelte'
 import { type Writable, type Readable, writable, derived, get } from 'svelte/store'
 
-import type { TabPage } from '../../../types'
+import type { TabPage, TabResource } from '../../../types'
 import type { OasisSpace } from '../../oasis'
 
 import { ContextItemBase } from './base'
@@ -122,16 +122,26 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
 
       if (this.include === 'everything' || this.include === 'tabs') {
         const scopedTabs = this.manager.tabsManager.tabsValue.filter(
-          (tab) => tab.type === 'page' && tab.scopeId === item.id
-        ) as TabPage[]
+          (tab) => tab.scopeId === item.id && (tab.type === 'page' || tab.type === 'resource')
+        ) as Array<TabPage | TabResource>
 
         const preparedResources = await Promise.all(
-          scopedTabs.map((tab) => this.manager.preparePageTab(tab))
+          scopedTabs.map(async (tab) => {
+            if (tab.type === 'page') {
+              const resource = await this.manager.preparePageTab(tab)
+              if (resource) {
+                return resource.id
+              } else {
+                return null
+              }
+            } else {
+              return tab.resourceId
+            }
+          })
         )
-        const scopedTabResourceIds = preparedResources
-          .filter(Boolean)
-          .map((resource) => resource!.id)
-        tabResources.push(...scopedTabResourceIds)
+
+        const tabResourceIds = preparedResources.filter(Boolean) as string[]
+        tabResources.push(...tabResourceIds)
       }
 
       return [...new Set([...contentResources, ...tabResources])]
@@ -155,16 +165,26 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
 
       if (this.include === 'everything' || this.include === 'tabs') {
         const unscopedTabs = this.manager.tabsManager.tabsValue.filter(
-          (tab) => tab.type === 'page' && !tab.scopeId
-        ) as TabPage[]
+          (tab) => !tab.scopeId && (tab.type === 'page' || tab.type === 'resource')
+        ) as Array<TabPage | TabResource>
 
         const preparedResources = await Promise.all(
-          unscopedTabs.map((tab) => this.manager.preparePageTab(tab))
+          unscopedTabs.map(async (tab) => {
+            if (tab.type === 'page') {
+              const resource = await this.manager.preparePageTab(tab)
+              if (resource) {
+                return resource.id
+              } else {
+                return null
+              }
+            } else {
+              return tab.resourceId
+            }
+          })
         )
-        const scopedTabResourceIds = preparedResources
-          .filter(Boolean)
-          .map((resource) => resource!.id)
-        tabResources.push(...scopedTabResourceIds)
+
+        const tabResourceIds = preparedResources.filter(Boolean) as string[]
+        tabResources.push(...tabResourceIds)
       }
 
       return [...new Set([...contentResources, ...tabResources])]

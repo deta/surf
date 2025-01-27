@@ -265,8 +265,8 @@
               resource.type.startsWith('video/') ||
               resource.type.startsWith('audio/')
             )
-          } else if ($selectedFilterType.id === 'documents') {
-            return resource.type.startsWith(ResourceTypes.DOCUMENT)
+          } else if ($selectedFilterType.id === 'notes') {
+            return resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
           } else if ($selectedFilterType.id === 'files') {
             return (
               !resource.type.startsWith('application/vnd.space.') &&
@@ -275,10 +275,7 @@
               !resource.type.startsWith('audio/')
             )
           } else if ($selectedFilterType.id === 'links') {
-            return (
-              resource.type.startsWith('application/vnd.space.') &&
-              !resource.type.startsWith(ResourceTypes.DOCUMENT)
-            )
+            return resource.type.startsWith('application/vnd.space.')
           } else {
             return true
           }

@@ -1178,7 +1178,37 @@
     try {
       const tab = $tabs.find((t: Tab) => t.id === tabId)
 
-      if (!tab || tab.type !== 'page') {
+      if (!tab) {
+        log.error('invalid tab for bookmarking', tab)
+        return { resource: null, isNew: false }
+      }
+
+      if (tab.type === 'resource') {
+        const resource = await resourceManager.getResource(tab.resourceId)
+        if (!resource) {
+          log.error('error creating resource', resource)
+          updateBookmarkingTabState(tabId, 'error')
+          toasts.error('Failed to save page!')
+          return { resource: null, isNew: false }
+        }
+
+        updateBookmarkingTabState(tabId, 'success')
+
+        if (!savedToSpace && tabsManager.activeScopeIdValue) {
+          await oasis.addResourcesToSpace(
+            tabsManager.activeScopeIdValue,
+            [resource.id],
+            SpaceEntryOrigin.ManuallyAdded
+          )
+          toasts.success(`Page saved to active Context!`)
+        } else if (savedToSpace) {
+          toasts.success('Page Saved to Context!')
+        } else {
+          toasts.success('Page Saved!')
+        }
+
+        return { resource, isNew: false }
+      } else if (tab.type !== 'page') {
         log.error('invalid tab for bookmarking', tab)
         return { resource: null, isNew: false }
       }
@@ -1868,21 +1898,28 @@
   const saveTabInSpace = async (tabId: string, space: OasisSpace) => {
     log.debug('save tab page to space', tabId, space)
     try {
-      const { resource } = await handleBookmark(tabId, true, SaveToOasisEventTrigger.Click)
-      log.debug('bookmarked resource', resource)
-      if (resource) {
-        log.debug('will add item', resource.id, 'to space', space.id)
-        await resourceManager.addItemsToSpace(
-          space.id,
-          [resource.id],
-          SpaceEntryOrigin.ManuallyAdded
-        )
-        // new resources are already tracked in the bookmarking function
-        await telemetry.trackAddResourceToSpace(
-          resource.type,
-          AddResourceToSpaceEventTrigger.TabMenu
-        )
+      const tab = $tabs.find((t: Tab) => t.id === tabId)
+      if (!tab) {
+        log.error('invalid tab for bookmarking', tab)
+        return
       }
+
+      let resource: Resource | null = null
+      if (tab.type === 'page' || tab.type === 'resource') {
+        const res = await handleBookmark(tabId, true, SaveToOasisEventTrigger.Click)
+        resource = res.resource
+        log.debug('bookmarked resource', resource)
+      }
+
+      if (!resource) {
+        log.error('no resource found for tab', tab)
+        return
+      }
+
+      log.debug('will add item', resource.id, 'to space', space.id)
+      await resourceManager.addItemsToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+      // new resources are already tracked in the bookmarking function
+      await telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.TabMenu)
     } catch (e) {
       log.error('Failed to add resource to space:', e)
     }
@@ -4151,6 +4188,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:chat-with-tab={handleOpenTabChat}
                       on:create-new-space={handleOpenCreateSpaceMenu}
@@ -4276,6 +4314,7 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
+                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
                       on:create-new-space={handleOpenCreateSpaceMenu}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:chat-with-tab={handleOpenTabChat}
