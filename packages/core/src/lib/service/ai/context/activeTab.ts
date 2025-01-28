@@ -169,10 +169,10 @@ export class ContextItemActiveTab extends ContextItemBase {
 
   debounceUpdateItem = useDebounce(() => this.updateItem(), 750)
 
-  async getResourceIds() {
+  async getResourceIds(prompt?: string) {
     const item = get(this.item)
     if (item) {
-      return item.getResourceIds()
+      return item.getResourceIds(prompt)
     } else {
       return []
     }

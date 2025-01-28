@@ -28,6 +28,20 @@
       <section class="section">
         <div class="info">
           <div class="title">
+            <h4>Use Wikipedia as a context for your note by mentioning <code>@wikipedia</code></h4>
+          </div>
+        </div>
+
+        <Switch
+          color="#ff4eed"
+          bind:checked={userConfigSettings.experimental_chat_web_search}
+          on:update
+        />
+      </section>
+
+      <section class="section">
+        <div class="info">
+          <div class="title">
             <h4>Automatically search for similar sources on text selection</h4>
           </div>
         </div>

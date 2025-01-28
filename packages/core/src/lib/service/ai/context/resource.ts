@@ -95,7 +95,7 @@ export class ContextItemResource extends ContextItemBase {
     } as ResourceContent
   }
 
-  async getResourceIds() {
+  async getResourceIds(_prompt?: string) {
     return [this.data.id]
   }
 

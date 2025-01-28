@@ -16,7 +16,7 @@ export class ContextItemHome extends ContextItemBase {
     this.label = writable('Home')
   }
 
-  async getResourceIds() {
+  async getResourceIds(_prompt?: string) {
     const unscopedTabs = this.manager.tabsManager.tabsValue.filter(
       (tab) => tab.type === 'page' && !tab.scopeId
     ) as TabPage[]

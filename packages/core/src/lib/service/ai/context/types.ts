@@ -15,7 +15,8 @@ export enum ContextItemTypes {
   ACTIVE_TAB = 'active-tab',
   ACTIVE_SPACE = 'active-space',
   HOME = 'home',
-  EVERYTHING = 'everything'
+  EVERYTHING = 'everything',
+  WIKIPEDIA = 'wikipedia'
 }
 
 export enum ContextItemIconTypes {

@@ -16,7 +16,7 @@ export class ContextItemEverything extends ContextItemBase {
     this.label = writable('All My Stuff')
   }
 
-  async getResourceIds() {
+  async getResourceIds(_prompt?: string) {
     const resourceIds = await this.manager.resourceManager.listResourceIDsByTags([
       ResourceManager.SearchTagDeleted(false),
       ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),

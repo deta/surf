@@ -109,7 +109,7 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
     }
   }
 
-  async getResourceIds() {
+  async getResourceIds(_prompt?: string) {
     const item = get(this.item)
     if (item) {
       let contentResources: string[] = []

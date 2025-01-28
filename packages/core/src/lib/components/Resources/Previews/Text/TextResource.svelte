@@ -15,6 +15,7 @@
 
   import { Resource, ResourceNote, useResourceManager } from '../../../../service/resources'
   import {
+    conditionalArrayItem,
     getFormattedDate,
     isMac,
     isModKeyPressed,
@@ -56,7 +57,10 @@
     type TabResource
   } from '@horizon/core/src/lib/types'
   import { AIChat, useAI, type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
-  import type { ContextManager } from '@horizon/core/src/lib/service/ai/contextManager'
+  import {
+    ContextItemTypes,
+    type ContextManager
+  } from '@horizon/core/src/lib/service/ai/contextManager'
   import {
     INLINE_TRANSFORM,
     SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
@@ -79,6 +83,7 @@
   import { OnboardingFeature } from '../../../Onboarding/onboardingScripts'
   import { Icon } from '@horizon/icons'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
+  import { createWikipediaAPI } from '@horizon/web-parser'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -97,6 +102,7 @@
   const telemetry = useTelemetry()
   const config = useConfig()
   const onboarding = useOnboardingNote(oasis)
+  const wikipediaAPI = createWikipediaAPI()
 
   const dispatch = createEventDispatcher<{
     'update-title': string
@@ -132,31 +138,40 @@
   let disableSimilaritySearch = false
   let tippyPopover: Instance<Props> | null = null
 
-  const builtInMentions = [
-    {
-      id: generalContext.id,
-      label: generalContext.label,
-      suggestionLabel: 'Home Context',
-      aliases: ['inbox', 'general'],
-      icon: 'icon;;circle-dot'
-    },
-    {
-      id: 'everything',
-      label: 'Surf',
-      suggestionLabel: 'Everything in Surf',
-      aliases: ['everything', 'all my stuff', 'all your stuff', 'surf'],
-      icon: 'icon;;save'
-    },
-    {
-      id: 'tabs',
-      label: 'Tabs',
-      suggestionLabel: 'Your Tabs',
-      aliases: ['tabs', 'context', 'active'],
-      icon: 'icon;;world'
-    }
-  ]
-
   const emptyPlaceholder = 'Start typing or hit space for suggestions…'
+
+  const builtInMentions = derived(userSettings, (userSettings) => {
+    return [
+      {
+        id: generalContext.id,
+        label: generalContext.label,
+        suggestionLabel: 'Home Context',
+        aliases: ['inbox', 'general'],
+        icon: 'icon;;circle-dot'
+      },
+      {
+        id: 'everything',
+        label: 'Surf',
+        suggestionLabel: 'Everything in Surf',
+        aliases: ['everything', 'all my stuff', 'all your stuff', 'surf'],
+        icon: 'icon;;save'
+      },
+      {
+        id: 'tabs',
+        label: 'Tabs',
+        suggestionLabel: 'Your Tabs',
+        aliases: ['tabs', 'context', 'active'],
+        icon: 'icon;;world'
+      },
+      ...conditionalArrayItem(userSettings.experimental_chat_web_search, {
+        id: 'wikipedia',
+        label: 'Wikipedia',
+        suggestionLabel: 'Search Wikipedia',
+        aliases: ['wiki'],
+        icon: 'favicon;;https://wikipedia.org'
+      })
+    ] as MentionItem[]
+  })
 
   const activeSpace = derived(
     [oasis.spaces, tabsManager.activeScopeId],
@@ -238,7 +253,7 @@
     }
   )
 
-  const mentionItems = derived([oasis.spaces], ([spaces]) => {
+  const mentionItems = derived([oasis.spaces, builtInMentions], ([spaces, builtInMentions]) => {
     const spaceItems = spaces
       .sort((a, b) => {
         return a.indexValue - b.indexValue
@@ -253,7 +268,7 @@
   })
 
   const isBuiltInMention = (id: string) => {
-    return builtInMentions.some((mention) => mention.id === id)
+    return $builtInMentions.some((mention) => mention.id === id)
   }
 
   const prepLoadingPhrases = [
@@ -688,6 +703,8 @@
         } else {
           chatContextManager.addActiveSpaceContext(undefined, undefined, 'resources')
         }
+      } else if (spaceId === 'wikipedia') {
+        chatContextManager.addWikipediaContext()
       } else {
         chatContextManager.addSpace(spaceId)
       }
@@ -811,6 +828,15 @@
       )
 
       log.debug('autocomplete response', response)
+
+      // Remove wikipedia context if it was added as we might have created temporary resource that we don't want to keep around
+      // Ignoring above for now citations to the resources otherwise won't work
+      // const wikipediaContext = chat.contextManager.itemsValue.find(
+      //   (item) => item.type === ContextItemTypes.WIKIPEDIA
+      // )
+      // if (wikipediaContext) {
+      //   chat.contextManager.removeContextItem(wikipediaContext.id)
+      // }
 
       if (response.error) {
         log.error('Error generating AI output', response.error)
@@ -1370,6 +1396,9 @@
   }
 
   onMount(async () => {
+    // @ts-ignore
+    window.wikipediaAPI = wikipediaAPI
+
     if (showOnboarding) {
       initialLoad = false
 

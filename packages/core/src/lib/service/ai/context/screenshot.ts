@@ -29,7 +29,7 @@ export class ContextItemScreenshot extends ContextItemBase {
     }
   }
 
-  async getResourceIds() {
+  async getResourceIds(_prompt?: string) {
     return []
   }
 

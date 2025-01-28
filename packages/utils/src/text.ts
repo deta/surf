@@ -5,3 +5,11 @@ export const truncate = (text: string, length: number) => {
 export const capitalize = (text: string) => {
   return text[0].toUpperCase() + text.slice(1)
 }
+
+export const optimisticParseJSON = (text: string) => {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}

@@ -32,7 +32,7 @@ export class ContextItemSpace extends ContextItemBase {
     })
   }
 
-  async getResourceIds() {
+  async getResourceIds(_prompt?: string) {
     const spaceContents = await this.manager.tabsManager.oasis.getSpaceContents(this.data.id)
     const filteredContents = spaceContents
       .filter((content) => content.manually_added !== SpaceEntryOrigin.Blacklisted)

@@ -110,6 +110,7 @@ export const getUserConfig = (path?: string) => {
       experimental_smart_notes: true,
       auto_note_similarity_search: false,
       experimental_note_inline_rewrite: false,
+      experimental_chat_web_search: false,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -232,6 +233,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.experimental_note_inline_rewrite === undefined) {
     storedConfig.settings.experimental_note_inline_rewrite = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_chat_web_search === undefined) {
+    storedConfig.settings.experimental_chat_web_search = false
     changedConfig = true
   }
 

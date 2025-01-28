@@ -306,8 +306,8 @@ export class AIChat {
     }
   }
 
-  async processContextItems() {
-    const resourceIds = await this.contextManager.getResourceIds()
+  async processContextItems(prompt: string) {
+    const resourceIds = await this.contextManager.getResourceIds(prompt)
     const inlineImages = await this.contextManager.getInlineImages()
     const usedScreenshots =
       this.contextItemsValue.filter((item) => item.type === 'screenshot').length > 0
@@ -379,7 +379,8 @@ export class AIChat {
     }
 
     try {
-      const { resourceIds, inlineImages, usedInlineScreenshot } = await this.processContextItems()
+      const { resourceIds, inlineImages, usedInlineScreenshot } =
+        await this.processContextItems(prompt)
       numInlineImages = inlineImages.length
 
       const inlineScreenshots = contextItems.filter((item) => item.type === 'screenshot')

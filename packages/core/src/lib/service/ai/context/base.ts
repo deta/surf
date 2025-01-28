@@ -91,7 +91,7 @@ export abstract class ContextItemBase {
     // no-op
   }
 
-  abstract getResourceIds(): Promise<string[]>
+  abstract getResourceIds(prompt?: string): Promise<string[]>
   abstract getInlineImages(): Promise<string[]>
   abstract generatePrompts(): Promise<ChatPrompt[]>
 }

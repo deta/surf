@@ -50,7 +50,7 @@
   }
 
   .content {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
     padding-left: 2.2rem;
     display: flex;
     flex-direction: column;

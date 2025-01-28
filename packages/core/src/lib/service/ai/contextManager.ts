@@ -30,6 +30,7 @@ import type { AIService, ChatPrompt } from './ai'
 import { ContextItemHome } from './context/home'
 import { ContextItemEverything } from './context/everything'
 import type { ActiveSpaceContextInclude } from './context/activeSpaceContexts'
+import { ContextItemWikipedia } from './context/wikipedia'
 
 export class ContextManager {
   key = 'active_chat_context'
@@ -690,6 +691,17 @@ export class ContextManager {
     this.addContextItem(item, trigger, index)
   }
 
+  async addWikipediaContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+    const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.WIKIPEDIA)
+    if (existingItem) {
+      this.log.debug('Wikipedia context already in context')
+      return
+    }
+
+    const item = new ContextItemWikipedia(this)
+    this.addContextItem(item, trigger, index)
+  }
+
   getItem(id: string) {
     const item = this.itemsValue.find((item) => item.id === id)
     if (item) {
@@ -808,9 +820,9 @@ export class ContextManager {
     this._items.set(updatedItems)
   }
 
-  async getResourceIds() {
+  async getResourceIds(prompt?: string) {
     const items = get(this._items)
-    const resourceIds = await Promise.all(items.map((item) => item.getResourceIds()))
+    const resourceIds = await Promise.all(items.map((item) => item.getResourceIds(prompt)))
     return [...new Set(resourceIds.flat())]
   }
 

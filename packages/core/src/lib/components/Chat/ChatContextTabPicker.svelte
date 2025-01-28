@@ -25,6 +25,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import {
+    conditionalArrayItem,
     getFileKind,
     getFileType,
     tooltip,
@@ -37,7 +38,7 @@
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { derived, writable, type Readable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@horizon/icons'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { ContextManager } from '@horizon/core/src/lib/service/ai/contextManager'
@@ -110,12 +111,15 @@
     aliases: ['everything']
   } as TabItem
 
-  const builtInItems: TabItem[] = [
-    activeTabItem,
-    activeContextItem,
-    homeContextItem,
-    everythingContextItem
-  ]
+  const wikipediaContextItem = {
+    id: 'wikipedia',
+    type: 'built-in',
+    label: 'Wikipedia Search',
+    value: `wikipedia`,
+    searchOnly: true,
+    icon: 'image;;https://en.wikipedia.org/static/favicon/wikipedia.ico',
+    aliases: ['wiki']
+  } as TabItem
 
   function tabToTabItem(tab: Tab) {
     return {
@@ -137,6 +141,16 @@
     } as TabItem
   }
 
+  const builtInItems = derived(userConfigSettings, (userConfigSettings) => {
+    return [
+      activeTabItem,
+      activeContextItem,
+      homeContextItem,
+      everythingContextItem,
+      ...conditionalArrayItem(userConfigSettings.experimental_chat_web_search, wikipediaContextItem)
+    ]
+  })
+
   const tabItems = derived(
     [
       searchResult,
@@ -146,7 +160,8 @@
       resourcesInContext,
       tabs,
       searchValue,
-      activeScopeId
+      activeScopeId,
+      builtInItems
     ],
     ([
       searchResult,
@@ -156,7 +171,8 @@
       resourcesInContext,
       tabs,
       searchValue,
-      activeScopeId
+      activeScopeId,
+      builtInItems
     ]) => {
       const filteredBuiltInItems = builtInItems.filter(
         (item) => contextItems.findIndex((ci) => ci.id === item.id) === -1
@@ -227,6 +243,8 @@
         contextManager.addHomeContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
       } else if (type === 'everything') {
         contextManager.addEverythingContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+      } else if (type === 'wikipedia') {
+        contextManager.addWikipediaContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
       }
 
       // $searchValue = ''
@@ -399,7 +417,7 @@
             <img
               src={item.iconUrl}
               alt={item.label}
-              class="w-full h-full object-contain"
+              class="w-full h-full object-contain flex-shrink-0"
               style="transition: transform 0.3s;"
               loading="lazy"
             />
@@ -410,7 +428,7 @@
               {/if}
             {/await}
           {:else if item.icon && item.type === 'built-in'}
-            <Icon name={item.icon} />
+            <DynamicIcon name={item.icon} size="14px" />
           {:else if item.icon}
             <FileIcon kind={item.icon} />
           {:else}
