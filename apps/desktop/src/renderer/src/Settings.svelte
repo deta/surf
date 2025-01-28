@@ -531,6 +531,14 @@
             on:update={handleSettingsUpdate}
           />
 
+          <SettingsOption
+            icon="circle-dot"
+            title="Show Contexts in Previews"
+            description="Show in which contexts a resource is saved in the resource preview."
+            bind:value={userConfigSettings.show_resource_contexts}
+            on:update={handleSettingsUpdate}
+          />
+
           <HomescreenOption
             bind:userConfigSettings
             on:update={handleSettingsUpdate}

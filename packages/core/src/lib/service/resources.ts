@@ -12,7 +12,6 @@ import {
 import { SFFS } from './sffs'
 import {
   type AiSFFSQueryResponse,
-  type CreateSpaceEntryInput,
   type SFFSResourceMetadata,
   type SFFSResourceTag,
   ResourceTypes,
@@ -24,10 +23,8 @@ import {
   type ResourceDataChatThread,
   type SFFSSearchResultEngine,
   ResourceTagsBuiltInKeys,
-  type ResourceTagsBuiltIn,
   type ResourceDataDocument,
   type SFFSSearchParameters,
-  type SFFSSearchProximityParameters,
   type SpaceEntry,
   type Space,
   type SpaceData,
@@ -50,7 +47,7 @@ import {
   type ResourceStateCombined
 } from '@horizon/types'
 import type TypedEmitter from 'typed-emitter'
-import { getContext, onDestroy, setContext, tick } from 'svelte'
+import { getContext, onDestroy, setContext } from 'svelte'
 import EventEmitter from 'events'
 import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@horizon/web-parser'
@@ -212,6 +209,7 @@ export class Resource {
   readDataPromise: Promise<Blob> | null // used to avoid duplicate reads
   dataUsed: number // number of times the data is being used
 
+  spaceIds: Writable<string[]>
   extractionState: Writable<ResourceState>
   postProcessingState: Writable<ResourceState>
   state: Readable<ResourceStateCombined>
@@ -241,6 +239,8 @@ export class Resource {
     this.rawData = null
     this.readDataPromise = null
     this.dataUsed = 0
+
+    this.spaceIds = writable(data.spaceIds ?? [])
 
     const stateMap = {
       [ResourceProcessingStateType.Pending]: 'running',
@@ -286,6 +286,10 @@ export class Resource {
         this.metadata?.sourceURI ||
         ''
     )?.href
+  }
+
+  get spaceIdsValue() {
+    return get(this.spaceIds)
   }
 
   private async readDataAsBlob() {
@@ -520,7 +524,7 @@ export class ResourceManager {
   sffs: SFFS
   telemetry: Telemetry
 
-  private eventEmitter: TypedEmitter<ResourceEvents>
+  eventEmitter: TypedEmitter<ResourceEvents>
 
   constructor(telemetry: Telemetry) {
     this.log = useLogScope('SFFSResourceManager')
@@ -796,12 +800,12 @@ export class ResourceManager {
   // }
 
   async getResourceAnnotations() {
-    const rawResults = await this.listResourcesByTags([
+    const resources = await this.listResourcesByTags([
       ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
       ResourceManager.SearchTagDeleted(false)
     ])
 
-    return rawResults.map((item) => this.findOrCreateResourceObject(item)) as ResourceAnnotation[]
+    return resources as ResourceAnnotation[]
   }
 
   async getResourcesFromSourceURL(url: string) {
@@ -835,13 +839,13 @@ export class ResourceManager {
   }
 
   async getAnnotationsForResource(id: string) {
-    const rawResults = await this.listResourcesByTags([
+    const resources = await this.listResourcesByTags([
       ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
       ResourceManager.SearchTagAnnotates(id),
       ResourceManager.SearchTagDeleted(false)
     ])
 
-    return rawResults.map((item) => this.findOrCreateResourceObject(item)) as ResourceAnnotation[]
+    return resources as ResourceAnnotation[]
   }
 
   async getRemoteResource(id: string, remoteURL: string) {
@@ -1296,7 +1300,20 @@ export class ResourceManager {
           (item) => item.resource_id === id && item.manually_added === origin
         ) === -1
     )
-    return await this.sffs.addItemsToSpace(space_id, newItems, origin)
+
+    const res = await this.sffs.addItemsToSpace(space_id, newItems, origin)
+
+    // update the spaceIds of the resources if we have them loaded
+    const loadedResources = get(this.resources)
+    loadedResources.map((r) => {
+      if (resourceIds.includes(r.id)) {
+        r.spaceIds.update((ids) => [...ids, space_id])
+      }
+
+      return r
+    })
+
+    return res
   }
 
   async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {

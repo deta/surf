@@ -95,6 +95,7 @@ impl Database {
                     resource_tags: None,
                     resource_annotations: None,
                     post_processing_job: None,
+                    space_ids: None,
                 })
             })?;
 

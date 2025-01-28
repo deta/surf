@@ -68,6 +68,7 @@ export interface SFFSRawCompositeResource {
   resource_tags?: SFFSRawResourceTag[]
   resource_annotations?: SFFSRawResource[]
   post_processing_job?: SFFSRawPostProcessingJob
+  space_ids?: string[]
 }
 
 export interface SFFSRawCard {

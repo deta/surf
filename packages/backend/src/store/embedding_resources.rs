@@ -197,6 +197,7 @@ impl Database {
                 resource_tags: None,
                 resource_annotations: None,
                 post_processing_job: None,
+                space_ids: None,
             })
         })?;
 
@@ -268,6 +269,7 @@ impl Database {
                 }),
                 resource_tags: None,
                 resource_annotations: None,
+                space_ids: None,
                 post_processing_job: if let Some(job_id) = job_id {
                     Some(PostProcessingJob {
                         id: job_id,

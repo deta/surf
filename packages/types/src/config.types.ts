@@ -50,6 +50,7 @@ export type UserSettings = {
   vision_image_tagging: boolean
   turntable_favicons: boolean
   auto_toggle_pip: boolean
+  show_resource_contexts: boolean
 }
 
 interface UserSession {

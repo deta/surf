@@ -74,6 +74,7 @@ export interface SFFSResource {
   tags?: SFFSResourceTag[]
   annotations?: SFFSResource[]
   postProcessingState?: ResourceProcessingState
+  spaceIds?: string[]
 }
 
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'

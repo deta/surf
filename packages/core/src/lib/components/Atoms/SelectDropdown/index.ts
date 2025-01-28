@@ -3,6 +3,7 @@ import type { Icons } from '@horizon/icons'
 export type SelectItem = {
   id: string
   label: string
+  disabled?: boolean
   icon?: Icons
   data: any
 }

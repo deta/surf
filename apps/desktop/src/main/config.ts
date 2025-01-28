@@ -122,7 +122,8 @@ export const getUserConfig = (path?: string) => {
       model_settings: [],
       vision_image_tagging: false,
       turntable_favicons: true,
-      auto_toggle_pip: false
+      auto_toggle_pip: false,
+      show_resource_contexts: false
     }
     setUserConfig(storedConfig as UserConfig)
   }
@@ -238,6 +239,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.experimental_chat_web_search === undefined) {
     storedConfig.settings.experimental_chat_web_search = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.show_resource_contexts === undefined) {
+    storedConfig.settings.show_resource_contexts = false
     changedConfig = true
   }
 

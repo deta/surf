@@ -111,12 +111,15 @@
   const userSettings = userConfig.settings
   const chatContext = ai.contextManager
   const tabsInContext = chatContext.tabsInContext
+  const selectedTabs = tabsManager.selectedTabs
+  const activeSpaceId = tabsManager.activeScopeId
 
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
-  const selectedTabs = tabsManager.selectedTabs
   const tabStyles = writable<string>('')
   const spaceSearchValue = writable<string>('')
+  const resource = writable<Resource | null>(null)
+  const resourceSpaceIds = writable<string[]>([])
 
   let addressInputEl: HTMLInputElement
   let spaceData: OasisSpace['data'] | null = null
@@ -131,16 +134,17 @@
 
   // TODO: CAN WE NUKE THIS SHIT?
   let space: OasisSpace | null = null
-  let pdfResource: Resource | null = null
 
   // Why is there no better way in Svelte :/
   $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
   $: isScopedMiniBrowserOpen = $isScopedMiniBrowserOpenStore ?? false
 
+  $: resourceSpaceIdsStore = $resource?.spaceIds
   $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
   $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
+  $: isSavedInSpace = $activeSpaceId && ($resourceSpaceIdsStore ?? []).includes($activeSpaceId)
   $: isBookmarkedByUser =
-    tab.type === 'page' ? tab.resourceBookmarkedManually : tab.type === 'resource'
+    tab.type === 'page' ? tab.resourceBookmarkedManually : tab.type === 'resource' && isSavedInSpace
   $: url =
     (tab.type === 'page' && (tab.currentLocation || tab.currentDetectedApp?.canonicalUrl)) || null
   $: isInsecureUrl = tab.type === 'page' && url && !checkIfSecureURL(url)
@@ -150,17 +154,13 @@
   $: showLiveSpaceButton = $userSettings.live_spaces && checkIfLiveSpacePossible(tab)
 
   $: {
-    if (
-      tab?.type === 'page' &&
-      tab.currentDetectedApp?.resourceType === 'application/pdf' &&
-      tab.resourceBookmark
-    ) {
-      resourceManager
-        .getResource(tab.resourceBookmark)
-        .then((resource) => (pdfResource = resource))
-        .catch((error) => console.error('error loading PDF resource:', error))
+    if (tab.type === 'page' && tab.resourceBookmark) {
+      fetchResource(tab.resourceBookmark)
+    } else if (tab.type === 'resource') {
+      fetchResource(tab.resourceId)
     }
   }
+
   $: if (tab.type === 'page' && !isEditing && !isRenamingTab) {
     if (hostname) {
       $inputUrl = isInsecureUrl ? `http://${hostname}` : hostname
@@ -171,6 +171,8 @@
   $: tabStyles.set(getTabStyles({ isActive, pinned, horizontalTabs, tab, isSelected }))
 
   $: hovered = isHovered && !isContextMenuOpen
+
+  $: resourceSpaceIds.set($resourceSpaceIdsStore ?? [])
 
   export const editAddress = async () => {
     isEditing = true
@@ -498,24 +500,31 @@
     }
   )
 
-  const saveToSpaceItems = derived([spaces, spaceSearchValue], ([spaces, searchValue]) => {
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            label: space.dataValue.folderName,
-            data: space
-          }) as SelectItem
+  const saveToSpaceItems = derived(
+    [spaces, spaceSearchValue, resourceSpaceIds],
+    ([spaces, searchValue, resourceSpaceIds]) => {
+      const spaceItems = spaces
+        .sort((a, b) => {
+          return a.indexValue - b.indexValue
+        })
+        .map(
+          (space) =>
+            ({
+              id: space.id,
+              label: space.dataValue.folderName,
+              disabled: resourceSpaceIds.includes(space.id),
+              icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
+              data: space
+            }) as SelectItem
+        )
+
+      if (!searchValue) return spaceItems
+
+      return spaceItems.filter((item) =>
+        item.label.toLowerCase().includes(searchValue.toLowerCase())
       )
-
-    if (!searchValue) return spaceItems
-
-    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
-  })
+    }
+  )
 
   const fetchSpace = async (id: string) => {
     try {
@@ -525,6 +534,15 @@
       }
     } catch (error) {
       log.error('Failed to fetch space:', error)
+    }
+  }
+
+  const fetchResource = async (id: string) => {
+    try {
+      if ($resource?.id === id) return
+      $resource = await resourceManager.getResource(id)
+    } catch (error) {
+      log.error('Failed to fetch resource:', error)
     }
   }
 
@@ -813,9 +831,9 @@
       (isActive && showClose && !pinned && hovered)}
   >
     <!--     style:view-transition-name="tab-icon-{tab.id}" -->
-    {#if pdfResource}
+    {#if $resource}
       <Image
-        src={`https://www.google.com/s2/favicons?domain=${pdfResource?.metadata?.sourceURI}&sz=48`}
+        src={`https://www.google.com/s2/favicons?domain=${$resource?.metadata?.sourceURI}&sz=48`}
         alt={tab.title}
         fallbackIcon="world"
       />

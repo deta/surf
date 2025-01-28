@@ -12,10 +12,10 @@
 
 <div class="item">
   <div class="icon">
-    {#if space}
-      <SpaceIcon folder={space} interactive={false} />
-    {:else if item.icon}
+    {#if item.icon}
       <Icon name={item.icon} />
+    {:else if space}
+      <SpaceIcon folder={space} interactive={false} />
     {/if}
   </div>
 

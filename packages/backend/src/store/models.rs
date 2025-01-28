@@ -831,6 +831,7 @@ pub struct CompositeResource {
     pub resource_tags: Option<Vec<ResourceTag>>,
     pub resource_annotations: Option<Vec<Resource>>,
     pub post_processing_job: Option<PostProcessingJob>,
+    pub space_ids: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

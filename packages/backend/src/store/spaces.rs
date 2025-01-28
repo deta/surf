@@ -147,4 +147,18 @@ impl Database {
         }
         Ok(result)
     }
+
+    pub fn list_space_ids_by_resource_id(&self, resource_id: &str) -> BackendResult<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT space_id FROM space_entries WHERE resource_id = ?1 AND manually_added = 1 ORDER BY created_at ASC",
+        )?;
+        let space_ids = stmt.query_map(rusqlite::params![resource_id], |row| {
+            Ok(row.get(0)?)
+        })?;
+        let mut result = Vec::new();
+        for space_id in space_ids {
+            result.push(space_id?);
+        }
+        Ok(result)
+    }
 }

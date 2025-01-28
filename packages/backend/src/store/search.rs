@@ -40,6 +40,7 @@ fn map_resource_and_metadata(
                 resource_tags: None,
                 resource_annotations: None,
                 post_processing_job: None,
+                space_ids: None,
             },
             distance: row.get(12).unwrap_or(None),
             ref_resource_id: ref_resource_id.clone(),

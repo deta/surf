@@ -42,11 +42,12 @@
     isMac,
     copyToClipboard,
     truncateURL,
-    conditionalArrayItem
+    conditionalArrayItem,
+    tooltip
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
-  import { useOasis } from '../../service/oasis'
+  import { useOasis, type OasisSpace } from '../../service/oasis'
   import {
     type Annotation,
     type Author,
@@ -55,7 +56,7 @@
     type Origin,
     type Source
   } from './Previews/Preview.svelte'
-  import Preview, { type ContentMode, type ViewMode } from './Previews/PreviewV2.svelte'
+  import Preview from './Previews/PreviewV2.svelte'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
@@ -67,7 +68,13 @@
   import { WebParser } from '@horizon/web-parser'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
-  import { getResourcePreview, type PreviewData } from '@horizon/core/src/lib/utils/resourcePreview'
+  import {
+    getResourcePreview,
+    type PreviewData,
+    type ContentMode,
+    type ViewMode
+  } from '@horizon/core/src/lib/utils/resourcePreview'
+  import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -113,26 +120,40 @@
 
   const spaces = oasis.spaces
   const resourceState = resource.state
+  const selectedSpaceId = oasis.selectedSpace
 
   let interactiveProp = interactive
 
   const isHovered = writable(false)
   const customTitleValue = writable(resource.metadata?.name ?? '')
 
-  const contextMenuSpaces = derived(spaces, (spaces) => {
+  const resourceSpaces = derived(
+    [spaces, resource.spaceIds, selectedSpaceId],
+    ([$spaces, $spaceIds, $selectedSpaceId]) => {
+      if (origin === 'stuff') {
+        return $spaces.filter(
+          (space) => $spaceIds.includes(space.id) && space.id !== $selectedSpaceId
+        )
+      }
+
+      return $spaces.filter((space) => $spaceIds.includes(space.id))
+    }
+  )
+
+  const contextMenuSpaces = derived([spaces, resource.spaceIds], ([spaces, resourceSpaceIds]) => {
     return spaces
       .filter(
         (e) =>
           e.id !== 'all' &&
           e.id !== 'inbox' &&
-          e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
-          !e.dataValue.builtIn
+          e.dataValue?.folderName?.toLowerCase() !== '.tempspace'
       )
       .map(
         (space) =>
           ({
             type: 'action',
-            icon: space,
+            icon: resourceSpaceIds.includes(space.id) ? 'check' : space,
+            disabled: resourceSpaceIds.includes(space.id),
             text: space.dataValue.folderName,
             action: async () => {
               try {
@@ -255,6 +276,12 @@
     })
 
     dispatch('load', resource.id)
+  }
+
+  const openSpace = (space: OasisSpace) => {
+    log.debug('Opening space', space.id)
+    tabsManager.showNewTabOverlay.set(2)
+    oasis.changeSelectedSpace(space.id)
   }
 
   const openResourceAsTab = (resourceId: string, opts?: CreateTabOptions) => {
@@ -694,6 +721,20 @@
       on:highlightWebviewText
       on:seekToTimestamp
     />
+
+    {#if $resourceSpaces.length > 0 && viewMode === 'card' && $userConfigSettings.show_resource_contexts}
+      <div class="contexts-wrapper">
+        {#each $resourceSpaces as space}
+          <div
+            class="context-item"
+            use:tooltip={{ text: space.dataValue.folderName, position: 'left' }}
+            on:click|preventDefault|stopPropagation={() => openSpace(space)}
+          >
+            <SpaceIcon folder={space} size="md" interactive={false} />
+          </div>
+        {/each}
+      </div>
+    {/if}
   {:else}
     <div class="loading-box">
       <span><!--<Icon name="spinner" size="12px" />-->Loading…</span>
@@ -910,5 +951,37 @@
     100% {
       opacity: 0.8;
     }
+  }
+
+  .contexts-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: absolute;
+    top: 1.1em;
+    right: 1.1em;
+    padding: 0.25rem;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(4px);
+    border-radius: 0.5rem;
+    width: fit-content;
+
+    &:hover {
+      background: rgba(255, 255, 255);
+
+      .context-item {
+        opacity: 1;
+      }
+    }
+  }
+
+  .context-item {
+    max-width: 1.25rem;
+    max-height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 125ms ease;
+    opacity: 0.75;
   }
 </style>
