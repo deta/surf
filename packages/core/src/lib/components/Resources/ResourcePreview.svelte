@@ -68,6 +68,8 @@
   import { WebParser } from '@horizon/web-parser'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
+  import { getResourcePreview, type PreviewData } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { useDesktopManager } from '../../service/desktop'
   import {
     getResourcePreview,
     type PreviewData,
@@ -99,6 +101,7 @@
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
+  const desktopManager = useDesktopManager()
   const oasis = useOasis()
   const toasts = useToasts()
   const config = useConfig()
@@ -565,6 +568,18 @@
         items: $contextMenuSpaces
       },
       { type: 'separator' }
+    ]),
+    ...conditionalArrayItem<CtxItem>(resource.type.startsWith('image/'), [
+      {
+        type: 'action',
+        icon: 'image',
+        text: 'Use as Background',
+        action: () => {
+          const dextop = get(desktopManager.activeDesktop)
+          if (!dextop) return
+          dextop.setBackgroundImage(resource.id)
+        }
+      }
     ]),
     ...conditionalArrayItem<CtxItem>(!!showOpenAsFile, [
       {
