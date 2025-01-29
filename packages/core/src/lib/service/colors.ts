@@ -71,7 +71,7 @@ export class ColorService {
   }
 
   destroy() {
-    for (const f of this.unsubscribers) f()
+    for (const f of this?.unsubscribers) f()
   }
 
   applyColorVariables(scheme: CustomColorData) {

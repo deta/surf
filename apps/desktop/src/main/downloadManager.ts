@@ -72,9 +72,15 @@ export function initDownloadManager(partition: string) {
     ipcMain.once(
       `download-path-response-${downloadId}`,
       async (_event, data: DownloadPathResponseMessage) => {
-        downloadItem.resume()
-
         const { path, copyToDownloads } = data
+
+        if (!path) {
+          log.error('No path received')
+          downloadItem.cancel()
+          return
+        }
+
+        downloadItem.resume()
 
         copyToUserDownloadsDirectory = copyToDownloads
         finalPath = path

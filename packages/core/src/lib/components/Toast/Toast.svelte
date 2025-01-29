@@ -1,11 +1,14 @@
 <script lang="ts">
   import type { Toast } from '../../service/toast'
   import { Icon } from '@horizon/icons'
+  import { createEventDispatcher } from 'svelte'
   import { scale } from 'svelte/transition'
 
   export let toast: Toast
   export let i: number
   export let outro = false
+
+  const dispatch = createEventDispatcher<{ dismiss: void }>()
 
   function intro(node: HTMLElement, opts: { clazz: string }) {
     node.classList.add(opts.clazz)
@@ -40,15 +43,15 @@
     </slot>
   </div>
 
-  <!-- {#if dismissible}
-      <button class="close" on:click={() => dispatch("dismiss")}>
-        <Icon name="close" />
-      </button>
-    {/if} -->
+  {#if toast.dismissable}
+    <button class="close" on:click={() => dispatch('dismiss')}>
+      <Icon name="close" size="15px" />
+    </button>
+  {/if}
 </article>
 
 <style lang="scss">
-  article {
+  .toast {
     @include utils.light-dark-custom(
       'background-fill-mix',
       rgba(255, 255, 255, 1),
@@ -99,7 +102,6 @@
     transform-origin: top center;
 
     white-space: nowrap;
-    overflow: hidden;
 
     &.starting {
       --scale: 0;
@@ -116,6 +118,10 @@
       &.text {
         opacity: 0;
       }
+    }
+
+    &:hover .close {
+      display: flex;
     }
 
     .text {
@@ -364,5 +370,23 @@
     .icon {
       color: SkyBlue;
     }
+  }
+
+  .close {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 50%;
+    color: var(--contrast-color);
+    background: var(--fill);
+    border: 1px solid color-mix(in srgb, var(--fill), 25% var(--background-fill-mix-inverted));
+    box-shadow:
+      0 0 0 1px rgba(50, 50, 93, 0.06),
+      0 2px 5px 0 rgba(50, 50, 93, 0.04),
+      0 1px 1.5px 0 rgba(0, 0, 0, 0.01);
   }
 </style>

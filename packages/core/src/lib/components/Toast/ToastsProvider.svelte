@@ -30,7 +30,12 @@
 {#if $toasts}
   <section class="toasts-wrapper">
     {#each $toasts.toReversed() as toast, i (toast.id)}
-      <Toast {toast} {i} outro={$willDismiss.has(toast.id)} />
+      <Toast
+        {toast}
+        {i}
+        outro={$willDismiss.has(toast.id)}
+        on:dismiss={() => service.dismiss(toast.id)}
+      />
     {/each}
   </section>
 {/if}

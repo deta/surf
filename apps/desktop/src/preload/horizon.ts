@@ -88,6 +88,386 @@ mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
 const webviewNewWindowHandlers: Record<number, (details: NewWindowRequest) => void> = {}
 
+const eventHandlers = {
+  onOpenURL: (callback: (details: OpenURL) => void) => {
+    return IPC_EVENTS_RENDERER.openURL.on((_, { url, active }) => {
+      try {
+        callback({ url, active })
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenOasis: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openOasis.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onStartScreenshotPicker: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.startScreenshotPicker.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenHistory: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openHistory.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onToggleRightSidebar: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.toggleRightSidebar.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onToggleRightSidebarTab: (callback: (tab: RightSidebarTab) => void) => {
+    return IPC_EVENTS_RENDERER.toggleRightSidebarTab.on((_, tab) => {
+      try {
+        callback(tab)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenCheatSheet: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openCheatSheet.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenInvitePage: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openInvitePage.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenDevtools: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openDevTools.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenFeedbackPage: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openFeedbackPage.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenWelcomePage: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openWelcomePage.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenImporter: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openImporter.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onBrowserFocusChange: (callback: (state: 'focused' | 'unfocused') => void) => {
+    return IPC_EVENTS_RENDERER.browserFocusChange.on((_, { state }) => {
+      try {
+        callback(state)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onAdBlockerStateChange: (callback: (partition: string, state: boolean) => void) => {
+    return IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
+      try {
+        callback(partition, state)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onTrackEvent: (
+    callback: (name: TelemetryEventTypes, properties: Record<string, any>) => void
+  ) => {
+    return IPC_EVENTS_RENDERER.trackEvent.on((_, { name, properties }) => {
+      try {
+        callback(name, properties)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onRequestDownloadPath: (
+    callback: (data: DownloadRequestMessage) => Promise<DownloadPathResponseMessage>
+  ) => {
+    return IPC_EVENTS_RENDERER.downloadRequest.on(async (_, data) => {
+      const res = await callback(data)
+      // TODO: refactor this to use the new event system
+      ipcRenderer.send(`download-path-response-${data.id}`, res)
+    })
+  },
+
+  onDownloadUpdated: (callback: (data: DownloadUpdatedMessage) => void) => {
+    return IPC_EVENTS_RENDERER.downloadUpdated.on((_, data) => {
+      callback(data)
+    })
+  },
+
+  onDownloadDone: (callback: (data: DownloadDoneMessage) => void) => {
+    return IPC_EVENTS_RENDERER.downloadDone.on((_, data) => {
+      callback(data)
+    })
+  },
+
+  onUserConfigSettingsChange: (callback: (settings: UserSettings) => void) => {
+    return IPC_EVENTS_RENDERER.userConfigSettingsChange.on((_, settings) => {
+      try {
+        userConfig.settings = settings
+        callback(settings)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onUserStatsChange: (callback: (stats: UserStats) => void) => {
+    return IPC_EVENTS_RENDERER.userStatsChange.on((_, stats) => {
+      try {
+        userStats = stats
+        callback(stats)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onGetPrompts: (callback: () => Promise<EditablePrompt[]>) => {
+    return IPC_EVENTS_RENDERER.requestPrompts.on(async (_event) => {
+      try {
+        const prompts = await callback()
+
+        IPC_EVENTS_RENDERER.setPrompts.send(prompts)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onUpdatePrompt: (callback: (id: string, content: string) => void) => {
+    return IPC_EVENTS_RENDERER.updatePrompt.on((_, { id, content }) => {
+      try {
+        callback(id, content)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onResetPrompt: (callback: (id: string) => void) => {
+    return IPC_EVENTS_RENDERER.resetPrompt.on((_, id) => {
+      try {
+        callback(id)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  // Used by the Settings page
+  onSetPrompts: (callback: (prompts: EditablePrompt[]) => void) => {
+    return IPC_EVENTS_RENDERER.setPrompts.on((_, prompts) => {
+      try {
+        callback(prompts)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onToggleSidebar: (callback: (visible?: boolean) => void) => {
+    return IPC_EVENTS_RENDERER.toggleSidebar.on((_, visible) => {
+      try {
+        callback(visible)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onToggleTabsPosition: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.toggleTabsPosition.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onToggleTheme: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.toggleTheme.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onCopyActiveTabURL: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.copyActiveTabUrl.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onCreateNewTab: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.createNewTab.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onCloseActiveTab: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.closeActiveTab.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onReloadActiveTab: (callback: (force: boolean) => void) => {
+    return IPC_EVENTS_RENDERER.reloadActiveTab.on((_, force) => {
+      try {
+        callback(force)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onTrackpadScrollStart: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.trackpadScrollStart.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onTrackpadScrollStop: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.trackpadScrollStop.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onNewWindowRequest: (callback: (details: NewWindowRequest) => void) => {
+    return IPC_EVENTS_RENDERER.newWindowRequest.on((_, details) => {
+      try {
+        if (!details.webContentsId) {
+          callback(details)
+          return
+        }
+
+        const handler = webviewNewWindowHandlers[details.webContentsId]
+        if (handler) {
+          handler(details)
+        }
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onResetBackgroundImage: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.resetBackgroundImage.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onImportedFiles: (callback: (files: File[]) => void) => {
+    return IPC_EVENTS_RENDERER.importedFiles.on(async (_, filePaths) => {
+      try {
+        const files = await Promise.all(
+          filePaths.map(async (filePath) => {
+            const fileBuffer = await fsp.readFile(filePath)
+            const fileName = path.basename(filePath)
+            const fileType = mime.lookup(fileName.toLowerCase()) || 'application/octet-stream'
+            return new File([fileBuffer], fileName, {
+              type: fileType
+            })
+          })
+        )
+
+        callback(files)
+      } catch (err) {
+        console.error('Failed to import files: ', err)
+      }
+    })
+  }
+}
+
 const api = {
   disableTabSwitchingShortcuts: DISABLE_TAB_SWITCHING_SHORTCUTS,
   SettingsWindowEntrypoint: SettingsWindowEntrypoint,
@@ -188,124 +568,6 @@ const api = {
     }
   },
 
-  onOpenURL: (callback: (details: OpenURL) => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openURL.on((_, { url, active }) => callback({ url, active }))
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenOasis: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openOasis.on((_) => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onStartScreenshotPicker: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.startScreenshotPicker.on((_) => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenHistory: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openHistory.on((_) => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  toggleRightSidebar: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.toggleRightSidebar.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onToggleRightSidebarTab: (callback: (tab: RightSidebarTab) => void) => {
-    try {
-      IPC_EVENTS_RENDERER.toggleRightSidebarTab.on((_, tab) => callback(tab))
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenCheatSheet: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openCheatSheet.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenInvitePage: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openInvitePage.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenDevtools: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openDevTools.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenFeedbackPage: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openFeedbackPage.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenWelcomePage: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openWelcomePage.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onOpenImporter: (callback: () => void) => {
-    try {
-      IPC_EVENTS_RENDERER.openImporter.on(() => callback())
-    } catch (error) {
-      // noop
-    }
-  },
-
-  onBrowserFocusChange: (callback: (state: 'focused' | 'unfocused') => void) => {
-    IPC_EVENTS_RENDERER.browserFocusChange.on((_, { state }) => {
-      callback(state)
-    })
-  },
-
-  onAdBlockerStateChange: (callback: (partition: string, state: boolean) => void) => {
-    IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
-      callback(partition, state)
-    })
-  },
-
-  onTrackEvent: (
-    callback: (name: TelemetryEventTypes, properties: Record<string, any>) => void
-  ) => {
-    try {
-      IPC_EVENTS_RENDERER.trackEvent.on((_, { name, properties }) => callback(name, properties))
-    } catch (error) {
-      // noop
-    }
-  },
-
   appIsReady: () => {
     IPC_EVENTS_RENDERER.appReady.send()
   },
@@ -329,28 +591,6 @@ const api = {
     }
 
     await api.setUserTelemetryId(userId)
-  },
-
-  onRequestDownloadPath: (
-    callback: (data: DownloadRequestMessage) => Promise<DownloadPathResponseMessage>
-  ) => {
-    IPC_EVENTS_RENDERER.downloadRequest.on(async (_, data) => {
-      const res = await callback(data)
-      // TODO: refactor this to use the new event system
-      ipcRenderer.send(`download-path-response-${data.id}`, res)
-    })
-  },
-
-  onDownloadUpdated: (callback: (data: DownloadUpdatedMessage) => void) => {
-    IPC_EVENTS_RENDERER.downloadUpdated.on((_, data) => {
-      callback(data)
-    })
-  },
-
-  onDownloadDone: (callback: (data: DownloadDoneMessage) => void) => {
-    IPC_EVENTS_RENDERER.downloadDone.on((_, data) => {
-      callback(data)
-    })
   },
 
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
@@ -382,20 +622,6 @@ const api = {
     IPC_EVENTS_RENDERER.updateUserStats.send(stats)
   },
 
-  onUserConfigSettingsChange: (callback: (settings: UserSettings) => void) => {
-    IPC_EVENTS_RENDERER.userConfigSettingsChange.on((_, settings) => {
-      userConfig.settings = settings
-      callback(settings)
-    })
-  },
-
-  onUserStatsChange: (callback: (stats: UserStats) => void) => {
-    IPC_EVENTS_RENDERER.userStatsChange.on((_, stats) => {
-      userStats = stats
-      callback(stats)
-    })
-  },
-
   openInvitePage: () => {
     IPC_EVENTS_RENDERER.openInvitePage.send()
   },
@@ -425,27 +651,6 @@ const api = {
     return IPC_EVENTS_RENDERER.isDefaultBrowser.invoke()
   },
 
-  onGetPrompts: (callback: () => Promise<EditablePrompt[]>) => {
-    IPC_EVENTS_RENDERER.requestPrompts.on(async (_event) => {
-      const prompts = await callback()
-
-      IPC_EVENTS_RENDERER.setPrompts.send(prompts)
-    })
-  },
-
-  onUpdatePrompt: (callback: (id: string, content: string) => void) => {
-    IPC_EVENTS_RENDERER.updatePrompt.on((_, { id, content }) => callback(id, content))
-  },
-
-  onResetPrompt: (callback: (id: string) => void) => {
-    IPC_EVENTS_RENDERER.resetPrompt.on((_event, id) => callback(id))
-  },
-
-  // Used by the Settings page
-  onSetPrompts: (callback: (prompts: EditablePrompt[]) => void) => {
-    IPC_EVENTS_RENDERER.setPrompts.on((_, prompts) => callback(prompts))
-  },
-
   // Used by the Settings page
   getPrompts: () => {
     IPC_EVENTS_RENDERER.requestPrompts.send()
@@ -469,56 +674,6 @@ const api = {
     }
   },
 
-  onToggleSidebar: (callback: (visible?: boolean) => void) => {
-    IPC_EVENTS_RENDERER.toggleSidebar.on((_, visible) => callback(visible))
-  },
-
-  onToggleTabsPosition: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.toggleTabsPosition.on((_) => callback())
-  },
-
-  onToggleTheme: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.toggleTheme.on((_) => callback())
-  },
-
-  onCopyActiveTabURL: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.copyActiveTabUrl.on((_) => callback())
-  },
-
-  onCreateNewTab: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.createNewTab.on((_) => callback())
-  },
-
-  onCloseActiveTab: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.closeActiveTab.on((_) => callback())
-  },
-
-  onReloadActiveTab: (callback: (force: boolean) => void) => {
-    IPC_EVENTS_RENDERER.reloadActiveTab.on((_, force) => callback(force))
-  },
-
-  onTrackpadScrollStart: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.trackpadScrollStart.on((_) => callback())
-  },
-
-  onTrackpadScrollStop: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.trackpadScrollStop.on((_) => callback())
-  },
-
-  onNewWindowRequest: (callback: (details: NewWindowRequest) => void) => {
-    IPC_EVENTS_RENDERER.newWindowRequest.on((_, details) => {
-      if (!details.webContentsId) {
-        callback(details)
-        return
-      }
-
-      const handler = webviewNewWindowHandlers[details.webContentsId]
-      if (handler) {
-        handler(details)
-      }
-    })
-  },
-
   showAppMenuPopup: () => {
     IPC_EVENTS_RENDERER.showAppMenuPopup.send()
   },
@@ -527,30 +682,7 @@ const api = {
     IPC_EVENTS_RENDERER.resetBackgroundImage.send()
   },
 
-  onResetBackgroundImage: (callback: () => void) => {
-    IPC_EVENTS_RENDERER.resetBackgroundImage.on((_) => callback())
-  },
-
-  onImportedFiles: (callback: (files: File[]) => void) => {
-    IPC_EVENTS_RENDERER.importedFiles.on(async (_, filePaths) => {
-      try {
-        const files = await Promise.all(
-          filePaths.map(async (filePath) => {
-            const fileBuffer = await fsp.readFile(filePath)
-            const fileName = path.basename(filePath)
-            const fileType = mime.lookup(fileName.toLowerCase()) || 'application/octet-stream'
-            return new File([fileBuffer], fileName, {
-              type: fileType
-            })
-          })
-        )
-
-        callback(files)
-      } catch (err) {
-        console.error('Failed to import files: ', err)
-      }
-    })
-  }
+  ...eventHandlers
 }
 
 export class ResourceHandle {
@@ -990,6 +1122,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('preloadEvents', eventHandlers)
     contextBridge.exposeInMainWorld('backend', {
       sffs,
       resources
@@ -1004,6 +1137,9 @@ if (process.contextIsolated) {
   window.api = api
   // @ts-ignore (define in dts)
   window.backend = { sffs, resources }
+  // @ts-ignore (define in dts)
+  window.preloadEvents = eventHandlers
 }
 
 export type API = typeof api
+export type PreloadEventHandlers = typeof eventHandlers

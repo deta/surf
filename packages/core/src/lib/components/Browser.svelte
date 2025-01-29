@@ -26,7 +26,8 @@
     type LogLevel,
     isMac,
     isDev,
-    conditionalArrayItem
+    conditionalArrayItem,
+    shortenFilename
   } from '@horizon/utils'
   import {
     createResourcesFromFiles,
@@ -2454,12 +2455,6 @@
   onMount(() => {
     initResourceDebugger(resourceManager)
 
-    window.api.onBrowserFocusChange((state) => {
-      if (state === 'unfocused') {
-        Dragcula.get().cleanupDragOperation()
-      }
-    })
-
     const unsubscribeCreated = tabsManager.on('created', (tab, active) => {
       checkScroll()
 
@@ -2558,6 +2553,7 @@
     }
   })
 
+  const mountUnsubscribers: (() => void)[] = []
   onMount(async () => {
     window.addEventListener('resize', handleResize)
 
@@ -2576,8 +2572,29 @@
 
     await telemetry.init(userConfig, config)
 
-    // Handle new window requests from webviews
-    window.api.onNewWindowRequest((details) => {
+    // Proxy the preload events to ensure that we unsubscribe from them
+    const horizonPreloadEvents: typeof window.preloadEvents = {} as typeof window.preloadEvents
+    for (const [key, value] of Object.entries(window.preloadEvents)) {
+      if (typeof value === 'function') {
+        horizonPreloadEvents[key as keyof typeof window.preloadEvents] = (...args: any[]) => {
+          const unsubscribe = (value as Function).apply(window.preloadEvents, args)
+          if (typeof unsubscribe === 'function') {
+            mountUnsubscribers.push(unsubscribe)
+          }
+          return unsubscribe
+        }
+      } else {
+        horizonPreloadEvents[key as keyof typeof window.preloadEvents] = value
+      }
+    }
+
+    horizonPreloadEvents.onBrowserFocusChange((state) => {
+      if (state === 'unfocused') {
+        Dragcula.get().cleanupDragOperation()
+      }
+    })
+
+    horizonPreloadEvents.onNewWindowRequest((details) => {
       log.debug('new window request', details)
 
       const { disposition, url } = details
@@ -2590,65 +2607,69 @@
       openUrlHandler(url, active)
     })
 
-    window.api.onOpenURL((details) => {
+    horizonPreloadEvents.onOpenURL((details) => {
       openUrlHandler(details.url, details.active)
     })
 
-    window.api.onTrackpadScrollStart(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStart())
-    window.api.onTrackpadScrollStop(() => $browserTabs[$activeTabId]?.handleTrackpadScrollStop())
+    horizonPreloadEvents.onTrackpadScrollStart(() =>
+      $browserTabs[$activeTabId]?.handleTrackpadScrollStart()
+    )
+    horizonPreloadEvents.onTrackpadScrollStop(() =>
+      $browserTabs[$activeTabId]?.handleTrackpadScrollStop()
+    )
 
-    window.api.onGetPrompts(() => {
+    horizonPreloadEvents.onGetPrompts(() => {
       return getPrompts()
     })
 
-    window.api.onUpdatePrompt((id, content) => {
+    horizonPreloadEvents.onUpdatePrompt((id, content) => {
       telemetry.trackUpdatePrompt(PromptType.BuiltIn, id)
 
       return updatePrompt(id as PromptIDs, content)
     })
 
-    window.api.onResetPrompt((id) => {
+    horizonPreloadEvents.onResetPrompt((id) => {
       telemetry.trackResetPrompt(PromptType.BuiltIn, id)
       return resetPrompt(id as PromptIDs)
     })
 
-    window.api.onToggleSidebar((visible) => {
+    horizonPreloadEvents.onToggleSidebar((visible) => {
       changeLeftSidebarState(visible)
     })
 
-    window.api.onToggleTabsPosition(() => {
+    horizonPreloadEvents.onToggleTabsPosition(() => {
       handleToggleHorizontalTabs()
     })
 
-    window.api.onToggleTheme(() => {
+    horizonPreloadEvents.onToggleTheme(() => {
       handleToggleTheme()
     })
 
-    window.api.onCopyActiveTabURL(() => {
+    horizonPreloadEvents.onCopyActiveTabURL(() => {
       handleCopyLocation()
     })
 
-    window.api.onOpenFeedbackPage(() => {
+    horizonPreloadEvents.onOpenFeedbackPage(() => {
       openFeedback()
     })
 
-    window.api.onOpenWelcomePage(() => {
+    horizonPreloadEvents.onOpenWelcomePage(() => {
       openWelcomeTab()
     })
 
-    window.api.onOpenImporter(() => {
+    horizonPreloadEvents.onOpenImporter(() => {
       openImporterTab()
     })
 
-    window.api.onOpenCheatSheet(() => {
+    horizonPreloadEvents.onOpenCheatSheet(() => {
       openCheatSheet()
     })
 
-    window.api.onOpenInvitePage(() => {
+    horizonPreloadEvents.onOpenInvitePage(() => {
       openInvitePage()
     })
 
-    window.api.onOpenDevtools(() => {
+    horizonPreloadEvents.onOpenDevtools(() => {
       const activeTabMiniBrowserSelected = getActiveMiniBrowser()
       if (activeTabMiniBrowserSelected && activeTabMiniBrowserSelected.selected.browserTab) {
         activeTabMiniBrowserSelected.selected.browserTab.openDevTools()
@@ -2658,7 +2679,7 @@
       $activeBrowserTab?.openDevTools()
     })
 
-    window.api.onOpenOasis(() => {
+    horizonPreloadEvents.onOpenOasis(() => {
       if ($showNewTabOverlay === 2) {
         $showNewTabOverlay = 0
       } else {
@@ -2666,7 +2687,7 @@
       }
     })
 
-    window.api.onStartScreenshotPicker(() => {
+    horizonPreloadEvents.onStartScreenshotPicker(() => {
       setShowNewTabOverlay(0)
       if ($showScreenshotPicker === false) {
         openScreenshotPicker()
@@ -2675,20 +2696,20 @@
       }
     })
 
-    window.api.onOpenHistory(() => {
+    horizonPreloadEvents.onOpenHistory(() => {
       setShowNewTabOverlay(0)
       createHistoryTab()
     })
 
-    window.api.toggleRightSidebar(() => {
+    horizonPreloadEvents.onToggleRightSidebar(() => {
       toggleRightSidebar()
     })
 
-    window.api.onToggleRightSidebarTab((tab) => {
+    horizonPreloadEvents.onToggleRightSidebarTab((tab) => {
       toggleRightSidebarTab(tab)
     })
 
-    window.api.onCreateNewTab(() => {
+    horizonPreloadEvents.onCreateNewTab(() => {
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
         if ($userConfigSettings.homescreen_link_cmdt) {
@@ -2705,7 +2726,7 @@
       }
     })
 
-    window.api.onCloseActiveTab(() => {
+    horizonPreloadEvents.onCloseActiveTab(() => {
       const activeTabMiniBrowserSelected = getActiveMiniBrowser()
       if (activeTabMiniBrowserSelected) {
         activeTabMiniBrowserSelected.miniBrowser.close()
@@ -2715,7 +2736,7 @@
       tabsManager.deleteActive(DeleteTabEventTrigger.Shortcut)
     })
 
-    window.api.onReloadActiveTab((force) => {
+    horizonPreloadEvents.onReloadActiveTab((force) => {
       if ($showNewTabOverlay !== 0) return
 
       const activeTabMiniBrowserSelected = getActiveMiniBrowser()
@@ -2736,7 +2757,7 @@
       }
     })
 
-    window.api.onImportedFiles(async (files: File[]) => {
+    horizonPreloadEvents.onImportedFiles(async (files: File[]) => {
       const toast = toasts.loading('Importing files...')
       try {
         log.debug('imported files', files)
@@ -2753,168 +2774,188 @@
       }
     })
 
-    // truncate filename if it's too long but make sure the extension is preserved
-    const shortenFilename = (raw: string, max = 30) => {
-      const extension = raw.slice(raw.lastIndexOf('.'))
-      const name = raw.slice(0, raw.lastIndexOf('.'))
+    horizonPreloadEvents.onRequestDownloadPath(async (data) => {
+      let toast: ToastItem | null = null
+      try {
+        await tick()
 
-      return name.length > max ? `${name.slice(0, max)}[...]${extension}` : raw
-    }
+        const downloadIntercepter = get(downloadIntercepters).get(data.url)
+        const existingDownload = downloadResourceMap.get(data.id)
+        if (existingDownload) {
+          log.debug('download already in progress', data)
+          return {
+            path: existingDownload.savePath,
+            copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
+          }
+        }
 
-    window.api.onRequestDownloadPath(async (data) => {
-      await tick()
+        const downloadData: Download = {
+          id: data.id,
+          url: data.url,
+          filename: shortenFilename(data.filename),
+          mimeType: data.mimeType,
+          startTime: data.startTime,
+          totalBytes: data.totalBytes,
+          contentDisposition: data.contentDisposition,
+          savePath: '',
+          resourceId: ''
+        }
 
-      const downloadIntercepter = get(downloadIntercepters).get(data.url)
-      const existingDownload = downloadResourceMap.get(data.id)
-      if (existingDownload) {
-        log.debug('download already in progress', data)
+        downloadResourceMap.set(data.id, downloadData)
+
+        log.debug('new download request', downloadData)
+
+        if (!downloadIntercepter) {
+          toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
+          downloadToastsMap.set(data.id, toast)
+        }
+
+        // TODO: add metadata/tags here
+        const resource = await resourceManager.createResource(
+          data.mimeType,
+          undefined,
+          {
+            name: data.filename,
+            sourceURI: data.url
+          },
+          [
+            ResourceTag.download(),
+            ...(downloadIntercepter
+              ? [
+                  ResourceTag.silent(),
+                  ResourceTag.createdForChat(),
+                  ResourceTag.canonicalURL(data.url)
+                ]
+              : [])
+          ]
+        )
+
+        log.debug('resource for download created', downloadData, resource)
+
+        downloadData.resourceId = resource.id
+        downloadData.savePath = resource.path
+        downloadResourceMap.set(data.id, downloadData)
+
         return {
-          path: existingDownload.savePath,
+          path: downloadData.savePath,
           copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
         }
-      }
+      } catch (err) {
+        log.error('download path error', err)
 
-      const downloadData: Download = {
-        id: data.id,
-        url: data.url,
-        filename: shortenFilename(data.filename),
-        mimeType: data.mimeType,
-        startTime: data.startTime,
-        totalBytes: data.totalBytes,
-        contentDisposition: data.contentDisposition,
-        savePath: '',
-        resourceId: ''
-      }
+        if (toast) {
+          toast.error(`Download of "${data.filename}" failed`)
+        }
 
-      downloadResourceMap.set(data.id, downloadData)
-
-      log.debug('new download request', downloadData)
-
-      if (!downloadIntercepter) {
-        const toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
-        downloadToastsMap.set(data.id, toast)
-      }
-
-      // TODO: add metadata/tags here
-      const resource = await resourceManager.createResource(
-        data.mimeType,
-        undefined,
-        {
-          name: data.filename,
-          sourceURI: data.url
-        },
-        [
-          ResourceTag.download(),
-          ...(downloadIntercepter
-            ? [
-                ResourceTag.silent(),
-                ResourceTag.createdForChat(),
-                ResourceTag.canonicalURL(data.url)
-              ]
-            : [])
-        ]
-      )
-
-      log.debug('resource for download created', downloadData, resource)
-
-      downloadData.resourceId = resource.id
-      downloadData.savePath = resource.path
-      downloadResourceMap.set(data.id, downloadData)
-
-      return {
-        path: downloadData.savePath,
-        copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
+        return {
+          path: null,
+          copyToDownloads: false
+        }
       }
     })
 
-    window.api.onDownloadUpdated((data) => {
-      log.debug('download updated', data)
+    horizonPreloadEvents.onDownloadUpdated((data) => {
+      try {
+        log.debug('download updated', data)
 
-      const downloadData = downloadResourceMap.get(data.id)
-      if (!downloadData) {
-        log.error('download data not found', data)
-        return
-      }
-
-      const toast = downloadToastsMap.get(data.id)
-      if (!toast) {
-        return
-      }
-
-      if (data.state === 'progressing') {
-        const progress =
-          isFinite(data.receivedBytes) && isFinite(data.totalBytes)
-            ? data.receivedBytes / data.totalBytes
-            : 0
-        const roundedPercent = Math.round(progress * 100)
-
-        if (roundedPercent >= 0 && roundedPercent <= 100) {
-          toast.update(`Downloading "${downloadData.filename}" (${roundedPercent}%)...`)
-        } else {
-          toast.update(`Downloading "${downloadData.filename}"...`)
+        const downloadData = downloadResourceMap.get(data.id)
+        if (!downloadData) {
+          log.error('download data not found', data)
+          return
         }
-      } else if (data.state === 'interrupted') {
-        toast.error(`Download of "${downloadData.filename}" interrupted`)
-      } else if (data.isPaused) {
-        toast.info(`Download of "${downloadData.filename}" paused`)
-      }
-    })
 
-    window.api.onDownloadDone(async (data) => {
-      log.debug('download done', data)
-
-      const downloadData = downloadResourceMap.get(data.id)
-      if (!downloadData) {
-        log.error('download data not found', data)
-        return
-      }
-
-      let savedToSpace = false
-
-      if (data.state === 'completed') {
-        const resource = await resourceManager.reloadResource(downloadData.resourceId)
-        if (resource) {
-          const isValidType =
-            (Object.values(ResourceTypes) as string[]).includes(resource.type) ||
-            resource.type.startsWith('image/')
-
-          if (isValidType) {
-            await window.backend.resources.updateResourceHash(downloadData.resourceId)
-            await window.backend.resources.triggerPostProcessing(downloadData.resourceId)
-            resourceManager.reloadResource(downloadData.resourceId)
-          }
-
-          if (tabsManager.activeScopeIdValue) {
-            await oasis.addResourcesToSpace(
-              tabsManager.activeScopeIdValue,
-              [resource.id],
-              SpaceEntryOrigin.ManuallyAdded
-            )
-            savedToSpace = true
-          }
+        const toast = downloadToastsMap.get(data.id)
+        if (!toast) {
+          return
         }
-      }
 
-      const toast = downloadToastsMap.get(data.id)
-      if (toast) {
-        if (data.state === 'completed') {
-          toast.success(
-            `"${downloadData.filename}" saved to ${savedToSpace ? 'active Context' : 'My Stuff'}!`
-          )
+        if (data.state === 'progressing') {
+          const progress =
+            isFinite(data.receivedBytes) && isFinite(data.totalBytes)
+              ? data.receivedBytes / data.totalBytes
+              : 0
+          const roundedPercent = Math.round(progress * 100)
+
+          if (roundedPercent >= 0 && roundedPercent <= 100) {
+            toast.update(`Downloading "${downloadData.filename}" (${roundedPercent}%)...`)
+          } else {
+            toast.update(`Downloading "${downloadData.filename}"...`)
+          }
         } else if (data.state === 'interrupted') {
           toast.error(`Download of "${downloadData.filename}" interrupted`)
-        } else if (data.state === 'cancelled') {
-          toast.error(`Download of "${downloadData.filename}" cancelled`)
+        } else if (data.isPaused) {
+          toast.info(`Download of "${downloadData.filename}" paused`)
         }
+      } catch (err) {
+        log.error('download updated error', err)
       }
+    })
 
-      downloadResourceMap.delete(data.id)
+    horizonPreloadEvents.onDownloadDone(async (data) => {
+      const toast = downloadToastsMap.get(data.id)
+      try {
+        log.debug('download done', data)
 
-      const downloadIntercepter = get(downloadIntercepters).get(downloadData.url)
-      if (downloadIntercepter) {
-        downloadIntercepter(downloadData)
-      } else {
-        await telemetry.trackFileDownload()
+        const downloadData = downloadResourceMap.get(data.id)
+        if (!downloadData) {
+          log.error('download data not found', data)
+          if (toast) {
+            toast.error(`Download of "${data.filename}" failed`)
+          }
+          return
+        }
+
+        let savedToSpace = false
+
+        if (data.state === 'completed') {
+          const resource = await resourceManager.reloadResource(downloadData.resourceId)
+          if (resource) {
+            const isValidType =
+              (Object.values(ResourceTypes) as string[]).includes(resource.type) ||
+              resource.type.startsWith('image/')
+
+            if (isValidType) {
+              await window.backend.resources.updateResourceHash(downloadData.resourceId)
+              await window.backend.resources.triggerPostProcessing(downloadData.resourceId)
+              resourceManager.reloadResource(downloadData.resourceId)
+            }
+
+            if (tabsManager.activeScopeIdValue) {
+              await oasis.addResourcesToSpace(
+                tabsManager.activeScopeIdValue,
+                [resource.id],
+                SpaceEntryOrigin.ManuallyAdded
+              )
+              savedToSpace = true
+            }
+          }
+        }
+
+        if (toast) {
+          if (data.state === 'completed') {
+            toast.success(
+              `"${downloadData.filename}" saved to ${savedToSpace ? 'active context' : 'your stuff'}!`
+            )
+          } else if (data.state === 'interrupted') {
+            toast.error(`Download of "${downloadData.filename}" interrupted`)
+          } else if (data.state === 'cancelled') {
+            toast.error(`Download of "${downloadData.filename}" cancelled`)
+          }
+        }
+
+        downloadResourceMap.delete(data.id)
+
+        const downloadIntercepter = get(downloadIntercepters).get(downloadData.url)
+        if (downloadIntercepter) {
+          downloadIntercepter(downloadData)
+        } else {
+          await telemetry.trackFileDownload()
+        }
+      } catch (err) {
+        log.error('download done error', err)
+        if (toast) {
+          toast.error(`Download of "${data.filename}" failed`)
+        }
       }
     })
 
@@ -3009,6 +3050,11 @@
     }
 
     syncService.init()
+  })
+
+  onDestroy(() => {
+    log.debug('app destroyed', mountUnsubscribers)
+    mountUnsubscribers.forEach((unsub) => unsub())
   })
 
   onMount(async () => {
@@ -3589,7 +3635,6 @@
             }
           }
         )
-  $: console.warn('BG IMA', $backgroundImage)
 
   const contextMenuMoveTabsToSpaces = derived(
     [spaces, tabsManager.activeScopeId],

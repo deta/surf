@@ -1,6 +1,6 @@
 import { get, writable, type Writable } from 'svelte/store'
 import type { Optional } from '../types'
-import { useLogScope, generateID } from '@horizon/utils'
+import { useLogScope, generateID, isDev } from '@horizon/utils'
 import { getContext, setContext } from 'svelte'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
@@ -10,6 +10,7 @@ export type Toast = {
   type: 'info' | 'success' | 'warning' | 'error' | 'loading'
   message: string
   timeout: number
+  dismissable: boolean
 }
 
 // use the return type of the loading method
@@ -39,17 +40,28 @@ export class Toasts {
     this.log = useLogScope('Toasts')
     // Svelte 5 would solve needing this event shit to notify
     this.eventEmitter = new EventEmitter() as TypedEmitter<ToastsEvents>
+
+    if (isDev) {
+      // @ts-ignore
+      window.toasts = this
+    }
   }
 
-  create(data: Optional<Toast, 'id' | 'timeout' | 'type'>) {
+  create(data: Optional<Toast, 'id' | 'timeout' | 'type' | 'dismissable'>) {
     const id = generateID()
     const defaults = {
       id,
       type: 'info',
-      timeout: DEFAULT_TIMEOUT
+      timeout: DEFAULT_TIMEOUT,
+      dismissable: true
     } as Toast
 
-    const toast = Object.assign({}, defaults, data)
+    const toast = {
+      ...defaults,
+      ...Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined))
+    }
+
+    this.log.debug('created toast', toast)
 
     this.toasts.update((v) => {
       v.push(toast)
@@ -62,24 +74,24 @@ export class Toasts {
     return id
   }
 
-  success(message: string, timeout?: number) {
-    this.create({ type: 'success', message, ...(timeout ? { timeout } : {}) })
+  success(message: string, timeout?: number, dismissable?: boolean) {
+    this.create({ type: 'success', message, dismissable, timeout })
   }
 
-  info(message: string, timeout?: number) {
-    this.create({ type: 'info', message, ...(timeout ? { timeout } : {}) })
+  info(message: string, timeout?: number, dismissable?: boolean) {
+    this.create({ type: 'info', message, dismissable, timeout })
   }
 
-  warning(message: string, timeout?: number) {
-    this.create({ type: 'warning', message, ...(timeout ? { timeout } : {}) })
+  warning(message: string, timeout?: number, dismissable?: boolean) {
+    this.create({ type: 'warning', message, dismissable, timeout })
   }
 
-  error(message: string, timeout?: number) {
-    this.create({ type: 'error', message, ...(timeout ? { timeout } : {}) })
+  error(message: string, timeout?: number, dismissable?: boolean) {
+    this.create({ type: 'error', message, dismissable, timeout })
   }
 
-  loading(message: string) {
-    const id = this.create({ type: 'loading', message, timeout: 0 })
+  loading(message: string, dismissable?: boolean) {
+    const id = this.create({ type: 'loading', message, dismissable, timeout: 0 })
 
     const updateToast = (message: string, type?: Toast['type'], timeout?: number) => {
       this.toasts.update((all) => {

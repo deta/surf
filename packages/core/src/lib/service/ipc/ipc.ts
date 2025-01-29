@@ -8,6 +8,8 @@ export interface IPCEvent {
   output?: any
 }
 
+export type IPCListenerUnsubscribe = () => void
+
 type HandleHandler<T extends IPCEvent> = (
   event: Electron.IpcMainInvokeEvent,
   payload: T['payload']
@@ -19,6 +21,10 @@ export class IPCService {
       renderer: {
         on: (handler: (event: Electron.IpcRendererEvent, payload: T) => void) => {
           ipcRenderer.on(name, handler)
+
+          return (() => {
+            ipcRenderer.off(name, handler)
+          }) as IPCListenerUnsubscribe
         },
         send: (payload: T) => {
           const mainProcess = !isRenderer()
@@ -32,6 +38,10 @@ export class IPCService {
       main: {
         on: (handler: (event: Electron.IpcMainEvent, payload: T) => void) => {
           ipcMain.on(name, handler)
+
+          return (() => {
+            ipcMain.off(name, handler)
+          }) as IPCListenerUnsubscribe
         },
         once: (handler: (event: Electron.IpcMainEvent, payload: T) => void) => {
           ipcMain.once(name, handler)

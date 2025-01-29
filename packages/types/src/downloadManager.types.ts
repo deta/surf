@@ -10,7 +10,7 @@ export interface DownloadRequestMessage {
 }
 
 export interface DownloadPathResponseMessage {
-  path: string
+  path: string | null
   copyToDownloads: boolean
 }
 

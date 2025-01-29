@@ -114,3 +114,13 @@ export const toHumanFileSize = (bytes: number, si = true, dp = 1) => {
 
   return bytes.toFixed(dp) + ' ' + units[u]
 }
+
+/**
+ * truncate filename if it's too long but make sure the extension is preserved
+ */
+export const shortenFilename = (raw: string, max = 30) => {
+  const extension = raw.slice(raw.lastIndexOf('.'))
+  const name = raw.slice(0, raw.lastIndexOf('.'))
+
+  return name.length > max ? `${name.slice(0, max)}[...]${extension}` : raw
+}
