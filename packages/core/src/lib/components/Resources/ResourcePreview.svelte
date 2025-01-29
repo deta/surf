@@ -68,7 +68,6 @@
   import { WebParser } from '@horizon/web-parser'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
-  import { getResourcePreview, type PreviewData } from '@horizon/core/src/lib/utils/resourcePreview'
   import { useDesktopManager } from '../../service/desktop'
   import {
     getResourcePreview,
