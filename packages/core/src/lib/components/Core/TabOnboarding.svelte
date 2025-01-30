@@ -53,6 +53,7 @@
   import ChatSection from '../Onboarding/sections/05.Chat.svelte'
   import ContextsSection from '../Onboarding/sections/06.Contexts.svelte'
   import SmartNotesSection from '../Onboarding/sections/07.SmartNotes.svelte'
+  import Codegen from '../Onboarding/sections/08.Codegen.svelte'
   import Done from '../Onboarding/sections/00.Done.svelte'
   import { OpenHomescreenEventTrigger } from '@horizon/types'
 
@@ -74,7 +75,8 @@
     { id: 'desktop', label: 'Desktop' },
     { id: 'vision', label: 'Vision' },
     { id: 'chat', label: 'Chat' },
-    { id: 'smart-notes', label: 'Smart Notes' }
+    { id: 'smart-notes', label: 'Smart Notes' },
+    { id: 'artifacts', label: 'Artifacts' }
     // { id: 'contexts', label: 'Contexts' }
   ]
 
@@ -330,6 +332,10 @@
 
     <section id="smart-notes">
       <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
+    </section>
+
+    <section id="artifacts">
+      <Codegen {modShortcut} on:tryVision={handleTryVision} />
     </section>
 
     <!-- <section id="contexts">

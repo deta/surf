@@ -63,6 +63,17 @@
       on:highlightWebviewText
       on:seekToTimestamp
     />
+  {:else if resourceId === 'onboarding-codegen'}
+    <TextResource
+      {resourceId}
+      showCodegenOnboarding
+      on:update-title={handleUpdateTitle}
+      on:highlightWebviewText
+      on:seekToTimestamp
+      autofocus={false}
+    />
+
+    bruder
   {:else}
     <div class="loading">Loading...</div>
   {/if}

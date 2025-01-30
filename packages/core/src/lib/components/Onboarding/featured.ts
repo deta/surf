@@ -1,5 +1,5 @@
 import teaser018smartnotes from '../../../../public/assets/features/018.teaser.png'
-import teaser018apps from '../../../../public/assets/features/018.apps.teaser.png'
+import teaser020apps from '../../../../public/assets/features/020.createapps.png'
 import { useLocalStorageStore } from '@horizon/utils'
 
 export interface VersionContent {
@@ -15,6 +15,19 @@ export interface VersionContent {
 }
 
 export const versions: VersionContent[] = [
+  {
+    label: 'Generate Artifacts',
+    featureID: '0.2.0',
+    current: true,
+    emoji: '',
+    title: 'Generating your own Artifacts, now in Surf',
+    description:
+      'Our chat features (vision & sidebar) have gotten code-generation capabilities! Allowing you to create interactive artifacts like mini apps, charts and more, with a single prompt. ',
+    buttonText: 'Try Creating Apps',
+    image: teaser020apps,
+    // @ts-ignore
+    action: () => window.showCodegenOnboarding()
+  },
   {
     label: 'Smart Notes',
     featureID: '0.1.8',

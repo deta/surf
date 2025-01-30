@@ -3057,6 +3057,24 @@
       log.debug('show onboarding note', newTab)
     }
 
+    // @ts-ignore
+    window.showCodegenOnboarding = async () => {
+      const newTab = await tabsManager.create<TabResource>(
+        {
+          title: 'Surf Artifacts',
+          icon: '',
+          type: 'resource',
+          resourceId: 'onboarding-codegen',
+          resourceType: ResourceTypes.DOCUMENT_SPACE_NOTE
+        },
+        {
+          active: true
+        }
+      )
+
+      log.debug('show onboarding note', newTab)
+    }
+
     if (userConfig && !userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
       await createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)

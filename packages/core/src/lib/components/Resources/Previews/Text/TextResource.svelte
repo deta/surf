@@ -77,7 +77,7 @@
   import type { InsertSourceEvent } from '@horizon/core/src/lib/components/Chat/Notes/SimilarityItem.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { DragculaDragEvent, HTMLDragZone } from '@horizon/dragcula'
-  import { useOnboardingNote } from '@horizon/core/src/lib/service/demoitems'
+  import { useOnboardingNote, useCodegenNote } from '@horizon/core/src/lib/service/demoitems'
   import OnboardingControls from '@horizon/core/src/lib/components/Chat/Notes/OnboardingControls.svelte'
   import { launchTimeline } from '../../../Onboarding/timeline'
   import { OnboardingFeature } from '../../../Onboarding/onboardingScripts'
@@ -91,6 +91,7 @@
   export let autofocus: boolean = true
   export let showTitle: boolean = true
   export let showOnboarding: boolean = false
+  export let showCodegenOnboarding: boolean = false
   export let minimal: boolean = false
   export let hideContextSwitcher: boolean = false
 
@@ -103,7 +104,8 @@
   const oasis = useOasis()
   const telemetry = useTelemetry()
   const config = useConfig()
-  const onboarding = useOnboardingNote(oasis)
+  const codegenOnboarding = useCodegenNote()
+  const noteOnboarding = useOnboardingNote(oasis)
   const wikipediaAPI = createWikipediaAPI()
 
   const dispatch = createEventDispatcher<{
@@ -113,8 +115,6 @@
     'change-onboarding-note': OnboardingNote
   }>()
 
-  const onboardingNote = onboarding.note
-  const onboardingIndex = onboarding.idx
   const userSettings = config.settings
 
   const content = writable('')
@@ -141,6 +141,28 @@
   let tippyPopover: Instance<Props> | null = null
 
   const emptyPlaceholder = 'Start typing or hit space for suggestions…'
+
+  const onboardingNote = derived(
+    [noteOnboarding.note, codegenOnboarding.note],
+    ([$note, $codegenNote]) => {
+      if (showCodegenOnboarding) {
+        return $codegenNote
+      } else {
+        return $note
+      }
+    }
+  )
+
+  const onboardingIndex = derived(
+    [noteOnboarding.idx, codegenOnboarding.idx],
+    ([$note, $codegenNote]) => {
+      if (showCodegenOnboarding) {
+        return $codegenNote
+      } else {
+        return $note
+      }
+    }
+  )
 
   const builtInMentions = derived(userSettings, (userSettings) => {
     return [
@@ -894,103 +916,6 @@
     }
   }
 
-  const handleAutocomplete = async (e: CustomEvent<EditorAutocompleteEvent>) => {
-    try {
-      log.debug('autocomplete', e.detail)
-
-      hideInfoPopover()
-
-      const { query, mentions } = e.detail
-      const spaces = (mentions ?? []).map((mention) => mention.id)
-      await generateAndInsertAIOutput(
-        query,
-        'Stay short and use citations!',
-        spaces,
-        PageChatMessageSentEventTrigger.NoteAutocompletion
-      )
-    } catch (e) {
-      log.error('Error doing magic', e)
-      toasts.error('Failed to autocomplete')
-    }
-  }
-
-  const generateContentHash = (content: string) => {
-    return content
-      .split('')
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-      .toString()
-  }
-
-  const generatePrompts = useDebounce(async () => {
-    try {
-      log.debug('generating prompts')
-      showPrompts.set(true)
-      generatingPrompts.set(true)
-      editorElem.focus()
-
-      const hash = generateContentHash($content)
-      if ($prompts.length > 0 && hash === $contentHash) {
-        log.debug('content hash has not changed, skipping prompt generation')
-        generatingPrompts.set(false)
-        return
-      }
-
-      const mentions = editorElem.getMentions()
-      const contextNames = mentions.map((mention) => mention.label)
-
-      const generatedPrompts = await ai.generatePrompts(
-        {
-          title: title,
-          content: $content,
-          contexts: [$activeSpace?.dataValue.folderName ?? '', ...contextNames]
-        },
-        {
-          systemPrompt: SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT,
-          trigger: GeneratePromptsEventTrigger.Shortcut,
-          context: EventContext.Note,
-          onboarding: showOnboarding
-        }
-      )
-
-      if (!generatedPrompts) {
-        log.error('Failed to generate prompts')
-        toasts.error('Failed to generate suggestions')
-        generatingPrompts.set(false)
-        return
-      }
-
-      log.debug('prompts', generatedPrompts)
-      prompts.set(generatedPrompts)
-    } catch (e) {
-      log.error('Error generating prompts', e)
-      toasts.error('Failed to generate suggestions')
-    } finally {
-      generatingPrompts.set(false)
-    }
-  }, 500)
-
-  const runPrompt = async (prompt: ChatPrompt) => {
-    try {
-      log.debug('Handling prompt submit', prompt)
-      const mentions = editorElem.getMentions()
-      const spaces = mentions.map((mention) => mention.id)
-
-      telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, showOnboarding)
-
-      hideInfoPopover()
-
-      await generateAndInsertAIOutput(
-        prompt.prompt,
-        'Stay short and use citations!',
-        spaces,
-        PageChatMessageSentEventTrigger.NoteUseSuggestion
-      )
-    } catch (e) {
-      log.error('Error doing magic', e)
-      toasts.error('Failed to generate suggestion')
-    }
-  }
-
   const openSpaceInStuff = (id: string) => {
     oasis.changeSelectedSpace(id)
     tabsManager.showNewTabOverlay.set(2)
@@ -1208,8 +1133,8 @@
     try {
       const { text, range, loading } = e.detail
 
-      if ((showOnboarding && get(onboarding.idx) < 3) || disableSimilaritySearch) {
-        log.debug('Onboarding mode, skipping similarity search', get(onboarding.idx))
+      if ((showOnboarding && $onboardingIndex < 3) || disableSimilaritySearch) {
+        log.debug('Onboarding mode, skipping similarity search', $onboardingIndex)
         return
       }
 
@@ -1312,7 +1237,7 @@
       log.debug('Note button click', action)
 
       if (action === 'onboarding-start-demo') {
-        onboarding.start()
+        noteOnboarding.start()
       } else if (action === 'onboarding-create-note') {
         createNewNote()
       } else if (action === 'onboarding-open-stuff') {
@@ -1402,23 +1327,117 @@
     $showPrompts = false
   }
 
+  const handleAutocomplete = async (e: CustomEvent<EditorAutocompleteEvent>) => {
+    try {
+      log.debug('autocomplete', e.detail)
+
+      hideInfoPopover()
+
+      const { query, mentions } = e.detail
+      const spaces = (mentions ?? []).map((mention) => mention.id)
+      await generateAndInsertAIOutput(
+        query,
+        'Stay short and use citations!',
+        spaces,
+        PageChatMessageSentEventTrigger.NoteAutocompletion
+      )
+    } catch (e) {
+      log.error('Error doing magic', e)
+      toasts.error('Failed to autocomplete')
+    }
+  }
+
+  const generateContentHash = (content: string) => {
+    return content
+      .split('')
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+      .toString()
+  }
+
+  const generatePrompts = useDebounce(async () => {
+    try {
+      log.debug('generating prompts')
+      showPrompts.set(true)
+      generatingPrompts.set(true)
+      editorElem.focus()
+
+      const hash = generateContentHash($content)
+      if ($prompts.length > 0 && hash === $contentHash) {
+        log.debug('content hash has not changed, skipping prompt generation')
+        generatingPrompts.set(false)
+        return
+      }
+
+      const mentions = editorElem.getMentions()
+      const contextNames = mentions.map((mention) => mention.label)
+
+      const generatedPrompts = await ai.generatePrompts(
+        {
+          title: title,
+          content: $content,
+          contexts: [$activeSpace?.dataValue.folderName ?? '', ...contextNames]
+        },
+        {
+          systemPrompt: SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT,
+          trigger: GeneratePromptsEventTrigger.Shortcut,
+          context: EventContext.Note,
+          onboarding: showOnboarding
+        }
+      )
+
+      if (!generatedPrompts) {
+        log.error('Failed to generate prompts')
+        toasts.error('Failed to generate suggestions')
+        generatingPrompts.set(false)
+        return
+      }
+
+      log.debug('prompts', generatedPrompts)
+      prompts.set(generatedPrompts)
+    } catch (e) {
+      log.error('Error generating prompts', e)
+      toasts.error('Failed to generate suggestions')
+    } finally {
+      generatingPrompts.set(false)
+    }
+  }, 500)
+
+  const runPrompt = async (prompt: ChatPrompt) => {
+    try {
+      log.debug('Handling prompt submit', prompt)
+      const mentions = editorElem.getMentions()
+      const spaces = mentions.map((mention) => mention.id)
+
+      telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, undefined, showOnboarding)
+
+      hideInfoPopover()
+
+      await generateAndInsertAIOutput(
+        prompt.prompt,
+        'Stay short and use citations!',
+        spaces,
+        PageChatMessageSentEventTrigger.NoteUseSuggestion
+      )
+    } catch (e) {
+      log.error('Error doing magic', e)
+      toasts.error('Failed to generate suggestion')
+    }
+  }
+
   onMount(async () => {
     // @ts-ignore
     window.wikipediaAPI = wikipediaAPI
 
     if (showOnboarding) {
       initialLoad = false
+      title = $onboardingNote?.title ?? 'Onboarding'
+      content.set($onboardingNote?.html ?? '')
 
-      title = get(onboarding.note)?.title ?? 'Onboarding'
-      content.set(get(onboarding.note)?.html ?? '')
+      let currentIdx = $onboardingIndex
 
-      let currentIdx = get(onboarding.idx)
-
-      unsubscribeContent = onboarding.note.subscribe((note) => {
+      unsubscribeContent = onboardingNote.subscribe((note) => {
         title = note.title
         content.set(note.html)
-
-        log.debug('onboarding note', note.title, note.html)
         dispatch('change-onboarding-note', note)
 
         hideInfoPopover()
@@ -1429,7 +1448,7 @@
           showSimilarityPopover()
         }
 
-        const newIdx = get(onboarding.idx)
+        const newIdx = $onboardingIndex
         if (newIdx !== currentIdx) {
           autofocus = true
           showPrompts.set(false)
@@ -1439,10 +1458,21 @@
       })
 
       contentHash.set(generateContentHash($content))
-
       contextManager = ai.createContextManager()
       contextManager.clear()
 
+      // await generatePrompts()
+
+      selectedContext.set('everything')
+      return
+    } else if (showCodegenOnboarding) {
+      initialLoad = false
+      title = $onboardingNote?.title ?? 'Onboarding'
+      content.set($onboardingNote?.html ?? '')
+
+      contentHash.set(generateContentHash($content))
+      contextManager = ai.createContextManager()
+      contextManager.clear()
       selectedContext.set('everything')
       return
     }
@@ -1476,8 +1506,6 @@
 
     contextManager = ai.createContextManager()
     contextManager.clear()
-
-    // await generatePrompts()
   })
 
   onDestroy(() => {
@@ -1591,13 +1619,13 @@
   {#if showOnboarding}
     <div class="onboarding-wrapper">
       <OnboardingControls
-        idx={onboarding.idx}
-        total={onboarding.notes.length}
-        canGoPrev={onboarding.canGoPrev}
-        canGoNext={onboarding.canGoNext}
+        idx={noteOnboarding.idx}
+        total={noteOnboarding.notes.length}
+        canGoPrev={noteOnboarding.canGoPrev}
+        canGoNext={noteOnboarding.canGoNext}
         title={showTitle ? undefined : title}
-        on:prev={onboarding.prev}
-        on:next={onboarding.next}
+        on:prev={noteOnboarding.prev}
+        on:next={noteOnboarding.next}
       />
     </div>
   {/if}

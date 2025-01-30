@@ -8,6 +8,7 @@ import { onboardingSpace } from '../constants/examples'
 import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
 import { ONBOARDING_NOTES, type OnboardingNote } from '../constants/notes'
+import { ONBOARDING_CODEGEN } from '../constants/codegen'
 
 const log = useLogScope('DemoItems')
 
@@ -129,14 +130,14 @@ export async function createOnboardingSpace(
   }
 }
 
-export function useOnboardingNote(oasis: OasisService) {
+export function useOnboardingNote(oasis: OasisService, type: 'notes' | 'codegen' = 'notes') {
   const spaces = oasis.spacesValue
   const space = spaces.find((space) => space.name.folderName === onboardingSpace.name)
 
   const currentNoteIdx = writable(0)
   const noteContent = writable('')
 
-  const processNote = (note: (typeof ONBOARDING_NOTES)[0]) => {
+  const processNote = (note: (typeof ONBOARDING_NOTES)[0] | (typeof ONBOARDING_CODEGEN)[0]) => {
     if (!space) {
       const html = note.html
         .replaceAll('$SPACE_NAME', 'Surf')
@@ -160,7 +161,9 @@ export function useOnboardingNote(oasis: OasisService) {
     }
   }
 
-  const notes = ONBOARDING_NOTES.map((note) => processNote(note)) as OnboardingNote[]
+  const notes = (type === 'notes' ? ONBOARDING_NOTES : ONBOARDING_CODEGEN).map((note) =>
+    processNote(note)
+  ) as OnboardingNote[]
 
   const currentNote = derived(currentNoteIdx, ($currentNoteIdx) => {
     const note = notes[$currentNoteIdx]
@@ -207,5 +210,40 @@ export function useOnboardingNote(oasis: OasisService) {
     prev,
     start,
     reset
+  }
+}
+
+export function useCodegenNote() {
+  const currentNoteIdx = writable(0)
+  const noteContent = writable('')
+
+  const processNote = (note: (typeof ONBOARDING_CODEGEN)[0]) => {
+    const html = note.html
+      .replaceAll('$SPACE_NAME', 'Surf')
+      .replaceAll('$SPACE_ID', 'everything')
+      .replaceAll('$SPACE_QUERY', onboardingSpace.query)
+
+    return {
+      ...note,
+      html
+    }
+  }
+
+  const notes = ONBOARDING_CODEGEN.map(processNote)
+
+  const currentNote = derived(currentNoteIdx, ($currentNoteIdx) => {
+    const note = notes[$currentNoteIdx]
+    if (!note) {
+      return notes[0]
+    }
+
+    noteContent.set(note.html)
+    return note
+  })
+
+  return {
+    note: currentNote,
+    idx: currentNoteIdx,
+    content: noteContent
   }
 }
