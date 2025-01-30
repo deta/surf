@@ -516,7 +516,14 @@
 
     <div class="mini-webview-wrapper">
       {#if resource && isGeneratedResource(resource)}
-        <CodeRenderer {resource} language="html" showPreview fullSize collapsable={false} />
+        <CodeRenderer
+          {resource}
+          language="html"
+          showPreview
+          fullSize
+          collapsable={false}
+          initialCollapsed={false}
+        />
       {:else if $url}
         <BrowserTab
           {historyEntriesManager}
