@@ -23,7 +23,7 @@ export const versions: VersionContent[] = [
     title: 'Generating your own Artifacts, now in Surf',
     description:
       'Our chat features (vision & sidebar) have gotten code-generation capabilities! Allowing you to create interactive artifacts like mini apps, charts and more, with a single prompt. ',
-    buttonText: 'Try Creating Apps',
+    buttonText: 'Try Creating Artifacts',
     image: teaser020apps,
     // @ts-ignore
     action: () => window.showCodegenOnboarding()
