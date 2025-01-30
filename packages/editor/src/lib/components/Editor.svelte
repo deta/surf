@@ -36,6 +36,8 @@
   export let bubbleMenuLoading: boolean = false
   export let autoSimilaritySearch: boolean = false
   export let enableRewrite: boolean = false
+  export let resourceComponent: ComponentType<SvelteComponent> | undefined = undefined
+  export let resourceComponentPreview: boolean = false
 
   let editor: Readable<Editor>
   let editorWidth: number = 350
@@ -183,7 +185,9 @@
     mentionClick: handleMentionClick,
     mentionInsert: handleMentionInsert,
     readOnlyMentions: readOnlyMentions,
-    buttonClick: handleButtonClick
+    buttonClick: handleButtonClick,
+    resourceComponent: resourceComponent,
+    resourceComponentPreview: resourceComponentPreview
   })
 
   const KeyboardHandler = Extension.create({

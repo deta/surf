@@ -92,7 +92,7 @@
         type: 'action',
         kind: 'danger',
         icon: 'trash',
-        text: 'Remove from Homescreen',
+        text: 'Remove from Desktop',
         action: () => dispatch('remove-from-homescreen')
       }
     ]

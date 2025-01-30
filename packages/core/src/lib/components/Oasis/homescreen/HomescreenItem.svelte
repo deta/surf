@@ -15,6 +15,10 @@
 <script lang="ts">
   import HomescreenSpaceItem from './HomescreenSpaceItem.svelte'
   import { clamp } from '../../../../../../dragcula/dist/utils/internal'
+  import CodeRenderer from '../../Chat/CodeRenderer.svelte'
+  import { mimeTypeToCodeLanguage } from '@horizon/utils'
+  import ResourcePreview from '../../Resources/ResourcePreview.svelte'
+  import { contextMenu } from '../../Core/ContextMenu.svelte'
 
   export let desktop: DesktopService
   export let item: Writable<DesktopItemData>
@@ -86,6 +90,7 @@
   class="homescreen-item item-type-{$item.resourceId ? 'resource' : 'space'}"
   class:interactive
   draggable={interactive}
+  class:resizing
   style:--cell-x={clamp($item.x, 1, Infinity)}
   style:--cell-y={clamp($item.y, 1, Infinity)}
   style:--span-x={$item.width}
@@ -114,6 +119,17 @@
     drag.continue()
   }}
   data-vaul-no-drag
+  use:contextMenu={{
+    items: [
+      {
+        type: 'action',
+        kind: 'danger',
+        icon: 'trash',
+        text: 'Remove from Desktop',
+        action: () => dispatch('remove-from-homescreen', $item.id)
+      }
+    ]
+  }}
 >
   <!--
 TODO: Fix resizing logic for other corners
@@ -202,7 +218,78 @@ TODO: Fix resizing logic for other corners
         }}
         on:highlightWebviewText
         on:seekToTimestamp
-      />
+        let:resource
+        let:mode
+        let:viewMode
+        let:origin
+        let:selected
+        let:isInSpace
+        let:resourcesBlacklistable
+        let:interactive
+        let:draggable
+        let:frameless
+        let:hideProcessing
+      >
+        {#if $item.width * $item.height > 12 && resource?.type.startsWith('text/html')}
+          <CodeRenderer
+            {resource}
+            showPreview
+            language={mimeTypeToCodeLanguage(resource.type)}
+            collapsable={false}
+          />
+        {:else if interactive}
+          <ResourcePreview
+            {resource}
+            {mode}
+            {viewMode}
+            {origin}
+            {selected}
+            {isInSpace}
+            {resourcesBlacklistable}
+            {interactive}
+            {draggable}
+            {frameless}
+            {hideProcessing}
+            on:load
+            on:click
+            on:open
+            on:open-and-chat
+            on:remove
+            on:blacklist-resource
+            on:whitelist-resource
+            on:set-resource-as-background
+            on:remove-from-homescreen
+            on:set-resource-as-space-icon
+            on:highlightWebviewText
+            on:seekToTimestamp
+          />
+        {:else}
+          <ResourcePreview
+            {resource}
+            {mode}
+            {viewMode}
+            {origin}
+            {selected}
+            {isInSpace}
+            {resourcesBlacklistable}
+            {interactive}
+            {draggable}
+            {frameless}
+            {hideProcessing}
+            on:load
+            on:click
+            on:open
+            on:open-and-chat
+            on:remove
+            on:blacklist-resource
+            on:whitelist-resource
+            on:remove-from-homescreen
+            on:set-resource-as-space-icon
+            on:highlightWebviewText
+            on:seekToTimestamp
+          />
+        {/if}
+      </OasisResourceLoader>
     {:else if $item.spaceId}
       {@const space = $spaces.find((s) => s.id === $item.spaceId)}
       {#if space}

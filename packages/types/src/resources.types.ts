@@ -41,7 +41,8 @@ export enum ResourceTagsBuiltInKeys {
   SILENT = 'silent', // resource was saved silently in the background and not by the user
   HIDE_IN_EVERYTHING = 'hideInEverything', // resource should not be shown in the Oasis Everything view
   SOURCE_PUBLISHED_AT = 'sourcePublishedAt', // timestamp of when the resource was published by the source (e.g. tweet timestamp)
-  CREATED_FOR_CHAT = 'createdForChat' // resource was created for a chat
+  CREATED_FOR_CHAT = 'createdForChat', // resource was created for a chat
+  CONTENT_HASH = 'contentHash' // hash of the content of the resource
 }
 
 export interface ResourceTagsBuiltIn {
@@ -51,6 +52,7 @@ export interface ResourceTagsBuiltIn {
     | 'drag/local'
     | 'paste'
     | 'import'
+    | 'generated'
   [ResourceTagsBuiltInKeys.TYPE]: string
   [ResourceTagsBuiltInKeys.DELETED]: boolean
   [ResourceTagsBuiltInKeys.HOSTNAME]: string
@@ -100,6 +102,8 @@ export interface SFFSSearchResultItem {
 
 export enum ResourceTypes {
   PDF = 'application/pdf',
+  HTML = 'text/html',
+  JAVASCRIPT = 'text/javascript',
 
   SPACE = 'application/vnd.space',
 

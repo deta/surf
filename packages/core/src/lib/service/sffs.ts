@@ -32,6 +32,7 @@ import type {
 } from '../types/browser.types'
 import type { EventBusMessage } from '@horizon/types'
 import type {
+  App,
   Model,
   ChatMessageOptions,
   CreateAppOptions,
@@ -90,11 +91,9 @@ export class SFFS {
         alt: composite.metadata?.alt ?? '',
         userContext: composite.metadata?.user_context ?? ''
       },
-      tags: (composite.resource_tags || []).map((tag) => ({
-        id: tag.id,
-        name: tag.tag_name,
-        value: tag.tag_value
-      })),
+      tags: (composite.resource_tags || []).map((tag) =>
+        this.convertRawResourceTagToResourceTag(tag)
+      ),
       annotations: (composite.resource_annotations || []).map((annotation) => {
         return {
           id: annotation.id,
@@ -195,6 +194,14 @@ export class SFFS {
       created_at: space.created_at,
       updated_at: space.updated_at,
       deleted: space.deleted
+    }
+  }
+
+  convertRawResourceTagToResourceTag(raw: SFFSRawResourceTag): SFFSResourceTag {
+    return {
+      id: raw.id,
+      name: raw.tag_name,
+      value: raw.tag_value
     }
   }
 
@@ -308,7 +315,14 @@ export class SFFS {
       tag_value: tagValue
     } as SFFSRawResourceTag)
 
-    await this.backend.js__store_create_resource_tag(stringified)
+    const raw = await this.backend.js__store_create_resource_tag(stringified)
+    const tag = this.parseData<SFFSRawResourceTag>(raw)
+
+    if (!tag) {
+      return null
+    }
+
+    return this.convertRawResourceTagToResourceTag(tag)
   }
 
   async updateResourceTag(resourceId: string, tagName: string, tagValue: string) {
@@ -326,6 +340,11 @@ export class SFFS {
   async deleteResourceTag(resourceId: string, tagName: string) {
     this.log.debug('deleting resource tag', resourceId, tagName)
     await this.backend.js__store_remove_resource_tag_by_name(resourceId, tagName)
+  }
+
+  async deleteResourceTagByID(id: string) {
+    this.log.debug('deleting resource tag by id', id)
+    await this.backend.js__store_remove_resource_tag_by_id(id)
   }
 
   async deleteResource(id: string): Promise<void> {
@@ -625,7 +644,18 @@ export class SFFS {
     this.log.debug('getting ai chat with id', id)
     const raw = await this.backend.js__store_get_ai_chat(id)
 
-    return this.parseData<AIChat>(raw)
+    const chat = this.parseData<AIChat>(raw)
+    if (!chat) {
+      return null
+    }
+
+    return {
+      ...chat,
+      messages: chat.messages.map((message, idx) => ({
+        ...message,
+        id: `${message.ai_session_id}-${message.role}-${idx}` // TODO: generate ids in the backend
+      }))
+    }
   }
 
   async getAIDocsSimilarity(
@@ -808,6 +838,7 @@ export class SFFS {
       resourceIds?: string[]
       inlineImages?: string[]
       general?: boolean
+      appCreation?: boolean
     }
   ): Promise<void> {
     this.log.debug(
@@ -837,7 +868,8 @@ export class SFFS {
       inline_images: opts?.inlineImages,
       limit: opts?.limit ?? 20,
       rag_only: opts?.ragOnly,
-      general: opts?.general
+      general: opts?.general,
+      app_creation: opts?.appCreation
     }
     return this.withErrorHandling(
       this.backend,
@@ -884,5 +916,20 @@ export class SFFS {
 
   setVisionTaggingFlag(flag: boolean) {
     return this.backend.js__backend_set_vision_tagging_flag(flag)
+  }
+
+  // TODO: use the App interface here?
+  async storeAIApp(appType: string, content: string, name?: string, icon?: string, meta?: string) {
+    return this.backend.js__store_create_app(appType, content, name, icon, meta)
+  }
+
+  async deleteAIApp(id: string) {
+    return this.backend.js__store_delete_app(id)
+  }
+
+  async listAIApps(): Promise<App[]> {
+    const apps = await this.backend.js__store_list_apps()
+    const parsed = this.parseData<App[]>(apps)
+    return parsed ?? []
   }
 }

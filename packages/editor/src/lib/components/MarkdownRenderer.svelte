@@ -19,6 +19,7 @@
   export let element: HTMLDivElement | undefined = undefined
   export let size: 'sm' | 'lg' = 'lg'
   export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
+  export let codeBlockComponent: ComponentType<SvelteComponent> | undefined = undefined
 
   const cleanContent = (content: string) => {
     const trimmed = content.trim()
@@ -73,11 +74,30 @@
         'citation'
       ]
     }),
+    /*
+    createRehypePlugin(rehypeSanitize, {
+      ...defaultSchema,
+      attributes: {
+        ...defaultSchema.attributes,
+        '*': ['*']
+      },
+      tagNames: [...(defaultSchema.tagNames || []), '*', 'citation']
+    }),
+    */
     createRehypePlugin(rehypeKatex),
     createRehypePlugin(rehypeStringify),
     createRehypePlugin(rehypeHighlight, { languages: all }),
     ...(citationComponent
-      ? [{ renderer: { citation: citationComponent, pre: CodeBlock, h4: 'h3', h5: 'h3' } }]
+      ? [
+          {
+            renderer: {
+              citation: citationComponent,
+              pre: codeBlockComponent || CodeBlock,
+              h4: 'h3',
+              h5: 'h3'
+            }
+          }
+        ]
       : [{ renderer: { pre: CodeBlock, h4: 'h3', h5: 'h3' } }])
   ]
 

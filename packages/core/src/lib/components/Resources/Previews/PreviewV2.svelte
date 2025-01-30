@@ -22,6 +22,7 @@
   import { useConfig } from '../../../service/config'
   import type { PreviewMetadata, ViewMode } from '@horizon/core/src/lib/utils/resourcePreview'
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
+  import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -284,7 +285,12 @@
                 on:seekToTimestamp
               />
             {:else}
-              <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
+              <Editor
+                content={truncate(content, MAX_CONTENT_LENGTH)}
+                resourceComponent={EmbeddedResource}
+                resourceComponentPreview
+                readOnly
+              />
             {/if}
           {:else if contentType === 'html'}
             <iframe

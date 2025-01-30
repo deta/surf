@@ -55,6 +55,9 @@
     "vite": "^5.0.8"
   },
   "dependencies": {
-    "@tiptap/extension-text-style": "^2.8.0"
+    "@tiptap/extension-code-block-lowlight": "^2.11.2",
+    "@tiptap/extension-text-style": "^2.8.0",
+    "hast-util-to-html": "^9.0.4",
+    "lowlight": "^3.3.0"
   }
 }

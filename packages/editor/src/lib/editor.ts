@@ -12,6 +12,7 @@ import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import Slash from './extensions/Slash/SlashExtension'
 import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
+import { CodeBlockExtension } from './extensions/CodeBlock'
 import Mention, { type MentionAction } from './extensions/Mention/index'
 // import Mention from '@tiptap/extension-mention'
 import mentionSuggestion from './extensions/Mention/suggestion'
@@ -20,10 +21,14 @@ import AIOutput from './extensions/AIOutput'
 import type { MentionItem } from './types'
 import type { SuggestionOptions } from '@tiptap/suggestion'
 import Button from './extensions/Button'
+import Resource from './extensions/Resource'
+import type { ComponentType, SvelteComponent } from 'svelte'
+import { conditionalArrayItem } from '@horizon/utils'
 
 export type ExtensionOptions = {
   placeholder?: string
   disableHashtag?: boolean
+  enhanceCodeBlock?: boolean
   parseMentions?: boolean
   readOnlyMentions?: boolean
   searchMentions?: (props: {
@@ -33,14 +38,18 @@ export type ExtensionOptions = {
   mentionClick?: (item: MentionItem, action: MentionAction) => void
   mentionInsert?: (item: MentionItem) => void
   buttonClick?: (action: string) => void
+  resourceComponent?: ComponentType<SvelteComponent>
+  resourceComponentPreview?: boolean
 }
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
+    codeBlock: false,
     heading: {
       levels: [1, 2, 3]
     }
   }),
+  CodeBlockExtension,
   Link.extend({
     addAttributes() {
       return {
@@ -65,41 +74,46 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       }
     }
   }),
-  ...(opts?.disableHashtag
-    ? []
-    : [
-        Hashtag.configure({
-          suggestion: hashtagSuggestion
-        })
-      ]),
-  ...(opts?.parseMentions
-    ? [
-        Mention.configure({
-          HTMLAttributes: {
-            class: 'mention'
-          },
-          suggestion: {
-            ...mentionSuggestion,
-            items: opts.searchMentions
-          },
-          renderText({ options, node }) {
-            return `${options.suggestion.char}${node.attrs.label ?? node.attrs.id}`
-          },
-          onClick: opts.mentionClick,
-          onInsert: opts.mentionInsert,
-          readOnly: opts.readOnlyMentions
-        })
-      ]
-    : []),
+  Button.configure({
+    onClick: opts?.buttonClick
+  }),
+  ...conditionalArrayItem(
+    !opts?.disableHashtag,
+    Hashtag.configure({
+      suggestion: hashtagSuggestion
+    })
+  ),
+  ...conditionalArrayItem(
+    !!opts?.parseMentions,
+    Mention.configure({
+      HTMLAttributes: {
+        class: 'mention'
+      },
+      suggestion: {
+        ...mentionSuggestion,
+        items: opts?.searchMentions
+      },
+      renderText({ options, node }) {
+        return `${options.suggestion.char}${node.attrs.label ?? node.attrs.id}`
+      },
+      onClick: opts?.mentionClick,
+      onInsert: opts?.mentionInsert,
+      readOnly: opts?.readOnlyMentions
+    })
+  ),
+  ...conditionalArrayItem(
+    !!opts?.resourceComponent,
+    Resource.configure({
+      component: opts?.resourceComponent,
+      preview: opts?.resourceComponentPreview
+    })
+  ),
   TaskItem,
   TaskList,
   ListKeymap,
   Loading,
   AIOutput,
-  Image,
-  Button.configure({
-    onClick: opts?.buttonClick
-  })
+  Image
   // Markdown,
   // DragHandle,
   // Slash.configure({

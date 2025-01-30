@@ -4,6 +4,7 @@ import { type ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
 import {
   QuotaDepletedError,
+  type App,
   type Message,
   type Model as ModelBackend,
   type Quota
@@ -40,6 +41,8 @@ export class AIService {
   models: Readable<Model[]>
   alwaysIncludeScreenshotInChat: Readable<boolean>
   contextItems: Readable<ContextItem[]>
+
+  customAIApps: Writable<App[]> = writable([])
 
   constructor(resourceManager: ResourceManager, tabsManager: TabsManager, config: ConfigService) {
     this.resourceManager = resourceManager
@@ -85,6 +88,8 @@ export class AIService {
     this.contextItems = derived([this.contextManager.items], ([$contextItems]) => {
       return $contextItems
     })
+
+    this.refreshCustomAiApps()
 
     if (isDev) {
       // @ts-ignore
@@ -359,6 +364,30 @@ export class AIService {
       customKey,
       contexts: opts?.contexts
     })
+  }
+
+  refreshCustomAiApps() {
+    this.sffs.listAIApps().then((apps) => {
+      this.customAIApps.set(apps)
+    })
+  }
+
+  async storeCustomAiApp({ name, prompt, icon }: { name: string; prompt: string; icon?: string }) {
+    try {
+      await this.sffs.storeAIApp('inline-screenshot', prompt, name, icon)
+      this.refreshCustomAiApps()
+    } catch (error) {
+      this.log.error('Failed to save custom tool:', error)
+    }
+  }
+
+  async deleteCustomAiApp(id: string) {
+    try {
+      await this.sffs.deleteAIApp(id)
+      this.refreshCustomAiApps()
+    } catch (error) {
+      this.log.error('Failed to delete custom tool:', error)
+    }
   }
 
   async summarizeText(

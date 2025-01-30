@@ -460,3 +460,26 @@ export const mapCitationsToText = (content: HTMLElement) => {
 
   return citationsToText
 }
+
+export const renderIDFromCitationID = (
+  citationID: string | null,
+  sources?: AIChatMessageSource[]
+) => {
+  if (!citationID || !sources) return ''
+
+  for (const source of sources) {
+    if (source.all_chunk_ids.includes(citationID)) {
+      return source.render_id
+    }
+  }
+  return ''
+}
+
+export const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undefined) => {
+  if (!sources) return
+  sources.forEach((source, idx) => {
+    source.render_id = (idx + 1).toString()
+    source.all_chunk_ids = [source.id]
+  })
+  return sources
+}

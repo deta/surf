@@ -7,7 +7,11 @@ import {
   getFormattedDate,
   parseUrlIntoCanonical,
   isDev,
-  parseStringIntoUrl
+  parseStringIntoUrl,
+  generateHash,
+  codeLanguageToMimeType,
+  conditionalArrayItem,
+  getNormalizedHostname
 } from '@horizon/utils'
 import { SFFS } from './sffs'
 import {
@@ -44,7 +48,8 @@ import {
   type ResourceDataAnnotation,
   type ResourceDataHistoryEntry,
   type ResourceState,
-  type ResourceStateCombined
+  type ResourceStateCombined,
+  type ResourceTagsBuiltIn
 } from '@horizon/types'
 import type TypedEmitter from 'typed-emitter'
 import { getContext, onDestroy, setContext } from 'svelte'
@@ -122,6 +127,10 @@ export class ResourceTag {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'import' }
   }
 
+  static generated() {
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'generated' }
+  }
+
   static canonicalURL(url: string) {
     return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
   }
@@ -156,6 +165,10 @@ export class ResourceTag {
 
   static createdForChat(value: boolean = true) {
     return { name: ResourceTagsBuiltInKeys.CREATED_FOR_CHAT, value: `${value}` }
+  }
+
+  static contentHash(value: string) {
+    return { name: ResourceTagsBuiltInKeys.CONTENT_HASH, value: value }
   }
 }
 
@@ -386,6 +399,13 @@ export class Resource {
     this.updatedAt = new Date().toISOString()
   }
 
+  removeTagByID(id: string) {
+    this.log.debug('removing resource tag by id', id)
+
+    this.tags = this.tags?.filter((t) => t?.id !== id)
+    this.updatedAt = new Date().toISOString()
+  }
+
   getData() {
     this.dataUsed += 1
 
@@ -524,6 +544,7 @@ export class ResourceManager {
   sffs: SFFS
   telemetry: Telemetry
 
+  static self: ResourceManager
   eventEmitter: TypedEmitter<ResourceEvents>
 
   constructor(telemetry: Telemetry) {
@@ -808,7 +829,7 @@ export class ResourceManager {
     return resources as ResourceAnnotation[]
   }
 
-  async getResourcesFromSourceURL(url: string) {
+  async getResourcesFromSourceURL(url: string, tags?: SFFSResourceTag[]) {
     const surfUrlMatch = url.match(/surf:\/\/resource\/([^\/]+)/)
     if (surfUrlMatch) {
       const resource = await this.getResource(surfUrlMatch[1])
@@ -822,18 +843,35 @@ export class ResourceManager {
 
     const resources = await this.listResourcesByTags([
       ResourceManager.SearchTagCanonicalURL(canonicalURL),
-      ResourceManager.SearchTagDeleted(false)
+      ResourceManager.SearchTagDeleted(false),
+      ...(tags ?? [])
     ])
 
     // if the canonical URL is different, we should also search for the original URL
     if (canonicalURL !== url) {
       const additionalResources = await this.listResourcesByTags([
         ResourceManager.SearchTagCanonicalURL(url),
-        ResourceManager.SearchTagDeleted(false)
+        ResourceManager.SearchTagDeleted(false),
+        ...(tags ?? [])
       ])
 
       resources.push(...additionalResources)
     }
+
+    return resources
+  }
+
+  async getResourcesFromSourceHostname(url: string, tags?: SFFSResourceTag[]) {
+    const hostname = getNormalizedHostname(url)
+    this.log.debug('searching for resources from hostname', hostname, url)
+    const protocol = url.startsWith('http://') ? 'http' : 'https'
+    const prefixedHostname = `${protocol}://${hostname}`
+
+    const resources = await this.listResourcesByTags([
+      ResourceManager.SearchTagCanonicalURL(prefixedHostname, 'prefix'),
+      ResourceManager.SearchTagDeleted(false),
+      ...(tags ?? [])
+    ])
 
     return resources
   }
@@ -1103,9 +1141,10 @@ export class ResourceManager {
 
     this.log.debug('creating resource tag', resourceId, tagName, tagValue)
 
-    await this.sffs.createResourceTag(resourceId, tagName, tagValue)
+    const tag = await this.sffs.createResourceTag(resourceId, tagName, tagValue)
+    this.log.warn('created resource tag', tag)
 
-    resource.addTag({ name: tagName, value: tagValue })
+    resource.addTag(tag ? tag : { name: tagName, value: tagValue })
     this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
@@ -1120,6 +1159,20 @@ export class ResourceManager {
     await this.sffs.deleteResourceTag(resourceId, tagName)
 
     resource.removeTag(tagName)
+    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
+  }
+
+  async deleteResourceTagByID(resourceId: string, id: string) {
+    const resource = await this.getResource(resourceId)
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    this.log.debug('deleting resource tag', resourceId, id)
+
+    await this.sffs.deleteResourceTagByID(id)
+
+    resource.removeTagByID(id)
     this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
@@ -1231,6 +1284,60 @@ export class ResourceManager {
     return this.createResource(blob.type, blob, metadata, tags)
   }
 
+  async createCodeResource(
+    data: { code: string; language: string; name?: string; url?: string },
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const { code, language, name, url } = data
+    const codeHash = await generateHash(code)
+    const type = codeLanguageToMimeType(language)
+
+    this.log.debug('Saving app', type, url, { code })
+
+    const blob = new Blob([code], { type })
+    return this.createResource(
+      type,
+      blob,
+      {
+        name: name,
+        sourceURI: url,
+        ...metadata
+      },
+      [
+        ResourceTag.generated(),
+        ResourceTag.contentHash(codeHash),
+        ...conditionalArrayItem(!!url, ResourceTag.canonicalURL(url!)),
+        ...(tags ?? [])
+      ]
+    )
+  }
+
+  async findOrCreateCodeResource(
+    data: { code: string; language: string; name?: string; url?: string },
+    metadata?: Partial<SFFSResourceMetadata>,
+    tags?: SFFSResourceTag[]
+  ) {
+    const { code, language } = data
+    const codeHash = await generateHash(code)
+    const type = codeLanguageToMimeType(language)
+
+    this.log.debug('Looking for existing code resource', type, codeHash)
+    const resources = await this.listResourcesByTags([
+      ResourceManager.SearchTagDeleted(false),
+      ResourceManager.SearchTagResourceType(type),
+      ResourceManager.SearchTagContentHash(codeHash),
+      ResourceManager.SearchTagSavedWithAction('generated')
+    ])
+
+    if (resources.length) {
+      this.log.debug('Found existing code resource', resources[0].id)
+      return resources[0]
+    }
+
+    return this.createCodeResource(data, metadata, tags)
+  }
+
   static SearchTagResourceType(
     type: ResourceTypes | string,
     op: SFFSResourceTag['op'] = 'eq'
@@ -1238,7 +1345,10 @@ export class ResourceManager {
     return { name: ResourceTagsBuiltInKeys.TYPE, value: type, op: op }
   }
 
-  static SearchTagSavedWithAction(action: string, prefix = false): SFFSResourceTag {
+  static SearchTagSavedWithAction(
+    action: ResourceTagsBuiltIn['savedWithAction'],
+    prefix = false
+  ): SFFSResourceTag {
     return {
       name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION,
       value: action,
@@ -1456,8 +1566,8 @@ export class ResourceManager {
     }
   }
 
-  static SearchTagCanonicalURL(url: string): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op: 'eq' }
+  static SearchTagCanonicalURL(url: string, op: SFFSResourceTag['op'] = 'eq'): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op }
   }
 
   static SearchTagAnnotates(resourceId: string): SFFSResourceTag {
@@ -1491,16 +1601,23 @@ export class ResourceManager {
     return { name: ResourceTagsBuiltInKeys.CREATED_FOR_CHAT, value: `${value}`, op: 'eq' }
   }
 
+  static SearchTagContentHash(hash: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.CONTENT_HASH, value: hash, op: 'eq' }
+  }
+
   static provide(telemetry: Telemetry) {
     const resourceManager = new ResourceManager(telemetry)
 
     setContext('resourceManager', resourceManager)
 
+    if (!ResourceManager.self) ResourceManager.self = resourceManager
+
     return resourceManager
   }
 
   static use() {
-    return getContext('resourceManager') as ResourceManager
+    if (!ResourceManager.self) return getContext<ResourceManager>('resourceManager')
+    return ResourceManager.self
   }
 }
 

@@ -1076,6 +1076,10 @@
         (resource) =>
           resource.type !== ResourceTypes.ANNOTATION &&
           resource.type !== ResourceTypes.HISTORY_ENTRY &&
+          !(resource.tags ?? []).some(
+            (tag) =>
+              tag.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION && tag.value === 'generated'
+          ) &&
           !(
             (resource.tags ?? []).find(
               (tag) =>

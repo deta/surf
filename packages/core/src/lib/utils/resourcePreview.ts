@@ -409,6 +409,22 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
         },
         theme: undefined
       }
+    } else if (isGeneratedResource(resource)) {
+      const hostname = getHostname(canonicalUrl ?? '')
+
+      previewData = {
+        type: resource.type,
+        title: resource?.metadata?.name,
+        content: undefined,
+        image: undefined,
+        url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
+        source: {
+          text: hostname ? `Generated on ${hostname}` : 'Artifact',
+          imageUrl: undefined,
+          icon: 'code-block'
+        },
+        theme: undefined
+      }
     } else {
       const hostname = getHostname(canonicalUrl ?? '')
 
@@ -521,4 +537,12 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
   }
 
   return previewData
+}
+
+export const isGeneratedResource = (resource: Resource) => {
+  return (
+    (resource.tags ?? []).find(
+      (x) => x.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION && x.value === 'generated'
+    ) !== undefined
+  )
 }

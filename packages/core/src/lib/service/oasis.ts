@@ -252,6 +252,8 @@ export class OasisService {
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
+  static self: OasisService
+
   constructor(resourceManager: ResourceManager, config: ConfigService) {
     this.log = useLogScope('OasisService')
     this.telemetry = resourceManager.telemetry
@@ -834,11 +836,14 @@ export class OasisService {
 
     setContext('oasis', service)
 
+    if (!OasisService.self) OasisService.self = service
+
     return service
   }
 
   static use() {
-    return getContext<OasisService>('oasis')
+    if (!OasisService.self) return getContext<OasisService>('oasis')
+    return OasisService.self
   }
 }
 

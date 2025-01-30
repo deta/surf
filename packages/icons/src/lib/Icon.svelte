@@ -10,7 +10,7 @@
   /**
    * The size of the icon. The `size` prop must be a valid CSS size value.
    */
-  export let size = '18px'
+  export let size: string | number = '18px'
 
   /**
    * Additional classes to add to the icon.

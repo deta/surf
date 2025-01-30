@@ -21,9 +21,13 @@
 
   import type { AIChatMessageSource } from '../../types/browser.types'
   import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
+  import CodeRenderer from './CodeRenderer.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
-  import { mapCitationsToText } from '@horizon/core/src/lib/service/ai/helpers'
+  import {
+    mapCitationsToText,
+    renderIDFromCitationID
+  } from '@horizon/core/src/lib/service/ai/helpers'
 
   export let id: string = ''
   export let content: string
@@ -62,17 +66,6 @@
   $: filteredSources = collapsedSources.slice(0, MAX_SOURCES)
 
   // $: log.debug('ChatMessageMarkdown', sources, collapsedSources)
-
-  const renderIDFromCitationID = (citationID: string | null, sources?: AIChatMessageSource[]) => {
-    if (!citationID || !sources) return ''
-
-    for (const source of sources) {
-      if (source.all_chunk_ids.includes(citationID)) {
-        return source.render_id
-      }
-    }
-    return ''
-  }
 
   const getCitationInfo = (id: string) => {
     const renderID = renderIDFromCitationID(id, sources)
@@ -202,6 +195,7 @@
     {id}
     size={inline ? 'sm' : 'lg'}
     citationComponent={CitationItem}
+    codeBlockComponent={CodeRenderer}
   />
 </div>
 

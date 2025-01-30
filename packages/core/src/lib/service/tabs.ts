@@ -129,6 +129,8 @@ export class TabsManager {
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
 
+  static self: TabsManager
+
   constructor(
     resourceManager: ResourceManager,
     historyEntriesManager: HistoryEntriesManager,
@@ -954,16 +956,21 @@ export class TabsManager {
     return tabsToDelete.length
   }
 
-  async updateSurfResourceTabs(resourceId: string, updates: Partial<TabPage>) {
+  async updateResourceTabs(resourceId: string, updates: Partial<TabPage>) {
     this.log.debug('Updating surf resource tabs for resource', resourceId, updates)
 
     this.tabsValue.forEach((tab) => {
-      if (tab.type !== 'page') return
-      if (
-        tab.resourceBookmark === resourceId &&
-        tab.currentLocation?.startsWith('surf://resource')
-      ) {
-        this.update(tab.id, updates)
+      if (tab.type === 'resource') {
+        if (tab.resourceId === resourceId) {
+          this.update(tab.id, updates)
+        }
+      } else if (tab.type === 'page') {
+        if (
+          tab.resourceBookmark === resourceId &&
+          tab.currentLocation?.startsWith('surf://resource')
+        ) {
+          this.update(tab.id, updates)
+        }
       }
     })
   }
@@ -1480,11 +1487,15 @@ export class TabsManager {
       config
     )
     setContext(TABS_CONTEXT_KEY, tabsService)
+
+    if (!TabsManager.self) TabsManager.self = tabsService
+
     return tabsService
   }
 
   static use() {
-    return getContext<TabsManager>(TABS_CONTEXT_KEY)
+    if (!TabsManager.self) return getContext<TabsManager>(TABS_CONTEXT_KEY)
+    return TabsManager.self
   }
 }
 

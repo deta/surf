@@ -198,6 +198,8 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         pub rag_only: bool,
         #[serde(default)]
         pub general: bool,
+        #[serde(default)]
+        pub app_creation: bool,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -223,6 +225,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             number_documents: opts.limit,
             rag_only: opts.rag_only,
             general: opts.general,
+            app_creation: opts.app_creation,
         }),
         deferred,
     );

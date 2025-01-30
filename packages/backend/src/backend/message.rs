@@ -33,6 +33,7 @@ pub enum WorkerMessage {
     ResourceMessage(ResourceMessage),
     ResourceTagMessage(ResourceTagMessage),
     SpaceMessage(SpaceMessage),
+    AppMessage(AppMessage),
 }
 
 #[derive(Debug)]
@@ -156,6 +157,7 @@ pub enum MiscMessage {
         resource_ids: Option<Vec<String>>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        app_creation: bool,
     },
     CreateApp {
         prompt: String,
@@ -197,4 +199,18 @@ pub enum EventBusMessage {
         resource_id: String,
         status: ResourceProcessingState,
     },
+}
+
+#[derive(Debug, serde::Serialize)]
+pub enum AppMessage {
+    StoreAppMessage {
+        app_type: String,
+        content: String,
+        name: Option<String>,
+        icon: Option<String>,
+        meta: Option<String>,
+    },
+    DeleteAppMessage(String),
+    ListAppsMessage,
+    UpdateAppContentMessage(String, String),
 }

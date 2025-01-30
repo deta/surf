@@ -129,6 +129,18 @@ CREATE TABLE IF NOT EXISTS post_processing_jobs (
     state TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS apps (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    icon TEXT,
+    meta TEXT,
+    app_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(name, app_type)
+);
+
 ALTER TABLE ai_session_messages ADD COLUMN msg_type TEXT NOT NULL DEFAULT 'text';
 ALTER TABLE ai_session_messages ADD COLUMN truncatable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE ai_session_messages ADD COLUMN is_context INTEGER NOT NULL DEFAULT 0;

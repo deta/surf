@@ -42,6 +42,7 @@
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { ContextManager } from '@horizon/core/src/lib/service/ai/contextManager'
+  import { requestUserScreenshot } from '../Core/ScreenPicker.svelte'
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager
@@ -392,8 +393,11 @@
     {/if}
 
     <button
-      on:click={() => {
-        dispatch('pick-screenshot')
+      on:click={async () => {
+        const blob = await requestUserScreenshot()
+        if (!blob) return
+
+        contextManager.addScreenshot(blob, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
       }}
       class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 text-xs"
     >

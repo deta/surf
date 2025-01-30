@@ -359,7 +359,6 @@ pub enum ResourceTagFilterOp {
     NeSuffix,
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResourceTagFilter {
     pub tag_name: String,
@@ -860,4 +859,16 @@ pub struct SearchResult {
 pub struct SearchResultSimple {
     pub items: Vec<String>,
     pub total: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct App {
+    pub id: String,
+    pub app_type: String,
+    pub content: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub name: Option<String>,
+    pub icon: Option<String>,
+    pub meta: Option<String>,
 }

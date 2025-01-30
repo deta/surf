@@ -428,16 +428,6 @@
   })
 </script>
 
-{#if webview}
-  <FindInPage bind:this={findInPageComp} {webview} {getSelection} />
-  <ZoomPreview {zoomLevel} {showZoomPreview} />
-  <HoverLinkPreview show={!!hoverTargetUrl} url={hoverTargetUrl} />
-{/if}
-
-{#if $error}
-  <ErrorPage error={$error} on:reload={() => forceReload()} />
-{/if}
-
 {#if webview && $isLoading === true}
   <div
     transition:blur={{ amount: 4, delay: 0.25 }}
@@ -493,9 +483,7 @@
   />
 
   {#if $error}
-    <div class="error-overlay">
-      <ErrorPage error={$error} on:reload={() => forceReload()} />
-    </div>
+    <ErrorPage error={$error} on:reload={() => forceReload()} />
   {/if}
 </div>
 
@@ -504,15 +492,5 @@
     position: relative;
     width: 100%;
     height: 100%;
-  }
-
-  .error-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    background-color: white;
   }
 </style>

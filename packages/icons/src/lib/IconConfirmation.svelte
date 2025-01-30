@@ -4,6 +4,7 @@
   export let size = '18px'
   export let name: Icons
   export let confirmationIcon: Icons = 'check'
+  export let loadingIcon: Icons = 'spinner'
   export let className: string = ''
   export let color: string | undefined = undefined
 
@@ -17,17 +18,34 @@
    */
   export let show = false
 
+  export let loading = false
+
   $: style = color ? `color: ${color};` : ''
 
   /**
    * Show the confirmation icon for a short period of time before reverting back to the original icon.
    */
   export const showConfirmation = () => {
+    loading = false
     show = true
 
     setTimeout(() => {
       show = false
     }, delay)
+  }
+
+  /**
+   * Show the loading icon.
+   */
+  export const startLoading = () => {
+    loading = true
+  }
+
+  /**
+   * Stop showing the loading icon.
+   */
+  export const stopLoading = () => {
+    loading = false
   }
 </script>
 
@@ -64,6 +82,16 @@ As an alternative, you can set the `show` prop to `true` to show the confirmatio
 {#if show}
   <svelte:component
     this={icons[confirmationIcon]}
+    {size}
+    class={className}
+    {style}
+    width={size}
+    height={size}
+    {...$$restProps}
+  />
+{:else if loading}
+  <svelte:component
+    this={icons[loadingIcon]}
     {size}
     class={className}
     {style}

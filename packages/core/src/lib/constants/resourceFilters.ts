@@ -26,6 +26,10 @@ export const filterOtherFileTags = (op: SFFSResourceTag['op']) => [
   ResourceManager.SearchTagResourceType('font/', op)
 ]
 
+export const filterGeneratedArtifactsTags = () => [
+  ResourceManager.SearchTagSavedWithAction('generated')
+]
+
 export const RESOURCE_FILTERS: FilterItem[] = [
   {
     id: 'links',
@@ -45,6 +49,16 @@ export const RESOURCE_FILTERS: FilterItem[] = [
     id: 'notes',
     label: 'Notes',
     tags: [ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]
+  },
+  // {
+  //   id: 'documents',
+  //   label: 'Documents',
+  //   tags: [...filterDocumentTags('prefix')]
+  // },
+  {
+    id: 'generated',
+    label: 'Artifacts',
+    tags: [...filterGeneratedArtifactsTags()]
   },
   // {
   //   id: 'documents',

@@ -349,6 +349,7 @@ impl AI {
         (sources, sources_xml)
     }
 
+    /*
     fn general_chat(
         &self,
         query: String,
@@ -381,6 +382,7 @@ impl AI {
             stream,
         })
     }
+    */
 
     pub fn chat(
         &self,
@@ -395,11 +397,13 @@ impl AI {
         should_cluster: bool,
         history: Vec<Message>,
     ) -> BackendResult<ChatResult> {
+        /*
         if general {
             return self.general_chat(query, model, custom_key, history, inline_images);
         }
+        */
 
-        if resource_ids.is_empty() {
+        if resource_ids.is_empty() && !general {
             return Err(BackendError::GenericError(
                 "Resource IDs must be provided if not general query".to_string(),
             ));
@@ -418,7 +422,7 @@ impl AI {
             )?,
             false => contents_store.list_resources_by_ids(resource_ids.clone())?,
         };
-        if rag_results.is_empty() {
+        if rag_results.is_empty() && !general {
             // NOTE: this is a fallback solution to let the llm decide what to do if no rag results
             // are found by sending everything to the llm
             // side effect is context window might be too large
@@ -436,9 +440,13 @@ impl AI {
         let (sources, sources_xml) = self.get_sources_xml(rag_results);
 
         // system message
-        let mut messages = vec![Message::new_system(&chat_prompt(
-            &human_readable_current_time(),
-        ))];
+        let current_time = human_readable_current_time();
+        let system_message_prompt = match general {
+            true => general_chat_prompt(&current_time),
+            false => chat_prompt(&current_time),
+        };
+
+        let mut messages = vec![Message::new_system(&system_message_prompt)];
 
         let history_len = history.len();
         // history if any
@@ -504,12 +512,23 @@ impl AI {
         }
 
         let system_message = match prompt.to_lowercase().starts_with("app:") {
-            true => create_app_prompt(&ctx),
-            false => command_prompt(&ctx),
+            true => create_app_prompt(),
+            false => command_prompt(),
         };
 
         let messages = vec![
             Message::new_system(&system_message),
+            Message::new_context(&ContextMessage {
+                id: "1".to_string(),
+                content_type: "webpage".to_string(),
+                content: Some(ctx),
+                created_at: None,
+                page: None,
+                title: None,
+                source_url: None,
+                author: None,
+                description: None,
+            })?,
             Message::new_user(&prompt),
         ];
 

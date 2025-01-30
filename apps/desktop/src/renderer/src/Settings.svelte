@@ -472,6 +472,14 @@
           />
 
           <SettingsOption
+            icon="sidebar.right"
+            title="Annotations Sidebar"
+            description="Enable the annotations sidebar where you can link artifacts and annotations to websites to easily revisit them from the sidebar."
+            bind:value={userConfigSettings.annotations_sidebar}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
             icon="picture-in-picture"
             title="Automatic Picture-in-Picture"
             description="Switching away from the active tab while a video is playing, it will continue playing the video inside a floating window."

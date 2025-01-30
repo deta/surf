@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Icon, type Icons } from '@horizon/icons'
+  import { DynamicIcon, type Icons } from '@horizon/icons'
 
-  export let label: string
+  export let label: string | undefined
   export let icon: Icons | undefined = undefined
 </script>
 
@@ -11,11 +11,13 @@
 >
   {#if icon}
     <div class="text-sky-800 dark:text-gray-100">
-      <Icon name={icon} />
+      <DynamicIcon name={icon} />
     </div>
   {/if}
 
-  <div class="text-sky-800 dark:text-gray-100 w-full truncate">
-    {label}
-  </div>
+  {#if label}
+    <div class="text-sky-800 dark:text-gray-100 w-full truncate">
+      {label}
+    </div>
+  {/if}
 </button>

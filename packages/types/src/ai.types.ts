@@ -17,6 +17,18 @@ export enum ModelTiers {
   Standard = 'standard'
 }
 
+export enum ChatMode {
+  TextOnly = 1,
+  TextWithScreenshot = 2,
+  AppCreation = 3
+}
+
+export namespace ChatMode {
+  export function isValid(value: number): value is ChatMode {
+    return Object.values(ChatMode).includes(value)
+  }
+}
+
 export const BuiltInModelLabels = {
   [BuiltInModelIDs.GPT4o]: 'GPT-4o',
   [BuiltInModelIDs.GPT4oMini]: 'GPT-4o Mini',

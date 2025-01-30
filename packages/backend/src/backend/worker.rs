@@ -151,6 +151,7 @@ pub fn worker_thread_entry_point(
             WorkerMessage::SpaceMessage(message) => {
                 handle_space_message(&mut worker, oneshot, message)
             }
+            WorkerMessage::AppMessage(message) => handle_app_message(&mut worker, oneshot, message),
         }
     }
 }

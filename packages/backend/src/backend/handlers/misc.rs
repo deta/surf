@@ -128,6 +128,7 @@ impl Worker {
         resource_ids: Option<Vec<String>>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        app_creation: bool,
     ) -> BackendResult<()> {
         // frontend sends a query with a trailing <p></p> for some reason
         let query = match query.strip_suffix("<p></p>") {
@@ -138,11 +139,8 @@ impl Worker {
             return self.handle_rag_only_query(query, number_documents, resource_ids, callback);
         }
 
-        if !general && resource_ids.is_none() {
-            return Err(BackendError::GenericError(
-                "Resource ids must be provided for non-general queries".to_string(),
-            ));
-        }
+        // app creation is a special case of a general chat query
+        let general = general || app_creation;
 
         self.handle_full_chat_query(
             query,
@@ -589,6 +587,7 @@ pub fn handle_misc_message(
             resource_ids,
             inline_images,
             general,
+            app_creation,
         } => {
             let result = worker.send_chat_query(
                 query,
@@ -601,6 +600,7 @@ pub fn handle_misc_message(
                 resource_ids,
                 inline_images,
                 general,
+                app_creation,
             );
             send_worker_response(&mut worker.channel, oneshot, result)
         }

@@ -1,7 +1,7 @@
 <svelte:options immutable />
 
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, getContext, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
 
   import {
@@ -18,7 +18,8 @@
     type ResourceDataPost,
     SpaceEntryOrigin,
     type DragTypes,
-    DragTypeNames
+    DragTypeNames,
+    BROWSER_CONTEXT_KEY
   } from '../../types'
 
   import { writable, get, derived } from 'svelte/store'
@@ -43,7 +44,8 @@
     copyToClipboard,
     truncateURL,
     conditionalArrayItem,
-    tooltip
+    tooltip,
+    parseUrlIntoCanonical
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
@@ -73,7 +75,8 @@
     getResourcePreview,
     type PreviewData,
     type ContentMode,
-    type ViewMode
+    type ViewMode,
+    isGeneratedResource
   } from '@horizon/core/src/lib/utils/resourcePreview'
   import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
 
@@ -106,6 +109,9 @@
   const config = useConfig()
   const userConfigSettings = config.settings
 
+  // pls don't sue me for this, don't want to add a new event and forward it through 10 components :/
+  const browser = getContext<any>(BROWSER_CONTEXT_KEY)
+
   const dispatch = createEventDispatcher<{
     click: string
     remove: { ids: string; deleteFromStuff: boolean }
@@ -123,6 +129,7 @@
   const spaces = oasis.spaces
   const resourceState = resource.state
   const selectedSpaceId = oasis.selectedSpace
+  const activeTab = tabsManager.activeTab
 
   let interactiveProp = interactive
 
@@ -429,6 +436,35 @@
     }
   }
 
+  const handleOpenInSidebar = async () => {
+    if ($activeTab?.type !== 'page') {
+      log.debug('Cannot open in sidebar, active tab is not a page')
+      return
+    }
+
+    const rawUrl = $activeTab.currentLocation || $activeTab.initialLocation
+    const url = rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined
+    if (!url) {
+      log.debug('Cannot open in sidebar, no URL found')
+      return
+    }
+
+    log.debug('Opening in sidebar', resource.id, url, browser)
+
+    const existingTag = resource.tags?.find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL && tag.value === url
+    )
+
+    if (existingTag?.id) {
+      // we delete and re-create it so the resource will show up at the top of the sidebar
+      await resourceManager.deleteResourceTagByID(resource.id, existingTag.id)
+    }
+
+    await resourceManager.createResourceTag(resource.id, ResourceTagsBuiltInKeys.CANONICAL_URL, url)
+
+    browser.openPageAnnotations()
+  }
+
   const handleEditTitle = async (e: CustomEvent<string>) => {
     const title = e.detail
 
@@ -445,7 +481,7 @@
 
     // update `surf://resource` tabs to have the new title if they
     // don't have a custom name given to them by the PDF renderer
-    tabsManager.updateSurfResourceTabs(resource.id, { title })
+    tabsManager.updateResourceTabs(resource.id, { title })
 
     // update the local resource first for instant feedback
     resource.updateMetadata({ name: title })
@@ -518,6 +554,12 @@
       text: 'Open in Mini Browser',
       action: () => dispatch('open', resource.id)
     },
+    ...conditionalArrayItem<CtxItem>(isGeneratedResource(resource) && $activeTab?.type === 'page', {
+      type: 'action',
+      icon: 'sidebar.right',
+      text: 'Open in Sidebar',
+      action: () => handleOpenInSidebar()
+    }),
     { type: 'separator' },
     ...conditionalArrayItem<CtxItem>($selectedItemIds.length === 0 && origin !== 'homescreen', {
       type: 'action',
@@ -649,7 +691,7 @@
           {
             type: 'action',
             icon: 'trash',
-            text: 'Remove from Homescreen',
+            text: 'Remove from Desktop',
             kind: 'danger',
             action: () => dispatch('remove-from-homescreen')
           }

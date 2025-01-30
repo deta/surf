@@ -35,6 +35,8 @@ export class Toasts {
   log: ReturnType<typeof useLogScope>
   eventEmitter: TypedEmitter<ToastsEvents>
 
+  static self: Toasts
+
   constructor() {
     this.toasts = writable([])
     this.log = useLogScope('Toasts')
@@ -140,11 +142,15 @@ export class Toasts {
   static provide() {
     const toasts = new Toasts()
     setContext('toasts', toasts)
+
+    if (!Toasts.self) Toasts.self = toasts
+
     return toasts
   }
 
   static use() {
-    return getContext<Toasts>('toasts')
+    if (!Toasts.self) return getContext<Toasts>('toasts')
+    return Toasts.self
   }
 }
 

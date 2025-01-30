@@ -2,9 +2,11 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTypes, type TabResource } from '../../types'
-  import { getFileType, useDebounce } from '@horizon/utils'
+  import { getFileType, mimeTypeToCodeLanguage, useDebounce } from '@horizon/utils'
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import TextResource from '../Resources/Previews/Text/TextResource.svelte'
+  import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'
+  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
 
   export let tab: TabResource
 
@@ -40,8 +42,18 @@
         on:highlightWebviewText
         on:seekToTimestamp
       />
+    {:else if isGeneratedResource(resource)}
+      <CodeRenderer
+        {resource}
+        {tab}
+        language={mimeTypeToCodeLanguage(resource.type)}
+        showPreview
+        fullSize
+        initialCollapsed={false}
+        collapsable={false}
+      />
     {:else}
-      <FilePreview {resource} preview={false} />
+      <FilePreview {resource} {tab} preview={false} />
     {/if}
   {:else if resourceId === 'onboarding'}
     <TextResource

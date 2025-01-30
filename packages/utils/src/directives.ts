@@ -31,23 +31,31 @@ export function clickOutside(node: HTMLElement, onEventFunction: () => void) {
 export type TooltipOptions = {
   text: string
   position?: 'top' | 'bottom' | 'left' | 'right'
+  disabled?: boolean
 }
 
 export function tooltip(node: HTMLElement, opts: string | TooltipOptions) {
   const defaultOptions = {
-    position: 'top'
+    position: 'top',
+    disabled: false
   }
 
   const parsedOptions = typeof opts === 'string' ? { text: opts } : opts
   const options = Object.assign({}, defaultOptions, parsedOptions)
 
-  node.setAttribute('data-tooltip', options.text)
-  node.setAttribute('data-tooltip-position', options.position)
+  if (!options.disabled) {
+    node.setAttribute('data-tooltip', options.text)
+    node.setAttribute('data-tooltip-position', options.position)
+  }
 
   return {
     update(newOpts: string | TooltipOptions) {
       const parsedOptions = typeof newOpts === 'string' ? { text: newOpts } : newOpts
       const options = Object.assign({}, defaultOptions, parsedOptions)
+
+      if (options.disabled) {
+        return
+      }
 
       node.setAttribute('data-tooltip', options.text)
       node.setAttribute('data-tooltip-position', options.position)

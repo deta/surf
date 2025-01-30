@@ -419,12 +419,12 @@ impl Worker {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn create_resource_tag(&mut self, mut tag: ResourceTag) -> BackendResult<()> {
+    pub fn create_resource_tag(&mut self, mut tag: ResourceTag) -> BackendResult<ResourceTag> {
         let mut tx = self.db.begin()?;
         tag.id = random_uuid();
         Database::create_resource_tag_tx(&mut tx, &tag)?;
         tx.commit()?;
-        Ok(())
+        Ok(tag)
     }
 
     #[instrument(level = "trace", skip(self))]

@@ -248,6 +248,15 @@ export const getHostname = (raw: string) => {
   }
 }
 
+export const getNormalizedHostname = (raw: string) => {
+  try {
+    const url = new URL(raw)
+    return normalizeURL(url.hostname)
+  } catch (error) {
+    return null
+  }
+}
+
 export const getURLBase = (raw: string) => {
   try {
     const url = new URL(raw)
@@ -296,6 +305,7 @@ export const parseUrlIntoCanonical = (value: string | URL) => {
     if (notionPageRegex.test(lastPart)) {
       const pageId = lastPart.split('-').pop()
       url.pathname = `${pathParts[1]}/${pageId}`
+      url.hostname = 'notion.so'
       return url.toString()
     }
   }

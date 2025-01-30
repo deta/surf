@@ -1,4 +1,5 @@
 pub mod ai_sessions;
+pub mod apps;
 pub mod db;
 pub mod embedding_resources;
 pub mod history_entries;
@@ -90,6 +91,11 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_upsert_resource_hash", js_upsert_resource_hash)?;
     cx.export_function("js__store_get_resource_hash", js_get_resource_hash)?;
     cx.export_function("js__store_delete_resource_hash", js_delete_resource_hash)?;
+
+    cx.export_function("js__store_create_app", js_create_app)?;
+    cx.export_function("js__store_delete_app", js_delete_app)?;
+    cx.export_function("js__store_list_apps", js_list_apps)?;
+    cx.export_function("js__store_update_app_content", js_update_app_content)?;
 
     Ok(())
 }
@@ -753,5 +759,72 @@ fn js_delete_resource_hash(mut cx: FunctionContext) -> JsResult<JsPromise> {
         deferred,
     );
 
+    Ok(promise)
+}
+
+fn js_create_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let app_type = cx.argument::<JsString>(1)?.value(&mut cx);
+    let content = cx.argument::<JsString>(2)?.value(&mut cx);
+    let name = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
+    let icon = cx.argument_opt(4).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
+    let meta = cx.argument_opt(5).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::AppMessage(AppMessage::StoreAppMessage {
+            app_type,
+            content,
+            name,
+            icon,
+            meta,
+        }),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_delete_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let app_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::AppMessage(AppMessage::DeleteAppMessage(app_id)),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_list_apps(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::AppMessage(AppMessage::ListAppsMessage),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_update_app_content(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let app_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let content = cx.argument::<JsString>(2)?.value(&mut cx);
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::AppMessage(AppMessage::UpdateAppContentMessage(app_id, content)),
+        deferred,
+    );
     Ok(promise)
 }

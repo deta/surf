@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@horizon/icons'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import SpaceIcon from '../SpaceIcon.svelte'
   import type { SelectItem } from '.'
@@ -13,7 +13,7 @@
 <div class="item">
   <div class="icon">
     {#if item.icon}
-      <Icon name={item.icon} />
+      <DynamicIcon name={item.icon} />
     {:else if space}
       <SpaceIcon folder={space} interactive={false} />
     {/if}

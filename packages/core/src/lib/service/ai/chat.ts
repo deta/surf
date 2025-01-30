@@ -1,9 +1,9 @@
 import { type ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
-import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
+import { QuotaDepletedError } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { generateID, useLogScope } from '@horizon/utils'
-import { CLASSIFY_SCREENSHOT_PROMPT } from '../../constants/prompts'
+import { CLASSIFY_CHAT_MODE } from '../../constants/prompts'
 import {
   type AIChatMessage,
   type AIChatMessageParsed,
@@ -11,10 +11,14 @@ import {
   type AIChatMessageSource,
   type TabPage
 } from '../../types'
-import { ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
+import { ChatMode, ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError, parseChatResponseSources } from './helpers'
 import type { Telemetry } from '../telemetry'
-import { PageChatMessageSentEventError, PageChatMessageSentEventTrigger } from '@horizon/types'
+import {
+  PageChatMessageSentEventError,
+  PageChatMessageSentEventTrigger,
+  type PageChatMessageSentData
+} from '@horizon/types'
 import type { AIService } from './ai'
 import { ContextItemActiveTab, type ContextItem, type ContextManager } from './contextManager'
 
@@ -100,7 +104,7 @@ export class AIChat {
         const parsed = systemMessages.map((message, idx) => {
           message.sources = message.sources
           return {
-            id: generateID(),
+            id: message.id,
             role: 'user',
             query: queries[idx],
             content: message.content.replace('<answer>', '').replace('</answer>', ''),
@@ -192,6 +196,7 @@ export class AIChat {
       resourceIds?: string[]
       inlineImages?: string[]
       general?: boolean
+      appCreation?: boolean
     }
   ) {
     const model = opts?.model ?? this.getModel(opts)
@@ -207,7 +212,8 @@ export class AIChat {
       ragOnly: opts?.ragOnly,
       resourceIds: opts?.resourceIds,
       inlineImages: opts?.inlineImages,
-      general: opts?.general
+      general: opts?.general,
+      appCreation: opts?.appCreation
     })
 
     return {
@@ -223,43 +229,40 @@ export class AIChat {
     return this.contextManager.getPromptsForItem(contextItem)
   }
 
-  async isScreenshotNeededForPromptAndTab(
-    prompt: string,
+  // TODO: we return TextOnly mode on errors, should we handle this differently?
+  async getChatModeForPromptAndTab(
+    prompts: string[],
     tab: TabPage,
     tier?: ModelTiers,
     isRetry = false
-  ): Promise<boolean> {
+  ): Promise<ChatMode> {
     try {
-      if (get(this.ai.alwaysIncludeScreenshotInChat)) {
-        return true
-      }
-
-      const model = this.ai.selectedModelValue
-      const supportsStructuredOutput = model.supports_json_format
-      if (!supportsStructuredOutput) {
-        this.log.debug('Model does not support structured output', model)
-        return false
-      }
-
       const title = tab.title
       const url = tab.currentLocation || tab.currentDetectedApp?.canonicalUrl || tab.initialLocation
 
       const completion = await this.ai.createChatCompletion(
         JSON.stringify({
-          prompt: prompt,
+          prompts: prompts,
           title: title,
           url: url
         }),
-        CLASSIFY_SCREENSHOT_PROMPT,
+        CLASSIFY_CHAT_MODE,
         { tier: tier ?? ModelTiers.Standard }
       )
 
       if (completion.error || !completion.output) {
         this.log.error('Error determining if a screenshot is needed')
-        return false
+        return ChatMode.TextOnly
       }
 
-      const response = JSON.parse(completion.output) as boolean
+      const response = JSON.parse(completion.output) as ChatMode
+      if (!ChatMode.isValid(response)) {
+        this.log.error('Invalid chat mode response from llm: ', response)
+        return ChatMode.TextOnly
+      }
+      if (response === ChatMode.TextOnly && get(this.ai.alwaysIncludeScreenshotInChat)) {
+        return ChatMode.TextWithScreenshot
+      }
       return response
     } catch (e) {
       this.log.error('Error determining if a screenshot is needed', e)
@@ -272,11 +275,11 @@ export class AIChat {
           res.exceededTiers.includes(ModelTiers.Standard)
         ) {
           this.log.debug('Retrying with premium model')
-          return this.isScreenshotNeededForPromptAndTab(prompt, tab, ModelTiers.Premium, true)
+          return this.getChatModeForPromptAndTab(prompts, tab, ModelTiers.Premium, true)
         }
       }
 
-      return false
+      return ChatMode.TextOnly
     }
   }
 
@@ -372,11 +375,12 @@ export class AIChat {
       numScreenshots: numInlineImages,
       numPreviousMessages: previousMessages.length,
       tookPageScreenshot: usedPageScreenshot,
+      generatedArtifact: false,
       embeddingModel: this.ai.config.settingsValue.embedding_model,
       chatModelProvider: model?.provider,
       chatModelName:
         model.provider === Provider.Custom ? (model.custom_model_name ?? 'custom') : model.id
-    }
+    } as PageChatMessageSentData
 
     try {
       const { resourceIds, inlineImages, usedInlineScreenshot } =
@@ -399,6 +403,8 @@ export class AIChat {
       this.status.set('running')
       this.addParsedResponse(response)
 
+      let appCreation = false
+
       if (inlineScreenshots.length === 0 && !options.skipScreenshot) {
         this.log.debug('No context images found, determining if a screenshot is needed')
 
@@ -413,13 +419,15 @@ export class AIChat {
         const desktopVisible = get(this.ai.tabsManager.desktopManager.activeDesktopVisible)
 
         if (activeTab && activeTab.type === 'page' && !desktopVisible) {
-          const screenshotNeeded = await this.isScreenshotNeededForPromptAndTab(
-            options.query ?? prompt,
-            activeTab as TabPage
-          )
-          this.log.debug('Screenshot needed:', screenshotNeeded)
-
-          if (screenshotNeeded) {
+          const userMessages = previousMessages
+            .filter((message) => message.role === 'user')
+            .map((message) => message.query)
+          const query = options.query ?? prompt
+          const allQueries = [query, ...userMessages.reverse()]
+          const chatMode = await this.getChatModeForPromptAndTab(allQueries, activeTab as TabPage)
+          appCreation = chatMode === ChatMode.AppCreation
+          this.log.debug('Chat mode determined:', chatMode)
+          if (chatMode === ChatMode.TextWithScreenshot || chatMode === ChatMode.AppCreation) {
             const browserTabs = this.ai.tabsManager.browserTabsValue
             const browserTab = browserTabs[activeTab.id]
             if (browserTab) {
@@ -489,7 +497,8 @@ export class AIChat {
         ragOnly: options.ragOnly,
         resourceIds: resourceIds,
         inlineImages: inlineImages,
-        general: resourceIds.length === 0
+        general: resourceIds.length === 0,
+        appCreation
       })
 
       this.updateParsedResponse(response.id, {
@@ -498,6 +507,10 @@ export class AIChat {
       })
 
       this.status.set('idle')
+
+      if (content.includes('```html')) {
+        basicTelemtryData.generatedArtifact = true
+      }
 
       if (options.trigger) {
         if (options.ragOnly) {

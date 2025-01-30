@@ -100,6 +100,7 @@
   import ContextTabsBar from './ContextTabsBar.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
 
   export let spaceId: string
   export let active: boolean = false
@@ -276,6 +277,8 @@
             )
           } else if ($selectedFilterType.id === 'links') {
             return resource.type.startsWith('application/vnd.space.')
+          } else if ($selectedFilterType.id === 'artifacts') {
+            return isGeneratedResource(resource)
           } else {
             return true
           }

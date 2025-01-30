@@ -1,7 +1,13 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { useLogScope } from '@horizon/utils'
   import {
+    formatCodeLanguage,
+    getNormalizedHostname,
+    mimeTypeToCodeLanguage,
+    useLogScope
+  } from '@horizon/utils'
+  import {
+    ResourceManager,
     useResourceManager,
     type Resource,
     type ResourceAnnotation
@@ -13,13 +19,16 @@
     type ResourceDataAnnotation,
     type WebViewEventAnnotation
   } from '@horizon/types'
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { Editor, getEditorContentText } from '@horizon/editor'
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import type { TabPage } from '@horizon/core/src/lib/types'
+  import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'
 
+  export let tab: TabPage
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
   export let horizontalTabs = false
@@ -38,6 +47,7 @@
 
   let loadingAnnotations = false
   let annotations: ResourceAnnotation[] = []
+  let appResources: Resource[] = []
   let inputValue = ''
   let tags: string[] = []
   let savingNotes = false
@@ -52,10 +62,44 @@
     loadAnnotations(resourceId, true)
   }
 
+  $: if (tab) {
+    loadApps(tab)
+  }
+
   export const reload = async (showLoading?: boolean) => {
     if (resourceId) {
       await loadAnnotations(resourceId, showLoading)
+      await loadApps(tab, showLoading)
       savingNotes = false
+    }
+  }
+
+  const loadApps = async (tab: TabPage, showLoading = false) => {
+    try {
+      // Show loading state if requested, only needed on initial load and when a resource got updated to force a re-render
+      if (showLoading) {
+        loadingAnnotations = true
+      }
+
+      const url = tab.currentLocation || tab.initialLocation
+      if (!url) {
+        log.error('No url found', tab)
+        return
+      }
+
+      const resources = await resourceManager.getResourcesFromSourceHostname(url, [
+        ResourceManager.SearchTagSavedWithAction('generated')
+      ])
+
+      appResources = resources.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+
+      log.debug('apps', appResources)
+    } catch (error) {
+      log.error('Error loading apps', error)
+    } finally {
+      loadingAnnotations = false
     }
   }
 
@@ -139,6 +183,17 @@
     log.debug('tags', e.detail)
     tags = e.detail
   }
+
+  onMount(() => {
+    const unsubDeleted = resourceManager.on('deleted', (resourceId) => {
+      annotations = annotations.filter((annotation) => annotation.id !== resourceId)
+      appResources = appResources.filter((app) => app.id !== resourceId)
+    })
+
+    return () => {
+      unsubDeleted()
+    }
+  })
 </script>
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 pt-0 h-full">
@@ -167,19 +222,40 @@
   </div> -->
 
   <div class="content">
-    {#if sortedAnnotations.length > 0}
-      <!-- The key block is needed to force a re-render when the annotation data changes as it is not reactive because of the data being stored as a file under the hood -->
-      {#key loadingAnnotations}
-        {#each sortedAnnotations as annotation (annotation.id)}
-          <AnnotationItem
-            resource={annotation}
-            active={annotation.id === activeAnnotation}
-            on:scrollTo
-            on:delete={handleAnnotationDelete}
-            on:update={handleAnnotationUpdate}
-          />
-        {/each}
-      {/key}
+    {#if sortedAnnotations.length > 0 || appResources.length > 0}
+      {#if sortedAnnotations.length > 0}
+        <!-- The key block is needed to force a re-render when the annotation data changes as it is not reactive because of the data being stored as a file under the hood -->
+        {#key loadingAnnotations}
+          {#each sortedAnnotations as annotation (annotation.id)}
+            <AnnotationItem
+              resource={annotation}
+              active={annotation.id === activeAnnotation}
+              on:scrollTo
+              on:delete={handleAnnotationDelete}
+              on:update={handleAnnotationUpdate}
+            />
+          {/each}
+        {/key}
+      {/if}
+
+      {#if appResources.length > 0}
+        <div class="space-y-3">
+          {#each appResources as resource, idx (resource.id + idx)}
+            <div
+              class="prose prose-lg prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg select-text"
+            >
+              <CodeRenderer
+                {resource}
+                language={mimeTypeToCodeLanguage(resource.type)}
+                showPreview
+                initialCollapsed={idx > 0}
+                showUnLink
+                on:link-removed={() => reload()}
+              />
+            </div>
+          {/each}
+        </div>
+      {/if}
     {:else if loadingAnnotations}
       <div class="loading">
         <Icon name="spinner" />

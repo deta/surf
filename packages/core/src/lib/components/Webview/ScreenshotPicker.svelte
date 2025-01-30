@@ -4,11 +4,13 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
+  import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
+  import type { Icons } from '@horizon/icons'
   import { tick } from 'svelte'
   import ChatMessageMarkdown from '../Chat/ChatMessageMarkdown.svelte'
   import { tooltip, truncate, useLogScope } from '@horizon/utils'
-  import { Editor, getEditorContentText } from '@horizon/editor'
+  import { Editor } from '@horizon/editor'
   import { debounce } from 'lodash'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
@@ -17,19 +19,33 @@
   import { handleQuotaDepletedError } from '@horizon/core/src/lib/service/ai/helpers'
   import { ModelTiers } from '@horizon/types/src/ai.types'
   import { QuotaDepletedError } from '@horizon/backend/types'
+  import type { App } from '@horizon/backend/types'
+  import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
 
   export let mode: ScreenshotPickerMode = 'inline'
   export let onboarding = false
 
+  export let customTools = writable<App[]>([])
+
+  let tools: App[] = $customTools
+  let toolsSearchQuery = ''
+  $: tools = $customTools
+  $: filteredTools = toolsSearchQuery
+    ? tools.filter((tool) => tool.name?.toLowerCase().includes(toolsSearchQuery.toLowerCase()))
+    : tools
+
   const dispatch = createEventDispatcher<{
     save: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
     copy: { rect: { x: number; y: number; width: number; height: number }; loading: boolean }
-    'screenshot-for-chat': {
+    'ask-screenshot': {
       rect: { x: number; y: number; width: number; height: number }
       loading: boolean
+      query: string
     }
     askAi: { rect: { x: number; y: number; width: number; height: number }; prompt: string }
     cancel: void
+    saveTool: { name: string; prompt: string }
+    deleteTool: { id: string }
   }>()
 
   let startX = 0,
@@ -62,14 +78,26 @@
   let aiResponseStream: ReadableStream<Uint8Array> | null = null
   let loading = false
   let selectedIndex = -1
-  let menuItems = [
-    { name: 'Save...', tooltip: 'Save Screenshot to My Stuff', icon: 'save' },
-    { name: 'Copy', tooltip: 'Copy Screenshot', icon: 'copy' },
-    { name: 'Chat', tooltip: 'Use Screenshot in Chat Sidebar', icon: 'chat' }
+  let menuItems = []
+  $: menuItems = [
+    { name: 'Save...', tooltip: 'Save Screenshot to My Stuff', icon: 'save' as Icons },
+    { name: 'Copy', tooltip: 'Copy Screenshot', icon: 'copy' as Icons },
+    { name: 'Custom', tooltip: 'Custom Tools', icon: 'sparkles' as Icons }
   ]
+
+  let aiResponseMenuItems = [
+    { action: 'Save', tooltip: 'Save', icon: 'save' as Icons },
+    { action: 'Copy', tooltip: 'Copy', icon: 'copy' as Icons }
+  ]
+  let toolName = ''
+  let toolPrompt = ''
+  let showSaveToolModal = false
+  let saveToolComplete = false
+  let showCustomTools = false
+
   let menuElement: HTMLElement
   let inside = false
-  let menuWidth = 400
+  let menuWidth = 650
   let menuHeight = mode === 'inline' ? 87 : 35
   let isResizingMenu = false
   let menuResizeStartX = 0
@@ -129,6 +157,7 @@
       return
     }
 
+    /*
     if (savedChatId) {
       if (
         !menuElement.contains(event.target as Node) &&
@@ -140,6 +169,7 @@
         return
       }
     }
+    */
     pickerRect = pickerElement.getBoundingClientRect()
     const adjustedX = event.clientX - pickerRect.left
     const adjustedY = event.clientY - pickerRect.top
@@ -173,7 +203,9 @@
         isDragging = true
         clientX = adjustedX - x
         clientY = adjustedY - y
-      } else {
+      }
+      /*
+      else {
         if (
           !menuElement.contains(event.target as Node) &&
           !buttonsElement.contains(event.target as Node)
@@ -182,6 +214,7 @@
           dispatch('cancel')
         }
       }
+      */
     }
     event.preventDefault()
     event.stopPropagation()
@@ -372,12 +405,21 @@
     isPending = false
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        dispatch('screenshot-for-chat', { rect, loading })
+        dispatch('ask-screenshot', { rect, loading, query: prompt })
         setTimeout(() => {
           isCapturing = false
         }, 100)
       })
     })
+  }
+
+  function handleShowCustomTools() {
+    showCustomTools = true
+  }
+
+  function handleCreateNewTool() {
+    showSaveToolModal = true
+    showCustomTools = false
   }
 
   function handleAIMessageCopy() {
@@ -387,6 +429,43 @@
       .replace('</answer>', '')
     navigator.clipboard.writeText(cleanedAiResponse)
     toasts.success('Copied to clipboard!')
+  }
+
+  function saveToolWithName() {
+    dispatch('saveTool', {
+      name: toolName,
+      prompt: toolPrompt
+    })
+    saveToolComplete = true
+  }
+
+  async function deleteTool(id: string, name?: string) {
+    // TODO: dialog
+    const { closeType: confirmed } = await openDialog({
+      title: 'Delete Custom Tool?',
+      message: `Are you sure you want to delete '${name}' ?`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Delete', type: 'submit' }
+      ]
+    })
+    if (confirmed) {
+      tools = tools.filter((tool) => tool.id !== id)
+      dispatch('deleteTool', { id })
+    }
+  }
+
+  function handleKeydownModal(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      saveToolWithName()
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      showSaveToolModal = false
+      toolName = ''
+      saveToolComplete = false
+    }
   }
 
   const saveResponseOutput = async (response: string) => {
@@ -436,14 +515,36 @@
     scrollToBottom()
   }
 
-  async function handleAISubmit(tier?: ModelTiers, isRetry = false) {
+  async function handleAISubmit() {
     if (prompt.length < 1) {
       return
     }
+    if (onboarding) {
+      handleAISubmitInline()
+    }
+    isCapturing = true
+    isPending = false
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        dispatch('ask-screenshot', { rect, loading, query: prompt })
+        setTimeout(() => {
+          isCapturing = false
+        }, 100)
+      })
+    })
+  }
+
+  async function handleAISubmitInline(tier?: ModelTiers, isRetry = false) {
+    if (prompt.length < 1) {
+      return
+    }
+
     loading = true
 
     const correctedRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
-    const savedInputValue = prompt.trim().replace('<p>', '').replace('</p>', '')
+
+    prompt = prompt.trim().replace('<p>', '').replace('</p>', '')
+    const savedInputValue = prompt
     lastPrompt = ''
     autoScrollChat = true
 
@@ -626,17 +727,24 @@
         handleCopy()
         break
       case 2:
+        handleShowCustomTools()
+        break
+      /*
         handleTakeScreenshotForChat()
         break
+      case 3:
+        handleShowCustomTools()
+        break
+      */
     }
   }
 
-  function handleAIMessageItemClick(index: number) {
-    switch (index) {
-      case 0:
+  function handleAIMessageItemClick(action: string) {
+    switch (action) {
+      case 'Save':
         saveResponseOutput(aiResponse)
         break
-      case 1:
+      case 'Copy':
         handleAIMessageCopy()
         break
     }
@@ -780,7 +888,68 @@
         {/each}
       {/if}
     </div>
+    {#if showCustomTools}
+      <div
+        class="absolute rounded-lg shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+        style="left: {rect.x + rect.width + 40}px; top: {rect.y + 108}px;"
+      >
+        <div class="p-4">
+          <!--
+          <div class="mb-4">
+            <input
+              type="text"
+              placeholder="Search tools..."
+              bind:value={toolsSearchQuery}
+              class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          -->
 
+          {#each filteredTools as tool}
+            <div class="flex justify-between items-center rounded-lg p-2 mb-2">
+              <div class="flex items-center justify-between w-full">
+                <button
+                  class="flex-grow text-left text-lg text-gray-800 dark:text-gray-200 w-[200px] truncate px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  on:click={() => {
+                    prompt = tool.content
+                    showCustomTools = false
+                    handleAISubmit()
+                  }}
+                >
+                  {tool.name}
+                </button>
+                <button
+                  class="ml-4 p-2 text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                  on:click={() => deleteTool(tool.id, tool.name)}
+                >
+                  <Icon name="trash" size="20px" />
+                </button>
+              </div>
+            </div>
+          {/each}
+
+          {#if filteredTools.length === 0 && toolsSearchQuery}
+            <div class="text-gray-500 dark:text-gray-400 text-center py-4">
+              No tools found matching "{toolsSearchQuery}"
+            </div>
+          {/if}
+
+          <div
+            class={filteredTools.length > 0
+              ? 'mt-4 pt-4 border-t border-gray-200 dark:border-gray-700'
+              : ''}
+          >
+            <button
+              class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:!bg-blue-600 text-white font-medium"
+              on:click={handleCreateNewTool}
+            >
+              <Icon name="add" size="16px" />
+              New Tool
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
     <div
       class="selection select-none absolute rounded-xl flex flex-row gap-4 border-2 border-white"
       style="left: {rect.x}px; top: {rect.y}px; width: {rect.width}px; height: {rect.height}px;"
@@ -812,35 +981,39 @@
       {#if mode === 'inline'}
         <div class="flex-1 shadow-xl">
           <div
-            class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-t-lg px-3 py-1"
+            class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-t-lg py-1"
           >
             {#if aiResponse}
               <div
                 bind:this={aiResponseElement}
                 on:wheel|passive={handleWheel}
-                class="overflow-y-auto max-h-80 py-2 w-full overflow-x-hidden"
+                class="overflow-y-auto max-h-[32rem] py-4 w-full max-w-4xl overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 px-4"
               >
+                <!--
                 {#if lastPrompt}
                   <div
-                    class="font-semibold text-gray-800 dark:text-gray-200 pt-2 rounded-xl w-fit mb-2"
+                    class="font-semibold text-gray-800 dark:text-gray-200 pt-2 rounded-xl w-full max-w-3xl mb-4 pl-1"
                   >
                     {@html lastPrompt}
                   </div>
                 {/if}
-                <ChatMessageMarkdown content={aiResponse} sources={[]} inline id="chat-message" />
+                -->
+                <div class="max-w-full p-4">
+                  <ChatMessageMarkdown content={aiResponse} sources={[]} inline id="chat-message" />
+                </div>
 
                 {#if aiResponse.length > 0 && !loading}
-                  <div class="flex flex-row items-center gap-2 justify-end my-2">
-                    {#each menuItems as item, index}
+                  <div class="flex flex-row items-center gap-3 my-4 max-w-3xl pl-1">
+                    {#each aiResponseMenuItems as item}
                       <button
-                        class="flex gap-2 select-none items-center rounded-xl p-2 text-sm font-medium !ring-0 !ring-transparent transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-900 disabled:opacity-25"
-                        on:click={() => handleAIMessageItemClick(index)}
+                        class="flex gap-2 select-none items-center rounded-xl px-3 py-2 text-sm font-medium !ring-0 !ring-transparent transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-900 disabled:opacity-25"
+                        on:click={() => handleAIMessageItemClick(item.action)}
                         use:tooltip={{
-                          text: item.name === 'Save...' ? 'Save' : 'Copy',
+                          text: item.tooltip,
                           position: 'top'
                         }}
                       >
-                        <Icon name={item.icon} size="14px" className="!text-gray-500" />
+                        <Icon name={item.icon} size="16px" className="!text-gray-500" />
                       </button>
                     {/each}
                   </div>
@@ -849,7 +1022,7 @@
             {/if}
 
             <form
-              class="py-2 flex-1 border-gray-200 dark:border-gray-700"
+              class="py-2 flex-1 border-gray-200 dark:border-gray-700 px-3"
               class:border-t={aiResponse}
             >
               <div class="flex-grow overflow-y-auto max-h-24 !text-md">
@@ -883,7 +1056,7 @@
               >
                 {#if prompt.length > 0 && !loading}
                   <!-- <kbd class="text-gray-500">↵</kbd> -->
-                  <span>Submit</span>
+                  <span>Ask</span>
                 {:else if loading}
                   <div>
                     <span
@@ -943,6 +1116,62 @@
   >
     <Icon name="cursor-arrow-rays" size="22px" />
     Click and drag anywhere to select a region
+  </div>
+{/if}
+
+{#if showSaveToolModal}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999999999]">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold text-gray-900">Create New Tool</h3>
+        <p class="text-sm text-gray-500">Create a new tool to quickly use it later.</p>
+        <div class="mt-4">
+          <input
+            id="toolName"
+            type="text"
+            bind:value={toolName}
+            on:keydown={handleKeydownModal}
+            disabled={saveToolComplete}
+            class="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+            placeholder="Name..."
+          />
+        </div>
+        <div class="mt-4">
+          <input
+            id="toolPrompt"
+            type="text"
+            bind:value={toolPrompt}
+            on:keydown={handleKeydownModal}
+            disabled={saveToolComplete}
+            class="mt-1 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+            placeholder="Prompt..."
+          />
+        </div>
+        {#if saveToolComplete}
+          <p class="mt-2 text-sm text-green-600">Saved!</p>
+        {/if}
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            class="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            on:click={() => {
+              showSaveToolModal = false
+              saveToolComplete = false
+              toolName = ''
+            }}
+          >
+            Close
+          </button>
+          <button
+            class="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:!bg-blue-700"
+            on:click={saveToolWithName}
+            hidden={saveToolComplete}
+            disabled={!toolName}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 {/if}
 

@@ -124,6 +124,8 @@ export type AIDocsSimilarity = {
 export type AIChatMessageRole = 'user' | 'system' | 'assistant'
 
 export type AIChatMessage = {
+  id: string // generated in the frontend
+  ai_session_id: string
   role: AIChatMessageRole
   status: 'success' | 'pending' | 'error'
   query: string
@@ -237,7 +239,7 @@ export type NewResourceTabEvent = {
   trigger?: CreateTabEventTrigger
 }
 
-export type BookmarkTabState = 'idle' | 'in_progress' | 'success' | 'error'
+export type BookmarkTabState = 'idle' | 'in_progress' | 'success' | 'error' | 'saved'
 
 export type AddContextItemEvent = {
   item: ContextItem
@@ -262,3 +264,5 @@ export type JumpToWebviewTimestampEvent = {
   preview: boolean
   context?: EventContext
 }
+
+export const BROWSER_CONTEXT_KEY = 'browser-utils'

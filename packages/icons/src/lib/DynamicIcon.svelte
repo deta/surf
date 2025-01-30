@@ -4,7 +4,7 @@
   import type { IconImage, IconEmoji, IconColors, IconIcon } from './types.ts'
 
   export let name: string
-  export let size: string = '18px'
+  export let size: string | number = '18px'
 
   $: isImage = name.startsWith('image;;') // image;;https://example.com/image.jpg
   $: isFavicon = name.startsWith('favicon;;') // favicon;;https://example.com

@@ -27,6 +27,7 @@
     isMac,
     isDev,
     conditionalArrayItem,
+    useLocalStorageStore,
     shortenFilename
   } from '@horizon/utils'
   import {
@@ -45,7 +46,13 @@
     toggleResourceDebugger
   } from '../service/resources'
 
-  import { DragTypeNames, type DragTypes, SpaceEntryOrigin, type SpaceSource } from '../types'
+  import {
+    BROWSER_CONTEXT_KEY,
+    DragTypeNames,
+    type DragTypes,
+    SpaceEntryOrigin,
+    type SpaceSource
+  } from '../types'
 
   import BrowserTab from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
@@ -128,7 +135,6 @@
   import BrowserActions from './Browser/BrowserActions.svelte'
   import { createTabsManager, getBrowserContextScopeType } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
-  import ScreenshotPicker, { type ScreenshotPickerMode } from './Webview/ScreenshotPicker.svelte'
   import { captureScreenshot, getHostFromURL, getScreenshotFileName } from '../utils/screenshot'
   import { useResizeObserver } from '../utils/observers'
   import { contextMenu, prepareContextMenu, type CtxItem } from './Core/ContextMenu.svelte'
@@ -152,7 +158,7 @@
   import { springVisibility } from './motion/springVisibility'
   import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
-  import { provideAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { AIChat, provideAI } from '@horizon/core/src/lib/service/ai/ai'
   import { ColorMode, provideColorService } from '@horizon/core/src/lib/service/colors'
   import {
     ContextItemResource,
@@ -166,8 +172,10 @@
   import { provideNotifications } from '../service/notifications'
   import { UserStatsService } from '../service/userStats'
   import '$styles/tippy.scss'
+  import type { App } from '@horizon/backend/types'
   import { floatyButtons } from './Atoms/floatyButtons'
   import FloatyButton from './Atoms/FloatyButton.svelte'
+  import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -190,6 +198,7 @@
   let pinnedTabsWrapper: HTMLElement
   let pinnedTabsScrollArea: HTMLElement
   let initializedApp = false
+  let showNewChatButton = false
 
   const onboardingActive = writable(false)
   const onboardingTabVisible = writable(false)
@@ -297,7 +306,6 @@
   } = tabsManager
 
   const showScreenshotPicker = writable(false)
-  const screenshotPickerMode = writable<ScreenshotPickerMode>('inline')
   const addressValue = writable('')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
   const magicInputValue = writable('')
@@ -312,6 +320,8 @@
   const showEndMask = writable(false)
   const newTabSelectedSpaceId = oasis.selectedSpace
   const updateSearchValue = writable('')
+  const activeSidebarChatId = useLocalStorageStore<string>('activeChatId', '')
+  const activeSidebarChat = writable<AIChat | null>(null)
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
@@ -363,7 +373,7 @@
       if (userConfigSettings.annotations_sidebar) {
         tools.push({
           id: 'annotations',
-          name: 'Annotate',
+          name: 'Annotations',
           type: 'tool',
           icon: 'marker',
           disabled: $activeTab?.type !== 'page',
@@ -695,23 +705,32 @@
     }
 
     // check if sidebar is even open
-    log.debug('Right sidebar tab change', tab)
+    log.debug('Right sidebar tab change', tab, showRightSidebar)
 
     // delay the tracking to make sure the sidebar can update first
     setTimeout(() => {
       telemetry.trackOpenRightSidebar(tab)
     }, 50)
 
-    if (tab === 'chat' && $showChatSidebar) {
-      setPageChatState(true)
-    } else if ($showChatSidebar) {
+    if (tab === 'chat' && ($showChatSidebar || showRightSidebar)) {
+      showNewChatButton = true
+      if (!$showChatSidebar) {
+        setPageChatState(true)
+      }
+    } else if (!showRightSidebar && $showChatSidebar) {
       setPageChatState(false)
     }
 
     if (tab === 'go-wild') {
+      showNewChatButton = false
       setAppSidebarState(true)
     } else if ($showAppSidebar) {
       setAppSidebarState(false)
+    }
+
+    if (tab === 'annotations' && showRightSidebar) {
+      showNewChatButton = false
+      reloadAnnotationsSidebar(false)
     }
   }
 
@@ -855,7 +874,6 @@
     } else if (isModKeyAndKeyPressed(e, 'n')) {
       createNewNote(EventContext.Shortcut)
     } else if (isModKeyAndKeyPressed(e, 'o')) {
-      console.log('OPEN STUFF', e, $showNewTabOverlay)
       if ($showNewTabOverlay === 2) {
         setShowNewTabOverlay(0)
       } else {
@@ -1146,13 +1164,8 @@
     }
   }
 
-  function openScreenshotPicker(mode: ScreenshotPickerMode = 'inline') {
+  function openScreenshotPicker() {
     $showScreenshotPicker = true
-    $screenshotPickerMode = mode
-  }
-
-  function handlePickScreenshotForChat() {
-    openScreenshotPicker('sidebar')
   }
 
   function updateBookmarkingTabState(tabId: string, value: BookmarkTabState | null) {
@@ -1646,6 +1659,7 @@
     log.debug('Toggling magic sidebar', enabled)
     const tab = $activeTab as TabPage | null
 
+    showNewChatButton = enabled
     if (!enabled) {
       selectedTabs.set(new Set())
       lastSelectedTabId.set(null)
@@ -2386,7 +2400,6 @@
   }
 
   const handleEndOnboardingTooltips = () => {
-    console.log('end onboarding tooltips')
     endTimeline()
   }
 
@@ -2451,6 +2464,17 @@
   const controlWindow = (action: ControlWindow) => {
     window.api.controlWindow(action)
   }
+
+  const openPageAnnotations = async () => {
+    tabsManager.showNewTabOverlay.set(0)
+    openRightSidebarTab('annotations')
+    await tick()
+    reloadAnnotationsSidebar(true)
+  }
+
+  setContext(BROWSER_CONTEXT_KEY, {
+    openPageAnnotations
+  })
 
   onMount(() => {
     initResourceDebugger(resourceManager)
@@ -2571,6 +2595,12 @@
     log.debug('user config', userConfig)
 
     await telemetry.init(userConfig, config)
+
+    try {
+      aiService.customAIApps.set(await sffs.listAIApps())
+    } catch (e) {
+      log.error('Failed to list custom AI apps', e)
+    }
 
     // Proxy the preload events to ensure that we unsubscribe from them
     const horizonPreloadEvents: typeof window.preloadEvents = {} as typeof window.preloadEvents
@@ -3473,7 +3503,6 @@
   const handleSaveScreenshot = async (
     event: CustomEvent<{
       rect: { x: number; y: number; width: number; height: number }
-      loading: boolean
     }>
   ) => {
     try {
@@ -3493,61 +3522,62 @@
 
       await resourceManager.createResource(type, blob, metadata, tags)
       // update
-      await telemetry.trackSaveToOasis(
-        type,
-        SaveToOasisEventTrigger.Click,
-        false,
-        EventContext.Inline
-      )
+      telemetry.trackSaveToOasis(type, SaveToOasisEventTrigger.Click, false, EventContext.Inline)
       toasts.success('Screenshot saved!')
     } catch (error) {
       toasts.error('Failed to save screenshot')
     } finally {
-      if (!event.detail.loading) {
-        $showScreenshotPicker = false
-      }
+      $showScreenshotPicker = false
     }
   }
 
-  const handleCopyScreenshot = async (
-    event: CustomEvent<{
-      rect: { x: number; y: number; width: number; height: number }
-      loading: boolean
-    }>
-  ) => {
+  const handleTakeScreenshotForChat = async (e: CustomEvent<Blob>) => {
     try {
-      const blob = await captureScreenshot(event.detail.rect)
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
-      toasts.success('Screenshot copied to clipboard!')
-    } catch (error) {
-      log.error('Failed to copy screenshot to clipboard:', error)
-      toasts.error('Failed to copy screenshot to clipboard')
-    } finally {
-      if (!event.detail.loading) {
-        $showScreenshotPicker = false
+      chatContext.addScreenshot(e.detail)
+
+      if (!showRightSidebar) {
+        toggleRightSidebarTab('chat')
       }
-    }
-  }
-
-  const handleTakeScreenshotForChat = async (
-    event: CustomEvent<{
-      rect: { x: number; y: number; width: number; height: number }
-      loading: boolean
-    }>
-  ) => {
-    try {
-      const blob = await captureScreenshot(event.detail.rect)
-
-      log.debug('Captured screenshot for chat', blob)
-
-      chatContext.addScreenshot(blob)
     } catch (error) {
       log.error('Failed to create screenshot for chat:', error)
       toasts.error('Failed to create screenshot for chat')
     } finally {
-      if (!event.detail.loading) {
-        $showScreenshotPicker = false
+      $showScreenshotPicker = false
+    }
+  }
+
+  const handleOpenInlineChatInSidebar = async (e: CustomEvent<{ chat: AIChat }>) => {
+    const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
+    log.debug('existing chat', $activeSidebarChat, messagesLength)
+
+    if (messagesLength > 0) {
+      const { closeType: confirmed } = await openDialog({
+        title: 'Move Chat',
+        message:
+          'Are you sure you want to move the inline chat? This will clear the current sidebar chat.',
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'Move', type: 'submit' }
+        ]
+      })
+
+      if (!confirmed) {
+        log.debug('User cancelled new chat')
+        return
       }
+    }
+
+    log.debug('Opening inline chat in sidebar', e.detail.chat)
+
+    showScreenshotPicker.set(false)
+
+    activeSidebarChatId.set(e.detail.chat.id)
+    activeSidebarChat.set(e.detail.chat)
+
+    await tick()
+
+    if (!showRightSidebar) {
+      await toggleRightSidebarTab('chat')
     }
   }
 
@@ -3737,13 +3767,24 @@
 </pre> -->
 
 {#if $showScreenshotPicker === true}
+  <!--
   <ScreenshotPicker
     mode={$screenshotPickerMode}
     onboarding={$onboardingActive}
     on:save={handleSaveScreenshot}
     on:copy={handleCopyScreenshot}
-    on:screenshot-for-chat={handleTakeScreenshotForChat}
+    on:ask-screenshot={handleAskScreenshot}
     on:cancel={() => ($showScreenshotPicker = false)}
+    customTools={customAIApps}
+    on:saveTool={handleSaveCustomTool}
+    on:deleteTool={handleDeleteCustomTool}
+-->
+  <ScreenPicker
+    mode="standalone"
+    on:save-screenshot={handleSaveScreenshot}
+    on:open-chat-in-sidebar={handleOpenInlineChatInSidebar}
+    on:use-screenshot-in-chat={handleTakeScreenshotForChat}
+    on:close={() => ($showScreenshotPicker = false)}
   />
 {/if}
 
@@ -4767,17 +4808,23 @@
             <div class="flex items-center justify-start">
               <!-- svelte-ignore a11y-click-events-have-key-events -->
               <!-- svelte-ignore a11y-no-static-element-interactions -->
-              <div
-                role="button"
-                tabindex="0"
-                on:click={() => toggleRightSidebar()}
-                class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
-              >
-                <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
-                <Icon name="close" class="hidden group-hover:!block" size="20px" />
-              </div>
+              {#if showNewChatButton}
+                <div
+                  role="button"
+                  tabindex="0"
+                  use:tooltip={{
+                    text: 'New Chat',
+                    position: 'right'
+                  }}
+                  on:click={() => magicSidebar.clearExistingChat()}
+                  class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
+                >
+                  <Icon name="add" size="20px" />
+                </div>
+              {:else}
+                <div style="width: 20px; height: 20px;"></div>
+              {/if}
             </div>
-
             <Tabs.List
               class="grid w-full {$sidebarTools.length === 3
                 ? 'grid-cols-3'
@@ -4799,9 +4846,21 @@
                 </Tabs.Trigger>
               {/each}
             </Tabs.List>
-
             <div class="p-1">
               <div style="width: 20px; height: 20px;"></div>
+            </div>
+            <div class="flex items-center justify-start">
+              <!-- svelte-ignore a11y-click-events-have-key-events -->
+              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <div
+                role="button"
+                tabindex="0"
+                on:click={() => toggleRightSidebar()}
+                class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
+              >
+                <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
+                <Icon name="close" class="hidden group-hover:!block" size="20px" />
+              </div>
             </div>
           </div>
         {/if}
@@ -4812,6 +4871,8 @@
               <MagicSidebar
                 bind:this={magicSidebar}
                 bind:inputValue={$magicInputValue}
+                activeChatId={activeSidebarChatId}
+                activeChat={activeSidebarChat}
                 on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
                 on:highlightWebviewText={highlightWebviewText}
                 on:seekToTimestamp={handleSeekToTimestamp}
@@ -4824,7 +4885,6 @@
                   toggleRightSidebarTab('chat')
                   handleEndOnboardingTooltips()
                 }}
-                on:pick-screenshot={handlePickScreenshotForChat}
               />
             {/key}
           {:else}
@@ -4838,6 +4898,7 @@
           {#if $activeTab && $activeTab.type === 'page'}
             <AnnotationsSidebar
               bind:this={annotationsSidebar}
+              tab={$activeTab}
               resourceId={$activeTab.resourceBookmark}
               on:scrollTo={handleAnnotationScrollTo}
               on:create={handleAnnotationSidebarCreate}

@@ -84,6 +84,8 @@
   import { Icon } from '@horizon/icons'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
   import { createWikipediaAPI } from '@horizon/web-parser'
+  import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
+  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -369,6 +371,11 @@
     const processDropResource = (resource: Resource) => {
       if (resource.type.startsWith('image/')) {
         editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
+      } else if (isGeneratedResource(resource)) {
+        editor.commands.insertContentAt(
+          position,
+          `<resource id="${resource.id}" data-type="${resource.type}" />`
+        )
       } else {
         const citationElem = createCitationHTML({
           id: resource.id,
@@ -1537,6 +1544,7 @@
             placeholder={emptyPlaceholder}
             placeholderNewLine={$editorPlaceholder}
             citationComponent={CitationItem}
+            resourceComponent={EmbeddedResource}
             mentionItems={$mentionItems}
             autocomplete={$isSmartNotesEnabled}
             floatingMenu={$isSmartNotesEnabled}
@@ -1548,6 +1556,7 @@
             bubbleMenuLoading={$bubbleMenuLoading}
             autoSimilaritySearch={$userSettings.auto_note_similarity_search && !minimal}
             enableRewrite={$userSettings.experimental_note_inline_rewrite}
+            resourceComponentPreview={minimal}
             parseMentions
             {tabsManager}
             on:click
@@ -1805,21 +1814,36 @@
   }
 
   :global(.tiptap) {
-    :global(ul) {
-      :global(li) {
-        margin-block: 0.25em !important;
-      }
+    overscroll-behavior: auto;
+
+    :global(ul li) {
+      margin-block: 0.25em;
     }
 
     :global(pre) {
-      background: #f8f8f8;
+      background: #030712;
+      margin: 1em 0;
+      padding: 1em;
+      border-radius: 4px;
+      overflow-x: auto;
+
+      :global(code) {
+        color: #fff;
+        :global(.hljs-*) {
+          color: inherit;
+        }
+      }
     }
+
+    :global(code:not(pre code)) {
+      background: #030712;
+      padding: 0.2em 0.4em;
+      font-size: 0.9em;
+    }
+
     :global(.dark) & {
       :global(*):not(.mention, a) {
         color: var(--text-color-dark) !important;
-      }
-      :global(pre) {
-        background: #111;
       }
     }
   }

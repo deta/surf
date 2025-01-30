@@ -42,6 +42,7 @@ export interface ChatMessageOptions {
   resource_ids?: string[]
   inline_images?: string[]
   general?: boolean
+  app_creation?: boolean
 }
 
 export interface QueryResourcesOptions {
@@ -103,4 +104,15 @@ export class TooManyRequestsError extends Error {
       Error.captureStackTrace(this, TooManyRequestsError)
     }
   }
+}
+
+export interface App {
+  id: string
+  app_type: string
+  content: string
+  created_at: string
+  updated_at: string
+  name?: string
+  icon?: string
+  meta?: string
 }

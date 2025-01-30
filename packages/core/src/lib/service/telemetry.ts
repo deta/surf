@@ -47,7 +47,8 @@ import {
   GeneratePromptsEventTrigger,
   MentionEventType,
   SummarizeEventContentSource,
-  NoteCreateCitationEventTrigger
+  NoteCreateCitationEventTrigger,
+  type PageChatMessageSentData
 } from '@horizon/types'
 
 import { useLogScope } from '@horizon/utils'
@@ -568,21 +569,7 @@ export class Telemetry {
     await this.trackEvent(TelemetryEventTypes.OpenAnnotationSidebar, {})
   }
 
-  async trackPageChatMessageSent(stats: {
-    contextSize: number
-    numSpaces: number
-    numTabs: number
-    numResources: number
-    numScreenshots: number
-    numPreviousMessages: number
-    tookPageScreenshot: boolean
-    embeddingModel?: string
-    chatModelProvider?: string
-    chatModelName?: string
-    error?: PageChatMessageSentEventError
-    trigger?: PageChatMessageSentEventTrigger
-    onboarding?: boolean
-  }) {
+  async trackPageChatMessageSent(stats: PageChatMessageSentData) {
     UserStatsService.incStat('global_n_chat_message_sent')
 
     await this.trackEvent(TelemetryEventTypes.PageChatMessageSent, {
@@ -598,25 +585,12 @@ export class Telemetry {
       chat_model_name: stats.chatModelName,
       error: stats.error,
       trigger: stats.trigger,
-      onboarding: stats.onboarding
+      onboarding: stats.onboarding,
+      generated_artifact: stats.generatedArtifact
     })
   }
 
-  async trackSimilaritySearch(stats: {
-    contextSize: number
-    numSpaces: number
-    numTabs: number
-    numResources: number
-    numScreenshots: number
-    numPreviousMessages: number
-    tookPageScreenshot: boolean
-    embeddingModel?: string
-    chatModelProvider?: string
-    chatModelName?: string
-    error?: PageChatMessageSentEventError
-    trigger?: PageChatMessageSentEventTrigger
-    onboarding?: boolean
-  }) {
+  async trackSimilaritySearch(stats: PageChatMessageSentData) {
     await this.trackEvent(TelemetryEventTypes.SimilaritySearch, {
       context_size: stats.contextSize,
       num_spaces: stats.numSpaces,
@@ -630,7 +604,8 @@ export class Telemetry {
       chat_model_name: stats.chatModelName,
       error: stats.error,
       trigger: stats.trigger,
-      onboarding: stats.onboarding
+      onboarding: stats.onboarding,
+      generated_artifact: stats.generatedArtifact
     })
   }
 

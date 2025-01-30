@@ -309,7 +309,9 @@ export enum AddResourceToSpaceEventTrigger {
   /** Tab was saved to a space from the space tab bar */
   SpaceTabBar = 'space_tab_bar',
   /** Resource was moved by dropping it on the space's homescreen */
-  DropHomescreen = 'drop_homescreen'
+  DropHomescreen = 'drop_homescreen',
+  /** Resource was saved to the space by selecting it when saving chat output */
+  Chat = 'chat'
 }
 
 export enum DeleteSpaceEventTrigger {
@@ -508,4 +510,21 @@ export enum SummarizeEventContentSource {
 
 export enum NoteCreateCitationEventTrigger {
   Drop = 'drop'
+}
+
+export type PageChatMessageSentData = {
+  contextSize: number
+  numSpaces: number
+  numTabs: number
+  numResources: number
+  numScreenshots: number
+  numPreviousMessages: number
+  tookPageScreenshot: boolean
+  embeddingModel?: string
+  chatModelProvider?: string
+  chatModelName?: string
+  error?: PageChatMessageSentEventError
+  trigger?: PageChatMessageSentEventTrigger
+  onboarding?: boolean
+  generatedArtifact?: boolean
 }

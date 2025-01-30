@@ -499,4 +499,8 @@
     ) {
     pointer-events: all;
   }
+
+  :global(#homescreen:has(.homescreen-item.resizing) webview) {
+    pointer-events: none !important;
+  }
 </style>

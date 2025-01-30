@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { derived, writable } from 'svelte/store'
-  import { fly, slide } from 'svelte/transition'
+  import { fade, fly, slide } from 'svelte/transition'
 
   import {
     htmlToMarkdown,
@@ -9,7 +9,8 @@
     truncate,
     useClipboard,
     useLogScope,
-    flyAndScale
+    parseUrlIntoCanonical,
+    codeLanguageToMimeType
   } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
@@ -26,18 +27,17 @@
     ResourceTypes,
     SaveToOasisEventTrigger
   } from '@horizon/types'
+  import type { App } from '@horizon/backend/types'
 
   import type {
-    AIChatMessageSource,
     AIChatMessageParsed,
     AIChatMessageRole,
-    Tab,
     JumpToWebviewTimestampEvent,
     HighlightWebviewTextEvent
   } from '../../types/browser.types'
   import { DragTypeNames, SpaceEntryOrigin, type DragTypes } from '../../types'
 
-  import { Resource, useResourceManager } from '../../service/resources'
+  import { Resource, ResourceTag, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
@@ -50,13 +50,18 @@
   import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import PromptItem from './PromptItem.svelte'
-  import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
-  import {
-    ContextItemActiveTab,
-    type ContextItem
-  } from '@horizon/core/src/lib/service/ai/contextManager'
+  import { SelectDropdown, SelectDropdownItem, type SelectItem } from '../Atoms/SelectDropdown'
+  import { type ContextItem } from '@horizon/core/src/lib/service/ai/contextManager'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
+  import CreateAiToolDialog from './CreateAiToolDialog.svelte'
+  import { quartOut } from 'svelte/easing'
+  import { contextMenu } from '../Core/ContextMenu.svelte'
+  import {
+    populateRenderAndChunkIds,
+    renderIDFromCitationID
+  } from '@horizon/core/src/lib/service/ai/helpers'
+  import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
 
   export let chat: AIChat
   export let inputValue = ''
@@ -64,6 +69,11 @@
   // TDOO: replace with new context store in AI service
   export let contextItemErrors: string[] = []
   export let preparingTabs: boolean = false
+
+  export let inputOnly = false
+  export let showContextBar = true
+  export let showAddToContext = true
+  export let onSubmitChatHook: ((input: string) => void) | undefined = undefined
 
   const dispatch = createEventDispatcher<{
     highlightWebviewText: HighlightWebviewTextEvent
@@ -90,9 +100,12 @@
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
   const activeTabId = tabsManager.activeTabId
+  const customAIApps = ai.customAIApps
 
-  const { contextManager, contextItems, responses, status, error } = chat
+  const { contextManager, contextItems, status, error } = chat
   const { tabsInContext, generatingPrompts, generatedPrompts } = contextManager
+
+  $: responses = chat.responses
 
   const optPressed = writable(false)
   const cmdPressed = writable(false)
@@ -101,17 +114,26 @@
   const optToggled = writable(false)
   const tabPickerOpen = writable(false)
   const modelSelectorOpen = writable(false)
+  const promptSelectorOpen = writable(false)
   const savedChatResponses = writable<Record<string, string>>({})
 
   let listElem: HTMLDivElement
   let editorFocused = false
   let editor: Editor
   let autoScrollChat = true
+  let showAddPromptDialog = false
+  const appModalContent = writable<App | null>(null)
 
   const selectConfigureItem = {
     id: 'configure',
     label: 'Configure Models',
     icon: 'settings'
+  } as SelectItem
+
+  const addPromptItem = {
+    id: 'addprompt',
+    label: 'Add Prompt',
+    icon: 'add'
   } as SelectItem
 
   const modelItems = derived([ai.models], ([models]) => {
@@ -135,7 +157,18 @@
     }
   )
 
-  const chatBoxPlaceholder = derived(
+  const promptItems = derived([ai.customAIApps], ([customAiApps]) => {
+    return customAiApps.map(
+      (app) =>
+        ({
+          id: app.id,
+          label: app.name,
+          icon: app.icon
+        }) as SelectItem
+    )
+  })
+
+  $: chatBoxPlaceholder = derived(
     [responses, contextItems, tabs],
     ([$responses, $contextItems, $tabs]) => {
       if ($contextItems.length === 0) return 'Ask me anything...'
@@ -151,10 +184,6 @@
     return tabs
       .filter((e) => !tabsInContext.find((i) => i.id === e.id))
       .sort((a, b) => b.index - a.index)
-  })
-
-  const showFloatingClearChat = derived(userConfigSettings, (userConfigSettings) => {
-    return userConfigSettings.annotations_sidebar || userConfigSettings.go_wild_mode
   })
 
   const showExamplePrompts = derived(
@@ -173,7 +202,7 @@
     }
   )
 
-  const filteredExamplePrompts = derived(
+  $: filteredExamplePrompts = derived(
     [generatedPrompts, responses],
     ([$generatedPrompts, $responses]) => {
       return $generatedPrompts.filter((prompt) => {
@@ -189,7 +218,7 @@
     }
   )
 
-  const filteredBuiltInPrompts = derived([responses], ([$responses]) => {
+  $: filteredBuiltInPrompts = derived([responses], ([$responses]) => {
     return BUILT_IN_PAGE_PROMPTS.filter((prompt) => {
       return !$responses.find(
         (response) => response.query === prompt.prompt || response.query === prompt.label
@@ -236,16 +265,121 @@
     modelSelectorOpen.set(false)
   }
 
+  const convertChatOutputToNote = async (response: AIChatMessageParsed) => {
+    let content = response.content
+    log.debug('Parsing response content', response, content)
+
+    const sources = populateRenderAndChunkIds(response.sources)
+
+    const element = document.getElementById(`chat-response-${response.id}`)
+    if (!element) {
+      log.debug('No element found for response', response)
+      return null
+    }
+
+    const html = element.innerHTML
+    const domParser = new DOMParser()
+    const doc = domParser.parseFromString(html, 'text/html')
+
+    const getInfo = (id: string) => {
+      const renderID = renderIDFromCitationID(id, sources)
+      const source = sources?.find((source) => source.render_id === renderID)
+
+      return { id, source, renderID } as CitationInfo
+    }
+
+    const citations = doc.querySelectorAll('citation')
+
+    // loop through the citations and replace them with the citation item
+    citations.forEach((citation) => {
+      const id = citation.textContent
+      if (!id) return
+
+      const info = getInfo(id)
+      citation.setAttribute('id', info.renderID)
+      citation.setAttribute('data-info', encodeURIComponent(JSON.stringify(info)))
+      citation.innerHTML = info.renderID
+    })
+
+    const replaceWithResource = (node: Element, resourceId: string, type: string) => {
+      const newCodeBlock = document.createElement('resource')
+
+      newCodeBlock.setAttribute('id', resourceId)
+      newCodeBlock.setAttribute('data-type', type)
+      newCodeBlock.innerHTML = ''
+
+      node.replaceWith(newCodeBlock)
+    }
+
+    const codeBlocksRes = doc.querySelectorAll('code-block')
+    const codeBlocks = Array.from(codeBlocksRes)
+
+    for await (const codeBlock of codeBlocks) {
+      try {
+        const resourceId = codeBlock.getAttribute('data-resource')
+        const language = codeBlock.getAttribute('data-language') ?? 'plaintext'
+        const type = codeLanguageToMimeType(language)
+        if (resourceId) {
+          replaceWithResource(codeBlock, resourceId, type)
+          continue
+        }
+
+        const pre = codeBlock.querySelector('pre')
+        if (!pre) continue
+
+        const code = pre.textContent
+        if (!code) continue
+
+        const name = codeBlock.getAttribute('data-name') ?? undefined
+        const tab = tabsManager.activeTabValue
+        const rawUrl = tab?.type === 'page' ? tab.currentLocation || tab.initialLocation : undefined
+        const url = (rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined) || undefined
+        // todo: create resource with code
+        log.debug('Creating resource for', language, { code })
+
+        const resource = await resourceManager.findOrCreateCodeResource(
+          {
+            code,
+            name,
+            language,
+            url: url
+          },
+          undefined,
+          [ResourceTag.silent()]
+        )
+
+        log.debug('Created resource', resource)
+
+        replaceWithResource(codeBlock, resource.id, resource.type)
+      } catch (e) {
+        log.error('Error creating code resource', e)
+      }
+    }
+
+    // remove html comments like <!--  -->
+    doc.querySelectorAll('comment').forEach((comment) => {
+      comment.remove()
+    })
+
+    return doc.body.innerHTML
+  }
+
   const saveResponseOutput = async (response: AIChatMessageParsed) => {
     log.debug('Saving chat response')
 
-    let content = response.content
-    const element = document.getElementById(`chat-response-${response.id}`)
-    if (element) {
-      content = element.innerHTML
-    }
+    const content = await convertChatOutputToNote(response)
+    // let content = response.content
+    // const element = document.getElementById(`chat-response-${response.id}`)
+    // if (element) {
+    //   content = element.innerHTML
+    // }
 
     log.debug('Saving chat response', content)
+    if (!content) {
+      log.error('No content found for response', response)
+      toasts.error('Failed to save response')
+      return
+    }
 
     const resource = await resourceManager.createResourceNote(
       content,
@@ -336,15 +470,6 @@
     log.debug('Opened saved response', resourceId)
   }
 
-  const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undefined) => {
-    if (!sources) return
-    sources.forEach((source, idx) => {
-      source.render_id = (idx + 1).toString()
-      source.all_chunk_ids = [source.id]
-    })
-    return sources
-  }
-
   const handleCitationClick = async (
     sourceId: string,
     answerText: string,
@@ -422,7 +547,11 @@
       inputValue = ''
       editor.clear()
 
-      await sendChatMessage(savedInputValue)
+      if (onSubmitChatHook !== undefined) {
+        onSubmitChatHook(savedInputValue)
+      } else {
+        await sendChatMessage(savedInputValue)
+      }
     } catch (e) {
       log.error('Error doing magic', e)
 
@@ -478,10 +607,6 @@
   const handleClearContext = () => {
     contextManager.clear(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
     editor.focus()
-  }
-
-  const handlePickScreenshot = () => {
-    dispatch('pick-screenshot')
   }
 
   const handleRemoveContextItem = (e: CustomEvent<string>) => {
@@ -714,137 +839,54 @@
   }}
   on:Drop={handleDrop}
 >
-  <div
-    class="flex flex-col overflow-auto h-full pb-60 pt-2 overflow-x-hidden"
-    bind:this={listElem}
-    on:wheel|passive={handleListWheel}
-  >
-    {#if $responses.length > 0}
-      {#each $responses as response, idx (response.id)}
-        {#if response.status === 'success'}
-          <div
-            class="response-wrapper text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative"
-          >
-            <div class="">
-              <div
-                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 p-3 rounded-xl w-fit mb-2"
-              >
-                <div class="flex items-start gap-2.5">
-                  <div class="icon mt-0.5 bg-sky-50 dark:bg-gray-700 rounded-full p-1.5">
-                    <Icon name="message" size="1em" />
-                  </div>
+  {#if showAddPromptDialog}
+    <div
+      id="tool-dialog"
+      class="absolute inset-0 z-50 flex items-end justify-start pb-[14rem] pl-8"
+      style="background: rgba(0 0 0 / 0.2);"
+      transition:fade={{ duration: 133, easing: quartOut }}
+    >
+      <CreateAiToolDialog
+        bind:show={showAddPromptDialog}
+        app={appModalContent}
+        on:added={() => ($promptSelectorOpen = true)}
+      />
+    </div>
+  {/if}
 
-                  <div class="query">
-                    {#if response.role === 'user'}
-                      <MarkdownRenderer content={response.query} id={response.id} />
-                    {:else}
-                      {sanitizeQuery(response.query)}
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <ChatMessageMarkdown
-              id={`chat-response-${response.id}`}
-              content={response.content}
-              sources={populateRenderAndChunkIds(response.sources)}
-              on:citationClick={(e) =>
-                handleCitationClick(
-                  e.detail.citationID,
-                  e.detail.text,
-                  response,
-                  e.detail.sourceUid,
-                  e.detail.preview
-                )}
-              on:removeScreenshot={() => rerunChatMessageWithoutScreenshot()}
-              showSourcesAtEnd={true}
-              usedPageScreenshot={response.usedPageScreenshot}
-              usedInlineScreenshot={response.usedInlineScreenshot}
-            />
-
+  {#if !inputOnly}
+    <div
+      id="chat-responses-{chat.id}"
+      class="flex flex-col overflow-auto h-full pb-60 pt-2 overflow-x-hidden"
+      bind:this={listElem}
+      on:wheel|passive={handleListWheel}
+    >
+      {#if $responses.length > 0}
+        {#each $responses as response, idx (response.id)}
+          {#if response.status === 'success'}
             <div
-              class="flex-row items-center mx-auto space-x-2 hidden group-hover:!flex absolute text-sm -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
+              class="response-wrapper text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative"
             >
-              {#if $savedChatResponses[response.id]}
-                <button
-                  on:click={() => openResponseResource(response.id)}
-                  use:tooltip={{
-                    text: 'Open as tab',
-                    position: 'left'
-                  }}
-                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 dark:bg-gray-800 hover:bg-sky-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
+              <div class="">
+                <div
+                  class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 border-1 p-3 rounded-xl w-fit mb-2"
                 >
-                  <Icon name="check" />
-                  Saved
-                </button>
-              {:else}
-                <button
-                  on:click={() => saveResponseOutput(response)}
-                  use:tooltip={{
-                    text: 'Save to My Stuff',
-                    position: 'left'
-                  }}
-                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
-                >
-                  <Icon name="save" />
-                  Save
-                </button>
-              {/if}
+                  <div class="flex items-start gap-2.5">
+                    <div class="icon mt-0.5 bg-sky-50 dark:bg-gray-700 rounded-full p-1.5">
+                      <Icon name="message" size="1em" />
+                    </div>
 
-              <button
-                draggable={true}
-                use:HTMLDragItem.action={{}}
-                on:DragStart={(drag) => {
-                  drag.dataTransfer.setData('text/html', response.content)
-                  drag.item.data.setData('text/plain', response.content)
-                  drag.continue()
-                }}
-                on:click={() => copy(response.content)}
-                use:tooltip={{
-                  text: 'Copy to Clipboard',
-                  position: 'left'
-                }}
-                class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center py-2.5 px-2.5 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
-              >
-                {#if $copied}
-                  <Icon name="check" size="16px" />
-                {:else}
-                  <Icon name="copy" size="16px" />
-                {/if}
-              </button>
-            </div>
-          </div>
-        {:else if response.status === 'pending'}
-          <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
-            <div class="">
-              <div
-                class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 p-3 rounded-xl w-fit mb-2 text-gray-900 dark:text-gray-100"
-              >
-                <div class="flex items-start gap-2.5">
-                  <div class="icon mt-0.5 rounded-full p-1">
-                    <Icon name="spinner" size="1.1em" />
-                  </div>
-
-                  <div class="query">
-                    <MarkdownRenderer content={response.query} id={response.id} />
+                    <div class="query">
+                      {#if response.role === 'user'}
+                        <MarkdownRenderer content={response.query} id={response.id} />
+                      {:else}
+                        {sanitizeQuery(response.query)}
+                      {/if}
+                    </div>
                   </div>
                 </div>
-
-                {#if response.usedPageScreenshot && (!response.sources || response.sources.length === 0)}
-                  <div class="flex items-center gap-2">
-                    <div class="w-4 h-4 text-gray-600 dark:text-gray-400">
-                      <FileIcon kind="image" />
-                    </div>
-                    <span class="text-gray-600 dark:text-gray-400 font-normal text-base"
-                      >Using screenshot as additional context</span
-                    >
-                  </div>
-                {/if}
               </div>
-            </div>
 
-            {#if response.content}
               <ChatMessageMarkdown
                 id={`chat-response-${response.id}`}
                 content={response.content}
@@ -857,100 +899,295 @@
                     e.detail.sourceUid,
                     e.detail.preview
                   )}
+                on:removeScreenshot={() => rerunChatMessageWithoutScreenshot()}
                 showSourcesAtEnd={true}
                 usedPageScreenshot={response.usedPageScreenshot}
                 usedInlineScreenshot={response.usedInlineScreenshot}
               />
-            {/if}
+
+              <div
+                class="flex-row items-center mx-auto space-x-2 hidden group-hover:!flex absolute text-sm -bottom-2 left-1/2 -translate-x-1/2 transition-all duration-300 ease-in-out"
+              >
+                {#if $savedChatResponses[response.id]}
+                  <button
+                    on:click={() => openResponseResource(response.id)}
+                    use:tooltip={{
+                      text: 'Open as tab',
+                      position: 'left'
+                    }}
+                    class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-sky-200 dark:bg-gray-800 hover:bg-sky-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
+                  >
+                    <Icon name="check" />
+                    Saved
+                  </button>
+                {:else}
+                  <button
+                    on:click={() => saveResponseOutput(response)}
+                    use:tooltip={{
+                      text: 'Save to My Stuff',
+                      position: 'left'
+                    }}
+                    class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center gap-2 py-2 px-3 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
+                  >
+                    <Icon name="save" />
+                    Save as Note
+                  </button>
+                {/if}
+
+                <button
+                  draggable={true}
+                  use:HTMLDragItem.action={{}}
+                  on:DragStart={(drag) => {
+                    drag.dataTransfer.setData('text/html', response.content)
+                    drag.item.data.setData('text/plain', response.content)
+                    drag.continue()
+                  }}
+                  on:click={() => copy(response.content)}
+                  use:tooltip={{
+                    text: 'Copy to Clipboard',
+                    position: 'left'
+                  }}
+                  class="transform active:scale-95 appearance-none border-[0.5px] border-gray-500/50 group margin-0 flex items-center py-2.5 px-2.5 bg-blue-50 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-gray-800/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100"
+                >
+                  {#if $copied}
+                    <Icon name="check" size="16px" />
+                  {:else}
+                    <Icon name="copy" size="16px" />
+                  {/if}
+                </button>
+              </div>
+            </div>
+          {:else if response.status === 'pending'}
+            <div class="text-lg flex flex-col gap-2 rounded-xl p-4 text-opacity-90 group relative">
+              <div class="">
+                <div
+                  class="font-medium bg-sky-100 dark:bg-gray-800 border-sky-200 dark:border-gray-800 border-1 p-3 rounded-xl w-fit mb-2 text-gray-900 dark:text-gray-100"
+                >
+                  <div class="flex items-start gap-2.5">
+                    <div class="icon mt-0.5 rounded-full p-1">
+                      <Icon name="spinner" size="1.1em" />
+                    </div>
+
+                    <div class="query">
+                      <MarkdownRenderer content={response.query} id={response.id} />
+                    </div>
+                  </div>
+
+                  {#if response.usedPageScreenshot && (!response.sources || response.sources.length === 0)}
+                    <div class="flex items-center gap-2">
+                      <div class="w-4 h-4 text-gray-600 dark:text-gray-400">
+                        <FileIcon kind="image" />
+                      </div>
+                      <span class="text-gray-600 dark:text-gray-400 font-normal text-base"
+                        >Using screenshot as additional context</span
+                      >
+                    </div>
+                  {/if}
+                </div>
+              </div>
+
+              {#if response.content}
+                <ChatMessageMarkdown
+                  id={`chat-response-${response.id}`}
+                  content={response.content}
+                  sources={populateRenderAndChunkIds(response.sources)}
+                  on:citationClick={(e) =>
+                    handleCitationClick(
+                      e.detail.citationID,
+                      e.detail.text,
+                      response,
+                      e.detail.sourceUid,
+                      e.detail.preview
+                    )}
+                  showSourcesAtEnd={true}
+                  usedPageScreenshot={response.usedPageScreenshot}
+                  usedInlineScreenshot={response.usedInlineScreenshot}
+                />
+              {/if}
+            </div>
+          {/if}
+        {/each}
+
+        {#if contextItemErrors.length > 0}
+          <div
+            class="flex flex-col bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
+          >
+            {#each contextItemErrors as error}
+              <div class="info-box">
+                <Icon name="alert-triangle" />
+                <p>Warning: {error}</p>
+              </div>
+            {/each}
+
+            <button
+              class="absolute top-3 right-3 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
+              on:click={() => dispatch('clear-errors')}
+            >
+              <Icon name="close" />
+            </button>
           </div>
         {/if}
-      {/each}
 
-      {#if contextItemErrors.length > 0}
-        <div
-          class="flex flex-col bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
-        >
-          {#each contextItemErrors as error}
-            <div class="info-box">
-              <Icon name="alert-triangle" />
-              <p>Warning: {error}</p>
-            </div>
-          {/each}
-
-          <button
-            class="absolute top-3 right-3 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
-            on:click={() => dispatch('clear-errors')}
+        {#if $error}
+          <div
+            class="flex flex-col justify-start bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
           >
-            <Icon name="close" />
-          </button>
-        </div>
-      {/if}
+            {$error.message}
 
-      {#if $error}
-        <div
-          class="flex flex-col justify-start bg-yellow-50 dark:bg-gray-800 border-yellow-300 dark:border-gray-800 border-[1px] p-4 pr-12 mx-4 gap-4 shadow-sm rounded-xl text-lg leading-relaxed text-yellow-800 dark:text-gray-100 relative"
-        >
-          {$error.message}
+            {#if $error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)}
+              <button class="w-fit" on:click={() => openModelSettings()}
+                >View Your Chat Quotas →</button
+              >
+            {/if}
 
-          {#if $error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)}
-            <button class="w-fit" on:click={() => openModelSettings()}
-              >View Your Chat Quotas →</button
+            <button
+              class="absolute top-5 right-4 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
+              on:click={() => error.set(null)}
             >
-          {/if}
+              <Icon name="close" />
+            </button>
+          </div>
+        {/if}
+      {:else}
+        <div
+          class="flex flex-col items-center justify-center empty text-gray-900 dark:text-gray-100"
+        >
+          <div class="empty-title" style="line-height: 1;">
+            <Icon name="chat" />
+            <h1>New Chat</h1>
+          </div>
 
-          <button
-            class="absolute top-5 right-4 text-yellow-800 dark:text-gray-100 hover:text-yellow-600 dark:hover:text-gray-100"
-            on:click={() => error.set(null)}
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-      {/if}
-    {:else}
-      <div class="flex flex-col items-center justify-center empty text-gray-900 dark:text-gray-100">
-        <div class="empty-title" style="line-height: 1;">
-          <Icon name="chat" />
-          <h1>New Chat</h1>
-        </div>
-
-        <p class="text-sky-900 dark:text-gray-100">
-          Ask questions about specific tabs or start a general conversation.
-        </p>
-        <p class="text-sky-900/60 dark:text-gray-100/60">
-          Use the + icon or select tabs from the tab bar to add context.
-          <!-- Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
+          <p class="text-sky-900 dark:text-gray-100">
+            Ask questions about specific tabs or start a general conversation.
+          </p>
+          <p class="text-sky-900/60 dark:text-gray-100/60">
+            Use the + icon or select tabs from the tab bar to add context.
+            <!-- Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
             .toLowerCase()
             .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ). -->
-        </p>
-      </div>
-    {/if}
-  </div>
+          </p>
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <div
     class="chat bg-gradient-to-t from-sky-300/20 via-sky-300/10 dark:from-gray-800/20 dark:via-gray-800/10 to-transparent mx-auto absolute w-full bottom-0 rounded-xl flex flex-col shadow-xl pb-2"
+    style:view-transition-name="chat-{chat.id}-input"
   >
-    {#if $showFloatingClearChat && $status !== 'running' && $responses.length >= 1}
-      <button
-        transition:flyAndScale={{ duration: 125, y: 22 }}
-        on:click={() => {
-          clearChat()
-        }}
-        class="transform mb-4 active:scale-95 appearance-none w-fit mx-auto border-[0.5px] border-sky-900/10 group margin-0 flex items-center px-3 py-2 bg-sky-100 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 text-xs"
+    <div class="overflow-hidden suggestion-items flex items-center">
+      <div
+        in:fly={{ y: 200 }}
+        class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full z-0 overflow-auto no-scrollbar"
       >
-        Clear Chat
-      </button>
-    {/if}
-
-    <div class="overflow-hidden">
-      {#if $showExamplePrompts && ($filteredBuiltInPrompts.length > 0 || $filteredExamplePrompts.length > 0 || $generatingPrompts)}
-        <div
-          transition:fly={{ y: 200 }}
-          class="flex items-center gap-2 pl-8 pr-8 mb-3 w-full overflow-auto no-scrollbar z-0"
+        <SelectDropdown
+          items={promptItems}
+          search="disabled"
+          selected={null}
+          footerItem={addPromptItem}
+          open={promptSelectorOpen}
+          side="top"
+          closeOnMouseLeave={false}
+          keepHeightWhileSearching
+          on:select={(e) => {
+            if (e.detail === addPromptItem.id) {
+              appModalContent.set(null)
+              showAddPromptDialog = true
+              return
+            }
+            const app = $customAIApps.find((app) => app.id === e.detail)
+            if (!app) return
+            runPrompt({
+              label: app.name ?? '',
+              prompt: (app.content || app.name) ?? ''
+            })
+          }}
         >
-          <div class="text-sky-800 dark:text-gray-100">
-            <Icon name="sparkles" />
-          </div>
+          <button
+            use:tooltip={{
+              text: 'Add a Prompt',
+              position: 'right',
+              disabled: $promptItems.length > 0
+            }}
+            class="flex-shrink-0 max-w-64 flex items-center justify-center gap-1 {$promptItems.length >
+              0 ||
+            !(
+              $showExamplePrompts &&
+              ($filteredBuiltInPrompts.length > 0 ||
+                $filteredExamplePrompts.length > 0 ||
+                $generatingPrompts)
+            )
+              ? 'px-2 py-1'
+              : 'px-1.5 py-1.5 aspect-square'} w-fit rounded-xl transition-colors text-sky-800 bg-blue-50 border-blue-300 dark:border-gray-700 dark:text-gray-100 hover:bg-blue-100 dark:bg-gray-800 dark:hover:bg-gray-700 border-[1px] select-none"
+            on:click={(e) => {
+              if ($promptItems.length === 0) {
+                e.preventDefault()
+                e.stopPropagation()
+                appModalContent.set(null)
+                showAddPromptDialog = true
+              }
+            }}
+          >
+            {#if $promptItems.length > 0}
+              {#if $promptSelectorOpen}
+                <Icon name="chevron.up" />
+              {:else}
+                <Icon name="chevron.down" />
+              {/if}
+              <div class="text-sky-800 dark:text-gray-100 w-full truncate font-medium">Saved</div>
+            {:else}
+              {#if $promptSelectorOpen}
+                <Icon name="close" />
+              {:else}
+                <Icon name="add" />
+              {/if}
 
+              {#if !($showExamplePrompts && ($filteredBuiltInPrompts.length > 0 || $filteredExamplePrompts.length > 0 || $generatingPrompts))}
+                Add Prompt
+              {/if}
+            {/if}
+          </button>
+
+          <div
+            slot="item"
+            class="w-full"
+            let:item
+            use:contextMenu={{
+              canOpen: item?.data,
+              items: [
+                {
+                  type: 'action',
+                  text: 'Edit',
+                  icon: 'edit',
+                  action: () => {
+                    const app = $customAIApps.find((app) => app.id === item.id)
+                    if (!app) return
+                    appModalContent.set(app)
+                    showAddPromptDialog = true
+                  }
+                },
+                {
+                  type: 'action',
+                  kind: 'danger',
+                  text: 'Delete',
+                  icon: 'trash',
+                  action: async () => {
+                    if (!item) return
+                    const { closeType: confirmed } = await openDialog({
+                      message: `Are you sure you want to delete the prompt "${item.label}"?`
+                    })
+                    if (confirmed) ai.deleteCustomAiApp(item.id)
+                    promptSelectorOpen.set(true)
+                  }
+                }
+              ]
+            }}
+          >
+            <SelectDropdownItem {item} />
+          </div>
+        </SelectDropdown>
+
+        {#if $showExamplePrompts && ($filteredBuiltInPrompts.length > 0 || $filteredExamplePrompts.length > 0 || $generatingPrompts)}
           {#each $filteredBuiltInPrompts as prompt (prompt.prompt.replace(/[^a-zA-Z0-9]/g, ''))}
             <PromptItem on:click={() => runPrompt(prompt)} label={prompt.label} />
           {/each}
@@ -962,53 +1199,55 @@
               <PromptItem on:click={() => runPrompt(prompt)} label={prompt.label} />
             {/each}
           {/if}
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
 
-    {#if preparingTabs}
-      <div
-        transition:slide={{ duration: 150, axis: 'y' }}
-        class="err flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
-      >
-        Preparing tabs for the chat…
-      </div>
-    {:else if $contextItems.length}
-      {#if !$optToggled}
+    {#if showContextBar}
+      {#if preparingTabs}
         <div
-          class="flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
-          transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
-          data-tooltip-target="context-bar"
+          transition:slide={{ duration: 150, axis: 'y' }}
+          class="err flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
         >
-          <div class=" flex-row items-center gap-2 flex">
-            <ContextBubbles
-              {contextManager}
-              on:select={handleSelectContextItem}
-              on:remove-item={handleRemoveContextItem}
-              on:retry={handleRetryContextItem}
-            />
-            {#if $contextItems.length > 0}
-              <button
-                class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
-                on:click={() => {
-                  handleClearContext()
-                }}
-                use:tooltip={{
-                  text: 'Shift + ⌫',
-                  position: 'left'
-                }}
-              >
-                <Icon name="close" />
-              </button>
-            {/if}
-          </div>
+          Preparing tabs for the chat…
         </div>
+      {:else if $contextItems.length}
+        {#if !$optToggled}
+          <div
+            class="flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
+            transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
+            data-tooltip-target="context-bar"
+          >
+            <div class=" flex-row items-center gap-2 flex">
+              <ContextBubbles
+                {contextManager}
+                on:select={handleSelectContextItem}
+                on:remove-item={handleRemoveContextItem}
+                on:retry={handleRetryContextItem}
+              />
+              {#if $contextItems.length > 0}
+                <button
+                  class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
+                  on:click={() => {
+                    handleClearContext()
+                  }}
+                  use:tooltip={{
+                    text: 'Shift + ⌫',
+                    position: 'left'
+                  }}
+                >
+                  <Icon name="close" />
+                </button>
+              {/if}
+            </div>
+          </div>
+        {/if}
       {/if}
     {/if}
 
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
-      class="flex bg-sky-50 dark:bg-gray-700 border-blue-300 dark:border-gray-600 border-[1px] px-4 py-3 gap-2 shadow-lg mx-4"
+      class="chat-input-wrapper flex bg-sky-50 dark:bg-gray-700 border-blue-300 dark:border-gray-600 border-[1px] px-4 py-3 gap-2 shadow-lg mx-4"
       class:rounded-2xl={smallSize}
       class:rounded-xl={!smallSize}
       class:flex-col={!smallSize}
@@ -1031,7 +1270,6 @@
           <ChatContextTabPicker
             tabs={contextPickerTabs}
             {contextManager}
-            on:pick-screenshot={handlePickScreenshot}
             on:close={() => {
               $tabPickerOpen = false
               if (editor) {
@@ -1041,20 +1279,22 @@
           />
         {/if}
 
-        <button
-          disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
-          popovertarget="chat-add-context-tabs"
-          class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
-          on:click={(e) => {
-            $tabPickerOpen = !$tabPickerOpen
-          }}
-          use:tooltip={{
-            text: 'Add tab',
-            position: 'left'
-          }}
-        >
-          <Icon name={'add'} size={'18px'} className="opacity-60" />
-        </button>
+        {#if showAddToContext}
+          <button
+            disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
+            popovertarget="chat-add-context-tabs"
+            class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
+            on:click={(e) => {
+              $tabPickerOpen = !$tabPickerOpen
+            }}
+            use:tooltip={{
+              text: 'Add tab',
+              position: 'left'
+            }}
+          >
+            <Icon name={'add'} size={'18px'} className="opacity-60" />
+          </button>
+        {/if}
 
         <SelectDropdown
           items={modelItems}
@@ -1079,7 +1319,7 @@
         </SelectDropdown>
 
         <button
-          class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
+          class="submit-button transform whitespace-nowrap active:scale-95 disabled:opacity-30 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
           on:click={() => {
             selectedMode = 'active'
             handleChatSubmit()

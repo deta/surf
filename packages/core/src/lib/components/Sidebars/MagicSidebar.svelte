@@ -7,9 +7,9 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { derived, writable } from 'svelte/store'
+  import { derived, writable, type Writable } from 'svelte/store'
 
-  import { useLogScope, tooltip, isMac, useLocalStorageStore } from '@horizon/utils'
+  import { useLogScope, tooltip, isMac } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
 
   import Chat from '@horizon/core/src/lib/components/Chat/Chat.svelte'
@@ -23,12 +23,11 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { AIChat, useAI } from '@horizon/core/src/lib/service/ai/ai'
-  import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
-  import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
-  import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
   export let inputValue = ''
+  export let activeChatId: Writable<string>
+  export let activeChat: Writable<AIChat | null>
 
   const dispatch = createEventDispatcher<{
     'close-chat': void
@@ -43,13 +42,11 @@
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
 
-  const activeChatId = useLocalStorageStore<string>('activeChatId', '')
-  const activeChat = writable<AIChat | null>(null)
   const onboardingOpen = writable(false)
 
   const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
 
-  const showFloatingClearChat = derived(userConfigSettings, (userConfigSettings) => {
+  const otherTabsOpen = derived(userConfigSettings, (userConfigSettings) => {
     return userConfigSettings.annotations_sidebar || userConfigSettings.go_wild_mode
   })
 
@@ -92,6 +89,10 @@
     chatComponent?.addChatWithQuery(query)
   }
 
+  export const clearExistingChat = async () => {
+    await handleClearChat()
+  }
+
   const handleClearErrors = () => {
     // todo: implement
   }
@@ -104,18 +105,18 @@
       return
     }
 
-    const toast = toasts.loading('Clearing chat...')
-
     try {
       const messagesLength = ($activeChat?.responsesValue ?? []).length
 
       await clearChat($activeChatId)
-      toast.success('Chat cleared!')
 
+      if (messagesLength > 0) {
+        toasts.success('Chat cleared!')
+      }
       await telemetry.trackPageChatClear(messagesLength)
     } catch (e) {
       log.error('Error clearing chat:', e)
-      toast.error('Failed to clear chat')
+      toasts.error('Failed to clear chat')
     }
   }
 
@@ -228,7 +229,7 @@
 {/if}
 
 <div class="flex flex-col h-full relative overflow-hidden">
-  {#if !$showFloatingClearChat}
+  {#if !$otherTabsOpen}
     <div
       class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 dark:border-gray-800"
     >
@@ -290,7 +291,6 @@
         on:process-context-item
         on:highlightWebviewText
         on:seekToTimestamp
-        on:pick-screenshot
       />
     {/key}
   {:else}

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { Icon } from '@horizon/icons'
   import type { FileKind } from 'human-filetypes'
 
-  export let kind: FileKind
+  export let kind: FileKind | 'code'
   export let width: number | string = '100%'
   export let height: number | string = '100%'
 </script>
@@ -140,6 +141,8 @@
       d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"
     /><path d="M10 13l-1 2l1 2" /><path d="M14 13l1 2l-1 2" /></svg
   >
+{:else if kind === 'code'}
+  <Icon name="code-block" size={width} />
 {:else}
   <svg
     xmlns="http://www.w3.org/2000/svg"

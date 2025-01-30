@@ -44,6 +44,8 @@
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import type { MiniBrowserSelection } from '@horizon/core/src/lib/service/miniBrowser'
+  import CodeRenderer from '../Chat/CodeRenderer.svelte'
+  import { isGeneratedResource } from '../../utils/resourcePreview'
 
   export let tab: TabPage
   // export let url: Writable<string>
@@ -513,7 +515,9 @@
     </div>
 
     <div class="mini-webview-wrapper">
-      {#if $url}
+      {#if resource && isGeneratedResource(resource)}
+        <CodeRenderer {resource} language="html" showPreview fullSize collapsable={false} />
+      {:else if $url}
         <BrowserTab
           {historyEntriesManager}
           downloadIntercepters={miniBrowserService.downloadIntercepters}

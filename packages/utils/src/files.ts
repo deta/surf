@@ -69,6 +69,18 @@ export const humanFileTypes = {
   [ResourceTypes.HISTORY_ENTRY]: 'Link'
 }
 
+export const codeFileTypes = [
+  'application/javascript',
+  'application/json',
+  'application/xml',
+  'text/markdown',
+  'text/html',
+  'text/css',
+  'text/csv',
+  'text/plain',
+  'text/x-markdown'
+]
+
 export const getFileType = (fileType: string): string => {
   if (!fileType) return 'unknown'
   const parsed = (humanFileTypes as any)[fileType]
@@ -85,6 +97,10 @@ export const getFileType = (fileType: string): string => {
 export const getFileKind = (fileType: string) => {
   const parsed = fromMime(fileType)
   if (!parsed || parsed === 'unknown') {
+    if (codeFileTypes.includes(fileType)) {
+      return 'code'
+    }
+
     const match = Object.entries(humanFileTypes).find((x) => fileType.includes(x[0]))
     if (match) {
       return match[1].toLowerCase().replace(/\s/g, '-')
@@ -113,6 +129,55 @@ export const toHumanFileSize = (bytes: number, si = true, dp = 1) => {
   } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1)
 
   return bytes.toFixed(dp) + ' ' + units[u]
+}
+
+export const formatCodeLanguage = (lang: string) => {
+  if (lang === 'javascript') return 'JS'
+  if (lang === 'typescript') return 'TS'
+  if (lang === 'html') return 'HTML'
+  if (lang === 'css') return 'CSS'
+  if (lang === 'scss') return 'SCSS'
+  if (lang === 'json') return 'JSON'
+  if (lang === 'bash') return 'Bash'
+  if (lang === 'shell') return 'Shell'
+  if (lang === 'plaintext') return 'Text'
+  if (lang === 'markdown') return 'MD'
+  if (lang === 'yaml') return 'YAML'
+  if (lang === 'xml') return 'XML'
+  if (lang === 'sql') return 'SQL'
+  if (lang === 'graphql') return 'GraphQL'
+  if (lang === 'python') return 'Python'
+  if (lang === 'java') return 'Java'
+  if (lang === 'csharp') return 'C#'
+  if (lang === 'cpp') return 'C++'
+  if (lang === 'c') return 'C'
+  if (lang === 'ruby') return 'Ruby'
+  if (lang === 'php') return 'PHP'
+  if (lang === 'perl') return 'Perl'
+  if (lang === 'rust') return 'Rust'
+  if (lang === 'go') return 'Go'
+  if (lang === 'swift') return 'Swift'
+  if (lang === 'kotlin') return 'Kotlin'
+  if (lang === 'dart') return 'Dart'
+  if (lang === 'elixir') return 'Elixir'
+  return lang
+}
+
+export const codeLanguageToMimeType = (code: string) => {
+  const parsed = code.toLowerCase()
+  if (parsed === 'plaintext') return 'text/plain'
+  if (parsed === 'html') return 'text/html'
+  if (parsed === 'css') return 'text/css'
+  if (parsed === 'scss') return 'text/scss'
+
+  return `application/${parsed}`
+}
+
+export const mimeTypeToCodeLanguage = (mimeType: string) => {
+  if (mimeType === 'text/plain') return 'plaintext'
+
+  const type = mimeType.split('/')[1]
+  return type
 }
 
 /**
