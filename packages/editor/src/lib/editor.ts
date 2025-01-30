@@ -12,7 +12,6 @@ import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import Slash from './extensions/Slash/SlashExtension'
 import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
-import { CodeBlockExtension } from './extensions/CodeBlock'
 import Mention, { type MentionAction } from './extensions/Mention/index'
 // import Mention from '@tiptap/extension-mention'
 import mentionSuggestion from './extensions/Mention/suggestion'
@@ -44,12 +43,10 @@ export type ExtensionOptions = {
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
-    codeBlock: false,
     heading: {
       levels: [1, 2, 3]
     }
   }),
-  CodeBlockExtension,
   Link.extend({
     addAttributes() {
       return {
