@@ -118,7 +118,7 @@ export const getUserConfig = (path?: string) => {
         completed_stuff: false
       },
       personas: [],
-      selected_model: BuiltInModelIDs.GPT4o,
+      selected_model: BuiltInModelIDs.ClaudeSonnet,
       model_settings: [],
       vision_image_tagging: false,
       turntable_favicons: true,
