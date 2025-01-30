@@ -51,10 +51,11 @@
       <h1
         class="font-gambarino text-3xl md:!text-5xl text-center text-white leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
       >
-        Generate your own Artifacts
+        Introducing Surflets
       </h1>
       <p class="text-center text-lg md:!text-xl text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
-        Draw a rectangle and ask to build an artifact or generate them directly in Chat.
+        Draw a rectangle, ask to build an interactive demo and watch as Surf turns the image into a
+        usable "Surflet".
       </p>
       <Button on:click={handleTryVision}>Try it out</Button>
       <p class="text-center text-sm md:!text-md text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">

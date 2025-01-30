@@ -3069,7 +3069,7 @@
     window.showCodegenOnboarding = async () => {
       const newTab = await tabsManager.create<TabResource>(
         {
-          title: 'Surf Artifacts',
+          title: 'Surf Surflets',
           icon: '',
           type: 'resource',
           resourceId: 'onboarding-codegen',

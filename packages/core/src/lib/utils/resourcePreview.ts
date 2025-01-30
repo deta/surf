@@ -419,7 +419,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
         image: undefined,
         url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
         source: {
-          text: hostname ? `Generated on ${hostname}` : 'Artifact',
+          text: hostname ? `Generated on ${hostname}` : 'Surflet',
           imageUrl: undefined,
           icon: 'code-block'
         },

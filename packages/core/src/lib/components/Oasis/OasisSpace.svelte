@@ -277,7 +277,7 @@
             )
           } else if ($selectedFilterType.id === 'links') {
             return resource.type.startsWith('application/vnd.space.')
-          } else if ($selectedFilterType.id === 'artifacts') {
+          } else if ($selectedFilterType.id === 'surflets') {
             return isGeneratedResource(resource)
           } else {
             return true

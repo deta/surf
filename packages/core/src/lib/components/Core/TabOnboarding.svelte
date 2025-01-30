@@ -76,7 +76,7 @@
     { id: 'vision', label: 'Vision' },
     { id: 'chat', label: 'Chat' },
     { id: 'smart-notes', label: 'Smart Notes' },
-    { id: 'artifacts', label: 'Artifacts' }
+    { id: 'surflets', label: 'Surflets' }
     // { id: 'contexts', label: 'Contexts' }
   ]
 
@@ -338,7 +338,7 @@
       <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
     </section>
 
-    <section id="artifacts">
+    <section id="surflets">
       <Codegen {modShortcut} on:tryVision={handleTryVision} />
     </section>
 

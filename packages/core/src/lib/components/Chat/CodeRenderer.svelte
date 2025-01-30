@@ -900,7 +900,7 @@
             {:else if isHTML}
               {#if showPreview}
                 <button
-                  use:tooltip={{ text: 'Reload Artifact', position: 'left' }}
+                  use:tooltip={{ text: 'Reload', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
                   on:click={() => reloadApp()}
                 >

@@ -16,14 +16,14 @@ export interface VersionContent {
 
 export const versions: VersionContent[] = [
   {
-    label: 'Generate Artifacts',
+    label: 'Surflets',
     featureID: '0.2.0',
     current: true,
     emoji: '',
-    title: 'Generating your own Artifacts, now in Surf',
+    title: 'Introducing Surflets',
     description:
-      'Our chat features (vision & sidebar) have gotten code-generation capabilities! Allowing you to create interactive artifacts like mini apps, charts and more, with a single prompt. ',
-    buttonText: 'Try Creating Artifacts',
+      'Our chat features (vision & sidebar) have gotten code-generation capabilities! Allowing you to create interactive "Surflets" like mini apps, charts and more, with a single prompt. ',
+    buttonText: 'Learn More',
     image: teaser020apps,
     // @ts-ignore
     action: () => window.showCodegenOnboarding()
