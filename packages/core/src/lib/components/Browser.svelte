@@ -734,7 +734,7 @@
     }
   }
 
-  const openRightSidebarTab = (id: RightSidebarTab) => {
+  const openRightSidebarTab = async (id: RightSidebarTab) => {
     if ($rightSidebarTab === id) {
       telemetry.trackOpenRightSidebar(id)
     } else {
@@ -745,7 +745,7 @@
       handleExpandRight()
 
       if (id === 'chat') {
-        setPageChatState(true)
+        await setPageChatState(true)
       }
     }
   }
@@ -2372,14 +2372,22 @@
   //   }
   // }
 
-  const handleOnboardingChatWithQuery = async (e: CustomEvent<{ query: string }>) => {
-    const { query } = e.detail
+  const handleOnboardingChatWithQuery = async (
+    e: CustomEvent<{ query: string; preserveContext?: boolean }>
+  ) => {
+    const { query, preserveContext } = e.detail
 
-    openRightSidebarTab('chat')
+    await openRightSidebarTab('chat')
 
     await tick()
 
-    chatContext.clear()
+    if (!preserveContext) {
+      chatContext.clear()
+    }
+
+    await wait(500)
+
+    log.debug('Inserting query into chat', query)
 
     const attemptInsertQuery = (retries = 3) => {
       if (magicSidebar) {

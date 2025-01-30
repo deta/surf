@@ -1,6 +1,6 @@
 <script lang="ts" context="module">
   export type OnboardingEvents = {
-    openChat: { query: string }
+    openChat: { query: string; preserveContext?: boolean }
     openStuff: void
     openScreenshot: void
     launchTimeline: OnboardingFeature
@@ -103,10 +103,10 @@
 
     if (space) {
       console.debug('detaSpace found:', space.id)
-      dispatch('openChat', { query: ONBOARDING_SPACE_QUERY })
+      dispatch('openChat', { query: ONBOARDING_SPACE_QUERY, preserveContext: true })
     } else {
       dispatch('createOnboardingSpace')
-      dispatch('openChat', { query: ONBOARDING_SPACE_QUERY })
+      dispatch('openChat', { query: ONBOARDING_SPACE_QUERY, preserveContext: true })
       console.error(`Space "${ONBOARDING_SPACE_NAME}" not found`)
     }
 
@@ -122,7 +122,8 @@
     await wait(2000)
 
     dispatch('openChat', {
-      query: 'Summarize this page and show me the historical context of the playstation.'
+      query: 'Summarize this page and show me the historical context of the playstation.',
+      preserveContext: true
     })
   }
 
@@ -134,14 +135,17 @@
 
     await wait(2000)
 
-    dispatch('openChat', { query: 'How is intelligence related to context?' })
+    dispatch('openChat', {
+      query: 'How is intelligence related to context?',
+      preserveContext: true
+    })
   }
 
   const handleTryChatWithYoutubeVideo = async () => {
     dispatch('launchTimeline', OnboardingFeature.ChatWithYoutubeVideoOnboarding)
     dispatch('batchOpenTabs', [onboardingYoutube])
     await wait(2000)
-    dispatch('openChat', { query: 'What did steve say about styluses?' })
+    dispatch('openChat', { query: 'What did steve say about styluses?', preserveContext: true })
   }
 
   const handleTryStuff = () => {
