@@ -235,6 +235,7 @@ TODO: Fix resizing logic for other corners
             {resource}
             showPreview
             language={mimeTypeToCodeLanguage(resource.type)}
+            initialCollapsed={false}
             collapsable={false}
           />
         {:else if interactive}
