@@ -30,6 +30,7 @@ export enum TelemetryEventTypes {
   SearchOasis = 'Search Oasis',
   OpenResource = 'Open Resource',
   MultiSelectResourceAction = 'Multi Select Resource Action',
+  OpenResourceInSidebar = 'Open Resource In Sidebar',
 
   // Spaces
   CreateSpace = 'Create Space',
@@ -51,6 +52,8 @@ export enum TelemetryEventTypes {
   OpenPageChatSidebar = 'Open Page Chat',
   SummarizeText = 'Summarize Text',
   GeneratePrompts = 'Generate Prompts',
+  CreatePrompt = 'Create Prompt',
+  DeletePrompt = 'Delete Prompt',
   UsePrompt = 'Use Prompt',
   UpdatePrompt = 'Update Prompt',
   ResetPrompt = 'Reset Prompt',

@@ -22,6 +22,7 @@ import { type ContextItem, ContextManager } from './contextManager'
 import {
   EventContext,
   GeneratePromptsEventTrigger,
+  PromptType,
   SummarizeEventContentSource
 } from '@horizon/types'
 
@@ -378,7 +379,9 @@ export class AIService {
       this.refreshCustomAiApps()
     } catch (error) {
       this.log.error('Failed to save custom tool:', error)
+      return
     }
+    this.telemetry.trackCreatePrompt(PromptType.Custom)
   }
 
   async deleteCustomAiApp(id: string) {
@@ -387,7 +390,9 @@ export class AIService {
       this.refreshCustomAiApps()
     } catch (error) {
       this.log.error('Failed to delete custom tool:', error)
+      return
     }
+    this.telemetry.trackDeletePrompt(PromptType.Custom)
   }
 
   async summarizeText(

@@ -37,7 +37,7 @@
   import { hasParent } from '../../utils/dom'
   import Chat from '../Chat/Chat.svelte'
   import { captureScreenshot } from '../../utils/screenshot'
-  import { PageChatMessageSentEventTrigger } from '@horizon/types'
+  import { EventContext, PageChatMessageSentEventTrigger, PromptType } from '@horizon/types'
   import { useTelemetry } from '../../service/telemetry'
   import PromptItem from '../Chat/PromptItem.svelte'
   import ChatInput from '../Chat/ChatInput.svelte'
@@ -539,6 +539,7 @@
       query: prompt.label,
       useContext: true
     })
+    telemetry.trackUsePrompt(PromptType.Custom, EventContext.Inline)
   }
 </script>
 

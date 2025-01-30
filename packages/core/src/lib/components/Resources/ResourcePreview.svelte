@@ -463,6 +463,7 @@
     await resourceManager.createResourceTag(resource.id, ResourceTagsBuiltInKeys.CANONICAL_URL, url)
 
     browser.openPageAnnotations()
+    resourceManager.telemetry.trackOpenResourceInSidebar(resource.type)
   }
 
   const handleEditTitle = async (e: CustomEvent<string>) => {

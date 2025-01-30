@@ -710,6 +710,20 @@ export class Telemetry {
     })
   }
 
+  async trackCreatePrompt(type: PromptType, name?: string) {
+    await this.trackEvent(TelemetryEventTypes.CreatePrompt, {
+      name: name,
+      type: type
+    })
+  }
+
+  async trackDeletePrompt(type: PromptType, name?: string) {
+    await this.trackEvent(TelemetryEventTypes.DeletePrompt, {
+      name: name,
+      type: type
+    })
+  }
+
   async trackAskInlineAI(data: { isFollowUp: boolean; baseMedia: AIMessageBaseMedia }) {
     UserStatsService.incStat('global_n_use_inline_tools')
 
@@ -837,6 +851,12 @@ export class Telemetry {
           : getPrimaryResourceType(resourceTypeOrSpace),
       trigger,
       onboarding
+    })
+  }
+
+  async trackOpenResourceInSidebar(resourceType: string) {
+    await this.trackEvent(TelemetryEventTypes.OpenResourceInSidebar, {
+      type: resourceType
     })
   }
 

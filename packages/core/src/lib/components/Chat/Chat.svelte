@@ -772,17 +772,23 @@
   //   await chat.getChatPrompts(contextItem)
   // }, 500)
 
-  const runPrompt = async (prompt: ChatPrompt) => {
+  const runPrompt = async (prompt: ChatPrompt, custom: boolean = false) => {
     try {
       log.debug('Handling prompt submit', prompt)
       autoScrollChat = true
       selectedMode = 'active'
 
-      const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
+      let promptType = PromptType.BuiltIn
+      if (custom) {
+        promptType = PromptType.Custom
+      } else {
+        const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
+        promptType = builtIn ? PromptType.BuiltIn : PromptType.Generated
+      }
       telemetry.trackUsePrompt(
-        builtIn ? PromptType.BuiltIn : PromptType.Generated,
+        promptType,
         EventContext.Chat,
-        builtIn ? prompt.label.toLowerCase() : undefined
+        prompt.label ? prompt.label.toLowerCase() : undefined
       )
 
       await sendChatMessage(prompt.prompt, 'user', prompt.label)
@@ -1097,10 +1103,13 @@
             }
             const app = $customAIApps.find((app) => app.id === e.detail)
             if (!app) return
-            runPrompt({
-              label: app.name ?? '',
-              prompt: (app.content || app.name) ?? ''
-            })
+            runPrompt(
+              {
+                label: app.name ?? '',
+                prompt: (app.content || app.name) ?? ''
+              },
+              true
+            )
           }}
         >
           <button
