@@ -130,6 +130,11 @@
   }
 
   const fetchExistingChat = async (id: string) => {
+    if ($activeChat?.id === id) {
+      log.debug('Chat already fetched', id)
+      return
+    }
+
     const fetched = await ai.getChat(id)
     if (!fetched) {
       log.error('Failed to fetch chat', id)

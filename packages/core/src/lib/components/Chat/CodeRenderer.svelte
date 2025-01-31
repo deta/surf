@@ -80,18 +80,17 @@
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
 
   $: isHTML = language === 'html'
+  $: isHTMLApp = isHTML && hasHTMLOpening(codeContent)
   $: isJS = language === 'javascript' || language === 'typescript'
   $: formattedLanguage = formatCodeLanguage(language)
 
   $: generationStatus = getGenerationStatus(codeContent, language)
-  $: stillGenerating = !resource && isHTML && !isHTMLComplete
-
-  $: log.debug('status', generationStatus)
+  $: stillGenerating = !resource && (isHTMLApp || !codeContent) && !isHTMLComplete
 
   $: silentResource =
     resource && (resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
 
-  $: if (showPreview && !collapsed && isHTML && !stillGenerating) {
+  $: if (showPreview && !collapsed && isHTMLApp && !stillGenerating) {
     renderHTMLPreview()
   } else if (!collapsed && resource) {
     highlightCode()
@@ -149,8 +148,6 @@
     const code = raw.trim()
     if (code === '') return 'empty'
 
-    log.debug('Checking generation status', { code })
-
     const hasStartTag = (tag: string) => code.includes(`<${tag}>`)
     const hasEndTag = (tag: string) => code.includes(`</${tag}>`)
 
@@ -175,6 +172,18 @@
     }
   }
 
+  const hasHTMLOpening = (raw: string) => {
+    const code = raw.trim().toLowerCase()
+
+    // check if it starts with the html doctype or an html tag
+    // we also check the other way around because the code might still be generating
+    return (
+      code.startsWith('<!doctype html>') ||
+      '<!doctype html>'.startsWith(code) ||
+      '<html '.startsWith(code)
+    )
+  }
+
   const showCodeView = () => {
     showPreview = false
     collapsed = false
@@ -185,6 +194,8 @@
 
     if (stillGenerating) {
       collapsed = true
+    } else {
+      renderHTMLPreview()
     }
   }
 
@@ -526,7 +537,7 @@
       return
     }
 
-    log.debug('Rendering HTML preview', language)
+    log.debug('Rendering HTML preview', language, { code })
 
     appContainer.innerHTML = ''
 
@@ -597,6 +608,7 @@
   }
 
   const handleEndOfOutput = async () => {
+    log.debug('End of output')
     isHTMLComplete = true
     showPreview = true
 
@@ -644,10 +656,9 @@
 
   const handleContentStream = useDebounce(async () => {
     const code = await getCode()
-    if (!code) return
+    if (!code || code.trim() === '') return
 
     if (!language) {
-      log.debug('Getting language')
       getLanguage()
     }
 
@@ -663,6 +674,13 @@
         observer?.disconnect()
         observer = null
         handleEndOfOutput()
+      } else if (!hasHTMLOpening(code)) {
+        log.debug('code is not an html app, switching to code view')
+        if (showPreview) {
+          showCodeView()
+        }
+
+        makeCodeEditable()
       }
     }
 
@@ -753,7 +771,7 @@
       saveState.set('saved')
     }
 
-    log.debug('CodeRenderer mounted', { lang, showPreview, code, resource })
+    log.debug('CodeRenderer mounted', { lang, showPreview, code, resource, initialCollapsed })
 
     if (lang === 'html' && code) {
       if (isEndOfOutput(code)) {
@@ -764,6 +782,9 @@
         }
       } else if (initialCollapsed) {
         collapsed = true
+      } else if (!hasHTMLOpening(code)) {
+        showCodeView()
+        makeCodeEditable()
       }
     } else if (code) {
       highlightCode()
@@ -816,7 +837,7 @@
             on:input={handleInputChange}
             on:keydown={handleInputKeydown}
             on:blur={handleInputBlur}
-            value={$customName || $generatedName}
+            value={$customName || $generatedName || language}
             placeholder="Name"
             class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
           />

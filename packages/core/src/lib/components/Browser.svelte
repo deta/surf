@@ -760,6 +760,16 @@
     window.api.updateTrafficLightsVisibility(visible)
   }
 
+  const openChatSidebar = async (resetContext?: boolean) => {
+    rightSidebarTab.set('chat')
+
+    if (!showRightSidebar) {
+      handleExpandRight()
+
+      await setPageChatState(true, resetContext)
+    }
+  }
+
   const handleLeftSidebarChange = useDebounce((value: boolean) => {
     if (showLeftSidebar === value) {
       return
@@ -1655,7 +1665,7 @@
     }
   }
 
-  const setPageChatState = async (enabled: boolean) => {
+  const setPageChatState = async (enabled: boolean, resetContext = true) => {
     log.debug('Toggling magic sidebar', enabled)
     const tab = $activeTab as TabPage | null
 
@@ -1674,27 +1684,29 @@
 
       log.debug('selected tabs', selectedTabIds)
 
-      if (selectedTabIds.length > 1) {
-        chatContext.clear()
-        for (const id of selectedTabIds) {
-          await chatContext.addTab(id)
+      if (resetContext) {
+        if (selectedTabIds.length > 1) {
+          chatContext.clear()
+          for (const id of selectedTabIds) {
+            await chatContext.addTab(id)
+          }
+
+          return
         }
 
-        return
-      }
+        if ($chatContextItems.length > 0) {
+          return
+        }
 
-      if ($chatContextItems.length > 0) {
-        return
-      }
-
-      if ($desktopVisible) {
-        chatContext.clear()
-        await chatContext.addActiveSpaceContext()
-      } else if (tab) {
-        chatContext.clear()
-        await chatContext.addActiveTab()
-      } else {
-        await chatContext.restoreItems()
+        if ($desktopVisible) {
+          chatContext.clear()
+          await chatContext.addActiveSpaceContext()
+        } else if (tab) {
+          chatContext.clear()
+          await chatContext.addActiveTab()
+        } else {
+          await chatContext.restoreItems()
+        }
       }
     } else {
       showChatSidebar.set(false)
@@ -3105,6 +3117,18 @@
       }
     }
 
+    if ($activeSidebarChatId) {
+      try {
+        const chat = await aiService.getChat($activeSidebarChatId)
+        if (chat) {
+          log.debug('Setting active sidebar chat', chat)
+          activeSidebarChat.set(chat)
+        }
+      } catch (error) {
+        log.error('Failed to fetch chat', error)
+      }
+    }
+
     syncService.init()
   })
 
@@ -3593,18 +3617,20 @@
       }
     }
 
-    log.debug('Opening inline chat in sidebar', e.detail.chat)
+    const chat = e.detail.chat
+
+    log.debug('Opening inline chat in sidebar', chat)
 
     showScreenshotPicker.set(false)
 
-    activeSidebarChatId.set(e.detail.chat.id)
-    activeSidebarChat.set(e.detail.chat)
+    chatContext.replaceWith(chat.contextManager)
+
+    activeSidebarChatId.set(chat.id)
+    activeSidebarChat.set(chat)
 
     await tick()
 
-    if (!showRightSidebar) {
-      await toggleRightSidebarTab('chat')
-    }
+    await openChatSidebar(false)
   }
 
   const removeAllContextItems = () => {

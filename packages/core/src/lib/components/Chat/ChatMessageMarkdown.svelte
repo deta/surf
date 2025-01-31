@@ -16,8 +16,8 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount, setContext } from 'svelte'
-  import { tooltip, useLogScope } from '@horizon/utils'
+  import { createEventDispatcher, setContext } from 'svelte'
+  import { useLogScope } from '@horizon/utils'
 
   import type { AIChatMessageSource } from '../../types/browser.types'
   import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
@@ -115,10 +115,6 @@
     citationClick: handleCitationClick,
     getCitationInfo: getCitationInfo,
     highlightedCitation: highlightedCitation
-  })
-
-  onMount(() => {
-    log.debug('ChatMessageMarkdown mounted', sources, content)
   })
 </script>
 

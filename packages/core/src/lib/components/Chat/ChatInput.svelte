@@ -125,6 +125,7 @@
       bind:focused={editorFocused}
       autofocus={true}
       placeholder={$chatBoxPlaceholder}
+      submitOnEnter
     />
   </div>
 

@@ -866,6 +866,11 @@ export class ContextManager {
     )
     return clone
   }
+
+  replaceWith(contextManager: ContextManager) {
+    this.updateItems(() => contextManager.itemsValue)
+    this.persistItems()
+  }
 }
 
 export * from './context/index'

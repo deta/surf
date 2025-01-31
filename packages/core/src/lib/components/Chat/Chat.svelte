@@ -1270,6 +1270,7 @@
           bind:content={inputValue}
           bind:focused={editorFocused}
           autofocus={true}
+          submitOnEnter
           placeholder={$chatBoxPlaceholder}
         />
       </div>

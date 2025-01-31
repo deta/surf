@@ -233,8 +233,7 @@ export class AIChat {
   async getChatModeForPromptAndTab(
     prompts: string[],
     tab: TabPage,
-    tier?: ModelTiers,
-    isRetry = false
+    tier?: ModelTiers
   ): Promise<ChatMode> {
     try {
       const title = tab.title
@@ -266,19 +265,6 @@ export class AIChat {
       return response
     } catch (e) {
       this.log.error('Error determining if a screenshot is needed', e)
-      if (e instanceof QuotaDepletedError) {
-        const res = handleQuotaDepletedError(e)
-        this.log.error('Quota depleted', res)
-        if (
-          !isRetry &&
-          res.exceededTiers.length === 1 &&
-          res.exceededTiers.includes(ModelTiers.Standard)
-        ) {
-          this.log.debug('Retrying with premium model')
-          return this.getChatModeForPromptAndTab(prompts, tab, ModelTiers.Premium, true)
-        }
-      }
-
       return ChatMode.TextOnly
     }
   }

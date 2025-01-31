@@ -216,12 +216,24 @@ export class AIService {
     opts?: {
       tier?: ModelTiers
       responseFormat?: string
+      /**
+       * Whether to retry with a different model tier if the current tier is depleted
+       */
+      quotaErrorRetry?: boolean
     }
-  ) {
+  ): Promise<ChatCompletionResponse> {
+    const defaultOpts = {
+      tier: ModelTiers.Premium,
+      quotaErrorRetry: true,
+      responseFormat: undefined as string | undefined
+    }
+
+    const options = Object.assign(defaultOpts, opts) as typeof defaultOpts
+
     try {
-      const model = this.getMatchingBackendModel(opts?.tier ?? ModelTiers.Premium)
+      const model = this.getMatchingBackendModel(options.tier)
       const customKey = this.customKeyValue
-      const responseFormat = opts?.responseFormat
+      const responseFormat = options?.responseFormat
 
       let messages: Message[] = []
 
@@ -237,7 +249,7 @@ export class AIService {
         })
       }
 
-      this.log.debug('creating chat completion', model, opts, messages)
+      this.log.debug('creating chat completion', model, options, messages)
       const result = await this.sffs.createAIChatCompletion(messages, model, {
         customKey,
         responseFormat
@@ -249,8 +261,28 @@ export class AIService {
         error: null
       } as ChatCompletionResponse
     } catch (e) {
+      if (e instanceof QuotaDepletedError) {
+        const res = handleQuotaDepletedError(e)
+        this.log.error('Quota depleted', res)
+        if (
+          options?.quotaErrorRetry === true &&
+          res.exceededTiers.length === 1 &&
+          res.exceededTiers.includes(options.tier)
+        ) {
+          const tier =
+            options.tier === ModelTiers.Standard ? ModelTiers.Premium : ModelTiers.Standard
+          this.log.debug('Retrying with different model tier', tier)
+          return this.createChatCompletion(userPrompt, systemPrompt, {
+            ...options,
+            tier: tier,
+            quotaErrorRetry: false
+          })
+        }
+      }
+
       const parsedError = parseAIError(e)
       this.log.error('Error creating chat completion', parsedError)
+
       return {
         output: null,
         error: parsedError
