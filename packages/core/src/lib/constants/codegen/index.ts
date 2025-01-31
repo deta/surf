@@ -5,6 +5,8 @@ import ImageTable from '../../../../public/assets/onboarding/codegen/table.png?u
 import ImageSave from '../../../../public/assets/onboarding/codegen/save.png?url'
 import ImageDrop from '../../../../public/assets/onboarding/codegen/dropontonotes.gif?url'
 import ImageFilter from '../../../../public/assets/onboarding/codegen/filter.gif?url'
+import ImageDesktop from '../../../../public/assets/onboarding/codegen/desktop.png?url'
+import ImageUseVision from '../../../../public/assets/onboarding/codegen/usevision.png?url'
 
 export type CodegenOnboardingNote = {
   id: string
@@ -20,6 +22,8 @@ const prepareHTML = (html: string) => {
     .replaceAll('save.png', ImageSave)
     .replaceAll('dropontonotes.gif', ImageDrop)
     .replaceAll('filter.gif', ImageFilter)
+    .replaceAll('desktop.png', ImageDesktop)
+    .replaceAll('usevision.png', ImageUseVision)
     .replaceAll('$MOD', isMac() ? '⌘' : 'Ctrl')
     .replaceAll('$OPT', isMac() ? '⌥' : 'Alt')
 }
