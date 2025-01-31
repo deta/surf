@@ -41,6 +41,8 @@
     $currentAction?.view === 'ModalLarge' ||
     $currentAction?.view === 'ModalSmall'
 
+  $: dispatch('actions-rendered', $currentAction ? true : false)
+
   let inputElem: HTMLInputElement
   let filteredActions = $actions
 

@@ -35,6 +35,17 @@ export const staticActions: TeletypeStaticAction[] = [
     icon: 'docs'
   },
   {
+    id: 'create.space',
+    execute: TeletypeAction.CreateSpace,
+    group: TeletypeActionGroup.CreateCommands,
+    name: 'Create Context',
+    keywords: ['smart', 'smart-space'],
+    // component: CreateNewSpace,
+    // view: 'ModalLarge',
+    shortcut: '',
+    icon: 'add'
+  },
+  {
     id: 'create.notion',
     execute: TeletypeAction.Create,
     group: TeletypeActionGroup.CreateCommands,
@@ -89,17 +100,6 @@ export const staticActions: TeletypeStaticAction[] = [
     name: 'Figma File',
     keywords: ['create', 'create figma', 'figma', 'design'],
     creationUrl: 'https://figma.new',
-    shortcut: '',
-    icon: 'add'
-  },
-  {
-    id: 'create.space',
-    execute: TeletypeAction.CreateSpace,
-    group: TeletypeActionGroup.CreateCommands,
-    name: 'Create Context',
-    keywords: ['smart', 'smart-space'],
-    // component: CreateNewSpace,
-    // view: 'ModalLarge',
     shortcut: '',
     icon: 'add'
   },

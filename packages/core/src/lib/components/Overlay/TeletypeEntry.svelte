@@ -88,8 +88,9 @@
   let teletype: TeletypeSystem
   let unsubscribe: () => void
 
-  const inputValue = writable('')
   const showWhatsNew = showFeatureModal
+  const inputValue = writable('')
+  const showActionsPanel = writable(false)
 
   const hasUntriedFeatures = derived(completedFeatures, ($completedFeatures) =>
     versions.some((v) => !$completedFeatures.includes(v.featureID))
@@ -128,6 +129,9 @@
     inputValue.set(input)
   }
 
+  const handleShowActionPanel = (event: CustomEvent<boolean>) => {
+    showActionsPanel.set(event.detail)
+  }
   const handleSearch = async (value: string) => {
     log.debug('Search:', value)
     const askActions = get(commandComposer.askActions)
@@ -518,7 +522,7 @@
     nestedSearch: true
   }}
 >
-  <Teletype on:close on:input={handleInput}>
+  <Teletype on:close on:input={handleInput} on:actions-rendered={handleShowActionPanel}>
     <div slot="header" class="custom-header">
       <TeletypeHeader
         on:ask={handleAsk}
@@ -526,6 +530,8 @@
         on:open-chat-with-tab
         on:open-space-and-chat
         on:openScreenshot
+        on:create-note
+        {showActionsPanel}
       />
     </div>
     <div slot="sidecar-right" class="tty-sidecar-right">
@@ -534,7 +540,7 @@
   </Teletype>
 </TeletypeProvider>
 
-{#if $hasUntriedFeatures && $inputValue == ''}
+{#if $hasUntriedFeatures && $inputValue == '' && !$showActionsPanel}
   {#if $showWhatsNew}
     <NewFeatureDialog
       on:dismiss={() => {

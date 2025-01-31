@@ -2151,6 +2151,7 @@
   }
 
   const createNewNote = async (context: EventContext, name?: string) => {
+    showNewTabOverlay.set(0)
     log.debug('create note', name)
 
     const resource = await resourceManager.createResourceNote(
