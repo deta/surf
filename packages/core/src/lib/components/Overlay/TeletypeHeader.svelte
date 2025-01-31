@@ -10,6 +10,7 @@
   const dispatch = createEventDispatcher<{
     'open-space-and-chat': { spaceId: string }
     'open-chat-with-tab': string
+    openScreenshot: void
   }>()
   const tabsManager = useTabsManager()
 
@@ -19,10 +20,11 @@
     buttons: [
       ...conditionalArrayItem($scope !== null, {
         component: FloatyButton,
-        offsetX: -120,
+        offsetX: -100,
         offsetY: -70,
         props: {
           text: 'Ask this Context',
+          icon: '',
           onClick: () => {
             dispatch('open-space-and-chat', { spaceId: $scope as string })
           }
@@ -30,13 +32,27 @@
       }),
       {
         component: FloatyButton,
-        offsetX: 80,
+        offsetX: 100,
         offsetY: -70,
         props: {
           text: 'Ask this Tab',
+          icon: '',
           onClick: () => {
             const activeTabId = tabsManager.activeTabIdValue
             dispatch('open-chat-with-tab', activeTabId)
+          }
+        }
+      },
+      {
+        component: FloatyButton,
+        offsetX: 20,
+        offsetY: -130,
+        props: {
+          text: 'Use Vision',
+          icon: document.body.classList.contains('dark') ? 'vision.light' : 'vision',
+          onClick: (e) => {
+            dispatch('openScreenshot')
+            return false
           }
         }
       }
@@ -55,8 +71,12 @@
       <Icon name="plus.boxed" />
     </button>
     {#key $scope}
-      <button class="header-btn" on:click={() => dispatch('ask')} use:floatyButtons={buttonConfigs}>
-        <Icon name="face" />
+      <button
+        class="header-btn"
+        on:click|stopPropagation={() => dispatch('ask')}
+        use:floatyButtons={buttonConfigs}
+      >
+        <Icon name="face.animated" size="34px" />
         <span>Ask</span>
       </button>
     {/key}

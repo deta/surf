@@ -525,6 +525,7 @@
         on:create={handleShowCreate}
         on:open-chat-with-tab
         on:open-space-and-chat
+        on:openScreenshot
       />
     </div>
     <div slot="sidecar-right" class="tty-sidecar-right">

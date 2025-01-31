@@ -3905,6 +3905,10 @@
       await tick()
       showNewTabOverlay.set(2)
     }}
+    on:openScreenshot={() => {
+      showNewTabOverlay.set(0)
+      openScreenshotPicker()
+    }}
   />
 </div>
 <!-- {/if} -->
@@ -4560,12 +4564,13 @@
                     class:pointer-events-auto={$showEndMask || horizontalTabs}
                     class:pointer-events-none={!$showEndMask}
                     use:floatyButtons={{
+                      origin: 'sidebar',
                       buttons: [
                         ...conditionalArrayItem($activeScopeId !== null, {
                           component: FloatyButton,
 
-                          offsetX: -80,
-                          offsetY: 110,
+                          offsetX: -130,
+                          offsetY: 90,
                           origin: 'sidebar',
                           props: {
                             text: 'Ask this Context',
@@ -4583,8 +4588,8 @@
                         }),
                         {
                           component: FloatyButton,
-                          offsetX: -160,
-                          offsetY: 50,
+                          offsetX: -180,
+                          offsetY: 35,
                           props: {
                             text: 'Ask this Tab',
                             onClick: async () => {
@@ -4595,6 +4600,21 @@
                                   detail: activeTabId
                                 })
                               )
+                            }
+                          }
+                        },
+                        {
+                          component: FloatyButton,
+                          offsetX: -50,
+                          offsetY: 150,
+                          props: {
+                            text: 'Use Vision',
+                            icon: document.body.classList.contains('dark')
+                              ? 'vision.light'
+                              : 'vision',
+                            onClick: (e) => {
+                              openScreenshotPicker()
+                              return false
                             }
                           }
                         }
@@ -4619,6 +4639,7 @@
                     on:click={() => toggleRightSidebarTab('chat')}
                     on:open-chat-with-tab={handleOpenTabChat}
                     on:open-space-and-chat={handleOpenSpaceAndChat}
+                    on:openScreenshot={() => openScreenshotPicker()}
                   />
                 {/if}
 

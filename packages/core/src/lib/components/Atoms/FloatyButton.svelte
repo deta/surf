@@ -1,7 +1,7 @@
-<!-- MagneticButton.svelte -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { generateUUID } from '@horizon/utils'
+  import { Icon } from '@horizon/icons'
 
   export let id: string = generateUUID()
 
@@ -17,6 +17,7 @@
   }
 
   export let text: string = ''
+  export let icon: string | undefined = undefined
   export let onClick: () => void = () => {}
 
   // Optional class name prop
@@ -99,6 +100,11 @@
     targetScale = 1
   }
 
+  function handleClick(e: MouseEvent) {
+    e.stopImmediatePropagation()
+    onClick()
+  }
+
   onMount(() => {
     button.addEventListener('mousemove', handleMouseMove)
     button.addEventListener('mouseleave', handleMouseLeave)
@@ -115,9 +121,12 @@
 <button
   bind:this={button}
   class={`magnetic-button ${class_name}`}
-  on:click={onClick}
-  style={`view-transition-name: ${id}`}
+  on:click={handleClick}
+  style={`transform: translate(${currentX}px, ${currentY}px) scale(${currentScale})`}
 >
+  {#if icon}
+    <Icon name={icon} size="16px" />
+  {/if}
   {#if text}
     <span>{text}</span>
   {:else}
@@ -132,6 +141,10 @@
     color: black;
     cursor: pointer;
     border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
     background: paint(squircle) !important;
     --squircle-radius: 18px;
     --squircle-smooth: 0.33;

@@ -36,6 +36,7 @@ import Search from './Icons/Search.svelte'
 import Info from './Icons/Info.svelte'
 import Face from './Icons/Face.svelte'
 import FaceLight from './Icons/FaceLight.svelte'
+import FaceAnimated from './Icons/animated/FaceAnimated.svelte'
 import File from './Icons/File.svelte'
 import Docs from './Icons/Docs.svelte'
 import Bookmark from './Icons/Bookmark.svelte'
@@ -103,6 +104,8 @@ import PlusBoxed from './Icons/PlusBoxed.svelte'
 import OpenAI from './Icons/OpenAI.svelte'
 import Claude from './Icons/Claude.svelte'
 import PictureInPicture from './Icons/PictureInPicture.svelte'
+import Vision from './Icons/Vision.svelte'
+import VisionLight from './Icons/VisionLight.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -146,6 +149,7 @@ export const icons = {
   info: Info,
   face: Face,
   'face.light': FaceLight,
+  'face.animated': FaceAnimated,
   file: File,
   docs: Docs,
   bookmark: Bookmark,
@@ -213,7 +217,9 @@ export const icons = {
   'open-ai': OpenAI,
   claude: Claude,
   'picture-in-picture': PictureInPicture,
-  dynamic: DynamicIcon
+  dynamic: DynamicIcon,
+  vision: Vision,
+  'vision.light': VisionLight
 }
 
 export type Icons = keyof typeof icons
@@ -257,6 +263,7 @@ export {
   Info,
   Face,
   FaceLight,
+  FaceAnimated,
   File,
   Docs,
   Bookmark,
@@ -323,5 +330,7 @@ export {
   OpenAI,
   Claude,
   PictureInPicture,
-  DynamicIcon
+  DynamicIcon,
+  Vision,
+  VisionLight
 }

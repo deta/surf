@@ -14,6 +14,7 @@
     actionClick: { action: string }
     'open-space-and-chat': { spaceId: string }
     'open-chat-with-tab': string
+    openScreenshot: void
   }>()
 
   // Props
@@ -48,6 +49,19 @@
             await new Promise((resolve) => setTimeout(resolve, 400))
             const activeTabId = tabsManager.activeTabIdValue
             dispatch('open-chat-with-tab', activeTabId)
+          }
+        }
+      },
+      {
+        component: FloatyButton,
+        offsetX: 35,
+        offsetY: -95,
+        props: {
+          text: 'Use Vision',
+          icon: document.body.classList.contains('dark') ? 'vision.light' : 'vision',
+          onClick: (e) => {
+            dispatch('openScreenshot')
+            return false
           }
         }
       }
