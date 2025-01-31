@@ -35,6 +35,7 @@
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import type { TabResource } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
+  import { createWebviewExtractor } from '@horizon/web-parser'
 
   export let resource: Resource | undefined = undefined
   export let tab: TabResource | undefined = undefined
@@ -60,6 +61,7 @@
   const saveState = writable<BookmarkTabState>('idle')
 
   const id = generateID()
+  const WEBVIEW_PARTITION = 'code-preview'
 
   let copyIcon: IconConfirmation
   let saveIcon: IconConfirmation
@@ -194,8 +196,14 @@
 
     if (stillGenerating) {
       collapsed = true
-    } else {
+    } else if (isHTML) {
       renderHTMLPreview()
+    } else if (isJS) {
+      if (jsOutput) {
+        collapsed = false
+      } else {
+        executeJavaScript()
+      }
     }
   }
 
@@ -245,11 +253,11 @@
           if (h1Match) {
             $generatedName = h1Match[1]
           } else {
-            $generatedName = formatCodeLanguage(language)
+            $generatedName = `${formatCodeLanguage(language)} Snippet`
           }
         }
       } else {
-        $generatedName = formatCodeLanguage(language)
+        $generatedName = `${formatCodeLanguage(language)} Snippet`
       }
     }
 
@@ -436,77 +444,34 @@
   }
 
   const executeJavaScript = async () => {
-    const code = await getCode()
-    if (!code) return
-
-    isExecuting = true
-    jsOutput = ''
-
-    const sandbox = document.createElement('iframe')
-    sandbox.setAttribute('sandbox', 'allow-scripts')
-    sandbox.style.display = 'none'
-    document.body.appendChild(sandbox)
+    const webview = createWebviewExtractor('about:blank', document, WEBVIEW_PARTITION)
 
     try {
-      const executePromise = new Promise((resolve, reject) => {
-        sandbox.onload = () => {
-          const iframeWindow = sandbox.contentWindow
-          if (!iframeWindow) {
-            reject(new Error('Could not access iframe window'))
-            return
-          }
+      const code = await getCode()
+      if (!code) return
 
-          iframeWindow.console = {
-            log: (...args: any[]) => {
-              const logMessage = args
-                .map((arg) =>
-                  typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-                )
-                .join(' ')
-              jsOutput += (jsOutput ? '\n' : '') + logMessage
-            },
-            error: (...args: any[]) => {
-              const errorMessage = `Error: ${args.join(' ')}`
-              jsOutput += (jsOutput ? '\n' : '') + errorMessage
-            }
-          }
+      showPreview = true
+      collapsed = false
 
-          const timeoutId = setTimeout(() => {
-            reject(new Error('Execution timed out'))
-            cleanup()
-          }, 5000)
+      isExecuting = true
+      jsOutput = ''
 
-          try {
-            const result = iframeWindow.eval(code)
-            clearTimeout(timeoutId)
-            resolve(result)
-          } catch (error: any) {
-            clearTimeout(timeoutId)
-            reject(error)
-          } finally {
-            cleanup()
-          }
-        }
-      })
+      await webview.initializeWebview(5000)
 
-      sandbox.srcdoc = `
-          <${'script'}>
-            ${code}
-          <${'/script'}>
-    `
+      const output = await webview.executeJavaScript(code)
+      const messages = await webview.getConsoleMessages()
 
-      await executePromise
+      const consoleOutput = messages.join('\n')
+
+      log.debug('JavaScript output', output)
+      log.debug('Console output', consoleOutput)
+
+      jsOutput = output || consoleOutput
     } catch (error: any) {
       jsOutput = `Error: ${error.message}`
     } finally {
-      cleanup()
-    }
-
-    function cleanup() {
-      if (sandbox && sandbox.parentNode) {
-        document.body.removeChild(sandbox)
-      }
       isExecuting = false
+      webview.destroyWebview()
     }
   }
 
@@ -549,6 +514,7 @@
     webview.style.width = '100%'
     webview.style.height = '100%'
     webview.style.border = 'none'
+    webview.partition = WEBVIEW_PARTITION
 
     webview.addEventListener('page-title-updated', (e) => {
       $generatedName = e.title
@@ -682,6 +648,8 @@
 
         makeCodeEditable()
       }
+    } else {
+      makeCodeEditable()
     }
 
     codeContent = code
@@ -804,7 +772,9 @@
   data-resource={resource ? resource.id : undefined}
   data-language={language}
   data-name={$customName || $generatedName}
-  class="relative bg-gray-900 rounded-xl flex flex-col overflow-hidden w-full {fullSize || collapsed
+  class="relative bg-gray-900 rounded-xl flex flex-col overflow-hidden w-full {fullSize ||
+  collapsed ||
+  isJS
     ? ''
     : 'h-full max-h-[750px]'} {fullSize ? 'h-full' : ''}"
 >
@@ -846,7 +816,7 @@
     </div>
 
     <div class="flex items-center gap-3">
-      {#if isHTML && (!collapsed || stillGenerating)}
+      {#if (isHTML || isJS) && (!collapsed || stillGenerating)}
         <div class="preview-group flex items-center rounded-md overflow-hidden">
           <button
             class="no-custom px-3 py-1 text-sm"
@@ -860,7 +830,13 @@
             on:click={() => showPreviewView()}
             class:active={showPreview}
           >
-            <div class="flex items-center gap-2">Preview</div>
+            <div class="flex items-center gap-2">
+              {#if isHTML}
+                Preview
+              {:else}
+                Output
+              {/if}
+            </div>
           </button>
         </div>
       {/if}
@@ -868,13 +844,32 @@
       {#if !stillGenerating}
         {#if collapsed}
           <div class="flex items-center gap-1">
-            <div class="p-1 opacity-60">
-              {#if language === 'html'}
-                <Icon name="world" />
-              {:else}
-                <Icon name="code" />
-              {/if}
-            </div>
+            {#if isJS}
+              <button
+                use:tooltip={{ text: 'Execute Code', position: 'left' }}
+                class="flex items-center p-1 rounded-md transition-colors"
+                on:click={() => executeJavaScript()}
+                disabled={isExecuting}
+              >
+                <div class="flex items-center gap-1">
+                  <Icon
+                    name={isExecuting ? 'spinner' : 'play'}
+                    size="16px"
+                    class={isExecuting ? 'animate-spin' : ''}
+                  />
+
+                  <div class="text-sm">Run</div>
+                </div>
+              </button>
+            {:else}
+              <div class="p-1 opacity-60">
+                {#if language === 'html'}
+                  <Icon name="world" />
+                {:else}
+                  <Icon name="code" />
+                {/if}
+              </div>
+            {/if}
             {#if showUnLink && resource}
               <button
                 on:click={handleUnLink}
@@ -897,6 +892,23 @@
             {/if}
 
             {#if isJS}
+              {#if !showPreview}
+                <button
+                  use:tooltip={{ text: 'Copy Code', position: 'left' }}
+                  class="flex items-center p-1 rounded-md transition-colors"
+                  on:click={handleCopyCode}
+                >
+                  <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
+                </button>
+              {:else}
+                <button
+                  use:tooltip={{ text: 'Copy Output', position: 'left' }}
+                  class="flex items-center text-gray-400 p-1 rounded-md transition-colors"
+                  on:click={handleCopyOutput}
+                >
+                  <IconConfirmation bind:this={copyOutputIcon} name="copy" size="16px" />
+                </button>
+              {/if}
               <button
                 use:tooltip={{ text: 'Execute Code', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
@@ -904,19 +916,14 @@
                 disabled={isExecuting}
               >
                 <div class="flex items-center gap-1">
-                  <Icon
-                    name={isExecuting ? 'spinner' : 'play'}
-                    size="16px"
-                    class={isExecuting ? 'animate-spin' : ''}
-                  />
+                  {#if isExecuting}
+                    <Icon name="spinner" size="16px" />
+                  {:else if jsOutput && showPreview}
+                    <Icon name="reload" size="16px" />
+                  {:else}
+                    <Icon name="play" size="16px" />
+                  {/if}
                 </div>
-              </button>
-              <button
-                use:tooltip={{ text: 'Copy Code', position: 'left' }}
-                class="flex items-center p-1 rounded-md transition-colors"
-                on:click={handleCopyCode}
-              >
-                <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
               </button>
             {:else if isHTML}
               {#if showPreview}
@@ -960,9 +967,11 @@
   </header>
 
   <div
-    class="w-full flex-grow overflow-hidden {(isHTML && showPreview) || collapsed
-      ? 'hidden'
-      : ''} {isHTML && !fullSize && !collapsed ? 'h-[750px]' : ''}"
+    class="w-full flex-grow overflow-hidden {showPreview || collapsed ? 'hidden' : ''} {isHTML &&
+    !fullSize &&
+    !collapsed
+      ? 'h-[750px]'
+      : ''}"
   >
     <pre
       bind:this={preElem}
@@ -971,29 +980,25 @@
       on:input={handleCodeInput}><slot>{codeContent}</slot></pre>
   </div>
 
-  {#if isHTML && showPreview && !collapsed}
-    <div
-      bind:this={appContainer}
-      class="bg-white w-full flex-grow overflow-auto {fullSize || collapsed ? '' : 'h-[750px]'}"
-    />
-  {/if}
-
-  {#if isJS && jsOutput && !collapsed}
-    <footer class="border-t border-gray-800 p-4 bg-gray-950 flex items-center gap-2">
-      <div class="font-mono text-sm whitespace-pre-wrap w-full">
-        {jsOutput}
-      </div>
-
-      <div class="flex-shrink-0">
-        <button
-          use:tooltip={{ text: 'Copy Output', position: 'left' }}
-          class="flex items-center text-gray-400 p-1 rounded-md transition-colors"
-          on:click={handleCopyOutput}
-        >
-          <IconConfirmation bind:this={copyOutputIcon} name="copy" size="16px" />
-        </button>
-      </div>
-    </footer>
+  {#if showPreview && !collapsed}
+    {#if isHTML}
+      <div
+        bind:this={appContainer}
+        class="bg-white w-full flex-grow overflow-auto {fullSize || collapsed ? '' : 'h-[750px]'}"
+      />
+    {:else if isJS}
+      <footer class="p-3 {fullSize && !collapsed ? 'h-full' : ''}">
+        <div class="font-mono text-sm whitespace-pre-wrap w-full">
+          {#if isExecuting}
+            Running code…
+          {:else if jsOutput}
+            {jsOutput}
+          {:else}
+            no output, click run to execute code
+          {/if}
+        </div>
+      </footer>
+    {/if}
   {/if}
 </code-block>
 
@@ -1009,22 +1014,6 @@
 
   header,
   footer {
-    @include utils.light-dark-custom(
-      'background-fill-mix',
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1),
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1)
-    );
-    @include utils.light-dark-custom(
-      'fill',
-      #f3faff,
-      rgb(29 33 44),
-      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
-      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
-    );
-
-    background: var(--fill);
     color: var(--contrast-color);
 
     :global(body.custom) & {
@@ -1044,6 +1033,45 @@
       }
     }
   }
+
+  header {
+    @include utils.light-dark-custom(
+      'background-fill-mix',
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1),
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1)
+    );
+    @include utils.light-dark-custom(
+      'fill',
+      #f3faff,
+      rgb(29 33 44),
+      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
+      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
+    );
+
+    background: var(--fill);
+  }
+
+  footer {
+    @include utils.light-dark-custom(
+      'background-fill-mix',
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1),
+      rgba(255, 255, 255, 1),
+      rgba(0, 0, 0, 1)
+    );
+    @include utils.light-dark-custom(
+      'fill',
+      #eaf3fa,
+      rgb(29 33 44),
+      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
+      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
+    );
+
+    background: var(--fill);
+  }
+
   .preview-group {
     @include utils.light-dark-custom(
       'background-fill-mix',

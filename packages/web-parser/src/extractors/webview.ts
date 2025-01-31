@@ -8,22 +8,30 @@ const DEFAULT_INITIALIZING_TIMEOUT = 7000
 const DEFAULT_ACTION_TIMEOUT = 10000
 
 export class WebViewExtractor {
-  url: URL
+  url: string
   document: Document
   webview: WebviewTag | null
   partition: string
 
+  consoleMessages: string[]
+
   appDetectionCallback: ((app: DetectedWebApp) => void) | null
   resourceDetectionCallback: ((resource: any) => void) | null
 
-  constructor(url: URL, document: Document, partition?: string) {
-    this.url = url
+  constructor(url: string | URL, document: Document, partition?: string) {
+    this.url = url instanceof URL ? url.href : url
     this.document = document
     this.webview = null
     this.partition = partition ?? 'persist:horizon'
 
+    this.consoleMessages = []
+
     this.appDetectionCallback = null
     this.resourceDetectionCallback = null
+  }
+
+  getConsoleMessages() {
+    return this.consoleMessages
   }
 
   onAppDetection(callback: (app: DetectedWebApp) => void) {
@@ -35,7 +43,7 @@ export class WebViewExtractor {
   }
 
   initializeWebview(timeout: number = DEFAULT_INITIALIZING_TIMEOUT) {
-    console.log('Initializing webview with location', this.url.href)
+    console.log('Initializing webview with location', this.url)
     this.webview = document.createElement('webview')
     if (!this.webview) return
 
@@ -50,6 +58,7 @@ export class WebViewExtractor {
 
     this.webview.addEventListener('console-message', (e) => {
       console.log('Webview console:', e.message)
+      this.consoleMessages.push(e.message)
     })
 
     this.webview.addEventListener('ipc-message', (event) => {
@@ -86,7 +95,7 @@ export class WebViewExtractor {
     this.webview.style.pointerEvents = 'none'
 
     this.webview.setAttribute('data-webview-extractor', 'true')
-    this.webview.src = this.url.href
+    this.webview.src = this.url
     this.webview.partition = this.partition
     this.webview.webpreferences =
       'autoplayPolicy=document-user-activation-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
@@ -209,4 +218,16 @@ export class WebViewExtractor {
       })
     })
   }
+
+  executeJavaScript(code: string, userGesture?: boolean) {
+    return this.webview?.executeJavaScript(code, userGesture)
+  }
+}
+
+export const createWebviewExtractor = (
+  url: string | URL,
+  document: Document,
+  partition?: string
+) => {
+  return new WebViewExtractor(url, document, partition)
 }
