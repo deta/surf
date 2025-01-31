@@ -259,7 +259,9 @@ TODO: Fix resizing logic for other corners
             on:blacklist-resource
             on:whitelist-resource
             on:set-resource-as-background
-            on:remove-from-homescreen
+            on:remove-from-homescreen={() => {
+              dispatch('remove-from-homescreen', $item.id)
+            }}
             on:set-resource-as-space-icon
             on:highlightWebviewText
             on:seekToTimestamp
@@ -284,7 +286,9 @@ TODO: Fix resizing logic for other corners
             on:remove
             on:blacklist-resource
             on:whitelist-resource
-            on:remove-from-homescreen
+            on:remove-from-homescreen={() => {
+              dispatch('remove-from-homescreen', $item.id)
+            }}
             on:set-resource-as-space-icon
             on:highlightWebviewText
             on:seekToTimestamp
