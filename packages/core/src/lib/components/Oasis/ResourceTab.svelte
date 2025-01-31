@@ -72,8 +72,6 @@
       on:seekToTimestamp
       autofocus={false}
     />
-
-    bruder
   {:else}
     <div class="loading">Loading...</div>
   {/if}
