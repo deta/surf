@@ -4,7 +4,6 @@ import ImageCodegen from '../../../../public/assets/onboarding/codegen/codegen.p
 import ImageTable from '../../../../public/assets/onboarding/codegen/table.png?url'
 import ImageSave from '../../../../public/assets/onboarding/codegen/save.png?url'
 import ImageDrop from '../../../../public/assets/onboarding/codegen/dropontonotes.gif?url'
-import ImageFilter from '../../../../public/assets/onboarding/codegen/filter.gif?url'
 import ImageDesktop from '../../../../public/assets/onboarding/codegen/desktop.png?url'
 import ImageUseVision from '../../../../public/assets/onboarding/codegen/usevision.png?url'
 
@@ -21,7 +20,6 @@ const prepareHTML = (html: string) => {
     .replaceAll('table.png', ImageTable)
     .replaceAll('save.png', ImageSave)
     .replaceAll('dropontonotes.gif', ImageDrop)
-    .replaceAll('filter.gif', ImageFilter)
     .replaceAll('desktop.png', ImageDesktop)
     .replaceAll('usevision.png', ImageUseVision)
     .replaceAll('$MOD', isMac() ? '⌘' : 'Ctrl')
