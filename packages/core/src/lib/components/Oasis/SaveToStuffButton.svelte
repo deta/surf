@@ -10,7 +10,9 @@
   import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import type { BookmarkTabState } from '@horizon/core/src/lib/types'
+  import type { Resource } from '@horizon/core/src/lib/service/resources'
 
+  export let resource: Resource | undefined = undefined
   export let disabled: boolean = false
   export let side: 'top' | 'right' | 'bottom' | 'left' | undefined = undefined
   export let state = writable<BookmarkTabState>('idle')
@@ -26,25 +28,36 @@
 
   const searchValue = writable('')
   const popoverOpened = writable(false)
+  const resourceSpaceIds = writable<string[]>([])
 
-  const saveToSpaceItems = derived([spaces, searchValue], ([spaces, searchValue]) => {
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            label: space.dataValue.folderName,
-            data: space
-          }) as SelectItem
+  $: resourceSpaceIdsStore = resource?.spaceIds
+  $: resourceSpaceIds.set($resourceSpaceIdsStore ?? [])
+
+  const saveToSpaceItems = derived(
+    [spaces, searchValue, resourceSpaceIds],
+    ([spaces, searchValue, resourceSpaceIds]) => {
+      const spaceItems = spaces
+        .sort((a, b) => {
+          return a.indexValue - b.indexValue
+        })
+        .map(
+          (space) =>
+            ({
+              id: space.id,
+              label: space.dataValue.folderName,
+              disabled: resourceSpaceIds.includes(space.id),
+              icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
+              data: space
+            }) as SelectItem
+        )
+
+      if (!searchValue) return spaceItems
+
+      return spaceItems.filter((item) =>
+        item.label.toLowerCase().includes(searchValue.toLowerCase())
       )
-
-    if (!searchValue) return spaceItems
-
-    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
-  })
+    }
+  )
 
   const handleSave = () => {
     dispatch('save', undefined)

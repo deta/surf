@@ -95,8 +95,12 @@
   const saveToSpacePopoverOpened = writable(false)
   const isLoadingPage = writable(false)
   const spaceSearchValue = writable<string>('')
+  const resourceSpaceIds = writable<string[]>([])
 
   const miniBrowserService = useMiniBrowserService()
+
+  $: resourceSpaceIdsStore = resource?.spaceIds
+  $: resourceSpaceIds.set($resourceSpaceIdsStore ?? [])
 
   const hostname = derived(url, (url) => {
     try {
@@ -107,24 +111,31 @@
     }
   })
 
-  const saveToSpaceItems = derived([spaces, spaceSearchValue], ([spaces, searchValue]) => {
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            label: space.dataValue.folderName,
-            data: space
-          }) as SelectItem
+  const saveToSpaceItems = derived(
+    [spaces, spaceSearchValue, resourceSpaceIds],
+    ([spaces, searchValue, resourceSpaceIds]) => {
+      const spaceItems = spaces
+        .sort((a, b) => {
+          return a.indexValue - b.indexValue
+        })
+        .map(
+          (space) =>
+            ({
+              id: space.id,
+              label: space.dataValue.folderName,
+              disabled: resourceSpaceIds.includes(space.id),
+              icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
+              data: space
+            }) as SelectItem
+        )
+
+      if (!searchValue) return spaceItems
+
+      return spaceItems.filter((item) =>
+        item.label.toLowerCase().includes(searchValue.toLowerCase())
       )
-
-    if (!searchValue) return spaceItems
-
-    return spaceItems.filter((item) => item.label.toLowerCase().includes(searchValue.toLowerCase()))
-  })
+    }
+  )
 
   $: canGoBack = tab?.currentHistoryIndex > 0
   $: canGoForward = tab?.currentHistoryIndex < tab.historyStackIds.length - 1

@@ -885,6 +885,7 @@
             {#if !stillGenerating && saveable}
               <SaveToStuffButton
                 state={saveState}
+                {resource}
                 side="left"
                 className="flex items-center  p-1 rounded-md  transition-colors"
                 on:save={(e) => saveAppAsResource(e.detail, false)}
