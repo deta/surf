@@ -47,7 +47,7 @@
   const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
 
   const otherTabsOpen = derived(userConfigSettings, (userConfigSettings) => {
-    return userConfigSettings.annotations_sidebar || userConfigSettings.go_wild_mode
+    return userConfigSettings.annotations_sidebar
   })
 
   let chatComponent: Chat

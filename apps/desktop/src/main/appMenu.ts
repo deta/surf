@@ -213,11 +213,6 @@ class AppMenu {
           accelerator: 'Alt+A',
           click: () => ipcSenders.toggleRightSidebarTab('annotations')
         },
-        {
-          label: 'Toggle Go Wild',
-          accelerator: 'Alt+g',
-          click: () => ipcSenders.toggleRightSidebarTab('go-wild')
-        },
         { type: 'separator' },
         {
           label: 'Change Tabs Orientation',

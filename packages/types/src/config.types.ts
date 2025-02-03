@@ -23,7 +23,6 @@ export type UserSettings = {
   save_to_user_downloads: boolean
   automatic_chat_prompt_generation: boolean
   // Experiments
-  go_wild_mode: boolean
   annotations_sidebar: boolean
   live_spaces: boolean
   homescreen_link_cmdt: boolean

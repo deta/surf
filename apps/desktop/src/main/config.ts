@@ -102,7 +102,6 @@ export const getUserConfig = (path?: string) => {
       save_to_user_downloads: true,
       show_annotations_in_oasis: true,
       automatic_chat_prompt_generation: true,
-      go_wild_mode: false,
       live_spaces: false,
       annotations_sidebar: false,
       homescreen_link_cmdt: false,
@@ -157,14 +156,8 @@ export const getUserConfig = (path?: string) => {
 
   // Migrate experimental_mode to individual feature flags
   if (storedConfig.settings.experimental_mode) {
-    storedConfig.settings.go_wild_mode = true
     storedConfig.settings.annotations_sidebar = true
     storedConfig.settings.experimental_mode = undefined
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.go_wild_mode === undefined) {
-    storedConfig.settings.go_wild_mode = false
     changedConfig = true
   }
 

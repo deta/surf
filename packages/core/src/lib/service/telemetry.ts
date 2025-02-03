@@ -360,8 +360,6 @@ export class Telemetry {
 
     if (tab === 'chat') {
       await this.trackOpenPageChat()
-    } else if (tab === 'go-wild') {
-      await this.trackOpenGoWild()
     } else if (tab === 'annotations') {
       await this.trackOpenAnnotations()
     }
@@ -646,26 +644,6 @@ export class Telemetry {
 
   async trackOpenPageChat() {
     await this.trackEvent(TelemetryEventTypes.OpenPageChatSidebar, {})
-  }
-
-  async trackGoWildModifyPage() {
-    await this.trackEvent(TelemetryEventTypes.GoWildModifyPage, {})
-  }
-
-  async trackGoWildCreateApp() {
-    await this.trackEvent(TelemetryEventTypes.GoWildCreateApp, {})
-  }
-
-  async trackGoWildRerun() {
-    await this.trackEvent(TelemetryEventTypes.GoWildRerun, {})
-  }
-
-  async trackGoWildClear() {
-    await this.trackEvent(TelemetryEventTypes.GoWildClear, {})
-  }
-
-  async trackOpenGoWild() {
-    await this.trackEvent(TelemetryEventTypes.OpenGoWildSidebar, {})
   }
 
   async trackSummarizeText(contentSource: SummarizeEventContentSource, context: EventContext) {

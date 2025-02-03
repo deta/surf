@@ -464,14 +464,6 @@
           />
 
           <SettingsOption
-            icon="code-block"
-            title="Go Wild Mode"
-            description="Modify the page or create mini apps from the page sidebar."
-            bind:value={userConfigSettings.go_wild_mode}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
             icon="sidebar.right"
             title="Annotations Sidebar"
             description="Enable the annotations sidebar where you can link Surflets and annotations to websites to easily revisit them from the sidebar."

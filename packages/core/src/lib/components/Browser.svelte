@@ -82,7 +82,6 @@
   import Importer from './Core/Importer.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
   import MagicSidebar from './Sidebars/MagicSidebar.svelte'
-  import AppSidebar, { type ExecuteCodeInTabEvent } from './Sidebars/AppSidebar.svelte'
   import {
     ActivateTabEventTrigger,
     AddResourceToSpaceEventTrigger,
@@ -313,7 +312,6 @@
   const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   const isCreatingLiveSpace = writable(false)
   const activeAppId = writable<string>('')
-  const showAppSidebar = writable(false)
   const rightSidebarTab = writable<RightSidebarTab>('chat')
   const showSplashScreen = writable(true)
   const showStartMask = writable(false)
@@ -355,8 +353,8 @@
   setContext('selectedFolder', 'inbox')
 
   const sidebarTools = derived(
-    [showChatSidebar, activeTab, showAppSidebar, userConfigSettings],
-    ([$showChatSidebar, $activeTab, $showAppSidebar, userConfigSettings]) => {
+    [showChatSidebar, activeTab, userConfigSettings],
+    ([$showChatSidebar, $activeTab, userConfigSettings]) => {
       const tools = [
         {
           id: 'chat',
@@ -381,21 +379,6 @@
           fallbackContent: {
             icon: 'info',
             message: 'No page info available.'
-          }
-        })
-      }
-
-      if (userConfigSettings.go_wild_mode) {
-        tools.push({
-          id: 'go-wild',
-          name: 'Go Wild',
-          type: 'tool',
-          icon: 'sparkles',
-          disabled: $activeTab?.type !== 'page',
-          showCondition: $activeTab && $activeTab.type === 'page' && $showAppSidebar,
-          fallbackContent: {
-            icon: 'info',
-            message: 'Go wild not available.'
           }
         })
       }
@@ -661,7 +644,7 @@
 
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
-  $: showSidebarTools = $userConfigSettings.annotations_sidebar || $userConfigSettings.go_wild_mode
+  $: showSidebarTools = $userConfigSettings.annotations_sidebar
 
   const handleCollapseRight = () => {
     if (showRightSidebar) {
@@ -719,13 +702,6 @@
       }
     } else if (!showRightSidebar && $showChatSidebar) {
       setPageChatState(false)
-    }
-
-    if (tab === 'go-wild') {
-      showNewChatButton = false
-      setAppSidebarState(true)
-    } else if ($showAppSidebar) {
-      setAppSidebarState(false)
     }
 
     if (tab === 'annotations' && showRightSidebar) {
@@ -1643,28 +1619,6 @@
     log.debug('HTML', html)
   }
 
-  const handleAppSidebarClear = async (createNewAppId: boolean) => {
-    log.debug('clearing app sidebar')
-    try {
-      let appId: string | null = null
-      await aiService.deleteChat($activeAppId)
-      //await deleteAppIdsForAppSidebar()
-      if (createNewAppId) {
-        const chat = await aiService.createChat('')
-        appId = chat?.id ?? null
-        if (!appId) {
-          log.error('Failed to create new app id aftering clearing the old one')
-          return
-        }
-      }
-      //updateAppIdsForAppSidebar(appId!)
-      activeAppId.set(appId!)
-      tabsManager.update($activeTabId, { appId: appId })
-    } catch (e) {
-      log.error('Error clearing app sidebar:', e)
-    }
-  }
-
   const setPageChatState = async (enabled: boolean, resetContext = true) => {
     log.debug('Toggling magic sidebar', enabled)
     const tab = $activeTab as TabPage | null
@@ -1711,64 +1665,6 @@
     } else {
       showChatSidebar.set(false)
       chatContext.clear()
-    }
-  }
-
-  const setAppSidebarState = async (enabled: boolean) => {
-    log.debug('Changing app sidebar state', enabled)
-
-    const tab = $activeTab as TabPage | null
-    if (!tab) {
-      log.error('No active tab')
-      toasts.error('Error: No active tab')
-      return
-    }
-
-    if (!enabled) {
-      activeAppId.set('')
-      showAppSidebar.set(false)
-      return
-    }
-
-    let appId = tab.appId
-    if (!appId) {
-      // TODO: a different way to create app id? not sure yet, single chat id should be fine
-      const chat = await aiService.createChat('')
-      appId = chat?.id
-      if (!appId) {
-        log.error('Failed to create an app id')
-        toasts.error('Error: Failed to create an pp id')
-        return
-      }
-
-      tabsManager.update(tab.id, { appId: appId })
-    }
-
-    activeAppId.set(appId!)
-    showAppSidebar.set(enabled)
-  }
-
-  const handleExecuteAppSidebarCode = async (e: CustomEvent<ExecuteCodeInTabEvent>) => {
-    try {
-      const { tabId, appId, code } = e.detail
-
-      const tab = $tabs.find((t) => t.id === tabId) as TabPage | undefined
-      const browserTab = $browserTabs[tabId]
-      if (!tab || !browserTab) {
-        log.error('Tab not found for executing code')
-        toasts.error('Failed to run go wild in page')
-        return
-      }
-
-      if (tab.appId !== appId) {
-        log.error('App ID does not match active tab')
-        return
-      }
-
-      await browserTab.executeJavaScript(code)
-    } catch (e) {
-      log.error('Error executing app sidebar code:', e)
-      toasts.error('Failed to run go wild in page')
     }
   }
 
@@ -4984,24 +4880,6 @@
             <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
               <Icon name="info" />
               <span>No page info available.</span>
-            </div>
-          {/if}
-        </Tabs.Content>
-        <Tabs.Content value="go-wild" class="flex-grow overflow-hidden">
-          {#if $activeTab && $activeTab.type === 'page' && $showAppSidebar}
-            <AppSidebar
-              appId={$activeAppId}
-              activeTab={$activeTab}
-              activeBrowserTab={$activeBrowserTab}
-              on:clear={() => handleAppSidebarClear(true)}
-              on:execute-tab-code={handleExecuteAppSidebarCode}
-              {horizontalTabs}
-              on:close={() => toggleRightSidebarTab('go-wild')}
-            />
-          {:else}
-            <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
-              <Icon name="info" />
-              <span>Go wild not available.</span>
             </div>
           {/if}
         </Tabs.Content>
