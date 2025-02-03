@@ -109,6 +109,7 @@
   })
 
   let backdropEl: HTMLElement
+  let pickerEl: HTMLElement
   let toolboxEl: HTMLElement
   let chatboxEl: HTMLElement
   let appsEl: HTMLElement
@@ -218,7 +219,7 @@
   function handleWindowMouseMove(e: MouseEvent) {
     if ($state.isLocked) {
       $state.resizeDirection = undefined
-      document.body.style.removeProperty('cursor')
+      pickerEl.style.removeProperty('cursor')
     }
     const THRESHOLD = 18
 
@@ -238,7 +239,7 @@
       showAddPromptDialog
     ) {
       $state.resizeDirection = undefined
-      document.body.style.removeProperty('cursor')
+      pickerEl.style.removeProperty('cursor')
       return
     }
 
@@ -285,14 +286,10 @@
 
     if (resizeEdge) {
       $state.resizeDirection = resizeEdge
-      document.body.style.setProperty(
-        'cursor',
-        `${DIRECTION_CURSORS[resizeEdge]}-resize`,
-        'important'
-      )
+      pickerEl.style.setProperty('cursor', `${DIRECTION_CURSORS[resizeEdge]}-resize`, 'important')
     } else {
       $state.resizeDirection = undefined
-      document.body.style.removeProperty('cursor')
+      pickerEl.style.removeProperty('cursor')
     }
   }
 
@@ -352,7 +349,7 @@
       const handleUp = async (e: MouseEvent) => {
         $state.isResizing = false
         $state.resizeDirection = undefined
-        document.body.style.removeProperty('cursor')
+        pickerEl.style.removeProperty('cursor')
         window.removeEventListener('mousemove', handleMove, { capture: true })
 
         if (raf !== null) cancelAnimationFrame(raf)
@@ -553,6 +550,7 @@
   <div
     bind:this={backdropEl}
     id="screen-picker-backdrop"
+    class:disabled={$state.isLocked}
     style="view-transition-name: screen-picker-backdrop;"
     style:--rect-x={$_selectionRect.x + 'px'}
     style:--rect-y={$_selectionRect.y + 'px'}
@@ -567,6 +565,7 @@
     {/if}
   </div>
   <div
+    bind:this={pickerEl}
     id="screen-picker"
     style="view-transition-name: screen-picker;"
     class="mode-{mode}"
@@ -785,7 +784,6 @@
                   preparingTabs={false}
                   inputOnly={!$state.isChatExpanded}
                   showAddToContext={false}
-                  onSubmitChatHook={handlePromptInputSubmit}
                   showContextBar={false}
                   on:clear-chat={() => {}}
                   on:clear-errors={() => {}}
@@ -809,13 +807,10 @@
   $transition-easing: cubic-bezier(0.19, 1, 0.22, 1);
 
   :global(body) {
-    &:has(#screen-picker) {
-      cursor: crosshair !important;
-    }
-    &:has(#screen-picker.isMouseInside) {
+    &:has(#screen-picker.isMouseInside:not(.isLocked)) #screen-picker {
       cursor: grab !important;
     }
-    &:has(#screen-picker.isMovingRect) {
+    &:has(#screen-picker.isMovingRect) #screen-picker {
       cursor: grabbing !important;
     }
   }
@@ -835,6 +830,9 @@
 
     background: rgb(0 0 0 / 0.25);
     backdrop-filter: blur(0.5px);
+    &:not(.disabled) {
+      cursor: crosshair;
+    }
 
     clip-path: polygon(
       0% 0%,
@@ -1134,6 +1132,7 @@
         overflow: hidden;
 
         pointer-events: all;
+        cursor: default;
 
         form {
           display: flex;
