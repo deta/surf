@@ -15,6 +15,7 @@ export class UserStatsService {
 
   static CHECK_DEFAULT_BROWSER_INTERVAL = isDev ? 1000 : 1000 * 60 * 1
   static checkDefaultBrowserPromptRef: NodeJS.Timer | null = null
+  static isShowingNotification = false
 
   static storeUserStats(stats: UserStats) {
     window.api.updateUserStats(stats)
@@ -113,7 +114,7 @@ export class UserStatsService {
 
   private static async checkDefaultBrowserPrompt() {
     if (await window.api.isDefaultBrowser()) return
-    if ((await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2) return
+    if (!isDev && (await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2) return
 
     const stats = await UserStatsService.getUserStats()
     if (!stats) {
@@ -144,7 +145,13 @@ export class UserStatsService {
       if (show && lastShownDiff < 1000 * 60 * 60) show = false
     }
 
-    if (!show || (await UserStatsService.getDontShowPromptSetDefaultBrowser())) return
+    if (
+      !show ||
+      (await UserStatsService.getDontShowPromptSetDefaultBrowser()) ||
+      UserStatsService.isShowingNotification
+    )
+      return
+    UserStatsService.isShowingNotification = true
 
     UserStatsService.setSetDefaultBrowserLastShownDiff()
 
@@ -158,6 +165,7 @@ export class UserStatsService {
           : { type: 'reset', kind: 'muted', value: 'never', title: `Don't ask again` }
       ]
     })
+    UserStatsService.isShowingNotification = false
 
     if (closeType === true) {
       window.api.useAsDefaultBrowser() // TODO: allow tracking event & from where it was called
