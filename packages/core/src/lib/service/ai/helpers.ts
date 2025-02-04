@@ -7,12 +7,16 @@ import {
   type WebViewSendEvents
 } from '@horizon/types'
 import type { ChatMessageContentItem, AIChatMessageSource } from '../../types/browser.types'
-import { useLogScope } from '@horizon/utils'
+import { conditionalArrayItem, useLogScope } from '@horizon/utils'
 import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
 import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 import { ModelTiers } from '@horizon/types/src/ai.types'
+import type { OasisService } from '../oasis'
+import { derived } from 'svelte/store'
+import { BUILT_IN_MENTIONS_BASE, WEB_SEARCH_MENTION } from '../../constants/chat'
+import type { MentionItem } from '@horizon/editor'
 
 const log = useLogScope('AI')
 
@@ -483,3 +487,27 @@ export const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undef
   })
   return sources
 }
+
+export const useEditorSpaceMentions = (oasis: OasisService) =>
+  derived([oasis.spaces, oasis.config.settings], ([spaces, userSettings]) => {
+    const builtInMentions = [
+      ...BUILT_IN_MENTIONS_BASE,
+      ...conditionalArrayItem(userSettings.experimental_chat_web_search, WEB_SEARCH_MENTION)
+    ]
+
+    const spaceItems = spaces
+      .sort((a, b) => {
+        return a.indexValue - b.indexValue
+      })
+      .map(
+        (space) =>
+          ({
+            id: space.id,
+            label: space.dataValue.folderName,
+            icon: space.getIconString(),
+            type: 'space'
+          }) as MentionItem
+      )
+
+    return [...builtInMentions, ...spaceItems]
+  })

@@ -17,6 +17,7 @@ export abstract class ContextItemBase {
   icon: Readable<ContextItemIcon>
   prompts: Writable<ChatPrompt[]>
   generatingPrompts: Writable<boolean>
+  visible: Writable<boolean>
 
   manager: ContextManager
   log: ReturnType<typeof useLogScope>
@@ -31,6 +32,7 @@ export abstract class ContextItemBase {
     this.icon = writable(icon ?? { type: ContextItemIconTypes.ICON, data: fallbackIcon })
     this.prompts = writable([])
     this.generatingPrompts = writable(false)
+    this.visible = writable(true)
   }
 
   get iconValue() {
@@ -43,6 +45,14 @@ export abstract class ContextItemBase {
 
   get promptsValue() {
     return get(this.prompts)
+  }
+
+  get visibleValue() {
+    return get(this.visible)
+  }
+
+  setVisibility(visible: boolean) {
+    this.visible.set(visible)
   }
 
   async getImagPreview(blob: Blob) {

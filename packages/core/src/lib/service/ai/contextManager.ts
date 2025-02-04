@@ -31,6 +31,13 @@ import { ContextItemHome } from './context/home'
 import { ContextItemEverything } from './context/everything'
 import type { ActiveSpaceContextInclude } from './context/activeSpaceContexts'
 import { ContextItemWikipedia } from './context/wikipedia'
+import { generalContext } from '../../constants/browsingContext'
+
+export type AddContextItemOptions = {
+  trigger?: PageChatUpdateContextEventTrigger
+  index?: number
+  visible?: boolean
+}
 
 export class ContextManager {
   key = 'active_chat_context'
@@ -293,12 +300,15 @@ export class ContextManager {
     }
   }
 
-  addContextItem<T extends ContextItem>(
-    item: T,
-    trigger?: PageChatUpdateContextEventTrigger,
-    index?: number | undefined
-  ) {
+  addContextItem<T extends ContextItem>(item: T, opts?: AddContextItemOptions) {
     this.log.debug('Adding context item', item.id)
+
+    const { trigger, index, visible } = opts ?? {}
+
+    if (visible === false) {
+      item.setVisibility(false)
+    }
+
     const currentContextLength = this.itemsValue.length
 
     const existingItem = this.itemsValue.find((i) => i.id === item.id)
@@ -528,11 +538,7 @@ export class ContextManager {
     return tabResource
   }
 
-  async addResource(
-    resourceOrId: Resource | string,
-    trigger?: PageChatUpdateContextEventTrigger,
-    index?: number
-  ) {
+  async addResource(resourceOrId: Resource | string, opts?: AddContextItemOptions) {
     const resource =
       typeof resourceOrId === 'string'
         ? await this.resourceManager.getResource(resourceOrId)
@@ -543,14 +549,10 @@ export class ContextManager {
     }
 
     const item = new ContextItemResource(this, resource)
-    return this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addSpace(
-    spaceOrId: OasisSpace | string,
-    trigger?: PageChatUpdateContextEventTrigger,
-    index?: number
-  ) {
+  async addSpace(spaceOrId: OasisSpace | string, opts?: AddContextItemOptions) {
     const space =
       typeof spaceOrId === 'string' ? await this.tabsManager.oasis.getSpace(spaceOrId) : spaceOrId
     if (!space) {
@@ -559,14 +561,10 @@ export class ContextManager {
     }
 
     const item = new ContextItemSpace(this, space)
-    return this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addTab(
-    tabOrId: TabPage | TabSpace | string,
-    trigger?: PageChatUpdateContextEventTrigger,
-    index?: number
-  ) {
+  async addTab(tabOrId: TabPage | TabSpace | string, opts?: AddContextItemOptions) {
     try {
       const tab =
         typeof tabOrId === 'string'
@@ -586,7 +584,7 @@ export class ContextManager {
       if (tab.type === 'page') {
         this.log.debug('Adding tab to context', tab.id)
         const item = new ContextItemPageTab(this, tab)
-        return this.addContextItem(item, trigger, index)
+        return this.addContextItem(item, opts)
       } else if (tab.type === 'space') {
         const space = await this.tabsManager.oasis.getSpace(tab.spaceId)
         if (!space) {
@@ -594,7 +592,7 @@ export class ContextManager {
         }
 
         const item = new ContextItemSpace(this, space, tab as TabSpace)
-        return this.addContextItem(item, trigger, index)
+        return this.addContextItem(item, opts)
       } else if (tab.type === 'resource') {
         const resource = await this.resourceManager.getResource(tab.resourceId)
         if (!resource) {
@@ -602,7 +600,7 @@ export class ContextManager {
         }
 
         const item = new ContextItemResource(this, resource, tab)
-        return this.addContextItem(item, trigger, index)
+        return this.addContextItem(item, opts)
       } else {
         throw new Error(`Unsupported tab type: ${tab.type}`)
       }
@@ -634,16 +632,12 @@ export class ContextManager {
     return
   }
 
-  async addScreenshot(
-    screenshot: Blob,
-    trigger?: PageChatUpdateContextEventTrigger,
-    index?: number
-  ) {
+  async addScreenshot(screenshot: Blob, opts?: AddContextItemOptions) {
     const item = new ContextItemScreenshot(this, screenshot)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addActiveTab(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+  async addActiveTab(opts?: AddContextItemOptions) {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_TAB)
     if (existingItem) {
       this.log.debug('Active tab already in context')
@@ -651,14 +645,10 @@ export class ContextManager {
     }
 
     const item = new ContextItemActiveTab(this)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addActiveSpaceContext(
-    trigger?: PageChatUpdateContextEventTrigger,
-    index?: number,
-    include?: ActiveSpaceContextInclude
-  ) {
+  async addActiveSpaceContext(include?: ActiveSpaceContextInclude, opts?: AddContextItemOptions) {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_SPACE)
     if (existingItem) {
       this.log.debug('Active space context already in context')
@@ -666,10 +656,10 @@ export class ContextManager {
     }
 
     const item = new ContextItemActiveSpaceContext(this, include)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addHomeContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+  async addHomeContext(opts?: AddContextItemOptions) {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.HOME)
     if (existingItem) {
       this.log.debug('Home context already in context')
@@ -677,10 +667,10 @@ export class ContextManager {
     }
 
     const item = new ContextItemHome(this)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addEverythingContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+  async addEverythingContext(opts?: AddContextItemOptions) {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.EVERYTHING)
     if (existingItem) {
       this.log.debug('Everything context already in context')
@@ -688,10 +678,10 @@ export class ContextManager {
     }
 
     const item = new ContextItemEverything(this)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
   }
 
-  async addWikipediaContext(trigger?: PageChatUpdateContextEventTrigger, index?: number) {
+  async addWikipediaContext(opts?: AddContextItemOptions) {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.WIKIPEDIA)
     if (existingItem) {
       this.log.debug('Wikipedia context already in context')
@@ -699,7 +689,36 @@ export class ContextManager {
     }
 
     const item = new ContextItemWikipedia(this)
-    this.addContextItem(item, trigger, index)
+    return this.addContextItem(item, opts)
+  }
+
+  addMentionItem(itemId: string, opts?: AddContextItemOptions) {
+    const activeSpaceContextItem = this.getActiveSpaceContextItem()
+    if (itemId === generalContext.id) {
+      return this.addHomeContext(opts)
+    } else if (itemId === 'everything') {
+      return this.addEverythingContext(opts)
+    } else if (itemId === 'tabs') {
+      if (activeSpaceContextItem) {
+        activeSpaceContextItem.include =
+          activeSpaceContextItem.include === 'resources' ? 'everything' : 'tabs'
+        return activeSpaceContextItem
+      } else {
+        return this.addActiveSpaceContext('tabs', opts)
+      }
+    } else if (itemId === 'active-context') {
+      if (activeSpaceContextItem) {
+        activeSpaceContextItem.include =
+          activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
+        return activeSpaceContextItem
+      } else {
+        return this.addActiveSpaceContext('resources', opts)
+      }
+    } else if (itemId === 'wikipedia') {
+      return this.addWikipediaContext(opts)
+    } else {
+      return this.addSpace(itemId, opts)
+    }
   }
 
   getItem(id: string) {

@@ -2192,12 +2192,11 @@
       const isOnboarding = space.dataValue.folderName === ONBOARDING_SPACE_NAME
 
       log.debug('Adding space to chat context', space, isOnboarding)
-      const spaceContextItem = await chatContext.addSpace(
-        space,
-        isOnboarding
+      const spaceContextItem = await chatContext.addSpace(space, {
+        trigger: isOnboarding
           ? PageChatUpdateContextEventTrigger.Onboarding
           : PageChatUpdateContextEventTrigger.Onboarding
-      )
+      })
 
       await chatContext.removeAllExcept(spaceContextItem.id)
 
@@ -2475,12 +2474,12 @@
         log.debug('Replacing active tab context with active space context')
         const index = $chatContextItems.findIndex((item) => item.id === $activeTabContextItem.id)
         chatContext.removeContextItem($activeTabContextItem.id)
-        chatContext.addActiveSpaceContext(undefined, index >= 0 ? index : undefined)
+        chatContext.addActiveSpaceContext(undefined, { index: index >= 0 ? index : undefined })
       } else if (!visible && $activeSpaceContextItem && !$activeTabContextItem) {
         log.debug('Replacing active space context with active tab context')
         const index = $chatContextItems.findIndex((item) => item.id === $activeSpaceContextItem.id)
         chatContext.removeContextItem($activeSpaceContextItem.id)
-        chatContext.addActiveTab(undefined, index >= 0 ? index : undefined)
+        chatContext.addActiveTab({ index: index >= 0 ? index : undefined })
       }
     })
 
@@ -3532,17 +3531,6 @@
   const removeAllContextItems = () => {
     chatContext.clear()
   }
-
-  // const handleAddContextItem = (e: CustomEvent<AddContextItemEvent>) => {
-  //   const { item, trigger } = e.detail
-
-  //   if (item instanceof ContextItemSpace) {
-  //     // This is needed for the onboarding to get to the next step
-  //     handleChattingWithOnboardingSpace(item.data.dataValue.folderName)
-  //   }
-
-  //   chatContext.addContextItem(item, trigger)
-  // }
 
   const handleOpenTabChat = (e: CustomEvent<string>) => {
     // Called from tab context menu

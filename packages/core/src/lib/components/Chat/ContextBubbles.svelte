@@ -24,7 +24,7 @@
   const contextItems = contextManager.items
   const containerWidth = spring(220, { stiffness: 0.2, damping: 0.7 })
 
-  $: items = $contextItems.slice(0, 10)
+  $: items = $contextItems.filter((item) => item.visibleValue).slice(0, 10)
 
   let isInitialized = false
 

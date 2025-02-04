@@ -1191,7 +1191,7 @@ export class TabsManager {
 
     const showChatSidebar = this.ai.showChatSidebarValue
     if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
-      this.ai.contextManager.addTab(tab, trigger)
+      this.ai.contextManager.addTab(tab, { trigger })
     } else {
       tick().then(() => {
         this.telemetry.trackSelectTab(SelectTabEventAction.Add, this.selectedTabsValue.size)
@@ -1239,7 +1239,7 @@ export class TabsManager {
 
     const showChatSidebar = this.ai.showChatSidebarValue
     if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
-      this.ai.contextManager.addTab(tab, trigger)
+      this.ai.contextManager.addTab(tab, { trigger })
     } else {
       tick().then(() => {
         this.telemetry.trackSelectTab(SelectTabEventAction.Add, this.selectedTabsValue.size)

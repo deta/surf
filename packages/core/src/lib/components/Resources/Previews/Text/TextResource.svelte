@@ -32,7 +32,10 @@
     type CitationInfo
   } from '../../../Chat/CitationItem.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { mapCitationsToText } from '@horizon/core/src/lib/service/ai/helpers'
+  import {
+    mapCitationsToText,
+    useEditorSpaceMentions
+  } from '@horizon/core/src/lib/service/ai/helpers'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import {
     ChangeContextEventTrigger,
@@ -44,6 +47,8 @@
     OpenInMiniBrowserEventFrom,
     PageChatMessageSentEventError,
     PageChatMessageSentEventTrigger,
+    PageChatUpdateContextEventAction,
+    PageChatUpdateContextEventTrigger,
     PromptType,
     ResourceTypes
   } from '@horizon/types'
@@ -164,39 +169,6 @@
     }
   )
 
-  const builtInMentions = derived(userSettings, (userSettings) => {
-    return [
-      {
-        id: generalContext.id,
-        label: generalContext.label,
-        suggestionLabel: 'Home Context',
-        aliases: ['inbox', 'general'],
-        icon: 'icon;;circle-dot'
-      },
-      {
-        id: 'everything',
-        label: 'Surf',
-        suggestionLabel: 'Everything in Surf',
-        aliases: ['everything', 'all my stuff', 'all your stuff', 'surf'],
-        icon: 'icon;;save'
-      },
-      {
-        id: 'tabs',
-        label: 'Tabs',
-        suggestionLabel: 'Your Tabs',
-        aliases: ['tabs', 'context', 'active'],
-        icon: 'icon;;world'
-      },
-      ...conditionalArrayItem(userSettings.experimental_chat_web_search, {
-        id: 'wikipedia',
-        label: 'Wikipedia',
-        suggestionLabel: 'Search Wikipedia',
-        aliases: ['wiki'],
-        icon: 'favicon;;https://wikipedia.org'
-      })
-    ] as MentionItem[]
-  })
-
   const activeSpace = derived(
     [oasis.spaces, tabsManager.activeScopeId],
     ([spaces, activeScopeId]) => {
@@ -277,22 +249,10 @@
     }
   )
 
-  const mentionItems = derived([oasis.spaces, builtInMentions], ([spaces, builtInMentions]) => {
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map((space) => ({
-        id: space.id,
-        label: space.dataValue.folderName,
-        icon: space.getIconString()
-      }))
-
-    return [...builtInMentions, ...spaceItems] as MentionItem[]
-  })
+  const mentionItems = useEditorSpaceMentions(oasis)
 
   const isBuiltInMention = (id: string) => {
-    return $builtInMentions.some((mention) => mention.id === id)
+    return $mentionItems.some((mention) => mention.id === id && mention.type === 'built-in')
   }
 
   const prepLoadingPhrases = [
@@ -712,45 +672,25 @@
 
     const chatContextManager = contextManager.clone()
 
-    const addSpace = (spaceId: string) => {
-      const activeSpaceContextItem = chatContextManager.getActiveSpaceContextItem()
-      if (spaceId === generalContext.id) {
-        chatContextManager.addHomeContext()
-      } else if (spaceId === 'everything') {
-        chatContextManager.addEverythingContext()
-      } else if (spaceId === 'tabs') {
-        if (activeSpaceContextItem) {
-          activeSpaceContextItem.include =
-            activeSpaceContextItem.include === 'resources' ? 'everything' : 'tabs'
-        } else {
-          chatContextManager.addActiveSpaceContext(undefined, undefined, 'tabs')
-        }
-      } else if (spaceId === 'active-context') {
-        if (activeSpaceContextItem) {
-          activeSpaceContextItem.include =
-            activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
-        } else {
-          chatContextManager.addActiveSpaceContext(undefined, undefined, 'resources')
-        }
-      } else if (spaceId === 'wikipedia') {
-        chatContextManager.addWikipediaContext()
-      } else {
-        chatContextManager.addSpace(spaceId)
-      }
-    }
-
     if (spaces && spaces.length > 0) {
       log.debug('Adding spaces to context', spaces)
       spaces.forEach((space) => {
-        addSpace(space)
+        chatContextManager.addMentionItem(space)
       })
+
+      ai.telemetry.trackPageChatContextUpdate(
+        PageChatUpdateContextEventAction.Add,
+        contextManager.itemsValue.length,
+        spaces.length,
+        undefined,
+        PageChatUpdateContextEventTrigger.EditorMention
+      )
     } else if ($selectedContext) {
       log.debug('Adding selected context to context', $selectedContext)
-      addSpace($selectedContext)
+      chatContextManager.addMentionItem($selectedContext)
     } else {
       log.debug('Adding active space to context', resourceId)
-      // chatContextManager.addResource(resourceId)
-      chatContextManager.addActiveSpaceContext(undefined, undefined, 'resources')
+      chatContextManager.addActiveSpaceContext('resources')
     }
 
     const chat = await ai.createChat(undefined, chatContextManager)

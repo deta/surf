@@ -390,7 +390,7 @@
 
   const handleIncludeTab = () => {
     if (tab.type === 'page' || tab.type === 'space') {
-      chatContext.addTab(tab, PageChatUpdateContextEventTrigger.TabSelection)
+      chatContext.addTab(tab, { trigger: PageChatUpdateContextEventTrigger.TabSelection })
     }
   }
 

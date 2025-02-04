@@ -12,6 +12,7 @@ export type MentionItem<T = any> = {
   aliases?: string[]
   icon?: string
   data?: T
+  type?: 'built-in' | 'space'
 }
 
 export type EditorRewriteEvent = {

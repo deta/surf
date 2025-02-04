@@ -21,6 +21,7 @@
     EventContext,
     PageChatMessageSentEventError,
     PageChatMessageSentEventTrigger,
+    PageChatUpdateContextEventAction,
     PageChatUpdateContextEventTrigger,
     PromptType,
     ResourceTagsBuiltInKeys,
@@ -59,7 +60,8 @@
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import {
     populateRenderAndChunkIds,
-    renderIDFromCitationID
+    renderIDFromCitationID,
+    useEditorSpaceMentions
   } from '@horizon/core/src/lib/service/ai/helpers'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
 
@@ -168,14 +170,18 @@
     )
   })
 
+  const visibleContextItems = derived([contextItems], ([$contextItems]) => {
+    return $contextItems.filter((item) => item.visibleValue)
+  })
+
   $: chatBoxPlaceholder = derived(
-    [responses, contextItems, tabs],
-    ([$responses, $contextItems, $tabs]) => {
-      if ($contextItems.length === 0) return 'Ask me anything...'
+    [responses, visibleContextItems, tabs],
+    ([$responses, $visibleContextItems, $tabs]) => {
+      if ($visibleContextItems.length === 0) return 'Ask me anything...'
       if ($responses.length >= 1) return 'Ask a follow up...'
-      if ($contextItems.length === $tabs.length) return 'Ask anything about all tabs...'
-      return `Ask anything about ${$contextItems.length} ${
-        $contextItems.length === 1 ? 'tab' : 'tabs'
+      if ($visibleContextItems.length === $tabs.length) return 'Ask anything about all tabs...'
+      return `Ask anything about ${$visibleContextItems.length} ${
+        $visibleContextItems.length === 1 ? 'tab' : 'tabs'
       }...`
     }
   )
@@ -225,6 +231,8 @@
       )
     })
   })
+
+  const mentionItems = useEditorSpaceMentions(oasis)
 
   export const updateChatInput = (text: string, focus = true) => {
     inputValue = text
@@ -542,8 +550,30 @@
     const savedInputValue = await htmlToMarkdown(inputValue) //inputValue.trim().replaceAll('<p></p>', '')
     autoScrollChat = true
 
+    const contextItems = []
+
     try {
-      log.debug('Handling chat submit', savedInputValue)
+      const mentions = editor.getMentions()
+      log.debug('Handling chat submit', savedInputValue, mentions)
+      const items = (mentions ?? []).map((mention) => mention.id)
+
+      if (items.length > 0) {
+        for await (const item of items) {
+          const contextItem = await contextManager.addMentionItem(item, { visible: false })
+          if (contextItem) {
+            contextItems.push(contextItem)
+          }
+        }
+
+        ai.telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.Add,
+          contextManager.itemsValue.length,
+          items.length,
+          undefined,
+          PageChatUpdateContextEventTrigger.EditorMention
+        )
+      }
+
       inputValue = ''
       editor.clear()
 
@@ -556,6 +586,16 @@
       log.error('Error doing magic', e)
 
       updateChatInput(savedInputValue)
+    } finally {
+      try {
+        log.debug('chat complete, removing context items', contextItems)
+
+        for await (const contextItem of contextItems) {
+          await contextManager.removeContextItem(contextItem.id)
+        }
+      } catch (e) {
+        log.error('Error removing context items', e)
+      }
     }
   }
 
@@ -718,11 +758,11 @@
       log.warn('Not yet implemented!')
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
-      contextManager.addTab(tabId, PageChatUpdateContextEventTrigger.DragAndDrop)
+      contextManager.addTab(tabId, { trigger: PageChatUpdateContextEventTrigger.DragAndDrop })
     } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
       const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
 
-      contextManager.addSpace(space, PageChatUpdateContextEventTrigger.DragAndDrop)
+      contextManager.addSpace(space, { trigger: PageChatUpdateContextEventTrigger.DragAndDrop })
     } else if (
       drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
       drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
@@ -743,7 +783,9 @@
 
       log.debug('dropped resource, adding to context', resource)
 
-      contextManager.addResource(resource, PageChatUpdateContextEventTrigger.DragAndDrop)
+      contextManager.addResource(resource, {
+        trigger: PageChatUpdateContextEventTrigger.DragAndDrop
+      })
     }
   }
 
@@ -1220,7 +1262,7 @@
         >
           Preparing tabs for the chat…
         </div>
-      {:else if $contextItems.length}
+      {:else if $visibleContextItems.length}
         {#if !$optToggled}
           <div
             class="flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 py-2 px-4 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
@@ -1234,7 +1276,7 @@
                 on:remove-item={handleRemoveContextItem}
                 on:retry={handleRetryContextItem}
               />
-              {#if $contextItems.length > 0}
+              {#if $visibleContextItems.length > 0}
                 <button
                   class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
                   on:click={() => {
@@ -1271,6 +1313,8 @@
           bind:focused={editorFocused}
           autofocus={true}
           submitOnEnter
+          parseMentions
+          mentionItems={$mentionItems}
           placeholder={$chatBoxPlaceholder}
         />
       </div>

@@ -505,7 +505,7 @@
 
     // WARN: This trigger event is weird / wrong
     // TODO: @maxi we dont have a fitting event i guess for upading context inside inline ai?
-    $activeChat?.contextManager.addScreenshot(blob, undefined)
+    $activeChat?.contextManager.addScreenshot(blob)
 
     // WARN: Telemetry
     $activeChat?.createChatCompletion(input, {
@@ -527,7 +527,7 @@
 
     // WARN: This trigger event is weird / wrong
     // TODO: @maxi we dont have a fitting event i guess for upading context inside inline ai?
-    $activeChat?.contextManager.addScreenshot(blob, undefined)
+    $activeChat?.contextManager.addScreenshot(blob)
 
     $activeChat?.createChatCompletion(prompt.prompt, {
       trigger: PageChatMessageSentEventTrigger.InlineAI,

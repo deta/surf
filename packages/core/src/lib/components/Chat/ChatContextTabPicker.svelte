@@ -229,23 +229,37 @@
       log.debug('submitting item', type, id)
 
       if (type === 'tab') {
-        contextManager.addTab(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addTab(id, { trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu })
       } else if (type === 'space') {
-        contextManager.addSpace(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addSpace(id, {
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       } else if (type === 'resource') {
-        contextManager.addResource(id, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addResource(id, {
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
 
         // for built-in items 'type' is the value
       } else if (type === 'active-tab') {
-        contextManager.addActiveTab(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addActiveTab({
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       } else if (type === 'active-space') {
-        contextManager.addActiveSpaceContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addActiveSpaceContext(undefined, {
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       } else if (type === 'home') {
-        contextManager.addHomeContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addHomeContext({
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       } else if (type === 'everything') {
-        contextManager.addEverythingContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addEverythingContext({
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       } else if (type === 'wikipedia') {
-        contextManager.addWikipediaContext(PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addWikipediaContext({
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       }
 
       // $searchValue = ''
@@ -397,7 +411,9 @@
         const blob = await requestUserScreenshot()
         if (!blob) return
 
-        contextManager.addScreenshot(blob, PageChatUpdateContextEventTrigger.ChatAddContextMenu)
+        contextManager.addScreenshot(blob, {
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
       }}
       class="active:scale-95 shadow-xl appearance-none w-fit border-0 group margin-0 flex items-center px-3 py-1 bg-sky-200 dark:bg-gray-800 hover:bg-sky-300 dark:hover:bg-gray-600/50 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-100 text-xs"
     >
