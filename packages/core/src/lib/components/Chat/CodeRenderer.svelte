@@ -78,12 +78,14 @@
   let codeBlockELem: HTMLElement
 
   let observer: MutationObserver | null = null
+  let generatingTimeout: ReturnType<typeof setTimeout> | null = null
 
   let isHTMLComplete: boolean = false
   let codeContent: string = ''
   let jsOutput: string = ''
   let isExecuting: boolean = false
   let noResourceFound = false
+  let manualGeneratingState = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
 
   $: isHTML = language === 'html'
@@ -92,7 +94,8 @@
   $: formattedLanguage = formatCodeLanguage(language)
 
   $: generationStatus = getGenerationStatus(codeContent, language)
-  $: stillGenerating = !resource && (isHTMLApp || !codeContent) && !isHTMLComplete
+  $: stillGenerating =
+    (!resource && (isHTMLApp || !codeContent) && !isHTMLComplete) || manualGeneratingState
 
   $: silentResource =
     resource && (resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
@@ -141,14 +144,13 @@
     'Placing the elements…'
   ]
 
-  const generatingMessages = [
+  const preparingMessages = [
     'Preparing the environment…',
     'Setting up the workspace…',
     'Getting things ready…',
     'Starting the magic…',
     'Planning the creation…'
   ]
-
   const getGenerationStatus = (raw: string, language: string) => {
     if (language !== 'html') return 'complete'
 
@@ -168,14 +170,18 @@
   }
 
   const getRandomStatusMessage = (status: string) => {
-    if (status === 'scripting') {
-      return scriptingMessages[Math.floor(Math.random() * scriptingMessages.length)]
-    } else if (status === 'styling') {
-      return stylingMessages[Math.floor(Math.random() * stylingMessages.length)]
-    } else if (status === 'templating') {
-      return templatingMessages[Math.floor(Math.random() * templatingMessages.length)]
+    if (language === 'html') {
+      if (status === 'scripting') {
+        return scriptingMessages[Math.floor(Math.random() * scriptingMessages.length)]
+      } else if (status === 'styling') {
+        return stylingMessages[Math.floor(Math.random() * stylingMessages.length)]
+      } else if (status === 'templating') {
+        return templatingMessages[Math.floor(Math.random() * templatingMessages.length)]
+      } else {
+        return preparingMessages[Math.floor(Math.random() * preparingMessages.length)]
+      }
     } else {
-      return generatingMessages[Math.floor(Math.random() * generatingMessages.length)]
+      return null
     }
   }
 
@@ -633,6 +639,18 @@
       getLanguage()
     }
 
+    if (!['html', 'javascript', 'typescript'].includes(language)) {
+      manualGeneratingState = true
+
+      if (generatingTimeout) {
+        clearTimeout(generatingTimeout)
+      }
+
+      generatingTimeout = setTimeout(() => {
+        manualGeneratingState = false
+      }, 1000)
+    }
+
     // if (code === codeContent) {
     //   log.debug('Code content did not change', {code, codeContent})
     //   return
@@ -741,17 +759,19 @@
 
     observer.observe(preElem, { childList: true, subtree: true })
 
-    if (initialCollapsed === 'auto') {
-      const autoExpanded = checkIfShouldBeExpanded()
-      log.debug('autoExpanded', autoExpanded)
-      initialCollapsed = !autoExpanded
-    }
-
     const lang = getLanguage()
-
     const code = await getCode()
     if (code) {
       codeContent = code
+    }
+
+    if (initialCollapsed === 'auto') {
+      if (!['html', 'javascript', 'typescript'].includes(lang ?? '')) {
+        initialCollapsed = codeContent.trim().split('\n').length > 1
+      } else {
+        const autoExpanded = checkIfShouldBeExpanded()
+        initialCollapsed = !autoExpanded
+      }
     }
 
     if (
@@ -777,6 +797,14 @@
         makeCodeEditable()
       }
     } else if (code) {
+      if (lang !== 'javascript' && lang !== 'typescript') {
+        showPreview = false
+      }
+
+      if (!initialCollapsed) {
+        collapsed = false
+      }
+
       highlightCode()
     }
   })
@@ -796,7 +824,7 @@
   data-name={$customName || $generatedName}
   class="relative bg-gray-900 rounded-xl flex flex-col overflow-hidden w-full {fullSize ||
   collapsed ||
-  isJS
+  !isHTML
     ? ''
     : 'h-full max-h-[750px]'} {fullSize ? 'h-full' : ''}"
 >
@@ -824,7 +852,7 @@
       {/if}
 
       <div class="w-full">
-        {#if stillGenerating}
+        {#if stillGenerating && !manualGeneratingState}
           <div class=" flex-shrink-0">
             {getRandomStatusMessage(generationStatus)}
           </div>
@@ -977,6 +1005,14 @@
                   <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
                 </button>
               {/if}
+            {:else}
+              <button
+                use:tooltip={{ text: 'Copy Code', position: 'left' }}
+                class="flex items-center p-1 rounded-md transition-colors"
+                on:click={handleCopyCode}
+              >
+                <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
+              </button>
             {/if}
 
             {#if !stillGenerating}
@@ -1022,7 +1058,7 @@
           {:else if jsOutput}
             {jsOutput}
           {:else}
-            no output, click run to execute code
+            no output, click the play button to run the code
           {/if}
         </div>
       </footer>
