@@ -29,13 +29,18 @@
   import { ResourceTag } from '@horizon/core/src/lib/service/resources'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'
-  import { SpaceEntryOrigin, type BookmarkTabState } from '@horizon/core/src/lib/types'
+  import {
+    DragTypeNames,
+    SpaceEntryOrigin,
+    type BookmarkTabState
+  } from '@horizon/core/src/lib/types'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
-  import type { TabResource } from '@horizon/core/src/lib/types'
+  import type { DragTypes, TabResource } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { createWebviewExtractor } from '@horizon/web-parser'
+  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
 
   export let resource: Resource | undefined = undefined
   export let tab: TabResource | undefined = undefined
@@ -677,6 +682,23 @@
     }
   }
 
+  const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
+    if (!resource) {
+      // unless we create a resource for every code block we have to dynamically create one when the drag is started
+      resource = await saveAppAsResource(undefined, true)
+    }
+
+    if (resource) {
+      const item = drag.item!
+      drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
+      item.data.setData(DragTypeNames.SURF_RESOURCE, resource)
+      item.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+      drag.continue()
+    } else {
+      drag.abort()
+    }
+  }
+
   const findResponsesWrapper = () => {
     let parent = codeBlockELem.parentElement
     while (parent) {
@@ -778,7 +800,12 @@
     ? ''
     : 'h-full max-h-[750px]'} {fullSize ? 'h-full' : ''}"
 >
-  <header class="flex-shrink-0 flex items-center justify-between gap-3 p-2">
+  <header
+    class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
+    draggable={true}
+    use:HTMLDragItem.action={{}}
+    on:DragStart={handleDragStart}
+  >
     <div class="flex items-center gap-1 w-full">
       {#if collapsable}
         <button
@@ -1007,6 +1034,12 @@
   :global(.code-wrapper code.hljs) {
     overflow: unset;
     outline: none;
+  }
+
+  // Prevent drag preview from being too large
+  :global(code-block[data-drag-preview]) {
+    width: var(--drag-width) !important;
+    height: var(--drag-height) !important;
   }
 
   code-block {
