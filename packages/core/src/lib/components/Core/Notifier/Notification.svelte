@@ -173,6 +173,8 @@ main browser so it follows you arround throughout your daily workflows.`
 </div>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   :global(::view-transition-image-pair(active-notifcation-mail)) {
     animation-duration: 123ms;
     animation-timing-function: ease-in-out;

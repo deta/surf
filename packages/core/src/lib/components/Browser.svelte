@@ -57,7 +57,6 @@
   import BrowserTab from './Browser/BrowserTab.svelte'
   import BrowserHomescreen from './Browser/BrowserHomescreen.svelte'
   import TabItem from './Core/Tab.svelte'
-  import '../../app.css'
   import { createDemoItems, createOnboardingSpace } from '../service/demoitems'
 
   import TeletypeEntry from './Overlay/TeletypeEntry.svelte'
@@ -4933,6 +4932,9 @@
 />
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @import '@horizon/core/src/lib/styles/colors';
+
   *,
   a,
   button {

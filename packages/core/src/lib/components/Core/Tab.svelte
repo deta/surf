@@ -1085,6 +1085,8 @@
 </div>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   @keyframes spin {
     from {
       rotate: 0deg;

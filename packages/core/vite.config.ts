@@ -35,17 +35,6 @@ export default defineConfig({
       }
     }
   },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `
-    @use '${resolve(__dirname, 'src/lib/styles/colors').split(sep).join('/')}' as colors;
-    @use '${resolve(__dirname, 'src/lib/styles/motion').split(sep).join('/')}' as motion;
-    @use '${resolve(__dirname, 'src/lib/styles/utils').split(sep).join('/')}' as utils;
-  `
-      }
-    }
-  },
   // This is needed to get html-minifier-terser working in the browser context: https://github.com/terser/html-minifier-terser/issues/160#issuecomment-1648837778
   define: {
     'process.env': {},

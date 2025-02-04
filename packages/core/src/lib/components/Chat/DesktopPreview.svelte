@@ -111,6 +111,8 @@
 {/key}
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/motion' as motion;
+
   .desktop-preview-hitarea {
     width: fit-content;
     height: fit-content;

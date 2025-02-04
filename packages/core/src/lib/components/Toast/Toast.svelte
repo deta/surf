@@ -51,6 +51,8 @@
 </article>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   .toast {
     @include utils.light-dark-custom(
       'background-fill-mix',

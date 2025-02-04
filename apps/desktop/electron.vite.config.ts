@@ -23,30 +23,17 @@ const svelteOptions = silenceWarnings
     }
   : {}
 
-// NOTE: These need to be in this vite config **AND** the packages using it's vite config!
-// Otherwise it will work inside the dev server but not the build!
-const SCSS_INJECTS = {
-  additionalData: `
-    @use '${resolve(__dirname, '../../packages/core/src/lib/styles/colors').split(sep).join('/')}' as colors;
-    @use '${resolve(__dirname, '../../packages/core/src/lib/styles/motion').split(sep).join('/')}' as motion;
-    @use '${resolve(__dirname, '../../packages/core/src/lib/styles/utils').split(sep).join('/')}' as utils;
-  `
-}
-
 const cssConfig = silenceWarnings
   ? {
       preprocessorOptions: {
         scss: {
-          silenceDeprecations: ['legacy-js-api', 'mixed-decls'],
-          ...SCSS_INJECTS
+          silenceDeprecations: ['legacy-js-api', 'mixed-decls']
         }
       }
     }
   : {
       preprocessorOptions: {
-        scss: {
-          ...SCSS_INJECTS
-        }
+        scss: {}
       }
     }
 

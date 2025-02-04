@@ -593,6 +593,8 @@
 </div>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   .top-bar {
     display: flex;
     justify-content: space-between;
