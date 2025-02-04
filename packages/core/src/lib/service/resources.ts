@@ -42,6 +42,7 @@ import {
   EventContext,
   ResourceProcessingStateType,
   TelemetryEventTypes,
+  WEB_RESOURCE_TYPES,
   type DetectedResource,
   type EventBusMessage,
   type ResourceData,
@@ -1505,16 +1506,11 @@ export class ResourceManager {
       throw new Error('resource not found')
     }
 
-    const canBeRefreshed =
-      (Object.values(ResourceTypes) as string[]).includes(resource.type) ||
-      resource.type === 'application/pdf'
-    const canonicalUrl = parseStringIntoUrl(
-      resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
-        resource.metadata?.sourceURI ||
-        ''
-    )?.href
+    const canBeRefreshed = WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))
+    const canBeReprocessed =
+      resource.type === ResourceTypes.PDF || resource.type.startsWith('image/')
 
-    if (!canBeRefreshed) {
+    if (!canBeRefreshed && !canBeReprocessed) {
       this.log.debug('skipping refresh for non-refreshable resource', resource.id)
       return
     }
@@ -1525,11 +1521,21 @@ export class ResourceManager {
     }
 
     try {
-      if (resource.type === 'application/pdf') {
-        this.log.debug('refreshing PDF resource by only re-running post processing', resource.id)
+      if (canBeReprocessed) {
+        this.log.debug(
+          'refreshing resource by only re-running post processing',
+          resource.id,
+          resource.type
+        )
         await this.sffs.backend.js__store_resource_post_process(resource.id)
         return
       }
+
+      const canonicalUrl = parseStringIntoUrl(
+        resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
+          resource.metadata?.sourceURI ||
+          ''
+      )?.href
 
       if (!canonicalUrl) {
         this.log.debug('skipping refresh as resource has no canonical URL', resource.id)

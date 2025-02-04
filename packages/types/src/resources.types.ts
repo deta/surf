@@ -151,6 +151,24 @@ export enum ResourceTypes {
   PLAYLIST_YOUTUBE = 'application/vnd.space.playlist.youtube'
 }
 
+export const WEB_RESOURCE_TYPES = [
+  ResourceTypes.LINK,
+  ResourceTypes.ARTICLE,
+  ResourceTypes.POST,
+  ResourceTypes.CHAT_MESSAGE,
+  ResourceTypes.CHAT_THREAD,
+  ResourceTypes.LOCATION,
+  ResourceTypes.COLOR,
+  ResourceTypes.DRAWING,
+  ResourceTypes.DOCUMENT_NOTION,
+  ResourceTypes.DOCUMENT_GOOGLE_DOC,
+  ResourceTypes.TABLE,
+  ResourceTypes.TABLE_COLUMN,
+  ResourceTypes.FLOWCHAT_FUN,
+  ResourceTypes.CHANNEL_YOUTUBE,
+  ResourceTypes.PLAYLIST_YOUTUBE
+]
+
 export interface ResourceDataPDF {
   url: string
   downloadURL?: string

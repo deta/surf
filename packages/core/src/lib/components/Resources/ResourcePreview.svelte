@@ -26,6 +26,7 @@
   import {
     CreateTabEventTrigger,
     OpenResourceEventFrom,
+    WEB_RESOURCE_TYPES,
     type AnnotationCommentData,
     type AnnotationRangeData,
     type ResourceDataAnnotation,
@@ -215,8 +216,8 @@
     }
   }
 
-  $: canBeRefreshed =
-    (Object.values(ResourceTypes) as string[]).includes(resource.type) && canonicalUrl !== undefined
+  $: canBeRefreshed = WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))
+  $: canBeReprocessed = resource.type === ResourceTypes.PDF || resource.type.startsWith('image/')
 
   $: sourceURL = parseStringIntoUrl(resource.metadata?.sourceURI ?? '')
 
@@ -652,11 +653,11 @@
         }
       }
     ),
-    ...conditionalArrayItem<CtxItem>(canBeRefreshed, {
+    ...conditionalArrayItem<CtxItem>(canBeRefreshed || canBeReprocessed, {
       type: 'action',
       disabled: $resourceState === 'extracting',
       icon: 'reload',
-      text: 'Refresh Content',
+      text: canBeRefreshed ? 'Refresh Content' : 'Reprocess Content',
       action: () => refreshResourceData()
     }),
     ...(origin !== 'homescreen'
