@@ -9,7 +9,7 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes
   } from '@horizon/types'
-  import { writable } from 'svelte/store'
+  import { get, writable } from 'svelte/store'
   import { isMac, useDebounce } from '@horizon/utils'
   import { useTabsManager } from '../../../service/tabs'
   import { Icon } from '@horizon/icons'
@@ -61,19 +61,51 @@
   }
 
   let resourceUnsubs = []
+  let initialLoad = true
   const fetchItems = useDebounce(async () => {
     resourceUnsubs.forEach((sub) => sub())
-    const resources = await resourceManager.listResourcesByTags(
-      [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-      ],
-      { includeAnnotations: false }
-    )
+
+    let resources = get(resourceManager.resources)
+    if (initialLoad) {
+      resources = await resourceManager.listResourcesByTags(
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+        ],
+        { includeAnnotations: false }
+      )
+      initialLoad = false
+    }
 
     let results = resources
+      .filter((resource) => {
+        if (resource.deleted) {
+          return false
+        }
+
+        if (resource.type === ResourceTypes.HISTORY_ENTRY) {
+          return false
+        }
+
+        const tags = resource.tags || []
+        if (
+          tags.some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT && tag.value === 'true')
+        ) {
+          return false
+        }
+
+        if (
+          tags.some(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING && tag.value === 'true'
+          )
+        ) {
+          return false
+        }
+
+        return true
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .map((resource) => {
         return {
