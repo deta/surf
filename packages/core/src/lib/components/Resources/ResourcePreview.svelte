@@ -855,6 +855,18 @@
 
   /// New resource previews // TODO: Clean up old styles
   article.resource-preview {
+    &[data-origin='stuff'] {
+      content-visibility: auto;
+      contain: layout paint style;
+    }
+
+    &[data-origin='homescreen'] {
+      content-visibility: auto;
+      // NOTE: For desktop elements we can even use strict, as their size is NOT determined
+      // by their contents, but a fixed card size!
+      contain: strict;
+    }
+
     --section-padding-inline: 1.4em;
     --section-padding-block: 1.2em;
 

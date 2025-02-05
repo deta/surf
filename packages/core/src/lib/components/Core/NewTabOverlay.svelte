@@ -896,6 +896,7 @@
       border: 1px solid rgba(255, 255, 255, 0.15);
     }
   }
+
   .wrapper {
     display: flex;
     flex-direction: column;
@@ -1001,6 +1002,10 @@
   }
 
   .stuff-outer {
+    // NOTE: We can use strict containment, as the stuff contents are
+    // selfcontained inside the overlay. This allows style / layout etc. to
+    // be separated from the rest of the app!
+    contain: strict;
     border-radius: 24px 24px 16px 16px;
   }
 
