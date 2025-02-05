@@ -20,6 +20,17 @@ export interface MentionNodeAttrs {
    * item, if provided. Stored as a `data-label` attribute. See `renderLabel`.
    */
   label?: string | null
+
+  /**
+   * The type of the mention, stored as a `data-type` attribute.
+   */
+  type?: string | null
+
+  /**
+   * The icon to be rendered by the editor as the displayed icon for this mentioned
+   * item, if provided. Stored as a `data-icon` attribute.
+   */
+  icon?: string | null
 }
 
 export type MentionOptions<
@@ -151,7 +162,12 @@ export const Mention = Node.create<MentionOptions>({
             (extension) => extension.name === this.name
           )
           if (extension && extension.options.onInsert) {
-            extension.options.onInsert({ id: props.id, label: props.label } as MentionItem)
+            extension.options.onInsert({
+              id: props.id,
+              label: props.label,
+              type: props.type,
+              icon: props.icon
+            } as MentionItem)
           }
         },
         allow: ({ state, range, editor }) => {
@@ -207,6 +223,34 @@ export const Mention = Node.create<MentionOptions>({
 
           return {
             'data-label': attributes.label
+          }
+        }
+      },
+
+      type: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-mention-type'),
+        renderHTML: (attributes) => {
+          if (!attributes.type) {
+            return {}
+          }
+
+          return {
+            'data-mention-type': attributes.type
+          }
+        }
+      },
+
+      icon: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-icon'),
+        renderHTML: (attributes) => {
+          if (!attributes.icon) {
+            return {}
+          }
+
+          return {
+            'data-icon': attributes.icon
           }
         }
       }
@@ -279,7 +323,10 @@ export const Mention = Node.create<MentionOptions>({
         target: container,
         props: {
           id: node.attrs.id,
-          label: `${this.options.suggestion.char}${node.attrs.label ?? node.attrs.id}`,
+          label: node.attrs.label ?? node.attrs.id,
+          char: this.options.suggestion.char,
+          type: node.attrs.type,
+          icon: node.attrs.icon,
           onClick: this.options.onClick,
           ...this.options.HTMLAttributes
         }

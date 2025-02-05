@@ -75,12 +75,18 @@
 	}
 
 	.mention {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
 		background-color: var(--background-brand);
 		border-radius: 0.4rem;
 		box-decoration-break: clone;
 		color: var(--color-brand) !important;
-		padding: 0.1rem 0.3rem;
+		padding: 0.2rem 0.3rem;
 		cursor: default;
+		line-height: 1.1;
+		position: relative;
+		top: 1px;
 
 		&::after {
 			content: "\200B";

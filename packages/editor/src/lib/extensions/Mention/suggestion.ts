@@ -26,7 +26,7 @@ export default {
           props: {
             items: props.items,
             callback: (item: MentionItem) => {
-              props.command({ id: item.id, label: item.label })
+              props.command(item)
             }
           }
         })

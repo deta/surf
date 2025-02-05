@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DynamicIcon } from '@horizon/icons'
-  import type { MentionItem } from '../../types'
+  import { MentionItemType, type MentionItem } from '../../types'
 
   export let items: MentionItem[] = []
   export let callback: (item: MentionItem) => void
@@ -10,24 +10,39 @@
   let itemElements: HTMLDivElement[] = []
   let disableMouseover = false
 
+  $: sections = items.reduce(
+    (acc, item) => {
+      const type = item.type ?? MentionItemType.OTHER
+      if (!acc[type]) {
+        acc[type] = []
+      }
+
+      acc[type].push(item)
+      return acc
+    },
+    {} as Record<MentionItemType, MentionItem[]>
+  )
+
   export function onKeyDown(event: KeyboardEvent): boolean {
     if (event.repeat) {
       return false
     }
 
+    const flatItems = Object.values(sections).flat()
+
     switch (event.key) {
       case 'ArrowUp':
         disableMouseover = true
-        activeIdx = (activeIdx + items.length - 1) % items.length
+        activeIdx = (activeIdx + flatItems.length - 1) % flatItems.length
         break
       case 'ArrowDown':
         disableMouseover = true
-        activeIdx = (activeIdx + 1) % items.length
+        activeIdx = (activeIdx + 1) % flatItems.length
         break
       case 'Enter':
         event.preventDefault()
         event.stopImmediatePropagation()
-        callback(items[activeIdx])
+        callback(flatItems[activeIdx])
         return true
       default:
         return false
@@ -36,32 +51,58 @@
     itemElements[activeIdx]?.scrollIntoView({ block: 'nearest' })
     return true
   }
+
+  const getSectionTitle = (type: MentionItemType) => {
+    switch (type) {
+      case MentionItemType.BUILT_IN:
+        return 'Built-In'
+      case MentionItemType.MODEL:
+        return 'Models'
+      case MentionItemType.CONTEXT:
+        return 'Contexts'
+      default:
+        return 'Others'
+    }
+  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="list" bind:this={listContainer} on:mousemove={() => (disableMouseover = false)}>
   {#if items.length > 0}
-    {#each items as item, i (item.id)}
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions  a11y-mouse-events-have-key-events -->
-      <div
-        class="item"
-        class:active={i === activeIdx}
-        on:click={() => callback(items[i])}
-        on:mouseover={() => {
-          if (disableMouseover) {
-            return
-          }
-          activeIdx = i
-        }}
-        bind:this={itemElements[i]}
-      >
-        {#if item.icon}
-          <DynamicIcon name={item.icon} size="16px" />
-        {/if}
+    {#each Object.entries(sections) as [type, sectionItems]}
+      <div class="section">
+        <div class="section-title">{getSectionTitle(type)}</div>
+        {#each sectionItems as item, i (item.id)}
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions  a11y-mouse-events-have-key-events -->
+          <div
+            class="item"
+            class:active={i +
+              Object.values(sections).slice(0, Object.keys(sections).indexOf(type)).flat()
+                .length ===
+              activeIdx}
+            on:click={() => callback(item)}
+            on:mouseover={() => {
+              if (disableMouseover) {
+                return
+              }
+              activeIdx =
+                i +
+                Object.values(sections).slice(0, Object.keys(sections).indexOf(type)).flat().length
+            }}
+            bind:this={itemElements[
+              i +
+                Object.values(sections).slice(0, Object.keys(sections).indexOf(type)).flat().length
+            ]}
+          >
+            {#if item.icon}
+              <DynamicIcon name={item.icon} size="16px" />
+            {/if}
 
-        <div>
-          {item.suggestionLabel || item.label}
-        </div>
+            <div>
+              {item.suggestionLabel || item.label}
+            </div>
+          </div>
+        {/each}
       </div>
     {/each}
   {:else}
@@ -73,7 +114,7 @@
   .list {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.75rem;
 
     --ctx-background: #fff;
     --ctx-border: rgba(0, 0, 0, 0.25);
@@ -87,6 +128,7 @@
     max-height: 400px;
     background: var(--ctx-background);
     padding: 0.25rem;
+    padding-top: 0.5rem;
     border-radius: 9px;
     border: 0.5px solid var(--ctx-border);
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
@@ -113,5 +155,17 @@
   .active {
     background-color: var(--ctx-item-hover);
     color: var(--ctx-item-text-hover);
+  }
+
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .section-title {
+    font-size: 0.9em;
+    color: var(--ctx-item-text);
+    padding: 0 0.5rem;
   }
 </style>

@@ -5,6 +5,13 @@ export type EditorAutocompleteEvent = {
   mentions?: MentionItem[]
 }
 
+export enum MentionItemType {
+  BUILT_IN = 'built-in',
+  CONTEXT = 'context',
+  MODEL = 'model',
+  OTHER = 'other'
+}
+
 export type MentionItem<T = any> = {
   id: string
   label: string
@@ -12,7 +19,9 @@ export type MentionItem<T = any> = {
   aliases?: string[]
   icon?: string
   data?: T
-  type?: 'built-in' | 'space'
+  type?: MentionItemType
+  hideInRoot?: boolean
+  hideInSearch?: boolean
 }
 
 export type EditorRewriteEvent = {

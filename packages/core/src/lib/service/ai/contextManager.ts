@@ -32,6 +32,15 @@ import { ContextItemEverything } from './context/everything'
 import type { ActiveSpaceContextInclude } from './context/activeSpaceContexts'
 import { ContextItemWikipedia } from './context/wikipedia'
 import { generalContext } from '../../constants/browsingContext'
+import {
+  ACTIVE_CONTEXT_MENTION,
+  EVERYTHING_MENTION,
+  GENERAL_CONTEXT_MENTION,
+  NO_CONTEXT_MENTION,
+  TABS_MENTION,
+  WIKIPEDIA_SEARCH_MENTION
+} from '../../constants/chat'
+import type { MentionItem } from '@horizon/editor'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -692,13 +701,16 @@ export class ContextManager {
     return this.addContextItem(item, opts)
   }
 
-  addMentionItem(itemId: string, opts?: AddContextItemOptions) {
+  addMentionItem(mentionOrId: MentionItem | string, opts?: AddContextItemOptions) {
+    const itemId = typeof mentionOrId === 'string' ? mentionOrId : mentionOrId.id
     const activeSpaceContextItem = this.getActiveSpaceContextItem()
-    if (itemId === generalContext.id) {
+    if (itemId === GENERAL_CONTEXT_MENTION.id) {
       return this.addHomeContext(opts)
-    } else if (itemId === 'everything') {
+    } else if (itemId === NO_CONTEXT_MENTION.id) {
+      this.clear()
+    } else if (itemId === EVERYTHING_MENTION.id) {
       return this.addEverythingContext(opts)
-    } else if (itemId === 'tabs') {
+    } else if (itemId === TABS_MENTION.id) {
       if (activeSpaceContextItem) {
         activeSpaceContextItem.include =
           activeSpaceContextItem.include === 'resources' ? 'everything' : 'tabs'
@@ -706,7 +718,7 @@ export class ContextManager {
       } else {
         return this.addActiveSpaceContext('tabs', opts)
       }
-    } else if (itemId === 'active-context') {
+    } else if (itemId === ACTIVE_CONTEXT_MENTION.id) {
       if (activeSpaceContextItem) {
         activeSpaceContextItem.include =
           activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
@@ -714,7 +726,7 @@ export class ContextManager {
       } else {
         return this.addActiveSpaceContext('resources', opts)
       }
-    } else if (itemId === 'wikipedia') {
+    } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
       return this.addWikipediaContext(opts)
     } else {
       return this.addSpace(itemId, opts)

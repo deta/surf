@@ -14,7 +14,7 @@
   } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
-  import { Editor, getEditorContentText } from '@horizon/editor'
+  import { Editor, getEditorContentText, MentionItemType } from '@horizon/editor'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
 
   import {
@@ -64,6 +64,9 @@
     useEditorSpaceMentions
   } from '@horizon/core/src/lib/service/ai/helpers'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
+  import { MODEL_CLAUDE_MENTION, MODEL_GPT_MENTION } from '@horizon/core/src/lib/constants/chat'
+  import { Provider } from '@horizon/types/src/ai.types'
+  import ModelPicker from './ModelPicker.svelte'
 
   export let chat: AIChat
   export let inputValue = ''
@@ -115,7 +118,6 @@
   const aPressed = writable(false)
   const optToggled = writable(false)
   const tabPickerOpen = writable(false)
-  const modelSelectorOpen = writable(false)
   const promptSelectorOpen = writable(false)
   const savedChatResponses = writable<Record<string, string>>({})
 
@@ -126,38 +128,11 @@
   let showAddPromptDialog = false
   const appModalContent = writable<App | null>(null)
 
-  const selectConfigureItem = {
-    id: 'configure',
-    label: 'Configure Models',
-    icon: 'settings'
-  } as SelectItem
-
   const addPromptItem = {
     id: 'addprompt',
     label: 'Add Prompt',
     icon: 'add'
   } as SelectItem
-
-  const modelItems = derived([ai.models], ([models]) => {
-    return models.map(
-      (model) =>
-        ({
-          id: model.id,
-          label: model.label,
-          icon: model.icon
-        }) as SelectItem
-    )
-  })
-
-  const selectedModelItem = derived(
-    [ai.selectedModelId, modelItems],
-    ([selectedModelId, modelItems]) => {
-      const model = modelItems.find((model) => model.id === selectedModelId)
-      if (!model) return null
-
-      return model
-    }
-  )
 
   const promptItems = derived([ai.customAIApps], ([customAiApps]) => {
     return customAiApps.map(
@@ -232,7 +207,7 @@
     })
   })
 
-  const mentionItems = useEditorSpaceMentions(oasis)
+  const mentionItems = useEditorSpaceMentions(oasis, ai)
 
   export const updateChatInput = (text: string, focus = true) => {
     inputValue = text
@@ -257,20 +232,6 @@
   const openModelSettings = () => {
     // window.api.openSettings('ai')
     window.api.openSettings()
-  }
-
-  const handleModelSelect = async (e: CustomEvent<string>) => {
-    const modelId = e.detail
-    log.debug('Selected model', modelId)
-
-    if (modelId === 'configure') {
-      openModelSettings()
-      modelSelectorOpen.set(false)
-      return
-    }
-
-    await ai.changeSelectedModel(modelId)
-    modelSelectorOpen.set(false)
   }
 
   const convertChatOutputToNote = async (response: AIChatMessageParsed) => {
@@ -537,6 +498,20 @@
     }
   }
 
+  const cleanEditorHTML = (raw: string) => {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(raw, 'text/html')
+
+    // filter out all mention nodes that are mentions models since these could trip up the LLM
+    doc
+      .querySelectorAll('span[data-type="mention"][data-mention-type="model"')
+      .forEach((mention) => {
+        mention.remove()
+      })
+
+    return doc.body.innerHTML
+  }
+
   export const submitChatMessage = async (selected?: 'general' | 'all' | 'active') => {
     if (!inputValue) {
       log.debug('No input value')
@@ -547,15 +522,19 @@
       selectedMode = selected
     }
 
-    const savedInputValue = await htmlToMarkdown(inputValue) //inputValue.trim().replaceAll('<p></p>', '')
+    const cleanHtml = cleanEditorHTML(inputValue)
+    const markdownQuery = await htmlToMarkdown(cleanHtml)
+    const chatQuery = markdownQuery.trim()
     autoScrollChat = true
 
     const contextItems = []
 
     try {
       const mentions = editor.getMentions()
-      log.debug('Handling chat submit', savedInputValue, mentions)
-      const items = (mentions ?? []).map((mention) => mention.id)
+      log.debug('Handling chat submit', chatQuery, mentions)
+      const items = (mentions ?? [])
+        .filter((mention) => mention.type !== MentionItemType.MODEL)
+        .map((mention) => mention.id)
 
       if (items.length > 0) {
         for await (const item of items) {
@@ -574,21 +553,42 @@
         )
       }
 
+      const modelMention = (mentions ?? [])
+        .reverse()
+        .find((mention) => mention.type === MentionItemType.MODEL)
+
+      if (modelMention) {
+        if (modelMention.id === MODEL_CLAUDE_MENTION.id) {
+          chat.selectProviderModel(Provider.Anthropic)
+        } else if (modelMention.id === MODEL_GPT_MENTION.id) {
+          chat.selectProviderModel(Provider.OpenAI)
+        } else {
+          const modelId = modelMention.id.replace('model-', '')
+          chat.selectModel(modelId)
+        }
+      }
+
       inputValue = ''
       editor.clear()
 
       if (onSubmitChatHook !== undefined) {
-        onSubmitChatHook(savedInputValue)
+        onSubmitChatHook(chatQuery)
       } else {
-        await sendChatMessage(savedInputValue)
+        await sendChatMessage(chatQuery)
       }
     } catch (e) {
       log.error('Error doing magic', e)
-
+      const savedInputValue = await htmlToMarkdown(inputValue)
       updateChatInput(savedInputValue)
     } finally {
       try {
-        log.debug('chat complete, removing context items', contextItems)
+        log.debug(
+          'chat complete, removing context items and resetting model',
+          contextItems,
+          chat.selectedModelId
+        )
+
+        chat.selectModel(null)
 
         for await (const contextItem of contextItems) {
           await contextManager.removeContextItem(contextItem.id)
@@ -1350,7 +1350,7 @@
           </button>
         {/if}
 
-        <SelectDropdown
+        <!-- <SelectDropdown
           items={modelItems}
           search="disabled"
           selected={$selectedModelItem ? $selectedModelItem.id : null}
@@ -1370,7 +1370,9 @@
               <Icon name="settings" className="opacity-60" />
             {/if}
           </button>
-        </SelectDropdown>
+        </SelectDropdown> -->
+
+        <ModelPicker />
 
         <button
           class="submit-button transform whitespace-nowrap active:scale-95 disabled:opacity-30 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"

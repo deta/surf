@@ -10,7 +10,7 @@
   import { conditionalArrayItem } from '@horizon/utils'
 
   import { createEditorExtensions, getEditorContentText, type ExtensionOptions } from '../editor'
-  import type { EditorAutocompleteEvent, MentionItem } from '../types'
+  import type { EditorAutocompleteEvent, MentionItem, MentionItemType } from '../types'
   import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
   import type { MentionAction } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
@@ -96,9 +96,7 @@
     let selectedNode = node || $editor.state.doc
     selectedNode.descendants((node) => {
       if (node.type.name === 'mention') {
-        const id = node.attrs.id as string
-        const label = node.attrs.label as string
-        mentions.push({ id, label })
+        mentions.push(parseMentionNode(node))
       }
     })
 
@@ -111,9 +109,7 @@
 
     selectedNode.descendants((node) => {
       if (node.type.name === 'mention') {
-        const id = node.attrs.id as string
-        const label = node.attrs.label as string
-        mentions.push({ id, label })
+        mentions.push(parseMentionNode(node))
       }
     })
 
@@ -128,6 +124,19 @@
     if (focused) {
       dispatch('submit')
     }
+  }
+
+  const parseMentionNode = (node: typeof $editor.state.doc) => {
+    const id = node.attrs.id as string
+    const label = node.attrs.label as string
+    const type = node.attrs.type as MentionItemType
+
+    const item = mentionItems.find((item) => item.id === id)
+    if (item) {
+      return item
+    }
+
+    return { id, label, type } as MentionItem
   }
 
   const shouldShowFloatingMenu: Exclude<FloatingMenuPluginProps['shouldShow'], null> = ({
@@ -154,6 +163,14 @@
     const compare = (a: string, b: string) => a.toLowerCase().includes(b.toLowerCase())
 
     return mentionItems.filter((item) => {
+      if (!query && item.hideInRoot) {
+        return false
+      }
+
+      if (query && item.hideInSearch) {
+        return false
+      }
+
       if (compare(item.label, query)) {
         return true
       }
@@ -237,9 +254,7 @@
                       const mentions: MentionItem[] = []
                       selectedNode.descendants((node) => {
                         if (node.type.name === 'mention') {
-                          const id = node.attrs.id as string
-                          const label = node.attrs.label as string
-                          mentions.push({ id, label })
+                          mentions.push(parseMentionNode(node))
                         }
                       })
 

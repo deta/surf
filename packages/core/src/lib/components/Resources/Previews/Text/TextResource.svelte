@@ -5,6 +5,7 @@
 
   import {
     Editor,
+    MentionItemType,
     type EditorAutocompleteEvent,
     type EditorRewriteEvent,
     type EditorSimilaritiesSearchEvent,
@@ -74,7 +75,7 @@
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
   import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
   import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
-  import { ModelTiers } from '@horizon/types/src/ai.types'
+  import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import ChangeContextBtn from '@horizon/core/src/lib/components/Chat/Notes/ChangeContextBtn.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
@@ -91,6 +92,12 @@
   import { createWikipediaAPI } from '@horizon/web-parser'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import {
+    MODEL_CLAUDE_MENTION,
+    MODEL_GPT_MENTION,
+    NO_CONTEXT_MENTION
+  } from '@horizon/core/src/lib/constants/chat'
+  import ModelPicker from '@horizon/core/src/lib/components/Chat/ModelPicker.svelte'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -229,6 +236,8 @@
           contextName = 'your tabs'
         } else if ($selectedContext === 'active-context') {
           contextName = 'the active context'
+        } else if ($selectedContext === NO_CONTEXT_MENTION.id) {
+          contextName = ''
         }
       } else if ($activeSpace) {
         contextName = `"${$activeSpace?.dataValue.folderName}"`
@@ -237,10 +246,19 @@
       if ($floatingMenuShown) {
         if ($generatingPrompts) {
           const mentions = editorElem.getMentions()
+          if (!contextName) {
+            return `Generating suggestions based on the mentioned contexts…`
+          }
           return `Generating suggestions based on "${contextName}"${mentions.length > 0 ? ' and the mentioned contexts' : ''}…`
         } else if ($showPrompts) {
+          if (!contextName) {
+            return `Select a suggestion or press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf continue writing…`
+          }
           return `Select a suggestion or press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
         } else {
+          if (!contextName) {
+            return `Press space for suggestions or ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf continue writing…`
+          }
           return `Press space for suggestions or ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
         }
       }
@@ -249,7 +267,7 @@
     }
   )
 
-  const mentionItems = useEditorSpaceMentions(oasis)
+  const mentionItems = useEditorSpaceMentions(oasis, ai)
 
   const isBuiltInMention = (id: string) => {
     return $mentionItems.some((mention) => mention.id === id && mention.type === 'built-in')
@@ -664,7 +682,7 @@
     return elem.outerHTML
   }
 
-  const createNewNoteChat = async (spaces?: string[]) => {
+  const createNewNoteChat = async (mentions?: MentionItem[]) => {
     if (!contextManager) {
       log.error('No context manager found')
       return null
@@ -672,16 +690,17 @@
 
     const chatContextManager = contextManager.clone()
 
-    if (spaces && spaces.length > 0) {
-      log.debug('Adding spaces to context', spaces)
-      spaces.forEach((space) => {
-        chatContextManager.addMentionItem(space)
+    if (mentions && mentions.length > 0) {
+      log.debug('Adding spaces to context', mentions)
+
+      mentions.forEach((mention) => {
+        chatContextManager.addMentionItem(mention)
       })
 
       ai.telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.Add,
         contextManager.itemsValue.length,
-        spaces.length,
+        mentions.length,
         undefined,
         PageChatUpdateContextEventTrigger.EditorMention
       )
@@ -697,6 +716,25 @@
     if (!chat) {
       log.error('Failed to create chat')
       return null
+    }
+
+    log.debug('Chat created', chat)
+
+    const modelMention = (mentions ?? [])
+      .reverse()
+      .find((mention) => mention.type === MentionItemType.MODEL)
+
+    log.debug('Model mention', modelMention)
+
+    if (modelMention) {
+      if (modelMention.id === MODEL_CLAUDE_MENTION.id) {
+        chat.selectProviderModel(Provider.Anthropic)
+      } else if (modelMention.id === MODEL_GPT_MENTION.id) {
+        chat.selectProviderModel(Provider.OpenAI)
+      } else {
+        const modelId = modelMention.id.replace('model-', '')
+        chat.selectModel(modelId)
+      }
     }
 
     return chat
@@ -719,11 +757,11 @@
   const generateAndInsertAIOutput = async (
     query: string,
     systemPrompt?: string,
-    spaces?: string[],
+    mentions?: MentionItem[],
     trigger?: PageChatMessageSentEventTrigger
   ) => {
     try {
-      const chat = await createNewNoteChat(spaces)
+      const chat = await createNewNoteChat(mentions)
       if (!chat || !query) {
         log.error('Failed to create chat')
         return
@@ -943,13 +981,11 @@
 
       // await generateAndInsertAIOutput(text, INLINE_TRANSFORM.replace('${INSTRUCTION}', prompt), undefined, PageChatMessageSentEventTrigger.NoteRewrite)
 
-      const spaces = (mentions ?? []).map((mention) => mention.id)
-
-      log.debug('Rewriting', prompt, text, range, spaces)
+      log.debug('Rewriting', prompt, text, range, mentions)
 
       hideInfoPopover()
 
-      const chat = await createNewNoteChat(spaces)
+      const chat = await createNewNoteChat(mentions)
       if (!chat) {
         log.error('Failed to create chat')
         return
@@ -1022,9 +1058,8 @@
 
       const node = editor.view.state.doc.cut(range.from, range.to)
       const mentions = editorElem.getMentions(node)
-      const spaces = mentions.map((mention) => mention.id)
 
-      const chat = await createNewNoteChat(spaces)
+      const chat = await createNewNoteChat(mentions)
       if (!chat) {
         log.error('Failed to create chat')
         return
@@ -1274,11 +1309,10 @@
       hideInfoPopover()
 
       const { query, mentions } = e.detail
-      const spaces = (mentions ?? []).map((mention) => mention.id)
       await generateAndInsertAIOutput(
         query,
         'Stay short and use citations!',
-        spaces,
+        mentions,
         PageChatMessageSentEventTrigger.NoteAutocompletion
       )
     } catch (e) {
@@ -1346,7 +1380,6 @@
     try {
       log.debug('Handling prompt submit', prompt)
       const mentions = editorElem.getMentions()
-      const spaces = mentions.map((mention) => mention.id)
 
       telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, undefined, showOnboarding)
 
@@ -1355,7 +1388,7 @@
       await generateAndInsertAIOutput(
         prompt.prompt,
         'Stay short and use citations!',
-        spaces,
+        mentions,
         PageChatMessageSentEventTrigger.NoteUseSuggestion
       )
     } catch (e) {
@@ -1587,6 +1620,8 @@
       />
     {:else if !hideContextSwitcher}
       <div class="change-context-wrapper">
+        <ModelPicker />
+
         <ChangeContextBtn
           spaces={oasis.spaces}
           {selectedContext}
@@ -1729,6 +1764,9 @@
     top: 1rem;
     right: 1rem;
     z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 
   .onboarding-wrapper {

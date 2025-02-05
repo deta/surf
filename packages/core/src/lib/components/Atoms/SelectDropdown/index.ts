@@ -4,7 +4,7 @@ export type SelectItem = {
   id: string
   label: string
   disabled?: boolean
-  icon?: Icons
+  icon?: Icons | string
   data: any
 }
 

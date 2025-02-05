@@ -20,7 +20,13 @@
   </div>
 
   <div class="name">
-    {$spaceData ? $spaceData.folderName : item.label}
+    {#if item.label}
+      {item.label}
+    {:else if $spaceData}
+      {$spaceData.folderName}
+    {:else}
+      {item.id}
+    {/if}
   </div>
 </div>
 
@@ -41,9 +47,10 @@
     justify-content: center;
   }
   .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-size: 1rem;
     font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 </style>

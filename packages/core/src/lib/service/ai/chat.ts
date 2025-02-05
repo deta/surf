@@ -54,7 +54,9 @@ export class AIChat {
   currentParsedMessages: Writable<AIChatMessageParsed[]>
   error: Writable<ChatError | null>
   status: Writable<'idle' | 'running' | 'error'>
+  selectedModelId: Writable<string | null>
 
+  selectedModel: Readable<Model>
   userMessages: Readable<AIChatMessage[]>
   systemMessages: Readable<AIChatMessage[]>
   responses: Readable<AIChatMessageParsed[]>
@@ -80,6 +82,7 @@ export class AIChat {
     this.currentParsedMessages = writable([])
     this.error = writable(null)
     this.status = writable('idle')
+    this.selectedModelId = writable(null)
 
     this.ai = ai
     this.contextManager = contextManager
@@ -123,6 +126,17 @@ export class AIChat {
     this.contextItems = derived([this.contextManager.items], ([$contextItems]) => {
       return $contextItems
     })
+
+    this.selectedModel = derived(
+      [this.selectedModelId, this.ai.selectedModelId, this.ai.models],
+      ([chatModelId, defaultModelId, models]) => {
+        if (chatModelId) {
+          return models.find((m) => m.id === chatModelId) || models[0]
+        }
+
+        return models.find((m) => m.id === defaultModelId) || models[0]
+      }
+    )
   }
 
   get messagesValue() {
@@ -143,6 +157,51 @@ export class AIChat {
 
   get contextItemsValue() {
     return get(this.contextItems)
+  }
+
+  get selectedModelIdValue() {
+    return get(this.selectedModelId)
+  }
+
+  get selectedModelValue() {
+    return get(this.selectedModel)
+  }
+
+  selectModel(modelId: string | null) {
+    this.log.debug('selecting model', modelId)
+
+    if (!modelId) {
+      this.selectedModelId.set(null)
+      return null
+    }
+
+    const model = this.ai.modelsValue.find((m) => m.id === modelId)
+    if (!model) {
+      this.log.error('Model not found', modelId)
+      return null
+    }
+
+    this.selectedModelId.set(model.id)
+    return model
+  }
+
+  selectProviderModel(provider: Provider, tier?: ModelTiers) {
+    this.log.debug('selecting model for provider', provider, tier)
+    const models = this.ai.modelsValue.filter((m) => m.provider === provider)
+    if (!models) {
+      this.log.error('model not found for provider', provider)
+      return null
+    }
+
+    const modelTier = tier ?? ModelTiers.Premium
+    const model = models.find((m) => m.tier === modelTier)
+    if (!model) {
+      this.log.error('model not found for tier', modelTier)
+      return null
+    }
+
+    this.selectedModelId.set(model.id)
+    return model
   }
 
   addParsedResponse(response: AIChatMessageParsed) {
@@ -174,12 +233,31 @@ export class AIChat {
     this.log.debug('sending chat message to chat with id', this.id, opts)
 
     if (opts?.modelId) {
+      this.log.debug('getting model by id', opts.modelId)
       model = this.ai.modelsValue.find((m) => m.id === opts.modelId)
     }
 
+    if (this.selectedModelIdValue) {
+      this.log.debug('getting model by selected model id', this.selectedModelIdValue)
+      model = this.ai.modelsValue.find((m) => m.id === this.selectedModelIdValue)
+      if (opts?.tier && model?.tier !== opts.tier) {
+        this.log.debug(
+          'model tier does not match, getting matching model',
+          opts.tier,
+          model?.provider
+        )
+        model = this.ai.modelsValue.find(
+          (m) => m.provider === model?.provider && m.tier === opts.tier
+        )
+      }
+    }
+
     if (!model) {
+      this.log.debug('no model found, getting default model')
       model = this.ai.getMatchingModel(opts?.tier ?? ModelTiers.Premium)
     }
+
+    this.log.debug('selected model', model)
 
     return model
   }

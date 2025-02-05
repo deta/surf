@@ -12,11 +12,11 @@ import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
 import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
-import { ModelTiers } from '@horizon/types/src/ai.types'
+import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
 import type { OasisService } from '../oasis'
 import { derived } from 'svelte/store'
-import { BUILT_IN_MENTIONS_BASE, WEB_SEARCH_MENTION } from '../../constants/chat'
-import type { MentionItem } from '@horizon/editor'
+import { BUILT_IN_MENTIONS_BASE, WIKIPEDIA_SEARCH_MENTION } from '../../constants/chat'
+import { MentionItemType, type MentionItem } from '@horizon/editor'
 
 const log = useLogScope('AI')
 
@@ -488,12 +488,25 @@ export const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undef
   return sources
 }
 
-export const useEditorSpaceMentions = (oasis: OasisService) =>
-  derived([oasis.spaces, oasis.config.settings], ([spaces, userSettings]) => {
+export const useEditorSpaceMentions = (oasis: OasisService, ai: AIService) =>
+  derived([oasis.spaces, ai.models, oasis.config.settings], ([spaces, models, userSettings]) => {
     const builtInMentions = [
       ...BUILT_IN_MENTIONS_BASE,
-      ...conditionalArrayItem(userSettings.experimental_chat_web_search, WEB_SEARCH_MENTION)
+      ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION)
     ]
+
+    const modelMentions = models.map(
+      (model) =>
+        ({
+          id: `model-${model.id}`,
+          label: model.label,
+          suggestionLabel: `Ask ${model.label}`,
+          aliases: [model.custom_model_name, model.provider].filter(Boolean) as string[],
+          icon: model.icon,
+          type: MentionItemType.MODEL,
+          hideInRoot: model.provider !== Provider.Custom
+        }) as MentionItem
+    )
 
     const spaceItems = spaces
       .sort((a, b) => {
@@ -505,9 +518,9 @@ export const useEditorSpaceMentions = (oasis: OasisService) =>
             id: space.id,
             label: space.dataValue.folderName,
             icon: space.getIconString(),
-            type: 'space'
+            type: MentionItemType.CONTEXT
           }) as MentionItem
       )
 
-    return [...builtInMentions, ...spaceItems]
+    return [...builtInMentions, ...modelMentions, ...spaceItems]
   })
