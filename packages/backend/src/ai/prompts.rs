@@ -139,6 +139,8 @@ Here are some guidelines to follow:
     - Interactive elements: clear hover states, loading indicators, smooth transitions
     - Data display: format numbers/dates with toLocale methods, charts with light grids and brand colors
 
+- For apps and visualizations, you can use local storage to store state and data if needed.
+
 - If you have to do any calculations, ALWAYS write JavaScript code with a `javascript` code block to do the calculations and provide a `console.log` statement to display the result. Do not provide the calculation result in your response but ask the user to run the code.
 
 - There might be multiple documents provided as context for the query. The context will be provided in JSON format.

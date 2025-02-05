@@ -263,8 +263,38 @@ export function createWindow() {
     }
   }
 
+  let surfletProtocolHandler = async (req: GlobalRequest) => {
+    try {
+      const url = new URL(req.url)
+      if (!url.hostname.endsWith('.app.local')) {
+        return new Response('Invalid Surflet protocol URL', { status: 400 })
+      }
+      const id = url.hostname.replace('.app.local', '')
+      const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
+      const path = join(base, id)
+
+      if (!isPathSafe(base, path)) {
+        return new Response('Forbidden', { status: 403 })
+      }
+      let res = await net.fetch(`file://${path}`)
+      if (!res.ok) {
+        return new Response('Not Found', { status: 404 })
+      }
+      const code = await res.text()
+      return new Response(code, {
+        headers: {
+          'Content-Type': 'text/html'
+        }
+      })
+    } catch (err) {
+      console.error('surflet protocol error:', err, req.url)
+      return new Response('Internal Server Error', { status: 500 })
+    }
+  }
+
   try {
     webviewSession.protocol.handle('surf', surfProtocolHandler)
+    webviewSession.protocol.handle('surflet', surfletProtocolHandler)
     mainWindowSession.protocol.handle('surf', surfProtocolHandler)
   } catch (e) {
     log.error('possibly failed to register surf protocol: ', e)

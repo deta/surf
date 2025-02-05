@@ -66,7 +66,6 @@
   const saveState = writable<BookmarkTabState>('idle')
 
   const id = generateID()
-  const WEBVIEW_PARTITION = 'code-preview'
 
   let copyIcon: IconConfirmation
   let saveIcon: IconConfirmation
@@ -84,7 +83,6 @@
   let codeContent: string = ''
   let jsOutput: string = ''
   let isExecuting: boolean = false
-  let noResourceFound = false
   let manualGeneratingState = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
 
@@ -455,7 +453,7 @@
   }
 
   const executeJavaScript = async () => {
-    const webview = createWebviewExtractor('about:blank', document, WEBVIEW_PARTITION)
+    const webview = createWebviewExtractor('about:blank', document, 'inline-js-exec')
 
     try {
       const code = await getCode()
@@ -521,11 +519,11 @@
     // @ts-ignore
     webview.nodeintegration = false
     // @ts-ignore
-    webview.webpreferences = 'contextIsolation=true, sandbox=true'
+    webview.webpreferences = 'contextIsolation=true,sandbox=true'
+    webview.partition = `persist:horizon`
     webview.style.width = '100%'
     webview.style.height = '100%'
     webview.style.border = 'none'
-    webview.partition = WEBVIEW_PARTITION
 
     webview.addEventListener('page-title-updated', (e) => {
       $generatedName = e.title
@@ -537,7 +535,9 @@
     appContainer.appendChild(webview)
 
     // @ts-ignore
-    webview.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(code)
+    webview.src = resource
+      ? `surflet://${resource?.id}.app.local`
+      : `data:text/html;charset=utf-8,${encodeURIComponent(code)}`
   }
 
   const reloadApp = async () => {
@@ -593,7 +593,8 @@
       collapsed = false
     }
 
-    if (!resource && !noResourceFound) {
+    let createSilentResource = true
+    if (!resource) {
       const code = await getCode()
       if (!code) return
 
@@ -622,11 +623,13 @@
         if (!isSilent) {
           saveState.set('saved')
         }
-      } else {
-        noResourceFound = true
+        createSilentResource = false
       }
     }
-
+    // always save the resource as a silent resource after output is done
+    if (createSilentResource) {
+      resource = await saveAppAsResource(undefined, true)
+    }
     await tick()
     makeCodeEditable()
   }

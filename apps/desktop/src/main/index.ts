@@ -81,6 +81,16 @@ const registerProtocols = () => {
         corsEnabled: true,
         stream: true
       }
+    },
+    {
+      scheme: 'surflet',
+      privileges: {
+        standard: true,
+        supportFetchAPI: true,
+        secure: true,
+        corsEnabled: true,
+        stream: true
+      }
     }
   ])
 }
