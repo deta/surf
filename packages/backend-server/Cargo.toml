@@ -20,7 +20,6 @@ strum_macros = "0.26.4"
 uds_windows = "1.1.0"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-openssl = "0.10.70"
 
 [dev-dependencies]
 serial_test = "3.2.0"
