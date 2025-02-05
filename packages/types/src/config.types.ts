@@ -1,4 +1,4 @@
-import { BuiltInModelIDs, Model } from './ai.types'
+import { Model } from './ai.types'
 
 export type UserConfig = {
   user_id?: string
@@ -81,5 +81,3 @@ export type UserStats = {
   global_n_open_homescreen: number
   global_n_update_homescreen: number
 }
-
-export const DEFAULT_AI_MODEL = BuiltInModelIDs.ClaudeSonnet

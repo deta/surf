@@ -95,3 +95,5 @@ export const BUILT_IN_MODELS = [
     vision: false
   }
 ] as Model[]
+
+export const DEFAULT_AI_MODEL = BuiltInModelIDs.ClaudeSonnet
