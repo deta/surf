@@ -231,13 +231,15 @@
   const getProviderItemContextMenu = (item: SelectItem) => {
     if (!item) return []
 
+    const model = getModelFromProvider(item.id)
+
     return [
       {
         text: 'Delete',
         type: 'action',
         icon: 'trash',
+        disabled: model?.provider !== Provider.Custom,
         action: () => {
-          const model = getModelFromProvider(item.id)
           console.log('delete model', model)
           dispatch('delete-model', model.id)
         }
@@ -320,77 +322,79 @@
       </p>
     </div>
 
-    <Exandable
-      title={$selectedModel.provider === Provider.Custom
-        ? `Configure Custom Provider`
-        : `Configure ${$selectedProviderItem.label ?? 'Provider'}`}
-      expanded={$showCreateCustomModel}
-    >
-      {#if $selectedModel.provider === Provider.Custom}
-        <p>Configure your custom model provider:</p>
+    {#if $selectedModel}
+      <Exandable
+        title={$selectedModel.provider === Provider.Custom
+          ? `Configure Custom Provider`
+          : `Configure ${$selectedProviderItem.label ?? 'Provider'}`}
+        expanded={$showCreateCustomModel}
+      >
+        {#if $selectedModel.provider === Provider.Custom}
+          <p>Configure your custom model provider:</p>
 
-        <FormField
-          label="Provider Label"
-          placeholder="give your custom model provider a name"
-          bind:value={customProviderName}
-          on:blur={() => handleModelChange({ label: customProviderName })}
-        />
+          <FormField
+            label="Provider Label"
+            placeholder="give your custom model provider a name"
+            bind:value={customProviderName}
+            on:save={() => handleModelChange({ label: customProviderName })}
+          />
 
-        <FormField
-          label="Model Name/ID"
-          placeholder="what model of the provider you want to use"
-          bind:value={customModelName}
-          on:blur={() => handleModelChange({ custom_model_name: customModelName })}
-        />
+          <FormField
+            label="Model Name/ID"
+            placeholder="what model of the provider you want to use"
+            bind:value={customModelName}
+            on:save={() => handleModelChange({ custom_model_name: customModelName })}
+          />
 
-        <FormField
-          label="Provider URL"
-          placeholder="url of the model provider"
-          bind:value={customProviderUrl}
-          on:blur={() => handleModelChange({ provider_url: customProviderUrl })}
-        />
+          <FormField
+            label="Provider URL"
+            placeholder="url of the model provider"
+            bind:value={customProviderUrl}
+            on:save={() => handleModelChange({ provider_url: customProviderUrl })}
+          />
 
-        <FormField
-          label="Provider API Key"
-          placeholder="api key for the model provider"
-          type="password"
-          bind:value={customApiKey}
-          on:blur={() => handleModelChange({ custom_key: customApiKey })}
-        />
+          <FormField
+            label="Provider API Key"
+            placeholder="api key for the model provider"
+            type="password"
+            bind:value={customApiKey}
+            on:save={() => handleModelChange({ custom_key: customApiKey })}
+          />
 
-        <FormField
-          label="Max Context Window"
-          placeholder="max tokens of the model"
-          type="number"
-          bind:value={customMaxTokens}
-          on:blur={() => handleModelChange({ max_tokens: customMaxTokens })}
-        />
+          <FormField
+            label="Max Context Window"
+            placeholder="max tokens of the model"
+            type="number"
+            bind:value={customMaxTokens}
+            on:save={() => handleModelChange({ max_tokens: customMaxTokens })}
+          />
 
-        <FormField
-          label="Supports Vision"
-          type="checkbox"
-          bind:value={customVisionSupport}
-          on:change={() => handleModelChange({ vision: customVisionSupport })}
-        />
+          <FormField
+            label="Supports Vision"
+            type="checkbox"
+            bind:value={customVisionSupport}
+            on:save={() => handleModelChange({ vision: customVisionSupport })}
+          />
 
-        <FormField
-          label="Supports JSON Format"
-          type="checkbox"
-          bind:value={customSupportsJsonFormat}
-          on:change={() => handleModelChange({ supports_json_format: customSupportsJsonFormat })}
-        />
-      {:else}
-        <p>Configure your provider settings here.</p>
+          <FormField
+            label="Supports JSON Format"
+            type="checkbox"
+            bind:value={customSupportsJsonFormat}
+            on:save={() => handleModelChange({ supports_json_format: customSupportsJsonFormat })}
+          />
+        {:else}
+          <p>Configure your provider settings here.</p>
 
-        <FormField
-          label="Custom Provider API Key"
-          placeholder="api key for the model provider"
-          type="password"
-          bind:value={customApiKey}
-          on:blur={() => handleModelChange({ custom_key: customApiKey })}
-        />
-      {/if}
-    </Exandable>
+          <FormField
+            label="Custom Provider API Key"
+            placeholder="api key for the model provider"
+            type="password"
+            bind:value={customApiKey}
+            on:save={() => handleModelChange({ custom_key: customApiKey })}
+          />
+        {/if}
+      </Exandable>
+    {/if}
   </div>
 
   {#if $quotas.length > 0}
@@ -452,7 +456,7 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 0.5rem;
   }
 
   .dev-wrapper {

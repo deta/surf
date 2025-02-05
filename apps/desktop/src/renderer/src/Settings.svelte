@@ -9,7 +9,13 @@
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
   import { useDebounce } from '@horizon/utils'
-  import type { EditablePrompt, SettingsWindowTab, UserConfig, UserSettings } from '@horizon/types'
+  import {
+    DEFAULT_AI_MODEL,
+    type EditablePrompt,
+    type SettingsWindowTab,
+    type UserConfig,
+    type UserSettings
+  } from '@horizon/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
@@ -151,6 +157,12 @@
   const handleDeleteModel = async (e: CustomEvent<string>) => {
     const id = e.detail
     console.log('deleting model', id)
+
+    if (id === $selectedModel) {
+      selectedModel.set(DEFAULT_AI_MODEL)
+      userConfigSettings.selected_model = DEFAULT_AI_MODEL
+    }
+
     models.update((models) => models.filter((model) => model.id !== id))
     await tick()
 
@@ -634,14 +646,13 @@
   }
 
   .tabs {
-    position: fixed;
-    top: 0;
+    flex-shrink: 0;
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    padding: 1rem;
+    padding: 1rem 6rem;
     background: var(--color-background-light);
     border-bottom: 1px solid var(--color-border);
     width: 100%;
@@ -675,30 +686,35 @@
   }
 
   .content-wrapper {
-    position: absolute;
-    top: 4.5rem;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
+    flex-grow: 1;
     overflow: auto;
-    padding: 3rem;
-    height: fit-content;
-    width: 100%;
+    display: flex;
     justify-content: center;
-    align-items: center;
+    padding: 3rem;
     background-color: var(--color-background);
-    z-index: 0;
+
+    // display: flex;
+    // flex-direction: column;
+    // flex: 1;
+    // overflow: auto;
+    // padding: 3rem;
+    // padding-top: 5rem;
+    // height: fit-content;
+    // width: 100%;
+    // justify-content: center;
+    // align-items: center;
+    // background-color: var(--color-background);
+    // z-index: 0;
   }
 
   .general {
-    height: 100%;
+    height: fit-content;
     width: 100%;
     max-width: 45rem;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     gap: 0.5rem;
+    align-items: center;
 
     .app-id {
       display: flex;
@@ -840,6 +856,7 @@
     flex-direction: column;
     gap: 1rem;
     max-width: 45rem;
+    height: fit-content;
   }
 
   .license-wrapper {

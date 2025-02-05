@@ -2,7 +2,7 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import type { UserConfig, UserStats } from '@horizon/types'
+import { DEFAULT_AI_MODEL, type UserConfig, type UserStats } from '@horizon/types'
 import { BuiltInModelIDs } from '@horizon/types/src/ai.types'
 
 export type Config = {
@@ -117,7 +117,7 @@ export const getUserConfig = (path?: string) => {
         completed_stuff: false
       },
       personas: [],
-      selected_model: BuiltInModelIDs.ClaudeSonnet,
+      selected_model: DEFAULT_AI_MODEL,
       model_settings: [],
       vision_image_tagging: false,
       turntable_favicons: true,
@@ -192,7 +192,7 @@ export const getUserConfig = (path?: string) => {
   }
 
   if (storedConfig.settings.selected_model === undefined) {
-    storedConfig.settings.selected_model = BuiltInModelIDs.GPT4o
+    storedConfig.settings.selected_model = DEFAULT_AI_MODEL
   }
 
   if (

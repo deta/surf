@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { useDebounce } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
 
   export let label: string
@@ -6,13 +7,24 @@
   export let placeholder: string = ''
   export let type: 'text' | 'number' | 'password' | 'checkbox' = 'text'
 
-  const dispatch = createEventDispatcher<{ change: string }>()
+  const dispatch = createEventDispatcher<{ change: string; save: string }>()
+
+  const debouncedSave = useDebounce((value: string) => {
+    dispatch('save', value)
+  }, 500)
 
   const handleChange = (event: Event) => {
     const target = event.target as HTMLSelectElement
     const value = target.value
 
-    dispatch('change', value)
+    debouncedSave(value)
+  }
+
+  const handleInput = (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const value = target.value
+
+    debouncedSave(value)
   }
 </script>
 
@@ -20,18 +32,11 @@
   <!-- svelte-ignore a11y-label-has-associated-control -->
   <label>{label}</label>
   {#if type === 'text'}
-    <input type="text" {placeholder} bind:value class="input" on:change={handleChange} on:blur />
+    <input type="text" {placeholder} bind:value class="input" on:input={handleInput} on:blur />
   {:else if type === 'number'}
-    <input type="number" {placeholder} bind:value class="input" on:change={handleChange} on:blur />
+    <input type="number" {placeholder} bind:value class="input" on:input={handleInput} on:blur />
   {:else if type === 'password'}
-    <input
-      type="password"
-      {placeholder}
-      bind:value
-      class="input"
-      on:change={handleChange}
-      on:blur
-    />
+    <input type="password" {placeholder} bind:value class="input" on:input={handleInput} on:blur />
   {:else if type === 'checkbox' && typeof value === 'boolean'}
     <input type="checkbox" bind:checked={value} class="checkbox" on:change={handleChange} on:blur />
   {/if}

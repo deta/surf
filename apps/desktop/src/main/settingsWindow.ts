@@ -18,7 +18,7 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
   const settingsWindowSession = session.fromPartition('persist:surf-app-session')
 
   settingsWindow = new BrowserWindow({
-    width: 900,
+    width: 1000,
     height: 800,
     fullscreenable: false,
     show: false,
