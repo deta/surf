@@ -36,16 +36,16 @@
 
   const renderLimit = writable(CHUNK_SIZE)
 
-  const renderContents = derived([resourceIds, renderLimit], ([resourceIds, renderLimit]) => {
+  /*const renderContents = derived([resourceIds, renderLimit], ([resourceIds, renderLimit]) => {
     return resourceIds.slice(0, renderLimit)
-  })
+  })*/
 
   const handleRemove = async (e?: MouseEvent, deleteFromStuff = false) => {
     e?.stopImmediatePropagation()
     dispatch('batch-remove', { ids: $selectedItemIds, deleteFromStuff })
   }
 
-  const handleLoadChunk = (e: CustomEvent) => {
+  /*const handleLoadChunk = (e: CustomEvent) => {
     if ($renderContents.length === 0) {
       renderLimit.set(40)
       return
@@ -55,7 +55,7 @@
     }
     const CHUNK_SIZE = e.detail
     renderLimit.update((limit) => limit + CHUNK_SIZE)
-  }
+  }*/
 
   const handleAddToSpace = async (spaceId: string) => {
     const itemCount = $selectedItemIds.length
@@ -166,59 +166,28 @@
     ]
   }}
 >
-  {#if useMasonry}
-    <div bind:this={scrollElement} class="content">
-      {#if scrollElement}
-        {#key $searchValue === ''}
-          <Masonry
-            items={$renderContents.map((id) => ({ id, data: null }))}
-            isEverythingSpace={false}
-            {searchValue}
-            on:load-more={handleLoadChunk}
-            let:item
-            let:renderingDone={handleRenderingDone}
-          >
-            <OasisResourceLoader
-              resourceOrId={item.id}
-              {isInSpace}
-              on:click
-              on:open
-              on:open-and-chat
-              on:remove
-              on:load
-              on:blacklist-resource
-              on:whitelist-resource
-              on:set-resource-as-space-icon
-              on:rendered={handleRenderingDone}
-              {interactive}
-              draggable
-            />
-          </Masonry>
-        {/key}
-      {/if}
-    </div>
-  {:else}
-    <div class="content flex flex-wrap gap-16 pt-[100px]">
-      {#each $renderContents as resourceId (resourceId)}
-        <div class="max-w-[420px] w-full">
+  <div bind:this={scrollElement} class="content">
+    {#if scrollElement}
+      {#key $searchValue === ''}
+        <Masonry items={$resourceIds.map((id) => ({ id, data: null }))} let:item>
           <OasisResourceLoader
-            resourceOrId={resourceId}
+            resourceOrId={item.id}
             {isInSpace}
             on:click
             on:open
             on:open-and-chat
-            on:blacklist-resource
-            on:whitelist-resource
             on:remove
             on:load
+            on:blacklist-resource
+            on:whitelist-resource
             on:set-resource-as-space-icon
             {interactive}
             draggable
           />
-        </div>
-      {/each}
-    </div>
-  {/if}
+        </Masonry>
+      {/key}
+    {/if}
+  </div>
 </div>
 
 <style lang="scss">

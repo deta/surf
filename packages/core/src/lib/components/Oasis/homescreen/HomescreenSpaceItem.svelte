@@ -28,10 +28,10 @@
   const spaceData = space.data
   const renderedItemsCnt = writable(10)
 
-  const renderedContents = derived([space.contents, renderedItemsCnt], ([contents, renderN]) => {
+  const renderedContents = derived([space.contents], ([contents]) => {
     contents = contents.filter((e) => e.manually_added !== SpaceEntryOrigin.Blacklisted)
     if (!renderContents) return []
-    return contents.slice(0, renderN)
+    return contents
   })
 
   let clickTimeout: ReturnType<typeof setTimeout>
@@ -140,12 +140,7 @@
           {/each}
         </LazyScroll>
       {:else}
-        <MasonrySpace
-          items={$renderedContents.map((e) => ({ id: e.id, data: e }))}
-          isEverythingSpace={false}
-          on:load-more={(e) => handleLazyLoad({ detail: [2, 0, 0] })}
-          let:item
-        >
+        <MasonrySpace items={$renderedContents.map((e) => ({ id: e.id, data: e }))} let:item>
           <OasisResourceLoader
             resourceOrId={item.data.resource_id}
             isInSpace={false}

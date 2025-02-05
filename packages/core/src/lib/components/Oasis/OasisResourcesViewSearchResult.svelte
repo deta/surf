@@ -32,16 +32,16 @@
   const MAXIMUM_CHUNK_SIZE = 20
   const CHUNK_THRESHOLD = 300
   let scrollElement: HTMLDivElement
-  let refreshContentLayout: () => Promise<void>
   const renderLimit = writable(CHUNK_SIZE)
-  const renderContents = derived([resources, renderLimit], ([resources, renderLimit]) => {
+  /*const renderContents = derived([resources, renderLimit], ([resources, renderLimit]) => {
     return resources.slice(0, renderLimit)
-  })
+  })*/
 
   const oasis = useOasis()
   const spaces = oasis.spaces
 
-  const handleLoadChunk = (e: CustomEvent) => {
+  /*const handleLoadChunk = (e: CustomEvent) => {
+    console.warn('handle load chunk')
     if ($renderContents.length === 0) {
       renderLimit.set($resources.length)
       return
@@ -50,15 +50,16 @@
       return
     }
     const CHUNK_SIZE = e.detail
-    renderLimit.update((limit) => limit + CHUNK_SIZE)
-  }
+    console.warn('handle load chunk', CHUNK_SIZE)
+    //renderLimit.update((limit) => limit + CHUNK_SIZE)
+  }*/
 
   export let scrollTop: number
 
-  const handleScroll = (event: CustomEvent<{ scrollTop: number; viewportHeight: number }>) => {
-    dispatch('scroll', { scrollTop: event.detail.scrollTop })
-    scrollTop = event.detail.scrollTop
-  }
+  /*const handleScroll = (event: CustomEvent<{ scrollTop: number; viewportHeight: number }>) => {
+    //dispatch('scroll', { scrollTop: event.detail.scrollTop })
+    //scrollTop = event.detail.scrollTop
+  }*/
 
   const handleBatchRemove = (deleteFromStuff = false) => {
     dispatch('batch-remove', { ids: $selectedItemIds, deleteFromStuff })
@@ -141,15 +142,13 @@
   <div bind:this={scrollElement} class="content">
     {#if scrollElement}
       {#key $searchValue === ''}
-        <Masonry
-          items={$renderContents.map((item) => ({ id: item.id, data: item.resource }))}
+        <!--           
           on:load-more={handleLoadChunk}
-          on:scroll={handleScroll}
+          -->
+        <Masonry
+          items={$resources.map((item) => ({ id: item.id, data: item.resource }))}
           on:wheel
-          {searchValue}
-          {isEverythingSpace}
           let:item
-          let:renderingDone={handleRenderingDone}
         >
           <OasisResourceLoader
             resourceOrId={item.data ? item.data : item.id}
@@ -163,7 +162,6 @@
             on:open-space-as-tab
             on:blacklist-resource
             on:whitelist-resource
-            on:rendered={handleRenderingDone}
             on:set-resource-as-space-icon
             {interactive}
           />

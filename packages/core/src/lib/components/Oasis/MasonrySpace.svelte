@@ -1,40 +1,65 @@
 <script lang="ts">
-  import { onMount, onDestroy, tick, createEventDispatcher } from 'svelte'
-  import { type Writable } from 'svelte/store'
-  import { useLogScope } from '@horizon/utils'
+  import { onMount } from 'svelte'
+  import { useLogScope, useThrottle } from '@horizon/utils'
 
-  import type { Item, RenderItem, ScrollVelocity } from './masonry/types'
-  import { selection, deselectAll } from './utils/select'
+  import type { Item } from './masonry/types'
+  import { selection } from './utils/select'
 
   export let items: Item[] = []
-  export let isEverythingSpace: boolean
-  export let searchValue: Writable<string> | undefined
+
+  const LAZY_N = 6 // NOTE: seems to be the best working value from testing
+
+  let renderedItemsN = 20
+  $: renderedItems = items.slice(0, renderedItemsN)
 
   const log = useLogScope('MasonrySpace')
 
-  let isUpdatingVisibleItems = false
-  let updateVisibleItemsRequestId: number | null = null
+  const scheduleLoad = () => {
+    if (renderedItemsN > items.length) return
 
-  let gridContainer: HTMLElement
-  let scrollVelocity: ScrollVelocity = {
+    // @ts-ignore - yes, this exists!
+    scheduler.postTask(
+      () => {
+        renderedItemsN += LAZY_N
+      },
+      {
+        priority: 'background'
+      }
+    )
+  }
+  const throttledScheduleLoad = useThrottle(scheduleLoad, 5)
+
+  onMount(() => {
+    throttledScheduleLoad()
+  })
+
+  const handleScroll = () => {
+    throttledScheduleLoad()
+  }
+
+  //let isUpdatingVisibleItems = false
+  //let updateVisibleItemsRequestId: number | null = null
+
+  //let gridContainer: HTMLElement
+  /*let scrollVelocity: ScrollVelocity = {
     scrollTop: 0,
     timestamp: 0,
     velocity: 0
-  }
+  }*/
 
-  const INITIAL_BATCH_SIZE = 10
+  /*const INITIAL_BATCH_SIZE = 10
   let batchSize = INITIAL_BATCH_SIZE
 
   const UPPER_OVERSHOOT_BOUND = 1400
-  const LOWER_OVERSHOOT_BOUND = 1400
+  const LOWER_OVERSHOOT_BOUND = 1400*/
 
-  const dispatch = createEventDispatcher<{
+  /*const dispatch = createEventDispatcher<{
     wheel: { event: WheelEvent; scrollTop: number }
     scroll: { scrollTop: number; viewportHeight: number }
     'load-more': number
-  }>()
+  }>()*/
 
-  function updateVisibleItems() {
+  /*function updateVisibleItems() {
     if (!gridContainer || isUpdatingVisibleItems) return
 
     isUpdatingVisibleItems = true
@@ -56,9 +81,9 @@
         handleBottomReached()
       }
     })
-  }
+  }*/
 
-  function calculateItemsToLoad(velocity: number): number {
+  /*function calculateItemsToLoad(velocity: number): number {
     if (velocity <= 0) {
       return 0
     }
@@ -70,9 +95,9 @@
     let items = Math.round(Math.log(velocity * VELOCITY_FACTOR + 1))
 
     return Math.max(MIN_ITEMS, Math.min(items, MAX_ITEMS))
-  }
+  }*/
 
-  function isBottomReached(): boolean {
+  /* function isBottomReached(): boolean {
     const BUFFER =
       scrollVelocity.velocity > 10
         ? 3 * gridContainer.clientHeight * (scrollVelocity.velocity / 4)
@@ -85,24 +110,20 @@
     return (
       gridContainer.scrollHeight - gridContainer.scrollTop <= gridContainer.clientHeight + BUFFER
     )
-  }
+  }*/
 
-  function handleBottomReached() {
+  /*function handleBottomReached() {
     const itemsToLoad = calculateItemsToLoad(scrollVelocity.velocity)
     dispatch('load-more', itemsToLoad)
-  }
+  }*/
 
-  const handleWheel = (e: WheelEvent) => {
+  /*const handleWheel = (e: WheelEvent) => {
     const scrollTop = gridContainer.scrollTop
 
     dispatch('wheel', { event: e, scrollTop })
-  }
+  }*/
 
-  function getUniqueKey(item: RenderItem, index: number) {
-    return `${item.id}-${index}`
-  }
-
-  onMount(async () => {
+  /*onMount(async () => {
     gridContainer?.addEventListener('scroll', updateVisibleItems)
   })
 
@@ -111,11 +132,11 @@
       gridContainer.removeEventListener('scroll', updateVisibleItems)
     }
     deselectAll()
-  })
+  })*/
 </script>
 
-<svelte:window
-  on:wheel={(event) => {
+<!--<svelte:window
+  on:wheel|passive={(event) => {
     const newScrollTop = gridContainer?.scrollTop
     const newTimestamp = event.timeStamp
 
@@ -131,17 +152,16 @@
       velocity: scrollVelocity ? scrollVelocity.velocity : 0
     }
   }}
-/>
+/>-->
 
 <div class="masonry-wrapper">
   <div
     class="masonry-grid bg-[#f7f7f7] dark:bg-gray-900"
-    on:wheel={handleWheel}
-    bind:this={gridContainer}
+    on:wheel|passive={handleScroll}
     use:selection
     data-container
   >
-    {#each items as item, index (getUniqueKey(item, index))}
+    {#each renderedItems as item, index (`${item.id}-${index}`)}
       <div class="item">
         <slot item={{ id: item.id, data: item.data }}></slot>
       </div>
@@ -167,6 +187,7 @@
   }
 
   .masonry-grid {
+    contain: strict;
     position: absolute;
     inset: 0;
     overflow-y: auto;
