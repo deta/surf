@@ -9,7 +9,8 @@ import {
   type AIChatMessageParsed,
   type AIChatMessageRole,
   type AIChatMessageSource,
-  type TabPage
+  type TabPage,
+  type TabResource
 } from '../../types'
 import { ChatMode, ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError, parseChatResponseSources } from './helpers'
@@ -20,7 +21,13 @@ import {
   type PageChatMessageSentData
 } from '@horizon/types'
 import type { AIService } from './ai'
-import { ContextItemActiveTab, type ContextItem, type ContextManager } from './contextManager'
+import {
+  ContextItemActiveTab,
+  ContextItemResource,
+  ContextItemTypes,
+  type ContextItem,
+  type ContextManager
+} from './contextManager'
 
 export type ChatPrompt = {
   label: string
@@ -310,19 +317,24 @@ export class AIChat {
   // TODO: we return TextOnly mode on errors, should we handle this differently?
   async getChatModeForPromptAndTab(
     prompts: string[],
-    tab: TabPage,
+    activeTab: TabPage | null,
+    hasSurfletInContext: boolean = false,
     tier?: ModelTiers
   ): Promise<ChatMode> {
     try {
-      const title = tab.title
-      const url = tab.currentLocation || tab.currentDetectedApp?.canonicalUrl || tab.initialLocation
-
+      const payload = {
+        prompts,
+        has_app_in_context: hasSurfletInContext,
+        ...(activeTab && {
+          title: activeTab.title,
+          url:
+            activeTab.currentLocation ??
+            activeTab.currentDetectedApp?.canonicalUrl ??
+            activeTab.initialLocation
+        })
+      }
       const completion = await this.ai.createChatCompletion(
-        JSON.stringify({
-          prompts: prompts,
-          title: title,
-          url: url
-        }),
+        JSON.stringify(payload),
         CLASSIFY_CHAT_MODE,
         { tier: tier ?? ModelTiers.Standard }
       )
@@ -451,7 +463,15 @@ export class AIChat {
         await this.processContextItems(prompt)
       numInlineImages = inlineImages.length
 
-      const inlineScreenshots = contextItems.filter((item) => item.type === 'screenshot')
+      const hasSurfletInContext = contextItems.some((item) => {
+        const isResourceType = item.type === ContextItemTypes.RESOURCE
+        if (isResourceType) {
+          const resourceItem = item as ContextItemResource
+          return resourceItem?.data?.type === 'text/html'
+        }
+        return false
+      })
+      this.log.debug('hasSurfletInContext', hasSurfletInContext)
 
       response = {
         id: generateID(),
@@ -467,46 +487,49 @@ export class AIChat {
       this.status.set('running')
       this.addParsedResponse(response)
 
-      let appCreation = false
+      const activeTabItem = this.contextItemsValue.find(
+        (item) => item instanceof ContextItemActiveTab
+      )
+      const activeTabInContext = this.contextManager.tabsInContextValue.find(
+        (tab) => tab.id === this.ai.tabsManager.activeTabValue?.id
+      )
+      const activeTab = activeTabItem ? activeTabItem.currentTabValue : activeTabInContext
+      const desktopVisible = get(this.ai.tabsManager.desktopManager.activeDesktopVisible)
 
-      if (inlineScreenshots.length === 0 && !options.skipScreenshot) {
-        this.log.debug('No context images found, determining if a screenshot is needed')
+      const userMessages = previousMessages
+        .filter((message) => message.role === 'user')
+        .map((message) => message.query)
+      const query = options.query ?? prompt
+      const allQueries = [query, ...userMessages.reverse()]
 
-        const activeTabItem = this.contextItemsValue.find(
-          (item) => item instanceof ContextItemActiveTab
-        )
-        const activeTabInContext = this.contextManager.tabsInContextValue.find(
-          (tab) => tab.id === this.ai.tabsManager.activeTabValue?.id
-        )
-        const activeTab = activeTabItem ? activeTabItem.currentTabValue : activeTabInContext
+      const chatMode = await this.getChatModeForPromptAndTab(
+        allQueries,
+        activeTab as TabPage,
+        hasSurfletInContext
+      )
 
-        const desktopVisible = get(this.ai.tabsManager.desktopManager.activeDesktopVisible)
-
-        if (activeTab && activeTab.type === 'page' && !desktopVisible) {
-          const userMessages = previousMessages
-            .filter((message) => message.role === 'user')
-            .map((message) => message.query)
-          const query = options.query ?? prompt
-          const allQueries = [query, ...userMessages.reverse()]
-          const chatMode = await this.getChatModeForPromptAndTab(allQueries, activeTab as TabPage)
-          appCreation = chatMode === ChatMode.AppCreation
-          this.log.debug('Chat mode determined:', chatMode)
-          if (chatMode === ChatMode.TextWithScreenshot || chatMode === ChatMode.AppCreation) {
-            const browserTabs = this.ai.tabsManager.browserTabsValue
-            const browserTab = browserTabs[activeTab.id]
-            if (browserTab) {
-              this.log.debug('Taking screenshot of page', activeTab)
-              const dataUrl = await browserTab.capturePage()
-              this.log.debug('Adding screenshot as inline image to chat context', dataUrl)
-              inlineImages.push(dataUrl)
-              usedPageScreenshot = true
-            }
+      if (chatMode === ChatMode.TextWithScreenshot || chatMode === ChatMode.AppCreation) {
+        // TODO: are all these conditions necessary?
+        // only take screenshot
+        // if there is an active tab  and
+        // there are no screenshots in context already and
+        // the user has not explicitly skipped the screenshot
+        // and the desktop is not visible
+        if (activeTab && !options.skipScreenshot && !usedInlineScreenshot && !desktopVisible) {
+          const browserTab = this.ai.tabsManager.browserTabsValue[activeTab.id]
+          if (browserTab) {
+            this.log.debug('Taking screenshot of page', activeTab)
+            const dataUrl = await browserTab.capturePage()
+            this.log.debug('Adding screenshot as inline image to chat context', dataUrl)
+            inlineImages.push(dataUrl)
+            usedPageScreenshot = true
           }
         } else {
-          this.log.debug('Active tab not in context, skipping screenshot')
+          this.log.debug(
+            'Skipping screenshot beacuse no active tab or screenshot already in context or explicitly skipped'
+          )
         }
       }
-
       if (!generalMode && resourceIds.length > 0) {
         contextSize = resourceIds.length + inlineImages.length
       }
@@ -562,7 +585,7 @@ export class AIChat {
         resourceIds: resourceIds,
         inlineImages: inlineImages,
         general: resourceIds.length === 0,
-        appCreation
+        appCreation: chatMode === ChatMode.AppCreation
       })
 
       this.updateParsedResponse(response.id, {

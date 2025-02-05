@@ -2083,48 +2083,41 @@
 
     log.debug('create chat with resources', resourceIds)
 
-    let validTabs: Tab[] = []
+    const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
+    log.debug('existing chat', $activeSidebarChat, messagesLength)
 
-    for (const id of resourceIds) {
-      try {
-        const resource = await resourceManager.getResource(id, { includeAnnotations: false })
-        if (resource) {
-          const tab = await tabsManager.openResourceAsTab(resource, {
-            active: true,
-            trigger: CreateTabEventTrigger.OasisMultiSelect
-          })
-          if (tab) {
-            validTabs.push(tab)
-          }
-        }
-      } catch (error) {
-        log.error(`Failed to process resource ${id}:`, error)
-      }
+    showNewTabOverlay.set(0)
 
-      if (resourceIds.length > 1) {
-        await telemetry.trackMultiSelectResourceAction(
-          MultiSelectResourceEventAction.AddToChat,
-          resourceIds.length
-        )
+    if (messagesLength > 0 || chatContext.itemsValue.length > 0) {
+      const { closeType: confirmed } = await openDialog({
+        title: 'Clear Chat',
+        message:
+          'Would you like to clear the current chat and start a new one with the selected resources, or add them to the existing chat?',
+        actions: [
+          { title: 'Use Existing', type: 'reset' },
+          { title: 'New Chat', type: 'submit' }
+        ]
+      })
+
+      if (confirmed) {
+        await chatContext.clear()
+        await magicSidebar.clearExistingChat()
       }
     }
 
-    if (validTabs.length > 0) {
+    if (resourceIds.length > 0) {
       openRightSidebarTab('chat')
 
-      for (const tab of validTabs) {
-        chatContext.addTab(tab.id)
+      for (const id of resourceIds) {
+        chatContext.addResource(id)
       }
-
-      // Select the tabs
-      selectedTabs.set(new Set(validTabs.map((tab) => ({ id: tab.id, userSelected: true }))))
 
       await tick()
 
       telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.Add,
-        chatContext.tabsInContextValue.length,
-        validTabs.length,
+        chatContext.itemsValue.length,
+        resourceIds.length,
         PageChatUpdateContextItemType.PageTab
       )
     } else {
@@ -2132,6 +2125,7 @@
       toasts.error('Failed to open resources')
     }
   }
+
   const handleOpenTabs = async (e: CustomEvent<string | string[]>) => {
     const tabIds = Array.isArray(e.detail) ? e.detail : [e.detail]
     log.debug('open tabs', tabIds)

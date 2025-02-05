@@ -303,6 +303,7 @@ fn needs_processing(resource_type: &str) -> bool {
         "application/pdf" => true,
         _ if resource_type.starts_with("image/") => true,
         _ if resource_type.starts_with("application/vnd.space.") => true,
+        _ if resource_type.starts_with("text/") => true,
         _ => false,
     }
 }
@@ -313,8 +314,8 @@ pub fn get_youtube_contents_metadatas(
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
     let runtime = tokio::runtime::Runtime::new()?;
     let transcript_config = language.map(|language| ytranscript::TranscriptConfig {
-            lang: Some(language),
-        });
+        lang: Some(language),
+    });
     let transcripts = runtime
         .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
             source_uri,
@@ -430,7 +431,6 @@ fn process_resource_data(
                 format!("{title} {messages_content}")
             },
         ),
-
         ResourceTextContentType::Annotation => process_json_data::<ResourceDataAnnotation>(
             resource_data,
             resource_text_content_type,
@@ -455,7 +455,10 @@ fn process_resource_data(
                 )
             },
         ),
-
+        ResourceTextContentType::GenericText => Ok(Some((
+            resource_text_content_type,
+            resource_data.to_string(),
+        ))),
         _ => Ok(None),
     }
 }

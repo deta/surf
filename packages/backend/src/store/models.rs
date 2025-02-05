@@ -86,6 +86,7 @@ pub enum ResourceTextContentType {
     PDF,
     Post,
     YoutubeTranscript,
+    GenericText,
 }
 
 impl ResourceTextContentType {
@@ -124,6 +125,9 @@ impl ResourceTextContentType {
             content_type if content_type.starts_with("application/vnd.space.annotation") => {
                 Some(ResourceTextContentType::Annotation)
             }
+            content_type if content_type.starts_with("text/") => {
+                Some(ResourceTextContentType::GenericText)
+            }
             _ => None,
         }
     }
@@ -143,6 +147,7 @@ impl ResourceTextContentType {
             ResourceTextContentType::ImageTags => true,
             ResourceTextContentType::ImageCaptions => true,
             ResourceTextContentType::YoutubeTranscript => true,
+            ResourceTextContentType::GenericText => false,
         }
     }
 }

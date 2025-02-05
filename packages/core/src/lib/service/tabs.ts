@@ -1190,7 +1190,10 @@ export class TabsManager {
     }
 
     const showChatSidebar = this.ai.showChatSidebarValue
-    if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
+    if (
+      showChatSidebar &&
+      (tab.type === 'page' || tab.type === 'space' || tab.type === 'resource')
+    ) {
       this.ai.contextManager.addTab(tab, { trigger })
     } else {
       tick().then(() => {
@@ -1397,7 +1400,10 @@ export class TabsManager {
     }
 
     const showChatSidebar = this.ai.showChatSidebarValue
-    if (showChatSidebar && (tab.type === 'page' || tab.type === 'space')) {
+    if (
+      showChatSidebar &&
+      (tab.type === 'page' || tab.type === 'space' || tab.type === 'resource')
+    ) {
       await tick()
       this.ai.contextManager.removeTabItem(tab.id, trigger)
     } else {

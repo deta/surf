@@ -166,11 +166,7 @@ export const formatCodeLanguage = (lang: string) => {
 export const codeLanguageToMimeType = (code: string) => {
   const parsed = code.toLowerCase()
   if (parsed === 'plaintext') return 'text/plain'
-  if (parsed === 'html') return 'text/html'
-  if (parsed === 'css') return 'text/css'
-  if (parsed === 'scss') return 'text/scss'
-
-  return `application/${parsed}`
+  return `text/${parsed}`
 }
 
 export const mimeTypeToCodeLanguage = (mimeType: string) => {

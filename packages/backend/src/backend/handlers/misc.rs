@@ -216,6 +216,7 @@ impl Worker {
                 // for youtube videos, we cluster by ~20 seconds per chunk, which is about ~300 characters
                 // so the threshold is 80 chunks which is 24k characters
                 // TODO: check if the thresholds produce good results
+                // TODO: special handling for code snippets?
                 match resource.resource_type.as_ref() {
                     "application/vnd.space.post.youtube" => {
                         return Ok(text_content_count > 80);
