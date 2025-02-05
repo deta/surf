@@ -46,7 +46,8 @@
     truncate,
     parseUrlIntoCanonical,
     useTimeout,
-    compareURLs
+    compareURLs,
+    checkIfYoutubeUrl
   } from '@horizon/utils'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
@@ -123,6 +124,8 @@
   const activeTabId = tabs.activeTabId
   const showNewTabOverlay = tabs.showNewTabOverlay
   const userConfigSettings = config.settings
+  const showChatSidebar = ai.showChatSidebar
+
   const isMediaPlaying = writable(false)
 
   export const goBack = () => webview.goBack()
@@ -612,8 +615,8 @@
     return resource
   }
 
-  export const createResourceForChat = async () => {
-    return bookmarkPage({ silent: true, createdForChat: true })
+  export const createResourceForChat = async (opts?: BookmarkPageOpts) => {
+    return bookmarkPage({ silent: true, createdForChat: true, ...opts })
   }
 
   export const handleTrackpadScrollStart = () => webview?.handleTrackpadScrollStart()
@@ -1109,23 +1112,25 @@
 
       const detectedResourceType = detectedApp.resourceType
       log.debug('bookmarked resource found', bookmarkedResource, tab)
-      if (!bookmarkedResource) {
-        log.debug('creating new silent resource', url)
-        bookmarkedResource = await createBookmarkResource(url, tab, {
-          silent: true,
-          createdForChat: true,
-          freshWebview: false
-        })
-      } else {
+
+      if (bookmarkedResource) {
         if (detectedResourceType === ResourceTypes.DOCUMENT_NOTION) {
           log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
           await refreshResourceWithPage(bookmarkedResource, url, false)
         }
+      } else {
+        // Note: we now let the context manager take care of creating resources when it needs them, keeping this around if we ever need it again.
+        // log.debug('creating new silent resource', url)
+        // bookmarkedResource = await createBookmarkResource(url, tab, {
+        //   silent: true,
+        //   createdForChat: true,
+        //   freshWebview: false
+        // })
       }
 
       // Check if the detected resource is different from the one we previously bookmarked
       // If it is and it is silent, delete it as it is no longer needed
-      if (tab.chatResourceBookmark && tab.chatResourceBookmark !== bookmarkedResource.id) {
+      if (tab.chatResourceBookmark && tab.chatResourceBookmark !== bookmarkedResource?.id) {
         const resource = await resourceManager.getResource(tab.chatResourceBookmark)
         if (resource) {
           const isSilent =

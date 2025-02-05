@@ -11,6 +11,7 @@
   export let item: ContextItemResource
   export let pillProperties: PillProperties
   export let additionalLabel: string | undefined = undefined
+  export let loading: boolean = false
 
   const resourceManager = useResourceManager()
   const resources = resourceManager.resources
@@ -33,7 +34,7 @@
 <ContextBubbleItemWrapper
   {item}
   {pillProperties}
-  loading={isProcessing}
+  loading={isProcessing || loading}
   failed={processingFailed}
   {additionalLabel}
   on:remove-item
@@ -41,7 +42,7 @@
   on:retry
 >
   <div class="w-full h-full relative">
-    <div class="w-full h-full {isProcessing || processingFailed ? 'p-1' : ''}">
+    <div class="w-full h-full {loading || isProcessing || processingFailed ? 'p-1' : ''}">
       {#if $icon.type === 'icon'}
         <Icon name={$icon.data} size="16px" />
       {:else if $icon.type === 'image'}
@@ -57,7 +58,7 @@
       {/if}
     </div>
 
-    {#if isProcessing}
+    {#if isProcessing || loading}
       <div
         class="absolute z-10 -top-1 -left-1 w-[calc(100%+8px)] h-[calc(100%+8px)] flex items-center justify-center bg-white/10 text-sky-400"
       >

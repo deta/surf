@@ -2066,7 +2066,7 @@
 
     showNewTabOverlay.set(0)
 
-    openRightSidebarTab('chat')
+    await openChatSidebar(true)
 
     await wait(500)
 

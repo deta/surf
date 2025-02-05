@@ -61,6 +61,10 @@ export class WebViewExtractor {
       this.consoleMessages.push(e.message)
     })
 
+    this.webview.addEventListener('dom-ready', () => {
+      this.webview?.setAudioMuted(true)
+    })
+
     this.webview.addEventListener('ipc-message', (event) => {
       if (event.channel !== 'webview-page-event') return
 

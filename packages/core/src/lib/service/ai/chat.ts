@@ -386,6 +386,7 @@ export class AIChat {
   }
 
   async processContextItems(prompt: string) {
+    this.log.debug('Processing context items for chat', prompt)
     const resourceIds = await this.contextManager.getResourceIds(prompt)
     const inlineImages = await this.contextManager.getInlineImages()
     const usedScreenshots =
@@ -459,9 +460,29 @@ export class AIChat {
     } as PageChatMessageSentData
 
     try {
+      response = {
+        id: generateID(),
+        role: options.role,
+        query: options.query ?? prompt,
+        status: 'pending',
+        usedPageScreenshot: usedPageScreenshot,
+        usedInlineScreenshot: false,
+        content: '',
+        citations: {}
+      } as AIChatMessageParsed
+
+      this.status.set('running')
+      this.addParsedResponse(response)
+
       const { resourceIds, inlineImages, usedInlineScreenshot } =
         await this.processContextItems(prompt)
-      numInlineImages = inlineImages.length
+
+      this.log.debug('Context items processed', resourceIds, inlineImages)
+
+      basicTelemtryData.numScreenshots = inlineImages.length
+      this.updateParsedResponse(response?.id ?? '', {
+        usedInlineScreenshot
+      })
 
       const hasSurfletInContext = contextItems.some((item) => {
         const isResourceType = item.type === ContextItemTypes.RESOURCE
@@ -471,21 +492,8 @@ export class AIChat {
         }
         return false
       })
+
       this.log.debug('hasSurfletInContext', hasSurfletInContext)
-
-      response = {
-        id: generateID(),
-        role: options.role,
-        query: options.query ?? prompt,
-        status: 'pending',
-        usedPageScreenshot: usedPageScreenshot,
-        usedInlineScreenshot: usedInlineScreenshot,
-        content: '',
-        citations: {}
-      } as AIChatMessageParsed
-
-      this.status.set('running')
-      this.addParsedResponse(response)
 
       const activeTabItem = this.contextItemsValue.find(
         (item) => item instanceof ContextItemActiveTab
@@ -530,14 +538,14 @@ export class AIChat {
           )
         }
       }
+
       if (!generalMode && resourceIds.length > 0) {
         contextSize = resourceIds.length + inlineImages.length
       }
 
       this.updateParsedResponse(response.id, {
         status: 'pending',
-        usedPageScreenshot: usedPageScreenshot,
-        usedInlineScreenshot: usedInlineScreenshot
+        usedPageScreenshot: usedPageScreenshot
       })
 
       this.log.debug('calling the AI', prompt, resourceIds)

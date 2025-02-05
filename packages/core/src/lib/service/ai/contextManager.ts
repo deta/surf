@@ -1,7 +1,13 @@
 import { tick } from 'svelte'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
-import { parseUrlIntoCanonical, useLocalStorage, useLogScope, wait } from '@horizon/utils'
+import {
+  checkIfYoutubeUrl,
+  parseUrlIntoCanonical,
+  useLocalStorage,
+  useLogScope,
+  wait
+} from '@horizon/utils'
 
 import {
   PageChatUpdateContextEventAction,
@@ -517,8 +523,11 @@ export class ContextManager {
 
     let tabResource = await this.getResourceFromTab(tab)
     if (!tabResource) {
-      this.log.debug('Bookmarking page for chat context', tab.id)
-      tabResource = await browserTab.createResourceForChat()
+      const useFreshWebview = checkIfYoutubeUrl(tab.currentLocation || tab.initialLocation)
+
+      this.log.debug('Bookmarking page for chat context', tab.id, 'fresh webview:', useFreshWebview)
+
+      tabResource = await browserTab.createResourceForChat({ freshWebview: useFreshWebview })
     } else {
       this.log.debug('Existing resource found for tab, using it', tab.id, tabResource.id)
       // const url =

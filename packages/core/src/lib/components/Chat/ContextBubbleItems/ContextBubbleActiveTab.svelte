@@ -17,6 +17,7 @@
   $: label = item.label
   $: icon = item.icon
   $: activeItem = item.item
+  $: loading = item.loading
 
   const dispatch = createEventDispatcher<{ 'remove-item': string }>()
 
@@ -31,6 +32,7 @@
       item={$activeItem}
       {pillProperties}
       additionalLabel="Active Tab"
+      loading={$loading}
       on:remove-item={handleRemove}
       on:select
       on:retry
@@ -40,6 +42,7 @@
       item={$activeItem}
       {pillProperties}
       additionalLabel="Active Tab"
+      loading={$loading}
       on:remove-item={handleRemove}
       on:select
       on:retry
@@ -48,7 +51,8 @@
     <ContextBubbleItemPlaceholder
       id={item.id}
       {pillProperties}
-      additionalLabel="No Active Tab"
+      loading={$loading}
+      additionalLabel={$loading ? 'Active Tab' : 'No Active Tab'}
       on:remove-item={handleRemove}
     />
   {/if}

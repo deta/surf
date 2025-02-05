@@ -16,17 +16,22 @@ import { PAGE_PROMPTS_GENERATOR_PROMPT } from '../../../constants/prompts'
 import { QuotaDepletedError } from '@horizon/backend/types'
 import { handleQuotaDepletedError } from '../helpers'
 
+const RESOURCE_PROCESSING_TIMEOUT = 30000
+
 export class ContextItemResource extends ContextItemBase {
   type = ContextItemTypes.RESOURCE
 
   label: Writable<string>
   icon: Writable<ContextItemIcon>
   generatingPromptsPromise: Promise<ChatPrompt[]> | null
-  processingUnsub: Writable<(() => void) | null>
+  processingUnsubPrompt: Writable<(() => void) | null>
+  processingUnsubGetResource: Writable<(() => void) | null>
 
   sourceTab?: TabPage | TabResource
   data: Resource
   url: string | null
+
+  processingTimeout: ReturnType<typeof setTimeout> | null = null
 
   constructor(manager: ContextManager, resource: Resource, sourceTab?: TabPage | TabResource) {
     super(manager, resource.id, 'file')
@@ -42,7 +47,8 @@ export class ContextItemResource extends ContextItemBase {
 
     this.label = writable('')
     this.icon = writable({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
-    this.processingUnsub = writable(null)
+    this.processingUnsubPrompt = writable(null)
+    this.processingUnsubGetResource = writable(null)
     this.generatingPromptsPromise = null
 
     this.setIcon()
@@ -96,7 +102,47 @@ export class ContextItemResource extends ContextItemBase {
   }
 
   async getResourceIds(_prompt?: string) {
-    return [this.data.id]
+    const returnValue = [this.data.id]
+    const resourceState = this.data.stateValue
+    this.log.debug('Getting resource ids', returnValue, resourceState)
+
+    if (resourceState === 'extracting' || resourceState === 'post-processing') {
+      this.log.debug('Resource is still extracting, waiting for it to finish')
+
+      return new Promise<string[]>(async (resolve) => {
+        const unsubscribe = this.data.state.subscribe(async (state) => {
+          const processingUnsubGetResource = get(this.processingUnsubGetResource)
+          if (processingUnsubGetResource) {
+            processingUnsubGetResource()
+            this.processingUnsubGetResource.set(null)
+          }
+
+          if (this.processingTimeout) {
+            clearTimeout(this.processingTimeout)
+            this.processingTimeout = null
+          }
+
+          if (state === 'idle') {
+            this.log.debug('Resource is now idle')
+            resolve(returnValue)
+          } else if (state === 'error') {
+            this.log.debug('Resource is in error state')
+            // we still return the ID so the chat will still use the resource and the backend might be able to use old data
+            resolve(returnValue)
+          }
+        })
+
+        this.processingUnsubGetResource.set(unsubscribe)
+
+        this.processingTimeout = setTimeout(() => {
+          this.log.debug('Resource processing timed out')
+          // we still return the ID so the chat will still use the resource and the backend might be able to use old data
+          resolve(returnValue)
+        }, RESOURCE_PROCESSING_TIMEOUT)
+      })
+    }
+
+    return returnValue
   }
 
   async getInlineImages() {
@@ -156,10 +202,10 @@ export class ContextItemResource extends ContextItemBase {
 
           if (resourceState === 'extracting' || resourceState === 'post-processing') {
             const unsubscribe = this.data.state.subscribe(async (state) => {
-              const processingUnsub = get(this.processingUnsub)
-              if (processingUnsub) {
-                processingUnsub()
-                this.processingUnsub.set(null)
+              const processingUnsubPrompt = get(this.processingUnsubPrompt)
+              if (processingUnsubPrompt) {
+                processingUnsubPrompt()
+                this.processingUnsubPrompt.set(null)
               }
 
               if (state === 'idle') {
@@ -170,7 +216,7 @@ export class ContextItemResource extends ContextItemBase {
               }
             })
 
-            this.processingUnsub.set(unsubscribe)
+            this.processingUnsubPrompt.set(unsubscribe)
           }
           return
         }

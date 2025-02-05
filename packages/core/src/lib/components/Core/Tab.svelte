@@ -154,8 +154,13 @@
   $: showLiveSpaceButton = $userSettings.live_spaces && checkIfLiveSpacePossible(tab)
 
   $: {
-    if (tab.type === 'page' && tab.resourceBookmark) {
-      fetchResource(tab.resourceBookmark)
+    if (tab.type === 'page') {
+      if (tab.resourceBookmark) {
+        fetchResource(tab.resourceBookmark)
+      } else {
+        resource.set(null)
+        resourceSpaceIds.set([])
+      }
     } else if (tab.type === 'resource') {
       fetchResource(tab.resourceId)
     }
@@ -540,7 +545,9 @@
   const fetchResource = async (id: string) => {
     try {
       if ($resource?.id === id) return
-      $resource = await resourceManager.getResource(id)
+      const fetchedResource = await resourceManager.getResource(id)
+      resource.set(fetchedResource)
+      resourceSpaceIds.set(fetchedResource?.spaceIdsValue ?? [])
     } catch (error) {
       log.error('Failed to fetch resource:', error)
     }

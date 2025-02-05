@@ -168,14 +168,15 @@
   })
 
   const showExamplePrompts = derived(
-    [tabsInContext, userConfigSettings],
-    ([tabsInContext, userConfigSettings]) => {
+    [tabsInContext, activeTabId, userConfigSettings],
+    ([tabsInContext, activeTabId, userConfigSettings]) => {
       if (!userConfigSettings.automatic_chat_prompt_generation) {
         return false
       }
 
-      const tab = tabsInContext.find((tab) => tab.id === $activeTabId)
-      if (!tab || tab.type !== 'page' || !tab.chatResourceBookmark) {
+      const tab = tabsInContext.find((tab) => tab.id === activeTabId)
+
+      if (!tab || tab.type !== 'page') {
         return false
       }
 
