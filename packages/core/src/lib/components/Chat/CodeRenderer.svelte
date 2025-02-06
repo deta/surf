@@ -11,8 +11,13 @@
     parseUrlIntoCanonical,
     tooltip,
     useDebounce,
-    useLogScope
+    useLogScope,
+    getFormattedDate,
+    cropImageToContent
   } from '@horizon/utils'
+
+  import { dataUrltoBlob } from '@horizon/core/src/lib/utils/screenshot'
+
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import type { WebviewTag } from 'electron'
   import { all, createLowlight } from 'lowlight'
@@ -75,6 +80,7 @@
   let appContainer: HTMLDivElement
   let inputElem: HTMLInputElement
   let codeBlockELem: HTMLElement
+  let webview: WebviewTag | null = null
 
   let observer: MutationObserver | null = null
   let generatingTimeout: ReturnType<typeof setTimeout> | null = null
@@ -84,6 +90,7 @@
   let jsOutput: string = ''
   let isExecuting: boolean = false
   let manualGeneratingState = false
+  let showHiddenPreview = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
 
   $: isHTML = language === 'html'
@@ -98,7 +105,7 @@
   $: silentResource =
     resource && (resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
 
-  $: if (showPreview && !collapsed && isHTMLApp && !stillGenerating) {
+  $: if ((showPreview || showHiddenPreview) && !collapsed && isHTMLApp && !stillGenerating) {
     renderHTMLPreview()
   } else if (!collapsed && resource) {
     highlightCode()
@@ -196,12 +203,17 @@
   }
 
   const showCodeView = () => {
+    showHiddenPreview = false
     showPreview = false
     collapsed = false
   }
 
-  const showPreviewView = () => {
-    showPreview = true
+  const showPreviewView = (hidden = false) => {
+    if (hidden) {
+      showHiddenPreview = true
+    } else {
+      showPreview = true
+    }
 
     if (stillGenerating) {
       collapsed = true
@@ -325,6 +337,67 @@
     tabsManager.updateResourceTabs(resource.id, { title: name })
   }, 300)
 
+  const captureWebviewScreenshot = async (): Promise<string | null> => {
+    const originalShowPreview = showPreview
+    const originalCollapsed = collapsed
+
+    if (!originalShowPreview) {
+      showPreviewView(true)
+      // when in code mode switch to preview mode to capture the screenshot
+      // await tick isn't enough here
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await tick()
+    }
+
+    return new Promise((resolve) => {
+      if (!appContainer) {
+        log.debug('No app container to capture')
+        resolve(null)
+        return
+      }
+
+      webview
+        ?.capturePage()
+        .then((image) => {
+          if (image) {
+            const croppedImage = cropImageToContent(image, {
+              padding: 0,
+              whiteThreshold: 250,
+              alphaThreshold: 0
+            })
+
+            const screenshotData = croppedImage.toDataURL()
+            resolve(screenshotData)
+          } else {
+            resolve(null)
+          }
+
+          if (!originalShowPreview) {
+            showCodeView()
+            collapsed = originalCollapsed
+          }
+        })
+        .catch(() => {
+          resolve(null)
+        })
+    })
+  }
+
+  const saveScreenshot = async (imageData: string): Promise<string> => {
+    const blob = dataUrltoBlob(imageData)
+
+    const imageResource = await resourceManager.createResource(
+      'image/png',
+      blob,
+      {
+        name: `Screenshot ${getFormattedDate(Date.now())}`
+      },
+      [ResourceTag.screenshot(), ResourceTag.silent()]
+    )
+
+    return imageResource.id
+  }
+
   const saveAppAsResource = async (spaceId?: string, silent = false) => {
     try {
       if (!silent) {
@@ -344,6 +417,16 @@
         return
       }
 
+      let previewImageId: string = ''
+      try {
+        const screenshotData = await captureWebviewScreenshot()
+        if (screenshotData) {
+          previewImageId = await saveScreenshot(screenshotData)
+        }
+      } catch (error) {
+        log.error('Error capturing screenshot:', error)
+      }
+
       if (!resource) {
         log.debug('Saving app', language, url, { code })
 
@@ -355,7 +438,13 @@
             url: url
           },
           undefined,
-          [...conditionalArrayItem(silent, ResourceTag.silent())]
+          [
+            ...conditionalArrayItem(silent, ResourceTag.silent()),
+            ...conditionalArrayItem(
+              previewImageId !== '',
+              ResourceTag.previewImageResource(previewImageId)
+            )
+          ]
         )
 
         await oasis.telemetry.trackSaveToOasis(
@@ -366,6 +455,24 @@
         )
       } else if (!silent) {
         await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+
+        const previewImageTag = resource.tags?.find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE
+        )
+
+        if (!previewImageTag && previewImageId) {
+          await resourceManager.createResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE,
+            previewImageId
+          )
+        } else if (previewImageTag && previewImageId) {
+          await resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE,
+            previewImageId
+          )
+        }
       }
 
       log.debug('Saved app', resource)
@@ -515,7 +622,7 @@
 
     appContainer.innerHTML = ''
 
-    const webview = document.createElement('webview') as WebviewTag
+    webview = document.createElement('webview') as WebviewTag
     // @ts-ignore
     webview.nodeintegration = false
     // @ts-ignore
@@ -541,7 +648,7 @@
   }
 
   const reloadApp = async () => {
-    if (isHTML && showPreview) {
+    if (isHTML && (showPreview || showHiddenPreview)) {
       if (resource) {
         const code = await getResourceCode()
         if (code) {
@@ -1047,11 +1154,13 @@
       on:input={handleCodeInput}><slot>{codeContent}</slot></pre>
   </div>
 
-  {#if showPreview && !collapsed}
+  {#if (showPreview || showHiddenPreview) && !collapsed}
     {#if isHTML}
       <div
         bind:this={appContainer}
-        class="bg-white w-full flex-grow overflow-auto {fullSize || collapsed ? '' : 'h-[750px]'}"
+        class="bg-white w-full flex-grow overflow-auto {fullSize || collapsed
+          ? ''
+          : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
       />
     {:else if isJS}
       <footer class="p-3 {fullSize && !collapsed ? 'h-full' : ''}">

@@ -134,8 +134,13 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
       ''
   )?.href
 
+  const previewImageId = resource.tags?.find(
+    (x) => x.name === ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE
+  )?.value
+
   const annotations = resource.annotations ?? []
   const resourceState = resource.stateValue
+  const userMediaResource = previewImageId ? `surf://resource/${previewImageId}` : null
 
   try {
     if (resource instanceof ResourceJSON) {
@@ -180,7 +185,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
           content: hideContent ? undefined : previewContent,
           contentType: 'plain',
           annotations: annotationItems,
-          image: data.image ?? undefined,
+          image: userMediaResource ?? data.image ?? undefined,
           url: data.url,
           source: {
             text: data.provider
@@ -222,7 +227,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
           content: hideContent ? undefined : previewContent,
           contentType: 'plain',
           annotations: annotationItems,
-          image: data.images[0] ?? undefined,
+          image: userMediaResource ?? data.images[0] ?? undefined,
           url: data.url,
           source: {
             text: data.site_name
@@ -284,7 +289,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
               : undefined,
           content: hideContent ? undefined : previewContent,
           contentType: 'plain',
-          image: imageUrl,
+          image: userMediaResource ?? imageUrl,
           url: data.url,
           source: {
             text:
@@ -312,7 +317,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
               ? data.content_html
               : undefined,
           contentType: 'html',
-          image: undefined,
+          image: userMediaResource ?? undefined,
           url: data.url,
           source: {
             text: data.editor_name,
@@ -341,7 +346,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
           annotations: highlightContent ? [{ type: 'highlight', content: highlightContent }] : [],
           content: commentContent,
           contentType: 'plain',
-          image: undefined,
+          image: userMediaResource ?? undefined,
           url: canonicalUrl ?? data.data.url ?? '',
           source: {
             text: hostname ?? getFileType(resource.type),
@@ -362,7 +367,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
           title: resource?.metadata?.name || data.title || getFileType(resource.type),
           content: data.content_plain,
           contentType: 'plain',
-          image: data.image ?? undefined,
+          image: userMediaResource ?? data.image ?? undefined,
           url: data.url,
           source: {
             text: data.provider
@@ -383,7 +388,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
         title: undefined,
         content: content && content !== '<p></p>' ? content : undefined,
         contentType: 'rich_text',
-        image: undefined,
+        image: userMediaResource ?? undefined,
         url: canonicalUrl ?? '',
         source: {
           text: resource?.metadata?.name || 'Note',
@@ -399,7 +404,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
         type: resource.type,
         title: undefined,
         content: undefined,
-        image: `surf://resource/${resource.id}`,
+        image: userMediaResource ?? `surf://resource/${resource.id}`,
         url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
         source: {
           text: resource?.metadata?.name || hostname || canonicalUrl || getFileType(resource.type),
@@ -416,7 +421,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
         type: resource.type,
         title: resource?.metadata?.name,
         content: undefined,
-        image: undefined,
+        image: userMediaResource ?? undefined,
         url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
         source: {
           text: hostname ? `Generated on ${hostname}` : 'Surflet',
@@ -446,7 +451,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
         type: resource.type,
         title: resource?.metadata?.name,
         content: undefined,
-        image: undefined,
+        image: userMediaResource ?? undefined,
         url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
         source: {
           text: sourceText,
@@ -526,7 +531,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
       type: resource.type,
       title: resource?.metadata?.name,
       content: undefined,
-      image: undefined,
+      image: userMediaResource ?? undefined,
       url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
       source: {
         text: canonicalUrl ?? getFileType(resource.type),

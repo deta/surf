@@ -171,6 +171,10 @@ export class ResourceTag {
   static contentHash(value: string) {
     return { name: ResourceTagsBuiltInKeys.CONTENT_HASH, value: value }
   }
+
+  static previewImageResource(previewId: string) {
+    return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: previewId }
+  }
 }
 
 export const getPrimaryResourceType = (type: string) => {
@@ -993,6 +997,8 @@ export class ResourceManager {
     }
 
     if (!resource.dummy) {
+      await this.cleanupResourceTags([id])
+
       // delete resource from sffs
       await this.sffs.deleteResource(id)
       // better to handle in user land
@@ -1003,8 +1009,31 @@ export class ResourceManager {
     this.eventEmitter.emit('deleted', id)
   }
 
+  async cleanupResourceTags(ids: string[]) {
+    const previewResourceIds: string[] = []
+
+    for (const id of ids) {
+      const rootResource = await this.getResource(id)
+      if (!rootResource) continue
+
+      const previewResourceId = rootResource.tags?.find(
+        (x) => x.name === ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE
+      )?.value
+
+      if (previewResourceId) {
+        previewResourceIds.push(previewResourceId)
+      }
+    }
+
+    if (previewResourceIds.length > 0) {
+      await this.sffs.deleteResources(previewResourceIds)
+    }
+  }
+
   async deleteResources(ids: string[]) {
     if (!ids.length) return
+
+    await this.cleanupResourceTags(ids)
 
     await this.sffs.deleteResources(ids)
     this.resources.update((resources) => resources.filter((r) => !ids.includes(r.id)))
@@ -1609,6 +1638,10 @@ export class ResourceManager {
 
   static SearchTagContentHash(hash: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.CONTENT_HASH, value: hash, op: 'eq' }
+  }
+
+  static SearchTagPreviewImageResource(id: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: id, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry) {

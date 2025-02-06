@@ -42,7 +42,8 @@ export enum ResourceTagsBuiltInKeys {
   HIDE_IN_EVERYTHING = 'hideInEverything', // resource should not be shown in the Oasis Everything view
   SOURCE_PUBLISHED_AT = 'sourcePublishedAt', // timestamp of when the resource was published by the source (e.g. tweet timestamp)
   CREATED_FOR_CHAT = 'createdForChat', // resource was created for a chat
-  CONTENT_HASH = 'contentHash' // hash of the content of the resource
+  CONTENT_HASH = 'contentHash', // hash of the content of the resource
+  PREVIEW_IMAGE_RESOURCE = 'previewImageResource' // resource id of the custom preview image set by the user
 }
 
 export interface ResourceTagsBuiltIn {
@@ -63,6 +64,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING]: boolean
   [ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT]: string
   [ResourceTagsBuiltInKeys.CREATED_FOR_CHAT]: boolean
+  [ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE]: string
 }
 
 export interface SFFSResource {
