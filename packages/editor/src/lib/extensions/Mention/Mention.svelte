@@ -1,12 +1,12 @@
 <script lang="ts">
   import { isModKeyPressed } from '@horizon/utils'
-  import type { MentionItem } from '../../types'
+  import { type MentionItem, MentionItemType } from '../../types'
   import type { MentionAction } from './mention'
   import { DynamicIcon } from '@horizon/icons'
 
   export let id: string
   export let label: string
-  export let type: string
+  export let type: MentionItemType
   export let icon: string | undefined
   export let char: string | undefined
   export let onClick: ((item: MentionItem, action: MentionAction) => void) | undefined
@@ -20,6 +20,10 @@
   const handleClick = (e: MouseEvent) => {
     e.preventDefault()
     e.stopImmediatePropagation()
+
+    if (type === MentionItemType.MODEL) {
+      return
+    }
 
     if (isModKeyPressed(e)) {
       if (e.shiftKey) {

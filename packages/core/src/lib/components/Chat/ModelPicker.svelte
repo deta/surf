@@ -73,7 +73,6 @@
   open={modelSelectorOpen}
   side="top"
   closeOnMouseLeave={false}
-  maxWidth="250px"
   keepHeightWhileSearching
   on:select={handleModelSelect}
 >

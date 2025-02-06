@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { type UserConfig, type UserStats } from '@horizon/types'
-import { DEFAULT_AI_MODEL } from '@horizon/types/src/ai.types'
+import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@horizon/types/src/ai.types'
 
 export type Config = {
   [key: string]: any
@@ -238,6 +238,22 @@ export const getUserConfig = (path?: string) => {
   if (storedConfig.settings.show_resource_contexts === undefined) {
     storedConfig.settings.show_resource_contexts = false
     changedConfig = true
+  }
+
+  // Workaround to fix the vision flag for the ClaudeSonnet model for existing users who have the model configured
+  if (storedConfig.settings.model_settings.length > 0) {
+    const configuredModel = storedConfig.settings.model_settings.find(
+      (model) => model.id === BuiltInModelIDs.ClaudeSonnet
+    )
+    if (configuredModel) {
+      const builtInModel = BUILT_IN_MODELS.find(
+        (model) => model.id === BuiltInModelIDs.ClaudeSonnet
+      )
+      if (builtInModel && builtInModel.vision !== configuredModel.vision) {
+        configuredModel.vision = builtInModel.vision
+        changedConfig = true
+      }
+    }
   }
 
   if (changedConfig) {
