@@ -56,6 +56,7 @@
   export let collapsable = true
   export let saveable = true
   export let showUnLink = false
+  export let draggable: boolean = true
 
   const log = useLogScope('CodeBlock')
   const resourceManager = useResourceManager()
@@ -940,7 +941,7 @@
 >
   <header
     class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
-    draggable={true}
+    {draggable}
     use:HTMLDragItem.action={{}}
     on:DragStart={handleDragStart}
   >
