@@ -276,6 +276,9 @@ export const getUserStats = (path?: string) => {
     timestamp_last_prompt_set_default_browser: 9999999999999,
     dont_show_prompt_set_default_browser: false,
 
+    timestamp_last_prompt_book_call: 9999999999999,
+    dont_show_prompt_book_call: false,
+
     // Grooves
     global_n_context_switches: 0,
     global_n_contexts_created: 0,

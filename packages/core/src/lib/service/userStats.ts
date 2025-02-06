@@ -1,7 +1,10 @@
-import type { UserStats } from '@horizon/types'
+import { CreateTabEventTrigger, type UserStats } from '@horizon/types'
 import { isDev, useLogScope } from '@horizon/utils'
 // NOTE: Lsp shits itself for reasons, this works tho:
 import { CONTENTS, showNotification } from '../components/Core/Notifier/Notification.svelte'
+import { DesktopManager } from './desktop'
+import { get } from 'svelte/store'
+import { useTabsManager } from './tabs'
 
 export class UserStatsService {
   static get log(): ReturnType<typeof useLogScope> {
@@ -13,8 +16,8 @@ export class UserStatsService {
     return stats
   }
 
-  static CHECK_DEFAULT_BROWSER_INTERVAL = isDev ? 1000 : 1000 * 60 * 1
-  static checkDefaultBrowserPromptRef: NodeJS.Timer | null = null
+  static CHECK_NOTIFY_INTERVAL = isDev ? 1000 : 1000 * 60 * 1
+  static checkUserNotifyRef: NodeJS.Timeout | null = null
   static isShowingNotification = false
 
   static storeUserStats(stats: UserStats) {
@@ -69,6 +72,62 @@ export class UserStatsService {
     return sum
   }
 
+  // Returns the max "streak" of having any session in a day.
+  static async getNDaysInARowSession(): Promise<number> {
+    if (!window) return 0
+    const sessions = await UserStatsService.getSessions()
+    if (!sessions || !sessions.length) return 0
+
+    // Sort sessions by startedAt to validate endedAt
+    const sortedSessions = [...sessions].sort((a, b) => a.startedAt - b.startedAt)
+
+    // Create a Map to store days with sessions
+    const daysWithSessions = new Map<string, boolean>()
+
+    sortedSessions.forEach((session, index) => {
+      // Skip sessions with invalid endedAt (if there's a later session)
+      if (session.endedAt === undefined && index < sortedSessions.length - 1) return
+
+      const startDate = new Date(session.startedAt)
+      const endDate = session.endedAt ? new Date(session.endedAt) : new Date()
+
+      let currentDate = new Date(startDate)
+      currentDate.setHours(0, 0, 0, 0)
+
+      const endDateTime = new Date(endDate)
+      endDateTime.setHours(23, 59, 59, 999)
+
+      // Add each day between start and end
+      while (currentDate <= endDateTime) {
+        daysWithSessions.set(currentDate.toISOString().split('T')[0], true)
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    })
+
+    // Convert to sorted array of dates
+    const dates = [...daysWithSessions.keys()].sort()
+
+    let maxStreak = 1
+    let currentStreak = 1
+
+    // Calculate streaks
+    for (let i = 1; i < dates.length; i++) {
+      const prevDate = new Date(dates[i - 1])
+      const currDate = new Date(dates[i])
+
+      const dayDiff = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+
+      if (dayDiff === 1) {
+        currentStreak++
+        maxStreak = Math.max(maxStreak, currentStreak)
+      } else {
+        currentStreak = 1
+      }
+    }
+
+    return maxStreak
+  }
+
   static async incStat(key: string) {
     if (!window) return
     const stats = await UserStatsService.getUserStats()
@@ -114,7 +173,12 @@ export class UserStatsService {
 
   private static async checkDefaultBrowserPrompt() {
     if (await window.api.isDefaultBrowser()) return
-    if (!isDev && (await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2) return
+    if (
+      !isDev &&
+      ((await UserStatsService.getDontShowPromptSetDefaultBrowser()) ||
+        (await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2)
+    )
+      return
 
     const stats = await UserStatsService.getUserStats()
     if (!stats) {
@@ -145,12 +209,7 @@ export class UserStatsService {
       if (show && lastShownDiff < 1000 * 60 * 60) show = false
     }
 
-    if (
-      !show ||
-      (await UserStatsService.getDontShowPromptSetDefaultBrowser()) ||
-      UserStatsService.isShowingNotification
-    )
-      return
+    if (!show || UserStatsService.isShowingNotification) return
     UserStatsService.isShowingNotification = true
 
     UserStatsService.setSetDefaultBrowserLastShownDiff()
@@ -177,15 +236,126 @@ export class UserStatsService {
     }
   }
 
-  static startCheckDefaultBrowserInterval() {
-    UserStatsService.checkDefaultBrowserPromptRef = setInterval(
-      UserStatsService.checkDefaultBrowserPrompt,
-      UserStatsService.CHECK_DEFAULT_BROWSER_INTERVAL
-    )
+  static async getBookCallPromptLastShownDiff() {
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return 9999999999999
+
+    return Math.abs(Date.now() - stats.timestamp_last_prompt_book_call)
   }
-  static stopCheckDefaultBrowserInterval() {
-    if (UserStatsService.checkDefaultBrowserPromptRef)
-      clearInterval(UserStatsService.checkDefaultBrowserPromptRef)
+  static async setBookCallPromptLastShownDiff() {
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
+
+    stats.timestamp_last_prompt_book_call = Date.now()
+    UserStatsService.storeUserStats(stats)
+  }
+  static async getDontShowBookCallPrompt() {
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
+    return stats.dont_show_prompt_book_call
+  }
+  static async setDontShowBookCallPrompt(v: boolean) {
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
+
+    stats.dont_show_prompt_book_call = v
+    UserStatsService.storeUserStats(stats)
+  }
+
+  private static async checkUserCallPrompt() {
+    if (
+      !isDev &&
+      ((await UserStatsService.getDontShowBookCallPrompt()) ||
+        (await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2)
+    )
+      return
+
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) {
+      UserStatsService.log.warn('Could not get userStats!')
+      return
+    }
+
+    let show = false
+    const isFirstNotification = stats.timestamp_last_prompt_book_call === 9999999999999
+    const lastShownDiff = await UserStatsService.getBookCallPromptLastShownDiff()
+
+    if (stats) {
+      if (stats.global_n_saves_to_oasis >= 20) show = true
+
+      if (show && lastShownDiff < 1000 * 60 * 60 * 3) show = false
+    }
+
+    if (!DesktopManager.self) {
+      this.log.warn('DesktopManager doesnt not exist! This shouldnt happen!')
+      return
+    }
+
+    const desktops = await DesktopManager.self.getAllDesktops()
+    const customDesktopsN = desktops
+      .map((desktop) => {
+        if (desktop?.background_image !== undefined) {
+          const bgData = get(desktop.background_image)
+          if (bgData?.resourceId !== undefined && bgData?.resourceId !== null) {
+            return desktop
+          }
+        }
+        return undefined
+      })
+      .filter((e) => e !== undefined).length
+
+    if (customDesktopsN < 1) return
+
+    //   use the product 3 days in a row
+    const maxStreak = await UserStatsService.getNDaysInARowSession()
+    if (maxStreak < 3) return
+
+    if (!show || UserStatsService.isShowingNotification) return
+    UserStatsService.isShowingNotification = true
+
+    UserStatsService.setBookCallPromptLastShownDiff()
+
+    const { closeType, submitValue } = await showNotification({
+      title: CONTENTS.book_call.title,
+      message: CONTENTS.book_call.body,
+      actions: [
+        { type: 'submit', title: 'Schedule a call' },
+        isFirstNotification
+          ? { type: 'reset', kind: 'muted', value: 'not_now', title: `Not Now` }
+          : { type: 'reset', kind: 'muted', value: 'never', title: `Don't ask again` }
+      ]
+    })
+    UserStatsService.isShowingNotification = false
+
+    if (closeType === true) {
+      const tabs = useTabsManager()
+      if (!tabs) {
+        this.log.error('Tabs manager not found! This shouldnt happen!')
+        return
+      }
+      tabs.addPageTab('https://deta.surf/meet', {
+        active: true,
+        index: 0,
+        placeAtEnd: false,
+
+        trigger: CreateTabEventTrigger.System
+      })
+    } else if (closeType === false && submitValue === 'not_now') {
+      // noop
+    } else if (closeType === false && submitValue === 'never') {
+      UserStatsService.setDontShowBookCallPrompt(true)
+    }
+  }
+
+  static startCheckNotifyUserInterval() {
+    UserStatsService.checkUserNotifyRef = setInterval(() => {
+      UserStatsService.checkDefaultBrowserPrompt()
+      UserStatsService.checkUserCallPrompt()
+    }, UserStatsService.CHECK_NOTIFY_INTERVAL)
+    UserStatsService.checkUserCallPrompt()
+  }
+  static stopCheckNotifyUserInterval() {
+    if (UserStatsService.checkUserNotifyRef) clearInterval(UserStatsService.checkUserNotifyRef)
   }
 }
 

@@ -3029,11 +3029,11 @@
   onMount(async () => {
     window.addEventListener('beforeunload', UserStatsService.endSession)
     await UserStatsService.startSession()
-    UserStatsService.startCheckDefaultBrowserInterval()
+    UserStatsService.startCheckNotifyUserInterval()
   })
   onDestroy(() => {
     window.removeEventListener('beforeunload', UserStatsService.endSession)
-    UserStatsService.stopCheckDefaultBrowserInterval()
+    UserStatsService.stopCheckNotifyUserInterval()
   })
 
   const openFeedback = () => {

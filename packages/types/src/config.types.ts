@@ -66,6 +66,10 @@ export type UserStats = {
   timestamp_last_prompt_set_default_browser: number
   dont_show_prompt_set_default_browser: boolean
 
+  // Prompt book call
+  timestamp_last_prompt_book_call: number
+  dont_show_prompt_book_call: boolean
+
   // Grooves
   global_n_context_switches: number
   global_n_contexts_created: number
