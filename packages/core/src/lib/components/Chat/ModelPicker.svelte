@@ -28,7 +28,9 @@
         ({
           id: model.id,
           label: model.label,
-          icon: model.icon
+          icon: model.icon,
+          descriptionIcon: !model.vision ? 'vision.off' : '',
+          description: !model.vision ? 'Vision not supported' : undefined
         }) as SelectItem
     )
   })
@@ -52,14 +54,14 @@
     const modelId = e.detail
     log.debug('Selected model', modelId)
 
+    modelSelectorOpen.set(false)
+
     if (modelId === 'configure') {
       openModelSettings()
-      modelSelectorOpen.set(false)
       return
     }
 
     await ai.changeSelectedModel(modelId)
-    modelSelectorOpen.set(false)
   }
 </script>
 
@@ -71,6 +73,7 @@
   open={modelSelectorOpen}
   side="top"
   closeOnMouseLeave={false}
+  maxWidth="250px"
   keepHeightWhileSearching
   on:select={handleModelSelect}
 >

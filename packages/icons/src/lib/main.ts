@@ -106,6 +106,8 @@ import Claude from './Icons/Claude.svelte'
 import PictureInPicture from './Icons/PictureInPicture.svelte'
 import Vision from './Icons/Vision.svelte'
 import VisionLight from './Icons/VisionLight.svelte'
+import EyeOff from './Icons/EyeOff.svelte'
+import VisionOff from './Icons/VisionOff.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -219,7 +221,9 @@ export const icons = {
   'picture-in-picture': PictureInPicture,
   dynamic: DynamicIcon,
   vision: Vision,
-  'vision.light': VisionLight
+  'vision.off': VisionOff,
+  'vision.light': VisionLight,
+  'eye.off': EyeOff
 }
 
 export type Icons = keyof typeof icons
@@ -332,5 +336,7 @@ export {
   PictureInPicture,
   DynamicIcon,
   Vision,
-  VisionLight
+  VisionOff,
+  VisionLight,
+  EyeOff
 }

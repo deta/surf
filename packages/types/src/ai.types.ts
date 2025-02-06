@@ -7,6 +7,7 @@ export enum Provider {
 export enum BuiltInModelIDs {
   GPT4o = 'gpt-4o',
   GPT4oMini = 'gpt-4o-mini',
+  O3Mini = 'o3-mini',
   ClaudeSonnet = 'claude-3-5-sonnet-latest',
   ClaudeHaiku = 'claude-3-5-haiku-latest'
 }
@@ -32,6 +33,7 @@ export namespace ChatMode {
 export const BuiltInModelLabels = {
   [BuiltInModelIDs.GPT4o]: 'GPT-4o',
   [BuiltInModelIDs.GPT4oMini]: 'GPT-4o Mini',
+  [BuiltInModelIDs.O3Mini]: 'o3 Mini',
   [BuiltInModelIDs.ClaudeSonnet]: 'Claude 3.5 Sonnet',
   [BuiltInModelIDs.ClaudeHaiku]: 'Claude 3.5 Haiku'
 }
@@ -76,12 +78,21 @@ export const BUILT_IN_MODELS = [
     supports_json_format: true
   },
   {
+    id: BuiltInModelIDs.O3Mini,
+    label: BuiltInModelLabels[BuiltInModelIDs.O3Mini],
+    provider: Provider.OpenAI,
+    tier: ModelTiers.Premium,
+    icon: 'open-ai',
+    vision: false,
+    supports_json_format: true
+  },
+  {
     id: BuiltInModelIDs.ClaudeSonnet,
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet],
     provider: Provider.Anthropic,
     tier: ModelTiers.Premium,
     icon: 'claude',
-    vision: false,
+    vision: true,
     supports_json_format: true,
     max_tokens: 128_000
   },

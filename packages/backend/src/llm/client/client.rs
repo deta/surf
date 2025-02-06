@@ -48,6 +48,8 @@ pub enum Model {
     GPT4o,
     #[serde(rename = "gpt-4o-mini")]
     GPT4oMini,
+    #[serde(rename = "o3-mini")]
+    O3Mini,
 
     #[serde(rename = "claude-3-5-sonnet-latest")]
     Claude35Sonnet,
@@ -455,15 +457,13 @@ impl Provider {
                         BackendError::GenericError(format!("failed to parse openai response: {e}"))
                     })?;
 
-                Ok(resp
-                    .choices.first()
-                    .and_then(|choice| {
-                        if delta {
-                            choice.delta.clone().and_then(|d| d.content)
-                        } else {
-                            choice.message.clone().map(|m| m.content)
-                        }
-                    }))
+                Ok(resp.choices.first().and_then(|choice| {
+                    if delta {
+                        choice.delta.clone().and_then(|d| d.content)
+                    } else {
+                        choice.message.clone().map(|m| m.content)
+                    }
+                }))
             }
             Self::Anthropic => serde_json::from_str::<anthropic::ChunkResponse>(data)
                 .map_err(|e| {
@@ -514,6 +514,7 @@ impl Model {
         match self {
             Self::GPT4o => "gpt-4o",
             Self::GPT4oMini => "gpt-4o-mini",
+            Self::O3Mini => "o3-mini",
             Self::Claude35Sonnet => "claude-3-5-sonnet-latest",
             Self::Claude35Haiku => "claude-3-5-haiku-latest",
             Self::Custom { name, .. } => name,
@@ -523,7 +524,7 @@ impl Model {
 
     fn provider(&self) -> &Provider {
         match self {
-            Self::GPT4o | Self::GPT4oMini => &Provider::OpenAI,
+            Self::GPT4o | Self::GPT4oMini | Self::O3Mini => &Provider::OpenAI,
             Self::Claude35Sonnet | Self::Claude35Haiku => &Provider::Anthropic,
             Self::Custom { provider, .. } => provider,
         }
@@ -535,6 +536,7 @@ impl TokenModel for Model {
         match self {
             Self::GPT4o => 128_000,
             Self::GPT4oMini => 128_000,
+            Self::O3Mini => 128_000,
             Self::Claude35Sonnet | Self::Claude35Haiku => 200_000,
             Self::Custom { max_tokens, .. } => *max_tokens,
         }

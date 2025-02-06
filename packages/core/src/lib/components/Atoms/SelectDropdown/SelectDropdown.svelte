@@ -20,6 +20,7 @@
   export let keepHeightWhileSearching = false
   export let side: 'top' | 'right' | 'bottom' | 'left' | undefined = undefined
   export let disabled: boolean = false
+  export let maxWidth = '229px'
 
   const dispatch = createEventDispatcher<{ select: string }>()
 
@@ -146,7 +147,8 @@
       </div>
     </DropdownMenu.Trigger>
     <DropdownMenu.Content
-      class="w-full max-w-[229px] rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
+      class="w-full rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
+      style="max-width: {maxWidth}"
       transition={flyAndScale}
       sideOffset={8}
       {side}

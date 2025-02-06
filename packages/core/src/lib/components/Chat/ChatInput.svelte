@@ -1,13 +1,12 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <script lang="ts">
   import { Editor } from '@horizon/editor'
-  import { derived, writable } from 'svelte/store'
+  import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import type { AIChat } from '../../service/ai/chat'
-  import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown'
-  import { useAI } from '../../service/ai/ai'
   import { useLogScope } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
+  import ModelPicker from './ModelPicker.svelte'
 
   const dispatch = createEventDispatcher<{
     submit: string
@@ -17,9 +16,8 @@
   export let viewTransitionName: string | undefined = undefined
 
   const log = useLogScope('ChatInput')
-  const ai = useAI()
 
-  const { contextManager, contextItems, responses, status, error } = chat
+  const { status } = chat
 
   let editor: unknown
   let inputValue: string = ''
@@ -27,53 +25,6 @@
   let selectedMode: unknown = ''
   const chatBoxPlaceholder = writable('Ask me anything')
   const optToggled = writable(false)
-  const modelSelectorOpen = writable(false)
-
-  const selectConfigureItem = {
-    id: 'configure',
-    label: 'Configure Models',
-    icon: 'settings'
-  } as SelectItem
-
-  const modelItems = derived([ai.models], ([models]) => {
-    return models.map(
-      (model) =>
-        ({
-          id: model.id,
-          label: model.label,
-          icon: model.icon
-        }) as SelectItem
-    )
-  })
-
-  const selectedModelItem = derived(
-    [ai.selectedModelId, modelItems],
-    ([selectedModelId, modelItems]) => {
-      const model = modelItems.find((model) => model.id === selectedModelId)
-      if (!model) return null
-
-      return model
-    }
-  )
-
-  const openModelSettings = () => {
-    // window.api.openSettings('ai')
-    window.api.openSettings()
-  }
-
-  const handleModelSelect = async (e: CustomEvent<string>) => {
-    const modelId = e.detail
-    log.debug('Selected model', modelId)
-
-    if (modelId === 'configure') {
-      openModelSettings()
-      modelSelectorOpen.set(false)
-      return
-    }
-
-    await ai.changeSelectedModel(modelId)
-    modelSelectorOpen.set(false)
-  }
 
   const optPressed = writable(false)
   const cmdPressed = writable(false)
@@ -160,27 +111,7 @@
       </button>
     {/if}-->
 
-    <SelectDropdown
-      items={modelItems}
-      search="disabled"
-      selected={$selectedModelItem ? $selectedModelItem.id : null}
-      footerItem={selectConfigureItem}
-      open={modelSelectorOpen}
-      side="top"
-      closeOnMouseLeave={false}
-      keepHeightWhileSearching
-      on:select={handleModelSelect}
-    >
-      <button
-        class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
-      >
-        {#if $selectedModelItem}
-          <Icon name={$selectedModelItem.icon} />
-        {:else}
-          <Icon name="settings" className="opacity-60" />
-        {/if}
-      </button>
-    </SelectDropdown>
+    <ModelPicker />
 
     <button
       class="submit-button transform whitespace-nowrap active:scale-95 disabled:opacity-40 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"

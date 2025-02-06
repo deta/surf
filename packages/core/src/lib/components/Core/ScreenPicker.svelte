@@ -86,6 +86,8 @@
   const ai = useAI()
   $: customAiApps = ai?.customAIApps
 
+  const selectedModel = ai.selectedModel
+
   const state = writable<any>({
     isMouseInRect: false,
 
@@ -726,6 +728,16 @@
             viewTransitionName={`chat-${$activeChat.id}-input`}
           />
         {/if}
+
+        {#if !$selectedModel.vision && $activeChat !== null && !$state.isChatExpanded}
+          <div class="vision-disclaimer">
+            <div class="vison-disclaimer-icon">
+              <Icon name="vision.off" size="19px" />
+            </div>
+            Vision not supported by {$selectedModel.label}.<br /> Switch models to use this screenshot
+            in the chat.
+          </div>
+        {/if}
       </div>
       {#if mode === 'standalone' && $activeChat}
         <!--{#if !$state.isChatExpanded}
@@ -1215,6 +1227,36 @@
         }
       }
     }
+  }
+
+  .vision-disclaimer {
+    z-index: 1;
+    margin-left: 1em;
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    width: fit-content;
+    height: 100%;
+
+    overflow: hidden;
+    padding: 0.45em 0.75em;
+
+    color: rgb(241, 152, 64);
+    background: #fff;
+    border-radius: var(--radii);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 0 !important;
+
+    font-weight: 450;
+    letter-spacing: 0.01em;
+    font-size: 0.8em;
+    pointer-events: auto;
+  }
+
+  .vision-disclaimer-icon {
+    flex-shrink: 0;
   }
 
   /* :global(#screen-picker .chatWrapper .chat-input-wrapper) {

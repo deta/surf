@@ -5,6 +5,8 @@ export type SelectItem = {
   label: string
   disabled?: boolean
   icon?: Icons | string
+  description?: string
+  descriptionIcon?: Icons | string
   data: any
 }
 
