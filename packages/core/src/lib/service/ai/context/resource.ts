@@ -15,6 +15,7 @@ import { WebParser, type ResourceContent } from '@horizon/web-parser'
 import { PAGE_PROMPTS_GENERATOR_PROMPT } from '../../../constants/prompts'
 import { QuotaDepletedError } from '@horizon/backend/types'
 import { handleQuotaDepletedError } from '../helpers'
+import { isGeneratedResource } from '../../../utils/resourcePreview'
 
 const RESOURCE_PROCESSING_TIMEOUT = 30000
 
@@ -71,6 +72,10 @@ export class ContextItemResource extends ContextItemBase {
         this.icon.set({ type: ContextItemIconTypes.IMAGE, data: imagePreview ?? this.fallbackIcon })
         return
       }
+    }
+    if (isGeneratedResource(this.data)) {
+      this.icon.set({ type: ContextItemIconTypes.ICON, data: 'code-block' })
+      return
     }
 
     const url = this.url ? getURLBase(this.url) : null

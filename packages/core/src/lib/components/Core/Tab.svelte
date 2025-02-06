@@ -43,6 +43,7 @@
   import { useDesktopManager } from '../../service/desktop'
   import SoundVisualizerBars from '../Effects/SoundVisualizerBars.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { isGeneratedResource } from '../../utils/resourcePreview'
 
   export let tab: Tab
   export let activeTabId: Writable<string>
@@ -839,11 +840,15 @@
   >
     <!--     style:view-transition-name="tab-icon-{tab.id}" -->
     {#if $resource}
-      <Image
-        src={`https://www.google.com/s2/favicons?domain=${$resource?.metadata?.sourceURI}&sz=48`}
-        alt={tab.title}
-        fallbackIcon="world"
-      />
+      {#if isGeneratedResource($resource)}
+        <Icon name="code-block" size="16px" />
+      {:else}
+        <Image
+          src={`https://www.google.com/s2/favicons?domain=${$resource?.metadata?.sourceURI}&sz=48`}
+          alt={tab.title}
+          fallbackIcon="world"
+        />
+      {/if}
     {:else if tab.icon}
       <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
     {:else if tab.type === 'horizon'}
