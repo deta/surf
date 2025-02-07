@@ -340,6 +340,7 @@ export class UserStatsService {
 
         trigger: CreateTabEventTrigger.System
       })
+      UserStatsService.setDontShowBookCallPrompt(true)
     } else if (closeType === false && submitValue === 'not_now') {
       // noop
     } else if (closeType === false && submitValue === 'never') {
