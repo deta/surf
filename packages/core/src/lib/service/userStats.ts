@@ -291,11 +291,11 @@ export class UserStatsService {
       return
     }
 
-    const desktops = await DesktopManager.self.getAllDesktops()
-    const customDesktopsN = desktops
+    const desktopsData = await DesktopManager.self.getAllDesktopsData()
+    const customDesktopsN = desktopsData
       .map((desktop) => {
         if (desktop?.background_image !== undefined) {
-          const bgData = get(desktop.background_image)
+          const bgData = desktop.background_image
           if (bgData?.resourceId !== undefined && bgData?.resourceId !== null) {
             return desktop
           }

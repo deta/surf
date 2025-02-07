@@ -171,20 +171,12 @@ export class DesktopManager {
     this._activeDesktop.set(desktop)
   }
 
-  /** Used to retrieve all desktop that exist, NOTE: This doesnt not load them fully / add them to
+  /** Used to retrieve all desktops data that exist, NOTE: This doesnt not load them fully / add them to
    *  the list of loaded desktops.
    */
-  async getAllDesktops(): Promise<DesktopService[]> {
+  async getAllDesktopsData(): Promise<DesktopData[]> {
     let data = await this.storage.desktop.all()
-    const desktopServices = data.map(
-      (d) =>
-        new DesktopService(d, {
-          telemetry: this.telemetry,
-          desktopManager: this,
-          miniBrowserService: this.miniBrowserService
-        })
-    )
-    return desktopServices
+    return data
   }
 
   /**
