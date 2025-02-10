@@ -557,7 +557,7 @@
           />
         {/if}
 
-        <PromptSection
+        <!--<PromptSection
           title="Inline Page Menu Prompts"
           description="Customize prompts used for the inline AI menu in web pages."
           image={inlineAIScreenshot}
@@ -575,7 +575,7 @@
             <Icon name="info" size="22px" />
             <p>Prompts can be written with basic Markdown syntax.</p>
           </div>
-        </PromptSection>
+        </PromptSection>-->
       </article>
     {/if}
   </div>
