@@ -234,6 +234,7 @@ TODO: Fix resizing logic for other corners
           <CodeRenderer
             {resource}
             showPreview
+            fullSize
             language={mimeTypeToCodeLanguage(resource.type)}
             initialCollapsed={false}
             collapsable={false}
