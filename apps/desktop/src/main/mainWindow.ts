@@ -142,16 +142,24 @@ export function createWindow() {
       }
     }
   })()
+
   webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
-    const shouldBlockRequest =
-      details.url.startsWith('surf:') &&
+    const isSurfProtocol = details.url.startsWith('surf:')
+    const isSurfletProtocol = details.url.startsWith('surflet:')
+
+    const shouldBlockSurfRequest =
+      isSurfProtocol &&
       // navigation and APIs like webContents.loadURL should be able to request resources
       details.resourceType !== 'mainFrame' &&
       // only the PDF renderer should be able to request resources, cancel if webContents is unavailable
       (!details.webContents || !isPDFViewerURL(details.webContents.getURL(), PDFViewerEntryPoint))
 
-    callback({ cancel: shouldBlockRequest })
+    const shouldBlockSurfletRequest =
+      isSurfletProtocol && (details.resourceType !== 'mainFrame' || !details.webContents)
+
+    callback({ cancel: shouldBlockSurfRequest || shouldBlockSurfletRequest })
   })
+
   webRequestManager.addBeforeSendHeaders(webviewSession, (details, callback) => {
     const { requestHeaders, url, id } = details
     const parsedURL = new URL(url)
