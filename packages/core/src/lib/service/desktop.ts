@@ -389,6 +389,10 @@ export class DesktopService {
     return this._dropTargetPreview
   }
 
+  /// Whether the desktop is "lightweight" enough to always keep it loaded for performance reasons
+  /// e.g. switching to it.
+  keepLoadedAlways: Readable<boolean>
+
   constructor(
     data: DesktopData,
     refs: {
@@ -412,6 +416,10 @@ export class DesktopService {
         return writable(desktopItemData)
       })
     )
+
+    this.keepLoadedAlways = derived(this.items, (items) => {
+      return items.length <= 10
+    })
 
     this.unsubscribers.push(
       this.resourceManager.on('deleted', (id) => {

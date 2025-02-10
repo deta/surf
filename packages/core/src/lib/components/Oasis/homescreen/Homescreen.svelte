@@ -145,7 +145,7 @@
     data-tooltip-target="desktop-demo"
     bind:this={desktopEl}
     use:HTMLDragZone.action={{
-      accepts: () => true
+      accepts: () => $desktopVisible
     }}
     on:DragEnter={(e) => desktop.handleDragEnter(e)}
     on:DragLeave={(e) => desktop.handleDragLeave(e)}
@@ -248,6 +248,8 @@
 </div>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   #homescreen-wrapper {
     position: relative;
     width: 100%;
@@ -257,6 +259,7 @@
     flex-direction: column;
 
     contain: strict;
+    pointer-events: all;
 
     --base-padding: 1.5em;
     :global(.verticalTabs) & {
@@ -304,13 +307,21 @@
       }
 
       .drop-preview {
-        mix-blend-mode: difference;
+        @include utils.light-dark-custom(
+          'contrast-border',
+          black,
+          white,
+          var(--contrast-color),
+          var(--contrast-color)
+        );
+
+        mix-blend-mode: exclusion;
         position: absolute;
-        z-index: 5;
+        z-index: 9999999999999;
         width: calc(var(--spanX) * var(--grid_cell_size) + (var(--spanX) - 1) * var(--grid_gap));
         height: calc(var(--spanY) * var(--grid_cell_size) + (var(--spanY) - 1) * var(--grid_gap));
         background: rgba(200, 200, 200, 0.15);
-        border: 2px dashed rgba(126, 126, 126, 0.4);
+        border: 2px dashed var(--contrast-border);
         border-radius: 0.5em;
         overflow: hidden;
 

@@ -5,10 +5,10 @@
   import { createEventDispatcher } from 'svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
-  import { CreateTabEventTrigger, UpdateHomescreenEventAction } from '@horizon/types'
+  import { CreateTabEventTrigger, ResourceTypes, UpdateHomescreenEventAction } from '@horizon/types'
   import { useTelemetry } from '../../../service/telemetry'
   import { useTabsManager } from '../../../service/tabs'
-  import type { DesktopService } from '../../../service/desktop'
+  import { useDesktopManager, type DesktopService } from '../../../service/desktop'
   import type { DesktopItemData } from '../../../types/desktop.types'
 </script>
 
@@ -19,11 +19,16 @@
   import { mimeTypeToCodeLanguage } from '@horizon/utils'
   import ResourcePreview from '../../Resources/ResourcePreview.svelte'
   import { contextMenu } from '../../Core/ContextMenu.svelte'
+  import LazyComponent from '../../Atoms/LazyComponent.svelte'
+  import { isGeneratedResource } from '../../../utils/resourcePreview'
 
   export let desktop: DesktopService
   export let item: Writable<DesktopItemData>
   export let interactive: boolean = true
   export let skeleton = false
+
+  const desktopManager = useDesktopManager()
+  const desktopVisible = desktopManager.activeDesktopVisible
 
   const telemetry = useTelemetry()
   const oasis = useOasis()
@@ -201,119 +206,128 @@ TODO: Fix resizing logic for other corners
 
   <div class="content">
     {#if $item.resourceId}
-      <OasisResourceLoader
-        resourceOrId={$item.resourceId}
-        mode={'responsive'}
-        origin="homescreen"
-        draggable={false}
-        frameless={false}
-        {interactive}
-        hideProcessing
-        on:set-resource-as-background
-        on:click
-        on:open
-        on:open-and-chat
-        on:remove-from-homescreen={() => {
-          dispatch('remove-from-homescreen', $item.id)
-        }}
-        on:highlightWebviewText
-        on:seekToTimestamp
-        let:resource
-        let:mode
-        let:viewMode
-        let:origin
-        let:selected
-        let:isInSpace
-        let:resourcesBlacklistable
-        let:interactive
-        let:draggable
-        let:frameless
-        let:hideProcessing
-      >
-        {#if $item.width * $item.height > 12 && resource?.type.startsWith('text/html')}
-          <CodeRenderer
-            {resource}
-            showPreview
-            fullSize
-            language={mimeTypeToCodeLanguage(resource.type)}
-            initialCollapsed={false}
-            collapsable={false}
+      <LazyComponent this={() => import('../OasisResourceLoader.svelte')}>
+        <svelte:fragment slot="component" let:Component>
+          <Component
+            resourceOrId={$item.resourceId}
+            mode={'responsive'}
+            origin="homescreen"
             draggable={false}
-          />
-        {:else if interactive}
-          <ResourcePreview
-            {resource}
-            {mode}
-            {viewMode}
-            {origin}
-            {selected}
-            {isInSpace}
-            {resourcesBlacklistable}
+            frameless={false}
             {interactive}
-            {draggable}
-            {frameless}
-            {hideProcessing}
-            on:load
-            on:click
-            on:open
-            on:open-and-chat
-            on:remove
-            on:blacklist-resource
-            on:whitelist-resource
+            hideProcessing
             on:set-resource-as-background
-            on:remove-from-homescreen={() => {
-              dispatch('remove-from-homescreen', $item.id)
-            }}
-            on:set-resource-as-space-icon
-            on:highlightWebviewText
-            on:seekToTimestamp
-          />
-        {:else}
-          <ResourcePreview
-            {resource}
-            {mode}
-            {viewMode}
-            {origin}
-            {selected}
-            {isInSpace}
-            {resourcesBlacklistable}
-            {interactive}
-            {draggable}
-            {frameless}
-            {hideProcessing}
-            on:load
             on:click
             on:open
             on:open-and-chat
-            on:remove
-            on:blacklist-resource
-            on:whitelist-resource
             on:remove-from-homescreen={() => {
               dispatch('remove-from-homescreen', $item.id)
             }}
-            on:set-resource-as-space-icon
             on:highlightWebviewText
             on:seekToTimestamp
+            let:resource
+            let:mode
+            let:viewMode
+            let:origin
+            let:selected
+            let:isInSpace
+            let:resourcesBlacklistable
+            let:interactive
+            let:draggable
+            let:frameless
+            let:hideProcessing
+          >
+            {#if (resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && $desktopVisible) || !resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE)}
+              {#if $item.width * $item.height > 12 && resource?.type.startsWith('text/html') && isGeneratedResource(resource)}
+                {#if $desktopVisible}
+                  <CodeRenderer
+                    {resource}
+                    showPreview
+                    language={mimeTypeToCodeLanguage(resource.type)}
+                    initialCollapsed={false}
+                    collapsable={false}
+                    draggable={false}
+                  />
+                {/if}
+              {:else if interactive}
+                <ResourcePreview
+                  {resource}
+                  {mode}
+                  {viewMode}
+                  {origin}
+                  {selected}
+                  {isInSpace}
+                  {resourcesBlacklistable}
+                  {interactive}
+                  {draggable}
+                  {frameless}
+                  {hideProcessing}
+                  on:load
+                  on:click
+                  on:open
+                  on:open-and-chat
+                  on:remove
+                  on:blacklist-resource
+                  on:whitelist-resource
+                  on:set-resource-as-background
+                  on:remove-from-homescreen={() => {
+                    dispatch('remove-from-homescreen', $item.id)
+                  }}
+                  on:set-resource-as-space-icon
+                  on:highlightWebviewText
+                  on:seekToTimestamp
+                />
+              {:else}
+                <ResourcePreview
+                  {resource}
+                  {mode}
+                  {viewMode}
+                  {origin}
+                  {selected}
+                  {isInSpace}
+                  {resourcesBlacklistable}
+                  {interactive}
+                  {draggable}
+                  {frameless}
+                  {hideProcessing}
+                  on:load
+                  on:click
+                  on:open
+                  on:open-and-chat
+                  on:remove
+                  on:blacklist-resource
+                  on:whitelist-resource
+                  on:remove-from-homescreen={() => {
+                    dispatch('remove-from-homescreen', $item.id)
+                  }}
+                  on:set-resource-as-space-icon
+                  on:highlightWebviewText
+                  on:seekToTimestamp
+                />
+              {/if}
+            {/if}
+          </Component>
+        </svelte:fragment>
+      </LazyComponent>
+    {:else if $item.spaceId}
+      {#if $desktopVisible}
+        {@const space = $spaces.find((s) => s.id === $item.spaceId)}
+        {#if space}
+          <HomescreenSpaceItem
+            {interactive}
+            {space}
+            renderContents={$item.width > 2 && $item.height > 2}
+            on:set-resource-as-background
+            on:open
+            on:open-space
+            on:open-and-chat
+            on:open-space-as-tab
+            on:open-space-as-context
+            on:remove-from-homescreen={() => {
+              dispatch('remove-from-homescreen', $item.id)
+            }}
           />
         {/if}
-      </OasisResourceLoader>
-    {:else if $item.spaceId}
-      {@const space = $spaces.find((s) => s.id === $item.spaceId)}
-      {#if space}
-        <HomescreenSpaceItem
-          {interactive}
-          {space}
-          renderContents={$item.width > 2 && $item.height > 2}
-          on:set-resource-as-background
-          on:open
-          on:open-space
-          on:open-and-chat
-          on:open-space-as-tab
-          on:open-space-as-context
-          on:remove-from-homescreen={() => {
-            dispatch('remove-from-homescreen', $item.id)
-          }}
-        />
       {/if}
     {/if}
   </div>
@@ -361,6 +375,9 @@ TODO: Fix resizing logic for other corners
 
     &:global([data-dragging-item]) {
       opacity: 0.4;
+      > * {
+        pointer-events: none !important;
+      }
     }
     &:global([data-dragging-item][data-drag-preview]) {
       opacity: 0.9;

@@ -276,6 +276,7 @@
 
   const desktopVisible = desktopManager.activeDesktopVisible
   const activeDesktop = desktopManager.activeDesktop
+  $: keepActiveDesktopLoaded = $activeDesktop?.keepLoadedAlways ?? writable(false)
   const activeDesktopColorScheme = desktopManager.activeDesktopColorScheme
 
   const desktopBackgroundStore = derived(desktopManager.activeDesktop, (activeDesktop) => {
@@ -3846,7 +3847,7 @@
     </div>
   {/if}
 
-  {#if $desktopVisible && $activeDesktop}
+  {#if $activeDesktop && ($desktopVisible || $keepActiveDesktopLoaded)}
     {#key $activeDesktop.id}
       <Homescreen
         desktop={$activeDesktop}
