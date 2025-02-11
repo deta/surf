@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-  import { derived, get, writable, type Readable } from 'svelte/store'
+  import { derived, get, writable } from 'svelte/store'
 
   import {
     useLogScope,
@@ -22,14 +22,12 @@
     isModKeyAndKeyPressed,
     truncate,
     parseStringIntoUrl,
-    isMac,
-    hover,
-    flyAndScale
+    isMac
   } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
   import SearchInput from './SearchInput.svelte'
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
     Resource,
     ResourceManager,
@@ -49,33 +47,24 @@
     type SpaceSource
   } from '../../types'
   import DropWrapper from './DropWrapper.svelte'
-  import CreateNewResource from './CreateNewResource.svelte'
 
   import {
-    MEDIA_TYPES,
     createResourcesFromMediaItems,
     extractAndCreateWebResource,
     processDrop
   } from '../../service/mediaImporter'
 
-  import { useToasts, type ToastItem } from '../../service/toast'
+  import { useToasts } from '../../service/toast'
   import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
-  import { fade, fly, slide } from 'svelte/transition'
+  import { fly, slide } from 'svelte/transition'
   import OasisSpaceSettings from './OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import type { ResourceContent } from '@horizon/web-parser'
-  import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
-  import type {
-    BookmarkTabState,
-    ChatWithSpaceEvent,
-    Tab,
-    TabPage
-  } from '../../types/browser.types'
+  import { DragculaDragEvent } from '@horizon/dragcula'
+  import type { BookmarkTabState, ChatWithSpaceEvent } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
-    ActivateTabEventTrigger,
-    AddResourceToSpaceEventTrigger,
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
     EventContext,
@@ -95,8 +84,6 @@
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import FilterSelector, { type FilterItem } from './FilterSelector.svelte'
-  import { blobToDataUrl, blobToSmallImageUrl } from '../../utils/screenshot'
-  import TabItem from '../Core/Tab.svelte'
   import ContextTabsBar from './ContextTabsBar.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
@@ -1066,7 +1053,9 @@
       const parsed = await processDrop(drag.event!)
       log.debug('Parsed', parsed)
 
-      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+        ResourceTag.dragLocal()
+      ])
       log.debug('Resources', newResources)
 
       await oasis.addResourcesToSpace(
@@ -1387,6 +1376,13 @@
   const handleReload = async () => {
     await loadSpaceContents(spaceId, true)
   }
+
+  onDestroy(
+    oasis.on('reload-space', (id: string) => {
+      if (id !== spaceId) return
+      loadSpaceContents(spaceId, true)
+    })
+  )
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />

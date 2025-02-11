@@ -1420,7 +1420,8 @@
                   metadata: {}
                 }
               ],
-              ''
+              '',
+              []
             )
             resourceIds.push(newResources[0].id)
           }
@@ -3157,7 +3158,9 @@
       const parsed = await processDrop(drag.event!)
       log.debug('Parsed', parsed)
 
-      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+        ResourceTag.dragLocal()
+      ])
       log.debug('Resources', newResources)
 
       for (const r of newResources) {
@@ -3363,7 +3366,9 @@
         const parsed = await processDrop(drag.event!)
         log.debug('Parsed', parsed)
 
-        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+          ResourceTag.dragLocal()
+        ])
         log.debug('Resources', newResources)
 
         if (saveToSpace) {

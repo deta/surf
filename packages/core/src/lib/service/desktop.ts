@@ -19,7 +19,7 @@ import type { ConfigService } from './config'
 import type { OasisService, OasisSpace } from './oasis'
 import type { TabsManager } from './tabs'
 import type { Toasts } from './toast'
-import type { Resource, ResourceManager } from './resources'
+import { ResourceTag, type Resource, type ResourceManager } from './resources'
 import type { DragculaDragEvent, Vec2 } from '../../../../dragcula/dist'
 import { DragTypeNames, SpaceEntryOrigin, type DragTypes, type Tab } from '../types'
 import { getResourceFromDrag } from '../utils/draganddrop'
@@ -500,9 +500,8 @@ export class DesktopService {
       if (typeof resourceOrId === 'string') resourceId = resourceOrId
       else resourceId = resourceOrId.id
 
-      const colorPalette = (await this.desktopManager.colorService?.calculateImagePalette(
-        resourceId
-      )!)!
+      const colorPalette =
+        (await this.desktopManager.colorService?.calculateImagePalette(resourceId)!)!
 
       // NOTE: Hacky way for now to get diff results & store in the same structure
       colorPalette.sort((a, b) => {
@@ -680,7 +679,9 @@ export class DesktopService {
     const parsed = await processDrop(drag.event!)
     this.log.debug('Parsed', parsed)
 
-    const newResources = await createResourcesFromMediaItems(this.resourceManager, parsed, '')
+    const newResources = await createResourcesFromMediaItems(this.resourceManager, parsed, '', [
+      ResourceTag.dragLocal()
+    ])
     this.log.debug('Resources', newResources)
 
     this.items.update((items) => {

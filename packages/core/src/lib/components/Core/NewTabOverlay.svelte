@@ -1,16 +1,20 @@
 <script lang="ts">
-  import { type Writable, derived, writable } from 'svelte/store'
+  import { type Writable, derived, writable, get } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useLogScope, useDebounce, useLocalStorageStore, tooltip } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
-  import { useToasts } from '../../service/toast'
+  import { useToasts, type ToastItem } from '../../service/toast'
   import { useConfig } from '../../service/config'
-  import { useTabsManager } from '../../service/tabs'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import type { OverlayEvents } from '../Overlay/types'
   import { Icon } from '@horizon/icons'
   import { DragOperation, Dragcula, DragculaDragEvent, HTMLDragArea } from '@horizon/dragcula'
-  import { Resource, ResourceManager, type ResourceSearchResultItem } from '../../service/resources'
+  import {
+    Resource,
+    ResourceManager,
+    ResourceTag,
+    type ResourceSearchResultItem
+  } from '../../service/resources'
   import {
     DragTypeNames,
     ResourceTagsBuiltInKeys,
@@ -18,7 +22,6 @@
     SpaceEntryOrigin,
     type DragTypes
   } from '../../types'
-  import type { Tab } from '../../types/browser.types'
   import type { HistoryEntriesManager } from '../../service/history'
   import {
     MultiSelectResourceEventAction,
@@ -39,7 +42,11 @@
   import Tooltip from '../Onboarding/Tooltip.svelte'
   import SearchField from '../Atoms/SearchField.svelte'
   import Select from '../Atoms/Select.svelte'
-  import { createResourcesFromMediaItems, processDrop } from '../../service/mediaImporter'
+  import {
+    createResourcesFromMediaItems,
+    processDrop,
+    processPaste
+  } from '../../service/mediaImporter'
   import { springAppear } from '../motion/springAppear'
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
@@ -245,7 +252,9 @@
         const parsed = await processDrop(drag.event!)
         log.debug('Parsed', parsed)
 
-        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '')
+        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+          ResourceTag.dragLocal()
+        ])
         log.debug('Resources', newResources)
 
         if (!isEverythingSpace && !isInboxSpace) {
@@ -299,6 +308,49 @@
     toast.success(`Resources added!`)
     await tick()
     showTabSearch.set(2)
+  }
+
+  const handlePaste = async (e: ClipboardEvent) => {
+    if ($showTabSearch !== 2 || get(miniBrowserService.isOpen)) return
+
+    let toast: ToastItem | null = null
+
+    try {
+      // NOTE: We filter plain text items, as that just leads to too many issue with the input fields
+      // for right now.
+      const mediaItems = (await processPaste(e)).filter((item) => item.type !== 'text')
+      toast = toasts.loading(
+        `Importing ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}…`
+      )
+
+      const resources = await createResourcesFromMediaItems(
+        resourceManager,
+        mediaItems,
+        `Imported at ${new Date().toLocaleString()}`,
+        [ResourceTag.paste()]
+      )
+
+      if (!isEverythingSpace && !isInboxSpace) {
+        const space = await oasis.getSpace($selectedSpaceId)
+        if (!space) {
+          toast.warning('Could not find active space! Import still succeeded!')
+        }
+
+        await space?.addResources(
+          resources.map((e) => e.id),
+          SpaceEntryOrigin.ManuallyAdded
+        )
+
+        oasis.reloadSpace($selectedSpaceId)
+      } else {
+        oasis.loadEverything(false)
+      }
+
+      toast?.success(`Imported ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}!`)
+    } catch (e) {
+      if (toast) toast.error('Could not import item(s)!')
+      else toasts.error('Could not import item(s)!')
+    }
   }
 
   const openResourceDetailsModal = (resourceId: string) => {
@@ -577,6 +629,8 @@
     })
   )
 </script>
+
+<svelte:window on:paste={handlePaste} />
 
 <div id="drawer-hint" class:show={$showDragHint && $showTabSearch === 0} use:portal={'body'}>
   <span>Hover to open your Stuff</span>

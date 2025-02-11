@@ -42,6 +42,7 @@ export type OasisEvents = {
   'removed-resources': (space: OasisSpace, resourceIds: string[]) => void
   deleted: (spaceId: string) => void
   'changed-active-space': (space: OasisSpace | null) => void
+  'reload-space': (spaceId: string) => void
 }
 
 export type OptionalSpaceData = Optional<
@@ -293,6 +294,10 @@ export class OasisService {
     } catch (error) {
       this.log.error('Failed to load spaces:', error)
     }
+  }
+
+  reloadSpace(spaceId: string) {
+    this.eventEmitter.emit('reload-space', spaceId)
   }
 
   private createSpaceObject(space: Space) {
@@ -550,13 +555,23 @@ export class OasisService {
 
     const confirmMessage =
       totalNumberOfReferences > 0
-        ? `${validResourceIDs.length > 1 ? `These ${validResourceIDs.length} resources` : `This resource`} will be removed from ${totalNumberOfReferences} space${totalNumberOfReferences > 1 ? 's' : ''} and deleted permanently.`
-        : `${validResourceIDs.length > 1 ? 'These' : 'This'} resource${validResourceIDs.length > 1 ? 's' : ''} will be deleted permanently.`
+        ? `${
+            validResourceIDs.length > 1
+              ? `These ${validResourceIDs.length} resources`
+              : `This resource`
+          } will be removed from ${totalNumberOfReferences} space${
+            totalNumberOfReferences > 1 ? 's' : ''
+          } and deleted permanently.`
+        : `${validResourceIDs.length > 1 ? 'These' : 'This'} resource${
+            validResourceIDs.length > 1 ? 's' : ''
+          } will be deleted permanently.`
 
     const { closeType: confirmed } = !confirmAction
       ? { closeType: true }
       : await openDialog({
-          title: `Delete ${validResourceIDs.length} Resource${validResourceIDs.length > 1 ? 's' : ''}`,
+          title: `Delete ${validResourceIDs.length} Resource${
+            validResourceIDs.length > 1 ? 's' : ''
+          }`,
           message: confirmMessage,
           actions: [
             { title: 'Cancel', type: 'reset' },
@@ -643,7 +658,11 @@ export class OasisService {
       return false
     }
 
-    const confirmMessage = `Remove ${validResources.length > 1 ? 'these resources' : 'this resource'} from '${space?.dataValue.folderName}'? \n${validResources.length > 1 ? 'They' : 'It'} will still be in 'All my Stuff'.`
+    const confirmMessage = `Remove ${
+      validResources.length > 1 ? 'these resources' : 'this resource'
+    } from '${space?.dataValue.folderName}'? \n${
+      validResources.length > 1 ? 'They' : 'It'
+    } will still be in 'All my Stuff'.`
     const { closeType: confirmed } = !confirmAction
       ? { closeType: true }
       : await openDialog({

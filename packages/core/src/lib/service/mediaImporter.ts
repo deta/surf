@@ -435,7 +435,8 @@ export const processPaste = async (e: ClipboardEvent) => {
 export const createResourcesFromMediaItems = async (
   resourceManager: ResourceManager,
   parsed: MediaParserResult[],
-  userGeneratedText: string
+  userGeneratedText: string,
+  tags: SFFSResourceTag[] = [ResourceTag.dragLocal()]
 ) => {
   const resources = await Promise.all(
     parsed.map(async (item) => {
@@ -445,24 +446,17 @@ export const createResourcesFromMediaItems = async (
 
       let resource
       if (item.type === 'text') {
-        resource = await resourceManager.createResourceNote(item.data, item.metadata, [
-          ResourceTag.dragLocal()
-        ])
+        resource = await resourceManager.createResourceNote(item.data, item.metadata, tags)
       } else if (item.type === 'url') {
         const parsed = await extractAndCreateWebResource(
           resourceManager,
           item.data.href,
           item.metadata,
-          [
-            ResourceTag.canonicalURL(item.data.href),
-            ResourceTag.dragBrowser() // we assume URLs were dragged from the browser,
-          ]
+          [ResourceTag.canonicalURL(item.data.href), ...tags]
         )
         resource = parsed.resource
       } else if (item.type === 'file') {
-        resource = await resourceManager.createResourceOther(item.data, item.metadata, [
-          ResourceTag.dragLocal()
-        ])
+        resource = await resourceManager.createResourceOther(item.data, item.metadata, tags)
       } else if (item.type === 'resource') {
         resource = await resourceManager.getResource(item.data)
       } else {
