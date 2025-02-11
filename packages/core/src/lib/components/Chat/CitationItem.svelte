@@ -471,9 +471,9 @@
             alt="source icon"
           />
         {:else if resource?.type}
-          <FileIcon kind={getFileKind(resource.type)} width="15px" height="15px" />
+          <FileIcon kind={getFileKind(resource.type)} width="1em" height="1em" />
         {:else}
-          <Icon name="world" size="15px" />
+          <Icon name="world" size="1em" />
         {/if}
         {#if !hideText}
           <div class="font-sans text-xs tracking-wide select-none">
@@ -497,7 +497,7 @@
           {#if resource.type.startsWith('image/')}
             <ResourceSmallImagePreview {resource} />
           {:else}
-            <FileIcon kind={getFileKind(resource.type)} width="15px" height="15px" />
+            <FileIcon kind={getFileKind(resource.type)} width="1em" height="1em" />
           {/if}
         {/if}
 
@@ -549,7 +549,7 @@
               alt="source icon"
             />
           {:else if resource?.type}
-            <FileIcon kind={getFileKind(resource.type)} width="15px" height="15px" />
+            <FileIcon kind={getFileKind(resource.type)} width="1em" height="1em" />
           {:else}
             <Icon name="world" size="15px" />
           {/if}
@@ -576,7 +576,7 @@
             {#if resource.type.startsWith('image/')}
               <ResourceSmallImagePreview {resource} />
             {:else}
-              <FileIcon kind={getFileKind(resource.type)} width="15px" height="15px" />
+              <FileIcon kind={getFileKind(resource.type)} width="1em" height="1em" />
             {/if}
           {/if}
 
@@ -606,28 +606,43 @@
 </citation>
 
 <style lang="scss">
+  :global(.response-wrapper citation) {
+    padding: 0.45em 0.6em !important;
+  }
+  :global(.response-wrapper citation img) {
+    width: 1.3em !important;
+    height: 1.3em !important;
+  }
+  :global(.response-wrapper citation.wide) {
+    padding: 0.3em 0.65em !important;
+    padding-bottom: 0.2em !important;
+  }
+
+  :global(.response-wrapper citation span) {
+    font-size: 1.08em;
+  }
   citation {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 0.5rem;
     border-radius: 12px;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.94em;
+    font-weight: 500 !important;
     height: auto;
     text-align: center;
     user-select: none;
     overflow: hidden;
     font-feature-settings: 'caps' on;
     line-height: 1;
-    padding-top: calc(0.5rem + 1px);
-    padding-bottom: calc(0.5rem - 1px);
-    min-width: 4rem;
+    padding-top: calc(0.4em + 1px);
+    padding-bottom: calc(0.4em - 1px);
+    padding-inline: 0.6em;
+    min-width: 3.5em;
 
     div {
-      font-size: 0.9rem;
-      line-height: 1.25rem;
+      font-size: 0.92em;
+      line-height: 1.25em;
       font-weight: 500;
       white-space: nowrap; // Added to prevent text wrapping
       overflow: hidden; // Added to prevent text overflow
@@ -635,19 +650,18 @@
     }
 
     img {
-      width: 1.1rem;
-      height: 1.1rem;
+      width: 1em;
+      height: 1em;
       flex-shrink: 0;
       border-radius: 5px;
       margin: 0;
-      margin-top: -1px;
       user-select: none;
       pointer-events: none;
     }
 
     .file-icon {
-      width: 1.1rem;
-      height: 1.1rem;
+      width: 1em;
+      height: 1em;
       flex-shrink: 0;
       color: #0e53a3;
 
@@ -658,18 +672,21 @@
 
     &.wide {
       height: auto;
-      padding: 0.25rem 0.5rem;
+      padding: 0.25em 0.333em;
       position: relative;
       top: 2px;
+      font-size: 0.95em;
     }
 
     &.compact {
-      height: 2rem;
-      min-width: 2rem;
+      height: auto;
+      min-width: auto;
+      font-size: 0.95em;
+      padding: 0.25em 0.333em;
     }
 
     &.icon {
-      padding: 0.25rem 0.5rem;
+      padding: 0.25em 0.5em;
       margin-top: -10px;
     }
 

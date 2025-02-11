@@ -1498,7 +1498,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  class="wrapper text-gray-900 dark:text-gray-100"
+  class="text-resource-wrapper text-gray-900 dark:text-gray-100"
   bind:clientWidth
   use:HTMLDragZone.action={{
     accepts: (drag) => {
@@ -1644,7 +1644,7 @@
 </div>
 
 <style lang="scss">
-  .wrapper {
+  .text-resource-wrapper {
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -1676,6 +1676,14 @@
     gap: 2em;
   }
 
+  :global([data-origin='homescreen']) {
+    .content {
+      padding-top: 0em;
+    }
+    :global(.notes-editor-wrapper .editor-wrapper div.tiptap) {
+      padding: 0 !important;
+    }
+  }
   .details-wrapper {
     max-width: 730px;
     width: 100%;
@@ -1745,9 +1753,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.5em;
     width: 100%;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5em;
     overflow: auto;
     z-index: 0;
   }
@@ -1761,26 +1769,26 @@
 
   .change-context-wrapper {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 1em;
+    right: 1em;
     z-index: 100;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.25em;
   }
 
   .onboarding-wrapper {
     position: absolute;
     z-index: 100;
     left: 50%;
-    bottom: 1.5rem;
+    bottom: 1.5em;
     transform: translateX(-50%);
   }
 
   .info-btn {
     position: fixed;
-    top: 1rem;
-    left: 1rem;
+    top: 1em;
+    left: 1em;
     z-index: 100;
     background: #fff;
     border: none;
@@ -1816,14 +1824,44 @@
     margin: auto;
     padding: 0 2em;
     box-sizing: content-box;
-    padding-bottom: 12rem;
+    padding-bottom: 12em;
+  }
+
+  :global(body.custom .text-resource-wrapper .tiptap ::selection) {
+    color: var(--mixed-bg);
+    background: var(--contrast-color);
+  }
+  :global(body.custom.dark .text-resource-wrapper .tiptap ::selection) {
+    color: var(--mixed-bg-dark);
+    background: var(--contrast-color);
   }
 
   :global(.tiptap) {
     overscroll-behavior: auto;
 
+    :global(h1) {
+      font-size: 1.38em;
+    }
+    :global(h2) {
+      font-size: 1.3em;
+    }
+    :global(h3) {
+      font-size: 1.21em;
+    }
+    :global(h4) {
+      font-size: 1.27em;
+    }
+    :global(h5) {
+      font-size: 1.13em;
+    }
+
     :global(ul li) {
       margin-block: 0.25em;
+    }
+
+    :global(input[type='checkbox']) {
+      width: 1em;
+      accent-color: var(--contrast-color) !important;
     }
 
     :global(pre) {

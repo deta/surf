@@ -858,6 +858,22 @@
     &[data-origin='stuff'] {
       content-visibility: auto;
       contain: layout paint style;
+
+      &[data-resource-type='application/vnd.space.document.space-note'] {
+        :global(.tiptap) {
+          font-size: 0.79em !important;
+        }
+      }
+    }
+
+    &[data-origin='stack'] {
+      contain: layout paint style;
+
+      &[data-resource-type='application/vnd.space.document.space-note'] {
+        :global(.tiptap) {
+          font-size: 0.3em !important;
+        }
+      }
     }
 
     &[data-origin='homescreen'] {
@@ -865,6 +881,12 @@
       // NOTE: For desktop elements we can even use strict, as their size is NOT determined
       // by their contents, but a fixed card size!
       contain: strict;
+
+      &[data-resource-type='application/vnd.space.document.space-note'] {
+        :global(.tiptap) {
+          font-size: 0.9em !important;
+        }
+      }
     }
 
     --section-padding-inline: 1.4em;

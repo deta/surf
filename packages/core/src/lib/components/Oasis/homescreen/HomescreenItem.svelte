@@ -419,6 +419,19 @@ TODO: Fix resizing logic for other corners
         :global(article .content > .wrapper) {
           background: transparent !important;
         }
+
+        :global(article .content) {
+          overflow: auto;
+          margin: 0 !important;
+          padding-inline: 0 !important;
+        }
+        :global(article .content .text-resource-wrapper) {
+          padding-inline: var(--section-padding-inline) !important;
+          padding-block: 0 !important;
+        }
+        :global(article .content .tiptap) {
+          padding-block: var(--section-padding-block) !important;
+        }
       }
     }
 

@@ -424,11 +424,6 @@
     height: 100%;
   }
 
-  :global(.tiptap p) {
-    font-size: 1.1rem !important;
-    color: #000000 !important;
-  }
-
   .anchor-text {
     font-size: 1rem;
     line-height: 1.5rem;

@@ -114,7 +114,7 @@
   .list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.75em;
 
     --ctx-background: #fff;
     --ctx-border: rgba(0, 0, 0, 0.25);
@@ -127,8 +127,8 @@
     min-width: 180px;
     max-height: 400px;
     background: var(--ctx-background);
-    padding: 0.25rem;
-    padding-top: 0.5rem;
+    padding: 0.25em;
+    padding-top: 0.5em;
     border-radius: 9px;
     border: 0.5px solid var(--ctx-border);
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
@@ -144,11 +144,11 @@
   }
 
   .item {
-    padding: 0.25rem 0.5rem;
+    padding: 0.25em 0.5em;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.5em;
     color: var(--ctx-item-text);
   }
 
@@ -160,12 +160,12 @@
   .section {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.25em;
   }
 
   .section-title {
     font-size: 0.9em;
     color: var(--ctx-item-text);
-    padding: 0 0.5rem;
+    padding: 0 0.5em;
   }
 </style>

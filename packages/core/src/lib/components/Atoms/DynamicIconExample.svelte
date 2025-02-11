@@ -50,12 +50,12 @@
   .list {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 1em;
   }
 
   .item {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.75em;
     align-items: center;
   }
 </style>
