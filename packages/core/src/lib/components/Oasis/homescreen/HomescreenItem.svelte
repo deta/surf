@@ -247,6 +247,7 @@ TODO: Fix resizing logic for other corners
                     initialCollapsed={false}
                     collapsable={false}
                     draggable={false}
+                    fullSize
                   />
                 {/if}
               {:else if interactive}

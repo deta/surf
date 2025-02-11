@@ -13,7 +13,8 @@
     useDebounce,
     useLogScope,
     getFormattedDate,
-    cropImageToContent
+    cropImageToContent,
+    optimisticParseJSON
   } from '@horizon/utils'
 
   import { dataUrltoBlob } from '@horizon/core/src/lib/utils/screenshot'
@@ -42,7 +43,13 @@
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
-  import type { DragTypes, TabResource } from '@horizon/core/src/lib/types'
+  import type {
+    DragTypes,
+    ResourceTagsBuiltIn,
+    SFFSResourceTag,
+    TabResource,
+    UserViewPrefsTagValue
+  } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { createWebviewExtractor } from '@horizon/web-parser'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
@@ -57,6 +64,14 @@
   export let saveable = true
   export let showUnLink = false
   export let draggable: boolean = true
+  export let resizable: boolean = false
+  export let minHeight: string = '200px'
+  export let maxHeight: string = '1000px'
+  export let initialHeight: string = '400px'
+
+  let isResizing = false
+  let startY = 0
+  let startHeight = 0
 
   const log = useLogScope('CodeBlock')
   const resourceManager = useResourceManager()
@@ -81,6 +96,7 @@
   let appContainer: HTMLDivElement
   let inputElem: HTMLInputElement
   let codeBlockELem: HTMLElement
+  let containerHeight = initialHeight
   let webview: WebviewTag | null = null
 
   let observer: MutationObserver | null = null
@@ -123,6 +139,20 @@
   $: if (stillGenerating) {
     collapsed = true
   }
+
+  // Load saved height from resource tag
+  $: if (resource?.tags) {
+    const prefs = getUserViewPreferences(resource.tags)
+    if (prefs?.blockHeight) {
+      containerHeight = prefs.blockHeight
+    }
+
+    if (prefs?.blockCollapsed !== undefined) {
+      collapsed = prefs.blockCollapsed
+    }
+  }
+
+  $: updateResourceViewPrefs(containerHeight, collapsed)
 
   // funny messages for the user
   const scriptingMessages = [
@@ -288,6 +318,26 @@
     return content
   }
 
+  const getUserViewPreferences = (tags: SFFSResourceTag[]) => {
+    try {
+      const prefsTag = tags.find((t) => t.name === ResourceTagsBuiltInKeys.USER_VIEW_PREFS)
+      log.debug('User preferences tag', prefsTag)
+      if (prefsTag) {
+        const prefs = optimisticParseJSON<
+          ResourceTagsBuiltIn[ResourceTagsBuiltInKeys.USER_VIEW_PREFS]
+        >(prefsTag.value)
+        if (!prefs) return null
+
+        return prefs
+      }
+
+      return null
+    } catch (e) {
+      log.error('Failed to parse user preferences:', e)
+      return null
+    }
+  }
+
   const isEndOfOutput = (code: string) => {
     return code.trim().endsWith('</html>')
   }
@@ -383,6 +433,42 @@
         })
     })
   }
+
+  const updateResourceViewPrefs = useDebounce(async (height: string, collapsed: boolean) => {
+    if (!resource?.id) return
+    try {
+      const prefs = getUserViewPreferences(resource.tags ?? [])
+
+      log.debug('Updating resource view preferences', { height, collapsed }, prefs)
+
+      if (prefs) {
+        if (resizable) {
+          prefs.blockHeight = height
+        }
+
+        prefs.blockCollapsed = collapsed
+
+        await resourceManager.updateResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
+          JSON.stringify(prefs)
+        )
+      } else {
+        const newPrefs = {
+          blockHeight: resizable ? height : undefined,
+          blockCollapsed: collapsed
+        } as UserViewPrefsTagValue
+
+        await resourceManager.createResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
+          JSON.stringify(newPrefs)
+        )
+      }
+    } catch (error) {
+      log.error('Failed to update resource height:', error)
+    }
+  }, 500)
 
   const saveScreenshot = async (imageData: string): Promise<string> => {
     const blob = dataUrltoBlob(imageData)
@@ -742,6 +828,48 @@
     makeCodeEditable()
   }
 
+  const handleResizeStart = (e: MouseEvent) => {
+    if (!resizable) return
+
+    isResizing = true
+    startY = e.clientY
+    const container = codeBlockELem?.querySelector('.code-container') as HTMLElement
+    startHeight = container?.offsetHeight || parseInt(containerHeight)
+
+    // Capture events on window to prevent losing track during fast movements
+    window.addEventListener('mousemove', handleResizeMove, { capture: true })
+    window.addEventListener('mouseup', handleResizeEnd, { capture: true })
+    window.addEventListener('mouseleave', handleResizeEnd, { capture: true })
+
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const deltaY = e.clientY - startY
+    const newHeight = Math.max(
+      parseInt(minHeight),
+      Math.min(parseInt(maxHeight), startHeight + deltaY)
+    )
+    const newHeightPx = `${newHeight}px`
+    containerHeight = newHeightPx
+
+    window.getComputedStyle(codeBlockELem).height
+  }
+
+  const handleResizeEnd = () => {
+    if (!isResizing) return
+
+    isResizing = false
+    window.removeEventListener('mousemove', handleResizeMove, { capture: true })
+    window.removeEventListener('mouseup', handleResizeEnd, { capture: true })
+    window.removeEventListener('mouseleave', handleResizeEnd, { capture: true })
+  }
+
   const handleContentStream = useDebounce(async () => {
     const code = await getCode()
     if (!code || code.trim() === '') return
@@ -876,7 +1004,10 @@
       codeContent = code
     }
 
-    if (initialCollapsed === 'auto') {
+    const prefs = getUserViewPreferences(resource?.tags ?? [])
+    if (prefs?.blockCollapsed !== undefined) {
+      initialCollapsed = prefs.blockCollapsed
+    } else if (initialCollapsed === 'auto') {
       if (!['html', 'javascript', 'typescript'].includes(lang ?? '')) {
         initialCollapsed = codeContent.trim().split('\n').length > 1
       } else {
@@ -930,10 +1061,13 @@
 <code-block
   bind:this={codeBlockELem}
   id="code-block-{id}"
+  class:isResizing
+  data-resizable={resizable}
   data-resource={resource ? resource.id : undefined}
   data-language={language}
   data-name={$customName || $generatedName}
   class="relative bg-gray-900 rounded-xl flex flex-col overflow-hidden w-full {fullSize ||
+  resizable ||
   collapsed ||
   !isHTML
     ? ''
@@ -1142,11 +1276,12 @@
   </header>
 
   <div
-    class="w-full flex-grow overflow-hidden {showPreview || collapsed ? 'hidden' : ''} {isHTML &&
-    !fullSize &&
-    !collapsed
-      ? 'h-[750px]'
-      : ''}"
+    class="code-container w-full flex-grow overflow-hidden {showPreview || collapsed
+      ? 'hidden'
+      : ''} {isHTML && !fullSize && !collapsed && !resizable ? 'h-[750px]' : ''}"
+    style={resizable && !fullSize && !collapsed
+      ? `height: ${containerHeight}; min-height: ${minHeight}; ${!resizable && !fullSize ? `max-height: ${maxHeight};` : ''}`
+      : ''}
   >
     <pre
       bind:this={preElem}
@@ -1159,9 +1294,10 @@
     {#if isHTML}
       <div
         bind:this={appContainer}
-        class="bg-white w-full flex-grow overflow-auto {fullSize || collapsed
+        class="bg-white w-full flex-grow overflow-auto {fullSize || resizable || collapsed
           ? ''
           : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
+        style={resizable && !fullSize && !collapsed ? `height: ${containerHeight};` : ''}
       />
     {:else if isJS}
       <footer class="p-3 {fullSize && !collapsed ? 'h-full' : ''}">
@@ -1177,6 +1313,13 @@
       </footer>
     {/if}
   {/if}
+  {#if resizable && !collapsed}
+    <div
+      class="resize-handle"
+      on:mousedown={handleResizeStart}
+      on:touchstart|preventDefault={handleResizeStart}
+    />
+  {/if}
 </code-block>
 
 <style lang="scss">
@@ -1187,6 +1330,16 @@
     outline: none;
   }
 
+  :global(body:has(code-block.isResizing)) {
+    cursor: ns-resize;
+    user-select: none;
+    pointer-events: none;
+
+    code-block.isResizing .resize-handle {
+      pointer-events: auto;
+    }
+  }
+
   // Prevent drag preview from being too large
   :global(code-block[data-drag-preview]) {
     width: var(--drag-width) !important;
@@ -1195,6 +1348,37 @@
 
   code-block {
     border: 1px solid light-dark(#bbb, #444);
+    position: relative;
+
+    &[data-resizable='true'] {
+      .resize-handle {
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 4px;
+        cursor: ns-resize;
+        background: light-dark(#bbb, #444);
+        opacity: 0;
+        transition: opacity 0.1s ease;
+
+        &::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: 1px;
+          width: 32px;
+          height: 2px;
+          background: currentColor;
+          border-radius: 1px;
+        }
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
   }
 
   header,

@@ -36,6 +36,10 @@
       showPreview
       collapsable
       initialCollapsed={preview}
+      resizable={true}
+      minHeight="150px"
+      maxHeight="800px"
+      initialHeight="450px"
     />
   {:else}
     <OasisResourceLoader resourceOrId={resource} />

@@ -43,7 +43,8 @@ export enum ResourceTagsBuiltInKeys {
   SOURCE_PUBLISHED_AT = 'sourcePublishedAt', // timestamp of when the resource was published by the source (e.g. tweet timestamp)
   CREATED_FOR_CHAT = 'createdForChat', // resource was created for a chat
   CONTENT_HASH = 'contentHash', // hash of the content of the resource
-  PREVIEW_IMAGE_RESOURCE = 'previewImageResource' // resource id of the custom preview image set by the user
+  PREVIEW_IMAGE_RESOURCE = 'previewImageResource', // resource id of the custom preview image set by the user
+  USER_VIEW_PREFS = 'userViewPreferences'
 }
 
 export interface ResourceTagsBuiltIn {
@@ -65,6 +66,12 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT]: string
   [ResourceTagsBuiltInKeys.CREATED_FOR_CHAT]: boolean
   [ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE]: string
+  [ResourceTagsBuiltInKeys.USER_VIEW_PREFS]: UserViewPrefsTagValue
+}
+
+export type UserViewPrefsTagValue = {
+  blockHeight: string
+  blockCollapsed: boolean
 }
 
 export interface SFFSResource {
@@ -179,7 +186,6 @@ export interface ResourceDataPDF {
 
 export interface ResourceDataTypes {
   [ResourceTypes.PDF]: ResourceDataPDF
-
   [ResourceTypes.POST]: ResourceDataPost
   [ResourceTypes.DOCUMENT]: ResourceDataDocument
   [ResourceTypes.CHAT_MESSAGE]: ResourceDataChatMessage
