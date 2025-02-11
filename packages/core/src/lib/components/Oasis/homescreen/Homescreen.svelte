@@ -139,6 +139,7 @@
   <div
     id="homescreen"
     class="no-drag"
+    class:visible={$desktopVisible}
     class:empty={$items.length <= 0 && newTabOverlayState === 0}
     style:--grid_cell_size={desktop.CELL_SIZE + 'px'}
     style:--grid_gap={desktop.CELL_GAP + 'px'}

@@ -529,7 +529,7 @@
 
     &:hover,
     &.empty,
-    :global(body:has(#app-contents.verticalTabs #homescreen.empty)) & {
+    :global(body:has(#app-contents.verticalTabs #homescreen.visible.empty)) & {
       button {
         opacity: 1 !important;
       }
@@ -572,7 +572,7 @@
 
     &:hover::before,
     &:has([data-context-menu-anchor])::before,
-    :global(body:has(#app-contents.verticalTabs #homescreen.empty)) &::before {
+    :global(body:has(#app-contents.verticalTabs #homescreen.visible.empty)) &::before {
       content: '';
     }
 
@@ -636,7 +636,7 @@
 
     &:hover,
     &:has([data-context-menu-anchor]),
-    :global(body:has(#app-contents.verticalTabs #homescreen.empty)) & {
+    :global(body:has(#app-contents.verticalTabs #homescreen.visible.empty)) & {
       .stack {
         > .card {
           opacity: calc(1 - ((var(--item) - 1 + 1) / (8 - 1) * (1 - 0.4)));
@@ -755,7 +755,7 @@
   }
   // HELL: yes. this is exactly what you think.. dont ask.. I need to re-write the stack finally..
   // the styling is not easily extendable for our new use-cases.
-  :global(#app-contents.horizontalTabs:has(#homescreen.empty) .stack-wrapper) {
+  :global(#app-contents.horizontalTabs:has(#homescreen.visible.empty) .stack-wrapper) {
     button {
       opacity: 1 !important;
     }
