@@ -12,12 +12,10 @@
     submit: string
   }>()
 
-  export let chat: AIChat
+  export let loading: boolean = false
   export let viewTransitionName: string | undefined = undefined
 
   const log = useLogScope('ChatInput')
-
-  const { status } = chat
 
   let editor: unknown
   let inputValue: string = ''
@@ -121,9 +119,9 @@
       }}
       data-tooltip-action="send-chat-message"
       data-tooltip-target="send-chat-message"
-      disabled={!inputValue || $status === 'running'}
+      disabled={!inputValue || loading}
     >
-      {#if $status === 'running' && !$optToggled}
+      {#if loading && !$optToggled}
         <Icon name="spinner" />
       {:else}
         <div class="rotate-90"><Icon name="arrow.left" /></div>

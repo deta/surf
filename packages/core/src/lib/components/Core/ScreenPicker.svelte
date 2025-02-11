@@ -37,7 +37,12 @@
   import { hasParent } from '../../utils/dom'
   import Chat from '../Chat/Chat.svelte'
   import { captureScreenshot } from '../../utils/screenshot'
-  import { EventContext, PageChatMessageSentEventTrigger, PromptType } from '@horizon/types'
+  import {
+    EventContext,
+    PageChatMessageSentEventTrigger,
+    PromptType,
+    type App
+  } from '@horizon/types'
   import { useTelemetry } from '../../service/telemetry'
   import PromptItem from '../Chat/PromptItem.svelte'
   import ChatInput from '../Chat/ChatInput.svelte'
@@ -47,6 +52,7 @@
   import { fade } from 'svelte/transition'
   import { contextMenu } from './ContextMenu.svelte'
   import { openDialog } from './Dialog/Dialog.svelte'
+  import ChatTitle from '@horizon/core/src/lib/components/Chat/ChatTitle.svelte'
 
   type Point = { x: number; y: number }
   type Rect = { x: number; y: number; width: number; height: number }
@@ -119,15 +125,17 @@
   let chatComponent: unknown
 
   let showAddPromptDialog = false
-  const appModalContent = writable<App | null>(null)
   let promptValue: string = ''
-  let activeChat = writable<AIChat | null>(null)
 
+  const appModalContent = writable<App | null>(null)
+  const activeChat = writable<AIChat | null>(null)
   const promptSelectorOpen = writable(false)
 
   const contextManager = ai?.createContextManager()
-  if (mode === 'standalone')
-    ai.createChat(undefined, contextManager).then((chat) => ($activeChat = chat))
+
+  $: chatStatusStore = $activeChat?.status
+  $: chatStatus = $chatStatusStore ?? 'idle'
+
   $: responses = $activeChat?.responses ? $activeChat.responses : readable([])
   $: if ($responses.length > 0 && !$state.isChatExpanded) {
     document.startViewTransition(async () => {
@@ -135,6 +143,8 @@
       await tick()
     })
   }
+
+  $: activeChatTitle = $activeChat?.title
 
   const promptItems = derived([ai?.customAIApps ?? readable([])], ([customAiApps]) => {
     return customAiApps.map(
@@ -507,7 +517,11 @@
 
     // WARN: This trigger event is weird / wrong
     // TODO: @maxi we dont have a fitting event i guess for upading context inside inline ai?
-    $activeChat?.contextManager.addScreenshot(blob)
+    contextManager.addScreenshot(blob)
+
+    if (!$activeChat) {
+      $activeChat = await ai.createChat({ contextManager, automaticTitleGeneration: true })
+    }
 
     // WARN: Telemetry
     $activeChat?.createChatCompletion(input, {
@@ -529,7 +543,11 @@
 
     // WARN: This trigger event is weird / wrong
     // TODO: @maxi we dont have a fitting event i guess for upading context inside inline ai?
-    $activeChat?.contextManager.addScreenshot(blob)
+    contextManager.addScreenshot(blob)
+
+    if (!$activeChat) {
+      $activeChat = await ai.createChat({ contextManager, automaticTitleGeneration: true })
+    }
 
     $activeChat?.createChatCompletion(prompt.prompt, {
       trigger: PageChatMessageSentEventTrigger.InlineAI,
@@ -721,15 +739,15 @@
             </ul>
           </li>
         </ul>
-        {#if $activeChat !== null && !$state.isChatExpanded}
+        {#if !$state.isChatExpanded}
           <ChatInput
-            chat={$activeChat}
+            loading={chatStatus === 'running'}
             on:submit={(e) => handlePromptInputSubmit(e.detail)}
-            viewTransitionName={`chat-${$activeChat.id}-input`}
+            viewTransitionName={`chat-${$activeChat?.id}-input`}
           />
         {/if}
 
-        {#if !$selectedModel.vision && $activeChat !== null && !$state.isChatExpanded}
+        {#if !$selectedModel.vision && !$state.isChatExpanded}
           <div class="vision-disclaimer">
             <div class="vison-disclaimer-icon">
               <Icon name="vision.off" size="19px" />
@@ -780,9 +798,16 @@
               style="view-transition-name: screen-picker-chat;"
             >
               <header>
-                <button on:click|preventDefault={handleClose}
-                  ><Icon name="close" size="1.3em" /> Close
-                </button>
+                <div class="messageBoxHeaderLeft">
+                  <button on:click|preventDefault={handleClose}>
+                    <Icon name="close" size="1.3em" />
+                  </button>
+
+                  {#if $activeChat}
+                    <ChatTitle chat={$activeChat} fallback="Vision Chat" small />
+                  {/if}
+                </div>
+
                 <button on:click|preventDefault={handleExpandChat}
                   >Open in Sidebar <Icon name="arrow.up.right" size="1.3em" /></button
                 >
@@ -1169,7 +1194,9 @@
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 1em;
           padding: 0.5em 0.5em;
+          width: 100%;
 
           font-size: 0.9em;
 
@@ -1177,7 +1204,22 @@
           color: #ababab;
           border-bottom: 1px solid light-dark(#eee, #454545);
 
+          .messageBoxHeaderLeft {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            width: 100%;
+            overflow: hidden;
+
+            > div {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+
           button {
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             gap: 0.4ch;

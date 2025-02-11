@@ -111,9 +111,12 @@ export type Tab =
   | TabOnboarding
   | TabInvites
 
-export type AIChat = {
+export type AIChatData = {
   id: string
+  title: string
   messages: AIChatMessage[]
+  createdAt: string
+  updatedAt: string
 }
 
 export type AIDocsSimilarity = {

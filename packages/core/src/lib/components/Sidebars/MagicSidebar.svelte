@@ -6,10 +6,10 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
-  import { derived, writable, type Writable } from 'svelte/store'
+  import { onMount } from 'svelte'
+  import { writable } from 'svelte/store'
 
-  import { useLogScope, tooltip, isMac } from '@horizon/utils'
+  import { useLogScope, isMac } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
 
   import Chat from '@horizon/core/src/lib/components/Chat/Chat.svelte'
@@ -21,34 +21,21 @@
 
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { useConfig } from '@horizon/core/src/lib/service/config'
-  import { AIChat, useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-
-  export let inputValue = ''
-  export let activeChatId: Writable<string>
-  export let activeChat: Writable<AIChat | null>
-
-  const dispatch = createEventDispatcher<{
-    'close-chat': void
-  }>()
 
   const log = useLogScope('MagicSidebar')
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-  const config = useConfig()
   const ai = useAI()
 
-  const userConfigSettings = config.settings
+  const activeChat = ai.activeSidebarChat
+  const activeChatId = ai.activeSidebarChatId
   const telemetry = resourceManager.telemetry
 
   const onboardingOpen = writable(false)
 
   const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
-
-  const otherTabsOpen = derived(userConfigSettings, (userConfigSettings) => {
-    return userConfigSettings.annotations_sidebar
-  })
 
   let chatComponent: Chat
 
@@ -121,31 +108,33 @@
   }
 
   const clearChat = async (id: string) => {
-    log.debug('Clearing chat', id)
-
-    await ai.deleteChat(id)
-
-    log.debug('Old chat deleted, creating new chat...')
+    log.debug('creating new chat...')
     await createNewChat()
   }
 
   const fetchExistingChat = async (id: string) => {
-    if ($activeChat?.id === id) {
-      log.debug('Chat already fetched', id)
-      return
-    }
+    try {
+      if ($activeChat?.id === id) {
+        log.debug('Chat already fetched', id)
+        return
+      }
 
-    const fetched = await ai.getChat(id)
-    if (!fetched) {
-      log.error('Failed to fetch chat', id)
-      return
-    }
+      const fetched = await ai.getChat(id)
+      if (!fetched) {
+        log.error('Failed to fetch chat', id)
+        createNewChat()
+        return
+      }
 
-    activeChat.set(fetched)
+      activeChat.set(fetched)
+    } catch (e) {
+      log.error('Error fetching chat:', e)
+      createNewChat()
+    }
   }
 
   const createNewChat = async () => {
-    const createdChat = await ai.createChat('')
+    const createdChat = await ai.createChat({ automaticTitleGeneration: true })
     if (!createdChat) {
       log.error('Failed to create chat')
       return
@@ -234,58 +223,10 @@
 {/if}
 
 <div class="flex flex-col h-full relative overflow-hidden">
-  {#if !$otherTabsOpen}
-    <div
-      class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 dark:border-gray-800"
-    >
-      {#if $responses && $responses.length > 0}
-        <button
-          class="flex items-center gap-2 p-2 rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100"
-          on:click={() => {
-            handleClearChat()
-          }}
-        >
-          <Icon name="add" />
-          New Chat
-        </button>
-      {:else}
-        <div
-          class="flex items-center justify-start text-lg p-1.5 font-semibold text-gray-900 dark:text-gray-100"
-        >
-          Chat <button
-            class="flex items-center gap-2 p-2 ml-2 rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
-            on:click={() => {
-              $onboardingOpen = true
-            }}
-            use:tooltip={{
-              text: 'Need help?',
-              position: 'bottom'
-            }}
-          >
-            <Icon name="info" />
-          </button>
-        </div>
-      {/if}
-
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div
-        role="button"
-        tabindex="0"
-        on:click={() => dispatch('close-chat')}
-        class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-sky-100/50 rounded-lg hover:bg-sky-100 dark:hover:bg-gray-800 hover:text-sky-800 dark:hover:text-sky-100 group cursor-default"
-      >
-        <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
-        <Icon name="close" class="hidden group-hover:!block" size="20px" />
-      </div>
-    </div>
-  {/if}
-
   {#if $activeChat}
     {#key $activeChat.id}
       <Chat
         bind:this={chatComponent}
-        bind:inputValue
         chat={$activeChat}
         contextItemErrors={[]}
         preparingTabs={false}
@@ -296,6 +237,9 @@
         on:process-context-item
         on:highlightWebviewText
         on:seekToTimestamp
+        on:open-onboarding={() => {
+          $onboardingOpen = true
+        }}
       />
     {/key}
   {:else}
@@ -309,5 +253,21 @@
   :global(#magic-chat[data-drag-target]) {
     outline: 2px dashed gray;
     outline-offset: -2px;
+  }
+
+  .chat-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px dashed rgb(203, 234, 255);
+  }
+
+  .chat-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
   }
 </style>

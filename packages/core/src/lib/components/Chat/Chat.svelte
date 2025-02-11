@@ -10,7 +10,8 @@
     useClipboard,
     useLogScope,
     parseUrlIntoCanonical,
-    codeLanguageToMimeType
+    codeLanguageToMimeType,
+    isMac
   } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
@@ -89,6 +90,7 @@
     'pick-screenshot': void
     'clear-chat': void
     'clear-errors': void
+    'open-onboarding': void
   }>()
 
   const log = useLogScope('Chat')
@@ -233,6 +235,10 @@
   const openModelSettings = () => {
     // window.api.openSettings('ai')
     window.api.openSettings()
+  }
+
+  const handleShowOnboarding = () => {
+    dispatch('open-onboarding')
   }
 
   const convertChatOutputToNote = async (response: AIChatMessageParsed) => {
@@ -869,7 +875,7 @@
 </script>
 
 <div
-  class="flex flex-col h-full relative overflow-hidden"
+  class="flex flex-col h-full relative overflow-hidden chat-wrapper"
   id="magic-chat"
   use:HTMLDragZone.action={{
     accepts: (drag) => {
@@ -1106,15 +1112,21 @@
             <h1>New Chat</h1>
           </div>
 
-          <p class="text-sky-900 dark:text-gray-100">
-            Ask questions about specific tabs or start a general conversation.
+          <p class="text-sky-900 dark:text-gray-100 max-w-[520px]">
+            Use the + icon next to the chat input to add your tabs or contexts to the chat.
           </p>
           <p class="text-sky-900/60 dark:text-gray-100/60">
-            Use the + icon or select tabs from the tab bar to add context.
-            <!-- Select tabs with the + Icon or by selecting them from the tab bar.( {#if navigator.platform
-            .toLowerCase()
-            .indexOf('mac') > -1}⌘{:else}Ctrl{/if} + click or Shift + click ). -->
+            Pro tip: use the Vision Tool ({isMac() ? '⌘' : 'ctrl'} + shift + 1) to add screenshots to
+            the chat.
           </p>
+
+          <button
+            on:click={handleShowOnboarding}
+            class="flex items-center gap-2 rounded-lg px-3 py-1.5 font-medium hover:bg-sky-200"
+          >
+            <!-- <Icon name="info" /> -->
+            <span>Learn More</span>
+          </button>
         </div>
       {/if}
     </div>

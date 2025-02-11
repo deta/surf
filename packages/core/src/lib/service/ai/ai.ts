@@ -10,7 +10,7 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { isDev, useLogScope } from '@horizon/utils'
+import { getFormattedDate, isDev, useLocalStorageStore, useLogScope } from '@horizon/utils'
 import { PAGE_PROMPTS_GENERATOR_PROMPT, SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
 import { type AiSFFSQueryResponse } from '../../types'
 import { BUILT_IN_MODELS, ModelTiers, type Model } from '@horizon/types/src/ai.types'
@@ -36,6 +36,9 @@ export class AIService {
   contextManager: ContextManager
 
   showChatSidebar: Writable<boolean>
+  chats: Writable<AIChat[]>
+  activeSidebarChatId: Writable<string>
+  activeSidebarChat: Writable<AIChat | null>
 
   selectedModelId: Readable<string>
   selectedModel: Readable<Model>
@@ -55,6 +58,9 @@ export class AIService {
     this.contextManager = new ContextManager(this, tabsManager, resourceManager)
 
     this.showChatSidebar = writable(false)
+    this.chats = writable([])
+    this.activeSidebarChatId = useLocalStorageStore<string>('activeChatId', '')
+    this.activeSidebarChat = writable<AIChat | null>(null)
 
     this.selectedModelId = derived([this.config.settings], ([settings]) => {
       return settings.selected_model
@@ -112,6 +118,15 @@ export class AIService {
 
   get modelsValue() {
     return get(this.models)
+  }
+
+  get chatsValue() {
+    return get(this.chats)
+  }
+
+  addMissingChats(chats: AIChat[]) {
+    const missingChats = chats.filter((chat) => !this.chatsValue.find((c) => c.id === chat.id))
+    this.chats.update((existingChats) => [...existingChats, ...missingChats])
   }
 
   modelToBackendModel(model: Model): ModelBackend {
@@ -176,12 +191,24 @@ export class AIService {
     return new ContextManager(this, this.tabsManager, this.resourceManager)
   }
 
-  async createChat(
-    system_prompt?: string,
+  async createChat(opts?: {
+    title?: string
+    system_prompt?: string
     contextManager?: ContextManager
-  ): Promise<AIChat | null> {
-    this.log.debug('creating ai chat (custom system prompt:', system_prompt, ')')
-    const chatId = await this.sffs.createAIChat(system_prompt)
+    automaticTitleGeneration?: boolean
+  }): Promise<AIChat | null> {
+    const { title, system_prompt, contextManager, automaticTitleGeneration } = Object.assign(
+      {
+        title: undefined,
+        system_prompt: undefined,
+        contextManager: this.contextManager,
+        automaticTitleGeneration: false
+      },
+      opts
+    )
+
+    this.log.debug(`creating ai chat "${title}" with system prompt: ${system_prompt}`)
+    const chatId = await this.sffs.createAIChat(title, system_prompt)
 
     if (!chatId) {
       this.log.error('failed to create ai chat')
@@ -189,25 +216,131 @@ export class AIService {
     }
 
     this.log.debug('created ai chat with id', chatId)
-    return new AIChat(chatId, [], this, contextManager ?? this.contextManager)
+
+    const createdChat = {
+      id: chatId,
+      title: title ?? '',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    const chat = new AIChat(
+      createdChat,
+      automaticTitleGeneration,
+      this,
+      contextManager ?? this.contextManager
+    )
+    this.chats.update((chats) => [...chats, chat])
+
+    return chat
   }
 
-  async getChat(id: string, contextManager?: ContextManager): Promise<AIChat | null> {
-    this.log.debug('getting ai chat with id', id)
-    const chatData = await this.sffs.getAIChat(id)
+  async listChats(opts?: { withMessages?: boolean; limit?: number }) {
+    const options = Object.assign({ withMessages: false, limit: 15 }, opts)
 
+    const chats = await this.sffs.listAIChats(options.limit)
+    if (!options.withMessages) {
+      const fullChats = chats.map((chat) => new AIChat(chat, false, this, this.contextManager))
+      this.addMissingChats(fullChats)
+      return fullChats
+    }
+
+    const chatsWithMessages = await Promise.all(
+      chats.map(async (chat) => {
+        const fullChat = await this.getChat(chat.id)
+        return fullChat
+      })
+    )
+
+    const filtered = chatsWithMessages.filter((chat) => chat !== null) as AIChat[]
+    this.addMissingChats(filtered)
+
+    return filtered
+  }
+
+  async searchChats(query: string, opts?: { withMessages?: boolean; limit?: number }) {
+    const options = Object.assign({ withMessages: false, limit: 15 }, opts)
+
+    const chats = await this.sffs.searchAIChats(query, options.limit)
+    if (!options.withMessages) {
+      const fullChats = chats.map((chat) => new AIChat(chat, false, this, this.contextManager))
+      this.addMissingChats(fullChats)
+      return fullChats
+    }
+
+    const chatsWithMessages = await Promise.all(
+      chats.map(async (chat) => {
+        const fullChat = await this.getChat(chat.id)
+        return fullChat
+      })
+    )
+
+    const filtered = chatsWithMessages.filter((chat) => chat !== null) as AIChat[]
+    this.addMissingChats(filtered)
+
+    return filtered
+  }
+
+  async getChat(
+    id: string,
+    opts?: { contextManager?: ContextManager; fresh?: boolean }
+  ): Promise<AIChat | null> {
+    const defaultOpts = {
+      contextManager: this.contextManager,
+      fresh: true
+    }
+
+    const options = Object.assign(defaultOpts, opts) as typeof defaultOpts
+
+    this.log.debug('getting ai chat with id', id, options)
+
+    if (!options.fresh) {
+      const localChat = this.chatsValue.find((chat) => chat.id === id)
+      if (localChat) {
+        if (!localChat.messagesValue || localChat.messagesValue.length === 0) {
+          await localChat.getMessages()
+        }
+
+        return localChat
+      }
+    }
+
+    const chatData = await this.sffs.getAIChat(id)
     if (!chatData) {
       this.log.error('failed to get ai chat')
       return null
     }
 
     this.log.debug('got ai chat', chatData)
-    return new AIChat(chatData.id, chatData.messages, this, contextManager ?? this.contextManager)
+    const chat = new AIChat(chatData, false, this, options.contextManager)
+
+    this.addMissingChats([chat])
+
+    return chat
+  }
+
+  async renameChat(id: string, title: string): Promise<void> {
+    this.log.debug('renaming ai chat with id', id, 'to', title)
+    const chat = this.chatsValue.find((chat) => chat.id === id)
+    if (!chat) {
+      this.log.error('chat not found', id)
+      return
+    }
+
+    chat.title.set(title)
+    await this.sffs.updateAIChatTitle(id, title)
+
+    // force svelte reactivity to update
+    this.chats.update((chats) => {
+      return chats.map((c) => (c.id === id ? chat : c))
+    })
   }
 
   async deleteChat(id: string): Promise<void> {
     this.log.debug('deleting ai chat with id', id)
     await this.sffs.deleteAIChat(id)
+    this.chats.update((chats) => chats.filter((chat) => chat.id !== id))
   }
 
   async createChatCompletion(

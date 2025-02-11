@@ -174,6 +174,7 @@
   import { floatyButtons } from './Atoms/floatyButtons'
   import FloatyButton from './Atoms/FloatyButton.svelte'
   import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
+  import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -271,6 +272,8 @@
   const chatContext = aiService.contextManager
   const chatContextItems = aiService.contextItems
   const showChatSidebar = aiService.showChatSidebar
+  const activeSidebarChatId = aiService.activeSidebarChatId
+  const activeSidebarChat = aiService.activeSidebarChat
   const activeTabContextItem = chatContext.activeTabContextItem
   const activeSpaceContextItem = chatContext.activeSpaceContextItem
 
@@ -307,7 +310,6 @@
   const showScreenshotPicker = writable(false)
   const addressValue = writable('')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
-  const magicInputValue = writable('')
   const showCreateLiveSpaceDialog = writable(false)
   const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   const isCreatingLiveSpace = writable(false)
@@ -318,8 +320,6 @@
   const showEndMask = writable(false)
   const newTabSelectedSpaceId = oasis.selectedSpace
   const updateSearchValue = writable('')
-  const activeSidebarChatId = useLocalStorageStore<string>('activeChatId', '')
-  const activeSidebarChat = writable<AIChat | null>(null)
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
@@ -351,41 +351,6 @@
 
   // Set global context
   setContext('selectedFolder', 'inbox')
-
-  const sidebarTools = derived(
-    [showChatSidebar, activeTab, userConfigSettings],
-    ([$showChatSidebar, $activeTab, userConfigSettings]) => {
-      const tools = [
-        {
-          id: 'chat',
-          name: 'Chat',
-          type: 'tool',
-          icon: 'chat',
-          fallbackContent: {
-            icon: 'info',
-            message: 'Magic chat not available'
-          }
-        }
-      ]
-
-      if (userConfigSettings.annotations_sidebar) {
-        tools.push({
-          id: 'annotations',
-          name: 'Annotations',
-          type: 'tool',
-          icon: 'marker',
-          disabled: $activeTab?.type !== 'page',
-          showCondition: $activeTab && $activeTab.type === 'page',
-          fallbackContent: {
-            icon: 'info',
-            message: 'No page info available.'
-          }
-        })
-      }
-
-      return tools
-    }
-  )
 
   $: activeTabMiniBrowser = useScopedMiniBrowserAsStore(`tab-${$activeTabId}`)
   $: activeTabMiniBrowserIsOpen = $activeTabMiniBrowser?.isOpen
@@ -2062,6 +2027,10 @@
     toasts.success('Note created!')
   }
 
+  const handleCreateNewChat = async () => {
+    await magicSidebar.clearExistingChat()
+  }
+
   const handleCreateChatWithQuery = async (e: CustomEvent<string | undefined>) => {
     const query = e.detail
     log.debug('create chat with query', query)
@@ -3570,7 +3539,6 @@
 
   let leftSidebarWidth = 0
   let leftSidebarHeight = 0
-  let rightSidebarWidth = 0
 
   let isVendorBackground = true
   $: backgroundImage =
@@ -4751,85 +4719,17 @@
       </div>
     </div>
 
-    <div slot="right-sidebar" bind:clientWidth={rightSidebarWidth} class="w-full h-full">
-      <Tabs.Root
-        bind:value={$rightSidebarTab}
-        class="bg-sky-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-full flex flex-col relative no-drag"
-        id="sidebar-right"
-        let:minimal
+    <div slot="right-sidebar" class="w-full h-full">
+      <RightSidebar
+        activeTab={rightSidebarTab}
+        on:close={() => toggleRightSidebar()}
+        on:new-chat={handleCreateNewChat}
       >
-        {#if showSidebarTools}
-          <div
-            class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 dark:border-gray-700"
-          >
-            <div class="flex items-center justify-start">
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
-              {#if showNewChatButton}
-                <div
-                  role="button"
-                  tabindex="0"
-                  use:tooltip={{
-                    text: 'New Chat',
-                    position: 'right'
-                  }}
-                  on:click={() => magicSidebar.clearExistingChat()}
-                  class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
-                >
-                  <Icon name="add" size="20px" />
-                </div>
-              {:else}
-                <div style="width: 20px; height: 20px;"></div>
-              {/if}
-            </div>
-            <Tabs.List
-              class="grid w-full {$sidebarTools.length === 3
-                ? 'grid-cols-3'
-                : 'grid-cols-2'} gap-1 rounded-9px bg-dark-10 text-sm font-semibold leading-[0.01em]"
-            >
-              {#each $sidebarTools as tool}
-                <Tabs.Trigger
-                  value={tool.id}
-                  class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center gap-2 px-2 py-3 transition-colors duration-200 rounded-xl text-sky-800 dark:text-gray-300  opacity-75 data-[state='active']:opacity-100 dark:data-[state='active']:bg-gray-700 hover:bg-sky-100 dark:hover:bg-gray-700 data-[state='active']:hover:bg-sky-200/50"
-                  disabled={tool.disabled}
-                >
-                  {#if tool.icon}
-                    <Icon name={tool.icon} />
-                  {/if}
-
-                  {#if !minimal}
-                    <span> {tool.name}</span>
-                  {/if}
-                </Tabs.Trigger>
-              {/each}
-            </Tabs.List>
-            <div class="p-1">
-              <div style="width: 20px; height: 20px;"></div>
-            </div>
-            <div class="flex items-center justify-start">
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
-              <div
-                role="button"
-                tabindex="0"
-                on:click={() => toggleRightSidebar()}
-                class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
-              >
-                <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
-                <Icon name="close" class="hidden group-hover:!block" size="20px" />
-              </div>
-            </div>
-          </div>
-        {/if}
-
-        <Tabs.Content value="chat" class="flex-grow overflow-hidden">
+        <svelte:fragment slot="magic-sidebar">
           {#if $showChatSidebar}
             {#key showRightSidebar}
               <MagicSidebar
                 bind:this={magicSidebar}
-                bind:inputValue={$magicInputValue}
-                activeChatId={activeSidebarChatId}
-                activeChat={activeSidebarChat}
                 on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
                 on:highlightWebviewText={highlightWebviewText}
                 on:seekToTimestamp={handleSeekToTimestamp}
@@ -4850,8 +4750,9 @@
               <span>Magic chat not available</span>
             </div>
           {/if}
-        </Tabs.Content>
-        <Tabs.Content value="annotations" class="flex-grow overflow-hidden">
+        </svelte:fragment>
+
+        <svelte:fragment slot="annotations-sidebar">
           {#if $activeTab && $activeTab.type === 'page'}
             <AnnotationsSidebar
               bind:this={annotationsSidebar}
@@ -4869,8 +4770,8 @@
               <span>No page info available.</span>
             </div>
           {/if}
-        </Tabs.Content>
-      </Tabs.Root>
+        </svelte:fragment>
+      </RightSidebar>
     </div>
   </SidebarPane>
 </div>

@@ -14,8 +14,9 @@ use crate::{
     store::{
         db::Database,
         models::{
-            random_uuid, AIChatHistory, AIChatSession, AIChatSessionMessage,
+            random_uuid, AIChatSession, AIChatSessionMessage,
             AIChatSessionMessageSource, CompositeResource, ResourceTextContent,
+            AIChatSessionHistory,
         },
     },
     BackendError, BackendResult,
@@ -29,22 +30,48 @@ impl Worker {
         Ok("ok".to_owned())
     }
 
-    pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<AIChatHistory> {
-        Ok(AIChatHistory {
-            id: id.clone(),
-            messages: self.db.list_non_context_ai_session_messages(&id)?,
+    pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<AIChatSessionHistory> {
+        let session = self.db.get_ai_session(&id)?.ok_or_else(|| {
+            BackendError::GenericError("AI chat session not found".to_string())
+        })?;
+        let messages = self.db.list_non_context_ai_session_messages(&id)?;
+        Ok(AIChatSessionHistory {
+            id: session.id,
+            system_prompt: session.system_prompt,
+            title: session.title,
+            created_at: session.created_at,
+            updated_at: session.updated_at,
+            messages,
         })
     }
 
-    pub fn create_ai_chat_message(&mut self, system_prompt: String) -> BackendResult<String> {
+    pub fn create_ai_chat_message(&mut self, system_prompt: String, title: String) -> BackendResult<String> {
         let new_chat = AIChatSession {
             id: random_uuid(),
             system_prompt,
+            title,
+            updated_at: chrono::Utc::now(),
+            created_at: chrono::Utc::now(),
         };
         let mut tx = self.db.begin()?;
         Database::create_ai_session_tx(&mut tx, &new_chat)?;
         tx.commit()?;
         Ok(new_chat.id)
+    }
+
+    pub fn update_ai_chat_message(&mut self, id: String, title: String) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::update_ai_session_tx(&mut tx, &id, &title, chrono::Utc::now())?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn list_ai_chats(&mut self, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
+        self.db.list_ai_sessions(limit)
+    }
+
+    pub fn search_ai_chats(&mut self, search: &str, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
+        self.db.search_ai_sessions(search, limit)
     }
 
     pub fn delete_ai_chat_message(&mut self, session_id: String) -> BackendResult<()> {
@@ -559,8 +586,20 @@ pub fn handle_misc_message(
             let result = worker.get_ai_chat_message(id);
             send_worker_response(&mut worker.channel, oneshot, result)
         }
-        MiscMessage::CreateAIChatMessage(system_prompot) => {
-            let result = worker.create_ai_chat_message(system_prompot);
+        MiscMessage::CreateAIChatMessage(system_prompt, title) => {
+            let result = worker.create_ai_chat_message(system_prompt, title);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::UpdateAIChatMessage(id, title) => {
+            let result = worker.update_ai_chat_message(id, title);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::ListAIChats(limit) => {
+            let result = worker.list_ai_chats(limit);
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::SearchAIChats(search, limit) => {
+            let result = worker.search_ai_chats(&search, limit);
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::CreateChatCompletion {

@@ -3,8 +3,9 @@ import type { SFFS } from '../sffs'
 import { QuotaDepletedError } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { generateID, useLogScope } from '@horizon/utils'
-import { CLASSIFY_CHAT_MODE } from '../../constants/prompts'
+import { CHAT_TITLE_GENERATOR_PROMPT, CLASSIFY_CHAT_MODE } from '../../constants/prompts'
 import {
+  type AIChatData,
   type AIChatMessage,
   type AIChatMessageParsed,
   type AIChatMessageRole,
@@ -28,6 +29,7 @@ import {
   type ContextItem,
   type ContextManager
 } from './contextManager'
+import { tick } from 'svelte'
 
 export type ChatPrompt = {
   label: string
@@ -57,11 +59,17 @@ export type ChatCompletionResponse = {
 
 export class AIChat {
   id: string
+  createdAt: string
+  updatedAt: string
+  automaticTitleGeneration: boolean
+
+  title: Writable<string>
   messages: Writable<AIChatMessage[]>
   currentParsedMessages: Writable<AIChatMessageParsed[]>
   error: Writable<ChatError | null>
   status: Writable<'idle' | 'running' | 'error'>
   selectedModelId: Writable<string | null>
+  generatingTitle: Writable<boolean>
 
   selectedModel: Readable<Model>
   userMessages: Readable<AIChatMessage[]>
@@ -79,17 +87,22 @@ export class AIChat {
   log: ReturnType<typeof useLogScope>
 
   constructor(
-    id: string,
-    messages: AIChatMessage[],
+    data: AIChatData,
+    automaticTitleGeneration: boolean,
     ai: AIService,
     contextManager: ContextManager
   ) {
-    this.id = id
-    this.messages = writable(messages)
+    this.id = data.id
+    this.createdAt = data.createdAt
+    this.updatedAt = data.updatedAt
+    this.automaticTitleGeneration = automaticTitleGeneration
+    this.title = writable(data.title)
+    this.messages = writable(data.messages)
     this.currentParsedMessages = writable([])
     this.error = writable(null)
     this.status = writable('idle')
     this.selectedModelId = writable(null)
+    this.generatingTitle = writable(false)
 
     this.ai = ai
     this.contextManager = contextManager
@@ -154,6 +167,10 @@ export class AIChat {
     return get(this.responses)
   }
 
+  get userMessagesValue() {
+    return get(this.userMessages)
+  }
+
   get errorValue() {
     return get(this.error)
   }
@@ -172,6 +189,27 @@ export class AIChat {
 
   get selectedModelValue() {
     return get(this.selectedModel)
+  }
+
+  get titleValue() {
+    return get(this.title)
+  }
+
+  async changeTitle(title: string) {
+    this.title.set(title)
+    return this.ai.renameChat(this.id, title)
+  }
+
+  async getMessages() {
+    const chat = await this.sffs.getAIChat(this.id)
+    if (!chat) {
+      this.log.error('Failed to get chat messages')
+      return []
+    }
+
+    this.messages.set(chat.messages)
+
+    return chat.messages
   }
 
   selectModel(modelId: string | null) {
@@ -474,6 +512,15 @@ export class AIChat {
       this.status.set('running')
       this.addParsedResponse(response)
 
+      await tick()
+
+      if (!this.titleValue && this.automaticTitleGeneration) {
+        // we don't need to wait for the title to be generated
+        this.generateTitle(prompt).then(() => {
+          this.log.debug('Title generated')
+        })
+      }
+
       const { resourceIds, inlineImages, usedInlineScreenshot } =
         await this.processContextItems(prompt)
 
@@ -733,5 +780,79 @@ export class AIChat {
     )
 
     return sources
+  }
+
+  async generateTitle(
+    content?: string,
+    opts?: {
+      tier?: ModelTiers
+    }
+  ) {
+    try {
+      this.generatingTitle.set(true)
+
+      if (!content) {
+        this.log.debug('messages', this.messagesValue)
+        const userMessages = this.userMessagesValue
+        if (userMessages.length === 0) {
+          this.log.debug('No user messages to generate title from, fetching all messages')
+          const messages = await this.getMessages()
+          if (messages.length === 0) {
+            this.log.error('No messages to generate title from')
+            return null
+          }
+
+          content = messages[0].content
+        } else {
+          content = userMessages[0].content
+        }
+
+        if (!content) {
+          this.log.error('No content to generate title from')
+          return null
+        }
+      }
+
+      const activeTab = this.ai.tabsManager.activeTabValue
+      const tabInContext = this.contextManager.tabsInContextValue.find(
+        (item) => item.id === activeTab?.id
+      )
+
+      let context = ''
+      if (tabInContext) {
+        context = tabInContext.title
+      }
+
+      this.log.debug('Generating title from', content, context)
+
+      const completion = await this.ai.createChatCompletion(
+        JSON.stringify({ message: content, context: context }),
+        CHAT_TITLE_GENERATOR_PROMPT,
+        { tier: opts?.tier ?? ModelTiers.Standard }
+      )
+
+      this.log.debug('title completion', completion)
+
+      if (completion.error) {
+        this.log.error('Failed to generate title', completion.error)
+        return null
+      }
+
+      if (!completion.output) {
+        this.log.error('Failed to generate title, no output')
+        return null
+      }
+
+      this.log.debug('Generated title', completion.output)
+
+      await this.changeTitle(completion.output)
+
+      return completion.output
+    } catch (e) {
+      this.log.error('Error generating title', e)
+      return null
+    } finally {
+      this.generatingTitle.set(false)
+    }
   }
 }

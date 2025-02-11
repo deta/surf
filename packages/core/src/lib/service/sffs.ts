@@ -21,11 +21,14 @@ import type {
   SpaceEntry,
   SpaceData,
   SpaceEntryOrigin,
-  SFFSRawResource
+  SFFSRawResource,
+  AIChatMessageRaw,
+  AIChatRaw
 } from '../types'
 
 import type {
-  AIChat,
+  AIChatData,
+  AIChatMessage,
   AIChatMessageSource,
   AIDocsSimilarity,
   YoutubeTranscript
@@ -202,6 +205,25 @@ export class SFFS {
       id: raw.id,
       name: raw.tag_name,
       value: raw.tag_value
+    }
+  }
+
+  convertRawChatMessageToChatMessage(raw: AIChatMessageRaw, idx?: number): AIChatMessage {
+    return {
+      ...raw,
+      id: `${raw.ai_session_id}-${raw.role}-${idx}` // TODO: generate ids in the backend
+    }
+  }
+
+  convertRawChatToChat(raw: AIChatRaw): AIChatData {
+    return {
+      id: raw.id,
+      title: raw.title,
+      messages: (raw.messages ?? []).map((message, idx) =>
+        this.convertRawChatMessageToChatMessage(message, idx)
+      ),
+      updatedAt: raw.updated_at,
+      createdAt: raw.created_at
     }
   }
 
@@ -631,9 +653,38 @@ export class SFFS {
     return parsed ?? []
   }
 
-  async createAIChat(system_prompt?: string): Promise<string | null> {
-    this.log.debug('creating ai chat (custom system prompt:', system_prompt, ')')
-    return this.parseData<string>(await this.backend.js__store_create_ai_chat(system_prompt))
+  async createAIChat(title?: string, system_prompt?: string): Promise<string | null> {
+    this.log.debug(`creating ai chat "${title}" with system prompt: ${system_prompt}`)
+    return this.parseData<string>(
+      await this.backend.js__store_create_ai_chat(system_prompt ?? '', title ?? '')
+    )
+  }
+
+  async updateAIChatTitle(id: string, title: string): Promise<void> {
+    this.log.debug('updating ai chat with id', id, title)
+    await this.backend.js__store_update_ai_chat(id, title)
+  }
+
+  async listAIChats(limit?: number): Promise<AIChatData[]> {
+    this.log.debug('listing ai chats', limit ?? 'all')
+    const raw = await this.backend.js__store_list_ai_chats(limit)
+    const chats = this.parseData<AIChatRaw[]>(raw)
+    if (!chats) {
+      return []
+    }
+
+    return chats.map((chat) => this.convertRawChatToChat(chat))
+  }
+
+  async searchAIChats(query: string, limit?: number): Promise<AIChatData[]> {
+    this.log.debug('searching ai chats with query', query, limit ?? 'all')
+    const raw = await this.backend.js__store_search_ai_chats(query, limit)
+    const chats = this.parseData<AIChatRaw[]>(raw)
+    if (!chats) {
+      return []
+    }
+
+    return chats.map((chat) => this.convertRawChatToChat(chat))
   }
 
   async deleteAIChat(id: string): Promise<void> {
@@ -641,22 +692,16 @@ export class SFFS {
     await this.backend.js__store_remove_ai_chat(id)
   }
 
-  async getAIChat(id: string): Promise<AIChat | null> {
+  async getAIChat(id: string): Promise<AIChatData | null> {
     this.log.debug('getting ai chat with id', id)
     const raw = await this.backend.js__store_get_ai_chat(id)
 
-    const chat = this.parseData<AIChat>(raw)
+    const chat = this.parseData<AIChatRaw>(raw)
     if (!chat) {
       return null
     }
 
-    return {
-      ...chat,
-      messages: chat.messages.map((message, idx) => ({
-        ...message,
-        id: `${message.ai_session_id}-${message.role}-${idx}` // TODO: generate ids in the backend
-      }))
-    }
+    return this.convertRawChatToChat(chat)
   }
 
   async getAIDocsSimilarity(

@@ -1,5 +1,5 @@
 import type { ResourceProcessingState } from '@horizon/types'
-import type { Optional } from '.'
+import type { AIChatMessageRole, AIChatMessageSource, Optional } from '.'
 
 export type SFFSSearchResultEngineRaw = 'Keyword' | 'Proximity' | 'Semantic'
 
@@ -113,4 +113,21 @@ export interface SFFSRawHistoryEntry {
   search_query: string | null
   created_at: string
   updated_at: string
+}
+
+export type AIChatRaw = {
+  id: string
+  title: string
+  messages: AIChatMessageRaw[]
+  created_at: string
+  updated_at: string
+}
+
+export type AIChatMessageRaw = {
+  ai_session_id: string
+  role: AIChatMessageRole
+  status: 'success' | 'pending' | 'error'
+  query: string
+  content: string
+  sources?: AIChatMessageSource[]
 }

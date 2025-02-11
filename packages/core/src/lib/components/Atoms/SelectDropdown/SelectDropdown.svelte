@@ -6,6 +6,7 @@
   import { flyAndScale, focus } from '@horizon/utils'
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
+  import { Icon } from '@horizon/icons'
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null
@@ -14,12 +15,14 @@
   export let searchValue = writable<string>('')
   export let inputPlaceholder = 'Filter...'
   export let emptyPlaceholder = 'No items found'
+  export let loadingPlaceholder = 'Loading...'
   export let open = writable(false)
   export let openOnHover: boolean | number = false
   export let closeOnMouseLeave = true
   export let keepHeightWhileSearching = false
   export let side: 'top' | 'right' | 'bottom' | 'left' | undefined = undefined
   export let disabled: boolean = false
+  export let loading = false
 
   const dispatch = createEventDispatcher<{ select: string }>()
 
@@ -161,14 +164,25 @@
         on:mouseleave={(e) => closeOnMouseLeave && handleMouseLeave(e)}
       >
         {#if search !== 'disabled'}
-          <div class="flex-shrink-0 px-1.5 py-1.5 pb-1 z-10" class:bottom-shadow={overflowTop}>
+          <div
+            class="flex-shrink-0 px-1.5 py-1.5 pb-1 z-10 relative"
+            class:bottom-shadow={overflowTop}
+          >
             <input
               bind:this={inputElem}
               bind:value={$searchValue}
               placeholder={inputPlaceholder}
-              class="w-full px-3 py-1.5 font-medium dark:text-gray-100 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg outline-1 outline outline-sky-700 focus:outline focus:outline-1"
+              class="w-full px-3 py-1.5 font-[450] dark:text-gray-100 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg outline-1 outline outline-sky-700 focus:outline focus:outline-1"
               use:focus={inputFocused}
             />
+
+            {#if loading}
+              <div
+                class="absolute top-1/2 right-3 -translate-y-1/2 flex items-center justify-center"
+              >
+                <Icon name="spinner" class="opacity-50" />
+              </div>
+            {/if}
           </div>
         {/if}
 
@@ -193,6 +207,10 @@
                 </slot>
               </DropdownMenu.Item>
             {/each}
+          {:else if loading}
+            <div class="flex items-center justify-center h-20 text-gray-400 dark:text-gray-500">
+              {loadingPlaceholder}
+            </div>
           {:else}
             <slot name="empty">
               <div class="flex items-center justify-center h-20 text-gray-400 dark:text-gray-500">

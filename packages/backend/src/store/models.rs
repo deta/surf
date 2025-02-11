@@ -648,10 +648,27 @@ impl Embedding {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AIChatSession {
     pub id: String,
     pub system_prompt: String,
+    pub title: String,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AIChatSessionHistory {
+    pub id: String,
+    pub system_prompt: String,
+    pub title: String,
+    pub messages: Vec<AIChatSessionMessage>,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -727,7 +744,7 @@ impl AIChatSessionMessageSource {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AIChatSessionMessage {
     pub ai_session_id: String,
     pub role: String,
@@ -739,12 +756,6 @@ pub struct AIChatSessionMessage {
     pub sources: Option<Vec<AIChatSessionMessageSource>>,
     #[serde(default = "current_time")]
     pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AIChatHistory {
-    pub id: String,
-    pub messages: Vec<AIChatSessionMessage>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

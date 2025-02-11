@@ -167,7 +167,10 @@ pub enum MiscMessage {
         contexts: Option<Vec<String>>,
     },
     Print(String),
-    CreateAIChatMessage(String),
+    CreateAIChatMessage(String, String),
+    UpdateAIChatMessage(String, String),
+    ListAIChats(Option<i64>),
+    SearchAIChats(String, Option<i64>),
     GetAIChatMessage(String),
     DeleteAIChatMessage(String),
     QuerySFFSResources(

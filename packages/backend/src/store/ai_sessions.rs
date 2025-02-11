@@ -7,8 +7,49 @@ impl Database {
         session: &AIChatSession,
     ) -> BackendResult<()> {
         tx.execute(
-            "INSERT INTO ai_sessions (id, system_prompt) VALUES (?1, ?2)",
-            rusqlite::params![session.id, session.system_prompt],
+            "INSERT INTO ai_sessions (id, system_prompt, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+            session.id,
+            session.system_prompt,
+            session.title,
+            session.created_at,
+            session.updated_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_ai_session(&self, id: &str) -> BackendResult<Option<AIChatSession>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, system_prompt, title, created_at, updated_at 
+            FROM ai_sessions 
+            WHERE id = ?1",
+        )?;
+        
+        let mut rows = stmt.query(rusqlite::params![id])?;
+        
+        if let Some(row) = rows.next()? {
+            Ok(Some(AIChatSession {
+                id: row.get(0)?,
+                system_prompt: row.get(1)?,
+                title: row.get(2)?,
+                created_at: row.get(3).unwrap_or_else(|_| chrono::Utc::now()),
+                updated_at: row.get(4).unwrap_or_else(|_| chrono::Utc::now()),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn update_ai_session_tx(
+        tx: &mut rusqlite::Transaction,
+        id: &str,
+        title: &str,
+        updated_at: chrono::DateTime<chrono::Utc>,
+    ) -> BackendResult<()> {
+        tx.execute(
+            "UPDATE ai_sessions SET title = ?1, updated_at = ?2 WHERE id = ?3",
+            rusqlite::params![title, updated_at, id],
         )?;
         Ok(())
     }
@@ -19,6 +60,78 @@ impl Database {
             rusqlite::params![id],
         )?;
         Ok(())
+    }
+
+    pub fn list_ai_sessions(&self, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
+        let sql = match limit {
+            Some(_) => "SELECT id, system_prompt, title, created_at, updated_at 
+                       FROM ai_sessions 
+                       ORDER BY updated_at DESC 
+                       LIMIT ?1",
+            None => "SELECT id, system_prompt, title, created_at, updated_at 
+                    FROM ai_sessions 
+                    ORDER BY updated_at DESC"
+        };
+
+        let mut stmt = self.conn.prepare(sql)?;
+        
+        let map_fn = |row: &rusqlite::Row| -> rusqlite::Result<AIChatSession> {
+            Ok(AIChatSession {
+                id: row.get(0)?,
+                system_prompt: row.get(1)?,
+                title: row.get(2)?,
+                created_at: row.get(3).unwrap_or_else(|_| chrono::Utc::now()),
+                updated_at: row.get(4).unwrap_or_else(|_| chrono::Utc::now()),
+            })
+        };
+
+        let sessions = match limit {
+            Some(n) => stmt.query_map([n], map_fn)?,
+            None => stmt.query_map([], map_fn)?,
+        };
+    
+        let mut result = Vec::new();
+        for session in sessions {
+            result.push(session?);
+        }
+        Ok(result)
+    }
+
+    pub fn search_ai_sessions(&self, search: &str, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
+        let sql = match limit {
+            Some(_) => "SELECT id, system_prompt, title, created_at, updated_at 
+                       FROM ai_sessions 
+                       WHERE title LIKE ?1 
+                       ORDER BY updated_at DESC 
+                       LIMIT ?2",
+            None => "SELECT id, system_prompt, title, created_at, updated_at 
+                    FROM ai_sessions 
+                    WHERE title LIKE ?1 
+                    ORDER BY updated_at DESC"
+        };
+
+        let mut stmt = self.conn.prepare(sql)?;
+        
+        let map_fn = |row: &rusqlite::Row| -> rusqlite::Result<AIChatSession> {
+            Ok(AIChatSession {
+                id: row.get(0)?,
+                system_prompt: row.get(1)?,
+                title: row.get(2)?,
+                created_at: row.get(3).unwrap_or_else(|_| chrono::Utc::now()),
+                updated_at: row.get(4).unwrap_or_else(|_| chrono::Utc::now()),
+            })
+        };
+
+        let sessions = match limit {
+            Some(n) => stmt.query_map([format!("%{}%", search), n.to_string()], map_fn)?,
+            None => stmt.query_map([format!("%{}%", search)], map_fn)?,
+        };
+
+        let mut result = Vec::new();
+        for session in sessions {
+            result.push(session?);
+        }
+        Ok(result)
     }
 
     pub fn create_ai_session_message_tx(
@@ -47,6 +160,12 @@ impl Database {
                 msg.created_at
             ],
         )?;
+
+        tx.execute(
+            "UPDATE ai_sessions SET updated_at = ?1 WHERE id = ?2",
+            rusqlite::params![msg.created_at, msg.ai_session_id],
+        )?;
+
         Ok(())
     }
 

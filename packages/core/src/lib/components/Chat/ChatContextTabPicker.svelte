@@ -475,7 +475,7 @@
 
 <style lang="scss">
   /* NOTE: WHyyyy only tailwind? cant select anything by a meaningful name any more :') */
-  :global([aria-labelledby='chat'] [data-cmdk-root]) {
+  :global(.chat-wrapper [data-cmdk-root]) {
     position: absolute;
     /* we should just use isolation: isolate for contained things like the sidebar insted of these zindices */
     z-index: 99999999;

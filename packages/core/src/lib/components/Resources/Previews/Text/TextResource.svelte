@@ -712,7 +712,7 @@
       chatContextManager.addActiveSpaceContext('resources')
     }
 
-    const chat = await ai.createChat(undefined, chatContextManager)
+    const chat = await ai.createChat({ chatContextManager })
     if (!chat) {
       log.error('Failed to create chat')
       return null

@@ -76,6 +76,9 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     )?;
 
     cx.export_function("js__store_create_ai_chat", js_create_ai_chat)?;
+    cx.export_function("js__store_update_ai_chat", js_update_ai_chat)?;
+    cx.export_function("js__store_list_ai_chats", js_list_ai_chats)?;
+    cx.export_function("js__store_search_ai_chats", js_search_ai_chats)?;
     cx.export_function("js__store_get_ai_chat", js_get_ai_chat)?;
     cx.export_function("js__store_remove_ai_chat", js_remove_ai_chat)?;
 
@@ -685,6 +688,8 @@ fn js_create_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .map(|js_string| js_string.value(&mut cx))
     });
 
+    let title = cx.argument::<JsString>(2)?.value(&mut cx);
+
     let system_prompt = match system_prompt {
         Some(prompt) => prompt,
         None => "".to_string(),
@@ -692,7 +697,53 @@ fn js_create_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::CreateAIChatMessage(system_prompt)),
+        WorkerMessage::MiscMessage(MiscMessage::CreateAIChatMessage(system_prompt, title)),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_update_ai_chat(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let session_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let title = cx.argument::<JsString>(2)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::UpdateAIChatMessage(session_id, title)),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_list_ai_chats(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let limit = cx.argument_opt(1).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::ListAIChats(limit)),
+        deferred,
+    );
+    Ok(promise)
+}
+
+fn js_search_ai_chats(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let search = cx.argument::<JsString>(1)?.value(&mut cx);
+    let limit = cx.argument_opt(2).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::SearchAIChats(search, limit)),
         deferred,
     );
     Ok(promise)

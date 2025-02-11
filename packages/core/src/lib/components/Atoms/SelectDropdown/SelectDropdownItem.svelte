@@ -1,24 +1,26 @@
 <script lang="ts">
   import { DynamicIcon } from '@horizon/icons'
-  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import SpaceIcon from '../SpaceIcon.svelte'
   import type { SelectItem } from '.'
   import { tooltip } from '@horizon/utils'
 
   export let item: SelectItem
 
-  $: space = item.data as OasisSpace | undefined
+  $: space = item.data instanceof OasisSpace ? (item.data as OasisSpace) : undefined
   $: spaceData = space?.data
 </script>
 
 <div class="item">
-  <div class="icon">
-    {#if item.icon}
+  {#if item.icon}
+    <div class="icon">
       <DynamicIcon name={item.icon} />
-    {:else if space}
+    </div>
+  {:else if space}
+    <div class="icon">
       <SpaceIcon folder={space} interactive={false} />
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   <div class="name">
     {#if item.label}
