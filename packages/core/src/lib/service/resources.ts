@@ -288,10 +288,6 @@ export class Resource {
         }
       }
     )
-
-    this.state.subscribe((state) => {
-      this.log.debug('state changed', state, this)
-    })
   }
 
   get stateValue() {
@@ -627,8 +623,6 @@ export class ResourceManager {
   }
 
   private handleEventBusMessage(event: EventBusMessage) {
-    this.log.debug('received event bus message', event)
-
     if (event.type === EventBusMessageType.ResourceProcessingMessage) {
       this.handleResourceProcessingMessage(event.resource_id, event.status.type)
     }
