@@ -220,7 +220,4 @@
       border-color: #787878 !important;
     }
   }
-  :global(.prompt-input *) {
-    font-size: 0.8em !important;
-  }
 </style>
