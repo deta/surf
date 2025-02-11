@@ -739,7 +739,7 @@
             </ul>
           </li>
         </ul>
-        {#if !$state.isChatExpanded}
+        {#if mode === 'standalone' && !$state.isChatExpanded}
           <ChatInput
             loading={chatStatus === 'running'}
             on:submit={(e) => handlePromptInputSubmit(e.detail)}
@@ -747,7 +747,7 @@
           />
         {/if}
 
-        {#if !$selectedModel.vision && !$state.isChatExpanded}
+        {#if mode === 'standalone' && !$selectedModel.vision && !$state.isChatExpanded}
           <div class="vision-disclaimer">
             <div class="vison-disclaimer-icon">
               <Icon name="vision.off" size="19px" />

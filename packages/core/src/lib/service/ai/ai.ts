@@ -27,6 +27,8 @@ import {
 } from '@horizon/types'
 
 export class AIService {
+  static self: AIService
+
   resourceManager: ResourceManager
   sffs: SFFS
   tabsManager: TabsManager
@@ -598,12 +600,14 @@ export class AIService {
     const service = new AIService(resourceManager, tabsManager, config)
 
     setContext('ai', service)
+    if (!AIService.self) AIService.self = service
 
     return service
   }
 
   static use() {
-    return getContext<AIService>('ai')
+    if (!AIService.self) return getContext<AIService>('ai')
+    return AIService.self
   }
 }
 
