@@ -57,7 +57,17 @@ const config: Config = {
             },
             'pre code': {
               padding: '1.5em !important'
-            }
+            },
+            blockquote: {
+              fontWeight: false,
+              fontStyle: false,
+              color: 'var(--tw-prose-quotes)',
+              borderInlineStartWidth: '0.25rem',
+              borderInlineStartColor: 'var(--tw-prose-quote-borders)',
+              quotes: '"\\201C""\\201D""\\2018""\\2019"'
+            },
+            'blockquote p:first-of-type::before': false,
+            'blockquote p:last-of-type::after': false
           }
         }
       }),

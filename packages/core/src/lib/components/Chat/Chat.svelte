@@ -218,6 +218,7 @@
 
     if (focus) {
       editor.focus()
+      editor.focusEnd()
     }
   }
 
@@ -228,7 +229,7 @@
   }
 
   export const addChatWithQuery = async (query: string) => {
-    const value = '<blockquote>' + query + '</blockquote>' + '</br>'
+    const value = '<blockquote>' + query + '</blockquote>' + '<p></p>'
     updateChatInput(value)
   }
 

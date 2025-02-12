@@ -64,6 +64,19 @@
     }
   }
 
+  export const focusEnd = () => {
+    const { state } = $editor
+    const { tr } = state
+
+    const endPos = state.doc.content.size
+    const resolvedPos = tr.doc.resolve(endPos)
+    const selection = new TextSelection(resolvedPos)
+
+    tr.setSelection(selection)
+
+    $editor.view.dispatch(tr)
+  }
+
   export const blur = () => {
     if ($editor) {
       $editor.commands.blur()
@@ -429,16 +442,7 @@
 
     if (!autofocus) {
       // place the cursor at the end of the content without effecting page focus
-      const { state } = $editor
-      const { tr } = state
-
-      const endPos = state.doc.content.size
-      const resolvedPos = tr.doc.resolve(endPos)
-      const selection = new TextSelection(resolvedPos)
-
-      tr.setSelection(selection)
-
-      $editor.view.dispatch(tr)
+      focusEnd()
     }
   })
 </script>

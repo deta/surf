@@ -3286,20 +3286,18 @@
     }
   }
 
-  const handleAddToChat = (e: CustomEvent<string>) => {
+  const handleAddToChat = async (e: CustomEvent<string>) => {
     const query = e.detail
 
-    openRightSidebarTab('chat')
+    await openChatSidebar()
+    await wait(500)
 
-    // wait for the magic sidebar to open
-    tick().then(() => {
-      if (magicSidebar) {
-        magicSidebar.addChatWithQuery(query)
-      } else {
-        log.error('Magic sidebar not found')
-        toasts.error('Failed to add to chat')
-      }
-    })
+    if (magicSidebar) {
+      magicSidebar.addChatWithQuery(query)
+    } else {
+      log.error('Magic sidebar not found')
+      toasts.error('Failed to add to chat')
+    }
   }
 
   const handleTabDragEnd = async (drag: DragculaDragEvent) => {
