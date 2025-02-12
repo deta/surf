@@ -69,6 +69,7 @@
   export let maxHeight: string = '1000px'
   export let initialHeight: string = '400px'
   export let expandable = true
+  export let hideHeader = false
 
   let isResizing = false
   let startY = 0
@@ -741,7 +742,7 @@
       : `data:text/html;charset=utf-8,${encodeURIComponent(code)}`
   }
 
-  const reloadApp = async () => {
+  export const reloadApp = async () => {
     if (isHTML && (showPreview || showHiddenPreview)) {
       if (resource) {
         const code = await getResourceCode()
@@ -1073,184 +1074,193 @@
   data-resource={resource ? resource.id : undefined}
   data-language={language}
   data-name={$customName || $generatedName}
-  class="relative bg-gray-900 rounded-xl flex flex-col overflow-hidden w-full {fullSize ||
-  resizable ||
-  collapsed ||
-  !isHTML
+  class="relative bg-gray-900 flex flex-col overflow-hidden w-full {fullSize
+    ? ''
+    : 'rounded-xl'} {fullSize || resizable || collapsed || !isHTML
     ? ''
     : 'h-full max-h-[750px]'} {fullSize ? 'h-full' : ''}"
 >
-  <header
-    class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
-    {draggable}
-    use:HTMLDragItem.action={{}}
-    on:DragStart={handleDragStart}
-  >
-    <div class="flex items-center gap-1 w-full">
-      {#if collapsable}
-        <button
-          class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
-          on:click={() => (collapsed = !collapsed)}
-        >
-          {#if stillGenerating}
-            <Icon name="spinner" />
-          {:else}
-            <Icon
-              name="chevron.right"
-              className="{!collapsed && expandable
-                ? 'rotate-90'
-                : ''} transition-transform duration-75"
-            />
-          {/if}
-        </button>
-      {/if}
-
-      <div class="w-full">
-        {#if stillGenerating && !manualGeneratingState}
-          <div class=" flex-shrink-0">
-            {getRandomStatusMessage(generationStatus)}
-          </div>
-        {:else}
-          <input
-            bind:this={inputElem}
-            on:input={handleInputChange}
-            on:keydown={handleInputKeydown}
-            on:blur={handleInputBlur}
-            value={$customName || $generatedName || language}
-            placeholder="Name"
-            class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
-          />
-        {/if}
-      </div>
-    </div>
-
-    <div class="flex items-center gap-3">
-      {#if (isHTML || isJS) && (!collapsed || stillGenerating) && expandable}
-        <div class="preview-group flex items-center rounded-md overflow-hidden">
+  {#if !hideHeader}
+    <header
+      class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
+      {draggable}
+      use:HTMLDragItem.action={{}}
+      on:DragStart={handleDragStart}
+    >
+      <div class="flex items-center gap-1 w-full">
+        {#if collapsable}
           <button
-            class="no-custom px-3 py-1 text-sm"
-            on:click={() => showCodeView()}
-            class:active={!showPreview}
+            class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
+            on:click={() => (collapsed = !collapsed)}
           >
-            Code
-          </button>
-          <button
-            class="no-custom px-3 py-1 text-sm"
-            on:click={() => showPreviewView()}
-            class:active={showPreview}
-          >
-            <div class="flex items-center gap-2">
-              {#if isHTML}
-                Preview
-              {:else}
-                Output
-              {/if}
-            </div>
-          </button>
-        </div>
-      {/if}
-
-      {#if !stillGenerating && expandable}
-        {#if collapsed}
-          <div class="flex items-center gap-1">
-            {#if isJS}
-              <button
-                use:tooltip={{ text: 'Execute Code', position: 'left' }}
-                class="flex items-center p-1 rounded-md transition-colors"
-                on:click={() => executeJavaScript()}
-                disabled={isExecuting}
-              >
-                <div class="flex items-center gap-1">
-                  <Icon
-                    name={isExecuting ? 'spinner' : 'play'}
-                    size="16px"
-                    class={isExecuting ? 'animate-spin' : ''}
-                  />
-
-                  <div class="text-sm">Run</div>
-                </div>
-              </button>
+            {#if stillGenerating}
+              <Icon name="spinner" />
             {:else}
-              <div class="p-1 opacity-60">
-                {#if language === 'html'}
-                  <Icon name="world" />
-                {:else}
-                  <Icon name="code" />
-                {/if}
-              </div>
-            {/if}
-            {#if showUnLink && resource}
-              <button
-                on:click={handleUnLink}
-                use:tooltip={{ text: 'Unlink from page', position: 'left' }}
-                class="flex items-center p-1 rounded-md transition-colors"
-              >
-                <Icon name="close" />
-              </button>
-            {/if}
-          </div>
-        {:else}
-          <div class="flex items-center gap-2">
-            {#if !stillGenerating && saveable}
-              <SaveToStuffButton
-                state={saveState}
-                {resource}
-                side="left"
-                className="flex items-center  p-1 rounded-md  transition-colors"
-                on:save={(e) => saveAppAsResource(e.detail, false)}
+              <Icon
+                name="chevron.right"
+                className="{!collapsed && expandable
+                  ? 'rotate-90'
+                  : ''} transition-transform duration-75"
               />
             {/if}
+          </button>
+        {/if}
 
-            {#if isJS}
-              {#if !showPreview}
+        <div class="w-full">
+          {#if stillGenerating && !manualGeneratingState}
+            <div class=" flex-shrink-0">
+              {getRandomStatusMessage(generationStatus)}
+            </div>
+          {:else}
+            <input
+              bind:this={inputElem}
+              on:input={handleInputChange}
+              on:keydown={handleInputKeydown}
+              on:blur={handleInputBlur}
+              value={$customName || $generatedName || language}
+              placeholder="Name"
+              class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
+            />
+          {/if}
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        {#if (isHTML || isJS) && (!collapsed || stillGenerating) && expandable}
+          <div class="preview-group flex items-center rounded-md overflow-hidden">
+            <button
+              class="no-custom px-3 py-1 text-sm"
+              on:click={() => showCodeView()}
+              class:active={!showPreview}
+            >
+              Code
+            </button>
+            <button
+              class="no-custom px-3 py-1 text-sm"
+              on:click={() => showPreviewView()}
+              class:active={showPreview}
+            >
+              <div class="flex items-center gap-2">
+                {#if isHTML}
+                  Preview
+                {:else}
+                  Output
+                {/if}
+              </div>
+            </button>
+          </div>
+        {/if}
+
+        {#if !stillGenerating && expandable}
+          {#if collapsed}
+            <div class="flex items-center gap-1">
+              {#if isJS}
                 <button
-                  use:tooltip={{ text: 'Copy Code', position: 'left' }}
+                  use:tooltip={{ text: 'Execute Code', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
-                  on:click={handleCopyCode}
-                >
-                  <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
-                </button>
-              {:else}
-                <button
-                  use:tooltip={{ text: 'Copy Output', position: 'left' }}
-                  class="flex items-center text-gray-400 p-1 rounded-md transition-colors"
-                  on:click={handleCopyOutput}
-                >
-                  <IconConfirmation bind:this={copyOutputIcon} name="copy" size="16px" />
-                </button>
-              {/if}
-              <button
-                use:tooltip={{ text: 'Execute Code', position: 'left' }}
-                class="flex items-center p-1 rounded-md transition-colors"
-                on:click={() => executeJavaScript()}
-                disabled={isExecuting}
-              >
-                <div class="flex items-center gap-1">
-                  {#if isExecuting}
-                    <Icon name="spinner" size="16px" />
-                  {:else if jsOutput && showPreview}
-                    <Icon name="reload" size="16px" />
-                  {:else}
-                    <Icon name="play" size="16px" />
-                  {/if}
-                </div>
-              </button>
-            {:else if isHTML}
-              {#if showPreview}
-                <button
-                  use:tooltip={{ text: 'Reload', position: 'left' }}
-                  class="flex items-center p-1 rounded-md transition-colors"
-                  on:click={() => reloadApp()}
+                  on:click={() => executeJavaScript()}
+                  disabled={isExecuting}
                 >
                   <div class="flex items-center gap-1">
-                    {#if $appIsLoading || stillGenerating}
-                      <Icon name="spinner" size="16px" />
-                    {:else}
-                      <Icon name="reload" size="16px" />
-                    {/if}
+                    <Icon
+                      name={isExecuting ? 'spinner' : 'play'}
+                      size="16px"
+                      class={isExecuting ? 'animate-spin' : ''}
+                    />
+
+                    <div class="text-sm">Run</div>
                   </div>
                 </button>
               {:else}
+                <div class="p-1 opacity-60">
+                  {#if language === 'html'}
+                    <Icon name="world" />
+                  {:else}
+                    <Icon name="code" />
+                  {/if}
+                </div>
+              {/if}
+              {#if showUnLink && resource}
+                <button
+                  on:click={handleUnLink}
+                  use:tooltip={{ text: 'Unlink from page', position: 'left' }}
+                  class="flex items-center p-1 rounded-md transition-colors"
+                >
+                  <Icon name="close" />
+                </button>
+              {/if}
+            </div>
+          {:else}
+            <div class="flex items-center gap-2">
+              {#if !stillGenerating && saveable}
+                <SaveToStuffButton
+                  state={saveState}
+                  {resource}
+                  side="left"
+                  className="flex items-center  p-1 rounded-md  transition-colors"
+                  on:save={(e) => saveAppAsResource(e.detail, false)}
+                />
+              {/if}
+
+              {#if isJS}
+                {#if !showPreview}
+                  <button
+                    use:tooltip={{ text: 'Copy Code', position: 'left' }}
+                    class="flex items-center p-1 rounded-md transition-colors"
+                    on:click={handleCopyCode}
+                  >
+                    <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
+                  </button>
+                {:else}
+                  <button
+                    use:tooltip={{ text: 'Copy Output', position: 'left' }}
+                    class="flex items-center text-gray-400 p-1 rounded-md transition-colors"
+                    on:click={handleCopyOutput}
+                  >
+                    <IconConfirmation bind:this={copyOutputIcon} name="copy" size="16px" />
+                  </button>
+                {/if}
+                <button
+                  use:tooltip={{ text: 'Execute Code', position: 'left' }}
+                  class="flex items-center p-1 rounded-md transition-colors"
+                  on:click={() => executeJavaScript()}
+                  disabled={isExecuting}
+                >
+                  <div class="flex items-center gap-1">
+                    {#if isExecuting}
+                      <Icon name="spinner" size="16px" />
+                    {:else if jsOutput && showPreview}
+                      <Icon name="reload" size="16px" />
+                    {:else}
+                      <Icon name="play" size="16px" />
+                    {/if}
+                  </div>
+                </button>
+              {:else if isHTML}
+                {#if showPreview}
+                  <button
+                    use:tooltip={{ text: 'Reload', position: 'left' }}
+                    class="flex items-center p-1 rounded-md transition-colors"
+                    on:click={() => reloadApp()}
+                  >
+                    <div class="flex items-center gap-1">
+                      {#if $appIsLoading || stillGenerating}
+                        <Icon name="spinner" size="16px" />
+                      {:else}
+                        <Icon name="reload" size="16px" />
+                      {/if}
+                    </div>
+                  </button>
+                {:else}
+                  <button
+                    use:tooltip={{ text: 'Copy Code', position: 'left' }}
+                    class="flex items-center p-1 rounded-md transition-colors"
+                    on:click={handleCopyCode}
+                  >
+                    <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
+                  </button>
+                {/if}
+              {:else}
                 <button
                   use:tooltip={{ text: 'Copy Code', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
@@ -1259,30 +1269,22 @@
                   <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
                 </button>
               {/if}
-            {:else}
-              <button
-                use:tooltip={{ text: 'Copy Code', position: 'left' }}
-                class="flex items-center p-1 rounded-md transition-colors"
-                on:click={handleCopyCode}
-              >
-                <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
-              </button>
-            {/if}
 
-            {#if !stillGenerating}
-              <button
-                use:tooltip={{ text: 'Open as Tab', position: 'left' }}
-                class="flex items-center p-1 rounded-md transition-colors"
-                on:click={handleOpenAsTab}
-              >
-                <Icon name="arrow.up.right" size="16px" />
-              </button>
-            {/if}
-          </div>
+              {#if !stillGenerating}
+                <button
+                  use:tooltip={{ text: 'Open as Tab', position: 'left' }}
+                  class="flex items-center p-1 rounded-md transition-colors"
+                  on:click={handleOpenAsTab}
+                >
+                  <Icon name="arrow.up.right" size="16px" />
+                </button>
+              {/if}
+            </div>
+          {/if}
         {/if}
-      {/if}
-    </div>
-  </header>
+      </div>
+    </header>
+  {/if}
 
   <div
     class="code-container w-full flex-grow overflow-hidden {showPreview || collapsed || !expandable

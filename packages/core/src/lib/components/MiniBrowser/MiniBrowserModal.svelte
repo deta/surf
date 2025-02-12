@@ -57,6 +57,7 @@
   export let isGlobal: boolean = false
 
   let webview: WebviewWrapper
+  let codeRenderer: CodeRenderer
   let copyConfirmation: IconConfirmation
 
   const dispatch = createEventDispatcher<{
@@ -95,12 +96,13 @@
   const saveToSpacePopoverOpened = writable(false)
   const isLoadingPage = writable(false)
   const spaceSearchValue = writable<string>('')
-  const resourceSpaceIds = writable<string[]>([])
+  const resourceSpaceIds = writable<string[]>(resource?.spaceIdsValue ?? [])
 
   const miniBrowserService = useMiniBrowserService()
 
   $: resourceSpaceIdsStore = resource?.spaceIds
   $: resourceSpaceIds.set($resourceSpaceIdsStore ?? [])
+  $: isBookmarkedResource = checkIfBookmarkedResource(tab, resource)
 
   const hostname = derived(url, (url) => {
     try {
@@ -181,7 +183,7 @@
   }
 
   const openAsNewTab = (active = true) => {
-    if (!$url && resource) {
+    if (resource && (!$url || isGeneratedResource(resource))) {
       tabsManager.openResourceAsTab(resource, {
         active: active,
         trigger: CreateTabEventTrigger.OasisItem
@@ -207,8 +209,8 @@
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
     let toast: ToastItem | null = null
 
-    if (resource?.type === ResourceTypes.DOCUMENT) {
-      log.debug('cannot bookmark document resources')
+    if (resource && (resource.type === ResourceTypes.DOCUMENT || isGeneratedResource(resource))) {
+      log.debug('cannot bookmark already saved resource', resource)
       bookmarkingState.set('success')
       return { resource: null, isNew: false }
     }
@@ -290,7 +292,10 @@
 
     try {
       let bookmarkedResource: Resource | null = null
-      if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      if (
+        resource &&
+        (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE || isGeneratedResource(resource))
+      ) {
         bookmarkedResource = resource
       } else {
         const { resource } = await handleBookmark(true)
@@ -327,6 +332,37 @@
 
   const handleUpdateNoteTitle = (e: CustomEvent<string>) => {
     tab.title = e.detail
+  }
+
+  const handleReload = () => {
+    if (resource && isGeneratedResource(resource)) {
+      codeRenderer?.reloadApp()
+    } else {
+      browserTab.reload()
+    }
+  }
+
+  const checkIfBookmarkedResource = (tab: TabPage, resource?: Resource) => {
+    if (tab.resourceBookmarkedManually) {
+      return true
+    }
+
+    if (!resource) {
+      return false
+    }
+
+    if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      return true
+    }
+
+    if (isGeneratedResource(resource)) {
+      const isSilent = (resource.tags ?? []).some(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+      )
+      return !isSilent
+    }
+
+    return false
   }
 
   onMount(async () => {
@@ -390,7 +426,9 @@
       <div class="info">
         <div class="left-side">
           <div class="icon-wrapper">
-            {#if $url && tab.icon}
+            {#if resource && isGeneratedResource(resource)}
+              <Icon name="code" size="16px" />
+            {:else if $url && tab.icon}
               {#key tab.icon}
                 <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
               {/key}
@@ -407,12 +445,32 @@
         </div>
 
         <div class="host">
-          {$hostname}
+          {#if resource && isGeneratedResource(resource)}
+            Generated on {$hostname}
+          {:else}
+            {$hostname}
+          {/if}
         </div>
       </div>
 
       <div class="flex items-center gap-4">
-        {#if $url}
+        {#if resource && isGeneratedResource(resource)}
+          <button
+            use:tooltip={{ text: 'Reload Surflet' }}
+            on:click={handleReload}
+            class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
+          >
+            <span
+              class="transition-transform group-hover/nav-btn:rotate-180 ease-in-out duration-200"
+            >
+              {#if $isLoadingPage}
+                <Icon name="spinner" />
+              {:else}
+                <Icon name="reload" />
+              {/if}
+            </span>
+          </button>
+        {:else if $url}
           <button
             use:tooltip={{ text: 'Go Back' }}
             disabled={!canGoBack}
@@ -441,7 +499,7 @@
 
           <button
             use:tooltip={{ text: 'Reload Page' }}
-            on:click={() => browserTab.reload()}
+            on:click={handleReload}
             class="group/nav-btn flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg"
           >
             <span
@@ -476,7 +534,7 @@
           </button>
         {/if} -->
 
-        {#key tab.resourceBookmarkedManually}
+        {#key isBookmarkedResource}
           <SelectDropdown
             items={saveToSpaceItems}
             search={$spaces.length > 0 ? 'manual' : 'disabled'}
@@ -498,7 +556,7 @@
                 <Icon name="check" size="16px" />
               {:else if $bookmarkingState === 'error'}
                 <Icon name="close" size="16px" />
-              {:else if tab.resourceBookmarkedManually || resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+              {:else if isBookmarkedResource}
                 <Icon name="bookmarkFilled" size="16px" />
               {:else}
                 <Icon name="save" size="16px" />
@@ -528,10 +586,12 @@
     <div class="mini-webview-wrapper">
       {#if resource && isGeneratedResource(resource)}
         <CodeRenderer
+          bind:this={codeRenderer}
           {resource}
           language="html"
           showPreview
           fullSize
+          hideHeader
           collapsable={false}
           initialCollapsed={false}
         />
