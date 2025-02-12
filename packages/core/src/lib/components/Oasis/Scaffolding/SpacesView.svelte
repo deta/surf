@@ -15,7 +15,7 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, tick, onMount } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
   import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
@@ -425,6 +425,15 @@
 
   // Recalculate overflows when the list changes
   $: recalculateListOverflows($didChangeOrder, $showAllSpaces)
+
+  onMount(() => {
+    if ($selectedSpace) {
+      const elem = document.getElementById(`folder-${$selectedSpace}`)
+      if (elem) {
+        elem.scrollIntoView({ behavior: 'instant', block: 'center' })
+      }
+    }
+  })
 </script>
 
 <svelte:window on:resize={handleResize} />

@@ -828,6 +828,10 @@
       if ($showNewTabOverlay === 2) {
         setShowNewTabOverlay(0)
       } else {
+        if (e.shiftKey) {
+          oasis.selectedSpace.set(DEFAULT_SPACE_ID)
+        }
+
         setShowNewTabOverlay(2)
       }
     } else if (e.ctrlKey && e.key === 'Tab') {
@@ -2873,6 +2877,10 @@
     tabs.update((currentTabs) => currentTabs.sort((a, b) => a.index - b.index))
     tabs.set(tabsList)
     log.debug('Tabs loaded', tabsList)
+
+    if (tabsManager.activeScopeIdValue) {
+      oasis.selectedSpace.set(tabsManager.activeScopeIdValue)
+    }
 
     // TODO: for safety we wait a bit before we tell the app that we are ready, we need a better way to do this
     setTimeout(() => {

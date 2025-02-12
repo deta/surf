@@ -49,6 +49,7 @@
   import { springAppear } from '../motion/springAppear'
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
 
   export let showTabSearch: Writable<number>
@@ -63,6 +64,7 @@
   const config = useConfig()
   const oasis = useOasis()
   const toasts = useToasts()
+  const tabsManager = useTabsManager()
   const miniBrowserService = useMiniBrowserService()
   const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`new-tab-overlay`)
 
@@ -73,6 +75,7 @@
   const everythingContentsResources = oasis.everythingContents
   const userConfigSettings = config.settings
   const selectedFilterTypeId = oasis.selectedFilterTypeId
+  const activeScopeId = tabsManager.activeScopeId
 
   const searchValue = writable('')
   const searchResults = writable<ResourceSearchResultItem[]>([])
@@ -614,9 +617,14 @@
     showTabSearch.subscribe((v) => {
       if (v === 0) {
         if (searchResetTimeout !== null) clearTimeout(searchResetTimeout)
+
+        if ($selectedSpaceId === DEFAULT_SPACE_ID) {
+          selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
+        }
+
         searchResetTimeout = setTimeout(() => {
           searchValue.set('')
-          selectedSpaceId.set('inbox')
+          selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
           selectedFilterTypeId.set(null)
           searchResetTimeout = null
         }, SEARCH_RESET_TIMEOUT)

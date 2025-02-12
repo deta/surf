@@ -43,7 +43,7 @@ import type { Telemetry } from './telemetry'
 import { getContext, setContext, tick } from 'svelte'
 import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
-import type { OasisService, OasisSpace } from './oasis'
+import { DEFAULT_SPACE_ID, type OasisService, type OasisSpace } from './oasis'
 import type { DesktopManager } from './desktop'
 import type { AIService } from './ai/ai'
 import { ContextItemResource } from './ai/context'
@@ -1023,6 +1023,10 @@ export class TabsManager {
 
     const desktopId = scopeId ?? '$$default'
     await this.desktopManager.setActive(desktopId)
+
+    if (this.showNewTabOverlayValue === 0) {
+      this.oasis.selectedSpace.set(scopeId ?? DEFAULT_SPACE_ID)
+    }
 
     await tick()
 
