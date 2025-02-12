@@ -90,6 +90,18 @@
     'all'
   )
 
+  const isResizing = writable(false)
+  const resizingDirection = writable<
+    undefined | 'horizontal' | 'vertical' | 'diag-left' | 'diag-right'
+  >(undefined)
+  const stuffWidthPercentage = useLocalStorageStore<number>('stuff_width_percentage', 90)
+  const stuffWidthOffset = writable(0)
+  const stuffHeightPercentage = useLocalStorageStore<number>('stuff_height_percentage', 90)
+  const stuffHeightOffset = writable(0)
+  let _stuffWidthOffset = 0
+  let _stuffHeightOffset = 0
+  let resizeRaf: null | number = null
+
   let stuffWrapperRef: HTMLElement
   let createSpaceRef: SpacesView
   let hasLoadedEverything = false
@@ -523,6 +535,60 @@
     await loadEverything()
   }
 
+  const resizeRafCbk = () => {
+    $stuffWidthOffset = _stuffWidthOffset
+    $stuffHeightOffset = _stuffHeightOffset
+    resizeRaf = null
+  }
+
+  const handleResizeHandlerMouseDown = (
+    _: MouseEvent,
+    direction: 'left' | 'right' | 'top' | 'top-right' | 'top-left'
+  ) => {
+    $isResizing = true
+    $resizingDirection = ['left', 'right'].includes(direction)
+      ? 'horizontal'
+      : direction === 'top'
+        ? 'vertical'
+        : direction === 'top-left'
+          ? 'diag-left'
+          : 'diag-right'
+    const move = (e: MouseEvent) => {
+      if (direction === 'left') {
+        _stuffWidthOffset += e.movementX * 2
+      } else if (direction === 'right') {
+        _stuffWidthOffset -= e.movementX * 2
+      } else if (direction === 'top') {
+        _stuffHeightOffset += e.movementY
+      } else if (direction === 'top-left') {
+        _stuffHeightOffset += e.movementY
+        _stuffWidthOffset += e.movementX * 2
+      } else if (direction === 'top-right') {
+        _stuffHeightOffset += e.movementY
+        _stuffWidthOffset -= e.movementX * 2
+      }
+      if (resizeRaf === null) resizeRaf = requestAnimationFrame(resizeRafCbk)
+    }
+    const up = (_: MouseEvent) => {
+      $isResizing = false
+      const drawerWidth = stuffWrapperRef.clientWidth
+      const drawerHeight = stuffWrapperRef.clientHeight
+      const windowWidth = window.innerWidth
+      const windowHeight = window.innerHeight
+
+      $stuffWidthPercentage = Math.round((drawerWidth / windowWidth) * 100)
+      $stuffHeightPercentage = Math.round((drawerHeight / windowHeight) * 100)
+      _stuffWidthOffset = 0
+      _stuffHeightOffset = 0
+      $resizingDirection = undefined
+      if (resizeRaf === null) resizeRaf = requestAnimationFrame(resizeRafCbk)
+      window.removeEventListener('mousemove', move, { capture: true })
+    }
+
+    window.addEventListener('mousemove', move, { capture: true })
+    window.addEventListener('mouseup', up, { capture: true, once: true })
+  }
+
   const cleanupDragStuck = () => {
     showDragHint.set(false)
     stuffWrapperRef?.classList.remove('hovering')
@@ -662,11 +728,17 @@
 >
   <div
     id="drawer"
-    style:view-transition-name="stuff-drawer"
-    class:hovering={!$drawerHide}
-    class="no-drag"
-    style="width: fit-content;"
     bind:this={stuffWrapperRef}
+    class:hovering={!$drawerHide}
+    class:isResizing={$isResizing}
+    class="no-drag"
+    data-resize-direction={$resizingDirection}
+    style="width: fit-content;"
+    style:view-transition-name="stuff-drawer"
+    style:--drawer-width={$stuffWidthPercentage + 'vw'}
+    style:--drawer-width-offset={$stuffWidthOffset + 'px'}
+    style:--drawer-height={$stuffHeightPercentage + 'vh'}
+    style:--drawer-height-offset={$stuffHeightOffset + 'px'}
     use:HTMLDragArea.use={{
       accepts: () => true
     }}
@@ -685,6 +757,31 @@
         on:highlightWebviewText
         on:close={handleMiniBrowserClose}
       />
+      <div
+        role="none"
+        class="resize-handle right"
+        on:mousedown={(e) => handleResizeHandlerMouseDown(e, 'right')}
+      ></div>
+      <div
+        role="none"
+        class="resize-handle left"
+        on:mousedown={(e) => handleResizeHandlerMouseDown(e, 'left')}
+      ></div>
+      <div
+        role="none"
+        class="resize-handle top"
+        on:mousedown={(e) => handleResizeHandlerMouseDown(e, 'top')}
+      ></div>
+      <div
+        role="none"
+        class="resize-handle top-right"
+        on:mousedown={(e) => handleResizeHandlerMouseDown(e, 'top-right')}
+      ></div>
+      <div
+        role="none"
+        class="resize-handle top-left"
+        on:mousedown={(e) => handleResizeHandlerMouseDown(e, 'top-left')}
+      ></div>
 
       <div class="drawer-content">
         {#if $onboardingOpen}
@@ -873,6 +970,27 @@
 </div>
 
 <style lang="scss">
+  :global(body:has(#drawer.isResizing[data-resize-direction='horizontal'])),
+  :global(body:has(#drawer.isResizing[data-resize-direction='vertical'])) {
+    user-select: none;
+
+    #drawer.isResizing .resize-handle {
+      pointer-events: auto;
+    }
+  }
+  :global(body:has(#drawer.isResizing[data-resize-direction='horizontal'])) {
+    cursor: ew-resize !important;
+  }
+  :global(body:has(#drawer.isResizing[data-resize-direction='vertical'])) {
+    cursor: ns-resize !important;
+  }
+  :global(body:has(#drawer.isResizing[data-resize-direction='diag-left'])) {
+    cursor: nwse-resize !important;
+  }
+  :global(body:has(#drawer.isResizing[data-resize-direction='diag-right'])) {
+    cursor: nesw-resize !important;
+  }
+
   #drawer-hint {
     pointer-events: none;
     position: fixed;
@@ -993,12 +1111,71 @@
 
     > .drawer-content {
       position: relative;
-      width: 90vw;
-      height: calc(100vh - 120px);
+      width: calc(var(--drawer-width) - var(--drawer-width-offset));
+      min-width: 120ch;
+      max-width: 95vw;
+      height: calc(var(--drawer-height) - var(--drawer-height-offset));
+      min-height: 50ch;
+      max-height: 95vh;
       overflow: hidden !important;
       border-radius: 24px 24px 16px 16px;
       @apply bg-white dark:bg-gray-700;
       display: flex;
+    }
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 100%;
+
+      z-index: 999999999999999999999999999;
+      cursor: ew-resize;
+
+      &.left {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+
+        &:hover {
+          border-radius: 2em;
+        }
+      }
+
+      &.top {
+        left: 50%;
+        top: 0;
+        height: 8px;
+        width: 100%;
+        cursor: ns-resize;
+      }
+      &.top-right {
+        left: unset;
+        right: 0;
+        top: 0;
+        height: 16px;
+        width: 16px;
+        cursor: nesw-resize;
+        transform: translate(0%, -0%);
+      }
+      &.top-left {
+        left: 0;
+        top: 0;
+        height: 16px;
+        width: 16px;
+        cursor: nwse-resize;
+        transform: translate(0%, -0%);
+      }
+      &.right {
+        left: unset;
+        right: 0;
+        top: 50%;
+        transform: translate(50%, -50%);
+        cursor: ew-resize;
+
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
     }
   }
 
