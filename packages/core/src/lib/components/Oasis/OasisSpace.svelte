@@ -15,7 +15,6 @@
   import {
     useLogScope,
     parseTextIntoISOString,
-    wait,
     clickOutside,
     tooltip,
     checkIfYoutubeUrl,
@@ -36,7 +35,7 @@
     type ResourceObject,
     type ResourceSearchResultItem
   } from '../../service/resources'
-  import OasisResourcesView from './OasisResourcesView.svelte'
+  import OasisResourcesView from './ResourceViews/OasisResourcesView.svelte'
   import {
     DragTypeNames,
     ResourceTagsBuiltInKeys,
@@ -55,14 +54,12 @@
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
-  import OasisResourcesViewSearchResult from './OasisResourcesViewSearchResult.svelte'
   import { fly, slide } from 'svelte/transition'
-  import OasisSpaceSettings from './OasisSpaceSettings.svelte'
+  import OasisSpaceSettings from './Scaffolding/OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import type { ResourceContent } from '@horizon/web-parser'
   import { DragculaDragEvent } from '@horizon/dragcula'
-  import type { BookmarkTabState, ChatWithSpaceEvent } from '../../types/browser.types'
-  import type { HistoryEntriesManager } from '../../service/history'
+  import type { ChatWithSpaceEvent } from '../../types/browser.types'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
     CreateTabEventTrigger,
@@ -91,10 +88,7 @@
 
   export let spaceId: string
   export let active: boolean = false
-  export let historyEntriesManager: HistoryEntriesManager
-  export let showBackBtn = false
   export let hideBar = false
-  export let hideResourcePreview = false
   export let handleEventsOutside: boolean = false
   export let insideDrawer: boolean = false
 
@@ -123,10 +117,9 @@
   const ai = useAI()
 
   const miniBrowserService = useMiniBrowserService()
-  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`space-${spaceId}`)
+  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`OasisSpace-${spaceId}`)
 
   const resourceManager = oasis.resourceManager
-  const spaces = oasis.spaces
   const selectedFilterTypeId = oasis.selectedFilterTypeId
   const selectedFilterType = oasis.selectedFilterType
   const telemetry = resourceManager.telemetry
@@ -138,31 +131,20 @@
   const chatPrompt = writable('')
   const searchResults = writable<string[]>([])
   const selectedItem = writable<string | null>(null)
-  const showNewResourceModal = writable(false)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<OasisSpace | null>(null)
-  const showScopedTabs = writable(false)
-  const forceShowScopedTabs = writable(false)
-  const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
 
   const canGoBack = writable(false)
 
   const REFRESH_SPACE_SOURCES_AFTER = 15 * 60 * 1000 // 15 minutes
 
-  // const selectedSpace = derived([spaces, selectedSpaceId], ([$spaces, $selectedSpaceId]) => {
-  //     return $spaces.find(space => space.id === $selectedSpaceId)
-  // })
-  //
-
   const spaceContents = writable<SpaceEntry[]>([])
   const everythingContents = writable<ResourceSearchResultItem[]>([])
   const newlyLoadedResources = writable<string[]>([])
   const processingSourceItems = writable<string[]>([])
-
-  let showScopedTabsTimeout: ReturnType<typeof setTimeout>
 
   $: spaceData = $space?.data
 
@@ -183,18 +165,6 @@
     }
   )
 
-  const scopedTabs = derived([tabsManager.tabs], ([$tabs]) => {
-    return $tabs.filter((tab) => !tab.pinned && tab.scopeId === spaceId)
-  })
-
-  $: log.debug('scoped tabs', $scopedTabs)
-
-  // $: if (spaceId === 'all') {
-  //   loadEverything()
-  // } else {
-  //   loadSpaceContents(spaceId)
-  // }
-
   $: if (active) {
     log.debug('Active, loading space contents...')
     if (spaceId === 'all') {
@@ -204,8 +174,6 @@
       loadSpaceContents(spaceId)
     }
   }
-
-  $: isSearching = $searchValue !== ''
 
   const loadSpaceContents = async (id: string, skipSources = false) => {
     try {
@@ -798,14 +766,6 @@
             await resourceManager.updateResourceMetadata(parsed.resource.id, {
               userContext: summary
             })
-
-            // HACK: this is needed for the preview to update with the summary
-            // const contents = $spaceContents
-            // spaceContents.set([])
-
-            // await tick()
-
-            // spaceContents.set(contents)
           } else {
             log.debug('summary generation failed')
           }
@@ -873,38 +833,11 @@
     })
   }
 
-  const handleChat = async (e: CustomEvent) => {
-    const result = e.detail
-    chatPrompt.set(result)
-
-    if (!isEverythingSpace) {
-      const result = await oasis.getSpaceContents(spaceId)
-      resourceIds.set(result.map((r) => r.resource_id))
-    } else {
-      resourceIds.set([])
-    }
-
-    await tick()
-
-    showChat.set(true)
-    searchValue.set('')
-
-    await telemetry.trackChatWithSpace()
-  }
-
   const handleCloseChat = () => {
     showChat.set(false)
     searchValue.set('')
     chatPrompt.set('')
     resourceIds.set([])
-  }
-
-  const handleOpenNewResourceModal = () => {
-    showNewResourceModal.set(true)
-  }
-
-  const handleCloseNewResourceModal = () => {
-    showNewResourceModal.set(false)
   }
 
   const handleOpenSettingsModal = () => {
@@ -1092,22 +1025,14 @@
       await loadSpaceContents(spaceId)
     }
     /* TODO: See if this is relevant.. is there a case whwere a tab would be prefeered instead of just handling the rosurce directory?
-
+    
     else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
-
+    }
     }*/
 
     drag.continue()
     toast.success(`Resources saved to Context!`)
-  }
-
-  const handleCreateResource = async (e: CustomEvent<string>) => {
-    dispatch('create-resource-from-oasis', e.detail)
-    showNewResourceModal.set(false)
-
-    await wait(5000)
-    await loadSpaceContents(spaceId, true)
   }
 
   const handleDeleteAutoSaved = async () => {
@@ -1418,13 +1343,6 @@
             <div
               class="relative left-1 top-1/2 transform -translate-y-1/2 z-10 place-items-center flex items-center gap-3"
             >
-              <!-- <button
-              on:click={handleGoBack}
-              class="z-10 flex items-center justify-center space-x-2 transition-transform  hover:bg-sky-200 px-4 py-2 rounded-lg duration-200 focus-visible:shadow-focus-ring-button active:scale-95"
-            >
-              <Icon name="arrow.left" size="20px" />
-            </button> -->
-
               <div
                 class="settings-wrapper flex items-center gap-2"
                 use:clickOutside={handleCloseSettingsModal}
@@ -1481,10 +1399,6 @@
                   </div>
                 {/if}
               </div>
-
-              <!-- <button on:click={() => navigator.clipboard.writeText(JSON.stringify($space))}>
-              Copy Space Data
-            </button> -->
             </div>
             <div class="search-input-wrapper">
               <SearchInput
@@ -1540,76 +1454,10 @@
       on:reload={handleReload}
     />
 
-    <!-- {#if $scopedTabs.length > 0}
-      <div
-        class="scoped-tabs-wrapper"
-        axis="horizontal"
-        class:show-tabs={$showScopedTabs || $forceShowScopedTabs}
-        on:mouseleave={handleScopedTabMouseLeave}
-        use:HTMLAxisDragZone.action={{
-          accepts: (drag) => {
-            if (
-              drag.isNative ||
-              drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-              drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-              drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
-              drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
-            ) {
-              return true
-            }
-            return false
-          }
-        }}
-        on:Drop={handleDropTapBar}
-        on:DragEnter={() => showScopedTabs.set(true)}
-      >
-        {#if $showScopedTabs || $forceShowScopedTabs}
-          <div
-            id="scoped-tabs-list"
-            class="scoped-tabs-list-wrapper"
-            bind:clientWidth={maxWidth}
-            transition:flyAndScale={{ duration: 150 }}
-          >
-            <div class="scoped-tabs-list">
-              {#each $scopedTabs as tab (tab.id)}
-                <TabItem
-                  {tab}
-                  activeTabId={tabsManager.activeTabId}
-                  spaces={oasis.spaces}
-                  bookmarkingState={$bookmarkingTabsState[tab.id]}
-                  pinned={false}
-                  isUserSelected={false}
-                  horizontalTabs={true}
-                  disableContextmenu
-                  {tabSize}
-                  on:select={handleTabSelect}
-                  on:passive-select={handleTabSelectPassive}
-                  on:multi-select={handleTabMultiSelect}
-                  on:bookmark={(e) => handleBookmark(tab)}
-                />
-              {/each}
-            </div>
-          </div>
-        {:else}
-          <div
-            id="scoped-tabs-indicators"
-            class="scoped-tabs-indicators-wrapper"
-            in:fade={{ delay: 100, duration: 150 }}
-          >
-            <div class="scoped-tabs-indicators" on:mouseenter={handleScopedTabMouseEnter}>
-              {#each $scopedTabs as tab (tab.id)}
-                <div class="tab-indicator"></div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
-    {/if} -->
-
     {#if $spaceResourceIds.length > 0 && !isEverythingSpace}
       <OasisResourcesView
-        resourceIds={spaceResourceIds}
-        selected={$selectedItem}
+        resources={spaceResourceIds}
+        {searchValue}
         isInSpace={!isEverythingSpace}
         on:click={handleItemClick}
         on:open={handleOpen}
@@ -1620,7 +1468,6 @@
         on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
         on:batch-open
         on:create-tab-from-space
-        {searchValue}
       />
 
       {#if $loadingContents}
@@ -1629,10 +1476,9 @@
         </div>
       {/if}
     {:else if isEverythingSpace && $everythingContents.length > 0}
-      <OasisResourcesViewSearchResult
+      <OasisResourcesView
         resources={everythingContents}
-        selected={$selectedItem}
-        scrollTop={0}
+        isInSpace={false}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:open-and-chat
@@ -1642,7 +1488,6 @@
         on:batch-remove
         on:batch-open
         on:open-space-as-tab
-        isEverythingSpace={false}
         {searchValue}
       />
 
@@ -1677,19 +1522,12 @@
   </div>
 </DropWrapper>
 
-<!-- </div> -->
-
 <style lang="scss">
   .wrapper {
     display: flex;
     flex-direction: column;
     height: 100%;
     border-radius: 12px;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 1rem;
   }
 
   button {
@@ -1706,16 +1544,6 @@
     display: flex;
     align-items: center;
     view-transition-name: search-transition;
-    &.active {
-      height: auto;
-      width: 100%;
-    }
-  }
-
-  .space-actions {
-    display: flex;
-    justify-content: start;
-    align-items: center;
   }
 
   .modal-wrapper {
@@ -1752,12 +1580,6 @@
         z-index: 10;
         top: 0;
 
-        .chat-input-wrapper {
-          position: fixed;
-          top: 0;
-          left: 0;
-        }
-
         .close-button {
           position: relative;
           display: none;
@@ -1778,51 +1600,10 @@
           }
         }
       }
-
-      .create-wrapper {
-        position: relative;
-
-        .create-new-resource {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          color: #7d7448;
-          opacity: 0.7;
-          &:hover {
-            opacity: 1;
-            background: transparent;
-          }
-        }
-      }
-
-      .search-transition {
-        position: relative;
-      }
     }
   }
 
-  .new-content-btn {
-    position: absolute;
-    left: 50%;
-    top: 6rem;
-    transform: translateX(-50%);
-    z-index: 100000;
-    appearance: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 12px;
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0px 0px 0px 1px rgba(0, 0, 0, 0.2);
-    color: #6d6d79;
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: 0.02rem;
-  }
-
-  .search-debug {
+  /*.search-debug {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1843,48 +1624,7 @@
       width: 75px;
       text-align: center;
     }
-  }
-
-  .chat-wrapper {
-    position: absolute;
-    top: 1rem;
-    left: 50%;
-    right: 50%;
-    z-index: 100000;
-    width: 100%;
-    height: 100%;
-    max-width: 50vw;
-    max-height: 70vh;
-    border-radius: 16px;
-    transform: translateX(-50%);
-    background: white;
-    box-shadow:
-      0px 0px 0px 1px rgba(0, 0, 0, 0.2),
-      0px 16.479px 41.197px 0px rgba(0, 0, 0, 0.46);
-
-    .close-button {
-      position: fixed;
-      top: 0.5rem;
-      left: 0.5rem;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 2rem;
-      height: 2rem;
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 0.5px solid rgba(0, 0, 0, 0.15);
-      transition: 60ms ease-out;
-      background: white;
-      z-index: 10000;
-      &.rotated {
-        transform: rotate(-45deg);
-      }
-      &:hover {
-        outline: 3px solid rgba(0, 0, 0, 0.15);
-      }
-    }
-  }
+  }*/
 
   .content-wrapper {
     width: 100%;

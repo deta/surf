@@ -1,10 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { fly } from 'svelte/transition'
-  import { Icon } from '@horizon/icons'
   import Create from './Create.svelte'
   import { SERVICES } from '@horizon/web-parser'
-  import type { ResourceManager } from '../../service/resources'
 
   const dispatch = createEventDispatcher<{ 'open-and-create-resource': string }>()
 

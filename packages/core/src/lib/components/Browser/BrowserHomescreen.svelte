@@ -3,18 +3,18 @@
 </script>
 
 <script lang="ts">
-  import { writable, get, type Unsubscriber, derived } from 'svelte/store'
+  import { writable, type Unsubscriber, derived } from 'svelte/store'
   import { createEventDispatcher, onMount } from 'svelte'
   import type { Writable } from 'svelte/store'
   import { fly } from 'svelte/transition'
 
   import { Icon } from '@horizon/icons'
-  import SpacesView, { type CreateSpaceTabEvent } from '../Oasis/SpacesView.svelte'
+  import SpacesView, { type CreateSpaceTabEvent } from '../Oasis/Scaffolding/SpacesView.svelte'
 
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
   import AddressToolbar, { type ActionEvent } from '../Atoms/Toolbar/AddressToolbar.svelte'
-  import type { Tab, TabSpace } from '../../types/browser.types'
+  import type { TabSpace } from '../../types/browser.types'
   import { parseStringIntoBrowserLocation, parseStringIntoUrl, useLogScope } from '@horizon/utils'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { useResourceManager } from '../../service/resources'

@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTypes, type TabResource } from '../../types'
-  import { getFileType, mimeTypeToCodeLanguage, useDebounce } from '@horizon/utils'
+  import { mimeTypeToCodeLanguage, useDebounce } from '@horizon/utils'
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import TextResource from '../Resources/Previews/Text/TextResource.svelte'
   import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'
@@ -53,7 +53,7 @@
         collapsable={false}
       />
     {:else}
-      <FilePreview {resource} {tab} preview={false} />
+      <FilePreview {resource} preview={false} />
     {/if}
   {:else if resourceId === 'onboarding'}
     <TextResource

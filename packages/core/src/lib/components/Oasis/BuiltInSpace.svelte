@@ -206,22 +206,6 @@
       width: 100%;
       position: relative;
 
-      .actions {
-        position: absolute;
-        right: 0;
-        display: flex;
-        gap: 0.75rem;
-        flex-shrink: 0;
-
-        button {
-          padding: 0.25rem;
-          &:hover {
-            border-radius: 4px;
-            background: #cee2ff;
-          }
-        }
-      }
-
       .folder-leading {
         display: flex;
         align-items: center;
@@ -265,50 +249,9 @@
         &::selection {
           background-color: rgba(0, 110, 255, 0.2);
         }
-
-        &.isEditing {
-          border-radius: 4px;
-          padding: 0 0.25rem;
-          margin: 0.4rem 0;
-          outline: 4px solid rgba(0, 110, 255, 0.4);
-        }
-      }
-
-      .close {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        appearance: none;
-        border: none;
-        padding: 0;
-        margin: 0;
-        height: min-content;
-        background: none;
-        color: #5c77a8;
-
-        transition: color 0.2s ease;
-
-        &:hover {
-          color: #244581;
-        }
-
-        &:disabled {
-          color: #7d96c5;
-        }
       }
     }
 
     @apply text-[#244581] dark:text-gray-100;
-  }
-
-  .folder.active {
-    color: #585130;
-    z-index: 1000;
-    background-color: #blue;
-  }
-
-  .draggedOver {
-    border-radius: 8px;
-    background-color: #a9a9a9 !important;
   }
 </style>

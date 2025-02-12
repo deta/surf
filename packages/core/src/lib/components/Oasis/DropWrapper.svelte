@@ -1,71 +1,19 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { useLogScope } from '@horizon/utils'
   import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
-  import { DragTypeNames, type DragTypes } from '../../types'
+  import { type DragTypes } from '../../types'
 
-  export let acceptDrop: boolean = true
   export let dragOver: boolean = false
   export let spaceId: string = crypto.randomUUID()
   export let zonePrefix: string | undefined
   export let acceptsDrag: (drag: DragculaDragEvent<DragTypes>) => boolean = () => false
 
-  const log = useLogScope('DropWrapper')
   const dispatch = createEventDispatcher<{
     drop: DragEvent
     DragEnter: DragculaDragEvent
     DragLeave: DragEvent
     Drop: DragculaDragEvent
   }>()
-
-  /*let counter = 0
-  let dragOverTimeout: ReturnType<typeof setTimeout> | null = null
-
-  const handleDragEnter = (e: DragculaDragEvent) => {
-    if (!acceptDrop) {
-      log.debug('Aborting DND')
-      return
-    }
-
-    const accepted = !dispatch('DragEnter', e, { cancelable: true })
-    if (!accepted) return
-    e.preventDefault()
-
-    counter++
-    if (counter === 1) {
-      dragOver = true
-      dispatch('DragEnter', e)
-    }
-  }
-
-  const handleDragLeave = (e: DragEvent) => {
-    e.preventDefault()
-
-    counter--
-    if (counter === 0) {
-      dragOver = false
-      dispatch('DragLeave', e)
-    }
-  }
-
-  const handleDragOver = (e: DragEvent) => {
-    if (!acceptDrop) {
-      return
-    }
-
-    // This is necessary to allow the drop
-    e.preventDefault()
-
-    // Reset the drag over effect after a short delay to simulate continuous drag over.
-    if (dragOverTimeout) {
-      clearTimeout(dragOverTimeout)
-    }
-
-    dragOver = true
-    dragOverTimeout = setTimeout(() => {
-      dragOver = false
-    }, 100) // Adjust delay as needed, 100ms is just an example
-  }*/
 
   const handleDrop = (drag: DragculaDragEvent) => {
     dispatch('Drop', drag)

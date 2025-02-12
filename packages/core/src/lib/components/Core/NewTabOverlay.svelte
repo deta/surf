@@ -30,9 +30,8 @@
     SearchOasisEventTrigger
   } from '@horizon/types'
   import DropWrapper from '../Oasis/DropWrapper.svelte'
-  import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
   import OasisSpaceRenderer from '../Oasis/OasisSpace.svelte'
-  import SpacesView from '../Oasis/SpacesView.svelte'
+  import SpacesView from '../Oasis/Scaffolding/SpacesView.svelte'
   import Onboarding from './Onboarding.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import stuffAdd from '../../../../public/assets/demo/stuffsave.gif'
@@ -50,6 +49,7 @@
   import { springAppear } from '../motion/springAppear'
   import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
+  import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
 
   export let showTabSearch: Writable<number>
   export let spaceId: string
@@ -638,8 +638,8 @@
 
 {#if $showTabSearch === 2}
   <div
-    class="stuff-backdrop"
-    style:view-transition-name="stuff-drawer-backdrop"
+    class="drawer-backdrop"
+    style:view-transition-name="drawer-backdrop"
     data-dragcula-ignore
     class:showing={!$drawerHide}
     role="none"
@@ -653,10 +653,10 @@
   }}
 >
   <div
-    id="drawer-content"
+    id="drawer"
     style:view-transition-name="stuff-drawer"
     class:hovering={!$drawerHide}
-    class="stuff-wrapper no-drag"
+    class="no-drag"
     style="width: fit-content;"
     bind:this={stuffWrapperRef}
     use:HTMLDragArea.use={{
@@ -670,15 +670,15 @@
       updateWebviewPointerEvents('unset')
     }}
   >
-    <MiniBrowser
-      service={scopedMiniBrowser}
-      on:seekToTimestamp
-      on:highlightWebviewText
-      on:close={handleMiniBrowserClose}
-    />
+    {#if $showTabSearch === 2}
+      <MiniBrowser
+        service={scopedMiniBrowser}
+        on:seekToTimestamp
+        on:highlightWebviewText
+        on:close={handleMiniBrowserClose}
+      />
 
-    <div class="stuff-outer w-[90vw] h-[calc(100vh-120px)] relative block overflow-hidden">
-      <div class="flex h-full">
+      <div class="drawer-content">
         {#if $onboardingOpen}
           <Onboarding
             on:close={closeOnboarding}
@@ -710,205 +710,161 @@
             buttonText="Continue"
           />
         {/if}
-        {#if $showTabSearch === 2}
-          <div id="stuff-sidebar" class="sidebar-wrap h-full bg-sky-500/40 w-[18rem] max-w-[18rem]">
-            {#key $spaces}
-              <SpacesView
-                bind:this={createSpaceRef}
-                {spaces}
-                {resourceManager}
-                showPreview={true}
-                type="horizontal"
-                interactive={false}
-                on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
-                on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-                on:create-empty-space={handleCreateEmptySpace}
-                on:open-space-and-chat
-                on:delete-space={handleDeleteSpace}
-                on:handled-drop={handlePostDropOnSpace}
-                on:close-oasis={closeOverlay}
-                on:Drop
-              />
-            {/key}
-          </div>
 
-          <div class="stuff-view h-full w-full relative">
-            <Tooltip rootID="stuff" />
+        {#key $spaces}
+          <SpacesView
+            bind:this={createSpaceRef}
+            {spaces}
+            {resourceManager}
+            showPreview={true}
+            type="horizontal"
+            interactive={false}
+            on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
+            on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+            on:create-empty-space={handleCreateEmptySpace}
+            on:open-space-and-chat
+            on:delete-space={handleDeleteSpace}
+            on:handled-drop={handlePostDropOnSpace}
+            on:close-oasis={closeOverlay}
+            on:Drop
+          />
+        {/key}
 
-            {#if isInboxSpace}
-              <ContextTabsBar
-                on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                on:handled-drop={handlePostDropOnSpace}
-                on:select-space={handleSpaceSelected}
-                on:reload={handleReload}
-              />
-            {/if}
+        <div class="stuff-view h-full w-full relative">
+          <Tooltip rootID="stuff" />
 
-            {#if !$isBuiltInSpace}
+          {#if isInboxSpace}
+            <ContextTabsBar
+              on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+              on:handled-drop={handlePostDropOnSpace}
+              on:select-space={handleSpaceSelected}
+              on:reload={handleReload}
+            />
+          {/if}
+
+          {#if !$isBuiltInSpace}
+            {#await new Promise((resolve) => setTimeout(resolve, 175))}
+              <!-- wait -->
+            {:then}
               {#key $selectedSpaceId}
-                {#await new Promise((resolve) => setTimeout(resolve, 175))}
-                  <!-- wait -->
-                {:then}
-                  <OasisSpaceRenderer
-                    spaceId={$selectedSpaceId}
-                    active
-                    showBackBtn
-                    hideResourcePreview
-                    handleEventsOutside
-                    {historyEntriesManager}
-                    on:open={handleOpen}
-                    on:open-and-chat
-                    on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                    on:go-back={() => oasis.changeSelectedSpace(DEFAULT_SPACE_ID)}
-                    on:deleted={handleSpaceDeleted}
-                    on:updated-space={handleUpdatedSpace}
-                    on:creating-new-space={handleCreatingNewSpace}
-                    on:done-creating-new-space={handleDoneCreatingNewSpace}
-                    on:select-space={handleSpaceSelected}
-                    on:batch-open
-                    on:batch-remove={handleResourceRemove}
-                    on:handled-drop={handlePostDropOnSpace}
-                    on:created-space={handleCreatedSpace}
-                    on:close={closeOverlay}
-                    on:seekToTimestamp
-                    on:highlightWebviewText
-                    on:open-space-and-chat
-                    insideDrawer={true}
-                    bind:this={oasisSpace}
-                    {searchValue}
-                  />
-                {/await}
+                <OasisSpaceRenderer
+                  bind:this={oasisSpace}
+                  spaceId={$selectedSpaceId}
+                  active
+                  handleEventsOutside
+                  insideDrawer
+                  on:open={handleOpen}
+                  on:open-and-chat
+                  on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                  on:go-back={() => oasis.changeSelectedSpace(DEFAULT_SPACE_ID)}
+                  on:deleted={handleSpaceDeleted}
+                  on:updated-space={handleUpdatedSpace}
+                  on:creating-new-space={handleCreatingNewSpace}
+                  on:done-creating-new-space={handleDoneCreatingNewSpace}
+                  on:select-space={handleSpaceSelected}
+                  on:batch-open
+                  on:batch-remove={handleResourceRemove}
+                  on:handled-drop={handlePostDropOnSpace}
+                  on:created-space={handleCreatedSpace}
+                  on:close={closeOverlay}
+                  on:seekToTimestamp
+                  on:highlightWebviewText
+                  on:open-space-and-chat
+                />
               {/key}
-            {:else}
-              <DropWrapper
-                acceptDrop={true}
-                {spaceId}
-                acceptsDrag={(drag) => {
-                  if (drag.from?.id.startsWith('drawer-') && drag.from?.id.endsWith(spaceId))
-                    return false
-                  if (
-                    drag.isNative ||
-                    drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-                    drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-                    drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-                  ) {
-                    return true
-                  }
+            {/await}
+          {:else}
+            <DropWrapper
+              {spaceId}
+              acceptsDrag={(drag) => {
+                if (drag.from?.id.startsWith('drawer-') && drag.from?.id.endsWith(spaceId))
                   return false
-                }}
-                on:Drop={(e) => handleDropOnSpace(spaceId, e.detail)}
-                zonePrefix="drawer-"
-              >
+                if (
+                  drag.isNative ||
+                  drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                  drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                  drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+                ) {
+                  return true
+                }
+                return false
+              }}
+              on:Drop={(e) => handleDropOnSpace(spaceId, e.detail)}
+              zonePrefix="drawer-"
+            >
+              {#await new Promise((resolve) => setTimeout(resolve, 175))}
+                <!-- wait -->
+              {:then}
                 <div class="w-full h-full">
-                  {#if $resourcesToShow.length > 0}
-                    {#key $selectedSpaceId}
-                      {#await new Promise((resolve) => setTimeout(resolve, 175))}
-                        <!-- wait -->
-                      {:then}
-                        <OasisResourcesViewSearchResult
-                          resources={resourcesToShow}
-                          selected={$selectedItem}
-                          isEverythingSpace={true}
-                          isInSpace={false}
-                          scrollTop={0}
-                          on:click={handleItemClick}
-                          on:open={(e) => handleOpen(e, true)}
-                          on:open-and-chat
-                          on:open-space-as-tab
-                          on:remove={handleResourceRemove}
-                          on:batch-remove={handleResourceRemove}
-                          on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-                          on:batch-open
-                          on:new-tab
-                          {searchValue}
-                        />
-                      {/await}
-                    {/key}
-
-                    {#if $loadingContents}
-                      <div class="floating-loading">
-                        <Icon name="spinner" size="20px" />
-                      </div>
-                    {/if}
-                  {:else if $isSearching && $searchValue?.length > 0}
-                    <div class="content-wrapper h-full flex items-center justify-center">
-                      <div
-                        class="content flex flex-col items-center justify-center text-center space-y-4"
-                      >
-                        <Icon name="spinner" size="22px" />
-                        <p class="text-lg font-medium text-gray-700">Searching your stuff...</p>
-                      </div>
-                    </div>
-                  {:else if $resourcesToShow.length === 0 && $searchValue.length > 0}
-                    <div class="content-wrapper h-full flex items-center justify-center">
-                      <div
-                        class="content flex flex-col items-center justify-center text-center space-y-4"
-                      >
-                        <Icon name="save" size="22px" class="mb-2" />
-
-                        <p class="text-lg font-medium text-gray-700">
-                          No stuff found for "{$searchValue}". Try a different search term.
-                        </p>
-                      </div>
-                    </div>
-                  {/if}
+                  {#key $selectedSpaceId}
+                    <OasisResourcesView
+                      resources={resourcesToShow}
+                      {searchValue}
+                      isInSpace={false}
+                      status={$loadingContents
+                        ? { icon: 'spinner', message: 'Loading contents…' }
+                        : $isSearching && $searchValue?.length > 0
+                          ? { icon: 'spinner', message: 'Searching your stuff…' }
+                          : undefined}
+                      on:click={handleItemClick}
+                      on:open={(e) => handleOpen(e, true)}
+                      on:open-and-chat
+                      on:open-space-as-tab
+                      on:remove={handleResourceRemove}
+                      on:batch-remove={handleResourceRemove}
+                      on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+                      on:batch-open
+                      on:new-tab
+                    />
+                  {/key}
                 </div>
-              </DropWrapper>
-            {/if}
-          </div>
-        {/if}
-      </div>
-    </div>
-
-    {#if $isBuiltInSpace}
-      <div class="global-search-wrapper">
-        {#if $showTabSearch === 2 && $isBuiltInSpace}
-          <button
-            class="onboarding-button"
-            on:click={() => {
-              $onboardingOpen = !$onboardingOpen
-            }}
-            use:tooltip={{
-              text: 'Need help?',
-              position: 'right'
-            }}
-            aria-label="Show onboarding"
-          >
-            <Icon name="info" />
-          </button>
-        {/if}
-
-        <div class="input-wrapper">
-          <SearchField {searchValue} placeholder="Search..." autoFocus={$showTabSearch === 2} />
-
-          {#if $isBuiltInSpace && !!$searchValue}
-            <Select {selectedFilter} on:change={handleOasisFilterChange}>
-              <option value="all">Show All</option>
-              <option value="saved_by_user">Saved by Me</option>
-            </Select>
+              {/await}
+            </DropWrapper>
           {/if}
         </div>
-
-        {#if $showTabSearch === 2}
-          <div class="absolute right-2 flex items-center gap-2">
-            <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
-          </div>
-        {/if}
       </div>
+
+      {#if $isBuiltInSpace}
+        <div class="global-search-wrapper">
+          {#if $showTabSearch === 2 && $isBuiltInSpace}
+            <button
+              class="onboarding-button"
+              on:click={() => {
+                $onboardingOpen = !$onboardingOpen
+              }}
+              use:tooltip={{
+                text: 'Need help?',
+                position: 'right'
+              }}
+              aria-label="Show onboarding"
+            >
+              <Icon name="info" />
+            </button>
+          {/if}
+
+          <div class="input-wrapper">
+            <SearchField {searchValue} placeholder="Search..." autoFocus={$showTabSearch === 2} />
+
+            {#if $isBuiltInSpace && !!$searchValue}
+              <Select {selectedFilter} on:change={handleOasisFilterChange}>
+                <option value="all">Show All</option>
+                <option value="saved_by_user">Saved by Me</option>
+              </Select>
+            {/if}
+          </div>
+
+          {#if $showTabSearch === 2}
+            <div class="absolute right-2 flex items-center gap-2">
+              <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
+            </div>
+          {/if}
+        </div>
+      {/if}
     {/if}
   </div>
 </div>
 
-<!-- {/if} -->
-
 <style lang="scss">
-  :global([data-vaul-drawer]) {
-    transition: transform 10ms ease-out !important;
-  }
-  :global([data-vaul-drawer][data-vaul-drawer-direction='bottom']::after) {
-    content: none;
-  }
-
   #drawer-hint {
     pointer-events: none;
     position: fixed;
@@ -951,15 +907,6 @@
     }
   }
 
-  .wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    height: 100%;
-    overflow: hidden;
-    border-radius: 12px;
-  }
-
   .onboarding-button {
     position: relative;
 
@@ -991,20 +938,33 @@
     }
   }
 
-  .stuff-wrapper {
+  #drawer {
     position: absolute;
     z-index: 100001;
     bottom: 2rem;
     left: 50%;
-    transform: translateX(-50%) translateZ(0);
+    overflow: visible !important;
+    display: flex;
+
     border-radius: 24px 24px 16px 16px;
+
     -webkit-font-smoothing: antialiased;
     -webkit-app-region: no-drag;
-    overflow: hidden;
+
+    transform: translateX(-50%) translateZ(0);
     transition:
       translate 100ms ease-out,
       transform 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
-    @apply bg-white dark:bg-gray-700;
+
+    &::before {
+      content: '';
+      position: fixed;
+      background: transparent;
+      left: -100vw;
+      right: -100vw;
+      top: 100%;
+      height: 100px;
+    }
 
     box-shadow:
       inset 0px 1px 1px -1px white,
@@ -1022,9 +982,19 @@
       0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
       0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
       0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
+
+    > .drawer-content {
+      position: relative;
+      width: 90vw;
+      height: calc(100vh - 120px);
+      overflow: hidden !important;
+      border-radius: 24px 24px 16px 16px;
+      @apply bg-white dark:bg-gray-700;
+      display: flex;
+    }
   }
 
-  .stuff-backdrop {
+  .drawer-backdrop {
     position: fixed;
     inset: 0;
     z-index: 100001;
@@ -1034,48 +1004,12 @@
     transition: opacity 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
     @apply bg-black/40 dark:bg-gray-700/80;
   }
-  :global(body[data-dragging='true'] .stuff-backdrop:not(.showing)) {
+  :global(body[data-dragging='true'] .drawer-backdrop:not(.showing)) {
     opacity: 0;
     pointer-events: none !important;
   }
-  :global(body[data-dragging='true'] .stuff-backdrop.showing) {
+  :global(body[data-dragging='true'] .drawer-backdrop.showing) {
     opacity: 1;
-  }
-
-  .page-background {
-    background: linear-gradient(180deg, #f9f5e6, rgb(237, 236, 226));
-    background: linear-gradient(
-      180deg,
-      color(display-p3 0.9725 0.9686 0.949) 0%,
-      color(display-p3 0.9725 0.9686 0.949) 100%
-    );
-  }
-
-  .background {
-    background: linear-gradient(180deg, #e6ddda 0%, #f8f7f1 100%);
-  }
-
-  .stuff-outer {
-    // NOTE: We can use strict containment, as the stuff contents are
-    // selfcontained inside the overlay. This allows style / layout etc. to
-    // be separated from the rest of the app!
-    contain: strict;
-    border-radius: 24px 24px 16px 16px;
-  }
-
-  .modal-wrapper {
-    position: absolute;
-    top: 4rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-  }
-
-  .drawer-bar {
-    position: absolute;
-    left: 0;
-    right: 0;
-    z-index: 1000;
   }
 
   .global-search-wrapper {
@@ -1126,30 +1060,17 @@
     gap: 1rem;
   }
 
-  :global(.stuff-wrapper) {
-    overflow: visible !important;
-    &::before {
-      content: '';
-      position: fixed;
-      background: transparent;
-      left: -100vw;
-      right: -100vw;
-      top: 100%;
-      height: 100px;
-    }
-  }
-
   /* FIXES double drop as webview still consumes drop if pointer is inside overlay. */
-  :global(body[data-dragging='true']:has(.stuff-wrapper.hovering) webview) {
+  :global(body[data-dragging='true']:has(#drawer.hovering) webview) {
     pointer-events: none !important;
   }
 
-  :global(body[data-dragging='true']:has(.stuff-wrapper:not(.hovering))) .stuff-wrapper {
+  :global(body[data-dragging='true']:has(#drawer:not(.hovering))) #drawer {
     transform: translate(-50%, 100%) !important;
   }
 
   /* Hides the Drawer when dragging and not targeting it */
-  :global(body[data-dragging='true'] .stuff-wrapper:not(.hovering)) {
+  :global(body[data-dragging='true'] #drawer:not(.hovering)) {
     transform: translate(-50%, 0);
   }
 </style>

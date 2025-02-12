@@ -1311,9 +1311,9 @@
   }
 
   // Weirdo inside stuff
-  :global(.stuff-outer) {
+  :global(.drawer-content) {
     .tab {
-      --radius: 8px;
+      --radius: 11px;
       @include utils.squircle($fill: var(--fill), $radius: 8px, $smooth: 0.28);
 
       &:not(.active) {

@@ -15,34 +15,29 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
   import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
-  import Folder, { type EditingStartEvent, type FolderEvents } from './Folder.svelte'
+  import Folder, { type EditingStartEvent, type FolderEvents } from '..//Folder.svelte'
   import { Icon, type Icons } from '@horizon/icons'
-  import { DEFAULT_SPACE_ID, OasisSpace, pickRandomColorPair, useOasis } from '../../service/oasis'
+  import { OasisSpace, pickRandomColorPair, useOasis } from '../../../service/oasis'
 
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '../../../service/toast'
   import {
     DragTypeNames,
     SpaceEntryOrigin,
     type DragTypes,
     type SpaceData,
     type TabSpace
-  } from '../../types'
+  } from '../../../types'
   import type { Readable } from 'svelte/store'
-  import { useTelemetry } from '../../service/telemetry'
-  import { onboardingSpace } from '../../constants/examples'
-  import {
-    ChangeContextEventTrigger,
-    CreateSpaceEventFrom,
-    OpenSpaceEventTrigger
-  } from '@horizon/types'
-  import type { ResourceManager } from '../../service/resources'
+  import { useTelemetry } from '../../../service/telemetry'
+  import { ChangeContextEventTrigger, OpenSpaceEventTrigger } from '@horizon/types'
+  import type { ResourceManager } from '../../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import BuiltInSpace from './BuiltInSpace.svelte'
+  import BuiltInSpace from '../BuiltInSpace.svelte'
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
   import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
@@ -56,7 +51,6 @@
   const dispatch = createEventDispatcher<SpacesViewEvents>()
 
   let sidebarElement: HTMLElement
-  let foldersWrapper: HTMLElement
   let pinnedList: HTMLElement
   let unpinnedList: HTMLElement
   let pinnedOverflow = false
@@ -595,21 +589,15 @@
 <style lang="scss">
   @use '@horizon/core/src/lib/styles/utils' as utils;
 
-  .top-bar {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    width: fit-content;
-  }
   .folders-sidebar {
     position: relative;
     display: flex;
+    flex-shrink: 0;
     flex-direction: column;
     align-items: center;
     padding: 1rem 0.75rem 1rem 0.75rem;
     gap: 1.5rem;
     height: 100%;
-    flex: 1;
     backdrop-filter: blur(24px);
     overflow: hidden;
 
@@ -804,12 +792,6 @@
     border-radius: 16px;
     background: var(--Black, #fff);
     background: var(--Black, color(display-p3 1 1 1));
-
-    span {
-      font-size: 1rem;
-      line-height: 1;
-      letter-spacing: 0.01em;
-    }
   }
 
   .folder-wrapper {
@@ -848,41 +830,9 @@
         0 3px 6px rgba(0, 0, 0, 0.02),
         0 4px 8px rgba(0, 0, 0, 0.01);
 
-      .new-space-text {
-        color: rgba(191, 219, 254, 0.9);
-      }
-
       &:hover {
         background: rgba(17, 24, 39, 0.8);
         color: rgba(191, 219, 254, 1);
-      }
-    }
-
-    &.sticky {
-      position: sticky;
-      z-index: 1000;
-      bottom: 0;
-      backdrop-filter: blur(10px);
-      box-shadow:
-        0 1px 1px rgba(67, 142, 239, 0.05),
-        0 1px 2px rgba(67, 142, 239, 0.03),
-        0 2px 4px rgba(67, 142, 239, 0.02),
-        0 3px 6px rgba(67, 142, 239, 0.01),
-        0 4px 8px rgba(67, 142, 239, 0.005);
-      border: 0.5px solid rgba(67, 142, 239, 0.15);
-      background: rgba(224, 242, 254, 0.6);
-      color: rgba(0, 103, 185, 0.7);
-
-      :global(.dark) & {
-        background: rgba(17, 24, 39, 0.6);
-        border-color: rgba(75, 85, 99, 0.3);
-        color: rgba(147, 197, 253, 0.8);
-        box-shadow:
-          0 1px 1px rgba(0, 0, 0, 0.1),
-          0 1px 2px rgba(0, 0, 0, 0.06),
-          0 2px 4px rgba(0, 0, 0, 0.04),
-          0 3px 6px rgba(0, 0, 0, 0.02),
-          0 4px 8px rgba(0, 0, 0, 0.01);
       }
     }
 
@@ -890,32 +840,6 @@
       opacity: 0.9;
       pointer-events: none;
       filter: grayscale(100%);
-    }
-
-    & .icon-wrapper {
-      background: rgba(0, 122, 255, 0.9);
-      border: 1px solid rgba(67, 142, 239, 0.3);
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      padding: 0 1px 0.5px 0;
-      justify-content: center;
-      align-items: center;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      text-rendering: optimizeLegibility;
-
-      :global(.dark) & {
-        background: rgba(59, 130, 246, 0.9);
-        border-color: rgba(147, 197, 253, 0.3);
-      }
-    }
-  }
-
-  .action-back-to-tabs {
-    .label {
-      letter-spacing: 0.04rem;
     }
   }
 </style>

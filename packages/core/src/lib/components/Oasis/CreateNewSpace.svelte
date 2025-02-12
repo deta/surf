@@ -25,20 +25,18 @@
   import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { CreateSpaceEventFrom } from '@horizon/types'
-  import { writable, derived, type Writable } from 'svelte/store'
+  import { writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, tick } from 'svelte'
   import { Editor } from '@horizon/editor'
   import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
 
   import { colorPairs, OasisSpace, useOasis } from '../../service/oasis'
-  import ResourceOverlay from '../Core/ResourceOverlay.svelte'
   import SpacePreview from './SpacePreview.svelte'
   import LoadingParticles from '../Effects/LoadingParticles.svelte'
-  import OasisResourcesViewSearchResult from '../Oasis/OasisResourcesViewSearchResult.svelte'
-  import EmojiPicker from '../Atoms/EmojiPicker.svelte'
   import type { SpaceIconChange } from './IconSelector.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import OasisResourcesView from './ResourceViews/OasisResourcesView.svelte'
 
   interface PromptConfig {
     name: string
@@ -467,8 +465,9 @@
           duration: 200
         }}
       >
-        <OasisResourcesViewSearchResult
+        <OasisResourcesView
           resources={previewResources}
+          searchValue={undefined}
           resourcesBlacklistable={true}
           on:blacklist-resource={handleBlacklistResource}
           on:whitelist-resource={handleWhitelistResource}

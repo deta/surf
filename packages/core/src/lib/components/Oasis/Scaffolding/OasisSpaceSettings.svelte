@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
-  import type { SpaceSource } from '../../types'
+  import type { SpaceSource } from '../../../types'
   import {
     useLogScope,
     tooltip,
@@ -12,13 +12,13 @@
     getHumanDistanceToNow,
     copyToClipboard
   } from '@horizon/utils'
-  import { OasisSpace, useOasis } from '../../service/oasis'
-  import Switch from '../Atoms/Switch.svelte'
-  import { useToasts } from '../../service/toast'
-  import { useConfig } from '../../service/config'
+  import { OasisSpace, useOasis } from '../../../service/oasis'
+  import Switch from '../../Atoms/Switch.svelte'
+  import { useToasts } from '../../../service/toast'
+  import { useConfig } from '../../../service/config'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
+  import { openDialog } from '../../Core/Dialog/Dialog.svelte'
 
   export let space: OasisSpace | null
   const config = useConfig()

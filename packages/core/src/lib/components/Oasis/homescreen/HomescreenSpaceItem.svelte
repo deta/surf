@@ -4,7 +4,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import LazyScroll from '../../Utils/LazyScroll.svelte'
   import LazyComponent from '../../Atoms/LazyComponent.svelte'
-  import MasonrySpace from '../MasonrySpace.svelte'
+  import MasonryView from '../ResourceViews/MasonryView.svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { useToasts } from '../../../service/toast'
@@ -140,7 +140,7 @@
           {/each}
         </LazyScroll>
       {:else}
-        <MasonrySpace items={$renderedContents.map((e) => ({ id: e.id, data: e }))} let:item>
+        <MasonryView items={$renderedContents.map((e) => ({ id: e.id, data: e }))} let:item>
           <OasisResourceLoader
             resourceOrId={item.data.resource_id}
             isInSpace={false}
@@ -157,7 +157,7 @@
             interactive={true}
             draggable
           />
-        </MasonrySpace>
+        </MasonryView>
       {/if}
     </div>
   {/if}

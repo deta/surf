@@ -34,13 +34,18 @@
         return
       }
 
-      const res = await resourceManager.getResourceWithAnnotations(resourceOrId)
-      if (!res) {
-        return
-      }
-      fetchedResource = res
-
-      dispatch('rendered')
+      resourceManager
+        .getResourceWithAnnotations(resourceOrId)
+        .then((res) => {
+          if (!res) {
+            return
+          }
+          fetchedResource = res
+          dispatch('load', fetchedResource)
+        })
+        .catch((e) => {
+          log.error(e)
+        })
     } catch (e) {
       log.error(e)
     }

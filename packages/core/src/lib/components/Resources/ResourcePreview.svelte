@@ -700,8 +700,8 @@
         ])
   ] as CtxItem[]
 
-  onMount(async () => {
-    await loadResource()
+  onMount(() => {
+    loadResource()
   })
 
   onDestroy(() => {
@@ -992,9 +992,6 @@
       &[data-resource-type^='application/vnd.space.post.youtube'] {
         // TODO: Custom Style
       }
-    }
-
-    &.interactive {
     }
 
     /// Loading state

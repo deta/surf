@@ -221,7 +221,14 @@
     {#if showMediaBlock}
       <div class="media" class:processing={isProcessing} class:og={!type.startsWith('image/')}>
         {#if media}
-          <Image src={media} alt={title ?? ''} emptyOnError />
+          <!--  NOTE: Explicit async&eager so masonry flows better -->
+          <Image
+            src={media}
+            alt={title ?? ''}
+            emptyOnError
+            decoding={origin === 'stuff' ? 'async' : 'auto'}
+            loading="eager"
+          />
         {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
           <FilePreview {resource} preview />
         {/if}
