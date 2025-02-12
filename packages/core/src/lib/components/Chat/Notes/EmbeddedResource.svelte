@@ -33,9 +33,10 @@
     <CodeRenderer
       {resource}
       language={mimeTypeToCodeLanguage(resource.type)}
-      showPreview
+      showPreview={!preview}
+      expandable={!preview}
       collapsable
-      initialCollapsed={preview}
+      initialCollapsed={preview ? true : 'auto'}
       resizable={true}
       minHeight="150px"
       maxHeight="800px"

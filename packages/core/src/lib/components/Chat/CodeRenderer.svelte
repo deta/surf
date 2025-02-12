@@ -68,6 +68,7 @@
   export let minHeight: string = '200px'
   export let maxHeight: string = '1000px'
   export let initialHeight: string = '400px'
+  export let expandable = true
 
   let isResizing = false
   let startY = 0
@@ -122,7 +123,13 @@
   $: silentResource =
     resource && (resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
 
-  $: if ((showPreview || showHiddenPreview) && !collapsed && isHTMLApp && !stillGenerating) {
+  $: if (
+    (showPreview || showHiddenPreview) &&
+    !collapsed &&
+    isHTMLApp &&
+    !stillGenerating &&
+    expandable
+  ) {
     renderHTMLPreview()
   } else if (!collapsed && resource) {
     highlightCode()
@@ -1005,7 +1012,7 @@
     }
 
     const prefs = getUserViewPreferences(resource?.tags ?? [])
-    if (prefs?.blockCollapsed !== undefined) {
+    if (prefs?.blockCollapsed !== undefined && initialCollapsed !== true) {
       initialCollapsed = prefs.blockCollapsed
     } else if (initialCollapsed === 'auto') {
       if (!['html', 'javascript', 'typescript'].includes(lang ?? '')) {
@@ -1090,7 +1097,9 @@
           {:else}
             <Icon
               name="chevron.right"
-              className="{!collapsed ? 'rotate-90' : ''} transition-transform duration-75"
+              className="{!collapsed && expandable
+                ? 'rotate-90'
+                : ''} transition-transform duration-75"
             />
           {/if}
         </button>
@@ -1116,7 +1125,7 @@
     </div>
 
     <div class="flex items-center gap-3">
-      {#if (isHTML || isJS) && (!collapsed || stillGenerating)}
+      {#if (isHTML || isJS) && (!collapsed || stillGenerating) && expandable}
         <div class="preview-group flex items-center rounded-md overflow-hidden">
           <button
             class="no-custom px-3 py-1 text-sm"
@@ -1141,7 +1150,7 @@
         </div>
       {/if}
 
-      {#if !stillGenerating}
+      {#if !stillGenerating && expandable}
         {#if collapsed}
           <div class="flex items-center gap-1">
             {#if isJS}
@@ -1276,7 +1285,7 @@
   </header>
 
   <div
-    class="code-container w-full flex-grow overflow-hidden {showPreview || collapsed
+    class="code-container w-full flex-grow overflow-hidden {showPreview || collapsed || !expandable
       ? 'hidden'
       : ''} {isHTML && !fullSize && !collapsed && !resizable ? 'h-[750px]' : ''}"
     style={resizable && !fullSize && !collapsed
@@ -1290,7 +1299,7 @@
       on:input={handleCodeInput}><slot>{codeContent}</slot></pre>
   </div>
 
-  {#if (showPreview || showHiddenPreview) && !collapsed}
+  {#if (showPreview || showHiddenPreview) && !collapsed && expandable}
     {#if isHTML}
       <div
         bind:this={appContainer}
