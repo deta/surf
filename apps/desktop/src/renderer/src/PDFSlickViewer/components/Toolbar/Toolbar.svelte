@@ -126,26 +126,6 @@
     <Splitter />
 
     <div class="items-center space-x-1 hidden sm:!flex">
-      <!-- <button
-        class="inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
-        on:click={() => openPdfFileRef.click()}
-      >
-        <iconify-icon height={16} icon="codicon:diff-added" />
-        <Tooltip position="bottom">
-          <p class="whitespace-nowrap">Open PDF File</p>
-        </Tooltip>
-      </button> -->
-
-      <!-- <button
-        class="inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
-        on:click={() => $pdfSlickStore?.pdfSlick?.downloadOrSave()}
-      >
-        <iconify-icon height={16} icon="codicon:desktop-download" />
-        <Tooltip position="bottom">
-          <p class="whitespace-nowrap">Save</p>
-        </Tooltip>
-      </button> -->
-
       <DocumentInfo bind:isOpen={isDocumentInfoOpen} />
       <Splitter />
     </div>

@@ -370,6 +370,8 @@
           const resourceData = detectedResource.data as ResourceDataPDF
           const url = resourceData.url
           const pdfDownloadURL = resourceData?.downloadURL ?? url
+
+          log.debug('downloading PDF', pdfDownloadURL)
           const downloadData = await new Promise<Download | null>((resolveDownload) => {
             const timeout = setTimeout(() => {
               downloadIntercepters.update((intercepters) => {
@@ -394,7 +396,9 @@
             downloadURL(pdfDownloadURL)
           })
 
-          if (downloadData) {
+          log.debug('download data', downloadData, downloadData.resourceId)
+
+          if (downloadData && downloadData.resourceId) {
             filename = downloadData.filename
             const resource = (await resourceManager.getResource(downloadData.resourceId))!
 
@@ -421,6 +425,10 @@
               )
 
             resolve(resource)
+            return
+          } else {
+            log.error('Failed to download PDF')
+            reject(null)
             return
           }
         }
@@ -598,6 +606,18 @@
       createdForChat,
       freshWebview
     })
+
+    // if (resource.type === ResourceTypes.PDF) {
+    //   window.api.openResourceLocally({
+    //     id: resource.id,
+    //     metadata: resource.metadata,
+    //     type: resource.type,
+    //     path: resource.path,
+    //     deleted: resource.deleted,
+    //     createdAt: resource.createdAt,
+    //     updatedAt: resource.updatedAt
+    //   })
+    // }
 
     tab.resourceBookmark = resource.id
     tab.chatResourceBookmark = resource.id

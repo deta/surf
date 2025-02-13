@@ -1152,6 +1152,8 @@
         return { resource: null, isNew: false }
       }
 
+      log.debug('bookmarking tab', tab)
+
       if (tab.type === 'resource') {
         const resource = await resourceManager.getResource(tab.resourceId)
         if (!resource) {
@@ -2717,7 +2719,7 @@
 
         downloadResourceMap.set(data.id, downloadData)
 
-        log.debug('new download request', downloadData)
+        log.debug('new download request', downloadData, data)
 
         if (!downloadIntercepter) {
           toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
@@ -2752,7 +2754,8 @@
 
         return {
           path: downloadData.savePath,
-          copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
+          copyToDownloads: $userConfigSettings.save_to_user_downloads
+          // copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
         }
       } catch (err) {
         log.error('download path error', err)

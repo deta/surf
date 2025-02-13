@@ -11,10 +11,13 @@ import { isPathSafe, checkFileExists } from './utils'
 
 const log = useLogScope('Download Manager')
 
+const PDFViewerEntryPoint =
+  process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
+
 export function initDownloadManager(partition: string) {
   const targetSession = session.fromPartition(partition)
 
-  targetSession.on('will-download', async (_event, downloadItem) => {
+  targetSession.on('will-download', async (_event, downloadItem, sourceWebContents) => {
     downloadItem.pause()
 
     let finalPath = ''
@@ -26,10 +29,46 @@ export function initDownloadManager(partition: string) {
 
     const fileExtension = path.extname(filename).toLowerCase()
     const mimeType = mime.lookup(fileExtension) || downloadItem.getMimeType()
+    const url = downloadItem.getURL()
 
-    downloadItem.setSavePath(tempDownloadPath)
+    log.debug('will-download', url, filename)
 
-    log.debug('will-download', downloadItem.getURL(), filename)
+    const sourcePageUrl = sourceWebContents ? sourceWebContents.getURL() : null
+    log.debug('sourceWebContents', sourcePageUrl)
+
+    const sourceIsPDFViewer =
+      (sourcePageUrl && sourcePageUrl.startsWith(PDFViewerEntryPoint) && url.startsWith('blob:')) ||
+      false
+
+    log.debug('source is PDF viewer:', sourceIsPDFViewer)
+
+    if (sourceIsPDFViewer) {
+      log.debug('source is PDF viewer, skipping resource creation')
+
+      const downloadsPath = app.getPath('downloads')
+
+      const downloadedFilePath = path.join(downloadsPath, filename)
+
+      let defaultPath: string | undefined = undefined
+      if (isPathSafe(downloadsPath, downloadedFilePath)) {
+        defaultPath = downloadedFilePath
+      }
+
+      downloadItem.setSaveDialogOptions({
+        title: 'Save PDF',
+        defaultPath: defaultPath
+      })
+
+      return
+    } else {
+      downloadItem.setSavePath(tempDownloadPath)
+    }
+
+    const webContents = getMainWindow()?.webContents
+    if (!webContents) {
+      log.error('No main window found')
+      return
+    }
 
     const moveTempFile = async (finalPath: string) => {
       // copy to downloads folder
@@ -69,6 +108,35 @@ export function initDownloadManager(partition: string) {
       }
     }
 
+    const handleDownloadComplete = async (state: 'interrupted' | 'completed' | 'cancelled') => {
+      let path: string
+
+      log.debug('handling completed download', state, downloadItem.getFilename())
+
+      if (finalPath) {
+        path = finalPath
+        await moveTempFile(finalPath)
+      } else {
+        log.debug('final path not set, using temp path')
+        path = tempDownloadPath
+      }
+
+      IPC_EVENTS_MAIN.downloadDone.sendToWebContents(webContents, {
+        id: downloadId,
+        state: state,
+        filename: downloadItem.getFilename(),
+        mimeType: mimeType,
+        totalBytes: downloadItem.getTotalBytes(),
+        contentDisposition: downloadItem.getContentDisposition(),
+        startTime: downloadItem.getStartTime(),
+        endTime: Date.now(),
+        urlChain: downloadItem.getURLChain(),
+        lastModifiedTime: downloadItem.getLastModifiedTime(),
+        eTag: downloadItem.getETag(),
+        savePath: path
+      })
+    }
+
     ipcMain.once(
       `download-path-response-${downloadId}`,
       async (_event, data: DownloadPathResponseMessage) => {
@@ -88,26 +156,21 @@ export function initDownloadManager(partition: string) {
         log.debug(`download-path-response-${downloadId}`, path)
 
         if (downloadItem.getState() === 'completed') {
-          await moveTempFile(finalPath)
+          await handleDownloadComplete('completed')
         }
       }
     )
 
-    const webContents = getMainWindow()?.webContents
-    if (!webContents) {
-      log.error('No main window found')
-      return
-    }
-
     IPC_EVENTS_MAIN.downloadRequest.sendToWebContents(webContents, {
       id: downloadId,
-      url: downloadItem.getURL(),
+      url: url,
       filename: filename,
       mimeType: mimeType,
       totalBytes: downloadItem.getTotalBytes(),
       contentDisposition: downloadItem.getContentDisposition(),
       startTime: downloadItem.getStartTime(),
-      hasUserGesture: downloadItem.hasUserGesture()
+      hasUserGesture: downloadItem.hasUserGesture(),
+      sourceIsPDFViewer: sourceIsPDFViewer
     })
 
     downloadItem.on('updated', (_event, state) => {
@@ -129,31 +192,13 @@ export function initDownloadManager(partition: string) {
     })
 
     downloadItem.once('done', async (_event, state) => {
-      let path: string
-
       log.debug('download-done', state, downloadItem.getFilename())
 
-      if (state === 'completed' && finalPath) {
-        path = finalPath
-        await moveTempFile(finalPath)
+      if (finalPath) {
+        await handleDownloadComplete(state)
       } else {
-        path = tempDownloadPath
+        log.debug('final path not set, waiting for path response')
       }
-
-      IPC_EVENTS_MAIN.downloadDone.sendToWebContents(webContents, {
-        id: downloadId,
-        state: state,
-        filename: downloadItem.getFilename(),
-        mimeType: mimeType,
-        totalBytes: downloadItem.getTotalBytes(),
-        contentDisposition: downloadItem.getContentDisposition(),
-        startTime: downloadItem.getStartTime(),
-        endTime: Date.now(),
-        urlChain: downloadItem.getURLChain(),
-        lastModifiedTime: downloadItem.getLastModifiedTime(),
-        eTag: downloadItem.getETag(),
-        savePath: path
-      })
     })
   })
 }

@@ -7,6 +7,7 @@ export interface DownloadRequestMessage {
   contentDisposition: string
   startTime: number
   hasUserGesture: boolean
+  sourceIsPDFViewer: boolean
 }
 
 export interface DownloadPathResponseMessage {
@@ -51,4 +52,5 @@ export interface Download {
   lastModifiedTime?: string
   eTag?: string
   savePath: string
+  sourceIsPDFViewer?: boolean
 }
