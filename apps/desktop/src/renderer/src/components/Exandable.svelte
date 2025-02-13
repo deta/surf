@@ -12,14 +12,19 @@
 
 <section class="wrapper">
   <!-- svelte-ignore a11y-interactive-supports-focus a11y-click-events-have-key-events -->
-  <div on:click={handleClick} role="button" class="title">
-    {#if expanded}
-      <Icon name="chevron.down" size="22" />
-    {:else}
-      <Icon name="chevron.right" size="22" />
-    {/if}
 
-    <h1>{title}</h1>
+  <div class="header">
+    <div on:click={handleClick} role="button" class="title">
+      {#if expanded}
+        <Icon name="chevron.down" size="22" />
+      {:else}
+        <Icon name="chevron.right" size="22" />
+      {/if}
+
+      <h1>{title}</h1>
+    </div>
+
+    <slot name="header"></slot>
   </div>
 
   {#if expanded}
@@ -35,6 +40,12 @@
     overflow: hidden;
     border-radius: 0.5rem;
     color: var(--color-text);
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .title {

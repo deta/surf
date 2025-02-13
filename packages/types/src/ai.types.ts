@@ -55,8 +55,11 @@ export type Model = {
   max_tokens?: number
   custom_key?: string
   provider_url?: string
+  skip_append_open_ai_suffix?: boolean
   custom_model_name?: string
 }
+
+export const OPEN_AI_PATH_SUFFIX = '/v1/chat/completions'
 
 export const BUILT_IN_MODELS = [
   {

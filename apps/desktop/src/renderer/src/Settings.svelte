@@ -21,7 +21,12 @@
   import AppStylePicker from './components/AppStylePicker.svelte'
   import HomescreenOption from './components/HomescreenOption.svelte'
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
-  import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, type Model } from '@horizon/types/src/ai.types'
+  import {
+    BUILT_IN_MODELS,
+    DEFAULT_AI_MODEL,
+    Provider,
+    type Model
+  } from '@horizon/types/src/ai.types'
   import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
@@ -115,9 +120,18 @@
   }
 
   const handleUpdateModel = async (e: CustomEvent<ModelUpdate>) => {
-    const { id, updates } = e.detail
+    let { id, updates } = e.detail
 
     console.log('updating model', id, updates)
+
+    const updateModel = (model: Model, updates: Partial<Model>) => {
+      if (model.provider === Provider.Custom) {
+        updates = { ...updates, skip_append_open_ai_suffix: true }
+      }
+
+      return { ...model, ...updates }
+    }
+
     models.update((models) => {
       const index = models.findIndex((model) => model.id === id)
       if (index === -1) {
@@ -126,12 +140,12 @@
           return models
         }
 
-        models.push({ ...model, ...updates })
+        models.push(updateModel(model, updates))
 
         return models
       }
 
-      models[index] = { ...models[index], ...updates }
+      models[index] = updateModel(models[index], updates)
       return models
     })
 
@@ -146,9 +160,7 @@
     models.update((models) => [...models, e.detail])
     await tick()
 
-    selectedModel.set(e.detail.id)
     userConfigSettings.model_settings = $models
-    userConfigSettings.selected_model = e.detail.id
 
     handleSettingsUpdate()
   }

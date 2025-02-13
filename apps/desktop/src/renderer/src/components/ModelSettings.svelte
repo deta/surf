@@ -1,6 +1,15 @@
 <script lang="ts" context="module">
   // prettier-ignore
   export type ModelUpdate = { id: string, updates: Partial<Model> };
+
+  export type ModelProvider = {
+    /** Model ID if custom provider otherwise provider label */
+    id: string
+    type: 'custom' | 'built-in'
+    label: string
+    icon: string
+    model: Model
+  }
 </script>
 
 <script lang="ts">
@@ -8,6 +17,7 @@
   import {
     BUILT_IN_MODELS,
     ModelTiers,
+    OPEN_AI_PATH_SUFFIX,
     Provider,
     ProviderLabels,
     type Model
@@ -19,7 +29,7 @@
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import { Icon } from '@horizon/icons'
   import Exandable from './Exandable.svelte'
-  import { generateID } from '@horizon/utils'
+  import { appendURLPath, generateID } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import FormField from './FormField.svelte'
   import { contextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
@@ -33,6 +43,9 @@
   export let selectedModelId: Writable<string>
   export let models: Writable<Model[]>
 
+  const AI_MODEL_DOCS =
+    'https://deta.notion.site/Using-different-AI-models-in-Surf-199a5244a71780e196fbd02db590e8f4'
+
   const sffs = new SFFS()
 
   const dispatch = createEventDispatcher<{
@@ -43,9 +56,11 @@
   }>()
 
   const modelSelectorOpen = writable(false)
-  const showCreateCustomModel = writable(false)
+  const providerSelectorOpen = writable(false)
+  const showProviderSettings = writable(false)
   const quotas = writable<Quota[]>([])
   const fetchingQuotas = writable(false)
+  const selectedProvider = writable<ModelProvider | null>(null)
 
   let customProviderName = ''
   let customModelName = ''
@@ -61,8 +76,35 @@
     icon: 'add'
   } as SelectItem
 
+  const modelToProvider = (model: Model) => {
+    if (model.provider === Provider.Custom) {
+      return {
+        id: model.id,
+        type: 'custom',
+        label: model.label,
+        icon: model.icon,
+        model
+      } as ModelProvider
+    }
+
+    return {
+      id: model.provider,
+      type: 'built-in',
+      label: ProviderLabels[model.provider],
+      icon: model.icon,
+      model
+    } as ModelProvider
+  }
+
+  const providerToModel = (providerId: string) => {
+    const provider = $providerItems.find((item) => item.id === providerId)
+    if (!provider) return null
+
+    return provider.data.model as Model
+  }
+
   const allModels = derived([models], ([models]) => {
-    const customModels = models.filter((m) => m.provider === 'custom')
+    const customModels = models.filter((m) => m.provider === Provider.Custom)
 
     const configuredBuiltInModels = BUILT_IN_MODELS.map((model) => {
       const customModel = models.find((m) => m.id === model.id)
@@ -77,59 +119,56 @@
 
   const selectedModel = derived([allModels, selectedModelId], ([allModels, selectedModelId]) => {
     const model = allModels.find((model) => model.id === selectedModelId)
-
-    customProviderName = model?.label ?? ''
-    customModelName = model?.custom_model_name ?? ''
-    customProviderUrl = model?.provider_url ?? ''
-    customMaxTokens = model?.max_tokens ?? 128_000
-    customVisionSupport = model?.vision ?? false
-    customSupportsJsonFormat = model?.supports_json_format ?? false
-    customApiKey = model?.custom_key ?? ''
-
     return model
   })
 
-  const providerItems = derived([allModels], ([allModels]) => {
+  const modelItems = derived([allModels], ([allModels]) => {
+    return allModels.map(
+      (model) =>
+        ({
+          id: model.id,
+          label: model.label,
+          icon: model.icon,
+          descriptionIcon: !model.vision ? 'vision.off' : '',
+          description: !model.vision ? 'Vision not supported' : undefined
+        }) as SelectItem
+    )
+  })
+
+  const providerItems = derived([allModels, selectedProvider], ([allModels, _selectedProvider]) => {
     const items = Array.from(
       new Set(
-        allModels.map((model) =>
-          model.provider === Provider.Custom ? model.label : model.provider
-        )
+        allModels.map((model) => (model.provider === Provider.Custom ? model.id : model.provider))
       )
     )
 
     return items.map((item) => {
-      const matchingModel = allModels.find(
-        (model) => model.provider === item || model.label === item
-      )
+      const matchingModel = allModels.find((model) => {
+        const hasSiblings = allModels.filter((m) => m.provider === item).length > 1
+
+        if (model.provider !== Provider.Custom) {
+          if (model.provider !== item) return false
+
+          if (hasSiblings) {
+            return model.tier === ModelTiers.Premium
+          }
+
+          return true
+        }
+
+        return model.id === item
+      })
+
+      const provider = modelToProvider(matchingModel)
+
       return {
-        id: item,
-        label:
-          matchingModel.provider === Provider.Custom ? matchingModel.label : ProviderLabels[item],
-        icon: matchingModel?.icon
+        id: provider.id,
+        label: provider.label,
+        icon: provider.icon,
+        data: provider
       } as SelectItem
     })
   })
-
-  const selectedProvider = derived([allModels, selectedModelId], ([allModels, selectedModelId]) => {
-    const model = allModels.find((model) => model.id === selectedModelId)
-    if (!model) return null
-
-    return model.provider === Provider.Custom ? model.label : model.provider
-  })
-
-  const selectedProviderItem = derived(
-    [selectedProvider, providerItems],
-    ([selectedProvider, providerItems]) => {
-      console.log('selectedProvider', selectedProvider, providerItems)
-      const provider = providerItems.find(
-        (provider) => provider.id === selectedProvider || provider.label === selectedProvider
-      )
-      if (!provider) return null
-
-      return provider
-    }
-  )
 
   const premiumTierQuotas = derived([quotas], ([$quotas]) => {
     const filtered = $quotas.filter((quota) => quota.tier === ModelTiers.Premium)
@@ -186,52 +225,91 @@
       custom_key: '',
       max_tokens: 128_000,
       vision: false,
-      supports_json_format: false
+      supports_json_format: false,
+      provider_url: '',
+      skip_append_open_ai_suffix: true
     } as Model
 
-    console.log('newCustomModel', newCustomModel)
+    const provider = modelToProvider(newCustomModel)
+    selectedProvider.set(provider)
+    showProviderSettings.set(true)
 
     dispatch('created-model', newCustomModel)
-
-    await tick()
-
-    showCreateCustomModel.set(true)
   }
 
-  const getModelFromProvider = (provider: string) => {
-    const models = $allModels.filter(
-      (model) => model.provider === provider || model.label === provider
-    )
-    const model = models.find((model) => model.tier === ModelTiers.Premium) ?? models[0]
-
-    return model
-  }
-
-  const handleSelectedModelChange = (event: CustomEvent<string>) => {
-    console.log('event.detail', event.detail, $allModels)
+  const handleSelectedProviderChange = (event: CustomEvent<string>) => {
     if (event.detail === 'configure') {
       modelSelectorOpen.set(false)
       handleCreateNewModel()
       return
     }
 
-    const model = getModelFromProvider(event.detail)
+    const providerItem = $providerItems.find((item) => item.id === event.detail)
+    if (providerItem) {
+      selectedProvider.set(providerItem.data)
+    }
+
+    providerSelectorOpen.set(false)
+    showProviderSettings.set(true)
+  }
+
+  const handleSelectedModelChange = (event: CustomEvent<string>) => {
+    const model = $allModels.find((model) => model.id === event.detail)
 
     if (model) {
       selectModel(model.id)
+
+      // if (model.provider === Provider.Custom) {
+      //   selectedProvider.set(model.label)
+      // } else {
+      //   selectedProvider.set(model.provider)
+      // }
     } else {
       modelSelectorOpen.set(false)
     }
   }
 
   const handleModelChange = (changes: Partial<Model>) => {
-    updateModel($selectedModel.id, changes)
+    const model = $selectedProvider.model
+    if (!model) return
+
+    if (changes.label) {
+      $selectedProvider.label = changes.label
+    }
+
+    updateModel(model.id, changes)
   }
 
   const getProviderItemContextMenu = (item: SelectItem) => {
     if (!item) return []
 
-    const model = getModelFromProvider(item.id)
+    const model = providerToModel(item.id)
+    if (!model) return []
+
+    return [
+      {
+        text: 'Delete',
+        type: 'action',
+        icon: 'trash',
+        disabled: model?.provider !== Provider.Custom,
+        action: () => {
+          console.log('delete model', model)
+
+          if ($selectedProvider.model.id === model.id) {
+            selectedProvider.set(null)
+            showProviderSettings.set(false)
+          }
+
+          dispatch('delete-model', model.id)
+        }
+      }
+    ] as CtxItem[]
+  }
+
+  const getModelItemContextMenu = (item: SelectItem) => {
+    if (!item) return []
+
+    const model = $allModels.find((m) => m.id === item.id)
 
     return [
       {
@@ -262,6 +340,47 @@
 
   onMount(() => {
     loadQuotas()
+
+    if ($selectedModel) {
+      const provider = modelToProvider($selectedModel)
+      selectedProvider.set(provider)
+    }
+
+    return selectedProvider.subscribe((provider) => {
+      if (!provider) return
+
+      if (provider.type === 'custom') {
+        customProviderName = provider.label
+        customModelName = provider.model?.custom_model_name ?? ''
+        customMaxTokens = provider.model?.max_tokens ?? 128_000
+        customVisionSupport = provider.model?.vision ?? false
+        customSupportsJsonFormat = provider.model?.supports_json_format ?? false
+        customApiKey = provider.model?.custom_key ?? ''
+
+        if (provider.model?.provider_url) {
+          if (provider.model?.skip_append_open_ai_suffix !== true) {
+            console.log('open ai prefix was previously used in the backend, setting it explicitly')
+            customProviderUrl = appendURLPath(provider.model.provider_url, OPEN_AI_PATH_SUFFIX)
+            updateModel(provider.model.id, {
+              provider_url: customProviderUrl,
+              skip_append_open_ai_suffix: true
+            })
+          } else {
+            customProviderUrl = provider.model.provider_url
+          }
+        } else {
+          customProviderUrl = ''
+        }
+      } else {
+        customProviderName = ''
+        customModelName = ''
+        customProviderUrl = ''
+        customMaxTokens = 128_000
+        customVisionSupport = false
+        customSupportsJsonFormat = false
+        customApiKey = provider.model?.custom_key ?? ''
+      }
+    })
   })
 </script>
 
@@ -271,15 +390,14 @@
   <div class="dev-wrapper">
     <div class="space-y-3">
       <div class="w-full flex items-center justify-between">
-        <h2 class="text-xl font-medium">AI Provider</h2>
+        <h2 class="text-xl font-medium">Selected AI Model</h2>
 
         <div class="block">
           <SelectDropdown
-            items={providerItems}
+            items={modelItems}
             search="disabled"
-            selected={$selectedProviderItem ? $selectedProviderItem.id : null}
+            selected={$selectedModel.id ?? null}
             open={modelSelectorOpen}
-            footerItem={selectConfigureItem}
             side="bottom"
             closeOnMouseLeave={false}
             keepHeightWhileSearching
@@ -288,11 +406,11 @@
             <button
               class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
             >
-              {#if $selectedProviderItem}
-                <Icon name={$selectedProviderItem.icon} />
+              {#if $selectedModel}
+                <Icon name={$selectedModel.icon} />
               {/if}
 
-              {$selectedProviderItem ? $selectedProviderItem.label : 'Select Model'}
+              {$selectedModel ? $selectedModel.label : 'Select Model'}
 
               {#if $modelSelectorOpen}
                 <Icon name="chevron.up" className="opacity-60" />
@@ -306,7 +424,7 @@
               class="w-full"
               let:item
               use:contextMenu={{
-                items: getProviderItemContextMenu(item)
+                items: getModelItemContextMenu(item)
               }}
             >
               <SelectDropdownItem {item} />
@@ -315,55 +433,135 @@
         </div>
       </div>
 
-      <p>
-        The provider you pick will be used across all Surf AI features. Surf will automatically pick
-        the right models of the provider for the task, you can choose a specific model from the
-        chat.
-      </p>
+      <div class="details-text">
+        <p>
+          Choose from built-in AI models by OpenAI and Anthropic, or configure your own custom model
+          below. Your selected model will be used across all Surf features.
+        </p>
+
+        <p>Surf may switch to more efficient models from the same provider for certain features.</p>
+
+        <p>
+          <b>Tip:</b> The model can also be changed from the chat sidebar, vision tool, and smart notes.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dev-wrapper">
+    <div class="space-y-3">
+      <div class="w-full flex items-center justify-between">
+        <h2 class="text-xl font-medium">Configure your AI Models</h2>
+      </div>
+
+      <div class="details-text">
+        <p>
+          Configure the built-in AI providers or add your own custom models. Visit our <a
+            href={AI_MODEL_DOCS}
+            target="_blank">manual</a
+          > for more information and setup instructions on how to configure your own models.
+        </p>
+      </div>
     </div>
 
-    {#if $selectedModel}
-      <Exandable
-        title={$selectedModel.provider === Provider.Custom
-          ? `Configure Custom Provider`
-          : `Configure ${$selectedProviderItem.label ?? 'Provider'}`}
-        expanded={$showCreateCustomModel}
-      >
-        {#if $selectedModel.provider === Provider.Custom}
-          <p>Configure your custom model provider:</p>
+    <Exandable
+      title={$selectedProvider?.type === Provider.Custom
+        ? 'Configure Custom Model'
+        : 'Configure Built-In Provider'}
+      expanded={!!($showProviderSettings && $selectedProvider)}
+    >
+      <div slot="header" class="flex items-center gap-2">
+        <button
+          on:click={handleCreateNewModel}
+          class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
+        >
+          <Icon name="add" />
+        </button>
+
+        <SelectDropdown
+          items={providerItems}
+          search="disabled"
+          selected={$selectedProvider ? $selectedProvider.id : null}
+          open={providerSelectorOpen}
+          footerItem={selectConfigureItem}
+          side="bottom"
+          closeOnMouseLeave={false}
+          keepHeightWhileSearching
+          on:select={handleSelectedProviderChange}
+        >
+          <button
+            class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
+          >
+            {#if $selectedProvider}
+              <Icon name={$selectedProvider.icon} />
+            {/if}
+
+            {$selectedProvider ? $selectedProvider.label : 'Select model to configure'}
+
+            {#if $providerSelectorOpen}
+              <Icon name="chevron.up" className="opacity-60" />
+            {:else}
+              <Icon name="chevron.down" className="opacity-60" />
+            {/if}
+          </button>
+
+          <div
+            slot="item"
+            class="w-full"
+            let:item
+            use:contextMenu={{
+              items: getProviderItemContextMenu(item)
+            }}
+          >
+            <SelectDropdownItem {item} />
+          </div>
+        </SelectDropdown>
+      </div>
+
+      {#if $selectedProvider?.type === Provider.Custom}
+        <div class="provider-config">
+          <p>
+            Here you can onfigure your own custom model and provider. Checkout the
+            <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how to configure it.
+          </p>
 
           <FormField
-            label="Provider Label"
-            placeholder="give your custom model provider a name"
+            label="Model Label"
+            placeholder="My Custom Model"
+            infoText="Give your custom model a name so you can identify it within Surf's UI"
             bind:value={customProviderName}
             on:save={() => handleModelChange({ label: customProviderName })}
           />
 
           <FormField
-            label="Model Name/ID"
-            placeholder="what model of the provider you want to use"
+            label="Provider Model ID"
+            placeholder="llama3.2"
+            infoText="The ID of the model from the provider's API"
             bind:value={customModelName}
             on:save={() => handleModelChange({ custom_model_name: customModelName })}
           />
 
           <FormField
-            label="Provider URL"
-            placeholder="url of the model provider"
+            label="Provider API Endpoint"
+            placeholder="https://<hostname>/v1/chat/completions"
+            infoText="Full URL of the model provider's OpenAI compatible API endpoint"
             bind:value={customProviderUrl}
             on:save={() => handleModelChange({ provider_url: customProviderUrl })}
           />
 
           <FormField
-            label="Provider API Key"
-            placeholder="api key for the model provider"
+            label="Provider API Key (optional)"
+            placeholder="optional API key"
+            infoText="API key for the provider's Open AI compatible API"
             type="password"
             bind:value={customApiKey}
             on:save={() => handleModelChange({ custom_key: customApiKey })}
           />
 
           <FormField
-            label="Max Context Window"
-            placeholder="max tokens of the model"
+            label="Context Size (tokens)"
+            placeholder="128000"
+            infoText="Maximum number of tokens the model supports in the context window"
             type="number"
             bind:value={customMaxTokens}
             on:save={() => handleModelChange({ max_tokens: customMaxTokens })}
@@ -371,6 +569,7 @@
 
           <FormField
             label="Supports Vision"
+            infoText="Does the model support vision features like image tagging"
             type="checkbox"
             bind:value={customVisionSupport}
             on:save={() => handleModelChange({ vision: customVisionSupport })}
@@ -378,23 +577,31 @@
 
           <FormField
             label="Supports JSON Format"
+            infoText="Does the model support outputing in JSON format"
             type="checkbox"
             bind:value={customSupportsJsonFormat}
             on:save={() => handleModelChange({ supports_json_format: customSupportsJsonFormat })}
           />
-        {:else}
-          <p>Configure your provider settings here.</p>
+        </div>
+      {:else if $selectedProvider}
+        <div class="provider-config">
+          <p>
+            Set your own API key for {$selectedProvider.label} to skip our services and quota limits
+            and let Surf talk with {$selectedProvider.label}'s API directly. More details in the
+            <a href={AI_MODEL_DOCS} target="_blank">manual</a>.
+          </p>
 
           <FormField
-            label="Custom Provider API Key"
-            placeholder="api key for the model provider"
+            label="Provider API Key"
+            placeholder="your API key"
+            infoText="Specify your own API key to use with the built-in provider"
             type="password"
             bind:value={customApiKey}
             on:save={() => handleModelChange({ custom_key: customApiKey })}
           />
-        {/if}
-      </Exandable>
-    {/if}
+        </div>
+      {/if}
+    </Exandable>
   </div>
 
   {#if $quotas.length > 0}
@@ -495,9 +702,22 @@
     gap: 0.5rem;
   }
 
+  .details-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   .tiers-wrapper {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+  }
+
+  .provider-config {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
   }
 </style>

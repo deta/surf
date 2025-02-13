@@ -229,7 +229,7 @@ impl Provider {
                 "{}/v1/messages",
                 base_url.unwrap_or("https://api.anthropic.com")
             ),
-            Self::Custom(url) => format!("{url}/v1/chat/completions"),
+            Self::Custom(url) => format!("{url}"),
         }
     }
 

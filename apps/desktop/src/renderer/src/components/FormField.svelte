@@ -1,21 +1,23 @@
 <script lang="ts">
-  import { useDebounce } from '@horizon/utils'
+  import Switch from '@horizon/core/src/lib/components/Atoms/Switch.svelte'
+  import { Icon } from '@horizon/icons'
+  import { tooltip, useDebounce } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
 
   export let label: string
   export let value: string | number | boolean
   export let placeholder: string = ''
+  export let infoText: string | undefined = undefined
   export let type: 'text' | 'number' | 'password' | 'checkbox' = 'text'
 
-  const dispatch = createEventDispatcher<{ change: string; save: string }>()
+  const dispatch = createEventDispatcher<{ change: string; save: string | boolean }>()
 
-  const debouncedSave = useDebounce((value: string) => {
+  const debouncedSave = useDebounce((value: string | boolean) => {
     dispatch('save', value)
   }, 500)
 
-  const handleChange = (event: Event) => {
-    const target = event.target as HTMLSelectElement
-    const value = target.value
+  const handleChange = (e: CustomEvent<boolean>) => {
+    const value = e.detail
 
     debouncedSave(value)
   }
@@ -30,7 +32,16 @@
 
 <div class="form-field">
   <!-- svelte-ignore a11y-label-has-associated-control -->
-  <label>{label}</label>
+  <div class="form-label">
+    <label>{label}</label>
+
+    {#if infoText}
+      <div class="info" use:tooltip={{ text: infoText }}>
+        <Icon name="info" size="16px" />
+      </div>
+    {/if}
+  </div>
+
   {#if type === 'text'}
     <input type="text" {placeholder} bind:value class="input" on:input={handleInput} on:blur />
   {:else if type === 'number'}
@@ -38,20 +49,41 @@
   {:else if type === 'password'}
     <input type="password" {placeholder} bind:value class="input" on:input={handleInput} on:blur />
   {:else if type === 'checkbox' && typeof value === 'boolean'}
-    <input type="checkbox" bind:checked={value} class="checkbox" on:change={handleChange} on:blur />
+    <Switch color="#ff4eed" fontSize={14} bind:checked={value} on:update={handleChange} />
   {/if}
 </div>
 
 <style lang="scss">
   .form-field {
     display: grid;
-    grid-template-columns: 180px 1fr;
+    grid-template-columns: 200px 1fr;
     align-items: center;
     gap: 1rem;
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      transition: opacity 0.2s ease-in-out;
+      opacity: 0.75;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
 
     label {
       font-size: 1rem;
       color: var(--color-text);
+      white-space: nowrap;
     }
 
     input {

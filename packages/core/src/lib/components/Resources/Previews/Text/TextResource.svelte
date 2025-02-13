@@ -693,17 +693,20 @@
     if (mentions && mentions.length > 0) {
       log.debug('Adding spaces to context', mentions)
 
-      mentions.forEach((mention) => {
-        chatContextManager.addMentionItem(mention)
-      })
+      const contextMentions = mentions.filter((mention) => mention.type !== MentionItemType.MODEL)
+      if (contextMentions.length > 0) {
+        contextMentions.forEach((mention) => {
+          chatContextManager.addMentionItem(mention)
+        })
 
-      ai.telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.Add,
-        contextManager.itemsValue.length,
-        mentions.length,
-        undefined,
-        PageChatUpdateContextEventTrigger.EditorMention
-      )
+        ai.telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.Add,
+          contextManager.itemsValue.length,
+          mentions.length,
+          undefined,
+          PageChatUpdateContextEventTrigger.EditorMention
+        )
+      }
     } else if ($selectedContext) {
       log.debug('Adding selected context to context', $selectedContext)
       chatContextManager.addMentionItem($selectedContext)

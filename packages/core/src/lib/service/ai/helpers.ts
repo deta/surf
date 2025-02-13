@@ -501,7 +501,9 @@ export const useEditorSpaceMentions = (oasis: OasisService, ai: AIService) =>
           id: `model-${model.id}`,
           label: model.label,
           suggestionLabel: `Ask ${model.label}`,
-          aliases: [model.custom_model_name, model.provider].filter(Boolean) as string[],
+          aliases: ['model', 'ai', model.custom_model_name, model.provider].filter(
+            Boolean
+          ) as string[],
           icon: model.icon,
           type: MentionItemType.MODEL,
           hideInRoot: model.provider !== Provider.Custom

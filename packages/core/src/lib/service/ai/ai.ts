@@ -10,10 +10,21 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { getFormattedDate, isDev, useLocalStorageStore, useLogScope } from '@horizon/utils'
+import {
+  appendURLPath,
+  getFormattedDate,
+  isDev,
+  useLocalStorageStore,
+  useLogScope
+} from '@horizon/utils'
 import { PAGE_PROMPTS_GENERATOR_PROMPT, SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
 import { type AiSFFSQueryResponse } from '../../types'
-import { BUILT_IN_MODELS, ModelTiers, type Model } from '@horizon/types/src/ai.types'
+import {
+  BUILT_IN_MODELS,
+  ModelTiers,
+  OPEN_AI_PATH_SUFFIX,
+  type Model
+} from '@horizon/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError } from './helpers'
 import type { TabsManager } from '../tabs'
 import type { Telemetry } from '../telemetry'
@@ -133,10 +144,18 @@ export class AIService {
 
   modelToBackendModel(model: Model): ModelBackend {
     if (model.provider === 'custom') {
+      let providerUrl = model.provider_url ?? ''
+
+      // for backwards compatibility we need to append the OpenAI path as we were doing that before in the backend
+      if (model.skip_append_open_ai_suffix !== true) {
+        providerUrl = appendURLPath(providerUrl, OPEN_AI_PATH_SUFFIX)
+        this.log.debug('appended open ai path suffix', providerUrl)
+      }
+
       return {
         custom: {
           name: model.custom_model_name ?? model.label,
-          provider: { custom: model.provider_url ?? '' },
+          provider: { custom: providerUrl },
           max_tokens: model.max_tokens || 128_000,
           vision: model.vision
         }

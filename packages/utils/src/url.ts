@@ -366,3 +366,13 @@ export const parsePDFViewerParams = (url: string | URL): PDFViewerParams => {
     filename: params.filename ? decodeURIComponent(params.filename) : undefined
   }
 }
+
+export const appendURLPath = (url: string, path: string) => {
+  try {
+    const urlObj = new URL(url)
+    urlObj.pathname = urlObj.pathname.replace(/\/$/, '') + '/' + path.replace(/^\//, '')
+    return urlObj.href
+  } catch {
+    return url
+  }
+}
