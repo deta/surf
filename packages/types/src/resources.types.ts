@@ -93,6 +93,7 @@ export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'loc
 export interface SFFSSearchGeneralParameters {
   includeAnnotations?: boolean
   spaceId?: string
+  keywordLimit?: number // Limit for keyword-based search results
 }
 
 export interface SFFSSearchSemanticParameters {

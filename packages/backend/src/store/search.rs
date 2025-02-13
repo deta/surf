@@ -55,6 +55,7 @@ impl Database {
         &self,
         keyword: &str,
         filtered_resource_ids: Vec<String>,
+        limit: Option<i64>,
     ) -> BackendResult<Vec<SearchResultItem>> {
         let mut results: Vec<SearchResultItem> = Vec::new();
 
@@ -69,9 +70,11 @@ impl Database {
                 OR R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1)
             )";
 
+        let limit_clause = limit.map_or(String::new(), |l| format!(" LIMIT {}", l));
+        
         let (query, params) = if filtered_resource_ids.is_empty() {
             (
-                format!("{} ORDER BY rank", base_query),
+                format!("{} ORDER BY rank{}", base_query, limit_clause),
                 vec![escaped_keyword],
             )
         } else {
@@ -80,9 +83,9 @@ impl Database {
                 "
                 {}
                 AND R.id IN ({})
-                ORDER BY rank
+                ORDER BY rank{}
             ",
-                base_query, placeholders
+                base_query, placeholders, limit_clause
             );
 
             let mut params = vec![escaped_keyword];
@@ -145,6 +148,7 @@ impl Database {
         keyword: &str,
         filtered_resource_ids: &Option<Vec<String>>,
         include_annotations: bool,
+        keyword_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         // The Some value in filtered_resource_ids indicates that the search MUST have the filter ids
         // so if value is Some and empty, we return an empty result
@@ -161,7 +165,7 @@ impl Database {
             None => &vec![],
         };
 
-        let mut results = self.keyword_search(keyword, filtered_resource_ids.clone())?;
+        let mut results = self.keyword_search(keyword, filtered_resource_ids.clone(), keyword_limit)?;
         if include_annotations {
             let mut annotations = self.list_resource_annotations(
                 results

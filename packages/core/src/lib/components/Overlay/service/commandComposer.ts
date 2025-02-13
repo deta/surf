@@ -291,7 +291,12 @@ export class CommandComposer {
               ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
               ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
             ],
-            { includeAnnotations: false, semanticEnabled: true }
+            {
+              includeAnnotations: false,
+              semanticEnabled: get(this.userConfigSettings).use_semantic_search,
+              semanticLimit: 0,
+              keywordLimit: 6
+            }
           )
           this.log.debug('Oasis search results:', data)
 
@@ -305,7 +310,7 @@ export class CommandComposer {
             })
           )
 
-          this.oasisSearchResults.set(resources.slice(0, 20))
+          this.oasisSearchResults.set(resources)
         } catch (error) {
           this.log.error('Error fetching Oasis search results:', error)
           this.oasisSearchResults.set([])

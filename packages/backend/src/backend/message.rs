@@ -97,6 +97,7 @@ pub enum ResourceMessage {
         embeddings_limit: Option<i64>,
         include_annotations: Option<bool>,
         space_id: Option<String>,
+        keyword_limit: Option<i64>,
     },
     UpdateResource(Resource),
     UpdateResourceMetadata(ResourceMetadata),

@@ -448,7 +448,8 @@ export class SFFS {
       parameters?.semanticDistanceThreshold,
       parameters?.semanticLimit,
       parameters?.includeAnnotations,
-      parameters?.spaceId
+      parameters?.spaceId,
+      parameters?.keywordLimit
     )
     const parsed = this.parseData<SFFSSearchResult>(raw)
     const items = parsed?.items ?? []

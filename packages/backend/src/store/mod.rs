@@ -420,6 +420,12 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .map(|js_string| js_string.value(&mut cx))
     });
 
+    let keyword_limit = cx.argument_opt(8).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as i64)
+    });
+
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::ResourceMessage(ResourceMessage::SearchResources {
@@ -430,6 +436,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             embeddings_limit,
             include_annotations,
             space_id,
+            keyword_limit,
         }),
         deferred,
     );

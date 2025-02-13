@@ -274,6 +274,7 @@ impl Worker {
         embeddings_limit: Option<i64>,
         include_annotations: Option<bool>,
         space_id: Option<String>,
+        keyword_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         if let Some(resource_tag_filters) = &resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
@@ -300,7 +301,7 @@ impl Worker {
 
         let db_results =
             self.db
-                .search_resources(&query, &filtered_resource_ids, include_annotations)?;
+                .search_resources(&query, &filtered_resource_ids, include_annotations, keyword_limit)?;
 
         for result in db_results.items {
             if result.resource.resource.resource_type.ends_with(".ignore") {
@@ -735,6 +736,7 @@ pub fn handle_resource_message(
             embeddings_limit,
             include_annotations,
             space_id,
+            keyword_limit,
         } => {
             let result = worker.search_resources(
                 query,
@@ -744,6 +746,7 @@ pub fn handle_resource_message(
                 embeddings_limit,
                 include_annotations,
                 space_id,
+                keyword_limit,
             );
             send_worker_response(&mut worker.channel, oneshot, result);
         }
