@@ -21,7 +21,8 @@ export interface SpaceData {
   liveModeEnabled: boolean
   hideViewed: boolean
   smartFilterQuery: string | null
-  sortBy: 'created_at' | 'source_published_at'
+  sortBy: 'created_at' | 'updated_at' | 'source_published_at' | 'name'
+  sortOrder?: 'asc' | 'desc'
   sql_query: string | null
   embedding_query: string | null
   builtIn?: boolean
@@ -49,6 +50,7 @@ export interface SpaceEntry {
   id: string
   space_id: string
   resource_id: string
+  resource_type?: string
   created_at: string
   updated_at: string
   manually_added: number

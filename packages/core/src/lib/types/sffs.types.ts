@@ -131,3 +131,8 @@ export type AIChatMessageRaw = {
   content: string
   sources?: AIChatMessageSource[]
 }
+
+export type SpaceEntrySearchOptions = {
+  sort_by?: 'created_at' | 'updated_at' | 'source_published_at' | 'name'
+  order?: 'asc' | 'desc'
+}

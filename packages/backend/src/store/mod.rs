@@ -204,10 +204,24 @@ fn js_create_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_get_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let sort_by = cx.argument_opt(2).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
+    let order_by = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::SpaceMessage(SpaceMessage::GetSpaceEntries { space_id }),
+        WorkerMessage::SpaceMessage(SpaceMessage::GetSpaceEntries { 
+            space_id,
+            sort_by,
+            order_by 
+        }),
         deferred,
     );
 

@@ -25,7 +25,8 @@ import {
   type Optional,
   type Space,
   type SpaceData,
-  type SpaceEntry
+  type SpaceEntry,
+  type SpaceEntrySearchOptions
 } from '../types'
 import { ResourceManager, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
@@ -151,9 +152,9 @@ export class OasisSpace {
     await this.updateData({ index })
   }
 
-  async fetchContents() {
+  async fetchContents(opts?: SpaceEntrySearchOptions) {
     this.log.debug('getting space contents')
-    const result = await this.resourceManager.getSpaceContents(this.id)
+    const result = await this.resourceManager.getSpaceContents(this.id, opts)
 
     this.log.debug('got space contents:', result)
     this.contents.set(result)
@@ -547,7 +548,7 @@ export class OasisService {
     return space
   }
 
-  async getSpaceContents(spaceId: string) {
+  async getSpaceContents(spaceId: string, opts?: SpaceEntrySearchOptions) {
     this.log.debug('getting space contents', spaceId)
 
     const space = await this.getSpace(spaceId)
@@ -556,7 +557,7 @@ export class OasisService {
       throw new Error('Space not found')
     }
 
-    return space.fetchContents()
+    return space.fetchContents(opts)
   }
 
   /** Deletes the provided resources from Oasis and gets rid of all references in any space */

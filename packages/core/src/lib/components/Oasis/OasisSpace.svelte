@@ -180,6 +180,8 @@
       loadingContents.set(true)
       everythingContents.set([])
 
+      const startTime = performance.now()
+
       const fetchedSpace = await oasis.getSpace(id)
       if (!fetchedSpace) {
         log.error('Space not found')
@@ -190,9 +192,11 @@
       log.debug('Fetched space:', fetchedSpace)
       space.set(fetchedSpace)
 
-      // TODO(@felix): instead of having one list, entries should be split into
-      // three lists, based on their `manually_added` attribute
-      let items = await oasis.getSpaceContents(id)
+      const sortBy = $space?.dataValue.sortBy ?? 'updated_at'
+      const order = $space?.dataValue.sortOrder ?? 'desc'
+
+      log.debug('Loading space contents:', id, sortBy, order)
+      let items = await oasis.getSpaceContents(id, { order: order, sort_by: sortBy })
       log.debug('Loaded space contents:', items)
 
       items = items.filter((item) => item.manually_added !== SpaceEntryOrigin.Blacklisted)
@@ -204,88 +208,62 @@
 
       await tick()
 
-      const fullResources = (
-        await Promise.all(items.map((x) => resourceManager.getResource(x.resource_id)))
-      ).filter((x) => x !== null)
-
       if ($selectedFilterType !== null) {
-        items = items.filter((item) => {
-          const resource = fullResources.find((x) => x.id === item.resource_id)
-          if (!resource) {
-            return false
-          }
+        const filteredItems = await Promise.all(
+          items.map(async (item) => {
+            let type = item.resource_type
+            let resource
 
-          if ($selectedFilterType.id === 'media') {
-            return (
-              resource.type.startsWith('image/') ||
-              resource.type.startsWith('video/') ||
-              resource.type.startsWith('audio/')
-            )
-          } else if ($selectedFilterType.id === 'notes') {
-            return resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
-          } else if ($selectedFilterType.id === 'files') {
-            return (
-              !resource.type.startsWith('application/vnd.space.') &&
-              !resource.type.startsWith('image/') &&
-              !resource.type.startsWith('video/') &&
-              !resource.type.startsWith('audio/')
-            )
-          } else if ($selectedFilterType.id === 'links') {
-            return resource.type.startsWith('application/vnd.space.')
-          } else if ($selectedFilterType.id === 'surflets') {
-            return isGeneratedResource(resource)
-          } else {
-            return true
-          }
-        })
+            // Fetch resource if type is missing or if we're filtering for surflets
+            if (!type || $selectedFilterType.id === 'surflets') {
+              log.debug('Fetching resource:', item.resource_id)
+              resource = await resourceManager.getResource(item.resource_id)
+              if (!resource) {
+                return false
+              }
+
+              type = resource.type
+            }
+
+            if (!type) {
+              return false
+            }
+
+            if ($selectedFilterType.id === 'media') {
+              return type.startsWith('image/') ||
+                type.startsWith('video/') ||
+                type.startsWith('audio/')
+                ? item
+                : false
+            } else if ($selectedFilterType.id === 'notes') {
+              return type === ResourceTypes.DOCUMENT_SPACE_NOTE ? item : false
+            } else if ($selectedFilterType.id === 'files') {
+              return !type.startsWith('application/vnd.space.') &&
+                !type.startsWith('image/') &&
+                !type.startsWith('video/') &&
+                !type.startsWith('audio/')
+                ? item
+                : false
+            } else if ($selectedFilterType.id === 'links') {
+              return type.startsWith('application/vnd.space.') ? item : false
+            } else if ($selectedFilterType.id === 'surflets') {
+              return resource && isGeneratedResource(resource) ? item : false
+            } else {
+              return item
+            }
+          })
+        )
+
+        // Filter out false values from the Promise.all results
+        items = filteredItems.filter((item) => item !== false)
 
         log.debug('Filtered items:', items)
       }
 
-      log.debug('Sorting full resources:', fullResources)
-
-      if ($space?.dataValue.sortBy === 'source_published_at') {
-        log.debug('Sorting by source_published_at')
-        // Use the source_published_at tag for sorting
-        const sorted = fullResources
-          .map((resource) => {
-            const publishedAt = resource.tags?.find(
-              (x) => x.name === ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT
-            )?.value
-            return {
-              id: resource.id,
-              publishedAt: publishedAt ? new Date(publishedAt) : new Date(resource.createdAt)
-            }
-          })
-          .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
-
-        log.debug('Sorted resources:', sorted)
-
-        // sort the space entries based on the sorted resources
-        items = sorted
-          .map((x) => items.find((y) => y.resource_id === x.id))
-          .filter((x) => x !== undefined) as SpaceEntry[]
-      } else {
-        log.debug('sorting by resource created_at')
-        // Use the create_at field for sorting
-        const sorted = fullResources
-          .map((resource) => {
-            return {
-              id: resource.id,
-              createdAt: new Date(resource.createdAt)
-            }
-          })
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
-        log.debug('Sorted resources:', sorted)
-
-        // sort the space entries based on the sorted resources
-        items = sorted
-          .map((x) => items.find((y) => y.resource_id === x.id))
-          .filter((x) => x !== undefined) as SpaceEntry[]
-      }
-
       spaceContents.set(items)
+
+      const endTime = performance.now()
+      log.debug('Loaded space contents in', (endTime - startTime).toFixed(2), 'ms')
 
       if (skipSources) {
         return

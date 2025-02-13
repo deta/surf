@@ -112,9 +112,18 @@ impl Worker {
             Database::create_space_tx(&mut tx, space)?;
             println!("\tcreated space");
 
-            let space_entries = old_db.list_space_entries(&space.id)?;
+            let space_entries = old_db.list_space_entries(&space.id, None, None)?;
             for entry in space_entries {
-                match Database::create_space_entry_tx(&mut tx, &entry) {
+                let resource_id = entry.resource_id.clone();
+                let space_entry = SpaceEntry {
+                    id: entry.id,
+                    space_id: entry.space_id,
+                    resource_id,
+                    created_at: entry.created_at,
+                    updated_at: entry.updated_at,
+                    manually_added: entry.manually_added,
+                };
+                match Database::create_space_entry_tx(&mut tx, &space_entry) {
                     Ok(_) => {}
                     Err(_) => {
                         println!(

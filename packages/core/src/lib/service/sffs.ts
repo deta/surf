@@ -23,7 +23,8 @@ import type {
   SpaceEntryOrigin,
   SFFSRawResource,
   AIChatMessageRaw,
-  AIChatRaw
+  AIChatRaw,
+  SpaceEntrySearchOptions
 } from '../types'
 
 import type {
@@ -525,13 +526,18 @@ export class SFFS {
     await this.backend.js__store_create_space_entries(space_id, typedItems)
   }
 
-  async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {
+  async getSpaceContents(space_id: string, opts?: SpaceEntrySearchOptions): Promise<SpaceEntry[]> {
     this.log.debug('getting space entries for space with id', space_id)
-    const rawEntries = await this.backend.js__store_get_space_entries(space_id)
+    const rawEntries = await this.backend.js__store_get_space_entries(
+      space_id,
+      opts?.sort_by,
+      opts?.order
+    )
     const entries = this.parseData<SpaceEntry[]>(rawEntries)
     if (!entries) {
       return []
     }
+
     return entries
   }
 

@@ -34,7 +34,8 @@ import {
   type SpaceData,
   type SpaceSource,
   SpaceEntryOrigin,
-  type SFFSRawResource
+  type SFFSRawResource,
+  type SpaceEntrySearchOptions
 } from '../types'
 import type { Telemetry } from './telemetry'
 import {
@@ -1465,8 +1466,8 @@ export class ResourceManager {
     return res
   }
 
-  async getSpaceContents(space_id: string): Promise<SpaceEntry[]> {
-    return await this.sffs.getSpaceContents(space_id)
+  async getSpaceContents(space_id: string, opts?: SpaceEntrySearchOptions): Promise<SpaceEntry[]> {
+    return await this.sffs.getSpaceContents(space_id, opts)
   }
 
   async deleteSpaceEntries(entry_ids: string[]) {

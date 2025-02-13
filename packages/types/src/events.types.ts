@@ -428,8 +428,25 @@ export enum GeneratePromptsEventTrigger {
 }
 
 export type UpdateSpaceSettingsEventChange = {
-  setting: 'name' | 'live_mode' | 'sort_by' | 'source' | 'hide_viewed' | 'smart_filter'
-  change: boolean | null | 'added' | 'removed' | 'created_at' | 'source_published_at'
+  setting:
+    | 'name'
+    | 'live_mode'
+    | 'sort_by'
+    | 'sort_order'
+    | 'source'
+    | 'hide_viewed'
+    | 'smart_filter'
+  change:
+    | boolean
+    | null
+    | 'added'
+    | 'removed'
+    | 'created_at'
+    | 'updated_at'
+    | 'source_published_at'
+    | 'name'
+    | 'asc'
+    | 'desc'
 }
 
 export type InlineAIEventPromptType = WebViewEventTransform['type']

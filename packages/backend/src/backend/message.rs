@@ -73,6 +73,8 @@ pub enum SpaceMessage {
     },
     GetSpaceEntries {
         space_id: String,
+        sort_by: Option<String>,
+        order_by: Option<String>,
     },
     DeleteSpaceEntries(Vec<String>),
 }

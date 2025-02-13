@@ -43,6 +43,7 @@
   let hideViewedResources = $spaceData?.hideViewed
   let smartFilterQuery = $spaceData?.smartFilterQuery
   let sortBy = $spaceData?.sortBy ?? 'created_at'
+  let sortOrder = $spaceData?.sortOrder ?? 'desc'
 
   let sourceValue = ''
   let loading = false
@@ -159,9 +160,26 @@
       setting: 'live_mode',
       change: e.detail
     })
-  }, 500)
+  }, 200)
 
-  const handleSortingUpdate = useDebounce(async () => {
+  const handleSortingUpdate = () => {
+    const prevSortBy = $spaceData?.sortBy
+    if (sortBy === 'name') {
+      if (sortOrder !== 'asc') {
+        sortOrder = 'asc'
+        handleSortOrderUpdate()
+      }
+    } else if (prevSortBy === 'name') {
+      if (sortOrder !== 'desc') {
+        sortOrder = 'desc'
+        handleSortOrderUpdate()
+      }
+    }
+
+    handleSortByUpdate()
+  }
+
+  const handleSortByUpdate = useDebounce(async () => {
     if (!space) return
 
     await space.updateData({ sortBy: sortBy })
@@ -172,7 +190,20 @@
     })
 
     dispatch('load')
-  }, 500)
+  }, 200)
+
+  const handleSortOrderUpdate = useDebounce(async () => {
+    if (!space) return
+
+    await space.updateData({ sortOrder: sortOrder })
+
+    await telemetry.trackUpdateSpaceSettings({
+      setting: 'sort_order',
+      change: sortOrder
+    })
+
+    dispatch('load')
+  }, 200)
 
   const handleHideViewedUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
     if (!space) return
@@ -185,7 +216,7 @@
     })
 
     dispatch('load')
-  }, 500)
+  }, 200)
 
   const handleSmartQueryBlur = useDebounce(async () => {
     if (!space) return
@@ -210,7 +241,7 @@
     })
 
     dispatch('load')
-  }, 500)
+  }, 350)
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Space' && !e.shiftKey) {
@@ -362,12 +393,46 @@
         />
 
         <div class="sorting">
-          <p>Sort resources by when they were</p>
+          <p>Sort resources by</p>
 
           <select bind:value={sortBy} on:change={handleSortingUpdate}>
-            <option value="created_at">added to the context</option>
-            <option value="source_published_at">originally published</option>
+            <option value="created_at">Added to Context</option>
+            <option value="updated_at">Last Modified</option>
+            <option value="source_published_at">Source Published</option>
+            <!-- <option value="name">Name</option> -->
           </select>
+        </div>
+
+        <div class="sorting">
+          <p>Order</p>
+
+          <!-- {#if sortBy === 'name'}
+            <select bind:value={sortOrder} on:change={handleSortOrderUpdate}>
+              <option value="asc">A to Z</option>
+              <option value="desc">Z to A</option>
+            </select>
+          {:else} -->
+          <select bind:value={sortOrder} on:change={handleSortOrderUpdate}>
+            <option value="desc">
+              {#if sortBy === 'created_at'}
+                Most Recent First
+              {:else if sortBy === 'updated_at'}
+                Most Recent First
+              {:else if sortBy === 'source_published_at'}
+                Most Recent First
+              {/if}
+            </option>
+            <option value="asc">
+              {#if sortBy === 'created_at'}
+                Oldest First
+              {:else if sortBy === 'updated_at'}
+                Oldest First
+              {:else if sortBy === 'source_published_at'}
+                Oldest First
+              {/if}
+            </option>
+          </select>
+          <!-- {/if} -->
         </div>
       </div>
 

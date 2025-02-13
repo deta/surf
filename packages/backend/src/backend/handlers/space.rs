@@ -5,7 +5,7 @@ use crate::{
     },
     store::{
         db::Database,
-        models::{current_time, random_uuid, Space, SpaceEntry},
+        models::{current_time, random_uuid, Space, SpaceEntry, SpaceEntryExtended},
     },
     BackendResult,
 };
@@ -70,8 +70,13 @@ impl Worker {
         Ok(space_entries)
     }
 
-    pub fn get_space_entries(&self, space_id: &str) -> BackendResult<Vec<SpaceEntry>> {
-        self.db.list_space_entries(space_id)
+    pub fn get_space_entries(
+        &self,
+        space_id: &str,
+        sort_by: Option<&str>,
+        order_by: Option<&str>,
+    ) -> BackendResult<Vec<SpaceEntryExtended>> {
+        self.db.list_space_entries(space_id, sort_by, order_by)
     }
 
     pub fn delete_space_entries(&mut self, entry_ids: Vec<String>) -> BackendResult<()> {
@@ -115,8 +120,8 @@ pub fn handle_space_message(
             let result = worker.create_space_entries(space_id, entries);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        SpaceMessage::GetSpaceEntries { space_id } => {
-            let result = worker.get_space_entries(&space_id);
+        SpaceMessage::GetSpaceEntries { space_id, sort_by, order_by } => {
+            let result = worker.get_space_entries(&space_id, sort_by.as_deref(), order_by.as_deref());
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         SpaceMessage::DeleteSpaceEntries(entry_ids) => {

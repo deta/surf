@@ -783,6 +783,20 @@ pub struct SpaceEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpaceEntryExtended {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub space_id: String,
+    pub resource_id: String,
+    pub resource_type: String,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub manually_added: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CompositeSpace {
     pub space: Space,
     pub space_entries: Vec<SpaceEntry>,

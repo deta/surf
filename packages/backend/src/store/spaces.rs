@@ -128,24 +128,56 @@ impl Database {
             .optional()?)
     }
 
-    pub fn list_space_entries(&self, space_id: &str) -> BackendResult<Vec<SpaceEntry>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, space_id, resource_id, created_at, updated_at, manually_added FROM space_entries WHERE space_id = ?1 ORDER BY updated_at DESC")?;
+    pub fn list_space_entries(
+        &self,
+        space_id: &str,
+        sort_by: Option<&str>,
+        order_by: Option<&str>,
+    ) -> BackendResult<Vec<SpaceEntryExtended>> {
+        // Use specific column selection instead of table.*
+        let (sort_field, join_clause) = match sort_by {
+            Some("created_at") => ("se.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("updated_at") => ("r.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("source_published_at") => (
+                "COALESCE(rt.tag_value, se.created_at)", 
+                "LEFT JOIN resources r ON se.resource_id = r.id \
+                 LEFT JOIN resource_tags rt ON r.id = rt.resource_id AND rt.tag_name = 'sourcePublishedAt'"
+            ),
+            _ => ("se.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+        };
+        
+        let order = if order_by == Some("asc") { "ASC" } else { "DESC" };
+
+        // Use table aliases and specific columns
+        let query = format!(
+            "SELECT se.id, se.space_id, se.resource_id, se.created_at, se.updated_at, \
+             se.manually_added, r.resource_type \
+             FROM space_entries se \
+             {} \
+             WHERE se.space_id = ?1 \
+             ORDER BY {} {}",
+            join_clause, sort_field, order
+        );
+
+        // Prepare statement once and reuse
+        let mut stmt = self.conn.prepare_cached(&query)?;
+
+        // Use iterator directly instead of collecting into vec first
         let space_entries = stmt.query_map(rusqlite::params![space_id], |row| {
-            Ok(SpaceEntry {
+            Ok(SpaceEntryExtended {
                 id: row.get(0)?,
-                space_id: row.get(1)?,
+                space_id: row.get(1)?, 
                 resource_id: row.get(2)?,
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
                 manually_added: row.get(5)?,
+                resource_type: row.get(6)?,
             })
         })?;
-        let mut result = Vec::new();
-        for space_entry in space_entries {
-            result.push(space_entry?);
-        }
-        Ok(result)
+
+        // Collect results
+        space_entries.collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(Into::into)
     }
 
     pub fn list_space_ids_by_resource_id(&self, resource_id: &str) -> BackendResult<Vec<String>> {
