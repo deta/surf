@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Toast } from '../../service/toast'
   import { Icon } from '@horizon/icons'
+  import { hover } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
   import { scale } from 'svelte/transition'
 
@@ -21,6 +22,7 @@
   role="alert"
   style:--i={i}
   class:outro
+  use:hover={toast.isHovering}
   use:intro={{ clazz: 'starting' }}
 >
   <div class="icon" transition:scale={{ duration: 150 }}>
@@ -42,6 +44,12 @@
       {toast.message}
     </slot>
   </div>
+
+  {#if toast.action}
+    <button class="action" on:click={() => toast.handleClick()}>
+      {toast.action.label}
+    </button>
+  {/if}
 
   {#if toast.dismissable}
     <button class="close" on:click={() => dispatch('dismiss')}>
@@ -79,8 +87,8 @@
     align-items: center;
     justify-items: center;
     gap: 0.5rem;
-    border-radius: 30px;
-    padding: 0.5rem 0.75rem;
+    border-radius: 13px;
+    padding: 0.5rem 0.5rem;
     //padding-right: 1.25rem;
     box-shadow:
       0 0 0 1px rgba(50, 50, 93, 0.06),
@@ -338,6 +346,24 @@
       0.999858 93%,
       0.999928 94%
     );
+  }
+
+  .action {
+    opacity: 0.8;
+
+    font-size: 0.95em;
+    font-weight: 500;
+    letter-spacing: 0.006px;
+
+    padding: 0.1em 0.3em;
+    border-radius: calc(13px - 0.5rem);
+
+    background: color-mix(in srgb, var(--fill), 15% var(--background-fill-mix-inverted));
+    transition: background 125ms ease-in-out;
+
+    &:hover {
+      background: color-mix(in srgb, var(--fill), 25% var(--background-fill-mix-inverted));
+    }
   }
 
   .icon {

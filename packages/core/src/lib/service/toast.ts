@@ -5,13 +5,23 @@ import { getContext, setContext } from 'svelte'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
 
-export type Toast = {
+export type ToastAction = {
+  label: string
+  handler: () => void | { preventDismiss?: boolean }
+}
+
+export type ToastData = {
   id: string
   type: 'info' | 'success' | 'warning' | 'error' | 'loading'
   message: string
   timeout: number
   dismissable: boolean
+  action?: ToastAction
 }
+
+export type CreateToastOpts = Partial<Omit<ToastData, 'id' | 'type' | 'message'>>
+export type CreateLoadingToastOpts = Omit<CreateToastOpts, 'timeout'>
+export type UpdateToastOpts = Partial<Omit<ToastData, 'id'>>
 
 // use the return type of the loading method
 export type ToastItem = {
@@ -28,6 +38,124 @@ const DEFAULT_TIMEOUT = 3000
 
 export type ToastsEvents = {
   'will-dismiss': (toast: Toast) => void
+}
+
+export class Toast {
+  id: string
+  type: 'info' | 'success' | 'warning' | 'error' | 'loading'
+  message: string
+  timeout: number
+  dismissable: boolean
+  action?: ToastAction
+
+  manager: Toasts
+  log: ReturnType<typeof useLogScope>
+
+  createdAt: number
+  remainingTime: number | null
+  timeoutCall: ReturnType<typeof setTimeout> | null = null
+  isHovering: Writable<boolean>
+
+  constructor(data: ToastData, manager: Toasts) {
+    this.id = data.id
+    this.type = data.type
+    this.message = data.message
+    this.timeout = data.timeout
+    this.dismissable = data.dismissable
+    this.action = data.action
+
+    this.createdAt = Date.now()
+    this.remainingTime = null
+    this.isHovering = writable(false)
+
+    this.manager = manager
+    this.log = manager.log
+
+    if (data.timeout) {
+      this.createTimeout(data.timeout)
+    }
+
+    this.isHovering.subscribe((v) => {
+      if (v) {
+        this.remainingTime = (this.remainingTime ?? this.timeout) - (Date.now() - this.createdAt)
+        this.clearTimeout()
+      } else if (this.timeout) {
+        this.createTimeout(this.remainingTime ?? this.timeout)
+      }
+    })
+  }
+
+  get isHoveringValue() {
+    return get(this.isHovering)
+  }
+
+  private createTimeout(delay: number) {
+    this.clearTimeout()
+
+    this.createdAt = Date.now()
+    this.timeoutCall = setTimeout(() => {
+      if (this.isHoveringValue) return
+      this.dismiss()
+    }, delay)
+  }
+
+  private clearTimeout() {
+    if (this.timeoutCall) {
+      clearTimeout(this.timeoutCall)
+    }
+
+    this.timeoutCall = null
+  }
+
+  update(data: UpdateToastOpts) {
+    this.message = data.message ?? this.message
+    this.type = data.type ?? this.type
+    this.timeout = data.timeout ?? this.timeout
+    this.dismissable = data.dismissable ?? this.dismissable
+    this.action = data.action ?? this.action
+
+    if (data.timeout) {
+      this.createdAt = Date.now()
+      this.remainingTime = null
+      this.createTimeout(data.timeout)
+    }
+
+    this.manager.triggerReactivityUpdate(this)
+  }
+
+  dismiss() {
+    this.manager.dismiss(this.id)
+  }
+
+  success(message: string, opts?: UpdateToastOpts) {
+    this.update({ timeout: DEFAULT_TIMEOUT, ...opts, message, type: 'success' })
+  }
+
+  error(message: string, opts?: UpdateToastOpts) {
+    this.update({ timeout: DEFAULT_TIMEOUT, ...opts, message, type: 'error' })
+  }
+
+  warning(message: string, opts?: UpdateToastOpts) {
+    this.update({ timeout: DEFAULT_TIMEOUT, ...opts, message, type: 'warning' })
+  }
+
+  info(message: string, opts?: UpdateToastOpts) {
+    this.update({ timeout: DEFAULT_TIMEOUT, ...opts, message, type: 'info' })
+  }
+
+  loading(message: string, opts?: UpdateToastOpts) {
+    this.update({ ...opts, message, type: 'loading', timeout: 0 })
+  }
+
+  handleClick() {
+    this.manager.log.debug('Toast action clicked', this)
+    if (this.action) {
+      const returnValue = this.action.handler()
+      if (returnValue?.preventDismiss) return
+
+      this.dismiss()
+    }
+  }
 }
 
 export class Toasts {
@@ -49,7 +177,15 @@ export class Toasts {
     }
   }
 
-  create(data: Optional<Toast, 'id' | 'timeout' | 'type' | 'dismissable'>) {
+  get toastsValue() {
+    return get(this.toasts)
+  }
+
+  triggerReactivityUpdate(toast: Toast) {
+    this.toasts.update((toasts) => toasts.map((t) => (t.id === toast.id ? toast : t)))
+  }
+
+  create(data: Optional<ToastData, 'id' | 'timeout' | 'type' | 'dismissable'>) {
     const id = generateID()
     const defaults = {
       id,
@@ -58,85 +194,58 @@ export class Toasts {
       dismissable: true
     } as Toast
 
-    const toast = {
+    const toastData = {
       ...defaults,
       ...Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined))
     }
 
-    this.log.debug('created toast', toast)
-
+    const toast = new Toast(toastData, this)
     this.toasts.update((v) => {
       v.push(toast)
       return v
     })
-    if (toast.timeout) {
-      setTimeout(() => this.dismiss(id), toast.timeout)
-    }
 
-    return id
+    return toast
   }
 
-  success(message: string, timeout?: number, dismissable?: boolean) {
-    this.create({ type: 'success', message, dismissable, timeout })
+  updateToast(id: string, updates: UpdateToastOpts) {
+    const toast = this.toastsValue.find((e) => e.id === id)
+    if (!toast) return
+
+    toast.update(updates)
   }
 
-  info(message: string, timeout?: number, dismissable?: boolean) {
-    this.create({ type: 'info', message, dismissable, timeout })
+  success(message: string, opts?: CreateToastOpts) {
+    return this.create({ type: 'success', message, ...opts })
   }
 
-  warning(message: string, timeout?: number, dismissable?: boolean) {
-    this.create({ type: 'warning', message, dismissable, timeout })
+  info(message: string, opts?: CreateToastOpts) {
+    return this.create({ type: 'info', message, ...opts })
   }
 
-  error(message: string, timeout?: number, dismissable?: boolean) {
-    this.create({ type: 'error', message, dismissable, timeout })
+  warning(message: string, opts?: CreateToastOpts) {
+    return this.create({ type: 'warning', message, ...opts })
   }
 
-  loading(message: string, dismissable?: boolean) {
-    const id = this.create({ type: 'loading', message, dismissable, timeout: 0 })
+  error(message: string, opts?: CreateToastOpts) {
+    return this.create({ type: 'error', message, ...opts })
+  }
 
-    const updateToast = (message: string, type?: Toast['type'], timeout?: number) => {
-      this.toasts.update((all) => {
-        const toast = all.find((t) => t.id === id)
-        if (toast) {
-          toast.message = message
-          if (type) {
-            toast.type = type
-          }
-
-          if (timeout) {
-            toast.timeout = timeout
-          }
-        }
-        return all
-      })
-
-      if (timeout) {
-        setTimeout(() => this.dismiss(id), timeout)
-      }
-    }
-
-    return {
-      id,
-      dismiss: () => this.dismiss(id),
-      update: updateToast,
-      success: (message: string, timeout?: number) =>
-        updateToast(message, 'success', timeout ?? DEFAULT_TIMEOUT),
-      info: (message: string, timeout?: number) =>
-        updateToast(message, 'info', timeout ?? DEFAULT_TIMEOUT),
-      warning: (message: string, timeout?: number) =>
-        updateToast(message, 'warning', timeout ?? DEFAULT_TIMEOUT),
-      error: (message: string, timeout?: number) =>
-        updateToast(message, 'error', timeout ?? DEFAULT_TIMEOUT)
-    } as ToastItem
+  loading(message: string, opts?: CreateLoadingToastOpts) {
+    return this.create({ type: 'loading', message, ...opts, timeout: 0 })
   }
 
   dismiss(id: string) {
-    this.log.debug('Dismissing toast', id)
-    const toast = get(this.toasts).find((e) => e.id === id)
+    const toast = this.toastsValue.find((e) => e.id === id)
     if (!toast) return
+
     this.eventEmitter.emit('will-dismiss', toast)
+
     setTimeout(() => this.toasts.update((all) => all.filter((t) => t.id !== id)), 300)
+
+    if (toast.timeoutCall) {
+      clearTimeout(toast.timeoutCall)
+    }
   }
 
   static provide() {

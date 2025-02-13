@@ -34,6 +34,7 @@ import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
 import { blobToSmallImageUrl } from '../utils/screenshot'
 import type { ConfigService } from './config'
 import { RESOURCE_FILTERS } from '../constants/resourceFilters'
+import type { SpaceBasicData } from './ipc/events'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -357,10 +358,33 @@ export class OasisService {
     this.eventEmitter.emit(event, ...args)
   }
 
+  updateMainProcessSpacesList() {
+    const items = this.spacesValue
+      .filter(
+        (e) =>
+          e.id !== 'all' && e.id !== 'inbox' && e.name.folderName?.toLowerCase() !== '.tempspace'
+      )
+      .map(
+        (space) =>
+          ({
+            id: space.id,
+            name: space.name.folderName,
+            pinned: space.name.pinned ?? false
+          }) as SpaceBasicData
+      )
+
+    this.log.debug('updating spaces list in main process', items)
+    window.api.updateSpacesList(items)
+  }
+
   triggerStoreUpdate(space: OasisSpace) {
     // trigger Svelte reactivity
     this.spaces.update((spaces) => {
       return spaces.map((s) => (s.id === space.id ? space : s))
+    })
+
+    tick().then(() => {
+      this.updateMainProcessSpacesList()
     })
   }
 
@@ -392,6 +416,11 @@ export class OasisService {
     this.log.debug('loaded spaces:', spaces)
 
     this.spaces.set(spaces)
+
+    tick().then(() => {
+      this.updateMainProcessSpacesList()
+    })
+
     return result
   }
 

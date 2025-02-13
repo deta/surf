@@ -35,7 +35,8 @@ import { getUserConfig, getUserStats } from '../main/config'
 import {
   IPC_EVENTS_RENDERER,
   NewWindowRequest,
-  OpenURL
+  OpenURL,
+  SpaceBasicData
 } from '@horizon/core/src/lib/service/ipc/events'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 
@@ -90,9 +91,9 @@ const webviewNewWindowHandlers: Record<number, (details: NewWindowRequest) => vo
 
 const eventHandlers = {
   onOpenURL: (callback: (details: OpenURL) => void) => {
-    return IPC_EVENTS_RENDERER.openURL.on((_, { url, active }) => {
+    return IPC_EVENTS_RENDERER.openURL.on((_, data) => {
       try {
-        callback({ url, active })
+        callback(data)
       } catch (error) {
         // noop
       }
@@ -465,6 +466,16 @@ const eventHandlers = {
         console.error('Failed to import files: ', err)
       }
     })
+  },
+
+  onSaveLink: (callback: (url: string, spaceId?: string) => void) => {
+    return IPC_EVENTS_RENDERER.saveLink.on((_, { url, spaceId }) => {
+      try {
+        callback(url, spaceId)
+      } catch (error) {
+        // noop
+      }
+    })
   }
 }
 
@@ -680,6 +691,10 @@ const api = {
 
   resetBackgroundImage: async () => {
     IPC_EVENTS_RENDERER.resetBackgroundImage.send()
+  },
+
+  updateSpacesList: async (data: SpaceBasicData[]) => {
+    IPC_EVENTS_RENDERER.updateSpacesList.send(data)
   },
 
   ...eventHandlers

@@ -1,4 +1,5 @@
 import { useLogScope, checkIfUrl, parseStringIntoUrl } from '@horizon/utils'
+import { ResourceTagsBuiltInKeys } from '@horizon/types'
 import { type SFFSResourceMetadata, type SFFSResourceTag } from '../types'
 import { Resource, ResourceTag, type ResourceManager } from './resources'
 import { WebParser } from '@horizon/web-parser'
@@ -482,6 +483,22 @@ export const extractAndCreateWebResource = async (
 ) => {
   log.debug('Extracting resource from', url)
 
+  const additionalTags = []
+
+  const existingCanoncialUrlTag = tags?.find(
+    (t) => t.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+  )
+  if (!existingCanoncialUrlTag) {
+    additionalTags.push(ResourceTag.canonicalURL(url))
+  }
+
+  const allTags = [...(tags ?? []), ...additionalTags]
+
+  const fullMetadata = {
+    sourceURI: url,
+    ...metadata
+  }
+
   const webParser = new WebParser(url)
 
   // Extract a resource from the web page using a webview, this should happen only when saving the resource
@@ -491,7 +508,7 @@ export const extractAndCreateWebResource = async (
   if (!extractedResource) {
     log.debug('No resource extracted, saving as link')
 
-    const resource = await resourceManager.createResourceLink({ url: url }, metadata, tags)
+    const resource = await resourceManager.createResourceLink({ url: url }, metadata, allTags)
 
     return {
       resource,
@@ -502,9 +519,14 @@ export const extractAndCreateWebResource = async (
   const title = (extractedResource.data as any)?.title ?? ''
   metadata = {
     name: title,
+    sourceURI: url,
     ...metadata
   }
-  const resource = await resourceManager.createDetectedResource(extractedResource, metadata, tags)
+  const resource = await resourceManager.createDetectedResource(
+    extractedResource,
+    metadata,
+    allTags
+  )
 
   const content = WebParser.getResourceContent(extractedResource.type, extractedResource.data)
 

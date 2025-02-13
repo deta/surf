@@ -623,7 +623,7 @@ export class TabsManager {
     }
 
     if (!tab.pinned && tab.scopeId !== (this.activeScopeIdValue ?? undefined)) {
-      this.changeScope(tab.scopeId ?? null, ChangeContextEventTrigger.Tab)
+      await this.changeScope(tab.scopeId ?? null, ChangeContextEventTrigger.Tab)
     }
 
     const browserTab = this.browserTabsValue[tabId]

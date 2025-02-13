@@ -41,6 +41,7 @@ export interface NewWindowRequest {
 export interface OpenURL {
   url: string
   active: boolean
+  scopeId?: string
 }
 
 export interface GetAdblockerState extends IPCEvent {
@@ -110,6 +111,12 @@ export interface GetAnnouncements extends IPCEvent {
   output: Announcement[]
 }
 
+export type SpaceBasicData = {
+  id: string
+  name: string
+  pinned: boolean
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -166,6 +173,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   resetBackgroundImage: ipcService.addEvent<void>('reset-background-image'),
   importedFiles: ipcService.addEvent<string[]>('imported-files'),
   setSurfBackendHealth: ipcService.addEvent<boolean>('set-surf-backend-health'),
+  saveLink: ipcService.addEvent<{ url: string; spaceId?: string }>('save-link'),
+  updateSpacesList: ipcService.addEvent<SpaceBasicData[]>('update-spaces-list'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

@@ -132,6 +132,10 @@ export class ResourceTag {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'generated' }
   }
 
+  static rightClickSave() {
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'page-right-click' }
+  }
+
   static canonicalURL(url: string) {
     return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
   }
@@ -1261,7 +1265,18 @@ export class ResourceManager {
 
     const allTags = [...(tags ?? []), ...additionalTags]
 
-    return this.createResource(ResourceTypes.LINK, blob, metadata, allTags) as Promise<ResourceLink>
+    const fullMetadata = {
+      name: data.title,
+      sourceURI: data.url,
+      ...metadata
+    }
+
+    return this.createResource(
+      ResourceTypes.LINK,
+      blob,
+      fullMetadata,
+      allTags
+    ) as Promise<ResourceLink>
   }
 
   async createResourceAnnotation(

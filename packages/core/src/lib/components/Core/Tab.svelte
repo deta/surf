@@ -454,9 +454,17 @@
 
           if (makeActive) {
             await tabsManager.makeActive(tab.id)
+            toasts.success(`Tabs moved to ${label}!`)
+          } else {
+            toasts.success(`Tabs moved to ${label}!`, {
+              action: {
+                label: 'Switch',
+                handler: () => {
+                  tabsManager.makeActive(tab.id)
+                }
+              }
+            })
           }
-
-          toasts.success(`Tabs moved to ${label}!`)
         } catch (e) {
           toasts.error(`Failed to add to ${label}`)
         }

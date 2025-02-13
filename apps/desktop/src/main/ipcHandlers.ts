@@ -36,6 +36,7 @@ import { getAppMenu } from './appMenu'
 
 import fs from 'fs/promises'
 import tokenManager from './token'
+import { updateCachedSpaces } from './spaces'
 
 const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
@@ -359,6 +360,14 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return []
     return getAnnouncements()
   })
+
+  IPC_EVENTS_MAIN.updateSpacesList.on((event, data) => {
+    if (!validateIPCSender(event)) return
+
+    console.log('updateSpacesList', data.length)
+
+    updateCachedSpaces(data)
+  })
 }
 
 export const ipcSenders = {
@@ -602,14 +611,14 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.openDevTools.sendToWebContents(window.webContents)
   },
 
-  openURL: (url: string, active: boolean) => {
+  openURL: (url: string, active: boolean, scopeId?: string) => {
     const window = getMainWindow()
     if (!window) {
       log.error('Main window not found')
       return
     }
 
-    IPC_EVENTS_MAIN.openURL.sendToWebContents(window.webContents, { url, active })
+    IPC_EVENTS_MAIN.openURL.sendToWebContents(window.webContents, { url, active, scopeId })
   },
 
   newWindowRequest: (details: NewWindowRequest) => {
@@ -664,5 +673,15 @@ export const ipcSenders = {
     const mainWindow = getMainWindow()
     if (!mainWindow) return
     IPC_EVENTS_MAIN.importedFiles.sendToWebContents(mainWindow.webContents, files)
+  },
+
+  saveLink(url: string, spaceId?: string) {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.saveLink.sendToWebContents(window.webContents, { url, spaceId })
   }
 }

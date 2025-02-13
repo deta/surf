@@ -28,7 +28,8 @@
     isDev,
     conditionalArrayItem,
     useLocalStorageStore,
-    shortenFilename
+    shortenFilename,
+    parseStringIntoUrl
   } from '@horizon/utils'
   import {
     createResourcesFromFiles,
@@ -175,6 +176,7 @@
   import FloatyButton from './Atoms/FloatyButton.svelte'
   import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
   import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
+  import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -589,8 +591,10 @@
     log.debug('Creating new history tab')
 
     // check if there already exists a history tab, if yes we just change to it
-
-    const historyTab = $tabs.find((tab) => tab.type === 'history')
+    const historyTab = $tabs.find(
+      (tab) =>
+        tab.type === 'history' && tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
+    )
 
     if (historyTab) {
       tabsManager.makeActive(historyTab.id)
@@ -974,10 +978,30 @@
     if (tabId && tabId != $activeTabId) makeTabActive(tabId, ActivateTabEventTrigger.Shortcut)
   }
 
-  const openUrlHandler = (url: string, active = true) => {
-    log.debug('open url', url, active)
+  const openUrlHandler = async (url: string, active = true, scopeId?: string) => {
+    log.debug('open url', url, active, scopeId)
 
-    tabsManager.addPageTab(url, { active: active, trigger: CreateTabEventTrigger.System })
+    const tab = await tabsManager.addPageTab(url, {
+      active: active,
+      scopeId: scopeId,
+      trigger: CreateTabEventTrigger.System
+    })
+
+    if (!tab) {
+      log.error('Failed to open url', url)
+      return
+    }
+
+    if (!active && scopeId !== $activeScopeId) {
+      toasts.success('Opened in Context', {
+        action: {
+          label: 'Switch',
+          handler: () => {
+            tabsManager.makeActive(tab.id, ActivateTabEventTrigger.Click)
+          }
+        }
+      })
+    }
   }
 
   const handleTabNavigation = (e: CustomEvent<string>) => {
@@ -2524,7 +2548,7 @@
     })
 
     horizonPreloadEvents.onOpenURL((details) => {
-      openUrlHandler(details.url, details.active)
+      openUrlHandler(details.url, details.active, details.scopeId)
     })
 
     horizonPreloadEvents.onTrackpadScrollStart(() =>
@@ -2687,6 +2711,41 @@
       } catch (err) {
         log.error('Failed to import', err)
         toast.error('Failed to import files')
+      }
+    })
+
+    horizonPreloadEvents.onSaveLink(async (rawUrl, spaceId) => {
+      const url = parseStringIntoUrl(rawUrl)
+      if (!url) {
+        log.error('Invalid URL', rawUrl)
+        return
+      }
+
+      const toast = toasts.loading('Saving link…')
+      try {
+        const { resource } = await extractAndCreateWebResource(
+          resourceManager,
+          url.href,
+          undefined,
+          [ResourceTag.rightClickSave()]
+        )
+
+        if (spaceId) {
+          await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+          toast.success('Link saved to context!')
+        } else if (tabsManager.activeScopeIdValue) {
+          await oasis.addResourcesToSpace(
+            tabsManager.activeScopeIdValue,
+            [resource.id],
+            SpaceEntryOrigin.ManuallyAdded
+          )
+          toast.success('Link saved to active context!')
+        } else {
+          toast.success('Link saved!')
+        }
+      } catch (err) {
+        log.error('Failed to save link', err)
+        toast.error('Failed to save link')
       }
     })
 
@@ -3596,12 +3655,20 @@
           const lastTabId = selected[selected.length - 1]
           if (makeActive) {
             await tabsManager.makeActive(lastTabId)
+            toasts.success(`Tabs moved to ${label}!`)
+          } else {
+            toasts.success(`Tabs moved to ${label}!`, {
+              action: {
+                label: 'Switch',
+                handler: () => {
+                  tabsManager.makeActive(lastTabId)
+                }
+              }
+            })
           }
 
           // reset selected tabs
           selectedTabs.set(new Set())
-
-          toasts.success(`Tabs moved to ${label}!`)
         } catch (e) {
           toasts.error(`Failed to add to ${label}`)
         }
