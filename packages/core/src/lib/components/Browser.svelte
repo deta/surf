@@ -992,7 +992,7 @@
       return
     }
 
-    if (!active && scopeId !== $activeScopeId) {
+    if (!active && scopeId && scopeId !== $activeScopeId) {
       toasts.success('Opened in Context', {
         action: {
           label: 'Switch',
