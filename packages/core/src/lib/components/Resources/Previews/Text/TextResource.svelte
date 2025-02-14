@@ -183,10 +183,6 @@
     }
   )
 
-  const isSmartNotesEnabled = derived(userSettings, ($userSettings) => {
-    return $userSettings.experimental_smart_notes
-  })
-
   const editorPlaceholder = derived(
     [
       floatingMenuShown,
@@ -194,7 +190,6 @@
       generatingPrompts,
       activeSpace,
       autocompleting,
-      isSmartNotesEnabled,
       selectedContext,
       onboardingNote
     ],
@@ -204,16 +199,11 @@
       $generatingPrompts,
       $activeSpace,
       $autocompleting,
-      $isSmartNotesEnabled,
       $selectedContext,
       $onboardingNote
     ]) => {
       if ($autocompleting) {
         return ''
-      }
-
-      if (!$isSmartNotesEnabled) {
-        return `Jot something down…`
       }
 
       if (showOnboarding) {
@@ -1538,7 +1528,7 @@
     {/if}
 
     {#if !initialLoad}
-      {#key showOnboarding ? `${$onboardingNote.id}-${$isSmartNotesEnabled}` : $isSmartNotesEnabled}
+      {#key `${showOnboarding}-${$onboardingNote.id}`}
         <div class="notes-editor-wrapper" bind:this={editorWrapperElem}>
           <Editor
             bind:this={editorElem}
@@ -1550,11 +1540,10 @@
             citationComponent={CitationItem}
             resourceComponent={EmbeddedResource}
             mentionItems={$mentionItems}
-            autocomplete={$isSmartNotesEnabled}
-            floatingMenu={$isSmartNotesEnabled}
-            readOnlyMentions={!$isSmartNotesEnabled}
+            autocomplete
+            floatingMenu
+            readOnlyMentions={false}
             bubbleMenu={$showBubbleMenu &&
-              $isSmartNotesEnabled &&
               !minimal &&
               (showOnboarding ? $onboardingIndex > 2 : true)}
             bubbleMenuLoading={$bubbleMenuLoading}

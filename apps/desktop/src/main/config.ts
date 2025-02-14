@@ -106,7 +106,6 @@ export const getUserConfig = (path?: string) => {
       annotations_sidebar: false,
       homescreen_link_cmdt: false,
       always_include_screenshot_in_chat: false,
-      experimental_smart_notes: true,
       auto_note_similarity_search: false,
       experimental_note_inline_rewrite: false,
       experimental_chat_web_search: false,
@@ -212,11 +211,6 @@ export const getUserConfig = (path?: string) => {
   }
   if (storedConfig.settings.auto_toggle_pip === undefined) {
     storedConfig.settings.auto_toggle_pip = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.experimental_smart_notes === undefined) {
-    storedConfig.settings.experimental_smart_notes = true
     changedConfig = true
   }
 
