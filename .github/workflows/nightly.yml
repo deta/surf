@@ -5,10 +5,10 @@ permissions:
   contents: write
 
 on:
-  schedule:
-    # every weekday at 20:03 UTC / 21:03 CET
-    # 20:03 because if you github runners will be more congested at the exact hours
-    - cron: '3 20 * * 1-5'
+  #schedule:
+  #  # every weekday at 20:03 UTC / 21:03 CET
+  #  # 20:03 because if you github runners will be more congested at the exact hours
+  #  - cron: '3 20 * * 1-5'
   workflow_dispatch:
 
 jobs:
