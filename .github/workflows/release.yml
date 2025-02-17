@@ -102,7 +102,9 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ${{ inputs.rust-workspaces }}
+          workspaces: |
+            packages/backend
+            packages/backend-server
           key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache Turbo
