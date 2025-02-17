@@ -91,18 +91,8 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            **/node_modules
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-            **/target
-          key: ${{ runner.os }}-${{ matrix.architecture }}-build-cache-${{ hashFiles('**/yarn.lock', '**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.architecture }}-build-cache-
+      - name: Setup caches
+        uses: ./.github/workflows/cache-deps.yml
 
       - name: Set up Windows Sign Tool
         if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true

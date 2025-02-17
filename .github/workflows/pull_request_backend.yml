@@ -29,17 +29,13 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v3
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            packages/backend/target
-            packages/backend-server/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/backend/Cargo.lock', 'packages/backend-server/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+          workspaces: |
+            packages/backend
+            packages/backend-server
+          key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run backend tests
         env:
