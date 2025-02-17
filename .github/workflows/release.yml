@@ -91,8 +91,29 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Setup caches
-        uses: ./.github/workflows/cache-deps.yml
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-${{ matrix.architecture }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-node-
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ inputs.rust-workspaces }}
+          key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache Turbo
+        uses: actions/cache@v3
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ hashFiles('**/package.json', '**/yarn.lock', 'turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-turbo-
 
       - name: Set up Windows Sign Tool
         if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
