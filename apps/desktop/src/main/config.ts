@@ -315,16 +315,16 @@ export const getUserStats = (path?: string) => {
 
   // Store if deep different
   if (JSON.stringify(value) !== JSON.stringify(storedConfig)) {
-    setUserStats(value)
+    setUserStats(value, path)
   }
 
   userStats = value
   return userStats
 }
 
-export const setUserStats = (stats: UserStats) => {
+export const setUserStats = (stats: UserStats, path?: string) => {
   userStats = stats
-  setConfig(app.getPath('userData'), stats, USER_STATS_NAME)
+  setConfig(path ?? app.getPath('userData'), stats, USER_STATS_NAME)
 }
 
 export const updateUserStats = (stats: Partial<UserStats>) => {
