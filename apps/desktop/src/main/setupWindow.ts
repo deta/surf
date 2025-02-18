@@ -20,7 +20,7 @@ export function createSetupWindow() {
     // titleBarStyle: isMac() ? 'hidden' : 'default',
     // ...(isLinux() ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/horizon.js'),
+      preload: join(__dirname, '../preload/setup.js'),
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,

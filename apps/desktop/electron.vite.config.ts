@@ -98,7 +98,8 @@ export default defineConfig({
           horizon: resolve(__dirname, 'src/preload/horizon.ts'),
           webview: resolve(__dirname, 'src/preload/webview.ts'),
           updates: resolve(__dirname, 'src/preload/updates.ts'),
-          announcements: resolve(__dirname, 'src/preload/announcements.ts')
+          announcements: resolve(__dirname, 'src/preload/announcements.ts'),
+          setup: resolve(__dirname, 'src/preload/setup.ts')
         },
         plugins: [
           ...(!disableAllObfuscation
