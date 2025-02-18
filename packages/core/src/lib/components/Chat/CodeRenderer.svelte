@@ -454,7 +454,9 @@
           prefs.blockHeight = height
         }
 
-        prefs.blockCollapsed = collapsed
+        if (collapsable) {
+          prefs.blockCollapsed = collapsed
+        }
 
         await resourceManager.updateResourceTag(
           resource.id,
@@ -464,7 +466,7 @@
       } else {
         const newPrefs = {
           blockHeight: resizable ? height : undefined,
-          blockCollapsed: collapsed
+          blockCollapsed: collapsable ? collapsed : undefined
         } as UserViewPrefsTagValue
 
         await resourceManager.createResourceTag(
@@ -1012,15 +1014,17 @@
       codeContent = code
     }
 
-    const prefs = getUserViewPreferences(resource?.tags ?? [])
-    if (prefs?.blockCollapsed !== undefined && initialCollapsed !== true) {
-      initialCollapsed = prefs.blockCollapsed
-    } else if (initialCollapsed === 'auto') {
-      if (!['html', 'javascript', 'typescript'].includes(lang ?? '')) {
-        initialCollapsed = codeContent.trim().split('\n').length > 1
-      } else {
-        const autoExpanded = checkIfShouldBeExpanded()
-        initialCollapsed = !autoExpanded
+    if (collapsable) {
+      const prefs = getUserViewPreferences(resource?.tags ?? [])
+      if (prefs?.blockCollapsed !== undefined && initialCollapsed !== true) {
+        initialCollapsed = prefs.blockCollapsed
+      } else if (initialCollapsed === 'auto') {
+        if (!['html', 'javascript', 'typescript'].includes(lang ?? '')) {
+          initialCollapsed = codeContent.trim().split('\n').length > 1
+        } else {
+          const autoExpanded = checkIfShouldBeExpanded()
+          initialCollapsed = !autoExpanded
+        }
       }
     }
 
