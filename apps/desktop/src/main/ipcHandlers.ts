@@ -33,6 +33,7 @@ import {
 import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'
+import { ExtensionsManager } from './extensions'
 
 import fs from 'fs/promises'
 import tokenManager from './token'
@@ -197,6 +198,20 @@ function setupIpcHandlers(backendRootPath: string) {
     return image.toDataURL()
   })
 
+  IPC_EVENTS_MAIN.setExtensionMode.on((event, mode) => {
+    if (!validateIPCSender(event)) return
+
+    const extensionsManager = ExtensionsManager.getInstance()
+    extensionsManager.setExtensionMode(mode)
+  })
+
+  IPC_EVENTS_MAIN.getExtensionMode.handle((event) => {
+    if (!validateIPCSender(event)) return null
+
+    const extensionsManager = ExtensionsManager.getInstance()
+    return extensionsManager.getExtensionMode()
+  })
+
   IPC_EVENTS_MAIN.getUserConfig.handle(async (event) => {
     if (!validateIPCSender(event)) return null
 
@@ -207,6 +222,29 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return null
 
     return getUserStats()
+  })
+
+  IPC_EVENTS_MAIN.getExtensionsEnabled.handle(async (event) => {
+    const url = event.senderFrame?.url
+    if (!url || !url.startsWith('https://chromewebstore.google.com/')) {
+      return null
+    }
+    const userConfig = getUserConfig()
+    return userConfig.settings.extensions
+  })
+
+  IPC_EVENTS_MAIN.listExtensions.handle((event) => {
+    if (!validateIPCSender(event)) return null
+
+    const extensionsManager = ExtensionsManager.getInstance()
+    return extensionsManager.listExtensions() ?? []
+  })
+
+  IPC_EVENTS_MAIN.removeExtension.on((event, id) => {
+    if (!validateIPCSender(event)) return
+
+    const extensionsManager = ExtensionsManager.getInstance()
+    extensionsManager.removeExtension(id)
   })
 
   IPC_EVENTS_MAIN.startDrag.on(async (event, { resourceId, filePath, fileType }) => {
@@ -361,11 +399,22 @@ function setupIpcHandlers(backendRootPath: string) {
     return getAnnouncements()
   })
 
+  IPC_EVENTS_MAIN.setActiveTabWebContentsId.on((event, webContentsId) => {
+    if (!validateIPCSender(event)) return
+    const extensionsManager = ExtensionsManager.getInstance()
+    if (!extensionsManager) return
+    extensionsManager.setActiveTab(webContentsId)
+  })
+
+  IPC_EVENTS_MAIN.closeTabWebContentsId.on((event, webContentsId) => {
+    if (!validateIPCSender(event)) return
+    const extensionsManager = ExtensionsManager.getInstance()
+    if (!extensionsManager) return
+    extensionsManager.closeTab(webContentsId)
+  })
+
   IPC_EVENTS_MAIN.updateSpacesList.on((event, data) => {
     if (!validateIPCSender(event)) return
-
-    console.log('updateSpacesList', data.length)
-
     updateCachedSpaces(data)
   })
 }
@@ -561,6 +610,16 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.startScreenshotPicker.sendToWebContents(window.webContents)
   },
 
+  extensionModeChange: (mode: 'horizontal' | 'vertical') => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.extensionModeChange.sendToWebContents(window.webContents, mode)
+  },
+
   openHistory: () => {
     const window = getMainWindow()
     if (!window) {
@@ -651,6 +710,11 @@ export const ipcSenders = {
 
       IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
     })
+
+    const extensionsManager = ExtensionsManager.getInstance()
+    if (!settings.extensions) {
+      extensionsManager.removeAllExtensions()
+    }
   },
 
   userStatsChange(stats: UserStats) {

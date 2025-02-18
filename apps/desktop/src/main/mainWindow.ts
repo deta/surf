@@ -16,9 +16,11 @@ import {
   PDFViewerEntryPoint,
   SettingsWindowEntrypoint
 } from './utils'
+
 import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
+import { handleCrxRequest } from './crxHandler'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -300,15 +302,22 @@ export function createWindow() {
     }
   }
 
+  let crxProtocolHandler = async (request: GlobalRequest): Promise<GlobalResponse> => {
+    return await handleCrxRequest(webviewSession, request.url)
+  }
+
   try {
     webviewSession.protocol.handle('surf', surfProtocolHandler)
     webviewSession.protocol.handle('surflet', surfletProtocolHandler)
+    mainWindowSession.protocol.handle('crx', crxProtocolHandler)
     mainWindowSession.protocol.handle('surf', surfProtocolHandler)
   } catch (e) {
     log.error('possibly failed to register surf protocol: ', e)
   }
 
   applyCSPToSession(mainWindowSession)
+
+  //
   // TODO: expose these to the renderer over IPC so
   // that the user can alter the current cached state
   //@ts-ignore

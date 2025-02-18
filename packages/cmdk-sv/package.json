@@ -34,7 +34,7 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.26.2",
 		"@playwright/test": "^1.28.1",
-		"@sveltejs/adapter-vercel": "^4.0.0",
+		"@sveltejs/adapter-vercel": "^5.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/package": "^2.2.7",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",

@@ -64,6 +64,36 @@ export interface GetUserStats extends IPCEvent {
   output: UserStats
 }
 
+export interface GetExtensionsEnabled extends IPCEvent {
+  payload: void
+  output: boolean
+}
+
+export interface BrowserExtension {
+  // Docs: https://electronjs.org/docs/api/structures/extension
+
+  id: string
+  /**
+   * Copy of the extension's manifest data.
+   */
+  manifest: any
+  name: string
+  /**
+   * The extension's file path.
+   */
+  path: string
+  /**
+   * The extension's `chrome-extension://` URL.
+   */
+  url: string
+  version: string
+}
+
+export interface ListExtensions extends IPCEvent {
+  payload: void
+  output: BrowserExtension[]
+}
+
 export interface StartDrag {
   resourceId: string
   filePath: string
@@ -89,6 +119,20 @@ export interface InterceptRequestHeaders extends IPCEvent {
 export interface ScreenshotPage extends IPCEvent {
   payload: { x: number; y: number; width: number; height: number }
   output: string
+}
+
+export interface SetExtensionMode extends IPCEvent {
+  payload: 'horizontal' | 'vertical'
+  output: void
+}
+
+export interface GetExtensionMode extends IPCEvent {
+  payload: void
+  output: 'horizontal' | 'vertical'
+}
+
+export interface ExtensionModeChange {
+  mode: 'horizontal' | 'vertical'
 }
 
 export interface WebviewReadResourceData extends IPCEvent {
@@ -173,8 +217,13 @@ const IPC_EVENTS = ipcService.registerEvents({
   resetBackgroundImage: ipcService.addEvent<void>('reset-background-image'),
   importedFiles: ipcService.addEvent<string[]>('imported-files'),
   setSurfBackendHealth: ipcService.addEvent<boolean>('set-surf-backend-health'),
+  setActiveTabWebContentsId: ipcService.addEvent<number>('set-active-tab-webcontents-id'),
+  closeTabWebContentsId: ipcService.addEvent<number>('close-tab-webcontents-id'),
   saveLink: ipcService.addEvent<{ url: string; spaceId?: string }>('save-link'),
   updateSpacesList: ipcService.addEvent<SpaceBasicData[]>('update-spaces-list'),
+  setExtensionMode: ipcService.addEvent<'horizontal' | 'vertical'>('set-extension-mode'),
+  extensionModeChange: ipcService.addEvent<ExtensionModeChange>('extension-mode-change'),
+  removeExtension: ipcService.addEvent<string>('remove-extension'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),
@@ -186,12 +235,16 @@ const IPC_EVENTS = ipcService.registerEvents({
     'intercept-request-headers'
   ),
   screenshotPage: ipcService.addEventWithReturn<ScreenshotPage>('screenshot-page'),
+  getExtensionMode: ipcService.addEventWithReturn<GetExtensionMode>('get-extension-mode'),
   tokenCreate: ipcService.addEventWithReturn<TokenCreate>('token-create'),
   webviewReadResourceData: ipcService.addEventWithReturn<WebviewReadResourceData>(
     'webview-read-resource-data'
   ),
   isDefaultBrowser: ipcService.addEventWithReturn<DefaultBrowserCheck>('is-default-browser'),
-  getAnnouncements: ipcService.addEventWithReturn<GetAnnouncements>('get-announcements')
+  getAnnouncements: ipcService.addEventWithReturn<GetAnnouncements>('get-announcements'),
+  getExtensionsEnabled:
+    ipcService.addEventWithReturn<GetExtensionsEnabled>('get-extensions-enabled'),
+  listExtensions: ipcService.addEventWithReturn<ListExtensions>('list-extensions')
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

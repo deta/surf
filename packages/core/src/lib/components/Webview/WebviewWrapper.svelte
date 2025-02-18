@@ -49,6 +49,7 @@
   export let currentHistoryIndex = writable(-1)
   export let acceptsDrags: boolean = false
   export let isLoading = writable(false)
+  export let webContentsId: Writable<number | null> | undefined = undefined
 
   export const canGoBack = derived(
     currentHistoryIndex,
@@ -466,6 +467,7 @@
     {url}
     {webviewReady}
     {acceptsDrags}
+    {webContentsId}
     {...$$restProps}
     bind:webview
     bind:this={webviewComponent}

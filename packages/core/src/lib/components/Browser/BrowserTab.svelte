@@ -109,8 +109,10 @@
     'about:blank'
 
   export let url = writable<string>(initialSrc)
+  export let webContentsId = writable<number | null>(null)
 
   const log = useLogScope('BrowserTab')
+
   const dispatch = createEventDispatcher<BrowserTabEvents>()
   const resourceManager = useResourceManager()
   const toasts = useToasts()
@@ -165,6 +167,10 @@
   const appDetectionCallbacks = new Map<string, (app: DetectedWebApp) => void>()
   const bookmarkingPromises = new Map<string, Promise<Resource>>()
   const updatingResourcePromises = new Map<string, Promise<Resource>>()
+
+  $: if (tab.id === $activeTabId && $webContentsId !== null) {
+    window.api.setActiveTab($webContentsId)
+  }
 
   const debouncedAppDetection = useDebounce(async () => {
     await wait(500)
@@ -1299,6 +1305,7 @@
   {historyStackIds}
   {currentHistoryIndex}
   {isLoading}
+  {webContentsId}
   acceptsDrags={active}
   bind:this={webview}
   on:webview-page-event={handleWebviewPageEvent}

@@ -29,6 +29,7 @@ export type UserSettings = {
   auto_note_similarity_search: boolean
   experimental_note_inline_rewrite: boolean
   experimental_chat_web_search: boolean
+  extensions: boolean
   /**
    * @deprecated use individual feature flags instead
    */

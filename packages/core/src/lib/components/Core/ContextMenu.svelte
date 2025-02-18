@@ -66,8 +66,13 @@
     window.addEventListener(
       'contextmenu',
       async (e) => {
-        // Find closest element which has contextMenuHint property set
         let target = e.target as HTMLElement | null
+        // for browesr-action-list for extensions
+        if (target?.tagName.toLowerCase() === 'browser-action-list') {
+          return
+        }
+
+        // Find closest element which has contextMenuHint property set
         while (target && !target.contextMenuItems) {
           target = target.parentElement
         }

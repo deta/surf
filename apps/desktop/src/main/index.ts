@@ -1,9 +1,10 @@
-import { app, BrowserWindow, protocol } from 'electron'
+import { app, BrowserWindow, protocol, session } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { readdir, unlink, stat } from 'fs/promises'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 import { isDev, isMac, isWindows, useLogScope } from '@horizon/utils'
+import { AuthenticatedAPI } from '@horizon/api'
 import { TelemetryEventTypes } from '@horizon/types'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 
@@ -12,14 +13,18 @@ import { setAppMenu } from './appMenu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
 import { ipcSenders, setupIpc } from './ipcHandlers'
-import { getUserConfig, getUserStats, updateUserConfig } from './config'
+import { getUserConfig, updateUserConfig } from './config'
 import { createSetupWindow } from './setupWindow'
 import { checkIfAppIsActivated } from './activation'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 import { AppUpdater, silentCheckForUpdates } from './appUpdates'
+import { ExtensionsManager } from './extensions'
 
 const log = useLogScope('Main Index')
+
+//see https://github.com/electron/electron/issues/45653
+app.commandLine.appendSwitch('disable-features', 'UseBrowserCalculatedOrigin')
 
 const CONFIG = {
   appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
@@ -84,6 +89,26 @@ const registerProtocols = () => {
     },
     {
       scheme: 'surflet',
+      privileges: {
+        standard: true,
+        supportFetchAPI: true,
+        secure: true,
+        corsEnabled: true,
+        stream: true
+      }
+    },
+    {
+      scheme: 'crx',
+      privileges: {
+        standard: true,
+        supportFetchAPI: true,
+        secure: true,
+        corsEnabled: true,
+        stream: true
+      }
+    },
+    {
+      scheme: 'chrome-extension',
       privileges: {
         standard: true,
         supportFetchAPI: true,
@@ -183,7 +208,6 @@ const initializeApp = async () => {
   const userDataPath = app.getPath('userData')
   const backendRootPath = join(userDataPath, 'sffs_backend')
   const userConfig = getUserConfig()
-  const userStats = getUserStats()
 
   setupIpc(backendRootPath)
 
@@ -249,6 +273,19 @@ const initializeApp = async () => {
 
     setInterval(silentCheckForUpdates, 1000 * 60 * 30) // 30 minutes
   })
+
+  const mainWindow = getMainWindow()
+  if (mainWindow && userConfig.settings.extensions) {
+    const webviewsSession = session.fromPartition('persist:horizon')
+    const extensionsManager = ExtensionsManager.getInstance()
+    await extensionsManager.initialize(
+      mainWindow,
+      webviewsSession,
+      userConfig.settings.tabs_orientation,
+      new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
+      handleOpenUrl
+    )
+  }
 }
 
 const setupApplication = () => {
@@ -280,7 +317,9 @@ const setupApplication = () => {
       isAppLaunched ? handleOpenUrl(url) : (appOpenedWithURL = url)
     )
     .on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+      }
     })
     .on('will-quit', async () => {
       surfBackendManager?.stop()

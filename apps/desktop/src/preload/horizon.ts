@@ -1,5 +1,6 @@
 import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { injectBrowserAction } from 'electron-chrome-extensions/dist/browser-action'
 
 import path from 'path'
 import http from 'http'
@@ -496,6 +497,22 @@ const api = {
     return IPC_EVENTS_RENDERER.captureWebContents.invoke()
   },
 
+  setExtensionMode: (mode: 'horizontal' | 'vertical') => {
+    IPC_EVENTS_RENDERER.setExtensionMode.send(mode)
+  },
+
+  getExtensionMode: () => {
+    return IPC_EVENTS_RENDERER.getExtensionMode.invoke()
+  },
+
+  listExtensions: () => {
+    return IPC_EVENTS_RENDERER.listExtensions.invoke()
+  },
+
+  removeExtension: (extensionId: string) => {
+    return IPC_EVENTS_RENDERER.removeExtension.send(extensionId)
+  },
+
   getAdblockerState: (partition: string) => {
     return IPC_EVENTS_RENDERER.getAdblockerState.invoke(partition)
   },
@@ -691,6 +708,14 @@ const api = {
 
   resetBackgroundImage: async () => {
     IPC_EVENTS_RENDERER.resetBackgroundImage.send()
+  },
+
+  setActiveTab: (webContentsId: number) => {
+    IPC_EVENTS_RENDERER.setActiveTabWebContentsId.send(webContentsId)
+  },
+
+  closeTab: (webContentsId: number) => {
+    IPC_EVENTS_RENDERER.closeTabWebContentsId.send(webContentsId)
   },
 
   updateSpacesList: async (data: SpaceBasicData[]) => {
@@ -1154,6 +1179,10 @@ if (process.contextIsolated) {
   window.backend = { sffs, resources }
   // @ts-ignore (define in dts)
   window.preloadEvents = eventHandlers
+}
+
+if (userConfig.settings?.extensions) {
+  injectBrowserAction()
 }
 
 export type API = typeof api

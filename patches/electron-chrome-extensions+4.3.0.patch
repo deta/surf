@@ -1,0 +1,186 @@
+diff --git a/node_modules/electron-chrome-extensions/dist/cjs/index.js b/node_modules/electron-chrome-extensions/dist/cjs/index.js
+index 7268748..3659071 100644
+--- a/node_modules/electron-chrome-extensions/dist/cjs/index.js
++++ b/node_modules/electron-chrome-extensions/dist/cjs/index.js
+@@ -28,11 +28,11 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
+ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+ 
+ // src/index.ts
+-var src_exports = {};
+-__export(src_exports, {
++var index_exports = {};
++__export(index_exports, {
+   ElectronChromeExtensions: () => ElectronChromeExtensions
+ });
+-module.exports = __toCommonJS(src_exports);
++module.exports = __toCommonJS(index_exports);
+ 
+ // src/browser/index.ts
+ var import_electron10 = require("electron");
+@@ -164,6 +164,7 @@ var _PopupView = class _PopupView {
+     this.parent = opts.parent;
+     this.extensionId = opts.extensionId;
+     this.anchorRect = opts.anchorRect;
++    this.mode = opts.mode;
+     this.browserWindow = new import_electron2.BrowserWindow({
+       show: false,
+       frame: false,
+@@ -241,8 +242,14 @@ var _PopupView = class _PopupView {
+     if (!this.browserWindow || !this.parent) return;
+     const winBounds = this.parent.getBounds();
+     const viewBounds = this.browserWindow.getBounds();
+-    let x = winBounds.x + this.anchorRect.x + this.anchorRect.width - viewBounds.width;
+-    let y = winBounds.y + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
++    let x, y;
++    if (this.mode === "horizontal") {
++      x = winBounds.x + this.anchorRect.x + this.anchorRect.width - viewBounds.width;
++      y = winBounds.y + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
++    } else {
++      x = winBounds.x + this.anchorRect.x - _PopupView.POSITION_PADDING + 20;
++      y = winBounds.y + this.anchorRect.y + 50;
++    }
+     x = Math.floor(x);
+     y = Math.floor(y);
+     debug(`updatePosition`, { x, y });
+@@ -562,7 +569,7 @@ var BrowserActionAPI = class {
+         console.debug(`Ignoring unknown browserAction.activate event '${eventType}'`);
+     }
+   }
+-  activateClick(details) {
++  async activateClick(details) {
+     const { extensionId, tabId, anchorRect } = details;
+     if (this.popup) {
+       const toggleExtension = !this.popup.isDestroyed() && this.popup.extensionId === extensionId;
+@@ -583,12 +590,15 @@ var BrowserActionAPI = class {
+       if (!win) {
+         throw new Error("Unable to get BrowserWindow from active tab");
+       }
++      const rawMode = this.ctx.store.impl.getPopupMode?.() || "horizontal";
++      const mode = typeof rawMode === "string" ? rawMode : rawMode.mode || "horizontal";
+       this.popup = new PopupView({
+         extensionId,
+         session: this.ctx.session,
+         parent: win,
+         url: popupUrl,
+-        anchorRect
++        anchorRect,
++        mode
+       });
+       d(`opened popup: ${popupUrl}`);
+       this.ctx.emit("browser-action-popup-created", this.popup);
+@@ -2677,3 +2687,4 @@ var ElectronChromeExtensions = class extends import_node_events3.EventEmitter {
+ 0 && (module.exports = {
+   ElectronChromeExtensions
+ });
++//# sourceMappingURL=index.js.map
+diff --git a/node_modules/electron-chrome-extensions/dist/esm/index.mjs b/node_modules/electron-chrome-extensions/dist/esm/index.mjs
+index f898757..0e9550a 100644
+--- a/node_modules/electron-chrome-extensions/dist/esm/index.mjs
++++ b/node_modules/electron-chrome-extensions/dist/esm/index.mjs
+@@ -135,6 +135,7 @@ var _PopupView = class _PopupView {
+     this.parent = opts.parent;
+     this.extensionId = opts.extensionId;
+     this.anchorRect = opts.anchorRect;
++    this.mode = opts.mode;
+     this.browserWindow = new BrowserWindow2({
+       show: false,
+       frame: false,
+@@ -212,8 +213,14 @@ var _PopupView = class _PopupView {
+     if (!this.browserWindow || !this.parent) return;
+     const winBounds = this.parent.getBounds();
+     const viewBounds = this.browserWindow.getBounds();
+-    let x = winBounds.x + this.anchorRect.x + this.anchorRect.width - viewBounds.width;
+-    let y = winBounds.y + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
++    let x, y;
++    if (this.mode === "horizontal") {
++      x = winBounds.x + this.anchorRect.x + this.anchorRect.width - viewBounds.width;
++      y = winBounds.y + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
++    } else {
++      x = winBounds.x + this.anchorRect.x - _PopupView.POSITION_PADDING + 20;
++      y = winBounds.y + this.anchorRect.y + 50;
++    }
+     x = Math.floor(x);
+     y = Math.floor(y);
+     debug(`updatePosition`, { x, y });
+@@ -533,7 +540,7 @@ var BrowserActionAPI = class {
+         console.debug(`Ignoring unknown browserAction.activate event '${eventType}'`);
+     }
+   }
+-  activateClick(details) {
++  async activateClick(details) {
+     const { extensionId, tabId, anchorRect } = details;
+     if (this.popup) {
+       const toggleExtension = !this.popup.isDestroyed() && this.popup.extensionId === extensionId;
+@@ -554,12 +561,15 @@ var BrowserActionAPI = class {
+       if (!win) {
+         throw new Error("Unable to get BrowserWindow from active tab");
+       }
++      const rawMode = this.ctx.store.impl.getPopupMode?.() || "horizontal";
++      const mode = typeof rawMode === "string" ? rawMode : rawMode.mode || "horizontal";
+       this.popup = new PopupView({
+         extensionId,
+         session: this.ctx.session,
+         parent: win,
+         url: popupUrl,
+-        anchorRect
++        anchorRect,
++        mode
+       });
+       d(`opened popup: ${popupUrl}`);
+       this.ctx.emit("browser-action-popup-created", this.popup);
+@@ -2647,3 +2657,4 @@ var ElectronChromeExtensions = class extends EventEmitter3 {
+ export {
+   ElectronChromeExtensions
+ };
++//# sourceMappingURL=index.mjs.map
+diff --git a/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts b/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts
+index 4b0ef18..daff4be 100644
+--- a/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts
++++ b/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts
+@@ -1,7 +1,7 @@
+ /// <reference types="chrome" />
+ /** App-specific implementation details for extensions. */
+ export interface ChromeExtensionImpl {
+-    createTab?(details: chrome.tabs.CreateProperties): Promise<[Electron.WebContents, Electron.BaseWindow]>;
++    createTab?: (details: chrome.tabs.CreateProperties) => Promise<[Electron.WebContents, Electron.BaseWindow]>;
+     selectTab?(tab: Electron.WebContents, window: Electron.BaseWindow): void;
+     removeTab?(tab: Electron.WebContents, window: Electron.BaseWindow): void;
+     /**
+@@ -11,4 +11,8 @@ export interface ChromeExtensionImpl {
+     assignTabDetails?(details: chrome.tabs.Tab, tab: Electron.WebContents): void;
+     createWindow?(details: chrome.windows.CreateData): Promise<Electron.BaseWindow>;
+     removeWindow?(window: Electron.BaseWindow): void;
++    /**
++     * Get the preferred popup mode (horizontal or vertical)
++     */
++    getPopupMode?(): 'horizontal' | 'vertical';
+ }
+diff --git a/node_modules/electron-chrome-extensions/dist/types/browser/popup.d.ts b/node_modules/electron-chrome-extensions/dist/types/browser/popup.d.ts
+index 580d4a3..7ac5d14 100644
+--- a/node_modules/electron-chrome-extensions/dist/types/browser/popup.d.ts
++++ b/node_modules/electron-chrome-extensions/dist/types/browser/popup.d.ts
+@@ -11,6 +11,7 @@ interface PopupViewOptions {
+     parent: Electron.BaseWindow;
+     url: string;
+     anchorRect: PopupAnchorRect;
++    mode: 'horizontal' | 'vertical';
+ }
+ export declare class PopupView {
+     static POSITION_PADDING: number;
+@@ -26,6 +27,7 @@ export declare class PopupView {
+     private anchorRect;
+     private destroyed;
+     private hidden;
++    private mode;
+     /** Preferred size changes are only received in Electron v12+ */
+     private usingPreferredSize;
+     private readyPromise;
+@@ -38,7 +40,7 @@ export declare class PopupView {
+     whenReady(): Promise<void>;
+     setSize(rect: Partial<Electron.Rectangle>): void;
+     private maybeClose;
+-    private updatePosition;
++    updatePosition(): void;
+     /** Backwards compat for Electron <12 */
+     private queryPreferredSize;
+     private updatePreferredSize;

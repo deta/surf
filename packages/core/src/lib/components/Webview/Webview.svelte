@@ -72,6 +72,7 @@
   export let url = writable(src)
   export let webviewReady = writable(false)
   export let acceptsDrags: boolean = false
+  export let webContentsId = writable<number | null>(null)
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -86,7 +87,6 @@
   const dispatch = createEventDispatcher<WebviewEvents>()
 
   let newWindowHandlerRegistered = false
-  let webviewWebContentsId: number | null = null
   let programmaticNavigation = false
 
   const debouncedHistoryChange = useDebounce((stack: string[], index: number) => {
@@ -560,10 +560,10 @@ Made with Deta Surf.`
     */
     webview.addEventListener('dom-ready', (_) => {
       webviewReady.set(true)
-      webviewWebContentsId = webview.getWebContentsId()
+      $webContentsId = webview.getWebContentsId()
 
       if (!newWindowHandlerRegistered) {
-        window.api.registerNewWindowHandler(webviewWebContentsId, (details) => {
+        window.api.registerNewWindowHandler($webContentsId, (details) => {
           dispatch('new-window', details)
         })
 
@@ -684,8 +684,8 @@ Made with Deta Surf.`
   })
 
   onDestroy(() => {
-    if (newWindowHandlerRegistered && webviewWebContentsId !== null) {
-      window.api.unregisterNewWindowHandler(webviewWebContentsId)
+    if (newWindowHandlerRegistered && $webContentsId !== null) {
+      window.api.unregisterNewWindowHandler($webContentsId)
     }
   })
 </script>

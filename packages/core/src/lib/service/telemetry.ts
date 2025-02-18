@@ -79,6 +79,7 @@ interface UserProperties {
   app_style?: string
   tabs_orientation?: string
   default_browser?: boolean
+  extensions_enabled?: boolean
 }
 
 // TODO: how much does telemetry hurt performance?
@@ -209,12 +210,13 @@ export class Telemetry {
     const userSettings = this.configService?.getSettings()
 
     let user_properties: UserProperties = {
-      anon_telemetry: this.userConfig?.anon_telemetry,
+      anon_telemetry: this.userConfig?.anon_telemetry ?? false,
       personas: this.personas,
       app_style: userSettings?.app_style || this.userConfig?.settings.app_style,
       tabs_orientation:
         userSettings?.tabs_orientation ?? this.userConfig?.settings.tabs_orientation,
-      default_browser: this.userConfig?.defaultBrowser
+      default_browser: this.userConfig?.defaultBrowser,
+      extensions_enabled: userSettings?.extensions ?? false
     }
 
     if (!this.isActive()) {

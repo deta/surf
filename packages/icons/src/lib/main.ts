@@ -104,6 +104,8 @@ import PlusBoxed from './Icons/PlusBoxed.svelte'
 import OpenAI from './Icons/OpenAI.svelte'
 import Claude from './Icons/Claude.svelte'
 import PictureInPicture from './Icons/PictureInPicture.svelte'
+import Puzzle from './Icons/Puzzle.svelte'
+import PuzzleFilled from './Icons/PuzzleFilled.svelte'
 import Vision from './Icons/Vision.svelte'
 import VisionLight from './Icons/VisionLight.svelte'
 import EyeOff from './Icons/EyeOff.svelte'
@@ -223,7 +225,9 @@ export const icons = {
   vision: Vision,
   'vision.off': VisionOff,
   'vision.light': VisionLight,
-  'eye.off': EyeOff
+  'eye.off': EyeOff,
+  puzzle: Puzzle,
+  'puzzle.filled': PuzzleFilled
 }
 
 export type Icons = keyof typeof icons
@@ -338,5 +342,7 @@ export {
   Vision,
   VisionOff,
   VisionLight,
-  EyeOff
+  EyeOff,
+  Puzzle,
+  PuzzleFilled
 }

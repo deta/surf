@@ -30,6 +30,7 @@
   import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
+  import ExtensionsManager from './components/ExtensionsManager.svelte'
 
   // let error = ''
   // let loading = false
@@ -42,6 +43,7 @@
   let migrating = false
   let userConfig: UserConfig | undefined = undefined
   let userConfigSettings: UserSettings | undefined = undefined
+  let currentExtensionsValue: boolean = false
   let checkInterval: NodeJS.Timeout
   let showLicenses = false
   let showMiscInfo = false
@@ -110,6 +112,15 @@
     console.log('updating settings', userConfigSettings)
     // @ts-ignore
     await window.api.updateUserConfigSettings(userConfigSettings)
+
+    // we need to restart the app if the extensions setting has changed
+    // this is done so that all the attached handlers, preloads etc are removed
+    if (currentExtensionsValue !== userConfigSettings.extensions) {
+      currentExtensionsValue = userConfigSettings.extensions
+      // @ts-ignore
+      // TODO: do we have a better way to restart the app while we wait for everything to finish?
+      setTimeout(() => window.api.restartApp(), 2000)
+    }
   }
 
   const handleSelectModel = (e: CustomEvent<string>) => {
@@ -223,6 +234,7 @@
     userConfig = await window.api.getUserConfig()
     console.log('loaded user config', userConfig)
     userConfigSettings = userConfig.settings
+    currentExtensionsValue = userConfigSettings.extensions
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
     console.log('loaded settings', userConfigSettings)
@@ -476,6 +488,26 @@
         </div>
 
         {#if userConfigSettings}
+          <SettingsOption
+            icon="puzzle"
+            title="Extensions Support"
+            description="Use extensions in Surf. Please note that this feature is still in early development."
+            bind:value={userConfigSettings.extensions}
+            showConfirmDialog={(_) => true}
+            getDialogMessage={(newExtensionValue) => {
+              const title = 'Are you sure? (Surf will restart)'
+              const message = newExtensionValue
+                ? 'Enabling extensions will restart Surf.'
+                : 'All your extensions will be uninstalled and Surf will restart.'
+              return { title, message }
+            }}
+            on:update={handleSettingsUpdate}
+          >
+            {#if userConfigSettings.extensions}
+              <ExtensionsManager />
+            {/if}
+          </SettingsOption>
+
           <SmartNotesOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
 
           <SettingsOption

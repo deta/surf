@@ -4,7 +4,9 @@ export const ENDPOINTS = {
   app_activations: '/v0/deta-os-auth/activations',
   resend_invite_code: '/v0/deta-os-auth/activation-keys/resend',
   userdata: '/v0/deta-os-auth/userdata',
-  userdata_telemetry_id: '/v0/deta-os-auth/userdata/tel-id'
+  userdata_telemetry_id: '/v0/deta-os-auth/userdata/tel-id',
+  check_extension: '/v0/deta-os-auth/check-extension',
+  extension_installations: '/v0/deta-os-auth/extensions/installations'
 }
 
 export class API {
@@ -129,6 +131,39 @@ export class AuthenticatedAPI extends API {
     } catch (error) {
       console.error('Error patching user telemetry id:', error)
     }
+  }
+
+  async checkIfExtensionIsAllowed(extensionId: string) {
+    return await this.postJSONReturnRes(
+      ENDPOINTS.check_extension,
+      {
+        extension_id: extensionId
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+  }
+
+  async trackInstalledExtension(extensionId: string, installed: boolean) {
+    const action = installed ? 'install' : 'uninstall'
+
+    return await this.postJSONReturnRes(
+      ENDPOINTS.extension_installations,
+      {
+        extension_id: extensionId,
+        action
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
   }
 
   static createAuthenticatedAPI(base: string, apiKey: string) {

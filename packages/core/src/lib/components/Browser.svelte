@@ -132,7 +132,7 @@
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
   import BrowserActions from './Browser/BrowserActions.svelte'
-  import { createTabsManager, getBrowserContextScopeType } from '../service/tabs'
+  import { createTabsManager, getBrowserContextScopeType, TABS_CONTEXT_KEY } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
   import { captureScreenshot, getHostFromURL, getScreenshotFileName } from '../utils/screenshot'
   import { useResizeObserver } from '../utils/observers'
@@ -148,6 +148,7 @@
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
   import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
+  import ExtensionBrowserActions from './Browser/ExtensionBrowserActions.svelte'
   import {
     createMiniBrowserService,
     useScopedMiniBrowserAsStore
@@ -200,6 +201,7 @@
   let pinnedTabsScrollArea: HTMLElement
   let initializedApp = false
   let showNewChatButton = false
+  let showExtensionsBrowserActions = writable(false)
 
   const onboardingActive = writable(false)
   const onboardingTabVisible = writable(false)
@@ -337,6 +339,8 @@
       colorService.usePalette($desktopColorScheme.colorPalette, isDarkMode)
     }
   }
+
+  $: showExtensionsBrowserActions.set($userConfigSettings.extensions)
 
   // Toggle dark mode
   $: document.body.classList[$userConfigSettings.app_style === 'dark' ? 'add' : 'remove']('dark')
@@ -944,16 +948,16 @@
   }
 
   const handleToggleHorizontalTabs = async () => {
-    const t = document.startViewTransition(() => {
+    const t = document.startViewTransition(async () => {
       horizontalTabs = !horizontalTabs
-
       config.updateSettings({
         tabs_orientation: horizontalTabs ? 'horizontal' : 'vertical'
       })
-
-      // localStorage.setItem('horizontalTabs', horizontalTabs.toString())
-      telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
     })
+
+    await t.finished
+    telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
+    window.api.setExtensionMode(horizontalTabs ? 'horizontal' : 'vertical')
 
     await tick().then(() => {
       checkScroll()
@@ -3077,6 +3081,12 @@
     UserStatsService.stopCheckNotifyUserInterval()
   })
 
+  const openExtensionStore = () => {
+    log.debug('open-extension-store')
+    const url = 'https://chromewebstore.google.com/category/extensions'
+    window.open(url, '_blank')
+  }
+
   const openFeedback = () => {
     const url = 'https://surf.featurebase.app/'
     window.open(url, '_blank')
@@ -3867,10 +3877,12 @@
           {canGoBack}
           {canGoForward}
           {canReload}
+          {showExtensionsBrowserActions}
           on:go-back={() => $activeBrowserTab?.goBack()}
           on:go-forward={() => $activeBrowserTab?.goForward()}
           on:reload={() => $activeBrowserTab?.reload()}
           on:toggle-sidebar={() => changeLeftSidebarState()}
+          on:open-extension-store={() => openExtensionStore()}
         />
       </div>
       <div class="flex flex-row items-center space-x-2 ml-5">
@@ -4020,10 +4032,12 @@
               {canGoBack}
               {canGoForward}
               {canReload}
+              {showExtensionsBrowserActions}
               on:go-back={() => $activeBrowserTab?.goBack()}
               on:go-forward={() => $activeBrowserTab?.goForward()}
               on:reload={() => $activeBrowserTab?.reload()}
               on:toggle-sidebar={() => changeLeftSidebarState()}
+              on:open-extension-store={() => openExtensionStore()}
             />
           {/if}
 
@@ -4428,6 +4442,9 @@
               ? 'h-full flex-row items-center'
               : 'flex-col'} flex-shrink-0"
           >
+            {#if $showExtensionsBrowserActions && horizontalTabs}
+              <ExtensionBrowserActions on:open-extension-store={openExtensionStore} />
+            {/if}
             {#if !horizontalTabs}
               <button
                 class="new-tab-button transform select-none no-drag active:scale-95 space-x-2

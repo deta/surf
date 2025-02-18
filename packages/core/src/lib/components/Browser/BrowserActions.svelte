@@ -3,12 +3,16 @@
   import { flyAndScale } from '@horizon/utils'
   import { Tooltip } from 'bits-ui'
   import { createEventDispatcher } from 'svelte'
+  import { type Writable } from 'svelte/store'
+  import CustomPopover from '../Atoms/CustomPopover.svelte'
+  import ExtensionBrowserActions from './ExtensionBrowserActions.svelte'
 
   export let horizontalTabs: boolean
   export let showCustomWindowActions: boolean
   export let canGoBack: boolean
   export let canGoForward: boolean
   export let canReload: boolean
+  export let showExtensionsBrowserActions: Writable<boolean>
 
   const dispatch = createEventDispatcher<{
     'go-back': void
@@ -91,6 +95,9 @@
   </div>
 
   <div class="flex flex-row items-center">
+    {#if !horizontalTabs && $showExtensionsBrowserActions}
+      <ExtensionBrowserActions on:open-extension-store />
+    {/if}
     <Tooltip.Root openDelay={400} closeDelay={10}>
       <Tooltip.Trigger>
         <button

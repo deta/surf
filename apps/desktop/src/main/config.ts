@@ -109,6 +109,7 @@ export const getUserConfig = (path?: string) => {
       auto_note_similarity_search: false,
       experimental_note_inline_rewrite: false,
       experimental_chat_web_search: false,
+      extensions: false,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -231,6 +232,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.show_resource_contexts === undefined) {
     storedConfig.settings.show_resource_contexts = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.extensions === undefined) {
+    storedConfig.settings.extensions = false
     changedConfig = true
   }
 

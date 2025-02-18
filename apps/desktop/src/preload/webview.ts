@@ -29,6 +29,7 @@ import CommentMenu from './components/Comment.svelte'
 import { type ResourceArticle, type Resource } from '@horizon/core/src/lib/service/resources'
 import { isPDFViewerURL, normalizeURL } from '@horizon/utils/src/url'
 import { htmlToMarkdown } from '@horizon/utils/src/markdown'
+import { checkIfExtensionsEnabled, setupChromeWebStoreApi } from './chrome-web-store'
 
 const COMPONENT_WRAPPER_TAG = 'DETA-COMPONENT-WRAPPER'
 const PDFViewerEntryPoint =
@@ -1367,3 +1368,15 @@ window.addEventListener('submit', (e: Event) => {
     }
   }
 })
+
+if (location.href.startsWith('https://chromewebstore.google.com/')) {
+  try {
+    checkIfExtensionsEnabled().then((enabled) => {
+      if (enabled) {
+        setupChromeWebStoreApi()
+      }
+    })
+  } catch (error) {
+    console.error('Error setting up Chrome Web Store API:', error)
+  }
+}

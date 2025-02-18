@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import { writable, derived } from 'svelte/store'
+  import { createEventDispatcher, onDestroy } from 'svelte'
+  import { writable } from 'svelte/store'
   import { Popover, type CustomEventHandler } from 'bits-ui'
   import { flyAndScale } from '@horizon/utils'
 
@@ -15,14 +15,22 @@
   export let disableHover = false
   export let triggerClassName = ''
   export let disableTransition = false
+  export let toggleOnClick = false
 
   let timerBeforePopoverClose: NodeJS.Timeout
   let timerBeforePopoverOpen: NodeJS.Timeout
   let blockOpen = false
+  let openedByHover = false
+  let blockToggleTimer: NodeJS.Timeout
 
-  const dispatch = createEventDispatcher<{ click: MouseEvent }>()
+  const dispatch = createEventDispatcher<{
+    click: MouseEvent
+    show: void
+  }>()
 
-  const CLOSE_DELAY = 200
+  $: if ($popoverOpened) {
+    dispatch('show')
+  }
 
   const handleMouseEnter = () => {
     clearTimeout(timerBeforePopoverClose)
@@ -33,6 +41,15 @@
     e.preventDefault()
 
     dispatch('click', e.detail.originalEvent)
+
+    if (toggleOnClick) {
+      // If opened by hover cancel closing
+      if (openedByHover) {
+        return
+      }
+      popoverOpened.update((value) => !value)
+      return
+    }
 
     if (disableHover) {
       clearTimeout(timerBeforePopoverClose)
@@ -64,6 +81,12 @@
     clearTimeout(timerBeforePopoverClose)
     timerBeforePopoverOpen = setTimeout(() => {
       popoverOpened.set(true)
+      openedByHover = true
+      // Reset the hover flag after 800ms
+      clearTimeout(blockToggleTimer)
+      blockToggleTimer = setTimeout(() => {
+        openedByHover = false
+      }, 800)
     }, openDelay)
   }
 
@@ -88,6 +111,7 @@
 
   onDestroy(() => {
     clearTimeout(timerBeforePopoverClose)
+    clearTimeout(blockToggleTimer)
   })
 
   const handleKeyDown = (e: KeyboardEvent) => {
