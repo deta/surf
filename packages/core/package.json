@@ -59,7 +59,7 @@
     "tslib": "^2.6.2",
     "typed-emitter": "^2.1.0",
     "typescript": "^5.2.2",
-    "vite": "^4.5.6",
+    "vite": "^5.0.0",
     "vite-plugin-markdown": "^2.2.0"
   },
   "dependencies": {
