@@ -51,7 +51,9 @@
     PageChatUpdateContextEventAction,
     PageChatUpdateContextEventTrigger,
     PromptType,
-    ResourceTypes
+    ResourceTagsBuiltInKeys,
+    ResourceTypes,
+    WEB_RESOURCE_TYPES
   } from '@horizon/types'
   import {
     DragTypeNames,
@@ -147,6 +149,9 @@
   const selectedContext = writable<string | null>(null)
 
   const collapsedSources = useLocalStorageStore<boolean>('smart-note-collapse-sources', false, true)
+
+  const DRAG_ZONE_PREFIX = 'text-resource/'
+  const dragZoneId = DRAG_ZONE_PREFIX + resourceId + Date.now()
 
   let clientWidth = 0
   let disableSimilaritySearch = false
@@ -357,11 +362,21 @@
   const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
     const editor = editorElem.getEditor()
     const position = dragPosition ?? editor.view.state.selection.from
+    const resolvedPos = editor.view.state.doc.resolve(position)
+    const isBlock = !resolvedPos.parent.inlineContent
+
+    log.debug('dropped something at', position, 'is block', isBlock)
 
     const processDropResource = (resource: Resource) => {
+      const canonicalUrl = (resource?.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+      )?.value
+      const canBeEmbedded =
+        WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
+
       if (resource.type.startsWith('image/')) {
         editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
-      } else if (isGeneratedResource(resource)) {
+      } else if ((isGeneratedResource(resource) || canBeEmbedded) && isBlock) {
         editor.commands.insertContentAt(
           position,
           `<resource id="${resource.id}" data-type="${resource.type}" />`
@@ -1494,7 +1509,9 @@
   class="text-resource-wrapper text-gray-900 dark:text-gray-100"
   bind:clientWidth
   use:HTMLDragZone.action={{
+    id: dragZoneId,
     accepts: (drag) => {
+      if (drag.from?.id.startsWith(DRAG_ZONE_PREFIX)) return false
       if (
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||

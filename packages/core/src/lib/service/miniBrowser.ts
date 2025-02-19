@@ -224,6 +224,8 @@ export class MiniBrowserService {
   isOpen: Readable<boolean>
   openScopedBrowsers: Readable<string[]>
 
+  static self: MiniBrowserService
+
   constructor(
     resourceManager: ResourceManager,
     downloadIntercepters: Writable<Map<string, (data: Download) => void>>
@@ -302,12 +304,15 @@ export class MiniBrowserService {
 
     setContext(MINI_BROWSER_SERVICE_CONTEXT_KEY, service)
 
+    if (!MiniBrowserService.self) MiniBrowserService.self = service
+
     return service
   }
 
   static use() {
-    const service = getContext<MiniBrowserService | null>(MINI_BROWSER_SERVICE_CONTEXT_KEY)
+    if (MiniBrowserService.self) return MiniBrowserService.self
 
+    const service = getContext<MiniBrowserService | null>(MINI_BROWSER_SERVICE_CONTEXT_KEY)
     if (!service) {
       throw new Error('MiniBrowserService not provided')
     }

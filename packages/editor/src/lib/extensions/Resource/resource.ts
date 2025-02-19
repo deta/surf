@@ -78,7 +78,7 @@ export const Resource = Node.create<ResourceOptions>({
   inline: false,
   atom: true,
   selectable: false,
-  draggable: false,
+  draggable: true,
 
   parseHTML() {
     return [{ tag: 'resource' }]

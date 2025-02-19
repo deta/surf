@@ -8,6 +8,8 @@ export class ConfigService {
 
   log: ReturnType<typeof useLogScope>
 
+  static self: ConfigService
+
   constructor() {
     this.log = useLogScope('Config')
 
@@ -51,11 +53,14 @@ export class ConfigService {
 
     setContext('config', config)
 
+    if (!ConfigService.self) ConfigService.self = config
+
     return config
   }
 
   static use() {
-    return getContext<ConfigService>('config')
+    if (!ConfigService.self) return getContext<ConfigService>('config')
+    return ConfigService.self
   }
 }
 

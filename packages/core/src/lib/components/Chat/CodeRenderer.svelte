@@ -1088,7 +1088,7 @@
     <header
       class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
       {draggable}
-      use:HTMLDragItem.action={{}}
+      use:HTMLDragItem.action={{ allowDragStartPropagation: true }}
       on:DragStart={handleDragStart}
     >
       <div class="flex items-center gap-1 w-full">

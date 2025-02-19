@@ -114,6 +114,7 @@ export class HTMLDragItem extends DragItem {
 
   readonly previewType: DragItemPreviewType;
   readonly element: HTMLElement;
+  readonly allowDragStartPropagation: boolean;
 
   /// Used for hoist
   //protected readonly nextElement?: HTMLElement;
@@ -138,11 +139,17 @@ export class HTMLDragItem extends DragItem {
 
   constructor(
     node: HTMLElement,
-    props?: { id?: string; data?: DragData; previewType?: DragItemPreviewType }
+    props?: {
+      id?: string;
+      data?: DragData;
+      previewType?: DragItemPreviewType;
+      allowDragStartPropagation?: boolean;
+    }
   ) {
     super((props?.id ?? Boolean(node.id)) ? node.id : undefined, props?.data);
     this.element = node;
     this.previewType = props?.previewType ?? "clone";
+    this.allowDragStartPropagation = props?.allowDragStartPropagation ?? false;
     //this.parentElement = node.parentElement;
 
     this.attach(node);
@@ -181,7 +188,7 @@ export class HTMLDragItem extends DragItem {
 
   static action(
     node: HTMLElement,
-    props: { id?: string; data?: DragData }
+    props: { id?: string; data?: DragData; allowDragStartPropagation?: boolean }
   ): ActionReturn<HTMLDragItemProps, HTMLDragItemAttributes> {
     const item = new this(node, props);
     return {
@@ -251,7 +258,9 @@ export class HTMLDragItem extends DragItem {
   protected handleMouseUp = this._handleMouseUp.bind(this);
 
   protected _handleDragStart(e: DragEvent) {
-    e.stopPropagation();
+    if (!this.allowDragStartPropagation) {
+      e.stopPropagation();
+    }
     e.dataTransfer!.setDragImage(Dragcula.get().transparentImg, 0, 0); // FIX: CHECK dt
     //e.dataTransfer!.setData("text", "test");
     e.dataTransfer!.effectAllowed = "all";
