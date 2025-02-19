@@ -59,11 +59,14 @@
       <div class="empty-state">
         <div class="description">
           <p>
-            Surf comes with experimental extension support, currently limited to most popular <b>password managers</b>.
+            Surf comes with experimental extension support, currently limited to most popular <b
+              >password managers</b
+            >.
           </p>
 
           <p>
-            Find your favorite password manager in the Chrome Web Store and install it to use it with Surf.
+            Find your favorite password manager in the Chrome Web Store and install it to use it
+            with Surf.
           </p>
 
           <button class="install-button" on:click={handleOpenExtenionStore}>

@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-  export interface MasonryItem {
+  export interface GridItem {
     id: string
     data: any // TODO: Svelte component typong -> succs in Svelte4 btu nice in svelte 5
   }
@@ -7,25 +7,17 @@
 
 <script lang="ts">
   import type { Readable } from 'svelte/store'
+
+  import { selection } from '../utils/select'
   import type { ContextViewDensity } from '@horizon/types'
 
-  export let items: Readable<MasonryItem[]>
-
-  export let paddingInline: number = 46
-  export let paddingBlock: number = 46
-  export let gap: number = 21
+  export let items: Readable<GridItem[]>
   export let density: ContextViewDensity | undefined = undefined // Allow specific override if needed
 </script>
 
-<div
-  class="masonry-view"
-  data-density={density}
-  style:--masonry-gap={gap}
-  style:--masonry-padding-inline={paddingInline}
-  style:--masonry-padding-block={paddingBlock}
->
+<div class="grid-view" data-density={density}>
   <!--     on:wheel|passive={handleScroll} -->
-  <div class="masonry-grid bg-[#f7f7f7] dark:bg-gray-900">
+  <div class="grid-content bg-[#f7f7f7] dark:bg-gray-900">
     {#each $items as item, index (`${item.id}-${index}`)}
       <div class="item">
         <slot item={{ id: item.id, data: item.data }}></slot>
@@ -44,87 +36,78 @@
     outline: 4px solid rgba(0, 123, 255, 0.4);
   }
 
-  .masonry-view {
+  .grid-view {
     container-type: inline-size;
-    container-name: masonry-view;
+    container-name: grid-view;
   }
 
-  .masonry-grid {
-    // NOTE: Using CSS Houdini Layout API -> Requires "CSSLayoutAPI" blink flag!
-    display: layout(masonry);
-    --padding-inline: var(--masonry-padding-inline, 0);
-    --padding-block: var(--masonry-padding-block, 0);
-    --gap: var(--masonry-gap, 0);
-    --columns: 4;
+  .grid-content {
+    display: grid;
+    gap: 2.75ch;
+    padding: 3.5ch;
+    padding-bottom: 7em;
+    grid-template-columns: repeat(var(--columns, 3), minmax(20ch, 1fr));
   }
   .item {
     box-sizing: border-box;
-    padding: 10px;
-    transition:
-      opacity 0s ease,
-      width 0s ease,
-      visibility 0.12s ease;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 
     width: 100% !important;
-    height: auto;
+    height: 100% !important;
+    aspect-ratio: 1 / 1;
   }
 
   .item:last-child {
     padding-bottom: 400px;
   }
 
-  @container masonry-view (max-width: 600px) {
-    .masonry-grid {
+  @container grid-view (max-width: 600px) {
+    .grid-content {
       --columns: var(--density-xs-columns);
     }
   }
-  @container masonry-view (min-width: 601px) and (max-width: 900px) {
-    .masonry-grid {
+  @container grid-view (min-width: 601px) and (max-width: 900px) {
+    .grid-content {
       --columns: var(--density-sm-columns);
     }
   }
-  @container masonry-view (min-width: 901px) and (max-width: 1200px) {
-    .masonry-grid {
+  @container grid-view (min-width: 901px) and (max-width: 1200px) {
+    .grid-content {
       --columns: var(--density-md-columns);
     }
   }
-  @container masonry-view (min-width: 1201px) and (max-width: 1700px) {
-    .masonry-grid {
+  @container grid-view (min-width: 1201px) and (max-width: 1700px) {
+    .grid-content {
       --columns: var(--density-lg-columns);
     }
   }
-  @container masonry-view (min-width: 1701px) {
-    .masonry-grid {
+  @container grid-view (min-width: 1701px) {
+    .grid-content {
       --columns: var(--density-xl-columns);
     }
   }
 
-  :global([data-density='compact'] .masonry-grid) {
+  :global([data-density='compact'] .grid-content) {
     --density-xs-columns: 2;
     --density-sm-columns: 3;
     --density-md-columns: 4;
     --density-lg-columns: 5;
     --density-xl-columns: 6;
   }
-  :global([data-density='cozy'] .masonry-grid) {
+  :global([data-density='cozy'] .grid-content) {
     --density-xs-columns: 1;
     --density-sm-columns: 2;
     --density-md-columns: 3;
     --density-lg-columns: 4;
     --density-xl-columns: 5;
   }
-  :global([data-density='comfortable'] .masonry-grid) {
+  :global([data-density='comfortable'] .grid-content) {
     --density-xs-columns: 1;
     --density-sm-columns: 2;
     --density-md-columns: 2;
     --density-lg-columns: 3;
     --density-xl-columns: 4;
   }
-  :global([data-density='spacious'] .masonry-grid) {
+  :global([data-density='spacious'] .grid-content) {
     --density-xs-columns: 1;
     --density-sm-columns: 1;
     --density-md-columns: 2;

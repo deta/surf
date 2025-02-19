@@ -1,4 +1,5 @@
 import { RightSidebarTab } from './browser.types'
+import { ContextViewDensity, ContextViewType } from './contexts.types'
 import { WebViewEventTransform } from './ipc.webview.types'
 import { AnnotationCommentData, AnnotationType } from './resources.types'
 
@@ -436,7 +437,9 @@ export type UpdateSpaceSettingsEventChange = {
     | 'source'
     | 'hide_viewed'
     | 'smart_filter'
-  change:
+    | 'view_type'
+    | 'view_density'
+  change: (
     | boolean
     | null
     | 'added'
@@ -447,6 +450,9 @@ export type UpdateSpaceSettingsEventChange = {
     | 'name'
     | 'asc'
     | 'desc'
+  ) &
+    ContextViewType &
+    ContextViewDensity
 }
 
 export type InlineAIEventPromptType = WebViewEventTransform['type']

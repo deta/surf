@@ -14,6 +14,8 @@ import {
 } from '@horizon/utils'
 import {
   ChangeContextEventTrigger,
+  ContextViewDensities,
+  ContextViewTypes,
   CreateSpaceEventFrom,
   DeleteResourceEventTrigger,
   ResourceTagsBuiltInKeys,
@@ -54,6 +56,8 @@ export type OptionalSpaceData = Optional<
   | 'hideViewed'
   | 'smartFilterQuery'
   | 'sortBy'
+  | 'viewType'
+  | 'viewDensity'
   | 'sources'
   | 'sql_query'
   | 'embedding_query'

@@ -24,6 +24,10 @@
   } from '../../types'
   import type { HistoryEntriesManager } from '../../service/history'
   import {
+    ContextViewDensities,
+    type ContextViewDensity,
+    type ContextViewType,
+    ContextViewTypes,
     MultiSelectResourceEventAction,
     OpenInMiniBrowserEventFrom,
     SaveToOasisEventTrigger,
@@ -51,6 +55,8 @@
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
+  import type { ViewChangeEvent } from '../Oasis/Scaffolding/OasisSpaceViewSettingsPopover.svelte'
+  import OasisSpaceViewSettingsPopover from '../Oasis/Scaffolding/OasisSpaceViewSettingsPopover.svelte'
 
   export let showTabSearch: Writable<number>
   export let spaceId: string
@@ -178,6 +184,24 @@
   const isBuiltInSpace = derived([selectedSpaceId], ([$selectedSpaceId]) => {
     return $selectedSpaceId === 'all' || $selectedSpaceId === 'inbox'
   })
+
+  const builtInSpacesViewSettings = useLocalStorageStore<{
+    all: {
+      viewType?: ContextViewType
+      viewDensity?: ContextViewDensity
+    }
+    inbox: {
+      viewType?: ContextViewType
+      viewDensity?: ContextViewDensity
+    }
+  }>(
+    'stuff_built_in_spaces_view_settings',
+    {
+      all: {},
+      inbox: {}
+    },
+    true
+  )
 
   const loadEverything = async (initialLoad = false) => {
     await tick()
@@ -527,6 +551,37 @@
     const completeley = e.detail
     if (completeley) {
       closeOverlay()
+    }
+  }
+
+  const handleViewSettingsChanges = async (e: CustomEvent<ViewChangeEvent>) => {
+    const { viewType, viewDensity } = e.detail
+
+    const prevViewType = $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all'].viewType
+    const prevViewDensity = $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all'].viewDensity
+
+    builtInSpacesViewSettings.update((v) => {
+      if (isInboxSpace) {
+        v.inbox.viewType = viewType
+        v.inbox.viewDensity = viewDensity
+      } else {
+        v.all.viewType = viewType
+        v.all.viewDensity = viewDensity
+      }
+      return v
+    })
+
+    if (viewType !== undefined && prevViewType !== viewType) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'view_type',
+        change: viewType
+      })
+    }
+    if (viewDensity !== undefined && prevViewDensity !== viewDensity) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'view_density',
+        change: viewDensity
+      })
     }
   }
 
@@ -911,6 +966,10 @@
                         : $isSearching && $searchValue?.length > 0
                           ? { icon: 'spinner', message: 'Searching your stuff…' }
                           : undefined}
+                      viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                        ?.viewType}
+                      viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                        ?.viewDensity}
                       on:click={handleItemClick}
                       on:open={(e) => handleOpen(e, true)}
                       on:open-and-chat
@@ -960,6 +1019,12 @@
 
           {#if $showTabSearch === 2}
             <div class="absolute right-2 flex items-center gap-2">
+              <OasisSpaceViewSettingsPopover
+                on:change={handleViewSettingsChanges}
+                viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']?.viewType}
+                viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                  ?.viewDensity}
+              />
               <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
             </div>
           {/if}

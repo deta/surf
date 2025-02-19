@@ -1,3 +1,5 @@
+import type { ContextViewDensity, ContextViewType } from '@horizon/types'
+
 export interface CreateSpaceEntryInput {
   resource_id: string
   manually_added: number
@@ -28,6 +30,8 @@ export interface SpaceData {
   builtIn?: boolean
   index?: number
   pinned?: boolean
+  viewType?: ContextViewType
+  viewDensity?: ContextViewDensity
 }
 
 export interface SpaceSource {

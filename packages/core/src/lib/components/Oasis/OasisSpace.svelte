@@ -62,6 +62,8 @@
   import type { ChatWithSpaceEvent } from '../../types/browser.types'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
+    ContextViewDensities,
+    ContextViewTypes,
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
     EventContext,
@@ -69,7 +71,9 @@
     RefreshSpaceEventTrigger,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger,
-    SummarizeEventContentSource
+    SummarizeEventContentSource,
+    type ContextViewDensity,
+    type ContextViewType
   } from '@horizon/types'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
@@ -85,6 +89,9 @@
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import OasisSpaceViewSettingsPopover, {
+    type ViewChangeEvent
+  } from './Scaffolding/OasisSpaceViewSettingsPopover.svelte'
 
   export let spaceId: string
   export let active: boolean = false
@@ -1275,6 +1282,29 @@
       scopedMiniBrowser.openWebpage(url, { from: OpenInMiniBrowserEventFrom.PinnedTab })
     }
   }
+  const handleViewSettingsChanges = async (e: CustomEvent<ViewChangeEvent>) => {
+    const { viewType, viewDensity } = e.detail
+
+    if (!$space) return
+
+    const prevViewType = $spaceData?.viewType
+    const prevViewDensity = $spaceData?.viewDensity
+
+    await $space.updateData({ viewType, viewDensity })
+
+    if (viewType !== undefined && prevViewType !== viewType) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'view_type',
+        change: viewType
+      })
+    }
+    if (viewDensity !== undefined && prevViewDensity !== viewDensity) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'view_density',
+        change: viewDensity
+      })
+    }
+  }
 
   const handleReload = async () => {
     await loadSpaceContents(spaceId, true)
@@ -1410,7 +1440,12 @@
               </div>
             </div>
 
-            <div class="flex justify-end">
+            <div class="flex justify-end gap-2">
+              <OasisSpaceViewSettingsPopover
+                on:change={handleViewSettingsChanges}
+                viewType={$spaceData?.viewType}
+                viewDensity={$spaceData?.viewDensity}
+              />
               <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
             </div>
 
@@ -1437,6 +1472,8 @@
         resources={spaceResourceIds}
         {searchValue}
         isInSpace={!isEverythingSpace}
+        viewType={$spaceData?.viewType}
+        viewDensity={$spaceData?.viewDensity}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:open-and-chat
@@ -1456,7 +1493,10 @@
     {:else if isEverythingSpace && $everythingContents.length > 0}
       <OasisResourcesView
         resources={everythingContents}
+        {searchValue}
         isInSpace={false}
+        viewType={$spaceData?.viewType}
+        viewDensity={$spaceData?.viewDensity}
         on:click={handleItemClick}
         on:open={handleOpen}
         on:open-and-chat
@@ -1466,7 +1506,6 @@
         on:batch-remove
         on:batch-open
         on:open-space-as-tab
-        {searchValue}
       />
 
       {#if $loadingContents}

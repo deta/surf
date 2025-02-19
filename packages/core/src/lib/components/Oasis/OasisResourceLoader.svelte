@@ -56,7 +56,7 @@
   })
 </script>
 
-<div class="wrapper">
+<div class="wrapper" class:full-height={viewMode === 'responsive'}>
   {#if resource}
     <slot
       {resource}
@@ -133,5 +133,9 @@
     display: block;
     width: 100%;
     height: min-content;
+
+    &.full-height {
+      height: 100%;
+    }
   }
 </style>

@@ -415,6 +415,7 @@ function setupIpcHandlers(backendRootPath: string) {
 
   IPC_EVENTS_MAIN.updateSpacesList.on((event, data) => {
     if (!validateIPCSender(event)) return
+
     updateCachedSpaces(data)
   })
 }

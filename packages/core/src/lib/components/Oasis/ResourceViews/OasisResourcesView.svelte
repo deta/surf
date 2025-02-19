@@ -1,7 +1,3 @@
-<script lang="ts" context="module">
-  export type ResourcesViewType = 'masonry' | 'grid' | 'list'
-</script>
-
 <script lang="ts">
   import { derived, type Readable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
@@ -13,12 +9,20 @@
   import { useOasis } from '../../../service/oasis'
   import { useToasts } from '../../../service/toast'
   import { useTelemetry } from '../../../service/telemetry'
-  import { MultiSelectResourceEventAction } from '@horizon/types'
+  import {
+    ContextViewDensities,
+    ContextViewTypes,
+    MultiSelectResourceEventAction,
+    type ContextViewDensity,
+    type ContextViewType
+  } from '@horizon/types'
 
   import { SpaceEntryOrigin } from '../../../types'
   import { Resource } from '../../../service/resources'
   import OasisResourceLoader from '../../Oasis/OasisResourceLoader.svelte'
   import { Icon, type Icons } from '@horizon/icons'
+  import GridView from './GridView.svelte'
+  import LazyScroll from '../../Utils/LazyScroll.svelte'
 
   export let resources: Readable<(Resource | string | { id: string } | { resource: Resource })[]>
 
@@ -27,7 +31,8 @@
   export let resourcesBlacklistable: boolean = false
 
   export let interactive: boolean = true
-  export let resourceViewType: ResourcesViewType = 'masonry' // TODO: (@maxu) impl
+  export let viewType: ContextViewType | undefined = ContextViewTypes.Masonry // TODO: (@maxu) impl
+  export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Cozy
 
   export let status: undefined | { icon: Icons | undefined; message: string } = undefined
 
@@ -170,7 +175,8 @@
 </script>
 
 <div
-  class="wrapper"
+  class="resources-view"
+  data-density={viewDensity ?? ContextViewDensities.Cozy}
   use:contextMenu={{
     canOpen: $selectedItemIds.length > 1,
     items: CONTEXT_MENU_ITEMS
@@ -201,31 +207,57 @@
       </div>
     {:else}
       {#key $searchValue === ''}
-        <MasonryView items={$renderContents} let:item>
-          <OasisResourceLoader
-            resourceOrId={item.data ?? item.id}
-            draggable
-            {interactive}
-            {isInSpace}
-            {resourcesBlacklistable}
-            on:click
-            on:open
-            on:open-and-chat
-            on:remove
-            on:load
-            on:space-selected
-            on:blacklist-resource
-            on:whitelist-resource
-            on:set-resource-as-space-icon
-          />
-        </MasonryView>
+        <LazyScroll items={renderContents} let:renderedItems>
+          {#if (viewType ?? ContextViewTypes.Masonry) === 'masonry'}
+            <MasonryView items={renderedItems} let:item>
+              <OasisResourceLoader
+                resourceOrId={item.data ?? item.id}
+                draggable
+                {interactive}
+                {isInSpace}
+                {resourcesBlacklistable}
+                viewMode="card"
+                on:click
+                on:open
+                on:open-and-chat
+                on:remove
+                on:load
+                on:space-selected
+                on:blacklist-resource
+                on:whitelist-resource
+                on:set-resource-as-space-icon
+              />
+            </MasonryView>
+          {:else if viewType === 'grid'}
+            <GridView items={renderedItems} let:item>
+              <OasisResourceLoader
+                resourceOrId={item.data ?? item.id}
+                draggable
+                {interactive}
+                {isInSpace}
+                {resourcesBlacklistable}
+                mode="full"
+                viewMode="responsive"
+                on:click
+                on:open
+                on:open-and-chat
+                on:remove
+                on:load
+                on:space-selected
+                on:blacklist-resource
+                on:whitelist-resource
+                on:set-resource-as-space-icon
+              />
+            </GridView>
+          {/if}
+        </LazyScroll>
       {/key}
     {/if}
   </div>
 </div>
 
 <style lang="scss">
-  .wrapper {
+  .resources-view {
     isolation: isolate;
     overflow: hidden;
     position: relative;

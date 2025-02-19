@@ -1,9 +1,24 @@
+<script lang="ts" context="module">
+  export interface LazyItem {
+    id: string
+    data: any
+  }
+</script>
+
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { useThrottle } from '@horizon/utils'
+
+  import { onMount } from 'svelte'
+  import { derived, writable, type Readable } from 'svelte/store'
+  import { selection } from '../Oasis/utils/select'
+
+  //import { createEventDispatcher, tick } from 'svelte'
   /**
    * A LazyLoading / Infinite scroll implementation using native browser features.
-   TODO: Write
+   TODO: Update custom implementation. For now it is faster to just force load things on scroll
+   * without custom calculations and everything
    */
+  /*
   const dispatch = createEventDispatcher<{
     /// Notify parent to load more items -> number is velocity which determines
     /// how many items to load.
@@ -47,21 +62,67 @@
   }
   function handleTriggerLoad(velocity: number, remainingAdjusted: number, remaining: number) {
     dispatch('lazyLoad', [velocity, remainingAdjusted, remaining])
+  }*/
+
+  export let items: Readable<LazyItem[]>
+
+  const LAZY_N = 6 // NOTE: seems to be the best working value from testing
+
+  let renderedItemsN = writable(20)
+  /*  $: renderedItems = [
+    ...new Map($items.slice(0, renderedItemsN).map((item) => [item.id, item])).values()
+  ]*/
+  const renderedItems = derived([items, renderedItemsN], ([$items, $renderedItemsN]) => {
+    return [...new Map($items.slice(0, $renderedItemsN).map((item) => [item.id, item])).values()]
+  })
+
+  const scheduleLoad = () => {
+    if ($renderedItemsN > $items.length) return
+
+    // @ts-ignore - yes, this exists!
+    scheduler.postTask(
+      () => {
+        $renderedItemsN += LAZY_N
+      },
+      {
+        priority: 'background'
+      }
+    )
+  }
+  const throttledScheduleLoad = useThrottle(scheduleLoad, 5)
+
+  onMount(() => {
+    throttledScheduleLoad()
+  })
+
+  const handleScroll = (e: WheelEvent) => {
+    throttledScheduleLoad()
   }
 </script>
 
+<!--   bind:this={scrollContainerEl}
+ -->
 <div
   class="lazyScroll-container"
-  bind:this={scrollContainerEl}
   on:wheel|passive={(e) => {
-    if (raf === null) raf = requestAnimationFrame(() => handleWheel(e))
+    handleScroll(e)
+    //if (raf === null) raf = requestAnimationFrame(() => handleWheel(e))
   }}
+  use:selection
+  data-container
 >
-  <slot />
+  <slot {renderedItems} />
+  <!--{#each renderedItems as item, index (`${item.id}-${index}`)}
+    <slot item={{ id: item.id, data: item.data }}></slot>
+  {/each}-->
+
+  <!--<slot />-->
 </div>
 
 <style lang="scss">
   .lazyScroll-container {
+    contain: strict;
+
     position: relative;
     overflow-y: auto;
     width: 100%;

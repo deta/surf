@@ -179,7 +179,7 @@ export class ExtensionsManager {
               console.error('Failed to track installed extension', error)
             })
         }
-        return { action}
+        return { action }
       }
     })
   }

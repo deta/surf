@@ -2,7 +2,6 @@
   import { createEventDispatcher } from 'svelte'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
-  import type { SpaceSource } from '../../../types'
   import {
     useLogScope,
     tooltip,
@@ -60,7 +59,7 @@
 
     await tabsManager.updateSpaceTabs(space.id, space.dataValue)
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'name',
       change: null
     })
@@ -96,7 +95,7 @@
     showAddSource = false
     sourceValue = ''
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'source',
       change: 'added'
     })
@@ -126,7 +125,7 @@
 
     toasts.success('Source removed!')
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'source',
       change: 'removed'
     })
@@ -156,7 +155,7 @@
 
     await space.updateData({ liveModeEnabled: e.detail })
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'live_mode',
       change: e.detail
     })
@@ -184,7 +183,7 @@
 
     await space.updateData({ sortBy: sortBy })
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'sort_by',
       change: sortBy
     })
@@ -197,7 +196,7 @@
 
     await space.updateData({ sortOrder: sortOrder })
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'sort_order',
       change: sortOrder
     })
@@ -210,7 +209,7 @@
 
     await space.updateData({ hideViewed: e.detail })
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'hide_viewed',
       change: e.detail
     })
@@ -235,7 +234,7 @@
       embedding_query: null
     })
 
-    await telemetry.trackUpdateSpaceSettings({
+    telemetry.trackUpdateSpaceSettings({
       setting: 'smart_filter',
       change: null
     })
