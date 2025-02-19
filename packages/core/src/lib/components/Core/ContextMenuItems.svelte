@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@horizon/icons'
   import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
   import { onMount, tick } from 'svelte'
   import ColorIcon from '../Atoms/ColorIcon.svelte'
@@ -66,6 +66,16 @@
             {/if}
           {/if}
           <span class="truncate" style="flex: 1; width:100%; max-width: 20ch;">{item.text}</span>
+          {#if item.tagText || item.tagIcon}
+            <span class="truncate item-tag">
+              {#if item.tagText}
+                {item.tagText}
+              {/if}
+              {#if item.tagIcon}
+                <DynamicIcon name={item.tagIcon} size="15px" />
+              {/if}
+            </span>
+          {/if}
         </button>
       {:else if item.type === 'sub-menu'}
         <li class="sub-item" class:danger={item.kind === 'danger'} style="anchor-name: --sub-{i};">
@@ -190,6 +200,10 @@
         background: var(--ctx-item-hover);
         color: var(--ctx-item-text-hover);
         outline: none;
+
+        .item-tag {
+          opacity: 1;
+        }
       }
       &:focus {
         // FIX: This should share with :hover, buut
@@ -234,5 +248,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .item-tag {
+    width: fit-content;
+    margin-left: auto;
+    padding-left: 0.5rem;
+
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0.75;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    font-size: 0.85em;
+    font-weight: 450;
+    letter-spacing: 0.025em;
   }
 </style>

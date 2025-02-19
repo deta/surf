@@ -7,6 +7,9 @@ export type SelectItem = {
   icon?: Icons | string
   description?: string
   descriptionIcon?: Icons | string
+  kind?: 'default' | 'danger'
+  topSeparator?: boolean
+  bottomSeparator?: boolean
   data: any
 }
 

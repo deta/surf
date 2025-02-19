@@ -1063,7 +1063,11 @@
     showSettingsModal.set(false)
 
     const resources = await oasis.getSpaceContents($space.id)
-    await resourceManager.deleteSpaceEntries(resources.map((x) => x.id))
+    await oasis.removeResourcesFromSpace(
+      $space.id,
+      resources.map((x) => x.id),
+      false
+    )
 
     toasts.success('Context cleared!')
 

@@ -46,7 +46,8 @@
     truncateURL,
     conditionalArrayItem,
     tooltip,
-    parseUrlIntoCanonical
+    parseUrlIntoCanonical,
+    wait
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
@@ -100,6 +101,7 @@
   export let processingText: string | undefined = undefined
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
+  export let disableContextMenu: boolean = false
 
   const log = useLogScope('ResourcePreview')
   const resourceManager = useResourceManager()
@@ -236,6 +238,10 @@
   let dragging = false
   let showEditMode = false
 
+  export const startEditingTitle = () => {
+    showEditMode = true
+  }
+
   const handleUpdating = () => {
     log.debug('Resource is updating', resource.id)
 
@@ -335,6 +341,8 @@
     if (e.shiftKey && !isModKeyPressed(e)) {
       log.debug('opening resource in mini browser', resourceToOpen)
       dispatch('open', resourceToOpen)
+    } else if (e.altKey) {
+      oasis.openResourceDetailsSidebar(resource, { select: true })
     } else {
       log.debug('opening resource in new tab', resourceToOpen)
       const active = !isModKeyPressed(e) || e.shiftKey
@@ -548,21 +556,38 @@
       type: 'action',
       icon: 'arrow.up.right',
       text: 'Open as Tab',
+      tagIcon: 'cursor-arrow-rays',
       action: () => handleOpenAsNewTab()
     },
     {
       type: 'action',
       icon: 'eye',
-      text: 'Open in Mini Browser',
+      text: 'Mini Browser',
+      tagIcon: 'cursor-arrow-rays',
+      tagText: 'shift + ',
       action: () => dispatch('open', resource.id)
     },
-    ...conditionalArrayItem<CtxItem>(isGeneratedResource(resource) && $activeTab?.type === 'page', {
+    {
       type: 'action',
-      icon: 'sidebar.right',
-      text: 'Open in Sidebar',
-      action: () => handleOpenInSidebar()
-    }),
+      icon: 'info',
+      text: 'View Details',
+      tagIcon: 'cursor-arrow-rays',
+      tagText: isMac() ? '⌥ + ' : 'alt + ',
+      action: () => {
+        oasis.openResourceDetailsSidebar(resource, { select: true })
+      }
+    },
     { type: 'separator' },
+    ...conditionalArrayItem<CtxItem>($contextMenuSpaces.length > 0, [
+      {
+        type: 'sub-menu',
+        icon: '',
+        disabled: $contextMenuSpaces.length === 0,
+        text: 'Add to Context',
+        items: $contextMenuSpaces
+      },
+      { type: 'separator' }
+    ]),
     ...conditionalArrayItem<CtxItem>($selectedItemIds.length === 0 && origin !== 'homescreen', {
       type: 'action',
       icon: 'circle.check',
@@ -577,6 +602,12 @@
       text: 'Copy URL',
       action: () => handleCopyToClipboard()
     }),
+    {
+      type: 'action',
+      icon: 'chat',
+      text: 'Use in Chat',
+      action: () => dispatch('open-and-chat', resource.id)
+    },
     ...conditionalArrayItem<CtxItem>(!!showSourceURL, [
       { type: 'separator' },
       {
@@ -586,12 +617,18 @@
         action: () => openSourceURL()
       }
     ]),
-    {
+    ...conditionalArrayItem<CtxItem>(!!showOpenAsFile, {
       type: 'action',
-      icon: 'chat',
-      text: 'Open in Chat',
-      action: () => dispatch('open-and-chat', resource.id)
-    },
+      icon: 'search',
+      text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
+      action: () => handleOpenAsFile()
+    }),
+    ...conditionalArrayItem<CtxItem>(isGeneratedResource(resource) && $activeTab?.type === 'page', {
+      type: 'action',
+      icon: 'sidebar.right',
+      text: 'Open in Sidebar',
+      action: () => handleOpenInSidebar()
+    }),
     ...conditionalArrayItem<CtxItem>(
       origin === 'homescreen' && resource.type.startsWith('image/'),
       {
@@ -602,42 +639,28 @@
       }
     ),
     { type: 'separator' },
-    ...conditionalArrayItem<CtxItem>($contextMenuSpaces.length > 0, [
-      {
-        type: 'sub-menu',
-        icon: '',
-        disabled: $contextMenuSpaces.length === 0,
-        text: 'Add to Context',
-        items: $contextMenuSpaces
-      },
-      { type: 'separator' }
-    ]),
-    ...conditionalArrayItem<CtxItem>(resource.type.startsWith('image/'), [
-      {
-        type: 'action',
-        icon: 'image',
-        text: 'Use as Background',
-        action: () => {
-          const dextop = get(desktopManager.activeDesktop)
-          if (!dextop) return
-          dextop.setBackgroundImage(resource.id)
-        }
-      }
-    ]),
-    ...conditionalArrayItem<CtxItem>(!!showOpenAsFile, [
-      {
-        type: 'action',
-        icon: '',
-        text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
-        action: () => handleOpenAsFile()
-      },
-      { type: 'separator' }
-    ]),
-    ...conditionalArrayItem(isInSpace && resource.type.startsWith('image/'), {
-      type: 'action',
+    ...conditionalArrayItem<CtxItem>(resource.type.startsWith('image/'), {
+      type: 'sub-menu',
       icon: 'screenshot',
-      text: 'Use as Context Icon',
-      action: () => handleUseAsSpaceIcon()
+      text: 'Use Image as',
+      items: [
+        {
+          type: 'action',
+          icon: 'rectangle',
+          text: 'Context Background',
+          action: () => {
+            const dextop = get(desktopManager.activeDesktop)
+            if (!dextop) return
+            dextop.setBackgroundImage(resource.id)
+          }
+        },
+        ...conditionalArrayItem<CtxItem>(isInSpace, {
+          type: 'action',
+          icon: 'leave',
+          text: 'Context Icon',
+          action: () => handleUseAsSpaceIcon()
+        })
+      ]
     }),
     ...conditionalArrayItem<CtxItem>(
       mode === 'full' ||
@@ -649,7 +672,7 @@
         icon: 'edit',
         text: previewData?.title || resource?.metadata?.name ? 'Edit Title' : 'Add Title',
         action: () => {
-          showEditMode = true
+          startEditingTitle()
         }
       }
     ),
@@ -702,6 +725,9 @@
 
   onMount(() => {
     loadResource()
+
+    // If the name of the resource changes, we need to update the preview
+    return resource.on('updated-metadata', () => loadResource())
   })
 
   onDestroy(() => {
@@ -720,7 +746,7 @@
   data-resource-type={resource.type}
   data-resource-id={resource.id}
   data-selectable
-  data-selectable-id={resource.id}
+  data-selectable-id={origin === 'stuff' ? resource.id : undefined}
   data-vaul-no-drag
   data-tooltip-target="stuff-example-resource"
   on:DragStart={handleDragStart}
@@ -735,7 +761,7 @@
   {draggable}
   use:HTMLDragItem.action={{}}
   use:contextMenu={{
-    canOpen: interactive,
+    canOpen: interactiveProp && !disableContextMenu,
     items: contextMenuItems
   }}
 >
@@ -1027,6 +1053,13 @@
     box-shadow:
       rgba(50, 50, 93, 0.2) 0px 13px 27px -5px,
       rgba(0, 0, 0, 0.25) 0px 8px 16px -8px;
+  }
+
+  :global(.resource-preview[data-drag-preview]) {
+    &[data-origin='stuff-details'] {
+      width: var(--drag-width, auto) !important;
+      height: var(--drag-height, auto) !important;
+    }
   }
 
   /// Animations

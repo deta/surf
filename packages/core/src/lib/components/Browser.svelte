@@ -2093,6 +2093,8 @@
 
     showNewTabOverlay.set(0)
 
+    let clearExistingChat = false
+
     if (messagesLength > 0 || chatContext.itemsValue.length > 0) {
       const { closeType: confirmed } = await openDialog({
         title: 'Clear Chat',
@@ -2105,13 +2107,17 @@
       })
 
       if (confirmed) {
-        await chatContext.clear()
-        await magicSidebar.clearExistingChat()
+        clearExistingChat = true
       }
     }
 
     if (resourceIds.length > 0) {
-      openRightSidebarTab('chat')
+      await openChatSidebar(false)
+
+      if (clearExistingChat) {
+        await chatContext.clear()
+        await magicSidebar.clearExistingChat()
+      }
 
       for (const id of resourceIds) {
         chatContext.addResource(id)

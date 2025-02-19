@@ -55,6 +55,12 @@
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
+  import ResourceDetails from '@horizon/core/src/lib/components/Oasis/Scaffolding/ResourceDetails.svelte'
+  import {
+    addSelectionById,
+    removeSelectionById
+  } from '@horizon/core/src/lib/components/Oasis/utils/select'
+  import StuffRightSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/StuffRightSidebar.svelte'
   import type { ViewChangeEvent } from '../Oasis/Scaffolding/OasisSpaceViewSettingsPopover.svelte'
   import OasisSpaceViewSettingsPopover from '../Oasis/Scaffolding/OasisSpaceViewSettingsPopover.svelte'
 
@@ -81,6 +87,7 @@
   const everythingContentsResources = oasis.everythingContents
   const userConfigSettings = config.settings
   const selectedFilterTypeId = oasis.selectedFilterTypeId
+  const detailedResource = oasis.detailedResource
   const activeScopeId = tabsManager.activeScopeId
 
   const searchValue = writable('')
@@ -236,6 +243,10 @@
           resourceIds.length,
           isEverythingSpace || isInboxSpace ? 'oasis' : 'space'
         )
+      }
+
+      if ($detailedResource && resourceIds.includes($detailedResource.id)) {
+        detailedResource.set(null)
       }
 
       if ($searchValue) {
@@ -554,6 +565,13 @@
     }
   }
 
+  const handleCloseDetailedResource = () => {
+    if ($detailedResource) {
+      removeSelectionById($detailedResource.id)
+    }
+    detailedResource.set(null)
+  }
+
   const handleViewSettingsChanges = async (e: CustomEvent<ViewChangeEvent>) => {
     const { viewType, viewDensity } = e.detail
 
@@ -742,6 +760,8 @@
         if ($selectedSpaceId === DEFAULT_SPACE_ID) {
           selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
         }
+
+        detailedResource.set(null)
 
         searchResetTimeout = setTimeout(() => {
           searchValue.set('')
@@ -986,6 +1006,20 @@
             </DropWrapper>
           {/if}
         </div>
+
+        {#if $detailedResource}
+          <StuffRightSidebar>
+            {#key $detailedResource.id}
+              <ResourceDetails
+                resource={$detailedResource}
+                on:open={(e) => handleOpen(e)}
+                on:close={handleCloseDetailedResource}
+                on:remove={handleResourceRemove}
+                on:open-and-chat
+              />
+            {/key}
+          </StuffRightSidebar>
+        {/if}
       </div>
 
       {#if $isBuiltInSpace}

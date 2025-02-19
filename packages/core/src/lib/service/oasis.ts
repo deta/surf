@@ -10,7 +10,8 @@ import {
   getFormattedDate,
   isDev,
   useLocalStorageStore,
-  useLogScope
+  useLogScope,
+  wait
 } from '@horizon/utils'
 import {
   ChangeContextEventTrigger,
@@ -38,6 +39,7 @@ import { blobToSmallImageUrl } from '../utils/screenshot'
 import type { ConfigService } from './config'
 import { RESOURCE_FILTERS } from '../constants/resourceFilters'
 import type { SpaceBasicData } from './ipc/events'
+import { addSelectionById } from '../components/Oasis/utils/select'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -179,12 +181,19 @@ export class OasisSpace {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
 
     this.log.debug('removing resources', resourceIds)
-    const matchingSpaceContents = this.contentsValue.filter((entry) =>
+
+    let contents = this.contentsValue
+    if (contents.length === 0) {
+      // TODO: kinda ridiculous to fetch the contents just to remove them, but we don't have a API to remove by resource_id :/
+      contents = await this.fetchContents()
+    }
+
+    const matchingSpaceContents = contents.filter((entry) =>
       resourceIds.includes(entry.resource_id)
     )
 
     this.log.debug('removing matching entries from space...', matchingSpaceContents)
-    await this.resourceManager.deleteSpaceEntries(matchingSpaceContents.map((entry) => entry.id))
+    await this.resourceManager.deleteSpaceEntries(matchingSpaceContents)
 
     this.log.debug('removing resources from space contents store')
     this.contents.update((contents) => {
@@ -243,6 +252,7 @@ export class OasisSpace {
 export class OasisService {
   spaces: Writable<OasisSpace[]>
   selectedSpace: Writable<string>
+  detailedResource: Writable<Resource | null>
 
   everythingContents: Writable<Resource[]>
   loadingEverythingContents: Writable<boolean>
@@ -270,6 +280,7 @@ export class OasisService {
 
     this.spaces = writable<OasisSpace[]>([])
     this.selectedSpace = writable<string>(DEFAULT_SPACE_ID)
+    this.detailedResource = writable<Resource | null>(null)
 
     this.everythingContents = writable([])
     this.loadingEverythingContents = writable(false)
@@ -701,7 +712,11 @@ export class OasisService {
       ? { closeType: true }
       : await openDialog({
           title: `Remove ${validResources.length} Resource${validResources.length > 1 ? 's' : ''}`,
-          message: confirmMessage
+          message: confirmMessage,
+          actions: [
+            { title: 'Cancel', type: 'reset' },
+            { title: 'Remove', type: 'submit', kind: 'danger' }
+          ]
         })
 
     if (!confirmed) {
@@ -882,6 +897,31 @@ export class OasisService {
     await tick()
 
     this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
+  }
+
+  async openResourceDetailsSidebar(resourceOrId: Resource | string, opts?: { select?: boolean }) {
+    const options = Object.assign({ select: true }, opts)
+
+    const resource =
+      typeof resourceOrId === 'string'
+        ? await this.resourceManager.getResource(resourceOrId)
+        : resourceOrId
+    if (!resource) {
+      this.log.error('Resource not found')
+      return
+    }
+
+    if (this.tabsManager.showNewTabOverlayValue !== 2) {
+      this.tabsManager.showNewTabOverlay.set(2)
+      this.selectedSpace.set('all')
+    }
+
+    this.detailedResource.set(resource)
+
+    if (options.select) {
+      await wait(200)
+      addSelectionById(resource.id, { removeOthers: true })
+    }
   }
 
   static provide(resourceManager: ResourceManager, config: ConfigService) {

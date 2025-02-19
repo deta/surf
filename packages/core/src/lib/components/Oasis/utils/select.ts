@@ -57,10 +57,16 @@ function updateSelection(items: HTMLElement[]) {
   )
 }
 
-function addToSelection(item: HTMLElement) {
+function addToSelection(item: HTMLElement, removeOthers = false) {
+  log.debug('Adding item to selection', item)
   if (!item.classList.contains('selected')) {
     item.classList.add('selected')
     selectedItems.update((items) => {
+      if (removeOthers) {
+        items.forEach((i) => i.classList.remove('selected'))
+        return [item]
+      }
+
       const newItems = [...items, item]
       updateSelection(newItems)
       return newItems
@@ -68,10 +74,45 @@ function addToSelection(item: HTMLElement) {
   }
 }
 
-export function addSelectionById(id: string) {
+export function removeFromSelection(item: HTMLElement) {
+  if (item.classList.contains('selected')) {
+    item.classList.remove('selected')
+    selectedItems.update((items) => {
+      const newItems = items.filter((i) => i !== item)
+      updateSelection(newItems)
+      return newItems
+    })
+  }
+}
+
+export function addSelectionById(
+  id: string,
+  opts?: { removeOthers?: boolean; scrollTo?: boolean }
+) {
+  const options = {
+    removeOthers: false,
+    scrollTo: false,
+    ...opts
+  }
+
   const item = document.querySelector(`[data-selectable-id="${id}"]`) as HTMLElement | null
   if (item) {
-    addToSelection(item)
+    log.debug(`Adding item with data-selectable-id="${id}" to selection`)
+    addToSelection(item, options.removeOthers)
+
+    if (options.scrollTo) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  } else {
+    log.warn(`Element with data-selectable-id="${id}" not found`)
+  }
+}
+
+export function removeSelectionById(id: string) {
+  const item = document.querySelector(`[data-selectable-id="${id}"]`) as HTMLElement | null
+  if (item) {
+    log.debug(`Removing item with data-selectable-id="${id}" from selection`)
+    removeFromSelection(item)
   } else {
     log.warn(`Element with data-selectable-id="${id}" not found`)
   }
@@ -86,17 +127,6 @@ export function selection(node: HTMLElement) {
       item.classList.remove('selected')
     })
     updateSelection([])
-  }
-
-  function removeFromSelection(item: HTMLElement) {
-    if (item.classList.contains('selected')) {
-      item.classList.remove('selected')
-      selectedItems.update((items) => {
-        const newItems = items.filter((i) => i !== item)
-        updateSelection(newItems)
-        return newItems
-      })
-    }
   }
 
   function toggleSelection(item: HTMLElement) {
@@ -233,9 +263,17 @@ export function selection(node: HTMLElement) {
       event.stopImmediatePropagation()
       handleSelectAll()
     }
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+
+    const isContentEditable = (event.target as HTMLElement).isContentEditable
+    if (
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLTextAreaElement ||
+      event.target instanceof HTMLSelectElement ||
+      isContentEditable
+    ) {
       return
     }
+
     if ((event.metaKey || event.ctrlKey) && event.key === 'a') {
       // Note: this only copies the visible items / only the loaded ones.
       event.preventDefault()

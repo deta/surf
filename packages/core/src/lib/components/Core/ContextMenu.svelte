@@ -21,6 +21,8 @@
     kind?: 'danger'
     disabled?: boolean
     text: string
+    tagText?: string
+    tagIcon?: string
     icon?: string | [string, string] | OasisSpace // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
     action: () => void
   }

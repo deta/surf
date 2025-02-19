@@ -12,7 +12,14 @@
   }
 
   export type Mode = 'full' | 'media' | 'content' | 'compact' | 'tiny' | 'responsive'
-  export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space' | 'cmdt' | 'chat'
+  export type Origin =
+    | 'stuff'
+    | 'stack'
+    | 'homescreen'
+    | 'homescreen-space'
+    | 'cmdt'
+    | 'chat'
+    | 'stuff-details'
   export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
 
   export type Annotation = {

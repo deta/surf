@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { derived, writable, type Readable } from 'svelte/store'
-  import { DropdownMenu, type CustomEventHandler } from 'bits-ui'
+  import { DropdownMenu, Separator, type CustomEventHandler } from 'bits-ui'
 
   import { flyAndScale, focus } from '@horizon/utils'
   import type { SelectItem } from '.'
@@ -193,6 +193,10 @@
         >
           {#if $filterdItems.length > 0}
             {#each $filterdItems as item, idx (item.id + idx)}
+              {#if item.topSeparator}
+                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px]" />
+              {/if}
+
               <DropdownMenu.Item
                 on:click={() => dispatch('select', item.id)}
                 disabled={item.disabled}
@@ -200,12 +204,18 @@
                   ? 'opacity-50'
                   : ''} {selected === item.id
                   ? 'text-sky-600 dark:text-sky-400'
-                  : 'dark:text-gray-100'}"
+                  : 'dark:text-gray-100'} {item.kind === 'danger'
+                  ? 'text-red-600 dark:text-red-400'
+                  : ''}"
               >
                 <slot name="item" {item}>
                   <SelectDropdownItem {item} />
                 </slot>
               </DropdownMenu.Item>
+
+              {#if item.bottomSeparator}
+                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px]" />
+              {/if}
             {/each}
           {:else if loading}
             <div class="flex items-center justify-center h-20 text-gray-400 dark:text-gray-500">

@@ -54,7 +54,7 @@ import {
   type ResourceTagsBuiltIn
 } from '@horizon/types'
 import type TypedEmitter from 'typed-emitter'
-import { getContext, onDestroy, setContext } from 'svelte'
+import { getContext, onDestroy, setContext, tick } from 'svelte'
 import EventEmitter from 'events'
 import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@horizon/web-parser'
@@ -208,11 +208,17 @@ export const getPrimaryResourceType = (type: string) => {
 
 const DUMMY_PATH = '__dummy'
 
-export type ResourceEvents = {
+export type ResourceManagerEvents = {
   created: (resource: ResourceObject) => void
   deleted: (resourceId: string) => void
   updated: (resource: ResourceObject) => void
   recovered: (resourceId: string) => void
+}
+
+export type ResourceEvents = {
+  'updated-metadata': (metadata: SFFSResourceMetadata) => void
+  'updated-tags': (tags: SFFSResourceTag[]) => void
+  'updated-data': (data: Blob) => void
 }
 
 export class Resource {
@@ -240,11 +246,13 @@ export class Resource {
   sffs: SFFS
   resourceManager: ResourceManager
   log: ScopedLogger
+  eventEmitter: TypedEmitter<ResourceEvents>
 
   constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
     this.log = useLogScope(`SFFSResource ${data.id}`)
     this.sffs = sffs
     this.resourceManager = resourceManager
+    this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceEvents>
 
     this.id = data.id
     this.type = data.type
@@ -311,6 +319,14 @@ export class Resource {
     return get(this.spaceIds)
   }
 
+  on<E extends keyof ResourceEvents>(event: E, listener: ResourceEvents[E]): () => void {
+    this.eventEmitter.on(event, listener)
+
+    return () => {
+      this.eventEmitter.off(event, listener)
+    }
+  }
+
   private async readDataAsBlob() {
     const buffer = await this.sffs.readDataFile(this.id)
 
@@ -356,6 +372,7 @@ export class Resource {
     this.rawData = data
     this.updatedAt = new Date().toISOString()
 
+    this.eventEmitter.emit('updated-data', data)
     this.resourceManager.eventEmitter.emit('updated', this)
     if (write) {
       return this.writeData()
@@ -369,6 +386,7 @@ export class Resource {
 
     this.metadata = { ...(this.metadata ?? {}), ...updates } as SFFSResourceMetadata
     this.updatedAt = new Date().toISOString()
+    this.eventEmitter.emit('updated-metadata', this.metadata)
   }
 
   updateTags(updates: SFFSResourceTag[]) {
@@ -376,6 +394,7 @@ export class Resource {
 
     this.tags = [...(this.tags ?? []), ...updates]
     this.updatedAt = new Date().toISOString()
+    this.eventEmitter.emit('updated-tags', this.tags ?? [])
   }
 
   updateTag(name: string, value: string) {
@@ -389,6 +408,7 @@ export class Resource {
     }
 
     this.updatedAt = new Date().toISOString()
+    this.eventEmitter.emit('updated-tags', this.tags ?? [])
   }
 
   addTag(tag: SFFSResourceTag) {
@@ -396,6 +416,7 @@ export class Resource {
 
     this.tags = [...(this.tags ?? []), tag]
     this.updatedAt = new Date().toISOString()
+    this.eventEmitter.emit('updated-tags', this.tags ?? [])
   }
 
   removeTag(name: string) {
@@ -403,6 +424,7 @@ export class Resource {
 
     this.tags = this.tags?.filter((t) => t.name !== name)
     this.updatedAt = new Date().toISOString()
+    this.eventEmitter.emit('updated-tags', this.tags ?? [])
   }
 
   removeTagByID(id: string) {
@@ -410,6 +432,7 @@ export class Resource {
 
     this.tags = this.tags?.filter((t) => t?.id !== id)
     this.updatedAt = new Date().toISOString()
+    this.eventEmitter.emit('updated-tags', this.tags ?? [])
   }
 
   getData() {
@@ -551,7 +574,7 @@ export class ResourceManager {
   telemetry: Telemetry
 
   static self: ResourceManager
-  eventEmitter: TypedEmitter<ResourceEvents>
+  eventEmitter: TypedEmitter<ResourceManagerEvents>
 
   constructor(telemetry: Telemetry) {
     this.log = useLogScope('SFFSResourceManager')
@@ -559,7 +582,7 @@ export class ResourceManager {
     this.sffs = new SFFS()
     this.telemetry = telemetry
 
-    this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceEvents>
+    this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceManagerEvents>
 
     if (isDev) {
       // @ts-ignore
@@ -575,7 +598,10 @@ export class ResourceManager {
     })
   }
 
-  on<E extends keyof ResourceEvents>(event: E, listener: ResourceEvents[E]): () => void {
+  on<E extends keyof ResourceManagerEvents>(
+    event: E,
+    listener: ResourceManagerEvents[E]
+  ): () => void {
     this.eventEmitter.on(event, listener)
 
     return () => {
@@ -1146,6 +1172,7 @@ export class ResourceManager {
     await this.sffs.updateResourceMetadata(id, fullMetadata)
 
     resource.updateMetadata(updates)
+    this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
   }
 
   async updateResourceTag(resourceId: string, tagName: string, tagValue: string) {
@@ -1454,14 +1481,16 @@ export class ResourceManager {
     const res = await this.sffs.addItemsToSpace(space_id, newItems, origin)
 
     // update the spaceIds of the resources if we have them loaded
-    const loadedResources = get(this.resources)
-    loadedResources.map((r) => {
-      if (resourceIds.includes(r.id)) {
-        r.spaceIds.update((ids) => [...ids, space_id])
-      }
+    if (origin === SpaceEntryOrigin.ManuallyAdded) {
+      const loadedResources = get(this.resources)
+      loadedResources.map((r) => {
+        if (resourceIds.includes(r.id)) {
+          r.spaceIds.update((ids) => [...ids, space_id])
+        }
 
-      return r
-    })
+        return r
+      })
+    }
 
     return res
   }
@@ -1470,8 +1499,26 @@ export class ResourceManager {
     return await this.sffs.getSpaceContents(space_id, opts)
   }
 
-  async deleteSpaceEntries(entry_ids: string[]) {
-    return await this.sffs.deleteSpaceEntries(entry_ids)
+  async deleteSpaceEntries(entries: SpaceEntry[]) {
+    const entry_ids = entries.map((e) => e.id)
+
+    await this.sffs.deleteSpaceEntries(entry_ids)
+
+    // update the spaceIds of the resources if we have them loaded
+    const loadedResources = get(this.resources)
+    await entries.map(async (entry) => {
+      const resource = loadedResources.find((r) => r.id === entry.resource_id)
+      this.log.debug('deleting space entry', entry, resource)
+      if (resource) {
+        this.log.debug('updating resource spaceIds', resource.id, resource.spaceIdsValue)
+        resource.spaceIds.update((ids) => ids.filter((id) => id !== entry.space_id))
+        await tick()
+        this.log.debug('updated resource spaceIds', resource.id, resource.spaceIdsValue)
+      }
+    })
+
+    // trigger reactivity upadte
+    this.resources.update((resources) => resources)
   }
 
   async getNumberOfReferencesInSpaces(resourceId: string): Promise<number> {
