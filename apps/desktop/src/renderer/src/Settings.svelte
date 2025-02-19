@@ -8,7 +8,7 @@
 
   import PromptSection from './components/PromptSection.svelte'
   import Prompt from './components/Prompt.svelte'
-  import { useDebounce } from '@horizon/utils'
+  import { isMac, useDebounce } from '@horizon/utils'
   import {
     type EditablePrompt,
     type SettingsWindowTab,
@@ -19,7 +19,6 @@
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
   import AppStylePicker from './components/AppStylePicker.svelte'
-  import HomescreenOption from './components/HomescreenOption.svelte'
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
   import {
     BUILT_IN_MODELS,
@@ -573,7 +572,7 @@
           <SettingsOption
             icon="rectangle"
             title="Auto Tag Images with AI"
-            description="Use AI vision to automatically detect and tag the content of your saved images for better organization"
+            description="Use AI vision to automatically detect and tag the content of your saved images for better organization."
             bind:value={userConfigSettings.vision_image_tagging}
             on:update={handleSettingsUpdate}
           />
@@ -581,7 +580,7 @@
           <SettingsOption
             icon="eye"
             title="Always Include Screenshot in Chat"
-            description="Always include a screenshot of your current webpage when using Chat"
+            description="Always include a screenshot of your current webpage when using Chat."
             bind:value={userConfigSettings.always_include_screenshot_in_chat}
             on:update={handleSettingsUpdate}
           />
@@ -594,10 +593,14 @@
             on:update={handleSettingsUpdate}
           />
 
-          <HomescreenOption
-            bind:userConfigSettings
+          <SettingsOption
+            icon="home"
+            title="Link New Tab Menu and Desktop"
+            description="Auto switch to the Desktop when opening the New Tab Menu ({isMac()
+              ? '⌘'
+              : 'ctrl'} + T)."
+            bind:value={userConfigSettings.homescreen_link_cmdt}
             on:update={handleSettingsUpdate}
-            on:reset-background-image={handleResetBackgroundImage}
           />
         {/if}
 
