@@ -20,6 +20,7 @@ import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 import { AppUpdater, silentCheckForUpdates } from './appUpdates'
 import { ExtensionsManager } from './extensions'
+import { CrashHandler } from './crashHandler'
 
 const log = useLogScope('Main Index')
 
@@ -42,10 +43,6 @@ const CONFIG = {
 let isAppLaunched = false
 let appOpenedWithURL: string | null = null
 let surfBackendManager: SurfBackendServerManager | null = null
-
-process.on('uncaughtException', (error: any) => {
-  log.error('Uncaught exception:', error)
-})
 
 async function cleanupTempFiles() {
   try {
@@ -275,16 +272,21 @@ const initializeApp = async () => {
   })
 
   const mainWindow = getMainWindow()
-  if (mainWindow && userConfig.settings.extensions) {
-    const webviewsSession = session.fromPartition('persist:horizon')
-    const extensionsManager = ExtensionsManager.getInstance()
-    await extensionsManager.initialize(
-      mainWindow,
-      webviewsSession,
-      userConfig.settings.tabs_orientation,
-      new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
-      handleOpenUrl
-    )
+  if (mainWindow) {
+    const crashHandler = CrashHandler.getInstance()
+    crashHandler.initialize(mainWindow)
+
+    if (userConfig.settings.extensions) {
+      const webviewsSession = session.fromPartition('persist:horizon')
+      const extensionsManager = ExtensionsManager.getInstance()
+      await extensionsManager.initialize(
+        mainWindow,
+        webviewsSession,
+        userConfig.settings.tabs_orientation,
+        new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
+        handleOpenUrl
+      )
+    }
   }
 }
 
