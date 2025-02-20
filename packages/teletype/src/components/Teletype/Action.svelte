@@ -258,7 +258,6 @@
   bind:this={elem}
   id={action.id}
   role="option"
-  aria-selected={active}
   in:slide={{ duration: 200 }}
   class="action"
   class:active
