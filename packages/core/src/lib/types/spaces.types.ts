@@ -15,6 +15,7 @@ export interface Space {
 
 export interface SpaceData {
   folderName: string
+  description?: string
   colors?: [string, string]
   emoji?: string
   imageIcon?: string

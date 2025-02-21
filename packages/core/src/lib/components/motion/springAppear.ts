@@ -18,7 +18,7 @@ export function springAppear(node: HTMLElement, params: SpringParams) {
 
   // Pre-compute transform strings for better performance
   const transformTemplate = (y: number, z: number, scale: number) =>
-    `translateY(${y}px) translateZ(${z}px) scale(${scale})`
+    `translateY(${y}px) scale(${scale})`
 
   // Cache the display check
   let isDisplayNone = false

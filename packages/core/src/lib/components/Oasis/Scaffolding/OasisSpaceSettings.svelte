@@ -18,6 +18,7 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { openDialog } from '../../Core/Dialog/Dialog.svelte'
+  import type { SpaceSource } from '@horizon/core/src/lib/types/spaces.types'
 
   export let space: OasisSpace | null
   const config = useConfig()
@@ -35,7 +36,6 @@
   const toasts = useToasts()
   const tabsManager = useTabsManager()
   const telemetry = oasis.resourceManager.telemetry
-  const autoSaveResources = oasis.autoSaveResources
 
   let spaceData = space?.data
   let isLiveModeOn = $spaceData?.liveModeEnabled
@@ -50,6 +50,7 @@
   let shoulDeleteAllResources = false
   let expandedDangerZone = false
   let copySourceIcon: IconConfirmation
+  let selectedTab: 'general' | 'smart' | 'sources' = 'smart'
 
   const handleNameBlur = async () => {
     if (!space) return
@@ -161,49 +162,6 @@
     })
   }, 200)
 
-  const handleSortingUpdate = () => {
-    const prevSortBy = $spaceData?.sortBy
-    if (sortBy === 'name') {
-      if (sortOrder !== 'asc') {
-        sortOrder = 'asc'
-        handleSortOrderUpdate()
-      }
-    } else if (prevSortBy === 'name') {
-      if (sortOrder !== 'desc') {
-        sortOrder = 'desc'
-        handleSortOrderUpdate()
-      }
-    }
-
-    handleSortByUpdate()
-  }
-
-  const handleSortByUpdate = useDebounce(async () => {
-    if (!space) return
-
-    await space.updateData({ sortBy: sortBy })
-
-    telemetry.trackUpdateSpaceSettings({
-      setting: 'sort_by',
-      change: sortBy
-    })
-
-    dispatch('load')
-  }, 200)
-
-  const handleSortOrderUpdate = useDebounce(async () => {
-    if (!space) return
-
-    await space.updateData({ sortOrder: sortOrder })
-
-    telemetry.trackUpdateSpaceSettings({
-      setting: 'sort_order',
-      change: sortOrder
-    })
-
-    dispatch('load')
-  }, 200)
-
   const handleHideViewedUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
     if (!space) return
 
@@ -278,221 +236,199 @@
       />
     </div>
 
-    <div class="content">
-      {#if $userConfigSettings.live_spaces}
-        <div class="sources">
-          <div class="info">
-            <div class="title">
-              <Icon name="news" size="20px" />
-              <h2>Subscriptions</h2>
+    <div class="content-wrapper">
+      <div class="tabs">
+        <button
+          class="tab"
+          class:active={selectedTab === 'smart'}
+          on:click={() => (selectedTab = 'smart')}
+        >
+          <Icon name="sparkles" />
+          Smart Filter
+        </button>
+
+        {#if $userConfigSettings.live_spaces}
+          <button
+            class="tab"
+            class:active={selectedTab === 'sources'}
+            on:click={() => (selectedTab = 'sources')}
+          >
+            <Icon name="rss" />
+            Subscriptions
+          </button>
+        {/if}
+
+        <button
+          class="tab"
+          class:active={selectedTab === 'general'}
+          on:click={() => (selectedTab = 'general')}
+        >
+          <Icon name="settings" />
+          Context Settings
+        </button>
+      </div>
+
+      <div class="content">
+        {#if selectedTab === 'sources'}
+          <div class="sources">
+            <div class="info">
+              <p>
+                Subscriptions automatically bring content into your context from your favorite
+                external sources. Provide a RSS feed and Surf will fetch the latest content.
+              </p>
+
+              {#if !isLiveModeOn}
+                <p><b>Note:</b> Since auto-refresh is turned off, you need to manually refresh.</p>
+              {/if}
             </div>
 
-            <p>
-              Subscriptions automatically bring content into your Context from external sources.
-            </p>
+            {#if $spaceData.sources}
+              {#each $spaceData.sources as source}
+                <div class="source">
+                  <div class="title">
+                    <img
+                      class="favicon"
+                      src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
+                      alt={`favicon`}
+                    />
 
-            <p>
-              If auto-refresh is enabled, these sources will automatically be loaded, otherwise you
-              can manually refresh.
-            </p>
-          </div>
+                    <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
+                  </div>
+                  <div class="meta">
+                    <p>
+                      Last fetched: {source.last_fetched_at
+                        ? getHumanDistanceToNow(source.last_fetched_at)
+                        : 'never'}
+                    </p>
 
-          {#if $spaceData.sources}
-            {#each $spaceData.sources as source}
-              <div class="source">
-                <div class="title">
-                  <img
-                    class="favicon"
-                    src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
-                    alt={`favicon`}
-                  />
+                    <div class="meta-actions">
+                      <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
+                        <IconConfirmation bind:this={copySourceIcon} name="copy" />
+                      </button>
 
-                  <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
+                      <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
+                        <Icon name="trash" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div class="meta">
-                  <p>
-                    Last fetched: {source.last_fetched_at
-                      ? getHumanDistanceToNow(source.last_fetched_at)
-                      : 'never'}
-                  </p>
+              {/each}
+            {/if}
 
-                  <div class="meta-actions">
-                    <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
-                      <IconConfirmation bind:this={copySourceIcon} name="copy" />
+            {#if showAddSource}
+              <div class="add-source">
+                <input
+                  placeholder="RSS feed URL"
+                  autofocus
+                  spellcheck="false"
+                  bind:value={sourceValue}
+                  on:blur={handleAddSourceBlur}
+                />
+
+                <button on:click={handleAddSource} class="icon">
+                  <Icon name="add" />
+                </button>
+              </div>
+            {:else}
+              <div class="add-source">
+                <button on:click={() => (showAddSource = true)} class="add-source">
+                  <Icon name="add" />
+                  Add Source
+                </button>
+              </div>
+            {/if}
+          </div>
+        {:else if selectedTab === 'smart'}
+          <div class="smart-filter">
+            <p>
+              Based on the provided description Surf will find links, articles and even files that
+              are relevant to the context and add them when you view the context.
+            </p>
+
+            <input
+              placeholder="e.g. articles about electric cars that I saved last week"
+              bind:value={smartFilterQuery}
+              on:blur={handleSmartQueryBlur}
+              on:keydown={handleKeyDown}
+            />
+
+            {#if !isLiveModeOn}
+              <p><b>Note:</b> Since auto-refresh is turned off, you need to manually refresh.</p>
+            {/if}
+          </div>
+        {:else}
+          <div class="setting">
+            <div class="w-fit mt-2">
+              <Switch
+                label="Hide already viewed items"
+                color="#ff4eed"
+                reverse
+                bind:checked={hideViewedResources}
+                on:update={handleHideViewedUpdate}
+              />
+            </div>
+
+            <div class="danger-zone">
+              <div class="danger-title">
+                <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
+                <div
+                  class="expand-toggle"
+                  on:click={() => (expandedDangerZone = !expandedDangerZone)}
+                  role="button"
+                >
+                  {#if expandedDangerZone}
+                    <Icon name="chevron.down" />
+                  {:else}
+                    <Icon name="chevron.right" />
+                  {/if}
+                  <h2>Danger Zone</h2>
+                </div>
+
+                {#if expandedDangerZone}
+                  <p>These actions cannot be undone.</p>
+                {/if}
+              </div>
+
+              {#if expandedDangerZone}
+                <div class="actions">
+                  <!-- <button
+                    on:click={handleClearSpace}
+                    use:tooltip={'Clear all resources from this Space.'}
+                  >
+                    <Icon name="close" />
+                    Clear resources from Space
+                  </button> -->
+
+                  <div class="action">
+                    <div class="action-row">
+                      <h3>Clear Context</h3>
+                      <p>Remove all resources from this Context.</p>
+                    </div>
+
+                    <button on:click={handleClearSpace}>
+                      <Icon name="close" />
+                      Clear Context
                     </button>
+                  </div>
 
-                    <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
+                  <div class="action">
+                    <div class="action-row">
+                      <h3>Delete Context</h3>
+                      <!-- <p>Deletes the Space and optionally its resources.</p> -->
+
+                      <label>
+                        <input bind:checked={shoulDeleteAllResources} type="checkbox" />
+                        Permanently delete all resources as well
+                      </label>
+                    </div>
+
+                    <button on:click={handleDeleteSpace}>
                       <Icon name="trash" />
+                      Delete Context
                     </button>
                   </div>
                 </div>
-              </div>
-            {/each}
-          {/if}
-
-          {#if showAddSource}
-            <div class="add-source">
-              <input
-                placeholder="RSS feed URL"
-                autofocus
-                spellcheck="false"
-                bind:value={sourceValue}
-                on:blur={handleAddSourceBlur}
-              />
-
-              <button on:click={handleAddSource} class="icon">
-                <Icon name="add" />
-              </button>
-            </div>
-          {:else}
-            <div class="add-source">
-              <button on:click={() => (showAddSource = true)} class="add-source">
-                <Icon name="add" />
-                Add Source
-              </button>
-            </div>
-          {/if}
-        </div>
-      {/if}
-
-      <div class="setting">
-        <div class="smart-filter">
-          <div class="title">
-            <Icon name="sparkles" size="20px" />
-            <h2>Smart Context</h2>
-          </div>
-
-          <p>
-            Automatically add new items you save to this Context, if they match your description.
-          </p>
-          <input
-            placeholder="e.g. articles about electric cars"
-            bind:value={smartFilterQuery}
-            on:blur={handleSmartQueryBlur}
-            on:keydown={handleKeyDown}
-          />
-
-          {#if !isLiveModeOn}
-            <p><b>Note:</b> When auto-refresh is turned off, you need to manually refresh.</p>
-          {/if}
-        </div>
-      </div>
-
-      <div class="setting">
-        <div class="title">
-          <Icon name="settings" size="20px" />
-          <h3>Settings</h3>
-        </div>
-
-        <Switch
-          label="Hide already viewed items"
-          color="#ff4eed"
-          bind:checked={hideViewedResources}
-          on:update={handleHideViewedUpdate}
-        />
-
-        <div class="sorting">
-          <p>Sort resources by</p>
-
-          <select bind:value={sortBy} on:change={handleSortingUpdate}>
-            <option value="created_at">Added to Context</option>
-            <option value="updated_at">Last Modified</option>
-            <option value="source_published_at">Source Published</option>
-            <!-- <option value="name">Name</option> -->
-          </select>
-        </div>
-
-        <div class="sorting">
-          <p>Order</p>
-
-          <!-- {#if sortBy === 'name'}
-            <select bind:value={sortOrder} on:change={handleSortOrderUpdate}>
-              <option value="asc">A to Z</option>
-              <option value="desc">Z to A</option>
-            </select>
-          {:else} -->
-          <select bind:value={sortOrder} on:change={handleSortOrderUpdate}>
-            <option value="desc">
-              {#if sortBy === 'created_at'}
-                Most Recent First
-              {:else if sortBy === 'updated_at'}
-                Most Recent First
-              {:else if sortBy === 'source_published_at'}
-                Most Recent First
               {/if}
-            </option>
-            <option value="asc">
-              {#if sortBy === 'created_at'}
-                Oldest First
-              {:else if sortBy === 'updated_at'}
-                Oldest First
-              {:else if sortBy === 'source_published_at'}
-                Oldest First
-              {/if}
-            </option>
-          </select>
-          <!-- {/if} -->
-        </div>
-      </div>
-
-      <div class="danger-zone">
-        <div class="danger-title">
-          <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
-          <div
-            class="expand-toggle"
-            on:click={() => (expandedDangerZone = !expandedDangerZone)}
-            role="button"
-          >
-            {#if expandedDangerZone}
-              <Icon name="chevron.down" />
-            {:else}
-              <Icon name="chevron.right" />
-            {/if}
-            <h2>Danger Zone</h2>
-          </div>
-
-          {#if expandedDangerZone}
-            <p>These actions cannot be undone.</p>
-          {/if}
-        </div>
-
-        {#if expandedDangerZone}
-          <div class="actions">
-            <!-- <button
-              on:click={handleClearSpace}
-              use:tooltip={'Clear all resources from this Space.'}
-            >
-              <Icon name="close" />
-              Clear resources from Space
-            </button> -->
-
-            <div class="action">
-              <div class="action-row">
-                <h3>Clear Context</h3>
-                <p>Remove all resources from this Context.</p>
-              </div>
-
-              <button on:click={handleClearSpace}>
-                <Icon name="close" />
-                Clear Context
-              </button>
-            </div>
-
-            <div class="action">
-              <div class="action-row">
-                <h3>Delete Context</h3>
-                <!-- <p>Deletes the Space and optionally its resources.</p> -->
-
-                <label>
-                  <input bind:checked={shoulDeleteAllResources} type="checkbox" />
-                  Permanently delete all resources as well
-                </label>
-              </div>
-
-              <button on:click={handleDeleteSpace}>
-                <Icon name="trash" />
-                Delete Context
-              </button>
             </div>
           </div>
         {/if}
@@ -509,19 +445,6 @@
     <div class="header">
       <!-- <SpaceIcon folder={space} /> -->
       <h1>Settings</h1>
-    </div>
-
-    <div class="setting">
-      <Switch
-        label="Auto Save Resources"
-        color="#ff4eed"
-        bind:checked={$autoSaveResources}
-        on:update={handleLiveModeUpdate}
-      />
-
-      <p>
-        <b>Note:</b> If enabled every web page you visit gets automatically saved to Your Stuff.
-      </p>
     </div>
 
     <div class="danger-zone">
@@ -577,8 +500,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
-    padding: 2rem;
+    gap: 1.5rem;
+    padding: 1.5rem;
     width: 40rem;
     min-height: 20rem;
     border: 0.5px solid rgba(255, 255, 255, 0.4);
@@ -588,7 +511,53 @@
       0px 0px 0px 1px rgba(0, 0, 0, 0.07),
       0px 4px 10px 0px rgba(0, 0, 0, 0.12);
 
-    @apply bg-white dark:bg-gray-800 dark:border-gray-600;
+    @apply bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white;
+  }
+
+  .content-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .tabs {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .tab {
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1.5px solid transparent;
+    opacity: 0.6;
+
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      opacity: 0.9;
+    }
+
+    &.active {
+      opacity: 0.9;
+      border-bottom-color: rgba(80, 80, 80, 0.214);
+
+      :global(.dark) & {
+        border-bottom-color: rgba(255, 255, 255, 0.432);
+      }
+
+      &:hover {
+        opacity: 1;
+      }
+    }
   }
 
   .content {
@@ -656,8 +625,8 @@
     }
 
     p {
-      font-size: 1.1rem;
-      opacity: 0.75;
+      font-size: 1rem;
+      opacity: 0.9;
     }
   }
 
@@ -710,7 +679,7 @@
 
       p {
         font-size: 1rem;
-        opacity: 0.5;
+        opacity: 0.9;
       }
 
       button {
@@ -776,6 +745,11 @@
       outline: none;
       width: 100%;
 
+      :global(.dark) & {
+        background: rgba(155, 155, 155, 0.216);
+        border-color: rgba(255, 255, 255, 0.1);
+      }
+
       &::placeholder {
         color: inherit;
         opacity: 0.5;
@@ -784,36 +758,6 @@
       &:active,
       &:focus {
         border: 1px solid #ff4eed;
-      }
-    }
-  }
-
-  .sorting {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-
-    p {
-      font-size: 16px;
-    }
-
-    select {
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-      padding: 0.5rem;
-      //grey
-      background: #f0f0f0;
-      color: inherit;
-      font-size: 1.1rem;
-      font-family: inherit;
-      font-smooth: always;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      outline: none;
-
-      :global(.dark) & {
-        background: rgba(155, 155, 155, 0.05);
       }
     }
   }
@@ -828,7 +772,7 @@
     border-radius: 12px;
 
     :global(.dark) & {
-      background: rgba(255, 0, 0, 0.25);
+      background: rgba(255, 55, 55, 0.457);
     }
 
     .expand-toggle {
@@ -854,7 +798,7 @@
 
       p {
         font-size: 1.1rem;
-        opacity: 0.75;
+        opacity: 0.9;
       }
     }
 
@@ -882,7 +826,7 @@
 
         p {
           font-size: 1rem;
-          opacity: 0.75;
+          opacity: 0.9;
         }
       }
 
@@ -891,7 +835,7 @@
         background: #ffffff80;
         border: 1px solid #a89ca6;
         color: inherit;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 500;
 
         font-smooth: always;
@@ -902,6 +846,11 @@
         gap: 0.5rem;
         padding: 0.5rem;
         border-radius: 8px;
+
+        :global(.dark) & {
+          background: #a51111;
+          border-color: #901010;
+        }
       }
 
       label {
@@ -920,7 +869,7 @@
   .smart-filter {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
 
     h2 {
       font-size: 1.2rem;
@@ -928,8 +877,8 @@
     }
 
     p {
-      font-size: 1.1rem;
-      opacity: 0.75;
+      font-size: 1rem;
+      opacity: 0.9;
     }
 
     input {
@@ -948,7 +897,8 @@
       width: 100%;
 
       :global(.dark) & {
-        background: rgba(155, 155, 155, 0.05);
+        background: rgba(155, 155, 155, 0.216);
+        border-color: rgba(255, 255, 255, 0.1);
       }
 
       &::placeholder {
@@ -972,7 +922,7 @@
   .setting {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
 
     h3 {
       font-size: 1.2rem;

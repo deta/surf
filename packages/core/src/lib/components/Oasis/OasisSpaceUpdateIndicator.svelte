@@ -124,7 +124,7 @@
           <div class="flex items-center -space-x-3 flex-shrink-0">
             {#each previews as preview (preview.id)}
               <img
-                class="w-6 h-6 rounded-lg overflow-hidden bg-white border-2 border-white/75 box-content flex-shrink-0"
+                class="w-6 h-6 rounded-lg overflow-hidden box-content flex-shrink-0"
                 src={`https://www.google.com/s2/favicons?domain=${preview.url}&sz=48`}
                 alt={`favicon`}
               />
@@ -179,31 +179,26 @@
     border-radius: 0.75rem;
     // background: #ffffffc0;
     border: none;
-    color: #0b689ac1;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.02rem;
+    transition-property: color, background, opacity;
+    transition-duration: 123ms;
+    transition-timing-function: ease-out;
 
-    //   &.live-enabled {
-    //     background: #ff4eed;
-    //     color: white;
-
-    //     &:hover {
-    //       background: #fb3ee9;
-    //     }
-    //   }
+    opacity: 0.7;
+    color: rgb(from var(--contrast-color) r g b / 1);
 
     &:hover {
-      color: #0b689a;
+      color: #0369a1;
       background: rgb(232, 238, 241);
+      color: var(--contrast-color);
+      background: rgb(from var(--base-color) r g b / 0.4);
+      opacity: 1;
     }
 
-    :global(.dark) & {
-      color: #b9b9b9;
-      &:hover {
-        color: #ffffff;
-        background: #ffffff10;
-      }
+    img {
+      @apply bg-white border-2 border-white/75;
     }
   }
 </style>

@@ -3,6 +3,8 @@ import { useLogScope } from '@horizon/utils'
 
 const log = useLogScope('Multi Select')
 
+// TODO CHANGE THE CONTAINER RECT REFERENCE TO THE NEW SCROLL CAONTAINER
+
 export const selectedItems = writable<HTMLElement[]>([])
 export const selectedItemIds = writable<string[]>([])
 

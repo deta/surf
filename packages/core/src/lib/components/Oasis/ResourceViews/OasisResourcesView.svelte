@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { derived, type Readable } from 'svelte/store'
+  import { derived, get, type Readable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
   import { useLogScope } from '@horizon/utils'
@@ -22,17 +22,23 @@
   import OasisResourceLoader from '../../Oasis/OasisResourceLoader.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import GridView from './GridView.svelte'
-  import LazyScroll from '../../Utils/LazyScroll.svelte'
+  import SpaceFilterViewButtons from '../SpaceFilterViewButtons.svelte'
+  import { selection } from '../utils/select'
 
   export let resources: Readable<(Resource | string | { id: string } | { resource: Resource })[]>
 
   export let isInSpace: boolean = false
   export let searchValue: Writable<string> | undefined
   export let resourcesBlacklistable: boolean = false
+  export let fadeIn = false
+  export let hideViewSettings = false
+  export let hideSortingSettings: boolean = false
 
   export let interactive: boolean = true
   export let viewType: ContextViewType | undefined = ContextViewTypes.Masonry // TODO: (@maxu) impl
   export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Cozy
+  export let sortBy: string | undefined
+  export let order: string | null
 
   export let status: undefined | { icon: Icons | undefined; message: string } = undefined
 
@@ -43,6 +49,8 @@
   const spaces = oasis.spaces
   const toasts = useToasts()
   const telemetry = useTelemetry()
+
+  const selectedFilterTypeId = oasis.selectedFilterTypeId
 
   const renderContents = derived([resources], ([resources]) => {
     return resources
@@ -176,12 +184,30 @@
 
 <div
   class="resources-view"
+  class:fadeIn
   data-density={viewDensity ?? ContextViewDensities.Cozy}
+  use:selection
   use:contextMenu={{
     canOpen: $selectedItemIds.length > 1,
     items: CONTEXT_MENU_ITEMS
   }}
 >
+  {#if !hideViewSettings}
+    <header>
+      <SpaceFilterViewButtons
+        filter={$selectedFilterTypeId}
+        {viewType}
+        {viewDensity}
+        {sortBy}
+        {order}
+        {hideSortingSettings}
+        on:changedView
+        on:changedFilter
+        on:changedSortBy
+        on:changedOrder
+      />
+    </header>
+  {/if}
   <div class="content">
     {#if status !== undefined}
       <div class="w-full h-full flex items-center justify-center">
@@ -207,62 +233,94 @@
       </div>
     {:else}
       {#key $searchValue === ''}
-        <LazyScroll items={renderContents} let:renderedItems>
-          {#if (viewType ?? ContextViewTypes.Masonry) === 'masonry'}
-            <MasonryView items={renderedItems} let:item>
-              <OasisResourceLoader
-                resourceOrId={item.data ?? item.id}
-                draggable
-                {interactive}
-                {isInSpace}
-                {resourcesBlacklistable}
-                viewMode="card"
-                on:click
-                on:open
-                on:open-and-chat
-                on:remove
-                on:load
-                on:space-selected
-                on:blacklist-resource
-                on:whitelist-resource
-                on:set-resource-as-space-icon
-              />
-            </MasonryView>
-          {:else if viewType === 'grid'}
-            <GridView items={renderedItems} let:item>
-              <OasisResourceLoader
-                resourceOrId={item.data ?? item.id}
-                draggable
-                {interactive}
-                {isInSpace}
-                {resourcesBlacklistable}
-                mode="full"
-                viewMode="responsive"
-                on:click
-                on:open
-                on:open-and-chat
-                on:remove
-                on:load
-                on:space-selected
-                on:blacklist-resource
-                on:whitelist-resource
-                on:set-resource-as-space-icon
-              />
-            </GridView>
-          {/if}
-        </LazyScroll>
+        {#if (viewType ?? ContextViewTypes.Masonry) === 'masonry'}
+          <MasonryView items={resources} let:item>
+            <OasisResourceLoader
+              resourceOrId={item.data ?? item.id}
+              draggable
+              {interactive}
+              {isInSpace}
+              {resourcesBlacklistable}
+              viewMode="card"
+              on:click
+              on:open
+              on:open-and-chat
+              on:remove
+              on:load
+              on:space-selected
+              on:blacklist-resource
+              on:whitelist-resource
+              on:set-resource-as-space-icon
+            />
+          </MasonryView>
+        {:else if viewType === 'grid'}
+          <GridView items={resources} let:item>
+            <OasisResourceLoader
+              resourceOrId={item.data ?? item.id}
+              draggable
+              {interactive}
+              {isInSpace}
+              {resourcesBlacklistable}
+              mode="full"
+              viewMode="responsive"
+              on:click
+              on:open
+              on:open-and-chat
+              on:remove
+              on:load
+              on:space-selected
+              on:blacklist-resource
+              on:whitelist-resource
+              on:set-resource-as-space-icon
+            />
+          </GridView>
+        {/if}
       {/key}
     {/if}
   </div>
 </div>
 
 <style lang="scss">
+  @keyframes reveal-up {
+    from {
+      opacity: 0;
+      translate: 0 2px;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
   .resources-view {
     isolation: isolate;
-    overflow: hidden;
     position: relative;
+    overflow: hidden;
+    height: auto;
+    padding-block: 0.75em;
 
-    height: 100%;
+    &.fadeIn {
+      animation: reveal-up 145ms ease-in;
+      animation-fill-mode: forwards;
+      animation-iteration-count: 1;
+      animation-delay: 113ms;
+      opacity: 0;
+    }
+
+    > header {
+      display: flex;
+      justify-content: end;
+      gap: 0.25em;
+      padding-inline: 2em;
+      margin-bottom: -1em;
+
+      :global(button) {
+        opacity: 0.8;
+        &:hover,
+        &.active {
+          opacity: 1;
+        }
+      }
+    }
   }
 
   .content {

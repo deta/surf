@@ -45,16 +45,11 @@
       background-color 0.2s,
       border-color 175ms;
     transition-timing-function: ease-in-out;
-    border: 1.5px dashed transparent;
+    //border: 1.5px dashed transparent;
   }
 
   :global(.drop-wrapper[data-drag-target]) {
-    outline: 1.5px dashed gray !important;
-    outline-offset: -1.5px;
-  }
-
-  .dragover {
-    background-color: rgba(255, 255, 255, 1);
-    opacity: 0.75;
+    //outline: 1.5px dashed gray !important;
+    //outline-offset: -1.5px;
   }
 </style>

@@ -73,7 +73,6 @@
   import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
   export let open: boolean
-  export let backgroundImage: Readable<{ path: string; customColors: unknown[] }>
 
   const log = useLogScope('TeletypeEntry')
   const config = useConfig()
@@ -84,6 +83,8 @@
   const dispatch = createEventDispatcher<TeletypeEntryEvents>()
   const commandComposer = useCommandComposer(oasis, config, tabsManager)
   const userConfigSettings = config.settings
+
+  const selectedSpace = oasis.selectedSpace
 
   let teletype: TeletypeSystem
   let unsubscribe: () => void
@@ -535,7 +536,7 @@
       />
     </div>
     <div slot="sidecar-right" class="tty-sidecar-right">
-      <DesktopPreview {backgroundImage} />
+      <DesktopPreview willReveal={true} desktopId={$selectedSpace} />
     </div>
   </Teletype>
 </TeletypeProvider>

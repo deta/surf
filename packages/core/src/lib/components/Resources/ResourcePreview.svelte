@@ -761,7 +761,7 @@
   {draggable}
   use:HTMLDragItem.action={{}}
   use:contextMenu={{
-    canOpen: interactiveProp && !disableContextMenu,
+    canOpen: interactive && !disableContextMenu,
     items: contextMenuItems
   }}
 >
@@ -895,6 +895,10 @@
         :global(.tiptap h1) {
           font-size: 1.4em !important;
           font-weight: 550;
+        }
+
+        :global(.editor-wrapper) {
+          overflow: hidden;
         }
       }
     }

@@ -56,7 +56,7 @@
   })
 </script>
 
-<div class="wrapper" class:full-height={viewMode === 'responsive'}>
+<div class="wrapper" class:full-height={viewMode === 'responsive'} class:loaded={resource}>
   {#if resource}
     <slot
       {resource}

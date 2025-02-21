@@ -10,7 +10,10 @@
 </script>
 
 <script lang="ts">
-  import { derived, get, writable } from 'svelte/store'
+  import vendorBackgroundLight from '../../../../public/assets/vendorBackgroundLight.webp'
+  import vendorBackgroundDark from '../../../../public/assets/vendorBackgroundDark.webp'
+
+  import { derived, get, writable, type Readable } from 'svelte/store'
 
   import {
     useLogScope,
@@ -21,7 +24,8 @@
     isModKeyAndKeyPressed,
     truncate,
     parseStringIntoUrl,
-    isMac
+    isMac,
+    useDebounce
   } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { Icon } from '@horizon/icons'
@@ -54,16 +58,12 @@
   } from '../../service/mediaImporter'
 
   import { useToasts } from '../../service/toast'
-  import { fly, slide } from 'svelte/transition'
-  import OasisSpaceSettings from './Scaffolding/OasisSpaceSettings.svelte'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import type { ResourceContent } from '@horizon/web-parser'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { ChatWithSpaceEvent } from '../../types/browser.types'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import {
-    ContextViewDensities,
-    ContextViewTypes,
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
     EventContext,
@@ -71,9 +71,7 @@
     RefreshSpaceEventTrigger,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger,
-    SummarizeEventContentSource,
-    type ContextViewDensity,
-    type ContextViewType
+    SummarizeEventContentSource
   } from '@horizon/types'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
@@ -81,21 +79,28 @@
   import { useTabsManager } from '../../service/tabs'
 
   import CreateNewSpace, { type CreateNewSpaceEvents } from './CreateNewSpace.svelte'
-  import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
-  import FilterSelector, { type FilterItem } from './FilterSelector.svelte'
+  import { type FilterItem } from './FilterSelector.svelte'
   import ContextTabsBar from './ContextTabsBar.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
-  import OasisSpaceViewSettingsPopover, {
-    type ViewChangeEvent
-  } from './Scaffolding/OasisSpaceViewSettingsPopover.svelte'
+
+  import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
+  import ContextHeader from './ContextHeader.svelte'
+  import OasisSpaceNavbar from './OasisSpaceNavbar.svelte'
+  import { useColorService, type CustomColorData } from '../../service/colors'
+  import { useDesktopManager } from '../../service/desktop'
+  import type {
+    FilterChangeEvent,
+    OrderChangeEvent,
+    SortByChangeEvent,
+    ViewChangeEvent
+  } from './SpaceFilterViewButtons.svelte'
 
   export let spaceId: string
   export let active: boolean = false
-  export let hideBar = false
   export let handleEventsOutside: boolean = false
   export let insideDrawer: boolean = false
 
@@ -126,6 +131,8 @@
   const miniBrowserService = useMiniBrowserService()
   const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`OasisSpace-${spaceId}`)
 
+  const desktopManager = useDesktopManager()
+  const colors = useColorService()
   const resourceManager = oasis.resourceManager
   const selectedFilterTypeId = oasis.selectedFilterTypeId
   const selectedFilterType = oasis.selectedFilterType
@@ -169,6 +176,15 @@
       }
 
       return ids
+    }
+  )
+
+  const renderContents = derived<[Readable<string[]>], LazyItem[]>(
+    [spaceResourceIds],
+    ([spaceResourceIds]) => {
+      return (spaceResourceIds ?? []).map((id) => {
+        return { id, data: null }
+      })
     }
   )
 
@@ -837,41 +853,54 @@
     showSettingsModal.set(false)
   }
 
-  const handleSearch = async (e: CustomEvent<string>) => {
-    let value = e.detail
+  const runSearch = useDebounce(async () => {
+    try {
+      loadingContents.set(true)
 
-    if (!value) {
-      searchResults.set([])
-      return
-    }
+      let value = $searchValue
 
-    const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
-    const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
-
-    // if all words are hashtags, clear the search
-    if (hashtags.length === value.split(' ').length) {
-      value = ''
-    }
-
-    await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, !isEverythingSpace)
-
-    const result = await resourceManager.searchResources(
-      value,
-      [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-        ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
-      ],
-      {
-        semanticEnabled: $userConfigSettings.use_semantic_search,
-        spaceId: spaceId ? spaceId : undefined
+      if (!value) {
+        searchResults.set([])
+        return
       }
-    )
 
-    log.debug('search in space results:', result)
+      const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
+      const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
 
-    searchResults.set(result.map((r) => r.resource.id))
+      // if all words are hashtags, clear the search
+      if (hashtags.length === value.split(' ').length) {
+        value = ''
+      }
+
+      await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, !isEverythingSpace)
+
+      const result = await resourceManager.searchResources(
+        value,
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+        ],
+        {
+          semanticEnabled: $userConfigSettings.use_semantic_search,
+          spaceId: spaceId ? spaceId : undefined
+        }
+      )
+
+      log.debug('search in space results:', result)
+
+      searchResults.set(result.map((r) => r.resource.id))
+    } catch (error) {
+      log.error('Error searching:', error)
+    } finally {
+      loadingContents.set(false)
+    }
+  }, 350)
+
+  const handleSearch = async (e: CustomEvent<string>) => {
+    loadingContents.set(true)
+    runSearch()
   }
 
   const handleResourceRemove = async (
@@ -1010,7 +1039,7 @@
       await loadSpaceContents(spaceId)
     }
     /* TODO: See if this is relevant.. is there a case whwere a tab would be prefeered instead of just handling the rosurce directory?
-    
+
     else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
       const droppedTab = drag.item!.data.getData(DragTypeNames.SURF_TAB)
     }
@@ -1310,6 +1339,50 @@
     }
   }
 
+  const handleFilterSettingsChanged = (e: CustomEvent<FilterChangeEvent>) => {
+    log.debug('Filter type change:', e.detail)
+    oasis.selectedFilterTypeId.set(e.detail.filter?.id ?? null)
+    loadSpaceContents(spaceId, true)
+  }
+
+  const handleSortBySettingsChanged = async (e: CustomEvent<SortByChangeEvent>) => {
+    const { sortBy } = e.detail
+
+    if (!$space) return
+
+    const prevSortby = $spaceData?.sortBy
+
+    // TODO: Typing we dont expose a type for the sort exactly so this is scudffed
+    await $space.updateData({ sortBy })
+    loadSpaceContents(spaceId, true)
+
+    if (prevSortby !== sortBy) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'sort_by',
+        change: sortBy
+      })
+    }
+  }
+
+  const handleOrderSettingsChanged = async (e: CustomEvent<OrderChangeEvent>) => {
+    const { order } = e.detail
+
+    if (!$space) return
+
+    const prevOrder = $spaceData?.sortOrder
+
+    // TODO: Typing we dont expose a type for the sort exactly so this is scudffed
+    await $space.updateData({ sortOrder: order })
+    loadSpaceContents(spaceId, true)
+
+    if (prevOrder !== order) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'sort_order',
+        change: order
+      })
+    }
+  }
+
   const handleReload = async () => {
     await loadSpaceContents(spaceId, true)
   }
@@ -1320,6 +1393,41 @@
       loadSpaceContents(spaceId, true)
     })
   )
+
+  // EXtract theme data for this context
+  // NOTE: Discriminating undefined & null is needed here
+  // null is "loading"
+  // undefined is no image set
+  // this helps prevent flickering as loading backoung data is async
+  const backgroundImage = writable<string | undefined | null>(null)
+  const theme = writable<CustomColorData | undefined>(undefined)
+  const calcThemeColors = (darkMode: boolean) =>
+    desktopManager.getDesktopThemeData(spaceId).then((data) => {
+      if (data) {
+        backgroundImage.set(`url('surf://resource/${data.resourceId}')`)
+        theme.set(
+          colors.calculateColors(
+            data.colorPalette.at($userConfigSettings.app_style === 'dark' ? -1 : 0),
+            darkMode
+          ) ?? undefined
+        )
+      } else {
+        backgroundImage.set(
+          `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`
+        )
+        theme.set({
+          color: '#808080',
+
+          isLight: $userConfigSettings.app_style !== 'dark',
+          contrastColor:
+            $userConfigSettings.app_style === 'dark' ? 'hsl(212, 92%, 92%)' : 'hsl(212, 92%, 8%)',
+          h: 212,
+          s: 92,
+          l: 50
+        })
+      }
+    })
+  $: calcThemeColors($userConfigSettings.app_style === 'dark')
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1342,203 +1450,135 @@
   }}
   zonePrefix={insideDrawer ? 'drawer-' : undefined}
 >
-  <div class="relative wrapper bg-sky-100/50 dark:bg-gray-900">
-    {#if !isEverythingSpace && $spaceData?.folderName !== '.tempspace'}
-      <div
-        class="drawer-bar transition-transform duration-300 ease-in-out"
-        class:translate-y-24={hideBar && active}
-      >
-        {#if $spaceData?.folderName !== '.tempspace'}
-          <div
-            class="drawer-chat-search bg-[rgba(255,255,255)] dark:bg-gray-800 text-gray-900 dark:text-gray-100 from-sky-100/70 dark:from-gray-900/90 border-gray-200 dark:border-gray-700 border-[1px] to-transparent via-bg-sky-100/10 dark:via-gray-900/10 backdrop-blur-xl backdrop-saturate-50"
-          >
-            <div
-              class="relative left-1 top-1/2 transform -translate-y-1/2 z-10 place-items-center flex items-center gap-3"
-            >
-              <div
-                class="settings-wrapper flex items-center gap-2"
-                use:clickOutside={handleCloseSettingsModal}
-              >
-                <button
-                  class="settings-toggle flex flex-col items-start hover:bg-sky-200 dark:hover:bg-gray-800 rounded-md h-full gap-[0.33rem]"
-                  on:click={handleOpenSettingsModal}
-                >
-                  {#if $spaceData?.folderName}
-                    <div
-                      class="folder-name flex gap-2 items-center justify-center text-xl text-sky-800 dark:text-gray-100"
-                    >
-                      <Icon
-                        name="chevron.down"
-                        size="20px"
-                        class="transition-all duration-200 {$showSettingsModal === true
-                          ? 'rotate-180'
-                          : ''}"
-                      />
-                      <span class="font-medium leading-[1] text-left">{$spaceData?.folderName}</span
-                      >
-                    </div>
-                    <!-- {#if $space.name.smartFilterQuery}
-                      <span
-                        class="relative text-sm left-3 pointer-events-none flex items-center justify-center mb-[0.1rem] place-self-start px-0.5"
-                      >
-                        <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-1.5"></span>
-                        <span class="text-blue-500 leading-[1]"> Smart Space</span>
-                      </span>
-                    {/if} -->
-                  {/if}
-                </button>
+  <div
+    class="relative wrapper"
+    style:--background-image={$backgroundImage}
+    style:--contrast-color={$theme?.contrastColor}
+    style:--base-color={$theme?.color}
+  >
+    {#if $space && $backgroundImage !== null}
+      <LazyScroll items={renderContents} let:renderedItems>
+        {#if !isEverythingSpace && $spaceData?.folderName !== '.tempspace'}
+          <OasisSpaceNavbar
+            space={$space}
+            {searchValue}
+            on:chat={handleChatWithSpace}
+            viewType={$spaceData?.viewType}
+            viewDensity={$spaceData?.viewDensity}
+            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            order={$spaceData?.sortOrder ?? 'desc'}
+            on:search={handleSearch}
+            on:changedView={handleViewSettingsChanges}
+            on:changedFilter={handleFilterSettingsChanged}
+            on:changedSortBy={handleSortBySettingsChanged}
+            on:changedOrder={handleOrderSettingsChanged}
+          />
 
-                <div class="w-[2px] h-full min-h-6 bg-sky-800/25 dark:bg-gray-800/25 ml-3"></div>
+          <ContextHeader
+            space={$space}
+            {newlyLoadedResources}
+            {loadingSpaceSources}
+            {processingSourceItems}
+            on:refresh={handleRefreshLiveSpace}
+            on:clear={handleClearSpace}
+            on:delete={(e) => handleDeleteSpace(e.detail)}
+            on:load={handleLoadSpace}
+            on:delete-auto-saved={handleDeleteAutoSaved}
+          />
 
-                <OasisSpaceUpdateIndicator
-                  {space}
-                  {newlyLoadedResources}
-                  {loadingSpaceSources}
-                  {processingSourceItems}
-                  on:refresh={handleRefreshLiveSpace}
-                />
+          <ContextTabsBar
+            {spaceId}
+            on:open-page-in-mini-browser={handleOpenPageMiniBrowser}
+            on:handled-drop
+            on:select-space
+            on:reload={handleReload}
+          />
+        {/if}
 
-                {#if $showSettingsModal}
-                  <div class="modal-wrapper" transition:fly={{ y: 10, duration: 160 }}>
-                    <OasisSpaceSettings
-                      bind:space={$space}
-                      on:refresh={handleRefreshLiveSpace}
-                      on:clear={handleClearSpace}
-                      on:delete={(e) => handleDeleteSpace(e.detail)}
-                      on:load={handleLoadSpace}
-                      on:delete-auto-saved={handleDeleteAutoSaved}
-                    />
-                  </div>
-                {/if}
-              </div>
+        {#if $spaceResourceIds.length > 0 && !isEverythingSpace}
+          <OasisResourcesView
+            resources={renderedItems}
+            {searchValue}
+            isInSpace={!isEverythingSpace}
+            viewType={$spaceData?.viewType}
+            viewDensity={$spaceData?.viewDensity}
+            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            order={$spaceData?.sortOrder ?? 'desc'}
+            fadeIn
+            on:click={handleItemClick}
+            on:open={handleOpen}
+            on:open-and-chat
+            on:remove={handleResourceRemove}
+            on:load={handleLoadResource}
+            on:batch-remove={handleResourceRemove}
+            on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+            on:batch-open
+            on:create-tab-from-space
+            on:changedView={handleViewSettingsChanges}
+            on:changedFilter={handleFilterSettingsChanged}
+            on:changedSortBy={handleSortBySettingsChanged}
+            on:changedOrder={handleOrderSettingsChanged}
+          />
+
+          {#if $loadingContents}
+            <div class="floating-loading">
+              <Icon name="spinner" size="20px" />
             </div>
-            <div class="search-input-wrapper">
-              <SearchInput
-                bind:value={$searchValue}
-                on:search={handleSearch}
-                on:chat={handleChatWithSpace}
-                placeholder="Search this Context"
-              />
+          {/if}
+        {:else if isEverythingSpace && $everythingContents.length > 0}
+          <OasisResourcesView
+            resources={everythingContents}
+            {searchValue}
+            isInSpace={false}
+            viewType={$spaceData?.viewType}
+            viewDensity={$spaceData?.viewDensity}
+            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            order={$spaceData?.sortOrder ?? 'desc'}
+            fadeIn
+            on:click={handleItemClick}
+            on:open={handleOpen}
+            on:open-and-chat
+            on:remove={handleResourceRemove}
+            on:space-selected={handleSpaceSelected}
+            on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+            on:batch-remove
+            on:batch-open
+            on:open-space-as-tab
+            on:changedView={handleViewSettingsChanges}
+            on:changedFilter={handleFilterSettingsChanged}
+            on:changedSortBy={handleSortBySettingsChanged}
+            on:changedOrder={handleOrderSettingsChanged}
+          />
 
-              <div class="chat-with-space-wrapper">
-                <button
-                  use:tooltip={{
-                    text:
-                      $searchValue.length > 0
-                        ? 'Create new chat with this context'
-                        : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
-                  }}
-                  class="chat-with-space"
-                  class:activated={$searchValue.length > 0}
-                  on:click={handleChatWithSpace}
-                >
-                  <Icon name="chat" size="20px" />
-
-                  {#if $searchValue.length > 0}
-                    <div transition:slide={{ axis: 'x' }} class="chat-text">
-                      Ask Context
-                      <span class="shortcut">{isMac() ? '⌘' : 'ctrl'}+↵</span>
-                    </div>
-                  {/if}
-                </button>
-              </div>
+          {#if $loadingContents}
+            <div class="floating-loading">
+              <Icon name="spinner" size="20px" />
             </div>
-
-            <div class="flex justify-end gap-2">
-              <OasisSpaceViewSettingsPopover
-                on:change={handleViewSettingsChanges}
-                viewType={$spaceData?.viewType}
-                viewDensity={$spaceData?.viewDensity}
-              />
-              <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
+          {/if}
+        {:else if $space && $spaceData?.folderName === '.tempspace'}
+          <CreateNewSpace
+            on:update-existing-space={handleUpdateExistingSpace}
+            on:abort-space-creation={handleAbortSpaceCreation}
+            on:creating-new-space
+            on:done-creating-new-space
+            space={$space}
+          />
+        {:else if $loadingContents}
+          <div class="content-wrapper">
+            <div class="content">
+              <Icon name="spinner" size="22px" />
+              <p>Loading…</p>
             </div>
-
-            <div class="drawer-chat active">
-              <button class="close-button" on:click={handleCloseChat}>
-                <Icon name="close" size="15px" />
-              </button>
+          </div>
+        {:else}
+          <div class="content-wrapper">
+            <div class="content">
+              <Icon name="save" size="22px" />
+              <p>Oops! It seems like this Context is feeling a bit empty.</p>
             </div>
           </div>
         {/if}
-      </div>
-    {/if}
-
-    <ContextTabsBar
-      {spaceId}
-      on:open-page-in-mini-browser={handleOpenPageMiniBrowser}
-      on:handled-drop
-      on:select-space
-      on:reload={handleReload}
-    />
-
-    {#if $spaceResourceIds.length > 0 && !isEverythingSpace}
-      <OasisResourcesView
-        resources={spaceResourceIds}
-        {searchValue}
-        isInSpace={!isEverythingSpace}
-        viewType={$spaceData?.viewType}
-        viewDensity={$spaceData?.viewDensity}
-        on:click={handleItemClick}
-        on:open={handleOpen}
-        on:open-and-chat
-        on:remove={handleResourceRemove}
-        on:load={handleLoadResource}
-        on:batch-remove={handleResourceRemove}
-        on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-        on:batch-open
-        on:create-tab-from-space
-      />
-
-      {#if $loadingContents}
-        <div class="floating-loading">
-          <Icon name="spinner" size="20px" />
-        </div>
-      {/if}
-    {:else if isEverythingSpace && $everythingContents.length > 0}
-      <OasisResourcesView
-        resources={everythingContents}
-        {searchValue}
-        isInSpace={false}
-        viewType={$spaceData?.viewType}
-        viewDensity={$spaceData?.viewDensity}
-        on:click={handleItemClick}
-        on:open={handleOpen}
-        on:open-and-chat
-        on:remove={handleResourceRemove}
-        on:space-selected={handleSpaceSelected}
-        on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-        on:batch-remove
-        on:batch-open
-        on:open-space-as-tab
-      />
-
-      {#if $loadingContents}
-        <div class="floating-loading">
-          <Icon name="spinner" size="20px" />
-        </div>
-      {/if}
-    {:else if $space && $spaceData?.folderName === '.tempspace'}
-      <CreateNewSpace
-        on:update-existing-space={handleUpdateExistingSpace}
-        on:abort-space-creation={handleAbortSpaceCreation}
-        on:creating-new-space
-        on:done-creating-new-space
-        space={$space}
-      />
-    {:else if $loadingContents}
-      <div class="content-wrapper">
-        <div class="content">
-          <Icon name="spinner" size="22px" />
-          <p>Loading…</p>
-        </div>
-      </div>
-    {:else}
-      <div class="content-wrapper">
-        <div class="content">
-          <Icon name="save" size="22px" />
-          <p>Oops! It seems like this Context is feeling a bit empty.</p>
-        </div>
-      </div>
+      </LazyScroll>
     {/if}
   </div>
 </DropWrapper>
@@ -1548,7 +1588,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    border-radius: 12px;
+    overflow: hidden;
   }
 
   button {

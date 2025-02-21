@@ -179,6 +179,17 @@ export class DesktopManager {
     return data
   }
 
+  async getDesktopThemeData(id: string): Promise<DesktopBackgroundData | null> {
+    if (get(this.loadedDesktops).has(id)) {
+      const desktop = get(this.loadedDesktops).get(id)!
+      return get(desktop.background_image) ?? null
+    }
+
+    let data = await this.storage.desktop.read(id)
+    if (!data) return null
+    return data.background_image ?? null
+  }
+
   /**
    * Returns the DesktopService given the desktop id or null if not found
    */

@@ -11,7 +11,7 @@
   export let folder: OasisSpace | undefined = undefined
   export let interactive = true
   export let round = false
-  export let size: 'sm' | 'md' | 'lg' | 'xl' = 'md'
+  export let size: 'sm' | 'md' | 'lg' | 'xl' | '2xl' = 'md'
   export let isCreating = false
   export let disablePopoverTransition: boolean | undefined = undefined
 
@@ -19,7 +19,15 @@
   $: parsedColors = getColors($spaceData?.colors ?? ['#76E0FF', '#4EC9FB'])
 
   $: colorIconSize =
-    size === 'sm' ? '1.1em' : size === 'lg' ? '1.3em' : size === 'xl' ? '6rem' : '1.2em'
+    size === 'sm'
+      ? '1.1em'
+      : size === 'lg'
+        ? '1.3em'
+        : size === 'xl'
+          ? '2.25rem'
+          : size === '2xl'
+            ? '6rem'
+            : '1.2em'
 
   let pickedEmoji: string | null = null
 
@@ -110,6 +118,10 @@
     }
 
     &[data-size='xl'] {
+      font-size: 2.25rem /* 40px */;
+    }
+
+    &[data-size='2xl'] {
       font-size: 6rem /* 64px */;
     }
   }

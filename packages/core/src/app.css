@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer utilities {
+
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -51,6 +52,7 @@
 }*/
 
 .os__windows {
+
   /* We only style the scrollbars on windows, as doing this on OSX results in the scrollbars being 
    * forced shown always.
    */
@@ -86,5 +88,30 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* HACK: Svelte4 is weird not supporting @starting-style.
+ * For this reason they need to live here for now.
+ */
+
+
+@starting-style {
+  .context-header {
+    .headline-container {
+      opacity: 0 !important;
+      translate: 0 2px !important;
+    }
+
+    .description {
+      opacity: 0 !important;
+      translate: 0 1px !important;
+    }
+
+    .preview-section {
+      opacity: 0 !important;
+      translate: 0 3px !important;
+    }
+
   }
 }

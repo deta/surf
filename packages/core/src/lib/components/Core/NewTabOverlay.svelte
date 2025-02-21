@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type Writable, derived, writable, get } from 'svelte/store'
+  import { type Writable, derived, writable, get, type Readable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useLogScope, useDebounce, useLocalStorageStore, tooltip } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
@@ -24,10 +24,8 @@
   } from '../../types'
   import type { HistoryEntriesManager } from '../../service/history'
   import {
-    ContextViewDensities,
     type ContextViewDensity,
     type ContextViewType,
-    ContextViewTypes,
     MultiSelectResourceEventAction,
     OpenInMiniBrowserEventFrom,
     SaveToOasisEventTrigger,
@@ -51,8 +49,6 @@
     processPaste
   } from '../../service/mediaImporter'
   import { springAppear } from '../motion/springAppear'
-  import FilterSelector, { type FilterItem } from '../Oasis/FilterSelector.svelte'
-  import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
   import ResourceDetails from '@horizon/core/src/lib/components/Oasis/Scaffolding/ResourceDetails.svelte'
@@ -61,8 +57,13 @@
     removeSelectionById
   } from '@horizon/core/src/lib/components/Oasis/utils/select'
   import StuffRightSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/StuffRightSidebar.svelte'
-  import type { ViewChangeEvent } from '../Oasis/Scaffolding/OasisSpaceViewSettingsPopover.svelte'
-  import OasisSpaceViewSettingsPopover from '../Oasis/Scaffolding/OasisSpaceViewSettingsPopover.svelte'
+
+  import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
+  import type {
+    FilterChangeEvent,
+    SortByChangeEvent,
+    ViewChangeEvent
+  } from '../Oasis/SpaceFilterViewButtons.svelte'
 
   export let showTabSearch: Writable<number>
   export let spaceId: string
@@ -185,6 +186,15 @@
         return searchResults
       }
       return everythingContents
+    }
+  )
+
+  const renderContents = derived<[Readable<ResourceSearchResultItem[]>], LazyItem[]>(
+    [resourcesToShow],
+    ([resourcesToShow]) => {
+      return (resourcesToShow ?? []).map((item) => {
+        return { id: item.id, data: null }
+      })
     }
   )
 
@@ -481,10 +491,29 @@
     await debouncedSearch($searchValue)
   }
 
-  const handleFilterTypeChange = (e: CustomEvent<FilterItem | null>) => {
+  const handleFilterTypeChange = (e: CustomEvent<FilterChangeEvent>) => {
     log.debug('Filter type change:', e.detail)
+    oasis.selectedFilterTypeId.set(e.detail.filter?.id ?? null)
     loadEverything()
   }
+
+  // TODO: (@maxu / @maxi): cant do rn only for contexts
+  /*const handleSortBySettingsChanged = async (e: CustomEvent<SortByChangeEvent>) => {
+    const { sortBy } = e.detail
+
+    const prevSortby = $spaceData?.sortBy
+
+    // TODO: Typing we dont expose a type for the sort exactly so this is scudffed
+    await $space.updateData({ sortBy })
+    loadSpaceContents(spaceId, true)
+
+    if (prevSortby !== sortBy) {
+      telemetry.trackUpdateSpaceSettings({
+        setting: 'sort_by',
+        change: sortBy
+      })
+    }
+  }*/
 
   const closeOnboarding = async () => {
     onboardingOpen.set(false)
@@ -913,14 +942,14 @@
         <div class="stuff-view h-full w-full relative">
           <Tooltip rootID="stuff" />
 
-          {#if isInboxSpace}
+          <!-- {#if isInboxSpace}
             <ContextTabsBar
               on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
               on:handled-drop={handlePostDropOnSpace}
               on:select-space={handleSpaceSelected}
               on:reload={handleReload}
             />
-          {/if}
+          {/if} -->
 
           {#if !$isBuiltInSpace}
             {#await new Promise((resolve) => setTimeout(resolve, 175))}
@@ -972,37 +1001,47 @@
               on:Drop={(e) => handleDropOnSpace(spaceId, e.detail)}
               zonePrefix="drawer-"
             >
-              {#await new Promise((resolve) => setTimeout(resolve, 175))}
-                <!-- wait -->
-              {:then}
-                <div class="w-full h-full">
-                  {#key $selectedSpaceId}
-                    <OasisResourcesView
-                      resources={resourcesToShow}
-                      {searchValue}
-                      isInSpace={false}
-                      status={$loadingContents
-                        ? { icon: 'spinner', message: 'Loading contents…' }
-                        : $isSearching && $searchValue?.length > 0
-                          ? { icon: 'spinner', message: 'Searching your stuff…' }
-                          : undefined}
-                      viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                        ?.viewType}
-                      viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                        ?.viewDensity}
-                      on:click={handleItemClick}
-                      on:open={(e) => handleOpen(e, true)}
-                      on:open-and-chat
-                      on:open-space-as-tab
-                      on:remove={handleResourceRemove}
-                      on:batch-remove={handleResourceRemove}
-                      on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-                      on:batch-open
-                      on:new-tab
-                    />
-                  {/key}
-                </div>
-              {/await}
+              <LazyScroll items={renderContents} let:renderedItems>
+                {#await new Promise((resolve) => setTimeout(resolve, 175))}
+                  <!-- wait -->
+                {:then}
+                  <div class="w-full h-full">
+                    {#key $selectedSpaceId}
+                      <!--
+                        TODO: Needs extended api
+                        on:changedSortBy={handleSortBySettingsChanged}
+                        on:changedOrder={handleOrderSettingsChanged}
+                      -->
+                      <OasisResourcesView
+                        resources={renderedItems}
+                        {searchValue}
+                        isInSpace={false}
+                        status={$loadingContents
+                          ? { icon: 'spinner', message: 'Loading contents…' }
+                          : $isSearching && $searchValue?.length > 0
+                            ? { icon: 'spinner', message: 'Searching your stuff…' }
+                            : undefined}
+                        viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                          ?.viewType}
+                        viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                          ?.viewDensity}
+                        hideSortingSettings
+                        on:click={handleItemClick}
+                        on:open={(e) => handleOpen(e, true)}
+                        on:open-and-chat
+                        on:open-space-as-tab
+                        on:remove={handleResourceRemove}
+                        on:batch-remove={handleResourceRemove}
+                        on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+                        on:batch-open
+                        on:new-tab
+                        on:changedView={handleViewSettingsChanges}
+                        on:changedFilter={handleFilterTypeChange}
+                      />
+                    {/key}
+                  </div>
+                {/await}
+              </LazyScroll>
             </DropWrapper>
           {/if}
         </div>
@@ -1053,13 +1092,7 @@
 
           {#if $showTabSearch === 2}
             <div class="absolute right-2 flex items-center gap-2">
-              <OasisSpaceViewSettingsPopover
-                on:change={handleViewSettingsChanges}
-                viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']?.viewType}
-                viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                  ?.viewDensity}
-              />
-              <FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />
+              <!--<FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />-->
             </div>
           {/if}
         </div>
@@ -1135,7 +1168,6 @@
   .onboarding-button {
     position: relative;
 
-    transform: translateZ(0);
     z-index: 10000;
     display: flex;
     align-items: center;
@@ -1176,7 +1208,7 @@
     -webkit-font-smoothing: antialiased;
     -webkit-app-region: no-drag;
 
-    transform: translateX(-50%) translateZ(0);
+    transform: translateX(-50%);
     transition:
       translate 100ms ease-out,
       transform 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -1212,10 +1244,10 @@
       position: relative;
       width: calc(var(--drawer-width) - var(--drawer-width-offset));
       min-width: 120ch;
-      max-width: 95vw;
+      max-width: min(95vw, 2000px);
       height: calc(var(--drawer-height) - var(--drawer-height-offset));
       min-height: 50ch;
-      max-height: 95vh;
+      max-height: min(95vh, 1400px);
       overflow: hidden !important;
       border-radius: 24px 24px 16px 16px;
       @apply bg-white dark:bg-gray-700;
@@ -1356,5 +1388,8 @@
   /* Hides the Drawer when dragging and not targeting it */
   :global(body[data-dragging='true'] #drawer:not(.hovering)) {
     transform: translate(-50%, 0);
+  }
+  .stuff-view {
+    overflow: hidden;
   }
 </style>

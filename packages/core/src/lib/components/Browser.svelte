@@ -122,11 +122,9 @@
   import ToastsProvider from './Toast/ToastsProvider.svelte'
   import { provideToasts, type ToastItem } from '../service/toast'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
-  import { Tabs } from 'bits-ui'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
   import { Dragcula, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
-  import CustomPopover from './Atoms/CustomPopover.svelte'
   import { provideConfig } from '../service/config'
   import { HistoryEntriesManager } from '../service/history'
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
@@ -172,7 +170,6 @@
   import { provideNotifications } from '../service/notifications'
   import { UserStatsService } from '../service/userStats'
   import '$styles/tippy.scss'
-  import type { App } from '@horizon/backend/types'
   import { floatyButtons } from './Atoms/floatyButtons'
   import FloatyButton from './Atoms/FloatyButton.svelte'
   import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
@@ -3654,6 +3651,8 @@
           }
         )
 
+  $: app.style.setProperty('--background-image', $backgroundImage?.path)
+
   const contextMenuMoveTabsToSpaces = derived(
     [spaces, tabsManager.activeScopeId],
     ([spaces, activeScopeId]) => {
@@ -3798,7 +3797,6 @@
   }}
 >
   <TeletypeEntry
-    {backgroundImage}
     open={$showNewTabOverlay == 1}
     on:close={() => {
       showNewTabOverlay.set(0)
@@ -4698,7 +4696,6 @@
               on:open-space-and-chat={handleOpenSpaceAndChat}
               on:seekToTimestamp={handleSeekToTimestamp}
               on:highlightWebviewText={highlightWebviewText}
-              hideBar={$showNewTabOverlay !== 0}
               {historyEntriesManager}
             />
           </div>
@@ -4761,7 +4758,6 @@
                   on:open-space-and-chat={handleOpenSpaceAndChat}
                   on:seekToTimestamp={handleSeekToTimestamp}
                   on:highlightWebviewText={highlightWebviewText}
-                  hideBar={$showNewTabOverlay !== 0}
                   {historyEntriesManager}
                 />
               {:else if tab.type === 'history'}

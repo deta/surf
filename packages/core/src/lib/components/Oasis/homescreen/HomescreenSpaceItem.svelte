@@ -1,15 +1,16 @@
 <script lang="ts">
-  import { derived, get, writable } from 'svelte/store'
+  import { derived, get, writable, type Readable } from 'svelte/store'
   import type { OasisSpace } from '../../../service/oasis'
   import { createEventDispatcher, onMount } from 'svelte'
-  import LazyScroll from '../../Utils/LazyScroll.svelte'
+  import LazyScroll, { type LazyItem } from '../../Utils/LazyScroll.svelte'
   import LazyComponent from '../../Atoms/LazyComponent.svelte'
   import MasonryView from '../ResourceViews/MasonryView.svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { useToasts } from '../../../service/toast'
   import { contextMenu } from '../../Core/ContextMenu.svelte'
-  import { SpaceEntryOrigin } from '../../../types'
+  import { SpaceEntryOrigin, type SpaceEntry } from '../../../types'
+  import OasisResourcesView from '../ResourceViews/OasisResourcesView.svelte'
 
   export let space: OasisSpace
   export let renderContents: boolean = true
@@ -28,11 +29,15 @@
   const spaceData = space.data
   const renderedItemsCnt = writable(10)
 
-  const renderedContents = derived([space.contents], ([contents]) => {
-    contents = contents.filter((e) => e.manually_added !== SpaceEntryOrigin.Blacklisted)
-    if (!renderContents) return []
-    return contents
-  })
+  const renderedContents = derived<[Readable<SpaceEntry[]>], LazyItem[]>(
+    [space.contents],
+    ([contents]) => {
+      if (!renderContents) return []
+      return contents
+        .filter((e) => e.manually_added !== SpaceEntryOrigin.Blacklisted)
+        .map((e) => ({ id: e.resource_id, data: null }))
+    }
+  )
 
   let clickTimeout: ReturnType<typeof setTimeout>
   let handledDoubleClick = false
@@ -118,7 +123,7 @@
   {#if renderContents}
     <div class="content view-{viewLayout}">
       {#if viewLayout === 'list'}
-        <LazyScroll baseItemHeight={200} on:lazyLoad={handleLazyLoad}>
+        <LazyScroll on:lazyLoad={handleLazyLoad}>
           {#each $renderedContents as item, i (item.resource_id)}
             <LazyComponent this={() => import('../../Oasis/OasisResourceLoader.svelte')}>
               <svelte:fragment slot="component" let:Component>
@@ -140,24 +145,18 @@
           {/each}
         </LazyScroll>
       {:else}
-        <MasonryView items={$renderedContents.map((e) => ({ id: e.id, data: e }))} let:item>
-          <OasisResourceLoader
-            resourceOrId={item.data.resource_id}
-            isInSpace={false}
-            mode="compact"
-            origin="homescreen-space"
-            on:click
-            on:open
-            on:open-and-chat
-            on:remove
-            on:load
-            on:blacklist-resource
-            on:whitelist-resource
-            on:set-resource-as-space-icon
-            interactive={true}
-            draggable
+        <LazyScroll items={renderedContents} let:renderedItems>
+          <OasisResourcesView
+            resources={renderedItems}
+            searchValue={writable('')}
+            viewType={'grid'}
+            fadeIn={false}
+            viewDensity={'cozy'}
+            sortBy={'created_at'}
+            order={'desc'}
+            hideViewSettings
           />
-        </MasonryView>
+        </LazyScroll>
       {/if}
     </div>
   {/if}
@@ -273,6 +272,10 @@
       }
     }
 
+    > .content {
+      height: 100%;
+      margin-top: 2rem;
+    }
     > .content.view-masonry {
       :global(.masonry-grid) {
         --columns: 1 !important;

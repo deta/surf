@@ -1,4 +1,4 @@
-<svg width="29" height="26" viewBox="0 0 29 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 29 26" fill="none" xmlns="http://www.w3.org/2000/svg" {...$$restProps}>
   <g filter="url(#filter0_dii_7248_247)">
     <rect
       x="18.7081"
@@ -7,8 +7,8 @@
       height="4.20799"
       rx="2.10399"
       transform="rotate(-84.6481 18.7081 10.6638)"
-      fill="#5B6882"
-      style="fill:#5B6882;fill:color(display-p3 0.3569 0.4078 0.5098);fill-opacity:1;"
+      fill="currentColor"
+      style="fill:currentColor;fill:currentColor;fill-opacity:1;"
     />
   </g>
   <g filter="url(#filter1_dii_7248_247)">
@@ -19,15 +19,15 @@
       height="4.20799"
       rx="2.10399"
       transform="rotate(-84.6481 7.29895 9.69287)"
-      fill="#5B6882"
-      style="fill:#5B6882;fill:color(display-p3 0.3569 0.4078 0.5098);fill-opacity:1;"
+      fill="currentColor"
+      style="fill:currentColor;fill:currentColor;fill-opacity:1;"
     />
   </g>
   <g filter="url(#filter2_dii_7248_247)">
     <path
       d="M4.93744 15.4777C6.32432 18.075 9.55935 20.2332 14.1142 20.6599C18.8643 21.1049 22.4538 19.586 24.3267 17.2941"
-      stroke="#5B6882"
-      style="stroke:#5B6882;stroke:color(display-p3 0.3569 0.4078 0.5098);stroke-opacity:1;"
+      stroke="currentColor"
+      style="stroke:currentColor;stroke-opacity:1;"
       stroke-width="1.93666"
       stroke-linecap="round"
       stroke-linejoin="bevel"

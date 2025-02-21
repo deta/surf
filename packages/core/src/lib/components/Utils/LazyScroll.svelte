@@ -10,7 +10,6 @@
 
   import { onMount } from 'svelte'
   import { derived, writable, type Readable } from 'svelte/store'
-  import { selection } from '../Oasis/utils/select'
 
   //import { createEventDispatcher, tick } from 'svelte'
   /**
@@ -108,7 +107,6 @@
     handleScroll(e)
     //if (raf === null) raf = requestAnimationFrame(() => handleWheel(e))
   }}
-  use:selection
   data-container
 >
   <slot {renderedItems} />
@@ -125,7 +123,10 @@
 
     position: relative;
     overflow-y: auto;
+    overflow-x: hidden;
     width: 100%;
     height: 100%;
+
+    timeline-scope: --contextHeaderReveal;
   }
 </style>

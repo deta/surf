@@ -1,39 +1,39 @@
 <script lang="ts">
-  import type { Readable } from 'svelte/store'
-  import { get } from 'svelte/store'
-  import { derived } from 'svelte/store'
-  import { DesktopService, useDesktopManager } from '../../service/desktop'
+  import { get, writable } from 'svelte/store'
+  import { useDesktopManager } from '../../service/desktop'
   import { useTabsManager } from '../../service/tabs'
-  import { useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { quadOut } from 'svelte/easing'
   import { fly } from 'svelte/transition'
-  import HomescreenItem from '../Oasis/homescreen/HomescreenItem.svelte'
-  import { OpenHomescreenEventTrigger } from '@horizon/types'
+  import { ChangeContextEventTrigger, OpenHomescreenEventTrigger } from '@horizon/types'
   import { Icon } from '@horizon/icons'
 
-  export let backgroundImage: Readable<{ path: string; customColors: unknown[] }>
+  export let desktopId: string // NOTE: This is the same as the space id for now to get the corresponding desktop
+  export let willReveal = false
 
   const tabsManager = useTabsManager()
   const desktopManager = useDesktopManager()
   const oasis = useOasis()
-  const activeDesktop = desktopManager.activeDesktop
+  const spaces = oasis.spaces
   const desktopVisible = desktopManager.activeDesktopVisible
+  const activeScopeId = tabsManager.activeScopeId
 
-  const activeSpace = derived([oasis.spaces, activeDesktop], ([$spaces, $activeDesktop]) => {
-    if (!$activeDesktop) return null
-    return $spaces.find((space) => space.id === $activeDesktop.id)
-  })
+  let targetDesktop = writable(null)
+  desktopManager.useDesktop(desktopId).then((desktop) => ($targetDesktop = desktop))
 
-  const activeSpaceName = derived(activeSpace, ($space) => {
-    if (!$space) return 'Desktop'
-    const spaceData = get($space.data)
+  const space = $spaces.find((space) => space.id === desktopId)
 
-    if ($space.id === 'all') return 'All my Stuff Desktop'
+  const getSpaceName = (space: OasisSpace | undefined) => {
+    if (!space) return 'Desktop'
+    const spaceData = get(space.data)
+
+    if (space.id === 'all') return 'All my Stuff Desktop'
 
     if (spaceData.builtIn) return spaceData.folderName + ' Desktop'
 
     return spaceData.folderName + ' Desktop' || 'Sheesh'
-  })
+  }
+  $: activeSpaceName = getSpaceName(space)
 
   const showNewTabOverlay = tabsManager.showNewTabOverlay
 
@@ -41,7 +41,7 @@
   let innerHeight: number
   let previewWidth: number
 
-  $: items = $activeDesktop?.items
+  $: items = $targetDesktop?.items
 
   $: SCALING_FACTOR = previewWidth / innerWidth
 </script>
@@ -49,19 +49,26 @@
 <svelte:window bind:innerWidth bind:innerHeight />
 
 {#key $showNewTabOverlay}
-  {#if !$desktopVisible}
-    <div class="desktop-preview-hitarea">
-      <div class="context-pill">
-        {$activeSpaceName}
-      </div>
+  {#if !willReveal || !$desktopVisible}
+    <div class={`desktop-preview-container ${willReveal ? 'desktop-preview-hitarea' : ''}`}>
+      {#if !willReveal}
+        <div class="context-pill">
+          {activeSpaceName}
+        </div>
+      {/if}
       <div
-        class="desktop-preview anchor"
-        style={`background-image: ${$backgroundImage?.path}; aspect-ratio: ${innerWidth} / ${innerHeight};`}
+        class={`desktop-preview ${willReveal ? 'anchor' : ''}`}
+        style={`background-image: var(--background-image) !important; aspect-ratio: ${innerWidth} / ${innerHeight};`}
         bind:clientWidth={previewWidth}
         in:fly={{ y: 12, delay: 5, easing: quadOut }}
-        on:click={() => {
-          desktopManager.setVisible(true, { trigger: OpenHomescreenEventTrigger.CommandMenu })
-          showNewTabOverlay.set(0)
+        on:click={async () => {
+          if ($activeScopeId === desktopId) {
+            desktopManager.setVisible(true, { trigger: OpenHomescreenEventTrigger.CommandMenu })
+            showNewTabOverlay.set(0)
+          } else {
+            await tabsManager.changeScope(desktopId, ChangeContextEventTrigger.SpaceInOasis)
+            showNewTabOverlay.set(0)
+          }
         }}
         aria-hidden="true"
       >
@@ -75,13 +82,14 @@
             </div>
           {/if}
         </div>
+
         {#await new Promise((resolve) => {
           setTimeout(resolve, 200)
         })}
           <div class="loading"></div>
         {:then}
           <div style="isolation: isolate;">
-            {#if $items && $activeDesktop}
+            {#if $items && $targetDesktop}
               {#each $items as item}
                 <div
                   class="item-wrapper"
@@ -113,10 +121,13 @@
 <style lang="scss">
   @use '@horizon/core/src/lib/styles/motion' as motion;
 
-  .desktop-preview-hitarea {
+  .desktop-preview-container {
     width: fit-content;
     height: fit-content;
     background: transparent;
+  }
+
+  .desktop-preview-hitarea {
     transform: translateX(-30px);
     view-transition-name: desktop-preview-hitarea;
     &:hover {
@@ -140,14 +151,21 @@
     overflow: hidden;
     height: 13ch;
     border-radius: 20px;
-    transform: rotate(-0.5deg) translateX(-60%) translateY(0) scale(0.85);
     outline: 3px solid var(--contrast-color);
     border-radius: 18px;
     background-size: cover;
-    transition: transform motion.$precise-motion;
 
-    &:hover {
-      transform: translate3d(15%, -5px, 0.5rem) scale(1.0025) rotate(0.33deg);
+    &:hover .show-desktop-label {
+      opacity: 1;
+    }
+
+    .desktop-preview-hitarea & {
+      transform: rotate(-0.5deg) translateX(-60%) translateY(0) scale(0.85);
+      transition: transform motion.$precise-motion;
+
+      &:hover {
+        transform: translate3d(15%, -5px, 0.5rem) scale(1.0025) rotate(0.33deg);
+      }
     }
   }
 
@@ -198,6 +216,7 @@
     opacity: 0;
     transition: opacity motion.$precise-motion;
     z-index: 2;
+    cursor: default;
   }
 
   .create-desktop-label {

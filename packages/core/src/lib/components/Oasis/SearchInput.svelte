@@ -1,69 +1,171 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
 
-  import { isModKeyPressed, useDebounce } from '@horizon/utils'
-  import { Command } from '../index'
+  import { isMac, isModKeyPressed } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
+  import { writable } from 'svelte/store'
 
   export let value: string = ''
   export let loading = false
   export let placeholder = 'Search'
 
+  const expanded = writable(false)
+
   const dispatch = createEventDispatcher<{ search: string; chat: string; close: void }>()
 
-  const search = () => {
-    dispatch('search', value)
+  let inputEl: HTMLInputElement
+
+  const handleFocusIn = (e: FocusEvent) => {
+    handleActivate()
+  }
+  const handleFocusOut = (e: FocusEvent) => {
+    if (value.length > 0) return
+    handleDeactivate()
   }
 
-  const debouncedSearch = useDebounce(search, 700)
-
-  let inputRef: HTMLInputElement
-
-  onMount(() => {
-    inputRef.focus()
-  })
+  const handleActivate = () => {
+    $expanded = true
+    inputEl.focus()
+  }
+  const handleDeactivate = () => {
+    value = ''
+    $expanded = false
+    inputEl.blur()
+  }
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    // check if key is searchable (alphanumeric, backspace, delete, etc.)
-    if (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete') {
-      debouncedSearch()
-    } else if (event.key === 'Enter') {
+    if (event.key === 'Enter') {
       if (isModKeyPressed(event)) {
         return
       }
 
       dispatch('search', value)
     } else if (event.key === 'Escape') {
+      handleDeactivate()
+      event.stopImmediatePropagation()
+      event.preventDefault()
       dispatch('close')
+    } else {
+      dispatch('search', value)
     }
   }
 </script>
 
+<svelte:window
+  on:keydown={(e) => {
+    if (e.metaKey && e.key === 'f') {
+      if (!$expanded) handleActivate()
+      else {
+        if (inputEl === window.document.activeElement) {
+          handleDeactivate()
+        } else {
+          handleActivate()
+        }
+      }
+      e.stopPropagation()
+    } else if (e.target !== document.body) return
+    else if (
+      !$expanded &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      String.fromCharCode(e.keyCode).match(/(\w|\s)/g)
+    ) {
+      handleActivate()
+      //value = e.key
+      e.stopPropagation()
+    }
+  }}
+/>
+
 <div
-  class="flex items-center bg-sky-100/10 dark:bg-gray-700 px-4 rounded-xl w-full gap-2 border border-sky-300/40 dark:border-gray-600 outline outline-[0.5px] outline-offset-0 outline-sky-800/20 dark:outline-gray-500/20"
+  class="search-wrapper"
+  class:expanded={$expanded}
+  on:click={handleActivate}
+  role="none"
+  on:focusin={handleFocusIn}
+  on:focusout={handleFocusOut}
 >
   {#if loading}
-    <Icon name="spinner" class="shrink-0 opacity-50 icon" />
+    <Icon name="spinner" class="shrink-0 icon" size="1.2em" />
   {:else}
-    <Icon name="search" class="shrink-0 opacity-50 icon" />
+    <Icon name="search" class="shrink-0  icon" size="1.2em" />
   {/if}
   <input
-    bind:this={inputRef}
+    bind:this={inputEl}
     bind:value
-    type="message"
-    name="message"
+    type="text"
     {placeholder}
-    class="placeholder:text-gray-500 flex w-full max-w-[calc(100%-3rem)] text-xl rounded-md bg-transparent py-2.5 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    class="flex bg-transparent outline-none disabled:cursor-not-allowed disabled:opacity-50"
     on:keydown={handleKeyDown}
   />
+  {#if value.length <= 0 && $expanded}
+    <span class="shortcut">{isMac() ? '⌘' : 'Ctrl'} + F</span>
+  {/if}
 </div>
 
 <style lang="scss">
-  .icon {
-    view-transition-name: search-icon-transition;
+  .search-wrapper {
+    position: relative;
+    width: fit-content;
+
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.75rem;
+
+    text-box: trim-both cap alphabetic;
+
+    interpolate-size: allow-keywords;
+    overflow: hidden;
+
+    input {
+      color: var(--contrast-color);
+      transition: width 143ms cubic-bezier(0.13, 1.02, 0.33, 1);
+      interpolate-size: allow-keywords;
+      padding-inline: 0.5em;
+
+      &::placeholder {
+        color: var(--contrast-color);
+        opacity: 0.5;
+      }
+    }
+
+    &.expanded {
+      width: fit-content;
+      input {
+        width: 22ch;
+      }
+    }
+    &:not(.expanded) {
+      input {
+        width: 0;
+        padding-inline: 0;
+      }
+    }
+
+    &:has(input:focus) {
+      background: rgb(from var(--base-color) r g b / 0.4);
+      border: 1px solid rgb(from var(--base-color) r g b / 0.9);
+    }
+
+    &:not(.expanded):hover {
+      color: #0369a1;
+      background: rgb(232, 238, 241);
+      color: var(--contrast-color);
+      background: rgb(from var(--base-color) r g b / 0.4);
+      opacity: 1;
+    }
+
+    // transition: width 33ms cubic-bezier(0, 1.22, 0.73, 1.13);
+    //transition-timing-function: ease-out;
   }
 
-  input {
-    view-transition-name: search-input-transition;
+  .shortcut {
+    user-select: none;
+    flex-shrink: 0;
+    font-size: 0.9em;
+    text-box: trim-both cap alphabetic;
+    opacity: 0.7;
   }
 </style>

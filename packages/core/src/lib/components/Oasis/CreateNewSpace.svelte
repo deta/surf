@@ -347,10 +347,10 @@
 />
 
 <div
-  class="flex flex-col items-center justify-center h-screen w-full bg-[#f6faff] dark:bg-gray-900 overflow-y-auto pb-48 border border-natural-100 border-l-natural-100 dark:border-gray-800 text-gray-900 dark:text-gray-100"
+  class="flex flex-col items-center justify-center h-full w-full bg-[#f6faff] dark:bg-gray-900 overflow-y-auto pb-48 border border-natural-100 border-l-natural-100 dark:border-gray-800 text-gray-900 dark:text-gray-100"
 >
   <div
-    class="top-bar fixed top-0 right-0 flex justify-between items-center w-[calc(100%-19.5rem)] px-4 py-2 bg-white dark:bg-gray-800 z-50 border border-gray-200 dark:border-gray-700"
+    class="top-bar fixed top-0 left-0 right-0 flex justify-between items-center w-[calc(100%-1.75rem)] px-4 py-2 bg-white dark:bg-gray-800 z-50 border border-gray-200 dark:border-gray-700"
     style="border-bottom-width: 0.5px; margin: 0.75rem; border-radius: 12px;"
   >
     <div class="input-wrapper flex-grow">
@@ -436,7 +436,7 @@
             <SpaceIcon
               on:update={handleSpaceIconUpdate}
               folder={space}
-              size="xl"
+              size="2xl"
               round
               isCreating
             />

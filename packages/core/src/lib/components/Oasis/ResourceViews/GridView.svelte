@@ -54,9 +54,10 @@
     width: 100% !important;
     height: 100% !important;
     aspect-ratio: 1 / 1;
+    justify-self: stretch;
   }
 
-  .item:last-child {
+  .grid-content:last-child {
     padding-bottom: 400px;
   }
 
