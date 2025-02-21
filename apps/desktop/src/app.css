@@ -11,12 +11,20 @@
 }
 
 @font-face {
+  font-family: 'Inter';
+  src: url('./renderer/src/assets/fonts/InterVariable-Italic.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Gambarino-Display';
   src:
-    url('/renderer/src/assets/fonts/Gambarino-Regular.woff2') format('woff2'),
-    url('/renderer/src/assets/fonts/Gambarino-Regular.woff') format('woff'),
-    url('/renderer/src/assets/fonts/Gambarino-Regular.ttf') format('truetype'),
-    url('/renderer/src/assets/fonts/Gambarino-Regular.eot') format('embedded-opentype');
+    url('./renderer/src/assets/fonts/Gambarino-Regular.woff2') format('woff2'),
+    url('./renderer/src/assets/fonts/Gambarino-Regular.woff') format('woff'),
+    url('./renderer/src/assets/fonts/Gambarino-Regular.ttf') format('truetype'),
+    url('./renderer/src/assets/fonts/Gambarino-Regular.eot') format('embedded-opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -32,4 +40,26 @@
 
 :global(.font-gambarino) {
   font-family: 'Gambarino';
+}
+
+@font-face {
+  font-family: 'SN Pro';
+  src:
+    url('./renderer/src/assets/fonts/SNPro-Variable.ttf') format('truetype'),
+    url('./renderer/src/assets/fonts/SNPro-Variable.woff2') format('woff2'),
+    url('./renderer/src/assets/fonts/SNPro-Variable.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SN Pro';
+  src:
+    url('./renderer/src/assets/fonts/SNPro-VariableItalic.ttf') format('truetype'),
+    url('./renderer/src/assets/fonts/SNPro-VariableItalic.woff2') format('woff2'),
+    url('./renderer/src/assets/fonts/SNPro-VariableItalic.woff') format('woff');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
 }

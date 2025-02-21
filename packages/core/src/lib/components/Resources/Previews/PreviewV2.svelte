@@ -513,6 +513,15 @@
     width: 100%;
     height: 100%;
 
+    font-size: 0.85em;
+    letter-spacing: 0.025em;
+    font-weight: 420;
+    font-family: -apple-system, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    font-synthesis: none;
+    text-rendering: optimizeSpeed;
+
     /// Global overrides
     :global(.favicon) {
       --size: 1.25em;
@@ -617,22 +626,23 @@
           width: fit-content;
           max-width: 100%;
 
+          font-family: SN Pro;
+          font-weight: 650;
+
           font-weight: 550;
-          font-size: 1.25em;
-          line-height: 1.475em;
-          letter-spacing: 0.02em;
+          font-size: 1.5em;
+          line-height: 1.25em;
+          letter-spacing: 0.002em;
 
           overflow: hidden;
           display: -webkit-box;
           -webkit-box-orient: vertical;
           -webkit-line-clamp: var(--MAX_title_lines, 4);
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
           overflow-wrap: break-word;
           text-wrap: balance;
           text-overflow: ellipsis;
 
-          margin-bottom: 0.15em;
+          margin-bottom: 0.35em;
           border-bottom: 1px solid transparent;
           transition: border-bottom 125ms ease;
 
@@ -651,9 +661,9 @@
         }
         > p {
           font-size: 1em;
-          line-height: 1.425em;
-          letter-spacing: 0.014em;
-          opacity: 0.9;
+          font-weight: 400;
+          letter-spacing: 0.035em;
+          opacity: 0.8;
 
           overflow: hidden;
           display: -webkit-box;
@@ -701,7 +711,7 @@
         display: flex;
         align-items: center;
         gap: 0.5em;
-        font-size: 0.9em;
+        font-size: 1em;
         max-width: 100%;
         width: min-content;
 
@@ -709,15 +719,14 @@
           border-radius: 0.3em;
         }
         > span {
-          font-weight: 500;
-          letter-spacing: 0.2px;
+          font-family: SN Pro;
+          font-weight: 550;
+          letter-spacing: 0.035em;
           opacity: var(--text-muted-opacity);
 
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
         }
       }
 
@@ -726,7 +735,7 @@
       .annotation-info {
         display: flex;
         align-items: center;
-        font-size: 0.9em;
+        font-size: 1em;
         gap: 0.5em;
       }
 
@@ -737,7 +746,7 @@
           animation: breathe 1.75s infinite ease;
         }
         > span {
-          font-size: 0.9em;
+          font-size: 1em;
 
           display: flex;
           align-items: center;
@@ -759,7 +768,7 @@
           border-radius: 0.3em;
         }
         > span {
-          font-size: 0.9em;
+          font-size: 1em;
           font-weight: 500;
           letter-spacing: 0.2px;
           opacity: var(--text-muted-opacity);
@@ -909,7 +918,7 @@
             flex-grow: 1;
             flex-shrink: 1;
             > h1 {
-              font-size: 0.95em;
+              font-size: 1em;
               max-width: 100%;
               //white-space: nowrap;
             }

@@ -28,7 +28,8 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        gambarino: ['Gambarino-Display', 'serif']
+        gambarino: ['Gambarino-Display', 'serif'],
+        sn: ['SN Pro', 'sans-serif']
       },
       typography: ({ theme }) => ({
         DEFAULT: {

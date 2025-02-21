@@ -4054,7 +4054,7 @@
           <div
             id="sidebar-pinned-tabs-wrapper"
             class={$pinnedTabs.length !== 0 || horizontalTabs
-              ? 'relative no-drag my-auto rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
+              ? 'relative no-drag h-fit py-[0.33rem] rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
               : horizontalTabs
                 ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
                 : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
@@ -4134,7 +4134,7 @@
           {/if}
 
           <div
-            class="relative w-full h-full no-scrollbar overflow-hidden py-2 {horizontalTabs
+            class="relative w-full h-full no-scrollbar overflow-hidden py-[0.35rem] {horizontalTabs
               ? 'flex-row overflow-y-hidden'
               : 'flex-col overflow-x-hidden'} {horizontalTabs
               ? 'overflow-x-auto'
@@ -5251,6 +5251,11 @@
 
     color: light-dark(var(--contrast-color), var(--contrast-color));
 
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+    font-weight: 400 !important;
+    @include utils.font-smoothing;
+
     &:hover,
     &.active {
       --bg: var(--black-09);
@@ -5346,5 +5351,11 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
+  }
+
+  .vertical-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 </style>

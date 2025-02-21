@@ -25,22 +25,21 @@
   :global(body.dark.custom) & {
     @if not $custom-dark {
       --#{$propertyName}: #{$custom-light};
-    }
-
-    @else {
+    } @else {
       --#{$propertyName}: #{$custom-dark};
     }
   }
-
 }
 
-@mixin squircle($fill: transparent,
+@mixin squircle(
+  $fill: transparent,
   $smooth: 0.33,
   $radius: 0px,
   $radius-top-left: null,
   $radius-top-right: null,
   $radius-bottom-left: null,
-  $radius-bottom-right: null) {
+  $radius-bottom-right: null
+) {
   border-radius: 0 !important;
 
   background: paint(squircle);
@@ -69,11 +68,13 @@
   }
 }
 
-@mixin squricle-radii($radius: 0px, $top-left: null,
+@mixin squricle-radii(
+  $radius: 0px,
+  $top-left: null,
   $top-right: null,
   $bottom-left: null,
-  $bottom-right: null) {
-
+  $bottom-right: null
+) {
   @if not $top-left {
     --squircle-radius-top-left: #{$radius};
   }
@@ -105,9 +106,7 @@
   @if $bottom-right {
     --squircle-radius-bottom-right: #{$bottom-right};
   }
-
 }
-
 
 @mixin material-frosted {
   backdrop-filter: blur(12px);
@@ -116,4 +115,9 @@
 
   // TODO: (maxu): Figure out a way to still allow ading custom transition props when using this mixin
   transition: background motion.$color-transition;
+}
+
+@mixin font-smoothing {
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: optimizeLegibility;
 }

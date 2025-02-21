@@ -515,8 +515,8 @@
     flex-direction: column;
     align-items: end;
     justify-content: space-between;
-    padding: 0.525rem 0.75rem;
-    border-radius: 16px;
+    padding: 0.3rem 0.5rem;
+    border-radius: 12px;
 
     position: relative;
     color: #244581;
@@ -601,7 +601,7 @@
       .folder-leading {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 0.5rem;
         flex: 1;
         max-width: calc(100% - 1rem);
         overflow: visible;
@@ -631,9 +631,9 @@
       .folder-input {
         border: none;
         background: transparent;
-        font-size: 1rem;
-        font-weight: 500;
-        letter-spacing: 0.0025em;
+        font-size: 1em;
+        font-weight: 450;
+        letter-spacing: 0.01em;
         line-height: 1;
         font-smooth: always;
         -webkit-font-smoothing: antialiased;

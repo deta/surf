@@ -28,6 +28,6 @@
     height: 100%;
     display: block;
     user-select: none;
-    border-radius: 4px;
+    border-radius: 2px;
   }
 </style>

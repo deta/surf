@@ -19,7 +19,7 @@
 </script>
 
 <section
-  class="min-h-screen flex flex-col items-center justify-center pt-12 md:!pt-24 relative z-10 px-4"
+  class="min-h-screen flex flex-col items-center justify-center pt-12 md:!pt-24 relative z-10 px-4 font-rounded"
 >
   <div class="w-full max-w-7xl mx-auto flex flex-col items-center">
     <div class="text-center mb-8 md:!mb-12 px-4">

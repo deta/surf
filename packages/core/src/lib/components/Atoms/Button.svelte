@@ -5,7 +5,12 @@
   export let disabled = false
 </script>
 
-<button {type} {disabled} on:click style="background-image: url({background});">
+<button
+  {type}
+  {disabled}
+  on:click
+  style="background-image: url({background}); font-family: 'SN Pro';"
+>
   <slot></slot>
 </button>
 

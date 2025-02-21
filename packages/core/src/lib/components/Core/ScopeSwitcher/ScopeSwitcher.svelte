@@ -420,6 +420,8 @@
 </div>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   .wrapper {
     display: flex;
     align-items: center;
@@ -445,6 +447,10 @@
       background-position: center center !important;
       background-repeat: no-repeat !important;
       outline: 1.5px solid var(--base-color);
+
+      &.horizontal {
+        height: calc(100% - 0.775rem);
+      }
     }
 
     :global(.dark) & {
@@ -454,9 +460,10 @@
     }
 
     &.horizontal {
-      padding: 0rem 0.2rem;
+      padding: 0.35rem 0.2rem;
       padding-left: 0.5rem;
-      border-radius: 0.75rem;
+      border-radius: 8px !important;
+      height: calc(100% - 0.525rem);
       .input,
       .title {
         font-size: 0.938rem;
@@ -490,7 +497,7 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.25rem;
-    padding-left: 0.25rem;
+    text-box-trim: trim-both cap alphabetic;
     z-index: 2;
 
     :global(.custom) & {
@@ -577,10 +584,13 @@
     left: 0;
     transform: translateY(-50%);
     width: 100%;
-    padding: 0.25rem 0.25rem;
+    padding: 0.275rem 0.275rem;
     border-radius: calc(10px - 0.25rem);
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 1.05rem;
+    font-weight: 450;
+    line-height: 1;
+
+    @include utils.font-smoothing;
 
     border: none;
     white-space: nowrap;

@@ -609,7 +609,7 @@
     let styleClasses = ''
     if (pinned) {
       if (horizontalTabs) {
-        styleClasses = 'w-full min-w-fit px-[0.563rem] py-[0.438rem]'
+        styleClasses = 'w-[34.5px] min-w-fit px-[0.563rem] py-[0.438rem] h-[34.5px]'
       } else {
         styleClasses = 'w-full p-3'
       }
@@ -882,7 +882,7 @@
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
-        class="items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
+        class="items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-lg"
         use:tooltip2={{
           text: 'Remove from Sidebar (⌘ + W)',
           position: 'right'
@@ -893,7 +893,7 @@
     {:else}
       <button
         on:click|stopPropagation={handleArchive}
-        class="items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
+        class="items-center hidden group-hover:!flex justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-lg"
       >
         {#if tab.archived}
           <Icon name="trash" size="16px" />
@@ -972,7 +972,7 @@
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
               slot="trigger"
-              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
+              class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-lg"
             >
               <Icon name="news" />
             </button>
@@ -1022,7 +1022,7 @@
             >
               <button
                 on:click|stopPropagation={() => handleBookmark()}
-                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
+                class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-lg"
               >
                 {#if bookmarkingState === 'in_progress'}
                   <Icon name="spinner" size="16px" />
@@ -1055,7 +1055,7 @@
         {#if showExcludeOthersButton}
           <button
             on:click|stopPropagation={handleExcludeOthers}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
+            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-lg"
             use:tooltip={{
               content: 'Only use this tab',
               action: 'hover',
@@ -1092,7 +1092,7 @@
     <!-- TODO (maxi): This is broken (on base already as well) -->
     {#if isScopedMiniBrowserOpen}
       <div
-        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-full"
+        class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content rounded-lg"
       >
         <Icon name="eye" />
       </div>
@@ -1130,7 +1130,7 @@
 
   .tab {
     view-transition-class: tab !important;
-    padding: 0.725rem 1rem;
+    padding: 0.65rem 0.85rem;
     font-weight: 400;
     -webkit-font-smoothing: auto;
     letter-spacing: 0.00925em;
@@ -1163,7 +1163,8 @@
       );
 
       :global(body:not(.dark)) & {
-        --squircle-shadow: 0px 2px 2px -1px var(--black-09);
+        // Removed because shadows push the background inwards, which looks shitty
+        //--squircle-shadow: 0px 2px 2px -1px var(--black-09);
         --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
           inset 0px 1.25px 0px -1.25px var(--white-60), inset 1.25px 0px 0px -1.25px var(--white-60),
           inset -1.25px 0px 0px -1.25px var(--white-60),
@@ -1193,7 +1194,7 @@
       --radius: 8px;
       @include utils.squircle($fill: var(--fill), $radius: 8px, $smooth: 0.28);
 
-      padding: 0.5rem 0.6rem;
+      padding: 0.5rem 0.5rem;
 
       &:not(.active) {
         @include utils.light-dark-custom(
@@ -1470,12 +1471,19 @@
   }
 
   .title {
+    font-size: 1rem;
+    letter-spacing: 0.0075em;
+    font-weight: 420 !important;
+    margin-bottom: 0.5px;
+    @include utils.font-smoothing;
     input {
       height: 100%;
       min-width: 0;
       font-size: inherit;
+      letter-spacing: inherit;
       line-height: inherit;
       font-family: inherit;
+      @include utils.font-smoothing;
 
       &:focus {
         outline: none;

@@ -279,7 +279,7 @@
     border: 0.5px solid var(--ctx-border);
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
     user-select: none;
-    font-size: 0.95em;
+    font-size: 0.9em;
     transform-origin: top left;
 
     animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);

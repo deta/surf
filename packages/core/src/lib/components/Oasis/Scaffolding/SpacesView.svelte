@@ -605,7 +605,7 @@
     flex-direction: column;
     align-items: center;
     padding: 1rem 0.75rem 1rem 0.75rem;
-    gap: 1.5rem;
+    gap: 1.25rem;
     height: 100%;
     backdrop-filter: blur(24px);
     overflow: hidden;
@@ -656,7 +656,7 @@
   .folders-list {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.1rem;
     width: 100%;
   }
 
@@ -778,7 +778,7 @@
   }
 
   .folders-header-text {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 500;
     letter-spacing: 0.0025em;
     line-height: 1;

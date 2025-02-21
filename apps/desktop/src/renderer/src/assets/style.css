@@ -1,14 +1,6 @@
 body {
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    'Helvetica Neue',
-    'Segoe UI',
-    'Oxygen',
-    'Ubuntu',
-    'Cantarell',
-    'Open Sans',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Open Sans', sans-serif;
   color: black;
   background-color: white;
   padding: 0;
@@ -30,4 +22,35 @@ body {
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+
+@font-face {
+  font-family: 'SN Pro';
+  src:
+    url('./fonts/SNPro-Variable.ttf') format('truetype'),
+    url('./fonts/SNPro-Variable.woff2') format('woff2'),
+    url('./fonts/SNPro-Variable.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SN Pro';
+  src:
+    url('./fonts/SNPro-VariableItalic.ttf') format('truetype'),
+    url('./fonts/SNPro-VariableItalic.woff2') format('woff2'),
+    url('./fonts/SNPro-VariableItalic.woff') format('woff');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+.font-rounded {
+  font-family: 'SN Pro', sans-serif;
+}
+
+.font-rounded-italic {
+  font-family: 'SN Pro', sans-serif;
+  font-style: italic;
 }

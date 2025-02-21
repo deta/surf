@@ -1711,7 +1711,7 @@
     width: 100%;
 
     input {
-      font-size: 1.9em;
+      font-size: 2.25em;
       font-weight: 600;
       border: none;
       outline: none;
@@ -1720,7 +1720,7 @@
       margin: 0;
       width: 100%;
 
-      font-family: Gambarino;
+      font-family: SN Pro;
       letter-spacing: 0.3px;
 
       color: var(--text-color);
@@ -1849,19 +1849,40 @@
     overscroll-behavior: auto;
 
     :global(h1) {
-      font-size: 1.38em;
+      font-size: 1.875em;
+      line-height: 1.3;
+      font-weight: 600;
+      margin-top: 2em;
+      margin-bottom: 4px;
     }
     :global(h2) {
-      font-size: 1.3em;
+      font-size: 1.5em;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-top: 1.4em;
+      margin-bottom: 1px;
     }
     :global(h3) {
-      font-size: 1.21em;
+      font-size: 1.25em;
+      font-weight: 600;
+      margin-top: 1em;
+      margin-bottom: 1px;
+      line-height: 1.3;
     }
+
     :global(h4) {
-      font-size: 1.27em;
+      font-size: 1.125em;
+      font-weight: 600;
+      margin-top: 1em;
+      margin-bottom: 1px;
+      line-height: 1.3;
     }
     :global(h5) {
-      font-size: 1.13em;
+      font-size: 1em;
+      font-weight: 600;
+      margin-top: 1em;
+      margin-bottom: 1px;
+      line-height: 1.3;
     }
 
     :global(ul li) {

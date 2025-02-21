@@ -14,7 +14,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        gambarino: ['Gambarino-Display', 'serif']
+        gambarino: ['Gambarino-Display', 'serif'],
+        sn: ['SN Pro', 'sans-serif']
       }
     }
   },

@@ -888,6 +888,13 @@
       &[data-resource-type='application/vnd.space.document.space-note'] {
         :global(.tiptap) {
           font-size: 0.79em !important;
+          letter-spacing: 0.025em;
+          font-weight: 400;
+        }
+
+        :global(.tiptap h1) {
+          font-size: 1.4em !important;
+          font-weight: 550;
         }
       }
     }
