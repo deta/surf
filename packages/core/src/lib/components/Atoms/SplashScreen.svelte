@@ -109,7 +109,7 @@
     filter: invert(1);
   }
   .surf {
-    font-family: Gambarino;
+    font-family: Gambarino-Display;
     font-size: 2em;
     letter-spacing: 0.32px;
   }

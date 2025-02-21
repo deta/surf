@@ -84,7 +84,7 @@
           </div>
 
           <input
-            class="editable headline"
+            class="editable headline font-gambarino"
             type="text"
             bind:this={headlineInput}
             bind:value={headline}
@@ -259,7 +259,6 @@
     display: relative;
     top: 0;
     font-size: 3rem;
-    font-family: 'Gambarino';
     color: #1a1a1a;
     margin-right: 1rem;
     color: var(--contrast-color);
@@ -340,7 +339,7 @@
 
   .editable.headline {
     font-size: 3rem;
-    font-family: 'Gambarino';
+    font-family: 'Gambarino-Display';
   }
 
   .editable.description {
