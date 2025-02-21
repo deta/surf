@@ -65,11 +65,11 @@ export const SEARCH_ENGINES: {
     getUrl: (query: string) => `https://search.brave.com/search?source=web&q=${query}`
   },
   /*{
-      key: 'startpage',
-      title: 'Search with Startpage',
-      shortcuts: ['startpage'],
-      getUrl: (query: string) => `https://www.startpage.com/sp/search?query=${query}`
-    },*/
+        key: 'startpage',
+        title: 'Search with Startpage',
+        shortcuts: ['startpage'],
+        getUrl: (query: string) => `https://www.startpage.com/sp/search?query=${query}`
+      },*/
   {
     key: 'wolframalpha',
     title: 'Search WolframAlpha',
@@ -111,5 +111,11 @@ export const SEARCH_ENGINES: {
     title: 'Search Gmail',
     shortcuts: ['gmail', 'googlemail', 'mail'],
     getUrl: (query: string) => `https://mail.google.com/mail/u/0/#search/${query}`
+  },
+  {
+    key: 'kagi',
+    title: 'Search with Kagi',
+    shortcuts: ['kagi'],
+    getUrl: (query: string) => `https://kagi.com/search?q=${query}`
   }
 ]
