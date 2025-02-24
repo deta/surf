@@ -43,7 +43,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.9.0
+          node-version: 22.14.0
 
       - name: Install Dependencies
         # using retries as there are recurring cases for unknown reasons where the yarn install gets stuck

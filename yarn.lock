@@ -4948,17 +4948,17 @@ electron-builder@^24.13.3:
     simple-update-notifier "2.0.0"
     yargs "^17.6.2"
 
-electron-chrome-extensions@4.3.0:
-  version "4.3.0"
-  resolved "https://registry.yarnpkg.com/electron-chrome-extensions/-/electron-chrome-extensions-4.3.0.tgz#5f35c123eb407d3d7c6fa286b1caa531fb3956a8"
-  integrity sha512-7JJLBx0wXBgGxbbQM+NgyZQgCsA51bYjUzhe9y2qOyeGnlCHPAAMNXUrrkvlHoZTcgemLOdhJ5tU8MPKw35ozw==
+electron-chrome-extensions@4.4.0:
+  version "4.4.0"
+  resolved "https://registry.yarnpkg.com/electron-chrome-extensions/-/electron-chrome-extensions-4.4.0.tgz#83dbd50d1ce3110cc447599e2f0a801cec479aca"
+  integrity sha512-NLrp6Qxp5KvAZPexAErfO/ZkKawwJoPqPGq4vDOmkXifkS017ZfzS3TTCAedToxXg5eZtYp4CQ1tqBzAtT/jSQ==
   dependencies:
     debug "^4.3.1"
 
-electron-chrome-web-store@0.8.0:
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/electron-chrome-web-store/-/electron-chrome-web-store-0.8.0.tgz#adc5d0af94a1bff52fac3f49428de2fbe9f7f71d"
-  integrity sha512-H7y7jPWJay3zPvldnN7BX3MEEICGtOZ3WnQ4wndwlGk2cY8ka6m6mIDJ5QsNxEzxZP3lWdKQ+dPE2ljhE9LzOg==
+electron-chrome-web-store@0.9.0:
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/electron-chrome-web-store/-/electron-chrome-web-store-0.9.0.tgz#4f53e7d855e3c3b54d0ffc83c71d2ec3d4d49c57"
+  integrity sha512-WxMieEHsJBm2I6wUjEs8eevhiioLxN6PKGeEnxsqgRn44Xu4LZ1Za0jhuTj83Gje/aoW+/+U5AEg1LgrJ1amkQ==
   dependencies:
     "@types/chrome" "^0.0.287"
     adm-zip "^0.5.16"
@@ -5040,10 +5040,10 @@ electron-vite@^1.0.27:
     magic-string "^0.30.1"
     picocolors "^1.0.0"
 
-electron@35.0.0-beta.5:
-  version "35.0.0-beta.5"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-35.0.0-beta.5.tgz#a0bb360eba3e1b6c4b60f4c7ec2c4619cc2b21d5"
-  integrity sha512-9g16X/1rFgOonph5lHjwaa1Kz+YqPB1ubYmYDayzScHKU3Xgl8J2dHDMuv93K2AL3gVSKBs0iFfAuyu5WAzXww==
+electron@35.0.0-beta.8:
+  version "35.0.0-beta.8"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-35.0.0-beta.8.tgz#acf936b42a063071d29e6cb7a85c02ac507c3edc"
+  integrity sha512-ehYTjZAwT4al6wJkj28WMn+ESas5kyK3DYp2AXz10jBGytspLkSd5Pgi8gJCZtF7Z5unHkCE1H3F/2aEFPDeYg==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^22.7.7"

@@ -1,5 +1,5 @@
 diff --git a/node_modules/electron-chrome-web-store/dist/cjs/browser/index.js b/node_modules/electron-chrome-web-store/dist/cjs/browser/index.js
-index 0e42264..010c678 100644
+index 5760fb1..f27ce15 100644
 --- a/node_modules/electron-chrome-web-store/dist/cjs/browser/index.js
 +++ b/node_modules/electron-chrome-web-store/dist/cjs/browser/index.js
 @@ -1577,7 +1577,7 @@ async function initUpdater(state) {
@@ -11,15 +11,15 @@ index 0e42264..010c678 100644
    const loadExtensions = typeof opts.loadExtensions === "boolean" ? opts.loadExtensions : true;
    const allowUnpackedExtensions = typeof opts.allowUnpackedExtensions === "boolean" ? opts.allowUnpackedExtensions : false;
    const autoUpdate = typeof opts.autoUpdate === "boolean" ? opts.autoUpdate : true;
-@@ -1590,6 +1590,7 @@ async function installChromeWebStore(opts = {}) {
-     denylist: opts.denylist ? new Set(opts.denylist) : void 0,
+@@ -1592,6 +1592,7 @@ async function installChromeWebStore(opts = {}) {
+     minimumManifestVersion,
      beforeInstall
    };
 +  /*
    const preloadPath = path6.join(modulePath, "dist/renderer/web-store-preload.js");
    if ("registerPreloadScript" in session) {
      session.registerPreloadScript({
-@@ -1600,6 +1601,7 @@ async function installChromeWebStore(opts = {}) {
+@@ -1602,6 +1603,7 @@ async function installChromeWebStore(opts = {}) {
    } else {
      session.setPreloads([...session.getPreloads(), preloadPath]);
    }
@@ -28,7 +28,7 @@ index 0e42264..010c678 100644
    await import_electron5.app.whenReady();
    if (loadExtensions) {
 diff --git a/node_modules/electron-chrome-web-store/dist/esm/browser/index.mjs b/node_modules/electron-chrome-web-store/dist/esm/browser/index.mjs
-index c7892b5..b9b7b33 100644
+index 3727562..a5690c6 100644
 --- a/node_modules/electron-chrome-web-store/dist/esm/browser/index.mjs
 +++ b/node_modules/electron-chrome-web-store/dist/esm/browser/index.mjs
 @@ -855,7 +855,7 @@ async function initUpdater(state) {
@@ -40,15 +40,15 @@ index c7892b5..b9b7b33 100644
    const loadExtensions = typeof opts.loadExtensions === "boolean" ? opts.loadExtensions : true;
    const allowUnpackedExtensions = typeof opts.allowUnpackedExtensions === "boolean" ? opts.allowUnpackedExtensions : false;
    const autoUpdate = typeof opts.autoUpdate === "boolean" ? opts.autoUpdate : true;
-@@ -868,6 +868,7 @@ async function installChromeWebStore(opts = {}) {
-     denylist: opts.denylist ? new Set(opts.denylist) : void 0,
+@@ -870,6 +870,7 @@ async function installChromeWebStore(opts = {}) {
+     minimumManifestVersion,
      beforeInstall
    };
 +  /*
    const preloadPath = path6.join(modulePath, "dist/renderer/web-store-preload.js");
    if ("registerPreloadScript" in session) {
      session.registerPreloadScript({
-@@ -878,6 +879,7 @@ async function installChromeWebStore(opts = {}) {
+@@ -880,6 +881,7 @@ async function installChromeWebStore(opts = {}) {
    } else {
      session.setPreloads([...session.getPreloads(), preloadPath]);
    }

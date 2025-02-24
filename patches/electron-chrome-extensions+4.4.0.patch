@@ -1,5 +1,5 @@
 diff --git a/node_modules/electron-chrome-extensions/dist/cjs/index.js b/node_modules/electron-chrome-extensions/dist/cjs/index.js
-index 7268748..3659071 100644
+index d8f7154..9da95b3 100644
 --- a/node_modules/electron-chrome-extensions/dist/cjs/index.js
 +++ b/node_modules/electron-chrome-extensions/dist/cjs/index.js
 @@ -28,11 +28,11 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
@@ -68,13 +68,13 @@ index 7268748..3659071 100644
        });
        d(`opened popup: ${popupUrl}`);
        this.ctx.emit("browser-action-popup-created", this.popup);
-@@ -2677,3 +2687,4 @@ var ElectronChromeExtensions = class extends import_node_events3.EventEmitter {
+@@ -2769,3 +2779,4 @@ var ElectronChromeExtensions = class extends import_node_events3.EventEmitter {
  0 && (module.exports = {
    ElectronChromeExtensions
  });
 +//# sourceMappingURL=index.js.map
 diff --git a/node_modules/electron-chrome-extensions/dist/esm/index.mjs b/node_modules/electron-chrome-extensions/dist/esm/index.mjs
-index f898757..0e9550a 100644
+index 4b594e7..574f063 100644
 --- a/node_modules/electron-chrome-extensions/dist/esm/index.mjs
 +++ b/node_modules/electron-chrome-extensions/dist/esm/index.mjs
 @@ -135,6 +135,7 @@ var _PopupView = class _PopupView {
@@ -128,13 +128,13 @@ index f898757..0e9550a 100644
        });
        d(`opened popup: ${popupUrl}`);
        this.ctx.emit("browser-action-popup-created", this.popup);
-@@ -2647,3 +2657,4 @@ var ElectronChromeExtensions = class extends EventEmitter3 {
+@@ -2739,3 +2749,4 @@ var ElectronChromeExtensions = class extends EventEmitter3 {
  export {
    ElectronChromeExtensions
  };
 +//# sourceMappingURL=index.mjs.map
 diff --git a/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts b/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts
-index 4b0ef18..daff4be 100644
+index 28dcab4..f368b7f 100644
 --- a/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts
 +++ b/node_modules/electron-chrome-extensions/dist/types/browser/impl.d.ts
 @@ -1,7 +1,7 @@
@@ -146,10 +146,10 @@ index 4b0ef18..daff4be 100644
      selectTab?(tab: Electron.WebContents, window: Electron.BaseWindow): void;
      removeTab?(tab: Electron.WebContents, window: Electron.BaseWindow): void;
      /**
-@@ -11,4 +11,8 @@ export interface ChromeExtensionImpl {
-     assignTabDetails?(details: chrome.tabs.Tab, tab: Electron.WebContents): void;
+@@ -12,4 +12,8 @@ export interface ChromeExtensionImpl {
      createWindow?(details: chrome.windows.CreateData): Promise<Electron.BaseWindow>;
      removeWindow?(window: Electron.BaseWindow): void;
+     requestPermissions?(extension: Electron.Extension, permissions: chrome.permissions.Permissions): Promise<boolean>;
 +    /**
 +     * Get the preferred popup mode (horizontal or vertical)
 +     */
