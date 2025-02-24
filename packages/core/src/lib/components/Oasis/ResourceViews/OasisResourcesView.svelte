@@ -35,8 +35,8 @@
   export let hideSortingSettings: boolean = false
 
   export let interactive: boolean = true
-  export let viewType: ContextViewType | undefined = ContextViewTypes.Masonry // TODO: (@maxu) impl
-  export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Cozy
+  export let viewType: ContextViewType | undefined = ContextViewTypes.Grid // TODO: (@maxu) impl
+  export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Compact
   export let sortBy: string | undefined
   export let order: string | null
 

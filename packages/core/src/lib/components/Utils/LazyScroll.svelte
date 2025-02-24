@@ -67,7 +67,7 @@
 
   const LAZY_N = 6 // NOTE: seems to be the best working value from testing
 
-  let renderedItemsN = writable(20)
+  let renderedItemsN = writable(30)
   /*  $: renderedItems = [
     ...new Map($items.slice(0, renderedItemsN).map((item) => [item.id, item])).values()
   ]*/
@@ -95,6 +95,7 @@
   })
 
   const handleScroll = (e: WheelEvent) => {
+    if (Math.sign(e.deltaY) <= 0) return
     throttledScheduleLoad()
   }
 </script>
