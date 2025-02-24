@@ -812,6 +812,7 @@ export class ResourceManager {
     )) as Resource[]
   }
 
+  // NOTE: if no `keyword_limit` is provided, the backend uses 100 as the default value
   async searchResources(
     query: string,
     tags?: SFFSResourceTag[],

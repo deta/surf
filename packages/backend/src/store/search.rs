@@ -51,7 +51,7 @@ fn map_resource_and_metadata(
 }
 
 impl Database {
-    pub fn keyword_search(
+    pub fn keyword_search_metadata(
         &self,
         keyword: &str,
         filtered_resource_ids: Vec<String>,
@@ -59,41 +59,95 @@ impl Database {
     ) -> BackendResult<Vec<SearchResultItem>> {
         let mut results: Vec<SearchResultItem> = Vec::new();
 
-        let escaped_keyword = escape_fts_query(keyword);
+        let limit_clause = limit.map_or(String::new(), |l| format!("LIMIT {}", l));
+        let inner_clause = format!(
+            "SELECT *
+              FROM resource_metadata
+              WHERE resource_metadata MATCH ?1
+              ORDER BY rank {}",
+            limit_clause
+        );
 
-        let base_query = "
-            SELECT DISTINCT M.*, R.* 
-            FROM resource_metadata M
-            LEFT JOIN resources R ON M.resource_id = R.id
-            WHERE (
-                R.id IN (SELECT T.resource_id FROM resource_text_content T WHERE T.content MATCH ?1)
-                OR R.id IN (SELECT resource_id FROM resource_metadata WHERE resource_metadata MATCH ?1)
-            )";
+        let match_phrase = format!("{{name alt}}: {}", keyword);
+        let base_query = format!(
+            "SELECT M.id, M.resource_id, M.name, M.source_uri, M.alt, M.user_context, R.* 
+            FROM (
+                {}
+            ) M
+            INNER JOIN resources R ON M.resource_id = R.id",
+            inner_clause
+        );
 
-        let limit_clause = limit.map_or(String::new(), |l| format!(" LIMIT {}", l));
-        
         let (query, params) = if filtered_resource_ids.is_empty() {
-            (
-                format!("{} ORDER BY rank{}", base_query, limit_clause),
-                vec![escaped_keyword],
-            )
+            (base_query, vec![match_phrase])
         } else {
             let placeholders = vec!["?"; filtered_resource_ids.len()].join(",");
             let filtered_query = format!(
                 "
                 {}
                 AND R.id IN ({})
-                ORDER BY rank{}
             ",
-                base_query, placeholders, limit_clause
+                base_query, placeholders
             );
+            let mut params = vec![match_phrase];
+            params.extend(filtered_resource_ids);
+            (filtered_query, params)
+        };
+        let row_map_fn = map_resource_and_metadata(None, SearchEngine::KeywordMetadata);
+        let mut stmt = self.conn.prepare(&query)?;
+        let items = stmt.query_map(rusqlite::params_from_iter(params.iter()), row_map_fn)?;
+        for item in items {
+            results.push(item?);
+        }
+        Ok(results)
+    }
 
-            let mut params = vec![escaped_keyword];
+    pub fn keyword_search_content(
+        &self,
+        keyword: &str,
+        filtered_resource_ids: Vec<String>,
+        limit: Option<i64>,
+    ) -> BackendResult<Vec<SearchResultItem>> {
+        let mut results: Vec<SearchResultItem> = Vec::new();
+
+        let limit_clause = limit.map_or(String::new(), |l| format!(" LIMIT {}", l));
+        let inner_clause = format!(
+            "SELECT resource_id
+            FROM resource_text_content
+            WHERE resource_text_content MATCH ?1
+            ORDER BY rank {}",
+            limit_clause
+        );
+
+        let base_query = format!(
+            "
+            SELECT M.id, M.resource_id, M.name, M.source_uri, M.alt, M.user_context, R.*
+            FROM (
+                {}
+            ) T
+            INNER JOIN resource_metadata M ON T.resource_id = M.resource_id
+            INNER JOIN resources R ON M.resource_id = R.id
+            ",
+            inner_clause
+        );
+
+        let (query, params) = if filtered_resource_ids.is_empty() {
+            (base_query, vec![keyword.to_string()])
+        } else {
+            let placeholders = vec!["?"; filtered_resource_ids.len()].join(",");
+            let filtered_query = format!(
+                "
+                {}
+                AND R.id IN ({})
+            ",
+                base_query, placeholders
+            );
+            let mut params = vec![keyword.to_string()];
             params.extend(filtered_resource_ids);
             (filtered_query, params)
         };
 
-        let row_map_fn = map_resource_and_metadata(None, SearchEngine::Keyword);
+        let row_map_fn = map_resource_and_metadata(None, SearchEngine::KeywordContent);
         let mut stmt = self.conn.prepare(&query)?;
         let items = stmt.query_map(rusqlite::params_from_iter(params.iter()), row_map_fn)?;
         for item in items {
@@ -165,7 +219,19 @@ impl Database {
             None => &vec![],
         };
 
-        let mut results = self.keyword_search(keyword, filtered_resource_ids.clone(), keyword_limit)?;
+        let escaped_keyword = escape_fts_query(keyword);
+        let mut results = self.keyword_search_metadata(
+            &escaped_keyword,
+            filtered_resource_ids.clone(),
+            keyword_limit,
+        )?;
+
+        results.extend(self.keyword_search_content(
+            &escaped_keyword,
+            filtered_resource_ids.clone(),
+            keyword_limit,
+        )?);
+
         if include_annotations {
             let mut annotations = self.list_resource_annotations(
                 results
@@ -183,11 +249,5 @@ impl Database {
             total: results.len() as i64,
             items: results,
         })
-        // let mut seen_resource_ids: Vec<String> = Vec::new();
-        // keyword resouce ids are guaranteed to be unique
-        // so not checking for duplicates
-        // for search_result in keyword_search_results {
-        //     seen_resource_ids.push(search_result.resource.resource.id.clone());
-        //     results.push(search_result);
     }
 }

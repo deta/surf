@@ -286,6 +286,7 @@ impl Worker {
                 )));
             }
         }
+        let keyword_limit = keyword_limit.unwrap_or(100);
         let include_annotations = include_annotations.unwrap_or(false);
 
         let semantic_search_enabled = semantic_search_enabled.unwrap_or_default();
@@ -299,15 +300,20 @@ impl Worker {
         let filtered_resource_ids =
             self.get_filtered_ids_for_search(resource_tag_filters, space_id)?;
 
-        let db_results =
-            self.db
-                .search_resources(&query, &filtered_resource_ids, include_annotations, keyword_limit)?;
+        let db_results = self.db.search_resources(
+            &query,
+            &filtered_resource_ids,
+            include_annotations,
+            Some(keyword_limit),
+        )?;
 
         for result in db_results.items {
             if result.resource.resource.resource_type.ends_with(".ignore") {
                 continue;
             }
-            // db_results are always unique by resource id
+            if seen_keys.contains(&result.resource.resource.id) {
+                continue;
+            }
             seen_keys.insert(result.resource.resource.id.clone());
             results.push(result)
         }

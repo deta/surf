@@ -865,7 +865,8 @@ pub struct CompositeResource {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SearchEngine {
-    Keyword,
+    KeywordContent,
+    KeywordMetadata,
     Proximity,
     Embeddings,
 }
