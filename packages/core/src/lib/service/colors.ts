@@ -1,9 +1,12 @@
 import ColorThief from '../utils/colors/colorthief.mjs'
-import { get, type Readable, type Writable, writable, derived } from 'svelte/store'
-import { type LogScope, useLogScope } from '@horizon/utils'
+import { get, type Readable, type Writable, writable } from 'svelte/store'
+import { useLogScope, type ScopedLogger } from '@horizon/utils'
 import type { ConfigService } from './config'
 import type { UserSettings } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
+
+import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
+import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
 
 export const LIGHT_BG_COLOR = 'hsla(0, 80%, 98%, 0.5)'
 export const DARK_BG_COLOR = 'hsla(0, 0%, 2%, 0.5)'
@@ -24,6 +27,22 @@ export interface CustomColorData {
   l: number
 }
 
+export interface ThemeData {
+  backgroundImage?: string | undefined
+  colors?: {
+    base: string
+    contrast: string
+  }
+}
+
+export function getBackgroundImageUrlFromId(id: string | undefined, darkMode: boolean) {
+  if (!id || id.startsWith('url(')) {
+    return `url('${darkMode ? vendorBackgroundDark : vendorBackgroundLight}')`
+  } else {
+    return `url('surf://resource/${id}')`
+  }
+}
+
 export interface SettingsData {
   app_style: 'dark' | 'light'
 }
@@ -31,7 +50,7 @@ export interface SettingsData {
 export class ColorService {
   private readonly unsubscribers = new Set<() => void>()
 
-  private log: LogScope
+  private log: ScopedLogger
   private readonly userConfig: Readable<UserSettings>
   private readonly colorMode: ColorMode
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { type Writable, derived, writable, get, type Readable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import { useLogScope, useDebounce, useLocalStorageStore, tooltip } from '@horizon/utils'
+  import { useLogScope, useDebounce, useLocalStorageStore, tooltip, isMac } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts, type ToastItem } from '../../service/toast'
   import { useConfig } from '../../service/config'
@@ -41,7 +41,7 @@
   import stuffSearch from '../../../../public/assets/demo/stuffsearch.gif'
   import { portal } from '../Core/Portal.svelte'
   import Tooltip from '../Onboarding/Tooltip.svelte'
-  import SearchField from '../Atoms/SearchField.svelte'
+  import { getBackgroundImageUrlFromId } from '../../service/colors'
   import Select from '../Atoms/Select.svelte'
   import {
     createResourcesFromMediaItems,
@@ -52,18 +52,15 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
   import ResourceDetails from '@horizon/core/src/lib/components/Oasis/Scaffolding/ResourceDetails.svelte'
-  import {
-    addSelectionById,
-    removeSelectionById
-  } from '@horizon/core/src/lib/components/Oasis/utils/select'
+  import { removeSelectionById } from '@horizon/core/src/lib/components/Oasis/utils/select'
   import StuffRightSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/StuffRightSidebar.svelte'
 
   import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
-  import type {
-    FilterChangeEvent,
-    SortByChangeEvent,
-    ViewChangeEvent
-  } from '../Oasis/SpaceFilterViewButtons.svelte'
+  import type { FilterChangeEvent, ViewChangeEvent } from '../Oasis/SpaceFilterViewButtons.svelte'
+  import ContextHeader from '../Oasis/ContextHeader.svelte'
+  import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
+  import OasisSpaceNavbar from '../Oasis/OasisSpaceNavbar.svelte'
+  import SpaceFilterViewButtons from '../Oasis/SpaceFilterViewButtons.svelte'
 
   export let showTabSearch: Writable<number>
   export let spaceId: string
@@ -129,6 +126,7 @@
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
   $: isInboxSpace = $selectedSpaceId === 'inbox'
+  $: darkMode = $userConfigSettings.app_style === 'dark'
 
   $: if (updateSearchValue) {
     searchValue.set($updateSearchValue)
@@ -431,6 +429,15 @@
     scopedMiniBrowser.openWebpage(e.detail, {
       from: OpenInMiniBrowserEventFrom.Oasis
     })
+  }
+
+  const handleChatWithSpace = (spaceId: string) => {
+    dispatch('open-space-and-chat', {
+      spaceId,
+      text: $searchValue
+    })
+    showTabSearch.set(0)
+    searchValue.set('')
   }
 
   const handleCloseOverlay = () => {
@@ -765,6 +772,16 @@
     })
   }
 
+  $: themeOverride = !['all', 'inbox'].includes($selectedSpaceId)
+    ? undefined
+    : {
+        backgroundImage: getBackgroundImageUrlFromId(undefined, darkMode),
+        colors: {
+          contrast: darkMode ? 'hsl(212, 92%, 92%)' : 'hsl(212, 92%, 8%)',
+          base: '#808080'
+        }
+      }
+
   onMount(() => {
     Dragcula.get().on('dragstart', handleDragculaDragStart)
     Dragcula.get().on('dragend', handleDragculaDragEnd)
@@ -939,17 +956,13 @@
           />
         {/key}
 
-        <div class="stuff-view h-full w-full relative">
+        <div
+          class="stuff-view h-full w-full relative"
+          style:--background-image={themeOverride?.backgroundImage}
+          style:--base-color={themeOverride?.colors?.base}
+          style:--contrast-color={themeOverride?.colors?.contrast}
+        >
           <Tooltip rootID="stuff" />
-
-          <!-- {#if isInboxSpace}
-            <ContextTabsBar
-              on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-              on:handled-drop={handlePostDropOnSpace}
-              on:select-space={handleSpaceSelected}
-              on:reload={handleReload}
-            />
-          {/if} -->
 
           {#if !$isBuiltInSpace}
             {#await new Promise((resolve) => setTimeout(resolve, 175))}
@@ -1005,41 +1018,117 @@
                 {#await new Promise((resolve) => setTimeout(resolve, 175))}
                   <!-- wait -->
                 {:then}
-                  <div class="w-full h-full">
-                    {#key $selectedSpaceId}
-                      <!--
+                  {#key $selectedSpaceId}
+                    <!--
                         TODO: Needs extended api
                         on:changedSortBy={handleSortBySettingsChanged}
                         on:changedOrder={handleOrderSettingsChanged}
                       -->
-                      <OasisResourcesView
-                        resources={renderedItems}
-                        {searchValue}
-                        isInSpace={false}
-                        status={$loadingContents
-                          ? { icon: 'spinner', message: 'Loading contents…' }
-                          : $isSearching && $searchValue?.length > 0
-                            ? { icon: 'spinner', message: 'Searching your stuff…' }
-                            : undefined}
-                        viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                          ?.viewType}
-                        viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                          ?.viewDensity}
-                        hideSortingSettings
-                        on:click={handleItemClick}
-                        on:open={(e) => handleOpen(e, true)}
-                        on:open-and-chat
-                        on:open-space-as-tab
-                        on:remove={handleResourceRemove}
-                        on:batch-remove={handleResourceRemove}
-                        on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-                        on:batch-open
-                        on:new-tab
-                        on:changedView={handleViewSettingsChanges}
-                        on:changedFilter={handleFilterTypeChange}
+
+                    <OasisSpaceNavbar {searchValue}>
+                      <svelte:fragment slot="left">
+                        <Icon
+                          name={isInboxSpace ? 'circle-dot' : 'save'}
+                          size="1.4rem"
+                          color="currentColor"
+                          style="color: currentColor;"
+                        />
+
+                        <span class="context-name">{isInboxSpace ? 'Home' : 'All My Stuff'}</span>
+                      </svelte:fragment>
+                      <svelte:fragment slot="right">
+                        {#if isInboxSpace}
+                          <button
+                            use:tooltip={{
+                              position: 'left',
+                              text:
+                                $searchValue.length > 0
+                                  ? 'Create new chat with this context'
+                                  : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                            }}
+                            class="chat-with-space pointer-all"
+                            class:activated={$searchValue.length > 0}
+                            on:click={() => handleChatWithSpace('inbox')}
+                          >
+                            <Icon name="face" size="1.6em" />
+
+                            <div class="chat-text">Ask Context</div>
+                          </button>
+                        {/if}
+                        {#if $isBuiltInSpace && !!$searchValue}
+                          <Select {selectedFilter} on:change={handleOasisFilterChange}>
+                            <option value="all">Show All</option>
+                            <option value="saved_by_user">Saved by Me</option>
+                          </Select>
+                        {/if}
+                      </svelte:fragment>
+                      <svelte:fragment slot="right-dynamic">
+                        <SpaceFilterViewButtons
+                          hideSortingSettings
+                          filter={$selectedFilterTypeId ?? null}
+                          viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                            ?.viewType}
+                          viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                            ?.viewDensity}
+                          sortBy={'created_at'}
+                          order={'desc'}
+                          on:changedView={handleViewSettingsChanges}
+                          on:changedFilter={handleFilterTypeChange}
+                        />
+                      </svelte:fragment>
+                    </OasisSpaceNavbar>
+
+                    <ContextHeader
+                      headline={isInboxSpace ? 'Home' : 'All Your Stuff'}
+                      headlineEditable={false}
+                      descriptionEditable={false}
+                    >
+                      <svelte:fragment slot="icon">
+                        <Icon
+                          name={isInboxSpace ? 'circle-dot' : 'save'}
+                          size="xl"
+                          color="currentColor"
+                          style="color: currentColor;"
+                        />
+                      </svelte:fragment>
+                    </ContextHeader>
+
+                    {#if isInboxSpace}
+                      <ContextTabsBar
+                        on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                        on:handled-drop={handlePostDropOnSpace}
+                        on:select-space={handleSpaceSelected}
+                        on:reload={handleReload}
                       />
-                    {/key}
-                  </div>
+                    {/if}
+
+                    <OasisResourcesView
+                      resources={renderedItems}
+                      {searchValue}
+                      isInSpace={false}
+                      status={$loadingContents
+                        ? { icon: 'spinner', message: 'Loading contents…' }
+                        : $isSearching && $searchValue?.length > 0
+                          ? { icon: 'spinner', message: 'Searching your stuff…' }
+                          : undefined}
+                      viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                        ?.viewType}
+                      viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                        ?.viewDensity}
+                      hideSortingSettings
+                      on:click={handleItemClick}
+                      on:open={(e) => handleOpen(e, true)}
+                      on:open-and-chat
+                      on:open-space-as-tab
+                      on:remove={handleResourceRemove}
+                      on:batch-remove={handleResourceRemove}
+                      on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+                      on:batch-open
+                      on:new-tab
+                      on:changedView={handleViewSettingsChanges}
+                      on:changedFilter={handleFilterTypeChange}
+                    />
+                  {/key}
                 {/await}
               </LazyScroll>
             </DropWrapper>
@@ -1060,43 +1149,6 @@
           </StuffRightSidebar>
         {/if}
       </div>
-
-      {#if $isBuiltInSpace}
-        <div class="global-search-wrapper">
-          {#if $showTabSearch === 2 && $isBuiltInSpace}
-            <button
-              class="onboarding-button"
-              on:click={() => {
-                $onboardingOpen = !$onboardingOpen
-              }}
-              use:tooltip={{
-                text: 'Need help?',
-                position: 'right'
-              }}
-              aria-label="Show onboarding"
-            >
-              <Icon name="info" />
-            </button>
-          {/if}
-
-          <div class="input-wrapper">
-            <SearchField {searchValue} placeholder="Search..." autoFocus={$showTabSearch === 2} />
-
-            {#if $isBuiltInSpace && !!$searchValue}
-              <Select {selectedFilter} on:change={handleOasisFilterChange}>
-                <option value="all">Show All</option>
-                <option value="saved_by_user">Saved by Me</option>
-              </Select>
-            {/if}
-          </div>
-
-          {#if $showTabSearch === 2}
-            <div class="absolute right-2 flex items-center gap-2">
-              <!--<FilterSelector selected={selectedFilterTypeId} on:change={handleFilterTypeChange} />-->
-            </div>
-          {/if}
-        </div>
-      {/if}
     {/if}
   </div>
 </div>

@@ -1,78 +1,21 @@
 <script lang="ts">
-  import { isMac, tooltip } from '@horizon/utils'
-  import { useOasis, type OasisSpace } from '../../service/oasis'
   import SearchInput from './SearchInput.svelte'
   import type { Readable } from 'svelte/store'
-  import { DynamicIcon, Icon } from '@horizon/icons'
-  import { slide } from 'svelte/transition'
-  import { createEventDispatcher } from 'svelte'
-  import SpaceFilterViewButtons from './SpaceFilterViewButtons.svelte'
-  import type { ContextViewType, ContextViewDensity } from '@horizon/types'
 
-  export let space: OasisSpace
   export let searchValue: Readable<string>
-
-  export let viewType: ContextViewType | undefined
-  export let viewDensity: ContextViewDensity | undefined
-  export let sortBy: string | undefined
-  export let order: string | null
-
-  const dispatch = createEventDispatcher<{ chat: void }>()
-
-  const oasis = useOasis()
-
-  const data = space.data
-
-  const selectedFilterTypeId = oasis.selectedFilterTypeId
-
-  const handleChatWithSpace = () => {}
 </script>
 
-<nav>
+<nav class="context-navbar">
   <div class="section first">
-    {#key `${$data.imageIcon}-${$data.colors}-${$data.emoji}`}
-      <DynamicIcon name={space.getIconString()} />
-    {/key}
-    <span class="context-name">{$data.folderName}</span>
+    <slot name="left" />
   </div>
 
-  <!--<div class="section center p-1"></div>-->
   <div class="section trailing flex items-center gap-2">
-    <SearchInput
-      bind:value={$searchValue}
-      on:search
-      on:chat={handleChatWithSpace}
-      placeholder="Search this Context"
-    />
-    <button
-      use:tooltip={{
-        position: 'left',
-        text:
-          $searchValue.length > 0
-            ? 'Create new chat with this context'
-            : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
-      }}
-      class="chat-with-space pointer-all"
-      class:activated={$searchValue.length > 0}
-      on:click={() => dispatch('chat')}
-    >
-      <Icon name="face" size="1.6em" />
-
-      <div class="chat-text">Ask Context</div>
-    </button>
+    <SearchInput bind:value={$searchValue} on:search on:chat placeholder="Search this Context" />
+    <slot name="right" />
 
     <div class="dynamic-buttons">
-      <SpaceFilterViewButtons
-        filter={$selectedFilterTypeId}
-        {viewType}
-        {viewDensity}
-        {sortBy}
-        {order}
-        on:changedView
-        on:changedFilter
-        on:changedSortBy
-        on:changedOrder
-      />
+      <slot name="right-dynamic" />
     </div>
   </div>
 </nav>
@@ -94,7 +37,7 @@
       width: fit-content;
     }
   }
-  nav {
+  :global(nav.context-navbar) {
     color: var(--contrast-color);
     position: sticky;
     z-index: 10;
@@ -125,6 +68,15 @@
       animation: reveal 0.2s ease-out forwards;
       animation-timeline: scroll(nearest block);
       animation-range: 200px 300px;
+    }
+
+    :global(.context-name) {
+      user-select: none;
+      font-size: 1.25em;
+      font-family: 'Inter';
+      font-weight: 420;
+      color: #1a1a1a;
+      color: var(--contrast-color);
     }
 
     .dynamic-buttons {
@@ -208,19 +160,30 @@
     }
   }
 
-  .context-name {
-    user-select: none;
-    font-size: 1.25em;
-    font-family: 'Inter';
-    font-weight: 420;
-    color: #1a1a1a;
-    color: var(--contrast-color);
-  }
-
-  .chat-with-space {
+  :global(nav.context-navbar .chat-with-space) {
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 0.5em;
+    appearance: none;
+    padding: 0.5em;
+    border-radius: 0.75rem;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.02rem;
+    transition-property: color, background, opacity;
+    transition-duration: 123ms;
+    transition-timing-function: ease-out;
+
+    opacity: 0.7;
+
+    &:hover {
+      color: #0369a1;
+      background: rgb(232, 238, 241);
+      color: var(--contrast-color);
+      background: rgb(from var(--base-color) r g b / 0.4);
+      opacity: 1;
+    }
   }
 </style>

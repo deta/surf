@@ -262,7 +262,6 @@
   const colorService = provideColorService(config, ColorMode.HSL)
   onDestroy(colorService.destroy)
   desktopManager.attachColorService(colorService)
-  const colorScheme = colorService.colorScheme
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
   const userConfigSettings = config.settings

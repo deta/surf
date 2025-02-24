@@ -67,6 +67,7 @@
             showNewTabOverlay.set(0)
           } else {
             await tabsManager.changeScope(desktopId, ChangeContextEventTrigger.SpaceInOasis)
+            desktopManager.setVisible(true, { trigger: OpenHomescreenEventTrigger.CommandMenu })
             showNewTabOverlay.set(0)
           }
         }}

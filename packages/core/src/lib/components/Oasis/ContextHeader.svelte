@@ -1,76 +1,42 @@
 <script lang="ts">
-  import { OasisSpace, useOasis } from '../../service/oasis'
-  import { get, writable, type Writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { createEventDispatcher } from 'svelte'
 
-  import DesktopPreview from '../Chat/DesktopPreview.svelte'
-  import OasisSpaceSettings from './Scaffolding/OasisSpaceSettings.svelte'
-  import { fly } from 'svelte/transition'
-  import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
-  import { clickOutside } from '@horizon/utils'
-  import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
+  export let headline: string | undefined = undefined
+  export let description: string | undefined = undefined
+  //export let themeData: ThemeData | undefined = undefined
 
-  export let space: OasisSpace
+  export let headlineEditable = true
+  export let descriptionEditable = true
 
-  export let newlyLoadedResources: Writable<any[]>
-  export let processingSourceItems: Writable<any[]>
-  export let loadingSpaceSources: Writable<boolean>
+  const dispatch = createEventDispatcher<{
+    'changed-headline': string
+    'changed-description': string
+  }>()
 
-  const oasis = useOasis()
-
-  const showSettingsModal = writable(false)
-
-  let isEditingHeadline = false
-  let isEditingDescription = false
-
-  let headline = ''
-  let description = ''
-  let previousHeadline = ''
   let headlineInput: HTMLInputElement
   let descriptionInput: HTMLInputElement
 
-  $: {
-    const spaceData = get(space.data)
-    if (!isEditingHeadline) {
-      headline = spaceData.folderName
-      previousHeadline = headline
-    }
-    if (!isEditingDescription) {
-      description = spaceData.description || ''
-    }
-  }
+  let previousHeadline = headline
 
-  function enableEditingHeadline() {
-    isEditingHeadline = true
-    // setTimeout(() => {
-    //   if (headlineInput) {
-    //     headlineInput.select()
-    //   }
-    // }, 0)
-  }
-
-  function disableEditingHeadline() {
+  function exitEditingHeadline() {
+    if (headline === undefined || previousHeadline === undefined) return
     headlineInput.blur()
     if (headline.trim() === '') {
       headline = previousHeadline
     } else {
       previousHeadline = headline
-      oasis.updateSpaceData(space.id, { folderName: headline })
+      dispatch('changed-headline', headline)
     }
-    isEditingHeadline = false
   }
 
-  function enableEditingDescription() {
-    isEditingDescription = true
-  }
-
-  async function disableEditingDescription() {
+  async function exitEditingDescription() {
+    if (description === undefined) return
     descriptionInput.blur()
     if (description.trim() === '') {
       description = ''
     }
-    await oasis.updateSpaceData(space.id, { description })
-    isEditingDescription = false
+
+    dispatch('changed-description', description)
   }
 </script>
 
@@ -78,78 +44,60 @@
   <div class="header-content">
     <div class="inputs-section">
       <div class="headline-container">
-        <div class="headline-title">
-          <div class="icon-wrapper">
-            <SpaceIcon folder={space} size="xl" />
+        {#if headline !== undefined || headlineEditable}
+          <div class="headline-title">
+            {#if $$slots['icon']}
+              <div class="icon-wrapper">
+                <slot name="icon" />
+              </div>
+            {/if}
+
+            <input
+              bind:this={headlineInput}
+              bind:value={headline}
+              class="editable headline font-gambarino"
+              type="text"
+              disabled={!headlineEditable}
+              on:blur={exitEditingHeadline}
+              on:keydown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') exitEditingHeadline()
+              }}
+            />
           </div>
+        {/if}
 
-          <input
-            class="editable headline font-gambarino"
-            type="text"
-            bind:this={headlineInput}
-            bind:value={headline}
-            on:focus={enableEditingHeadline}
-            on:blur={disableEditingHeadline}
-            on:keydown={(e) => {
-              e.stopPropagation()
-              if (e.key === 'Enter') disableEditingHeadline()
-              if (e.key === 'Escape') isEditingHeadline = false
-            }}
-          />
-        </div>
-
-        <button class="edit-button" on:click={() => ($showSettingsModal = !$showSettingsModal)}
-          ><Icon name="settings" size="1.6em" /></button
-        >
-
-        <OasisSpaceUpdateIndicator
-          space={writable(space)}
-          {newlyLoadedResources}
-          {loadingSpaceSources}
-          {processingSourceItems}
-          on:refresh
-        />
+        <slot name="headline-content" />
       </div>
-      {#if $showSettingsModal}
-        <div
-          class="settings-modal-wrapper"
-          transition:fly={{ y: 10, duration: 160 }}
-          use:clickOutside={() => ($showSettingsModal = false)}
-        >
-          <OasisSpaceSettings
-            bind:space
-            on:refresh
-            on:clear
-            on:delete
-            on:load
-            on:delete-auto-saved
-          />
-        </div>
+
+      {#if description !== undefined || descriptionEditable}
+        <input
+          bind:value={description}
+          bind:this={descriptionInput}
+          class="editable description"
+          class:empty={!description || description?.trim() === ''}
+          type="text"
+          placeholder="Add a description"
+          disabled={!descriptionEditable}
+          on:mousedown|stopPropagation
+          on:blur={exitEditingDescription}
+          on:keydown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') exitEditingDescription()
+            if (e.key === 'Escape') {
+              descriptionInput.blur()
+            }
+          }}
+        />
       {/if}
 
-      <input
-        class="editable description"
-        class:empty={description.trim() === ''}
-        type="text"
-        placeholder="Add a description"
-        bind:value={description}
-        bind:this={descriptionInput}
-        on:mousedown|stopPropagation
-        on:blur={disableEditingDescription}
-        on:focus={enableEditingDescription}
-        on:keydown={(e) => {
-          e.stopPropagation()
-          if (e.key === 'Enter') disableEditingDescription()
-          if (e.key === 'Escape') {
-            isEditingDescription = false
-            descriptionInput.blur()
-          }
-        }}
-      />
+      <slot name="header-content" />
     </div>
-    <div class="preview-section">
-      <DesktopPreview desktopId={space.id} />
-    </div>
+    {#if $$slots['meta-section']}
+      <div class="meta-section">
+        <slot name="meta-section" />
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -169,14 +117,13 @@
     view-timeline-name: --context-header;
     view-timeline-axis: block;
     z-index: 1;
-    overflow: hidden;
 
     &::before {
       content: '';
       position: absolute;
       inset: -4px;
       background: red;
-      z-index: -1;
+      z-index: -2;
 
       background: linear-gradient(
           to bottom,
@@ -213,6 +160,7 @@
     margin-right: 4rem;
     .inputs-section {
       position: relative;
+      color: var(--contrast-color);
       &:before {
         content: '';
         display: block;
@@ -264,34 +212,6 @@
     color: var(--contrast-color);
   }
 
-  .edit-button {
-    anchor-name: --edit-button;
-
-    appearance: none;
-    display: flex;
-    align-items: center;
-    padding: 0.5em;
-    border-radius: 0.75rem;
-    border: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.02rem;
-    transition-property: color, background, opacity;
-    transition-duration: 123ms;
-    transition-timing-function: ease-out;
-
-    opacity: 0.7;
-    color: rgb(from var(--contrast-color) r g b / 1);
-
-    &:hover {
-      color: #0369a1;
-      background: rgb(232, 238, 241);
-      color: var(--contrast-color);
-      background: rgb(from var(--base-color) r g b / 0.4);
-      opacity: 1;
-    }
-  }
-
   .description {
     font-size: 1.4rem;
     font-family:
@@ -323,10 +243,6 @@
     opacity: 0;
     font-style: italic;
     transition: all 0.1s ease-in-out;
-
-    &.show {
-      opacity: 1;
-    }
   }
 
   .editable {
@@ -355,19 +271,13 @@
       sans-serif;
   }
 
-  .preview-section {
+  .meta-section {
+    z-index: 0;
     opacity: 1;
     translate: 0 0;
     transition: opacity, translate;
     transition-duration: 434ms;
     transition-timing-function: ease-out;
     transition-delay: 483ms;
-  }
-
-  .settings-modal-wrapper {
-    position: fixed;
-    position-anchor: --edit-button;
-    position-area: end end;
-    z-index: 100;
   }
 </style>

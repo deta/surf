@@ -10,26 +10,23 @@
 </script>
 
 <script lang="ts">
-  import vendorBackgroundLight from '../../../../public/assets/vendorBackgroundLight.webp'
-  import vendorBackgroundDark from '../../../../public/assets/vendorBackgroundDark.webp'
-
   import { derived, get, writable, type Readable } from 'svelte/store'
+  import { type ThemeData, getBackgroundImageUrlFromId } from '../../service/colors'
 
   import {
     useLogScope,
     parseTextIntoISOString,
-    clickOutside,
-    tooltip,
     checkIfYoutubeUrl,
     isModKeyAndKeyPressed,
     truncate,
     parseStringIntoUrl,
-    isMac,
-    useDebounce
+    useDebounce,
+    clickOutside,
+    tooltip,
+    isMac
   } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
-  import { Icon } from '@horizon/icons'
-  import SearchInput from './SearchInput.svelte'
+  import { DynamicIcon, Icon } from '@horizon/icons'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
     Resource,
@@ -90,7 +87,7 @@
   import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
   import ContextHeader from './ContextHeader.svelte'
   import OasisSpaceNavbar from './OasisSpaceNavbar.svelte'
-  import { useColorService, type CustomColorData } from '../../service/colors'
+  import { useColorService } from '../../service/colors'
   import { useDesktopManager } from '../../service/desktop'
   import type {
     FilterChangeEvent,
@@ -98,6 +95,12 @@
     SortByChangeEvent,
     ViewChangeEvent
   } from './SpaceFilterViewButtons.svelte'
+  import OasisSpaceUpdateIndicator from './OasisSpaceUpdateIndicator.svelte'
+  import OasisSpaceSettings from './Scaffolding/OasisSpaceSettings.svelte'
+  import { fly } from 'svelte/transition'
+  import SpaceIcon from '../Atoms/SpaceIcon.svelte'
+  import DesktopPreview from '../Chat/DesktopPreview.svelte'
+  import SpaceFilterViewButtons from './SpaceFilterViewButtons.svelte'
 
   export let spaceId: string
   export let active: boolean = false
@@ -134,7 +137,6 @@
   const desktopManager = useDesktopManager()
   const colors = useColorService()
   const resourceManager = oasis.resourceManager
-  const selectedFilterTypeId = oasis.selectedFilterTypeId
   const selectedFilterType = oasis.selectedFilterType
   const telemetry = resourceManager.telemetry
   const userConfigSettings = config.settings
@@ -161,6 +163,7 @@
   const processingSourceItems = writable<string[]>([])
 
   $: spaceData = $space?.data
+  $: darkMode = $userConfigSettings.app_style === 'dark'
 
   const spaceResourceIds = derived(
     [searchValue, spaceContents, searchResults],
@@ -1394,40 +1397,32 @@
     })
   )
 
-  // EXtract theme data for this context
-  // NOTE: Discriminating undefined & null is needed here
-  // null is "loading"
-  // undefined is no image set
-  // this helps prevent flickering as loading backoung data is async
-  const backgroundImage = writable<string | undefined | null>(null)
-  const theme = writable<CustomColorData | undefined>(undefined)
-  const calcThemeColors = (darkMode: boolean) =>
+  // Extract theme data for this context hacky till i get saround to refactoring the theming shit
+  const theme = writable<ThemeData | undefined>(undefined)
+  const calcThemeColors = (darkMode: boolean) => {
     desktopManager.getDesktopThemeData(spaceId).then((data) => {
-      if (data) {
-        backgroundImage.set(`url('surf://resource/${data.resourceId}')`)
-        theme.set(
-          colors.calculateColors(
-            data.colorPalette.at($userConfigSettings.app_style === 'dark' ? -1 : 0),
-            darkMode
-          ) ?? undefined
-        )
+      const themeData: ThemeData = { colors: {} }
+      if (data && data.colorPalette) {
+        const colorData =
+          colors.calculateColors(data.colorPalette.at(darkMode ? -1 : 0), darkMode) ?? undefined
+        themeData.colors.contrast = colorData.contrastColor
+        themeData.colors.base = colorData.color
+        themeData.backgroundImage = data.resourceId
       } else {
-        backgroundImage.set(
-          `url('${$userConfigSettings.app_style === 'dark' ? vendorBackgroundDark : vendorBackgroundLight}')`
-        )
-        theme.set({
-          color: '#808080',
-
-          isLight: $userConfigSettings.app_style !== 'dark',
-          contrastColor:
-            $userConfigSettings.app_style === 'dark' ? 'hsl(212, 92%, 92%)' : 'hsl(212, 92%, 8%)',
-          h: 212,
-          s: 92,
-          l: 50
-        })
+        themeData.colors.contrast = darkMode ? 'hsl(212, 92%, 92%)' : 'hsl(212, 92%, 8%)'
+        themeData.colors.base = '#808080'
+        themeData.backgroundImage = getBackgroundImageUrlFromId(undefined, darkMode)
       }
+
+      theme.set(themeData)
     })
+  }
   $: calcThemeColors($userConfigSettings.app_style === 'dark')
+  onDestroy(
+    desktopManager.on('changed-desktop-background', () =>
+      calcThemeColors($userConfigSettings.app_style === 'dark')
+    )
+  )
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -1452,39 +1447,102 @@
 >
   <div
     class="relative wrapper"
-    style:--background-image={$backgroundImage}
-    style:--contrast-color={$theme?.contrastColor}
-    style:--base-color={$theme?.color}
+    style:--background-image={getBackgroundImageUrlFromId($theme?.backgroundImage, darkMode)}
+    style:--base-color={$theme?.colors?.base}
+    style:--contrast-color={$theme?.colors?.contrast}
   >
-    {#if $space && $backgroundImage !== null}
+    {#if $space && $spaceData && $theme !== undefined}
       <LazyScroll items={renderContents} let:renderedItems>
         {#if !isEverythingSpace && $spaceData?.folderName !== '.tempspace'}
-          <OasisSpaceNavbar
-            space={$space}
-            {searchValue}
-            on:chat={handleChatWithSpace}
-            viewType={$spaceData?.viewType}
-            viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'created_at'}
-            order={$spaceData?.sortOrder ?? 'desc'}
-            on:search={handleSearch}
-            on:changedView={handleViewSettingsChanges}
-            on:changedFilter={handleFilterSettingsChanged}
-            on:changedSortBy={handleSortBySettingsChanged}
-            on:changedOrder={handleOrderSettingsChanged}
-          />
+          <OasisSpaceNavbar {searchValue} on:search={handleSearch} on:chat={handleChatWithSpace}>
+            <svelte:fragment slot="left">
+              {#key `${$spaceData.imageIcon}-${$spaceData.colors}-${$spaceData.emoji}`}
+                <DynamicIcon name={$space.getIconString()} />
+              {/key}
+              <span class="context-name">{$spaceData.folderName}</span>
+            </svelte:fragment>
+            <svelte:fragment slot="right">
+              <button
+                use:tooltip={{
+                  position: 'left',
+                  text:
+                    $searchValue.length > 0
+                      ? 'Create new chat with this context'
+                      : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                }}
+                class="chat-with-space pointer-all"
+                class:activated={$searchValue.length > 0}
+                on:click={handleChatWithSpace}
+              >
+                <Icon name="face" size="1.6em" />
+
+                <div class="chat-text">Ask Context</div>
+              </button>
+            </svelte:fragment>
+            <svelte:fragment slot="right-dynamic">
+              <SpaceFilterViewButtons
+                filter={$selectedFilterType?.id ?? null}
+                viewType={$spaceData?.viewType}
+                viewDensity={$spaceData?.viewDensity}
+                sortBy={$spaceData?.sortBy ?? 'created_at'}
+                order={$spaceData?.sortOrder ?? 'desc'}
+                on:changedView={handleViewSettingsChanges}
+                on:changedFilter={handleFilterSettingsChanged}
+                on:changedSortBy={handleSortBySettingsChanged}
+                on:changedOrder={handleOrderSettingsChanged}
+              />
+            </svelte:fragment>
+          </OasisSpaceNavbar>
 
           <ContextHeader
-            space={$space}
-            {newlyLoadedResources}
-            {loadingSpaceSources}
-            {processingSourceItems}
-            on:refresh={handleRefreshLiveSpace}
-            on:clear={handleClearSpace}
-            on:delete={(e) => handleDeleteSpace(e.detail)}
-            on:load={handleLoadSpace}
-            on:delete-auto-saved={handleDeleteAutoSaved}
-          />
+            bind:headline={$spaceData.folderName}
+            bind:description={$spaceData.description}
+            themeData={theme}
+            on:changed-headline={({ detail: headline }) =>
+              oasis.updateSpaceData($space.id, { folderName: headline })}
+            on:changed-description={({ detail: description }) =>
+              oasis.updateSpaceData($space.id, { description })}
+          >
+            <svelte:fragment slot="icon">
+              <SpaceIcon folder={$space} size="xl" />
+            </svelte:fragment>
+            <svelte:fragment slot="headline-content">
+              <button
+                class="edit-button"
+                on:click={() => ($showSettingsModal = !$showSettingsModal)}
+                ><Icon name="settings" size="1.6em" /></button
+              >
+
+              <OasisSpaceUpdateIndicator
+                {space}
+                {newlyLoadedResources}
+                {loadingSpaceSources}
+                {processingSourceItems}
+                on:refresh={handleRefreshLiveSpace}
+              />
+            </svelte:fragment>
+            <svelte:fragment slot="header-content">
+              {#if $showSettingsModal}
+                <div
+                  class="settings-modal-wrapper"
+                  transition:fly={{ y: 10, duration: 160 }}
+                  use:clickOutside={() => ($showSettingsModal = false)}
+                >
+                  <OasisSpaceSettings
+                    bind:space={$space}
+                    on:refresh={handleRefreshLiveSpace}
+                    on:clear={handleClearSpace}
+                    on:delete={(e) => handleDeleteSpace(e.detail)}
+                    on:load={handleLoadSpace}
+                    on:delete-auto-saved={handleDeleteAutoSaved}
+                  />
+                </div>
+              {/if}
+            </svelte:fragment>
+            <svelte:fragment slot="meta-section">
+              <DesktopPreview desktopId={$space.id} />
+            </svelte:fragment>
+          </ContextHeader>
 
           <ContextTabsBar
             {spaceId}
@@ -1591,101 +1649,41 @@
     overflow: hidden;
   }
 
-  button {
-    padding: 0.5rem;
-  }
+  .edit-button {
+    anchor-name: --edit-button;
 
-  .search-input-wrapper {
-    position: relative;
-    z-index: 10;
-    width: 100%;
-    max-width: 32rem;
-    justify-self: center;
-    gap: 1rem;
+    appearance: none;
     display: flex;
     align-items: center;
-    view-transition-name: search-transition;
+    padding: 0.5em;
+    border-radius: 0.75rem;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.02rem;
+    transition-property: color, background, opacity;
+    transition-duration: 123ms;
+    transition-timing-function: ease-out;
+
+    opacity: 0.7;
+    color: rgb(from var(--contrast-color) r g b / 1);
+
+    &:hover {
+      color: #0369a1;
+      background: rgb(232, 238, 241);
+      color: var(--contrast-color);
+      background: rgb(from var(--base-color) r g b / 0.4);
+      opacity: 1;
+    }
   }
 
-  .modal-wrapper {
+  .settings-modal-wrapper {
     position: fixed;
-    bottom: 4rem;
-    left: 0;
-    z-index: 100;
+    position-anchor: --edit-button;
+    top: calc(anchor(end) + 0.75rem);
+    left: calc(anchor(start));
+    z-index: 10000000000000000;
   }
-
-  .drawer-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1;
-    margin: 0.5rem;
-    .drawer-chat-search {
-      position: relative;
-      border-radius: 12px;
-
-      display: grid;
-      grid-template-columns: 18vw 1fr 18vw;
-      width: 100%;
-      column-gap: 1rem;
-      padding: 0.5rem 1rem;
-      transition: all 240ms ease-out;
-
-      @media (max-width: 1300px) {
-        grid-template-columns: fit-content(100%) 1fr fit-content(100%);
-      }
-
-      .drawer-chat {
-        position: relative;
-        z-index: 10;
-        top: 0;
-
-        .close-button {
-          position: relative;
-          display: none;
-          top: -1rem;
-          right: -3.5rem;
-          justify-content: center;
-          align-items: center;
-          width: 2rem;
-          height: 2rem;
-          flex-shrink: 0;
-          border-radius: 50%;
-          border: 0.5px solid rgba(0, 0, 0, 0.15);
-          transition: 60ms ease-out;
-          background: white;
-          z-index: 100;
-          &:hover {
-            outline: 3px solid rgba(0, 0, 0, 0.15);
-          }
-        }
-      }
-    }
-  }
-
-  /*.search-debug {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    padding: 1rem;
-    padding-bottom: 1.5rem;
-    padding-top: 0.25rem;
-    background: rgba(255, 255, 255, 0.33);
-
-    input {
-      background: none;
-      padding: 0.5rem;
-      border-radius: 4px;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      font-size: 1rem;
-      font-weight: 500;
-      letter-spacing: 0.02rem;
-      width: 75px;
-      text-align: center;
-    }
-  }*/
 
   .content-wrapper {
     width: 100%;
@@ -1707,98 +1705,6 @@
     }
 
     @apply text-[#7d7448] dark:text-gray-300;
-  }
-
-  .settings-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-
-    .settings-toggle {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: #7d7448;
-      padding: 0;
-      opacity: 0.7;
-      &:hover {
-        opacity: 1;
-        background: transparent;
-      }
-    }
-  }
-
-  .chat-with-space-wrapper {
-    @media (min-width: 1300px) {
-      max-width: 40px;
-      width: 100%;
-      overflow: visible;
-    }
-  }
-
-  .chat-with-space {
-    flex-shrink: 0;
-    appearance: none;
-    display: flex;
-    align-items: center;
-    padding: 0.65rem;
-    border-radius: 0.75rem;
-    border: none;
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.02rem;
-    transition: all 0.2s ease-in-out;
-
-    // Light theme
-    color: #0b689ad6;
-
-    &:hover {
-      color: #0369a1;
-      background: rgb(232, 238, 241);
-    }
-
-    &.activated {
-      background: rgba(255, 255, 255, 0.75);
-
-      &:hover {
-        background: rgba(255, 255, 255, 1);
-      }
-    }
-
-    // Dark theme
-    :global(.dark) & {
-      color: #7dd3ffd6;
-
-      &:hover {
-        color: #7dd3fc;
-        @apply bg-sky-700/20;
-      }
-
-      &.activated {
-        @apply bg-sky-700/20;
-
-        &:hover {
-          @apply bg-sky-700/40;
-        }
-      }
-    }
-
-    .chat-text {
-      margin-left: 0.5rem;
-      text-wrap: nowrap;
-    }
-
-    .shortcut {
-      margin-left: 0.25rem;
-      padding: 0.25rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      background: #d4dbe4c0;
-
-      :global(.dark) & {
-        background: #1e293b;
-      }
-    }
   }
 
   .floating-loading {
