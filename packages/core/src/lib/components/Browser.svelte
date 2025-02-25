@@ -227,12 +227,12 @@
   const downloadIntercepters = writable(new Map<string, (data: Download) => void>())
 
   const log = useLogScope('Browser')
-  const resourceManager = createResourceManager(telemetry)
+  const config = provideConfig()
+  const resourceManager = createResourceManager(telemetry, config)
   const storage = new HorizonDatabase()
   const sffs = new SFFS()
   const historyEntriesManager = new HistoryEntriesManager()
   const toasts = provideToasts()
-  const config = provideConfig()
   const syncService = createSyncService(resourceManager)
   const oasis = provideOasis(resourceManager, config)
   const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
@@ -254,6 +254,7 @@
   const aiService = provideAI(resourceManager, tabsManager, config)
 
   tabsManager.attachAIService(aiService)
+  resourceManager.attachAIService(aiService)
   oasis.attachTabsManager(tabsManager)
   desktopManager.attachTabsManager(tabsManager)
   DIALOG_OASIS_REF.set(oasis)

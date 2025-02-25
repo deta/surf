@@ -30,6 +30,7 @@ export type UserSettings = {
   experimental_note_inline_rewrite: boolean
   experimental_chat_web_search: boolean
   extensions: boolean
+  cleanup_filenames: boolean
   /**
    * @deprecated use individual feature flags instead
    */

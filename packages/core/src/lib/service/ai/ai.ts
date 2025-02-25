@@ -17,7 +17,11 @@ import {
   useLocalStorageStore,
   useLogScope
 } from '@horizon/utils'
-import { PAGE_PROMPTS_GENERATOR_PROMPT, SIMPLE_SUMMARIZER_PROMPT } from '../../constants/prompts'
+import {
+  FILENAME_CLEANUP_PROMPT,
+  PAGE_PROMPTS_GENERATOR_PROMPT,
+  SIMPLE_SUMMARIZER_PROMPT
+} from '../../constants/prompts'
 import { type AiSFFSQueryResponse } from '../../types'
 import {
   BUILT_IN_MODELS,
@@ -600,6 +604,18 @@ export class AIService {
     if (opts?.context && opts?.contentSource) {
       this.telemetry.trackSummarizeText(opts.contentSource, opts.context)
     }
+
+    return completion
+  }
+
+  async cleanupTitle(text: string, context?: string) {
+    const completion = await this.createChatCompletion(
+      JSON.stringify({ input: text, context }),
+      FILENAME_CLEANUP_PROMPT.replace('$DATE', new Date().toISOString()),
+      { tier: ModelTiers.Standard }
+    )
+
+    this.log.debug('Cleaned up title completion', completion)
 
     return completion
   }

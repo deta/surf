@@ -532,6 +532,14 @@
             bind:value={userConfigSettings.auto_toggle_pip}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="sparkles"
+            title="Automatic Filename Cleanup"
+            description="Automatically clean up filenames when saving resources."
+            bind:value={userConfigSettings.cleanup_filenames}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}

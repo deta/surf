@@ -430,6 +430,24 @@
                 ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
               )
 
+            if ($userConfigSettings.cleanup_filenames) {
+              const filename = tab.title || downloadData.filename
+              log.debug('cleaning up filename', filename, url)
+              const completion = await ai.cleanupTitle(filename, url)
+              if (!completion.error && completion.output) {
+                log.debug('cleaned up filename', filename, completion.output)
+                await resourceManager.updateResourceMetadata(resource.id, {
+                  name: completion.output,
+                  sourceURI: url !== pdfDownloadURL ? url : undefined
+                })
+              }
+            } else {
+              await resourceManager.updateResourceMetadata(resource.id, {
+                name: tab.title,
+                sourceURI: url !== pdfDownloadURL ? url : undefined
+              })
+            }
+
             resolve(resource)
             return
           } else {

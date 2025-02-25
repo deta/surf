@@ -58,6 +58,8 @@ import { getContext, onDestroy, setContext, tick } from 'svelte'
 import EventEmitter from 'events'
 import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@horizon/web-parser'
+import type { ConfigService } from './config'
+import type { AIService } from './ai/ai'
 
 /*
  TODO:
@@ -572,15 +574,18 @@ export class ResourceManager {
   log: ScopedLogger
   sffs: SFFS
   telemetry: Telemetry
+  config: ConfigService
+  ai!: AIService
 
   static self: ResourceManager
   eventEmitter: TypedEmitter<ResourceManagerEvents>
 
-  constructor(telemetry: Telemetry) {
+  constructor(telemetry: Telemetry, config: ConfigService) {
     this.log = useLogScope('SFFSResourceManager')
     this.resources = writable([])
     this.sffs = new SFFS()
     this.telemetry = telemetry
+    this.config = config
 
     this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceManagerEvents>
 
@@ -607,6 +612,10 @@ export class ResourceManager {
     return () => {
       this.eventEmitter.off(event, listener)
     }
+  }
+
+  attachAIService(ai: AIService) {
+    this.ai = ai
   }
 
   private createResourceObject(data: SFFSResource): ResourceObject {
@@ -755,6 +764,22 @@ export class ResourceManager {
       const canonicalURL = parseUrlIntoCanonical(canonicalUrlTag.value)
       if (canonicalURL) {
         canonicalUrlTag.value = canonicalURL
+      }
+    }
+
+    // We only want to cleanup traditional file types, not web resources or PDFs (which are already handled in BrowserTab)
+    const typeSupportsCleanup =
+      !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) && type !== ResourceTypes.PDF
+    if (typeSupportsCleanup && this.config.settingsValue.cleanup_filenames) {
+      const filename = metadata?.name
+      if (filename) {
+        const context = canonicalUrlTag?.value || metadata?.sourceURI || ''
+        this.log.debug('cleaning up filename', filename, context)
+        const completion = await this.ai.cleanupTitle(filename, context)
+        if (!completion.error && completion.output) {
+          this.log.debug('cleaned up filename', filename, completion.output)
+          parsedMetadata.name = completion.output
+        }
       }
     }
 
@@ -1702,8 +1727,8 @@ export class ResourceManager {
     return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: id, op: 'eq' }
   }
 
-  static provide(telemetry: Telemetry) {
-    const resourceManager = new ResourceManager(telemetry)
+  static provide(telemetry: Telemetry, config: ConfigService) {
+    const resourceManager = new ResourceManager(telemetry, config)
 
     setContext('resourceManager', resourceManager)
 
