@@ -366,6 +366,11 @@ function setupIpcHandlers(backendRootPath: string) {
     ipcSenders.resetPrompt(id)
   })
 
+  IPC_EVENTS_MAIN.openURL.on((event, { url, active, scopeId }) => {
+    if (!validateIPCSender(event)) return
+    ipcSenders.openURL(url, active, scopeId)
+  })
+
   IPC_EVENTS_MAIN.openInvitePage.on((event) => {
     if (!validateIPCSender(event)) return
     ipcSenders.openInvitePage()

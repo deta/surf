@@ -650,6 +650,10 @@ const api = {
     IPC_EVENTS_RENDERER.updateUserStats.send(stats)
   },
 
+  openURL: (url: string, active: boolean, scopeId?: string) => {
+    IPC_EVENTS_RENDERER.openURL.send({ url, active, scopeId })
+  },
+
   openInvitePage: () => {
     IPC_EVENTS_RENDERER.openInvitePage.send()
   },

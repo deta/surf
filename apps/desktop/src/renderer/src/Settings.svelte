@@ -35,6 +35,7 @@
   // let loading = false
 
   const isDev = import.meta.env.DEV
+  const changelogURL = import.meta.env.R_VITE_CHANGELOG_URL
 
   let version = ''
   let prompts: EditablePrompt[] = []
@@ -338,7 +339,16 @@
 
           <span class="version-pill">{version}</span>
         </div>
-
+        {#if changelogURL}
+          <button
+            on:click={() => {
+              // @ts-ignore
+              window.api.openURL(changelogURL, true)
+            }}
+          >
+            Changelog
+          </button>
+        {/if}
         <button on:click={checkForUpdates}>Check for Updates</button>
 
         {#if !$isDefaultBrowser}

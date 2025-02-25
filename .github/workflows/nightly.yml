@@ -158,6 +158,8 @@ jobs:
 
           R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
+          R_VITE_MAIN_ONBOARDING_VIDEO_URL: ${{ secrets.MAIN_ONBOARDING_VIDEO_URL }}/${{ needs.next-nightly-version.outputs.version }}
+          R_VITE_CHANGELOG_URL: ${{ secrets.CHANGELOG_URL }}/${{ needs.next-nightly-version.outputs.version }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_APP_UPDATES_PROXY_URL: ${{ secrets.APP_UPDATES_PROXY_URL_NIGHTLY }}

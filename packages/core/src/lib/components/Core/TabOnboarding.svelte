@@ -66,6 +66,9 @@
   export let resourceManager: ResourceManager
   export const onboardingRunning = writable(true)
 
+  let mainOnboardingVideoUrl: string =
+    import.meta.env.R_VITE_MAIN_ONBOARDING_VIDEO_URL || 'https://www.youtube.com/embed/-FJf3qaVsCA'
+
   // Navigation state and config
   let activeSection = 'welcome'
   let observer: IntersectionObserver
@@ -267,7 +270,7 @@
         style="z-index: 2147483647;"
       >
         <webview
-          src="https://www.youtube.com/embed/-FJf3qaVsCA"
+          src={mainOnboardingVideoUrl}
           class="w-full h-full shadow-xl rounded-xl overflow-hidden"
           partition="app"
         />
