@@ -1250,7 +1250,7 @@
   const showOnboardingNote = async () => {
     const newTab = await tabsManager.create<TabResource>(
       {
-        title: 'Intro to Smart Notes',
+        title: 'Intro to Surf Notes',
         icon: '',
         type: 'resource',
         resourceId: 'onboarding',
@@ -1644,7 +1644,7 @@
       <button
         on:click={() => showOnboardingNote()}
         class="info-btn"
-        use:tooltip={{ text: 'Intro to Smart Notes', position: 'right' }}
+        use:tooltip={{ text: 'Intro to Surf Notes', position: 'right' }}
       >
         <Icon name="info" />
       </button>

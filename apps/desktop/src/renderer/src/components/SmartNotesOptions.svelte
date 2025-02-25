@@ -9,7 +9,7 @@
   let expanded = false
 </script>
 
-<SettingsOption icon="file-text-ai" title="Smart Notes" on:update>
+<SettingsOption icon="file-text-ai" title="Surf Notes" on:update>
   <p slot="description">
     Access context-aware Surf AI features like auto completion, citation generation, and more from
     within your Surf notes. <a

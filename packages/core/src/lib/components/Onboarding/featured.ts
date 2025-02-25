@@ -29,14 +29,14 @@ export const versions: VersionContent[] = [
     action: () => window.showCodegenOnboarding()
   },
   {
-    label: 'Smart Notes',
+    label: 'Surf Notes',
     featureID: '0.1.8',
     current: true,
     emoji: '',
     title: 'Generate Notes From Your Knowledge',
     description:
-      'Smart Notes combines a rich text editor with AI capabilities, enabling you to leverage your personal context(s) while writing. It can assist in research, note-taking, and brainstorming by pulling in relevant information and suggestions from your saved stuff.',
-    buttonText: 'Try Smart Notes Now',
+      'Surf Notes combines a rich text editor with AI capabilities, enabling you to leverage your personal context(s) while writing. It can assist in research, note-taking, and brainstorming by pulling in relevant information and suggestions from your saved stuff.',
+    buttonText: 'Try Surf Notes Now',
     image: teaser018smartnotes,
     // @ts-ignore
     action: () => window.showOnboardingNote()

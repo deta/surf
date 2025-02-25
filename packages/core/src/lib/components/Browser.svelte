@@ -2999,7 +2999,7 @@
     window.showOnboardingNote = async () => {
       const newTab = await tabsManager.create<TabResource>(
         {
-          title: 'Intro to Smart Notes',
+          title: 'Intro to Surf Notes',
           icon: '',
           type: 'resource',
           resourceId: 'onboarding',

@@ -442,7 +442,7 @@
         <p>Surf may switch to more efficient models from the same provider for certain features.</p>
 
         <p>
-          <b>Tip:</b> The model can also be changed from the chat sidebar, vision tool, and smart notes.
+          <b>Tip:</b> The model can also be changed from the chat sidebar, vision tool, and within notes.
         </p>
       </div>
     </div>

@@ -10,7 +10,7 @@
   export let total: number
   export let title: string | undefined = undefined
 
-  $: titleToShow = title || 'Intro to Smart Notes'
+  $: titleToShow = title || 'Intro to Surf Notes'
 
   const dispatch = createEventDispatcher<{
     next: void

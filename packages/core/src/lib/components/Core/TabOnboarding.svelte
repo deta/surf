@@ -75,7 +75,7 @@
     { id: 'desktop', label: 'Desktop' },
     { id: 'vision', label: 'Vision' },
     { id: 'chat', label: 'Chat' },
-    { id: 'smart-notes', label: 'Smart Notes' },
+    { id: 'smart-notes', label: 'Notes' },
     { id: 'surflets', label: 'Surflets' }
     // { id: 'contexts', label: 'Contexts' }
   ]
