@@ -82,7 +82,7 @@
   on:select={handleSelect}
 >
   <button
-    on:click={() => handleSave()}
+    on:click|stopPropagation={() => handleSave()}
     class={className
       ? className
       : 'flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 disabled:opacity-25 rounded-lg'}

@@ -770,6 +770,7 @@
       {resource}
       {interactive}
       {origin}
+      {mode}
       {viewMode}
       type={resource.type}
       url={canonicalUrl}
@@ -787,6 +788,7 @@
       {resource}
       {interactive}
       {origin}
+      {mode}
       {viewMode}
       {titleEditable}
       type={previewData.type}

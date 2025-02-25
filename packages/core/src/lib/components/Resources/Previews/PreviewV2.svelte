@@ -8,7 +8,7 @@
    * Any section can be hidden by setting its props to undefined.
    * NOTE: The content section is a bit more involved, as it can also show up, if e.g. annotations exist.
    */
-  import { getFileKind, truncate } from '@horizon/utils'
+  import { getFileKind, mimeTypeToCodeLanguage, truncate } from '@horizon/utils'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
@@ -20,9 +20,15 @@
   import { createEventDispatcher } from 'svelte'
   import TextResource from './Text/TextResource.svelte'
   import { useConfig } from '../../../service/config'
-  import type { PreviewMetadata, ViewMode } from '@horizon/core/src/lib/utils/resourcePreview'
+  import {
+    isGeneratedResource,
+    type ContentMode,
+    type PreviewMetadata,
+    type ViewMode
+  } from '@horizon/core/src/lib/utils/resourcePreview'
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
+  import CodeRenderer from '../../Chat/CodeRenderer.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -30,6 +36,7 @@
   export let resource: Resource
   export let type: string
   export let viewMode: ViewMode = 'card'
+  export let mode: ContentMode = 'full'
 
   export let origin: Origin = 'stuff'
   export let interactive: boolean = false
@@ -218,172 +225,160 @@
   class:titleEditable
 >
   <div class="inner">
-    {#if showMediaBlock}
-      <div class="media" class:processing={isProcessing} class:og={!type.startsWith('image/')}>
-        {#if media}
-          <!--  NOTE: Explicit async&eager so masonry flows better -->
-          <Image
-            src={media}
-            alt={title ?? ''}
-            emptyOnError
-            decoding={origin === 'stuff' ? 'async' : 'auto'}
-            loading="eager"
-          />
-        {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
-          <FilePreview {resource} preview />
-        {/if}
-      </div>
-    {/if}
-
-    {#if showContentBlock}
-      <hgroup class="content">
-        {#if title && title.length > 0}
-          {#if editTitle}
-            <h1
-              contenteditable
-              placeholder="Edit Title"
-              spellcheck="false"
-              bind:this={titleInputEl}
-              bind:textContent={titleValue}
-              on:click|stopPropagation
-              on:blur={handleEditTitleBlur}
-              on:keydown={handleTitleKeydown}
-              draggable
-              on:dragstart|preventDefault|stopPropagation={() => {}}
-            >
-              {title}
-            </h1>
-          {:else}
-            <h1
-              on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
-              on:click|stopPropagation={handleTitleClick}
-            >
-              {title}
-            </h1>
+    {#if isGeneratedResource(resource) && origin === 'homescreen' && viewMode === 'full'}
+      <CodeRenderer
+        {resource}
+        showPreview
+        language={mimeTypeToCodeLanguage(resource.type)}
+        initialCollapsed={false}
+        collapsable={false}
+        draggable={false}
+        fullSize
+      />
+    {:else}
+      {#if showMediaBlock}
+        <div class="media" class:processing={isProcessing} class:og={!type.startsWith('image/')}>
+          {#if media}
+            <!--  NOTE: Explicit async&eager so masonry flows better -->
+            <Image
+              src={media}
+              alt={title ?? ''}
+              emptyOnError
+              decoding={origin === 'stuff' ? 'async' : 'auto'}
+              loading="eager"
+            />
+          {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
+            <FilePreview {resource} preview />
           {/if}
-        {/if}
+        </div>
+      {/if}
 
-        {#if content && content.length > 0}
-          {@const content = content}
-          {@const contentType = contentType}
-          {#if contentType === 'plain'}
-            <p>
-              {truncate(content, MAX_CONTENT_LENGTH)}
-            </p>
-          {:else if contentType === 'rich_text'}
-            {#if origin === 'homescreen'}
-              <TextResource
-                resourceId={resource.id}
-                autofocus={false}
-                showTitle={false}
-                minimal
-                on:click={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                }}
-                on:dragstart={(e) => {
-                  // TODO: proper prevention
-                  if (['#text', 'p'].includes(e.target?.nodeName.toLowerCase())) {
+      {#if showContentBlock}
+        <hgroup class="content">
+          {#if title && title.length > 0}
+            {#if editTitle}
+              <h1
+                contenteditable
+                placeholder="Edit Title"
+                spellcheck="false"
+                bind:this={titleInputEl}
+                bind:textContent={titleValue}
+                on:click|stopPropagation
+                on:blur={handleEditTitleBlur}
+                on:keydown={handleTitleKeydown}
+                draggable
+                on:dragstart|preventDefault|stopPropagation={() => {}}
+              >
+                {title}
+              </h1>
+            {:else}
+              <h1
+                on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
+                on:click|stopPropagation={handleTitleClick}
+              >
+                {title}
+              </h1>
+            {/if}
+          {/if}
+
+          {#if content && content.length > 0}
+            {@const content = content}
+            {@const contentType = contentType}
+
+            {#if contentType === 'plain'}
+              <p>
+                {truncate(content, MAX_CONTENT_LENGTH)}
+              </p>
+            {:else if contentType === 'rich_text'}
+              {#if origin === 'homescreen'}
+                <TextResource
+                  resourceId={resource.id}
+                  autofocus={false}
+                  showTitle={false}
+                  minimal
+                  on:click={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                  }
-                }}
-                on:highlightWebviewText
-                on:seekToTimestamp
+                  }}
+                  on:dragstart={(e) => {
+                    // TODO: proper prevention
+                    if (['#text', 'p'].includes(e.target?.nodeName.toLowerCase())) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }
+                  }}
+                  on:highlightWebviewText
+                  on:seekToTimestamp
+                />
+              {:else}
+                <Editor
+                  content={truncate(content, MAX_CONTENT_LENGTH)}
+                  resourceComponent={EmbeddedResource}
+                  resourceComponentPreview
+                  readOnly
+                />
+              {/if}
+            {:else if contentType === 'html'}
+              <iframe
+                title="Document Preview"
+                srcdoc="{IFRAME_STYLES}{content}"
+                frameborder="0"
+                sandbox=""
               />
-            {:else}
-              <Editor
-                content={truncate(content, MAX_CONTENT_LENGTH)}
-                resourceComponent={EmbeddedResource}
-                resourceComponentPreview
-                readOnly
-              />
+            {:else if contentType === 'markdown'}
+              <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
             {/if}
-          {:else if contentType === 'html'}
-            <iframe
-              title="Document Preview"
-              srcdoc="{IFRAME_STYLES}{content}"
-              frameborder="0"
-              sandbox=""
-            />
-          {:else if contentType === 'markdown'}
-            <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
           {/if}
-        {/if}
 
-        <!-- Annotations -->
-        {#if annotations && annotations.length > 0}
-          {@const annotation = annotations[0]}
-
-          <div class="annotation">
-            {#if annotation.type === 'highlight'}
-              <p class="content quote">
-                <mark>
-                  {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
-                </mark>
-              </p>
-            {:else}
-              <div class="icon">
-                <Icon name="message" size="1.15em" />
-              </div>
-              <div class="content">
-                {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
-              </div>
-            {/if}
-          </div>
-
+          <!-- Annotations -->
           {#if annotations && annotations.length > 0}
-            {#if annotations.length > 1}
-              <div class="annotation-info">
-                <Icon name="marker" size="1.15em" />
-                + {annotations.length - 1} more annotation{annotations.length > 2 ? 's' : ''}
-              </div>
-            {:else if annotations[0].type === 'highlight'}
-              <div class="annotation-info">
-                <Icon name="marker" size="1.15em" />
-                Your Highlight
-              </div>
+            {@const annotation = annotations[0]}
+
+            <div class="annotation">
+              {#if annotation.type === 'highlight'}
+                <p class="content quote">
+                  <mark>
+                    {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
+                  </mark>
+                </p>
+              {:else}
+                <div class="icon">
+                  <Icon name="message" size="1.15em" />
+                </div>
+                <div class="content">
+                  {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
+                </div>
+              {/if}
+            </div>
+
+            {#if annotations && annotations.length > 0}
+              {#if annotations.length > 1}
+                <div class="annotation-info">
+                  <Icon name="marker" size="1.15em" />
+                  + {annotations.length - 1} more annotation{annotations.length > 2 ? 's' : ''}
+                </div>
+              {:else if annotations[0].type === 'highlight'}
+                <div class="annotation-info">
+                  <Icon name="marker" size="1.15em" />
+                  Your Highlight
+                </div>
+              {/if}
             {/if}
           {/if}
-        {/if}
-      </hgroup>
-    {/if}
+        </hgroup>
+      {/if}
 
-    {#if showMetadataBlock}
-      <hgroup class="metadata">
-        {#if isProcessing}
-          <div class="source">
-            {#if status !== 'static'}<Icon name="spinner" size="12px" />{/if}
-            <span>{statusText === undefined ? randomPhrase() : statusText}</span>
-          </div>
-        {/if}
-        {#if metadata?.length === 1 && !isProcessing}
-          {@const pill = metadata[0]}
-          <div class="source" style="width: 100%;justify-content: space-between;">
-            {#if pill.imageUrl}
-              <Image
-                src={pill.imageUrl}
-                alt={pill.text ?? ''}
-                emptyOnError
-                fallbackIcon="link"
-                class="favicon"
-              />
-            {:else if pill.icon}
-              <div class="favicon">
-                <Icon name={pill.icon} size="100%" />
-              </div>
-            {:else}
-              <div class="favicon">
-                <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
-              </div>
-            {/if}
-            {#if pill.text}
-              <span style="order: -1;">{pill.text}</span>
-            {/if}
-          </div>
-        {:else}
-          {#each metadata ?? [] as pill}
+      {#if showMetadataBlock}
+        <hgroup class="metadata">
+          {#if isProcessing}
             <div class="source">
+              {#if status !== 'static'}<Icon name="spinner" size="12px" />{/if}
+              <span>{statusText === undefined ? randomPhrase() : statusText}</span>
+            </div>
+          {/if}
+          {#if metadata?.length === 1 && !isProcessing}
+            {@const pill = metadata[0]}
+            <div class="source" style="width: 100%;justify-content: space-between;">
               {#if pill.imageUrl}
                 <Image
                   src={pill.imageUrl}
@@ -402,12 +397,36 @@
                 </div>
               {/if}
               {#if pill.text}
-                <span>{pill.text}</span>
+                <span style="order: -1;">{pill.text}</span>
               {/if}
             </div>
-          {/each}
-        {/if}
-        <!--{#if isProcessing}
+          {:else}
+            {#each metadata ?? [] as pill}
+              <div class="source">
+                {#if pill.imageUrl}
+                  <Image
+                    src={pill.imageUrl}
+                    alt={pill.text ?? ''}
+                    emptyOnError
+                    fallbackIcon="link"
+                    class="favicon"
+                  />
+                {:else if pill.icon}
+                  <div class="favicon">
+                    <Icon name={pill.icon} size="100%" />
+                  </div>
+                {:else}
+                  <div class="favicon">
+                    <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
+                  </div>
+                {/if}
+                {#if pill.text}
+                  <span>{pill.text}</span>
+                {/if}
+              </div>
+            {/each}
+          {/if}
+          <!--{#if isProcessing}
             <hgroup class="status">
               {#if failedText}
                 <span class="failed text-red-700">{failedText ?? 'Error'}</span>
@@ -472,7 +491,8 @@
               </div>
             {/if}
           {/if}-->
-      </hgroup>
+        </hgroup>
+      {/if}
     {/if}
   </div>
 </div>

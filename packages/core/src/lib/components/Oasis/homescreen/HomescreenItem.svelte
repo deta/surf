@@ -211,6 +211,7 @@ TODO: Fix resizing logic for other corners
           <Component
             resourceOrId={$item.resourceId}
             mode={'responsive'}
+            viewMode={'compact'}
             origin="homescreen"
             draggable={false}
             frameless={false}
@@ -237,24 +238,14 @@ TODO: Fix resizing logic for other corners
             let:frameless
             let:hideProcessing
           >
-            {#if (resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && $desktopVisible) || !resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE)}
-              {#if $item.width * $item.height > 12 && resource?.type.startsWith('text/html') && isGeneratedResource(resource)}
-                {#if $desktopVisible}
-                  <CodeRenderer
-                    {resource}
-                    showPreview
-                    language={mimeTypeToCodeLanguage(resource.type)}
-                    initialCollapsed={false}
-                    collapsable={false}
-                    draggable={false}
-                    fullSize
-                  />
-                {/if}
-              {:else if interactive}
+            {#if (resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && $desktopVisible) || (isGeneratedResource(resource) && $desktopVisible) || (!resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && !isGeneratedResource(resource))}
+              {#if interactive}
                 <ResourcePreview
                   {resource}
                   {mode}
-                  {viewMode}
+                  viewMode={isGeneratedResource(resource) && $item.width * $item.height > 12
+                    ? 'full'
+                    : viewMode}
                   {origin}
                   {selected}
                   {isInSpace}

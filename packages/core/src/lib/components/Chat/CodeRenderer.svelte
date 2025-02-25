@@ -1095,7 +1095,7 @@
         {#if collapsable}
           <button
             class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
-            on:click={() => (collapsed = !collapsed)}
+            on:click|stopPropagation={() => (collapsed = !collapsed)}
           >
             {#if stillGenerating}
               <Icon name="spinner" />
@@ -1134,14 +1134,14 @@
           <div class="preview-group flex items-center rounded-md overflow-hidden">
             <button
               class="no-custom px-3 py-1 text-sm"
-              on:click={() => showCodeView()}
+              on:click|stopPropagation={() => showCodeView()}
               class:active={!showPreview}
             >
               Code
             </button>
             <button
               class="no-custom px-3 py-1 text-sm"
-              on:click={() => showPreviewView()}
+              on:click|stopPropagation={() => showPreviewView()}
               class:active={showPreview}
             >
               <div class="flex items-center gap-2">
@@ -1162,7 +1162,7 @@
                 <button
                   use:tooltip={{ text: 'Execute Code', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
-                  on:click={() => executeJavaScript()}
+                  on:click|stopPropagation={() => executeJavaScript()}
                   disabled={isExecuting}
                 >
                   <div class="flex items-center gap-1">
@@ -1186,7 +1186,7 @@
               {/if}
               {#if showUnLink && resource}
                 <button
-                  on:click={handleUnLink}
+                  on:click|stopPropagation={handleUnLink}
                   use:tooltip={{ text: 'Unlink from page', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
                 >
@@ -1211,7 +1211,7 @@
                   <button
                     use:tooltip={{ text: 'Copy Code', position: 'left' }}
                     class="flex items-center p-1 rounded-md transition-colors"
-                    on:click={handleCopyCode}
+                    on:click|stopPropagation={handleCopyCode}
                   >
                     <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
                   </button>
@@ -1219,7 +1219,7 @@
                   <button
                     use:tooltip={{ text: 'Copy Output', position: 'left' }}
                     class="flex items-center text-gray-400 p-1 rounded-md transition-colors"
-                    on:click={handleCopyOutput}
+                    on:click|stopPropagation={handleCopyOutput}
                   >
                     <IconConfirmation bind:this={copyOutputIcon} name="copy" size="16px" />
                   </button>
@@ -1227,7 +1227,7 @@
                 <button
                   use:tooltip={{ text: 'Execute Code', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
-                  on:click={() => executeJavaScript()}
+                  on:click|stopPropagation={() => executeJavaScript()}
                   disabled={isExecuting}
                 >
                   <div class="flex items-center gap-1">
@@ -1245,7 +1245,7 @@
                   <button
                     use:tooltip={{ text: 'Reload', position: 'left' }}
                     class="flex items-center p-1 rounded-md transition-colors"
-                    on:click={() => reloadApp()}
+                    on:click|stopPropagation={() => reloadApp()}
                   >
                     <div class="flex items-center gap-1">
                       {#if $appIsLoading || stillGenerating}
@@ -1259,7 +1259,7 @@
                   <button
                     use:tooltip={{ text: 'Copy Code', position: 'left' }}
                     class="flex items-center p-1 rounded-md transition-colors"
-                    on:click={handleCopyCode}
+                    on:click|stopPropagation={handleCopyCode}
                   >
                     <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
                   </button>
@@ -1268,7 +1268,7 @@
                 <button
                   use:tooltip={{ text: 'Copy Code', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
-                  on:click={handleCopyCode}
+                  on:click|stopPropagation={handleCopyCode}
                 >
                   <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
                 </button>
@@ -1278,7 +1278,7 @@
                 <button
                   use:tooltip={{ text: 'Open as Tab', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
-                  on:click={handleOpenAsTab}
+                  on:click|stopPropagation={handleOpenAsTab}
                 >
                   <Icon name="arrow.up.right" size="16px" />
                 </button>
@@ -1302,7 +1302,8 @@
       bind:this={preElem}
       class="h-full overflow-auto code-wrapper"
       style="color: white;"
-      on:input={handleCodeInput}><slot>{codeContent}</slot></pre>
+      on:input={handleCodeInput}
+      on:click|stopPropagation><slot>{codeContent}</slot></pre>
   </div>
 
   {#if (showPreview || showHiddenPreview) && !collapsed && expandable}
@@ -1331,7 +1332,7 @@
   {#if resizable && !collapsed}
     <div
       class="resize-handle"
-      on:mousedown={handleResizeStart}
+      on:mousedown|stopPropagation={handleResizeStart}
       on:touchstart|preventDefault={handleResizeStart}
     />
   {/if}
