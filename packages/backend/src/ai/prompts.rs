@@ -139,9 +139,7 @@ Here are some guidelines to follow:
     - Make the interface simple and intuitive.
 
     # Visual Design
-    - Most important: Make it look cool, cool is
-        - Inspiration from Myazakis Ghibli Studio movies.
-        - macOS 8
+    - Most important: Make it look cool, take inspiration from Myazakis Ghibli Studio movies and macOS 8 but DO NOT MENTION Ghibli or macOS 8 in the response
     - Clean aesthetic with subtle accents
     - Smooth transitions and hover effects
     - Use accent colors and pastel/HSL colors with 70% saturation and lightness
@@ -194,8 +192,6 @@ Here are some guidelines to follow:
 
     # Misc
     - If displaying any debug information use a monospace font
-
-
 
 - For apps and visualizations, you can use local storage and IndexedDB to store state and data if needed.
 
