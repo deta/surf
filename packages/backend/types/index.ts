@@ -4,8 +4,10 @@ export type Model =
   | 'gpt-4o'
   | 'gpt-4o-mini'
   | 'o3-mini'
+  | 'claude-3-7-sonnet-latest'
   | 'claude-3-5-sonnet-latest'
   | 'claude-3-5-haiku-latest'
+  | 'gemini-2.0-flash'
   | {
       custom: {
         name: string

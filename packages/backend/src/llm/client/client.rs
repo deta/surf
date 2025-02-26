@@ -38,7 +38,7 @@ pub struct LLMClient {
 pub enum Provider {
     OpenAI,
     Anthropic,
-    Gemini,
+    Google,
     Custom(String),
 }
 
@@ -51,10 +51,15 @@ pub enum Model {
     #[serde(rename = "o3-mini")]
     O3Mini,
 
+    #[serde(rename = "claude-3-7-sonnet-latest")]
+    Claude37Sonnet,
     #[serde(rename = "claude-3-5-sonnet-latest")]
     Claude35Sonnet,
     #[serde(rename = "claude-3-5-haiku-latest")]
     Claude35Haiku,
+
+    #[serde(rename = "gemini-2.0-flash")]
+    Gemini20Flash,
 
     #[serde(rename = "custom")]
     Custom {
@@ -221,8 +226,8 @@ impl Provider {
                 "{}/v1/chat/completions",
                 base_url.unwrap_or("https://api.openai.com"),
             ),
-            Self::Gemini => format!(
-                "{}/v1/chat/completions",
+            Self::Google => format!(
+                "{}/chat/completions",
                 base_url.unwrap_or("https://generativelanguage.googleapis.com/v1beta/openai"),
             ),
             Self::Anthropic => format!(
@@ -237,7 +242,7 @@ impl Provider {
         match self {
             Self::OpenAI => "openai",
             Self::Anthropic => "anthropic",
-            Self::Gemini => "gemini",
+            Self::Google => "google",
             Self::Custom(_) => "custom",
         }
     }
@@ -247,7 +252,7 @@ impl Provider {
 
         if let Some(api_key) = api_key {
             let auth = match self {
-                Self::OpenAI | Self::Gemini | Self::Custom(_) => {
+                Self::OpenAI | Self::Google | Self::Custom(_) => {
                     ("Authorization".to_string(), format!("Bearer {}", api_key))
                 }
                 Self::Anthropic => ("x-api-key".to_string(), api_key.to_string()),
@@ -292,7 +297,7 @@ impl Provider {
         response_format: Option<&serde_json::Value>,
     ) -> BackendResult<String> {
         match self {
-            Self::OpenAI | Self::Gemini => {
+            Self::OpenAI | Self::Google => {
                 self.prepare_openai_request(model, stream, messages, response_format)
             }
             Self::Custom(_) => self.prepare_openai_request(
@@ -451,7 +456,7 @@ impl Provider {
 
         use response_types::*;
         match self {
-            Self::OpenAI | Self::Gemini | Self::Custom(_) => {
+            Self::OpenAI | Self::Google | Self::Custom(_) => {
                 let resp = serde_json::from_str::<openai::ChatCompletionChunkResponse>(data)
                     .map_err(|e| {
                         BackendError::GenericError(format!("failed to parse openai response: {e}"))
@@ -478,7 +483,7 @@ impl Provider {
 
         use response_types::*;
         match self {
-            Self::OpenAI | Self::Gemini | Self::Custom(_) => self.parse_response_chunk(data, false),
+            Self::OpenAI | Self::Google | Self::Custom(_) => self.parse_response_chunk(data, false),
             Self::Anthropic => {
                 match serde_json::from_str::<anthropic::Response>(data).map_err(|e| {
                     BackendError::GenericError(format!("failed to parse anthropic response: {e}"))
@@ -515,8 +520,10 @@ impl Model {
             Self::GPT4o => "gpt-4o",
             Self::GPT4oMini => "gpt-4o-mini",
             Self::O3Mini => "o3-mini",
+            Self::Claude37Sonnet => "claude-3-7-sonnet-latest",
             Self::Claude35Sonnet => "claude-3-5-sonnet-latest",
             Self::Claude35Haiku => "claude-3-5-haiku-latest",
+            Self::Gemini20Flash => "gemini-2.0-flash",
             Self::Custom { name, .. } => name,
         }
         .to_string()
@@ -525,7 +532,10 @@ impl Model {
     fn provider(&self) -> &Provider {
         match self {
             Self::GPT4o | Self::GPT4oMini | Self::O3Mini => &Provider::OpenAI,
-            Self::Claude35Sonnet | Self::Claude35Haiku => &Provider::Anthropic,
+            Self::Claude37Sonnet | Self::Claude35Sonnet | Self::Claude35Haiku => {
+                &Provider::Anthropic
+            }
+            Self::Gemini20Flash => &Provider::Google,
             Self::Custom { provider, .. } => provider,
         }
     }
@@ -537,7 +547,10 @@ impl TokenModel for Model {
             Self::GPT4o => 128_000,
             Self::GPT4oMini => 128_000,
             Self::O3Mini => 128_000,
-            Self::Claude35Sonnet | Self::Claude35Haiku => 200_000,
+            // TODO: verify if 200k tokens is correct for Claude models
+            Self::Claude37Sonnet | Self::Claude35Sonnet | Self::Claude35Haiku => 200_000,
+            // NOTE: actual is 1M for gemini-2.0-flash
+            Self::Gemini20Flash => 900_000,
             Self::Custom { max_tokens, .. } => *max_tokens,
         }
     }

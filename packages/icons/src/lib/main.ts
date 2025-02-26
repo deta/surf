@@ -103,6 +103,7 @@ import Save from './Icons/Save.svelte'
 import PlusBoxed from './Icons/PlusBoxed.svelte'
 import OpenAI from './Icons/OpenAI.svelte'
 import Claude from './Icons/Claude.svelte'
+import Gemini from './Icons/Gemini.svelte'
 import PictureInPicture from './Icons/PictureInPicture.svelte'
 import Puzzle from './Icons/Puzzle.svelte'
 import PuzzleFilled from './Icons/PuzzleFilled.svelte'
@@ -222,6 +223,7 @@ export const icons = {
   'plus.boxed': PlusBoxed,
   'open-ai': OpenAI,
   claude: Claude,
+  gemini: Gemini,
   'picture-in-picture': PictureInPicture,
   dynamic: DynamicIcon,
   vision: Vision,
@@ -341,6 +343,7 @@ export {
   PlusBoxed,
   OpenAI,
   Claude,
+  Gemini,
   PictureInPicture,
   DynamicIcon,
   Vision,

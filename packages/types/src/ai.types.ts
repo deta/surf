@@ -1,6 +1,7 @@
 export enum Provider {
   OpenAI = 'open-ai',
   Anthropic = 'anthropic',
+  Google = 'google',
   Custom = 'custom'
 }
 
@@ -9,7 +10,9 @@ export enum BuiltInModelIDs {
   GPT4oMini = 'gpt-4o-mini',
   O3Mini = 'o3-mini',
   ClaudeSonnet = 'claude-3-5-sonnet-latest',
-  ClaudeHaiku = 'claude-3-5-haiku-latest'
+  ClaudeSonnet37 = 'claude-3-7-sonnet-latest',
+  ClaudeHaiku = 'claude-3-5-haiku-latest',
+  Gemini2Flash = 'gemini-2.0-flash'
 }
 
 export enum ModelTiers {
@@ -34,13 +37,16 @@ export const BuiltInModelLabels = {
   [BuiltInModelIDs.GPT4o]: 'GPT-4o',
   [BuiltInModelIDs.GPT4oMini]: 'GPT-4o Mini',
   [BuiltInModelIDs.O3Mini]: 'o3 Mini',
+  [BuiltInModelIDs.ClaudeSonnet37]: 'Claude 3.7 Sonnet',
   [BuiltInModelIDs.ClaudeSonnet]: 'Claude 3.5 Sonnet',
-  [BuiltInModelIDs.ClaudeHaiku]: 'Claude 3.5 Haiku'
+  [BuiltInModelIDs.ClaudeHaiku]: 'Claude 3.5 Haiku',
+  [BuiltInModelIDs.Gemini2Flash]: 'Gemini 2.0 Flash'
 }
 
 export const ProviderLabels = {
   [Provider.OpenAI]: 'Open AI',
   [Provider.Anthropic]: 'Anthropic',
+  [Provider.Google]: 'Google',
   [Provider.Custom]: 'Custom'
 }
 
@@ -90,6 +96,16 @@ export const BUILT_IN_MODELS = [
     supports_json_format: true
   },
   {
+    id: BuiltInModelIDs.ClaudeSonnet37,
+    label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet37],
+    provider: Provider.Anthropic,
+    tier: ModelTiers.Premium,
+    icon: 'claude',
+    vision: true,
+    supports_json_format: true,
+    max_tokens: 128_000
+  },
+  {
     id: BuiltInModelIDs.ClaudeSonnet,
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet],
     provider: Provider.Anthropic,
@@ -107,7 +123,16 @@ export const BUILT_IN_MODELS = [
     icon: 'claude',
     supports_json_format: true,
     vision: false
+  },
+  {
+    id: BuiltInModelIDs.Gemini2Flash,
+    label: BuiltInModelLabels[BuiltInModelIDs.Gemini2Flash],
+    provider: Provider.Google,
+    tier: ModelTiers.Standard,
+    icon: 'gemini',
+    supports_json_format: true,
+    vision: true
   }
 ] as Model[]
 
-export const DEFAULT_AI_MODEL = BuiltInModelIDs.ClaudeSonnet
+export const DEFAULT_AI_MODEL = BuiltInModelIDs.ClaudeSonnet37

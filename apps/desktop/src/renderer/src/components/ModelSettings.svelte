@@ -636,10 +636,13 @@
       </div>
 
       <div class="tiers-wrapper">
-        <TierQuota name="Premium Tier (GPT-4o / Claude Sonnet)" parsedQuota={$premiumTierQuotas} />
+        <TierQuota
+          name="Premium Tier (GPT-4o / Claude Sonnet/ O3 Mini)"
+          parsedQuota={$premiumTierQuotas}
+        />
 
         <TierQuota
-          name="Standard Tier (GPT-4o Mini / Claude Haiku)"
+          name="Standard Tier (GPT-4o Mini / Claude Haiku/ Gemini Flash)"
           parsedQuota={$standardTierQuotas}
         />
 
