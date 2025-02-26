@@ -10,9 +10,9 @@ import type {
   AnnotationCommentRange,
   AnnotationRangeData,
   DetectedWebApp,
-  ResourceDataPDF,
-  DragTypeNames
+  ResourceDataPDF
 } from '@horizon/types'
+import { DragTypeNames } from '@horizon/types'
 import {
   WebviewAnnotationEventNames,
   WebviewAnnotationEvents,
