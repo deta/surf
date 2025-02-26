@@ -243,7 +243,8 @@
     // @ts-ignore
     webview.nodeintegration = false
     // @ts-ignore
-    webview.webpreferences = 'contextIsolation=true,sandbox=true'
+    webview.webpreferences =
+      'autoplayPolicy=document-user-activation-required,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true'
     webview.partition = `persist:horizon`
     webview.style.width = '100%'
     webview.style.height = '100%'
@@ -255,6 +256,7 @@
 
     webview.addEventListener('did-start-loading', () => appIsLoading.set(true))
     webview.addEventListener('did-stop-loading', () => appIsLoading.set(false))
+    webview.addEventListener('dom-ready', () => webview.setAudioMuted(true))
 
     appContainer.appendChild(webview)
 

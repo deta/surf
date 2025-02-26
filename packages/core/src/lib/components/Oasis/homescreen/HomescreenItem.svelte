@@ -5,7 +5,12 @@
   import { createEventDispatcher } from 'svelte'
   import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
-  import { CreateTabEventTrigger, ResourceTypes, UpdateHomescreenEventAction } from '@horizon/types'
+  import {
+    CreateTabEventTrigger,
+    ResourceTypes,
+    UpdateHomescreenEventAction,
+    WEB_RESOURCE_TYPES
+  } from '@horizon/types'
   import { useTelemetry } from '../../../service/telemetry'
   import { useTabsManager } from '../../../service/tabs'
   import { useDesktopManager, type DesktopService } from '../../../service/desktop'
@@ -34,12 +39,27 @@
   const oasis = useOasis()
   const spaces = oasis.spaces
   const resourceManager = oasis.resourceManager
+  const config = oasis.config
+  const userSettings = config.settings
   const tabs = useTabsManager()
   const dispatch = createEventDispatcher<{
     'remove-from-homescreen': string
   }>()
 
   let bentoItemEl: HTMLElement
+
+  const calcViewMode = (viewMode, item, resource, settings) => {
+    if (isGeneratedResource(resource)) {
+      return item.width * item.height > 12 ? 'full' : viewMode
+    } else if (
+      WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) &&
+      settings.experimental_desktop_embeds
+    ) {
+      return item.width > 8 && item.height > 7 ? 'full' : viewMode
+    } else {
+      return viewMode
+    }
+  }
 
   let resizing = false
   function handleResizeMouseDown(direction: 'nw' | 'ne' | 'se' | 'sw'): (e: MouseEvent) => void {
@@ -238,14 +258,13 @@ TODO: Fix resizing logic for other corners
             let:frameless
             let:hideProcessing
           >
-            {#if (resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && $desktopVisible) || (isGeneratedResource(resource) && $desktopVisible) || (!resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && !isGeneratedResource(resource))}
+            {@const calcedViewMode = calcViewMode(viewMode, $item, resource, $userSettings)}
+            {#if (resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && $desktopVisible) || (WEB_RESOURCE_TYPES.some( (x) => resource.type.startsWith(x) ) && $desktopVisible && calcedViewMode === 'full') || (isGeneratedResource(resource) && $desktopVisible) || (!resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && !isGeneratedResource(resource))}
               {#if interactive}
                 <ResourcePreview
                   {resource}
                   {mode}
-                  viewMode={isGeneratedResource(resource) && $item.width * $item.height > 12
-                    ? 'full'
-                    : viewMode}
+                  viewMode={calcedViewMode}
                   {origin}
                   {selected}
                   {isInSpace}

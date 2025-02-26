@@ -550,6 +550,14 @@
             bind:value={userConfigSettings.cleanup_filenames}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="rectangle"
+            title="Embeds on the Desktop"
+            description="Embed content from websites directly on your desktop if the card is big enough."
+            bind:value={userConfigSettings.experimental_desktop_embeds}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
       </article>
     {:else if $activeTab === 'advanced'}

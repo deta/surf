@@ -109,6 +109,7 @@ export const getUserConfig = (path?: string) => {
       auto_note_similarity_search: false,
       experimental_note_inline_rewrite: false,
       experimental_chat_web_search: false,
+      experimental_desktop_embeds: false,
       extensions: false,
       cleanup_filenames: false,
       onboarding: {
@@ -243,6 +244,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.cleanup_filenames === undefined) {
     storedConfig.settings.cleanup_filenames = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_desktop_embeds === undefined) {
+    storedConfig.settings.experimental_desktop_embeds = false
     changedConfig = true
   }
 

@@ -15,7 +15,7 @@
   import FileIcon from './File/FileIcon.svelte'
   import { Editor } from '@horizon/editor'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
-  import { ResourceTypes } from '@horizon/types'
+  import { ResourceTypes, WEB_RESOURCE_TYPES } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
   import { createEventDispatcher } from 'svelte'
   import TextResource from './Text/TextResource.svelte'
@@ -29,6 +29,7 @@
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import CodeRenderer from '../../Chat/CodeRenderer.svelte'
+  import CollapsableResourceBlock from '@horizon/core/src/lib/components/Oasis/CollapsableResourceBlock.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -227,6 +228,16 @@
   <div class="inner">
     {#if isGeneratedResource(resource) && origin === 'homescreen' && viewMode === 'full'}
       <CodeRenderer
+        {resource}
+        showPreview
+        language={mimeTypeToCodeLanguage(resource.type)}
+        initialCollapsed={false}
+        collapsable={false}
+        draggable={false}
+        fullSize
+      />
+    {:else if WEB_RESOURCE_TYPES.some( (x) => resource.type.startsWith(x) ) && origin === 'homescreen' && viewMode === 'full'}
+      <CollapsableResourceBlock
         {resource}
         showPreview
         language={mimeTypeToCodeLanguage(resource.type)}
