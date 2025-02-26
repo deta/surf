@@ -4,18 +4,12 @@
   import { createEventDispatcher, getContext, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
 
-  import {
-    ResourceJSON,
-    ResourceNote,
-    useResourceManager,
-    type Resource
-  } from '../../service/resources'
+  import { useResourceManager, type Resource } from '../../service/resources'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     type CreateTabOptions,
     type ResourceData,
-    type ResourceDataPost,
     SpaceEntryOrigin,
     type DragTypes,
     DragTypeNames,
@@ -23,43 +17,24 @@
   } from '../../types'
 
   import { writable, get, derived } from 'svelte/store'
-  import {
-    CreateTabEventTrigger,
-    OpenResourceEventFrom,
-    WEB_RESOURCE_TYPES,
-    type AnnotationCommentData,
-    type AnnotationRangeData,
-    type ResourceDataAnnotation,
-    type ResourceDataArticle,
-    type ResourceDataDocument,
-    type ResourceDataLink
-  } from '@horizon/types'
+  import { CreateTabEventTrigger, OpenResourceEventFrom, WEB_RESOURCE_TYPES } from '@horizon/types'
   import {
     useLogScope,
     isModKeyPressed,
     getFileType,
     parseStringIntoUrl,
-    getHostname,
     hover,
     isMac,
     copyToClipboard,
     truncateURL,
     conditionalArrayItem,
     tooltip,
-    parseUrlIntoCanonical,
-    wait
+    parseUrlIntoCanonical
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
   import { useOasis, type OasisSpace } from '../../service/oasis'
-  import {
-    type Annotation,
-    type Author,
-    type ContentType,
-    type Mode,
-    type Origin,
-    type Source
-  } from './Previews/Preview.svelte'
+  import { type Origin } from './Previews/Preview.svelte'
   import Preview from './Previews/PreviewV2.svelte'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
@@ -69,9 +44,7 @@
     addSelectionById
   } from '@horizon/core/src/lib/components/Oasis/utils/select'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
-  import { WebParser } from '@horizon/web-parser'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-  import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
   import { useDesktopManager } from '../../service/desktop'
   import {
     getResourcePreview,
@@ -128,6 +101,24 @@
     'remove-from-homescreen': void
     'set-resource-as-space-icon': string
   }>()
+
+  const PREVIEW_PAIRS: Record<string, { quality: number; maxDimension: number }> = {
+    stuff: {
+      quality: 50,
+      maxDimension: 1200
+    },
+    stack: {
+      quality: 20,
+      maxDimension: 200
+    }
+  } as const
+  const getPreviewPair = (otigin: Origin) =>
+    Object.keys(PREVIEW_PAIRS).includes(origin)
+      ? PREVIEW_PAIRS[origin]
+      : {
+          quality: undefined,
+          maxDimension: undefined
+        }
 
   const spaces = oasis.spaces
   const resourceState = resource.state
@@ -284,11 +275,14 @@
   }
 
   const loadResource = async () => {
+    const previewMediaQuery = getPreviewPair(origin)
     previewData = await getResourcePreview(resource, {
       viewMode,
       mode,
       hideProcessing,
-      showAnnotations: $userConfigSettings.show_annotations_in_oasis
+      showAnnotations: $userConfigSettings.show_annotations_in_oasis,
+      quality: previewMediaQuery.quality,
+      maxDimension: previewMediaQuery.maxDimension
     })
 
     dispatch('load', resource.id)

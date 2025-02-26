@@ -38,6 +38,7 @@
     "electron-updater": "^6.1.7",
     "iconify-icon": "^2.1.0",
     "mime-types": "^2.1.35",
+    "sharp": "^0.33.5",
     "svelte-dnd-list": "^0.1.8",
     "svelte-portal": "^2.2.1"
   },

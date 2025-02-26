@@ -48,7 +48,8 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/main/index.ts')
+          index: resolve(__dirname, 'src/main/index.ts'),
+          imageProcessor: resolve(__dirname, 'src/main/workers/imageProcessor.ts')
         }
       }
     },

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, screen, net } from 'electron'
+import { app, BrowserWindow, session, screen } from 'electron'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { attachContextMenu } from './contextMenu'
@@ -11,7 +11,6 @@ import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
 import {
   isAppSetup,
-  isPathSafe,
   normalizeElectronUserAgent,
   PDFViewerEntryPoint,
   SettingsWindowEntrypoint
@@ -21,6 +20,7 @@ import { getWebRequestManager } from './webRequestManager'
 import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
 import { handleCrxRequest } from './crxHandler'
+import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -33,6 +33,10 @@ export function createWindow() {
     log.warn('App is not setup, not allowed to create main window')
     return
   }
+
+  const userDataPath = app.getPath('userData')
+  const backendRootPath = join(userDataPath, 'sffs_backend')
+  const imageResourceCachePath = join(backendRootPath, 'resources/previews')
 
   const winState = new WindowState(
     {
@@ -255,52 +259,6 @@ export function createWindow() {
 
     callback({ cancel: false })
   })
-
-  let surfProtocolHandler = async (req: GlobalRequest) => {
-    try {
-      const id = req.url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
-      if (!id) return new Response('Invalid Surf protocol URL', { status: 400 })
-
-      const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
-      const path = join(base, id)
-
-      return isPathSafe(base, path)
-        ? await net.fetch(`file://${path}`)
-        : new Response('Forbidden', { status: 403 })
-    } catch (err) {
-      console.error('surf protocol error:', err, req.url)
-      return new Response('Internal Server Error', { status: 500 })
-    }
-  }
-
-  let surfletProtocolHandler = async (req: GlobalRequest) => {
-    try {
-      const url = new URL(req.url)
-      if (!url.hostname.endsWith('.app.local')) {
-        return new Response('Invalid Surflet protocol URL', { status: 400 })
-      }
-      const id = url.hostname.replace('.app.local', '')
-      const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
-      const path = join(base, id)
-
-      if (!isPathSafe(base, path)) {
-        return new Response('Forbidden', { status: 403 })
-      }
-      let res = await net.fetch(`file://${path}`)
-      if (!res.ok) {
-        return new Response('Not Found', { status: 404 })
-      }
-      const code = await res.text()
-      return new Response(code, {
-        headers: {
-          'Content-Type': 'text/html'
-        }
-      })
-    } catch (err) {
-      console.error('surflet protocol error:', err, req.url)
-      return new Response('Internal Server Error', { status: 500 })
-    }
-  }
 
   let crxProtocolHandler = async (request: GlobalRequest): Promise<GlobalResponse> => {
     return await handleCrxRequest(webviewSession, request.url)

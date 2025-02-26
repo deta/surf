@@ -41,7 +41,12 @@ function electronBuilderConfig() {
       '!**/*.js.map'
     ],
     asar: true,
-    asarUnpack: ['resources/**', '**/*.node'],
+    asarUnpack: [
+      'resources/**',
+      '**/*.node',
+      '**/main/bytecode-loader.js',
+      '**/main/imageProcessor.js*'
+    ],
     afterPack: 'build/afterpack.js',
     protocols: [
       {

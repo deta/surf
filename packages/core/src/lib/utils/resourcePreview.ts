@@ -84,6 +84,8 @@ export type PreviewOptions = {
   viewMode?: ViewMode
   hideProcessing?: boolean
   showAnnotations?: boolean
+  quality?: number // Only image/ resources
+  maxDimension?: number // Only image/ resources
 }
 
 const cleanSource = (text: string) => {
@@ -400,11 +402,21 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
     } else if (resource.type.startsWith('image/')) {
       const hostname = getHostname(canonicalUrl ?? '')
 
+      const image = userMediaResource ?? `surf://resource/${resource.id}`
+      const imageURL = new URL(image)
+
+      if (opts?.quality !== undefined) {
+        imageURL.searchParams.set('quality', opts.quality.toString())
+      }
+      if (opts?.maxDimension !== undefined) {
+        imageURL.searchParams.set('maxDimension', opts.maxDimension.toString())
+      }
+
       previewData = {
         type: resource.type,
         title: undefined,
         content: undefined,
-        image: userMediaResource ?? `surf://resource/${resource.id}`,
+        image: imageURL.toString(),
         url: canonicalUrl ?? parseStringIntoUrl(resource.metadata?.sourceURI ?? '')?.href ?? '',
         source: {
           text: resource?.metadata?.name || hostname || canonicalUrl || getFileType(resource.type),
