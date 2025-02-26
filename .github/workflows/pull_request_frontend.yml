@@ -1,14 +1,14 @@
 name: Frontend Changes Pull Request
 
 on:
-  pull_request:
-    branches:
-      - grooves-base
-    paths:
-      - 'packages/**'
-      - 'apps/desktop/src/**'
-      - '!packages/backend/**'
-      - '!packages/backend-server/**'
+  #pull_request:
+  #  branches:
+  #    - grooves-base
+  #  paths:
+  #    - 'packages/**'
+  #    - 'apps/desktop/src/**'
+  #    - '!packages/backend/**'
+  #    - '!packages/backend-server/**'
   workflow_dispatch:
 
 jobs:
