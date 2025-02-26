@@ -277,13 +277,19 @@
     opacity: 0;
     gap: 0.5rem;
     flex-wrap: nowrap;
-    overflow-x: auto;
+    overflow-x: scroll;
+    -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
     display: flex;
     transition:
       opacity 0.2s ease-out,
       width 0.2s ease-out;
     interpolate-size: allow-keywords;
     pointer-events: none;
+
+    &::-webkit-scrollbar {
+      display: none; /* Hide scrollbar for Chrome, Safari and Opera */
+    }
   }
 
   .expand-btn {
