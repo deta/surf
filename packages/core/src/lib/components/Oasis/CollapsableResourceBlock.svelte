@@ -448,7 +448,7 @@
         {#if collapsable}
           <button
             class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
-            on:click={() => (collapsed = !collapsed)}
+            on:click|stopPropagation={() => (collapsed = !collapsed)}
           >
             <Icon
               name="chevron.right"
@@ -465,6 +465,7 @@
             on:input={handleInputChange}
             on:keydown={handleInputKeydown}
             on:blur={handleInputBlur}
+            on:click|stopPropagation
             value={$customName || $generatedName || language}
             placeholder="Name"
             class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
@@ -495,7 +496,7 @@
               <button
                 use:tooltip={{ text: 'Reload', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
-                on:click={() => reloadApp()}
+                on:click|stopPropagation={() => reloadApp()}
               >
                 <div class="flex items-center gap-1">
                   {#if $appIsLoading}
@@ -509,7 +510,7 @@
               <button
                 use:tooltip={{ text: 'Open in Mini Browser', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
-                on:click={() => openMiniBrowser()}
+                on:click|stopPropagation={() => openMiniBrowser()}
               >
                 <Icon name="eye" size="16px" />
               </button>
@@ -517,7 +518,7 @@
               <button
                 use:tooltip={{ text: 'Open as Tab', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
-                on:click={handleOpenAsTab}
+                on:click|stopPropagation={handleOpenAsTab}
               >
                 <Icon name="arrow.up.right" size="16px" />
               </button>

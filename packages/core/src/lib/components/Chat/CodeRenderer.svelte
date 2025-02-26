@@ -1121,6 +1121,7 @@
               on:input={handleInputChange}
               on:keydown={handleInputKeydown}
               on:blur={handleInputBlur}
+              on:click|stopPropagation
               value={$customName || $generatedName || language}
               placeholder="Name"
               class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
