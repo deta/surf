@@ -330,6 +330,13 @@ export function createWindow() {
 
   winState.manage(mainWindow)
 
+  // Hack to make sure the window gets properly focused
+  mainWindow.on('show', () => {
+    setTimeout(() => {
+      mainWindow?.focus()
+    }, 200)
+  })
+
   mainWindow.on('ready-to-show', () => {
     if (winState.state.isMaximized) {
       mainWindow?.maximize()
