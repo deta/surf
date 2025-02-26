@@ -9,7 +9,14 @@ import fetch from 'cross-fetch'
 
 import EventEmitter from 'events'
 import * as crypto from 'crypto'
-import { promises as fsp, createReadStream, createWriteStream, ReadStream, WriteStream } from 'fs'
+import {
+  promises as fsp,
+  createReadStream,
+  createWriteStream,
+  ReadStream,
+  WriteStream,
+  mkdirSync
+} from 'fs'
 import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@horizon/api'
 import {
   type EditablePrompt,
@@ -78,6 +85,8 @@ const PDFViewerEntryPoint =
   process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
 const SettingsWindowEntrypoint =
   process.argv.find((arg) => arg.startsWith('--settings-window-entry-point='))?.split('=')[1] || ''
+
+mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
 const webviewNewWindowHandlers: Record<number, (details: NewWindowRequest) => void> = {}
 
