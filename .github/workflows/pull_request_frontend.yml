@@ -45,7 +45,11 @@ jobs:
           yarn config set network-timeout 300000
           yarn install --frozen-lockfile --network-timeout 300000
 
-      - name: Run build
+      - name: Generate Tailwind Output
+        run: |
+          yarn workspace @horizon/core build:tailwind
+
+      - name: Run Vite Build
         run: yarn workspace desktop build
         env:
           HUSKY: 0
