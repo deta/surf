@@ -15,6 +15,7 @@
   import type { MentionAction } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
   import { TextSelection } from '@tiptap/pm/state'
+  import { DragTypeNames } from '@horizon/types'
 
   export let content: string
   export let readOnly: boolean = false
@@ -409,6 +410,18 @@
       content: content,
       editable: !readOnly,
       autofocus: !autofocus || readOnly ? false : 'end',
+      editorProps: {
+        handleDOMEvents: {
+          drop: (view, e) => {
+            // if a tab is being dropped we need to prevent the default behavior so TipTap does not handle it
+            const tabId = e.dataTransfer?.getData(DragTypeNames.SURF_TAB_ID)
+            if (tabId) {
+              e.preventDefault()
+              return false
+            }
+          }
+        }
+      },
       onUpdate: ({ editor }) => {
         editor = editor
         const html = editor.getHTML()

@@ -10,7 +10,8 @@ import type {
   AnnotationCommentRange,
   AnnotationRangeData,
   DetectedWebApp,
-  ResourceDataPDF
+  ResourceDataPDF,
+  DragTypeNames
 } from '@horizon/types'
 import {
   WebviewAnnotationEventNames,
@@ -1128,7 +1129,7 @@ async function handleDrop(e: DragEvent) {
       dataTransfer: e.dataTransfer
     })
 
-    const resourceId = e.dataTransfer?.getData('application/vnd.space.dragcula.resourceId')
+    const resourceId = e.dataTransfer?.getData(DragTypeNames.SURF_RESOURCE_ID)
     if (resourceId) {
       const metadata = await getDragMetadata(resourceId)
       if (!metadata) return

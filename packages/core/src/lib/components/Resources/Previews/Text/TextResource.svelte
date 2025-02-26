@@ -80,7 +80,7 @@
   import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import ChangeContextBtn from '@horizon/core/src/lib/components/Chat/Notes/ChangeContextBtn.svelte'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
   import type { InsertSourceEvent } from '@horizon/core/src/lib/components/Chat/Notes/SimilarityItem.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
@@ -360,135 +360,157 @@
   }
 
   const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
-    const editor = editorElem.getEditor()
-    const position = dragPosition ?? editor.view.state.selection.from
-    const resolvedPos = editor.view.state.doc.resolve(position)
-    const isBlock = !resolvedPos.parent.inlineContent
+    let toast: Toast | null = null
+    try {
+      const editor = editorElem.getEditor()
+      const position = dragPosition ?? editor.view.state.selection.from
+      const resolvedPos = editor.view.state.doc.resolve(position)
+      const isBlock = !resolvedPos.parent.inlineContent
 
-    log.debug('dropped something at', position, 'is block', isBlock)
+      log.debug('dropped something at', position, 'is block', isBlock)
 
-    const processDropResource = (resource: Resource) => {
-      const canonicalUrl = (resource?.tags ?? []).find(
-        (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-      )?.value
-      const canBeEmbedded =
-        WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
+      const processDropResource = (resource: Resource) => {
+        const canonicalUrl = (resource?.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+        )?.value
+        const canBeEmbedded =
+          WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
 
-      if (resource.type.startsWith('image/')) {
-        editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
-      } else if ((isGeneratedResource(resource) || canBeEmbedded) && isBlock) {
-        editor.commands.insertContentAt(
-          position,
-          `<resource id="${resource.id}" data-type="${resource.type}" />`
+        if (resource.type.startsWith('image/')) {
+          editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
+        } else if ((isGeneratedResource(resource) || canBeEmbedded) && isBlock) {
+          editor.commands.insertContentAt(
+            position,
+            `<resource id="${resource.id}" data-type="${resource.type}" />`
+          )
+        } else {
+          const citationElem = createCitationHTML({
+            id: resource.id,
+            metadata: {
+              url: resource.url
+            },
+            resource_id: resource.id,
+            all_chunk_ids: [resource.id],
+            render_id: resource.id,
+            content: ''
+          })
+
+          editor.commands.insertContentAt(position, citationElem)
+        }
+
+        telemetry.trackNoteCreateCitation(
+          resource.type,
+          NoteCreateCitationEventTrigger.Drop,
+          showOnboarding
         )
-      } else {
-        const citationElem = createCitationHTML({
-          id: resource.id,
-          metadata: {
-            url: resource.url
-          },
-          resource_id: resource.id,
-          all_chunk_ids: [resource.id],
-          render_id: resource.id,
-          content: ''
-        })
-
-        editor.commands.insertContentAt(position, citationElem)
       }
 
-      telemetry.trackNoteCreateCitation(
-        resource.type,
-        NoteCreateCitationEventTrigger.Drop,
-        showOnboarding
-      )
-    }
-
-    const processDropSpace = (space: OasisSpace) => {
-      editor
-        .chain()
-        .focus()
-        .insertContentAt(position, [
-          {
-            type: 'mention',
-            attrs: {
-              id: space.id,
-              label: space.dataValue.folderName
+      const processDropSpace = (space: OasisSpace) => {
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(position, [
+            {
+              type: 'mention',
+              attrs: {
+                id: space.id,
+                label: space.dataValue.folderName
+              }
+            },
+            {
+              type: 'text',
+              text: ' '
             }
-          },
-          {
-            type: 'text',
-            text: ' '
-          }
-        ])
-        .run()
+          ])
+          .run()
 
-      telemetry.trackNoteCreateCitation(
-        DragTypeNames.SURF_SPACE,
-        NoteCreateCitationEventTrigger.Drop,
-        showOnboarding
-      )
-    }
-
-    if (drag.isNative) {
-      log.warn('Not yet implemented!')
-    } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
-      const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
-      const tab = await tabsManager.get(tabId)
-      if (!tab) {
-        log.error('Tab not found', tabId)
-        drag.abort()
-        return
+        telemetry.trackNoteCreateCitation(
+          DragTypeNames.SURF_SPACE,
+          NoteCreateCitationEventTrigger.Drop,
+          showOnboarding
+        )
       }
 
-      log.debug('dropped tab', tab)
+      if (drag.isNative) {
+        log.warn('Not yet implemented!')
+      } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+        const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
+        const tab = await tabsManager.get(tabId)
+        if (!tab) {
+          log.error('Tab not found', tabId)
+          drag.abort()
+          return
+        }
 
-      if (tab.type === 'page') {
-        if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
-          const resource = await resourceManager.getResource(tab.resourceBookmark)
-          if (resource) {
-            processDropResource(resource)
+        log.debug('dropped tab', tab)
+
+        if (tab.type === 'page') {
+          if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
+            const resource = await resourceManager.getResource(tab.resourceBookmark)
+            if (resource) {
+              processDropResource(resource)
+              drag.continue()
+              return
+            }
+          } else {
+            log.debug('Creating resource from tab', tab)
+            toast = toasts.loading('Processing Tab…')
+            const { resource } = await tabsManager.createResourceFromTab(tab, { silent: true })
+            if (resource) {
+              log.debug('Created resource from tab', resource)
+              processDropResource(resource)
+              toast.success(isBlock ? 'Tab Embedded!' : 'Tab Linked!')
+              drag.continue()
+              return
+            }
+          }
+        } else if (tab.type === 'space') {
+          const space = await oasis.getSpace(tab.spaceId)
+          if (space) {
+            processDropSpace(space)
             drag.continue()
             return
           }
         }
-      } else if (tab.type === 'space') {
-        const space = await oasis.getSpace(tab.spaceId)
-        if (space) {
-          processDropSpace(space)
-          drag.continue()
+
+        log.warn('Dropped tab but no resource found! Aborting drop!')
+        drag.abort()
+      } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
+        const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
+
+        log.debug('dropped space', space)
+        processDropSpace(space)
+      } else if (
+        drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        let resource: Resource | null = null
+        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+          resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+          resource = await resourceFetcher()
+        }
+
+        if (resource === null) {
+          log.warn('Dropped resource but resource is null! Aborting drop!')
+          drag.abort()
           return
         }
-      }
 
-      log.warn('Dropped tab but no resource found! Aborting drop!')
+        log.debug('dropped resource', resource)
+        processDropResource(resource)
+
+        drag.continue()
+      }
+    } catch (e) {
+      log.error('Error handling drop', e)
+      if (toast) {
+        toast.error('Failed to handle drop')
+      } else {
+        toasts.error('Failed to handle drop')
+      }
       drag.abort()
-    } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
-      const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
-
-      log.debug('dropped space', space)
-      processDropSpace(space)
-    } else if (
-      drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-      drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-    ) {
-      let resource: Resource | null = null
-      if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
-        resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
-      } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
-        const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
-        resource = await resourceFetcher()
-      }
-
-      if (resource === null) {
-        log.warn('Dropped resource but resource is null! Aborting drop!')
-        drag.abort()
-        return
-      }
-
-      log.debug('dropped resource', resource)
-      processDropResource(resource)
-
-      drag.continue()
     }
   }
 

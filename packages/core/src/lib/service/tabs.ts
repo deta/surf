@@ -48,6 +48,7 @@ import type { DesktopManager } from './desktop'
 import type { AIService } from './ai/ai'
 import { ContextItemResource } from './ai/context'
 import type { ConfigService } from './config'
+import type { BookmarkPageOpts } from '../components/Browser/BrowserTab.svelte'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -1465,6 +1466,53 @@ export class TabsManager {
     }
 
     return tab
+  }
+
+  async createResourceFromTab(tabOrTabId: string | TabPage, opts?: BookmarkPageOpts) {
+    const tab =
+      typeof tabOrTabId === 'string' ? this.tabsValue.find((t) => t.id === tabOrTabId) : tabOrTabId
+    if (!tab || tab.type !== 'page') {
+      this.log.debug('Tab not found or not a page tab', tabOrTabId)
+      return { resource: null, isNew: false }
+    }
+
+    let browserTab = this.browserTabsValue[tab.id]
+
+    const tabUrl = browserTab?.getInitialSrc() || tab.currentLocation || tab.initialLocation
+    if (tabUrl.startsWith('surf://')) {
+      return { resource: null, isNew: false }
+    }
+
+    const isActivated = this.activatedTabsValue.includes(tab.id)
+    if (!isActivated) {
+      this.log.debug('Tab not activated, activating first', tab.id)
+      this.activatedTabs.update((tabs) => {
+        return [...tabs, tab.id]
+      })
+
+      // give the tab some time to load
+      await wait(200)
+
+      browserTab = this.browserTabsValue[tab.id]
+      if (!browserTab) {
+        this.log.error('Browser tab not found', tab.id)
+        throw Error(`Browser tab not found`)
+      }
+
+      this.log.debug('Waiting for tab to become active', tab.id)
+      await browserTab.waitForAppDetection(3000)
+    }
+
+    const options = {
+      silent: true,
+      createdForChat: false,
+      freshWebview: false,
+      ...opts
+    }
+
+    const resource = await browserTab.bookmarkPage(options)
+
+    return { resource: resource, isNew: true }
   }
 
   export() {

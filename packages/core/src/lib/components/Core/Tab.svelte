@@ -407,6 +407,7 @@
     blur()
 
     drag.item!.data.setData(DragTypeNames.SURF_TAB, { ...tab, pinned }) // FIX: pinned is not included but needed for reordering to work
+    drag.dataTransfer?.setData(DragTypeNames.SURF_TAB_ID, tab.id)
 
     if (tab.type === 'page' && tab.currentLocation) {
       drag.dataTransfer?.setData('text/uri-list', tab.currentLocation)
@@ -417,7 +418,7 @@
     // @ts-ignore
     const resourceId = tab.resourceBookmark ?? tab.resourceId
     if (resourceId) {
-      drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resourceId)
+      drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, resourceId)
       drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resourceId)
       drag.item!.data.setData(DragTypeNames.ASYNC_SURF_RESOURCE, () =>
         resourceManager.getResource(resourceId)

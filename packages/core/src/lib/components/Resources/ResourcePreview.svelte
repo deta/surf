@@ -526,7 +526,7 @@
 
   const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
     drag.item!.data.setData(DragTypeNames.SURF_RESOURCE, resource)
-    drag.dataTransfer?.setData('application/vnd.space.dragcula.resourceId', resource.id)
+    drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
     drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
 
     // const citationInfo = encodeURIComponent(
