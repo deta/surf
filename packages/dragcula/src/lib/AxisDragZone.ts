@@ -2,7 +2,7 @@ import type { ActionReturn } from "svelte/action";
 import { HTMLDragZone, type HTMLDragZoneAttributes, type HTMLDragZoneProps } from "./DragZone.js";
 import { HTMLDragItem, type DragOperation } from "./index.js";
 
-export type Axis = "horizontal" | "vertical";
+export type Axis = "horizontal" | "vertical" | "both";
 
 export interface HTMLAxisDragZoneAttributes extends HTMLDragZoneAttributes {
   axis: Axis;
@@ -25,7 +25,8 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   #raf: number | null = null;
   #indicatorVisible = false;
   #indicatorEl: HTMLElement | null = null;
-  #indicatorOffset: number = 0;
+  #indicatorOffsetTop: number = 0;
+  #indicatorOffsetLeft: number = 0;
 
   // Store pos to only check inside raf!
   #mousePos: { x: number; y: number } = { x: 0, y: 0 };
@@ -48,6 +49,9 @@ export class HTMLAxisDragZone extends HTMLDragZone {
         break;
       case "vertical":
         this.axis = "vertical";
+        break;
+      case "both":
+        this.axis = "both";
         break;
       default:
         this.axis = "vertical";
@@ -84,47 +88,165 @@ export class HTMLAxisDragZone extends HTMLDragZone {
       y: y - this.#containerCache.top + containerScroll.y
     };
 
-    // From center to center -> issue dragging upwards
-    const distances = this.#childrenCache.map((child) => {
-      let center: number = 0;
-      if (this.axis === "horizontal") {
-        center = child.rect.x + containerScroll.x + child.rect.width / 2;
-        return { el: child.el, dist: center - relativePoint.x };
-      } else if (this.axis === "vertical") {
-        center = child.rect.y + containerScroll.y + child.rect.height / 2;
-        return { el: child.el, dist: center - relativePoint.y };
+    if (this.axis === "both") {
+      // For "both" axis (grid layout), we need a different approach
+
+      // First, check if we're before the first item
+      const firstChild = this.#childrenCache[0];
+      if (
+        firstChild &&
+        (relativePoint.x < firstChild.rect.x ||
+          (relativePoint.x < firstChild.rect.x + firstChild.rect.width &&
+            relativePoint.y < firstChild.rect.y))
+      ) {
+        return [0, 0];
       }
-    });
 
-    const closestElement = distances.reduce(
-      (acc, curr) => {
-        if (Math.abs(curr.dist) < Math.abs(acc.dist)) {
-          return curr;
+      // Check if we're after the last item
+      const lastChild = this.#childrenCache[this.#childrenCache.length - 1];
+      if (
+        lastChild &&
+        (relativePoint.y > lastChild.rect.y + lastChild.rect.height ||
+          (relativePoint.x > lastChild.rect.x + lastChild.rect.width &&
+            relativePoint.y > lastChild.rect.y))
+      ) {
+        return [this.#childrenCache.length, 0];
+      }
+
+      // Find the item we're hovering over or closest to
+      for (let i = 0; i < this.#childrenCache.length; i++) {
+        const child = this.#childrenCache[i];
+        const nextChild = i < this.#childrenCache.length - 1 ? this.#childrenCache[i + 1] : null;
+
+        // Check if we're inside this item's bounds
+        if (
+          relativePoint.x >= child.rect.x &&
+          relativePoint.x <= child.rect.x + child.rect.width &&
+          relativePoint.y >= child.rect.y &&
+          relativePoint.y <= child.rect.y + child.rect.height
+        ) {
+          // We're inside this item - determine if we're in the left or right half
+          const midX = child.rect.x + child.rect.width / 2;
+          if (relativePoint.x < midX) {
+            return [i, 0]; // Left half - insert at this index
+          } else {
+            return [i + 1, 0]; // Right half - insert after this index
+          }
         }
-        return acc;
-      },
-      { el: null, dist: Infinity }
-    );
 
-    if (closestElement?.el == null) return [undefined, undefined];
+        // Check if we're between this item and the next one horizontally
+        // (in the same row)
+        if (
+          nextChild &&
+          Math.abs(child.rect.y - nextChild.rect.y) < 10 && // Same row (with small tolerance)
+          relativePoint.x > child.rect.x + child.rect.width &&
+          relativePoint.x < nextChild.rect.x &&
+          relativePoint.y >= child.rect.y &&
+          relativePoint.y <= child.rect.y + child.rect.height
+        ) {
+          return [i + 1, 0]; // Between items horizontally
+        }
 
-    // Find target index of relativePoint
-    // TODO: (old) remove
-    /*	const targetIndex = this.#childrenCache.findIndex((child) => {
-				if (this.axis === "horizontal") {
-					return relativePoint.x >= child.rect.x && relativePoint.x <= child.rect.right;
-				}
-				else if (this.axis === "vertical") {
-					return relativePoint.y >= child.rect.y && relativePoint.y <= child.rect.y + child.rect.height;
-				}
-			})*/
+        // Check if we're between rows
+        if (i < this.#childrenCache.length - 1) {
+          const nextRowStart = this.#childrenCache
+            .slice(i + 1)
+            .find((c) => c.rect.y > child.rect.y + child.rect.height);
 
-    let targetIndex = this.#childrenCache.findIndex((child) => child.el === closestElement.el);
+          if (
+            nextRowStart &&
+            relativePoint.y > child.rect.y + child.rect.height &&
+            relativePoint.y < nextRowStart.rect.y
+          ) {
+            // Find the correct horizontal position
+            const rowEndIndex = this.#childrenCache.indexOf(nextRowStart);
+            for (let j = i; j < rowEndIndex; j++) {
+              if (
+                relativePoint.x <=
+                this.#childrenCache[j].rect.x + this.#childrenCache[j].rect.width
+              ) {
+                return [j + 1, 0]; // Insert after this item in the row
+              }
+            }
+            return [rowEndIndex, 0]; // Insert at the start of the next row
+          }
+        }
+      }
 
-    if (Math.sign(closestElement.dist) < 0) targetIndex++;
+      // If we got here, find the closest item by distance
+      let closestIndex = 0;
+      let closestDistance = Infinity;
 
-    if (targetIndex === -1) return [undefined, undefined];
-    return [targetIndex, closestElement.dist];
+      for (let i = 0; i < this.#childrenCache.length; i++) {
+        const child = this.#childrenCache[i];
+        const childCenterX = child.rect.x + child.rect.width / 2;
+        const childCenterY = child.rect.y + child.rect.height / 2;
+
+        const distance = Math.sqrt(
+          Math.pow(childCenterX - relativePoint.x, 2) + Math.pow(childCenterY - relativePoint.y, 2)
+        );
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = i;
+        }
+      }
+
+      // Check if we should insert before or after the closest item
+      const closestChild = this.#childrenCache[closestIndex];
+      const childCenterX = closestChild.rect.x + closestChild.rect.width / 2;
+      return [relativePoint.x < childCenterX ? closestIndex : closestIndex + 1, closestDistance];
+    } else if (this.axis === "horizontal") {
+      // From center to center
+      const distances = this.#childrenCache.map((child) => {
+        const center = child.rect.x + containerScroll.x + child.rect.width / 2;
+        return { el: child.el, dist: center - relativePoint.x };
+      });
+
+      const closestElement = distances.reduce(
+        (acc, curr) => {
+          if (Math.abs(curr?.dist ?? Infinity) < Math.abs(acc.dist)) {
+            return curr;
+          }
+          return acc;
+        },
+        { el: null, dist: Infinity }
+      );
+
+      if (closestElement?.el == null) return [undefined, undefined];
+
+      let targetIndex = this.#childrenCache.findIndex((child) => child.el === closestElement.el);
+      if (Math.sign(closestElement.dist) < 0) targetIndex++;
+
+      if (targetIndex === -1) return [undefined, undefined];
+      return [targetIndex, closestElement.dist];
+    } else if (this.axis === "vertical") {
+      // From center to center
+      const distances = this.#childrenCache.map((child) => {
+        const center = child.rect.y + containerScroll.y + child.rect.height / 2;
+        return { el: child.el, dist: center - relativePoint.y };
+      });
+
+      const closestElement = distances.reduce(
+        (acc, curr) => {
+          if (Math.abs(curr?.dist ?? Infinity) < Math.abs(acc.dist)) {
+            return curr;
+          }
+          return acc;
+        },
+        { el: null, dist: Infinity }
+      );
+
+      if (closestElement?.el == null) return [undefined, undefined];
+
+      let targetIndex = this.#childrenCache.findIndex((child) => child.el === closestElement.el);
+      if (Math.sign(closestElement.dist) < 0) targetIndex++;
+
+      if (targetIndex === -1) return [undefined, undefined];
+      return [targetIndex, closestElement.dist];
+    }
+
+    return [undefined, undefined];
   }
 
   protected boundRafCbk = this.rafCbk.bind(this);
@@ -138,56 +260,105 @@ export class HTMLAxisDragZone extends HTMLDragZone {
       const containerScroll = { x: this.element.scrollLeft, y: this.element.scrollTop };
 
       // Calc offset
-      this.#indicatorOffset = 0;
+      this.#indicatorOffsetLeft = 0;
+      this.#indicatorOffsetTop = 0;
+
       if (index <= 0) {
+        // Before the first item
         if (this.#childrenCache.length <= 0) {
+          // Empty container
+          this.#indicatorOffsetLeft = 0;
+          this.#indicatorOffsetTop = 0;
         } else {
           const firstChild = this.#childrenCache[0];
-          if (this.axis === "horizontal")
-            this.#indicatorOffset = firstChild.rect.left - this.#containerCache.x;
-          else if (this.axis === "vertical")
-            this.#indicatorOffset = firstChild.rect.top - this.#containerCache.y;
+          if (this.axis === "horizontal") {
+            this.#indicatorOffsetLeft = firstChild.rect.left - this.#containerCache.x;
+          } else if (this.axis === "vertical") {
+            this.#indicatorOffsetTop = firstChild.rect.top - this.#containerCache.y;
+          } else if (this.axis === "both") {
+            this.#indicatorOffsetLeft = firstChild.rect.left - this.#containerCache.x;
+            // Position vertically centered on the row for the "both" axis
+            this.#indicatorOffsetTop =
+              firstChild.rect.top + firstChild.rect.height / 2 - this.#containerCache.y;
+          }
         }
       } else if (index >= this.#childrenCache.length) {
+        // After the last item
         const lastChild = this.#childrenCache[this.#childrenCache.length - 1];
-        if (this.axis === "horizontal")
-          this.#indicatorOffset = lastChild.rect.right - this.#containerCache.x;
-        else if (this.axis === "vertical")
-          this.#indicatorOffset = lastChild.rect.bottom - this.#containerCache.y;
+        if (this.axis === "horizontal") {
+          this.#indicatorOffsetLeft = lastChild.rect.right - this.#containerCache.x;
+        } else if (this.axis === "vertical") {
+          this.#indicatorOffsetTop = lastChild.rect.bottom - this.#containerCache.y;
+        } else if (this.axis === "both") {
+          // For grid layout, position after the last item
+          this.#indicatorOffsetLeft = lastChild.rect.right - this.#containerCache.x;
+          this.#indicatorOffsetTop =
+            lastChild.rect.top + lastChild.rect.height / 2 - this.#containerCache.y;
+        }
       } else {
-        const targetChild = this.#childrenCache[index];
+        // Between items
+        const currentChild = this.#childrenCache[index - 1];
+        const nextChild = this.#childrenCache[index];
 
-        if (!targetChild) {
-          this.#indicatorOffset =
-            this.#childrenCache[this.#childrenCache.length - 1].rect.right - this.#containerCache.x;
-          if (this.axis === "horizontal")
-            this.#indicatorOffset =
+        if (!currentChild || !nextChild) {
+          if (this.axis === "horizontal") {
+            this.#indicatorOffsetLeft =
               this.#childrenCache[this.#childrenCache.length - 1].rect.right -
               this.#containerCache.x;
-          else if (this.axis === "vertical")
-            this.#indicatorOffset =
+          } else if (this.axis === "vertical") {
+            this.#indicatorOffsetTop =
               this.#childrenCache[this.#childrenCache.length - 1].rect.bottom -
               this.#containerCache.y;
+          } else if (this.axis === "both") {
+            this.#indicatorOffsetLeft =
+              this.#childrenCache[this.#childrenCache.length - 1].rect.right -
+              this.#containerCache.x;
+            this.#indicatorOffsetTop =
+              this.#childrenCache[this.#childrenCache.length - 1].rect.bottom -
+              this.#containerCache.y;
+          }
         } else {
-          const prevChild = index > 0 ? this.#childrenCache[index - 1] : null;
           if (this.axis === "horizontal") {
-            const gapToPrev = prevChild
-              ? targetChild.rect.left - this.#childrenCache[index - 1].rect.right
-              : 0;
-            this.#indicatorOffset = targetChild.rect.x - gapToPrev / 2;
+            // Position in the gap between items
+            const gap = nextChild.rect.left - currentChild.rect.right;
+            this.#indicatorOffsetLeft = currentChild.rect.right + gap / 2 - this.#containerCache.x;
           } else if (this.axis === "vertical") {
-            const gapToPrev = prevChild
-              ? targetChild.rect.top - this.#childrenCache[index - 1].rect.bottom
-              : 0;
-            this.#indicatorOffset = targetChild.rect.y - gapToPrev / 2;
+            // Position in the gap between items
+            const gap = nextChild.rect.top - currentChild.rect.bottom;
+            this.#indicatorOffsetTop = currentChild.rect.bottom + gap / 2 - this.#containerCache.y;
+          } else if (this.axis === "both") {
+            // For grid layout, we need to handle rows
+            if (Math.abs(currentChild.rect.y - nextChild.rect.y) < 10) {
+              // Same row - position horizontally between items
+              const gap = nextChild.rect.left - currentChild.rect.right;
+              this.#indicatorOffsetLeft =
+                currentChild.rect.right + gap / 2 - this.#containerCache.x;
+              this.#indicatorOffsetTop =
+                currentChild.rect.top + currentChild.rect.height / 2 - this.#containerCache.y;
+            } else {
+              // Between rows - position at the start of the next row
+              this.#indicatorOffsetLeft = nextChild.rect.left - this.#containerCache.x;
+
+              // Always align with the next row's vertical midpoint, not between rows
+              this.#indicatorOffsetTop =
+                nextChild.rect.top + nextChild.rect.height / 2 - this.#containerCache.y;
+            }
           }
         }
       }
-      if (this.axis === "horizontal") this.#indicatorOffset += containerScroll.x;
-      else if (this.axis === "vertical") this.#indicatorOffset += containerScroll.y;
+
+      // Apply scroll offset
+      if (this.axis === "horizontal") {
+        this.#indicatorOffsetLeft += containerScroll.x;
+      } else if (this.axis === "vertical") {
+        this.#indicatorOffsetTop += containerScroll.y;
+      } else if (this.axis === "both") {
+        this.#indicatorOffsetTop += containerScroll.y;
+        this.#indicatorOffsetLeft += containerScroll.x;
+      }
     }
 
-    // Apply dom
+    // Apply DOM updates
     if (!this.#indicatorVisible && this.#indicatorEl !== null) {
       this.#indicatorEl.remove();
       this.#indicatorEl = null;
@@ -203,13 +374,13 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     }
 
     if (index !== undefined && this.#lastIndex !== index && this.#indicatorEl !== null) {
-      let prop =
-        this.axis === "horizontal" ? this.#indicatorEl.style.left : this.#indicatorEl.style.top;
-      prop = `${this.#indicatorOffset}px`;
       if (this.axis === "vertical") {
-        this.#indicatorEl.style.top = `${this.#indicatorOffset}px`;
+        this.#indicatorEl.style.top = `${this.#indicatorOffsetTop}px`;
       } else if (this.axis === "horizontal") {
-        this.#indicatorEl.style.left = `${this.#indicatorOffset}px`;
+        this.#indicatorEl.style.left = `${this.#indicatorOffsetLeft}px`;
+      } else if (this.axis === "both") {
+        this.#indicatorEl.style.left = `${this.#indicatorOffsetLeft}px`;
+        this.#indicatorEl.style.top = `${this.#indicatorOffsetTop}px`;
       }
 
       this.#lastIndex = index;
@@ -258,8 +429,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     this.#indicatorVisible = false;
     this.#childrenCache = [];
     this.#containerCache = null;
-    /*if (HTMLDragItem.activeTransition) setTimeout(this.boundRafCbk);
-		else*/ if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
+    if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
     super.onDragLeave(drag, e);
   }
 
@@ -269,7 +439,6 @@ export class HTMLAxisDragZone extends HTMLDragZone {
       this.#mousePos = { x: e.clientX, y: e.clientY };
       if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
     }
-    //if (HTMLDragItem.activeTransition) setTimeout(this.boundRafCbk);
     super.onDragOver(drag, e);
   }
 
@@ -278,20 +447,9 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     this.#indicatorVisible = false;
     this.#childrenCache = [];
     this.#containerCache = null;
-    /*if (HTMLDragItem.activeTransition) setTimeout(this.boundRafCbk);
-		else*/ if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
+    if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
     drag.index = this.#lastIndex;
     this.#lastIndex = null;
     super.onDrop(drag, e);
   }
-
-  /*protected override onDragEnd(drag: DragOperation, e: DragEvent) {
-		if (e) this.#mousePos = { x: e.clientX, y: e.clientY };
-		this.#indicatorVisible = false;
-		this.#childrenCache = [];
-		this.#containerCache = null;
-		if (HTMLDragItem.activeTransition) this.rafCbk();
-		else if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
-		super.onDragEnd(drag, e);
-	}*/
 }

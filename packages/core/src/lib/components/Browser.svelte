@@ -4073,66 +4073,69 @@
             bind:this={pinnedTabsWrapper}
             style="scroll-behavior: smooth;"
           >
-            <div
-              id="sidebar-pinned-tabs"
-              class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between min-w-[1ch]`}
-              axis="horizontal"
-              dragdeadzone="5"
-              role="none"
-              bind:this={pinnedTabsScrollArea}
-              use:useResizeObserver
-              on:resize={() => {
-                pinnedTabsScrollArea.className = pinnedTabsScrollArea.className
-              }}
-              use:HTMLAxisDragZone.action={{
-                accepts: (drag) => {
-                  if (
-                    drag.isNative ||
-                    drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-                    drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-                    drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
-                    drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
-                  ) {
-                    return true
+            {#key horizontalTabs}
+              <div
+                id="sidebar-pinned-tabs"
+                class={`flex items-start h-full gap-1 overflow-x-scroll overflow-y-hidden overscroll-none no-scrollbar w-full justify-between min-w-[1ch]`}
+                axis={horizontalTabs ? 'horizontal' : 'both'}
+                dragdeadzone="5"
+                role="none"
+                bind:this={pinnedTabsScrollArea}
+                use:useResizeObserver
+                on:resize={() => {
+                  // TODO: Tf is this resize observer doing? sbdy. plz call code police!
+                  pinnedTabsScrollArea.className = pinnedTabsScrollArea.className
+                }}
+                use:HTMLAxisDragZone.action={{
+                  accepts: (drag) => {
+                    if (
+                      drag.isNative ||
+                      drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+                      drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+                      drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+                      drag.item?.data.hasData(DragTypeNames.SURF_SPACE)
+                    ) {
+                      return true
+                    }
+                    return false
                   }
-                  return false
-                }
-              }}
-              on:Drop={handleDropSidebar}
-            >
-              {#if $pinnedTabs.length === 0}
-                <div style="height: 0rem; width: 100%;"></div>
-              {:else}
-                {#each $pinnedTabs as tab, index (tab.id + index)}
-                  <TabItem
-                    hibernated={!$activatedTabs.includes(tab.id)}
-                    removeHighlight={$showNewTabOverlay !== 0}
-                    {tab}
-                    {horizontalTabs}
-                    {activeTabId}
-                    {spaces}
-                    pinned={true}
-                    isMagicActive={$showChatSidebar}
-                    isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
-                    isUserSelected={Array.from($selectedTabs).some(
-                      (item) => item.id === tab.id && item.userSelected
-                    )}
-                    isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
-                    on:select={(e) => makeTabActive(e.detail)}
-                    on:remove-from-sidebar={handleRemoveFromSidebar}
-                    on:delete-tab={handleDeleteTab}
-                    on:DragEnd={(e) => handleTabDragEnd(e.detail)}
-                    on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
-                    on:multi-select={handleMultiSelect}
-                    on:passive-select={handlePassiveSelect}
-                    on:chat-with-tab={handleOpenTabChat}
-                    on:pin={handlePinTab}
-                    on:unpin={handleUnpinTab}
-                    on:edit={handleEdit}
-                  />
-                {/each}
-              {/if}
-            </div>
+                }}
+                on:Drop={handleDropSidebar}
+              >
+                {#if $pinnedTabs.length === 0}
+                  <div style="height: 0rem; width: 100%;"></div>
+                {:else}
+                  {#each $pinnedTabs as tab, index (tab.id + index)}
+                    <TabItem
+                      hibernated={!$activatedTabs.includes(tab.id)}
+                      removeHighlight={$showNewTabOverlay !== 0}
+                      {tab}
+                      {horizontalTabs}
+                      {activeTabId}
+                      {spaces}
+                      pinned={true}
+                      isMagicActive={$showChatSidebar}
+                      isSelected={Array.from($selectedTabs).some((item) => item.id === tab.id)}
+                      isUserSelected={Array.from($selectedTabs).some(
+                        (item) => item.id === tab.id && item.userSelected
+                      )}
+                      isMediaPlaying={$browserTabs[tab.id]?.getMediaPlaybackState()}
+                      on:select={(e) => makeTabActive(e.detail)}
+                      on:remove-from-sidebar={handleRemoveFromSidebar}
+                      on:delete-tab={handleDeleteTab}
+                      on:DragEnd={(e) => handleTabDragEnd(e.detail)}
+                      on:Drop={(e) => handleDropOnSpaceTab(e.detail.drag, e.detail.spaceId)}
+                      on:multi-select={handleMultiSelect}
+                      on:passive-select={handlePassiveSelect}
+                      on:chat-with-tab={handleOpenTabChat}
+                      on:pin={handlePinTab}
+                      on:unpin={handleUnpinTab}
+                      on:edit={handleEdit}
+                    />
+                  {/each}
+                {/if}
+              </div>
+            {/key}
           </div>
 
           {#if horizontalTabs && $pinnedTabs.length > 0}
@@ -5148,7 +5151,7 @@
   :global(.dragcula-drop-indicator) {
     --color: #3765ee;
     --dotColor: white;
-    --inset: 2%;
+    --inset: 3%;
     background: var(--color);
     transition:
       top 100ms cubic-bezier(0.2, 0, 0, 1),
@@ -5166,6 +5169,14 @@
     width: 2px;
     transform: translateX(-50%);
   }
+  :global(.dragcula-drop-indicator.dragcula-axis-both) {
+    left: 0;
+    top: 0;
+    width: 2px;
+    height: 3rem;
+    transform: translateY(-50%);
+  }
+
   :global(.dragcula-drop-indicator.dragcula-axis-vertical::before) {
     content: '';
     position: absolute;
@@ -5214,6 +5225,30 @@
     background: var(--dotColor);
     border: 2px solid var(--color);
   }
+  :global(.dragcula-drop-indicator.dragcula-axis-both::before) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
 
   :global([data-drag-zone][axis='vertical']) {
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
@@ -5232,6 +5267,12 @@
 
   #sidebar-pinned-tabs {
     gap: 6px;
+  }
+
+  :global(.verticalTabs #sidebar-pinned-tabs) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+    grid-template-rows: auto;
   }
 
   :global([data-drag-zone='sidebar-pinned-tabs']) {
