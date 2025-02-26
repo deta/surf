@@ -1059,6 +1059,7 @@
     overflow: hidden;
     pointer-events: none;
 
+    // NOTE: We try to not override them globally as we might need other sizigns somewhere.
     //width: var(--drag-width, auto) !important;
     //height: var(--drag-height, auto) !important;
   }
@@ -1069,7 +1070,8 @@
   }
 
   :global(.resource-preview[data-drag-preview]) {
-    &[data-origin='stuff-details'] {
+    &[data-origin='stuff-details'],
+    &[data-origin='stuff'] {
       width: var(--drag-width, auto) !important;
       height: var(--drag-height, auto) !important;
     }
