@@ -14,7 +14,7 @@
     'editing-start': { id: string }
     'editing-end': void
     'update-data': UpdateFolderDataEvent
-    select: void
+    select: string
     'open-space-as-tab': OpenSpaceAsTabEvent
     'space-selected': SpaceSelectedEvent
     'open-space-and-chat': { spaceId: string }
@@ -26,8 +26,8 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, tick, onMount } from 'svelte'
-  import { writable } from 'svelte/store'
+  import { createEventDispatcher, tick, onMount, onDestroy } from 'svelte'
+  import { writable, type Readable } from 'svelte/store'
   import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
@@ -38,11 +38,20 @@
     ResourceTypes,
     SpaceEntryOrigin
   } from '../../types'
-  import { useLogScope, hover, isModKeyPressed, conditionalArrayItem } from '@horizon/utils'
+  import {
+    useLogScope,
+    hover,
+    isModKeyPressed,
+    conditionalArrayItem,
+    generateID,
+    wait
+  } from '@horizon/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
   import {
+    ChangeContextEventTrigger,
+    CreateSpaceEventFrom,
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
     UpdateSpaceSettingsEventTrigger
@@ -57,12 +66,18 @@
   import { onboardingSpace } from '../../constants/examples'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import { DynamicIcon, Icon } from '@horizon/icons'
+  import ContextLinksSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/ContextLinksSidebar.svelte'
+  import { useContextService } from '@horizon/core/src/lib/service/contexts'
 
   export let folder: OasisSpace
+  export let depth: number = 0
   export let selected: boolean
   export let showPreview = false
   export let isEditing = false // New prop to control editing state
   export let allowPinning = false
+  export let expandable = false
+  export let editingFolderId: Readable<string | null>
 
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher<FolderEvents>()
@@ -72,8 +87,11 @@
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
   const ai = useAI()
+  const contextService = useContextService()
   const config = useConfig()
   const userSettings = config.settings
+
+  const spaceLinks = contextService.useSpaceLinks(folder.id, 'forward', 1)
 
   let folderDetails = folder.data
   let inputWidth = `${$folderDetails.folderName.length}ch`
@@ -86,6 +104,11 @@
   const draggedOver = writable(false)
   const inView = writable(false)
   const previousName = writable($folderDetails.folderName)
+  const expanded = writable(false)
+
+  const uid = generateID()
+
+  $: folderUID = `folder-${folder.id}-${uid}`
 
   $: {
     if (isEditing) {
@@ -136,7 +159,7 @@
   }
 
   const handleClick = () => {
-    dispatch('select')
+    dispatch('select', folder.id)
   }
 
   const handleSpaceSelect = async (event: MouseEvent) => {
@@ -281,6 +304,26 @@
     }
   }
 
+  const createLinkedContext = async () => {
+    const newSpace = await oasis.createNewBrowsingSpace(
+      ChangeContextEventTrigger.SpaceInOasis,
+      CreateSpaceEventFrom.OasisSpacesView,
+      { switch: false, newTab: false }
+    )
+
+    contextService.createLink(folder.id, newSpace.id)
+
+    oasis.selectedSpace.set(newSpace.id)
+
+    await wait(150)
+
+    // pls don't sue me
+    const elem = document.getElementById(`expand-btn-${folder.id}`)
+    if (elem) {
+      elem.click()
+    }
+  }
+
   const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
     drag.item!.data.setData(DragTypeNames.SURF_SPACE, folder)
     drag.continue()
@@ -291,7 +334,7 @@
     if (dragoverTimeout) clearTimeout(dragoverTimeout)
 
     dragoverTimeout = setTimeout(() => {
-      dispatch('select')
+      dispatch('select', folder.id)
       dragoverTimeout = null
     }, 800)
   }
@@ -364,8 +407,104 @@
     }
   }
 
+  const calculateFolderNesting = (excludeSelf = false) => {
+    // within this container of nested folders check if we are the deepest one with the same id
+    const container = document.getElementById('spaces-view-wrapper')
+    if (!container) return { clones: [], deepest: null }
+
+    const clones = container.querySelectorAll(`#folder-${folder.id}`)
+    const clonesArray = Array.from(clones).filter((clone) => {
+      const cloneId = clone.getAttribute('data-folder-uid')
+      if (excludeSelf) {
+        return cloneId !== folderUID
+      }
+      return true
+    })
+
+    if (clonesArray.length === 1) {
+      return { clones: [], deepest: { id: folderUID, elem: clonesArray[0], cloneDepth: 0 } }
+    }
+
+    const mapped = clonesArray.map((clone) => {
+      const cloneId = clone.getAttribute('data-folder-uid')
+      const cloneDepth = parseInt(clone.getAttribute('data-depth') || '0')
+      return { id: cloneId, elem: clone, cloneDepth }
+    })
+
+    log.debug('Mapped clones', mapped)
+
+    const deepestClone = mapped.reduce((acc, curr) => {
+      if (curr.cloneDepth > acc.cloneDepth) {
+        return curr
+      }
+      return acc
+    }, mapped[0])
+
+    return { clones: mapped, deepest: deepestClone }
+  }
+
+  const applyFolderNestingStyles = (excludeSelf: boolean) => {
+    const { clones, deepest } = calculateFolderNesting()
+    log.debug('Deepest clone', deepest, deepest?.id === folderUID)
+
+    const deepestDepth = deepest?.cloneDepth || 0
+
+    const clonesToFade = clones.filter((clone) => clone.id !== deepest?.id)
+
+    log.debug('Clones to fade', clonesToFade)
+
+    // on every clone except the deepest one, add the faded class
+    clonesToFade.forEach((clone) => {
+      clone.elem.classList.add('faded-nested-folder')
+
+      // Calculate opacity based on depth
+      let opacity
+
+      const totalFolders = clonesToFade.length
+      const currentDepth = clone.cloneDepth
+
+      if (totalFolders === 1) {
+        // 1 folder: 0.5
+        opacity = 0.5
+      } else if (totalFolders === 2) {
+        // 2 folders: 0.25 for depth 0, 0.5 for depth 1
+        opacity = currentDepth === 0 ? 0.25 : 0.5
+      } else if (totalFolders === 3) {
+        // 3 folders: 0.15, 0.25, 0.5
+        opacity = currentDepth === 0 ? 0.15 : currentDepth === 1 ? 0.25 : 0.5
+      } else if (totalFolders === 4) {
+        // 4 folders: 0.1, 0.15, 0.25, 0.5
+        opacity =
+          currentDepth === 0 ? 0.1 : currentDepth === 1 ? 0.15 : currentDepth === 2 ? 0.25 : 0.5
+      } else {
+        // 5+ folders: 0.1, 0.15, 0.25, 0.35, 0.5
+        if (currentDepth === deepestDepth) opacity = 0.5
+        else if (currentDepth === 0) opacity = 0.1
+        else {
+          const step = (0.5 - 0.1) / (deepestDepth - 0)
+          opacity = 0.1 + step * currentDepth
+        }
+      }
+
+      // If multiple folders have the same depth, use the higher opacity
+      if (currentDepth === deepestDepth) {
+        opacity = 0.5
+      }
+
+      clone.elem.style.setProperty('--faded-opacity', opacity.toString())
+    })
+
+    deepest?.elem.classList.remove('faded-nested-folder')
+  }
+
   onMount(() => {
     initializeIntersectionObserver()
+
+    applyFolderNestingStyles(false)
+  })
+
+  onDestroy(() => {
+    applyFolderNestingStyles(true)
   })
 
   $: {
@@ -375,7 +514,10 @@
 
 <div
   id={`folder-${folder.id}`}
+  data-folder-uid={folderUID}
+  data-depth={depth}
   class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
+  class:selected-folder={selected}
   data-vaul-no-drag
   data-folder-id={folder.id}
   role="none"
@@ -429,6 +571,13 @@
               action: () => handleChatWithSpace()
             },
             { type: 'separator' },
+            {
+              type: 'action',
+              icon: 'add',
+              text: 'Create Linked Context',
+              action: () => createLinkedContext()
+            },
+            { type: 'separator' },
             ...conditionalArrayItem(allowPinning, {
               type: 'action',
               icon: $folderDetails.pinned ? `pinned-off` : `pin`,
@@ -447,6 +596,7 @@
     class="folder {selected
       ? 'bg-sky-100 dark:bg-gray-700'
       : 'hover:bg-sky-50 dark:hover:bg-gray-600'}"
+    data-has-links={$spaceLinks.length > 0 && $userSettings.experimental_context_linking_sidebar}
     on:click={$editMode ? null : handleSpaceSelect}
     on:dblclick={handleDoubleClick}
     role="none"
@@ -458,8 +608,19 @@
       data-tooltip-target={$folderDetails.folderName === onboardingSpace.name ? 'demo-space' : ''}
     >
       <div class="folder-leading">
-        <div class="space-icon-wrapper" on:click|stopPropagation role="none">
-          <SpaceIcon on:change={handleColorChange} {folder} disablePopoverTransition />
+        <div class="folder-icon">
+          <button
+            id="expand-btn-{folder.id}"
+            on:click={() => ($expanded = !$expanded)}
+            class="expand-toggle"
+          >
+            <Icon name="chevron.right" className={$expanded ? 'rotate-90' : ''} size="17px" />
+          </button>
+
+          <div class="space-icon-wrapper" on:click|stopPropagation role="none">
+            <!-- <SpaceIcon on:change={handleColorChange} {folder} disablePopoverTransition /> -->
+            <DynamicIcon name={folder.getIconString()} size="17px" />
+          </div>
         </div>
 
         {#if $editMode}
@@ -486,6 +647,25 @@
       </div>
     </div>
   </div>
+
+  {#if $expanded && $userSettings.experimental_context_linking_sidebar}
+    <ContextLinksSidebar
+      space={folder}
+      {editingFolderId}
+      depth={depth + 1}
+      on:select
+      on:space-selected
+      on:open-space-as-tab
+      on:update-data
+      on:use-as-context
+      on:open-space-and-chat
+      on:Drop
+      on:editing-start
+      on:editing-end
+      on:pin
+      on:unpin
+    />
+  {/if}
 </div>
 
 <style lang="scss">
@@ -510,6 +690,10 @@
     outline-offset: -1.5px;
   }
 
+  :global(.faded-nested-folder.selected-folder .folder) {
+    background: rgb(224 242 254 / var(--faded-opacity)) !important;
+  }
+
   .folder {
     display: flex;
     flex-direction: column;
@@ -528,6 +712,19 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     z-index: 1000;
+
+    &[data-has-links='true']:hover {
+      .space-icon-wrapper {
+        display: none !important;
+        opacity: 0 !important;
+      }
+
+      .expand-toggle {
+        display: flex !important;
+        opacity: 1 !important;
+      }
+    }
+
     .previews {
       position: relative;
       height: 100%;
@@ -610,12 +807,39 @@
 
       .space-icon-wrapper {
         display: flex;
+        opacity: 1;
         align-items: center;
         justify-content: center;
         padding: 0.25rem;
         margin: -0.25rem;
         border-radius: 4px;
         max-width: 1.75rem;
+
+        transition: all 0.2s ease-in-out;
+
+        &:hover {
+          background: #cee2ff;
+        }
+
+        :global(.dark) & {
+          &:hover {
+            background: #244581;
+          }
+        }
+      }
+
+      .expand-toggle {
+        display: none;
+        opacity: 0;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease;
+        border-radius: 4px;
+        padding: 0.25rem;
+        margin: -0.25rem;
+        max-width: 1.75rem;
+
+        transition: all 0.2s ease-in-out;
 
         &:hover {
           background: #cee2ff;

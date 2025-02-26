@@ -41,13 +41,17 @@
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
   import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import { useContextService } from '@horizon/core/src/lib/service/contexts'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   const log = useLogScope('SpacesView')
   const oasis = useOasis()
   const toast = useToasts()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
+  const contextService = useContextService()
   const ai = useAI()
+  const config = useConfig()
   const dispatch = createEventDispatcher<SpacesViewEvents>()
 
   let sidebarElement: HTMLElement
@@ -67,6 +71,9 @@
   const didChangeOrder = writable(false)
   const showAllSpaces = useLocalStorageStore<boolean>('showAllSpacesInOasis', true, true)
 
+  const userSettings = config.settings
+  const sourceSpaces = contextService.useRankedSpaces(10)
+
   const filteredSpaces = derived([spaces, didChangeOrder], ([$spaces, didChangeOrder]) =>
     $spaces
       .filter(
@@ -81,8 +88,21 @@
   const pinnedSpaces = derived(filteredSpaces, ($spaces) =>
     $spaces.filter((space) => space.dataValue.pinned)
   )
-  const unpinnedSpaces = derived(filteredSpaces, ($spaces) =>
-    $spaces.filter((space) => !space.dataValue.pinned)
+  const unpinnedSpaces = derived(
+    [filteredSpaces, sourceSpaces, userSettings],
+    ([$spaces, $sourceSpaces, $userSettings]) => {
+      if ($userSettings.experimental_context_linking) {
+        return $spaces.filter((space) => $sourceSpaces.findIndex((s) => s.id === space.id) === -1)
+      }
+
+      return $spaces.filter((space) => !space.dataValue.pinned)
+    }
+  )
+
+  const missingSourceSpaces = derived(
+    [sourceSpaces, pinnedSpaces],
+    ([$sourceSpaces, $pinnedSpaces]) =>
+      $sourceSpaces.filter((space) => $pinnedSpaces.findIndex((s) => s.id === space.id) === -1)
   )
 
   const builtInSpaces = [
@@ -439,6 +459,7 @@
 <svelte:window on:resize={handleResize} />
 
 <div
+  id="spaces-view-wrapper"
   class="folders-sidebar p-2 pl-12 w-[18rem] max-w-[18rem] bg-white/95 dark:bg-gray-900/95"
   class:all-spaces-hidden={!$showAllSpaces}
   bind:this={sidebarElement}
@@ -463,54 +484,91 @@
         />
       </div>
     {/each}
+  </div>
 
-    <hr />
-
-    <div
-      bind:this={pinnedList}
-      on:scroll={() => checkOverflowPinned()}
-      class="pinned-list"
-      class:empty={$pinnedSpaces.length === 0}
-      axis="vertical"
-      id="overlay-spaces-list-pinned"
-      use:HTMLAxisDragZone.action={{
-        accepts: (drag) => {
-          if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
-            return true
-          }
-          return false
+  <div
+    bind:this={pinnedList}
+    on:scroll={() => checkOverflowPinned()}
+    class="pinned-list"
+    class:empty={$pinnedSpaces.length === 0}
+    axis="vertical"
+    id="overlay-spaces-list-pinned"
+    use:HTMLAxisDragZone.action={{
+      accepts: (drag) => {
+        if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+          return true
         }
-      }}
-      on:Drop={handleDrop}
-    >
-      {#if $pinnedSpaces.length === 0}
-        <div class="pinned-list-drag-indicator-wrapper">
-          <div class="pinned-list-drag-indicator">Drop Context here to Pin</div>
+        return false
+      }
+    }}
+    on:Drop={handleDrop}
+  >
+    {#if $pinnedSpaces.length === 0}
+      <div class="pinned-list-drag-indicator-wrapper">
+        <div class="pinned-list-drag-indicator">Drop Context here to Pin</div>
+      </div>
+    {:else}
+      <div class="separator">
+        Pinned
+        <!-- <div class="separator-line"></div> -->
+      </div>
+      {#each $pinnedSpaces as folder, index (folder.id + index)}
+        <Folder
+          {folder}
+          on:select={(e) => handleSpaceSelect(e.detail)}
+          on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
+          on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+          on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+          on:use-as-context={(e) => handleUseAsContext(e.detail)}
+          on:open-space-and-chat={handleOpenSpaceAndChat}
+          on:Drop
+          on:editing-start={handleEditingStart}
+          on:editing-end={handleEditingEnd}
+          on:pin={handlePin}
+          on:unpin={handleUnpin}
+          selected={$selectedSpace === folder.id}
+          isEditing={$editingFolderId === folder.id}
+          allowPinning
+          {showPreview}
+        />
+      {/each}
+    {/if}
+  </div>
+
+  {#if $missingSourceSpaces.length > 0}
+    <div bind:this={pinnedList} on:scroll={() => checkOverflowPinned()} class="connected-list">
+      {#if $userSettings.experimental_context_linking}
+        <div class="separator">
+          Most Connected
+          <!-- <div class="separator-line"></div> -->
         </div>
-      {:else}
-        {#each $pinnedSpaces as folder, index (folder.id + index)}
-          <Folder
-            {folder}
-            on:select={() => handleSpaceSelect(folder.id)}
-            on:space-selected={() => handleSpaceSelect(folder.id)}
-            on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
-            on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-            on:use-as-context={() => handleUseAsContext(folder.id)}
-            on:open-space-and-chat={handleOpenSpaceAndChat}
-            on:Drop
-            on:editing-start={handleEditingStart}
-            on:editing-end={handleEditingEnd}
-            on:pin={handlePin}
-            on:unpin={handleUnpin}
-            selected={$selectedSpace === folder.id}
-            isEditing={$editingFolderId === folder.id}
-            allowPinning
-            {showPreview}
-          />
+
+        {#each $missingSourceSpaces as folder, index (folder.id + index)}
+          <div class="space-source-item">
+            <Folder
+              {folder}
+              {editingFolderId}
+              on:select={(e) => handleSpaceSelect(e.detail)}
+              on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
+              on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+              on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+              on:use-as-context={(e) => handleUseAsContext(e.detail)}
+              on:open-space-and-chat={handleOpenSpaceAndChat}
+              on:Drop
+              on:editing-start={handleEditingStart}
+              on:editing-end={handleEditingEnd}
+              on:pin={handlePin}
+              on:unpin={handleUnpin}
+              selected={$selectedSpace === folder.id}
+              isEditing={$editingFolderId === folder.id}
+              allowPinning
+              {showPreview}
+            />
+          </div>
         {/each}
       {/if}
     </div>
-  </div>
+  {/if}
 
   <div
     id="overlay-unpinned-list-wrapper"
@@ -535,6 +593,7 @@
         <Icon
           name="chevron.down"
           className="{$showAllSpaces ? '' : '-rotate-90'} text-[#3b578a] dark:text-gray-300"
+          size="16px"
         />
         <div class="folders-header-text">All Your Contexts</div>
       </div>
@@ -573,11 +632,11 @@
         {#each $unpinnedSpaces as folder, index (folder.id + index)}
           <Folder
             {folder}
-            on:select={() => handleSpaceSelect(folder.id)}
-            on:space-selected={() => handleSpaceSelect(folder.id)}
+            on:select={(e) => handleSpaceSelect(e.detail)}
+            on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
             on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
             on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-            on:use-as-context={() => handleUseAsContext(folder.id)}
+            on:use-as-context={(e) => handleUseAsContext(e.detail)}
             on:open-space-and-chat={handleOpenSpaceAndChat}
             on:Drop
             on:editing-start={handleEditingStart}
@@ -587,6 +646,7 @@
             selected={$selectedSpace === folder.id}
             isEditing={$editingFolderId === folder.id}
             allowPinning
+            {editingFolderId}
             {showPreview}
           />
         {/each}
@@ -653,6 +713,7 @@
 
   .built-in-list,
   .pinned-list,
+  .connected-list,
   .folders-list {
     display: flex;
     flex-direction: column;
@@ -678,10 +739,8 @@
 
   .pinned-list {
     border: 1px dashed transparent;
-    height: 100%;
-    overflow: auto;
+    height: fit-content;
     position: relative;
-    padding-bottom: 5px;
 
     &.empty {
       min-height: 1.5rem;
@@ -703,6 +762,29 @@
 
     :global(.dark) & {
       background: linear-gradient(#111b2b00, #111b2b);
+    }
+  }
+
+  .separator {
+    width: 100%;
+    padding-left: 0.75rem;
+    padding-right: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85em;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    opacity: 0.75;
+
+    @apply text-[#244581] dark:text-gray-100;
+
+    .separator-line {
+      flex: 1;
+      height: 1px;
+      opacity: 0.25;
+
+      @apply bg-[#244581] dark:bg-gray-100;
     }
   }
 

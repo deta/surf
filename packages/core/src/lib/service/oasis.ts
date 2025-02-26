@@ -39,6 +39,7 @@ import { blobToSmallImageUrl } from '../utils/screenshot'
 import type { ConfigService } from './config'
 import { RESOURCE_FILTERS } from '../constants/resourceFilters'
 import type { SpaceBasicData } from './ipc/events'
+import { createContextService, type ContextService } from './contexts'
 import { addSelectionById } from '../components/Oasis/utils/select'
 
 export type OasisEvents = {
@@ -266,6 +267,7 @@ export class OasisService {
   tabsManager!: TabsManager
   resourceManager: ResourceManager
   config: ConfigService
+  contextService: ContextService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
@@ -276,6 +278,7 @@ export class OasisService {
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
     this.config = config
+    this.contextService = createContextService(this)
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
     this.spaces = writable<OasisSpace[]>([])

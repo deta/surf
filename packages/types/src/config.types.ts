@@ -30,6 +30,8 @@ export type UserSettings = {
   experimental_note_inline_rewrite: boolean
   experimental_chat_web_search: boolean
   experimental_desktop_embeds: boolean
+  experimental_context_linking: boolean
+  experimental_context_linking_sidebar: boolean
   extensions: boolean
   cleanup_filenames: boolean
   /**

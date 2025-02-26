@@ -31,6 +31,7 @@
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
   import ExtensionsManager from './components/ExtensionsManager.svelte'
   import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
+  import ContextLinkingOptions from './components/ContextLinkingOptions.svelte'
 
   // let error = ''
   // let loading = false
@@ -531,6 +532,8 @@
           </SettingsOption>
 
           <SmartNotesOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
+
+          <ContextLinkingOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
 
           <SettingsOption
             icon="marker"

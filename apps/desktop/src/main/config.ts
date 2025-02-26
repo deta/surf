@@ -110,6 +110,8 @@ export const getUserConfig = (path?: string) => {
       experimental_note_inline_rewrite: false,
       experimental_chat_web_search: false,
       experimental_desktop_embeds: false,
+      experimental_context_linking: false,
+      experimental_context_linking_sidebar: false,
       extensions: false,
       cleanup_filenames: false,
       onboarding: {
@@ -234,6 +236,16 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.show_resource_contexts === undefined) {
     storedConfig.settings.show_resource_contexts = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_context_linking === undefined) {
+    storedConfig.settings.experimental_context_linking = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_context_linking_sidebar === undefined) {
+    storedConfig.settings.experimental_context_linking_sidebar = false
     changedConfig = true
   }
 

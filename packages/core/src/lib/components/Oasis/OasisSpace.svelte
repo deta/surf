@@ -83,7 +83,7 @@
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
-
+  import ContextLinks from './Scaffolding/ContextLinks.svelte'
   import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
   import ContextHeader from './ContextHeader.svelte'
   import OasisSpaceNavbar from './OasisSpaceNavbar.svelte'
@@ -1493,6 +1493,10 @@
               />
             </svelte:fragment>
           </OasisSpaceNavbar>
+
+          {#if $userConfigSettings.experimental_context_linking && $space}
+            <ContextLinks space={$space} />
+          {/if}
 
           <ContextHeader
             bind:headline={$spaceData.folderName}
