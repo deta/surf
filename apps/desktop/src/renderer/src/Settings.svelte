@@ -30,12 +30,12 @@
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
   import ExtensionsManager from './components/ExtensionsManager.svelte'
+  import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
 
   // let error = ''
   // let loading = false
 
   const isDev = import.meta.env.DEV
-  const changelogURL = import.meta.env.R_VITE_CHANGELOG_URL
 
   let version = ''
   let prompts: EditablePrompt[] = []
@@ -339,17 +339,30 @@
 
           <span class="version-pill">{version}</span>
         </div>
-        {#if changelogURL}
+
+        <div class="links-wrapper">
+          <button on:click={checkForUpdates}>Check for Updates</button>
+
+          -
+
           <button
             on:click={() => {
               // @ts-ignore
-              window.api.openURL(changelogURL, true)
+              window.api.openURL(CHANGELOG_URL, true)
             }}
           >
             Changelog
           </button>
-        {/if}
-        <button on:click={checkForUpdates}>Check for Updates</button>
+
+          -
+
+          <button
+            on:click={() => {
+              // @ts-ignore
+              window.api.openURL(SHORTCUTS_PAGE_URL, true)
+            }}>Keyboard Shortcuts</button
+          >
+        </div>
 
         {#if !$isDefaultBrowser}
           <div class="default-wrapper">
@@ -1059,5 +1072,9 @@
       border-color: var(--color-brand-light);
       box-shadow: 0 0 0 2px rgba(255, 167, 246, 0.1);
     }
+  }
+
+  .links-wrapper {
+    margin-bottom: 2rem;
   }
 </style>

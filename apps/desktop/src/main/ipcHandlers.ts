@@ -466,6 +466,16 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.openWelcomePage.sendToWebContents(window.webContents)
   },
 
+  openShortcutsPage: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openShortcutsPage.sendToWebContents(window.webContents)
+  },
+
   openImporter: () => {
     const window = getMainWindow()
     if (!window) {

@@ -56,6 +56,7 @@
   import Codegen from '../Onboarding/sections/08.Codegen.svelte'
   import Done from '../Onboarding/sections/00.Done.svelte'
   import { OpenHomescreenEventTrigger } from '@horizon/types'
+  import { MAIN_ONBOARDING_VIDEO_URL } from '@horizon/core/src/lib/utils/env'
 
   const dispatch = createEventDispatcher<OnboardingEvents>()
   const oasis = useOasis()
@@ -65,9 +66,6 @@
 
   export let resourceManager: ResourceManager
   export const onboardingRunning = writable(true)
-
-  let mainOnboardingVideoUrl: string =
-    import.meta.env.R_VITE_MAIN_ONBOARDING_VIDEO_URL || 'https://www.youtube.com/embed/-FJf3qaVsCA'
 
   // Navigation state and config
   let activeSection = 'welcome'
@@ -270,7 +268,7 @@
         style="z-index: 2147483647;"
       >
         <webview
-          src={mainOnboardingVideoUrl}
+          src={MAIN_ONBOARDING_VIDEO_URL}
           class="w-full h-full shadow-xl rounded-xl overflow-hidden"
           partition="app"
         />

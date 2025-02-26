@@ -342,6 +342,10 @@ class AppMenu {
           label: 'Give Feedback',
           click: () => ipcSenders.openFeedbackPage(),
           accelerator: 'CmdOrCtrl+Shift+H'
+        },
+        {
+          label: 'Keyboard Shortcuts',
+          click: () => ipcSenders.openShortcutsPage()
         }
       ]
     }

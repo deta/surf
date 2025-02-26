@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly R_VITE_TELEMETRY_PROXY_URL?: string
   readonly R_VITE_CHEATSHEET_URL?: string
   readonly R_VITE_SENTRY_DSN?: string
+  readonly R_VITE_CHEAT_SHEET_URL?: string
+  readonly R_VITE_SHORTCUTS_PAGE_URL?: string
   readonly R_VITE_MAIN_ONBOARDING_VIDEO_URL?: string
   readonly R_VITE_CHANGELOG_URL?: string
 }

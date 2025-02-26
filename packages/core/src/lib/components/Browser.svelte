@@ -175,6 +175,7 @@
   import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
   import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
   import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
+  import { CHEAT_SHEET_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -2616,6 +2617,10 @@
       openInvitePage()
     })
 
+    horizonPreloadEvents.onOpenShortcutsPage(() => {
+      openShortcutsPage()
+    })
+
     horizonPreloadEvents.onOpenDevtools(() => {
       const activeTabMiniBrowserSelected = getActiveMiniBrowser()
       if (activeTabMiniBrowserSelected && activeTabMiniBrowserSelected.selected.browserTab) {
@@ -3129,9 +3134,16 @@
   }
 
   const openCheatSheet = useDebounce(async (opts?: CreateTabOptions) => {
-    const url = 'https://deta.notion.site/Surf-v0-0-1-e9c49ddf02a8476fb3c53b7efdc7e0fd'
-    tabsManager.addPageTab(url, {
-      active: true
+    tabsManager.addPageTab(CHEAT_SHEET_URL, {
+      active: true,
+      ...opts
+    })
+  }, 200)
+
+  const openShortcutsPage = useDebounce(async (opts?: CreateTabOptions) => {
+    tabsManager.addPageTab(SHORTCUTS_PAGE_URL, {
+      active: true,
+      ...opts
     })
   }, 200)
 

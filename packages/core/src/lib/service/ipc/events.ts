@@ -186,6 +186,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   resetPrompt: ipcService.addEvent<string>('reset-prompt'),
   updatePrompt: ipcService.addEvent<Pick<EditablePrompt, 'id' | 'content'>>('update-prompt'),
   openCheatSheet: ipcService.addEvent<void>('open-cheat-sheet'),
+  openShortcutsPage: ipcService.addEvent<void>('open-shortcuts-page'),
   openInvitePage: ipcService.addEvent<void>('open-invite-page'),
   openFeedbackPage: ipcService.addEvent<void>('open-feedback-page'),
   openWelcomePage: ipcService.addEvent<void>('open-welcome-page'),

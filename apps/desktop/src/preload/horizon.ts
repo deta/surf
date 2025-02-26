@@ -191,6 +191,16 @@ const eventHandlers = {
     })
   },
 
+  onOpenShortcutsPage: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openShortcutsPage.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
   onOpenWelcomePage: (callback: () => void) => {
     return IPC_EVENTS_RENDERER.openWelcomePage.on((_) => {
       try {
