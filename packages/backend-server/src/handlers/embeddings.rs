@@ -167,7 +167,7 @@ pub fn handle_filtered_search(
             response_tx,
             query_embedding,
             request.num_docs,
-            request.keys.iter().copied().collect(),
+            request.keys.to_vec(),
             request.threshold,
         ),
         stream,

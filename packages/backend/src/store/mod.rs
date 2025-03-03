@@ -217,10 +217,10 @@ fn js_get_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::SpaceMessage(SpaceMessage::GetSpaceEntries { 
+        WorkerMessage::SpaceMessage(SpaceMessage::GetSpaceEntries {
             space_id,
             sort_by,
-            order_by 
+            order_by,
         }),
         deferred,
     );

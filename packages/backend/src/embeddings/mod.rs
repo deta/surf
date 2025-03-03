@@ -14,6 +14,5 @@ fn cosine_dist_f32(vec_a: &[f32], vec_b: &[f32], vec_size: &usize) -> f32 {
         b_mag += vec_b[i] * vec_b[i];
     }
 
-    
     1.0 - (a_dot_b / (a_mag.sqrt() * b_mag.sqrt()))
 }

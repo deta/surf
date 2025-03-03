@@ -41,7 +41,7 @@ impl SurfBackendHealth {
         let (lock, cvar) = &*self.0;
         let mut healthy = lock.lock().unwrap();
         if *healthy {
-            return
+            return;
         }
         while !*healthy {
             tracing::warn!("surf-backend server isn't healthy, sleeping the processor thread");
@@ -135,7 +135,7 @@ impl WorkerTunnel {
         tqueue_tx: crossbeam::Sender<ProcessorMessage>,
         aiqueue_tx: crossbeam::Sender<AIMessage>,
         event_bus_rx_callback: Arc<Root<JsFunction>>,
-        surf_backend_health: SurfBackendHealth
+        surf_backend_health: SurfBackendHealth,
     ) where
         C: Context<'a>,
     {
@@ -248,10 +248,7 @@ impl WorkerTunnel {
         oneshot: Option<crossbeam::Sender<BackendResult<String>>>,
     ) {
         self.worker_tx
-            .send(TunnelMessage(
-                message,
-                oneshot.map(TunnelOneshot::Rust),
-            ))
+            .send(TunnelMessage(message, oneshot.map(TunnelOneshot::Rust)))
             .expect("unbound channel send failed on worker queue");
     }
 }

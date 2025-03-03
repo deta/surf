@@ -31,10 +31,7 @@ pub fn estimate_message_token(message: &Message) -> usize {
 }
 
 pub fn estimate_messages_tokens(messages: &[Message]) -> usize {
-    messages
-        .iter()
-        .map(estimate_message_token)
-        .sum()
+    messages.iter().map(estimate_message_token).sum()
 }
 
 // truncate messages to fit the max tokens

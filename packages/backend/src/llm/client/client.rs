@@ -234,7 +234,7 @@ impl Provider {
                 "{}/v1/messages",
                 base_url.unwrap_or("https://api.anthropic.com")
             ),
-            Self::Custom(url) => format!("{url}"),
+            Self::Custom(url) => url.to_string(),
         }
     }
 

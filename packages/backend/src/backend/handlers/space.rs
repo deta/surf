@@ -53,7 +53,11 @@ impl Worker {
         for entry in entries {
             // check if the new entry was added by the user and only then delete the old entries
             if entry.manually_added == 1 {
-                Database::delete_space_entry_by_resource_id_tx(&mut tx, &space_id, &entry.resource_id)?;
+                Database::delete_space_entry_by_resource_id_tx(
+                    &mut tx,
+                    &space_id,
+                    &entry.resource_id,
+                )?;
             }
             let space_entry = SpaceEntry {
                 id: random_uuid(),
@@ -120,8 +124,13 @@ pub fn handle_space_message(
             let result = worker.create_space_entries(space_id, entries);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        SpaceMessage::GetSpaceEntries { space_id, sort_by, order_by } => {
-            let result = worker.get_space_entries(&space_id, sort_by.as_deref(), order_by.as_deref());
+        SpaceMessage::GetSpaceEntries {
+            space_id,
+            sort_by,
+            order_by,
+        } => {
+            let result =
+                worker.get_space_entries(&space_id, sort_by.as_deref(), order_by.as_deref());
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         SpaceMessage::DeleteSpaceEntries(entry_ids) => {

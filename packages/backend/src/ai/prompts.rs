@@ -39,7 +39,7 @@ pub fn should_narrow_search_prompt_simple() -> String {
 }
 
 pub fn create_app_prompt() -> String {
-    format!("
+    "
 You are a code generator that outputs ONLY complete, self-contained web applications using JavaScript, HTML, and CSS.
 The web applications you generate help extend or add functionality to a webpage. They run in an iframe and do not have access to the parent page.
 
@@ -71,11 +71,11 @@ FORBIDDEN:
 - Suggestions
 
 Your output must contain ONLY the complete application code.
-")
+".to_string()
 }
 
 pub fn command_prompt() -> String {
-    format!("
+    "
 You are a developer that writes javascript code without any comments to perform various tasks on a webpage. You return the javascript code that a user runs in the browser console to perform the task.
 
 1. DO NOT ADD COMMENTS IN THE CODE, THE COMMENTS BREAK THE CODE WHEN RUN IN THE BROWSER CONSOLE.
@@ -83,7 +83,7 @@ You are a developer that writes javascript code without any comments to perform 
 3. The code your write is complete, the users can not write any code themselves and you must create a fully functional script.
 4. Hardcode any data needed from the context directly into the script. Add as much data as needed to make the script functional.
 5. Do not include anything else like any commentary, further instructions, explanations or comments, only return the code.
-",)
+".to_string()
 }
 
 pub fn general_chat_prompt(current_time: &str) -> String {

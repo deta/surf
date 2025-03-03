@@ -19,9 +19,7 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare("SELECT content_hash FROM resource_content_hashes WHERE resource_id = ?")?;
-        let hash = stmt
-            .query_row([resource_id], |row| row.get(0))
-            .optional()?;
+        let hash = stmt.query_row([resource_id], |row| row.get(0)).optional()?;
         Ok(hash)
     }
 

@@ -25,9 +25,9 @@ impl Database {
             FROM ai_sessions 
             WHERE id = ?1",
         )?;
-        
+
         let mut rows = stmt.query(rusqlite::params![id])?;
-        
+
         if let Some(row) = rows.next()? {
             Ok(Some(AIChatSession {
                 id: row.get(0)?,
@@ -64,17 +64,21 @@ impl Database {
 
     pub fn list_ai_sessions(&self, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
         let sql = match limit {
-            Some(_) => "SELECT id, system_prompt, title, created_at, updated_at 
+            Some(_) => {
+                "SELECT id, system_prompt, title, created_at, updated_at 
                        FROM ai_sessions 
                        ORDER BY updated_at DESC 
-                       LIMIT ?1",
-            None => "SELECT id, system_prompt, title, created_at, updated_at 
+                       LIMIT ?1"
+            }
+            None => {
+                "SELECT id, system_prompt, title, created_at, updated_at 
                     FROM ai_sessions 
                     ORDER BY updated_at DESC"
+            }
         };
 
         let mut stmt = self.conn.prepare(sql)?;
-        
+
         let map_fn = |row: &rusqlite::Row| -> rusqlite::Result<AIChatSession> {
             Ok(AIChatSession {
                 id: row.get(0)?,
@@ -89,7 +93,7 @@ impl Database {
             Some(n) => stmt.query_map([n], map_fn)?,
             None => stmt.query_map([], map_fn)?,
         };
-    
+
         let mut result = Vec::new();
         for session in sessions {
             result.push(session?);
@@ -97,21 +101,29 @@ impl Database {
         Ok(result)
     }
 
-    pub fn search_ai_sessions(&self, search: &str, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
+    pub fn search_ai_sessions(
+        &self,
+        search: &str,
+        limit: Option<i64>,
+    ) -> BackendResult<Vec<AIChatSession>> {
         let sql = match limit {
-            Some(_) => "SELECT id, system_prompt, title, created_at, updated_at 
+            Some(_) => {
+                "SELECT id, system_prompt, title, created_at, updated_at 
                        FROM ai_sessions 
                        WHERE title LIKE ?1 
                        ORDER BY updated_at DESC 
-                       LIMIT ?2",
-            None => "SELECT id, system_prompt, title, created_at, updated_at 
+                       LIMIT ?2"
+            }
+            None => {
+                "SELECT id, system_prompt, title, created_at, updated_at 
                     FROM ai_sessions 
                     WHERE title LIKE ?1 
                     ORDER BY updated_at DESC"
+            }
         };
 
         let mut stmt = self.conn.prepare(sql)?;
-        
+
         let map_fn = |row: &rusqlite::Row| -> rusqlite::Result<AIChatSession> {
             Ok(AIChatSession {
                 id: row.get(0)?,

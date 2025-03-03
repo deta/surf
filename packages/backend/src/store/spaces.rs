@@ -145,8 +145,12 @@ impl Database {
             ),
             _ => ("se.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
         };
-        
-        let order = if order_by == Some("asc") { "ASC" } else { "DESC" };
+
+        let order = if order_by == Some("asc") {
+            "ASC"
+        } else {
+            "DESC"
+        };
 
         // Use table aliases and specific columns
         let query = format!(
@@ -166,7 +170,7 @@ impl Database {
         let space_entries = stmt.query_map(rusqlite::params![space_id], |row| {
             Ok(SpaceEntryExtended {
                 id: row.get(0)?,
-                space_id: row.get(1)?, 
+                space_id: row.get(1)?,
                 resource_id: row.get(2)?,
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
@@ -176,7 +180,8 @@ impl Database {
         })?;
 
         // Collect results
-        space_entries.collect::<rusqlite::Result<Vec<_>>>()
+        space_entries
+            .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(Into::into)
     }
 
@@ -184,9 +189,7 @@ impl Database {
         let mut stmt = self.conn.prepare(
             "SELECT space_id FROM space_entries WHERE resource_id = ?1 AND manually_added = 1 ORDER BY created_at ASC",
         )?;
-        let space_ids = stmt.query_map(rusqlite::params![resource_id], |row| {
-            Ok(row.get(0)?)
-        })?;
+        let space_ids = stmt.query_map(rusqlite::params![resource_id], |row| row.get(0))?;
         let mut result = Vec::new();
         for space_id in space_ids {
             result.push(space_id?);

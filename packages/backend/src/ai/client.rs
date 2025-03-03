@@ -55,18 +55,16 @@ impl Stream for LocalAIStream {
     type Item = BackendResult<String>;
 
     fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Option<Self::Item>> {
-        loop {
-            let mut buffer = [0; 1024];
-            let bytes_read = self
-                .stream
-                .read(&mut buffer[..])
-                .expect("failed to read from client");
-            if bytes_read == 0 {
-                return Poll::Ready(None);
-            }
-            let message = String::from_utf8_lossy(&buffer[..bytes_read]);
-            return Poll::Ready(Some(Ok(message.to_string())));
+        let mut buffer = [0; 1024];
+        let bytes_read = self
+            .stream
+            .read(&mut buffer[..])
+            .expect("failed to read from client");
+        if bytes_read == 0 {
+            return Poll::Ready(None);
         }
+        let message = String::from_utf8_lossy(&buffer[..bytes_read]);
+        Poll::Ready(Some(Ok(message.to_string())))
     }
 }
 

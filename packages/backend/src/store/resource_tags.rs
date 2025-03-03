@@ -65,10 +65,7 @@ impl Database {
         let mut result: HashMap<String, Vec<Resource>> = HashMap::new();
         for row in rows {
             let (tag_value, resource) = row.map_err(BackendError::DatabaseError)?;
-            result
-                .entry(tag_value)
-                .or_default()
-                .push(resource);
+            result.entry(tag_value).or_default().push(resource);
         }
 
         Ok(result)

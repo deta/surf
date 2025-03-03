@@ -14,9 +14,8 @@ use crate::{
     store::{
         db::Database,
         models::{
-            random_uuid, AIChatSession, AIChatSessionMessage,
+            random_uuid, AIChatSession, AIChatSessionHistory, AIChatSessionMessage,
             AIChatSessionMessageSource, CompositeResource, ResourceTextContent,
-            AIChatSessionHistory,
         },
     },
     BackendError, BackendResult,
@@ -31,9 +30,10 @@ impl Worker {
     }
 
     pub fn get_ai_chat_message(&mut self, id: String) -> BackendResult<AIChatSessionHistory> {
-        let session = self.db.get_ai_session(&id)?.ok_or_else(|| {
-            BackendError::GenericError("AI chat session not found".to_string())
-        })?;
+        let session = self
+            .db
+            .get_ai_session(&id)?
+            .ok_or_else(|| BackendError::GenericError("AI chat session not found".to_string()))?;
         let messages = self.db.list_non_context_ai_session_messages(&id)?;
         Ok(AIChatSessionHistory {
             id: session.id,
@@ -45,7 +45,11 @@ impl Worker {
         })
     }
 
-    pub fn create_ai_chat_message(&mut self, system_prompt: String, title: String) -> BackendResult<String> {
+    pub fn create_ai_chat_message(
+        &mut self,
+        system_prompt: String,
+        title: String,
+    ) -> BackendResult<String> {
         let new_chat = AIChatSession {
             id: random_uuid(),
             system_prompt,
@@ -70,7 +74,11 @@ impl Worker {
         self.db.list_ai_sessions(limit)
     }
 
-    pub fn search_ai_chats(&mut self, search: &str, limit: Option<i64>) -> BackendResult<Vec<AIChatSession>> {
+    pub fn search_ai_chats(
+        &mut self,
+        search: &str,
+        limit: Option<i64>,
+    ) -> BackendResult<Vec<AIChatSession>> {
         self.db.search_ai_sessions(search, limit)
     }
 
