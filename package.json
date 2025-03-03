@@ -5,7 +5,7 @@
     "dev": "turbo run desktop#dev @horizon/core#dev:tailwind",
     "dev:silent": "SILENCE_WARNINGS=true yarn run dev",
     "dev:all": "turbo dev",
-    "build": "turbo build",
+    "build": "turbo run desktop#build",
     "build:packages": "turbo build --filter=!desktop",
     "build:desktop": "yarn workspace desktop build",
     "build:desktop:mwl": "yarn turbo run desktop#build:mwl",
@@ -32,7 +32,7 @@
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.1.1",
     "prettier-plugin-svelte": "^3.1.2",
-    "turbo": "2.0.3"
+    "turbo": "2.4.4"
   },
   "engines": {
     "node": ">=18"

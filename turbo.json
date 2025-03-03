@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
   "globalEnv": ["*"],
+  "ui": "tui",
   "tasks": {
     "@horizon/backend#build": {
       "dependsOn": [],
@@ -25,36 +26,40 @@
     "@horizon/backend-server#dev": {
       "outputs": ["backend-server"]
     },
+    "desktop#build": {
+      "dependsOn": ["build:app"],
+      "outputs": [".dist/**", ".out/**"]
+    },
     "desktop#build:mwl": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:mac": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:mac:x64": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:mac:arm": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:lin:x64": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:lin:arm": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:win:x64": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "desktop#build:linux": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
     "@horizon/tela#build": {
@@ -82,15 +87,20 @@
       "outputs": ["src/output.css"],
       "outputLogs": "new-only"
     },
-    "build": {
+    "build:app": {
       "dependsOn": [
-        "^build",
+        "@horizon/core#build:tailwind",
+        "@horizon/dragcula#build",
+        "@horizon/trackpad#build",
         "@horizon/backend#build",
         "@horizon/backend-server#build",
-        "@horizon/cmdk-sv#build",
-        "@horizon/core#build:tailwind"
+        "@horizon/cmdk-sv#build"
       ],
-      "outputs": [".dist/**"]
+      "outputs": [".dist/**", ".out/**"]
+    },
+    "build": {
+      "dependsOn": ["build:app"],
+      "outputs": [".dist/**", ".out/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
