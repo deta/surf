@@ -2,6 +2,7 @@ name: Frontend Changes Pull Request
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - grooves-base
     paths:
@@ -13,6 +14,7 @@ on:
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

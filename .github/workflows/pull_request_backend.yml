@@ -2,6 +2,7 @@ name: Backend Changes Pull Request
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - grooves-base
     paths:
@@ -11,6 +12,7 @@ on:
 
 jobs:
   test:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
