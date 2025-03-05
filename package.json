@@ -6,6 +6,7 @@
     "dev:silent": "SILENCE_WARNINGS=true yarn run dev",
     "dev:all": "turbo dev",
     "build": "turbo run desktop#build",
+    "build:frontend": "turbo run desktop#build:frontend",
     "build:packages": "turbo build --filter=!desktop",
     "build:desktop": "yarn workspace desktop build",
     "build:desktop:mwl": "yarn turbo run desktop#build:mwl",

@@ -30,6 +30,10 @@
       "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
     },
+    "desktop#build:frontend": {
+      "dependsOn": ["build:app:frontend"],
+      "outputs": [".dist/**", ".out/**"]
+    },
     "desktop#build:mwl": {
       "dependsOn": ["build:app"],
       "outputs": [".dist/**", ".out/**"]
@@ -87,15 +91,24 @@
       "outputs": ["src/output.css"],
       "outputLogs": "new-only"
     },
-    "build:app": {
+    "build:app:frontend": {
       "dependsOn": [
         "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
-        "@horizon/trackpad#build",
-        "@horizon/backend#build",
-        "@horizon/backend-server#build",
         "@horizon/cmdk-sv#build"
       ],
+      "outputs": [".dist/**", ".out/**"]
+    },
+    "build:app:backend": {
+      "dependsOn": [
+        "@horizon/trackpad#build",
+        "@horizon/backend#build",
+        "@horizon/backend-server#build"
+      ],
+      "outputs": [".dist/**", ".out/**"]
+    },
+    "build:app": {
+      "dependsOn": ["build:app:frontend", "build:app:backend"],
       "outputs": [".dist/**", ".out/**"]
     },
     "build": {

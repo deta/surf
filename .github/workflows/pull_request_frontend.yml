@@ -6,8 +6,13 @@ on:
     branches:
       - grooves-base
     paths:
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'turbo.json'
+      - 'yarn.lock'
       - 'packages/**'
       - 'apps/desktop/src/**'
+      - '!packages/trackpad/**'
       - '!packages/backend/**'
       - '!packages/backend-server/**'
   workflow_dispatch:
@@ -48,7 +53,7 @@ jobs:
           yarn install --frozen-lockfile --network-timeout 300000
 
       - name: Run Vite Build
-        run: yarn build
+        run: yarn build:frontend
         env:
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192

@@ -13,6 +13,7 @@
     "dev": "node scripts/dev.js",
     "build:typecheck": "npm run typecheck && electron-vite build",
     "build": "electron-vite build",
+    "build:frontend": "electron-vite build",
     "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.js --arm64 --x64 --publish always",
     "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --x64 --publish always",
     "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.js --x64 --publish always",
