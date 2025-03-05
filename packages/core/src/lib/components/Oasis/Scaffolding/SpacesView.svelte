@@ -92,7 +92,10 @@
     [filteredSpaces, sourceSpaces, userSettings],
     ([$spaces, $sourceSpaces, $userSettings]) => {
       if ($userSettings.experimental_context_linking) {
-        return $spaces.filter((space) => $sourceSpaces.findIndex((s) => s.id === space.id) === -1)
+        return $spaces.filter(
+          (space) =>
+            $sourceSpaces.findIndex((s) => s.id === space.id) === -1 && !space.dataValue.pinned
+        )
       }
 
       return $spaces.filter((space) => !space.dataValue.pinned)
