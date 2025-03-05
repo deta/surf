@@ -11,8 +11,6 @@
   let SpreadMode: typeof TSpreadMode
   // let openPdfFileRef: HTMLInputElement
 
-  export let isDocumentInfoOpen: boolean
-
   onMount(async () => {
     const pdfSlick = await import('@pdfslick/core')
 
@@ -381,24 +379,6 @@
               >
                 <iconify-icon height={16} icon="tabler:download" />
                 <span>Download to System</span>
-              </MenuItem>
-
-              <MenuItem
-                on:click={() => {
-                  isDocumentInfoOpen = true
-                }}
-                class={({ active, disabled }) =>
-                  clsx(
-                    'w-full  items-center flex space-x-2 box-border text-left px-2 py-1.5 text-xs',
-                    {
-                      'text-gray-900 bg-slate-100': active,
-                      'text-gray-700': !active,
-                      'opacity-50': disabled
-                    }
-                  )}
-              >
-                <iconify-icon height={16} icon="codicon:info" />
-                <span>Document Properties...</span>
               </MenuItem>
             </div>
           </div>

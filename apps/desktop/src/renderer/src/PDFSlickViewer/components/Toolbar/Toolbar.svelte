@@ -1,16 +1,12 @@
 <script lang="ts">
   import { clsx } from 'clsx'
-  import Tooltip from '../../Tooltip.svelte'
   import Splitter from './Splitter.svelte'
   import ZoomSelector from './ZoomSelector.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../../store'
   import MoreActions from './MoreActions.svelte'
-  import FreeTextMenu from './FreeTextMenu.svelte'
-  import InkMenu from './InkMenu.svelte'
   import DocumentInfo from './DocumentInfo.svelte'
 
   let wantedPageNumber: number | string = 1
-  let isDocumentInfoOpen: boolean
   let currentPageNumber = 1
   // let openPdfFileRef: HTMLInputElement
   const urlParams = new URLSearchParams(window.location.search)
@@ -120,17 +116,8 @@
   </div>
 
   <div class="px-1 space-x-1 flex items-center justify-end">
-    <FreeTextMenu />
-    <InkMenu />
-
-    <Splitter />
-
-    <div class="items-center space-x-1 hidden sm:!flex">
-      <DocumentInfo bind:isOpen={isDocumentInfoOpen} />
-      <Splitter />
-    </div>
-
-    <MoreActions bind:isDocumentInfoOpen />
+    <DocumentInfo />
+    <MoreActions />
   </div>
 </div>
 <!-- <div class="absolute -top-10 overflow-hidden w-0 h-0">
