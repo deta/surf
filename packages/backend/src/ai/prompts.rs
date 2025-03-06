@@ -92,7 +92,6 @@ pub fn general_chat_prompt(current_time: &str) -> String {
 Here are some guidelines to follow:
 
 - The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-- Put your internal thoughts and reasoning into a `<think>` tag within the answer. This is where you can explain your thought process. Put the actual answer behind the <think> tag still within the same <answer> tag.
 - Format your response using Markdown so that it is easy to read. Make use of headings, lists, bold, italics, etc. and sepearate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###)`. You can use GitHub Flavored Markdown features like tables and task lists.
 - Be very consise unless asked to provide a detailed answer.
 - For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
@@ -210,7 +209,6 @@ pub fn chat_prompt(current_time: &str) -> String {
 
 - There can be multiple documents provided as context. The context will be provided in JSON format.
 - The answer should be enclosed in an `<answer>` tag and be formatted using Markdown.
-- Put your internal thoughts and reasoning into a `<think>` tag within the answer. This is where you can explain your thought process. Put the actual answer behind the <think> tag still within the same <answer> tag.
 - Every factual statement in your response MUST have a citation from the provided context.
 - If a statement combines information from multiple sources, you MUST cite all relevant sources.
 - Citations must be placed immediately after the sentence or clause they support using the `<citation>` tag.
