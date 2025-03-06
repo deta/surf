@@ -1,7 +1,7 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import { type DOMOutputSpec, Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { PluginKey } from '@tiptap/pm/state'
-import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion'
+import Suggestion, { type SuggestionOptions } from '@horizon/editor/src/lib/utilities/Suggestion'
 
 import MentionComp from './Mention.svelte'
 import type { MentionItem } from '../../types'
@@ -130,6 +130,7 @@ export const Mention = Node.create<MentionOptions>({
       suggestion: {
         char: '@',
         pluginKey: MentionPluginKey,
+        placeholder: 'select or filter to mention context/model…',
         command: ({ editor, range, props }) => {
           // increase range.to by one when the next node is of type "text"
           // and starts with a space character

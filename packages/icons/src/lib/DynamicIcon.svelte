@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Icon, type Icons } from '@horizon/icons'
   import ColorIcon from './ColorIcon.svelte'
+  import FileIcon from './FileIcon.svelte'
   import type { IconImage, IconEmoji, IconColors, IconIcon } from './types.ts'
 
   export let name: string
@@ -11,6 +12,7 @@
   $: isEmoji = name.startsWith('emoji;;') // emoji;;🚀
   $: isColors = name.startsWith('colors;;') // colors;;#FF0000;;#00FF00
   $: isIcon = name.startsWith('icon;;') // icon;;check
+  $: isFile = name.startsWith('file;;') // file;;document
 
   const getData = (name: string) => {
     if (isImage) {
@@ -21,7 +23,7 @@
     } else if (isFavicon) {
       return {
         type: 'image',
-        data: `https://www.google.com/s2/favicons?sz=64&domain_url=${name.split(';;')[1]}`
+        data: `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(name.split(';;')[1])}`
       } as IconImage
     } else if (isEmoji) {
       return {
@@ -38,6 +40,11 @@
       return {
         type: 'icon',
         data: name.split(';;')[1] as Icons
+      } as IconIcon
+    } else if (isFile) {
+      return {
+        type: 'file',
+        data: name.split(';;')[1] as string
       } as IconIcon
     } else {
       return {
@@ -60,6 +67,8 @@
   <ColorIcon colors={icon.data} {size} />
 {:else if icon.type === 'icon'}
   <Icon name={icon.data} {size} />
+{:else if icon.type === 'file'}
+  <FileIcon kind={icon.data} width={size} height={size} />
 {/if}
 
 <style lang="scss">

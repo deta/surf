@@ -1,92 +1,21 @@
 import Slash from './Slash.svelte'
 import tippy from 'tippy.js'
+import { BUILT_IN_SLASH_COMMANDS } from './actions'
+import type { SuggestionOptions } from '@horizon/editor/src/lib/utilities/Suggestion'
+import type { SlashMenuItem, SlashCommandPayload } from './types'
 
 export default {
   items: ({ query }) => {
-    return [
-      {
-        icon: 'paragraph',
-        title: 'Plain Text',
-        keywords: ['plain', 'text', 'paragraph'],
-        command: ({ editor, range }) => {
-          editor.chain().focus().deleteRange(range).setParagraph().run()
-        }
-      },
-      {
-        icon: 'h1',
-        title: 'Heading 1',
-        keywords: ['1', 'first', 'heading', 'title'],
-        command: ({ editor, range }) => {
-          editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run()
-        }
-      },
-      {
-        icon: 'h2',
-        title: 'Heading 2',
-        keywords: ['2', 'second', 'heading', 'title'],
-        command: ({ editor, range }) => {
-          editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run()
-        }
-      },
-      {
-        icon: 'h3',
-        title: 'Heading 3',
-        keywords: ['3', 'third', 'heading', 'title'],
-        command: ({ editor, range }) => {
-          editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run()
-        }
-      },
-      {
-        icon: 'list',
-        title: 'Bulleted List',
-        keywords: ['list', 'bullet', '-', 'unordered'],
-        command: ({ editor, range }) => {
-          editor.chain().deleteRange(range).focus().toggleBulletList().run()
-        }
-      },
-      {
-        icon: 'list-numbered',
-        title: 'Numbered List',
-        keywords: ['list', 'numbered', 'ordered'],
-        command: ({ editor, range }) => {
-          editor.chain().deleteRange(range).focus().toggleOrderedList().run()
-        }
-      },
-      {
-        icon: 'list-check',
-        title: 'To-Do List',
-        keywords: ['list', 'tasks', 'to do', 'checked'],
-        command: ({ editor, range }) => {
-          editor.chain().deleteRange(range).focus().toggleTaskList().run()
-        }
-      },
-      {
-        icon: 'quote',
-        title: 'Blockquote',
-        keywords: ['quote', '>'],
-        command: ({ editor, range }) => {
-          editor.chain().deleteRange(range).focus().toggleBlockquote().run()
-        }
-      },
-      {
-        icon: 'code-block',
-        title: 'Code Block',
-        keywords: ['code', 'block', '```'],
-        command: ({ editor, range }) => {
-          editor.chain().deleteRange(range).focus().toggleCodeBlock().run()
-        }
-      }
-    ]
-      .filter(
-        (item) =>
-          item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.keywords.some((keyword) => keyword.includes(query.toLowerCase()))
-      )
-      .slice(0, 10)
+    return BUILT_IN_SLASH_COMMANDS.filter(
+      (item) =>
+        item.title.toLowerCase().includes(query.toLowerCase()) ||
+        item.keywords.some((keyword) => keyword.includes(query.toLowerCase()))
+    )
   },
 
   render: () => {
-    let component, popup
+    let component: Slash
+    let popup: any
     let selected = false
 
     return {
@@ -97,7 +26,12 @@ export default {
           props: {
             editor: props.editor,
             range: props.range,
-            items: props.items
+            items: props.items,
+            query: props.query,
+            callback: (payload: SlashCommandPayload) => {
+              console.log('slash command callback', payload)
+              props.command(payload)
+            }
           }
         })
 
@@ -116,7 +50,8 @@ export default {
         component.$set({
           editor: props.editor,
           range: props.range,
-          items: props.items
+          items: props.items,
+          query: props.query
         })
         if (!props.clientRect) {
           return
@@ -145,4 +80,6 @@ export default {
       }
     }
   }
-}
+} as Omit<SuggestionOptions<SlashMenuItem>, 'editor'>
+
+export type SlashItemsFetcher = SuggestionOptions<SlashMenuItem>['items']

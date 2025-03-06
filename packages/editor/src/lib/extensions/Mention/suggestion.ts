@@ -2,7 +2,7 @@ import { SvelteRenderer } from 'svelte-tiptap'
 import tippy from 'tippy.js'
 
 import MentionList from './MentionList.svelte'
-import type { SuggestionOptions } from '@tiptap/suggestion'
+import type { SuggestionOptions } from '@horizon/editor/src/lib/utilities/Suggestion'
 import type { MentionItem } from '../../types'
 
 export default {

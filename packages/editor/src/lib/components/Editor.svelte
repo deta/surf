@@ -5,7 +5,14 @@
   import { createEventDispatcher, onMount, SvelteComponent, type ComponentType } from 'svelte'
 
   import { createEditor, Editor, EditorContent, FloatingMenu } from 'svelte-tiptap'
-  import { Extension, generateJSON, generateText, Node, nodePasteRule } from '@tiptap/core'
+  import {
+    Extension,
+    generateJSON,
+    generateText,
+    Node,
+    nodePasteRule,
+    type Range
+  } from '@tiptap/core'
   import Placeholder from '@tiptap/extension-placeholder'
   import { conditionalArrayItem } from '@horizon/utils'
 
@@ -16,6 +23,8 @@
   import BubbleMenu from './BubbleMenu.svelte'
   import { TextSelection } from '@tiptap/pm/state'
   import { DragTypeNames } from '@horizon/types'
+  import type { SlashCommandPayload } from '../extensions/Slash/index'
+  import type { SlashItemsFetcher } from '../extensions/Slash/suggestion'
 
   export let content: string
   export let readOnly: boolean = false
@@ -40,6 +49,8 @@
   export let resourceComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let resourceComponentPreview: boolean = false
   export let showDragHandle: boolean = false
+  export let showSlashMenu: boolean = false
+  export let slashItemsFetcher: SlashItemsFetcher | undefined = undefined
 
   let editor: Readable<Editor>
   let editorWidth: number = 350
@@ -54,6 +65,7 @@
     'mention-click': { item: MentionItem; action: MentionAction }
     'mention-insert': MentionItem
     'button-click': string
+    'slash-command': SlashCommandPayload
   }>()
 
   export const getEditor = () => {
@@ -135,6 +147,50 @@
     return { text, mentions }
   }
 
+  export const triggerAutocomplete = () => {
+    const editor = getEditor()
+    const getText = () => {
+      const { from, to } = editor.view.state.selection
+      if (from === to) {
+        const currentNode = editor.view.state.selection.$from.node()
+        const previousNode = editor.view.state.selection.$from.nodeBefore
+
+        const selectedNode = currentNode || previousNode
+        if (selectedNode && selectedNode.textContent.length > 0) {
+          const mentions: MentionItem[] = []
+          selectedNode.descendants((node) => {
+            if (node.type.name === 'mention') {
+              mentions.push(parseMentionNode(node))
+            }
+          })
+
+          const json = selectedNode.toJSON()
+          const text = generateText(json, extensions)
+          return { text, mentions }
+        }
+
+        const textUntilPos = editor.view.state.doc.textBetween(0, to)
+        if (textUntilPos) {
+          return {
+            text: textUntilPos
+          }
+        }
+
+        return { text: editor.getText() }
+      } else {
+        const node = editor.view.state.doc.cut(from, to)
+        const mentions = getMentions(node)
+        return {
+          text: editor.view.state.doc.textBetween(from, to),
+          mentions
+        }
+      }
+    }
+
+    const data = getText()
+    dispatch('autocomplete', { query: data.text, mentions: data.mentions })
+  }
+
   const onSubmit = () => {
     if (focused) {
       dispatch('submit')
@@ -210,6 +266,10 @@
     dispatch('button-click', action)
   }
 
+  const handleSlashCommand = (payload: SlashCommandPayload) => {
+    dispatch('slash-command', payload)
+  }
+
   const baseExtensions = createEditorExtensions({
     disableHashtag: !parseHashtags,
     parseMentions,
@@ -220,7 +280,10 @@
     buttonClick: handleButtonClick,
     resourceComponent: resourceComponent,
     resourceComponentPreview: resourceComponentPreview,
-    showDragHandle: showDragHandle
+    showDragHandle: showDragHandle,
+    showSlashMenu: showSlashMenu,
+    onSlashCommand: handleSlashCommand,
+    slashItems: slashItemsFetcher
   })
 
   const KeyboardHandler = Extension.create({
@@ -259,46 +322,7 @@
                   return false
                 }
 
-                const getText = () => {
-                  const { from, to } = this.editor.view.state.selection
-                  if (from === to) {
-                    const currentNode = this.editor.view.state.selection.$from.node()
-                    const previousNode = this.editor.view.state.selection.$from.nodeBefore
-
-                    const selectedNode = currentNode || previousNode
-                    if (selectedNode && selectedNode.textContent.length > 0) {
-                      const mentions: MentionItem[] = []
-                      selectedNode.descendants((node) => {
-                        if (node.type.name === 'mention') {
-                          mentions.push(parseMentionNode(node))
-                        }
-                      })
-
-                      const json = selectedNode.toJSON()
-                      const text = generateText(json, extensions)
-                      return { text, mentions }
-                    }
-
-                    const textUntilPos = this.editor.view.state.doc.textBetween(0, to)
-                    if (textUntilPos) {
-                      return {
-                        text: textUntilPos
-                      }
-                    }
-
-                    return { text: this.editor.getText() }
-                  } else {
-                    const node = this.editor.view.state.doc.cut(from, to)
-                    const mentions = getMentions(node)
-                    return {
-                      text: this.editor.view.state.doc.textBetween(from, to),
-                      mentions
-                    }
-                  }
-                }
-
-                const data = getText()
-                dispatch('autocomplete', { query: data.text, mentions: data.mentions })
+                triggerAutocomplete()
 
                 return false
               }

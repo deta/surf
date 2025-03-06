@@ -17,11 +17,14 @@
   import { Resource, ResourceNote, useResourceManager } from '../../../../service/resources'
   import {
     conditionalArrayItem,
+    getFileKind,
+    getFileType,
     getFormattedDate,
     isMac,
     isModKeyPressed,
     markdownToHtml,
     tooltip,
+    truncateURL,
     useDebounce,
     useLocalStorageStore,
     useLogScope,
@@ -100,6 +103,13 @@
     NO_CONTEXT_MENTION
   } from '@horizon/core/src/lib/constants/chat'
   import ModelPicker from '@horizon/core/src/lib/components/Chat/ModelPicker.svelte'
+  import type {
+    SlashCommandPayload,
+    SlashMenuItem
+  } from '@horizon/editor/src/lib/extensions/Slash/index'
+  import type { SlashItemsFetcher } from '@horizon/editor/src/lib/extensions/Slash/suggestion'
+  import { BUILT_IN_SLASH_COMMANDS } from '@horizon/editor/src/lib/extensions/Slash/actions'
+  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -251,10 +261,7 @@
           }
           return `Select a suggestion or press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
         } else {
-          if (!contextName) {
-            return `Press space for suggestions or ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf continue writing…`
-          }
-          return `Press space for suggestions or ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
+          return `Write something or type / for commands…`
         }
       }
 
@@ -359,6 +366,72 @@
     }
   }
 
+  const processDropResource = (position: number, resource: Resource, tryToEmbed = false) => {
+    const editor = editorElem.getEditor()
+
+    const canonicalUrl = (resource?.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+    )?.value
+    const canBeEmbedded =
+      WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
+
+    if (resource.type.startsWith('image/')) {
+      editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
+    } else if ((isGeneratedResource(resource) || canBeEmbedded) && tryToEmbed) {
+      editor.commands.insertContentAt(
+        position,
+        `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
+      )
+    } else {
+      const citationElem = createCitationHTML({
+        id: resource.id,
+        metadata: {
+          url: resource.url
+        },
+        resource_id: resource.id,
+        all_chunk_ids: [resource.id],
+        render_id: resource.id,
+        content: ''
+      })
+
+      editor.commands.insertContentAt(position, citationElem)
+    }
+
+    telemetry.trackNoteCreateCitation(
+      resource.type,
+      NoteCreateCitationEventTrigger.Drop,
+      showOnboarding
+    )
+  }
+
+  const processDropSpace = (position: number, space: OasisSpace) => {
+    const editor = editorElem.getEditor()
+
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(position, [
+        {
+          type: 'mention',
+          attrs: {
+            id: space.id,
+            label: space.dataValue.folderName
+          }
+        },
+        {
+          type: 'text',
+          text: ' '
+        }
+      ])
+      .run()
+
+    telemetry.trackNoteCreateCitation(
+      DragTypeNames.SURF_SPACE,
+      NoteCreateCitationEventTrigger.Drop,
+      showOnboarding
+    )
+  }
+
   const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
     let toast: Toast | null = null
     try {
@@ -368,68 +441,6 @@
       const isBlock = !resolvedPos.parent.inlineContent
 
       log.debug('dropped something at', position, 'is block', isBlock)
-
-      const processDropResource = (resource: Resource) => {
-        const canonicalUrl = (resource?.tags ?? []).find(
-          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-        )?.value
-        const canBeEmbedded =
-          WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
-
-        if (resource.type.startsWith('image/')) {
-          editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
-        } else if ((isGeneratedResource(resource) || canBeEmbedded) && isBlock) {
-          editor.commands.insertContentAt(
-            position,
-            `<resource id="${resource.id}" data-type="${resource.type}" />`
-          )
-        } else {
-          const citationElem = createCitationHTML({
-            id: resource.id,
-            metadata: {
-              url: resource.url
-            },
-            resource_id: resource.id,
-            all_chunk_ids: [resource.id],
-            render_id: resource.id,
-            content: ''
-          })
-
-          editor.commands.insertContentAt(position, citationElem)
-        }
-
-        telemetry.trackNoteCreateCitation(
-          resource.type,
-          NoteCreateCitationEventTrigger.Drop,
-          showOnboarding
-        )
-      }
-
-      const processDropSpace = (space: OasisSpace) => {
-        editor
-          .chain()
-          .focus()
-          .insertContentAt(position, [
-            {
-              type: 'mention',
-              attrs: {
-                id: space.id,
-                label: space.dataValue.folderName
-              }
-            },
-            {
-              type: 'text',
-              text: ' '
-            }
-          ])
-          .run()
-
-        telemetry.trackNoteCreateCitation(
-          DragTypeNames.SURF_SPACE,
-          NoteCreateCitationEventTrigger.Drop,
-          showOnboarding
-        )
-      }
 
       if (drag.isNative) {
         log.warn('Not yet implemented!')
@@ -448,7 +459,7 @@
           if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
             const resource = await resourceManager.getResource(tab.resourceBookmark)
             if (resource) {
-              processDropResource(resource)
+              processDropResource(position, resource, isBlock)
               drag.continue()
               return
             }
@@ -458,7 +469,7 @@
             const { resource } = await tabsManager.createResourceFromTab(tab, { silent: true })
             if (resource) {
               log.debug('Created resource from tab', resource)
-              processDropResource(resource)
+              processDropResource(position, resource, isBlock)
               toast.success(isBlock ? 'Tab Embedded!' : 'Tab Linked!')
               drag.continue()
               return
@@ -479,7 +490,7 @@
         const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
 
         log.debug('dropped space', space)
-        processDropSpace(space)
+        processDropSpace(position, space)
       } else if (
         drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
         drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
@@ -499,7 +510,7 @@
         }
 
         log.debug('dropped resource', resource)
-        processDropResource(resource)
+        processDropResource(position, resource, isBlock)
 
         drag.continue()
       }
@@ -1287,6 +1298,80 @@
     }
   }
 
+  const handleSlashCommand = async (e: CustomEvent<SlashCommandPayload>) => {
+    const { item, range } = e.detail
+    log.debug('Slash command', item)
+
+    if (item.id === 'autocomplete') {
+      editorElem.triggerAutocomplete()
+    } else if (item.id === 'suggestions') {
+      generatePrompts()
+    } else if (item.id.startsWith('resource-')) {
+      const resourceId = item.id.replace('resource-', '')
+      const resource = await resourceManager.getResource(resourceId)
+      if (!resource) {
+        log.error('Resource not found', resourceId)
+        return
+      }
+
+      processDropResource(range.from, resource, true)
+    } else {
+      log.warn('Unknown slash command', item)
+    }
+  }
+
+  const slashItemsFetcher: SlashItemsFetcher = async ({ query }) => {
+    log.debug('fetching slash items', query)
+
+    if (!query) {
+      return BUILT_IN_SLASH_COMMANDS
+    }
+
+    const filteredActions = BUILT_IN_SLASH_COMMANDS.filter(
+      (item) =>
+        item.title.toLowerCase().includes(query.toLowerCase()) ||
+        item.keywords.some((keyword) => keyword.includes(query.toLowerCase()))
+    )
+
+    let stuffResults: SlashMenuItem[] = []
+
+    if (query.length > 3) {
+      const result = await resourceManager.searchResources(
+        query,
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+        ],
+        {
+          semanticEnabled: $userSettings.use_semantic_search
+        }
+      )
+
+      stuffResults = result.slice(0, 5).map((item) => {
+        const resource = item.resource
+
+        log.debug('search result item', resource)
+
+        const canonicalURL =
+          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+            ?.value || resource.metadata?.sourceURI
+
+        return {
+          id: `resource-${resource.id}`,
+          section: 'My Stuff',
+          title:
+            resource.metadata?.name ||
+            (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
+          icon: canonicalURL ? `favicon;;${canonicalURL}` : `file;;${getFileKind(resource.type)}`
+        } as SlashMenuItem
+      })
+    }
+
+    return [...filteredActions, ...stuffResults]
+  }
+
   const showOnboardingNote = async () => {
     const newTab = await tabsManager.create<TabResource>(
       {
@@ -1608,8 +1693,10 @@
             enableRewrite={$userSettings.experimental_note_inline_rewrite}
             resourceComponentPreview={minimal}
             showDragHandle={!minimal}
+            showSlashMenu={!minimal}
             parseMentions
             {tabsManager}
+            {slashItemsFetcher}
             on:click
             on:dragstart
             on:citation-click={handleCitationClick}
@@ -1622,6 +1709,7 @@
             on:close-bubble-menu={handleCloseBubbleMenu}
             on:open-bubble-menu={handleOpenBubbleMenu}
             on:button-click={handleNoteButtonClick}
+            on:slash-command={handleSlashCommand}
             {autofocus}
           >
             <div slot="floating-menu">

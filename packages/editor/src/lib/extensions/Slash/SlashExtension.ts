@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core'
-import Suggestion from '@tiptap/suggestion'
+import Suggestion from '@horizon/editor/src/lib/utilities/Suggestion'
 
 export default Extension.create({
   name: 'slash',
@@ -8,9 +8,8 @@ export default Extension.create({
     return {
       suggestion: {
         char: '/',
-        command: ({ editor, range, props }) => {
-          props.command({ editor, range })
-        }
+        allowSpaces: true,
+        placeholder: 'select command or type to search stuff…'
       }
     }
   },

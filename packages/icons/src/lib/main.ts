@@ -113,6 +113,7 @@ import EyeOff from './Icons/EyeOff.svelte'
 import VisionOff from './Icons/VisionOff.svelte'
 import Dots from './Icons/Dots.svelte'
 import DotsVertical from './Icons/DotsVertical.svelte'
+import Mention from './Icons/Mention.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -233,7 +234,8 @@ export const icons = {
   puzzle: Puzzle,
   'puzzle.filled': PuzzleFilled,
   dots: Dots,
-  'dots.vertical': DotsVertical
+  'dots.vertical': DotsVertical,
+  mention: Mention
 }
 
 export type Icons = keyof typeof icons
@@ -353,5 +355,6 @@ export {
   Puzzle,
   PuzzleFilled,
   Dots,
-  DotsVertical
+  DotsVertical,
+  Mention
 }

@@ -70,6 +70,15 @@ export const Resource = Node.create<ResourceOptions>({
             'data-type': attributes.type
           }
         }
+      },
+      expanded: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-expanded') === 'true',
+        renderHTML: (attributes) => {
+          return {
+            'data-expanded': attributes.expanded ? 'true' : undefined
+          }
+        }
       }
     }
   },
@@ -91,6 +100,9 @@ export const Resource = Node.create<ResourceOptions>({
   addNodeView() {
     return ({ node }) => {
       const container = document.createElement('resource')
+      container.setAttribute('id', node.attrs.id)
+      container.setAttribute('data-type', node.attrs.type)
+      container.setAttribute('data-expanded', node.attrs.expanded === true ? 'true' : 'false')
 
       console.log('resource node', node)
 
@@ -99,7 +111,8 @@ export const Resource = Node.create<ResourceOptions>({
         props: {
           id: node.attrs.id,
           type: node.attrs.type,
-          preview: this.options.preview
+          preview: this.options.preview,
+          expanded: node.attrs.expanded
         }
       })
 

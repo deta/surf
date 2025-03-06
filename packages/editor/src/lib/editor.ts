@@ -1,4 +1,11 @@
-import { type JSONContent, generateHTML, generateText, generateJSON, Editor } from '@tiptap/core'
+import {
+  type JSONContent,
+  generateHTML,
+  generateText,
+  generateJSON,
+  Editor,
+  type Range
+} from '@tiptap/core'
 import Link from '@tiptap/extension-link'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
@@ -9,7 +16,12 @@ import Image from '@tiptap/extension-image'
 import { Markdown } from 'tiptap-markdown'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
-import Slash from './extensions/Slash/SlashExtension'
+import {
+  SlashExtension,
+  SlashSuggestion,
+  type SlashCommandPayload,
+  type SlashMenuItem
+} from './extensions/Slash/index'
 import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
 import Mention, { type MentionAction } from './extensions/Mention/index'
@@ -25,6 +37,7 @@ import Button from './extensions/Button'
 import Resource from './extensions/Resource'
 import type { ComponentType, SvelteComponent } from 'svelte'
 import { conditionalArrayItem } from '@horizon/utils'
+import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -42,6 +55,9 @@ export type ExtensionOptions = {
   resourceComponent?: ComponentType<SvelteComponent>
   resourceComponentPreview?: boolean
   showDragHandle?: boolean
+  showSlashMenu?: boolean
+  onSlashCommand?: (payload: SlashCommandPayload) => void
+  slashItems?: SlashItemsFetcher
 }
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
@@ -109,6 +125,38 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     })
   ),
   ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),
+  ...conditionalArrayItem(
+    !!opts?.showSlashMenu,
+    SlashExtension.configure({
+      suggestion: {
+        ...SlashSuggestion,
+        command: ({
+          props,
+          editor,
+          range
+        }: {
+          editor: Editor
+          range: Range
+          props: SlashCommandPayload
+        }) => {
+          const { item, query } = props
+          if (item.command) {
+            item.command(item, editor, { from: range.from, to: range.to + query.length })
+          } else if (opts?.onSlashCommand) {
+            editor
+              .chain()
+              .deleteRange({ from: range.from, to: range.to + query.length })
+              .focus()
+              .run()
+            opts.onSlashCommand({ range, item, query })
+          } else {
+            console.error('No command found for slash item', props)
+          }
+        },
+        items: opts?.slashItems
+      }
+    })
+  ),
   TaskItem,
   TaskList,
   ListKeymap,
@@ -118,9 +166,6 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   AIOutput,
   Image
   // Markdown,
-  // Slash.configure({
-  // 	suggestion
-  // })
 ]
 
 const extensions = createEditorExtensions()

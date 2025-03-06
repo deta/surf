@@ -394,7 +394,7 @@
 
   onMount(async () => {
     const prefs = getUserViewPreferences(resource?.tags ?? [])
-    if (prefs?.blockCollapsed !== undefined && initialCollapsed !== true) {
+    if (prefs?.blockCollapsed !== undefined && initialCollapsed === 'auto') {
       initialCollapsed = prefs.blockCollapsed
     } else if (initialCollapsed === 'auto') {
       const autoExpanded = checkIfShouldBeExpanded()
@@ -412,6 +412,8 @@
 
     if (initialCollapsed) {
       collapsed = true
+    } else if (!initialCollapsed) {
+      collapsed = false
     }
 
     $generatedName =

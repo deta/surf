@@ -13,6 +13,7 @@
 
   export let id: string
   export let preview: boolean = false
+  export let expanded: boolean = false
 
   const log = useLogScope('EmbeddedResource')
   const resourceManager = useResourceManager()
@@ -30,7 +31,7 @@
 
   onMount(async () => {
     resource = await resourceManager.getResource(id)
-    log.debug('Resource:', resource, preview)
+    log.debug('Resource:', resource, preview, expanded)
   })
 </script>
 
@@ -39,10 +40,10 @@
     <CodeRenderer
       {resource}
       language={mimeTypeToCodeLanguage(resource.type)}
-      showPreview={!preview}
-      expandable={!preview}
+      showPreview={!preview || expanded}
+      expandable={!preview || expanded}
       collapsable
-      initialCollapsed={preview ? true : 'auto'}
+      initialCollapsed={expanded ? false : preview ? true : 'auto'}
       resizable={true}
       minHeight="150px"
       maxHeight="800px"
@@ -52,10 +53,10 @@
     <CollapsableResourceBlock
       {resource}
       language={mimeTypeToCodeLanguage(resource.type)}
-      showPreview={!preview}
-      expandable={!preview}
+      showPreview={!preview || expanded}
+      expandable={!preview || expanded}
       collapsable
-      initialCollapsed={preview ? true : 'auto'}
+      initialCollapsed={expanded ? false : preview ? true : 'auto'}
       resizable={true}
       minHeight="150px"
       maxHeight="800px"
