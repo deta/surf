@@ -24,9 +24,6 @@ import { CrashHandler } from './crashHandler'
 
 const log = useLogScope('Main Index')
 
-//see https://github.com/electron/electron/issues/45653
-app.commandLine.appendSwitch('disable-features', 'UseBrowserCalculatedOrigin')
-
 const CONFIG = {
   appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
   appVersion: import.meta.env.M_VITE_APP_VERSION,
