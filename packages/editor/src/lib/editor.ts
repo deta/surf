@@ -38,6 +38,7 @@ import Resource from './extensions/Resource'
 import type { ComponentType, SvelteComponent } from 'svelte'
 import { conditionalArrayItem } from '@horizon/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
+import { Citation } from './extensions/Citation/citation'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -54,6 +55,8 @@ export type ExtensionOptions = {
   buttonClick?: (action: string) => void
   resourceComponent?: ComponentType<SvelteComponent>
   resourceComponentPreview?: boolean
+  citationComponent?: ComponentType<SvelteComponent>
+  citationClick?: (e: CustomEvent<any>) => void
   showDragHandle?: boolean
   showSlashMenu?: boolean
   onSlashCommand?: (payload: SlashCommandPayload) => void
@@ -93,6 +96,9 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   Button.configure({
     onClick: opts?.buttonClick
   }),
+  Placeholder.configure({
+    placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
+  }),
   ...conditionalArrayItem(
     !opts?.disableHashtag,
     Hashtag.configure({
@@ -122,6 +128,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     Resource.configure({
       component: opts?.resourceComponent,
       preview: opts?.resourceComponentPreview
+    })
+  ),
+  ...conditionalArrayItem(
+    !!opts?.citationComponent,
+    Citation.configure({
+      component: opts?.citationComponent,
+      onClick: opts?.citationClick
     })
   ),
   ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),

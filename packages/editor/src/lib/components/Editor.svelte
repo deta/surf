@@ -270,10 +270,15 @@
     dispatch('slash-command', payload)
   }
 
+  const handleCitationClick = (e: CustomEvent<any>) => {
+    dispatch('citation-click', e.detail)
+  }
+
   const baseExtensions = createEditorExtensions({
-    disableHashtag: !parseHashtags,
+    placeholder,
     parseMentions,
     searchMentions,
+    disableHashtag: !parseHashtags,
     mentionClick: handleMentionClick,
     mentionInsert: handleMentionInsert,
     readOnlyMentions: readOnlyMentions,
@@ -283,7 +288,9 @@
     showDragHandle: showDragHandle,
     showSlashMenu: showSlashMenu,
     onSlashCommand: handleSlashCommand,
-    slashItems: slashItemsFetcher
+    slashItems: slashItemsFetcher,
+    citationComponent: citationComponent,
+    citationClick: handleCitationClick
   })
 
   const KeyboardHandler = Extension.create({
@@ -345,90 +352,7 @@
     }
   })
 
-  const createCitationNode = (CitationItem: any) => {
-    return Node.create({
-      name: 'citation',
-      group: 'inline',
-      inline: true,
-      atom: true,
-      addAttributes() {
-        return {
-          id: {
-            default: null,
-            parseHTML: (element) => element.textContent
-          },
-          info: {
-            default: null,
-            parseHTML: (element) => {
-              let rawData = element.getAttribute('data-info')
-              if (rawData) {
-                return JSON.parse(decodeURIComponent(rawData))
-              }
-            }
-          }
-        }
-      },
-      parseHTML() {
-        return [
-          {
-            tag: 'citation'
-          }
-        ]
-      },
-      renderHTML({ node }) {
-        return [
-          'citation',
-          {
-            'data-id': node.attrs.id,
-            'data-info': encodeURIComponent(JSON.stringify(node.attrs.info)),
-            ...node.attrs
-          },
-          node.attrs.id
-        ]
-      },
-      addNodeView() {
-        return ({ node }) => {
-          const container = document.createElement('span')
-          container.setAttribute('data-citation-id', node.attrs.id)
-          const component = new CitationItem({
-            target: container,
-            props: {
-              ...node.attrs,
-              skipContext: true,
-              tabsManager
-            }
-          })
-          component.$on('click', (event: CustomEvent<any>) => {
-            dispatch('citation-click', event.detail)
-          })
-          return {
-            dom: container,
-            destroy: () => {
-              component.$destroy()
-            }
-          }
-        }
-      },
-      addPasteRules() {
-        return [
-          nodePasteRule({
-            // reges for <resource id=""></resource> tags
-            find: /<citation>([^<]+)<\/citation>/g,
-            type: this.type
-          })
-        ]
-      }
-    })
-  }
-
-  const extensions = [
-    ...baseExtensions,
-    extendKeyboardHandler,
-    Placeholder.configure({
-      placeholder: placeholder ?? "Write something or type '/' for options…"
-    }),
-    ...conditionalArrayItem(!!citationComponent, createCitationNode(citationComponent))
-  ]
+  const extensions = [...baseExtensions, extendKeyboardHandler]
 
   onMount(() => {
     editor = createEditor({
