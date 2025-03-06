@@ -469,7 +469,10 @@ Made with Deta Surf.`
     if (!resource) return
     const token = await window.api.createToken(resource.id)
 
-    webview.send('set-drag-metadata', JSON.stringify({ token, resource }))
+    webview?.send(
+      'set-drag-metadata',
+      JSON.stringify({ token, resource: resource.getTransferableObject() })
+    )
   }
 
   const handleDragOver = (drag: DragculaDragEvent) => {
@@ -704,6 +707,7 @@ Made with Deta Surf.`
         drag.isNative ||
         drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
         drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE_ID) ||
         drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
       ) {
         return true

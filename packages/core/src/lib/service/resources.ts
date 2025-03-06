@@ -464,6 +464,28 @@ export class Resource {
     this.log.debug('updating post processing state', state)
     this.postProcessingState.set(state)
   }
+
+  /** Returns a raw resource object which can be serialized (sent through IPC)
+   * without any references to services and other non-serializable properties
+   */
+  getTransferableObject(): Record<string, unknown> {
+    return [
+      'id',
+      'createdAt',
+      'updatedAt',
+      'dummy',
+      'deleted',
+      'path',
+      'type',
+      'tags',
+      'annotations',
+      'parsedData',
+      'metadata'
+    ].reduce<Record<string, unknown>>((filtered, prop) => {
+      if (prop in this) filtered[prop] = this[prop as keyof this]
+      return filtered
+    }, {})
+  }
 }
 
 // TODO: adapt to new resource data
