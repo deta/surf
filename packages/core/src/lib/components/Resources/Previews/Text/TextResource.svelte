@@ -674,9 +674,20 @@
       elem.setAttribute('data-info', encodeURIComponent(JSON.stringify(info)))
     })
 
-    const markdown = doc.body.innerHTML
+    // separate the <think> block from the rest of the content and convert both separately to html
+    const thinkBlock = doc.querySelector('think')
+    let thinkHtml = ''
+    if (thinkBlock) {
+      thinkHtml = await markdownToHtml(thinkBlock.innerHTML)
+      thinkBlock.remove()
+    }
 
-    const html = await markdownToHtml(markdown)
+    const markdown = doc.body.innerHTML
+    let html = await markdownToHtml(markdown)
+    if (thinkHtml) {
+      html = `<think>${thinkHtml}</think>\n${html}`
+    }
+
     return html
   }
 
@@ -909,6 +920,13 @@
         editor.commands.insertContentAt(range.from, html, {
           updateSelection: false
         })
+
+        log.debug('inserted output', html)
+
+        // insert new line
+        // editor.commands.insertContentAt(range.to, '<br>', {
+        //   updateSelection: false
+        // })
       }
     } catch (err) {
       log.error('Error generating AI output', err)

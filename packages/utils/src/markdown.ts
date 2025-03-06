@@ -40,7 +40,8 @@ export const markdownToHtml = async (markdown: string) => {
       tagNames: [
         ...(defaultSchema.tagNames ?? []),
         // allow custom citation tags so we can render them
-        'citation'
+        'citation',
+        'think'
       ]
     })
     .use(rehypeKatex)

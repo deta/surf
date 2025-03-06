@@ -16,6 +16,8 @@ import Mention, { type MentionAction } from './extensions/Mention/index'
 // import Mention from '@tiptap/extension-mention'
 import mentionSuggestion from './extensions/Mention/suggestion'
 import Loading from './extensions/Loading'
+import Thinking from './extensions/Thinking'
+import TrailingNode from './extensions/TrailingNode'
 import AIOutput from './extensions/AIOutput'
 import type { MentionItem } from './types'
 import type { SuggestionOptions } from '@tiptap/suggestion'
@@ -109,6 +111,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   TaskList,
   ListKeymap,
   Loading,
+  Thinking,
+  TrailingNode,
   AIOutput,
   Image
   // Markdown,

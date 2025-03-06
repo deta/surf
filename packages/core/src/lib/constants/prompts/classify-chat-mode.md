@@ -81,3 +81,5 @@ Additional Example Sequences:
 ["What information is shown in the chart?", "How is it styled?"] → 1
 ["Are the form fields properly aligned?", "What data is being collected?"] → 2
 ["What's in the sidebar?", "Create a visualization"] → 1
+
+Respond only with the mode number (1, 2, or 3) as the output, NOTHING ELSE.

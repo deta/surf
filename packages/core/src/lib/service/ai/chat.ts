@@ -382,15 +382,24 @@ export class AIChat {
         return ChatMode.TextOnly
       }
 
-      const response = JSON.parse(completion.output) as ChatMode
-      if (!ChatMode.isValid(response)) {
-        this.log.error('Invalid chat mode response from llm: ', response)
+      let raw = completion.output
+      if (raw.startsWith('Final Answer:')) {
+        raw = raw.replace('Final Answer:', '').trim()
+      } else if (raw.startsWith('Answer:')) {
+        raw = raw.replace('Answer:', '').trim()
+      } else if (raw.startsWith('```json')) {
+        raw = raw.replace('```json', '').replace('```', '').trim()
+      }
+
+      const mode = JSON.parse(raw) as ChatMode
+      if (!ChatMode.isValid(mode)) {
+        this.log.error('Invalid chat mode response from llm: ', mode)
         return ChatMode.TextOnly
       }
-      if (response === ChatMode.TextOnly && get(this.ai.alwaysIncludeScreenshotInChat)) {
+      if (mode === ChatMode.TextOnly && get(this.ai.alwaysIncludeScreenshotInChat)) {
         return ChatMode.TextWithScreenshot
       }
-      return response
+      return mode
     } catch (e) {
       this.log.error('Error determining if a screenshot is needed', e)
       return ChatMode.TextOnly

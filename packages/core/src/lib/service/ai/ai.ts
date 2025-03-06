@@ -378,12 +378,14 @@ export class AIService {
        * Whether to retry with a different model tier if the current tier is depleted
        */
       quotaErrorRetry?: boolean
+      filterOutReasoning?: boolean
     }
   ): Promise<ChatCompletionResponse> {
     const defaultOpts = {
       tier: ModelTiers.Premium,
       quotaErrorRetry: true,
-      responseFormat: undefined as string | undefined
+      responseFormat: undefined as string | undefined,
+      filterOutReasoning: true
     }
 
     const options = Object.assign(defaultOpts, opts) as typeof defaultOpts
@@ -408,12 +410,29 @@ export class AIService {
       }
 
       this.log.debug('creating chat completion', model, options, messages)
-      const result = await this.sffs.createAIChatCompletion(messages, model, {
+      let result = await this.sffs.createAIChatCompletion(messages, model, {
         customKey,
         responseFormat
       })
 
+      if (options.filterOutReasoning) {
+        if (result.trim().startsWith('<think>')) {
+          this.log.debug('Filtering out reasoning block')
+          // remove <think> blocks from the response
+          const domParser = new DOMParser()
+          const doc = domParser.parseFromString(result, 'text/html')
+
+          const thinkBlocks = doc.querySelectorAll('think')
+          thinkBlocks.forEach((node) => {
+            node.remove()
+          })
+
+          result = doc.body.innerHTML.trim()
+        }
+      }
+
       this.log.debug('created chat completion', result)
+
       return {
         output: result as string,
         error: null
