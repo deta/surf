@@ -16,12 +16,13 @@ export interface DragHandleOptions {
   dragHandleWidth: number
 }
 
-function absoluteRect(node: Element) {
+function absoluteRect(node: Element, editorWrapper: Element | null) {
   const data = node.getBoundingClientRect()
+  const wrapperRect = editorWrapper?.getBoundingClientRect()
 
   return {
-    top: data.top,
-    left: data.left,
+    top: data.top - (wrapperRect?.top ?? 0),
+    left: data.left - (wrapperRect?.left ?? 0),
     width: data.width
   }
 }
@@ -43,7 +44,8 @@ function nodeDOMAtCoords(coords: { x: number; y: number }) {
             '[data-type=horizontalRule]',
             '.tableWrapper',
             '.node-subdocument',
-            '.node-equationBlock'
+            '.node-equationBlock',
+            'img'
           ].join(', ')
         )
     )
@@ -51,11 +53,39 @@ function nodeDOMAtCoords(coords: { x: number; y: number }) {
 
 export function nodePosAtDOM(node: Element, view: EditorView) {
   const boundingRect = node.getBoundingClientRect()
-
-  return view.posAtCoords({
+  const pos = view.posAtCoords({
     left: boundingRect.left + 1,
     top: boundingRect.top + 1
-  })?.inside
+  })
+
+  if (!pos) return undefined
+
+  // Special handling for list items
+  if (node.matches('li')) {
+    const $pos = view.state.doc.resolve(pos.pos)
+    // Find the actual list item position
+    if ($pos.parent.type.name === 'listItem' || $pos.parent.type.name === 'bulletList') {
+      return $pos.before($pos.depth)
+    }
+  }
+
+  // For images, find the image node position
+  if (node.matches('img')) {
+    let $pos = view.state.doc.resolve(pos.pos)
+
+    // Look for the closest image node
+    while ($pos.pos > 0) {
+      const nodeAtPos = view.state.doc.nodeAt($pos.pos)
+      if (nodeAtPos?.type.name === 'image') {
+        return $pos.pos
+      }
+      $pos = view.state.doc.resolve($pos.pos - 1)
+    }
+    return undefined
+  }
+
+  // For all other nodes
+  return pos.inside > -1 ? pos.inside : pos.pos
 }
 
 export default function DragHandle(options: DragHandleOptions) {
@@ -74,7 +104,18 @@ export default function DragHandle(options: DragHandleOptions) {
     const nodePos = nodePosAtDOM(node, view)
     if (nodePos === undefined) return
 
-    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)))
+    const $pos = view.state.doc.resolve(nodePos)
+    let selection = NodeSelection.create(view.state.doc, nodePos)
+
+    // Handle list items specially
+    if ($pos.parent.type.name === 'listItem' || $pos.node().type.name === 'listItem') {
+      // Include the entire list item and its content
+      const start = $pos.before($pos.depth)
+      const end = $pos.after($pos.depth)
+      selection = NodeSelection.create(view.state.doc, start, end)
+    }
+
+    view.dispatch(view.state.tr.setSelection(selection))
 
     const slice = view.state.selection.content()
     const { dom, text } = __serializeForClipboard(view, slice)
@@ -84,7 +125,8 @@ export default function DragHandle(options: DragHandleOptions) {
     event.dataTransfer.setData('text/plain', text)
     event.dataTransfer.effectAllowed = 'copyMove'
 
-    event.dataTransfer.setDragImage(node, 0, 0)
+    const dragImage = node.matches('li') ? node.closest('li') || node : node
+    event.dataTransfer.setDragImage(dragImage, 0, 0)
 
     view.dragging = { slice, move: event.ctrlKey }
   }
@@ -179,7 +221,9 @@ export default function DragHandle(options: DragHandleOptions) {
           const lineHeight = parseInt(compStyle.lineHeight, 10)
           const paddingTop = parseInt(compStyle.paddingTop, 10)
 
-          const rect = absoluteRect(node)
+          // Get the editor wrapper to calculate scroll position
+          const editorWrapper = view.dom.parentElement
+          const rect = absoluteRect(node, editorWrapper)
 
           rect.top += (lineHeight - 24) / 2
           rect.top += paddingTop

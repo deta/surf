@@ -39,6 +39,7 @@
   export let enableRewrite: boolean = false
   export let resourceComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let resourceComponentPreview: boolean = false
+  export let showDragHandle: boolean = false
 
   let editor: Readable<Editor>
   let editorWidth: number = 350
@@ -218,7 +219,8 @@
     readOnlyMentions: readOnlyMentions,
     buttonClick: handleButtonClick,
     resourceComponent: resourceComponent,
-    resourceComponentPreview: resourceComponentPreview
+    resourceComponentPreview: resourceComponentPreview,
+    showDragHandle: showDragHandle
   })
 
   const KeyboardHandler = Extension.create({

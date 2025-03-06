@@ -447,6 +447,7 @@
       <div class="flex items-center gap-1 w-full">
         {#if collapsable}
           <button
+            tabindex="-1"
             class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
             on:click|stopPropagation={() => (collapsed = !collapsed)}
           >
@@ -461,6 +462,7 @@
 
         <div class="w-full">
           <input
+            tabindex="-1"
             bind:this={inputElem}
             on:input={handleInputChange}
             on:keydown={handleInputKeydown}
@@ -494,6 +496,7 @@
               {/if}
 
               <button
+                tabindex="-1"
                 use:tooltip={{ text: 'Reload', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
                 on:click|stopPropagation={() => reloadApp()}
@@ -508,6 +511,7 @@
               </button>
 
               <button
+                tabindex="-1"
                 use:tooltip={{ text: 'Open in Mini Browser', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
                 on:click|stopPropagation={() => openMiniBrowser()}
@@ -516,6 +520,7 @@
               </button>
 
               <button
+                tabindex="-1"
                 use:tooltip={{ text: 'Open as Tab', position: 'left' }}
                 class="flex items-center p-1 rounded-md transition-colors"
                 on:click|stopPropagation={handleOpenAsTab}

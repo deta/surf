@@ -41,6 +41,7 @@ export type ExtensionOptions = {
   buttonClick?: (action: string) => void
   resourceComponent?: ComponentType<SvelteComponent>
   resourceComponentPreview?: boolean
+  showDragHandle?: boolean
 }
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
@@ -107,6 +108,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       preview: opts?.resourceComponentPreview
     })
   ),
+  ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),
   TaskItem,
   TaskList,
   ListKeymap,
@@ -116,7 +118,6 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   AIOutput,
   Image
   // Markdown,
-  // DragHandle,
   // Slash.configure({
   // 	suggestion
   // })

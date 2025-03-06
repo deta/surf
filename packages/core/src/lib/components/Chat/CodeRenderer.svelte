@@ -501,7 +501,7 @@
         saveState.set('in_progress')
       }
 
-      const tab = tabsManager.activeTabValue
+      const tab = tabsManager?.activeTabValue
       const rawUrl = tab?.type === 'page' ? tab.currentLocation || tab.initialLocation : undefined
       const url = (rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined) || undefined
 

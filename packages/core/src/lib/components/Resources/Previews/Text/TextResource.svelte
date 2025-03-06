@@ -1607,6 +1607,7 @@
             autoSimilaritySearch={$userSettings.auto_note_similarity_search && !minimal}
             enableRewrite={$userSettings.experimental_note_inline_rewrite}
             resourceComponentPreview={minimal}
+            showDragHandle={!minimal}
             parseMentions
             {tabsManager}
             on:click
