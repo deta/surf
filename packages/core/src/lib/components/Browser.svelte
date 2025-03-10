@@ -2045,18 +2045,32 @@
   }
 
   const createNewNote = async (context: EventContext, name?: string) => {
-    showNewTabOverlay.set(0)
-    log.debug('create note', name)
+    try {
+      showNewTabOverlay.set(0)
+      log.debug('create note', name)
 
-    const resource = await resourceManager.createResourceNote(
-      '',
-      name ? { name: name } : {},
-      undefined,
-      context
-    )
+      const resource = await resourceManager.createResourceNote(
+        '',
+        name ? { name: name } : {},
+        undefined,
+        context
+      )
 
-    await tabsManager.openResourceAsTab(resource, { active: true })
-    toasts.success('Note created!')
+      await tabsManager.openResourceAsTab(resource, { active: true })
+
+      if (tabsManager.activeScopeIdValue) {
+        await oasis.addResourcesToSpace(
+          tabsManager.activeScopeIdValue,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+      }
+
+      toasts.success('Note created!')
+    } catch (e) {
+      log.error('Failed to create note', e)
+      toasts.error('Failed to create note')
+    }
   }
 
   const handleCreateNewChat = async () => {
