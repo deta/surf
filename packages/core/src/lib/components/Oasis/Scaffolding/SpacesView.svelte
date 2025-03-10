@@ -57,8 +57,15 @@
   let sidebarElement: HTMLElement
   let pinnedList: HTMLElement
   let unpinnedList: HTMLElement
-  let pinnedOverflow = false
-  let unpinnedOverflow = false
+  let scrollableContainer: HTMLElement
+
+  // Scroll state for main container
+  let showTopShadowMain = false
+  let showBottomShadowMain = true
+
+  // Scroll state for unpinned list
+  let showTopShadowUnpinned = false
+  let showBottomShadowUnpinned = true
 
   export let spaces: Readable<OasisSpace[]>
   export let interactive = true
@@ -417,29 +424,35 @@
     dispatch('close-oasis')
   }
 
-  const checkOverflowPinned = () => {
-    if (!pinnedList) return
-    if (pinnedList.scrollHeight > pinnedList.clientHeight) {
-      pinnedOverflow = pinnedList.scrollTop + pinnedList.clientHeight < pinnedList.scrollHeight
-    } else {
-      pinnedOverflow = false
-    }
+  const checkMainListOverflow = () => {
+    if (!scrollableContainer) return
+
+    // Show top shadow if not at the top
+    showTopShadowMain = scrollableContainer.scrollTop > 2
+
+    // Show bottom shadow if not at the bottom
+    showBottomShadowMain =
+      scrollableContainer.scrollHeight > scrollableContainer.clientHeight &&
+      scrollableContainer.scrollTop + scrollableContainer.clientHeight <
+        scrollableContainer.scrollHeight - 2
   }
 
-  const checkOverflowUnpinned = () => {
+  const checkUnpinnedListOverflow = () => {
     if (!unpinnedList) return
-    if (unpinnedList.scrollHeight > unpinnedList.clientHeight) {
-      unpinnedOverflow =
-        unpinnedList.scrollTop + unpinnedList.clientHeight < unpinnedList.scrollHeight
-    } else {
-      unpinnedOverflow = false
-    }
+
+    // Show top shadow if not at the top
+    showTopShadowUnpinned = unpinnedList.scrollTop > 2
+
+    // Show bottom shadow if not at the bottom
+    showBottomShadowUnpinned =
+      unpinnedList.scrollHeight > unpinnedList.clientHeight &&
+      unpinnedList.scrollTop + unpinnedList.clientHeight < unpinnedList.scrollHeight - 2
   }
 
   const recalculateListOverflows = async (_didChangeOrder: boolean, _showAllSpaces: boolean) => {
     await tick()
-    checkOverflowPinned()
-    checkOverflowUnpinned()
+    checkMainListOverflow()
+    checkUnpinnedListOverflow()
   }
 
   const handleResize = () => {
@@ -456,6 +469,10 @@
         elem.scrollIntoView({ behavior: 'instant', block: 'center' })
       }
     }
+
+    // Initialize scroll indicators
+    checkMainListOverflow()
+    checkUnpinnedListOverflow()
   })
 </script>
 
@@ -468,89 +485,63 @@
   bind:this={sidebarElement}
   on:wheel|passive={handleWheel}
 >
-  <div
-    class="built-in-list"
-    class:overflowing={pinnedOverflow}
-    class:expanded={!$showAllSpaces}
-    class:empty={$pinnedSpaces.length === 0}
-  >
-    {#each builtInSpaces as builtInSpace (builtInSpace.id)}
-      <div class="folder-wrapper">
-        <BuiltInSpace
-          id={builtInSpace.id}
-          name={builtInSpace.name}
-          icon={builtInSpace.icon}
-          selected={$selectedSpace === builtInSpace.id}
-          on:select={() => handleSpaceSelect(builtInSpace.id)}
-          on:space-selected={() => handleSpaceSelect(builtInSpace.id)}
-          on:Drop
-        />
-      </div>
-    {/each}
-  </div>
-
-  <div
-    bind:this={pinnedList}
-    on:scroll={() => checkOverflowPinned()}
-    class="pinned-list"
-    class:empty={$pinnedSpaces.length === 0}
-    axis="vertical"
-    id="overlay-spaces-list-pinned"
-    use:HTMLAxisDragZone.action={{
-      accepts: (drag) => {
-        if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
-          return true
-        }
-        return false
-      }
-    }}
-    on:Drop={handleDrop}
-  >
-    {#if $pinnedSpaces.length === 0}
-      <div class="pinned-list-drag-indicator-wrapper">
-        <div class="pinned-list-drag-indicator">Drop Context here to Pin</div>
-      </div>
-    {:else}
-      <div class="separator">
-        Pinned
-        <!-- <div class="separator-line"></div> -->
-      </div>
-      {#each $pinnedSpaces as folder, index (folder.id + index)}
-        <Folder
-          {folder}
-          on:select={(e) => handleSpaceSelect(e.detail)}
-          on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
-          on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
-          on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-          on:use-as-context={(e) => handleUseAsContext(e.detail)}
-          on:open-space-and-chat={handleOpenSpaceAndChat}
-          on:Drop
-          on:editing-start={handleEditingStart}
-          on:editing-end={handleEditingEnd}
-          on:pin={handlePin}
-          on:unpin={handleUnpin}
-          selected={$selectedSpace === folder.id}
-          isEditing={$editingFolderId === folder.id}
-          allowPinning
-          {showPreview}
-        />
-      {/each}
-    {/if}
-  </div>
-
-  {#if $missingSourceSpaces.length > 0}
-    <div bind:this={pinnedList} on:scroll={() => checkOverflowPinned()} class="connected-list">
-      {#if $userSettings.experimental_context_linking}
-        <div class="separator">
-          Most Connected
-          <!-- <div class="separator-line"></div> -->
+  <!-- Built-in spaces - always visible section -->
+  <div class="built-in-section">
+    <div class="built-in-list">
+      {#each builtInSpaces as builtInSpace (builtInSpace.id)}
+        <div class="folder-wrapper">
+          <BuiltInSpace
+            id={builtInSpace.id}
+            name={builtInSpace.name}
+            icon={builtInSpace.icon}
+            selected={$selectedSpace === builtInSpace.id}
+            on:select={() => handleSpaceSelect(builtInSpace.id)}
+            on:space-selected={() => handleSpaceSelect(builtInSpace.id)}
+            on:Drop
+          />
         </div>
+      {/each}
+    </div>
+  </div>
 
-        {#each $missingSourceSpaces as folder, index (folder.id + index)}
-          <div class="space-source-item">
+  <!-- Scrollable middle section containing pinned and connected lists -->
+  <div class="scrollable-lists-container">
+    <!-- Top shadow indicator -->
+    <div class="scroll-indicator top" class:visible={showTopShadowMain}></div>
+
+    <div
+      class="scroll-content"
+      bind:this={scrollableContainer}
+      on:scroll={() => checkMainListOverflow()}
+    >
+      <div
+        bind:this={pinnedList}
+        class="pinned-list"
+        class:empty={$pinnedSpaces.length === 0}
+        axis="vertical"
+        id="overlay-spaces-list-pinned"
+        use:HTMLAxisDragZone.action={{
+          accepts: (drag) => {
+            if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+              return true
+            }
+            return false
+          }
+        }}
+        on:Drop={handleDrop}
+      >
+        {#if $pinnedSpaces.length === 0}
+          <div class="pinned-list-drag-indicator-wrapper">
+            <div class="pinned-list-drag-indicator">Drop Context here to Pin</div>
+          </div>
+        {:else}
+          <div class="separator">
+            Pinned
+            <!-- <div class="separator-line"></div> -->
+          </div>
+          {#each $pinnedSpaces as folder, index (folder.id + index)}
             <Folder
               {folder}
-              {editingFolderId}
               on:select={(e) => handleSpaceSelect(e.detail)}
               on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
               on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
@@ -567,16 +558,55 @@
               allowPinning
               {showPreview}
             />
-          </div>
-        {/each}
+          {/each}
+        {/if}
+      </div>
+
+      {#if $missingSourceSpaces.length > 0}
+        <div class="connected-list">
+          {#if $userSettings.experimental_context_linking}
+            <div class="separator">
+              Most Connected
+              <!-- <div class="separator-line"></div> -->
+            </div>
+
+            {#each $missingSourceSpaces as folder, index (folder.id + index)}
+              <div class="space-source-item">
+                <Folder
+                  {folder}
+                  {editingFolderId}
+                  on:select={(e) => handleSpaceSelect(e.detail)}
+                  on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
+                  on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+                  on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+                  on:use-as-context={(e) => handleUseAsContext(e.detail)}
+                  on:open-space-and-chat={handleOpenSpaceAndChat}
+                  on:Drop
+                  on:editing-start={handleEditingStart}
+                  on:editing-end={handleEditingEnd}
+                  on:pin={handlePin}
+                  on:unpin={handleUnpin}
+                  selected={$selectedSpace === folder.id}
+                  isEditing={$editingFolderId === folder.id}
+                  allowPinning
+                  {showPreview}
+                />
+              </div>
+            {/each}
+          {/if}
+        </div>
       {/if}
     </div>
-  {/if}
 
+    <!-- Bottom shadow indicator -->
+    <div class="scroll-indicator bottom" class:visible={showBottomShadowMain}></div>
+  </div>
+
+  <!-- All spaces section - always visible header, expandable content -->
   <div
     id="overlay-unpinned-list-wrapper"
     class="folders-wrapper"
-    class:overflowing={unpinnedOverflow}
+    class:expanded={$showAllSpaces}
     axis="horizontal"
     data-tooltip-target="stuff-spaces-list"
     use:HTMLAxisDragZone.action={{
@@ -616,43 +646,51 @@
     </div>
 
     {#if $showAllSpaces}
-      <div
-        bind:this={unpinnedList}
-        on:scroll={() => checkOverflowUnpinned()}
-        class="folders-list"
-        axis="vertical"
-        id="overlay-spaces-list"
-        use:HTMLAxisDragZone.action={{
-          accepts: (drag) => {
-            if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
-              return true
+      <div class="unpinned-container">
+        <!-- Top shadow indicator for unpinned list -->
+        <div class="scroll-indicator top" class:visible={showTopShadowUnpinned}></div>
+
+        <div
+          bind:this={unpinnedList}
+          on:scroll={() => checkUnpinnedListOverflow()}
+          class="folders-list"
+          axis="vertical"
+          id="overlay-spaces-list"
+          use:HTMLAxisDragZone.action={{
+            accepts: (drag) => {
+              if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+                return true
+              }
+              return false
             }
-            return false
-          }
-        }}
-        on:Drop={handleDrop}
-      >
-        {#each $unpinnedSpaces as folder, index (folder.id + index)}
-          <Folder
-            {folder}
-            on:select={(e) => handleSpaceSelect(e.detail)}
-            on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
-            on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
-            on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
-            on:use-as-context={(e) => handleUseAsContext(e.detail)}
-            on:open-space-and-chat={handleOpenSpaceAndChat}
-            on:Drop
-            on:editing-start={handleEditingStart}
-            on:editing-end={handleEditingEnd}
-            on:pin={handlePin}
-            on:unpin={handleUnpin}
-            selected={$selectedSpace === folder.id}
-            isEditing={$editingFolderId === folder.id}
-            allowPinning
-            {editingFolderId}
-            {showPreview}
-          />
-        {/each}
+          }}
+          on:Drop={handleDrop}
+        >
+          {#each $unpinnedSpaces as folder, index (folder.id + index)}
+            <Folder
+              {folder}
+              on:select={(e) => handleSpaceSelect(e.detail)}
+              on:space-selected={(e) => handleSpaceSelect(e.detail.id)}
+              on:open-space-as-tab={(e) => addItemToTabs(folder.id, e.detail.active)}
+              on:update-data={(e) => handleSpaceUpdate(folder.id, e.detail)}
+              on:use-as-context={(e) => handleUseAsContext(e.detail)}
+              on:open-space-and-chat={handleOpenSpaceAndChat}
+              on:Drop
+              on:editing-start={handleEditingStart}
+              on:editing-end={handleEditingEnd}
+              on:pin={handlePin}
+              on:unpin={handleUnpin}
+              selected={$selectedSpace === folder.id}
+              isEditing={$editingFolderId === folder.id}
+              allowPinning
+              {editingFolderId}
+              {showPreview}
+            />
+          {/each}
+        </div>
+
+        <!-- Bottom shadow indicator for unpinned list -->
+        <div class="scroll-indicator bottom" class:visible={showBottomShadowUnpinned}></div>
       </div>
     {/if}
   </div>
@@ -664,26 +702,162 @@
   .folders-sidebar {
     position: relative;
     display: flex;
-    flex-shrink: 0;
     flex-direction: column;
+    flex-shrink: 0;
     align-items: center;
     padding: 1rem 0.75rem 1rem 0.75rem;
-    gap: 1.25rem;
+    gap: 0.75rem;
     height: 100%;
     backdrop-filter: blur(24px);
     overflow: hidden;
+  }
 
-    hr {
-      margin-inline: 1rem;
-      margin-block: 0.35rem;
-      @include utils.light-dark-custom(
-        'border-color',
-        var(--black-09),
-        var(--white-15) var(--black-09),
-        var(--white-15)
-      );
-      border-color: var(--border-color);
+  .built-in-section {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .scrollable-lists-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    flex: 1;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    min-height: 0; /* Important for allowing the container to shrink with flex */
+    position: relative; /* For positioning the indicators */
+
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    &::-webkit-scrollbar {
+      width: 0px;
+      background: transparent; /* Chrome/Safari/Opera */
     }
+  }
+
+  .scroll-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    // padding: 1rem 0;
+    flex: 1;
+    overflow-y: auto;
+
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    &::-webkit-scrollbar {
+      width: 0px;
+      background: transparent; /* Chrome/Safari/Opera */
+    }
+  }
+
+  .unpinned-container {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .folders-list {
+    }
+  }
+
+  /* Scroll indicators styling */
+  .scroll-indicator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 35px;
+    pointer-events: none;
+    z-index: 1000000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    &.visible {
+      opacity: 1;
+    }
+
+    &.top {
+      top: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.75) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+
+      :global(.dark) & {
+        background: linear-gradient(
+          to bottom,
+          rgba(17, 27, 43, 0.95) 0%,
+          rgba(17, 27, 43, 0.75) 50%,
+          rgba(17, 27, 43, 0) 100%
+        );
+      }
+    }
+
+    &.bottom {
+      bottom: 0;
+      background: linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.75) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+
+      :global(.dark) & {
+        background: linear-gradient(
+          to top,
+          rgba(17, 27, 43, 0.95) 0%,
+          rgba(17, 27, 43, 0.75) 50%,
+          rgba(17, 27, 43, 0) 100%
+        );
+      }
+    }
+  }
+
+  .scrollable-lists-container .scroll-indicator {
+    &.top {
+      top: 18px;
+    }
+
+    &.bottom {
+      bottom: -5px;
+    }
+  }
+
+  .folders-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    transition: max-height 0.3s ease;
+    max-height: 2.5rem; /* Just enough for the header */
+
+    &.expanded {
+      max-height: 50%;
+      flex: 0 1 auto;
+      overflow: visible; /* Ensure the scroll indicators are visible */
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  .folders-sidebar hr {
+    margin-inline: 1rem;
+    margin-block: 0.35rem;
+    @include utils.light-dark-custom(
+      'border-color',
+      var(--black-09),
+      var(--white-15) var(--black-09),
+      var(--white-15)
+    );
+    border-color: var(--border-color);
   }
 
   .folders-sidebar::-webkit-scrollbar {
@@ -700,24 +874,9 @@
     background: transparent;
   }
 
-  .folders-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .folders-wrapper.overflowing {
-    -webkit-mask-image: linear-gradient(to bottom, #000 98%, transparent 100%);
-  }
-
   .built-in-list,
   .pinned-list,
-  .connected-list,
-  .folders-list {
+  .connected-list {
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
@@ -726,24 +885,12 @@
 
   .built-in-list {
     position: relative;
-    max-height: 65%;
-    overflow: hidden;
-    flex-shrink: 0;
-
-    &.expanded {
-      max-height: calc(100% - 4.5rem);
-      height: min-content;
-    }
-
-    &.empty {
-      overflow: unset;
-    }
   }
 
   .pinned-list {
     border: 1px dashed transparent;
-    height: fit-content;
     position: relative;
+    width: 100%;
 
     &.empty {
       min-height: 1.5rem;
@@ -752,35 +899,26 @@
     }
   }
 
-  .built-in-list.overflowing::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 5rem;
-    background: linear-gradient(rgba(255, 255, 255, 0), rgb(251 253 254));
-    pointer-events: none;
-    z-index: 100000;
-
-    :global(.dark) & {
-      background: linear-gradient(#111b2b00, #111b2b);
-    }
-  }
-
   .separator {
     width: 100%;
     padding-left: 0.75rem;
     padding-right: 0.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85em;
     font-weight: 400;
     letter-spacing: 0.01em;
-    opacity: 0.75;
+    opacity: 1;
+    position: sticky;
+    top: 0;
+    z-index: 10000;
+    background: #fff;
+    margin-top: -1px;
 
-    @apply text-[#244581] dark:text-gray-100;
+    @apply text-[#324f86] dark:text-gray-300;
 
     .separator-line {
       flex: 1;
@@ -788,6 +926,10 @@
       opacity: 0.25;
 
       @apply bg-[#244581] dark:bg-gray-100;
+    }
+
+    :global(.dark) & {
+      background: rgba(17, 24, 39, 0.95);
     }
   }
 
@@ -835,7 +977,18 @@
   .folders-list {
     height: 100%;
     overflow-y: auto;
-    padding-bottom: 2rem;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    padding: 0.5rem 0;
+
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    &::-webkit-scrollbar {
+      width: 0px;
+      background: transparent; /* Chrome/Safari/Opera */
+    }
   }
 
   .folders-header {
@@ -935,5 +1088,9 @@
       pointer-events: none;
       filter: grayscale(100%);
     }
+  }
+
+  .connected-list {
+    width: 100%;
   }
 </style>
