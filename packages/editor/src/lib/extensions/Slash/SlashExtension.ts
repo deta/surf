@@ -9,7 +9,7 @@ export default Extension.create({
       suggestion: {
         char: '/',
         allowSpaces: true,
-        placeholder: 'select command or type to search stuff…'
+        placeholder: 'filter or search stuff…'
       }
     }
   },

@@ -9,7 +9,6 @@
   export let emailStore: Readable<string>
 
   let showCodeInput = false
-  let allowResend = false
   let resentEmail = false
   let loading = false
   let error = ''
@@ -51,14 +50,12 @@
 
       const res = await window.api.activateAppUsingKey(sanitize(inviteCode), true)
       if (!res.ok) {
-        error = 'Sorry, the invite code is invalid.'
+        error = 'Sorry, the verification code is invalid.'
         switch (res.status) {
           case 409:
-            error = 'Sorry, the invite code has already been used.'
-            allowResend = true
+            error = 'Sorry, the verification code has already been used.'
             break
           default:
-            error = 'Sorry, the invite code is invalid.'
             break
         }
         return
@@ -83,7 +80,12 @@
     <h1 class="title">Welcome to Surf!</h1>
 
     {#if error}
-      <p class="error">{error}</p>
+      <p class="error">
+        {error}
+        <a href="#" on:click|preventDefault={resendVerificationEmail}>
+          Resend verification email.</a
+        >
+      </p>
       <p class="info">Send us an email (<i>hello@deta.surf</i>) if the issue persists.</p>
     {/if}
 
@@ -197,7 +199,7 @@
   }
 
   .links {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-family: 'Inter', sans-serif;
     color: rgba(0, 0, 0, 0.5);
     padding: 1rem;
@@ -208,7 +210,10 @@
   }
 
   .apply-link {
-    color: inherit;
+    color: #1995f5;
+  }
+
+  .apply-link:hover {
     text-decoration: underline;
   }
 
@@ -248,6 +253,11 @@
     margin-bottom: 1rem;
     padding: 0 4rem;
     text-align: center;
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
   }
 
   .success {

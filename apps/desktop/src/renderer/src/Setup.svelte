@@ -50,7 +50,9 @@
   const mountUnsubscribers: (() => void)[] = []
 
   onMount(() => {
+    console.log('presetInviteCode', presetInviteCode)
     if (presetInviteCode) {
+      console.log('submitting invite code')
       inviteView.submitInviteCode(presetInviteCode)
     }
   })
