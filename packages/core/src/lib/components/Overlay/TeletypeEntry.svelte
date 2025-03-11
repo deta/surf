@@ -430,6 +430,12 @@
     }
   }
 
+  const handleTeletypeClose = () => {
+    if (teletype) {
+      tabsManager.showNewTabOverlay.set(0)
+    }
+  }
+
   onMount(() => {
     const handlers = {
       [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
@@ -577,6 +583,8 @@
   {/if}
 {/if}
 
+<div class="teletype-close-wrapper" on:click={handleTeletypeClose}></div>
+
 <style lang="scss" is:global>
   :root {
     --text: #586884;
@@ -703,5 +711,15 @@
     left: calc(anchor(--teletype right) + 1.25em);
 
     z-index: -1;
+  }
+
+  .teletype-close-wrapper {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100vh;
+    width: 100vw;
+    background: transparent;
   }
 </style>
