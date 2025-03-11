@@ -101,18 +101,16 @@
     color: var(--color-text);
     border-radius: 0.4em;
     box-decoration-break: clone;
-    padding: 0.2em 0.3em;
+    padding: 0.2em 0;
   }
 
   span.suggestion[data-suggestion-placeholder] {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     position: relative;
-    padding-right: 0;
   
     &::after {
       content: attr(data-suggestion-placeholder);
-      position: absolute;
       display: inline-flex;
       align-items: center;
       height: 100%;

@@ -130,7 +130,7 @@ export const Mention = Node.create<MentionOptions>({
       suggestion: {
         char: '@',
         pluginKey: MentionPluginKey,
-        placeholder: 'select or filter to mention context/model…',
+        placeholder: 'filter mentions…',
         command: ({ editor, range, props }) => {
           // increase range.to by one when the next node is of type "text"
           // and starts with a space character
