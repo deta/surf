@@ -12,11 +12,11 @@
   let state = 'invite'
   let inviteCode = ''
   let resendInviteEmail = ''
-  let allowResend = false
   let resentEmail = false
   let acceptedTerms = false
   let loading = false
   let error = ''
+  let highlightRequestNewCode = false
 
   const sanitize = (input: string): string => {
     return input.trim()
@@ -28,6 +28,7 @@
     resentEmail = false
     loading = false
     resendInviteEmail = ''
+    highlightRequestNewCode = false
   }
 
   const handleSubmitInvite = async () => {
@@ -36,11 +37,11 @@
 
       const res = await window.api.activateAppUsingKey(sanitize(inviteCode), acceptedTerms)
       if (!res.ok) {
+        highlightRequestNewCode = true
         error = 'Sorry, the invite code is invalid.'
         switch (res.status) {
           case 409:
             error = 'Sorry, the invite code has already been used.'
-            allowResend = true
             break
           default:
             error = 'Sorry, the invite code is invalid.'
@@ -88,14 +89,11 @@
     </h1>
 
     {#if error}
-      <p class="error">{error}</p>
-      {#if allowResend}
-        <p class="info">
-          <a href="#" on:click|preventDefault={toggleResendState}>Request a new code</a>
-        </p>
-      {:else}
-        <p class="info">Please send us an email (<i>hello@deta.surf</i>) if the issue persists.</p>
-      {/if}
+      <p class="error">
+        {error}
+        <a href="#" on:click|preventDefault={toggleResendState}> Request for a new code.</a>
+      </p>
+      <p class="info">Send us an email (<i>hello@deta.surf</i>) if the issue persists.</p>
     {/if}
 
     {#if state === 'invite'}
@@ -112,14 +110,17 @@
           it.
         </p>
 
-        <p class="info">
-          No invite code? <a href={REQUEST_INVITE_URL} target="_blank" class="apply-link"
-            >Apply here</a
+        <p class="code-links">
+          <a
+            href="#"
+            on:click|preventDefault={toggleResendState}
+            class={`apply-link ${highlightRequestNewCode ? 'highlight' : ''}`}
           >
+            Request for a new code
+          </a>
           <br />
-          Forgot code?
-          <a href="#" on:click|preventDefault={toggleResendState} class="apply-link"
-            >Request a new code</a
+          <a href={REQUEST_INVITE_URL} target="_blank" class="apply-link"
+            >Apply for our early access program</a
           >
         </p>
 
@@ -240,8 +241,20 @@
     text-align: center;
   }
 
+  .code-links {
+    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif;
+    color: rgba(0, 0, 0, 0.5);
+    margin-bottom: 1rem;
+    padding: 0 4rem;
+    text-align: center;
+  }
+
   .apply-link {
-    color: inherit;
+    color: #1995f5;
+  }
+
+  .apply-link:hover {
     text-decoration: underline;
   }
 
@@ -281,6 +294,11 @@
     margin-bottom: 1rem;
     padding: 0 4rem;
     text-align: center;
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
   }
 
   .submit-button {
@@ -296,5 +314,11 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+  }
+
+  .highlight {
+    padding: 0.25rem 0.5rem;
+    background-color: #ffcdd2;
+    border-radius: 4px;
   }
 </style>
