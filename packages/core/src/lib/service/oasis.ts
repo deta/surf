@@ -902,8 +902,11 @@ export class OasisService {
     this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
   }
 
-  async openResourceDetailsSidebar(resourceOrId: Resource | string, opts?: { select?: boolean }) {
-    const options = Object.assign({ select: true }, opts)
+  async openResourceDetailsSidebar(
+    resourceOrId: Resource | string,
+    opts?: { select?: boolean; selectedSpace?: string }
+  ) {
+    const options = Object.assign({ select: true, selectedSpace: 'all' }, opts)
 
     const resource =
       typeof resourceOrId === 'string'
@@ -916,7 +919,7 @@ export class OasisService {
 
     if (this.tabsManager.showNewTabOverlayValue !== 2) {
       this.tabsManager.showNewTabOverlay.set(2)
-      this.selectedSpace.set('all')
+      this.selectedSpace.set(options.selectedSpace)
     }
 
     this.detailedResource.set(resource)
