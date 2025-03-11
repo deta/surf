@@ -14,6 +14,18 @@
 
   // TODO: send email to backend
   const handleSubmitEmail = async () => {
+    try {
+      // @ts-ignore
+      const res = await window.api.signup(email)
+      if (!res.ok) {
+        error = 'Sorry, we could not send the verification email.'
+        console.error('could not send the verification email, res status: ', res.status)
+        return
+      }
+    } catch (e) {
+      console.error(e)
+      error = `Sorry, we countered an error: ${e}`
+    }
     dispatch('setUserEmail', email)
   }
 </script>

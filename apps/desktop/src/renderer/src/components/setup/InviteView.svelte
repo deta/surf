@@ -26,15 +26,13 @@
 
   const resendVerificationEmail = async () => {
     try {
-      // TODO: send email to backend
-      /*
       loading = true
-      const res = await window.api.resendVerificationEmail(email)
+      // TODO: should we use another endpoint?
+      const res = await window.api.resendInviteCode($emailStore)
       if (!res.ok) {
         error = 'Sorry, we could not resend the verification email.'
         return
       }
-      */
       resentEmail = true
     } catch (e) {
       console.error(e)
