@@ -21,6 +21,7 @@ import { SurfBackendServerManager } from './surfBackend'
 import { AppUpdater, silentCheckForUpdates } from './appUpdates'
 import { ExtensionsManager } from './extensions'
 import { CrashHandler } from './crashHandler'
+import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 
 const log = useLogScope('Main Index')
 
@@ -70,6 +71,7 @@ const initializePaths = () => {
 }
 
 const registerProtocols = () => {
+  app.setAsDefaultProtocolClient('surf')
   protocol.registerSchemesAsPrivileged([
     {
       scheme: 'surf',
@@ -136,6 +138,11 @@ const handleOpenUrl = (url: string) => {
 
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.focus()
+    const u = new URL(url)
+    if (u.protocol === 'surf:') {
+      surfProtocolExternalURLHandler(u)
+      return
+    }
     IPC_EVENTS_MAIN.openURL.sendToWebContents(mainWindow.webContents, { url, active: true })
   } catch (error) {
     log.error('Error handling open URL:', error)

@@ -6,7 +6,7 @@ import { isDev } from '@horizon/utils'
 
 let setupWindow: BrowserWindow | undefined
 
-export function createSetupWindow() {
+export function createSetupWindow(options?: { presetInviteCode?: string; presetEmail?: string }) {
   const setupWindowSession = session.fromPartition('persist:surf-app-session')
 
   setupWindow = new BrowserWindow({
@@ -24,6 +24,8 @@ export function createSetupWindow() {
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+        `--presetInviteCode=${options?.presetInviteCode}`,
+        `--presetEmail=${options?.presetEmail}`,
         ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
         ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS
           ? ['--disable-tab-switching-shortcuts']

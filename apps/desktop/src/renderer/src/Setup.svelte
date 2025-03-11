@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onDestroy, onMount, tick } from 'svelte'
+  import { writable } from 'svelte/store'
+  import EmailView from './components/setup/EmailView.svelte'
   import InviteView from './components/setup/InviteView.svelte'
   import DisclaimerView from './components/setup/DisclaimerView.svelte'
   import AppPreferencesSetup from './components/setup/AppPreferencesSetup.svelte'
@@ -13,6 +16,7 @@
   import type { UserSettings } from '@horizon/types'
 
   type ViewType =
+    | 'email'
     | 'invite'
     | 'disclaimer'
     | 'app_preferences'
@@ -22,14 +26,69 @@
     | 'explainer.stuff'
     | 'explainer.chat'
     | 'done'
-  let viewHistory: ViewType[] = ['invite']
-  let view: ViewType = 'invite'
+
+  //@ts-ignore
+  let presetInviteCode: string = window.presetInviteCode || ''
+  // @ts-ignore
+  let presetEmail: string = window.presetEmail || ''
+
+  let initialView: ViewType = presetInviteCode ? 'invite' : 'email'
+  let view: ViewType = initialView
+
+  let viewHistory: ViewType[] = [initialView]
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
   let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let selectedPersonas: string[] = []
 
+  let inviteView: InviteView
+
+  const userEmailStore = writable('')
+  if (presetEmail) {
+    userEmailStore.set(presetEmail)
+  }
+
+  const mountUnsubscribers: (() => void)[] = []
+
+  onMount(() => {
+    if (presetInviteCode) {
+      inviteView.submitInviteCode(presetInviteCode)
+    }
+  })
+
+  onDestroy(() => {
+    mountUnsubscribers.forEach((unsub) => unsub())
+  })
+
+  let setupPreloadEvents = {} as typeof window.preloadEvents
+  for (const [key, value] of Object.entries(window.preloadEvents)) {
+    if (typeof value === 'function') {
+      setupPreloadEvents[key as keyof typeof window.preloadEvents] = (...args: any[]) => {
+        const unsubscribe = (value as Function).apply(window.preloadEvents, args)
+        if (typeof unsubscribe === 'function') {
+          mountUnsubscribers.push(unsubscribe)
+        }
+        return unsubscribe
+      }
+    } else {
+      setupPreloadEvents[key as keyof typeof window.preloadEvents] = value
+    }
+  }
+
+  // @ts-ignore
+  setupPreloadEvents.onSetupVerificationCode(async (code: string) => {
+    view = 'invite'
+    await tick()
+    inviteView.submitInviteCode(code)
+  })
+
   const handleViewChange = async (event: CustomEvent<ViewType>) => {
     view = event.detail
+    viewHistory.push(view)
+  }
+
+  const handleSetUserEmail = (event: CustomEvent<string>) => {
+    userEmailStore.set(event.detail)
+    view = 'invite'
     viewHistory.push(view)
   }
 
@@ -65,8 +124,14 @@
 
 <main>
   <div class="wrapper" class:wide={view === 'disclaimer'}>
-    {#if view === 'invite'}
-      <InviteView on:viewChange={handleViewChange} />
+    {#if view === 'email'}
+      <EmailView on:setUserEmail={handleSetUserEmail} />
+    {:else if view === 'invite'}
+      <InviteView
+        bind:this={inviteView}
+        emailStore={userEmailStore}
+        on:viewChange={handleViewChange}
+      />
     {:else if view === 'disclaimer'}
       <DisclaimerView on:viewChange={handleViewChange} />
     {:else if view === 'app_preferences'}
