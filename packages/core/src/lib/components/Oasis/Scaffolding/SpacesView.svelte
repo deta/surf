@@ -505,7 +505,7 @@
   </div>
 
   <!-- Scrollable middle section containing pinned and connected lists -->
-  <div class="scrollable-lists-container">
+  <div class="scrollable-lists-container" class:all-spaces={$showAllSpaces}>
     <!-- Top shadow indicator -->
     <div class="scroll-indicator top" class:visible={showTopShadowMain}></div>
 
@@ -607,6 +607,7 @@
     id="overlay-unpinned-list-wrapper"
     class="folders-wrapper"
     class:expanded={$showAllSpaces}
+    class:all-spaces={$showAllSpaces}
     axis="horizontal"
     data-tooltip-target="stuff-spaces-list"
     use:HTMLAxisDragZone.action={{
@@ -721,18 +722,30 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    flex: 1;
-    overflow-y: hidden;
-    overflow-x: hidden;
-    min-height: 0; /* Important for allowing the container to shrink with flex */
-    position: relative; /* For positioning the indicators */
+    position: relative;
+
+    /* Default state when all spaces is collapsed */
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+
+    /* When all spaces is expanded, let it take up to 60% but no less than its content requires */
+    .folders-sidebar:not(.all-spaces-hidden) & {
+      max-height: 40%;
+      height: fit-content;
+      min-height: auto;
+      flex: 0 1 auto;
+    }
+
+    /* Ensure content is visible by proper overflow handling */
+    overflow: visible;
 
     /* Hide scrollbar but keep functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     &::-webkit-scrollbar {
       width: 0px;
-      background: transparent; /* Chrome/Safari/Opera */
+      background: transparent;
     }
   }
 
@@ -741,16 +754,22 @@
     flex-direction: column;
     gap: 0.5rem;
     width: 100%;
-    // padding: 1rem 0;
-    flex: 1;
+    padding-bottom: 0.5rem;
+
+    /* Allow content to scroll within this container */
     overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Take full height and allow shrinking/growing as needed */
+    flex: 1 1 auto;
+    max-height: 100%;
 
     /* Hide scrollbar but keep functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     &::-webkit-scrollbar {
       width: 0px;
-      background: transparent; /* Chrome/Safari/Opera */
+      background: transparent;
     }
   }
 
@@ -760,9 +779,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-
-    .folders-list {
-    }
+    flex: 1;
   }
 
   /* Scroll indicators styling */
@@ -833,18 +850,38 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    flex-shrink: 0;
-    overflow: hidden;
     position: relative;
     transition: max-height 0.3s ease;
     max-height: 2.5rem; /* Just enough for the header */
 
+    /* When collapsed, position at the bottom */
+    margin-top: auto;
+
+    /* When all spaces list is expanded */
+    .folders-sidebar:not(.all-spaces-hidden) & {
+      flex: 1 1 auto;
+    }
+
     &.expanded {
-      max-height: 50%;
-      flex: 0 1 auto;
-      overflow: visible; /* Ensure the scroll indicators are visible */
+      max-height: none;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
+      margin-top: 0; /* Reset margin */
+
+      /* When expanded, take remaining available space, but don't force it */
+      flex: 1 1 auto;
+
+      /* When expanded and all-spaces is applied */
+      &.all-spaces {
+        .unpinned-container {
+          height: 100%;
+
+          .folders-list {
+            max-height: none;
+          }
+        }
+      }
     }
   }
 
@@ -877,10 +914,10 @@
   .built-in-list,
   .pinned-list,
   .connected-list {
-    display: flex;
-    flex-direction: column;
     gap: 0.1rem;
     width: 100%;
+    /* Allow these lists to shrink to fit content */
+    flex: 0 0 auto;
   }
 
   .built-in-list {
@@ -981,6 +1018,8 @@
     min-height: 0;
     position: relative;
     padding: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
 
     /* Hide scrollbar but keep functionality */
     scrollbar-width: none; /* Firefox */
