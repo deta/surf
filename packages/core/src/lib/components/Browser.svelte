@@ -120,7 +120,7 @@
 
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
   import ToastsProvider from './Toast/ToastsProvider.svelte'
-  import { provideToasts, type ToastItem } from '../service/toast'
+  import { provideToasts, type Toast } from '../service/toast'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import BrowserHistory from './Browser/BrowserHistory.svelte'
   import { Dragcula, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
@@ -224,7 +224,7 @@
   })
 
   const downloadResourceMap = new Map<string, Download>()
-  const downloadToastsMap = new Map<string, ToastItem>()
+  const downloadToastsMap = new Map<string, Toast>()
   const downloadIntercepters = writable(new Map<string, (data: Download) => void>())
 
   const log = useLogScope('Browser')
@@ -1165,10 +1165,10 @@
 
   async function handleBookmark(
     tabId: string,
-    savedToSpace = false,
+    spaceId: string | false = false,
     trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
-    let toast: ToastItem | null = null
+    let toast: Toast | null = null
 
     try {
       const tab = $tabs.find((t: Tab) => t.id === tabId)
@@ -1179,102 +1179,124 @@
       }
 
       log.debug('bookmarking tab', tab)
+      let resource: Resource | null = null
+      let isNew = false
 
       if (tab.type === 'resource') {
-        const resource = await resourceManager.getResource(tab.resourceId)
-        if (!resource) {
-          log.error('error creating resource', resource)
-          updateBookmarkingTabState(tabId, 'error')
-          toasts.error('Failed to save page!')
-          return { resource: null, isNew: false }
-        }
+        toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
 
-        updateBookmarkingTabState(tabId, 'success')
-
-        if (!savedToSpace && tabsManager.activeScopeIdValue) {
-          await oasis.addResourcesToSpace(
-            tabsManager.activeScopeIdValue,
-            [resource.id],
-            SpaceEntryOrigin.ManuallyAdded
-          )
-          toasts.success(`Page saved to active Context!`)
-        } else if (savedToSpace) {
-          toasts.success('Page Saved to Context!')
-        } else {
-          toasts.success('Page Saved!')
-        }
-
-        return { resource, isNew: false }
+        resource = await resourceManager.getResource(tab.resourceId)
       } else if (tab.type !== 'page') {
         log.error('invalid tab for bookmarking', tab)
         return { resource: null, isNew: false }
-      }
+      } else {
+        let browserTab = $browserTabs[tabId]
 
-      let browserTab = $browserTabs[tabId]
-
-      const tabUrl = browserTab?.getInitialSrc() || tab.currentLocation || tab.initialLocation
-      if (tabUrl.startsWith('surf://')) {
-        return { resource: null, isNew: false }
-      }
-
-      updateBookmarkingTabState(tabId, 'in_progress')
-      toast = toasts.loading(savedToSpace ? 'Saving Page to Context…' : 'Saving Page…')
-
-      const isActivated = $activatedTabs.includes(tab.id)
-      if (!isActivated) {
-        log.debug('Tab not activated, activating first', tab.id)
-        activatedTabs.update((tabs) => {
-          return [...tabs, tab.id]
-        })
-
-        // give the tab some time to load
-        await wait(200)
-
-        browserTab = $browserTabs[tab.id]
-        if (!browserTab) {
-          log.error('Browser tab not found', tab.id)
-          throw Error(`Browser tab not found`)
+        const tabUrl = browserTab?.getInitialSrc() || tab.currentLocation || tab.initialLocation
+        if (tabUrl.startsWith('surf://')) {
+          return { resource: null, isNew: false }
         }
 
-        log.debug('Waiting for tab to become active', tab.id)
-        await browserTab.waitForAppDetection(3000)
-      }
+        updateBookmarkingTabState(tabId, 'in_progress')
+        toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
 
-      const resource = await browserTab.bookmarkPage({
-        silent: false,
-        createdForChat: false,
-        freshWebview: true
-      })
+        const isActivated = $activatedTabs.includes(tab.id)
+        if (!isActivated) {
+          log.debug('Tab not activated, activating first', tab.id)
+          activatedTabs.update((tabs) => {
+            return [...tabs, tab.id]
+          })
+
+          // give the tab some time to load
+          await wait(200)
+
+          browserTab = $browserTabs[tab.id]
+          if (!browserTab) {
+            log.error('Browser tab not found', tab.id)
+            throw Error(`Browser tab not found`)
+          }
+
+          log.debug('Waiting for tab to become active', tab.id)
+          await browserTab.waitForAppDetection(3000)
+        }
+
+        resource = await browserTab.bookmarkPage({
+          silent: false,
+          createdForChat: false,
+          freshWebview: true
+        })
+
+        isNew = true
+      }
 
       if (!resource) {
         log.error('error creating resource', resource)
+
         updateBookmarkingTabState(tabId, 'error')
-        toast?.error('Failed to save page!')
+
+        toast.error('Failed to save page!')
+
         return { resource: null, isNew: false }
       }
 
-      oasis.pushPendingStackAction(resource.id, { tabId: tabId })
+      if (isNew) {
+        oasis.pushPendingStackAction(resource.id, { tabId: tabId })
+      }
 
-      if (!savedToSpace && tabsManager.activeScopeIdValue) {
+      if (!spaceId && tabsManager.activeScopeIdValue) {
         await oasis.addResourcesToSpace(
           tabsManager.activeScopeIdValue,
           [resource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
-        toast?.success(`Page saved to active Context!`)
-      } else if (savedToSpace) {
-        toast?.success('Page Saved to Context!')
+
+        toast.success(`Page saved to active context!`, {
+          action: {
+            label: 'View',
+            handler: () => {
+              oasis.openResourceDetailsSidebar(resource.id, {
+                selectedSpace: tabsManager.activeScopeIdValue ?? undefined
+              })
+            }
+          }
+        })
+      } else if (spaceId) {
+        log.debug('will add item', resource.id, 'to space', spaceId)
+        await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+        await telemetry.trackAddResourceToSpace(
+          resource.type,
+          AddResourceToSpaceEventTrigger.TabMenu
+        )
+
+        toast.success('Page saved to context!', {
+          action: {
+            label: 'View',
+            handler: () => {
+              oasis.openResourceDetailsSidebar(resource.id, {
+                selectedSpace: spaceId
+              })
+            }
+          }
+        })
       } else {
-        toast?.success('Page Saved!')
+        toast.success('Page saved!', {
+          action: {
+            label: 'View',
+            handler: () => {
+              oasis.openResourceDetailsSidebar(resource.id)
+            }
+          }
+        })
       }
 
       updateBookmarkingTabState(tabId, 'success')
 
-      oasis.reloadStack()
+      if (isNew) {
+        oasis.reloadStack()
+        await telemetry.trackSaveToOasis(resource.type, trigger, !!spaceId)
+      }
 
-      await telemetry.trackSaveToOasis(resource.type, trigger, savedToSpace)
-
-      return { resource, isNew: true }
+      return { resource, isNew: isNew }
     } catch (e) {
       log.error('error creating resource', e)
 
@@ -1814,36 +1836,6 @@
     await tick()
     const button = document.querySelector('.action-new-space') as HTMLButtonElement | null
     if (button) button.click()
-  }
-
-  const saveTabInSpace = async (tabId: string, space: OasisSpace) => {
-    log.debug('save tab page to space', tabId, space)
-    try {
-      const tab = $tabs.find((t: Tab) => t.id === tabId)
-      if (!tab) {
-        log.error('invalid tab for bookmarking', tab)
-        return
-      }
-
-      let resource: Resource | null = null
-      if (tab.type === 'page' || tab.type === 'resource') {
-        const res = await handleBookmark(tabId, true, SaveToOasisEventTrigger.Click)
-        resource = res.resource
-        log.debug('bookmarked resource', resource)
-      }
-
-      if (!resource) {
-        log.error('no resource found for tab', tab)
-        return
-      }
-
-      log.debug('will add item', resource.id, 'to space', space.id)
-      await resourceManager.addItemsToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-      // new resources are already tracked in the bookmarking function
-      await telemetry.trackAddResourceToSpace(resource.type, AddResourceToSpaceEventTrigger.TabMenu)
-    } catch (e) {
-      log.error('Failed to add resource to space:', e)
-    }
   }
 
   const createSpaceSourceFromActiveTab = async (tab: TabPage) => {
@@ -2776,7 +2768,7 @@
     })
 
     horizonPreloadEvents.onRequestDownloadPath(async (data) => {
-      let toast: ToastItem | null = null
+      let toast: Toast | null = null
       try {
         await tick()
 
@@ -4271,7 +4263,8 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
+                      on:save-resource-in-space={(e) =>
+                        handleBookmark(tab.id, e.detail.id, SaveToOasisEventTrigger.Click)}
                       on:create-new-space={handleOpenCreateSpaceMenu}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -4305,7 +4298,8 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
+                      on:save-resource-in-space={(e) =>
+                        handleBookmark(tab.id, e.detail.id, SaveToOasisEventTrigger.Click)}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:chat-with-tab={handleOpenTabChat}
                       on:create-new-space={handleOpenCreateSpaceMenu}
@@ -4397,7 +4391,8 @@
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:create-live-space={() => handleCreateLiveSpace()}
                       on:add-source-to-space={handleAddSourceToSpace}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
+                      on:save-resource-in-space={(e) =>
+                        handleBookmark(tab.id, e.detail.id, SaveToOasisEventTrigger.Click)}
                       on:create-new-space={handleOpenCreateSpaceMenu}
                       on:chat-with-tab={handleOpenTabChat}
                       on:pin={handlePinTab}
@@ -4431,7 +4426,8 @@
                       on:delete-tab={handleDeleteTab}
                       on:input-enter={handleBlur}
                       on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
-                      on:save-resource-in-space={(e) => saveTabInSpace(tab.id, e.detail)}
+                      on:save-resource-in-space={(e) =>
+                        handleBookmark(tab.id, e.detail.id, SaveToOasisEventTrigger.Click)}
                       on:create-new-space={handleOpenCreateSpaceMenu}
                       on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
                       on:chat-with-tab={handleOpenTabChat}

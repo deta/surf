@@ -431,8 +431,6 @@
       return { id: cloneId, elem: clone, cloneDepth }
     })
 
-    log.debug('Mapped clones', mapped)
-
     const deepestClone = mapped.reduce((acc, curr) => {
       if (curr.cloneDepth > acc.cloneDepth) {
         return curr
@@ -445,13 +443,9 @@
 
   const applyFolderNestingStyles = (excludeSelf: boolean) => {
     const { clones, deepest } = calculateFolderNesting()
-    log.debug('Deepest clone', deepest, deepest?.id === folderUID)
-
     const deepestDepth = deepest?.cloneDepth || 0
 
     const clonesToFade = clones.filter((clone) => clone.id !== deepest?.id)
-
-    log.debug('Clones to fade', clonesToFade)
 
     // on every clone except the deepest one, add the faded class
     clonesToFade.forEach((clone) => {
@@ -498,13 +492,16 @@
   }
 
   onMount(() => {
-    initializeIntersectionObserver()
-
-    applyFolderNestingStyles(false)
+    if ($userSettings.experimental_context_linking_sidebar) {
+      initializeIntersectionObserver()
+      applyFolderNestingStyles(false)
+    }
   })
 
   onDestroy(() => {
-    applyFolderNestingStyles(true)
+    if ($userSettings.experimental_context_linking_sidebar) {
+      applyFolderNestingStyles(true)
+    }
   })
 
   $: {
