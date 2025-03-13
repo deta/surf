@@ -79,6 +79,8 @@
   let codeBlockELem: HTMLElement
   let containerHeight = initialHeight
   let webview: WebviewTag | null = null
+  let webviewMediaPlaying = false
+  let webviewMuted = true
 
   let showHiddenPreview = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
@@ -228,6 +230,14 @@
     }
   }
 
+  const setWebviewMuted = (value?: boolean) => {
+    if (webview) {
+      const muted = value ?? !webviewMuted
+      webview.setAudioMuted(muted)
+      webviewMuted = muted
+    }
+  }
+
   const renderHTMLPreview = async () => {
     await tick()
     if (!appContainer || !canonicalUrl) {
@@ -256,7 +266,9 @@
 
     webview.addEventListener('did-start-loading', () => appIsLoading.set(true))
     webview.addEventListener('did-stop-loading', () => appIsLoading.set(false))
-    webview.addEventListener('dom-ready', () => webview.setAudioMuted(true))
+    webview.addEventListener('dom-ready', () => setWebviewMuted(true))
+    webview.addEventListener('media-started-playing', () => (webviewMediaPlaying = true))
+    webview.addEventListener('media-paused', () => (webviewMediaPlaying = false))
 
     appContainer.appendChild(webview)
 
@@ -487,6 +499,24 @@
             </div>
           {:else}
             <div class="flex items-center gap-2">
+              {#if webviewMediaPlaying}
+                <button
+                  tabindex="-1"
+                  use:tooltip={{
+                    text: webviewMuted ? 'Unmute Audio' : 'Mute Audio',
+                    position: 'left'
+                  }}
+                  class="flex items-center p-1 rounded-md transition-colors"
+                  on:click|stopPropagation={() => setWebviewMuted()}
+                >
+                  {#if webviewMuted}
+                    <Icon name="mute" size="16px" />
+                  {:else}
+                    <Icon name="unmute" size="16px" />
+                  {/if}
+                </button>
+              {/if}
+
               {#if saveable}
                 <SaveToStuffButton
                   state={saveState}
