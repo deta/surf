@@ -1335,7 +1335,7 @@
 
     let stuffResults: SlashMenuItem[] = []
 
-    if (query.length > 3) {
+    if (query.length > 0) {
       const result = await resourceManager.searchResources(
         query,
         [

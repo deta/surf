@@ -148,6 +148,11 @@ export interface SuggestionProps<I = any, TSelected = any> {
   items: I[]
 
   /**
+   * The loading state of the suggestion.
+   */
+  loading: boolean
+
+  /**
    * A function that is called when a suggestion is selected.
    * @param props The props object.
    * @returns void
@@ -235,6 +240,7 @@ export function Suggestion<I = any, TSelected = any>({
             query: state.query,
             text: state.text,
             items: [],
+            loading: false,
             command: (commandProps) => {
               return command({
                 editor,
@@ -267,10 +273,24 @@ export function Suggestion<I = any, TSelected = any>({
           }
 
           if (handleChange || handleStart) {
+            const timeout = setTimeout(() => {
+              if (!props) return
+
+              props.loading = true
+
+              if (handleChange) {
+                renderer?.onUpdate?.(props)
+              }
+            }, 75)
+
             props.items = await items({
               editor,
               query: state.query
             })
+
+            clearTimeout(timeout)
+
+            props.loading = false
           }
 
           if (handleExit) {
@@ -304,6 +324,7 @@ export function Suggestion<I = any, TSelected = any>({
           range: Range
           query: null | string
           text: null | string
+          loading: boolean
           composing: boolean
           decorationId?: string | null
         } = {
@@ -314,7 +335,8 @@ export function Suggestion<I = any, TSelected = any>({
           },
           query: null,
           text: null,
-          composing: false
+          composing: false,
+          loading: false
         }
 
         return state

@@ -28,6 +28,7 @@ export default {
             range: props.range,
             items: props.items,
             query: props.query,
+            loading: props.loading,
             callback: (payload: SlashCommandPayload) => {
               console.log('slash command callback', payload)
               props.command(payload)
@@ -51,6 +52,7 @@ export default {
           editor: props.editor,
           range: props.range,
           items: props.items,
+          loading: props.loading,
           query: props.query
         })
         if (!props.clientRect) {

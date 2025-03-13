@@ -9,6 +9,7 @@
   export let range: any
   export let items: SlashMenuItem[] = []
   export let query: string
+  export let loading: boolean = false
   export let callback: (payload: SlashCommandPayload) => void
 
   let selectedSection = 0
@@ -115,12 +116,16 @@
           </div>
         {/each}
       {/each}
-    {:else}
+    {:else if loading}
       <div class="slash-item">
         <div class="slash-item-icon">
           <DynamicIcon name="spinner" size="16px" />
         </div>
         <p class="slash-item-title">Searching your stuff…</p>
+      </div>
+    {:else}
+      <div class="slash-item">
+        <p class="slash-item-title">Nothing found</p>
       </div>
     {/if}
   </div>
