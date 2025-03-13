@@ -877,7 +877,8 @@
 
   /// New resource previews // TODO: Clean up old styles
   article.resource-preview {
-    &[data-origin='stuff'] {
+    &[data-origin='stuff'],
+    &[data-origin='chat'] {
       content-visibility: auto;
       contain: layout paint style;
 
