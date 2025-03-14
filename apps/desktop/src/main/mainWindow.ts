@@ -88,6 +88,8 @@ export function createWindow() {
   mainWindow = new BrowserWindow({
     width: boundWindow.width,
     height: boundWindow.height,
+    minWidth: 542,
+    minHeight: 330,
     x: boundWindow.x,
     y: boundWindow.y,
     fullscreen: winState.state.isFullScreen,
