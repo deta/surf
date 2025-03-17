@@ -371,12 +371,32 @@
   const handlePaste = async (e: ClipboardEvent) => {
     if ($showTabSearch !== 2 || get(miniBrowserService.isOpen)) return
 
+    const target = e.target as HTMLElement
+    const isFocused = target === document.activeElement
+
+    if (
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.getAttribute('contenteditable') === 'true') &&
+      isFocused
+    ) {
+      log.debug('Ignoring paste event in input field or editable content')
+      return
+    }
+
     let toast: ToastItem | null = null
+
+    log.debug('Handling paste event')
 
     try {
       // NOTE: We filter plain text items, as that just leads to too many issue with the input fields
       // for right now.
       const mediaItems = (await processPaste(e)).filter((item) => item.type !== 'text')
+      if (mediaItems.length === 0) {
+        log.debug('No valid media items found in paste event')
+        return
+      }
+
       toast = toasts.loading(
         `Importing ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}…`
       )
