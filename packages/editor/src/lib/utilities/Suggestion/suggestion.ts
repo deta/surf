@@ -33,6 +33,14 @@ export interface SuggestionOptions<I = any, TSelected = any> {
   allowSpaces?: boolean
 
   /**
+   * When true, prevents re-triggering a suggestion after it has been dismissed.
+   * This is useful for cases like slash commands where you don't want to re-trigger
+   * the menu for the same slash character after the user has dismissed it.
+   * @default false
+   */
+  preventReTrigger?: boolean
+
+  /**
    * Allow the character to be included in the suggestion query. Not compatible with `allowSpaces`.
    * @default false
    */
@@ -119,6 +127,14 @@ export interface SuggestionOptions<I = any, TSelected = any> {
     isActive?: boolean
   }) => boolean
   findSuggestionMatch?: typeof defaultFindSuggestionMatch
+
+  /**
+   * When true, dismisses the suggestion if the query starts with a space.
+   * This works even when allowSpaces is true, and prevents the menu from
+   * reappearing when typing after a space.
+   * @default false
+   */
+  dismissOnSpace?: boolean
 }
 
 export interface SuggestionProps<I = any, TSelected = any> {
@@ -190,12 +206,14 @@ export function Suggestion<I = any, TSelected = any>({
   editor,
   char = '@',
   allowSpaces = false,
+  preventReTrigger = false,
   allowToIncludeChar = false,
   allowedPrefixes = [' '],
   startOfLine = false,
   decorationTag = 'span',
   decorationClass = 'suggestion',
   placeholder = '',
+  dismissOnSpace = false,
   command = () => null,
   items = () => [],
   render = () => ({}),
@@ -204,6 +222,13 @@ export function Suggestion<I = any, TSelected = any>({
 }: SuggestionOptions<I, TSelected>) {
   let props: SuggestionProps<I, TSelected> | undefined
   const renderer = render?.()
+  // Track dismissed suggestion ranges to prevent re-triggering
+  const dismissedRanges = new Set<string>()
+  // Track the last document position where we saw a trigger char to reset dismissal
+  let lastTriggerPositions = new Map<number, boolean>()
+  // Track empty results for auto-dismissal
+  let emptyResultsCount = 0
+  let lastQuery = ''
 
   const plugin: Plugin<any> = new Plugin({
     key: pluginKey,
@@ -266,6 +291,9 @@ export function Suggestion<I = any, TSelected = any>({
 
           if (handleStart) {
             renderer?.onBeforeStart?.(props)
+            // Reset empty results count on start
+            emptyResultsCount = 0
+            lastQuery = state.query || ''
           }
 
           if (handleChange) {
@@ -291,10 +319,45 @@ export function Suggestion<I = any, TSelected = any>({
             clearTimeout(timeout)
 
             props.loading = false
+
+            // Handle auto-dismissal when no results are found
+            if (props.items.length === 0) {
+              // If this is a new query (user typed more), increment the empty results counter
+              if (state.query && state.query.length > lastQuery.length) {
+                emptyResultsCount++
+                lastQuery = state.query
+
+                // Auto-dismiss after 3 characters typed with no results
+                if (emptyResultsCount >= 3) {
+                  // Add this range to dismissed ranges
+                  if (preventReTrigger && state.range && state.range.from) {
+                    dismissedRanges.add(`${state.range.from}`)
+                  }
+
+                  // Force deactivation by updating the editor
+                  setTimeout(() => {
+                    editor.commands.focus()
+                  }, 50)
+
+                  // Call onExit to clean up UI immediately
+                  renderer?.onExit?.(props)
+                  return
+                }
+              }
+            } else {
+              // Reset counter if items were found
+              emptyResultsCount = 0
+            }
           }
 
           if (handleExit) {
             renderer?.onExit?.(props)
+
+            // When a suggestion is exited, add its range to dismissed ranges
+            // if we want to prevent re-triggering
+            if (preventReTrigger && prev.range && prev.range.from) {
+              dismissedRanges.add(`${prev.range.from}`)
+            }
           }
 
           if (handleChange) {
@@ -327,6 +390,7 @@ export function Suggestion<I = any, TSelected = any>({
           loading: boolean
           composing: boolean
           decorationId?: string | null
+          dismissed?: boolean
         } = {
           active: false,
           range: {
@@ -336,7 +400,8 @@ export function Suggestion<I = any, TSelected = any>({
           query: null,
           text: null,
           composing: false,
-          loading: false
+          loading: false,
+          dismissed: false
         }
 
         return state
@@ -361,6 +426,29 @@ export function Suggestion<I = any, TSelected = any>({
             next.active = false
           }
 
+          // Check for newly typed trigger characters to reset dismissed positions
+          if (preventReTrigger && transaction.docChanged) {
+            // Get the content of the current position
+            const $pos = selection.$from
+            const nodeBefore = $pos.nodeBefore
+
+            // If the previous character is the trigger character, mark this position for reset
+            if (nodeBefore && nodeBefore.isText && nodeBefore.text?.endsWith(char)) {
+              const charPos = from - 1
+              lastTriggerPositions.set(charPos, true)
+
+              // If this is a position that was previously dismissed, remove it from dismissedRanges
+              // to allow the suggestion to trigger again
+              for (const dismissedPos of dismissedRanges) {
+                const pos = parseInt(dismissedPos, 10)
+                // Use approximate matching since positions might shift slightly
+                if (Math.abs(pos - charPos) <= 3) {
+                  dismissedRanges.delete(dismissedPos)
+                }
+              }
+            }
+          }
+
           // Try to match against where our cursor currently is
           const match = findSuggestionMatch({
             char,
@@ -375,6 +463,15 @@ export function Suggestion<I = any, TSelected = any>({
           // If we found a match, update the current state to show it
           if (
             match &&
+            // Don't trigger for previously dismissed ranges if preventReTrigger is enabled,
+            // unless we've detected a new trigger character at this position
+            !(
+              preventReTrigger &&
+              dismissedRanges.has(`${match.range.from}`) &&
+              !lastTriggerPositions.has(match.range.from)
+            ) &&
+            // Check if we should dismiss on space
+            !(dismissOnSpace && match.query.startsWith(' ')) &&
             allow({
               editor,
               state,
@@ -387,8 +484,19 @@ export function Suggestion<I = any, TSelected = any>({
             next.range = match.range
             next.query = match.query
             next.text = match.text
+
+            // Clear this position from lastTriggerPositions once used
+            if (lastTriggerPositions.has(match.range.from)) {
+              lastTriggerPositions.delete(match.range.from)
+            }
           } else {
             next.active = false
+
+            // If we matched but the query starts with a space and dismissOnSpace is true,
+            // add this position to dismissed ranges to prevent re-triggering
+            if (match && dismissOnSpace && match.query.startsWith(' ') && preventReTrigger) {
+              dismissedRanges.add(`${match.range.from}`)
+            }
           }
         } else {
           next.active = false

@@ -77,8 +77,12 @@ export default {
       },
 
       onExit() {
-        popup[0].destroy()
-        component.$destroy()
+        if (popup && popup[0]) {
+          popup[0].destroy()
+        }
+        if (component) {
+          component.$destroy()
+        }
       }
     }
   }

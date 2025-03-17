@@ -1349,24 +1349,27 @@
         }
       )
 
-      stuffResults = result.slice(0, 5).map((item) => {
-        const resource = item.resource
+      stuffResults = result
+        .filter((item) => item.resource.id !== resourceId)
+        .slice(0, 5)
+        .map((item) => {
+          const resource = item.resource
 
-        log.debug('search result item', resource)
+          log.debug('search result item', resource)
 
-        const canonicalURL =
-          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
-            ?.value || resource.metadata?.sourceURI
+          const canonicalURL =
+            (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+              ?.value || resource.metadata?.sourceURI
 
-        return {
-          id: `resource-${resource.id}`,
-          section: 'My Stuff',
-          title:
-            resource.metadata?.name ||
-            (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
-          icon: canonicalURL ? `favicon;;${canonicalURL}` : `file;;${getFileKind(resource.type)}`
-        } as SlashMenuItem
-      })
+          return {
+            id: `resource-${resource.id}`,
+            section: 'My Stuff',
+            title:
+              resource.metadata?.name ||
+              (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
+            icon: canonicalURL ? `favicon;;${canonicalURL}` : `file;;${getFileKind(resource.type)}`
+          } as SlashMenuItem
+        })
     }
 
     return [...filteredActions, ...stuffResults]
