@@ -46,32 +46,28 @@
     callback({ item, query, editor })
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      selectedIndex = (selectedIndex + items.length - 1) % items.length
-      return true
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      selectedIndex = (selectedIndex + 1) % items.length
-      return true
-    }
-
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      const item = items[selectedIndex]
-
-      if (item) {
-        runCommand(item)
-      }
-      return true
+  export function onKeyDown(e: KeyboardEvent) {
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        selectedIndex = (selectedIndex + items.length - 1) % items.length
+        return true
+      case 'ArrowDown':
+        e.preventDefault()
+        selectedIndex = (selectedIndex + 1) % items.length
+        return true
+      case 'Enter':
+        e.preventDefault()
+        const item = items[selectedIndex]
+        if (item) {
+          runCommand(item)
+        }
+        return true
+      default:
+        return false
     }
   }
 </script>
-
-<svelte:window on:keydown={handleKeydown} />
 
 <div class="slash-container">
   <!-- <div class="slash-header">Select element to insert:</div> -->

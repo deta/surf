@@ -24,10 +24,6 @@
   )
 
   export function onKeyDown(event: KeyboardEvent): boolean {
-    if (event.repeat) {
-      return false
-    }
-
     const flatItems = Object.values(sections).flat()
 
     switch (event.key) {

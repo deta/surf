@@ -16,7 +16,6 @@ export default {
   render: () => {
     let component: Slash
     let popup: any
-    let selected = false
 
     return {
       onStart: (props) => {
@@ -69,11 +68,8 @@ export default {
           popup[0].hide()
           return true
         }
-        if (props.event.key === 'Enter') {
-          selected = true
-          props.event.preventDefault()
-          return true
-        }
+
+        return component.onKeyDown(props.event)
       },
 
       onExit() {
