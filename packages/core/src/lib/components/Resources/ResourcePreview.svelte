@@ -575,7 +575,7 @@
     ...conditionalArrayItem<CtxItem>($contextMenuSpaces.length > 0, [
       {
         type: 'sub-menu',
-        icon: '',
+        icon: 'add',
         disabled: $contextMenuSpaces.length === 0,
         text: 'Add to Context',
         items: $contextMenuSpaces

@@ -906,7 +906,10 @@ export class OasisService {
     resourceOrId: Resource | string,
     opts?: { select?: boolean; selectedSpace?: string }
   ) {
-    const options = Object.assign({ select: true, selectedSpace: 'all' }, opts)
+    const options = {
+      select: opts?.select ?? true,
+      selectedSpace: opts?.selectedSpace ?? 'all'
+    }
 
     const resource =
       typeof resourceOrId === 'string'

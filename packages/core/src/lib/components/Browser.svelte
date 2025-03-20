@@ -1330,7 +1330,12 @@
     }
 
     const { closeType: confirmed } = await openDialog({
-      message: 'Are you sure you want to delete this page from your stuff?'
+      title: 'Delete from Stuff',
+      message: 'Are you sure you want to delete this page from your stuff?',
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Delete', type: 'submit', kind: 'danger' }
+      ]
     })
 
     if (!confirmed) {
@@ -4188,6 +4193,7 @@
                 },
                 {
                   type: 'sub-menu',
+                  icon: 'arrow.right',
                   text: 'Move Tabs to Context',
                   items: $contextMenuMoveTabsToSpaces
                 },

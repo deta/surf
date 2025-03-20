@@ -343,6 +343,11 @@
   }
 
   const handleBookmark = (trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
+    if (isBookmarkedByUser) {
+      handleRemoveBookmark()
+      return
+    }
+
     dispatch('bookmark', { trigger })
     saveToSpacePopoverOpened.set(false)
   }
@@ -398,6 +403,25 @@
     if (tab.type === 'page' || tab.type === 'space') {
       chatContext.addTab(tab, { trigger: PageChatUpdateContextEventTrigger.TabSelection })
     }
+  }
+
+  const openResourceDetails = async () => {
+    if (!$resource) return
+
+    let selectedSpace: string | undefined = undefined
+    if (
+      tabsManager.activeScopeIdValue &&
+      $resourceSpaceIds.includes(tabsManager.activeScopeIdValue)
+    ) {
+      selectedSpace = tabsManager.activeScopeIdValue
+    } else if ($resourceSpaceIds.length === 1) {
+      selectedSpace = $resourceSpaceIds[0]
+    }
+
+    await oasis.openResourceDetailsSidebar($resource, {
+      select: true,
+      selectedSpace: selectedSpace
+    })
   }
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
@@ -687,12 +711,28 @@
       { type: 'separator', hidden: tab.type !== 'page' },
       {
         type: 'action',
+        hidden: !isBookmarkedByUser,
+        icon: 'info',
+        text: 'View Details',
+        action: () => openResourceDetails()
+      },
+      {
+        type: 'action',
         hidden: tab.type !== 'space',
         icon: generalContext.icon,
         text: 'Open Context',
         action: () => {
           if (tab.type !== 'space') return
           tabsManager.changeScope(tab.spaceId, ChangeContextEventTrigger.Tab)
+        }
+      },
+      {
+        type: 'action',
+        hidden: tab.type !== 'page',
+        icon: 'link',
+        text: 'Copy URL',
+        action: () => {
+          if (url) navigator.clipboard.writeText(url)
         }
       },
       {
@@ -719,22 +759,13 @@
         text: `${isInChatContext ? 'Remove from' : 'Add to'} Chat`,
         action: () => (isInChatContext ? handleExcludeTab() : handleIncludeTab())
       },
-      {
-        type: 'action',
-        hidden: tab.type !== 'page',
-        icon: 'link',
-        text: 'Copy URL',
-        action: () => {
-          if (url) navigator.clipboard.writeText(url)
-        }
-      },
+      { type: 'separator' },
       {
         type: 'sub-menu',
-        icon: 'circle.dot',
-        text: 'Move Tabs to Context',
+        icon: 'arrow.right',
+        text: 'Move Tab to Context',
         items: $contextMenuMoveTabsToSpaces
       },
-      { type: 'separator' },
       {
         type: 'action',
         icon: tab.pinned ? `pinned-off` : `pin`,
