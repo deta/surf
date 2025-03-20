@@ -92,6 +92,7 @@
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
+  import type { SavingItem } from '@horizon/core/src/lib/service/saving'
 
   export let tab: TabPage
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
@@ -562,6 +563,12 @@
       return await resourceManager.getResource(surfResourceId)
     }
 
+    let saveItem: SavingItem | undefined
+    if (!silent) {
+      log.debug('adding pending save item')
+      saveItem = oasis.addPendingSaveTab(tab)
+    }
+
     // strip &t from url suffix
     let youtubeHostnames = [
       'youtube.com',
@@ -592,6 +599,8 @@
           if (!silent) {
             tab.resourceBookmarkedManually = true
             await resourceManager.markResourceAsSavedByUser(fetchedResource.id)
+
+            saveItem?.addResource(fetchedResource)
           }
 
           // Make sure the resource is up to date with at least the latest title and sourceURI
@@ -630,6 +639,9 @@
       createdForChat,
       freshWebview
     })
+
+    log.debug('adding resource to save item', resource, saveItem)
+    saveItem?.addResource(resource)
 
     // if (resource.type === ResourceTypes.PDF) {
     //   window.api.openResourceLocally({

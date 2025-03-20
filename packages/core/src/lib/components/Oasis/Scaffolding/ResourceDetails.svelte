@@ -476,7 +476,7 @@
               items={saveToSpaceItems}
               search="manual"
               {searchValue}
-              inputPlaceholder="Select a Context to save to…"
+              inputPlaceholder="Select a context to save to…"
               open={popoverOpened}
               side="bottom"
               keepHeightWhileSearching

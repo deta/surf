@@ -176,6 +176,7 @@
   import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
   import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
   import { CHEAT_SHEET_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
+  import type { SavingItem } from '@horizon/core/src/lib/service/saving'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -1183,7 +1184,7 @@
       let isNew = false
 
       if (tab.type === 'resource') {
-        toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
+        // toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
 
         resource = await resourceManager.getResource(tab.resourceId)
       } else if (tab.type !== 'page') {
@@ -1198,7 +1199,7 @@
         }
 
         updateBookmarkingTabState(tabId, 'in_progress')
-        toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
+        // toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
 
         const isActivated = $activatedTabs.includes(tab.id)
         if (!isActivated) {
@@ -1234,7 +1235,7 @@
 
         updateBookmarkingTabState(tabId, 'error')
 
-        toast.error('Failed to save page!')
+        toasts.error('Failed to save page!')
 
         return { resource: null, isNew: false }
       }
@@ -1250,16 +1251,16 @@
           SpaceEntryOrigin.ManuallyAdded
         )
 
-        toast.success(`Page saved to active context!`, {
-          action: {
-            label: 'View',
-            handler: () => {
-              oasis.openResourceDetailsSidebar(resource.id, {
-                selectedSpace: tabsManager.activeScopeIdValue ?? undefined
-              })
-            }
-          }
-        })
+        // toasts.success(`Page saved to active context!`, {
+        //   action: {
+        //     label: 'View',
+        //     handler: () => {
+        //       oasis.openResourceDetailsSidebar(resource.id, {
+        //         selectedSpace: tabsManager.activeScopeIdValue ?? undefined
+        //       })
+        //     }
+        //   }
+        // })
       } else if (spaceId) {
         log.debug('will add item', resource.id, 'to space', spaceId)
         await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
@@ -1268,25 +1269,25 @@
           AddResourceToSpaceEventTrigger.TabMenu
         )
 
-        toast.success('Page saved to context!', {
-          action: {
-            label: 'View',
-            handler: () => {
-              oasis.openResourceDetailsSidebar(resource.id, {
-                selectedSpace: spaceId
-              })
-            }
-          }
-        })
+        // toasts.success('Page saved to context!', {
+        //   action: {
+        //     label: 'View',
+        //     handler: () => {
+        //       oasis.openResourceDetailsSidebar(resource.id, {
+        //         selectedSpace: spaceId
+        //       })
+        //     }
+        //   }
+        // })
       } else {
-        toast.success('Page saved!', {
-          action: {
-            label: 'View',
-            handler: () => {
-              oasis.openResourceDetailsSidebar(resource.id)
-            }
-          }
-        })
+        // toasts.success('Page saved!', {
+        //   action: {
+        //     label: 'View',
+        //     handler: () => {
+        //       oasis.openResourceDetailsSidebar(resource.id)
+        //     }
+        //   }
+        // })
       }
 
       updateBookmarkingTabState(tabId, 'success')
@@ -1302,11 +1303,8 @@
 
       updateBookmarkingTabState(tabId, 'error')
 
-      if (toast) {
-        toast?.error('Failed to save page!')
-      } else {
-        toasts.error('Failed to save page!')
-      }
+      toasts.error('Failed to save page!')
+
       return { resource: null, isNew: false }
     } finally {
       setTimeout(() => {
@@ -2744,8 +2742,11 @@
         return
       }
 
-      const toast = toasts.loading('Saving link…')
+      // const toast = toasts.loading('Saving link…')
+      let saveItem: SavingItem | undefined
       try {
+        saveItem = oasis.addPendingSave({ url: url.href })
+
         const { resource } = await extractAndCreateWebResource(
           resourceManager,
           url.href,
@@ -2753,22 +2754,24 @@
           [ResourceTag.rightClickSave()]
         )
 
+        saveItem.addResource(resource)
+
         if (spaceId) {
           await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-          toast.success('Link saved to context!')
+          // toast.success('Link saved to context!')
         } else if (tabsManager.activeScopeIdValue) {
           await oasis.addResourcesToSpace(
             tabsManager.activeScopeIdValue,
             [resource.id],
             SpaceEntryOrigin.ManuallyAdded
           )
-          toast.success('Link saved to active context!')
+          // toast.success('Link saved to active context!')
         } else {
-          toast.success('Link saved!')
+          // toast.success('Link saved!')
         }
       } catch (err) {
         log.error('Failed to save link', err)
-        toast.error('Failed to save link')
+        toasts.error('Failed to save link')
       }
     })
 

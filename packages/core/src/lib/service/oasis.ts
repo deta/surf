@@ -29,7 +29,8 @@ import {
   type Space,
   type SpaceData,
   type SpaceEntry,
-  type SpaceEntrySearchOptions
+  type SpaceEntrySearchOptions,
+  type TabPage
 } from '../types'
 import { ResourceManager, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
@@ -41,6 +42,7 @@ import { RESOURCE_FILTERS } from '../constants/resourceFilters'
 import type { SpaceBasicData } from './ipc/events'
 import { createContextService, type ContextService } from './contexts'
 import { addSelectionById } from '../components/Oasis/utils/select'
+import { SavingItem, type SaveItemMetadata } from './saving'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -261,6 +263,8 @@ export class OasisService {
   selectedFilterType: Readable<FilterItem | null>
 
   stackKey: Writable<{}>
+  pendingSave: Writable<SavingItem | null>
+  pendingSaveTimeout: ReturnType<typeof setTimeout> | null
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
 
   private eventEmitter: TypedEmitter<OasisEvents>
@@ -290,6 +294,8 @@ export class OasisService {
     this.selectedFilterTypeId = writable<string | null>(null)
 
     this.stackKey = writable({})
+    this.pendingSave = writable(null)
+    this.pendingSaveTimeout = null
     this.pendingStackActions = []
 
     this.selectedFilterType = derived(this.selectedFilterTypeId, (id) => {
@@ -363,6 +369,10 @@ export class OasisService {
 
   get spacesValue() {
     return get(this.spaces).map((space) => space.spaceValue)
+  }
+
+  get pendingSaveValue() {
+    return get(this.pendingSave)
   }
 
   on<E extends keyof OasisEvents>(event: E, listener: OasisEvents[E]): () => void {
@@ -660,6 +670,14 @@ export class OasisService {
     this.log.debug('removing resource bookmarks from tabs', validResourceIDs)
     await Promise.all(validResourceIDs.map((id) => this.tabsManager.removeResourceBookmarks(id)))
 
+    if (
+      this.pendingSaveValue?.resourceValue?.id &&
+      validResourceIDs.includes(this.pendingSaveValue.resourceValue.id)
+    ) {
+      this.log.debug('pending save resource was deleted, clearing pending save')
+      await this.removePendingSave()
+    }
+
     this.log.debug('updating everything after resource deletion')
     this.everythingContents.update((contents) => {
       return contents.filter((resource) => !validResourceIDs.includes(resource.id))
@@ -931,6 +949,44 @@ export class OasisService {
       await wait(200)
       addSelectionById(resource.id, { removeOthers: true })
     }
+  }
+
+  addPendingSave(data: SaveItemMetadata, resource?: Resource) {
+    this.log.debug('Adding pending save', resource)
+
+    const item = new SavingItem(
+      { resourceManager: this.resourceManager, oasis: this },
+      data,
+      resource
+    )
+
+    this.pendingSave.set(item)
+
+    item.on('destroy', () => {
+      this.pendingSave.set(null)
+    })
+
+    return item
+  }
+
+  addPendingSaveTab(tab: TabPage, resource?: Resource) {
+    this.log.debug('Adding pending save tab', tab, resource)
+
+    return this.addPendingSave(
+      {
+        title: tab.title,
+        description: '',
+        url: tab.currentLocation || tab.initialLocation,
+        icon: `image;;${tab.icon}`
+      },
+      resource
+    )
+  }
+
+  async removePendingSave() {
+    this.log.debug('Removing pending save')
+    await this.pendingSaveValue?.destroy()
+    this.pendingSave.set(null)
   }
 
   static provide(resourceManager: ResourceManager, config: ConfigService) {

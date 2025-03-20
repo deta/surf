@@ -190,8 +190,8 @@ main browser so it follows you around throughout your daily workflows.`
   .notification-wrapper {
     position: fixed;
     z-index: 99999999999999;
-    top: 3.5rem;
-    right: 0.65rem;
+    top: 3.75rem;
+    right: 0.75rem;
     transform-origin: top right;
 
     transition:
@@ -203,8 +203,8 @@ main browser so it follows you around throughout your daily workflows.`
     :global(body:has(#app-contents.verticalTabs)) & {
       top: unset;
       right: unset;
-      bottom: 5.5rem;
-      left: 1.7rem;
+      bottom: 6rem;
+      left: 1.6rem;
       transform-origin: bottom left;
       &:has(.closed) {
         scale: 0.8;
@@ -230,16 +230,18 @@ main browser so it follows you around throughout your daily workflows.`
   }
   :global(body:has(#app-contents.verticalTabs) .notification-wrapper.starting) {
     opacity: 0;
-    --y: 3rem !important;
+    --y: 7rem !important;
   }
 
   :global(
       body:has(#app-contents.horizontalTabs .sidebar-meta.mouseInside #stuff-stack.wasMouseInside)
         .notification-wrapper
-    ) {
-    --x: 110%;
+    ),
+  :global(body:has(#app-contents.horizontalTabs .pending-wrapper) .notification-wrapper) {
+    --x: 130%;
   }
-  :global(body:has(#app-contents.verticalTabs .sidebar-meta.mouseInside) .notification-wrapper) {
+  :global(body:has(#app-contents.verticalTabs .sidebar-meta.mouseInside) .notification-wrapper),
+  :global(body:has(#app-contents.verticalTabs .pending-wrapper) .notification-wrapper) {
     --x: -160%;
   }
 
