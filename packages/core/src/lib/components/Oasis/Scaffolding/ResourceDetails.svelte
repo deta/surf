@@ -206,7 +206,7 @@
 
   const saveUserContext = useDebounce((value: string) => {
     log.debug('saveUserContext', value)
-    resource.updateMetadata({ userContext: value })
+    resourceManager.updateResourceMetadata(resource.id, { userContext: value })
   }, 300)
 
   const getContent = async () => {
