@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@medv/finder": "^3.2.0",
-    "@mozilla/readability": "^0.5.0",
+    "@mozilla/readability": "^0.6.0",
     "css-selector-generator": "^3.6.8",
     "rss-parser": "^3.13.0"
   }
