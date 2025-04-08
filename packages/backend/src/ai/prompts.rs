@@ -246,6 +246,7 @@ Prohibited Elements:
 - Do not group citations at the end of responses
 - Do not skip citations for any factual statements
 - Do not combine multiple context ids in one citation tag
+- Do not wrap the response text in any other unnecessary tags or markdown blocks
 
 Quality Control Steps:
 1. Before submitting your response, verify that EVERY factual statement has a citation
