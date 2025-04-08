@@ -1,11 +1,10 @@
-use super::{
-    message::{
+use super::{processor::processor_thread_entry_point, worker::worker_thread_entry_point};
+use crate::{
+    api::message::{
         AIMessage, ProcessorMessage, ResourceMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
     },
-    processor::processor_thread_entry_point,
-    worker::worker_thread_entry_point,
+    BackendResult,
 };
-use crate::BackendResult;
 use crossbeam_channel as crossbeam;
 use neon::{
     handle::Root,

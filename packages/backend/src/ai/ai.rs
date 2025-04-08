@@ -1,16 +1,17 @@
 use std::str::FromStr;
 
-use crate::ai::client::FilteredSearchRequest;
-use crate::embeddings::chunking::ContentChunker;
-use crate::llm::client::client;
-use crate::llm::client::client::{ChatCompletionStream, Model};
-use crate::llm::models::{ContextMessage, Message, MessageContent, MessageRole, Quota};
+use crate::ai::embeddings::chunking::ContentChunker;
+use crate::ai::llm::client::client;
+use crate::ai::llm::client::client::{ChatCompletionStream, Model};
+use crate::ai::llm::models::{ContextMessage, Message, MessageContent, MessageRole, Quota};
+use crate::ai::local::client::{
+    DocsSimilarityRequest, FilteredSearchRequest, LocalAIClient, UpsertEmbeddingsRequest,
+};
 use crate::store::db::Database;
 use crate::store::models::{AIChatSessionMessage, AIChatSessionMessageSource, CompositeResource};
 use crate::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
 
-use super::client::{DocsSimilarityRequest, LocalAIClient, UpsertEmbeddingsRequest};
 use super::prompts::{
     chat_prompt, command_prompt, create_app_prompt, general_chat_prompt,
     should_narrow_search_prompt, should_narrow_search_prompt_simple, sql_query_generator_prompt,

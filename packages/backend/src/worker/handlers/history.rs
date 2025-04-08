@@ -1,11 +1,9 @@
 use std::collections::HashSet;
 
 use crate::{
-    backend::{
-        message::{HistoryMessage, TunnelOneshot},
-        worker::{send_worker_response, Worker},
-    },
+    api::message::{HistoryMessage, TunnelOneshot},
     store::models::HistoryEntry,
+    worker::worker::{send_worker_response, Worker},
     BackendResult,
 };
 

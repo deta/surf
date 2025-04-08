@@ -3,14 +3,11 @@ use crate::{
         ChatResult, DocsSimilarity, YoutubeTranscript, YoutubeTranscriptMetadata,
         YoutubeTranscriptPiece,
     },
-    backend::{
-        message::{MiscMessage, ProcessorMessage, TunnelOneshot},
-        worker::{send_worker_response, Worker},
-    },
-    llm::{
+    ai::llm::{
         client::client::Model,
         models::{Message, MessageContent, Quota},
     },
+    api::message::{MiscMessage, ProcessorMessage, TunnelOneshot},
     store::{
         db::Database,
         models::{
@@ -18,6 +15,7 @@ use crate::{
             AIChatSessionMessageSource, CompositeResource, ResourceTextContent,
         },
     },
+    worker::worker::{send_worker_response, Worker},
     BackendError, BackendResult,
 };
 use neon::prelude::*;

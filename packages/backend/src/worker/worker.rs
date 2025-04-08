@@ -1,12 +1,9 @@
-use super::{
-    message::{
-        AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
-    },
-    tunnel::SurfBackendHealth,
-};
+use super::{handlers::*, tunnel::SurfBackendHealth};
 use crate::{
     ai::ai::AI,
-    backend::handlers::*,
+    api::message::{
+        AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
+    },
     store::{db::Database, models::current_time},
     BackendError, BackendResult,
 };
@@ -32,7 +29,8 @@ pub struct Worker {
     pub surf_backend_health: SurfBackendHealth,
     pub created_at: DateTime<Utc>,
 }
-
+//
+// TODO: not unwrap
 impl Worker {
     fn new(
         app_path: String,

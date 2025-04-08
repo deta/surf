@@ -1,17 +1,10 @@
-pub mod ai;
-pub mod handlers;
-pub mod message;
-pub mod migrator;
-pub mod processor;
-pub mod tunnel;
-pub mod worker;
-
-use crate::backend::message::{MiscMessage, WorkerMessage};
+use crate::{
+    api::message::{MiscMessage, WorkerMessage},
+    worker::tunnel,
+};
 use neon::prelude::*;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
-
-const _MODULE_PREFIX: &str = "backend";
 
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__backend_tunnel_init", js_tunnel_init)?;
@@ -51,6 +44,16 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
     let language_setting = cx.argument::<JsString>(5)?.value(&mut cx);
     let event_bus_rx_callback = cx.argument::<JsFunction>(6)?.root(&mut cx);
 
+    match std::fs::create_dir_all(&backend_root_path) {
+        Ok(_) => {}
+        Err(e) => match e.kind() {
+            std::io::ErrorKind::AlreadyExists => {}
+            _ => {
+                tracing::error!("failed to create backend root path: {:#?}", e);
+                return cx.throw_error("failed to create backend root path");
+            }
+        },
+    }
     let config = tunnel::TunnelConfig {
         backend_root_path,
         app_path,

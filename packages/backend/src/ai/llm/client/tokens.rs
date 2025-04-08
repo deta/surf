@@ -1,5 +1,5 @@
 use super::models::TokenModel;
-use crate::llm::models::{Message, MessageContent};
+use crate::ai::llm::models::{Message, MessageContent};
 use std::collections::HashSet;
 
 // reference: https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
@@ -130,7 +130,7 @@ pub fn truncate_messages(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::models::{ContextMessage, Message, MessageContent};
+    use crate::ai::llm::models::{ContextMessage, Message, MessageContent};
 
     struct MockModel {
         // NOTE: the token estimation is 4 characters per token

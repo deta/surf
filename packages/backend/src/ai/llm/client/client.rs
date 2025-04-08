@@ -7,9 +7,11 @@ use std::{
 
 use super::{models::TokenModel, tokens};
 use crate::{
-    ai::_AI_API_ENDPOINT,
-    llm::models::{
-        Message, MessageContent, MessageRole, Quota, QuotaResponse, QuotasDepletedResponse,
+    ai::{
+        llm::models::{
+            Message, MessageContent, MessageRole, Quota, QuotaResponse, QuotasDepletedResponse,
+        },
+        _AI_API_ENDPOINT,
     },
     BackendError, BackendResult,
 };

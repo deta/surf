@@ -1,4 +1,4 @@
-use crate::{llm::models::Message, BackendError, BackendResult};
+use crate::{ai::{llm::models::Message, ai::DocsSimilarity}, BackendError, BackendResult};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
@@ -8,8 +8,6 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 #[cfg(target_os = "windows")]
 use uds_windows::UnixStream;
-
-use super::ai::DocsSimilarity;
 
 pub struct LocalAIClient {
     socket_path: String,

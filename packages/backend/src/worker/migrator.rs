@@ -1,6 +1,6 @@
-use crate::backend::worker::Worker;
 use crate::store::db::Database;
 use crate::store::models::*;
+use crate::worker::worker::Worker;
 use crate::{BackendError, BackendResult};
 
 use std::path::Path;

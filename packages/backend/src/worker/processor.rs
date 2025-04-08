@@ -3,13 +3,10 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
-use super::{
-    message::*,
-    tunnel::{SurfBackendHealth, WorkerTunnel},
-};
+use super::tunnel::{SurfBackendHealth, WorkerTunnel};
 use crate::{
-    backend::ai::AI,
-    embeddings::chunking::ContentChunker,
+    ai::{embeddings::chunking::ContentChunker, vision::Vision},
+    api::message::*,
     store::models::{
         CompositeResource, ResourceProcessingState, ResourceTextContentMetadata,
         ResourceTextContentType,
@@ -23,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 pub struct Processor {
     tunnel: WorkerTunnel,
-    ai: AI,
+    vision: Vision,
     ocr_engine: Option<OcrEngine>,
     language: Option<String>,
     vision_tagging_flag: Arc<AtomicBool>,
@@ -40,13 +37,13 @@ impl Processor {
         vision_tagging_flag: Arc<AtomicBool>,
         surf_backend_health: SurfBackendHealth,
     ) -> Self {
-        let ai = AI::new(api_key, api_base);
+        let vision = Vision::new(api_key, api_base);
         let ocr_engine = create_ocr_engine(&app_path)
             .map_err(|e| tracing::error!("failed to create the OCR engine: {e}"))
             .ok();
         Self {
             tunnel,
-            ai,
+            vision,
             ocr_engine,
             language,
             vision_tagging_flag,
@@ -149,7 +146,7 @@ impl Processor {
                     .vision_tagging_flag
                     .load(std::sync::atomic::Ordering::Relaxed)
                 {
-                    match self.ai.process_vision_message(&resource) {
+                    match self.process_vision_message(&resource) {
                         Ok(ai_results) => {
                             for (content_type, content) in ai_results {
                                 let content_len = content.len();
@@ -236,6 +233,41 @@ impl Processor {
         }
 
         Ok(())
+    }
+
+    pub fn process_vision_message(
+        &self,
+        composite_resource: &CompositeResource,
+    ) -> BackendResult<Vec<(ResourceTextContentType, Vec<String>)>> {
+        let image = std::fs::read(&composite_resource.resource.resource_path)
+            .map_err(|e| BackendError::GenericError(format!("failed to read image: {}", e)))?;
+        let output = self
+            .vision
+            .describe_image(image)
+            .map_err(|e| BackendError::GenericError(format!("failed to describe image: {}", e)))?;
+
+        let tags: Vec<String> = output
+            .tags_result
+            .values
+            .iter()
+            .map(|tag| tag.name.clone())
+            .collect();
+        let captions: Vec<String> = output
+            .dense_captions_result
+            .values
+            .iter()
+            .map(|caption| caption.text.clone())
+            .collect();
+
+        let mut result = Vec::new();
+        if !tags.is_empty() {
+            result.push((ResourceTextContentType::ImageTags, tags));
+        }
+        if !captions.is_empty() {
+            result.push((ResourceTextContentType::ImageCaptions, captions));
+        }
+
+        Ok(result)
     }
 }
 

@@ -1,12 +1,10 @@
 use crate::{
-    backend::{
-        message::{CreateSpaceEntryInput, SpaceMessage, TunnelOneshot},
-        worker::{send_worker_response, Worker},
-    },
+    api::message::{CreateSpaceEntryInput, SpaceMessage, TunnelOneshot},
     store::{
         db::Database,
         models::{current_time, random_uuid, Space, SpaceEntry, SpaceEntryExtended},
     },
+    worker::worker::{send_worker_response, Worker},
     BackendResult,
 };
 

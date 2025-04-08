@@ -1,5 +1,5 @@
 use crate::{
-    llm::{client::client::Model, models::Message},
+    ai::llm::{client::client::Model, models::Message},
     store::models::*,
     BackendResult,
 };

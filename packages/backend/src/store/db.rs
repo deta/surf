@@ -1,13 +1,10 @@
 use crate::{BackendError, BackendResult};
 
 use rusqlite::Connection;
-use rust_embed::RustEmbed;
 
-#[derive(RustEmbed)]
-#[folder = "migrations/"]
-struct Migrations;
+use super::migrations::migrate;
 
-fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
+pub fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
     let journal_mode: String = conn
         .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))
         .map_err(BackendError::DatabaseError)?;
@@ -17,22 +14,6 @@ fn enable_wal_mode(conn: &rusqlite::Connection) -> BackendResult<()> {
         ));
     }
     Ok(())
-}
-
-fn execute_ignoring_duplicate_column<T, E>(f: impl FnOnce() -> Result<T, E>) -> Result<Option<T>, E>
-where
-    E: std::fmt::Display,
-{
-    match f() {
-        Ok(t) => Ok(Some(t)),
-        Err(e) => {
-            if e.to_string().contains("duplicate column name") {
-                Ok(None)
-            } else {
-                Err(e)
-            }
-        }
-    }
 }
 
 pub struct Database {
@@ -53,25 +34,8 @@ impl Database {
         enable_wal_mode(&read_only_conn)?;
 
         if run_migrations {
-            let init_schema = Migrations::get("init.sql")
-                .ok_or(BackendError::GenericError("init.sql not found".into()))?;
-            let init_schema = std::str::from_utf8(init_schema.data.as_ref())
-                .map_err(|e| BackendError::GenericError(e.to_string()))?;
-            let migrations_schema = Migrations::get("migrations.sql")
-                .map(|f| std::str::from_utf8(f.data.as_ref()).map(|s| s.to_owned()))
-                .transpose()
-                .map_err(|e| BackendError::GenericError(e.to_string()))?;
-
-            let tx = conn.transaction()?;
-
-            // TODO: have proper migration schema
-            // sqlite doesn't support IF NOT EXISTS on columns, so we need to ignore the error
-            execute_ignoring_duplicate_column(|| tx.execute_batch(init_schema))?;
-            if let Some(schema) = migrations_schema {
-                execute_ignoring_duplicate_column(|| tx.execute_batch(&schema))?;
-            }
-
-            tx.commit()?;
+            let backup_db_path = format!("{}.backup", db_path);
+            migrate(&mut conn, &backup_db_path)?
         }
         // TODO: do we need this?
         rusqlite::vtab::array::load_module(&conn)?;

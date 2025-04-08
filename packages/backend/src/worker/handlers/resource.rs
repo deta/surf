@@ -3,10 +3,7 @@ use std::collections::HashSet;
 use tracing::{debug, instrument};
 
 use crate::{
-    backend::{
-        message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
-        worker::{send_worker_response, Worker},
-    },
+    api::message::{ProcessorMessage, ResourceMessage, ResourceTagMessage, TunnelOneshot},
     store::{
         db::Database,
         models::{
@@ -17,6 +14,7 @@ use crate::{
             SearchResultSimple,
         },
     },
+    worker::worker::{send_worker_response, Worker},
     BackendError, BackendResult,
 };
 use std::{path::Path, str::FromStr};

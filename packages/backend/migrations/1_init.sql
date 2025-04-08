@@ -141,6 +141,11 @@ CREATE TABLE IF NOT EXISTS apps (
     UNIQUE(name, app_type)
 );
 
+DROP TABLE IF EXISTS horizons;
+DROP TABLE IF EXISTS cards;
+DROP INDEX IF EXISTS cards_resource_id_index;
+DROP TABLE IF EXISTS card_positions;
+
 ALTER TABLE ai_sessions ADD COLUMN title TEXT NOT NULL DEFAULT '';
 ALTER TABLE ai_sessions ADD COLUMN created_at TEXT DEFAULT NULL;
 ALTER TABLE ai_sessions ADD COLUMN updated_at TEXT DEFAULT NULL;
@@ -149,7 +154,4 @@ ALTER TABLE ai_session_messages ADD COLUMN msg_type TEXT NOT NULL DEFAULT 'text'
 ALTER TABLE ai_session_messages ADD COLUMN truncatable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE ai_session_messages ADD COLUMN is_context INTEGER NOT NULL DEFAULT 0;
 
-DROP TABLE IF EXISTS horizons;
-DROP TABLE IF EXISTS cards;
-DROP INDEX IF EXISTS cards_resource_id_index;
-DROP TABLE IF EXISTS card_positions; 
+ 
