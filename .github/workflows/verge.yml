@@ -6,6 +6,12 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      product_name:
+        type: string
+        description: 'App Name'
+        required: true
+        default: 'Surf'
 
 jobs:
   latest-pro-max-version:
@@ -142,9 +148,9 @@ jobs:
           SHOULD_NOTARIZE: 'true'
           DISABLE_ALL_OBFUSCATION: 'false'
 
-          PRODUCT_NAME: 'Surf'
+          PRODUCT_NAME: ${{ inputs.product_name }}
           M_VITE_PRODUCT_NAME: 'Surf'
-          BUILD_RESOURCES_DIR: build/resources/prod
+          BUILD_RESOURCES_DIR: build/resources/nightly
 
           APPLE_ID: ${{ secrets.APPLE_ID_NEW }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID_NEW }}
