@@ -3541,10 +3541,20 @@
       const tags = [ResourceTag.screenshot()]
       const type = 'image/png'
 
-      await resourceManager.createResource(type, blob, metadata, tags)
-      // update
+      const resource = await resourceManager.createResource(type, blob, metadata, tags)
+
+      const currentSpaceId = tabsManager.activeScopeIdValue
+      if (currentSpaceId) {
+        await oasis.addResourcesToSpace(
+          currentSpaceId,
+          [resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+      }
+
+      // Update telemetry
       telemetry.trackSaveToOasis(type, SaveToOasisEventTrigger.Click, false, EventContext.Inline)
-      toasts.success('Screenshot saved!')
+      toasts.success('Screenshot saved to context!')
     } catch (error) {
       toasts.error('Failed to save screenshot')
     } finally {
