@@ -2,9 +2,8 @@ import { get, writable, type Writable } from 'svelte/store'
 import EventEmitter from 'events'
 import type TypedEmitter from 'typed-emitter'
 
-import { conditionalArrayItem, generateID, useLogScope } from '@horizon/utils'
+import { generateID, useLogScope } from '@horizon/utils'
 
-import type { TabPage } from '../types'
 import { ResourceJSON, ResourceManager, type Resource } from './resources'
 import { getResourcePreview } from '../utils/resourcePreview'
 import type { OasisService } from './oasis'
@@ -142,11 +141,17 @@ export class SavingItem {
   }
 
   async persistChanges() {
-    this.log.debug('Persisting changes')
-    if (!this.resourceValue) return
+    this.log.debug('Persisting changes', {
+      userContext: this.userContextValue,
+      title: this.titleValue
+    })
+    if (!this.resourceValue) {
+      this.log.debug('No resource to persist')
+      return
+    }
 
     await this.resourceManager.updateResourceMetadata(this.resourceValue.id, {
-      ...conditionalArrayItem(!!this.titleValue, { title: this.titleValue }),
+      ...(this.titleValue ? { name: this.titleValue } : {}),
       userContext: this.userContextValue
     })
   }
