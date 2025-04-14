@@ -21,7 +21,7 @@ strum = { version = "0.25.0", features = ["derive"] }
 rand = "0.8.5"
 text-splitter = { version = "0.6.3" }
 url = "2.5.0"
-crossbeam-channel = "0.5.12"
+crossbeam-channel = "0.5.15"
 lopdf = "0.32.0"
 reqwest = { version = "0.11.25", features = ["json", "stream", "blocking"] }
 futures = "0.3.30"
