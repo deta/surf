@@ -212,11 +212,25 @@ const initializeApp = async () => {
       return
     }
 
-    const isActivated = await checkIfAppIsActivated(userConfig.api_key)
-    if (!isActivated) {
-      log.debug('App not activated, prompting user to enter invite token again')
-      createSetupWindow()
-      return
+    try {
+      const isActivated = await checkIfAppIsActivated(userConfig.api_key)
+      if (!isActivated) {
+        log.debug('App not activated, prompting user to enter invite token again')
+        createSetupWindow()
+        return
+      }
+    } catch (error) {
+      log.error('Error checking if app is activated:', error)
+
+      // NOTE: this is a workaround for cases when already activated app users get kicked out randomly
+      // don't force setup window on errors other than 404 from server
+      // let other errors through as `api_key` has already been set
+      // this also means people can put a random api key in the config manually and Surf will start regardless
+      const status = (error as any).status
+      if (status && status === 404) {
+        createSetupWindow()
+        return
+      }
     }
   }
 
