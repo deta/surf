@@ -4,7 +4,7 @@ import { useLogScope } from '@horizon/utils'
 import { blobToSmallImageUrl } from '../../../utils/screenshot'
 import type { ChatPrompt } from '../chat'
 
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemTypes, type ContextItemIcon, ContextItemIconTypes } from './types'
 
 export abstract class ContextItemBase {
@@ -19,11 +19,11 @@ export abstract class ContextItemBase {
   generatingPrompts: Writable<boolean>
   visible: Writable<boolean>
 
-  manager: ContextManager
+  service: ContextService
   log: ReturnType<typeof useLogScope>
 
-  constructor(manager: ContextManager, id: string, fallbackIcon = 'world', icon?: ContextItemIcon) {
-    this.manager = manager
+  constructor(service: ContextService, id: string, fallbackIcon = 'world', icon?: ContextItemIcon) {
+    this.service = service
     this.log = useLogScope(`ContextItem ${id}`)
     this.id = id
     this.fallbackIcon = fallbackIcon
@@ -65,7 +65,7 @@ export abstract class ContextItemBase {
   }
 
   async getResourceBlobData(resourceId: string) {
-    const resource = await this.manager.resourceManager.getResource(resourceId)
+    const resource = await this.service.resourceManager.getResource(resourceId)
     if (!resource) {
       return null
     }

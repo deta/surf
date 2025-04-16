@@ -61,7 +61,7 @@
   }
 
   function getSubtleRotation() {
-    return (Math.random() * 2 - 1) * 3.5
+    return 0
   }
 
   async function resetAnimation() {
@@ -80,10 +80,10 @@
   })
 </script>
 
-<div class="relative w-full" style="height: 54px;" role="none">
+<div class="relative w-full h-fit" role="none">
   <div
-    class="flex items-center -space-x-3 h-full relative"
-    style="width: {$containerWidth}px; height: 64px; min-width: 100%;"
+    class="flex items-center -space-x-3 h-fit relative"
+    style="width: {$containerWidth}px; min-width: 100%;"
   >
     {#each items as item (item.id)}
       {#if item instanceof ContextItemSpace}

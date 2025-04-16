@@ -13,6 +13,7 @@
   export let mentionItems: MentionItem[] = []
   export let autosearch = false
   export let showRewrite = false
+  export let showSimilaritySearch = false
 
   const dispatch = createEventDispatcher<{
     'open-bubble-menu': void
@@ -209,68 +210,72 @@
         </button>
       </div>
 
-      <div class="divider"></div>
+      {#if showRewrite || showSimilaritySearch}
+        <div class="divider"></div>
 
-      <div class="menu-section">
-        {#if showRewrite}
-          <button on:click={handleShowRewrite} id="editor-bubble-rewrite-btn">
-            <Icon name="wand" size="17px" />
-          </button>
-        {/if}
+        <div class="menu-section">
+          {#if showRewrite}
+            <button on:click={handleShowRewrite} id="editor-bubble-rewrite-btn">
+              <Icon name="wand" size="17px" />
+            </button>
+          {/if}
 
-        <button on:click={handleFindSimilar} id="editor-bubble-similarity-btn">
-          <Icon name="file-text-ai" size="17px" />
-        </button>
+          {#if showSimilaritySearch}
+            <button on:click={handleFindSimilar} id="editor-bubble-similarity-btn">
+              <Icon name="file-text-ai" size="17px" />
+            </button>
+          {/if}
 
-        <!-- <button
-              class:active={isActive('heading', { level: 1 })}
-              on:click={() => $editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          >
-              <Icon name="h1" />
-          </button>
+          <!-- <button
+                class:active={isActive('heading', { level: 1 })}
+                on:click={() => $editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            >
+                <Icon name="h1" />
+            </button>
 
-          <button
-              class:active={isActive('heading', { level: 2 })}
-              on:click={() => $editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          >
-              <Icon name="h2" />
-          </button>
+            <button
+                class:active={isActive('heading', { level: 2 })}
+                on:click={() => $editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            >
+                <Icon name="h2" />
+            </button>
 
-          <button
-              
-              on:click={() => $editor.chain().focus().setParagraph().run()}
-          >
-              <Icon name="paragraph" />
-          </button>
+            <button
+                
+                on:click={() => $editor.chain().focus().setParagraph().run()}
+            >
+                <Icon name="paragraph" />
+            </button>
 
-          <button
-              class:active={isActive('bulletList')}
-              on:click={() => $editor.chain().focus().toggleBulletList().run()}
-          >
-              <Icon name="list" />
-          </button>
+            <button
+                class:active={isActive('bulletList')}
+                on:click={() => $editor.chain().focus().toggleBulletList().run()}
+            >
+                <Icon name="list" />
+            </button>
 
-          <button
-              class:active={isActive('orderedList')}
-              on:click={() => $editor.chain().focus().toggleOrderedList().run()}
-          >
-              <Icon name="list-numbered" />
-          </button>
+            <button
+                class:active={isActive('orderedList')}
+                on:click={() => $editor.chain().focus().toggleOrderedList().run()}
+            >
+                <Icon name="list-numbered" />
+            </button>
 
-          <button
-              class:active={isActive('taskList')}
-              on:click={() => $editor.chain().focus().toggleTaskList().run()}
-          >
-              <Icon name="list-check" />
-          </button>
+            <button
+                class:active={isActive('taskList')}
+                on:click={() => $editor.chain().focus().toggleTaskList().run()}
+            >
+                <Icon name="list-check" />
+            </button>
 
-          <button
-              class:active={isActive('blockquote')}
-              on:click={() => $editor.chain().focus().toggleBlockquote().run()}
-          >
-              <Icon name="list-check" />
-          </button> -->
-      </div>
+            <button
+                class:active={isActive('blockquote')}
+                on:click={() => $editor.chain().focus().toggleBlockquote().run()}
+            >
+                <Icon name="list-check" />
+            </button> -->
+        </div>
+      {/if}
     {/if}
   </div>
 </BubbleMenu>

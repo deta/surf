@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_create_chat_completion", js_create_chat_completion)?;
     cx.export_function("js__ai_send_chat_message", js_send_chat_message)?;
+    cx.export_function("js__ai_send_note_message", js_send_note_message)?;
     cx.export_function("js__ai_create_app", js_create_app)?;
     cx.export_function("js__ai_query_sffs_resources", js_query_sffs_resources)?;
     cx.export_function("js__ai_get_chat_data_source", js_get_ai_chat_data_source)?;
@@ -167,6 +168,53 @@ fn js_create_chat_completion(mut cx: FunctionContext) -> JsResult<JsPromise> {
             model: opts.model,
             custom_key: opts.custom_key,
             response_format: opts.response_format,
+        }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    fn default_limit() -> i32 {
+        20
+    }
+    #[derive(Serialize, Deserialize, Debug)]
+    struct NoteMessageOptions {
+        pub query: String,
+        pub note_resource_id: String,
+        pub model: Model,
+        pub custom_key: Option<String>,
+        pub resource_ids: Option<Vec<String>>,
+        pub inline_images: Option<Vec<String>>,
+        #[serde(default = "default_limit")]
+        pub limit: i32,
+        #[serde(default)]
+        pub general: bool,
+    }
+
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let callback = cx.argument::<JsFunction>(2)?.root(&mut cx);
+    let mut opts: NoteMessageOptions = match serde_json::from_str(&json_opt) {
+        Ok(opts) => opts,
+        Err(err) => return cx.throw_error(format!("failed to parse options: {err}")),
+    };
+    opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::NoteQuery {
+            callback,
+            query: opts.query,
+            note_resource_id: opts.note_resource_id,
+            model: opts.model,
+            custom_key: opts.custom_key,
+            resource_ids: opts.resource_ids,
+            inline_images: opts.inline_images,
+            number_documents: opts.limit,
+            general: opts.general,
         }),
         deferred,
     );

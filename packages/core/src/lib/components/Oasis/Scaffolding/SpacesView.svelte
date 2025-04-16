@@ -34,7 +34,7 @@
   import type { Readable } from 'svelte/store'
   import { useTelemetry } from '../../../service/telemetry'
   import { ChangeContextEventTrigger, OpenSpaceEventTrigger } from '@horizon/types'
-  import type { ResourceManager } from '../../../service/resources'
+  import { notesSpace, type ResourceManager } from '../../../service/resources'
   import { RefreshSpaceEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import BuiltInSpace from '../BuiltInSpace.svelte'
@@ -125,6 +125,11 @@
       id: 'inbox',
       name: generalContext.label,
       icon: generalContext.icon
+    },
+    {
+      id: 'notes',
+      name: notesSpace.name.folderName,
+      icon: 'docs'
     }
   ] as { id: string; name: string; icon: Icons }[]
 

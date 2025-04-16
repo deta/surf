@@ -26,7 +26,7 @@
     : `--height-override: ${$containerHeight}; --bg-url: url('${dotNoiseLightGrey}');`}
   role="none"
 >
-  <div class="bottom" style="gap: 0.25em;">
+  <div class="bottom" style="gap: 0.5em;">
     <RecentsStack
       wasMouseInside={wasMouseInsideStack}
       on:open
@@ -38,6 +38,7 @@
       on:Drop
     />
     <slot name="tools" />
+    <slot name="right" />
   </div>
 </div>
 

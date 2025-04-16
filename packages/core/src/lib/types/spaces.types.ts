@@ -33,6 +33,7 @@ export interface SpaceData {
   pinned?: boolean
   viewType?: ContextViewType
   viewDensity?: ContextViewDensity
+  selectedNoteResource?: string
 }
 
 export interface SpaceSource {

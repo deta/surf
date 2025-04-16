@@ -44,7 +44,8 @@ export enum ResourceTagsBuiltInKeys {
   CREATED_FOR_CHAT = 'createdForChat', // resource was created for a chat
   CONTENT_HASH = 'contentHash', // hash of the content of the resource
   PREVIEW_IMAGE_RESOURCE = 'previewImageResource', // resource id of the custom preview image set by the user
-  USER_VIEW_PREFS = 'userViewPreferences'
+  USER_VIEW_PREFS = 'userViewPreferences',
+  LINKED_CHAT = 'linkedChat' // resource is linked to a chat
 }
 
 export interface ResourceTagsBuiltIn {
@@ -55,6 +56,7 @@ export interface ResourceTagsBuiltIn {
     | 'paste'
     | 'import'
     | 'generated'
+    | 'chat'
   [ResourceTagsBuiltInKeys.TYPE]: string
   [ResourceTagsBuiltInKeys.DELETED]: boolean
   [ResourceTagsBuiltInKeys.HOSTNAME]: string

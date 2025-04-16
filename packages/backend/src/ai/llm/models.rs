@@ -134,6 +134,16 @@ impl Message {
             is_context: true,
         }
     }
+
+    pub fn new_note(content: &str) -> Message {
+        let content_str = format!("working user document:\n{}", content);
+        Message {
+            role: MessageRole::User,
+            content: vec![MessageContent::new_text(content_str)],
+            truncatable: false,
+            is_context: false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

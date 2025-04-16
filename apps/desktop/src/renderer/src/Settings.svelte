@@ -45,6 +45,7 @@
   let userConfig: UserConfig | undefined = undefined
   let userConfigSettings: UserSettings | undefined = undefined
   let currentExtensionsValue: boolean = false
+  let currentNotesSidebarValue: boolean = false
   let checkInterval: NodeJS.Timeout
   let showLicenses = false
   let showMiscInfo = false
@@ -121,6 +122,9 @@
       // @ts-ignore
       // TODO: do we have a better way to restart the app while we wait for everything to finish?
       setTimeout(() => window.api.restartApp(), 2000)
+    } else if (currentNotesSidebarValue !== userConfigSettings.experimental_notes_chat_sidebar) {
+      currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
+      setTimeout(() => window.api.restartApp(), 800)
     }
   }
 
@@ -236,6 +240,7 @@
     console.log('loaded user config', userConfig)
     userConfigSettings = userConfig.settings
     currentExtensionsValue = userConfigSettings.extensions
+    currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
     console.log('loaded settings', userConfigSettings)

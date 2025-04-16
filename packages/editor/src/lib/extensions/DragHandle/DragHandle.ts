@@ -40,12 +40,12 @@ function nodeDOMAtCoords(coords: { x: number; y: number }) {
             'pre',
             'blockquote',
             'h1, h2, h3',
+            'resource',
             '[data-type=callout]',
             '[data-type=horizontalRule]',
             '.tableWrapper',
             '.node-subdocument',
-            '.node-equationBlock',
-            'img'
+            '.node-equationBlock'
           ].join(', ')
         )
     )

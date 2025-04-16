@@ -2,7 +2,13 @@
 
 <script lang="ts">
   import type { Readable } from 'svelte/store'
-  import { createEventDispatcher, onMount, SvelteComponent, type ComponentType } from 'svelte'
+  import {
+    createEventDispatcher,
+    onMount,
+    onDestroy,
+    SvelteComponent,
+    type ComponentType
+  } from 'svelte'
 
   import { createEditor, Editor, EditorContent, FloatingMenu } from 'svelte-tiptap'
   import {
@@ -14,7 +20,7 @@
     type Range
   } from '@tiptap/core'
   import Placeholder from '@tiptap/extension-placeholder'
-  import { conditionalArrayItem } from '@horizon/utils'
+  import { conditionalArrayItem, useAnimationFrameThrottle } from '@horizon/utils'
 
   import { createEditorExtensions, getEditorContentText, type ExtensionOptions } from '../editor'
   import type { EditorAutocompleteEvent, MentionItem, MentionItemType } from '../types'
@@ -35,6 +41,7 @@
   export let parseHashtags: boolean = false
   export let submitOnEnter: boolean = false
   export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
+  export let surfletComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let tabsManager: any | undefined = undefined
   export let autocomplete: boolean = false
   export let floatingMenu: boolean = false
@@ -51,9 +58,22 @@
   export let showDragHandle: boolean = false
   export let showSlashMenu: boolean = false
   export let slashItemsFetcher: SlashItemsFetcher | undefined = undefined
+  export let enableCaretIndicator: boolean = false
+  export let onCaretPositionUpdate: ((position: any) => void) | undefined = undefined
+  export let showSimilaritySearch: boolean = false
 
   let editor: Readable<Editor>
   let editorWidth: number = 350
+  let resizeObserver: ResizeObserver | null = null
+  let editorElement: HTMLElement
+
+  // Create a throttled version of the caret position update function
+  // This will ensure we don't update too frequently during resize events
+  const throttledUpdateCaretPosition = useAnimationFrameThrottle(() => {
+    if ($editor && $editor.storage && $editor.storage.caretIndicator) {
+      updateCaretPosition()
+    }
+  }, 100) // Add a 100ms backup timeout for cases where RAF might be delayed
 
   const dispatch = createEventDispatcher<{
     update: string
@@ -66,10 +86,44 @@
     'mention-insert': MentionItem
     'button-click': string
     'slash-command': SlashCommandPayload
+    'caret-position-update': any
   }>()
 
   export const getEditor = () => {
     return $editor
+  }
+
+  // Manually trigger a caret position update (useful for resize events)
+  export const updateCaretPosition = () => {
+    if (!$editor || !enableCaretIndicator) return
+
+    try {
+      // Check if the caretIndicator extension exists and is initialized
+      if ($editor.storage.caretIndicator) {
+        const extension = $editor.storage.caretIndicator
+
+        // Check if getCaretPosition method is available
+        if (typeof extension.getCaretPosition === 'function') {
+          const position = extension.getCaretPosition()
+
+          if (position) {
+            // Create a new position object to ensure reactivity
+            const newPosition = { ...position }
+
+            // Only update if storage is initialized
+            if (extension.storage) {
+              extension.storage.caretPosition = newPosition
+            }
+
+            // Emit event and call handler
+            $editor.emit('caretPositionUpdate', newPosition)
+            handleCaretPositionUpdate(newPosition)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating caret position:', error)
+    }
   }
 
   export const focus = () => {
@@ -168,15 +222,6 @@
           const text = generateText(json, extensions)
           return { text, mentions }
         }
-
-        const textUntilPos = editor.view.state.doc.textBetween(0, to)
-        if (textUntilPos) {
-          return {
-            text: textUntilPos
-          }
-        }
-
-        return { text: editor.getText() }
       } else {
         const node = editor.view.state.doc.cut(from, to)
         const mentions = getMentions(node)
@@ -188,7 +233,9 @@
     }
 
     const data = getText()
-    dispatch('autocomplete', { query: data.text, mentions: data.mentions })
+    if (data) {
+      dispatch('autocomplete', { query: data.text, mentions: data.mentions })
+    }
   }
 
   const onSubmit = () => {
@@ -274,6 +321,16 @@
     dispatch('citation-click', e.detail)
   }
 
+  const handleCaretPositionUpdate = (position: any) => {
+    // Forward the position to any listeners via the provided callback
+    if (onCaretPositionUpdate) {
+      onCaretPositionUpdate(position)
+    }
+
+    // Dispatch the event for any components listening directly
+    dispatch('caret-position-update', position)
+  }
+
   const baseExtensions = createEditorExtensions({
     placeholder,
     parseMentions,
@@ -290,7 +347,10 @@
     onSlashCommand: handleSlashCommand,
     slashItems: slashItemsFetcher,
     citationComponent: citationComponent,
-    citationClick: handleCitationClick
+    citationClick: handleCitationClick,
+    enableCaretIndicator: enableCaretIndicator,
+    onCaretPositionUpdate: handleCaretPositionUpdate,
+    surfletComponent: surfletComponent
   })
 
   const KeyboardHandler = Extension.create({
@@ -332,6 +392,26 @@
                 triggerAutocomplete()
 
                 return false
+              },
+
+              'Meta-Enter': () => {
+                if (!autocomplete) {
+                  return false
+                }
+
+                triggerAutocomplete()
+
+                return true
+              },
+
+              'Ctrl-Enter': () => {
+                if (!autocomplete) {
+                  return false
+                }
+
+                triggerAutocomplete()
+
+                return true
               }
             }
           : {}),
@@ -355,14 +435,47 @@
   const extensions = [...baseExtensions, extendKeyboardHandler]
 
   onMount(() => {
+    // Set up resize observer to update caret position when editor resizes
+    if (enableCaretIndicator) {
+      resizeObserver = new ResizeObserver(() => {
+        // Use the throttled update function to limit the frequency of updates
+        throttledUpdateCaretPosition()
+      })
+    }
+
     editor = createEditor({
       extensions: extensions,
       content: content,
       editable: !readOnly,
       autofocus: !autofocus || readOnly ? false : 'end',
+      onSelectionUpdate: ({ editor }) => {
+        if (enableCaretIndicator && editor.storage.caretIndicator) {
+          const extension = editor.storage.caretIndicator
+          if (extension.caretPosition) {
+            handleCaretPositionUpdate(extension.caretPosition)
+          }
+        }
+      },
       editorProps: {
         handleDOMEvents: {
           drop: (view, e) => {
+            // Check if image drop from webpage
+            const htmlContent = e.dataTransfer.getData('text/html')
+            if (htmlContent.includes('<img ')) {
+              // HACK: To make the raw datatransfer object accessible inside the
+              // TextResource.svelte Dragcula handler. There is an issue with dragcula not
+              // bootstrapping this with the correct dt object so its always empty
+              // Also the webviews do some funky stuff
+              // FIX: @maxu
+              // @ts-ignore bro I literally check if it exists, chill!
+              if (window.Dragcula && window.Dragcula.activeDrag) {
+                // @ts-ignore bro I literally check if it exists, chill!
+                window.Dragcula.activeDrag.dataTransfer = e.dataTransfer
+              }
+              e.preventDefault()
+              return false
+            }
+
             // if a tab is being dropped we need to prevent the default behavior so TipTap does not handle it
             const tabId = e.dataTransfer?.getData(DragTypeNames.SURF_TAB_ID)
             if (tabId) {
@@ -407,6 +520,21 @@
       // place the cursor at the end of the content without effecting page focus
       focusEnd()
     }
+
+    // Set up resize observer after editor is initialized
+    if (resizeObserver && editorElement) {
+      resizeObserver.observe(editorElement)
+      if (editorElement.parentElement) {
+        resizeObserver.observe(editorElement.parentElement)
+      }
+    }
+  })
+
+  onDestroy(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect()
+      resizeObserver = null
+    }
   })
 </script>
 
@@ -425,6 +553,7 @@
       loading={bubbleMenuLoading}
       autosearch={autoSimilaritySearch}
       showRewrite={enableRewrite}
+      {showSimilaritySearch}
       on:rewrite
       on:similarity-search
       on:close-bubble-menu
@@ -436,6 +565,7 @@
     class="editor-wrapper select-text prose prose-lg prose-neutral dark:prose-invert prose-inline-code:bg-sky-200/80 prose-ul:list-disc prose-ol:list-decimal"
     class:cursor-text={!readOnly}
     bind:clientWidth={editorWidth}
+    bind:this={editorElement}
   >
     {#if floatingMenu && $editor}
       <FloatingMenu
@@ -447,6 +577,8 @@
       </FloatingMenu>
     {/if}
     <EditorContent editor={$editor} />
+
+    <slot name="caret-popover"></slot>
   </div>
 </div>
 
@@ -456,9 +588,37 @@
     overflow-y: auto;
     overscroll-behavior: auto;
 
+    :global(.dark) & {
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: #1e1e24;
+        border-radius: 50%;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #4a4a57;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb:hover {
+        background: #65657a;
+      }
+    }
+
     :global(#stuff-stack) &,
     :global(#tty-default) & {
       overflow-y: hidden;
+    }
+
+    :global(.prosemirror-dropcursor-block),
+    :global(.prosemirror-dropcursor-inline) {
+      --thiccness: 2px;
+
+      position: relative;
+      border-radius: 2rem;
     }
   }
 

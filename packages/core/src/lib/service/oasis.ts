@@ -32,7 +32,7 @@ import {
   type SpaceEntrySearchOptions,
   type TabPage
 } from '../types'
-import { ResourceManager, type Resource } from './resources'
+import { ResourceManager, ResourceNote, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
@@ -43,6 +43,7 @@ import type { SpaceBasicData } from './ipc/events'
 import { createContextService, type ContextService } from './contexts'
 import { addSelectionById } from '../components/Oasis/utils/select'
 import { SavingItem, type SaveItemMetadata } from './saving'
+import type { SmartNoteManager } from './ai/note'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -270,6 +271,7 @@ export class OasisService {
   private eventEmitter: TypedEmitter<OasisEvents>
   tabsManager!: TabsManager
   resourceManager: ResourceManager
+  smartNotes: SmartNoteManager
   config: ConfigService
   contextService: ContextService
   telemetry: Telemetry
@@ -277,10 +279,15 @@ export class OasisService {
 
   static self: OasisService
 
-  constructor(resourceManager: ResourceManager, config: ConfigService) {
+  constructor(
+    resourceManager: ResourceManager,
+    config: ConfigService,
+    smartNotes: SmartNoteManager
+  ) {
     this.log = useLogScope('OasisService')
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
+    this.smartNotes = smartNotes
     this.config = config
     this.contextService = createContextService(this)
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
@@ -328,6 +335,12 @@ export class OasisService {
 
   private createSpaceObject(space: Space) {
     return new OasisSpace(space, this)
+  }
+
+  getActiveSpace() {
+    return (
+      get(this.spaces).find((space) => space.id === this.tabsManager.activeScopeIdValue) ?? null
+    )
   }
 
   createFakeSpace(data: Partial<SpaceData>, id?: string, skipUpdate = false) {
@@ -588,6 +601,42 @@ export class OasisService {
     return space.fetchContents(opts)
   }
 
+  /**
+   * Fetches note resources from a specific space
+   * @param spaceId - ID of the space to fetch notes from
+   * @returns Array of ResourceNote objects from the space
+   */
+  async fetchNoteResourcesFromSpace(spaceId: string) {
+    this.log.debug('Fetching note resources for space:', spaceId)
+
+    // Get the space
+    const space = await this.getSpace(spaceId)
+    if (!space) {
+      this.log.error('Space not found:', spaceId)
+      return []
+    }
+
+    // Get space contents
+    const spaceContents = (await space.fetchContents()) ?? []
+
+    // Extract IDs of note resources
+    const noteIds = spaceContents
+      .filter(
+        (entry) =>
+          entry.manually_added !== SpaceEntryOrigin.Blacklisted &&
+          entry.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE
+      )
+      .map((entry) => entry.resource_id)
+
+    // Load all note resources in parallel
+    const resources = await Promise.all(noteIds.map((id) => this.resourceManager.getResource(id)))
+
+    // Filter valid resources
+    const filteredResources = resources.filter(Boolean) as ResourceNote[]
+
+    return filteredResources
+  }
+
   /** Deletes the provided resources from Oasis and gets rid of all references in any space */
   async deleteResourcesFromOasis(resourceIds: string | string[], confirmAction = true) {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
@@ -669,6 +718,9 @@ export class OasisService {
 
     this.log.debug('removing resource bookmarks from tabs', validResourceIDs)
     await Promise.all(validResourceIDs.map((id) => this.tabsManager.removeResourceBookmarks(id)))
+
+    this.log.debug('removing deleted smart notes', validResourceIDs)
+    this.smartNotes.handleDeletedResources(validResourceIDs)
 
     if (
       this.pendingSaveValue?.resourceValue?.id &&
@@ -801,19 +853,31 @@ export class OasisService {
       const selectedFilterType = get(this.selectedFilterType)
 
       this.log.debug('loading everything', selectedFilterType, { excludeAnnotations })
-      const resources = await this.resourceManager.listResourcesByTags(
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
-          ...conditionalArrayItem(
-            excludeAnnotations,
-            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+      const resources = (
+        await this.resourceManager.listResourcesByTags(
+          [
+            ResourceManager.SearchTagDeleted(false),
+            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+            ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
+            ...conditionalArrayItem(
+              excludeAnnotations,
+              ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+            ),
+            ...conditionalArrayItem(
+              get(this.selectedSpace) === 'notes',
+              ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+            )
+          ],
+          { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }
+        )
+      ).filter(
+        (resource) =>
+          !(
+            resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE &&
+            !resource.metadata?.name
           )
-        ],
-        { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }
       )
 
       this.log.debug('Loaded everything:', resources)
@@ -989,8 +1053,12 @@ export class OasisService {
     this.pendingSave.set(null)
   }
 
-  static provide(resourceManager: ResourceManager, config: ConfigService) {
-    const service = new OasisService(resourceManager, config)
+  static provide(
+    resourceManager: ResourceManager,
+    config: ConfigService,
+    smartNotes: SmartNoteManager
+  ) {
+    const service = new OasisService(resourceManager, config, smartNotes)
 
     setContext('oasis', service)
 

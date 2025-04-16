@@ -28,8 +28,44 @@
   let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let selectedPersonas: string[] = []
 
+  /**
+   * Check if the experimental notes chat sidebar feature is enabled
+   * @returns {Promise<boolean>} True if the feature is enabled, false otherwise
+   */
+  const isNotesChatSidebarEnabled = async (): Promise<boolean> => {
+    try {
+      //@ts-ignore
+      const userConfig = await window.api.getUserConfig()
+      console.log(
+        'User config notes sidebar setting:',
+        userConfig?.settings?.experimental_notes_chat_sidebar
+      )
+      return userConfig?.settings?.experimental_notes_chat_sidebar === true
+    } catch (error) {
+      console.error('Error checking experimental_notes_chat_sidebar setting:', error)
+      return false
+    }
+  }
+
+  /**
+   * Handle view changes in the setup flow
+   */
   const handleViewChange = async (event: CustomEvent<ViewType>) => {
-    view = event.detail
+    // Get the target view from the event
+    let targetView = event.detail
+
+    // Skip the chat explainer if we're going to explainer.chat and the feature is enabled
+    if (targetView === 'explainer.chat') {
+      const isNotesSidebarEnabled = await isNotesChatSidebarEnabled()
+
+      if (isNotesSidebarEnabled) {
+        console.log('Skipping chat explainer due to notes chat sidebar feature being enabled')
+        targetView = 'language' // Skip directly to the language view
+      }
+    }
+
+    // Set the view and update history
+    view = targetView
     viewHistory.push(view)
   }
 

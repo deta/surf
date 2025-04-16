@@ -5,6 +5,10 @@ import { type UserSettings } from '@horizon/types'
 import { IPC_EVENTS_RENDERER } from '@horizon/core/src/lib/service/ipc/events'
 
 const api = {
+  getUserConfig: async () => {
+    return IPC_EVENTS_RENDERER.getUserConfig.invoke()
+  },
+
   updateUserConfigSettings: async (settings: Partial<UserSettings>) => {
     IPC_EVENTS_RENDERER.updateUserConfigSettings.send(settings)
   },

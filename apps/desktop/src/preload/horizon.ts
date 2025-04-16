@@ -573,6 +573,18 @@ const api = {
     }
   },
 
+  fetchRemoteBlob: (url: string) => {
+    return fetch(url)
+      .then(async (res) => {
+        return [res.headers.get('Content-Type'), await res.arrayBuffer()]
+      })
+      .then(([type, buffer]) => {
+        return new Blob([buffer], {
+          type
+        })
+      })
+  },
+
   openResourceLocally: (resource: SFFSResource) => {
     IPC_EVENTS_RENDERER.openResourceLocally.send(resource)
   },

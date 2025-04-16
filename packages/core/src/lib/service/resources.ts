@@ -106,6 +106,25 @@ export const inboxSpace = {
   type: 'space'
 } as Space
 
+export const notesSpace = {
+  id: 'notes',
+  name: {
+    folderName: 'Notes',
+    colors: ['#76E0FF', '#4EC9FB'],
+    showInSidebar: false,
+    liveModeEnabled: false,
+    hideViewed: false,
+    smartFilterQuery: null,
+    sql_query: null,
+    embedding_query: null,
+    sortBy: 'created_at'
+  },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  deleted: 0,
+  type: 'space'
+} as Space
+
 export class ResourceTag {
   static download() {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'download' }
@@ -133,6 +152,10 @@ export class ResourceTag {
 
   static generated() {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'generated' }
+  }
+
+  static chat() {
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'chat' }
   }
 
   static rightClickSave() {
@@ -181,6 +204,10 @@ export class ResourceTag {
 
   static previewImageResource(previewId: string) {
     return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: previewId }
+  }
+
+  static linkedChat(value: string) {
+    return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: value }
   }
 }
 
@@ -493,6 +520,10 @@ export class ResourceNote extends Resource {
   // data: Writable<SFFSResourceDataNote | null>
 
   parsedData: Writable<string | null>
+
+  get contentValue() {
+    return get(this.parsedData)
+  }
 
   constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
     super(sffs, resourceManager, data)
@@ -1487,6 +1518,10 @@ export class ResourceManager {
     return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag, op: 'eq' }
   }
 
+  static SearchTagLinkedChat(chatId: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: chatId, op: 'eq' }
+  }
+
   async createSpace(name: SpaceData) {
     return await this.sffs.createSpace(name)
   }
@@ -1494,10 +1529,10 @@ export class ResourceManager {
   async getSpace(id: string) {
     if (id === 'all') {
       return everythingSpace
-    }
-
-    if (id === 'inbox') {
+    } else if (id === 'inbox') {
       return inboxSpace
+    } else if (id === 'notes') {
+      return notesSpace
     }
 
     return await this.sffs.getSpace(id)

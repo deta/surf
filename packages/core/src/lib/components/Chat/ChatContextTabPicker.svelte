@@ -47,6 +47,7 @@
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager
+  export let excludeActiveTab: boolean = false
 
   const log = useLogScope('ChatContextTabPicker')
   const oasis = useOasis()
@@ -147,7 +148,7 @@
 
   const builtInItems = derived(userConfigSettings, (userConfigSettings) => {
     return [
-      activeTabItem,
+      ...conditionalArrayItem(!excludeActiveTab, activeTabItem),
       activeContextItem,
       homeContextItem,
       everythingContextItem,
@@ -374,7 +375,7 @@
 
   onMount(() => {
     // wtf are we doing at this point.. svelte component libaries which dont fucking expose their stuf.f.. aaa
-    ref = document.querySelector('.chat [data-cmdk-root]') as HTMLDivElement
+    ref = document.querySelector('.context-controls [data-cmdk-root]') as HTMLDivElement
   })
 </script>
 
@@ -480,7 +481,7 @@
 
 <style lang="scss">
   /* NOTE: WHyyyy only tailwind? cant select anything by a meaningful name any more :') */
-  :global(.chat-wrapper [data-cmdk-root]) {
+  :global(.context-controls [data-cmdk-root]) {
     position: absolute;
     /* we should just use isolation: isolate for contained things like the sidebar insted of these zindices */
     z-index: 99999999;

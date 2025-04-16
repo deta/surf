@@ -3,10 +3,46 @@
   import SettingsOption from './SettingsOption.svelte'
   import type { UserSettings } from '@horizon/types'
   import Exandable from './Exandable.svelte'
+  import { Icon } from '@horizon/icons'
+  import { createEventDispatcher } from 'svelte'
+  import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
 
   export let userConfigSettings: UserSettings
 
+  const dispatch = createEventDispatcher<{ update: boolean }>()
+
   let expanded = false
+  let localUseSidebar = userConfigSettings.experimental_notes_chat_sidebar
+
+  const handleToggleNotesSidebar = async (e: CustomEvent<boolean>) => {
+    const value = e.detail
+
+    const { closeType: confirmed } = await openDialog({
+      icon: 'sidebar.right',
+      title: value ? 'Enable Notes Sidebar' : 'Disable Notes Sidebar',
+      message: value
+        ? 'To use the experimental notes sidebar Surf needs to restart.'
+        : 'To use the chat sidebar again Surf needs to restart.',
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        {
+          title: value ? 'Enable and Restart' : 'Disable and Restart',
+          type: 'submit',
+          kind: value ? 'submit' : 'danger'
+        }
+      ]
+    })
+
+    if (confirmed) {
+      localUseSidebar = value
+      userConfigSettings.experimental_notes_chat_sidebar = value
+      dispatch('update', value)
+    } else {
+      localUseSidebar = userConfigSettings.experimental_notes_chat_sidebar
+    }
+  }
+
+  $: localUseSidebar = userConfigSettings.experimental_notes_chat_sidebar
 </script>
 
 <SettingsOption icon="file-text-ai" title="Surf Notes" on:update>
@@ -17,6 +53,18 @@
       target="_blank">More information</a
     >
   </p>
+
+  <section class="section big-section">
+    <div class="info">
+      <div class="title">
+        <Icon name="sidebar.right" size="20px" stroke-width="2" />
+        <h3>Notes Sidebar</h3>
+      </div>
+      <p>Create and view Surf notes in the sidebar replacing the old chat interface.</p>
+    </div>
+
+    <Switch color="#ff4eed" bind:checked={localUseSidebar} on:update={handleToggleNotesSidebar} />
+  </section>
 
   <Exandable title="Advanced (more unstable)" {expanded}>
     <section class="section">
@@ -64,6 +112,22 @@
 </SettingsOption>
 
 <style lang="scss">
+  .big-section {
+    margin-top: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
   h4 {
     font-size: 1.1rem;
     color: var(--color-text);

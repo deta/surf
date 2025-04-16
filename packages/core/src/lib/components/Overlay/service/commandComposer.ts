@@ -146,6 +146,8 @@ export class CommandComposer {
         ...searchEngineSuggestionResults.map((suggestion) =>
           searchEngineSuggestionToTeletypeItem(suggestion)
         ),
+
+        // TODO:  this doesn't do anything? uncecessary load? they dont seem to get used / rendered
         ...oasisSearchResults.map((resource) => resourceToTeletypeItem(resource)),
         ...historyEntriesResults.map((entry) =>
           historyEntryToTeletypeItem(entry, get(this.historyEntriesResults))

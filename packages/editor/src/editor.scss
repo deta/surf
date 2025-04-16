@@ -38,22 +38,26 @@
     font-weight: 500;
     color: var(--color-link);
     text-decoration: underline;
+
+    &:hover {
+      color: var(--color-link-nuted);
+
+    }
   }
 
-  a:hover {
-    color: var(--color-link-muted);
-  }
+
 
   .prose {
     max-width: unset;
   }
 
-
   ul {
     margin: 4px 0 !important;
+
     li {
       padding-inline-start: 0 !important;
       margin: 0 3px;
+
       &::marker {
         color: #373530cc !important;
       }
@@ -64,6 +68,17 @@
     li::marker {
       background: red;
       color: #373530cc;
+    }
+  }
+}
+
+body.custom .editor {
+  a {
+    color: var(--contrast-color) !important;
+
+    &:hover {
+      color: var(--contrast-color) !important;
+      opacity: 0.75;
     }
   }
 }
@@ -108,7 +123,7 @@
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     position: relative;
-  
+
     &::after {
       content: attr(data-suggestion-placeholder);
       display: inline-flex;
@@ -181,29 +196,33 @@
     color: #373530;
   }
 
-  h1.is-empty, h2.is-empty, h3.is-empty {
+  h1.is-empty,
+  h2.is-empty,
+  h3.is-empty {
     .ProseMirror-trailingBreak {
       display: none;
     }
   }
 
-  h1.is-empty::after, h2.is-empty::after, h3.is-empty::after {
+  h1.is-empty::after,
+  h2.is-empty::after,
+  h3.is-empty::after {
     color: var(--color-text-muted);
     pointer-events: none;
   }
 
   h1.is-empty::after {
-  	content: 'Heading 1';
+    content: 'Heading 1';
     opacity: 0.75;
   }
 
   h2.is-empty::after {
-  	content: 'Heading 2';
+    content: 'Heading 2';
     opacity: 0.75;
   }
 
   h3.is-empty::after {
-  	content: 'Heading 3';
+    content: 'Heading 3';
     opacity: 0.75;
   }
 
@@ -219,6 +238,7 @@
     margin: 1px 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
     strong {
       color: #373530;
       font-weight: 600;
@@ -227,7 +247,6 @@
 
   img {
     border-radius: 12px;
-    margin: 2px;
     width: calc(100% - 4px);
 
     &.ProseMirror-selectednode {
@@ -263,12 +282,12 @@
       align-items: flex-start;
       gap: 0.5em;
 
-      > label {
+      >label {
         flex: 0 0 auto;
         user-select: none;
       }
 
-      > div {
+      >div {
         flex: 1 1 auto;
       }
     }
@@ -327,6 +346,7 @@
   .hashtag {
     color: var(--color-brand);
   }
+
 }
 
 .dark .tiptap {

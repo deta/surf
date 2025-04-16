@@ -28,7 +28,7 @@
    * @maxu: Add layout check for super small rect at bottom of screen, if space above -> move toolbox
    *        above rect, not inside.
    */
-  import { dist, isInsideRect, useLogScope } from '@horizon/utils'
+  import { dist, isInsideRect, useLogScope, wait } from '@horizon/utils'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import { derived, get, readable, writable } from 'svelte/store'
   import { useToasts } from '../../service/toast'
@@ -36,6 +36,7 @@
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { hasParent } from '../../utils/dom'
   import Chat from '../Chat/Chat.svelte'
+  import ChatOld from '../Chat/ChatOld.svelte'
   import { captureScreenshot } from '../../utils/screenshot'
   import {
     EventContext,
@@ -53,6 +54,10 @@
   import { contextMenu } from './ContextMenu.svelte'
   import { openDialog } from './Dialog/Dialog.svelte'
   import ChatTitle from '@horizon/core/src/lib/components/Chat/ChatTitle.svelte'
+  import NoteTitle from '@horizon/core/src/lib/components/Chat/Notes/NoteTitle.svelte'
+  import { SmartNote, useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   type Point = { x: number; y: number }
   type Rect = { x: number; y: number; width: number; height: number }
@@ -80,6 +85,7 @@
   const dispatch = createEventDispatcher<{
     close: Blob | null // Task implementor of this component to close it (blob: screenshot, false: cancelled / issue)
     'open-chat-in-sidebar': { chat: AIChat }
+    'open-note-in-sidebar': { note: SmartNote }
     'save-screenshot': {
       rect: { x: number; y: number; width: number; height: number }
     }
@@ -89,9 +95,14 @@
   const log = useLogScope('ScreenPicker')
   const toasts = useToasts()
   const telemetry = useTelemetry()
+  const tabsManager = useTabsManager()
   const ai = useAI()
+  const smartNotes = useSmartNotes()
+  const config = useConfig()
+
   $: customAiApps = ai?.customAIApps
 
+  const userConfigSettings = config.settings
   const selectedModel = ai.selectedModel
 
   const state = writable<any>({
@@ -122,22 +133,21 @@
   let chatboxEl: HTMLElement
   let appsEl: HTMLElement
   let addPromptEl: HTMLElement | undefined
-  let chatComponent: unknown
+  let chatComponent: Chat | ChatOld
 
   let showAddPromptDialog = false
   let promptValue: string = ''
 
   const appModalContent = writable<App | null>(null)
+  const note = writable<SmartNote | null>(null)
   const activeChat = writable<AIChat | null>(null)
   const promptSelectorOpen = writable(false)
-
-  const contextManager = ai?.createContextManager()
 
   $: chatStatusStore = $activeChat?.status
   $: chatStatus = $chatStatusStore ?? 'idle'
 
   $: responses = $activeChat?.responses ? $activeChat.responses : readable([])
-  $: if ($responses.length > 0 && !$state.isChatExpanded) {
+  $: if (($note || $responses.length > 0) && !$state.isChatExpanded) {
     document.startViewTransition(async () => {
       $state.isChatExpanded = true
       await tick()
@@ -439,9 +449,26 @@
   }
 
   async function handleExpandChat() {
-    dispatch('open-chat-in-sidebar', {
-      chat: $activeChat!
-    })
+    if ($userConfigSettings.experimental_notes_chat_sidebar) {
+      if (!$note) return
+
+      dispatch('open-note-in-sidebar', {
+        note: $note
+      })
+    } else {
+      if (!$activeChat) return
+
+      dispatch('open-chat-in-sidebar', {
+        chat: $activeChat
+      })
+    }
+  }
+
+  function handleOpenAsTab() {
+    if (!$note) return
+
+    tabsManager.openResourcFromContextAsPageTab($note.id)
+    dispatch('close', null)
   }
 
   async function handleAcceptAsInput() {
@@ -515,21 +542,35 @@
     const blob = await captureScreenshot($selectionRect)
     $state.isCapturing = false
 
-    // WARN: This trigger event is weird / wrong
-    // TODO: @maxi we dont have a fitting event i guess for upading context inside inline ai?
-    contextManager.addScreenshot(blob)
+    if ($userConfigSettings.experimental_notes_chat_sidebar) {
+      $note = await smartNotes.createNote('')
+      $note.contextManager.addScreenshot(blob)
 
-    if (!$activeChat) {
-      $activeChat = await ai.createChat({ contextManager, automaticTitleGeneration: true })
+      await wait(500)
+
+      chatComponent.addChatWithQuery(input, true)
+      chatComponent.createChatCompletion(
+        input,
+        undefined,
+        undefined,
+        PageChatMessageSentEventTrigger.InlineAI
+      )
+    } else {
+      const contextManager = ai.createContextManager()
+      contextManager.addScreenshot(blob)
+
+      if (!$activeChat) {
+        $activeChat = await ai.createChat({ contextManager, automaticTitleGeneration: true })
+      }
+
+      // WARN: Telemetry
+      $activeChat?.createChatCompletion(input, {
+        trigger: PageChatMessageSentEventTrigger.InlineAI,
+        //useContext: true
+        skipScreenshot: true
+        //... TODO:: @maxi use others props // what do we need here?
+      })
     }
-
-    // WARN: Telemetry
-    $activeChat?.createChatCompletion(input, {
-      trigger: PageChatMessageSentEventTrigger.InlineAI,
-      //useContext: true
-      skipScreenshot: true
-      //... TODO:: @maxi use others props // what do we need here?
-    })
   }
 
   async function handleRunPrompt(prompt: ChatPrompt) {
@@ -541,21 +582,36 @@
     const blob = await captureScreenshot($selectionRect)
     $state.isCapturing = false
 
-    // WARN: This trigger event is weird / wrong
-    // TODO: @maxi we dont have a fitting event i guess for upading context inside inline ai?
-    contextManager.addScreenshot(blob)
+    if ($userConfigSettings.experimental_notes_chat_sidebar) {
+      $note = await smartNotes.createNote('')
+      $note.contextManager.addScreenshot(blob)
 
-    if (!$activeChat) {
-      $activeChat = await ai.createChat({ contextManager, automaticTitleGeneration: true })
+      await wait(800)
+
+      chatComponent.addChatWithQuery(prompt.label, true)
+      chatComponent.createChatCompletion(
+        prompt.prompt,
+        undefined,
+        undefined,
+        PageChatMessageSentEventTrigger.InlineAI
+      )
+    } else {
+      const contextManager = ai.createContextManager()
+      contextManager.addScreenshot(blob)
+
+      if (!$activeChat) {
+        $activeChat = await ai.createChat({ contextManager, automaticTitleGeneration: true })
+      }
+
+      $activeChat?.createChatCompletion(prompt.prompt, {
+        trigger: PageChatMessageSentEventTrigger.InlineAI,
+        skipScreenshot: true,
+        role: 'user',
+        query: prompt.label,
+        useContext: true
+      })
     }
 
-    $activeChat?.createChatCompletion(prompt.prompt, {
-      trigger: PageChatMessageSentEventTrigger.InlineAI,
-      skipScreenshot: true,
-      role: 'user',
-      query: prompt.label,
-      useContext: true
-    })
     telemetry.trackUsePrompt(PromptType.Custom, EventContext.Inline)
   }
 </script>
@@ -741,9 +797,9 @@
         </ul>
         {#if mode === 'standalone' && !$state.isChatExpanded}
           <ChatInput
-            loading={chatStatus === 'running'}
+            loading={chatStatus && chatStatus === 'running'}
             on:submit={(e) => handlePromptInputSubmit(e.detail)}
-            viewTransitionName={`chat-${$activeChat?.id}-input`}
+            viewTransitionName={`chat-${$activeChat?.id || $note?.id}-input`}
           />
         {/if}
 
@@ -757,7 +813,7 @@
           </div>
         {/if}
       </div>
-      {#if mode === 'standalone' && $activeChat}
+      {#if mode === 'standalone' && ($note || $activeChat)}
         <!--{#if !$state.isChatExpanded}
           <div bind:this={appsEl} class="apps-wrapper flex flex-wrap gap-2 justify-center">
             <button
@@ -803,17 +859,50 @@
                     <Icon name="close" size="1.3em" />
                   </button>
 
-                  {#if $activeChat}
+                  {#if $userConfigSettings.experimental_notes_chat_sidebar}
+                    {#if $note}
+                      <NoteTitle note={$note} fallback="Vision Chat" small />
+                    {/if}
+                  {:else if $activeChat}
                     <ChatTitle chat={$activeChat} fallback="Vision Chat" small />
                   {/if}
                 </div>
 
-                <button on:click|preventDefault={handleExpandChat}
-                  >Open in Sidebar <Icon name="arrow.up.right" size="1.3em" /></button
-                >
+                <div class="messageBoxHeaderRight">
+                  {#if $userConfigSettings.experimental_notes_chat_sidebar}
+                    <button on:click|preventDefault={handleOpenAsTab}>
+                      <Icon name="arrow.diagonal" size="1.3em" />
+                    </button>
+                  {/if}
+
+                  <button on:click|preventDefault={handleExpandChat}>
+                    <Icon name="sidebar.right" size="1.3em" />
+                  </button>
+                </div>
               </header>
-              {#if $activeChat}
-                <Chat
+
+              {#if $userConfigSettings.experimental_notes_chat_sidebar}
+                {#if $note}
+                  <Chat
+                    bind:this={chatComponent}
+                    bind:inputValue={promptValue}
+                    note={$note}
+                    contextItemErrors={[]}
+                    preparingTabs={false}
+                    inputOnly={!$state.isChatExpanded}
+                    showAddToContext={false}
+                    showContextBar={false}
+                    on:clear-chat={() => {}}
+                    on:clear-errors={() => {}}
+                    on:close-chat
+                    on:open-context-item
+                    on:process-context-item
+                    on:highlightWebviewText
+                    on:seekToTimestamp
+                  />
+                {/if}
+              {:else if $activeChat}
+                <ChatOld
                   bind:this={chatComponent}
                   bind:inputValue={promptValue}
                   chat={$activeChat}
@@ -1162,7 +1251,6 @@
 
         display: flex;
         flex-direction: column;
-        gap: 1ch;
 
         background: transparent;
         border-radius: 11px;
@@ -1216,6 +1304,14 @@
               text-overflow: ellipsis;
               white-space: nowrap;
             }
+          }
+
+          .messageBoxHeaderRight {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            overflow: hidden;
           }
 
           button {

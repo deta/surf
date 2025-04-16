@@ -4,6 +4,7 @@
   import { createEventDispatcher } from 'svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable, derived } from 'svelte/store'
+  import AppBarButton from './AppBarButton.svelte'
 
   const extensions = writable<any[]>([])
   const hasNoExtensionsEnabled = derived(extensions, ($extensions) => $extensions.length === 0)
@@ -46,13 +47,9 @@
   on:show={updateExtensionState}
 >
   <div slot="trigger">
-    <button
-      class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
-    >
-      <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
-        <Icon name="puzzle" />
-      </span>
-    </button>
+    <AppBarButton class="group">
+      <Icon name="puzzle" size="1.2rem" />
+    </AppBarButton>
   </div>
   <div slot="content" class="popover-content">
     {#if $hasNoExtensionsEnabled}
@@ -91,19 +88,6 @@
 </CustomPopover>
 
 <style lang="scss">
-  .custom-button-color {
-    :global(.custom) & {
-      color: var(--contrast-color) !important;
-      // This is a hack since i have no idea where the active class is set.
-      &.bg-sky-200 {
-        background-color: var(--base-color) !important;
-      }
-      &:hover {
-        background-color: var(--base-color) !important;
-      }
-    }
-  }
-
   .popover-content {
     background: radial-gradient(
       143.56% 143.56% at 50% -43.39%,

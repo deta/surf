@@ -74,6 +74,15 @@ export const MODEL_GPT_MENTION = {
   hideInSearch: true
 } as MentionItem
 
+export const NOTE_MENTION = {
+  id: 'note',
+  label: 'Note',
+  suggestionLabel: 'This Note',
+  aliases: ['this', 'myself', 'active'],
+  icon: 'icon;;docs',
+  type: MentionItemType.BUILT_IN
+} as MentionItem
+
 export const BUILT_IN_MENTIONS_BASE = [
   GENERAL_CONTEXT_MENTION,
   EVERYTHING_MENTION,

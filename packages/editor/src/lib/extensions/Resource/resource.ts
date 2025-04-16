@@ -98,7 +98,7 @@ export const Resource = Node.create<ResourceOptions>({
   },
 
   addNodeView() {
-    return ({ node }) => {
+    return ({ node, editor }) => {
       const container = document.createElement('resource')
       container.setAttribute('id', node.attrs.id)
       container.setAttribute('data-type', node.attrs.type)
@@ -112,7 +112,8 @@ export const Resource = Node.create<ResourceOptions>({
           id: node.attrs.id,
           type: node.attrs.type,
           preview: this.options.preview,
-          expanded: node.attrs.expanded
+          expanded: node.attrs.expanded,
+          isEditable: editor.isEditable
         }
       })
 

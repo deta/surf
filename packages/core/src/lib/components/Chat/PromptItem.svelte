@@ -5,19 +5,65 @@
   export let icon: Icons | undefined = undefined
 </script>
 
-<button
-  on:click
-  class="flex-shrink-0 max-w-64 flex items-center justify-center gap-2 px-2 py-1 w-fit rounded-xl transition-colors text-sky-800 bg-blue-50 border-blue-300 dark:border-gray-700 dark:text-gray-100 hover:bg-blue-100 dark:bg-gray-800 dark:hover:bg-gray-700 border-[1px] select-none"
->
+<button on:click>
   {#if icon}
-    <div class="text-sky-800 dark:text-gray-100">
+    <div>
       <DynamicIcon name={icon} />
     </div>
   {/if}
 
   {#if label}
-    <div class="text-sky-800 dark:text-gray-100 w-full truncate">
+    <div>
       {label}
     </div>
   {/if}
 </button>
+
+<style lang="scss">
+  button {
+    flex-shrink: 0;
+    max-width: 64rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.275rem 0.75rem;
+    width: fit-content;
+    border-radius: 0.75rem;
+    transition-property: color;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    color: #075985;
+    background-color: white;
+    border: 0.5px solid rgba(0, 0, 0, 0.12);
+    user-select: none;
+
+    &:hover {
+      background-color: #dbeafe;
+    }
+
+    :global(.dark) & {
+      color: #f3f4f6;
+      background-color: #1f2937;
+
+      &:hover {
+        background-color: #374151;
+      }
+    }
+
+    div {
+      color: #075985;
+
+      :global(.dark) & {
+        color: #f3f4f6;
+      }
+
+      &:last-child {
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+</style>

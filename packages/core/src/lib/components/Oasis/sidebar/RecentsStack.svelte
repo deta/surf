@@ -737,7 +737,7 @@
       }
       &:not(.isMac)::before {
         width: 300px !important;
-        position: relative;
+        position: absolute;
         transform: translateX(25%);
         background: radial-gradient(circle at 50% 0%, #cce1f9bb 0%, transparent 70%);
         mask-image: linear-gradient(90deg, #0000 0%, #000 50%, #0000 100%);

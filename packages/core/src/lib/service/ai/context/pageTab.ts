@@ -4,7 +4,7 @@ import { type Writable, writable, derived } from 'svelte/store'
 import type { TabPage } from '../../../types'
 
 import { ContextItemResource } from './resource'
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemIconTypes, ContextItemTypes, type ContextItemIcon } from './types'
 import { ContextItemBase } from './base'
 
@@ -14,8 +14,8 @@ export class ContextItemPageTab extends ContextItemBase {
 
   item: Writable<ContextItemResource | null>
 
-  constructor(manager: ContextManager, tab: TabPage) {
-    super(manager, tab.id, 'browser')
+  constructor(service: ContextService, tab: TabPage) {
+    super(service, tab.id, 'browser')
 
     this.data = writable(tab)
     this.item = writable(null)
@@ -56,14 +56,14 @@ export class ContextItemPageTab extends ContextItemBase {
       return
     }
 
-    const resource = await this.manager.preparePageTab(tab)
+    const resource = await this.service.preparePageTab(tab)
     if (!resource) {
       this.log.error('Failed to prepare page tab', tab.id)
       this.item.set(null)
       return
     }
 
-    const newItem = new ContextItemResource(this.manager, resource, tab)
+    const newItem = new ContextItemResource(this.service, resource, tab)
     this.item.set(newItem)
   }
 

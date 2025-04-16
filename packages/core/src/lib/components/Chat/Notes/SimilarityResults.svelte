@@ -110,13 +110,13 @@
           </button>
         {/if}
 
-        <ChangeContextBtn
+        <!-- <ChangeContextBtn
           {spaces}
           {selectedContext}
           {activeSpace}
           on:click={handleOpenContext}
           on:select={handleSelectContext}
-        />
+        /> -->
       </div>
     </div>
 

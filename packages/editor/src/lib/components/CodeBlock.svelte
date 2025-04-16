@@ -153,7 +153,7 @@
   */
 
   const renderHTMLPreview = () => {
-    log.trace('renderHTMLPreview')
+    log.debug('renderHTMLPreview')
     if (!isHTML || !appContainer) return
 
     const code = getCode()

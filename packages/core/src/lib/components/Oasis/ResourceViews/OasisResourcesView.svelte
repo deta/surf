@@ -31,7 +31,9 @@
   export let searchValue: Writable<string> | undefined
   export let resourcesBlacklistable: boolean = false
   export let fadeIn = false
+  export let openIn: 'tab' | 'sidebar' = 'tab'
   export let hideViewSettings = false
+  export let hideFilterSettings: boolean = false
   export let hideSortingSettings: boolean = false
 
   export let interactive: boolean = true
@@ -200,6 +202,7 @@
         {viewDensity}
         {sortBy}
         {order}
+        {hideFilterSettings}
         {hideSortingSettings}
         on:changedView
         on:changedFilter
@@ -241,10 +244,12 @@
               {interactive}
               {isInSpace}
               {resourcesBlacklistable}
+              {openIn}
               viewMode="card"
               on:click
               on:open
               on:open-and-chat
+              on:open-in-sidebar
               on:remove
               on:load
               on:space-selected
@@ -261,11 +266,13 @@
               {interactive}
               {isInSpace}
               {resourcesBlacklistable}
+              {openIn}
               mode="full"
               viewMode="responsive"
               on:click
               on:open
               on:open-and-chat
+              on:open-in-sidebar
               on:remove
               on:load
               on:space-selected

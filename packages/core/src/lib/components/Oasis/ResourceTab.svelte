@@ -38,6 +38,7 @@
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <TextResource
         {resourceId}
+        similaritySearch
         on:update-title={handleUpdateTitle}
         on:highlightWebviewText
         on:seekToTimestamp
@@ -59,6 +60,7 @@
     <TextResource
       {resourceId}
       showOnboarding
+      similaritySearch
       on:update-title={handleUpdateTitle}
       on:highlightWebviewText
       on:seekToTimestamp
@@ -67,6 +69,7 @@
     <TextResource
       {resourceId}
       showCodegenOnboarding
+      similaritySearch
       on:update-title={handleUpdateTitle}
       on:highlightWebviewText
       on:seekToTimestamp

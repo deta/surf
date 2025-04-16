@@ -4,11 +4,12 @@
   import { Tooltip } from 'bits-ui'
   import { createEventDispatcher } from 'svelte'
   import { type Writable } from 'svelte/store'
-  import CustomPopover from '../Atoms/CustomPopover.svelte'
   import ExtensionBrowserActions from './ExtensionBrowserActions.svelte'
+  import AppBarButton from './AppBarButton.svelte'
 
   export let horizontalTabs: boolean
   export let showCustomWindowActions: boolean
+
   export let canGoBack: boolean
   export let canGoForward: boolean
   export let canReload: boolean
@@ -24,55 +25,53 @@
 </script>
 
 <div
-  class="flex flex-row items-center flex-shrink-0 {horizontalTabs
-    ? 'pl-3'
-    : showCustomWindowActions
-      ? ''
-      : 'w-full justify-between pl-[4.4rem]'}"
+  class="flex flex-row items-center flex-shrink-0 {showCustomWindowActions
+    ? ''
+    : 'pl-[5rem]'} {horizontalTabs ? '' : 'w-full justify-between'} "
 >
-  {#if showCustomWindowActions}
-    <Tooltip.Root openDelay={400} closeDelay={10}>
-      <Tooltip.Trigger>
-        <button
-          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
-          on:click={window.api.showAppMenuPopup}
-        >
-          <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
-            <Icon name="menu" />
-          </span>
-        </button>
-      </Tooltip.Trigger>
-      <Tooltip.Content
-        transition={flyAndScale}
-        transitionConfig={{ y: 8, duration: 150 }}
-        sideOffset={8}
-      >
-        <div class="bg-gray-100 dark:bg-gray-800">
-          <Tooltip.Arrow
-            class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
-          />
-        </div>
-        <div
-          class="flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-        >
-          Show Menu Options
-        </div>
-      </Tooltip.Content>
-    </Tooltip.Root>
-  {/if}
   <div>
+    {#if showCustomWindowActions}
+      <Tooltip.Root openDelay={400} closeDelay={10}>
+        <Tooltip.Trigger>
+          <AppBarButton class="group" on:click={window.api.showAppMenuPopup}>
+            <span class="inline-block ease-in-out duration-200">
+              <Icon name="menu" />
+            </span>
+          </AppBarButton>
+        </Tooltip.Trigger>
+        <Tooltip.Content
+          transition={flyAndScale}
+          transitionConfig={{ y: 8, duration: 150 }}
+          sideOffset={8}
+        >
+          <div class="bg-gray-100 dark:bg-gray-800">
+            <Tooltip.Arrow
+              class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+            />
+          </div>
+          <div
+            class="flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+          >
+            Show Menu Options
+          </div>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    {/if}
+    {#if horizontalTabs && $showExtensionsBrowserActions}
+      <ExtensionBrowserActions on:open-extension-store />
+    {/if}
+
     {#if !horizontalTabs}
       <Tooltip.Root openDelay={400} closeDelay={10}>
         <Tooltip.Trigger>
-          <button
-            class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
-            class:rotate-90={horizontalTabs}
+          <AppBarButton
+            class="group {horizontalTabs ? 'rotate-90' : ''}"
             on:click={() => dispatch('toggle-sidebar')}
           >
-            <span class="inline-block translate-x-0 transition-transform ease-in-out duration-200">
+            <span class="inline-block ease-in-out duration-200">
               <Icon name="sidebar.left" />
             </span>
-          </button>
+          </AppBarButton>
         </Tooltip.Trigger>
         <Tooltip.Content
           transition={flyAndScale}
@@ -92,19 +91,17 @@
         </Tooltip.Content>
       </Tooltip.Root>
     {/if}
-  </div>
-
-  <div class="flex flex-row items-center">
     {#if !horizontalTabs && $showExtensionsBrowserActions}
       <ExtensionBrowserActions on:open-extension-store />
     {/if}
+  </div>
+
+  <div class="flex flex-row items-center">
     <Tooltip.Root openDelay={400} closeDelay={10}>
       <Tooltip.Trigger>
-        <button
-          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 {!canGoBack
-            ? 'opacity-30 cursor-not-allowed'
-            : ''}"
+        <AppBarButton
           disabled={!canGoBack}
+          class="group  {!canGoBack ? 'opacity-30 cursor-not-allowed' : ''}"
           on:click={() => dispatch('go-back')}
         >
           <span
@@ -113,7 +110,7 @@
           >
             <Icon name="arrow.left" />
           </span>
-        </button>
+        </AppBarButton>
       </Tooltip.Trigger>
       <Tooltip.Content
         transition={flyAndScale}
@@ -135,11 +132,9 @@
 
     <Tooltip.Root openDelay={400} closeDelay={10}>
       <Tooltip.Trigger>
-        <button
-          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 group margin-0 flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 {!canGoForward
-            ? 'opacity-30 cursor-not-allowed'
-            : ''}"
+        <AppBarButton
           disabled={!canGoForward}
+          class="group  {!canGoForward ? 'opacity-30 cursor-not-allowed' : ''}"
           on:click={() => dispatch('go-forward')}
         >
           <span
@@ -148,7 +143,7 @@
           >
             <Icon name="arrow.right" />
           </span>
-        </button>
+        </AppBarButton>
       </Tooltip.Trigger>
       <Tooltip.Content
         transition={flyAndScale}
@@ -170,17 +165,15 @@
 
     <Tooltip.Root openDelay={400} closeDelay={10}>
       <Tooltip.Trigger>
-        <button
-          class="custom-button-color no-drag transform active:scale-95 appearance-none border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100 {!canReload
-            ? 'opacity-30 cursor-not-allowed'
-            : ''}"
-          on:click={() => dispatch('reload')}
+        <AppBarButton
+          class="group  {!canReload ? 'opacity-30 cursor-not-allowed' : ''}"
           disabled={!canReload}
+          on:click={() => dispatch('reload')}
         >
-          <span class="group-hover:!rotate-180 transition-transform ease-in-out duration-200">
+          <span class="group-hover:!rotate-180 ease-in-out duration-200">
             <Icon name="reload" />
           </span>
-        </button>
+        </AppBarButton>
       </Tooltip.Trigger>
       <Tooltip.Content
         transition={flyAndScale}

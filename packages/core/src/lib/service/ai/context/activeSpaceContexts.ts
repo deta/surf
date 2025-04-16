@@ -5,7 +5,7 @@ import type { TabPage, TabResource } from '../../../types'
 import type { OasisSpace } from '../../oasis'
 
 import { ContextItemBase } from './base'
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemSpace } from './space'
 import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './types'
 import {
@@ -29,15 +29,15 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
 
   activeSpaceUnsub: () => void
 
-  constructor(manager: ContextManager, include: ActiveSpaceContextInclude = 'everything') {
-    super(manager, ContextItemTypes.ACTIVE_SPACE, 'browser')
+  constructor(service: ContextService, include: ActiveSpaceContextInclude = 'everything') {
+    super(service, ContextItemTypes.ACTIVE_SPACE, 'browser')
 
     this.include = include
     this.item = writable(null)
     this.currentSpaceId = writable(null)
 
     this.activeSpace = derived(
-      [manager.tabsManager.activeScopeId, manager.tabsManager.oasis.spaces],
+      [service.tabsManager.activeScopeId, service.tabsManager.oasis.spaces],
       ([activeScopeId, spaces]) => {
         if (!activeScopeId) {
           this.item.set(null)
@@ -94,14 +94,14 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
     const existingItem = this.itemValue
 
     this.currentSpaceId.set(space.id)
-    const newItem = new ContextItemSpace(this.manager, space)
+    const newItem = new ContextItemSpace(this.service, space)
     this.item.set(newItem)
 
     // Only track if the item is new
     if (existingItem) {
-      this.manager.telemetry.trackPageChatContextUpdate(
+      this.service.telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.ActiveContextChanged,
-        this.manager.itemsValue.length,
+        1, // TODO: figure out how to get the correct count
         1,
         PageChatUpdateContextItemType.Space,
         PageChatUpdateContextEventTrigger.ContextSwitch
@@ -121,14 +121,14 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
       }
 
       if (this.include === 'everything' || this.include === 'tabs') {
-        const scopedTabs = this.manager.tabsManager.tabsValue.filter(
+        const scopedTabs = this.service.tabsManager.tabsValue.filter(
           (tab) => tab.scopeId === item.id && (tab.type === 'page' || tab.type === 'resource')
         ) as Array<TabPage | TabResource>
 
         const preparedResources = await Promise.all(
           scopedTabs.map(async (tab) => {
             if (tab.type === 'page') {
-              const resource = await this.manager.preparePageTab(tab)
+              const resource = await this.service.preparePageTab(tab)
               if (resource) {
                 return resource.id
               } else {
@@ -150,7 +150,7 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
       let tabResources: string[] = []
 
       if (this.include === 'everything' || this.include === 'resources') {
-        const resourceIds = await this.manager.resourceManager.listResourceIDsByTags(
+        const resourceIds = await this.service.resourceManager.listResourceIDsByTags(
           [
             ResourceManager.SearchTagDeleted(false),
             ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
@@ -164,14 +164,14 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
       }
 
       if (this.include === 'everything' || this.include === 'tabs') {
-        const unscopedTabs = this.manager.tabsManager.tabsValue.filter(
+        const unscopedTabs = this.service.tabsManager.tabsValue.filter(
           (tab) => !tab.scopeId && (tab.type === 'page' || tab.type === 'resource')
         ) as Array<TabPage | TabResource>
 
         const preparedResources = await Promise.all(
           unscopedTabs.map(async (tab) => {
             if (tab.type === 'page') {
-              const resource = await this.manager.preparePageTab(tab)
+              const resource = await this.service.preparePageTab(tab)
               if (resource) {
                 return resource.id
               } else {

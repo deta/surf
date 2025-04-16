@@ -39,6 +39,7 @@ import type {
   App,
   Model,
   ChatMessageOptions,
+  NoteMessageOptions,
   CreateAppOptions,
   QueryResourcesOptions,
   Quota,
@@ -927,6 +928,53 @@ export class SFFS {
     return this.withErrorHandling(
       this.backend,
       this.backend.js__ai_send_chat_message,
+      JSON.stringify(data),
+      callback
+    )
+  }
+
+  async sendAINoteMessage(
+    callback: (chunk: string) => void,
+    noteResourceId: string,
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      limit?: number
+      resourceIds?: string[]
+      inlineImages?: string[]
+      general?: boolean
+    }
+  ): Promise<void> {
+    this.log.debug(
+      'sending ai note message with note resource id',
+      noteResourceId,
+      'query:',
+      query,
+      'model',
+      model,
+      'custom_key',
+      !!opts?.customKey,
+      'limit:',
+      opts?.limit,
+      'resource ids filter:',
+      opts?.resourceIds,
+      'inline images length:',
+      opts?.inlineImages?.length
+    )
+    const data: NoteMessageOptions = {
+      query,
+      note_resource_id: noteResourceId,
+      model,
+      custom_key: opts?.customKey,
+      resource_ids: opts?.resourceIds,
+      inline_images: opts?.inlineImages,
+      limit: opts?.limit ?? 20,
+      general: opts?.general
+    }
+    return this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_send_note_message,
       JSON.stringify(data),
       callback
     )

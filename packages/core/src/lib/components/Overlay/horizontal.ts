@@ -11,7 +11,7 @@ import {
   TeletypeActionGroup,
   dispatchTeletypeEvent
 } from './service/teletypeActions'
-import ResourcePreview from '../Resources/ResourcePreview.svelte'
+import TeletypeResourcePreview from './TeletypeResourcePreview.svelte'
 import { type Resource } from '../../service/resources'
 import { staticActions } from './service/staticActions'
 import { createExecutioner } from './service/translations'
@@ -29,16 +29,9 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
     description: resource.metadata?.userContext || '',
     icon: getPrimaryResourceType(resource.type) || 'document',
     execute: TeletypeAction.OpenResource,
-    component: ResourcePreview,
+    component: TeletypeResourcePreview,
     componentProps: {
-      resource: resource,
-      mode: 'compact',
-      viewMode: 'responsive',
-      interactive: false,
-      frameless: true,
-      draggable: true,
-      titleEditable: false,
-      origin: 'cmdt'
+      resource
     },
     view: 'Inline',
     actionPanel: [
@@ -74,7 +67,7 @@ const createSpaceAction = async (
     })
   )
 
-  const validItems = horizontalItems.filter((item) => item !== null).slice(0, 100)
+  const validItems = horizontalItems.filter((item) => item !== null).slice(0, 10)
 
   const horizontalAction = {
     id: result.id,
@@ -145,16 +138,9 @@ const createResourceAction = async (entry: { id: string }, resourceManager: Reso
       icon: getPrimaryResourceType(resource.type) || 'document',
       execute: TeletypeAction.OpenResource,
       group: TeletypeActionGroup.Resources,
-      component: ResourcePreview,
+      component: TeletypeResourcePreview,
       componentProps: {
-        resource,
-        mode: 'compact',
-        viewMode: 'responsive',
-        interactive: false,
-        draggable: true,
-        frameless: true,
-        titleEditable: false,
-        origin: 'cmdt'
+        resource
       },
       view: 'Inline',
       actionPanel: [

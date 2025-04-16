@@ -13,8 +13,9 @@ use crate::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
 
 use super::prompts::{
-    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt,
-    should_narrow_search_prompt, should_narrow_search_prompt_simple, sql_query_generator_prompt,
+    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt, note_chat_prompt,
+    note_general_chat_prompt, should_narrow_search_prompt, should_narrow_search_prompt_simple,
+    sql_query_generator_prompt,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -391,6 +392,7 @@ impl AI {
         query: String,
         model: &Model,
         custom_key: Option<&str>,
+        note_resource_id: Option<String>,
         number_documents: i32,
         resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
@@ -442,9 +444,15 @@ impl AI {
 
         // system message
         let current_time = human_readable_current_time();
-        let system_message_prompt = match general {
-            true => general_chat_prompt(&current_time),
-            false => chat_prompt(&current_time),
+        let system_message_prompt = match note_resource_id {
+            Some(_) => match general {
+                true => note_general_chat_prompt(&current_time),
+                false => note_chat_prompt(&current_time),
+            },
+            None => match general {
+                true => general_chat_prompt(&current_time),
+                false => chat_prompt(&current_time),
+            },
         };
 
         let mut messages = vec![Message::new_system(&system_message_prompt)];
@@ -462,6 +470,18 @@ impl AI {
             for image in inline_images {
                 messages.push(Message::new_image(&image));
             }
+        }
+
+        if let Some(note_resource_id) = note_resource_id {
+            let resource_text_contents =
+                contents_store.list_resource_text_content_by_resource_id(&note_resource_id)?;
+            // concatate contents
+            let content = resource_text_contents
+                .iter()
+                .map(|c| c.content.clone())
+                .collect::<Vec<String>>()
+                .join("\n");
+            messages.push(Message::new_note(&content));
         }
 
         messages.push(Message::new_user(&query));

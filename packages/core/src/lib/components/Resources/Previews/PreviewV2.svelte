@@ -29,7 +29,7 @@
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import CodeRenderer from '../../Chat/CodeRenderer.svelte'
-  import CollapsableResourceBlock from '@horizon/core/src/lib/components/Oasis/CollapsableResourceBlock.svelte'
+  import CollapsableResourceEmbed from '@horizon/core/src/lib/components/Chat/Notes/CollapsableResourceEmbed.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -237,8 +237,9 @@
         fullSize
       />
     {:else if WEB_RESOURCE_TYPES.some( (x) => resource.type.startsWith(x) ) && origin === 'homescreen' && viewMode === 'full'}
-      <CollapsableResourceBlock
+      <CollapsableResourceEmbed
         {resource}
+        isEditable={false}
         showPreview
         language={mimeTypeToCodeLanguage(resource.type)}
         initialCollapsed={false}
@@ -322,12 +323,14 @@
                   on:seekToTimestamp
                 />
               {:else}
-                <Editor
-                  content={truncate(content, MAX_CONTENT_LENGTH)}
-                  resourceComponent={EmbeddedResource}
-                  resourceComponentPreview
-                  readOnly
-                />
+                <div class="editor-wrapper">
+                  <Editor
+                    content={truncate(content, MAX_CONTENT_LENGTH)}
+                    resourceComponent={EmbeddedResource}
+                    resourceComponentPreview
+                    readOnly
+                  />
+                </div>
               {/if}
             {:else if contentType === 'html'}
               <iframe
@@ -1008,6 +1011,12 @@
     100% {
       mask-size: 190%;
     }
+  }
+
+  .editor-wrapper {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
   }
 
   /////////// Responsive Mode overrides

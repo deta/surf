@@ -162,6 +162,17 @@ pub enum MiscMessage {
         general: bool,
         app_creation: bool,
     },
+    NoteQuery {
+        callback: Root<JsFunction>,
+        number_documents: i32,
+        query: String,
+        model: Model,
+        custom_key: Option<String>,
+        note_resource_id: String,
+        resource_ids: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
+        general: bool,
+    },
     CreateApp {
         prompt: String,
         model: Model,

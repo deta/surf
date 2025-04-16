@@ -154,7 +154,8 @@ impl Worker {
         query: String,
         model: Model,
         custom_key: Option<&str>,
-        session_id: String,
+        session_id: Option<String>,
+        note_resource_id: Option<String>,
         number_documents: i32,
         rag_only: bool,
         callback: Root<JsFunction>,
@@ -180,6 +181,7 @@ impl Worker {
             &model,
             custom_key,
             session_id,
+            note_resource_id,
             number_documents,
             resource_ids.unwrap_or_default(),
             inline_images,
@@ -267,16 +269,21 @@ impl Worker {
         query: String,
         model: &Model,
         custom_key: Option<&str>,
-        session_id: String,
+        session_id: Option<String>,
+        note_resource_id: Option<String>,
         number_documents: i32,
         mut resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
         callback: Root<JsFunction>,
     ) -> BackendResult<()> {
-        let history = self
-            .ai
-            .parse_chat_history(self.db.list_ai_session_messages_skip_sources(&session_id)?)?;
+        let mut history: Vec<Message> = vec![];
+
+        if let Some(ref session_id) = session_id {
+            history = self
+                .ai
+                .parse_chat_history(self.db.list_ai_session_messages_skip_sources(session_id)?)?;
+        }
 
         let mut should_cluster = false;
         let send_cluster_query = !general && self.should_send_cluster_query(&resource_ids)?;
@@ -317,6 +324,7 @@ impl Worker {
             query,
             model,
             custom_key,
+            note_resource_id,
             number_documents,
             resource_ids,
             inline_images,
@@ -324,8 +332,10 @@ impl Worker {
             should_cluster,
             history,
         )?;
-        self.save_messages(session_id, assistant_message, chat_result)?;
 
+        if let Some(session_id) = session_id {
+            self.save_messages(session_id, assistant_message, chat_result)?;
+        }
         Ok(())
     }
 
@@ -335,6 +345,7 @@ impl Worker {
         query: String,
         model: &Model,
         custom_key: Option<&str>,
+        note_resource_id: Option<String>,
         number_documents: i32,
         resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
@@ -347,6 +358,7 @@ impl Worker {
             query,
             model,
             custom_key,
+            note_resource_id,
             number_documents,
             resource_ids,
             inline_images,
@@ -639,7 +651,8 @@ pub fn handle_misc_message(
                 query,
                 model,
                 custom_key.as_deref(),
-                session_id,
+                Some(session_id),
+                None,
                 number_documents,
                 rag_only,
                 callback,
@@ -647,6 +660,33 @@ pub fn handle_misc_message(
                 inline_images,
                 general,
                 app_creation,
+            );
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::NoteQuery {
+            query,
+            model,
+            custom_key,
+            note_resource_id,
+            number_documents,
+            callback,
+            resource_ids,
+            inline_images,
+            general,
+        } => {
+            let result = worker.send_chat_query(
+                query,
+                model,
+                custom_key.as_deref(),
+                None,
+                Some(note_resource_id),
+                number_documents,
+                false,
+                callback,
+                resource_ids,
+                inline_images,
+                general,
+                false,
             );
             send_worker_response(&mut worker.channel, oneshot, result)
         }

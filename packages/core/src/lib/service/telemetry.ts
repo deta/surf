@@ -80,6 +80,7 @@ interface UserProperties {
   tabs_orientation?: string
   default_browser?: boolean
   extensions_enabled?: boolean
+  notes_sidebar_enabled?: boolean
 }
 
 // TODO: how much does telemetry hurt performance?
@@ -216,7 +217,8 @@ export class Telemetry {
       tabs_orientation:
         userSettings?.tabs_orientation ?? this.userConfig?.settings.tabs_orientation,
       default_browser: this.userConfig?.defaultBrowser,
-      extensions_enabled: userSettings?.extensions ?? false
+      extensions_enabled: userSettings?.extensions ?? false,
+      notes_sidebar_enabled: userSettings?.experimental_notes_chat_sidebar ?? false
     }
 
     if (!this.isActive()) {

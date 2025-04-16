@@ -9,7 +9,7 @@ import {
 import type { Tab } from '../../../types'
 
 import { ContextItemBase } from './base'
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemResource } from './resource'
 import { ContextItemSpace } from './space'
 import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './types'
@@ -28,8 +28,8 @@ export class ContextItemActiveTab extends ContextItemBase {
 
   activeTabUnsub: () => void
 
-  constructor(manager: ContextManager) {
-    super(manager, ContextItemTypes.ACTIVE_TAB, 'browser')
+  constructor(service: ContextService) {
+    super(service, ContextItemTypes.ACTIVE_TAB, 'browser')
 
     this.item = writable(null)
     this.currentTab = writable(null)
@@ -53,7 +53,7 @@ export class ContextItemActiveTab extends ContextItemBase {
       }
     })
 
-    this.activeTabUnsub = this.manager.tabsManager.activeTab.subscribe((activeTab) => {
+    this.activeTabUnsub = this.service.tabsManager.activeTab.subscribe((activeTab) => {
       this.log.debug('Active tab changed', activeTab?.id)
 
       if (!activeTab) {
@@ -104,7 +104,7 @@ export class ContextItemActiveTab extends ContextItemBase {
     try {
       this.loading.set(true)
 
-      const tab = this.manager.tabsManager.activeTabValue
+      const tab = this.service.tabsManager.activeTabValue
       if (!tab) {
         this.item.set(null)
         return
@@ -121,7 +121,7 @@ export class ContextItemActiveTab extends ContextItemBase {
 
       if (tab.type === 'page') {
         this.log.debug('Preparing page tab', tab)
-        const resource = await this.manager.preparePageTab(tab)
+        const resource = await this.service.preparePageTab(tab)
         if (!resource) {
           this.log.error('Failed to prepare page tab', tab.id)
           this.item.set(null)
@@ -130,23 +130,35 @@ export class ContextItemActiveTab extends ContextItemBase {
 
         this.log.debug('Prepared page tab', tab.id, resource)
 
-        const newItem = new ContextItemResource(this.manager, resource, tab)
+        const newItem = new ContextItemResource(this.service, resource, tab)
         this.item.set(newItem)
 
-        const showChatSidebar = this.manager.ai.showChatSidebarValue
+        const showChatSidebar = this.service.ai.showChatSidebarValue
         const autoGeneratePrompts =
-          this.manager.ai.config.settingsValue.automatic_chat_prompt_generation
-        if (showChatSidebar && autoGeneratePrompts) {
-          this.manager.getPromptsForItem(newItem)
+          this.service.ai.config.settingsValue.automatic_chat_prompt_generation
+
+        const usingNotesSidebar =
+          this.service.ai.config.settingsValue.experimental_notes_chat_sidebar
+
+        // Only generate prompts if the sidebar is open and the context item is in the active note's context
+        const contextIsInActiveNote = this.service.checkIfItemInActiveNoteContext(this)
+
+        if (
+          showChatSidebar &&
+          autoGeneratePrompts &&
+          (!usingNotesSidebar || contextIsInActiveNote)
+        ) {
+          this.log.debug('Getting prompts for page tab', tab.id)
+          this.service.getPromptsForItem(newItem)
         } else {
           this.log.debug('Skipping auto prompt generation for page tab as it is disabled', tab.id)
         }
 
         // Only track if the item is new and a completely different tab
         if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-          this.manager.telemetry.trackPageChatContextUpdate(
+          this.service.telemetry.trackPageChatContextUpdate(
             PageChatUpdateContextEventAction.ActiveChanged,
-            this.manager.itemsValue.length,
+            0, // TODO: figure out how to get the correct count
             0,
             PageChatUpdateContextItemType.PageTab,
             PageChatUpdateContextEventTrigger.ActiveTabChanged
@@ -154,21 +166,21 @@ export class ContextItemActiveTab extends ContextItemBase {
         }
       } else if (tab.type === 'space') {
         this.log.debug('Preparing space tab', tab)
-        const space = await this.manager.tabsManager.oasis.getSpace(tab.spaceId)
+        const space = await this.service.tabsManager.oasis.getSpace(tab.spaceId)
         if (!space) {
           this.item.set(null)
           return
         }
 
-        const newItem = new ContextItemSpace(this.manager, space, tab)
+        const newItem = new ContextItemSpace(this.service, space, tab)
         this.item.set(newItem)
 
         // Only track if the item is new and a completely different tab
-        const showChatSidebar = this.manager.ai.showChatSidebarValue
+        const showChatSidebar = this.service.ai.showChatSidebarValue
         if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-          this.manager.telemetry.trackPageChatContextUpdate(
+          this.service.telemetry.trackPageChatContextUpdate(
             PageChatUpdateContextEventAction.ActiveChanged,
-            this.manager.itemsValue.length,
+            0, // TODO: figure out how to get the correct count
             1,
             PageChatUpdateContextItemType.Space,
             PageChatUpdateContextEventTrigger.ActiveTabChanged

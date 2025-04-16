@@ -32,6 +32,7 @@ export type UserSettings = {
   experimental_desktop_embeds: boolean
   experimental_context_linking: boolean
   experimental_context_linking_sidebar: boolean
+  experimental_notes_chat_sidebar: boolean
   extensions: boolean
   cleanup_filenames: boolean
   /**
@@ -89,3 +90,6 @@ export type UserStats = {
   global_n_open_homescreen: number
   global_n_update_homescreen: number
 }
+
+export const EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_EXISTING_USERS = 1
+export const EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_NEW_USERS = 0.5

@@ -34,6 +34,7 @@
   export let sortBy: string | undefined
   export let order: string | null
   export let hideSortingSettings: boolean = false
+  export let hideFilterSettings: boolean = false
 
   const dispatch = createEventDispatcher<{
     changedFilter: FilterChangeEvent
@@ -86,40 +87,42 @@
   const filterPopoverOpen = writable(false)
 </script>
 
-<CustomPopover
-  position="bottom"
-  openDelay={200}
-  sideOffset={10}
-  popoverOpened={filterPopoverOpen}
-  disableTransition={false}
-  forceOpen
-  portal="body"
-  triggerClassName="w-fit h-full"
-  disableHover
-  disabled={false}
->
-  <div slot="trigger" class="w-fit shrink-1">
-    <button class:active={$filterPopoverOpen}> <Icon name="filter" size="1.4em" /> </button>
-  </div>
-
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div slot="content" class="no-drag p-4 flex flex-col gap-2" data-ignore-click-outside>
-    <div class="row flex space-between">
-      <span class="font-medium opacity-80">Filter by</span>
-      <select
-        bind:this={viewFilterEl}
-        value={filter ?? 'all'}
-        on:change={handleFilterSettingsUpdate}
-      >
-        <option value="all" selected>All Types</option>
-
-        {#each RESOURCE_FILTERS as filter (filter.id)}
-          <option value={filter.id}>{filter.label}</option>
-        {/each}
-      </select>
+{#if !hideFilterSettings}
+  <CustomPopover
+    position="bottom"
+    openDelay={200}
+    sideOffset={10}
+    popoverOpened={filterPopoverOpen}
+    disableTransition={false}
+    forceOpen
+    portal="body"
+    triggerClassName="w-fit h-full"
+    disableHover
+    disabled={false}
+  >
+    <div slot="trigger" class="w-fit shrink-1">
+      <button class:active={$filterPopoverOpen}> <Icon name="filter" size="1.4em" /> </button>
     </div>
-  </div>
-</CustomPopover>
+
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div slot="content" class="no-drag p-4 flex flex-col gap-2" data-ignore-click-outside>
+      <div class="row flex space-between">
+        <span class="font-medium opacity-80">Filter by</span>
+        <select
+          bind:this={viewFilterEl}
+          value={filter ?? 'all'}
+          on:change={handleFilterSettingsUpdate}
+        >
+          <option value="all" selected>All Types</option>
+
+          {#each RESOURCE_FILTERS as filter (filter.id)}
+            <option value={filter.id}>{filter.label}</option>
+          {/each}
+        </select>
+      </div>
+    </div>
+  </CustomPopover>
+{/if}
 
 <CustomPopover
   position="bottom"

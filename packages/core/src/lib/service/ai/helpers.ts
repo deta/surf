@@ -6,8 +6,18 @@ import {
   type WebViewEventSendNames,
   type WebViewSendEvents
 } from '@horizon/types'
-import type { ChatMessageContentItem, AIChatMessageSource } from '../../types/browser.types'
-import { conditionalArrayItem, useLogScope } from '@horizon/utils'
+import type {
+  ChatMessageContentItem,
+  AIChatMessageSource,
+  AIChatMessageParsed
+} from '../../types/browser.types'
+import {
+  codeLanguageToMimeType,
+  conditionalArrayItem,
+  markdownToHtml,
+  parseUrlIntoCanonical,
+  useLogScope
+} from '@horizon/utils'
 import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
@@ -15,8 +25,15 @@ import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types
 import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
 import type { OasisService } from '../oasis'
 import { derived } from 'svelte/store'
-import { BUILT_IN_MENTIONS_BASE, WIKIPEDIA_SEARCH_MENTION } from '../../constants/chat'
+import {
+  BUILT_IN_MENTIONS_BASE,
+  NOTE_MENTION,
+  WIKIPEDIA_SEARCH_MENTION
+} from '../../constants/chat'
 import { MentionItemType, type MentionItem } from '@horizon/editor'
+import { ResourceTag, type ResourceManager } from '../resources'
+import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
+import type { TabsManager } from '../tabs'
 
 const log = useLogScope('AI')
 
@@ -405,31 +422,31 @@ export const mapCitationsToText = (content: HTMLElement) => {
   let citationsToText = new Map<string, string>()
 
   /*
-      For each citation node, we need to find the text that corresponds to it.
-      We do this by finding the text node that comes before the citation node.
-      We need to make sure we only use the relevant text not the entire text content between the last citation and the current citation.
-      We do this by only taking the text nodes of elements that are directly in front of the citation node.
+			For each citation node, we need to find the text that corresponds to it.
+			We do this by finding the text node that comes before the citation node.
+			We need to make sure we only use the relevant text not the entire text content between the last citation and the current citation.
+			We do this by only taking the text nodes of elements that are directly in front of the citation node.
 
-      Example:
-      <p>First text with a citation <citation>1</citation></p>
-      <p>Second text with a citation <citation>2</citation></p>
-      <p>Third text with no citation</p>
-      <p>Forth <strong>text</strong> with a citation <citation>3</citation></p>
+			Example:
+			<p>First text with a citation <citation>1</citation></p>
+			<p>Second text with a citation <citation>2</citation></p>
+			<p>Third text with no citation</p>
+			<p>Forth <strong>text</strong> with a citation <citation>3</citation></p>
 
-      Parsed mapping:
+			Parsed mapping:
 
-      1: First text with a citation
-      2: Second text with a citation
-      3: Forth text with a citation
-  */
+			1: First text with a citation
+			2: Second text with a citation
+			3: Forth text with a citation
+	*/
 
   let lastText = ''
 
   /*
-      loop through all child nodes to find the citation node
-      take all text nodes that come before the citation within the same parent node and concatenate them
-      if the citation node is inside a styled node like <strong> or <em> we need to take the text node of the styled node
-  */
+			loop through all child nodes to find the citation node
+			take all text nodes that come before the citation within the same parent node and concatenate them
+			if the citation node is inside a styled node like <strong> or <em> we need to take the text node of the styled node
+	*/
 
   const mapCitationsToTextRecursive = (node: Node, citationsToText: Map<string, string>) => {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -479,6 +496,17 @@ export const renderIDFromCitationID = (
   return ''
 }
 
+export const getCitationInfo = (id: string, sources?: AIChatMessageSource[]) => {
+  const renderID = renderIDFromCitationID(id, sources)
+  const source = sources?.find((source) => source.render_id === renderID)
+
+  return {
+    id,
+    source,
+    renderID
+  }
+}
+
 export const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undefined) => {
   if (!sources) return
   sources.forEach((source, idx) => {
@@ -488,10 +516,11 @@ export const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undef
   return sources
 }
 
-export const useEditorSpaceMentions = (oasis: OasisService, ai: AIService) =>
+export const useEditorSpaceMentions = (oasis: OasisService, ai: AIService, isInNote = false) =>
   derived([oasis.spaces, ai.models, oasis.config.settings], ([spaces, models, userSettings]) => {
     const builtInMentions = [
       ...BUILT_IN_MENTIONS_BASE,
+      ...conditionalArrayItem(isInNote, NOTE_MENTION),
       ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION)
     ]
 
@@ -526,3 +555,173 @@ export const useEditorSpaceMentions = (oasis: OasisService, ai: AIService) =>
 
     return [...builtInMentions, ...modelMentions, ...spaceItems]
   })
+
+export const convertChatOutputToNoteContent = async (
+  response: AIChatMessageParsed,
+  services: { resourceManager: ResourceManager; tabsManager: TabsManager }
+) => {
+  let content = response.content
+  log.debug('Parsing response content', response, content)
+
+  const sources = populateRenderAndChunkIds(response.sources)
+
+  const element = document.getElementById(`chat-response-${response.id}`)
+  if (!element) {
+    log.debug('No element found for response', response)
+    return null
+  }
+
+  const html = element.innerHTML
+  const domParser = new DOMParser()
+  const doc = domParser.parseFromString(html, 'text/html')
+
+  const getInfo = (id: string) => {
+    const renderID = renderIDFromCitationID(id, sources)
+    const source = sources?.find((source) => source.render_id === renderID)
+
+    return { id, source, renderID } as CitationInfo
+  }
+
+  const citations = doc.querySelectorAll('citation')
+
+  // loop through the citations and replace them with the citation item
+  citations.forEach((citation) => {
+    const id = citation.textContent
+    if (!id) return
+
+    const info = getInfo(id)
+    citation.setAttribute('id', info.renderID)
+    citation.setAttribute('data-info', encodeURIComponent(JSON.stringify(info)))
+    citation.innerHTML = info.renderID
+  })
+
+  const replaceWithResource = (node: Element, resourceId: string, type: string) => {
+    const newCodeBlock = document.createElement('resource')
+
+    newCodeBlock.setAttribute('id', resourceId)
+    newCodeBlock.setAttribute('data-type', type)
+    newCodeBlock.innerHTML = ''
+
+    node.replaceWith(newCodeBlock)
+  }
+
+  const codeBlocksRes = doc.querySelectorAll('code-block')
+  const codeBlocks = Array.from(codeBlocksRes)
+
+  for await (const codeBlock of codeBlocks) {
+    try {
+      const resourceId = codeBlock.getAttribute('data-resource')
+      const language = codeBlock.getAttribute('data-language') ?? 'plaintext'
+      const type = codeLanguageToMimeType(language)
+      if (resourceId) {
+        replaceWithResource(codeBlock, resourceId, type)
+        continue
+      }
+
+      const pre = codeBlock.querySelector('pre')
+      if (!pre) continue
+
+      const code = pre.textContent
+      if (!code) continue
+
+      const name = codeBlock.getAttribute('data-name') ?? undefined
+      const tab = services.tabsManager.activeTabValue
+      const rawUrl = tab?.type === 'page' ? tab.currentLocation || tab.initialLocation : undefined
+      const url = (rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined) || undefined
+      // todo: create resource with code
+      log.debug('Creating resource for', language, { code })
+
+      const resource = await services.resourceManager.findOrCreateCodeResource(
+        {
+          code,
+          name,
+          language,
+          url: url
+        },
+        undefined,
+        [ResourceTag.silent()]
+      )
+
+      log.debug('Created resource', resource)
+
+      replaceWithResource(codeBlock, resource.id, resource.type)
+    } catch (e) {
+      log.error('Error creating code resource', e)
+    }
+  }
+
+  // remove html comments like <!--  -->
+  doc.querySelectorAll('comment').forEach((comment) => {
+    comment.remove()
+  })
+
+  return doc.body.innerHTML
+}
+
+export const generateContentHash = (content: string) => {
+  return content
+    .split('')
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    .toString()
+}
+
+export const parseChatOutputToHtml = async (output: AIChatMessageParsed) => {
+  const content = output.content
+  const sources = populateRenderAndChunkIds(output.sources)
+
+  const domParser = new DOMParser()
+  const doc = domParser.parseFromString(content, 'text/html')
+
+  const citations = doc.querySelectorAll('citation')
+
+  citations.forEach((elem) => {
+    const id = elem.textContent
+    if (!id) {
+      log.error('No citation id found')
+      return
+    }
+
+    const info = getCitationInfo(id, sources)
+    elem.setAttribute('test', 'hello')
+    elem.setAttribute('data-info', encodeURIComponent(JSON.stringify(info)))
+  })
+
+  // separate the <think> block from the rest of the content and convert both separately to html
+  const thinkBlock = doc.querySelector('think')
+  let thinkHtml = ''
+  if (thinkBlock) {
+    thinkHtml = await markdownToHtml(thinkBlock.innerHTML)
+    thinkBlock.remove()
+  }
+
+  const markdown = doc.body.innerHTML
+  let html = await markdownToHtml(markdown)
+  if (thinkHtml) {
+    html = `<think>${thinkHtml}</think>\n${html}`
+  }
+
+  return html
+}
+
+export const parseChatOutputToSurfletCode = async (output: AIChatMessageParsed) => {
+  const content = output.content
+
+  const completeCodeBlockRegex = /```(?:[\w]*\n)?([\s\S]*?)```/
+  const completeMatch = content.match(completeCodeBlockRegex)
+
+  const openCodeBlockRegex = /```(?:[\w]*\n)?([\s\S]*)/
+  const openMatch = content.match(openCodeBlockRegex)
+
+  let match = ''
+  if (completeMatch) {
+    match = completeMatch[1]
+  } else if (openMatch) {
+    match = openMatch[1]
+  }
+  const surflet = document.createElement('surflet')
+  const codeElement = document.createElement('code')
+  codeElement.textContent = match // this properly escapes the content
+
+  surflet.appendChild(codeElement)
+  return surflet.outerHTML
+}

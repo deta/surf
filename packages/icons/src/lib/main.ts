@@ -12,6 +12,7 @@ import ChevronLeft from './Icons/ChevronLeft.svelte'
 import ChevronRight from './Icons/ChevronRight.svelte'
 import Close from './Icons/Close.svelte'
 import Copy from './Icons/Copy.svelte'
+import Cursor from './Icons/Cursor.svelte'
 import Download from './Icons/Download.svelte'
 import Edit from './Icons/Edit.svelte'
 import Mute from './Icons/Muted.svelte'
@@ -45,6 +46,7 @@ import SidebarLeft from './Icons/SidebarLeft.svelte'
 import SidebarRight from './Icons/SidebarRight.svelte'
 import SquareRotated from './Icons/SquareRotated.svelte'
 import Home from './Icons/Home.svelte'
+import HelpCircle from './Icons/HelpCircle.svelte'
 import Rectangle from './Icons/Rectangle.svelte'
 import Spinner from './Icons/Spinner.svelte'
 import Play from './Icons/Play.svelte'
@@ -114,6 +116,7 @@ import VisionOff from './Icons/VisionOff.svelte'
 import Dots from './Icons/Dots.svelte'
 import DotsVertical from './Icons/DotsVertical.svelte'
 import Mention from './Icons/Mention.svelte'
+import FileTextSpark from './Icons/FileTextSpark.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -132,6 +135,7 @@ export const icons = {
   close: Close,
   chat: Chat,
   copy: Copy,
+  cursor: Cursor,
   command: Command,
   download: Download,
   edit: Edit,
@@ -144,6 +148,7 @@ export const icons = {
   h1: H1,
   h2: H2,
   h3: H2,
+  'help.circle': HelpCircle,
   link: Link,
   paragraph: Paragraph,
   list: List,
@@ -235,7 +240,8 @@ export const icons = {
   'puzzle.filled': PuzzleFilled,
   dots: Dots,
   'dots.vertical': DotsVertical,
-  mention: Mention
+  mention: Mention,
+  'file-text-spark': FileTextSpark
 }
 
 export type Icons = keyof typeof icons
@@ -255,6 +261,7 @@ export {
   Close,
   Chat,
   Copy,
+  Cursor,
   Command,
   Edit,
   Mute,
@@ -265,6 +272,7 @@ export {
   Code,
   H1,
   H2,
+  HelpCircle,
   Link,
   Paragraph,
   List,
@@ -356,5 +364,6 @@ export {
   PuzzleFilled,
   Dots,
   DotsVertical,
-  Mention
+  Mention,
+  FileTextSpark
 }

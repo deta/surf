@@ -1,7 +1,14 @@
 <script lang="ts">
   import { type Writable, derived, writable, get, type Readable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import { useLogScope, useDebounce, useLocalStorageStore, tooltip, isMac } from '@horizon/utils'
+  import {
+    useLogScope,
+    useDebounce,
+    useLocalStorageStore,
+    tooltip,
+    isMac,
+    conditionalArrayItem
+  } from '@horizon/utils'
   import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts, type ToastItem } from '../../service/toast'
   import { useConfig } from '../../service/config'
@@ -126,6 +133,7 @@
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
   $: isInboxSpace = $selectedSpaceId === 'inbox'
+  $: isNotesSpace = $selectedSpaceId === 'notes'
   $: darkMode = $userConfigSettings.app_style === 'dark'
 
   $: if (updateSearchValue) {
@@ -154,9 +162,7 @@
     closeResourceDetailsModal()
   }
 
-  $: if ($selectedSpaceId === 'all') {
-    loadEverything()
-  } else if ($selectedSpaceId === 'inbox') {
+  $: if (['all', 'inbox', 'notes'].includes($selectedSpaceId)) {
     loadEverything()
   }
 
@@ -197,15 +203,19 @@
   )
 
   const isBuiltInSpace = derived([selectedSpaceId], ([$selectedSpaceId]) => {
-    return $selectedSpaceId === 'all' || $selectedSpaceId === 'inbox'
+    return ['all', 'inbox', 'notes'].includes($selectedSpaceId)
   })
 
   const builtInSpacesViewSettings = useLocalStorageStore<{
-    all: {
+    all?: {
       viewType?: ContextViewType
       viewDensity?: ContextViewDensity
     }
-    inbox: {
+    inbox?: {
+      viewType?: ContextViewType
+      viewDensity?: ContextViewDensity
+    }
+    notes?: {
       viewType?: ContextViewType
       viewDensity?: ContextViewDensity
     }
@@ -213,7 +223,8 @@
     'stuff_built_in_spaces_view_settings',
     {
       all: {},
-      inbox: {}
+      inbox: {},
+      notes: {}
     },
     true
   )
@@ -236,7 +247,8 @@
         return
       }
 
-      const isInSpace = $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox'
+      const isInSpace =
+        $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox' && $selectedSpaceId != 'notes'
       const res = await oasis.removeResourcesFromSpaceOrOasis(
         resourceIds,
         isInSpace ? $selectedSpaceId : undefined
@@ -249,7 +261,7 @@
         await telemetry.trackMultiSelectResourceAction(
           MultiSelectResourceEventAction.Delete,
           resourceIds.length,
-          isEverythingSpace || isInboxSpace ? 'oasis' : 'space'
+          isEverythingSpace || isInboxSpace || isNotesSpace ? 'oasis' : 'space'
         )
       }
 
@@ -315,7 +327,7 @@
         ])
         log.debug('Resources', newResources)
 
-        if (!isEverythingSpace && !isInboxSpace) {
+        if (!isEverythingSpace && !isInboxSpace && !isNotesSpace) {
           await oasis.addResourcesToSpace(
             spaceId,
             newResources.map((r) => r.id),
@@ -327,7 +339,7 @@
           telemetry.trackSaveToOasis(
             r.type,
             SaveToOasisEventTrigger.Drop,
-            !isEverythingSpace && !isInboxSpace
+            !isEverythingSpace && !isInboxSpace && !isNotesSpace
           )
         }
       } else if (
@@ -408,7 +420,7 @@
         [ResourceTag.paste()]
       )
 
-      if (!isEverythingSpace && !isInboxSpace) {
+      if (!isEverythingSpace && !isInboxSpace && !isNotesSpace) {
         const space = await oasis.getSpace($selectedSpaceId)
         if (!space) {
           toast.warning('Could not find active space! Import still succeeded!')
@@ -594,7 +606,11 @@
           ...($selectedFilter === 'saved_by_user'
             ? [ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)]
             : []),
-          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x)),
+          ...conditionalArrayItem(
+            $selectedSpaceId === 'notes',
+            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          )
         ],
         {
           semanticEnabled: $userConfigSettings.use_semantic_search
@@ -631,14 +647,23 @@
   const handleViewSettingsChanges = async (e: CustomEvent<ViewChangeEvent>) => {
     const { viewType, viewDensity } = e.detail
 
-    const prevViewType = $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all'].viewType
-    const prevViewDensity = $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all'].viewDensity
+    const prevViewType =
+      $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all']?.viewType
+    const prevViewDensity =
+      $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all']
+        ?.viewDensity
 
     builtInSpacesViewSettings.update((v) => {
       if (isInboxSpace) {
+        if (v.inbox === undefined) v.inbox = {}
         v.inbox.viewType = viewType
         v.inbox.viewDensity = viewDensity
+      } else if (isNotesSpace) {
+        if (v.notes === undefined) v.notes = {}
+        v.notes.viewType = viewType
+        v.notes.viewDensity = viewDensity
       } else {
+        if (v.all === undefined) v.all = {}
         v.all.viewType = viewType
         v.all.viewDensity = viewDensity
       }
@@ -1099,13 +1124,13 @@
                     </OasisSpaceNavbar>
 
                     <ContextHeader
-                      headline={isInboxSpace ? 'Home' : 'All Your Stuff'}
+                      headline={isInboxSpace ? 'Home' : isNotesSpace ? 'Notes' : 'All Your Stuff'}
                       headlineEditable={false}
                       descriptionEditable={false}
                     >
                       <svelte:fragment slot="icon">
                         <Icon
-                          name={isInboxSpace ? 'circle-dot' : 'save'}
+                          name={isInboxSpace ? 'circle-dot' : isNotesSpace ? 'docs' : 'save'}
                           size="xl"
                           color="currentColor"
                           style="color: currentColor;"
@@ -1131,11 +1156,14 @@
                         : $isSearching && $searchValue?.length > 0
                           ? { icon: 'spinner', message: 'Searching your stuff…' }
                           : undefined}
-                      viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                        ?.viewType}
-                      viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                        ?.viewDensity}
+                      viewType={$builtInSpacesViewSettings[
+                        isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
+                      ]?.viewType}
+                      viewDensity={$builtInSpacesViewSettings[
+                        isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
+                      ]?.viewDensity}
                       hideSortingSettings
+                      hideFilterSettings={isNotesSpace}
                       on:click={handleItemClick}
                       on:open={(e) => handleOpen(e, true)}
                       on:open-and-chat

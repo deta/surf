@@ -293,7 +293,7 @@ const initializeApp = async () => {
       await extensionsManager.initialize(
         mainWindow,
         webviewsSession,
-        userConfig.settings.tabs_orientation,
+        'vertical',
         new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
         handleOpenUrl
       )

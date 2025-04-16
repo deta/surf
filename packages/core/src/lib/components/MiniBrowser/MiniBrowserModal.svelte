@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import WebviewWrapper from '../Webview/WebviewWrapper.svelte'
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import {

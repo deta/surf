@@ -3,6 +3,7 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 
 import {
   checkIfYoutubeUrl,
+  generateID,
   parseUrlIntoCanonical,
   useLocalStorage,
   useLogScope,
@@ -54,11 +55,12 @@ export type AddContextItemOptions = {
   visible?: boolean
 }
 
+export const DEFAULT_CONTEXT_MANAGER_KEY = 'active_chat_context'
+
 export class ContextManager {
-  key = 'active_chat_context'
+  key: string
 
   private _storage: ReturnType<typeof useLocalStorage<StoredContextItem[]>>
-  private _items: Writable<ContextItem[]>
   generatingPrompts: Writable<boolean>
   generatedPrompts: Writable<ChatPrompt[]>
 
@@ -71,6 +73,7 @@ export class ContextManager {
   activeTabContextItem: Readable<ContextItemActiveTab | undefined>
   activeSpaceContextItem: Readable<ContextItemActiveSpaceContext | undefined>
 
+  service: ContextService
   ai: AIService
   tabsManager: TabsManager
   resourceManager: ResourceManager
@@ -78,26 +81,30 @@ export class ContextManager {
   log: ReturnType<typeof useLogScope>
 
   constructor(
+    key: string,
+    service: ContextService,
     ai: AIService,
     tabsManager: TabsManager,
-    resourceManager: ResourceManager,
-    items?: ContextItem[]
+    resourceManager: ResourceManager
   ) {
+    this.key = key
+    this.service = service
     this.ai = ai
     this.tabsManager = tabsManager
     this.resourceManager = resourceManager
     this.telemetry = resourceManager.telemetry
-    this.log = useLogScope('ContextManager')
+    this.log = useLogScope(`ContextManager ${key}`)
 
     this.generatingPrompts = writable(false)
     this.generatedPrompts = writable([])
     this._storage = useLocalStorage<StoredContextItem[]>(this.key, [], true)
-    this._items = writable(items ?? [])
 
-    this.items = derived(this._items, ($items) => $items)
+    this.items = derived(this.service.items, ($items) => {
+      return $items.filter((item) => item.scopes.includes(this.key)).map((item) => item.item)
+    })
 
     this.tabsInContext = derived(
-      [this._items, this.tabsManager.activeTab],
+      [this.items, this.tabsManager.activeTab],
       ([$contextItems, $activeTab]) => {
         return $contextItems
           .filter(
@@ -126,7 +133,7 @@ export class ContextManager {
       }
     )
 
-    this.spacesInContext = derived([this._items], ([$contextItems]) => {
+    this.spacesInContext = derived([this.items], ([$contextItems]) => {
       return $contextItems
         .filter(
           (item) =>
@@ -145,7 +152,7 @@ export class ContextManager {
         .filter((space) => !!space)
     })
 
-    this.resourcesInContext = derived([this._items], ([$contextItems]) => {
+    this.resourcesInContext = derived([this.items], ([$contextItems]) => {
       return $contextItems
         .filter(
           (item) =>
@@ -164,23 +171,23 @@ export class ContextManager {
         .filter((resource) => !!resource)
     })
 
-    this.screenshotsInContext = derived([this._items], ([$contextItems]) => {
+    this.screenshotsInContext = derived([this.items], ([$contextItems]) => {
       return $contextItems
         .filter((item) => item instanceof ContextItemScreenshot)
         .map((item) => (item as ContextItemScreenshot).data)
     })
 
-    this.activeTabContextItem = derived([this._items], ([$contextItems]) => {
+    this.activeTabContextItem = derived([this.items], ([$contextItems]) => {
       return $contextItems.find((item) => item instanceof ContextItemActiveTab)
     })
 
-    this.activeSpaceContextItem = derived([this._items], ([$contextItems]) => {
+    this.activeSpaceContextItem = derived([this.items], ([$contextItems]) => {
       return $contextItems.find((item) => item instanceof ContextItemActiveSpaceContext)
     })
   }
 
   get itemsValue() {
-    return get(this._items)
+    return get(this.items)
   }
 
   get tabsInContextValue() {
@@ -199,104 +206,100 @@ export class ContextManager {
     return get(this.screenshotsInContext)
   }
 
+  get promptsValue() {
+    return get(this.generatedPrompts)
+  }
+
   async restoreItems() {
-    const storedItems = this._storage.get()
-    if (!storedItems) {
-      return
-    }
-
-    this.log.debug('Restoring context items', storedItems)
-
-    const items: ContextItem[] = []
-    let encounteredMalformedType = false
-
-    for (const storedItem of storedItems) {
-      if (storedItem.type === ContextItemTypes.RESOURCE && storedItem.data) {
-        const resource = await this.resourceManager.getResource(storedItem.data)
-        if (resource) {
-          items.push(new ContextItemResource(this, resource))
-        }
-      } else if (storedItem.type === ContextItemTypes.SPACE && storedItem.data) {
-        const space = await this.tabsManager.oasis.getSpace(storedItem.data)
-        if (space) {
-          items.push(new ContextItemSpace(this, space))
-        }
-      } else if (storedItem.type === ContextItemTypes.PAGE_TAB && storedItem.data) {
-        const tab = this.tabsManager.tabsValue.find((tab) => tab.id === storedItem.data)
-        if (tab?.type === 'page') {
-          items.push(new ContextItemPageTab(this, tab))
-        } else if (tab?.type === 'space') {
-          const space = await this.tabsManager.oasis.getSpace(tab.spaceId)
-          if (space) {
-            items.push(new ContextItemSpace(this, space, tab as TabSpace))
-          }
-        } else {
-          this.log.error('Invalid tab', tab)
-          // encounteredMalformedType = true
-        }
-      } else if (storedItem.type === ContextItemTypes.ACTIVE_TAB) {
-        items.push(new ContextItemActiveTab(this))
-      } else if (storedItem.type === ContextItemTypes.ACTIVE_SPACE) {
-        items.push(new ContextItemActiveSpaceContext(this))
-      } else {
-        this.log.error('Unknown stored item type', storedItem)
-        encounteredMalformedType = true
-      }
-    }
-
-    this.log.debug('Restored context items', items)
-
-    this.updateItems(() => items)
-
-    await tick()
-
-    if (encounteredMalformedType) {
-      this.persistItems()
-    }
+    // const storedItems = this._storage.get()
+    // if (!storedItems) {
+    //   return
+    // }
+    // this.log.debug('Restoring context items', storedItems)
+    // const items: ContextItem[] = []
+    // let encounteredMalformedType = false
+    // for (const storedItem of storedItems) {
+    //   if (storedItem.type === ContextItemTypes.RESOURCE && storedItem.data) {
+    //     const resource = await this.resourceManager.getResource(storedItem.data)
+    //     if (resource) {
+    //       items.push(new ContextItemResource(this, resource))
+    //     }
+    //   } else if (storedItem.type === ContextItemTypes.SPACE && storedItem.data) {
+    //     const space = await this.tabsManager.oasis.getSpace(storedItem.data)
+    //     if (space) {
+    //       items.push(new ContextItemSpace(this, space))
+    //     }
+    //   } else if (storedItem.type === ContextItemTypes.PAGE_TAB && storedItem.data) {
+    //     const tab = this.tabsManager.tabsValue.find((tab) => tab.id === storedItem.data)
+    //     if (tab?.type === 'page') {
+    //       items.push(new ContextItemPageTab(this, tab))
+    //     } else if (tab?.type === 'space') {
+    //       const space = await this.tabsManager.oasis.getSpace(tab.spaceId)
+    //       if (space) {
+    //         items.push(new ContextItemSpace(this, space, tab as TabSpace))
+    //       }
+    //     } else {
+    //       this.log.error('Invalid tab', tab)
+    //       // encounteredMalformedType = true
+    //     }
+    //   } else if (storedItem.type === ContextItemTypes.ACTIVE_TAB) {
+    //     items.push(new ContextItemActiveTab(this))
+    //   } else if (storedItem.type === ContextItemTypes.ACTIVE_SPACE) {
+    //     items.push(new ContextItemActiveSpaceContext(this))
+    //   } else {
+    //     this.log.error('Unknown stored item type', storedItem)
+    //     encounteredMalformedType = true
+    //   }
+    // }
+    // this.log.debug('Restored context items', items)
+    // this.updateItems(() => items)
+    // await tick()
+    // if (encounteredMalformedType) {
+    //   this.persistItems()
+    // }
   }
 
   async persistItems() {
-    await tick()
-    const itemsToStore = this.itemsValue
-      .filter((item) => !(item instanceof ContextItemScreenshot))
-      .map((item) => {
-        if (item instanceof ContextItemResource) {
-          return {
-            id: item.id,
-            type: item.type,
-            data: item.data.id
-          }
-        } else if (item instanceof ContextItemSpace) {
-          return {
-            id: item.id,
-            type: item.type,
-            data: item.data.id
-          }
-        } else if (item instanceof ContextItemPageTab) {
-          return {
-            id: item.id,
-            type: item.type,
-            data: item.dataValue?.id
-          }
-        } else if (item instanceof ContextItemActiveTab) {
-          return {
-            id: item.id,
-            type: item.type
-          }
-        } else if (item instanceof ContextItemActiveSpaceContext) {
-          return {
-            id: item.id,
-            type: item.type
-          }
-        } else {
-          return {
-            id: item.id,
-            type: item.type
-          }
-        }
-      })
-
-    this._storage.set(itemsToStore)
+    // await tick()
+    // const itemsToStore = this.itemsValue
+    //   .filter((item) => !(item instanceof ContextItemScreenshot))
+    //   .map((item) => {
+    //     if (item instanceof ContextItemResource) {
+    //       return {
+    //         id: item.id,
+    //         type: item.type,
+    //         data: item.data.id
+    //       }
+    //     } else if (item instanceof ContextItemSpace) {
+    //       return {
+    //         id: item.id,
+    //         type: item.type,
+    //         data: item.data.id
+    //       }
+    //     } else if (item instanceof ContextItemPageTab) {
+    //       return {
+    //         id: item.id,
+    //         type: item.type,
+    //         data: item.dataValue?.id
+    //       }
+    //     } else if (item instanceof ContextItemActiveTab) {
+    //       return {
+    //         id: item.id,
+    //         type: item.type
+    //       }
+    //     } else if (item instanceof ContextItemActiveSpaceContext) {
+    //       return {
+    //         id: item.id,
+    //         type: item.type
+    //       }
+    //     } else {
+    //       return {
+    //         id: item.id,
+    //         type: item.type
+    //       }
+    //     }
+    //   })
+    // this._storage.set(itemsToStore)
   }
 
   getUpdateEventItemType(item: ContextItem): PageChatUpdateContextItemType | undefined {
@@ -342,9 +345,12 @@ export class ContextManager {
 
     this.persistItems()
 
-    const linkedTab = this.getTabFromItem(item)
-    if (linkedTab) {
-      this.tabsManager.addTabToSelection(linkedTab.id)
+    // We only want to add the tab to the selection if we are the global context manager
+    if (this.key === DEFAULT_CONTEXT_MANAGER_KEY) {
+      const linkedTab = this.getTabFromItem(item)
+      if (linkedTab) {
+        this.tabsManager.addTabToSelection(linkedTab.id)
+      }
     }
 
     if (trigger) {
@@ -373,9 +379,12 @@ export class ContextManager {
     this.updateItems((items) =>
       items.filter((item) => {
         if (item.id === id) {
-          const linkedTab = this.getTabFromItem(item)
-          if (linkedTab) {
-            this.tabsManager.removeTabFromSelection(linkedTab.id)
+          // we only want to remove the item from the selection if we are the global context manager
+          if (this.key === DEFAULT_CONTEXT_MANAGER_KEY) {
+            const linkedTab = this.getTabFromItem(item)
+            if (linkedTab) {
+              this.tabsManager.removeTabFromSelection(linkedTab.id)
+            }
           }
 
           return false
@@ -435,127 +444,6 @@ export class ContextManager {
     this.removeAllExcept(contextItem.id, trigger)
   }
 
-  async getResourceFromTab(tab: TabPage) {
-    const existingResourceId = tab.resourceBookmark ?? tab.chatResourceBookmark
-    if (!existingResourceId) {
-      return null
-    }
-
-    const fetchedResource = await this.resourceManager.getResource(existingResourceId)
-    if (!fetchedResource) {
-      return null
-    }
-
-    const isDeleted =
-      (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
-        ?.value === 'true'
-    if (isDeleted) {
-      this.log.debug('Existing resource is deleted, ignoring', fetchedResource.id)
-      return null
-    }
-
-    const fetchedCanonical = (fetchedResource?.tags ?? []).find(
-      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
-    )?.value
-
-    if (!fetchedCanonical) {
-      this.log.debug(
-        'Existing resource has no canonical url, still going to use it',
-        fetchedResource.id
-      )
-      return fetchedResource
-    }
-
-    if (
-      parseUrlIntoCanonical(fetchedCanonical) !==
-      parseUrlIntoCanonical(tab.currentLocation || tab.initialLocation)
-    ) {
-      this.log.debug(
-        'Existing resource does not match current location',
-        fetchedCanonical,
-        tab.currentLocation,
-        tab.id
-      )
-      return null
-    }
-
-    return fetchedResource
-  }
-
-  async preparePageTab(tab: TabPage) {
-    await tick()
-    const surfUrlMatch = tab.currentLocation?.match(/surf:\/\/resource\/([^\/]+)/)
-    if (surfUrlMatch) {
-      const resourceId = surfUrlMatch[1]
-      const resource = await this.resourceManager.getResource(resourceId)
-      if (resource) {
-        this.log.debug('Resource found for surf url', resourceId)
-        return resource
-      }
-
-      return null
-    }
-
-    const isActivated = this.tabsManager.activatedTabsValue.includes(tab.id)
-    this.log.debug('Preparing tab for chat context', tab, isActivated)
-    if (!isActivated) {
-      this.log.debug('Tab not activated, activating first', tab.id)
-      this.tabsManager.activateTab(tab.id)
-
-      // give the tab some time to load
-      await wait(200)
-
-      const browserTab = this.tabsManager.browserTabsValue[tab.id]
-      if (!browserTab) {
-        this.log.error('Browser tab not found', tab.id)
-        throw Error(`Browser tab not found`)
-      }
-
-      this.log.debug('Waiting for tab to become active', tab.id)
-      await browserTab.waitForAppDetection(3000)
-    }
-
-    const browserTab = this.tabsManager.browserTabsValue[tab.id]
-    if (!browserTab) {
-      this.log.error('Browser tab not found', tab.id)
-      throw Error(`Browser tab not found`)
-    }
-
-    let tabResource = await this.getResourceFromTab(tab)
-    if (!tabResource) {
-      const useFreshWebview = checkIfYoutubeUrl(tab.currentLocation || tab.initialLocation)
-
-      this.log.debug('Bookmarking page for chat context', tab.id, 'fresh webview:', useFreshWebview)
-
-      tabResource = await browserTab.createResourceForChat({ freshWebview: useFreshWebview })
-    } else {
-      this.log.debug('Existing resource found for tab, using it', tab.id, tabResource.id)
-      // const url =
-      //   tabResource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
-      //     ?.value ??
-      //   tab.currentLocation ??
-      //   tab.initialLocation
-
-      // this.log.debug(
-      //   'Existing resource found for tab, updating with fresh content',
-      //   tab.id,
-      //   tabResource.id,
-      //   url
-      // )
-
-      // tabResource = await browserTab.refreshResourceWithPage(tabResource, url, false)
-    }
-
-    if (!tabResource) {
-      this.log.error('Failed to bookmark page for chat context', tab.id)
-      throw Error(`Failed to bookmark page for chat context`)
-    }
-
-    this.log.debug('Tab prepared for chat context', tab.id, tabResource)
-
-    return tabResource
-  }
-
   async addResource(resourceOrId: Resource | string, opts?: AddContextItemOptions) {
     const resource =
       typeof resourceOrId === 'string'
@@ -566,7 +454,7 @@ export class ContextManager {
       throw new Error(`Resource not found: ${resourceOrId}`)
     }
 
-    const item = new ContextItemResource(this, resource)
+    const item = new ContextItemResource(this.service, resource)
     return this.addContextItem(item, opts)
   }
 
@@ -578,7 +466,7 @@ export class ContextManager {
       throw new Error(`Space not found: ${spaceOrId}`)
     }
 
-    const item = new ContextItemSpace(this, space)
+    const item = new ContextItemSpace(this.service, space)
     return this.addContextItem(item, opts)
   }
 
@@ -601,7 +489,7 @@ export class ContextManager {
 
       if (tab.type === 'page') {
         this.log.debug('Adding tab to context', tab.id)
-        const item = new ContextItemPageTab(this, tab)
+        const item = new ContextItemPageTab(this.service, tab)
         return this.addContextItem(item, opts)
       } else if (tab.type === 'space') {
         const space = await this.tabsManager.oasis.getSpace(tab.spaceId)
@@ -609,7 +497,7 @@ export class ContextManager {
           throw new Error(`Space not found: ${tab.spaceId}`)
         }
 
-        const item = new ContextItemSpace(this, space, tab as TabSpace)
+        const item = new ContextItemSpace(this.service, space, tab as TabSpace)
         return this.addContextItem(item, opts)
       } else if (tab.type === 'resource') {
         const resource = await this.resourceManager.getResource(tab.resourceId)
@@ -617,7 +505,7 @@ export class ContextManager {
           throw new Error(`Resource not found: ${tab.resourceId}`)
         }
 
-        const item = new ContextItemResource(this, resource, tab)
+        const item = new ContextItemResource(this.service, resource, tab)
         return this.addContextItem(item, opts)
       } else {
         throw new Error(`Unsupported tab type: ${tab.type}`)
@@ -651,7 +539,7 @@ export class ContextManager {
   }
 
   async addScreenshot(screenshot: Blob, opts?: AddContextItemOptions) {
-    const item = new ContextItemScreenshot(this, screenshot)
+    const item = new ContextItemScreenshot(this.service, screenshot)
     return this.addContextItem(item, opts)
   }
 
@@ -662,7 +550,7 @@ export class ContextManager {
       return
     }
 
-    const item = new ContextItemActiveTab(this)
+    const item = new ContextItemActiveTab(this.service)
     return this.addContextItem(item, opts)
   }
 
@@ -673,7 +561,7 @@ export class ContextManager {
       return
     }
 
-    const item = new ContextItemActiveSpaceContext(this, include)
+    const item = new ContextItemActiveSpaceContext(this.service, include)
     return this.addContextItem(item, opts)
   }
 
@@ -684,7 +572,7 @@ export class ContextManager {
       return
     }
 
-    const item = new ContextItemHome(this)
+    const item = new ContextItemHome(this.service)
     return this.addContextItem(item, opts)
   }
 
@@ -695,7 +583,7 @@ export class ContextManager {
       return
     }
 
-    const item = new ContextItemEverything(this)
+    const item = new ContextItemEverything(this.service)
     return this.addContextItem(item, opts)
   }
 
@@ -706,7 +594,7 @@ export class ContextManager {
       return
     }
 
-    const item = new ContextItemWikipedia(this)
+    const item = new ContextItemWikipedia(this.service)
     return this.addContextItem(item, opts)
   }
 
@@ -835,7 +723,10 @@ export class ContextManager {
     this.updateItems(() => [])
     this.persistItems()
 
-    this.tabsManager.clearTabSelection()
+    // We only want to clear the tab selection if we are the global context manager
+    if (this.key === DEFAULT_CONTEXT_MANAGER_KEY) {
+      this.tabsManager.clearTabSelection()
+    }
 
     if (trigger) {
       this.telemetry.trackPageChatContextUpdate(
@@ -849,67 +740,340 @@ export class ContextManager {
   }
 
   updateItems(updateFn: (items: ContextItem[]) => ContextItem[]) {
-    const currentItems = this.itemsValue
-    const updatedItems = updateFn(currentItems)
-
-    const deletedItems = currentItems.filter((item) => !updatedItems.includes(item))
-    deletedItems.forEach((item) => {
-      item.onDestroy()
-    })
-
-    this._items.set(updatedItems)
+    this.service.updateItems(this.key, updateFn)
   }
 
   async getResourceIds(prompt?: string) {
-    const items = get(this._items)
+    const items = this.service.getScopedItems(this.key)
+    this.log.debug('Getting resource ids for context items', items)
     const resourceIds = await Promise.all(items.map((item) => item.getResourceIds(prompt)))
     return [...new Set(resourceIds.flat())]
   }
 
   async getInlineImages() {
-    const items = get(this._items)
+    const items = get(this.items)
     const imageItems = await Promise.all(items.map((item) => item.getInlineImages()))
     return [...new Set(imageItems.flat())]
   }
 
   async getPromptsForItem(idOrItem: string | ContextItem, fresh = false) {
-    const item =
-      typeof idOrItem === 'string'
-        ? get(this._items).find((item) => item.id === idOrItem)
-        : idOrItem
-    if (!item) {
+    try {
+      this.generatingPrompts.set(true)
+
+      const item =
+        typeof idOrItem === 'string'
+          ? get(this.items).find((item) => item.id === idOrItem)
+          : idOrItem
+      if (!item) {
+        this.generatedPrompts.set([])
+        return []
+      }
+
+      this.log.debug('Getting chat prompts for contextItem', item)
+      const model = this.ai.selectedModelValue
+      const supportsJsonFormat = model.supports_json_format
+      if (!supportsJsonFormat) {
+        this.log.debug('Model does not support JSON format', model)
+        this.generatedPrompts.set([])
+        return []
+      }
+
+      const prompts = await item.getPrompts(fresh)
+      this.log.debug('Got chat prompts for contextItem', item, prompts)
+      this.generatedPrompts.set(prompts)
+      return prompts
+    } catch (err) {
+      this.log.error('Error getting prompts for item', err)
       return []
+    } finally {
+      this.generatingPrompts.set(false)
+    }
+  }
+
+  async generatePrompts() {
+    const activeTabItem = get(this.activeTabContextItem)
+
+    if (activeTabItem) {
+      return this.getPromptsForItem(activeTabItem)
     }
 
-    this.log.debug('Getting chat prompts for contextItem', item)
-    const model = this.ai.selectedModelValue
-    const supportsJsonFormat = model.supports_json_format
-    if (!supportsJsonFormat) {
-      this.log.debug('Model does not support JSON format', model)
-      this.generatedPrompts.set([])
-      return []
-    }
-
-    const prompts = await item.getPrompts(fresh)
-    this.log.debug('Got chat prompts for contextItem', item, prompts)
-    this.generatedPrompts.set(prompts)
-    return prompts
+    return []
   }
 
   // Clone the context manager into a new instance
-  clone() {
-    const clone = new ContextManager(
-      this.ai,
-      this.tabsManager,
-      this.resourceManager,
-      this.itemsValue
-    )
+  clone(key?: string) {
+    const clone = this.service.create(this.itemsValue, key)
     return clone
   }
 
   replaceWith(contextManager: ContextManager) {
-    this.updateItems(() => contextManager.itemsValue)
+    this.updateItems(() =>
+      contextManager.itemsValue.map((item) => {
+        return item
+      })
+    )
     this.persistItems()
+  }
+}
+
+export class ContextService {
+  ai: AIService
+  tabsManager: TabsManager
+  resourceManager: ResourceManager
+  telemetry: Telemetry
+  log: ReturnType<typeof useLogScope>
+
+  private _items: Writable<{ item: ContextItem; scopes: string[] }[]>
+  items: Readable<{ item: ContextItem; scopes: string[] }[]>
+
+  constructor(ai: AIService, tabsManager: TabsManager, resourceManager: ResourceManager) {
+    this.ai = ai
+    this.tabsManager = tabsManager
+    this.resourceManager = resourceManager
+    this.telemetry = resourceManager.telemetry
+    this.log = useLogScope('ContextService')
+
+    this._items = writable([])
+
+    this.items = derived(this._items, ($items) => $items)
+  }
+
+  get itemsValue() {
+    return get(this.items)
+  }
+
+  getScopedItems(scope: string) {
+    return this.itemsValue.filter((item) => item.scopes.includes(scope)).map((item) => item.item)
+  }
+
+  updateItems(scope: string, updateFn: (items: ContextItem[]) => ContextItem[]) {
+    const allItems = this.itemsValue
+    const scopedItems = allItems.filter((x) => x.scopes.includes(scope)).map((x) => x.item)
+
+    const updatedItems = updateFn(scopedItems)
+
+    const deletedItems = scopedItems.filter((item) => !updatedItems.includes(item))
+    const addedItems = updatedItems.filter((item) => !scopedItems.includes(item))
+    const changedItems = updatedItems.filter((item) => scopedItems.includes(item))
+
+    deletedItems.forEach((item) => {
+      const index = allItems.findIndex((x) => x.item.id === item.id)
+      if (index !== -1) {
+        allItems[index].scopes = allItems[index].scopes.filter((x) => x !== scope)
+        if (allItems[index].scopes.length === 0) {
+          allItems.splice(index, 1)
+          item.onDestroy()
+        }
+      }
+    })
+
+    addedItems.forEach((item) => {
+      const index = allItems.findIndex((x) => x.item.id === item.id)
+      if (index !== -1) {
+        allItems[index].scopes.push(scope)
+      } else {
+        allItems.push({ item, scopes: [scope] })
+      }
+    })
+
+    changedItems.forEach((item) => {
+      const index = allItems.findIndex((x) => x.item.id === item.id)
+      if (index !== -1) {
+        allItems[index].item = item
+      }
+    })
+
+    this.log.debug('Updated context items', allItems, {
+      added: addedItems,
+      deleted: deletedItems,
+      changed: changedItems
+    })
+
+    this._items.set(allItems)
+  }
+
+  async getPromptsForItem(idOrItem: string | ContextItem, fresh = false) {
+    const usingNotesSidebar = this.ai.config.settingsValue.experimental_notes_chat_sidebar
+
+    const activeContextManager = usingNotesSidebar
+      ? this.ai.smartNotes.activeNoteValue?.contextManager
+      : this.ai.contextManager
+    if (activeContextManager) {
+      return activeContextManager.getPromptsForItem(idOrItem, fresh)
+    }
+
+    return []
+  }
+
+  async getResourceFromTab(tab: TabPage) {
+    const existingResourceId = tab.resourceBookmark ?? tab.chatResourceBookmark
+    if (!existingResourceId) {
+      return null
+    }
+
+    const fetchedResource = await this.resourceManager.getResource(existingResourceId)
+    if (!fetchedResource) {
+      return null
+    }
+
+    const isDeleted =
+      (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+        ?.value === 'true'
+    if (isDeleted) {
+      this.log.debug('Existing resource is deleted, ignoring', fetchedResource.id)
+      return null
+    }
+
+    const fetchedCanonical = (fetchedResource?.tags ?? []).find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+    )?.value
+
+    if (!fetchedCanonical) {
+      this.log.debug(
+        'Existing resource has no canonical url, still going to use it',
+        fetchedResource.id
+      )
+      return fetchedResource
+    }
+
+    if (
+      parseUrlIntoCanonical(fetchedCanonical) !==
+      parseUrlIntoCanonical(tab.currentLocation || tab.initialLocation)
+    ) {
+      this.log.debug(
+        'Existing resource does not match current location',
+        fetchedCanonical,
+        tab.currentLocation,
+        tab.id
+      )
+      return null
+    }
+
+    return fetchedResource
+  }
+
+  async preparePageTab(tab: TabPage) {
+    await tick()
+    const surfUrlMatch = tab.currentLocation?.match(/surf:\/\/resource\/([^\/]+)/)
+    if (surfUrlMatch) {
+      const resourceId = surfUrlMatch[1]
+      const resource = await this.resourceManager.getResource(resourceId)
+      if (resource) {
+        this.log.debug('Resource found for surf url', resourceId)
+        return resource
+      }
+
+      return null
+    }
+
+    const isActivated = this.tabsManager.activatedTabsValue.includes(tab.id)
+    this.log.debug('Preparing tab for chat context', tab, isActivated)
+    if (!isActivated) {
+      this.log.debug('Tab not activated, activating first', tab.id)
+      this.tabsManager.activateTab(tab.id)
+
+      // give the tab some time to load
+      await wait(200)
+
+      const browserTab = this.tabsManager.browserTabsValue[tab.id]
+      if (!browserTab) {
+        this.log.error('Browser tab not found', tab.id)
+        throw Error(`Browser tab not found`)
+      }
+
+      this.log.debug('Waiting for tab to become active', tab.id)
+      await browserTab.waitForAppDetection(3000)
+    }
+
+    const browserTab = this.tabsManager.browserTabsValue[tab.id]
+    if (!browserTab) {
+      this.log.error('Browser tab not found', tab.id)
+      throw Error(`Browser tab not found`)
+    }
+
+    let tabResource = await this.getResourceFromTab(tab)
+    if (!tabResource) {
+      const useFreshWebview = checkIfYoutubeUrl(tab.currentLocation || tab.initialLocation)
+
+      this.log.debug('Bookmarking page for chat context', tab.id, 'fresh webview:', useFreshWebview)
+
+      tabResource = await browserTab.createResourceForChat({ freshWebview: useFreshWebview })
+    } else {
+      this.log.debug('Existing resource found for tab, using it', tab.id, tabResource.id)
+      // const url =
+      //   tabResource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+      //     ?.value ??
+      //   tab.currentLocation ??
+      //   tab.initialLocation
+
+      // this.log.debug(
+      //   'Existing resource found for tab, updating with fresh content',
+      //   tab.id,
+      //   tabResource.id,
+      //   url
+      // )
+
+      // tabResource = await browserTab.refreshResourceWithPage(tabResource, url, false)
+    }
+
+    if (!tabResource) {
+      this.log.error('Failed to bookmark page for chat context', tab.id)
+      throw Error(`Failed to bookmark page for chat context`)
+    }
+
+    this.log.debug('Tab prepared for chat context', tab.id, tabResource)
+
+    return tabResource
+  }
+
+  /**
+   * Checks if a given item is in the context of the currently active note's context
+   */
+  checkIfItemInActiveNoteContext(item: ContextItem) {
+    const activeNoteContextManager = this.ai.smartNotes.activeNoteValue?.contextManager
+
+    if (!activeNoteContextManager) {
+      return false
+    }
+
+    const activeNoteContextItems = activeNoteContextManager.itemsValue
+    const isInActiveNoteContext = activeNoteContextItems.some((i) => i.id === item.id)
+
+    return isInActiveNoteContext
+  }
+
+  create(items?: ContextItem[], key?: string) {
+    const ctxKey = key ?? `context-${generateID()}`
+    this.log.debug('Creating context manager', ctxKey, items)
+
+    if (items) {
+      this.log.debug('Using items', items)
+
+      this.updateItems(ctxKey, (existingItems) => {
+        return [...existingItems, ...items]
+      })
+    }
+
+    return new ContextManager(ctxKey, this, this.ai, this.tabsManager, this.resourceManager)
+  }
+
+  createDefault(items?: ContextItem[]) {
+    const ctxKey = DEFAULT_CONTEXT_MANAGER_KEY
+    this.log.debug('Creating default context manager', ctxKey, items)
+
+    if (items) {
+      this.log.debug('Using items', items)
+
+      this.updateItems(ctxKey, (existingItems) => {
+        return [...existingItems, ...items]
+      })
+    }
+
+    return new ContextManager(ctxKey, this, this.ai, this.tabsManager, this.resourceManager)
+  }
+
+  static create(ai: AIService, tabsManager: TabsManager, resourceManager: ResourceManager) {
+    return new ContextService(ai, tabsManager, resourceManager)
   }
 }
 

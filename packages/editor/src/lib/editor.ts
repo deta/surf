@@ -1,8 +1,8 @@
 import {
   type JSONContent,
   generateHTML,
-  generateText,
   generateJSON,
+  generateText,
   Editor,
   type Range
 } from '@tiptap/core'
@@ -27,6 +27,7 @@ import Hashtag from './extensions/Hashtag/index'
 import Mention, { type MentionAction } from './extensions/Mention/index'
 // import Mention from '@tiptap/extension-mention'
 import mentionSuggestion from './extensions/Mention/suggestion'
+import { CaretIndicatorExtension, type CaretPosition } from './extensions/CaretIndicator'
 import Loading from './extensions/Loading'
 import Thinking from './extensions/Thinking'
 import TrailingNode from './extensions/TrailingNode'
@@ -39,6 +40,7 @@ import type { ComponentType, SvelteComponent } from 'svelte'
 import { conditionalArrayItem } from '@horizon/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
 import { Citation } from './extensions/Citation/citation'
+import { Surflet } from './extensions/Surflet/surflet'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -61,12 +63,19 @@ export type ExtensionOptions = {
   showSlashMenu?: boolean
   onSlashCommand?: (payload: SlashCommandPayload) => void
   slashItems?: SlashItemsFetcher
+  enableCaretIndicator?: boolean
+  onCaretPositionUpdate?: (position: CaretPosition) => void
+  surfletComponent?: ComponentType<SvelteComponent>
 }
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
       levels: [1, 2, 3]
+    },
+    dropcursor: {
+      color: 'var(--contrast-color)',
+      width: 2
     }
   }),
   Link.extend({
@@ -137,6 +146,12 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       onClick: opts?.citationClick
     })
   ),
+  ...conditionalArrayItem(
+    !!opts?.surfletComponent,
+    Surflet.configure({
+      component: opts?.surfletComponent
+    })
+  ),
   ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),
   ...conditionalArrayItem(
     !!opts?.showSlashMenu,
@@ -177,7 +192,22 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   Thinking,
   TrailingNode,
   AIOutput,
-  Image
+  Image,
+  ...conditionalArrayItem(
+    !!opts?.enableCaretIndicator,
+    CaretIndicatorExtension.configure({
+      debug: false,
+      onSelectionUpdate: ({ editor }) => {
+        console.log('CaretIndicator: Selection update triggered from editor.ts')
+        const pos = editor.storage.caretIndicator.caretPosition
+        if (pos && opts?.onCaretPositionUpdate) {
+          console.log('CaretIndicator: Forwarding position to callback:', pos)
+          opts.onCaretPositionUpdate(pos)
+        }
+      },
+      updateDelay: 10 // Reduced delay for more responsive updates
+    })
+  )
   // Markdown,
 ]
 

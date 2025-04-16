@@ -61,6 +61,7 @@
   export let draggable = interactive
   export let frameless: boolean = false
   export let titleEditable = interactive
+  export let openIn: 'tab' | 'sidebar' = 'tab'
 
   /// View
   export let mode: ContentMode = 'full'
@@ -94,6 +95,7 @@
     load: string
     open: string
     'open-and-chat': string
+    'open-in-sidebar': string
     'created-tab': void
     'whitelist-resource': string
     'blacklist-resource': string
@@ -110,6 +112,10 @@
     stack: {
       quality: 20,
       maxDimension: 200
+    },
+    cmdt: {
+      quality: 40,
+      maxDimension: 500
     }
   } as const
   const getPreviewPair = (otigin: Origin) =>
@@ -337,7 +343,7 @@
       dispatch('open', resourceToOpen)
     } else if (e.altKey) {
       oasis.openResourceDetailsSidebar(resource, { select: true })
-    } else {
+    } else if (openIn === 'tab') {
       log.debug('opening resource in new tab', resourceToOpen)
       const active = !isModKeyPressed(e) || e.shiftKey
       openResourceAsTab(resourceToOpen, {
@@ -353,6 +359,9 @@
       if (active) {
         tabsManager.showNewTabOverlay.set(0)
       }
+    } else if (openIn === 'sidebar') {
+      log.debug('opening resource in sidebar', resourceToOpen)
+      dispatch('open-in-sidebar', resourceToOpen)
     }
 
     resourceManager.telemetry.trackOpenResource(

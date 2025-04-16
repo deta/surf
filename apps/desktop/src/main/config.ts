@@ -2,8 +2,14 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import { type UserConfig, type UserStats } from '@horizon/types'
+import {
+  EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_EXISTING_USERS,
+  EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_NEW_USERS,
+  type UserConfig,
+  type UserStats
+} from '@horizon/types'
 import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@horizon/types/src/ai.types'
+import { getRandomBooleanWithProbability } from '@horizon/utils/src/math'
 
 export type Config = {
   [key: string]: any
@@ -92,6 +98,9 @@ export const getUserConfig = (path?: string) => {
     setUserConfig(storedConfig as UserConfig)
   }
 
+  /*
+    --- Default settings values for new users ---
+  */
   if (!storedConfig.settings) {
     storedConfig.settings = {
       search_engine: 'google',
@@ -112,6 +121,9 @@ export const getUserConfig = (path?: string) => {
       experimental_desktop_embeds: false,
       experimental_context_linking: false,
       experimental_context_linking_sidebar: false,
+      experimental_notes_chat_sidebar: getRandomBooleanWithProbability(
+        EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_NEW_USERS
+      ),
       extensions: false,
       cleanup_filenames: false,
       onboarding: {
@@ -133,6 +145,9 @@ export const getUserConfig = (path?: string) => {
 
   let changedConfig = false
 
+  /*
+    --- Migration for existing users to new config structure ---
+  */
   if (storedConfig.settings.app_style === undefined) {
     storedConfig.settings.app_style = 'light'
     changedConfig = true
@@ -261,6 +276,13 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.experimental_desktop_embeds === undefined) {
     storedConfig.settings.experimental_desktop_embeds = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.experimental_notes_chat_sidebar === undefined) {
+    storedConfig.settings.experimental_notes_chat_sidebar = getRandomBooleanWithProbability(
+      EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_EXISTING_USERS
+    )
     changedConfig = true
   }
 

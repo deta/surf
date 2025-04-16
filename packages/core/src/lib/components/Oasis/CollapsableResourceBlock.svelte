@@ -39,6 +39,8 @@
   } from '@horizon/core/src/lib/types'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
+  import OasisResourceLoader from './OasisResourceLoader.svelte'
+  import type { Origin } from '../../utils/resourcePreview'
 
   export let resource: Resource
   export let tab: TabResource | undefined = undefined
@@ -55,6 +57,7 @@
   export let initialHeight: string = '400px'
   export let expandable = true
   export let hideHeader = false
+  export let origin: Origin = 'stuff'
 
   let isResizing = false
   let startY = 0
@@ -324,8 +327,10 @@
 
     isResizing = true
     startY = e.clientY
-    const container = codeBlockELem?.querySelector('.code-container') as HTMLElement
-    startHeight = container?.offsetHeight || parseInt(containerHeight)
+    const codeContainer = codeBlockELem?.querySelector('.code-container') as HTMLElement
+    const imgContainer = codeBlockELem?.querySelector('article') as HTMLElement
+    startHeight =
+      codeContainer?.offsetHeight ?? imgContainer?.offsetHeight ?? parseInt(containerHeight)
 
     // Capture events on window to prevent losing track during fast movements
     window.addEventListener('mousemove', handleResizeMove, { capture: true })
@@ -567,13 +572,30 @@
   {/if}
 
   {#if !collapsed && expandable}
-    <div
-      bind:this={appContainer}
-      class="bg-white w-full flex-grow overflow-auto {fullSize || resizable || collapsed
-        ? ''
-        : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
-      style={resizable && !fullSize && !collapsed ? `height: ${containerHeight};` : ''}
-    />
+    {#if !resource?.type?.startsWith('image/')}
+      <div
+        bind:this={appContainer}
+        class="bg-white w-full flex-grow overflow-auto {fullSize || resizable || collapsed
+          ? ''
+          : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
+        style={resizable && !fullSize && !collapsed ? ` height: ${containerHeight}; ` : ''}
+      />
+    {:else}
+      <div
+        style={resizable && !fullSize && !collapsed
+          ? ` max-height: max-content; height: ${containerHeight === '-1' ? 'auto' : containerHeight};`
+          : ''}
+      >
+        <OasisResourceLoader
+          resourceOrId={resource}
+          frameless
+          {origin}
+          interactive={false}
+          draggable={false}
+          hideProcessing
+        />
+      </div>
+    {/if}
   {/if}
 
   {#if resizable && !collapsed}
@@ -733,6 +755,23 @@
           color-mix(in srgb, var(--base-color), 5% var(--background-fill-mix)),
           color-mix(in srgb, var(--base-color), 60% var(--background-fill-mix))
         );
+      }
+    }
+  }
+
+  // @maxu god forgive me.. who made these resource preview stylings :'(… right… I
+  :global(resource[data-type^='image/'] .wrapper) {
+    height: 100% !important;
+    :global(> article) {
+      height: 100% !important;
+      :global(.preview) {
+        :global(.inner) {
+          height: 100% !important;
+          :global(img) {
+            height: 100% !important;
+            object-fit: cover;
+          }
+        }
       }
     }
   }

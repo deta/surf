@@ -3,7 +3,7 @@
   import { derived, writable, type Readable } from 'svelte/store'
   import { DropdownMenu, Separator, type CustomEventHandler } from 'bits-ui'
 
-  import { flyAndScale, focus } from '@horizon/utils'
+  import { flyAndScaleDirectional, focus } from '@horizon/utils'
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
   import { Icon } from '@horizon/icons'
@@ -149,8 +149,8 @@
       </div>
     </DropdownMenu.Trigger>
     <DropdownMenu.Content
-      class="w-full rounded-xl max-w-[250px] border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
-      transition={flyAndScale}
+      class="xw-full rounded-xl max-w-[250px] border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
+      transition={(node, params) => flyAndScaleDirectional(node, { ...params, side })}
       sideOffset={8}
       {side}
       on:keydown={handleKeyDown}

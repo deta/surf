@@ -110,8 +110,7 @@
 
   const desktopVisible = desktopManager.activeDesktopVisible
   const userSettings = userConfig.settings
-  const chatContext = ai.contextManager
-  const tabsInContext = chatContext.tabsInContext
+  const chatContext = ai.activeContextManager
   const selectedTabs = tabsManager.selectedTabs
   const activeSpaceId = tabsManager.activeScopeId
 
@@ -142,6 +141,7 @@
 
   $: resourceSpaceIdsStore = $resource?.spaceIds
   $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
+  $: tabsInContext = $chatContext.tabsInContext
   $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
   $: isSavedInSpace = $activeSpaceId && ($resourceSpaceIdsStore ?? []).includes($activeSpaceId)
   $: isBookmarkedByUser =
@@ -882,6 +882,8 @@
     {#if $resource}
       {#if isGeneratedResource($resource)}
         <Icon name="code-block" size="16px" />
+      {:else if $resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+        <Icon name="docs" size="16px" />
       {:else}
         <Image
           src={`https://www.google.com/s2/favicons?domain=${$resource?.metadata?.sourceURI}&sz=48`}

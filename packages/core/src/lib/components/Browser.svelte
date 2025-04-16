@@ -119,6 +119,7 @@
   import OasisSpaceRenderer from './Oasis/OasisSpace.svelte'
 
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
+  import RootSidebar from './Sidebars/RootSidebar.svelte'
   import ToastsProvider from './Toast/ToastsProvider.svelte'
   import { provideToasts, type Toast } from '../service/toast'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
@@ -140,6 +141,10 @@
   import { launchTimeline, endTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import { createSyncService } from '@horizon/core/src/lib/service/sync'
+  import {
+    provideOnboardingService,
+    useOnboardingService
+  } from '@horizon/core/src/lib/service/onboarding'
   import TabInvite from './Core/TabInvite.svelte'
   import Ask from './Core/Ask.svelte'
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
@@ -177,6 +182,8 @@
   import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
   import { CHEAT_SHEET_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
+  import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
+  import AppBarButton from './Browser/AppBarButton.svelte'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -193,7 +200,13 @@
   let rightPane: PaneAPI | undefined = undefined
   let sidebarComponent: SidebarPane | null = null
   let annotationsSidebar: AnnotationsSidebar
-  let magicSidebar: MagicSidebar
+  let magicSidebar: any
+  let rightSidebar: any
+
+  // Register the MagicSidebar with the onboarding service when it's initialized
+  $: if (magicSidebar && onboardingService) {
+    onboardingService.attachMagicSidebar(magicSidebar)
+  }
   let isFirstButtonVisible = true
   let containerRef: Element
   let pinnedTabsWrapper: HTMLElement
@@ -236,7 +249,8 @@
   const historyEntriesManager = new HistoryEntriesManager()
   const toasts = provideToasts()
   const syncService = createSyncService(resourceManager)
-  const oasis = provideOasis(resourceManager, config)
+  const smartNotes = provideSmartNotes(resourceManager)
+  const oasis = provideOasis(resourceManager, config, smartNotes)
   const miniBrowserService = createMiniBrowserService(resourceManager, downloadIntercepters)
   const desktopManager = provideDesktopManager({
     telemetry,
@@ -253,8 +267,14 @@
     desktopManager,
     config
   )
-  const aiService = provideAI(resourceManager, tabsManager, config)
 
+  // Initialize the onboarding service
+  const onboardingService = provideOnboardingService(tabsManager)
+
+  const aiService = provideAI(resourceManager, tabsManager, oasis, config, smartNotes)
+
+  onboardingService.attachAIService(aiService)
+  smartNotes.attachAIService(aiService)
   tabsManager.attachAIService(aiService)
   resourceManager.attachAIService(aiService)
   oasis.attachTabsManager(tabsManager)
@@ -272,13 +292,13 @@
   const spaces = oasis.spaces
   const selectedSpace = oasis.selectedSpace
 
-  const chatContext = aiService.contextManager
+  const chatContext = aiService.activeContextManager
   const chatContextItems = aiService.contextItems
   const showChatSidebar = aiService.showChatSidebar
   const activeSidebarChatId = aiService.activeSidebarChatId
   const activeSidebarChat = aiService.activeSidebarChat
-  const activeTabContextItem = chatContext.activeTabContextItem
-  const activeSpaceContextItem = chatContext.activeSpaceContextItem
+  $: activeTabContextItem = $chatContext.activeTabContextItem
+  $: activeSpaceContextItem = $chatContext.activeSpaceContextItem
 
   const desktopVisible = desktopManager.activeDesktopVisible
   const activeDesktop = desktopManager.activeDesktop
@@ -927,6 +947,7 @@
   }
 
   const startChatWithSelectedTabs = async () => {
+    log.debug('Starting chat with selected tabs', $selectedTabs)
     if (($activeTab?.type === 'page' || $activeTab?.type === 'space') && !showRightSidebar) {
       // Update selectedTabs to reflect the change
       selectedTabs.update((selected) => {
@@ -956,7 +977,6 @@
 
     await t.finished
     telemetry.trackToggleTabsOrientation(horizontalTabs ? 'horizontal' : 'vertical')
-    window.api.setExtensionMode(horizontalTabs ? 'horizontal' : 'vertical')
 
     await tick().then(() => {
       checkScroll()
@@ -1095,7 +1115,7 @@
 
         if (existingContextTab) {
           log.debug('removing existing context item for same resource', existingContextTab.id)
-          chatContext.removeContextItem(existingContextTab.id)
+          $chatContext.removeContextItem(existingContextTab.id)
         }
 
         log.debug('created tab for space', newTab)
@@ -1135,7 +1155,7 @@
     handleEndOnboardingTooltips()
 
     if ($showChatSidebar) {
-      chatContext.clear()
+      $chatContext.clear()
     }
 
     // activeTabId.set('')
@@ -1663,9 +1683,9 @@
 
       if (resetContext) {
         if (selectedTabIds.length > 1) {
-          chatContext.clear()
+          $chatContext.clear()
           for (const id of selectedTabIds) {
-            await chatContext.addTab(id)
+            await $chatContext.addTab(id)
           }
 
           return
@@ -1676,18 +1696,18 @@
         }
 
         if ($desktopVisible) {
-          chatContext.clear()
-          await chatContext.addActiveSpaceContext()
+          $chatContext.clear()
+          await $chatContext.addActiveSpaceContext()
         } else if (tab) {
-          chatContext.clear()
-          await chatContext.addActiveTab()
+          $chatContext.clear()
+          await $chatContext.addActiveTab()
         } else {
-          await chatContext.restoreItems()
+          await $chatContext.restoreItems()
         }
       }
     } else {
       showChatSidebar.set(false)
-      chatContext.clear()
+      // $chatContext.clear()
     }
   }
 
@@ -2069,7 +2089,27 @@
   }
 
   const handleCreateNewChat = async () => {
-    await magicSidebar.clearExistingChat()
+    try {
+      log.debug('Creating new chat')
+
+      // Make sure the chat sidebar is open
+      await openChatSidebar(true)
+
+      // Wait a bit to ensure magicSidebar is initialized
+      await wait(100)
+
+      if (magicSidebar) {
+        await magicSidebar.clearExistingChat()
+      } else {
+        // Alternative approach: create a new note directly if magicSidebar isn't available
+        log.debug('Magic sidebar not available, creating new note instead')
+        const smartNote = await smartNotes.createNote('')
+        await smartNotes.changeActiveNote(smartNote)
+      }
+    } catch (error) {
+      log.error('Failed to create new chat', error)
+      toasts.error('Failed to create new chat')
+    }
   }
 
   const handleCreateChatWithQuery = async (e: CustomEvent<string | undefined>) => {
@@ -2095,21 +2135,32 @@
 
     log.debug('create chat with resources', resourceIds)
 
-    const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
-    log.debug('existing chat', $activeSidebarChat, messagesLength)
+    let hasContent = false
+
+    const usingNotesSidebar = $userConfigSettings.experimental_notes_chat_sidebar
+
+    if (usingNotesSidebar) {
+      hasContent =
+        smartNotes.activeNoteValue?.contentValue &&
+        smartNotes.activeNoteValue.contentValue.length > 0
+    } else {
+      const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
+      hasContent = messagesLength > 0
+    }
+
+    log.debug('existing chat', $activeSidebarChat, hasContent)
 
     showNewTabOverlay.set(0)
 
     let clearExistingChat = false
 
-    if (messagesLength > 0 || chatContext.itemsValue.length > 0) {
+    if (hasContent || $chatContext.itemsValue.length > 0) {
       const { closeType: confirmed } = await openDialog({
-        title: 'Clear Chat',
-        message:
-          'Would you like to clear the current chat and start a new one with the selected resources, or add them to the existing chat?',
+        title: usingNotesSidebar ? 'Clear Note' : 'Clear Chat',
+        message: `Would you like to clear the current ${usingNotesSidebar ? 'note' : 'chat'} and start a new one with the selected resources, or add them to the existing ${usingNotesSidebar ? 'note' : 'chat'}?`,
         actions: [
           { title: 'Use Existing', type: 'reset' },
-          { title: 'New Chat', type: 'submit' }
+          { title: usingNotesSidebar ? 'New Note' : 'New Chat', type: 'submit' }
         ]
       })
 
@@ -2122,19 +2173,19 @@
       await openChatSidebar(false)
 
       if (clearExistingChat) {
-        await chatContext.clear()
+        await $chatContext.clear()
         await magicSidebar.clearExistingChat()
       }
 
       for (const id of resourceIds) {
-        chatContext.addResource(id)
+        $chatContext.addResource(id)
       }
 
       await tick()
 
       telemetry.trackPageChatContextUpdate(
         PageChatUpdateContextEventAction.Add,
-        chatContext.itemsValue.length,
+        $chatContext.itemsValue.length,
         resourceIds.length,
         PageChatUpdateContextItemType.PageTab
       )
@@ -2197,20 +2248,20 @@
     if (tab) {
       log.debug('Found existing space tab', tab.id)
       tabsManager.makeActive(tab.id)
-      await chatContext.onlyUseTabInContext(tab.id)
+      await $chatContext.onlyUseTabInContext(tab.id)
     } else {
       // When the user drops the onboarding space into the chat we start the onboarding
       const ONBOARDING_SPACE_NAME = onboardingSpace.name
       const isOnboarding = space.dataValue.folderName === ONBOARDING_SPACE_NAME
 
       log.debug('Adding space to chat context', space, isOnboarding)
-      const spaceContextItem = await chatContext.addSpace(space, {
+      const spaceContextItem = await $chatContext.addSpace(space, {
         trigger: isOnboarding
           ? PageChatUpdateContextEventTrigger.Onboarding
           : PageChatUpdateContextEventTrigger.Onboarding
       })
 
-      await chatContext.removeAllExcept(spaceContextItem.id)
+      await $chatContext.removeAllExcept(spaceContextItem.id)
 
       if (isOnboarding && !text) {
         text = onboardingSpace.query
@@ -2301,16 +2352,16 @@
     await tick()
 
     if (!preserveContext) {
-      chatContext.clear()
+      $chatContext.clear()
     }
 
     await wait(500)
 
     log.debug('Inserting query into chat', query)
 
-    const attemptInsertQuery = (retries = 3) => {
+    const attemptInsertQuery = async (retries = 3) => {
       if (magicSidebar) {
-        magicSidebar.insertQueryIntoChat(query)
+        await magicSidebar.insertQueryIntoChat(query)
       } else if (retries > 0) {
         setTimeout(() => attemptInsertQuery(retries - 1), 1000)
       } else {
@@ -2322,7 +2373,29 @@
     attemptInsertQuery()
   }
 
-  const handleLaunchOnboardingTooltips = (timeline: OnboardingFeature) => {
+  const startNotesOnboarding = async () => {
+    await smartNotes.createNote(undefined, undefined, { switch: true, reuseContext: false })
+
+    // Launch the Notes onboarding timeline
+    handleOnboardingChatWithQuery(
+      new CustomEvent('openChat', {
+        detail: {
+          query: 'Show me when the moon landing was.',
+          preserveContext: false
+        }
+      })
+    )
+
+    launchTimeline(OnboardingFeature.NotesOnboarding)
+    log.debug('launched Notes onboarding timeline')
+  }
+
+  const handleLaunchOnboardingTooltips = async (timeline: OnboardingFeature) => {
+    if (timeline === OnboardingFeature.NotesOnboarding) {
+      startNotesOnboarding()
+      return
+    }
+
     launchTimeline(timeline)
   }
 
@@ -2346,7 +2419,7 @@
       }
 
       if (existingTab) {
-        await chatContext.addTab(existingTab.id)
+        await $chatContext.addTab(existingTab.id)
       }
     })
   }
@@ -2405,6 +2478,35 @@
 
   onMount(() => {
     initResourceDebugger(resourceManager)
+
+    // @FELIX replace this with the stored last positions / more intelligent once we have the backend
+    // Add event listener for scope changes - switches right sidebar to root view when context changes
+    const unsubscribeScopeChange = tabsManager.on(
+      'changed-active-scope',
+      (scopeId: string | null) => {
+        log.debug('Active scope changed:', scopeId)
+        // Switch the right sidebar to root view when context changes
+        if (
+          $userConfigSettings.experimental_notes_chat_sidebar &&
+          showRightSidebar &&
+          ($rightSidebarTab === 'chat' || $rightSidebarTab === 'root')
+        ) {
+          const activeNote = smartNotes.getActiveSpaceNote()
+          log.debug('Active note:', activeNote)
+          if (activeNote) {
+            rightSidebarTab.set('chat')
+            smartNotes.changeActiveNote(activeNote)
+          } else {
+            smartNotes.createNote(undefined, undefined, { switch: true })
+            // rightSidebarTab.set('root')
+          }
+        }
+      }
+    )
+
+    // Add to mount unsubscribers for cleanup
+    mountUnsubscribers.push(unsubscribeScopeChange)
+    // ## ENDFELIX
 
     const unsubscribeCreated = tabsManager.on('created', (tab, active) => {
       checkScroll()
@@ -2485,13 +2587,13 @@
       if (visible && $activeTabContextItem && !$activeSpaceContextItem) {
         log.debug('Replacing active tab context with active space context')
         const index = $chatContextItems.findIndex((item) => item.id === $activeTabContextItem.id)
-        chatContext.removeContextItem($activeTabContextItem.id)
-        chatContext.addActiveSpaceContext(undefined, { index: index >= 0 ? index : undefined })
+        $chatContext.removeContextItem($activeTabContextItem.id)
+        $chatContext.addActiveSpaceContext(undefined, { index: index >= 0 ? index : undefined })
       } else if (!visible && $activeSpaceContextItem && !$activeTabContextItem) {
         log.debug('Replacing active space context with active tab context')
         const index = $chatContextItems.findIndex((item) => item.id === $activeSpaceContextItem.id)
-        chatContext.removeContextItem($activeSpaceContextItem.id)
-        chatContext.addActiveTab({ index: index >= 0 ? index : undefined })
+        $chatContext.removeContextItem($activeSpaceContextItem.id)
+        $chatContext.addActiveTab({ index: index >= 0 ? index : undefined })
       }
     })
 
@@ -3051,6 +3153,9 @@
       log.debug('show onboarding note', newTab)
     }
 
+    // @ts-ignore
+    window.showNotesOnboarding = startNotesOnboarding
+
     if (userConfig && !userConfig.initialized_tabs) {
       log.debug('Creating initial tabs')
       await createDemoItems(tabsManager, oasis, tabsManager.addSpaceTab, resourceManager)
@@ -3091,6 +3196,8 @@
   onDestroy(() => {
     log.debug('app destroyed', mountUnsubscribers)
     mountUnsubscribers.forEach((unsub) => unsub())
+
+    // Event listeners are cleaned up via mountUnsubscribers
   })
 
   onMount(async () => {
@@ -3564,7 +3671,7 @@
 
   const handleTakeScreenshotForChat = async (e: CustomEvent<Blob>) => {
     try {
-      chatContext.addScreenshot(e.detail)
+      $chatContext.addScreenshot(e.detail)
 
       if (!showRightSidebar) {
         toggleRightSidebarTab('chat')
@@ -3575,6 +3682,41 @@
     } finally {
       $showScreenshotPicker = false
     }
+  }
+
+  const handleOpenInlineNoteInSidebar = async (e: CustomEvent<{ note: SmartNote }>) => {
+    const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
+    log.debug('existing chat', $activeSidebarChat, messagesLength)
+
+    if (messagesLength > 0) {
+      const { closeType: confirmed } = await openDialog({
+        title: 'Move Chat',
+        message:
+          'Are you sure you want to move this chat? This will clear the current note in the sidebar.',
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'Move', type: 'submit' }
+        ]
+      })
+
+      if (!confirmed) {
+        log.debug('User cancelled new chat')
+        return
+      }
+    }
+
+    const note = e.detail.note
+
+    log.debug('Opening inline note in sidebar', note)
+
+    showScreenshotPicker.set(false)
+
+    $chatContext.replaceWith(note.contextManager)
+    smartNotes.changeActiveNote(note)
+
+    await tick()
+
+    await openChatSidebar(false)
   }
 
   const handleOpenInlineChatInSidebar = async (e: CustomEvent<{ chat: AIChat }>) => {
@@ -3597,14 +3739,11 @@
         return
       }
     }
-
     const chat = e.detail.chat
-
     log.debug('Opening inline chat in sidebar', chat)
 
     showScreenshotPicker.set(false)
-
-    chatContext.replaceWith(chat.contextManager)
+    $chatContext.replaceWith(chat.contextManager)
 
     activeSidebarChatId.set(chat.id)
     activeSidebarChat.set(chat)
@@ -3615,7 +3754,7 @@
   }
 
   const removeAllContextItems = () => {
-    chatContext.clear()
+    $chatContext.clear()
   }
 
   const handleOpenTabChat = (e: CustomEvent<string>) => {
@@ -3631,7 +3770,7 @@
 
     // Open chat with the tab
     openRightSidebarTab('chat')
-    chatContext.onlyUseTabInContext(tabId)
+    $chatContext.onlyUseTabInContext(tabId)
   }
   const handlePinTab = (e: CustomEvent<string>) => {
     const tabId = e.detail
@@ -3780,7 +3919,26 @@
 
 <ToastsProvider service={toasts} />
 
-<Tooltip on:open-stuff={() => ($showNewTabOverlay = 2)} rootID="body" />
+<Tooltip
+  on:open-stuff={() => ($showNewTabOverlay = 2)}
+  on:open-pdf={(e) => {
+    // Use the onboarding service to handle PDF opening and chat initialization
+    onboardingService.openURLAndChat(e.detail)
+  }}
+  on:insert-question={(e) => {
+    // Use the onboarding service to insert a question
+    if (magicSidebar) {
+      onboardingService.insertQuestionAndGenerateResponse(e.detail)
+    }
+  }}
+  on:start-ai-completion={(e) => {
+    // Use the onboarding service to start a chat with the query
+    if (magicSidebar) {
+      onboardingService.openPDFAndChat(e.detail)
+    }
+  }}
+  rootID="body"
+/>
 <!-- <pre
   style="position: fixed; bottom: 1rem; right: 1rem; top:1rem; z-index: 10000; background: black; color: white; overflow-y: scroll;"
   aria-hidden={true}>
@@ -3814,6 +3972,7 @@
     mode="standalone"
     on:save-screenshot={handleSaveScreenshot}
     on:open-chat-in-sidebar={handleOpenInlineChatInSidebar}
+    on:open-note-in-sidebar={handleOpenInlineNoteInSidebar}
     on:use-screenshot-in-chat={handleTakeScreenshotForChat}
     on:close={() => ($showScreenshotPicker = false)}
   />
@@ -3907,10 +4066,10 @@
 >
   {#if !horizontalTabs && showCustomWindowActions}
     <div
-      class="vertical-window-bar flex flex-row flex-shrink-0 items-center justify-between p-1"
+      class="vertical-window-bar flex flex-row flex-shrink-0 items-center justify-between"
       style="position: relative; z-index: 9999999999;"
     >
-      <div>
+      <div style="width: calc(var(--left-sidebar-size) - (2 * 0.5rem));">
         <BrowserActions
           {horizontalTabs}
           {showCustomWindowActions}
@@ -3926,24 +4085,15 @@
         />
       </div>
       <div class="flex flex-row items-center space-x-2 ml-5">
-        <button
-          on:click={() => controlWindow('minimize')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-x text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
-        >
+        <AppBarButton on:click={() => controlWindow('minimize')}>
           <Icon name="minus" />
-        </button>
-        <button
-          on:click={() => controlWindow('toggle-maximize')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
-        >
+        </AppBarButton>
+        <AppBarButton on:click={() => controlWindow('toggle-maximize')}>
           <Icon name="rectangle" />
-        </button>
-        <button
-          on:click={() => controlWindow('close')}
-          class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800 dark:hover:bg-sky-900/50 dark:text-sky-100"
-        >
+        </AppBarButton>
+        <AppBarButton on:click={() => controlWindow('close')}>
           <Icon name="close" />
-        </button>
+        </AppBarButton>
       </div>
     </div>
   {/if}
@@ -4013,9 +4163,9 @@
     >
       {#if $sidebarTab !== 'oasis'}
         <div
-          class="flex {!horizontalTabs
-            ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)]' : 'py-1.5 h-full'} space-y-4 px-2`
-            : `flex-row !items-center h-full  ${showCustomWindowActions ? '' : 'ml-20'} space-x-4 mr-4`} relative"
+          class="horizontal-window-bar flex {!horizontalTabs
+            ? `flex-col w-full ${showCustomWindowActions ? 'h-[calc(100%-45px)] ' : 'py-1.5 h-full'} space-y-4 px-2`
+            : `flex-row !items-center h-full space-x-4 ${showCustomWindowActions ? '' : '!pr-4'}`} relative"
           use:contextMenu={{
             items: [
               {
@@ -4490,9 +4640,6 @@
               ? 'h-full flex-row items-center'
               : 'flex-col'} flex-shrink-0"
           >
-            {#if $showExtensionsBrowserActions && horizontalTabs}
-              <ExtensionBrowserActions on:open-extension-store={openExtensionStore} />
-            {/if}
             {#if !horizontalTabs}
               <button
                 class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
@@ -4618,7 +4765,11 @@
                       }
                     }}
                   >
-                    <Icon name="chat" size="20px" stroke-width="2" />
+                    {#if $userConfigSettings.experimental_notes_chat_sidebar}
+                      <Icon name="file-text-spark" size="1.35rem" stroke-width="1.84" />
+                    {:else}
+                      <Icon name="chat" size="1.4rem" stroke-width="1.84" />
+                    {/if}
                     {#if !horizontalTabs}
                       <span class="label">New Tab</span>
                     {/if}
@@ -4681,34 +4832,25 @@
                   {/if}
                 {/if}-->
               </div>
+              <svelte:fragment slot="right">
+                {#if horizontalTabs && showCustomWindowActions}
+                  <div
+                    class="flex flex-row items-center gap-2 mr-4"
+                    style="order: 10000; position: relative; z-index: 9999999999;"
+                  >
+                    <AppBarButton on:click={() => controlWindow('minimize')}>
+                      <Icon name="minus" />
+                    </AppBarButton>
+                    <AppBarButton on:click={() => controlWindow('toggle-maximize')}>
+                      <Icon name="rectangle" />
+                    </AppBarButton>
+                    <AppBarButton on:click={() => controlWindow('close')}>
+                      <Icon name="close" />
+                    </AppBarButton>
+                  </div>
+                {/if}
+              </svelte:fragment>
             </SidebarMetaOverlay>
-
-            <!-- TODO: (maxu): Figure out what this is.. windiws.? -->
-            {#if horizontalTabs && showCustomWindowActions}
-              <div
-                class="flex flex-row items-center space-x-2 ml-5"
-                style="position: relative; z-index: 9999999999;"
-              >
-                <button
-                  on:click={() => controlWindow('minimize')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
-                >
-                  <Icon name="minus" />
-                </button>
-                <button
-                  on:click={() => controlWindow('toggle-maximize')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
-                >
-                  <Icon name="rectangle" />
-                </button>
-                <button
-                  on:click={() => controlWindow('close')}
-                  class="transform no-drag active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 dark:hover:bg-gray-800 dark:text-sky-100 transition-colors duration-200 rounded-xl text-sky-800"
-                >
-                  <Icon name="close" />
-                </button>
-              </div>
-            {/if}
           </div>
         </div>
       {:else}
@@ -4859,58 +5001,68 @@
     </div>
 
     <div slot="right-sidebar" class="w-full h-full">
-      <RightSidebar
-        activeTab={rightSidebarTab}
-        on:close={() => toggleRightSidebar()}
-        on:new-chat={handleCreateNewChat}
-      >
-        <svelte:fragment slot="magic-sidebar">
-          {#if $showChatSidebar}
-            {#key showRightSidebar}
-              <MagicSidebar
-                bind:this={magicSidebar}
-                on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
-                on:highlightWebviewText={highlightWebviewText}
-                on:seekToTimestamp={handleSeekToTimestamp}
-                on:navigate={(e) => {
-                  $browserTabs[$activeTabId].navigate(e.detail.url)
-                }}
-                on:open-context-item={(e) => openContextItemAsTab(e.detail)}
-                on:process-context-item={(e) => processContextItem(e.detail)}
-                on:close-chat={() => {
-                  toggleRightSidebarTab('chat')
-                  handleEndOnboardingTooltips()
-                }}
-              />
-            {/key}
-          {:else}
-            <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
-              <Icon name="info" />
-              <span>Magic chat not available</span>
-            </div>
-          {/if}
-        </svelte:fragment>
+      {#key tabsManager.activeScopeId}
+        <RightSidebar
+          activeTab={rightSidebarTab}
+          on:close={() => toggleRightSidebar()}
+          on:new-chat={handleCreateNewChat}
+          on:launchTimeline={(e) => handleLaunchOnboardingTooltips(e.detail)}
+        >
+          <svelte:fragment slot="magic-sidebar">
+            {#if $showChatSidebar}
+              {#key showRightSidebar}
+                <MagicSidebar
+                  bind:this={magicSidebar}
+                  on:highlightText={(e) => scrollWebviewToText(e.detail.tabId, e.detail.text)}
+                  on:highlightWebviewText={highlightWebviewText}
+                  on:seekToTimestamp={handleSeekToTimestamp}
+                  on:navigate={(e) => {
+                    $browserTabs[$activeTabId].navigate(e.detail.url)
+                  }}
+                  on:open-context-item={(e) => openContextItemAsTab(e.detail)}
+                  on:process-context-item={(e) => processContextItem(e.detail)}
+                  on:close-chat={() => {
+                    toggleRightSidebarTab('chat')
+                    handleEndOnboardingTooltips()
+                  }}
+                />
+              {/key}
+            {:else}
+              <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+                <Icon name="info" />
+                <span>Magic chat not available</span>
+              </div>
+            {/if}
+          </svelte:fragment>
 
-        <svelte:fragment slot="annotations-sidebar">
-          {#if $activeTab && $activeTab.type === 'page'}
-            <AnnotationsSidebar
-              bind:this={annotationsSidebar}
-              tab={$activeTab}
-              resourceId={$activeTab.resourceBookmark}
-              on:scrollTo={handleAnnotationScrollTo}
-              on:create={handleAnnotationSidebarCreate}
-              on:reload={handleAnnotationSidebarReload}
-              {horizontalTabs}
-              on:close={() => toggleRightSidebarTab('annotations')}
-            />
-          {:else}
-            <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
-              <Icon name="info" />
-              <span>No page info available.</span>
-            </div>
-          {/if}
-        </svelte:fragment>
-      </RightSidebar>
+          <svelte:fragment slot="annotations-sidebar">
+            {#if $activeTab && $activeTab.type === 'page'}
+              <AnnotationsSidebar
+                bind:this={annotationsSidebar}
+                tab={$activeTab}
+                resourceId={$activeTab.resourceBookmark}
+                on:scrollTo={handleAnnotationScrollTo}
+                on:create={handleAnnotationSidebarCreate}
+                on:reload={handleAnnotationSidebarReload}
+                {horizontalTabs}
+                on:close={() => toggleRightSidebarTab('annotations')}
+              />
+            {:else}
+              <div class="w-full h-full flex items-center justify-center flex-col opacity-50">
+                <Icon name="info" />
+                <span>No page info available.</span>
+              </div>
+            {/if}
+          </svelte:fragment>
+          <svelte:fragment slot="root-sidebar"
+            ><RootSidebar
+              on:change-tab={() => {
+                rightSidebarTab.set('chat')
+              }}
+            /></svelte:fragment
+          >
+        </RightSidebar>
+      {/key}
     </div>
   </SidebarPane>
 </div>
@@ -4978,8 +5130,13 @@
 
   /// App Scaffolding
 
+  .horizontal-window-bar {
+    padding-inline: 0.5rem;
+  }
+
   .vertical-window-bar {
     position: relative;
+    padding: 0.25rem 0.5rem;
 
     :global(.custom) & {
       &::before {
@@ -5332,10 +5489,15 @@
     font-size: 1.05rem;
     letter-spacing: 0.01em;
     font-weight: 400 !important;
+    //opacity: 0.8;
     @include utils.font-smoothing;
+    transition: color, scale, opacity;
+    transition-duration: 125ms;
+    transition-timing-function: ease-out;
 
     &:hover,
     &.active {
+      //opacity: 1;
       --bg: var(--black-09);
 
       :global(.dark) & {

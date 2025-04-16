@@ -6,7 +6,7 @@ import type { TabPage, TabResource } from '../../../types'
 import { blobToDataUrl } from '../../../utils/screenshot'
 import { ResourceJSON, type Resource } from '../../resources'
 
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { type ContextItemIcon, ContextItemIconTypes, ContextItemTypes } from './types'
 import { ContextItemBase } from './base'
 import { ModelTiers } from '@horizon/types/src/ai.types'
@@ -34,8 +34,8 @@ export class ContextItemResource extends ContextItemBase {
 
   processingTimeout: ReturnType<typeof setTimeout> | null = null
 
-  constructor(manager: ContextManager, resource: Resource, sourceTab?: TabPage | TabResource) {
-    super(manager, resource.id, 'file')
+  constructor(service: ContextService, resource: Resource, sourceTab?: TabPage | TabResource) {
+    super(service, resource.id, 'file')
 
     this.sourceTab = sourceTab
     this.data = resource
@@ -184,12 +184,12 @@ export class ContextItemResource extends ContextItemBase {
     this.generatingPromptsPromise = new Promise(async (resolve, reject) => {
       try {
         this.generatingPrompts.set(true)
-        this.manager.generatingPrompts.set(true)
+        // this.manager.generatingPrompts.set(true)
 
         if (!(this.data instanceof ResourceJSON)) {
           this.log.debug('No resource content')
           this.generatingPrompts.set(false)
-          this.manager.generatingPrompts.set(false)
+          // this.manager.generatingPrompts.set(false)
           resolve([])
           return
         }
@@ -203,7 +203,7 @@ export class ContextItemResource extends ContextItemBase {
         if (resourceState !== 'idle') {
           this.log.debug('Resource is still extracting')
           this.generatingPrompts.set(false)
-          this.manager.generatingPrompts.set(false)
+          // this.manager.generatingPrompts.set(false)
 
           if (resourceState === 'extracting' || resourceState === 'post-processing') {
             const unsubscribe = this.data.state.subscribe(async (state) => {
@@ -233,7 +233,7 @@ export class ContextItemResource extends ContextItemBase {
           metadata.title,
           (content.plain ?? content.html)?.length
         )
-        const prompts = await this.manager.ai.generatePrompts(
+        const prompts = await this.service.ai.generatePrompts(
           {
             title: metadata.title ?? '',
             url: metadata.url ?? '',
@@ -247,7 +247,7 @@ export class ContextItemResource extends ContextItemBase {
 
         if (!prompts) {
           this.generatingPrompts.set(false)
-          this.manager.generatingPrompts.set(false)
+          // this.manager.generatingPrompts.set(false)
           resolve([])
           return
         }
@@ -275,7 +275,7 @@ export class ContextItemResource extends ContextItemBase {
         resolve([])
       } finally {
         this.generatingPrompts.set(false)
-        this.manager.generatingPrompts.set(false)
+        // this.manager.generatingPrompts.set(false)
       }
     })
 

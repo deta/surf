@@ -3,7 +3,7 @@ import { type Writable, writable } from 'svelte/store'
 
 import { blobToDataUrl } from '../../../utils/screenshot'
 import { ContextItemBase } from './base'
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemTypes, type ContextItemIcon, ContextItemIconTypes } from './types'
 
 export class ContextItemScreenshot extends ContextItemBase {
@@ -11,8 +11,8 @@ export class ContextItemScreenshot extends ContextItemBase {
   icon: Writable<ContextItemIcon>
   data: Blob
 
-  constructor(manager: ContextManager, screenshot: Blob) {
-    super(manager, generateID(), 'screenshot')
+  constructor(service: ContextService, screenshot: Blob) {
+    super(service, generateID(), 'screenshot')
 
     this.data = screenshot
     this.icon = writable({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
