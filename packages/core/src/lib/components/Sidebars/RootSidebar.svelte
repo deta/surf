@@ -179,7 +179,7 @@
         fadeIn={true}
         hideViewSettings={true}
         viewType="grid"
-        sortBy="created_at"
+        sortBy="resource_added_to_space"
         order="desc"
         on:click={handleResourceClick}
         on:open={handleOpen}

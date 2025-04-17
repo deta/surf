@@ -152,7 +152,7 @@
             viewType={'grid'}
             fadeIn={false}
             viewDensity={'cozy'}
-            sortBy={'created_at'}
+            sortBy={'resource_added_to_space'}
             order={'desc'}
             hideViewSettings
           />

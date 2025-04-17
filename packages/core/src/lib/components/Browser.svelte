@@ -1413,7 +1413,7 @@
         showInSidebar: true,
         colors: ['#FFD700', '#FF8C00'], // Default colors, you can randomize this
         sources: [],
-        sortBy: 'created_at',
+        sortBy: 'resource_created',
         liveModeEnabled: false
       })
 
@@ -1955,7 +1955,7 @@
         showInSidebar: true,
         colors: colorPairs[Math.floor(Math.random() * colorPairs.length)],
         sources: [source],
-        sortBy: 'source_published_at',
+        sortBy: 'resource_source_published',
         liveModeEnabled: true
       })
 
@@ -2002,7 +2002,7 @@
       await oasis.updateSpaceData(space.id, {
         showInSidebar: true,
         sources: [...(space.dataValue.sources ?? []), source],
-        sortBy: 'source_published_at',
+        sortBy: 'resource_source_published',
         liveModeEnabled: true
       })
 

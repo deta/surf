@@ -79,7 +79,7 @@ export const everythingSpace = {
     smartFilterQuery: null,
     sql_query: null,
     embedding_query: null,
-    sortBy: 'created_at'
+    sortBy: 'resource_added_to_space'
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -98,7 +98,7 @@ export const inboxSpace = {
     smartFilterQuery: null,
     sql_query: null,
     embedding_query: null,
-    sortBy: 'created_at'
+    sortBy: 'resource_added_to_space'
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -117,7 +117,7 @@ export const notesSpace = {
     smartFilterQuery: null,
     sql_query: null,
     embedding_query: null,
-    sortBy: 'created_at'
+    sortBy: 'resource_added_to_space'
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

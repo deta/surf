@@ -174,12 +174,13 @@
         <span class="font-medium opacity-80">Sort by</span>
         <select
           bind:this={viewSortingEl}
-          value={sortBy ?? 'created_at'}
+          value={sortBy ?? 'resource_added_to_space'}
           on:change={handleSortingSettingsUpdate}
         >
-          <option value="created_at">Added to Context</option>
-          <option value="updated_at">Last Modified</option>
-          <option value="source_published_at">Source Published</option>
+          <option value="resource_added_to_space">Added to Context</option>
+          <option value="resource_created">First Saved</option>
+          <option value="resource_updated">Last Modified</option>
+          <option value="resource_source_published">Source Published</option>
           <!-- <option value="name">Name</option> -->
         </select>
       </div>
@@ -191,24 +192,8 @@
           value={order ?? 'desc'}
           on:change={handleOrderSettingsUpdate}
         >
-          <option value="desc">
-            {#if sortBy === 'created_at'}
-              Most Recent First
-            {:else if sortBy === 'updated_at'}
-              Most Recent First
-            {:else if sortBy === 'source_published_at'}
-              Most Recent First
-            {/if}
-          </option>
-          <option value="asc">
-            {#if sortBy === 'created_at'}
-              Oldest First
-            {:else if sortBy === 'updated_at'}
-              Oldest First
-            {:else if sortBy === 'source_published_at'}
-              Oldest First
-            {/if}
-          </option>
+          <option value="desc"> Most Recent First </option>
+          <option value="asc"> Oldest First </option>
         </select>
       </div>
     {/if}

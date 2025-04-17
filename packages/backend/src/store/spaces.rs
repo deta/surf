@@ -136,9 +136,10 @@ impl Database {
     ) -> BackendResult<Vec<SpaceEntryExtended>> {
         // Use specific column selection instead of table.*
         let (sort_field, join_clause) = match sort_by {
-            Some("created_at") => ("se.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
-            Some("updated_at") => ("r.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
-            Some("source_published_at") => (
+            Some("resource_added_to_space") => ("se.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("resource_updated") => ("r.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("resource_created") => ("r.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("resource_source_published") => (
                 "COALESCE(rt.tag_value, se.created_at)", 
                 "LEFT JOIN resources r ON se.resource_id = r.id \
                  LEFT JOIN resource_tags rt ON r.id = rt.resource_id AND rt.tag_name = 'sourcePublishedAt'"

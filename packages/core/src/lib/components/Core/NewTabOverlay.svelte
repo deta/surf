@@ -1115,7 +1115,7 @@
                             ?.viewType}
                           viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
                             ?.viewDensity}
-                          sortBy={'created_at'}
+                          sortBy={'resource_added_to_space'}
                           order={'desc'}
                           on:changedView={handleViewSettingsChanges}
                           on:changedFilter={handleFilterTypeChange}

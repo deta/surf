@@ -41,7 +41,7 @@
   let isLiveModeOn = $spaceData?.liveModeEnabled
   let hideViewedResources = $spaceData?.hideViewed
   let smartFilterQuery = $spaceData?.smartFilterQuery
-  let sortBy = $spaceData?.sortBy ?? 'created_at'
+  let sortBy = $spaceData?.sortBy ?? 'resource_added_to_space'
   let sortOrder = $spaceData?.sortOrder ?? 'desc'
 
   let sourceValue = ''

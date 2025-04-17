@@ -444,9 +444,10 @@ export type UpdateSpaceSettingsEventChange = {
     | null
     | 'added'
     | 'removed'
-    | 'created_at'
-    | 'updated_at'
-    | 'source_published_at'
+    | 'resource_created'
+    | 'resource_updated'
+    | 'resource_added_to_space'
+    | 'resource_source_published'
     | 'name'
     | 'asc'
     | 'desc'

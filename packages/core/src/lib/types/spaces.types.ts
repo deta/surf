@@ -1,4 +1,5 @@
 import type { ContextViewDensity, ContextViewType } from '@horizon/types'
+import type { SpaceEntrySortBy } from './sffs.types'
 
 export interface CreateSpaceEntryInput {
   resource_id: string
@@ -24,7 +25,7 @@ export interface SpaceData {
   liveModeEnabled: boolean
   hideViewed: boolean
   smartFilterQuery: string | null
-  sortBy: 'created_at' | 'updated_at' | 'source_published_at' | 'name'
+  sortBy?: SpaceEntrySortBy
   sortOrder?: 'asc' | 'desc'
   sql_query: string | null
   embedding_query: string | null

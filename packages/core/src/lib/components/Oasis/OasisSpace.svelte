@@ -218,7 +218,7 @@
       log.debug('Fetched space:', fetchedSpace)
       space.set(fetchedSpace)
 
-      const sortBy = $space?.dataValue.sortBy ?? 'updated_at'
+      const sortBy = $space?.dataValue.sortBy ?? 'resource_updated'
       const order = $space?.dataValue.sortOrder ?? 'desc'
 
       log.debug('Loading space contents:', id, sortBy, order)
@@ -1484,7 +1484,7 @@
                 filter={$selectedFilterType?.id ?? null}
                 viewType={$spaceData?.viewType}
                 viewDensity={$spaceData?.viewDensity}
-                sortBy={$spaceData?.sortBy ?? 'created_at'}
+                sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
                 order={$spaceData?.sortOrder ?? 'desc'}
                 on:changedView={handleViewSettingsChanges}
                 on:changedFilter={handleFilterSettingsChanged}
@@ -1564,7 +1564,7 @@
             isInSpace={!isEverythingSpace}
             viewType={$spaceData?.viewType}
             viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
             order={$spaceData?.sortOrder ?? 'desc'}
             fadeIn
             on:click={handleItemClick}
@@ -1594,7 +1594,7 @@
             isInSpace={false}
             viewType={$spaceData?.viewType}
             viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
             order={$spaceData?.sortOrder ?? 'desc'}
             fadeIn
             on:click={handleItemClick}

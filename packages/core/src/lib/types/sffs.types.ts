@@ -132,7 +132,13 @@ export type AIChatMessageRaw = {
   sources?: AIChatMessageSource[]
 }
 
+export type SpaceEntrySortBy =
+  | 'resource_created'
+  | 'resource_updated'
+  | 'resource_added_to_space'
+  | 'resource_source_published' // | 'resource_name'
+
 export type SpaceEntrySearchOptions = {
-  sort_by?: 'created_at' | 'updated_at' | 'source_published_at' | 'name'
+  sort_by?: SpaceEntrySortBy
   order?: 'asc' | 'desc'
 }

@@ -351,7 +351,7 @@ export class OasisService {
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
-      sortBy: 'created_at',
+      sortBy: 'resource_added_to_space',
       builtIn: false,
       index: this.spacesValue.length,
       sources: [],
@@ -476,7 +476,7 @@ export class OasisService {
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
-      sortBy: 'created_at',
+      sortBy: 'resource_added_to_space',
       builtIn: false,
       index: this.spacesValue.length,
       sources: []
@@ -874,10 +874,7 @@ export class OasisService {
         )
       ).filter(
         (resource) =>
-          !(
-            resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE &&
-            !resource.metadata?.name
-          )
+          !(resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE && !resource.metadata?.name)
       )
 
       this.log.debug('Loaded everything:', resources)

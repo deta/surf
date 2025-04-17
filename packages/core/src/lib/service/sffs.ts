@@ -180,9 +180,22 @@ export class SFFS {
             liveModeEnabled: false,
             hideViewed: false,
             smartFilterQuery: null,
-            sortBy: 'created_at'
+            sortBy: 'resource_added_to_space'
           } as SpaceData)
         : parsedName
+
+    // Convert legacy sortBy values to new ones
+    if (nameData.sortBy) {
+      const sortBy = nameData.sortBy as string
+      if (sortBy === 'created_at') {
+        nameData.sortBy = 'resource_added_to_space'
+      } else if (sortBy === 'updated_at') {
+        nameData.sortBy = 'resource_updated'
+      } else if (sortBy === 'source_published_at') {
+        nameData.sortBy = 'resource_source_published'
+      }
+    }
+
     return {
       id: raw.id,
       name: nameData,
