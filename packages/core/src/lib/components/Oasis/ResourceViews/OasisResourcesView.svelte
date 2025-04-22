@@ -48,10 +48,11 @@
 
   const log = useLogScope('OasisResourcesView')
   const oasis = useOasis()
-  const spaces = oasis.spaces
   const toasts = useToasts()
   const telemetry = useTelemetry()
 
+  const spaces = oasis.spaces
+  const sortedSpaces = oasis.sortedSpacesListFlat
   const selectedFilterTypeId = oasis.selectedFilterTypeId
 
   const renderContents = derived([resources], ([resources]) => {
@@ -122,7 +123,7 @@
       type: 'sub-menu',
       icon: '',
       text: 'Add to Context',
-      items: $spaces
+      items: $sortedSpaces
         .filter(
           (e) =>
             e.id !== 'all' &&

@@ -41,7 +41,6 @@
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
   import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
-  import { useContextService } from '@horizon/core/src/lib/service/contexts'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   const log = useLogScope('SpacesView')
@@ -49,7 +48,6 @@
   const toast = useToasts()
   const telemetry = useTelemetry()
   const tabsManager = useTabsManager()
-  const contextService = useContextService()
   const ai = useAI()
   const config = useConfig()
   const dispatch = createEventDispatcher<SpacesViewEvents>()
@@ -72,48 +70,18 @@
   export let type: 'grid' | 'horizontal' = 'grid'
   export let resourceManager: ResourceManager
   export let showPreview = true
-  const selectedSpace = oasis.selectedSpace
 
   const editingFolderId = writable<string | null>(null)
   const didChangeOrder = writable(false)
   const showAllSpaces = useLocalStorageStore<boolean>('showAllSpacesInOasis', true, true)
 
   const userSettings = config.settings
-  const sourceSpaces = contextService.useRankedSpaces(10)
+  const selectedSpace = oasis.selectedSpace
+  const sortedSpaces = oasis.sortedSpacesList
 
-  const filteredSpaces = derived([spaces, didChangeOrder], ([$spaces, didChangeOrder]) =>
-    $spaces
-      .filter(
-        (space) =>
-          space.dataValue.folderName !== '.tempspace' && space.id !== 'all' && space.id !== 'inbox'
-      )
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-  )
-
-  const pinnedSpaces = derived(filteredSpaces, ($spaces) =>
-    $spaces.filter((space) => space.dataValue.pinned)
-  )
-  const unpinnedSpaces = derived(
-    [filteredSpaces, sourceSpaces, userSettings],
-    ([$spaces, $sourceSpaces, $userSettings]) => {
-      if ($userSettings.experimental_context_linking) {
-        return $spaces.filter(
-          (space) =>
-            $sourceSpaces.findIndex((s) => s.id === space.id) === -1 && !space.dataValue.pinned
-        )
-      }
-
-      return $spaces.filter((space) => !space.dataValue.pinned)
-    }
-  )
-
-  const missingSourceSpaces = derived(
-    [sourceSpaces, pinnedSpaces],
-    ([$sourceSpaces, $pinnedSpaces]) =>
-      $sourceSpaces.filter((space) => $pinnedSpaces.findIndex((s) => s.id === space.id) === -1)
-  )
+  const pinnedSpaces = derived(sortedSpaces, ($sortedSpaces) => $sortedSpaces.pinned)
+  const unpinnedSpaces = derived(sortedSpaces, ($sortedSpaces) => $sortedSpaces.unpinned)
+  const missingSourceSpaces = derived(sortedSpaces, ($sortedSpaces) => $sortedSpaces.linked)
 
   const builtInSpaces = [
     {
@@ -544,7 +512,7 @@
             Pinned
             <!-- <div class="separator-line"></div> -->
           </div>
-          {#each $pinnedSpaces as folder, index (folder.id + index)}
+          {#each $pinnedSpaces as folder (folder.id)}
             <Folder
               {folder}
               on:select={(e) => handleSpaceSelect(e.detail)}
@@ -575,7 +543,7 @@
               <!-- <div class="separator-line"></div> -->
             </div>
 
-            {#each $missingSourceSpaces as folder, index (folder.id + index)}
+            {#each $missingSourceSpaces as folder (folder.id)}
               <div class="space-source-item">
                 <Folder
                   {folder}
@@ -672,7 +640,7 @@
           }}
           on:Drop={handleDrop}
         >
-          {#each $unpinnedSpaces as folder, index (folder.id + index)}
+          {#each $unpinnedSpaces as folder (folder.id)}
             <Folder
               {folder}
               on:select={(e) => handleSpaceSelect(e.detail)}

@@ -159,6 +159,7 @@ export type SpaceBasicData = {
   id: string
   name: string
   pinned: boolean
+  linked: boolean
 }
 
 const IPC_EVENTS = ipcService.registerEvents({

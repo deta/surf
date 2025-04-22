@@ -127,6 +127,7 @@
         }
 
   const spaces = oasis.spaces
+  const sortedSpaces = oasis.sortedSpacesListFlat
   const resourceState = resource.state
   const selectedSpaceId = oasis.selectedSpace
   const activeTab = tabsManager.activeTab
@@ -149,37 +150,40 @@
     }
   )
 
-  const contextMenuSpaces = derived([spaces, resource.spaceIds], ([spaces, resourceSpaceIds]) => {
-    return spaces
-      .filter(
-        (e) =>
-          e.id !== 'all' &&
-          e.id !== 'inbox' &&
-          e.dataValue?.folderName?.toLowerCase() !== '.tempspace'
-      )
-      .map(
-        (space) =>
-          ({
-            type: 'action',
-            icon: resourceSpaceIds.includes(space.id) ? 'check' : space,
-            disabled: resourceSpaceIds.includes(space.id),
-            text: space.dataValue.folderName,
-            action: async () => {
-              try {
-                await oasis.addResourcesToSpace(
-                  space.id,
-                  [resource.id],
-                  SpaceEntryOrigin.ManuallyAdded
-                )
+  const contextMenuSpaces = derived(
+    [sortedSpaces, resource.spaceIds],
+    ([spaces, resourceSpaceIds]) => {
+      return spaces
+        .filter(
+          (e) =>
+            e.id !== 'all' &&
+            e.id !== 'inbox' &&
+            e.dataValue?.folderName?.toLowerCase() !== '.tempspace'
+        )
+        .map(
+          (space) =>
+            ({
+              type: 'action',
+              icon: resourceSpaceIds.includes(space.id) ? 'check' : space,
+              disabled: resourceSpaceIds.includes(space.id),
+              text: space.dataValue.folderName,
+              action: async () => {
+                try {
+                  await oasis.addResourcesToSpace(
+                    space.id,
+                    [resource.id],
+                    SpaceEntryOrigin.ManuallyAdded
+                  )
 
-                toasts.success(`Added to ${space.dataValue.folderName}`)
-              } catch (e) {
-                toasts.error(`Failed to add to ${space.dataValue.folderName}`)
+                  toasts.success(`Added to ${space.dataValue.folderName}`)
+                } catch (e) {
+                  toasts.error(`Failed to add to ${space.dataValue.folderName}`)
+                }
               }
-            }
-          }) as CtxItem
-      )
-  })
+            }) as CtxItem
+        )
+    }
+  )
 
   $: annotations = resource.annotations ?? []
 

@@ -290,6 +290,7 @@
   const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const spaces = oasis.spaces
+  const sortedSpaces = oasis.sortedSpacesListFlat
   const selectedSpace = oasis.selectedSpace
 
   const chatContext = aiService.activeContextManager
@@ -3829,7 +3830,7 @@
   $: app.style.setProperty('--background-image', $backgroundImage?.path)
 
   const contextMenuMoveTabsToSpaces = derived(
-    [spaces, tabsManager.activeScopeId],
+    [sortedSpaces, tabsManager.activeScopeId],
     ([spaces, activeScopeId]) => {
       const handleMove = async (spaceId: string | null, label: string, makeActive = false) => {
         try {
@@ -3892,7 +3893,6 @@
               e.id !== 'all' &&
               e.id !== 'inbox' &&
               e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
-              !e.dataValue.builtIn &&
               e.id !== activeScopeId
           )
           .map(

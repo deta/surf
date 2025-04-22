@@ -982,24 +982,22 @@
           />
         {/if}
 
-        {#key $spaces}
-          <SpacesView
-            bind:this={createSpaceRef}
-            {spaces}
-            {resourceManager}
-            showPreview={true}
-            type="horizontal"
-            interactive={false}
-            on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
-            on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-            on:create-empty-space={handleCreateEmptySpace}
-            on:open-space-and-chat
-            on:delete-space={handleDeleteSpace}
-            on:handled-drop={handlePostDropOnSpace}
-            on:close-oasis={closeOverlay}
-            on:Drop
-          />
-        {/key}
+        <SpacesView
+          bind:this={createSpaceRef}
+          {spaces}
+          {resourceManager}
+          showPreview={true}
+          type="horizontal"
+          interactive={false}
+          on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
+          on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+          on:create-empty-space={handleCreateEmptySpace}
+          on:open-space-and-chat
+          on:delete-space={handleDeleteSpace}
+          on:handled-drop={handlePostDropOnSpace}
+          on:close-oasis={closeOverlay}
+          on:Drop
+        />
 
         <div
           class="stuff-view h-full w-full relative"

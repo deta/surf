@@ -262,6 +262,8 @@ export class OasisService {
   loadingEverythingContents: Writable<boolean>
   selectedFilterTypeId: Writable<string | null>
   selectedFilterType: Readable<FilterItem | null>
+  sortedSpacesList: Readable<{ pinned: OasisSpace[]; linked: OasisSpace[]; unpinned: OasisSpace[] }>
+  sortedSpacesListFlat: Readable<OasisSpace[]>
 
   stackKey: Writable<{}>
   pendingSave: Writable<SavingItem | null>
@@ -289,7 +291,6 @@ export class OasisService {
     this.resourceManager = resourceManager
     this.smartNotes = smartNotes
     this.config = config
-    this.contextService = createContextService(this)
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
     this.spaces = writable<OasisSpace[]>([])
@@ -307,6 +308,50 @@ export class OasisService {
 
     this.selectedFilterType = derived(this.selectedFilterTypeId, (id) => {
       return RESOURCE_FILTERS.find((filter) => filter.id === id) ?? null
+    })
+
+    this.contextService = createContextService(this)
+
+    this.sortedSpacesList = derived(
+      [this.spaces, this.contextService.rankedSpaces, this.config.settings],
+      ([$spaces, $sourceSpaces, $userSettings]) => {
+        const filteredSpaces = $spaces
+          .filter(
+            (space) =>
+              space.dataValue.folderName !== '.tempspace' &&
+              space.id !== 'all' &&
+              space.id !== 'inbox'
+          )
+          .sort((a, b) => {
+            return a.indexValue - b.indexValue
+          })
+
+        const pinnedSpaces = filteredSpaces.filter((space) => space.dataValue.pinned)
+
+        const unpinnedSpaces = filteredSpaces.filter((space) => {
+          if ($userSettings.experimental_context_linking) {
+            return (
+              $sourceSpaces.findIndex((s) => s.id === space.id) === -1 && !space.dataValue.pinned
+            )
+          }
+
+          return !space.dataValue.pinned
+        })
+
+        const sourceSpaces = $sourceSpaces.filter(
+          (space) => pinnedSpaces.findIndex((s) => s.id === space.id) === -1
+        )
+
+        return {
+          pinned: pinnedSpaces,
+          linked: $userSettings.experimental_context_linking ? sourceSpaces : [],
+          unpinned: unpinnedSpaces
+        }
+      }
+    )
+
+    this.sortedSpacesListFlat = derived(this.sortedSpacesList, (sorted) => {
+      return [...sorted.pinned, ...sorted.linked, ...sorted.unpinned]
     })
 
     this.initSpaces()
@@ -384,6 +429,14 @@ export class OasisService {
     return get(this.spaces).map((space) => space.spaceValue)
   }
 
+  get sortedSpacesListValue() {
+    return get(this.sortedSpacesList)
+  }
+
+  get sortedSpacesListFlatValue() {
+    return get(this.sortedSpacesListFlat)
+  }
+
   get pendingSaveValue() {
     return get(this.pendingSave)
   }
@@ -401,19 +454,41 @@ export class OasisService {
   }
 
   updateMainProcessSpacesList() {
-    const items = this.spacesValue
-      .filter(
-        (e) =>
-          e.id !== 'all' && e.id !== 'inbox' && e.name.folderName?.toLowerCase() !== '.tempspace'
-      )
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            name: space.name.folderName,
-            pinned: space.name.pinned ?? false
-          }) as SpaceBasicData
-      )
+    const { pinned, unpinned, linked } = this.sortedSpacesListValue
+
+    const pinnedItems = pinned.map(
+      (space) =>
+        ({
+          id: space.id,
+          name: space.dataValue.folderName,
+          pinned: true,
+          linked: false
+        }) as SpaceBasicData
+    )
+
+    const linkedItems = linked.map(
+      (space) =>
+        ({
+          id: space.id,
+          name: space.dataValue.folderName,
+          pinned: false,
+          linked: true
+        }) as SpaceBasicData
+    )
+
+    const unpinnedItems = unpinned.map(
+      (space) =>
+        ({
+          id: space.id,
+          name: space.dataValue.folderName,
+          pinned: false,
+          linked: false
+        }) as SpaceBasicData
+    )
+
+    const items = [...pinnedItems, ...linkedItems, ...unpinnedItems].filter(
+      (e) => e.id !== 'all' && e.id !== 'inbox' && e.name?.toLowerCase() !== '.tempspace'
+    )
 
     this.log.debug('updating spaces list in main process', items)
     window.api.updateSpacesList(items)

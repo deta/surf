@@ -113,6 +113,7 @@
   const chatContext = ai.activeContextManager
   const selectedTabs = tabsManager.selectedTabs
   const activeSpaceId = tabsManager.activeScopeId
+  const sortedSpaces = oasis.sortedSpacesListFlat
 
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
@@ -471,7 +472,7 @@
   /// MISC
 
   const contextMenuMoveTabsToSpaces = derived(
-    [spaces, tabsManager.activeScopeId],
+    [sortedSpaces, tabsManager.activeScopeId],
     ([spaces, activeScopeId]) => {
       const handleMove = async (spaceId: string | null, label: string, makeActive = false) => {
         try {
@@ -523,7 +524,6 @@
               e.id !== 'all' &&
               e.id !== 'inbox' &&
               e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
-              !e.dataValue.builtIn &&
               e.id !== activeScopeId
           )
           .map(
@@ -540,22 +540,18 @@
   )
 
   const saveToSpaceItems = derived(
-    [spaces, spaceSearchValue, resourceSpaceIds],
-    ([spaces, searchValue, resourceSpaceIds]) => {
-      const spaceItems = spaces
-        .sort((a, b) => {
-          return a.indexValue - b.indexValue
-        })
-        .map(
-          (space) =>
-            ({
-              id: space.id,
-              label: space.dataValue.folderName,
-              disabled: resourceSpaceIds.includes(space.id),
-              icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
-              data: space
-            }) as SelectItem
-        )
+    [sortedSpaces, spaceSearchValue, resourceSpaceIds],
+    ([sortedSpaces, searchValue, resourceSpaceIds]) => {
+      const spaceItems = sortedSpaces.map(
+        (space) =>
+          ({
+            id: space.id,
+            label: space.dataValue.folderName,
+            disabled: resourceSpaceIds.includes(space.id),
+            icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
+            data: space
+          }) as SelectItem
+      )
 
       if (!searchValue) return spaceItems
 
