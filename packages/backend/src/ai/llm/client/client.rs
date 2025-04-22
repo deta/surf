@@ -46,6 +46,10 @@ pub enum Provider {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Model {
+    #[serde(rename = "gpt-4.1")]
+    GPT4_1,
+    #[serde(rename = "gpt-4.1-mini")]
+    GPT4_1Mini,
     #[serde(rename = "gpt-4o")]
     GPT4o,
     #[serde(rename = "gpt-4o-mini")]
@@ -519,6 +523,8 @@ impl Model {
 
     fn as_str(&self) -> String {
         match self {
+            Self::GPT4_1 => "gpt-4.1",
+            Self::GPT4_1Mini => "gpt-4.1-mini",
             Self::GPT4o => "gpt-4o",
             Self::GPT4oMini => "gpt-4o-mini",
             Self::O3Mini => "o3-mini",
@@ -533,7 +539,9 @@ impl Model {
 
     fn provider(&self) -> &Provider {
         match self {
-            Self::GPT4o | Self::GPT4oMini | Self::O3Mini => &Provider::OpenAI,
+            Self::GPT4_1 | Self::GPT4_1Mini | Self::GPT4o | Self::GPT4oMini | Self::O3Mini => {
+                &Provider::OpenAI
+            }
             Self::Claude37Sonnet | Self::Claude35Sonnet | Self::Claude35Haiku => {
                 &Provider::Anthropic
             }
@@ -546,6 +554,9 @@ impl Model {
 impl TokenModel for Model {
     fn max_tokens(&self) -> usize {
         match self {
+            // NOTE: actual is 1M for gpt4.1
+            Self::GPT4_1 => 900_000,
+            Self::GPT4_1Mini => 900_000,
             Self::GPT4o => 128_000,
             Self::GPT4oMini => 128_000,
             Self::O3Mini => 128_000,

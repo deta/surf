@@ -2,6 +2,10 @@ use strum_macros::{Display, EnumString};
 
 #[derive(Debug, Clone, EnumString, Display)]
 pub enum Model {
+    #[strum(serialize = "gpt-4.1")]
+    GPT4_1,
+    #[strum(serialize = "gpt-4.1-mini")]
+    GPT4_1Mini,
     #[strum(serialize = "gpt-4o")]
     GPT4o,
     #[strum(serialize = "gpt-4o-mini")]
@@ -21,6 +25,8 @@ impl TokenModel for Model {
     // and for practicality
     fn max_tokens(&self) -> usize {
         match self {
+            Model::GPT4_1 => 900000,
+            Model::GPT4_1Mini => 900000,
             Model::GPT4o => 100000,
             Model::GPT4oMini => 100000,
             Model::O1Preview => 100000,
