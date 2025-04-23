@@ -178,7 +178,6 @@ export class SFFS {
             showInSidebar: false,
             sources: [],
             liveModeEnabled: false,
-            hideViewed: false,
             smartFilterQuery: null,
             sortBy: 'resource_added_to_space'
           } as SpaceData)

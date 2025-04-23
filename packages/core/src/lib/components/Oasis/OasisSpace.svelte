@@ -1169,23 +1169,6 @@
     }
   }
 
-  const handleLoadResource = (e: CustomEvent<Resource>) => {
-    const resource = e.detail
-    log.debug('Load resource:', resource)
-
-    if ($space?.dataValue.hideViewed) {
-      const viewedByUser =
-        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.VIEWED_BY_USER)?.value ===
-        'true'
-
-      if (viewedByUser) {
-        log.debug('Resource already viewed by user')
-
-        $spaceContents = $spaceContents.filter((x) => x.resource_id !== resource.id)
-      }
-    }
-  }
-
   const handleLoadSpace = () => {
     loadSpaceContents(spaceId)
   }
@@ -1571,7 +1554,6 @@
             on:open={handleOpen}
             on:open-and-chat
             on:remove={handleResourceRemove}
-            on:load={handleLoadResource}
             on:batch-remove={handleResourceRemove}
             on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
             on:batch-open

@@ -23,7 +23,6 @@ export interface SpaceData {
   showInSidebar: boolean
   sources?: SpaceSource[]
   liveModeEnabled: boolean
-  hideViewed: boolean
   smartFilterQuery: string | null
   sortBy?: SpaceEntrySortBy
   sortOrder?: 'asc' | 'desc'

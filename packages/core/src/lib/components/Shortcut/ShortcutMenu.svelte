@@ -61,7 +61,6 @@
   //         colors: ['#76E0FF', '#4EC9FB'],
   //         showInSidebar: false,
   //         liveModeEnabled: false,
-  //         hideViewed: false
   //       },
   //       created_at: new Date().toISOString(),
   //       updated_at: new Date().toISOString(),

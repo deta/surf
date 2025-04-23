@@ -39,7 +39,6 @@
 
   let spaceData = space?.data
   let isLiveModeOn = $spaceData?.liveModeEnabled
-  let hideViewedResources = $spaceData?.hideViewed
   let smartFilterQuery = $spaceData?.smartFilterQuery
   let sortBy = $spaceData?.sortBy ?? 'resource_added_to_space'
   let sortOrder = $spaceData?.sortOrder ?? 'desc'
@@ -160,19 +159,6 @@
       setting: 'live_mode',
       change: e.detail
     })
-  }, 200)
-
-  const handleHideViewedUpdate = useDebounce(async (e: CustomEvent<boolean>) => {
-    if (!space) return
-
-    await space.updateData({ hideViewed: e.detail })
-
-    telemetry.trackUpdateSpaceSettings({
-      setting: 'hide_viewed',
-      change: e.detail
-    })
-
-    dispatch('load')
   }, 200)
 
   const handleSmartQueryBlur = useDebounce(async () => {
@@ -358,16 +344,6 @@
           </div>
         {:else}
           <div class="setting">
-            <div class="w-fit mt-2">
-              <Switch
-                label="Hide already viewed items"
-                color="#ff4eed"
-                reverse
-                bind:checked={hideViewedResources}
-                on:update={handleHideViewedUpdate}
-              />
-            </div>
-
             <div class="danger-zone">
               <div class="danger-title">
                 <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->

@@ -63,7 +63,6 @@ export async function createDemoItems(
   //         colors: ['#76E0FF', '#4EC9FB'],
   //         showInSidebar: false,
   //         liveModeEnabled: false,
-  //         hideViewed: false,
   //         smartFilterQuery: null,
   //         sql_query: null,
   //         embedding_query: null,

@@ -59,7 +59,6 @@ export type OptionalSpaceData = Optional<
   SpaceData,
   | 'showInSidebar'
   | 'liveModeEnabled'
-  | 'hideViewed'
   | 'smartFilterQuery'
   | 'sortBy'
   | 'viewType'
@@ -392,7 +391,6 @@ export class OasisService {
     const fullData = {
       showInSidebar: false,
       liveModeEnabled: false,
-      hideViewed: false,
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
@@ -547,7 +545,6 @@ export class OasisService {
     const defaults = {
       showInSidebar: false,
       liveModeEnabled: false,
-      hideViewed: false,
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
