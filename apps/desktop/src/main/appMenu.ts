@@ -335,9 +335,14 @@ class AppMenu {
           accelerator: 'F1'
         },
         {
+          label: 'Open Changelog',
+          click: () => ipcSenders.openChangelog()
+        },
+        {
           label: 'Open Welcome Page',
           click: () => ipcSenders.openWelcomePage()
         },
+        { type: 'separator' },
         {
           label: 'Give Feedback',
           click: () => ipcSenders.openFeedbackPage(),

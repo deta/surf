@@ -436,6 +436,16 @@ export const ipcSenders = {
     IPC_EVENTS_MAIN.openCheatSheet.sendToWebContents(window.webContents)
   },
 
+  openChangelog: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openChangelog.sendToWebContents(window.webContents)
+  },
+
   openInvitePage: () => {
     const window = getMainWindow()
     if (!window) {

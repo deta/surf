@@ -161,6 +161,16 @@ const eventHandlers = {
     })
   },
 
+  onOpenChangelog: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openChangelog.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
   onOpenInvitePage: (callback: () => void) => {
     return IPC_EVENTS_RENDERER.openInvitePage.on((_) => {
       try {

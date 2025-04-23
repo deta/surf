@@ -180,7 +180,11 @@
   import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
   import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
   import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
-  import { CHEAT_SHEET_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
+  import {
+    CHANGELOG_URL,
+    CHEAT_SHEET_URL,
+    SHORTCUTS_PAGE_URL
+  } from '@horizon/core/src/lib/utils/env'
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
@@ -2725,6 +2729,10 @@
       openCheatSheet()
     })
 
+    horizonPreloadEvents.onOpenChangelog(() => {
+      openChangelog()
+    })
+
     horizonPreloadEvents.onOpenInvitePage(() => {
       openInvitePage()
     })
@@ -3260,6 +3268,24 @@
       active: true,
       ...opts
     })
+  }, 200)
+
+  const openChangelog = useDebounce(async (opts?: CreateTabOptions) => {
+    const tab = $tabs.find(
+      (tab) =>
+        tab.type === 'page' &&
+        tab.currentLocation === CHANGELOG_URL &&
+        tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
+    )
+
+    if (tab) {
+      tabsManager.makeActive(tab.id)
+    } else {
+      tabsManager.addPageTab(CHANGELOG_URL, {
+        active: true,
+        ...opts
+      })
+    }
   }, 200)
 
   const openShortcutsPage = useDebounce(async (opts?: CreateTabOptions) => {
