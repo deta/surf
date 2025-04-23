@@ -25,12 +25,13 @@
   import { createEditorExtensions, getEditorContentText, type ExtensionOptions } from '../editor'
   import type { EditorAutocompleteEvent, MentionItem, MentionItemType } from '../types'
   import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
-  import type { MentionAction } from '../extensions/Mention'
+  import type { MentionAction, MentionNodeAttrs } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
   import { TextSelection } from '@tiptap/pm/state'
   import { DragTypeNames } from '@horizon/types'
   import type { SlashCommandPayload } from '../extensions/Slash/index'
   import type { SlashItemsFetcher } from '../extensions/Slash/suggestion'
+  import type { MentionItemsFetcher } from '../extensions/Mention/suggestion'
 
   export let content: string
   export let readOnly: boolean = false
@@ -48,7 +49,6 @@
   export let floatingMenuShown: boolean = false
   export let parseMentions: boolean = false
   export let readOnlyMentions: boolean = false
-  export let mentionItems: MentionItem[] = []
   export let bubbleMenu: boolean = false
   export let bubbleMenuLoading: boolean = false
   export let autoSimilaritySearch: boolean = false
@@ -58,6 +58,7 @@
   export let showDragHandle: boolean = false
   export let showSlashMenu: boolean = false
   export let slashItemsFetcher: SlashItemsFetcher | undefined = undefined
+  export let mentionItemsFetcher: MentionItemsFetcher | undefined = undefined
   export let enableCaretIndicator: boolean = false
   export let onCaretPositionUpdate: ((position: any) => void) | undefined = undefined
   export let showSimilaritySearch: boolean = false
@@ -245,16 +246,10 @@
   }
 
   const parseMentionNode = (node: typeof $editor.state.doc) => {
-    const id = node.attrs.id as string
-    const label = node.attrs.label as string
-    const type = node.attrs.type as MentionItemType
+    const attrs = node.attrs as MentionNodeAttrs
+    const { id, label, icon, mentionType } = attrs
 
-    const item = mentionItems.find((item) => item.id === id)
-    if (item) {
-      return item
-    }
-
-    return { id, label, type } as MentionItem
+    return { id, label, icon, type: mentionType } as MentionItem
   }
 
   const shouldShowFloatingMenu: Exclude<FloatingMenuPluginProps['shouldShow'], null> = ({
@@ -275,30 +270,6 @@
 
     floatingMenuShown = true
     return true
-  }
-
-  const searchMentions: ExtensionOptions['searchMentions'] = ({ query }) => {
-    const compare = (a: string, b: string) => a.toLowerCase().includes(b.toLowerCase())
-
-    return mentionItems.filter((item) => {
-      if (!query && item.hideInRoot) {
-        return false
-      }
-
-      if (query && item.hideInSearch) {
-        return false
-      }
-
-      if (compare(item.label, query)) {
-        return true
-      }
-
-      if (item.aliases && item.aliases.some((alias) => compare(alias, query))) {
-        return true
-      }
-
-      return false
-    })
   }
 
   const handleMentionClick = (item: MentionItem, action: MentionAction) => {
@@ -334,7 +305,6 @@
   const baseExtensions = createEditorExtensions({
     placeholder,
     parseMentions,
-    searchMentions,
     disableHashtag: !parseHashtags,
     mentionClick: handleMentionClick,
     mentionInsert: handleMentionInsert,
@@ -346,6 +316,7 @@
     showSlashMenu: showSlashMenu,
     onSlashCommand: handleSlashCommand,
     slashItems: slashItemsFetcher,
+    mentionItems: mentionItemsFetcher,
     citationComponent: citationComponent,
     citationClick: handleCitationClick,
     enableCaretIndicator: enableCaretIndicator,
@@ -549,7 +520,7 @@
   {#if editor && !readOnly && bubbleMenu}
     <BubbleMenu
       {editor}
-      {mentionItems}
+      {mentionItemsFetcher}
       loading={bubbleMenuLoading}
       autosearch={autoSimilaritySearch}
       showRewrite={enableRewrite}

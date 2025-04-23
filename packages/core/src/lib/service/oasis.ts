@@ -427,6 +427,10 @@ export class OasisService {
     return get(this.spaces).map((space) => space.spaceValue)
   }
 
+  get spacesObjectsValue() {
+    return get(this.spaces)
+  }
+
   get sortedSpacesListValue() {
     return get(this.sortedSpacesList)
   }
@@ -1053,15 +1057,17 @@ export class OasisService {
     this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
   }
 
+  /**
+   *
+   * @param resourceOrId resource or resource id
+   * @param opts - options
+   * @param opts.select - whether to select the resource in the sidebar
+   * @param opts.selectedSpace - the space to select, or 'auto' to select the space that contains the resource
+   */
   async openResourceDetailsSidebar(
     resourceOrId: Resource | string,
-    opts?: { select?: boolean; selectedSpace?: string }
+    opts?: { select?: boolean; selectedSpace?: 'auto' | string }
   ) {
-    const options = {
-      select: opts?.select ?? true,
-      selectedSpace: opts?.selectedSpace ?? 'all'
-    }
-
     const resource =
       typeof resourceOrId === 'string'
         ? await this.resourceManager.getResource(resourceOrId)
@@ -1069,6 +1075,26 @@ export class OasisService {
     if (!resource) {
       this.log.error('Resource not found')
       return
+    }
+
+    let selectedSpace: string | undefined = 'all'
+
+    if (opts?.selectedSpace === 'auto') {
+      if (
+        this.tabsManager.activeScopeIdValue &&
+        resource.spaceIdsValue.includes(this.tabsManager.activeScopeIdValue)
+      ) {
+        selectedSpace = this.tabsManager.activeScopeIdValue
+      } else if (resource.spaceIdsValue.length === 1) {
+        selectedSpace = resource.spaceIdsValue[0]
+      }
+    } else if (opts?.selectedSpace) {
+      selectedSpace = opts?.selectedSpace
+    }
+
+    const options = {
+      select: opts?.select ?? true,
+      selectedSpace: selectedSpace
     }
 
     if (this.tabsManager.showNewTabOverlayValue !== 2) {

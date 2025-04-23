@@ -393,35 +393,25 @@
   }
 
   const handleExcludeOthers = () => {
-    chatContext.removeAllExcept(tab.id)
+    $chatContext.removeAllExcept(tab.id)
   }
 
   const handleExcludeTab = () => {
-    chatContext.removeTabItem(tab.id, PageChatUpdateContextEventTrigger.TabSelection)
+    $chatContext.removeTabItem(tab.id, PageChatUpdateContextEventTrigger.TabSelection)
   }
 
   const handleIncludeTab = () => {
     if (tab.type === 'page' || tab.type === 'space') {
-      chatContext.addTab(tab, { trigger: PageChatUpdateContextEventTrigger.TabSelection })
+      $chatContext.addTab(tab, { trigger: PageChatUpdateContextEventTrigger.TabSelection })
     }
   }
 
   const openResourceDetails = async () => {
     if (!$resource) return
 
-    let selectedSpace: string | undefined = undefined
-    if (
-      tabsManager.activeScopeIdValue &&
-      $resourceSpaceIds.includes(tabsManager.activeScopeIdValue)
-    ) {
-      selectedSpace = tabsManager.activeScopeIdValue
-    } else if ($resourceSpaceIds.length === 1) {
-      selectedSpace = $resourceSpaceIds[0]
-    }
-
     await oasis.openResourceDetailsSidebar($resource, {
       select: true,
-      selectedSpace: selectedSpace
+      selectedSpace: 'auto'
     })
   }
 

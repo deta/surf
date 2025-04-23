@@ -361,9 +361,7 @@
     try {
       const mentions = editor.getMentions()
       log.debug('Handling chat submit', chatQuery, mentions)
-      const items = (mentions ?? [])
-        .filter((mention) => mention.type !== MentionItemType.MODEL)
-        .map((mention) => mention.id)
+      const items = (mentions ?? []).filter((mention) => mention.type !== MentionItemType.MODEL)
 
       if (items.length > 0) {
         for await (const item of items) {

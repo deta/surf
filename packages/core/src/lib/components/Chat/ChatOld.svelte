@@ -61,13 +61,13 @@
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import {
     populateRenderAndChunkIds,
-    renderIDFromCitationID,
-    useEditorSpaceMentions
+    renderIDFromCitationID
   } from '@horizon/core/src/lib/service/ai/helpers'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
   import { MODEL_CLAUDE_MENTION, MODEL_GPT_MENTION } from '@horizon/core/src/lib/constants/chat'
   import { Provider } from '@horizon/types/src/ai.types'
   import ModelPicker from './ModelPicker.svelte'
+  import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
 
   export let chat: AIChat
   export let inputValue = ''
@@ -211,7 +211,7 @@
     })
   })
 
-  const mentionItems = useEditorSpaceMentions(oasis, ai)
+  const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager })
 
   export const updateChatInput = (text: string, focus = true) => {
     inputValue = text
@@ -541,9 +541,7 @@
     try {
       const mentions = editor.getMentions()
       log.debug('Handling chat submit', chatQuery, mentions)
-      const items = (mentions ?? [])
-        .filter((mention) => mention.type !== MentionItemType.MODEL)
-        .map((mention) => mention.id)
+      const items = (mentions ?? []).filter((mention) => mention.type !== MentionItemType.MODEL)
 
       if (items.length > 0) {
         for await (const item of items) {
@@ -1334,7 +1332,7 @@
           autofocus={true}
           submitOnEnter
           parseMentions
-          mentionItems={$mentionItems}
+          {mentionItemsFetcher}
           placeholder={$chatBoxPlaceholder}
         />
       </div>

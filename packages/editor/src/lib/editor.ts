@@ -13,27 +13,20 @@ import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import ListKeymap from '@tiptap/extension-list-keymap'
 import Image from '@tiptap/extension-image'
-import { Markdown } from 'tiptap-markdown'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
-import {
-  SlashExtension,
-  SlashSuggestion,
-  type SlashCommandPayload,
-  type SlashMenuItem
-} from './extensions/Slash/index'
+import { SlashExtension, SlashSuggestion, type SlashCommandPayload } from './extensions/Slash/index'
 import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
 import Mention, { type MentionAction } from './extensions/Mention/index'
 // import Mention from '@tiptap/extension-mention'
-import mentionSuggestion from './extensions/Mention/suggestion'
+import mentionSuggestion, { type MentionItemsFetcher } from './extensions/Mention/suggestion'
 import { CaretIndicatorExtension, type CaretPosition } from './extensions/CaretIndicator'
 import Loading from './extensions/Loading'
 import Thinking from './extensions/Thinking'
 import TrailingNode from './extensions/TrailingNode'
 import AIOutput from './extensions/AIOutput'
 import type { MentionItem } from './types'
-import type { SuggestionOptions } from '@tiptap/suggestion'
 import Button from './extensions/Button'
 import Resource from './extensions/Resource'
 import type { ComponentType, SvelteComponent } from 'svelte'
@@ -48,10 +41,6 @@ export type ExtensionOptions = {
   enhanceCodeBlock?: boolean
   parseMentions?: boolean
   readOnlyMentions?: boolean
-  searchMentions?: (props: {
-    query: string
-    editor: Editor
-  }) => MentionItem[] | Promise<MentionItem[]>
   mentionClick?: (item: MentionItem, action: MentionAction) => void
   mentionInsert?: (item: MentionItem) => void
   buttonClick?: (action: string) => void
@@ -63,6 +52,7 @@ export type ExtensionOptions = {
   showSlashMenu?: boolean
   onSlashCommand?: (payload: SlashCommandPayload) => void
   slashItems?: SlashItemsFetcher
+  mentionItems?: MentionItemsFetcher
   enableCaretIndicator?: boolean
   onCaretPositionUpdate?: (position: CaretPosition) => void
   surfletComponent?: ComponentType<SvelteComponent>
@@ -122,7 +112,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       },
       suggestion: {
         ...mentionSuggestion,
-        items: opts?.searchMentions
+        items: opts?.mentionItems
       },
       renderText({ options, node }) {
         return `${options.suggestion.char}${node.attrs.label ?? node.attrs.id}`

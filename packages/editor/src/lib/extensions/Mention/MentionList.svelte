@@ -56,6 +56,8 @@
         return 'Models'
       case MentionItemType.CONTEXT:
         return 'Contexts'
+      case MentionItemType.RESOURCE:
+        return 'My Stuff'
       default:
         return 'Others'
     }
@@ -94,7 +96,7 @@
               <DynamicIcon name={item.icon} size="16px" />
             {/if}
 
-            <div>
+            <div class="item-text">
               {item.suggestionLabel || item.label}
             </div>
           </div>
@@ -120,7 +122,7 @@
     --ctx-item-text: #210e1f;
     --ctx-item-text-hover: #fff;
 
-    min-width: 180px;
+    width: 275px;
     max-height: 400px;
     background: var(--ctx-background);
     padding: 0.25em;
@@ -146,6 +148,12 @@
     align-items: center;
     gap: 0.5em;
     color: var(--ctx-item-text);
+  }
+
+  .item-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .active {

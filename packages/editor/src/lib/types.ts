@@ -8,6 +8,7 @@ export type EditorAutocompleteEvent = {
 export enum MentionItemType {
   BUILT_IN = 'built-in',
   CONTEXT = 'context',
+  RESOURCE = 'resource',
   MODEL = 'model',
   OTHER = 'other'
 }

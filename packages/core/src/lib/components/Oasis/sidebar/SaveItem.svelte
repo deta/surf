@@ -138,19 +138,9 @@
     if (!$resource) return
     await saveItem()
 
-    let selectedSpace: string | undefined = undefined
-    if (
-      tabsManager.activeScopeIdValue &&
-      $resourceSpaceIds.includes(tabsManager.activeScopeIdValue)
-    ) {
-      selectedSpace = tabsManager.activeScopeIdValue
-    } else if ($resourceSpaceIds.length === 1) {
-      selectedSpace = $resourceSpaceIds[0]
-    }
-
     oasis.openResourceDetailsSidebar($resource, {
       select: true,
-      selectedSpace: selectedSpace
+      selectedSpace: 'auto'
     })
   }
 

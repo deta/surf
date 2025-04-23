@@ -5,12 +5,13 @@
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher, tick } from 'svelte'
   import { parseStringIntoUrl } from '@horizon/utils'
-  import type { EditorRewriteEvent, EditorSimilaritiesSearchEvent, MentionItem } from '../types'
+  import type { EditorRewriteEvent, EditorSimilaritiesSearchEvent } from '../types'
   import EditorComp from './Editor.svelte'
+  import type { MentionItemsFetcher } from '../extensions/Mention/suggestion'
 
   export let loading = false
   export let editor: Readable<Editor>
-  export let mentionItems: MentionItem[] = []
+  export let mentionItemsFetcher: MentionItemsFetcher | undefined = undefined
   export let autosearch = false
   export let showRewrite = false
   export let showSimilaritySearch = false
@@ -165,7 +166,7 @@
           <EditorComp
             bind:this={editorElem}
             bind:content={inputValue}
-            {mentionItems}
+            {mentionItemsFetcher}
             placeholder="How do you want to rewrite it?"
             autofocus={true}
             parseMentions

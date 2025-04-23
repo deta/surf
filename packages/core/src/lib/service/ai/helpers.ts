@@ -13,7 +13,6 @@ import type {
 } from '../../types/browser.types'
 import {
   codeLanguageToMimeType,
-  conditionalArrayItem,
   markdownToHtml,
   parseUrlIntoCanonical,
   useLogScope
@@ -22,16 +21,8 @@ import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
 import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
-import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
-import type { OasisService } from '../oasis'
-import { derived } from 'svelte/store'
-import {
-  BUILT_IN_MENTIONS_BASE,
-  NOTE_MENTION,
-  WIKIPEDIA_SEARCH_MENTION
-} from '../../constants/chat'
-import { MentionItemType, type MentionItem } from '@horizon/editor'
-import { ResourceTag, type ResourceManager } from '../resources'
+import { ModelTiers } from '@horizon/types/src/ai.types'
+import { ResourceManager, ResourceTag } from '../resources'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
 import type { TabsManager } from '../tabs'
 
@@ -71,7 +62,7 @@ export const parseXML = (xml: string) => {
 
   const parseError = xmlDoc.getElementsByTagName('parsererror')
   if (parseError.length > 0) {
-    console.warn('Error parsing chat response: ' + parseError[0]?.textContent ?? 'unknown error')
+    console.warn('Error parsing chat response: ' + (parseError[0]?.textContent ?? 'unknown error'))
     return xmlDoc
   }
 
@@ -515,46 +506,6 @@ export const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undef
   })
   return sources
 }
-
-export const useEditorSpaceMentions = (oasis: OasisService, ai: AIService, isInNote = false) =>
-  derived([oasis.spaces, ai.models, oasis.config.settings], ([spaces, models, userSettings]) => {
-    const builtInMentions = [
-      ...BUILT_IN_MENTIONS_BASE,
-      ...conditionalArrayItem(isInNote, NOTE_MENTION),
-      ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION)
-    ]
-
-    const modelMentions = models.map(
-      (model) =>
-        ({
-          id: `model-${model.id}`,
-          label: model.label,
-          suggestionLabel: `Ask ${model.label}`,
-          aliases: ['model', 'ai', model.custom_model_name, model.provider].filter(
-            Boolean
-          ) as string[],
-          icon: model.icon,
-          type: MentionItemType.MODEL,
-          hideInRoot: model.provider !== Provider.Custom
-        }) as MentionItem
-    )
-
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            label: space.dataValue.folderName,
-            icon: space.getIconString(),
-            type: MentionItemType.CONTEXT
-          }) as MentionItem
-      )
-
-    return [...builtInMentions, ...modelMentions, ...spaceItems]
-  })
 
 export const convertChatOutputToNoteContent = async (
   response: AIChatMessageParsed,

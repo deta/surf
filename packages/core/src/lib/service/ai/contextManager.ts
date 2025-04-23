@@ -47,7 +47,7 @@ import {
   TABS_MENTION,
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
-import type { MentionItem } from '@horizon/editor'
+import { MentionItemType, type MentionItem } from '@horizon/editor'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -598,8 +598,8 @@ export class ContextManager {
     return this.addContextItem(item, opts)
   }
 
-  addMentionItem(mentionOrId: MentionItem | string, opts?: AddContextItemOptions) {
-    const itemId = typeof mentionOrId === 'string' ? mentionOrId : mentionOrId.id
+  addMentionItem(item: MentionItem, opts?: AddContextItemOptions) {
+    const itemId = item.id
     const activeSpaceContextItem = this.getActiveSpaceContextItem()
     if (itemId === GENERAL_CONTEXT_MENTION.id) {
       return this.addHomeContext(opts)
@@ -625,6 +625,8 @@ export class ContextManager {
       }
     } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
       return this.addWikipediaContext(opts)
+    } else if (item.type === MentionItemType.RESOURCE) {
+      return this.addResource(item.id, opts)
     } else {
       return this.addSpace(itemId, opts)
     }

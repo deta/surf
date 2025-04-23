@@ -31,6 +31,7 @@
     isModKeyPressed,
     markdownToHtml,
     tooltip,
+    truncate,
     truncateURL,
     useDebounce,
     useLocalStorageStore,
@@ -47,8 +48,7 @@
     generateContentHash,
     mapCitationsToText,
     parseChatOutputToHtml,
-    parseChatOutputToSurfletCode,
-    useEditorSpaceMentions
+    parseChatOutputToSurfletCode
   } from '@horizon/core/src/lib/service/ai/helpers'
   import {
     startAIGeneration,
@@ -136,6 +136,8 @@
   import Surflet from '@horizon/core/src/lib/components/Chat/Notes/Surflet.svelte'
   import ChatControls from '@horizon/core/src/lib/components/Chat/ChatControls.svelte'
   import { openContextMenu } from '../../../Core/ContextMenu.svelte'
+  import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+  import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -322,11 +324,7 @@
     }
   )
 
-  const mentionItems = useEditorSpaceMentions(oasis, ai, true)
-
-  const isBuiltInMention = (id: string) => {
-    return $mentionItems.some((mention) => mention.id === id && mention.type === 'built-in')
-  }
+  const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager }, resourceId)
 
   const prepLoadingPhrases = [
     'Analysing your context…',
@@ -872,7 +870,7 @@
       }
     } else if ($selectedContext) {
       log.debug('Adding selected context to context', $selectedContext)
-      chatContextManager.addMentionItem($selectedContext)
+      chatContextManager.addSpace($selectedContext)
     } else {
       log.debug('Adding active space to context', resourceId)
       chatContextManager.addActiveSpaceContext('resources')
@@ -1112,17 +1110,41 @@
     try {
       log.debug('mention click', e.detail)
       const { item, action } = e.detail
-      const { id } = item
+      const { id, type } = item
 
       telemetry.trackNoteOpenMention(getMentionType(id), action, showOnboarding)
 
-      if (id === 'tabs') {
-        return
-      }
+      if (action === 'overlay') {
+        if (id === generalContext.id) {
+          openSpaceInStuff('inbox')
+        } else if (id === 'everything') {
+          openSpaceInStuff('all')
+        } else if (type === MentionItemType.RESOURCE) {
+          oasis.openResourceDetailsSidebar(id, { select: true, selectedSpace: 'auto' })
+        } else if (type === MentionItemType.CONTEXT) {
+          openSpaceInStuff(id)
+        } else {
+          toasts.info('This is a built-in mention and cannot be opened')
+        }
+      } else {
+        if (type === MentionItemType.BUILT_IN || type === MentionItemType.MODEL) {
+          toasts.info('This is a built-in mention and cannot be opened')
+          return
+        }
 
-      if (action === 'new-tab' || action === 'new-background-tab') {
-        if (isBuiltInMention(id)) {
-          tabsManager.changeScope(null, ChangeContextEventTrigger.Note)
+        if (type === MentionItemType.RESOURCE) {
+          tabsManager.openResourcFromContextAsPageTab(id, {
+            active: action !== 'new-background-tab'
+          })
+          return
+        }
+
+        if (action === 'open') {
+          tabsManager.changeScope(
+            id === generalContext.id || id === 'everything' ? null : id,
+            ChangeContextEventTrigger.Note
+          )
+
           return
         }
 
@@ -1135,19 +1157,6 @@
         tabsManager.addSpaceTab(space, {
           active: action === 'new-tab'
         })
-      } else if (action === 'overlay') {
-        if (id === generalContext.id) {
-          openSpaceInStuff('inbox')
-        } else if (id === 'everything') {
-          openSpaceInStuff('all')
-        } else if (!isBuiltInMention(id)) {
-          openSpaceInStuff(id)
-        }
-      } else {
-        tabsManager.changeScope(
-          id === generalContext.id || id === 'everything' ? null : id,
-          ChangeContextEventTrigger.Note
-        )
       }
     } catch (e) {
       log.error('Error handling mention click', e)
@@ -1943,7 +1952,6 @@
               citationComponent={CitationItem}
               surfletComponent={Surflet}
               resourceComponent={EmbeddedResource}
-              mentionItems={$mentionItems}
               autocomplete
               floatingMenu
               readOnlyMentions={false}
@@ -1964,6 +1972,7 @@
               onCaretPositionUpdate={handleCaretPositionUpdate}
               {tabsManager}
               {slashItemsFetcher}
+              {mentionItemsFetcher}
               on:blur={hidePopover}
               on:click
               on:dragstart
