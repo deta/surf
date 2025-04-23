@@ -99,6 +99,17 @@ export const useAnimationFrameThrottle = <F extends (...args: any[]) => any>(
   func: F,
   timeout?: number
 ) => {
+  // PERF: This implementation doesnt really make sense no? If you want to throttle updates to happen
+  // once per animation frame, just call requestANimationFrame with the callback to your code...
+  // Otherwise this essentially is just a duplicate of useThrottle in a more complex way.
+  // This implementation immediately runs the code if its not in the throttle..
+  // Just do (and make sure to reset raf = null at the end of the callback):
+  //
+  // var raf: number | null = null
+  // ...
+  // if (raf === null) raf = requestAnimationFrame(yourCallback);
+  //
+
   let inThrottle: boolean
   let debounceTimer: ReturnType<typeof setTimeout>
   const throttle = (...args: Parameters<F>) => {

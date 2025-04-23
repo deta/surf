@@ -328,7 +328,8 @@
     }
   }
 
-  const handleFaviconChange = (newFaviconURL: string) => {
+  const handleFaviconChange = useDebounce((newFaviconURL: string) => {
+    // NOTE: This is an expensive operation invoking main thread! Make sure it is debounced
     if (webview?.getURL()) {
       if (isPDFViewerURL(webview?.getURL(), window.api.PDFViewerEntryPoint)) return
     }
@@ -339,7 +340,7 @@
 
     faviconURL.set(newFaviconURL)
     dispatch('favicon-change', newFaviconURL)
-  }
+  }, 250)
 
   /**
    * Convert drag data into serialized format transferable to webview.

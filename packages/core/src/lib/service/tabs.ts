@@ -666,8 +666,8 @@ export class TabsManager {
       if (activeTabElement) {
         activeTabElement.scrollIntoView({
           behavior: 'smooth',
-          block: 'end',
-          inline: 'end'
+          block: 'nearest',
+          inline: 'nearest'
         })
       }
     }, 0)

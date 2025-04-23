@@ -2567,8 +2567,6 @@
       } else {
         addressValue.set('')
       }
-
-      // TODO: is this needed? persistTabChanges(tab?.id, tab)
     })
 
     const unsubscribeSidebarTab = sidebarTab.subscribe((tab) => {
@@ -4281,11 +4279,6 @@
                 dragdeadzone="5"
                 role="none"
                 bind:this={pinnedTabsScrollArea}
-                use:useResizeObserver
-                on:resize={() => {
-                  // TODO: Tf is this resize observer doing? sbdy. plz call code police!
-                  pinnedTabsScrollArea.className = pinnedTabsScrollArea.className
-                }}
                 use:HTMLAxisDragZone.action={{
                   accepts: (drag) => {
                     if (

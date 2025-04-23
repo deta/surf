@@ -186,9 +186,7 @@
     })
   )
   onDestroy(() => {
-    const sidebarEl = document.querySelector('#left-sidebar')
-    if (!sidebarEl) return
-    resizeObserver?.unobserve(sidebarEl)
+    resizeObserver?.disconnect()
   })
 
   onMount(async () => {
