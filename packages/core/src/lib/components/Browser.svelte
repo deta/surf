@@ -2575,7 +2575,7 @@
         // Switch the right sidebar to root view when context changes
         if (
           $userConfigSettings.experimental_notes_chat_sidebar &&
-          showRightSidebar &&
+          !showRightSidebar &&
           ($rightSidebarTab === 'chat' || $rightSidebarTab === 'root')
         ) {
           const activeNote = smartNotes.getActiveSpaceNote()
