@@ -188,6 +188,8 @@
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
+  import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
+  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -1504,9 +1506,124 @@
     })
   }
 
+  const getCitationSourceAndResource = async (
+    resourceId?: string,
+    source?: AIChatMessageSource,
+    sourceUid?: string
+  ) => {
+    if (!resourceId && source?.metadata?.url) {
+      log.debug(
+        'no resource id provided, searching for existing resource with the same url',
+        source.metadata.url
+      )
+      const matchingResources = await resourceManager.getResourcesFromSourceURL(
+        source.metadata.url,
+        [
+          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
+        ]
+      )
+
+      if (matchingResources.length > 0) {
+        log.debug('found existing resource with the same url', matchingResources[0])
+        resourceId = matchingResources[0].id
+      }
+    }
+
+    if (!source && sourceUid) {
+      const fetchedSource = await sffs.getAIChatDataSource(sourceUid)
+      source = fetchedSource ?? undefined
+    }
+
+    if (!source) {
+      log.error('no source provided', sourceUid)
+      return null
+    }
+
+    return { resourceId, source }
+  }
+
+  const getAndPrepareBrowserTabForCitation = async (
+    trigger: CreateTabEventTrigger,
+    source: AIChatMessageSource,
+    resourceId?: string
+  ) => {
+    let browserTab: BrowserTab
+    let tab =
+      $unpinnedTabs.find(
+        (tab) =>
+          tab.type === 'page' &&
+          (tab.resourceBookmark === resourceId || tab.currentLocation === source?.metadata?.url)
+      ) || null
+
+    if (!tab) {
+      let newTab: Tab | null = null
+      if (resourceId) {
+        newTab = await tabsManager.openResourcFromContextAsPageTab(resourceId, { trigger })
+      } else if (source?.metadata?.url) {
+        log.debug('no existing resource found, creating new tab', source.metadata.url)
+        newTab = await tabsManager.addPageTab(source.metadata.url, {
+          active: true,
+          trigger
+        })
+      }
+
+      if (!newTab) {
+        log.error('failed to open resource from context', resourceId)
+        toasts.error('Failed to highlight citation')
+        return null
+      }
+
+      tab = newTab
+
+      // give the tab some time to load
+      await wait(200)
+      browserTab = $browserTabs[tab.id]
+      await browserTab.waitForAppDetection(3000)
+    } else {
+      const isActivated = $activatedTabs.includes(tab.id)
+      if (!isActivated) {
+        log.debug('Tab not activated, activating first', tab.id)
+        tabsManager.activateTab(tab.id)
+
+        // give the tab some time to load
+        await wait(200)
+
+        browserTab = $browserTabs[tab.id]
+        if (!browserTab) {
+          log.error('Browser tab not found', tab.id)
+          return null
+        }
+
+        log.debug('Waiting for tab to become active', tab.id)
+        await browserTab.waitForAppDetection(3000)
+      } else {
+        browserTab = $browserTabs[tab.id]
+      }
+    }
+
+    if (!browserTab) {
+      log.error('Browser tab not found', tab.id)
+      toasts.error('Failed to highlight citation')
+      return null
+    }
+
+    if (tabsManager.activeTabIdValue !== tab.id) {
+      tabsManager.makeActive(tab.id, ActivateTabEventTrigger.ChatCitation)
+    }
+
+    return browserTab
+  }
+
   const highlightWebviewText = async (e: CustomEvent<HighlightWebviewTextEvent>) => {
-    let { resourceId, answerText, sourceUid, preview, context } = e.detail
+    let { resourceId, answerText, sourceUid, source, preview, context } = e.detail
     log.debug('highlighting text', resourceId, answerText, sourceUid)
+
+    if (!resourceId && !source) {
+      log.error('no resourceId or source provided', resourceId, source)
+      toasts.error('Failed to highlight citation')
+      return
+    }
 
     let from = OpenInMiniBrowserEventFrom.Chat
     let trigger = CreateTabEventTrigger.OasisChat
@@ -1516,143 +1633,108 @@
       trigger = CreateTabEventTrigger.NoteCitation
     }
 
-    if (preview) {
-      globalMiniBrowser.openResource(resourceId, {
-        from: from,
-        highlightSimilarText: answerText,
-        citationSourceUid: sourceUid
-      })
+    const metadata = await getCitationSourceAndResource(resourceId, source, sourceUid)
+    if (!metadata) {
+      log.error('failed to get citation source and resource', resourceId, source)
+      toasts.error('Failed to highlight citation')
       return
     }
 
-    let tab =
-      $unpinnedTabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) ||
-      null
-
-    if (!tab) {
-      tab = (await tabsManager.openResourcFromContextAsPageTab(resourceId, { trigger })) ?? null
-      if (!tab) {
-        log.error('failed to open resource from context', resourceId)
-        toasts.error('Failed to highlight citation')
-        return
-      }
-
-      // give the new tab some time to load
-      await wait(1000)
+    if (answerText === '') {
+      answerText = metadata.source.content
     }
 
-    if (tab) {
-      let browserTab: BrowserTab
-      const isActivated = $activatedTabs.includes(tab.id)
-      if (!isActivated) {
-        log.debug('Tab not activated, activating first', tab.id)
-        tabsManager.activateTab(tab.id)
-
-        // give the tab some time to load
-        await wait(200)
-
-        browserTab = $browserTabs[tab.id]
-        if (!browserTab) {
-          log.error('Browser tab not found', tab.id)
-          throw Error(`Browser tab not found`)
-        }
-
-        log.debug('Waiting for tab to become active', tab.id)
-        await browserTab.waitForAppDetection(3000)
-      } else {
-        browserTab = $browserTabs[tab.id]
+    if (preview) {
+      if (metadata.resourceId) {
+        globalMiniBrowser.openResource(metadata.resourceId, {
+          from: from,
+          highlightSimilarText: answerText,
+          citationSource: metadata.source
+        })
+      } else if (metadata.source.metadata?.url) {
+        globalMiniBrowser.openWebpage(metadata.source.metadata.url, {
+          from: from,
+          highlightSimilarText: answerText,
+          citationSource: metadata.source
+        })
       }
 
-      if (!browserTab) {
-        log.error('Browser tab not found', tab.id)
-        toasts.error('Failed to highlight citation')
-        return
-      }
+      return
+    }
 
-      tabsManager.makeActive(tab.id, ActivateTabEventTrigger.ChatCitation)
-
-      log.debug('highlighting citation', tab.id, answerText, sourceUid)
-      let source = null
-      if (sourceUid) source = await sffs.getAIChatDataSource(sourceUid)
-
-      if (answerText === '') {
-        if (!source) {
-          return
-        }
-        answerText = source.content
-      }
-
-      await browserTab.highlightWebviewText(resourceId, answerText, source)
-    } else {
-      log.error('No tab in chat context found for resource', resourceId)
+    const browserTab = await getAndPrepareBrowserTabForCitation(
+      trigger,
+      metadata.source,
+      metadata.resourceId
+    )
+    if (!browserTab) {
+      log.error(
+        'failed to prepare browserTab to highlight citation',
+        metadata.source,
+        metadata.resourceId
+      )
       toasts.error('Failed to highlight citation')
+      return
     }
+
+    await browserTab.highlightWebviewText(answerText, metadata.source)
   }
 
   const handleSeekToTimestamp = async (e: CustomEvent<JumpToWebviewTimestampEvent>) => {
-    const { resourceId, timestamp, preview } = e.detail
+    const { resourceId, timestamp, preview, context, source, sourceUid } = e.detail
     log.info('seeking to timestamp', resourceId, timestamp, preview)
 
-    if (preview) {
-      globalMiniBrowser.openResource(resourceId, {
-        from: OpenInMiniBrowserEventFrom.Chat,
-        jumptToTimestamp: timestamp
-      })
+    let from = OpenInMiniBrowserEventFrom.Chat
+    let trigger = CreateTabEventTrigger.OasisChat
+
+    if (context === EventContext.Note) {
+      from = OpenInMiniBrowserEventFrom.Note
+      trigger = CreateTabEventTrigger.NoteCitation
+    }
+
+    const metadata = await getCitationSourceAndResource(resourceId, source, sourceUid)
+    if (!metadata) {
+      log.error('failed to get citation source and resource', resourceId, source)
+      toasts.error('Failed to highlight citation')
       return
     }
 
-    let tab =
-      $unpinnedTabs.find((tab) => tab.type === 'page' && tab.resourceBookmark === resourceId) ||
-      null
-
-    if (!tab) {
-      tab = (await tabsManager.openResourcFromContextAsPageTab(resourceId)) ?? null
-      if (!tab) {
-        log.error('failed to open resource from context', resourceId)
-        toasts.error('Failed to highlight citation')
-        return
+    if (preview) {
+      if (metadata.resourceId) {
+        globalMiniBrowser.openResource(metadata.resourceId, {
+          from: from,
+          jumptToTimestamp: timestamp,
+          citationSource: metadata.source
+        })
+      } else if (metadata.source.metadata?.url) {
+        globalMiniBrowser.openWebpage(metadata.source.metadata.url, {
+          from: from,
+          jumptToTimestamp: timestamp,
+          citationSource: metadata.source
+        })
       }
 
-      // give the new tab some time to load
-      await wait(1000)
+      return
     }
 
-    if (tab) {
-      let browserTab: BrowserTab
-      const isActivated = $activatedTabs.includes(tab.id)
-      if (!isActivated) {
-        log.debug('Tab not activated, activating first', tab.id)
-        tabsManager.activateTab(tab.id)
-
-        // give the tab some time to load
-        await wait(200)
-
-        browserTab = $browserTabs[tab.id]
-        if (!browserTab) {
-          log.error('Browser tab not found', tab.id)
-          throw Error(`Browser tab not found`)
-        }
-
-        log.debug('Waiting for tab to become active', tab.id)
-        await browserTab.waitForAppDetection(3000)
-      } else {
-        browserTab = $browserTabs[tab.id]
-      }
-
-      if (!browserTab) {
-        log.error('Browser tab not found', tab.id)
-        toasts.error('Failed to highlight citation')
-        return
-      }
-
-      tabsManager.makeActive(tab.id, ActivateTabEventTrigger.ChatCitation)
-      browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
-        timestamp: timestamp
-      })
-    } else {
-      log.error('No tab in chat context found for resource', resourceId)
-      toasts.error('Failed to open citation')
+    const browserTab = await getAndPrepareBrowserTabForCitation(
+      trigger,
+      metadata.source,
+      metadata.resourceId
+    )
+    if (!browserTab) {
+      log.error(
+        'failed to prepare browserTab to jump to timestamp',
+        metadata.source,
+        metadata.resourceId
+      )
+      toasts.error('Failed to highlight citation')
+      return
     }
+
+    browserTab.sendWebviewEvent(WebViewEventReceiveNames.SeekToTimestamp, {
+      timestamp: timestamp
+    })
   }
 
   const scrollWebviewToText = async (tabId: string, text: string) => {

@@ -703,7 +703,6 @@
   }
 
   export const highlightWebviewText = async (
-    resourceId: string,
     answerText: string,
     source: AIChatMessageSource | null
   ) => {
@@ -711,7 +710,7 @@
     const toast = pdfPage === null ? toasts.loading('Highlighting Citation…') : undefined
 
     try {
-      log.debug('highlighting text', resourceId, answerText, source)
+      log.debug('highlighting text', answerText, source)
 
       const detectedResource = await detectResource()
       if (!detectedResource) {

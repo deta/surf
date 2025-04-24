@@ -383,11 +383,11 @@
     }
 
     if (source?.metadata?.url) {
-      tooltipText = `Source: ${truncateURL(source.metadata.url, maxTitleLength)}`
+      tooltipText = truncateURL(source.metadata.url, maxTitleLength)
     } else if (citationType === 'image') {
-      tooltipText = 'Source: screenshot or image'
+      tooltipText = 'screenshot or image'
     } else {
-      tooltipText = `Source: ${renderID}`
+      tooltipText = renderID
     }
 
     if (source?.resource_id) {

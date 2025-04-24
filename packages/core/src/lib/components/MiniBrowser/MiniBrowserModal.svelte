@@ -366,7 +366,7 @@
   }
 
   onMount(async () => {
-    log.debug('Resource modal mounted', resource, selection?.timestamp, $url)
+    log.debug('Resource modal mounted', resource, selection, $url)
 
     if (resource) {
       const viewedByUserTag = (resource.tags ?? []).find(
@@ -395,15 +395,23 @@
           )
         }
       }
+    }
 
-      if (selection?.text && !selection?.timestamp) {
-        let source = null
-        if (selection.sourceUid)
-          source = await resourceManager.sffs.getAIChatDataSource(selection.sourceUid)
+    if (selection?.text && !selection?.timestamp) {
+      log.debug(
+        'Highlighting text in webview',
+        selection.text,
+        selection.source ?? selection.sourceUid
+      )
+      let source = selection.source ?? null
+      if (!source && selection.sourceUid) {
+        source = await resourceManager.sffs.getAIChatDataSource(selection.sourceUid)
+      }
 
-        if (browserTab) {
-          await browserTab.highlightWebviewText(resource.id, selection?.text, source)
-        }
+      if (browserTab) {
+        await browserTab.highlightWebviewText(selection?.text, source)
+      } else {
+        log.error('No browser tab found to highlight text in webview')
       }
     }
   })

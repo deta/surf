@@ -255,17 +255,20 @@ export type ChatWithSpaceEvent = {
 }
 
 export type HighlightWebviewTextEvent = {
-  resourceId: string
+  resourceId?: string
   answerText: string
   sourceUid?: string
   preview: boolean
+  source?: AIChatMessageSource
   context?: EventContext
 }
 export type JumpToWebviewTimestampEvent = {
-  resourceId: string
+  resourceId?: string
   timestamp: number
   preview: boolean
   context?: EventContext
+  sourceUid?: string
+  source?: AIChatMessageSource
 }
 
 export const BROWSER_CONTEXT_KEY = 'browser-utils'

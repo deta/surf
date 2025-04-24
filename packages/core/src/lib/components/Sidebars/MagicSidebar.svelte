@@ -9,7 +9,7 @@
   import { onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
 
-  import { useLogScope, isMac, useLocalStorageStore } from '@horizon/utils'
+  import { useLogScope, isMac } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
 
   import Chat from '@horizon/core/src/lib/components/Chat/Chat.svelte'
@@ -20,17 +20,10 @@
   import chatAdd from '../../../../public/assets/demo/chatadd.gif'
   import chatRemove from '../../../../public/assets/demo/chatremove.gif'
 
-  import {
-    ResourceManager,
-    ResourceTag,
-    useResourceManager,
-    type Resource
-  } from '@horizon/core/src/lib/service/resources'
+  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-  import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
-  import { ResourceTypes } from '@horizon/types'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
@@ -52,13 +45,8 @@
 
   const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
 
-  let chatComponent: Chat
+  let chatComponent: Chat | ChatOld
 
-  $: loadingContent = $activeNote?.loadingContent
-  // $: responses = $activeChat?.responses
-  // $: activeChatNote = $activeChat ? $activeChat.noteResource : undefined
-
-  // $: log.debug('Active chat:', $activeChat)
   $: log.debug('Active chat note ID:', $activeNoteId)
   $: log.debug('Active chat note:', $activeNote)
 
@@ -346,7 +334,6 @@
       <Chat
         bind:this={chatComponent}
         note={$activeNote}
-        contextItemErrors={[]}
         preparingTabs={false}
         on:clear-chat={handleClear}
         on:clear-errors={handleClearErrors}

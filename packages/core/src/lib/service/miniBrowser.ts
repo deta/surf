@@ -3,7 +3,7 @@ import { Resource, ResourceManager } from './resources'
 import { generateID, useLogScope } from '@horizon/utils'
 import { OpenInMiniBrowserEventFrom, ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
 import { getContext, setContext } from 'svelte'
-import type { Download, TabPage } from '../types'
+import type { AIChatMessageSource, Download, TabPage } from '../types'
 import type BrowserTab from '../components/Browser/BrowserTab.svelte'
 import type { Telemetry } from './telemetry'
 
@@ -34,6 +34,7 @@ export type MiniBrowserSelected = {
 export type MiniBrowserSelection = {
   text?: string
   timestamp?: number
+  source?: AIChatMessageSource
   sourceUid?: string
 }
 
@@ -41,6 +42,7 @@ export type OpenMiniBrowserOptions = {
   highlightSimilarText?: string
   jumptToTimestamp?: number
   citationSourceUid?: string
+  citationSource?: AIChatMessageSource
   from?: OpenInMiniBrowserEventFrom
 }
 
@@ -130,6 +132,7 @@ export class MiniBrowser {
       selection: {
         text: opts?.highlightSimilarText,
         timestamp: opts?.jumptToTimestamp,
+        source: opts?.citationSource,
         sourceUid: opts?.citationSourceUid
       }
     })
@@ -153,6 +156,7 @@ export class MiniBrowser {
       selection: {
         text: opts?.highlightSimilarText,
         timestamp: opts?.jumptToTimestamp,
+        source: opts?.citationSource,
         sourceUid: opts?.citationSourceUid
       }
     })
@@ -171,6 +175,7 @@ export class MiniBrowser {
       selection: {
         text: opts?.highlightSimilarText,
         timestamp: opts?.jumptToTimestamp,
+        source: opts?.citationSource,
         sourceUid: opts?.citationSourceUid
       }
     })

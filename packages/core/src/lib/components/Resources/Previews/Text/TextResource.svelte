@@ -724,52 +724,60 @@
     }
 
     const resource = await resourceManager.getResource(source.resource_id)
-    if (!resource) {
-      log.error('Resource not found', source.resource_id)
-      return
-    }
-
     log.debug('Resource linked to citation', resource)
 
     if (
-      (resource.type === ResourceTypes.PDF ||
+      (!resource ||
+        resource.type === ResourceTypes.PDF ||
         resource.type === ResourceTypes.LINK ||
         resource.type === ResourceTypes.ARTICLE ||
         resource.type.startsWith(ResourceTypes.POST)) &&
       !skipHighlight
     ) {
-      if (
-        resource.type === ResourceTypes.POST_YOUTUBE &&
-        source.metadata?.timestamp !== undefined &&
-        source.metadata?.timestamp !== null
-      ) {
+      if (source.metadata?.timestamp !== undefined && source.metadata?.timestamp !== null) {
         const timestamp = source.metadata.timestamp
         dispatch('seekToTimestamp', {
-          resourceId: resource.id,
+          resourceId: resource?.id,
           timestamp: timestamp,
+          sourceUid: source.uid,
+          source: source,
           preview: preview ?? false,
           context: EventContext.Note
         })
       } else {
         // TODO: pass correct from and trigger telemetry properties
         dispatch('highlightWebviewText', {
-          resourceId: resource.id,
+          resourceId: resource?.id,
           answerText: text,
           sourceUid: source.uid,
+          source: source,
           preview: preview ?? false,
           context: EventContext.Note
         })
       }
     } else {
       if (preview) {
-        globalMiniBrowser.openResource(resource.id, {
-          from: OpenInMiniBrowserEventFrom.Note
-        })
+        if (resource) {
+          globalMiniBrowser.openResource(resource.id, {
+            from: OpenInMiniBrowserEventFrom.Note
+          })
+        } else {
+          globalMiniBrowser.openWebpage(source.metadata?.url ?? '', {
+            from: OpenInMiniBrowserEventFrom.Note
+          })
+        }
       } else {
-        tabsManager.openResourcFromContextAsPageTab(resource.id, {
-          active: true,
-          trigger: CreateTabEventTrigger.NoteCitation
-        })
+        if (resource) {
+          tabsManager.openResourcFromContextAsPageTab(resource.id, {
+            active: true,
+            trigger: CreateTabEventTrigger.NoteCitation
+          })
+        } else {
+          tabsManager.addPageTab(source.metadata?.url ?? '', {
+            active: true,
+            trigger: CreateTabEventTrigger.NoteCitation
+          })
+        }
       }
     }
   }
