@@ -2916,7 +2916,9 @@
         log.debug('new download request', downloadData, data)
 
         if (!downloadIntercepter) {
-          toast = toasts.loading(`Downloading "${downloadData.filename}"...`)
+          toast = toasts.loading(`Downloading "${downloadData.filename}"...`, {
+            dismissText: 'Hide (download will continue)'
+          })
           downloadToastsMap.set(data.id, toast)
         }
 
@@ -2988,9 +2990,11 @@
           const roundedPercent = Math.round(progress * 100)
 
           if (roundedPercent >= 0 && roundedPercent <= 100) {
-            toast.update(`Downloading "${downloadData.filename}" (${roundedPercent}%)...`)
+            toast.update({
+              message: `Downloading "${downloadData.filename}" (${roundedPercent}%)...`
+            })
           } else {
-            toast.update(`Downloading "${downloadData.filename}"...`)
+            toast.update({ message: `Downloading "${downloadData.filename}"...` })
           }
         } else if (data.state === 'interrupted') {
           toast.error(`Download of "${downloadData.filename}" interrupted`)
@@ -3045,12 +3049,19 @@
         if (toast) {
           if (data.state === 'completed') {
             toast.success(
-              `"${downloadData.filename}" saved to ${savedToSpace ? 'active context' : 'your stuff'}!`
+              `"${downloadData.filename}" saved to ${savedToSpace ? 'active context' : 'your stuff'}!`,
+              {
+                dismissText: 'Dismiss'
+              }
             )
           } else if (data.state === 'interrupted') {
-            toast.error(`Download of "${downloadData.filename}" interrupted`)
+            toast.error(`Download of "${downloadData.filename}" interrupted`, {
+              dismissText: 'Dismiss'
+            })
           } else if (data.state === 'cancelled') {
-            toast.error(`Download of "${downloadData.filename}" cancelled`)
+            toast.error(`Download of "${downloadData.filename}" cancelled`, {
+              dismissText: 'Dismiss'
+            })
           }
         }
 
