@@ -217,6 +217,7 @@
   let clientWidth = 0
   let disableSimilaritySearch = false
   let tippyPopover: Instance<Props> | null = null
+  let editorFocused = false
 
   // Caret indicator state
   let caretPosition: CaretPosition | null = null
@@ -678,8 +679,13 @@
   }
 
   const handleTitleBlur = () => {
-    if (resource && title) {
-      resourceManager.updateResourceMetadata(resourceId, { name: title })
+    if (title) {
+      if (note) {
+        note.updateTitle(title)
+      } else if (resourceId) {
+        resourceManager.updateResourceMetadata(resourceId, { name: title })
+      }
+
       dispatch('update-title', title)
     }
   }
@@ -1677,6 +1683,7 @@
 
   let unsubscribeValue: () => void
   let unsubscribeContent: () => void
+  let unsubscribeTitle: () => void
 
   $: if (!$floatingMenuShown) {
     $showPrompts = false
@@ -1865,6 +1872,10 @@
     unsubscribeValue = value.subscribe((value) => {
       if (value) {
         content.set(value)
+
+        if (!editorFocused) {
+          editorElem?.setContent(value)
+        }
       }
     })
 
@@ -1877,6 +1888,11 @@
     })
 
     title = note.titleValue ?? 'Untitled'
+    unsubscribeTitle = note.title.subscribe((value) => {
+      if (value) {
+        title = value
+      }
+    })
 
     log.debug('text resource', resource, title, $content)
 
@@ -1898,6 +1914,10 @@
 
     if (unsubscribeValue) {
       unsubscribeValue()
+    }
+
+    if (unsubscribeTitle) {
+      unsubscribeTitle()
     }
   })
 </script>
@@ -1955,6 +1975,7 @@
               bind:focus={focusEditor}
               bind:content={$content}
               bind:floatingMenuShown={$floatingMenuShown}
+              bind:focused={editorFocused}
               placeholder={emptyPlaceholder}
               placeholderNewLine={$editorPlaceholder}
               citationComponent={CitationItem}
