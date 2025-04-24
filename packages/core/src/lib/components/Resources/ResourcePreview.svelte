@@ -300,8 +300,7 @@
 
   const openSpace = (space: OasisSpace) => {
     log.debug('Opening space', space.id)
-    tabsManager.showNewTabOverlay.set(2)
-    oasis.changeSelectedSpace(space.id)
+    oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: space.id })
   }
 
   const openResourceAsTab = (resourceId: string, opts?: CreateTabOptions) => {
@@ -1128,5 +1127,6 @@
     justify-content: center;
     transition: opacity 125ms ease;
     opacity: 0.75;
+    cursor: default;
   }
 </style>

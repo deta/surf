@@ -143,7 +143,6 @@ export const Mention = Node.create<MentionOptions>({
             range.to += 1
           }
 
-
           editor
             .chain()
             .focus()

@@ -1077,7 +1077,7 @@ export class OasisService {
       return
     }
 
-    let selectedSpace: string | undefined = 'all'
+    let selectedSpace: string | undefined = undefined
 
     if (opts?.selectedSpace === 'auto') {
       if (
@@ -1097,15 +1097,24 @@ export class OasisService {
       selectedSpace: selectedSpace
     }
 
+    this.log.debug('Opening resource details sidebar', resource, options)
+
     if (this.tabsManager.showNewTabOverlayValue !== 2) {
       this.tabsManager.showNewTabOverlay.set(2)
+
+      if (!options.selectedSpace) {
+        this.selectedSpace.set('all')
+      }
+    }
+
+    if (options.selectedSpace) {
       this.selectedSpace.set(options.selectedSpace)
     }
 
     this.detailedResource.set(resource)
 
     if (options.select) {
-      await wait(200)
+      await wait(300)
       addSelectionById(resource.id, { removeOthers: true })
     }
   }
