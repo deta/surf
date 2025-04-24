@@ -819,7 +819,9 @@ export class ResourceManager {
 
     // We only want to cleanup traditional file types, not web resources or PDFs (which are already handled in BrowserTab)
     const typeSupportsCleanup =
-      !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) && type !== ResourceTypes.PDF
+      !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) &&
+      type !== ResourceTypes.PDF &&
+      type !== ResourceTypes.DOCUMENT_SPACE_NOTE
     if (typeSupportsCleanup && this.config.settingsValue.cleanup_filenames) {
       const filename = metadata?.name
       if (filename) {
