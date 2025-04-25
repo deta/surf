@@ -2199,6 +2199,7 @@
         log.debug('Magic sidebar not available, creating new note instead')
         const smartNote = await smartNotes.createNote('')
         await smartNotes.changeActiveNote(smartNote)
+        await telemetry.trackCreateNote(EventContext.Chat)
       }
     } catch (error) {
       log.error('Failed to create new chat', error)

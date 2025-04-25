@@ -26,6 +26,7 @@
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { EventContext } from '@horizon/types'
 
   const log = useLogScope('MagicSidebar')
   const resourceManager = useResourceManager()
@@ -117,7 +118,7 @@
       await clearNote()
 
       toasts.success('Note cleared!')
-      await telemetry.trackPageChatClear(0) // TODO: fix metrics
+      await telemetry.trackCreateNote(EventContext.Chat)
     } catch (e) {
       log.error('Error clearing note:', e)
       toasts.error('Failed to clear note')
