@@ -2341,7 +2341,7 @@
     margin: auto;
     padding: 0 2em;
     box-sizing: content-box;
-    padding-bottom: 12em;
+    padding-bottom: 60vh;
   }
 
   :global(body.custom .text-resource-wrapper .tiptap ::selection) {
