@@ -211,6 +211,7 @@
   $: showContentBlock =
     (content && content.length > 0) ||
     (title && title.length > 0) ||
+    editTitle ||
     (annotations && annotations.length > 0)
 
   $: showMetadataBlock = (metadata && metadata.length > 0) || isProcessing
@@ -267,7 +268,7 @@
 
       {#if showContentBlock}
         <hgroup class="content">
-          {#if title && title.length > 0}
+          {#if (title && title.length > 0) || editTitle}
             {#if editTitle}
               <h1
                 contenteditable
