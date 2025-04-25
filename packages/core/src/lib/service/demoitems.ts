@@ -76,6 +76,12 @@ export async function createDemoItems(
   //   }
   // }
 
+  const defaultSpace = existingSpaces.find((space) => space.name.default)
+  if (defaultSpace) {
+    log.debug('Changing scope to default space:', defaultSpace.id)
+    await tabsManager.changeScope(defaultSpace.id)
+  }
+
   const existingOnboardingSpace = existingSpaces.find(
     (space) => space.name.folderName === onboardingSpace.name
   )

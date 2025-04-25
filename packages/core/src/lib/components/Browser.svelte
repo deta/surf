@@ -160,7 +160,7 @@
   import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
   import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
   import { springVisibility } from './motion/springVisibility'
-  import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
   import { AIChat, provideAI } from '@horizon/core/src/lib/service/ai/ai'
   import { ColorMode, provideColorService } from '@horizon/core/src/lib/service/colors'
@@ -191,6 +191,7 @@
   import AppBarButton from './Browser/AppBarButton.svelte'
   import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
+  import { migrateHomeContext } from '@horizon/core/src/lib/service/migration'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -1272,7 +1273,11 @@
         oasis.pushPendingStackAction(resource.id, { tabId: tabId })
       }
 
-      if (!spaceId && tabsManager.activeScopeIdValue) {
+      if (
+        !spaceId &&
+        tabsManager.activeScopeIdValue &&
+        $userConfigSettings.save_to_active_context
+      ) {
         await oasis.addResourcesToSpace(
           tabsManager.activeScopeIdValue,
           [resource.id],
@@ -2162,6 +2167,7 @@
       await tabsManager.openResourceAsTab(resource, { active: true })
 
       if (tabsManager.activeScopeIdValue) {
+        // TODO: should we check for $userConfigSettings.save_to_active_context here?
         await oasis.addResourcesToSpace(
           tabsManager.activeScopeIdValue,
           [resource.id],
@@ -2951,7 +2957,7 @@
         if (spaceId) {
           await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
           // toast.success('Link saved to context!')
-        } else if (tabsManager.activeScopeIdValue) {
+        } else if (tabsManager.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
           await oasis.addResourcesToSpace(
             tabsManager.activeScopeIdValue,
             [resource.id],
@@ -3118,7 +3124,7 @@
               resourceManager.reloadResource(downloadData.resourceId)
             }
 
-            if (tabsManager.activeScopeIdValue) {
+            if (tabsManager.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
               await oasis.addResourcesToSpace(
                 tabsManager.activeScopeIdValue,
                 [resource.id],
@@ -3253,6 +3259,8 @@
 
       log.debug('show onboarding note', newTab)
     }
+
+    await migrateHomeContext({ tabsManager, oasis })
 
     // @ts-ignore
     window.showNotesOnboarding = startNotesOnboarding
@@ -3986,12 +3994,6 @@
       return [
         {
           type: 'action',
-          icon: generalContext.icon,
-          text: generalContext.label,
-          action: () => handleMove(null, generalContext.label)
-        } as CtxItem,
-        {
-          type: 'action',
           icon: newContext.icon,
           text: newContext.label,
           action: async () => {
@@ -4294,7 +4296,7 @@
               },
               {
                 type: 'action',
-                icon: generalContext.icon,
+                icon: 'circle-dot',
                 text: 'New Context',
                 action: async () => {
                   await oasis.createNewBrowsingSpace(

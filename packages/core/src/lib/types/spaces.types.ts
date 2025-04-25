@@ -29,6 +29,7 @@ export interface SpaceData {
   sql_query: string | null
   embedding_query: string | null
   builtIn?: boolean
+  default?: boolean
   index?: number
   pinned?: boolean
   viewType?: ContextViewType
@@ -68,5 +69,3 @@ export interface AiSFFSQueryResponse {
   embedding_search_query: string | null
   embedding_search_results: string[] | null // narrowed down resource ids, is null if the query is null
 }
-
-export const GENERAL_CONTEXT_ID = '__general_context'

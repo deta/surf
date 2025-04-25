@@ -38,7 +38,7 @@
   } from '@horizon/core/src/lib/service/miniBrowser'
   import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
   import { useDesktopManager } from '../../service/desktop'
   import SoundVisualizerBars from '../Effects/SoundVisualizerBars.svelte'
@@ -489,12 +489,6 @@
       return [
         {
           type: 'action',
-          icon: generalContext.icon,
-          text: generalContext.label,
-          action: () => handleMove(null, generalContext.label)
-        } as CtxItem,
-        {
-          type: 'action',
           icon: newContext.icon,
           text: newContext.label,
           action: async () => {
@@ -705,7 +699,7 @@
       {
         type: 'action',
         hidden: tab.type !== 'space',
-        icon: generalContext.icon,
+        icon: 'circle-dot',
         text: 'Open Context',
         action: () => {
           if (tab.type !== 'space') return
@@ -1032,7 +1026,7 @@
               search={$spaces.length > 0 ? 'manual' : 'disabled'}
               searchValue={spaceSearchValue}
               footerItem={newContext}
-              inputPlaceholder="Select a Context to save to…"
+              inputPlaceholder="Select a context to save to…"
               open={saveToSpacePopoverOpened}
               openOnHover={500}
               disabled={disableContextmenu}

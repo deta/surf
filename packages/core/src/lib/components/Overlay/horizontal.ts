@@ -5,7 +5,7 @@ import {
   ActionSelectPriority
 } from '@deta/teletype/src/components/Teletype/types'
 import type { ResourceManager } from '../../service/resources'
-import { GENERAL_CONTEXT_ID, ResourceTagsBuiltInKeys, type SpaceEntry } from '../../types'
+import { ResourceTagsBuiltInKeys, type SpaceEntry } from '../../types'
 import {
   TeletypeAction,
   TeletypeActionGroup,
@@ -97,9 +97,7 @@ const createSpaceAction = async (
 
   const actions: (Action | HorizontalAction)[] = [openSpaceAction]
 
-  if (result.id !== GENERAL_CONTEXT_ID) {
-    actions.push(horizontalAction)
-  }
+  actions.push(horizontalAction)
 
   return actions
 }

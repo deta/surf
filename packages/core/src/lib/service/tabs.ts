@@ -1008,6 +1008,21 @@ export class TabsManager {
     const currentActiveScope = this.activeScopeIdValue
     this.log.debug('changing active scope from', currentActiveScope, 'to', scopeId)
 
+    if (scopeId === null) {
+      const defaultSpace = this.oasis.spacesValue.find((space) => space.name.default)
+      if (defaultSpace) {
+        this.log.debug('using default space as scope', defaultSpace.id)
+        scopeId = defaultSpace.id
+      } else {
+        scopeId = this.oasis.spacesValue[0]?.id
+      }
+    }
+
+    if (scopeId === null) {
+      this.log.error('No default space found')
+      return
+    }
+
     this.activeScopeId.set(scopeId)
 
     if (scopeId !== null) {

@@ -7,13 +7,13 @@ import type { ContextService } from '../contextManager'
 import { ContextItemTypes } from './types'
 import { ResourceManager } from '../../resources'
 
-export class ContextItemHome extends ContextItemBase {
-  type = ContextItemTypes.HOME
+export class ContextItemInbox extends ContextItemBase {
+  type = ContextItemTypes.INBOX
 
   constructor(service: ContextService) {
-    super(service, 'home', 'circle-dot')
+    super(service, 'inbox', 'circle-dot')
 
-    this.label = writable('Home')
+    this.label = writable('Inbox')
   }
 
   async getResourceIds(_prompt?: string) {

@@ -97,7 +97,7 @@
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
   import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
-  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { inboxContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { ChatMode, ModelTiers, Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import ChangeContextBtn from '@horizon/core/src/lib/components/Chat/Notes/ChangeContextBtn.svelte'
@@ -120,7 +120,9 @@
     MODEL_CLAUDE_MENTION,
     MODEL_GPT_MENTION,
     NO_CONTEXT_MENTION,
-    NOTE_MENTION
+    NOTE_MENTION,
+    EVERYTHING_MENTION,
+    INBOX_MENTION
   } from '@horizon/core/src/lib/constants/chat'
   import ModelPicker from '@horizon/core/src/lib/components/Chat/ModelPicker.svelte'
   import type {
@@ -292,12 +294,10 @@
         }
       }
 
-      let contextName = generalContext.label
+      let contextName = ''
       if ($selectedContext) {
         if ($selectedContext === 'everything') {
           contextName = 'all your stuff'
-        } else if ($selectedContext === generalContext.id) {
-          contextName = `"${generalContext.label}"`
         } else if ($selectedContext === 'tabs') {
           contextName = 'your tabs'
         } else if ($selectedContext === 'active-context') {
@@ -1148,8 +1148,6 @@
       return MentionEventType.Everything
     } else if (id === 'tabs') {
       return MentionEventType.Tabs
-    } else if (id === generalContext.id) {
-      return MentionEventType.GeneralContext
     } else if (id === 'active-context') {
       return MentionEventType.ActiveContext
     } else {
@@ -1168,9 +1166,9 @@
       telemetry.trackNoteOpenMention(getMentionType(id), action, showOnboarding)
 
       if (action === 'overlay') {
-        if (id === generalContext.id) {
+        if (id === INBOX_MENTION.id) {
           openSpaceInStuff('inbox')
-        } else if (id === 'everything') {
+        } else if (id === EVERYTHING_MENTION.id) {
           openSpaceInStuff('all')
         } else if (type === MentionItemType.RESOURCE) {
           oasis.openResourceDetailsSidebar(id, { select: true, selectedSpace: 'auto' })
@@ -1194,7 +1192,7 @@
 
         if (action === 'open') {
           tabsManager.changeScope(
-            id === generalContext.id || id === 'everything' ? null : id,
+            id === INBOX_MENTION.id || id === EVERYTHING_MENTION.id ? null : id,
             ChangeContextEventTrigger.Note
           )
 

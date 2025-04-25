@@ -11,17 +11,50 @@
 
   // Import or define UserSettings type
   import type { UserSettings } from '@horizon/types'
+  import { provideConfig } from '@horizon/core/src/lib/service/config'
+  import { createResourceManager } from '@horizon/core/src/lib/service/resources'
+  import { provideOasis } from '@horizon/core/src/lib/service/oasis'
+  import { createTelemetry } from '@horizon/core/src/lib/service/telemetry'
+  import { onMount } from 'svelte'
+  import { useLogScope, wait } from '@horizon/utils'
+  import ContextView from './components/setup/ContextView.svelte'
+
+  let telemetryAPIKey = ''
+  let telemetryActive = false
+  let telemetryProxyUrl: string | undefined = undefined
+  if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
+    telemetryActive = true
+    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
+    if (!telemetryProxyUrl) {
+      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
+    }
+  }
+
+  const telemetry = createTelemetry({
+    apiKey: telemetryAPIKey,
+    active: telemetryActive,
+    trackHostnames: false,
+    proxyUrl: telemetryProxyUrl
+  })
+
+  const config = provideConfig()
+  const resourceManager = createResourceManager(telemetry, config)
+  const oasis = provideOasis(resourceManager, config)
+
+  const log = useLogScope('Setup')
 
   type ViewType =
     | 'invite'
-    | 'disclaimer'
-    | 'app_preferences'
-    | 'language'
-    | 'prefs'
     | 'persona'
     | 'explainer.stuff'
+    | 'contexts'
     | 'explainer.chat'
+    | 'language'
+    | 'prefs'
     | 'done'
+    // not used
+    | 'disclaimer'
+    | 'app_preferences'
   let viewHistory: ViewType[] = ['invite']
   let view: ViewType = 'invite'
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
@@ -97,16 +130,39 @@
 
     window.api.restartApp()
   }
+
+  onMount(async () => {
+    await wait(300)
+    const spaces = oasis.spacesValue
+    log.debug('spaces', spaces)
+  })
 </script>
 
 <main>
   <div class="wrapper" class:wide={view === 'disclaimer'}>
     {#if view === 'invite'}
       <InviteView on:viewChange={handleViewChange} />
-    {:else if view === 'disclaimer'}
-      <DisclaimerView on:viewChange={handleViewChange} />
-    {:else if view === 'app_preferences'}
-      <AppPreferencesSetup on:viewChange={handleViewChange} on:back={handleBack} />
+    {:else if view === 'persona'}
+      <PersonaView
+        {selectedPersonas}
+        on:personasChange={handlePersonasChange}
+        on:viewChange={handleViewChange}
+        on:back={handleBack}
+      />
+    {:else if view === 'explainer.stuff'}
+      <ExplainerStuff
+        persona={selectedPersonas}
+        on:viewChange={handleViewChange}
+        on:back={handleBack}
+      />
+    {:else if view === 'contexts'}
+      <ContextView {selectedPersonas} on:viewChange={handleViewChange} on:back={handleBack} />
+    {:else if view === 'explainer.chat'}
+      <ExplainerChat
+        persona={selectedPersonas}
+        on:viewChange={handleViewChange}
+        on:back={handleBack}
+      />
     {:else if view === 'language'}
       <LanguageView
         {embeddingModel}
@@ -121,25 +177,10 @@
         on:viewChange={handleViewChange}
         on:back={handleBack}
       />
-    {:else if view === 'persona'}
-      <PersonaView
-        {selectedPersonas}
-        on:personasChange={handlePersonasChange}
-        on:viewChange={handleViewChange}
-        on:back={handleBack}
-      />
-    {:else if view === 'explainer.stuff'}
-      <ExplainerStuff
-        persona={selectedPersonas}
-        on:viewChange={handleViewChange}
-        on:back={handleBack}
-      />
-    {:else if view === 'explainer.chat'}
-      <ExplainerChat
-        persona={selectedPersonas}
-        on:viewChange={handleViewChange}
-        on:back={handleBack}
-      />
+      <!-- {:else if view === 'disclaimer'}
+      <DisclaimerView on:viewChange={handleViewChange} />
+    {:else if view === 'app_preferences'}
+      <AppPreferencesSetup on:viewChange={handleViewChange} on:back={handleBack} /> -->
     {:else if view === 'done'}
       <DoneView on:start={handleStart} />
     {/if}

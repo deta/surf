@@ -57,6 +57,7 @@ export type OasisEvents = {
 
 export type OptionalSpaceData = Optional<
   SpaceData,
+  | 'default'
   | 'showInSidebar'
   | 'liveModeEnabled'
   | 'smartFilterQuery'
@@ -554,6 +555,7 @@ export class OasisService {
       embedding_query: null,
       sortBy: 'resource_added_to_space',
       builtIn: false,
+      default: false,
       index: this.spacesValue.length,
       sources: []
     }

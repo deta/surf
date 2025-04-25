@@ -492,8 +492,9 @@ export class SmartNoteManager {
     //await note.loadContent()
 
     const currentSpaceId = this.ai.tabsManager.activeScopeIdValue
+    const saveToActiveContext = this.ai.config.settingsValue.save_to_active_context
 
-    if (currentSpaceId) {
+    if (currentSpaceId && saveToActiveContext) {
       await this.ai.oasis.addResourcesToSpace(
         currentSpaceId,
         [resource.id],

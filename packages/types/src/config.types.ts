@@ -35,6 +35,7 @@ export type UserSettings = {
   experimental_notes_chat_sidebar: boolean
   extensions: boolean
   cleanup_filenames: boolean
+  save_to_active_context: boolean
   /**
    * @deprecated use individual feature flags instead
    */

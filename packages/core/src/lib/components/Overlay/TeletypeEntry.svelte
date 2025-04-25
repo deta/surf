@@ -70,7 +70,7 @@
   import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useDebounce } from '@horizon/utils'
-  import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
+  import { type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
   export let open: boolean
 
@@ -333,7 +333,7 @@
     const space = payload.space
     log.debug('open-space-in-stuff', payload)
 
-    oasis.selectedSpace.set(space.id === GENERAL_CONTEXT_ID ? DEFAULT_SPACE_ID : space.id)
+    oasis.selectedSpace.set(space.id)
     await tick()
     tabsManager.showNewTabOverlay.set(2)
 
@@ -348,10 +348,7 @@
     const space = payload.space
     log.debug('open-space-as-context', payload)
 
-    tabsManager.changeScope(
-      space.id === GENERAL_CONTEXT_ID ? null : space.id,
-      ChangeContextEventTrigger.CommandMenu
-    )
+    tabsManager.changeScope(space.id, ChangeContextEventTrigger.CommandMenu)
   }
 
   const handleOpenSpaceAsTab: TeletypeActionHandler<{ space: OasisSpace }> = async (payload) => {

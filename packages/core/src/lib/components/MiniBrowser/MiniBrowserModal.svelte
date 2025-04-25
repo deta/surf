@@ -46,6 +46,7 @@
   import type { MiniBrowserSelection } from '@horizon/core/src/lib/service/miniBrowser'
   import CodeRenderer from '../Chat/CodeRenderer.svelte'
   import { isGeneratedResource } from '../../utils/resourcePreview'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let tab: TabPage
   // export let url: Writable<string>
@@ -69,9 +70,11 @@
   const historyEntriesManager = tabsManager.historyEntriesManager
   const toasts = useToasts()
   const oasis = useOasis()
+  const config = useConfig()
 
   const spaces = oasis.spaces
   const telemetry = resourceManager.telemetry
+  const userConfigSettings = config.settings
 
   const injectYouTubeTimestamp = (value: string, timestamp: number) => {
     const url = new URL(value)
@@ -244,7 +247,12 @@
         [OpenInMiniBrowserEventFrom.WebPage, OpenInMiniBrowserEventFrom.Chat].includes(
           selected.from
         )
-      if (!savedToSpace && scopedToSpace && tabsManager.activeScopeIdValue) {
+      if (
+        !savedToSpace &&
+        scopedToSpace &&
+        tabsManager.activeScopeIdValue &&
+        $userConfigSettings.save_to_active_context
+      ) {
         await oasis.addResourcesToSpace(
           tabsManager.activeScopeIdValue,
           [resource.id],

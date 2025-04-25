@@ -48,7 +48,7 @@
   }
 
   const handleContinueToDemo = () => {
-    dispatch('viewChange', 'explainer.chat')
+    dispatch('viewChange', 'contexts')
   }
 
   const handleBack = () => {

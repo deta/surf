@@ -126,6 +126,7 @@ export const getUserConfig = (path?: string) => {
       ),
       extensions: false,
       cleanup_filenames: false,
+      save_to_active_context: true,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -283,6 +284,11 @@ export const getUserConfig = (path?: string) => {
     storedConfig.settings.experimental_notes_chat_sidebar = getRandomBooleanWithProbability(
       EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_EXISTING_USERS
     )
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.save_to_active_context === undefined) {
+    storedConfig.settings.save_to_active_context = true
     changedConfig = true
   }
 

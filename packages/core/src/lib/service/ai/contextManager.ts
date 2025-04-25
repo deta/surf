@@ -34,15 +34,15 @@ import {
   ContextItemSpace
 } from './context/index'
 import type { AIService, ChatPrompt } from './ai'
-import { ContextItemHome } from './context/home'
+import { ContextItemInbox } from './context/inbox'
 import { ContextItemEverything } from './context/everything'
 import type { ActiveSpaceContextInclude } from './context/activeSpaceContexts'
 import { ContextItemWikipedia } from './context/wikipedia'
-import { generalContext } from '../../constants/browsingContext'
 import {
   ACTIVE_CONTEXT_MENTION,
+  ACTIVE_TAB_MENTION,
   EVERYTHING_MENTION,
-  GENERAL_CONTEXT_MENTION,
+  INBOX_MENTION,
   NO_CONTEXT_MENTION,
   TABS_MENTION,
   WIKIPEDIA_SEARCH_MENTION
@@ -565,14 +565,14 @@ export class ContextManager {
     return this.addContextItem(item, opts)
   }
 
-  async addHomeContext(opts?: AddContextItemOptions) {
-    const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.HOME)
+  async addInboxContext(opts?: AddContextItemOptions) {
+    const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.INBOX)
     if (existingItem) {
-      this.log.debug('Home context already in context')
+      this.log.debug('Inbox context already in context')
       return
     }
 
-    const item = new ContextItemHome(this.service)
+    const item = new ContextItemInbox(this.service)
     return this.addContextItem(item, opts)
   }
 
@@ -601,12 +601,12 @@ export class ContextManager {
   addMentionItem(item: MentionItem, opts?: AddContextItemOptions) {
     const itemId = item.id
     const activeSpaceContextItem = this.getActiveSpaceContextItem()
-    if (itemId === GENERAL_CONTEXT_MENTION.id) {
-      return this.addHomeContext(opts)
-    } else if (itemId === NO_CONTEXT_MENTION.id) {
+    if (itemId === NO_CONTEXT_MENTION.id) {
       this.clear()
     } else if (itemId === EVERYTHING_MENTION.id) {
       return this.addEverythingContext(opts)
+    } else if (itemId === INBOX_MENTION.id) {
+      return this.addInboxContext(opts)
     } else if (itemId === TABS_MENTION.id) {
       if (activeSpaceContextItem) {
         activeSpaceContextItem.include =
@@ -623,6 +623,8 @@ export class ContextManager {
       } else {
         return this.addActiveSpaceContext('resources', opts)
       }
+    } else if (itemId == ACTIVE_TAB_MENTION.id) {
+      return this.addActiveTab(opts)
     } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
       return this.addWikipediaContext(opts)
     } else if (item.type === MentionItemType.RESOURCE) {

@@ -964,7 +964,7 @@
         EventContext.Inline
       )
 
-      if (tabs.activeScopeIdValue) {
+      if (tabs.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
         await oasis.addResourcesToSpace(
           tabs.activeScopeIdValue,
           [resource.id],
@@ -1025,7 +1025,7 @@
       ]
     )
 
-    if (tabs.activeScopeIdValue) {
+    if (tabs.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
       await oasis.addResourcesToSpace(
         tabs.activeScopeIdValue,
         [annotationResource.id],

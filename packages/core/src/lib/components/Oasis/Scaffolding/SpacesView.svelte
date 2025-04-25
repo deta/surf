@@ -39,7 +39,11 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import BuiltInSpace from '../BuiltInSpace.svelte'
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
-  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import {
+    everythingContext,
+    inboxContext,
+    notesContext
+  } from '@horizon/core/src/lib/constants/browsingContext'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
@@ -85,19 +89,19 @@
 
   const builtInSpaces = [
     {
-      id: 'all',
-      name: 'All Your Stuff',
-      icon: 'save'
+      id: everythingContext.id,
+      name: everythingContext.label,
+      icon: everythingContext.icon
     },
     {
-      id: 'inbox',
-      name: generalContext.label,
-      icon: generalContext.icon
+      id: inboxContext.id,
+      name: inboxContext.label,
+      icon: inboxContext.icon
     },
     {
-      id: 'notes',
-      name: notesSpace.name.folderName,
-      icon: 'docs'
+      id: notesContext.id,
+      name: notesContext.label,
+      icon: notesContext.icon
     }
   ] as { id: string; name: string; icon: Icons }[]
 

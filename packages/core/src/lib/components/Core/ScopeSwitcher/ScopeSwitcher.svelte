@@ -17,7 +17,7 @@
     OpenHomescreenEventTrigger
   } from '@horizon/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { tick } from 'svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
@@ -84,10 +84,7 @@
           data: space
         }))
 
-      return [
-        ...conditionalArrayItem(activeScopeId !== null, generalContext),
-        ...spaceItems
-      ] as SelectItem[]
+      return spaceItems
     }
   )
 
@@ -101,10 +98,6 @@
 
   const switchSpace = async (spaceId: string) => {
     log.debug('Switching space:', spaceId)
-    if (spaceId === 'default') {
-      await tabsManager.changeScope(null, ChangeContextEventTrigger.ContextSwitcher)
-      return
-    }
 
     if (spaceId === 'new') {
       await oasis.createNewBrowsingSpace(
@@ -256,13 +249,6 @@
     [
       {
         type: 'action',
-        icon: generalContext.icon,
-        hidden: active,
-        text: 'Open',
-        action: () => switchSpace(space.id)
-      },
-      {
-        type: 'action',
         icon: 'arrow.right',
         hidden: active,
         text: 'Open in Stuff',
@@ -347,8 +333,6 @@
       <button class="context-icon">
         <SpaceIcon folder={$activeSpace} interactive={false} size="md" />
       </button>
-    {:else}
-      <Icon name={generalContext.icon} size="1.5rem" />
     {/if}
 
     {#if !horizontalTabs}
@@ -385,7 +369,7 @@
             in:fly={{ delay: 33, duration: 120, y: -10 }}
             out:fly={{ duration: 120, y: -10 }}
           >
-            {$activeSpaceData ? $activeSpaceData.folderName : generalContext.label}
+            {$activeSpaceData ? $activeSpaceData.folderName : 'Switch Context'}
           </div>
         {/if}
       </div>
@@ -398,7 +382,7 @@
     footerItem={newContext}
     {searchValue}
     search="manual"
-    inputPlaceholder="Search your Contexts…"
+    inputPlaceholder="Search your contexts…"
     on:select={handleChange}
   >
     <div class="trigger cursor-default" on:mouseenter={handleTitleMouseLeave}>

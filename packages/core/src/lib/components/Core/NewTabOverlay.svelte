@@ -68,6 +68,11 @@
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
   import OasisSpaceNavbar from '../Oasis/OasisSpaceNavbar.svelte'
   import SpaceFilterViewButtons from '../Oasis/SpaceFilterViewButtons.svelte'
+  import {
+    everythingContext,
+    inboxContext,
+    notesContext
+  } from '@horizon/core/src/lib/constants/browsingContext'
 
   export let showTabSearch: Writable<number>
   export let spaceId: string
@@ -1071,13 +1076,23 @@
                     <OasisSpaceNavbar {searchValue}>
                       <svelte:fragment slot="left">
                         <Icon
-                          name={isInboxSpace ? 'circle-dot' : 'save'}
+                          name={isInboxSpace
+                            ? inboxContext.icon
+                            : isNotesSpace
+                              ? notesContext.icon
+                              : everythingContext.icon}
                           size="1.4rem"
                           color="currentColor"
                           style="color: currentColor;"
                         />
 
-                        <span class="context-name">{isInboxSpace ? 'Home' : 'All My Stuff'}</span>
+                        <span class="context-name"
+                          >{isInboxSpace
+                            ? inboxContext.label
+                            : isNotesSpace
+                              ? notesContext.label
+                              : everythingContext.label}</span
+                        >
                       </svelte:fragment>
                       <svelte:fragment slot="right">
                         {#if isInboxSpace}
@@ -1122,13 +1137,26 @@
                     </OasisSpaceNavbar>
 
                     <ContextHeader
-                      headline={isInboxSpace ? 'Home' : isNotesSpace ? 'Notes' : 'All Your Stuff'}
+                      headline={isInboxSpace
+                        ? inboxContext.label
+                        : isNotesSpace
+                          ? notesContext.label
+                          : everythingContext.label}
+                      description={isInboxSpace
+                        ? inboxContext.description
+                        : isNotesSpace
+                          ? notesContext.description
+                          : everythingContext.description}
                       headlineEditable={false}
                       descriptionEditable={false}
                     >
                       <svelte:fragment slot="icon">
                         <Icon
-                          name={isInboxSpace ? 'circle-dot' : isNotesSpace ? 'docs' : 'save'}
+                          name={isInboxSpace
+                            ? inboxContext.icon
+                            : isNotesSpace
+                              ? notesContext.icon
+                              : everythingContext.icon}
                           size="xl"
                           color="currentColor"
                           style="color: currentColor;"

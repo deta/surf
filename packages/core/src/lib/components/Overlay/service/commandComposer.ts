@@ -38,10 +38,9 @@ import {
 } from '../../../service/resources'
 import { ResourceTagsBuiltInKeys, ResourceTypes, SearchOasisEventTrigger } from '@horizon/types'
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
-import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '../../../types'
+import { type HistoryEntry, type Tab } from '../../../types'
 import Fuse from 'fuse.js'
 import type { TabsManager } from '../../../service/tabs'
-import { generalContext } from '../../../constants/browsingContext'
 
 export class CommandComposer {
   private log = useLogScope('CommandComposer')
@@ -94,17 +93,7 @@ export class CommandComposer {
     this.telemetry = this.resourceManager.telemetry
     this.userConfigSettings = this.config.settings
     this.tabsManager = this.tabsManager
-    this.spaces = derived(this.oasis.spaces, ($spaces) => {
-      const generalContextSpace = this.oasis.createFakeSpace(
-        {
-          folderName: generalContext.label
-        },
-        GENERAL_CONTEXT_ID,
-        true
-      )
-
-      return [generalContextSpace, ...$spaces]
-    })
+    this.spaces = this.oasis.spaces
 
     // Subscribe to search value changes
     this.searchValue.subscribe((value) => {

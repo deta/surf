@@ -6,23 +6,11 @@
   import RightPanel from './RightPanel.svelte'
   import { Icon } from '@horizon/icons'
   import { fade, fly } from 'svelte/transition'
+  import { PERSONAS } from './personas'
 
   const dispatch = createEventDispatcher()
 
   export let selectedPersonas: string[]
-
-  const personas = [
-    'Student',
-    'Software Engineer',
-    'Designer',
-    'Entrepreneur',
-    'Marketing',
-    'Artist',
-    'Researcher',
-    'Product Manager',
-    'Writer',
-    'Other'
-  ]
 
   let showContent = false
   let showButton = false
@@ -97,7 +85,7 @@
       </p>
     {/if}
     <div class="grid-container">
-      {#each personas as persona}
+      {#each PERSONAS as persona}
         <button
           class="persona-button {selectedPersonas.includes(persona) ? 'selected' : ''}"
           on:click={() => togglePersona(persona)}

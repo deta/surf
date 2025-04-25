@@ -21,6 +21,7 @@
   import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import ChatControls from './ChatControls.svelte'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let note: SmartNote
 
@@ -34,8 +35,10 @@
   const resourceManager = useResourceManager()
   const toasts = useToasts()
   const ai = useAI()
+  const config = useConfig()
   const smartNotes = ai.smartNotes
 
+  const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
   const activeNoteId = smartNotes.activeNoteId
   const contextManager = note.contextManager
@@ -167,21 +170,6 @@
     const { prompt, custom } = e.detail
     log.debug('Handling run prompt', prompt)
     runPrompt(prompt, custom)
-  }
-
-  const sendChatMessage = async (
-    prompt: string,
-    role: AIChatMessageRole = 'user',
-    query?: string,
-    skipScreenshot = false
-  ) => {
-    await chat?.sendMessageAndHandle(prompt, {
-      trigger: PageChatMessageSentEventTrigger.SidebarChat,
-      useContext: selectedMode !== 'general',
-      role,
-      query,
-      skipScreenshot
-    })
   }
 
   const handleUpdateNoteTitle = async (e: CustomEvent<string>) => {

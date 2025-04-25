@@ -649,6 +649,14 @@
             bind:value={userConfigSettings.homescreen_link_cmdt}
             on:update={handleSettingsUpdate}
           />
+
+          <SettingsOption
+            icon="save"
+            title="Save to Active Context"
+            description="If enabled clicking the save button on a tab or chat message or downloading something will save it to the currently active context instead of the inbox."
+            bind:value={userConfigSettings.save_to_active_context}
+            on:update={handleSettingsUpdate}
+          />
         {/if}
 
         <!--<PromptSection

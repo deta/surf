@@ -241,11 +241,13 @@ const initializeApp = async () => {
   markAppAsSetup()
   await setupAdblocker()
   setAppMenu()
-  createWindow()
 
   if (CONFIG.forceSetupWindow) {
     createSetupWindow()
+    return
   }
+
+  createWindow()
 
   AppUpdater.initialize({
     authToken: userConfig.api_key || '',
