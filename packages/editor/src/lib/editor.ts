@@ -4,7 +4,8 @@ import {
   generateJSON,
   generateText,
   Editor,
-  type Range
+  type Range,
+  Extension
 } from '@tiptap/core'
 import Link from '@tiptap/extension-link'
 import TaskItem from '@tiptap/extension-task-item'
@@ -34,6 +35,7 @@ import { conditionalArrayItem } from '@horizon/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
 import { Citation } from './extensions/Citation/citation'
 import { Surflet } from './extensions/Surflet/surflet'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -197,7 +199,29 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       },
       updateDelay: 10 // Reduced delay for more responsive updates
     })
-  )
+  ),
+  Extension.create<{ pluginKey?: PluginKey }>({
+    name: 'paste-handler',
+
+    addProseMirrorPlugins() {
+      const plugin = new Plugin({
+        key: this.options.pluginKey,
+
+        props: {
+          handleDOMEvents: {
+            paste(_, e) {
+              const clipboardDataItems = Array.from(e.clipboardData?.items || [])
+              if (clipboardDataItems.map((e) => e.kind).includes('file')) {
+                e.preventDefault()
+              }
+            }
+          }
+        }
+      })
+
+      return [plugin]
+    }
+  })
   // Markdown,
 ]
 

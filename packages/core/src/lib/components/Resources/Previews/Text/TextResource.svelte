@@ -136,6 +136,11 @@
   import Surflet from '@horizon/core/src/lib/components/Chat/Notes/Surflet.svelte'
   import ChatControls from '@horizon/core/src/lib/components/Chat/ChatControls.svelte'
   import { openContextMenu } from '../../../Core/ContextMenu.svelte'
+  import {
+    createResourcesFromMediaItems,
+    processPaste,
+    type MediaParserResult
+  } from '../../../../service/mediaImporter'
   import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
 
@@ -517,6 +522,40 @@
       NoteCreateCitationEventTrigger.Drop,
       showOnboarding
     )
+  }
+
+  const handlePaste = async (e: ClipboardEvent) => {
+    let toast: Toast | null = null
+    e.preventDefault()
+    try {
+      var parsed = await processPaste(e)
+
+      // NOTE: We only process files as other types are already handled by tiptap
+      parsed = parsed.filter((e) => e.type === 'file')
+      if (parsed.length <= 0) return
+
+      toast = toasts.loading('Importing pasted items…')
+
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+        ResourceTag.paste()
+      ])
+
+      for (const resource of newResources) {
+        if ($activeSpace) {
+          oasis.addResourcesToSpace($activeSpace.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+        }
+        const editor = editorElem.getEditor()
+        const position = editor.view.state.selection.from
+
+        await processDropResource(position, resource, true, { x: 0, y: 0 })
+      }
+
+      toast.success('Items imported!')
+    } catch (e) {
+      toast?.error('Failed to import pasted items!')
+
+      log.error(e)
+    }
   }
 
   const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
@@ -1944,6 +1983,7 @@
   }}
   on:Drop={handleDrop}
   on:dragover={handleDragOver}
+  on:paste={handlePaste}
 >
   <div class="content">
     {#if showTitle}

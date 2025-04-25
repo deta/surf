@@ -34,7 +34,8 @@
   import {
     createResourcesFromFiles,
     createResourcesFromMediaItems,
-    processDrop
+    processDrop,
+    processPaste
   } from '../service/mediaImporter'
   import SidebarPane, { leftSize, rightSize } from './Sidebars/SidebarPane.svelte'
 
