@@ -3212,8 +3212,10 @@
       window.api.appIsReady()
     }, 2000)
 
-    const desktopId = tabsManager.activeScopeIdValue ?? '$$default'
-    desktopManager.setActive(desktopId)
+    const desktopId = tabsManager.activeScopeIdValue
+    if (desktopId) {
+      desktopManager.setActive(desktopId)
+    }
 
     await tick()
 
@@ -3288,7 +3290,7 @@
       log.debug('show onboarding note', newTab)
     }
 
-    await migrateHomeContext({ tabsManager, oasis })
+    await migrateHomeContext({ tabsManager, oasis, desktopManager })
 
     // @ts-ignore
     window.showNotesOnboarding = startNotesOnboarding
