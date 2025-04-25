@@ -431,7 +431,7 @@
   bind:this={citationElem}
   use:contextMenu={contextMenuData}
   draggable={true}
-  use:HTMLDragItem.action={{}}
+  use:HTMLDragItem.action={{ allowDragStartPropagation: true }}
   on:DragStart={(drag) => {
     if (resource) {
       drag.item.data.setData(DragTypeNames.SURF_RESOURCE, resource)

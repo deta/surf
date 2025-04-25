@@ -32,6 +32,7 @@ export const Citation = Node.create<CitationOptions>({
   group: 'inline',
   inline: true,
   atom: true,
+  draggable: true,
 
   addOptions() {
     return {
