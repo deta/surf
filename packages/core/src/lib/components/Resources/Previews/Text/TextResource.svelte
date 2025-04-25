@@ -30,6 +30,7 @@
     isMac,
     isModKeyPressed,
     markdownToHtml,
+    parseSurfProtocolURL,
     tooltip,
     truncate,
     truncateURL,
@@ -144,7 +145,11 @@
     type MediaParserResult
   } from '../../../../service/mediaImporter'
   import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
-  import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
+  import {
+    createMentionsFetcher,
+    createResourcesMentionsFetcher
+  } from '@horizon/core/src/lib/service/ai/mentions'
+  import type { LinkClickHandler } from '@horizon/editor/src/lib/extensions/Link/helpers/clickHandler'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -331,6 +336,7 @@
   )
 
   const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager }, resourceId)
+  const linkItemsFetcher = createResourcesMentionsFetcher(resourceManager, resourceId)
 
   const prepLoadingPhrases = [
     'Analysing your context…',
@@ -1454,6 +1460,57 @@
     }
   }
 
+  const handleLinkClick: LinkClickHandler = async (e, href) => {
+    const target =
+      e.shiftKey && !isModKeyPressed(e)
+        ? 'preview'
+        : e.altKey
+          ? 'details'
+          : isModKeyPressed(e)
+            ? 'new-tab'
+            : 'current-tab'
+    const activeTab = target === 'current-tab'
+
+    log.debug('Link clicked', href, target)
+
+    const resourceId = parseSurfProtocolURL(href)
+    if (resourceId) {
+      log.debug('Trying to open resource', resourceId)
+      const resource = await resourceManager.getResource(resourceId)
+      if (!resource) {
+        log.error('Resource not found', resourceId)
+        toasts.error('Resource to open not found')
+        return
+      }
+
+      if (target === 'preview') {
+        globalMiniBrowser.openResource(resource.id, {
+          from: OpenInMiniBrowserEventFrom.NoteLink
+        })
+      } else if (target === 'details') {
+        oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: 'auto' })
+      } else {
+        tabsManager.openResourcFromContextAsPageTab(resource.id, {
+          active: activeTab,
+          trigger: CreateTabEventTrigger.NoteLink
+        })
+      }
+
+      return
+    }
+
+    if (target === 'preview') {
+      globalMiniBrowser.openWebpage(href, {
+        from: OpenInMiniBrowserEventFrom.NoteLink
+      })
+    } else {
+      tabsManager.addPageTab(href, {
+        active: activeTab,
+        trigger: CreateTabEventTrigger.NoteLink
+      })
+    }
+  }
+
   const handleEditorKeyDown = (e: KeyboardEvent) => {
     // Only prevent propagation when the editor exists AND is focused
     if (editorElem) {
@@ -2037,9 +2094,11 @@
               parseMentions
               enableCaretIndicator={true}
               onCaretPositionUpdate={handleCaretPositionUpdate}
+              onLinkClick={handleLinkClick}
               {tabsManager}
               {slashItemsFetcher}
               {mentionItemsFetcher}
+              {linkItemsFetcher}
               on:blur={hidePopover}
               on:click
               on:dragstart

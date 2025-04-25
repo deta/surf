@@ -132,6 +132,8 @@ export enum CreateTabEventTrigger {
   HomescreenSpace = 'homescreen_space',
   /** Tab was created from a note */
   NoteCitation = 'note_citation',
+  /** Tab was created from a link in a note */
+  NoteLink = 'note_link',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
 }
@@ -204,7 +206,8 @@ export enum OpenInMiniBrowserEventFrom {
   WebPage = 'web_page',
   Homescreeen = 'homescreen',
   CommandMenu = 'command_menu',
-  Note = 'note'
+  Note = 'note',
+  NoteLink = 'note_link'
 }
 
 export enum DeleteResourceEventTrigger {

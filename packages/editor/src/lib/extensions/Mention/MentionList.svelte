@@ -4,6 +4,9 @@
 
   export let items: MentionItem[] = []
   export let callback: (item: MentionItem) => void
+  export let minimal: boolean = false
+  export let hideSectionTitle: boolean = false
+  export let hideEmpty: boolean = false
 
   let activeIdx = 0
   let listContainer: HTMLDivElement
@@ -65,11 +68,19 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="list" bind:this={listContainer} on:mousemove={() => (disableMouseover = false)}>
+<div
+  class="list"
+  class:minimal
+  bind:this={listContainer}
+  on:mousemove={() => (disableMouseover = false)}
+>
   {#if items.length > 0}
     {#each Object.entries(sections) as [type, sectionItems]}
       <div class="section">
-        <div class="section-title">{getSectionTitle(type)}</div>
+        {#if !hideSectionTitle}
+          <div class="section-title">{getSectionTitle(type)}</div>
+        {/if}
+
         {#each sectionItems as item, i (item.id)}
           <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions  a11y-mouse-events-have-key-events -->
           <div
@@ -103,7 +114,7 @@
         {/each}
       </div>
     {/each}
-  {:else}
+  {:else if !hideEmpty}
     <div class="item">Nothing found</div>
   {/if}
 </div>
@@ -122,14 +133,21 @@
     --ctx-item-text: #210e1f;
     --ctx-item-text-hover: #fff;
 
-    width: 275px;
-    max-height: 400px;
-    background: var(--ctx-background);
-    padding: 0.25em;
-    padding-top: 0.5em;
-    border-radius: 9px;
-    border: 0.5px solid var(--ctx-border);
-    box-shadow: 0 2px 10px var(--ctx-shadow-color);
+    &:not(.minimal) {
+      width: 275px;
+      max-height: 400px;
+      background: var(--ctx-background);
+      padding: 0.25em;
+      padding-top: 0.5em;
+      border-radius: 9px;
+      border: 0.5px solid var(--ctx-border);
+      box-shadow: 0 2px 10px var(--ctx-shadow-color);
+    }
+
+    &.minimal .section {
+      gap: 0;
+    }
+
     user-select: none;
     font-size: 0.95em;
     overflow: auto;

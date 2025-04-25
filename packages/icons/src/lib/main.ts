@@ -117,6 +117,7 @@ import Dots from './Icons/Dots.svelte'
 import DotsVertical from './Icons/DotsVertical.svelte'
 import Mention from './Icons/Mention.svelte'
 import FileTextSpark from './Icons/FileTextSpark.svelte'
+import Underline from './Icons/Underline.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -241,7 +242,8 @@ export const icons = {
   dots: Dots,
   'dots.vertical': DotsVertical,
   mention: Mention,
-  'file-text-spark': FileTextSpark
+  'file-text-spark': FileTextSpark,
+  underline: Underline
 }
 
 export type Icons = keyof typeof icons
@@ -365,5 +367,6 @@ export {
   Dots,
   DotsVertical,
   Mention,
-  FileTextSpark
+  FileTextSpark,
+  Underline
 }

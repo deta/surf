@@ -23,7 +23,12 @@
   import { conditionalArrayItem, useAnimationFrameThrottle } from '@horizon/utils'
 
   import { createEditorExtensions, getEditorContentText, type ExtensionOptions } from '../editor'
-  import type { EditorAutocompleteEvent, MentionItem, MentionItemType } from '../types'
+  import type {
+    EditorAutocompleteEvent,
+    LinkItemsFetcher,
+    MentionItem,
+    MentionItemType
+  } from '../types'
   import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
   import type { MentionAction, MentionNodeAttrs } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
@@ -32,6 +37,7 @@
   import type { SlashCommandPayload } from '../extensions/Slash/index'
   import type { SlashItemsFetcher } from '../extensions/Slash/suggestion'
   import type { MentionItemsFetcher } from '../extensions/Mention/suggestion'
+  import type { LinkClickHandler } from '../extensions/Link/helpers/clickHandler'
 
   export let content: string
   export let readOnly: boolean = false
@@ -59,6 +65,9 @@
   export let showSlashMenu: boolean = false
   export let slashItemsFetcher: SlashItemsFetcher | undefined = undefined
   export let mentionItemsFetcher: MentionItemsFetcher | undefined = undefined
+  export let linkItemsFetcher: LinkItemsFetcher | undefined = undefined
+  export let onLinkClick: LinkClickHandler | undefined = undefined
+
   export let enableCaretIndicator: boolean = false
   export let onCaretPositionUpdate: ((position: any) => void) | undefined = undefined
   export let showSimilaritySearch: boolean = false
@@ -321,7 +330,8 @@
     citationClick: handleCitationClick,
     enableCaretIndicator: enableCaretIndicator,
     onCaretPositionUpdate: handleCaretPositionUpdate,
-    surfletComponent: surfletComponent
+    surfletComponent: surfletComponent,
+    onLinkClick: onLinkClick
   })
 
   const KeyboardHandler = Extension.create({
@@ -521,6 +531,7 @@
     <BubbleMenu
       {editor}
       {mentionItemsFetcher}
+      {linkItemsFetcher}
       loading={bubbleMenuLoading}
       autosearch={autoSimilaritySearch}
       showRewrite={enableRewrite}

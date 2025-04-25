@@ -29,7 +29,9 @@
     conditionalArrayItem,
     useLocalStorageStore,
     shortenFilename,
-    parseStringIntoUrl
+    parseStringIntoUrl,
+    parseURL,
+    parseSurfProtocolURL
   } from '@horizon/utils'
   import {
     createResourcesFromFiles,
@@ -1012,6 +1014,31 @@
 
   const openUrlHandler = async (url: string, active = true, scopeId?: string) => {
     log.debug('open url', url, active, scopeId)
+
+    const resourceId = parseSurfProtocolURL(url)
+    if (resourceId) {
+      log.debug('Trying to open resource', resourceId)
+      const resource = await resourceManager.getResource(resourceId)
+      if (!resource) {
+        log.error('Resource not found', resourceId)
+        toasts.error('Resource to open not found')
+        return
+      }
+
+      const tab = await tabsManager.openResourcFromContextAsPageTab(resource.id, {
+        active: active,
+        scopeId: scopeId,
+        trigger: CreateTabEventTrigger.System
+      })
+
+      if (!tab) {
+        log.error('Failed to open url', url)
+        toasts.error('Failed to open resource')
+        return
+      }
+
+      return
+    }
 
     const tab = await tabsManager.addPageTab(url, {
       active: active,

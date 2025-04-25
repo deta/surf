@@ -37,3 +37,5 @@ export type EditorSimilaritiesSearchEvent = {
   range: Range
   loading: boolean
 }
+
+export type LinkItemsFetcher = (query: string) => Promise<MentionItem[]>

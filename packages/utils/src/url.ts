@@ -18,6 +18,14 @@ export const prependProtocol = (url: string, secure = true) => {
   }
 }
 
+export const parseURL = (url: string) => {
+  try {
+    return new URL(url)
+  } catch (e) {
+    return null
+  }
+}
+
 export const makeAbsoluteURL = (urlOrPath: string, base: URL) => {
   try {
     return new URL(urlOrPath, base.origin).href
@@ -375,4 +383,28 @@ export const appendURLPath = (url: string, path: string) => {
   } catch {
     return url
   }
+}
+
+/**
+ * Try to parse a surf protocol URL and return the resourceId
+ * Surf protocol URL format: surf://resource/<id>
+ * @param rawUrl The URL to parse
+ * @returns resourceId or null if the URL is not a surf protocol URL
+ */
+export const parseSurfProtocolURL = (rawUrl: URL | string) => {
+  const url = typeof rawUrl === 'string' ? parseURL(rawUrl) : rawUrl
+  if (!url) {
+    return null
+  }
+
+  if (url.protocol === 'surf:') {
+    const resourceId = url.pathname.replace('/', '')
+    if (!resourceId) {
+      return null
+    }
+
+    return resourceId
+  }
+
+  return null
 }

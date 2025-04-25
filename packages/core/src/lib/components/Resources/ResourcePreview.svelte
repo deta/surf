@@ -29,7 +29,8 @@
     truncateURL,
     conditionalArrayItem,
     tooltip,
-    parseUrlIntoCanonical
+    parseUrlIntoCanonical,
+    isDev
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
@@ -54,6 +55,7 @@
     isGeneratedResource
   } from '@horizon/core/src/lib/utils/resourcePreview'
   import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
+  import { debugMode } from '@horizon/core/src/lib/stores/debug'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -629,6 +631,18 @@
       text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
       action: () => handleOpenAsFile()
     }),
+    ...conditionalArrayItem<CtxItem>($debugMode, [
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'code',
+        text: 'Copy Resource ID',
+        action: () => {
+          copyToClipboard(resource.id)
+          toasts.success('Copied resource ID to clipboard!')
+        }
+      }
+    ]),
     ...conditionalArrayItem<CtxItem>(isGeneratedResource(resource) && $activeTab?.type === 'page', {
       type: 'action',
       icon: 'sidebar.right',

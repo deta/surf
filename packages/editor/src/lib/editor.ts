@@ -7,13 +7,13 @@ import {
   type Range,
   Extension
 } from '@tiptap/core'
-import Link from '@tiptap/extension-link'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import ListKeymap from '@tiptap/extension-list-keymap'
 import Image from '@tiptap/extension-image'
+import Underline from '@tiptap/extension-underline'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import { SlashExtension, SlashSuggestion, type SlashCommandPayload } from './extensions/Slash/index'
@@ -36,6 +36,8 @@ import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
 import { Citation } from './extensions/Citation/citation'
 import { Surflet } from './extensions/Surflet/surflet'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
+import Link from './extensions/Link'
+import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -58,6 +60,7 @@ export type ExtensionOptions = {
   enableCaretIndicator?: boolean
   onCaretPositionUpdate?: (position: CaretPosition) => void
   surfletComponent?: ComponentType<SvelteComponent>
+  onLinkClick?: LinkClickHandler
 }
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
@@ -70,30 +73,39 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       width: 2
     }
   }),
-  Link.extend({
-    addAttributes() {
-      return {
-        href: {
-          default: null
-        },
-        'data-sveltekit-reload': {
-          default: true
-        },
-        target: {
-          default: null,
-          renderHTML: () => {
-            return {
-              target:
-                window.location.origin.includes('deta.space') ||
-                window.location.origin.includes('localhost')
-                  ? '_self'
-                  : '_blank'
-            }
-          }
-        }
-      }
+  Underline,
+  Link.configure({
+    onClick: opts?.onLinkClick,
+    protocols: ['surf'],
+    HTMLAttributes: {
+      target: '_blank'
     }
   }),
+  // Link.extend({
+  //   addAttributes() {
+  //     return {
+  //       href: {
+  //         default: null
+  //       },
+  //       'data-sveltekit-reload': {
+  //         default: true
+  //       },
+  //       protocols: ['surf'],
+  //       target: {
+  //         default: null,
+  //         renderHTML: () => {
+  //           return {
+  //             target:
+  //               window.location.origin.includes('deta.space') ||
+  //               window.location.origin.includes('localhost')
+  //                 ? '_self'
+  //                 : '_blank'
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }),
   Button.configure({
     onClick: opts?.buttonClick
   }),

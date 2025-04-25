@@ -4,10 +4,22 @@
 
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher, tick } from 'svelte'
-  import { parseStringIntoUrl } from '@horizon/utils'
-  import type { EditorRewriteEvent, EditorSimilaritiesSearchEvent } from '../types'
+  import {
+    isMac,
+    isModKeyAndKeyPressed,
+    parseStringIntoUrl,
+    tooltip,
+    useDebounce
+  } from '@horizon/utils'
+  import type {
+    EditorRewriteEvent,
+    EditorSimilaritiesSearchEvent,
+    LinkItemsFetcher,
+    MentionItem
+  } from '../types'
   import EditorComp from './Editor.svelte'
   import type { MentionItemsFetcher } from '../extensions/Mention/suggestion'
+  import MentionList from '../extensions/Mention/MentionList.svelte'
 
   export let loading = false
   export let editor: Readable<Editor>
@@ -15,6 +27,7 @@
   export let autosearch = false
   export let showRewrite = false
   export let showSimilaritySearch = false
+  export let linkItemsFetcher: LinkItemsFetcher | undefined = undefined
 
   const dispatch = createEventDispatcher<{
     'open-bubble-menu': void
@@ -29,8 +42,11 @@
 
   let editorElem: EditorComp
   let inputElem: HTMLInputElement
+  let mentionList: MentionList
   let inputValue = ''
   let inputType: 'link' | 'rewrite' = 'rewrite'
+  let linkItems: MentionItem[] = []
+  let isOpen = false
 
   const showInput = async (type: typeof inputType) => {
     inputType = type
@@ -101,14 +117,22 @@
     }
   }
 
+  const turnSelectionIntoLink = (url: string) => {
+    $editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  }
+
+  const unsetLink = () => {
+    $editor.chain().focus().extendMarkRange('link').unsetLink().run()
+  }
+
   const handleSubmit = () => {
     try {
       if (inputType === 'link') {
         const url = parseStringIntoUrl(inputValue)
         if (url) {
-          $editor.chain().focus().extendMarkRange('link').setLink({ href: url.href }).run()
+          turnSelectionIntoLink(url.href)
         } else {
-          $editor.chain().focus().extendMarkRange('link').unsetLink().run()
+          unsetLink()
         }
       } else {
         rewrite()
@@ -118,19 +142,32 @@
     }
   }
 
-  const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'Enter') {
+  const searchLinkItems = useDebounce(async () => {
+    if (linkItemsFetcher) {
+      linkItems = await linkItemsFetcher(inputValue)
+    }
+  }, 200)
+
+  const handleKeydown = async (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || !linkItems) {
       handleSubmit()
 
       $inputShown = false
       inputValue = ''
     }
+    if (mentionList) {
+      mentionList.onKeyDown(event)
+    }
+
+    searchLinkItems()
   }
 
   const handleOpen = () => {
+    isOpen = true
     $inputShown = false
     inputValue = ''
     inputType = 'rewrite'
+    linkItems = []
     loading = false
 
     dispatch('open-bubble-menu')
@@ -141,28 +178,76 @@
   }
 
   const handleClose = () => {
+    isOpen = false
     dispatch('close-bubble-menu')
+  }
+
+  const handleLinkItemSelect = (item: MentionItem) => {
+    const resource = item.data
+    if (resource) {
+      turnSelectionIntoLink(`surf://resource/${resource.id}`)
+    }
+
+    $inputShown = false
+    inputValue = ''
+  }
+
+  const handleWindowKeyDown = (event: KeyboardEvent) => {
+    // check if the editor is focused and the bubble menu is open
+    if (!isOpen || !$editor.isFocused) {
+      return
+    }
+
+    if (isModKeyAndKeyPressed(event, 'k')) {
+      event.preventDefault()
+      handleLink()
+    }
   }
 </script>
 
-<BubbleMenu editor={$editor} tippyOptions={{ onShow: handleOpen, onHide: handleClose }}>
-  <div class="bubble-menu">
+<svelte:window on:keydown={handleWindowKeyDown} />
+
+<BubbleMenu
+  editor={$editor}
+  tippyOptions={{ onShow: handleOpen, onHide: handleClose, placement: 'bottom' }}
+>
+  <div class="bubble-menu-wrapper">
     {#if loading}
-      <div class="loading">
-        <Icon name="spinner" size="16px" />
-        <div>Thinking…</div>
+      <div class="bubble-menu">
+        <div class="loading">
+          <Icon name="spinner" size="16px" />
+          <div>Thinking…</div>
+        </div>
       </div>
     {:else if $inputShown}
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <div class="input-wrapper" on:keydown={handleKeydown}>
-        {#if inputType === 'link'}
-          <input
-            bind:this={inputElem}
-            bind:value={inputValue}
-            placeholder="Enter a URL"
-            on:keydown={handleKeydown}
+      {#if inputType === 'link'}
+        <div class="link-menu not-prose">
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div class="input-wrapper">
+            <input
+              bind:this={inputElem}
+              bind:value={inputValue}
+              placeholder="Enter a URL or search your stuff"
+              on:keydown={handleKeydown}
+            />
+
+            <button on:click={handleSubmit}>
+              <Icon name="arrow.right" />
+            </button>
+          </div>
+
+          <MentionList
+            bind:this={mentionList}
+            items={linkItems}
+            callback={handleLinkItemSelect}
+            minimal
+            hideSectionTitle
+            hideEmpty
           />
-        {:else}
+        </div>
+      {:else if inputType === 'rewrite'}
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div class="input-wrapper" on:keydown={handleKeydown}>
           <EditorComp
             bind:this={editorElem}
             bind:content={inputValue}
@@ -171,122 +256,99 @@
             autofocus={true}
             parseMentions
           />
-        {/if}
-        <button on:click={handleSubmit}>
-          <Icon name="arrow.right" />
-        </button>
-      </div>
-    {:else}
-      <div class="menu-section">
-        <button
-          class:active={isActive('bold')}
-          on:click={() => $editor.chain().focus().toggleBold().run()}
-        >
-          <Icon name="bold" />
-        </button>
 
-        <button
-          class:active={isActive('italic')}
-          on:click={() => $editor.chain().focus().toggleItalic().run()}
-        >
-          <Icon name="italic" />
-        </button>
-
-        <button
-          class:active={isActive('strike')}
-          on:click={() => $editor.chain().focus().toggleStrike().run()}
-        >
-          <Icon name="strike" />
-        </button>
-
-        <button
-          class:active={isActive('code')}
-          on:click={() => $editor.chain().focus().toggleCode().run()}
-        >
-          <Icon name="code" />
-        </button>
-
-        <button class:active={isActive('link')} on:click={handleLink}>
-          <Icon name="link" />
-        </button>
-      </div>
-
-      {#if showRewrite || showSimilaritySearch}
-        <div class="divider"></div>
-
-        <div class="menu-section">
-          {#if showRewrite}
-            <button on:click={handleShowRewrite} id="editor-bubble-rewrite-btn">
-              <Icon name="wand" size="17px" />
-            </button>
-          {/if}
-
-          {#if showSimilaritySearch}
-            <button on:click={handleFindSimilar} id="editor-bubble-similarity-btn">
-              <Icon name="file-text-ai" size="17px" />
-            </button>
-          {/if}
-
-          <!-- <button
-                class:active={isActive('heading', { level: 1 })}
-                on:click={() => $editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            >
-                <Icon name="h1" />
-            </button>
-
-            <button
-                class:active={isActive('heading', { level: 2 })}
-                on:click={() => $editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            >
-                <Icon name="h2" />
-            </button>
-
-            <button
-                
-                on:click={() => $editor.chain().focus().setParagraph().run()}
-            >
-                <Icon name="paragraph" />
-            </button>
-
-            <button
-                class:active={isActive('bulletList')}
-                on:click={() => $editor.chain().focus().toggleBulletList().run()}
-            >
-                <Icon name="list" />
-            </button>
-
-            <button
-                class:active={isActive('orderedList')}
-                on:click={() => $editor.chain().focus().toggleOrderedList().run()}
-            >
-                <Icon name="list-numbered" />
-            </button>
-
-            <button
-                class:active={isActive('taskList')}
-                on:click={() => $editor.chain().focus().toggleTaskList().run()}
-            >
-                <Icon name="list-check" />
-            </button>
-
-            <button
-                class:active={isActive('blockquote')}
-                on:click={() => $editor.chain().focus().toggleBlockquote().run()}
-            >
-                <Icon name="list-check" />
-            </button> -->
+          <button on:click={handleSubmit}>
+            <Icon name="arrow.right" />
+          </button>
         </div>
       {/if}
+    {:else}
+      <div class="bubble-menu">
+        <div class="menu-section">
+          <button
+            class:active={isActive('bold')}
+            on:click={() => $editor.chain().focus().toggleBold().run()}
+            use:tooltip={{ text: `Bold (${isMac() ? '⌘' : 'ctrl'} + B)`, position: 'bottom' }}
+          >
+            <Icon name="bold" />
+          </button>
+
+          <button
+            class:active={isActive('italic')}
+            on:click={() => $editor.chain().focus().toggleItalic().run()}
+            use:tooltip={{ text: `Italic (${isMac() ? '⌘' : 'ctrl'} + I)`, position: 'bottom' }}
+          >
+            <Icon name="italic" />
+          </button>
+
+          <button
+            class:active={isActive('underline')}
+            on:click={() => $editor.chain().focus().toggleUnderline().run()}
+            use:tooltip={{ text: `Underline (${isMac() ? '⌘' : 'ctrl'} + U)`, position: 'bottom' }}
+          >
+            <Icon name="underline" size="20px" />
+          </button>
+
+          <button
+            class:active={isActive('strike')}
+            on:click={() => $editor.chain().focus().toggleStrike().run()}
+            use:tooltip={{
+              text: `Strike-through (${isMac() ? '⌘' : 'ctrl'} + Shift + S)`,
+              position: 'bottom'
+            }}
+          >
+            <Icon name="strike" />
+          </button>
+
+          <button
+            class:active={isActive('code')}
+            on:click={() => $editor.chain().focus().toggleCode().run()}
+            use:tooltip={{ text: `Code`, position: 'bottom' }}
+          >
+            <Icon name="code" />
+          </button>
+
+          <button
+            class:active={isActive('link')}
+            on:click={handleLink}
+            use:tooltip={{ text: `Link (${isMac() ? '⌘' : 'ctrl'} + K)`, position: 'bottom' }}
+          >
+            <Icon name="link" />
+          </button>
+        </div>
+
+        {#if showRewrite || showSimilaritySearch}
+          <div class="divider"></div>
+
+          <div class="menu-section">
+            {#if showRewrite}
+              <button
+                on:click={handleShowRewrite}
+                id="editor-bubble-rewrite-btn"
+                use:tooltip={{ text: `Rewrite`, position: 'bottom' }}
+              >
+                <Icon name="wand" size="17px" />
+              </button>
+            {/if}
+
+            {#if showSimilaritySearch}
+              <button
+                on:click={() => handleFindSimilar()}
+                id="editor-bubble-similarity-btn"
+                use:tooltip={{ text: `Find Similar Resources`, position: 'bottom' }}
+              >
+                <Icon name="file-text-ai" size="17px" />
+              </button>
+            {/if}
+          </div>
+        {/if}
+      </div>
     {/if}
   </div>
 </BubbleMenu>
 
 <style lang="scss">
-  .bubble-menu {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-
+  .bubble-menu-wrapper {
     --ctx-background: #fff;
     --ctx-border: rgba(0, 0, 0, 0.25);
     --ctx-shadow-color: rgba(0, 0, 0, 0.12);
@@ -308,75 +370,87 @@
     }
 
     background: var(--ctx-background);
-    padding: 0.5rem 0.5rem;
     border-radius: 9px;
     border: 0.5px solid var(--ctx-border);
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
     user-select: none;
     font-size: 0.95em;
-    overflow: auto;
 
     animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
 
     &::backdrop {
       background-color: rgba(0, 0, 0, 0);
     }
+  }
 
-    .loading {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.95em;
+  .bubble-menu {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95em;
+  }
+
+  .menu-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .divider {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--color-menu-muted);
+    opacity: 0.5;
+  }
+
+  button {
+    display: flex;
+    background: none;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: 0;
+    color: var(--color-menu-muted);
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      color: var(--color-menu);
     }
 
-    .menu-section {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+    &.active {
+      color: var(--ctx-item-hover);
     }
+  }
 
-    .divider {
-      width: 1px;
-      height: 1.5rem;
-      background: var(--color-menu-muted);
-      opacity: 0.5;
-    }
+  input {
+    width: 100%;
+    background: none;
+    padding: 0.25rem 0.5rem;
+    outline: none;
+    border: none;
+    font-size: 0.95em;
+  }
 
-    button {
-      display: flex;
-      background: none;
-      border: none;
-      outline: none;
-      margin: 0;
-      padding: 0;
-      color: var(--color-menu-muted);
-      transition: all 0.2s ease-in-out;
+  .input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 335px; /* Set a fixed width for the bubble menu */
+    max-height: 120px;
+  }
 
-      &:hover {
-        color: var(--color-menu);
-      }
-
-      &.active {
-        color: var(--color-menu);
-      }
-    }
-
-    input {
-      width: 100%;
-      background: none;
-      padding-left: 0.5rem;
-      outline: none;
-      border: none;
-      font-size: 0.95em;
-    }
-
-    .input-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      width: 550px;
-      max-height: 120px;
-    }
+  .link-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 0.25em;
+    font-size: 1rem;
   }
 
   :global(.bubble-menu .editor-wrapper div.tiptap) {

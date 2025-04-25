@@ -337,7 +337,8 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-        url: event.url
+        url: event.url,
+        disposition: 'foreground-tab'
         // we are explicitly not sending the webContentsId here
       })
     }
