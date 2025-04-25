@@ -1456,19 +1456,19 @@
     }
   }
 
-  const handleEditorKeyDown = (event: KeyboardEvent) => {
+  const handleEditorKeyDown = (e: KeyboardEvent) => {
     // Only prevent propagation when the editor exists AND is focused
     if (editorElem) {
       // Prevent Option+Arrow or Command+Arrow keys from navigating the browser
       if (
-        (event.altKey || event.metaKey) &&
-        (event.key === 'ArrowLeft' ||
-          event.key === 'ArrowRight' ||
-          event.key === 'ArrowUp' ||
-          event.key === 'ArrowDown')
+        (e.altKey || e.metaKey) &&
+        (e.key === 'ArrowLeft' ||
+          e.key === 'ArrowRight' ||
+          e.key === 'ArrowUp' ||
+          e.key === 'ArrowDown')
       ) {
         // Stop propagation to prevent the event from bubbling up
-        event.stopPropagation()
+        e.stopPropagation()
       }
     }
   }
