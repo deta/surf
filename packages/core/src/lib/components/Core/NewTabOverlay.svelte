@@ -749,10 +749,8 @@
   }
 
   const cleanupDragStuck = () => {
-    showDragHint.set(false)
     stuffWrapperRef?.classList.remove('hovering')
     updateWebviewPointerEvents('unset')
-    window.removeEventListener('drag', handleDrag)
     window.removeEventListener('click', dragClickHandler, { capture: true })
     window.removeEventListener('keydown', dragClickHandler, { capture: true })
   }
@@ -763,18 +761,7 @@
     Dragcula.get().cleanupDragOperation()
   }
 
-  const handleDrag = async (e: DragEvent) => {
-    if ($showTabSearch !== 0) return
-    if (e.clientY > window.innerHeight - 80) {
-      stuffWrapperRef.classList.add('hovering')
-      showTabSearch.set(2)
-      // await tick()
-    }
-  }
-
   const handleDragculaDragStart = (drag: DragOperation) => {
-    showDragHint.set(true)
-    window.addEventListener('drag', handleDrag)
     window.addEventListener('click', dragClickHandler, { capture: true })
     window.addEventListener('keydown', dragClickHandler, { capture: true })
   }
@@ -835,12 +822,6 @@
   onMount(() => {
     Dragcula.get().on('dragstart', handleDragculaDragStart)
     Dragcula.get().on('dragend', handleDragculaDragEnd)
-
-    window.api.onBrowserFocusChange((v) => {
-      if (v === 'unfocused') {
-        showDragHint.set(false)
-      }
-    })
   })
 
   onDestroy(() => {
@@ -876,10 +857,6 @@
 </script>
 
 <svelte:window on:paste={handlePaste} />
-
-<div id="drawer-hint" class:show={$showDragHint && $showTabSearch === 0} use:portal={'body'}>
-  <span>Hover to open your Stuff</span>
-</div>
 
 {#if $showTabSearch === 2}
   <div
