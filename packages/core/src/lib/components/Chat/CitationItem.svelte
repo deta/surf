@@ -619,15 +619,15 @@
   }
 
   :global(.response-wrapper citation span) {
-    font-size: 1.08em;
+    font-size: 1.08rem;
   }
   citation {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: start;
     gap: 6px;
     border-radius: 12px;
-    font-size: 0.94em;
+    font-size: 0.94rem;
     font-weight: 500 !important;
     height: auto;
     text-align: center;
@@ -637,11 +637,10 @@
     line-height: 1;
     padding-top: calc(0.4em + 1px);
     padding-bottom: calc(0.4em - 1px);
-    padding-inline: 0.6em;
-    min-width: 3.5em;
+    padding-inline: 0.6rem;
 
     div {
-      font-size: 0.92em;
+      font-size: 0.8rem;
       line-height: 1.25em;
       font-weight: 500;
       white-space: nowrap; // Added to prevent text wrapping
@@ -672,10 +671,10 @@
 
     &.wide {
       height: auto;
-      padding: 0.25em 0.333em;
+      padding: 0.25rem 0.45rem;
       position: relative;
       top: 2px;
-      font-size: 0.95em;
+      font-size: 0.9em;
     }
 
     &.compact {
