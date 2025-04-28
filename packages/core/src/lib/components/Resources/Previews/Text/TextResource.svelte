@@ -2461,21 +2461,6 @@
       accent-color: var(--contrast-color) !important;
     }
 
-    :global(pre) {
-      background: #030712;
-      margin: 1em 0;
-      padding: 1em;
-      border-radius: 4px;
-      overflow-x: auto;
-
-      :global(code) {
-        color: #fff;
-        :global(.hljs-*) {
-          color: inherit;
-        }
-      }
-    }
-
     :global(code:not(pre code)) {
       background: #030712;
       padding: 0.2em 0.4em;
@@ -2483,7 +2468,7 @@
     }
 
     :global(.dark) & {
-      :global(*):not(.mention, a) {
+      :global(*):not(.mention, a, span) {
         color: var(--text-color-dark) !important;
       }
     }

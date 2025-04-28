@@ -311,24 +311,25 @@ body.custom .editor {
     background-color: var(--background-menu-muted);
     border-radius: min(5px, var(--theme-border-radius));
     color: var(--color-menu);
-    padding: 0 5px;
+    padding: 0 5px !important;
   }
 
   pre {
-    background-color: var(--background-menu-muted);
     border-radius: min(10px, var(--theme-border-radius));
     color: var(--color-menu);
     font-family: 'Cartograph CF', monospace;
     padding-block: 0.5em;
     padding-inline: 0.75em;
     overflow-wrap: break-word;
-    margin-top: 0.25em;
+    margin: 1em 0;
+    padding: 0.5em 1em !important;
+    background: #030712;
 
     code {
-      color: inherit;
-      padding: 0;
+      color: #fff;
+      padding: 0 !important;
       background: none;
-      font-size: 0.8em;
+      font-size: 0.85em;
     }
   }
 

@@ -14,6 +14,8 @@ import StarterKit from '@tiptap/starter-kit'
 import ListKeymap from '@tiptap/extension-list-keymap'
 import Image from '@tiptap/extension-image'
 import Underline from '@tiptap/extension-underline'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { all, createLowlight } from 'lowlight'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
 import { SlashExtension, SlashSuggestion, type SlashCommandPayload } from './extensions/Slash/index'
@@ -63,6 +65,8 @@ export type ExtensionOptions = {
   onLinkClick?: LinkClickHandler
 }
 
+const lowlight = createLowlight(all)
+
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
@@ -71,7 +75,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     dropcursor: {
       color: 'var(--contrast-color)',
       width: 2
-    }
+    },
+    codeBlock: false
   }),
   Underline,
   Link.configure({
@@ -80,6 +85,9 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     HTMLAttributes: {
       target: '_blank'
     }
+  }),
+  CodeBlockLowlight.configure({
+    lowlight
   }),
   // Link.extend({
   //   addAttributes() {
