@@ -63,7 +63,7 @@
     "@types/mime-types": "^2.1.4",
     "@types/node": "^18.17.5",
     "autoprefixer": "^10.4.19",
-    "electron": "35.2.1",
+    "electron": "36.0.0",
     "electron-builder": "^24.13.3",
     "electron-context-menu": "^3.6.1",
     "electron-vite": "^1.0.27",
