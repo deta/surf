@@ -170,7 +170,9 @@ export function floatyButtons(
     initializeTriggerButton()
 
     floatyButtons.forEach((btn) => {
-      btn.instance.$destroy()
+      if (btn.instance) {
+        btn.instance.$destroy()
+      }
       btn.element.remove()
     })
     floatyButtons = []

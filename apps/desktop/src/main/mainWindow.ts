@@ -99,7 +99,7 @@ export function createWindow() {
     frame: isMac() ? false : true,
     titleBarStyle: 'hidden',
     // ...(isLinux() ? { icon } : {}),
-    trafficLightPosition: { x: 12.5, y: 12.5 },
+    trafficLightPosition: { x: 16, y: 17 },
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [

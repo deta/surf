@@ -4372,9 +4372,9 @@
           <div
             id="sidebar-pinned-tabs-wrapper"
             class={$pinnedTabs.length !== 0 || horizontalTabs
-              ? 'relative no-drag h-fit py-[0.33rem] rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
+              ? 'relative no-drag h-fit rounded-xl flex justify-start flex-shrink-0 transition-colors gap-1 overflow-hidden}'
               : horizontalTabs
-                ? 'absolute top-1 h-[1.9rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
+                ? 'absolute top-1 h-[1.2rem] left-[9rem] w-[16px] rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'
                 : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
             class:horizontalTabs
             class:empty={$pinnedTabs.length === 0}
@@ -4450,7 +4450,7 @@
           {/if}
 
           <div
-            class="relative w-full h-full no-scrollbar overflow-hidden py-[0.35rem] {horizontalTabs
+            class="relative w-full h-full no-scrollbar overflow-hidden py-[6px] {horizontalTabs
               ? 'flex-row overflow-y-hidden'
               : 'flex-col overflow-x-hidden'} {horizontalTabs
               ? 'overflow-x-auto'

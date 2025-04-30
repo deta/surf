@@ -117,6 +117,7 @@ import Dots from './Icons/Dots.svelte'
 import DotsVertical from './Icons/DotsVertical.svelte'
 import Mention from './Icons/Mention.svelte'
 import FileTextSpark from './Icons/FileTextSpark.svelte'
+import Squircle from './Icons/Squircle.svelte'
 import Underline from './Icons/Underline.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
@@ -243,6 +244,7 @@ export const icons = {
   'dots.vertical': DotsVertical,
   mention: Mention,
   'file-text-spark': FileTextSpark,
+  squircle: Squircle,
   underline: Underline
 }
 
@@ -368,5 +370,6 @@ export {
   DotsVertical,
   Mention,
   FileTextSpark,
+  Squircle,
   Underline
 }

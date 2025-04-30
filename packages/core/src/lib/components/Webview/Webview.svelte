@@ -369,9 +369,17 @@
   onMount(() => {
     if (!webview) return
 
-    return userConfig.subscribe(() => {
-      updateFaviconForTheme()
-    })
+    unsubscribeTheme = userConfig.subscribe(
+      useDebounce(() => {
+        updateFaviconForTheme()
+      }, 500)
+    )
+  })
+
+  onDestroy(() => {
+    if (unsubscribeTheme) {
+      unsubscribeTheme()
+    }
   })
 
   /**
@@ -650,6 +658,7 @@ Made with Deta Surf.`
     webview.addEventListener('page-title-updated', (e: Electron.PageTitleUpdatedEvent) => {
       handlePageTitleChange(e.title)
     })
+
     webview.addEventListener('page-favicon-updated', (event: Electron.PageFaviconUpdatedEvent) => {
       // Store the favicons for later theme changes
       lastReceivedFavicons = event.favicons
@@ -669,6 +678,7 @@ Made with Deta Surf.`
       // Update the favicon
       handleFaviconChange(bestFavicon)
     })
+
     webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
       dispatch('update-target-url', e.url)
     })

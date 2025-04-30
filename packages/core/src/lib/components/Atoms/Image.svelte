@@ -18,7 +18,7 @@
   <img {src} {alt} {...$$restProps} on:error={handleError} draggable="false" {loading} {decoding} />
 {:else if !emptyOnError}
   <div class="image-error">
-    <Icon name={fallbackIcon} size="100%" />
+    <Icon name={fallbackIcon} size="100%" fill="var(--contrast-color)" />
   </div>
 {/if}
 

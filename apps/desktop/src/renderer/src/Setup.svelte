@@ -241,7 +241,7 @@
 
   :global(p span.pill) {
     background: #4592f0;
-    color: #fff;
+    color: #e0e0e0;
     font-size: 1.1rem;
     font-family: 'Inter', sans-serif;
     font-weight: 400;

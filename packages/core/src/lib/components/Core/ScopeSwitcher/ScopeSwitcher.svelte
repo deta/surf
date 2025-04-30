@@ -22,8 +22,8 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { HTMLDragArea } from '@horizon/dragcula'
-  import { fly } from 'svelte/transition'
   import { openDialog } from '../Dialog/Dialog.svelte'
+  import ScopeActionButtons from './ScopeActionButtons.svelte'
 
   export let horizontalTabs = false
   export let backgroundImage: Readable<{ path: string } | undefined>
@@ -166,9 +166,8 @@
       forceShowTitle.set(true)
       toggleHomescreen()
 
-      setTimeout(() => {
-        forceShowTitle.set(false)
-      }, 300)
+      // No delay
+      forceShowTitle.set(false)
     }
   }
 
@@ -278,9 +277,8 @@
   }
 
   const handleTitleMouseLeave = () => {
-    hideTimeout = setTimeout(() => {
-      titleHovered.set(false)
-    }, 200)
+    // No delay
+    titleHovered.set(false)
   }
 </script>
 
@@ -335,45 +333,34 @@
       </button>
     {/if}
 
-    {#if !horizontalTabs}
-      <div class="name-wrapper">
-        {#if $activeSpaceData && $editName}
-          <input
-            type="text"
-            class="input"
-            bind:this={inputElem}
-            bind:value={$activeSpaceData.folderName}
-            on:focus={handleFocus}
-            on:blur={handleBlur}
-            on:keydown={handleKeyDown}
-            placeholder="Context Name"
-            disabled={$activeScopeId === null}
+    <div class="name-wrapper">
+      {#if $activeSpaceData && $editName}
+        <input
+          type="text"
+          class="input"
+          bind:this={inputElem}
+          bind:value={$activeSpaceData.folderName}
+          on:focus={handleFocus}
+          on:blur={handleBlur}
+          on:keydown={handleKeyDown}
+        />
+      {:else}
+        <div
+          id="context-name"
+          class="open-desktop"
+          class:hover-effect={$titleHovered || $forceShowTitle}
+        >
+          <span>{$activeSpaceData ? $activeSpaceData.folderName : 'Switch Context'}</span>
+        </div>
+
+        {#if $titleHovered || $forceShowTitle}
+          <ScopeActionButtons
+            onShowDesktop={toggleHomescreen}
+            onOpenInOasis={() => handleOpenSpaceInOasis()}
           />
-        {:else if $titleHovered || $forceShowTitle}
-          <div
-            id="open-desktop-text"
-            class="open-desktop animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%]"
-            in:fly={{ delay: 33, duration: 120, y: 10 }}
-            out:fly={{ duration: 120, y: 10 }}
-          >
-            {#if $desktopVisible}
-              Hide Desktop
-            {:else}
-              View Desktop →
-            {/if}
-          </div>
-        {:else}
-          <div
-            id="context-name"
-            class="open-desktop"
-            in:fly={{ delay: 33, duration: 120, y: -10 }}
-            out:fly={{ duration: 120, y: -10 }}
-          >
-            {$activeSpaceData ? $activeSpaceData.folderName : 'Switch Context'}
-          </div>
         {/if}
-      </div>
-    {/if}
+      {/if}
+    </div>
   </div>
 
   <SelectDropdown
@@ -411,15 +398,14 @@
     align-items: center;
     position: relative;
     gap: 0.5rem;
-    padding: 0.25rem;
+    padding: 0.25rem 0.25rem 0.25rem 0.45rem;
     padding-left: 0.5rem;
 
     color: var(--contrast-color);
     background: paint(squircle) !important;
-    --squircle-radius: 16px;
+    --squircle-radius: 14px;
     --squircle-smooth: 0.33;
-    --squircle-shadow: 0px 2px 2px -1px var(--black-09);
-    --squircle-fill: var(--white-65);
+    --squircle-fill: var(--white-85);
     border-radius: 0 !important;
 
     :global(.custom) & {
@@ -430,10 +416,10 @@
       background-size: cover !important;
       background-position: center center !important;
       background-repeat: no-repeat !important;
-      outline: 1.5px solid var(--base-color);
+      // outline: 1.5px solid var(--base-color);
 
       &.horizontal {
-        height: calc(100% - 0.775rem);
+        height: calc(100% - 13.5px);
       }
     }
 
@@ -444,18 +430,18 @@
     }
 
     &.horizontal {
-      padding: 0.35rem 0.2rem;
-      padding-left: 0.5rem;
-      border-radius: 8px !important;
-      height: calc(100% - 0.525rem);
+      padding: 0.3rem 0.5rem;
+      border-radius: 12px !important;
+      height: calc(100% - 12px);
       .input,
       .title {
+        width: 100%;
         font-size: 0.938rem;
       }
 
-      @apply px-1.5 ml-2 gap-1.5 bg-white/70 py-1.5;
-      --squircle-radius: 8px;
-      --squircle-smooth: 0.28;
+      @apply ml-2 gap-1.5 bg-white/70;
+      --squircle-radius: 12px;
+      --squircle-smooth: 0.33;
     }
 
     &.activated {
@@ -476,7 +462,7 @@
   }
 
   .title {
-    width: 100%;
+    width: calc(100% - 3rem);
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -528,8 +514,10 @@
   }
 
   .name-wrapper {
-    width: 100%;
+    width: 95%;
     position: relative;
+    max-width: -webkit-fill-available;
+    justify-self: auto;
   }
 
   .context-icon {
@@ -539,6 +527,24 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
+
+    &.hover-effect {
+      color: rgb(2 132 199);
+      background: rgba(2, 132, 199, 0.1);
+
+      :global(.dark) & {
+        color: rgb(2 132 199);
+        background-color: rgb(59, 80, 111);
+      }
+
+      :global(.custom) & {
+        color: var(--contrast-color) !important;
+        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 90%, 0.3)) !important;
+      }
+      :global(.custom.dark) & {
+        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 00%, 0.65)) !important;
+      }
+    }
 
     div {
       pointer-events: none;
@@ -563,16 +569,15 @@
   }
 
   .open-desktop {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
+    position: relative;
     width: 100%;
     padding: 0.275rem 0.275rem;
     border-radius: calc(10px - 0.25rem);
     font-size: 1.05rem;
     font-weight: 450;
     line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     @include utils.font-smoothing;
 
@@ -585,7 +590,7 @@
     align-items: center;
     justify-content: center;
     padding: 0.5rem 0.5rem;
-    border-radius: calc(1rem - 0.25rem);
+    border-radius: 0.7rem;
     font-size: 1rem;
     font-weight: 400;
 
@@ -631,6 +636,12 @@
   }
 
   .horizontal {
+    .name-wrapper {
+      width: fit-content;
+      display: flex;
+      max-width: 15ch;
+    }
+
     .title {
       padding: 0;
     }
