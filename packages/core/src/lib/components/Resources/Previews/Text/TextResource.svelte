@@ -1242,15 +1242,13 @@
     tabsManager.showNewTabOverlay.set(2)
   }
 
-  const getMentionType = (id: string) => {
+  const getMentionType = (id: string, type?: MentionEventType) => {
     if (id === 'everything') {
       return MentionEventType.Everything
-    } else if (id === 'tabs') {
-      return MentionEventType.Tabs
     } else if (id === 'active-context') {
       return MentionEventType.ActiveContext
     } else {
-      return MentionEventType.Context
+      return type ?? MentionEventType.Context
     }
   }
 
@@ -1262,7 +1260,7 @@
       const { item, action } = e.detail
       const { id, type } = item
 
-      telemetry.trackNoteOpenMention(getMentionType(id), action, showOnboarding)
+      telemetry.trackNoteOpenMention(getMentionType(id, type), action, showOnboarding)
 
       if (action === 'overlay') {
         if (id === INBOX_MENTION.id) {
@@ -1315,10 +1313,10 @@
   }
 
   const handleMentionInsert = (e: CustomEvent<MentionItem>) => {
-    const { id } = e.detail
-    log.debug('mention insert', id)
+    const { id, type } = e.detail
+    log.debug('mention insert', id, type)
 
-    telemetry.trackNoteCreateMention(getMentionType(id), showOnboarding)
+    telemetry.trackNoteCreateMention(getMentionType(id, type), showOnboarding)
   }
 
   const handleRewrite = async (e: CustomEvent<EditorRewriteEvent>) => {

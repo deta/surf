@@ -532,7 +532,9 @@ export enum MentionEventType {
   GeneralContext = 'general_context',
   ActiveContext = 'active_context',
   Everything = 'everything',
-  Tabs = 'tabs'
+  Tabs = 'tabs',
+  Resource = 'resource',
+  BUILT_IN = 'built-in'
 }
 
 export enum SummarizeEventContentSource {
