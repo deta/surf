@@ -59,7 +59,7 @@
 
   // Get the current space ID from activeScopeId
   const currentSpaceId = derived([tabsManager.activeScopeId], ([$activeScopeId]) => {
-    return $activeScopeId || 'inbox'
+    return $activeScopeId || oasis.defaultSpaceID
   })
 
   // Filter notes based on the current space

@@ -28,6 +28,7 @@
   import youtubeChat from '../../../../public/assets/onboarding/notes/youtube-chat.png'
   import chatPDF from '../../../../public/assets/onboarding/notes/chat.pdf.png'
   import saving from '../../../../public/assets/onboarding/saving.mp4'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
 
   export let rootID: string
 
@@ -45,6 +46,7 @@
 
   // Get the onboarding service to access loading state
   const onboardingService = useOnboardingService()
+  const oasis = useOasis()
 
   // Derived store for loading state
   const loadingState = derived(onboardingService.loadingState, ($loadingState) => $loadingState)
@@ -207,7 +209,8 @@
     }
   }
 
-  const handleOpenStuff = () => {
+  const handleOpenStuff = async () => {
+    oasis.selectedSpace.set('all')
     dispatch('open-stuff')
   }
 

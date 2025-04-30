@@ -145,7 +145,7 @@
     return [
       ...conditionalArrayItem(!excludeActiveTab, activeTabItem),
       activeContextItem,
-      inboxContextItem,
+      ...conditionalArrayItem(!userConfigSettings.save_to_active_context, inboxContextItem),
       everythingContextItem,
       ...conditionalArrayItem(userConfigSettings.experimental_chat_web_search, wikipediaContextItem)
     ]

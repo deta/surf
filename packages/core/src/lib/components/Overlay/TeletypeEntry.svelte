@@ -48,7 +48,7 @@
     type HorizontalAction
   } from '@deta/teletype/src'
   import { useCommandComposer } from '../Overlay/service/commandComposer'
-  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
   import { Resource, useResourceManager } from '../../service/resources'
   import { teletypeActionStore, TeletypeAction } from './service/teletypeActions'

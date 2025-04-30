@@ -70,8 +70,6 @@ export type OptionalSpaceData = Optional<
   | 'builtIn'
 >
 
-export const DEFAULT_SPACE_ID = 'inbox'
-
 export const getSpaceIconString = (space: SpaceData) => {
   if (space.emoji) {
     return `emoji;;${space.emoji}`
@@ -294,7 +292,7 @@ export class OasisService {
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
     this.spaces = writable<OasisSpace[]>([])
-    this.selectedSpace = writable<string>(DEFAULT_SPACE_ID)
+    this.selectedSpace = writable<string>(this.defaultSpaceID)
     this.detailedResource = writable<Resource | null>(null)
 
     this.everythingContents = writable([])
@@ -442,6 +440,14 @@ export class OasisService {
 
   get pendingSaveValue() {
     return get(this.pendingSave)
+  }
+
+  get defaultSpaceID() {
+    if (this.config.settingsValue.save_to_active_context) {
+      return 'all'
+    } else {
+      return 'inbox'
+    }
   }
 
   on<E extends keyof OasisEvents>(event: E, listener: OasisEvents[E]): () => void {
@@ -620,7 +626,7 @@ export class OasisService {
     this.spaces.set(filtered)
 
     if (get(this.selectedSpace) === spaceId && spaceId !== '.tempspace') {
-      this.changeSelectedSpace(DEFAULT_SPACE_ID)
+      this.changeSelectedSpace(this.defaultSpaceID)
     }
 
     await this.tabsManager.deleteScopedTabs(spaceId)
@@ -973,7 +979,7 @@ export class OasisService {
   }
 
   async resetSelectedSpace() {
-    this.changeSelectedSpace(DEFAULT_SPACE_ID)
+    this.changeSelectedSpace(this.defaultSpaceID)
   }
 
   async createNewBrowsingSpace(

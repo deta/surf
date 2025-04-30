@@ -118,7 +118,7 @@
   import { scrollToTextCode } from '../constants/inline'
   import { onboardingSpace } from '../constants/examples'
   import { SFFS } from '../service/sffs'
-  import { provideOasis, colorPairs, OasisSpace, DEFAULT_SPACE_ID } from '../service/oasis'
+  import { provideOasis, colorPairs, OasisSpace } from '../service/oasis'
   import OasisSpaceRenderer from './Oasis/OasisSpace.svelte'
 
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
@@ -861,7 +861,7 @@
         setShowNewTabOverlay(0)
       } else {
         if (e.shiftKey) {
-          oasis.selectedSpace.set(DEFAULT_SPACE_ID)
+          oasis.selectedSpace.set(oasis.defaultSpaceID)
         }
 
         setShowNewTabOverlay(2)
@@ -4173,7 +4173,7 @@
     }}
     on:open-stuff={async (e) => {
       const searchValue = e.detail
-      selectedSpace.set(DEFAULT_SPACE_ID)
+      selectedSpace.set(oasis.defaultSpaceID)
       updateSearchValue.set(searchValue)
       await tick()
       showNewTabOverlay.set(2)
@@ -5197,7 +5197,7 @@
 </div>
 
 <NewTabOverlay
-  spaceId={DEFAULT_SPACE_ID}
+  spaceId={oasis.defaultSpaceID}
   {updateSearchValue}
   showTabSearch={showNewTabOverlay}
   selectedSpaceId={newTabSelectedSpaceId}

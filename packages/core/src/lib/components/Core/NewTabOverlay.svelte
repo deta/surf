@@ -9,7 +9,7 @@
     isMac,
     conditionalArrayItem
   } from '@horizon/utils'
-  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts, type ToastItem } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
@@ -499,7 +499,7 @@
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
-    oasis.changeSelectedSpace(DEFAULT_SPACE_ID)
+    oasis.changeSelectedSpace(oasis.defaultSpaceID)
   }
 
   const handleSpaceSelected = async (e: CustomEvent<string>) => {
@@ -834,15 +834,15 @@
       if (v === 0) {
         if (searchResetTimeout !== null) clearTimeout(searchResetTimeout)
 
-        if ($selectedSpaceId === DEFAULT_SPACE_ID) {
-          selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
+        if ($selectedSpaceId === oasis.defaultSpaceID) {
+          selectedSpaceId.set($activeScopeId ?? oasis.defaultSpaceID)
         }
 
         detailedResource.set(null)
 
         searchResetTimeout = setTimeout(() => {
           searchValue.set('')
-          selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
+          selectedSpaceId.set($activeScopeId ?? oasis.defaultSpaceID)
           selectedFilterTypeId.set(null)
           searchResetTimeout = null
         }, SEARCH_RESET_TIMEOUT)
@@ -1003,7 +1003,7 @@
                   on:open={handleOpen}
                   on:open-and-chat
                   on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                  on:go-back={() => oasis.changeSelectedSpace(DEFAULT_SPACE_ID)}
+                  on:go-back={() => oasis.changeSelectedSpace(oasis.defaultSpaceID)}
                   on:deleted={handleSpaceDeleted}
                   on:updated-space={handleUpdatedSpace}
                   on:creating-new-space={handleCreatingNewSpace}

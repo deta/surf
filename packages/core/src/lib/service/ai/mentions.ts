@@ -12,6 +12,7 @@ import { Provider } from '@horizon/types/src/ai.types'
 import type { OasisService } from '../oasis'
 import {
   BUILT_IN_MENTIONS_BASE,
+  INBOX_MENTION,
   NOTE_MENTION,
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
@@ -98,6 +99,7 @@ export const createMentionsFetcher = (
 
     const builtInMentions = [
       ...BUILT_IN_MENTIONS_BASE,
+      ...conditionalArrayItem(!userSettings.save_to_active_context, INBOX_MENTION),
       ...conditionalArrayItem(!!notResourceId, NOTE_MENTION),
       ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION)
     ]

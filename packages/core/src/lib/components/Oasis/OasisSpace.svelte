@@ -25,7 +25,7 @@
     tooltip,
     isMac
   } from '@horizon/utils'
-  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
@@ -1147,7 +1147,7 @@
 
       await tabsManager.removeSpaceTabs(spaceId)
 
-      oasis.changeSelectedSpace(DEFAULT_SPACE_ID)
+      oasis.changeSelectedSpace(oasis.defaultSpaceID)
       dispatch('deleted', spaceId)
 
       if (!abortSpaceCreation) {
