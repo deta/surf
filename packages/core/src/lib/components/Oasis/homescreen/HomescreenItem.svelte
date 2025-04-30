@@ -51,10 +51,7 @@
   const calcViewMode = (viewMode, item, resource, settings) => {
     if (isGeneratedResource(resource)) {
       return item.width * item.height > 12 ? 'full' : viewMode
-    } else if (
-      WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) &&
-      settings.experimental_desktop_embeds
-    ) {
+    } else if (WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))) {
       return item.width > 8 && item.height > 7 ? 'full' : viewMode
     } else {
       return viewMode

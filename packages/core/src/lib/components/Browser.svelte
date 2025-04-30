@@ -223,7 +223,6 @@
   let pinnedTabsScrollArea: HTMLElement
   let initializedApp = false
   let showNewChatButton = false
-  let showExtensionsBrowserActions = writable(false)
 
   const onboardingActive = writable(false)
   const onboardingTabVisible = writable(false)
@@ -369,8 +368,6 @@
       colorService.usePalette($desktopColorScheme.colorPalette, isDarkMode)
     }
   }
-
-  $: showExtensionsBrowserActions.set($userConfigSettings.extensions)
 
   // Toggle dark mode
   $: document.body.classList[$userConfigSettings.app_style === 'dark' ? 'add' : 'remove']('dark')
@@ -793,9 +790,6 @@
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if ($showNewTabOverlay !== 0) {
-        if ($userConfigSettings.homescreen_link_cmdt && $showNewTabOverlay === 1) {
-          desktopManager.setCmdVisible(false)
-        }
         showNewTabOverlay.set(0)
         return
       }
@@ -2899,17 +2893,9 @@
     horizonPreloadEvents.onCreateNewTab(() => {
       if ($showNewTabOverlay === 1) {
         $showNewTabOverlay = 0
-        if ($userConfigSettings.homescreen_link_cmdt) {
-          desktopManager.setCmdVisible(false)
-        }
       } else {
         // THIS IS WHERE THE OLD COMMAND BAR GOT CALLED
         $showNewTabOverlay = 1
-        if ($userConfigSettings.homescreen_link_cmdt) {
-          desktopManager.setCmdVisible(true)
-          // TODO: (maxu/home): Only until felixes new cmdt merge
-          tick().then(() => document.querySelector('.drawer-overlay')?.remove())
-        }
       }
     })
 
@@ -4226,7 +4212,6 @@
           {canGoBack}
           {canGoForward}
           {canReload}
-          {showExtensionsBrowserActions}
           on:go-back={() => $activeBrowserTab?.goBack()}
           on:go-forward={() => $activeBrowserTab?.goForward()}
           on:reload={() => $activeBrowserTab?.reload()}
@@ -4372,7 +4357,6 @@
               {canGoBack}
               {canGoForward}
               {canReload}
-              {showExtensionsBrowserActions}
               on:go-back={() => $activeBrowserTab?.goBack()}
               on:go-forward={() => $activeBrowserTab?.goForward()}
               on:reload={() => $activeBrowserTab?.reload()}

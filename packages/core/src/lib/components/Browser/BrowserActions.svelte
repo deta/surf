@@ -13,7 +13,6 @@
   export let canGoBack: boolean
   export let canGoForward: boolean
   export let canReload: boolean
-  export let showExtensionsBrowserActions: Writable<boolean>
 
   const dispatch = createEventDispatcher<{
     'go-back': void
@@ -57,7 +56,7 @@
         </Tooltip.Content>
       </Tooltip.Root>
     {/if}
-    {#if horizontalTabs && $showExtensionsBrowserActions}
+    {#if horizontalTabs}
       <ExtensionBrowserActions on:open-extension-store />
     {/if}
 
@@ -91,7 +90,7 @@
         </Tooltip.Content>
       </Tooltip.Root>
     {/if}
-    {#if !horizontalTabs && $showExtensionsBrowserActions}
+    {#if !horizontalTabs}
       <ExtensionBrowserActions on:open-extension-store />
     {/if}
   </div>

@@ -1,1 +1,1 @@
-export type SettingsWindowTab = 'general' | 'ai' | 'appearance' | 'experiments' | 'advanced'
+export type SettingsWindowTab = 'general' | 'ai' | 'appearance' | 'advanced' | 'extensions'

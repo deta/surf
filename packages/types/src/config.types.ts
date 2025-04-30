@@ -17,29 +17,13 @@ export type UserSettings = {
   tabs_orientation: 'vertical' | 'horizontal'
   app_style: 'light' | 'dark' // Note intentionally used app_style as "app_theme" would be themes in the future?
   use_semantic_search: boolean
-  show_annotations_in_oasis: boolean
-  always_include_screenshot_in_chat: boolean
-  /** Copy downloaded files to the user's system downloads directory */
   save_to_user_downloads: boolean
   automatic_chat_prompt_generation: boolean
   // Experiments
   annotations_sidebar: boolean
-  live_spaces: boolean
   homescreen_link_cmdt: boolean
-  auto_note_similarity_search: boolean
-  experimental_note_inline_rewrite: boolean
-  experimental_chat_web_search: boolean
-  experimental_desktop_embeds: boolean
-  experimental_context_linking: boolean
-  experimental_context_linking_sidebar: boolean
-  experimental_notes_chat_sidebar: boolean
-  extensions: boolean
   cleanup_filenames: boolean
   save_to_active_context: boolean
-  /**
-   * @deprecated use individual feature flags instead
-   */
-  experimental_mode?: boolean
   search_engine: string
   onboarding: {
     completed_welcome: boolean
@@ -55,7 +39,32 @@ export type UserSettings = {
   vision_image_tagging: boolean
   turntable_favicons: boolean
   auto_toggle_pip: boolean
+
+  /**
+   * @deprecated use individual feature flags instead
+   * these only remain for typescript LSP
+   */
+  show_annotations_in_oasis: boolean
+  /** @deprecated */
   show_resource_contexts: boolean
+  /** @deprecated */
+  always_include_screenshot_in_chat: boolean
+  /** @deprecated */
+  live_spaces: boolean
+  /** @deprecated */
+  experimental_context_linking: boolean
+  /** @deprecated */
+  experimental_context_linking_sidebar: boolean
+  /** @deprecated */
+  experimental_notes_chat_sidebar: boolean
+  /** @deprecated */
+  experimental_chat_web_search: boolean
+  /** @deprecated */
+  experimental_note_inline_rewrite: boolean
+  /** @deprecated */
+  auto_note_similarity_search: boolean
+
+  experimental_mode?: boolean
 }
 
 interface UserSession {

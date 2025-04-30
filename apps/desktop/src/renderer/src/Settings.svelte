@@ -4,10 +4,7 @@
   import { Icon } from '@horizon/icons'
 
   import appIcon from './assets/icon_512.png'
-  import inlineAIScreenshot from './assets/inline-ai.png'
 
-  import PromptSection from './components/PromptSection.svelte'
-  import Prompt from './components/Prompt.svelte'
   import { isMac, useDebounce } from '@horizon/utils'
   import {
     type EditablePrompt,
@@ -31,7 +28,6 @@
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
   import ExtensionsManager from './components/ExtensionsManager.svelte'
   import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
-  import ContextLinkingOptions from './components/ContextLinkingOptions.svelte'
 
   // let error = ''
   // let loading = false
@@ -44,7 +40,6 @@
   let migrating = false
   let userConfig: UserConfig | undefined = undefined
   let userConfigSettings: UserSettings | undefined = undefined
-  let currentExtensionsValue: boolean = false
   let currentNotesSidebarValue: boolean = false
   let checkInterval: NodeJS.Timeout
   let showLicenses = false
@@ -117,12 +112,7 @@
 
     // we need to restart the app if the extensions setting has changed
     // this is done so that all the attached handlers, preloads etc are removed
-    if (currentExtensionsValue !== userConfigSettings.extensions) {
-      currentExtensionsValue = userConfigSettings.extensions
-      // @ts-ignore
-      // TODO: do we have a better way to restart the app while we wait for everything to finish?
-      setTimeout(() => window.api.restartApp(), 2000)
-    } else if (currentNotesSidebarValue !== userConfigSettings.experimental_notes_chat_sidebar) {
+    if (currentNotesSidebarValue !== userConfigSettings.experimental_notes_chat_sidebar) {
       currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
       setTimeout(() => window.api.restartApp(), 800)
     }
@@ -239,7 +229,6 @@
     userConfig = await window.api.getUserConfig()
     console.log('loaded user config', userConfig)
     userConfigSettings = userConfig.settings
-    currentExtensionsValue = userConfigSettings.extensions
     currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
@@ -314,17 +303,6 @@
     </div>
 
     <div
-      on:click={() => activeTab.set('experiments')}
-      role="tab"
-      tabindex="0"
-      class="tab no-drag"
-      class:active={$activeTab === 'experiments'}
-    >
-      <Icon name="code" size="24" />
-      <h1>Experiments</h1>
-    </div>
-
-    <div
       on:click={() => activeTab.set('advanced')}
       role="tab"
       tabindex="0"
@@ -333,6 +311,17 @@
     >
       <Icon name="adjustments.horizontal" size="24" />
       <h1>Advanced</h1>
+    </div>
+
+    <div
+      on:click={() => activeTab.set('extensions')}
+      role="tab"
+      tabindex="0"
+      class="tab no-drag"
+      class:active={$activeTab === 'extensions'}
+    >
+      <Icon name="puzzle" size="24" />
+      <h1>Extensions</h1>
     </div>
   </div>
 
@@ -499,104 +488,30 @@
           />
         </div>
       </article>
-    {:else if $activeTab === 'experiments'}
-      <article class="list">
-        <div class="box">
-          <div class="box-icon">
-            <Icon name="info" size="25px" />
-          </div>
-
-          <p>
-            The following features are still under development and may not work as expected. Feel
-            free to try them out and give us feedback. <a
-              href="https://deta.notion.site/Experimental-Mode-152a5244a717801587dfcb374536b73d"
-              target="_blank">More info in our docs ↗</a
-            >
-          </p>
-        </div>
-
-        {#if userConfigSettings}
-          <SettingsOption
-            icon="puzzle"
-            title="Extensions Support"
-            description="Use extensions in Surf. Please note that this feature is still in early development."
-            bind:value={userConfigSettings.extensions}
-            showConfirmDialog={(_) => true}
-            getDialogMessage={(newExtensionValue) => {
-              const title = 'Are you sure? (Surf will restart)'
-              const message = newExtensionValue
-                ? 'Enabling extensions will restart Surf.'
-                : 'All your extensions will be uninstalled and Surf will restart.'
-              return { title, message }
-            }}
-            on:update={handleSettingsUpdate}
-          >
-            {#if userConfigSettings.extensions}
-              <ExtensionsManager />
-            {/if}
-          </SettingsOption>
-
-          <SmartNotesOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
-
-          <ContextLinkingOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
-
-          <SettingsOption
-            icon="marker"
-            title="Live Contexts"
-            description="Subscribe to RSS feeds of websites and pull in their content into a context."
-            bind:value={userConfigSettings.live_spaces}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="sidebar.right"
-            title="Annotations Sidebar"
-            description="Enable the annotations sidebar where you can link Surflets and annotations to websites to easily revisit them from the sidebar."
-            bind:value={userConfigSettings.annotations_sidebar}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="picture-in-picture"
-            title="Automatic Picture-in-Picture"
-            description="Switching away from the active tab while a video is playing, it will continue playing the video inside a floating window."
-            bind:value={userConfigSettings.auto_toggle_pip}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="sparkles"
-            title="Automatic Filename Cleanup"
-            description="Automatically clean up filenames when saving resources."
-            bind:value={userConfigSettings.cleanup_filenames}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="rectangle"
-            title="Embeds on the Desktop"
-            description="Embed content from websites directly on your desktop if the card is big enough."
-            bind:value={userConfigSettings.experimental_desktop_embeds}
-            on:update={handleSettingsUpdate}
-          />
-        {/if}
-      </article>
     {:else if $activeTab === 'advanced'}
       <article class="list">
         {#if userConfigSettings}
-          <SettingsOption
-            icon="search"
-            title="Use Semantic Search"
-            description="Use search to find resources in Your Stuff based on their semantic relevance."
-            bind:value={userConfigSettings.use_semantic_search}
-            on:update={handleSettingsUpdate}
-          />
+          <div class="box">
+            <div class="box-icon">
+              <Icon name="info" size="25px" />
+            </div>
+
+            <p>
+              Some of the following features are still under development and may not work as
+              expected. Feel free to try them out and give us feedback. <a
+                href="https://deta.notion.site/Experimental-Mode-152a5244a717801587dfcb374536b73d"
+                target="_blank">More info in our docs ↗</a
+              >
+            </p>
+          </div>
+
+          <SmartNotesOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
 
           <SettingsOption
-            icon="marker"
-            title="Show Annotations in My Stuff"
-            description="If enabled, annotations will be shown in My Stuff. Otherwise, you can only see them if you are on the page with the annotation, or if you search."
-            bind:value={userConfigSettings.show_annotations_in_oasis}
+            icon="save"
+            title="Save to Active Context"
+            description="If enabled clicking the save button on a tab or chat message or downloading something will save it to the currently active context instead of the inbox."
+            bind:value={userConfigSettings.save_to_active_context}
             on:update={handleSettingsUpdate}
           />
 
@@ -605,6 +520,24 @@
             title="Save Downloads to System Downloads Folder"
             description="If enabled, a copy of the files you download with Surf will be saved to your system's default downloads folder in addition to your stuff in Surf."
             bind:value={userConfigSettings.save_to_user_downloads}
+            on:update={handleSettingsUpdate}
+          />
+
+          {#if !isMac()}
+            <SettingsOption
+              icon="picture-in-picture"
+              title="Automatic Picture-in-Picture"
+              description="Switching away from the active tab while a video is playing, it will continue playing the video inside a floating window."
+              bind:value={userConfigSettings.auto_toggle_pip}
+              on:update={handleSettingsUpdate}
+            />
+          {/if}
+
+          <SettingsOption
+            icon="sparkles"
+            title="Automatic Filename Cleanup"
+            description="Automatically clean up filenames when saving resources."
+            bind:value={userConfigSettings.cleanup_filenames}
             on:update={handleSettingsUpdate}
           />
 
@@ -621,40 +554,6 @@
             title="Auto Tag Images with AI"
             description="Use AI vision to automatically detect and tag the content of your saved images for better organization."
             bind:value={userConfigSettings.vision_image_tagging}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="eye"
-            title="Always Include Screenshot in Chat"
-            description="Always include a screenshot of your current webpage when using Chat."
-            bind:value={userConfigSettings.always_include_screenshot_in_chat}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="circle-dot"
-            title="Show Contexts in Previews"
-            description="Show in which contexts a resource is saved in the resource preview."
-            bind:value={userConfigSettings.show_resource_contexts}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="home"
-            title="Link New Tab Menu and Desktop"
-            description="Auto switch to the Desktop when opening the New Tab Menu ({isMac()
-              ? '⌘'
-              : 'ctrl'} + T)."
-            bind:value={userConfigSettings.homescreen_link_cmdt}
-            on:update={handleSettingsUpdate}
-          />
-
-          <SettingsOption
-            icon="save"
-            title="Save to Active Context"
-            description="If enabled clicking the save button on a tab or chat message or downloading something will save it to the currently active context instead of the inbox."
-            bind:value={userConfigSettings.save_to_active_context}
             on:update={handleSettingsUpdate}
           />
         {/if}
@@ -679,6 +578,8 @@
           </div>
         </PromptSection>-->
       </article>
+    {:else if $activeTab === 'extensions'}
+      <ExtensionsManager />
     {/if}
   </div>
 </main>
