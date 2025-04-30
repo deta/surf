@@ -129,6 +129,7 @@ export const getUserConfig = (path?: string) => {
       experimental_context_linking: false,
       experimental_context_linking_sidebar: false,
       experimental_notes_chat_sidebar: true,
+      experimental_notes_chat_input: false,
       experimental_chat_web_search: true,
       experimental_note_inline_rewrite: false,
       auto_note_similarity_search: false
@@ -293,6 +294,11 @@ export const getUserConfig = (path?: string) => {
         changedConfig = true
       }
     }
+  }
+
+  if (storedConfig.settings.experimental_notes_chat_input === undefined) {
+    storedConfig.settings.experimental_notes_chat_input = false
+    changedConfig = true
   }
 
   if (changedConfig) {

@@ -18,8 +18,13 @@
   import ContextBubbleActiveContext from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubbleActiveContext.svelte'
   import ContextBubblePageTab from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubblePageTab.svelte'
   import ContextBubbleBasic from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubbleBasic.svelte'
+  import { isEmpty } from 'lodash'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let contextManager: ContextManager
+
+  const config = useConfig()
+  const userConfigSettings = config.settings
 
   const contextItems = contextManager.items
   const containerWidth = spring(220, { stiffness: 0.2, damping: 0.7 })
@@ -80,7 +85,13 @@
   })
 </script>
 
-<div class="relative w-full h-fit" role="none">
+<div
+  class="relative w-full h-fit"
+  role="none"
+  class:experimental={$userConfigSettings.experimental_notes_chat_input &&
+    $userConfigSettings.experimental_notes_chat_sidebar}
+  class:isEmpty={isEmpty(items)}
+>
   <div
     class="flex items-center -space-x-3 h-fit relative"
     style="width: {$containerWidth}px; min-width: 100%;"
@@ -149,6 +160,17 @@
 
 <style lang="scss">
   .relative::-webkit-scrollbar {
+    display: none;
+  }
+
+  .experimental {
+    .flex {
+      gap: 4px;
+      margin-left: 0.5rem;
+    }
+  }
+
+  .isEmpty {
     display: none;
   }
 </style>

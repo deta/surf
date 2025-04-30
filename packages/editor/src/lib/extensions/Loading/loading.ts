@@ -41,13 +41,15 @@ export const Loading = Node.create<LoadingOptions>({
       text: {
         default: '',
         parseHTML: (element) => {
-          return {
-            text: element.textContent
-          }
+          return element.getAttribute('data-text')
         },
         renderHTML: (attributes) => {
+          if (!attributes.text) {
+            return {}
+          }
+
           return {
-            text: attributes.text
+            'data-text': attributes.text
           }
         }
       }
@@ -77,7 +79,7 @@ export const Loading = Node.create<LoadingOptions>({
       const component = new LoadingComp({
         target: container,
         props: {
-          text: node.attrs.text.text
+          text: node.attrs.text
         }
       })
 

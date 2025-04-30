@@ -27,6 +27,11 @@
   import { useSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import CreateAiToolDialog from './CreateAiToolDialog.svelte'
   import { quartOut } from 'svelte/easing'
+  import { Editor, type MentionItem } from '@horizon/editor'
+  import { isGeneratingAI } from '@horizon/core/src/lib/service/ai/generationState'
+  import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
+  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   export let chatId: string
   export let contextManager: ContextManager
@@ -36,17 +41,21 @@
   export let showAddToContext = true
   export let floating: boolean = true
   export let excludeActiveTab: boolean = false
+  export let showInput: boolean = false
 
   const dispatch = createEventDispatcher<{
     'run-prompt': { prompt: ChatPrompt; custom: boolean }
     'open-context-item': ContextItem
     'process-context-item': ContextItem
+    submit: { query: string; mentions: MentionItem[] }
   }>()
 
   const log = useLogScope('ChatControls')
   const config = useConfig()
   const tabsManager = useTabsManager()
   const ai = useAI()
+  const oasis = useOasis()
+  const resourceManager = useResourceManager()
   const smartNotes = useSmartNotes()
 
   const tabs = tabsManager.tabs
@@ -60,6 +69,10 @@
   $: responses = writable<AIChatMessageParsed[]>([])
 
   let showAddPromptDialog = false
+  let editor: Editor
+  let inputValue: string = ''
+
+  const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager })
 
   const optToggled = writable(false)
   const tabPickerOpen = writable(false)
@@ -167,6 +180,16 @@
     dispatch('run-prompt', { prompt, custom })
   }
 
+  const handleInputSubmit = () => {
+    if (!inputValue || !editor) return
+
+    const mentions = editor.getMentions()
+    dispatch('submit', { query: inputValue, mentions })
+
+    inputValue = ''
+    editor.clear()
+  }
+
   onMount(() => {
     log.debug('mounted', contextManager, contextManager.key)
 
@@ -204,7 +227,10 @@
   <div class="overflow-hidden suggestion-items flex items-center">
     <div
       in:fly={{ y: 200 }}
-      class="suggestions-wrapper flex items-center px-1 mb-2 w-full z-0 overflow-auto no-scrollbar"
+      class="suggestions-wrapper flex items-center {$userConfigSettings.experimental_notes_chat_input &&
+      $userConfigSettings.experimental_notes_chat_sidebar
+        ? 'pl-5 pr-5'
+        : 'px-1'} mb-2 w-full z-0 overflow-auto no-scrollbar"
     >
       <SelectDropdown
         items={promptItems}
@@ -337,72 +363,111 @@
     class:no-items={$visibleContextItems.length === 0}
     class:has-items={$visibleContextItems.length > 0}
     class:floating
+    class:experimental={$userConfigSettings.experimental_notes_chat_input &&
+      $userConfigSettings.experimental_notes_chat_sidebar}
   >
-    {#if preparingTabs}
-      <div
-        transition:slide={{ duration: 150, axis: 'y' }}
-        class="err flex flex-col bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 p-2 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
-      >
-        Preparing tabs for the chat…
-      </div>
-    {:else if $visibleContextItems.length}
-      {#if !$optToggled}
+    <div class="chat-components-content" class:no-items={$visibleContextItems.length === 0}>
+      {#if preparingTabs}
         <div
-          class="flex flex-col relative"
-          transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
-          data-tooltip-target="context-bar"
+          transition:slide={{ duration: 150, axis: 'y' }}
+          class="err flex w-full bg-blue-50 dark:bg-gray-800 border-t-blue-300 dark:border-t-gray-700 border-l-blue-300 dark:border-l-gray-700 border-r-blue-300 dark:border-r-gray-700 border-[1px] border-b-0 p-2 gap-4 shadow-sm mx-8 rounded-t-xl text-lg leading-relaxed text-blue-800/60 dark:text-gray-100/60 relative"
         >
-          <div class="context-bar">
-            <ContextBubbles
-              {contextManager}
-              on:select={handleSelectContextItem}
-              on:remove-item={handleRemoveContextItem}
-              on:retry={handleRetryContextItem}
-            />
-          </div>
+          Preparing tabs for the chat…
         </div>
-      {/if}
-    {/if}
-
-    <div class="input-wrapper">
-      <slot></slot>
-
-      <div
-        class="context-controls"
-        class:no-items={$visibleContextItems.length === 0}
-        class:has-items={$visibleContextItems.length > 0}
-      >
-        {#if $tabPickerOpen}
-          <ChatContextTabPicker
-            tabs={contextPickerTabs}
-            {excludeActiveTab}
-            {contextManager}
-            on:close={() => {
-              $tabPickerOpen = false
-            }}
-          />
-        {/if}
-
-        {#if showAddToContext}
-          <button
-            disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
-            popovertarget="chat-add-context-tabs"
-            class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
-            on:click={(e) => {
-              $tabPickerOpen = !$tabPickerOpen
-            }}
-            use:tooltip={{
-              text: 'Add tab',
-              position: 'left'
-            }}
+      {:else if $visibleContextItems.length}
+        {#if !$optToggled}
+          <div
+            class="flex w-full relative"
+            transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
+            data-tooltip-target="context-bar"
           >
-            <Icon name={'add'} size={'18px'} className="opacity-60" />
-          </button>
+            <div class="context-bar">
+              <ContextBubbles
+                {contextManager}
+                on:select={handleSelectContextItem}
+                on:remove-item={handleRemoveContextItem}
+                on:retry={handleRetryContextItem}
+              />
+            </div>
+          </div>
         {/if}
+      {:else}
+        <div class="w-full"></div>
+      {/if}
 
-        <ModelPicker />
+      <div class="controls-wrapper">
+        <slot></slot>
+
+        <div
+          class="context-controls"
+          class:no-items={$visibleContextItems.length === 0}
+          class:has-items={$visibleContextItems.length > 0}
+        >
+          {#if $tabPickerOpen}
+            <ChatContextTabPicker
+              tabs={contextPickerTabs}
+              {excludeActiveTab}
+              {contextManager}
+              on:close={() => {
+                $tabPickerOpen = false
+              }}
+            />
+          {/if}
+
+          {#if showAddToContext}
+            <button
+              disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
+              popovertarget="chat-add-context-tabs"
+              class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
+              on:click={(e) => {
+                $tabPickerOpen = !$tabPickerOpen
+              }}
+              use:tooltip={{
+                text: 'Add tab',
+                position: 'left'
+              }}
+            >
+              <Icon name={'add'} size={'18px'} className="opacity-60" />
+            </button>
+          {/if}
+
+          <ModelPicker />
+        </div>
       </div>
     </div>
+
+    {#if showInput}
+      <div class="input-wrapper" class:has-context={$visibleContextItems.length > 0}>
+        <div class="flex-grow overflow-y-auto max-h-64">
+          <Editor
+            bind:this={editor}
+            bind:content={inputValue}
+            on:submit={handleInputSubmit}
+            {mentionItemsFetcher}
+            autofocus={true}
+            submitOnEnter
+            parseMentions
+            placeholder="Ask something..."
+          />
+        </div>
+
+        <div>
+          <button
+            class="submit-button transform whitespace-nowrap active:scale-95 disabled:opacity-30 appearance-none border-0 group margin-0 flex aspect-square items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-lg text-sky-1000 dark:text-gray-100 text-sm"
+            on:click={handleInputSubmit}
+            data-tooltip-action="send-chat-message"
+            data-tooltip-target="send-chat-message"
+            disabled={!inputValue || $isGeneratingAI}
+          >
+            {#if $isGeneratingAI}
+              <Icon name="spinner" />
+            {:else}
+              <div class="rotate-90"><Icon name="arrow.left" /></div>
+            {/if}
+          </button>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -424,9 +489,41 @@
     border: 0.5px solid #58688460;
     border-radius: 18px;
     background: white;
+    margin: 0 1rem;
+
+    &.no-items {
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+    }
 
     :global(.dark) & {
       background: #181818;
+    }
+
+    &.experimental {
+      .chat-components-content {
+        padding: 0rem 0.75rem 0 0;
+      }
+      outline: 1px solid rgba(126, 168, 240, 0.05);
+      background: radial-gradient(
+        143.56% 143.56% at 50% -43.39%,
+        #f3f6fa 0%,
+        #f0f3f7 50%,
+        #e0e9f1 100%
+      );
+      box-shadow:
+        inset 0px 1px 1px -1px white,
+        inset 0px -1px 1px -1px white,
+        inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
+        0px 0px 89px 0px rgba(0, 0, 0, 0.12),
+        0px 4px 18px 0px rgba(0, 0, 0, 0.12),
+        0px 1px 1px 0px rgba(126, 168, 240, 0.1),
+        0px 4px 4px 0px rgba(126, 168, 240, 0.05);
+
+      :global(.dark) & {
+        background: #181818;
+      }
     }
 
     &.no-items {
@@ -447,12 +544,14 @@
 
     &.floating {
       outline: 1px solid rgba(126, 168, 240, 0.05);
+
       background: radial-gradient(
         143.56% 143.56% at 50% -43.39%,
-        #eef4ff 0%,
-        #ecf3ff 50%,
-        #d2e2ff 100%
+        #f3f6fa 0%,
+        #f0f3f7 50%,
+        #e0e9f1 100%
       );
+
       box-shadow:
         inset 0px 1px 1px -1px white,
         inset 0px -1px 1px -1px white,
@@ -464,8 +563,29 @@
     }
   }
 
-  .input-wrapper {
+  .chat-components-content {
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 7px 7px 7px 7px;
+    &.no-items {
+      padding: 0;
+      bottom: 2rem;
+      outline: 0;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+      .controls-wrapper {
+        position: relative;
+        bottom: 1.5rem;
+        right: 1rem;
+      }
+    }
+  }
+
+  .controls-wrapper {
     display: flex;
     align-items: center;
   }
@@ -475,29 +595,29 @@
     flex-direction: row;
     align-items: center;
     gap: 0.5rem;
-    padding: 7px 7px 7px 7px;
+
+    .experimental & {
+      margin-top: 0.5rem;
+    }
   }
 
   .context-controls {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    position: absolute;
-    right: 1rem;
-
     &.no-items {
-      bottom: 0.75rem;
-    }
-
-    &.has-items {
-      top: 50%;
-      transform: translateY(-50%);
+      height: 0;
+      padding: 0;
+      background: transparent;
     }
   }
 
   .suggestions-wrapper {
     gap: 4px;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+
     & > :first-child {
       border-radius: 8px 0 0 8px;
     }
@@ -508,6 +628,48 @@
 
     & > :last-child {
       border-radius: 0 8px 8px 0;
+    }
+
+    .experimental & {
+      margin-bottom: 0.75rem;
+      padding-right: 5px !important;
+    }
+  }
+
+  .input-wrapper {
+    display: flex;
+    background: #f8fafc;
+    border: 1px solid #58688460;
+    border-radius: 2xl;
+    padding: 0.75rem 1rem;
+    gap: 2px;
+
+    :global(.dark) & {
+      background: #1f2937;
+    }
+
+    .experimental & {
+      margin: 0 0.55rem 0.55rem 0.55rem;
+      padding: 0.65rem 0.65rem 0.65rem 1rem;
+      border-radius: 0 11px 11px 11px;
+      background: #fff;
+      border: none;
+      box-shadow:
+        0px 13px 4px 0px color(display-p3 0.0078 0.2118 0.3804 / 0),
+        0px 8px 3px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.01),
+        0px 5px 3px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.03),
+        0px 2px 2px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.05),
+        0px 1px 1px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.06);
+
+      &:not(.has-context) {
+        margin: 0;
+        outline: 1px solid rgba(0, 0, 0, 0.09);
+        border-radius: 11px;
+      }
+
+      :global(.dark) & {
+        background: #1f2937;
+      }
     }
   }
 </style>

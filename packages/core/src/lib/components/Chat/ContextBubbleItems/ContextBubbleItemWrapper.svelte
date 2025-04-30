@@ -28,6 +28,7 @@
     type ContextItem
   } from '@horizon/core/src/lib/service/ai/contextManager'
   import { ResourceTypes } from '@horizon/types'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let item: ContextItem
   export let pillProperties: PillProperties
@@ -35,6 +36,9 @@
   export let failed: boolean = false
   export let opened: Writable<boolean> = writable(false)
   export let additionalLabel: string | undefined = undefined
+
+  const config = useConfig()
+  const userConfigSettings = config.settings
 
   const dispatch = createEventDispatcher<{
     select: string
@@ -99,6 +103,8 @@
     <div
       role="none"
       class="shine-border pill transform group/pill"
+      class:experimental={$userConfigSettings.experimental_notes_chat_input &&
+        $userConfigSettings.experimental_notes_chat_sidebar}
       on:click={() => handleSelect(item.id)}
       use:contextMenu={contextMenuData}
       style="transform: transform-origin: center center;"
@@ -169,6 +175,16 @@
     cursor: default;
     transition: transform 0.3s ease;
     border-radius: 11px 11px 11px 11px;
+  }
+
+  .experimental {
+    &.pill,
+    .pill {
+      border-radius: 11px 11px 0 0;
+      transform: none !important;
+      transform-origin: center center;
+      height: 36px;
+    }
   }
 
   .pill {

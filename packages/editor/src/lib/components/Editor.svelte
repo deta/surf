@@ -71,11 +71,11 @@
   export let enableCaretIndicator: boolean = false
   export let onCaretPositionUpdate: ((position: any) => void) | undefined = undefined
   export let showSimilaritySearch: boolean = false
+  export let editorElement: HTMLElement
 
   let editor: Readable<Editor>
   let editorWidth: number = 350
   let resizeObserver: ResizeObserver | null = null
-  let editorElement: HTMLElement
 
   // Create a throttled version of the caret position update function
   // This will ensure we don't update too frequently during resize events

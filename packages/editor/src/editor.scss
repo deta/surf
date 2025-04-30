@@ -348,6 +348,37 @@ body.custom .editor {
     color: var(--color-brand);
   }
 
+  output {
+    display: inline-block;
+    width: 100%;
+    border-radius: 0.4em;
+    // padding: 0.5rem 0.75rem;
+    // margin: -0.5rem -0.75rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+
+    // use the prompt from data-prompt and position it before the output, only if it exists
+    &[data-prompt]::before {
+      display: block;
+      content: attr(data-prompt);
+      color: var(--color-brand);
+      font-weight: 500;
+      margin-right: 5px;
+      font-size: 0.8em;
+      opacity: 0.75;
+
+      // truncate it after two lines
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      width: 100%;
+      white-space: normal;
+
+    }
+  }
+
 }
 
 .dark .tiptap {

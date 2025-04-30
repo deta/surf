@@ -57,6 +57,7 @@ export type UserSettings = {
   experimental_context_linking_sidebar: boolean
   /** @deprecated */
   experimental_notes_chat_sidebar: boolean
+  experimental_notes_chat_input: boolean
   /** @deprecated */
   experimental_chat_web_search: boolean
   /** @deprecated */

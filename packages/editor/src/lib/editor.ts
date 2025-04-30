@@ -210,10 +210,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     CaretIndicatorExtension.configure({
       debug: false,
       onSelectionUpdate: ({ editor }) => {
-        console.log('CaretIndicator: Selection update triggered from editor.ts')
         const pos = editor.storage.caretIndicator.caretPosition
         if (pos && opts?.onCaretPositionUpdate) {
-          console.log('CaretIndicator: Forwarding position to callback:', pos)
           opts.onCaretPositionUpdate(pos)
         }
       },

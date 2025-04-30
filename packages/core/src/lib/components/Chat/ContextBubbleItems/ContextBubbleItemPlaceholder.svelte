@@ -3,6 +3,7 @@
   import { Icon, type Icons } from '@horizon/icons'
 
   import type { PillProperties } from './ContextBubbleItemWrapper.svelte'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let id: string
   export let pillProperties: PillProperties
@@ -11,6 +12,9 @@
   export let icon: Icons | undefined = undefined
   export let additionalLabel: string | undefined = undefined
   export let hideRemove: boolean = false
+
+  const config = useConfig()
+  const userConfigSettings = config.settings
 
   const dispatch = createEventDispatcher<{
     'remove-item': string
@@ -23,6 +27,8 @@
 
 <div
   class="shine-border pill transform group/pill"
+  class:experimental={$userConfigSettings.experimental_notes_chat_input &&
+    $userConfigSettings.experimental_notes_chat_sidebar}
   style="transform: rotate({pillProperties.rotate}deg); transform-origin: center center;"
 >
   <div
@@ -75,6 +81,16 @@
     cursor: default;
     transition: transform 0.3s ease;
     border-radius: 11px 11px 11px 11px;
+  }
+
+  .experimental {
+    &.pill,
+    .pill {
+      border-radius: 11px 11px 0 0;
+      transform: none !important;
+      transform-origin: center center;
+      height: 36px;
+    }
   }
 
   .pill {

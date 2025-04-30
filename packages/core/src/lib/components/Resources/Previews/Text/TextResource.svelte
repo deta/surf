@@ -214,6 +214,8 @@
     }
   })
 
+  type ChatSubmitOptions = { focusEnd: boolean; autoScroll: boolean; showPrompt: boolean }
+
   const similarityResults = writable<null | {
     sources: AIChatMessageSource[]
     range: Range
@@ -230,6 +232,7 @@
   let disableSimilaritySearch = false
   let tippyPopover: Instance<Props> | null = null
   let editorFocused = false
+  let disableAutoscroll = false
 
   // Caret indicator state
   let caretPosition: CaretPosition | null = null
@@ -380,6 +383,7 @@
   $: resource = note?.resource
 
   let editorElem: Editor
+  let editorElement: HTMLElement
   let editorWrapperElem: HTMLElement
 
   const isEditorNodeEmptyAtPosition = (editor: TiptapEditor, position: number) => {
@@ -854,6 +858,16 @@
     return nodes[nodes.length - 1]
   }
 
+  const getOutputNodeByID = (id: string) => {
+    const editor = editorElem.getEditor()
+    const nodePositions = editor.$nodes('output')
+    if (!nodePositions || nodePositions.length === 0) {
+      return null
+    }
+
+    return nodePositions.find((nodePos) => nodePos.node.attrs.id === id) ?? null
+  }
+
   const createCitationHTML = (source: AIChatMessageSource, skipHighlight = false) => {
     const citationInfo = encodeURIComponent(
       JSON.stringify({
@@ -961,14 +975,29 @@
     query: string,
     systemPrompt?: string,
     mentions?: MentionItem[],
-    trigger: PageChatMessageSentEventTrigger = PageChatMessageSentEventTrigger.NoteAutocompletion
+    trigger: PageChatMessageSentEventTrigger = PageChatMessageSentEventTrigger.NoteAutocompletion,
+    opts?: Partial<ChatSubmitOptions>
   ) => {
+    const options = {
+      focusEnd: opts?.focusEnd ?? false,
+      autoScroll: opts?.autoScroll ?? false,
+      showPrompt: opts?.showPrompt ?? false
+    } as ChatSubmitOptions
+
     // Hide the caret popover when generation starts
     hidePopover()
 
     // Update both local and global AI generation state
     isGeneratingAI.set(true)
     startAIGeneration('text-resource', `Generating response to: ${query.substring(0, 30)}...`)
+
+    if (options.focusEnd) {
+      editorElem.focusEnd()
+    }
+
+    if (options.autoScroll) {
+      disableAutoscroll = false
+    }
 
     try {
       if (note) {
@@ -990,8 +1019,25 @@
       const replace = trigger === PageChatMessageSentEventTrigger.NoteRewrite
 
       if (!replace) {
-        editor.commands.insertContentAt(currentPosition, `<loading>${getPrepPhrase()}</loading>`, {
-          updateSelection: false
+        editor.commands.insertContentAt(
+          currentPosition,
+          `<loading data-text="${getPrepPhrase()}"></loading>`,
+          {
+            updateSelection: false
+          }
+        )
+
+        wait(300).then(() => {
+          const elem = editor.contentElement
+          if (elem) {
+            const domElem = elem.querySelector('loading')
+            if (domElem) {
+              domElem.scrollIntoView({
+                behavior: 'instant',
+                block: 'start'
+              })
+            }
+          }
         })
       }
 
@@ -1000,6 +1046,10 @@
       // Update progress
       updateAIGenerationProgress(25, 'Determining chat mode...')
 
+      const textQuery = getEditorContentText(query)
+
+      let createdOutputNode = false
+
       // TODO: chatMode is already also figured out in `createChatCompletion` API
       // we need to refactor this to avoid double calls
       const chatMode = await chat.getChatModeForNoteAndTab(query, editor.getText(), null)
@@ -1007,20 +1057,16 @@
         if (!createdLoading) {
           createdLoading = true
 
-          editor.commands.insertContentAt(currentPosition, '<output> </output>', {
-            updateSelection: false
-          })
-
           const loading = getLastNode('loading')
           if (loading) {
             editor.commands.deleteRange(loading.range)
           }
 
           if (!replace) {
-            let outputNode = getLastNode('output')
+            // let outputNode = getOutputNodeByID(message.id)
             editor.commands.insertContentAt(
-              outputNode?.range.to ?? currentPosition,
-              `<loading>${getWritingPhrase()}</loading>`,
+              currentPosition,
+              `<loading data-text="${getWritingPhrase()}"></loading>`,
               {
                 updateSelection: false
               }
@@ -1028,28 +1074,53 @@
           }
 
           await tick()
+
+          if (options.autoScroll) {
+            disableAutoscroll = false
+          }
         }
+
+        await tick()
 
         //log.debug('chat message', message)
         const outputContent =
           chatMode === ChatMode.AppCreation
             ? await parseChatOutputToSurfletCode(message)
             : await parseChatOutputToHtml(message)
-        let outputNode = getLastNode('output')
-        if (!outputNode) {
-          log.error('No output node found')
-          return
-        }
 
         const tr = editor.view.state.tr
         const json = editorElem.generateJSONFromHTML(outputContent)
         const newOutputNode = editor.view.state.schema.nodeFromJSON({
           type: 'output',
-          content: json.content
+          content: json.content,
+          attrs: {
+            id: message.id,
+            prompt: options.showPrompt ? textQuery : undefined
+          }
         })
 
-        tr.replaceRangeWith(outputNode.range.from, outputNode.range.to, newOutputNode)
+        const nodeContent = newOutputNode.content
+
+        const outputNode = getOutputNodeByID(message.id)
+        if (outputNode) {
+          tr.replaceRangeWith(outputNode.from - 1, outputNode.to + 1, newOutputNode)
+        } else if (!createdOutputNode) {
+          createdOutputNode = true
+          tr.insert(currentPosition, newOutputNode)
+        }
+
         editor.view.dispatch(tr)
+
+        if (options.autoScroll && !disableAutoscroll) {
+          let outputNodePos = getOutputNodeByID(message.id)
+          if (outputNodePos) {
+            const domElem = outputNodePos.element
+            domElem.scrollIntoView({
+              behavior: 'instant',
+              block: 'start'
+            })
+          }
+        }
       }, 15)
 
       // Use the note resource in the chat if the note is mentioned or automaticall if nothing is mentioned
@@ -1102,22 +1173,44 @@
           editor.commands.deleteRange(loading.range)
         }
 
-        const outputNode = getLastNode('output')
-        if (!outputNode) {
-          log.error('No output node found')
-          editor.commands.insertContent(content, {
-            updateSelection: false
-          })
-          return
-        }
+        // const outputNode = getLastNode('output')
+        // if (!outputNode) {
+        //   log.error('No output node found')
+        //   editor.commands.insertContent(content, {
+        //     updateSelection: false
+        //   })
+        //   return
+        // }
 
-        const range = outputNode.range
-        editor.commands.deleteRange(range)
-        editor.commands.insertContentAt(range.from, content, {
-          updateSelection: false
-        })
+        // const range = outputNode.range
+        // editor.commands.deleteRange(range)
+        // editor.commands.insertContentAt(range.from, content, {
+        //   updateSelection: false
+        // })
 
         log.debug('inserted output', content)
+
+        // await wait(700)
+
+        // let outputNode = getOutputNodeByID(response.output.id)
+        // if (!outputNode) {
+        //   log.error('No output node found')
+        //   return
+        // }
+
+        // const tr = editor.view.state.tr
+        // const json = editorElem.generateJSONFromHTML(content)
+        // const newOutputNode = editor.view.state.schema.nodeFromJSON({
+        //   type: 'output',
+        //   content: json.content,
+        //   attrs: {
+        //     id: response.output.id,
+        //     prompt: textQuery
+        //   }
+        // })
+
+        // tr.replaceRangeWith(outputNode.range.from, outputNode.range.to, newOutputNode)
+        // editor.view.dispatch(tr)
 
         // insert new line
         // editor.commands.insertContentAt(range.to, '<br>', {
@@ -1797,7 +1890,8 @@
         query,
         'Stay short and use citations!',
         mentions,
-        PageChatMessageSentEventTrigger.NoteAutocompletion
+        PageChatMessageSentEventTrigger.NoteAutocompletion,
+        { autoScroll: false }
       )
     } catch (e) {
       log.error('Error doing magic', e)
@@ -1853,7 +1947,7 @@
     }
   }, 500)
 
-  export const runPrompt = async (prompt: ChatPrompt) => {
+  export const runPrompt = async (prompt: ChatPrompt, opts?: Partial<ChatSubmitOptions>) => {
     try {
       log.debug('Handling prompt submit', prompt)
 
@@ -1870,7 +1964,8 @@
         prompt.prompt,
         'Stay short and use citations!',
         mentions,
-        PageChatMessageSentEventTrigger.NoteUseSuggestion
+        PageChatMessageSentEventTrigger.NoteUseSuggestion,
+        opts
       )
     } catch (e) {
       log.error('Error doing magic', e)
@@ -1899,6 +1994,30 @@
 
     editorElem.setContent(text)
     editor.commands.focus('end')
+  }
+
+  const handleChatSubmit = async (e: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
+    try {
+      const { query, mentions } = e.detail
+      log.debug('Handling submit', query, mentions)
+
+      if (note) {
+        generateAndInsertAIOutput(
+          query,
+          undefined,
+          mentions,
+          PageChatMessageSentEventTrigger.NoteChatInput,
+          { focusEnd: true, autoScroll: true, showPrompt: true }
+        )
+      }
+    } catch (e) {
+      log.error('Error doing magic', e)
+    }
+  }
+
+  const handleScroll = () => {
+    log.debug('scroll')
+    disableAutoscroll = true
   }
 
   onMount(async () => {
@@ -1995,6 +2114,12 @@
     if (!contextManager) {
       contextManager = note.contextManager
     }
+
+    await wait(500)
+
+    if (editorElement) {
+      editorElement.addEventListener('scroll', handleScroll)
+    }
   })
 
   onDestroy(() => {
@@ -2012,6 +2137,10 @@
 
     if (unsubscribeTitle) {
       unsubscribeTitle()
+    }
+
+    if (editorElement) {
+      editorElement.removeEventListener('scroll', handleScroll)
     }
   })
 </script>
@@ -2071,6 +2200,7 @@
               bind:content={$content}
               bind:floatingMenuShown={$floatingMenuShown}
               bind:focused={editorFocused}
+              bind:editorElement
               placeholder={emptyPlaceholder}
               placeholderNewLine={$editorPlaceholder}
               citationComponent={CitationItem}
@@ -2189,6 +2319,9 @@
             contextManager={note.contextManager}
             floating={false}
             excludeActiveTab
+            showInput={$userSettings.experimental_notes_chat_input &&
+              $userSettings.experimental_notes_chat_sidebar}
+            on:submit={handleChatSubmit}
           />
         {/if}
       </div>
@@ -2400,7 +2533,7 @@
     margin: auto;
     padding: 0 2em;
     box-sizing: content-box;
-    padding-bottom: 60vh;
+    padding-bottom: 90vh;
   }
 
   :global(body.custom .text-resource-wrapper .tiptap ::selection) {

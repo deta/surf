@@ -56,6 +56,19 @@ export const AIOutput = Node.create<AIOutputOptions>({
             'data-tooltip-target': attributes.tooltipTarget
           }
         }
+      },
+      prompt: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-prompt'),
+        renderHTML: (attributes) => {
+          if (!attributes.prompt) {
+            return {}
+          }
+
+          return {
+            'data-prompt': attributes.prompt
+          }
+        }
       }
     }
   },
@@ -68,7 +81,11 @@ export const AIOutput = Node.create<AIOutputOptions>({
 
   group: 'block',
 
-  content: 'inline*',
+  content: 'block*',
+
+  selectable: true,
+
+  draggable: true,
 
   parseHTML() {
     return [{ tag: 'output' }]

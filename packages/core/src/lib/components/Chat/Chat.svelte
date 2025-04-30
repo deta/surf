@@ -160,7 +160,7 @@
         prompt.label ? prompt.label.toLowerCase() : undefined
       )
 
-      noteComp?.runPrompt(prompt)
+      noteComp?.runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: true })
     } catch (e) {
       log.error('Error doing magic', e)
     }
@@ -176,6 +176,25 @@
     const title = e.detail
 
     await note.updateTitle(title)
+  }
+
+  const handleSubmit = async (e: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
+    try {
+      const { query, mentions } = e.detail
+      log.debug('Handling submit', query, mentions)
+
+      if (note) {
+        noteComp?.generateAndInsertAIOutput(
+          query,
+          undefined,
+          mentions,
+          PageChatMessageSentEventTrigger.NoteChatInput,
+          { focusEnd: true, autoScroll: true, showPrompt: true }
+        )
+      }
+    } catch (e) {
+      log.error('Error doing magic', e)
+    }
   }
 </script>
 
@@ -236,11 +255,13 @@
     chatId={note.id}
     active={note.id === $activeNoteId}
     contextManager={note.contextManager}
+    showInput={$userConfigSettings.experimental_notes_chat_input}
     {preparingTabs}
     {showAddToContext}
     on:open-context-item
     on:process-context-item
     on:run-prompt={handleRunPrompt}
+    on:submit={handleSubmit}
   />
 </div>
 

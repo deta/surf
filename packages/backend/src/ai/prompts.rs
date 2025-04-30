@@ -410,7 +410,8 @@ pub fn note_chat_prompt(current_time: &str) -> String {
 
 Response Structure Requirements:
 - Use Markdown formatting for clarity and readability
-- Organize content with headers (levels 1-3 only: #, ##, ###)
+- Organize content with headers (levels 2-3 only: ##, ###)
+- Avoid using a heading at the beginning of the response
 - Utilize formatting elements like:
   - Lists (ordered and unordered)
   - Bold and italics

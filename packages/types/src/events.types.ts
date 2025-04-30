@@ -416,7 +416,8 @@ export enum PageChatMessageSentEventTrigger {
   NoteAutocompletion = 'note_autocompletion',
   NoteUseSuggestion = 'note_use_suggestion',
   NoteRewrite = 'note_rewrite',
-  NoteSimilaritySearch = 'note_similarity_search'
+  NoteSimilaritySearch = 'note_similarity_search',
+  NoteChatInput = 'note_chat_input'
 }
 
 export enum PromptType {

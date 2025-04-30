@@ -65,6 +65,24 @@
 
     <Switch color="#ff4eed" bind:checked={localUseSidebar} on:update={handleToggleNotesSidebar} />
   </section>
+
+  {#if userConfigSettings.experimental_notes_chat_sidebar}
+    <section class="section big-section">
+      <div class="info">
+        <div class="title">
+          <Icon name="chat" size="20px" stroke-width="2" />
+          <h3>Sidebar Chat Input (experimental)</h3>
+        </div>
+        <p>Show a traditional chat input in the notes sidebar.</p>
+      </div>
+
+      <Switch
+        color="#ff4eed"
+        bind:checked={userConfigSettings.experimental_notes_chat_input}
+        on:update
+      />
+    </section>
+  {/if}
 </SettingsOption>
 
 <style lang="scss">
