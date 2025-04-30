@@ -1217,9 +1217,7 @@ if (process.contextIsolated) {
   window.preloadEvents = eventHandlers
 }
 
-if (userConfig.settings?.extensions) {
-  injectBrowserAction()
-}
+injectBrowserAction()
 
 export type API = typeof api
 export type PreloadEventHandlers = typeof eventHandlers

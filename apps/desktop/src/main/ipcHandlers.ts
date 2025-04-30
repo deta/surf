@@ -229,8 +229,11 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!url || !url.startsWith('https://chromewebstore.google.com/')) {
       return null
     }
+    return true
+    /*
     const userConfig = getUserConfig()
     return userConfig.settings.extensions
+    */
   })
 
   IPC_EVENTS_MAIN.listExtensions.handle((event) => {

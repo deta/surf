@@ -289,17 +289,15 @@ const initializeApp = async () => {
     const crashHandler = CrashHandler.getInstance()
     crashHandler.initialize(mainWindow)
 
-    if (userConfig.settings.extensions) {
-      const webviewsSession = session.fromPartition('persist:horizon')
-      const extensionsManager = ExtensionsManager.getInstance()
-      await extensionsManager.initialize(
-        mainWindow,
-        webviewsSession,
-        'vertical',
-        new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
-        handleOpenUrl
-      )
-    }
+    const webviewsSession = session.fromPartition('persist:horizon')
+    const extensionsManager = ExtensionsManager.getInstance()
+    await extensionsManager.initialize(
+      mainWindow,
+      webviewsSession,
+      'vertical',
+      new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
+      handleOpenUrl
+    )
   }
 }
 
