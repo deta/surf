@@ -18,7 +18,7 @@
   import { createEventDispatcher, tick, onMount } from 'svelte'
   import { writable, derived } from 'svelte/store'
 
-  import { tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
+  import { conditionalArrayItem, tooltip, useLocalStorageStore, useLogScope } from '@horizon/utils'
   import Folder, { type EditingStartEvent, type FolderEvents } from '..//Folder.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import { OasisSpace, pickRandomColorPair, useOasis } from '../../../service/oasis'
@@ -87,23 +87,27 @@
   const unpinnedSpaces = derived(sortedSpaces, ($sortedSpaces) => $sortedSpaces.unpinned)
   const missingSourceSpaces = derived(sortedSpaces, ($sortedSpaces) => $sortedSpaces.linked)
 
-  const builtInSpaces = [
-    {
-      id: everythingContext.id,
-      name: everythingContext.label,
-      icon: everythingContext.icon
-    },
-    {
-      id: inboxContext.id,
-      name: inboxContext.label,
-      icon: inboxContext.icon
-    },
-    {
-      id: notesContext.id,
-      name: notesContext.label,
-      icon: notesContext.icon
-    }
-  ] as { id: string; name: string; icon: Icons }[]
+  const builtInSpaces = derived(
+    userSettings,
+    ($userSettings) =>
+      [
+        {
+          id: everythingContext.id,
+          name: everythingContext.label,
+          icon: everythingContext.icon
+        },
+        ...conditionalArrayItem(!$userSettings.save_to_active_context, {
+          id: inboxContext.id,
+          name: inboxContext.label,
+          icon: inboxContext.icon
+        }),
+        {
+          id: notesContext.id,
+          name: notesContext.label,
+          icon: notesContext.icon
+        }
+      ] as { id: string; name: string; icon: Icons }[]
+  )
 
   export let onBack = () => {}
   export const handleCreateSpace = async (
@@ -465,7 +469,7 @@
   <!-- Built-in spaces - always visible section -->
   <div class="built-in-section">
     <div class="built-in-list">
-      {#each builtInSpaces as builtInSpace (builtInSpace.id)}
+      {#each $builtInSpaces as builtInSpace (builtInSpace.id)}
         <div class="folder-wrapper">
           <BuiltInSpace
             id={builtInSpace.id}
