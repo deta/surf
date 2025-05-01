@@ -85,7 +85,7 @@
     "typescript": "^5.1.6",
     "unzipper": "^0.10.14",
     "uuid": "^9.0.1",
-    "vite": "^4.5.13",
+    "vite": "^4.5.14",
     "vite-plugin-css-injected-by-js": "^3.5.1",
     "vite-plugin-markdown": "^2.2.0"
   }

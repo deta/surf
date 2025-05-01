@@ -53,7 +53,7 @@
     "tiptap-markdown": "^0.8.9",
     "tslib": "^2.6.2",
     "typescript": "^5.2.2",
-    "vite": "^4.5.13"
+    "vite": "^4.5.14"
   },
   "dependencies": {
     "@tiptap/extension-code-block-lowlight": "^2.11.2",
