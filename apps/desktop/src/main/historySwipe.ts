@@ -1,7 +1,7 @@
 import trackpad from '@horizon/trackpad'
 import { getMainWindow } from './mainWindow'
 import log from '@horizon/utils/src/log'
-import { getBrowserConfig, setBrowserConfig } from './config'
+import { getUserConfig, updateUserConfigSettings } from './config'
 import { changeMenuItemLabel } from './appMenu'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 
@@ -13,7 +13,7 @@ export function getHistorySwipeGestureConfig() {
 
 export function setHistorySwipeGestureConfig(state: boolean) {
   historySwipeGestureEnabled = state
-  setBrowserConfig({ ...getBrowserConfig(), historySwipeGesture: state })
+  updateUserConfigSettings({ historySwipeGesture: state })
   changeMenuItemLabel(
     'historySwipe',
     historySwipeGestureEnabled ? 'Disable History Swipe Gesture' : 'Enable History Swipe Gesture'
@@ -25,7 +25,7 @@ export function toggleHistorySwipeGestureConfig() {
 }
 
 export function setupHistorySwipeIpcSenders() {
-  setHistorySwipeGestureConfig(getBrowserConfig().historySwipeGesture || false)
+  setHistorySwipeGestureConfig(getUserConfig().settings.historySwipeGesture || false)
 
   trackpad.setScrollStartCallback(() => {
     if (!historySwipeGestureEnabled) return

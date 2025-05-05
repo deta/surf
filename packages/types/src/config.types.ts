@@ -19,6 +19,9 @@ export type UserSettings = {
   use_semantic_search: boolean
   save_to_user_downloads: boolean
   automatic_chat_prompt_generation: boolean
+  adblockerEnabled: boolean
+  historySwipeGesture: boolean
+
   // Experiments
   annotations_sidebar: boolean
   homescreen_link_cmdt: boolean

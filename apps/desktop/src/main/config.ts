@@ -9,11 +9,6 @@ export type Config = {
   [key: string]: any
 }
 
-export type BrowserConfig = {
-  adblockerEnabled: boolean
-  historySwipeGesture: boolean
-}
-
 export interface PermissionDecision {
   [origin: string]: {
     [permission: string]: boolean
@@ -64,14 +59,6 @@ export const setConfig = <T extends Config>(
   }
 }
 
-export const getBrowserConfig = () => {
-  return getConfig<BrowserConfig>(app.getPath('userData'), BROWSER_CONFIG_NAME)
-}
-
-export const setBrowserConfig = (config: BrowserConfig) => {
-  setConfig(app.getPath('userData'), config, BROWSER_CONFIG_NAME)
-}
-
 export const getAnnouncementsState = () => {
   return getConfig(app.getPath('userData'), SEEN_ANNOUNCEMENTS_STATE)
 }
@@ -104,6 +91,8 @@ export const getUserConfig = (path?: string) => {
       use_semantic_search: false,
       save_to_user_downloads: true,
       automatic_chat_prompt_generation: true,
+      adblockerEnabled: true,
+      historySwipeGesture: false,
       annotations_sidebar: false,
       cleanup_filenames: false,
       save_to_active_context: true,
@@ -159,6 +148,16 @@ export const getUserConfig = (path?: string) => {
       completed_chat: false,
       completed_stuff: false
     }
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.adblockerEnabled === undefined) {
+    storedConfig.settings.adblockerEnabled = true
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.historySwipeGesture === undefined) {
+    storedConfig.settings.historySwipeGesture = false
     changedConfig = true
   }
 
