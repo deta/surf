@@ -158,8 +158,6 @@
         </div>
       </Tooltip.Content>
     </Tooltip.Root>
-
-    {#if !horizontalTabs}
       <Tooltip.Root openDelay={400} closeDelay={10}>
         <Tooltip.Trigger>
           <AppBarButton
@@ -189,7 +187,6 @@
           </div>
         </Tooltip.Content>
       </Tooltip.Root>
-    {/if}
     {#if horizontalTabs}
       <ExtensionBrowserActions on:open-extension-store />
     {/if}
