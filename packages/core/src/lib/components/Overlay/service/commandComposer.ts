@@ -417,7 +417,7 @@ export class CommandComposer {
 
     const fuse = new Fuse(fuseSpaces, {
       keys: [{ name: 'name.folderName', weight: 0.7 }],
-      threshold: 0.4,
+      threshold: 0.2,
       includeScore: true
     })
 
