@@ -45,6 +45,9 @@ on:
         description: 'Run Linux x64 build'
         default: false
 
+env:
+  TIPTAP_REGISTRY_TOKEN: ${{ secrets.TIPTAP_REGISTRY_TOKEN }}
+
 jobs:
   determine_builds:
     runs-on: ubuntu-latest

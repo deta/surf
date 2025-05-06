@@ -39,6 +39,8 @@
   import type { MentionItemsFetcher } from '../extensions/Mention/suggestion'
   import type { LinkClickHandler } from '../extensions/Link/helpers/clickHandler'
 
+  import 'katex/dist/katex.min.css'
+
   export let content: string
   export let readOnly: boolean = false
   export let placeholder: string = `Write something or type '/' for options…`

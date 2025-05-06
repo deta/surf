@@ -17,6 +17,9 @@ on:
       - '!packages/backend-server/**'
   workflow_dispatch:
 
+env:
+  TIPTAP_REGISTRY_TOKEN: ${{ secrets.TIPTAP_REGISTRY_TOKEN }}
+
 jobs:
   build:
     if: github.event.pull_request.draft == false

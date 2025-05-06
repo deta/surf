@@ -11,6 +11,9 @@ on:
   #  - cron: '3 20 * * 1-5'
   workflow_dispatch:
 
+env:
+  TIPTAP_REGISTRY_TOKEN: ${{ secrets.TIPTAP_REGISTRY_TOKEN }}
+
 jobs:
   latest-nightly-version:
     runs-on: ubuntu-latest

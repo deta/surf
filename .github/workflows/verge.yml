@@ -13,6 +13,9 @@ on:
         required: true
         default: 'Surf'
 
+env:
+  TIPTAP_REGISTRY_TOKEN: ${{ secrets.TIPTAP_REGISTRY_TOKEN }}
+
 jobs:
   latest-pro-max-version:
     runs-on: ubuntu-latest

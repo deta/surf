@@ -334,7 +334,7 @@
         }
       }
 
-      return `Press ${isMac() ? '⌘' : 'ctrl'} + ↵ to autocomplete based on ${contextName}`
+      return `Write something or type / for commands…`
     }
   )
 

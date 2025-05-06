@@ -5,7 +5,9 @@ import {
   generateText,
   Editor,
   type Range,
-  Extension
+  Extension,
+  wrappingInputRule,
+  nodeInputRule
 } from '@tiptap/core'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
@@ -14,6 +16,11 @@ import StarterKit from '@tiptap/starter-kit'
 import ListKeymap from '@tiptap/extension-list-keymap'
 import Image from '@tiptap/extension-image'
 import Underline from '@tiptap/extension-underline'
+import { Mathematics } from '@tiptap-pro/extension-mathematics'
+import Blockquote from '@tiptap/extension-blockquote'
+import Details from '@tiptap-pro/extension-details'
+import DetailsContent from '@tiptap-pro/extension-details-content'
+import DetailsSummary from '@tiptap-pro/extension-details-summary'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { all, createLowlight } from 'lowlight'
 
@@ -40,6 +47,7 @@ import { Surflet } from './extensions/Surflet/surflet'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Link from './extensions/Link'
 import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
+import { detailsInputRule } from './utilities/inputRules/details'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -67,6 +75,12 @@ export type ExtensionOptions = {
 
 const lowlight = createLowlight(all)
 
+// match the > char followed by a space
+const detailsRegex = /^\s*>\s$/
+
+// match the | char followed by a space
+const blockquoteRegex = /^\s*\|\s$/
+
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
@@ -76,8 +90,10 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       color: 'var(--contrast-color)',
       width: 2
     },
-    codeBlock: false
+    codeBlock: false,
+    blockquote: false
   }),
+  Mathematics,
   Underline,
   Link.configure({
     onClick: opts?.onLinkClick,
@@ -89,6 +105,33 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   CodeBlockLowlight.configure({
     lowlight
   }),
+  Blockquote.extend({
+    addInputRules() {
+      return [
+        wrappingInputRule({
+          find: blockquoteRegex,
+          type: this.type
+        })
+      ]
+    }
+  }),
+  Details.configure({
+    persist: true,
+    HTMLAttributes: {
+      class: 'details'
+    }
+  }).extend({
+    addInputRules() {
+      return [
+        detailsInputRule({
+          find: detailsRegex,
+          type: this.type
+        })
+      ]
+    }
+  }),
+  DetailsSummary,
+  DetailsContent,
   // Link.extend({
   //   addAttributes() {
   //     return {
@@ -118,7 +161,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     onClick: opts?.buttonClick
   }),
   Placeholder.configure({
-    placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
+    placeholder: ({ node }) => {
+      if (node.type.name === 'detailsSummary') {
+        return 'Toggle'
+      }
+
+      return opts?.placeholder ?? "Write something or type '/' for options…"
+    }
   }),
   ...conditionalArrayItem(
     !opts?.disableHashtag,

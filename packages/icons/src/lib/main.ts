@@ -119,6 +119,7 @@ import Mention from './Icons/Mention.svelte'
 import FileTextSpark from './Icons/FileTextSpark.svelte'
 import Squircle from './Icons/Squircle.svelte'
 import Underline from './Icons/Underline.svelte'
+import ListDetails from './Icons/ListDetails.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -245,7 +246,8 @@ export const icons = {
   mention: Mention,
   'file-text-spark': FileTextSpark,
   squircle: Squircle,
-  underline: Underline
+  underline: Underline,
+  'list-details': ListDetails
 }
 
 export type Icons = keyof typeof icons
@@ -371,5 +373,6 @@ export {
   Mention,
   FileTextSpark,
   Squircle,
-  Underline
+  Underline,
+  ListDetails
 }
