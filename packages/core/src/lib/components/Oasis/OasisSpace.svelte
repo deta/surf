@@ -195,7 +195,6 @@
     log.debug('Active, loading space contents...')
     if (spaceId === 'all') {
       loadEverything()
-      telemetry.trackOpenOasis()
     } else {
       loadSpaceContents(spaceId)
     }

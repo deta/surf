@@ -135,6 +135,7 @@
   let previousSearchValue = ''
   let showDragHint = writable(false)
   let drawerHide = writable(false) // Whether to slide the drawer away
+  let lastShowTabSearch = 0
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
   $: isInboxSpace = $selectedSpaceId === 'inbox'
@@ -146,8 +147,16 @@
   }
 
   $: if ($showTabSearch === 2) {
-    loadEverything(true)
+    if (['all', 'inbox', 'notes'].includes($selectedSpaceId)) {
+      loadEverything()
+    }
+    if (lastShowTabSearch !== $showTabSearch) {
+      telemetry.trackOpenOasis()
+    }
     $drawerHide = false
+    lastShowTabSearch = $showTabSearch
+  } else {
+    lastShowTabSearch = $showTabSearch
   }
 
   $: if ($showTabSearch === 2 && $searchValue !== previousSearchValue) {
@@ -165,10 +174,6 @@
 
   $: if ($showTabSearch !== 2) {
     closeResourceDetailsModal()
-  }
-
-  $: if (['all', 'inbox', 'notes'].includes($selectedSpaceId)) {
-    loadEverything()
   }
 
   const everythingContents = derived(

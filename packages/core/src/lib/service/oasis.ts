@@ -929,10 +929,6 @@ export class OasisService {
       this.everythingContents.set([])
       await tick()
 
-      if (initialLoad) {
-        this.telemetry.trackOpenOasis()
-      }
-
       const excludeAnnotations = !get(this.config.settings).show_annotations_in_oasis
       const selectedFilterType = get(this.selectedFilterType)
 
