@@ -139,9 +139,20 @@ export const BUILT_IN_SLASH_COMMANDS = [
     title: 'Toggle List',
     section: 'Basic Elements',
     keywords: ['list', 'block', '>', 'details', 'summary'],
-    tagline: '',
+    tagline: '>',
     command: (_, editor, range) => {
       editor.chain().deleteRange(range).focus().setDetails().run()
+    }
+  },
+  {
+    id: 'table-block',
+    icon: 'table',
+    title: 'Table',
+    section: 'Basic Elements',
+    keywords: ['table', 'grid', '|'],
+    tagline: '',
+    command: (_, editor, range) => {
+      editor.chain().deleteRange(range).focus().insertTable().run()
     }
   },
   {

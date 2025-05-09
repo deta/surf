@@ -120,6 +120,7 @@ import FileTextSpark from './Icons/FileTextSpark.svelte'
 import Squircle from './Icons/Squircle.svelte'
 import Underline from './Icons/Underline.svelte'
 import ListDetails from './Icons/ListDetails.svelte'
+import Table from './Icons/Table.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -247,7 +248,8 @@ export const icons = {
   'file-text-spark': FileTextSpark,
   squircle: Squircle,
   underline: Underline,
-  'list-details': ListDetails
+  'list-details': ListDetails,
+  table: Table
 }
 
 export type Icons = keyof typeof icons
@@ -374,5 +376,6 @@ export {
   FileTextSpark,
   Squircle,
   Underline,
-  ListDetails
+  ListDetails,
+  Table
 }

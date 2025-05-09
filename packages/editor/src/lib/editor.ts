@@ -21,6 +21,10 @@ import Blockquote from '@tiptap/extension-blockquote'
 import Details from '@tiptap-pro/extension-details'
 import DetailsContent from '@tiptap-pro/extension-details-content'
 import DetailsSummary from '@tiptap-pro/extension-details-summary'
+import Table from '@tiptap/extension-table'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import TableRow from '@tiptap/extension-table-row'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { all, createLowlight } from 'lowlight'
 
@@ -48,6 +52,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Link from './extensions/Link'
 import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
 import { detailsInputRule } from './utilities/inputRules/details'
+import TableAddRowColumn from './extensions/TableAddRowColumn'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -132,31 +137,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   }),
   DetailsSummary,
   DetailsContent,
-  // Link.extend({
-  //   addAttributes() {
-  //     return {
-  //       href: {
-  //         default: null
-  //       },
-  //       'data-sveltekit-reload': {
-  //         default: true
-  //       },
-  //       protocols: ['surf'],
-  //       target: {
-  //         default: null,
-  //         renderHTML: () => {
-  //           return {
-  //             target:
-  //               window.location.origin.includes('deta.space') ||
-  //               window.location.origin.includes('localhost')
-  //                 ? '_self'
-  //                 : '_blank'
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  // }),
+  Table.configure({
+    resizable: true
+  }),
+  TableRow,
+  TableHeader,
+  TableCell,
+  TableAddRowColumn,
   Button.configure({
     onClick: opts?.buttonClick
   }),
@@ -289,7 +276,6 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       return [plugin]
     }
   })
-  // Markdown,
 ]
 
 const extensions = createEditorExtensions()

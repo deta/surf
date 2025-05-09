@@ -158,35 +158,35 @@
         </div>
       </Tooltip.Content>
     </Tooltip.Root>
-      <Tooltip.Root openDelay={400} closeDelay={10}>
-        <Tooltip.Trigger>
-          <AppBarButton
-            class="group  {!canReload ? 'opacity-30 cursor-not-allowed' : ''}"
-            disabled={!canReload}
-            on:click={() => dispatch('reload')}
-          >
-            <span class="group-hover:!rotate-180 ease-in-out duration-200">
-              <Icon name="reload" />
-            </span>
-          </AppBarButton>
-        </Tooltip.Trigger>
-        <Tooltip.Content
-          transition={flyAndScale}
-          transitionConfig={{ y: 8, duration: 150 }}
-          sideOffset={8}
+    <Tooltip.Root openDelay={400} closeDelay={10}>
+      <Tooltip.Trigger>
+        <AppBarButton
+          class="group  {!canReload ? 'opacity-30 cursor-not-allowed' : ''}"
+          disabled={!canReload}
+          on:click={() => dispatch('reload')}
         >
-          <div class="bg-gray-100 dark:bg-gray-800">
-            <Tooltip.Arrow
-              class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
-            />
-          </div>
-          <div
-            class="custom-button-color flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
-          >
-            Reload Page (⌘ + R)
-          </div>
-        </Tooltip.Content>
-      </Tooltip.Root>
+          <span class="group-hover:!rotate-180 ease-in-out duration-200">
+            <Icon name="reload" />
+          </span>
+        </AppBarButton>
+      </Tooltip.Trigger>
+      <Tooltip.Content
+        transition={flyAndScale}
+        transitionConfig={{ y: 8, duration: 150 }}
+        sideOffset={8}
+      >
+        <div class="bg-gray-100 dark:bg-gray-800">
+          <Tooltip.Arrow
+            class="rounded-[2px] border-l border-t border-gray-200 dark:border-gray-700"
+          />
+        </div>
+        <div
+          class="custom-button-color flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+        >
+          Reload Page (⌘ + R)
+        </div>
+      </Tooltip.Content>
+    </Tooltip.Root>
     {#if horizontalTabs}
       <ExtensionBrowserActions on:open-extension-store />
     {/if}

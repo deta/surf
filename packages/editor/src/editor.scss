@@ -59,7 +59,7 @@
       margin: 0 3px;
 
       &::marker {
-        color: #373530cc !important;
+        color: var(--color-text-muted) !important;
       }
     }
   }
@@ -70,6 +70,26 @@
       color: #373530cc;
     }
   }
+}
+
+.dark .editor {
+  --color-text: #e8e6e3;
+  --color-text-muted: #a1a1a1;
+  --color-text-secondary: #4d4b4d;
+  --color-menu: #e8e6e3;
+  --color-menu-muted: #696969;
+  --color-link: #d52b7d;
+  --color-link-muted: #ac1a61;
+  --color-brand: #b7065c;
+  --color-brand-muted: #b7065cba;
+  --color-brand-dark: #ff4fa4;
+  --background: #161616;
+  --background-menu: #2e2e2e;
+  --background-menu-muted: #353535;
+}
+
+.dark .tiptap .details > button::before {
+  background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m9 6 6 6-6 6' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E");
 }
 
 body.custom .editor {
@@ -379,7 +399,7 @@ body.custom .editor {
         // chevron icon svg
         --size: 1.25em;
         content: '';
-        background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m9 6 6 6-6 6' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m9 6 6 6-6 6' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E");
         background-size: var(--size) var(--size);  /* Increased from 1em */
         background-repeat: no-repeat;
         background-position: center;
@@ -417,6 +437,112 @@ body.custom .editor {
     }
   }
 
+  /* Table-specific styling */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+    overflow: hidden;
+    table-layout: fixed;
+    width: 100%;
+    border-radius: 8px;
+
+    td,
+    th {
+      border: 1px solid var(--background-menu-muted);
+      box-sizing: border-box;
+      min-width: 1em;
+      padding: 6px 8px;
+      position: relative;
+      vertical-align: top;
+      border-left: 0;
+      border-top: 0;
+
+      > * {
+        margin-bottom: 0;
+      }
+    }
+
+    td:has(.column-resize-handle) {
+      border-left: 0px solid var(--background-menu-muted);
+    }
+
+    th {
+      background-color: var(--background-menu);
+      font-weight: bold;
+      text-align: left;
+      border-top: 1px solid var(--background-menu-muted);
+    }
+
+    tr {
+      th:first-child, td:first-child {
+        border-left: 1px solid var(--background-menu-muted);
+      }
+    }
+
+    tr:first-child {
+      border-top: 1px solid var(--background-menu-muted);
+      border-left: 1px solid var(--background-menu-muted);
+    }
+
+    /* Rounded corners for the first row */
+    tr:first-child th:first-child {
+      border-top-left-radius: 8px;
+    }
+
+    tr:first-child th:last-child,
+    tr:first-child td:last-child {
+      border-top-right-radius: 8px;
+    }
+
+    /* Rounded corners for the last row */
+    tr:last-child td:first-child {
+      border-bottom-left-radius: 8px;
+    }
+
+    tr:last-child td:last-child {
+      border-bottom-right-radius: 8px;
+    }
+
+    .selectedCell:after {
+      background: rgba(4, 104, 255, 0.1);
+      content: "";
+      left: 0; right: 0; top: 0; bottom: 0;
+      pointer-events: none;
+      position: absolute;
+      z-index: 2;
+    }
+
+    .column-resize-handle {
+      background-color: var(--color-brand-dark);
+      bottom: -1px;
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      opacity: 0.75;
+    }
+
+    th .column-resize-handle {
+      width: 4px;
+      right: -2px;
+    }
+
+    td .column-resize-handle {
+      width: 3px;
+      right: -1px;
+    }
+  }
+
+  .tableWrapper {
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  &.resize-cursor {
+    cursor: ew-resize;
+    cursor: col-resize;
+  }
+
   output {
     display: inline-block;
     width: 100%;
@@ -446,6 +572,30 @@ body.custom .editor {
       white-space: normal;
 
     }
+  }
+
+  .table-add-row-column-container {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+  }
+
+  /* Table add buttons styling */
+  .table-add-button {
+    position: absolute;
+    z-index: 50;
+  }
+
+  .table-add-button.row {
+    cursor: row-resize;
+  }
+  
+  .table-add-button.column {
+    cursor: col-resize;
   }
 
 }
