@@ -933,28 +933,23 @@ export class OasisService {
       const selectedFilterType = get(this.selectedFilterType)
 
       this.log.debug('loading everything', selectedFilterType, { excludeAnnotations })
-      const resources = (
-        await this.resourceManager.listResourcesByTags(
-          [
-            ResourceManager.SearchTagDeleted(false),
-            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-            ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
-            ...conditionalArrayItem(
-              excludeAnnotations,
-              ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
-            ),
-            ...conditionalArrayItem(
-              get(this.selectedSpace) === 'notes',
-              ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-            )
-          ],
-          { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }
-        )
-      ).filter(
-        (resource) =>
-          !(resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE && !resource.metadata?.name)
+      const resources = await this.resourceManager.listResourcesByTags(
+        [
+          ResourceManager.SearchTagDeleted(false),
+          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
+          ...conditionalArrayItem(
+            excludeAnnotations,
+            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+          ),
+          ...conditionalArrayItem(
+            get(this.selectedSpace) === 'notes',
+            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          )
+        ],
+        { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }
       )
 
       this.log.debug('Loaded everything:', resources)

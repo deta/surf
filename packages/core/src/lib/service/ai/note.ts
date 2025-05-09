@@ -1,4 +1,9 @@
-import { useDebounce, useLocalStorageStore, useLogScope } from '@horizon/utils'
+import {
+  conditionalArrayItem,
+  useDebounce,
+  useLocalStorageStore,
+  useLogScope
+} from '@horizon/utils'
 
 import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
 import type { AIChat, AIService } from './ai'
@@ -128,12 +133,50 @@ export class SmartNote {
     this.telemetry.trackUpdateNote()
   }, 1000)
 
+  /**
+   * Makes sure the note is visible in stuff if it was previously empty
+   * Also adds it to the active context if it's enabled
+   */
+  private async checkAndSurfaceEmptyNote(newData: { title?: string; content?: string } = {}) {
+    const oldData = {
+      title: this.titleValue,
+      content: this.contentValue
+    }
+
+    const titleAdded = !oldData.title && newData.title
+    const contentAdded = !oldData.content && newData.content
+
+    if (titleAdded || contentAdded) {
+      this.log.debug('Note is no longer empty, removing hide tag and adding to active context')
+
+      await this.resourceManager.deleteResourceTag(
+        this.resource.id,
+        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+      )
+
+      const currentSpaceId = this.ai.tabsManager.activeScopeIdValue
+      const saveToActiveContext = this.ai.config.settingsValue.save_to_active_context
+
+      if (currentSpaceId && saveToActiveContext) {
+        await this.ai.oasis.addResourcesToSpace(
+          currentSpaceId,
+          [this.resource.id],
+          SpaceEntryOrigin.ManuallyAdded
+        )
+      }
+    }
+  }
+
   async saveContent(value: string) {
     const newHash = generateContentHash(value)
 
     if (newHash === this.contentHashValue) {
       this.log.debug('content hash has not changed, skipping save')
       return
+    }
+
+    if (value) {
+      await this.checkAndSurfaceEmptyNote({ content: value })
     }
 
     this.log.debug('saving content', value.length)
@@ -146,6 +189,11 @@ export class SmartNote {
 
   async updateTitle(name: string) {
     this.log.debug('Updating title', name)
+
+    if (name) {
+      await this.checkAndSurfaceEmptyNote({ title: name })
+    }
+
     this.title.set(name)
     await this.resourceManager.updateResourceMetadata(this.resource.id, { name })
   }
@@ -480,12 +528,14 @@ export class SmartNoteManager {
       reuseContext: opts?.reuseContext ?? true
     }
 
+    const isEmpty = !name && !content
+
     const resource = await this.resourceManager.createResourceNote(
       content ?? '',
       {
         name: name
       },
-      [ResourceTag.chat()]
+      [ResourceTag.chat(), ...conditionalArrayItem(isEmpty, ResourceTag.hideInEverything())]
     )
 
     const note = this.convertResourceToNote(resource)
@@ -494,7 +544,7 @@ export class SmartNoteManager {
     const currentSpaceId = this.ai.tabsManager.activeScopeIdValue
     const saveToActiveContext = this.ai.config.settingsValue.save_to_active_context
 
-    if (currentSpaceId && saveToActiveContext) {
+    if (currentSpaceId && saveToActiveContext && !isEmpty) {
       await this.ai.oasis.addResourcesToSpace(
         currentSpaceId,
         [resource.id],
