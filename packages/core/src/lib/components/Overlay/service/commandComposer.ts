@@ -79,7 +79,7 @@ export class CommandComposer {
       { name: 'value', weight: 0.4 },
       { name: 'type', weight: 0.1 }
     ],
-    threshold: 0.7,
+    threshold: 0.2,
     includeScore: true
   }
 
@@ -220,8 +220,8 @@ export class CommandComposer {
         !get(this.isFetchingHostnameHistoryEntriesResults) && this.fetchHostnameEntries(value),
         !get(this.isFetchingTabEntryResults) && this.fetchTabEntries(value),
         !get(this.isFilteringCommandItems) && this.filterBrowserCommands(value),
-        !get(this.isFilteringBrowserCommands) && this.filterBrowserCommands(value),
-        !get(this.isFetchingOasisSearchResults) && this.fetchOasisResults(value)
+        !get(this.isFilteringBrowserCommands) && this.filterBrowserCommands(value)
+        //!get(this.isFetchingOasisSearchResults) && this.fetchOasisResults(value)
       ].filter(Boolean)
 
       await Promise.all(tasks)
@@ -332,7 +332,7 @@ export class CommandComposer {
       )
       this.log.debug('Fetched history entries:', entries)
 
-      this.historyEntriesResults.set(entries.slice(0, 10))
+      this.historyEntriesResults.set(entries.slice(0, 5))
 
       const filteredEntries = get(this.historyEntriesResults).filter(
         (entry: HistoryEntry) =>
