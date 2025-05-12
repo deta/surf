@@ -463,44 +463,6 @@ export const notesOnboardingTimeline: OnboardingTimeline = {
       zIndex: 1000
     },
     {
-      target: '#notes.onboarding.8',
-      headline: 'Chat with PDFs',
-      content: "Surf lets you chat with PDFs directly. Let's try it with a research paper on AI.",
-      domTarget: 'sidebar-right',
-      domAnchor: 'sidebar-right',
-      domRoot: 'body',
-      position: {
-        vertical: 'top',
-        horizontal: 'left',
-        offsetX: -440,
-        offsetY: 100
-      },
-      nextButtonLabel: 'Open the PDF',
-      prevButtonLabel: 'Back',
-      actions: [OnboardingAction.OpenPDF],
-      mediaID: 'chat.pdf',
-      mediaType: 'image',
-      zIndex: 1000
-    },
-    {
-      target: '#notes.onboarding.9',
-      headline: 'PDF Loaded',
-      content:
-        'Great! The PDF is now loaded and Surf is analyzing the content. You can see how Surf processes the document and provides valuable insights.',
-      domTarget: 'chat-input',
-      domRoot: 'body',
-      domAnchor: 'sidebar-right',
-      position: {
-        vertical: 'bottom',
-        horizontal: 'left',
-        offsetX: -440,
-        offsetY: -300
-      },
-      nextButtonLabel: 'Next',
-      prevButtonLabel: 'Back',
-      zIndex: 1000
-    },
-    {
       target: '#notes.onboarding.10',
       headline: 'Create a Surflet',
       content:
