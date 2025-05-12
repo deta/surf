@@ -245,10 +245,6 @@ Bottom: ${Math.round(position.bottom)}`
           return null
         }
 
-        // Log raw coords in debug mode
-        log.debug('Raw coordsAtPos:', coords)
-        log.debug('Editor rect:', editorRect)
-
         // Add margins from the editor to the caret position
         const computedStyle = window.getComputedStyle(editorDOM)
         const marginLeft = parseFloat(computedStyle.marginLeft) || 0
