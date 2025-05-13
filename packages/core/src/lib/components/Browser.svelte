@@ -4120,71 +4120,66 @@
   on:highlightWebviewText={highlightWebviewText}
 />
 
-<!-- {#if $showNewTabOverlay == 1} -->
-<div
-  class="teletype-motion fixed bottom-0 left-0 right-0 z-[5001] h-[1px]"
-  use:springVisibility={{
-    visible: $showNewTabOverlay == 1
-  }}
->
-  <TeletypeEntry
-    open={$showNewTabOverlay == 1}
-    on:close={() => {
-      showNewTabOverlay.set(0)
-    }}
-    on:ask={handleCreateChatWithQuery}
-    on:open-url={(e) => {
-      tabsManager.addPageTab(e.detail, {
-        active: true,
-        trigger: CreateTabEventTrigger.AddressBar
-      })
-    }}
-    on:open-url-in-minibrowser={openURLDetailsModal}
-    on:open-resource-in-minibrowser={(e) =>
-      openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.CommandMenu)}
-    on:reload={() => {
-      $activeBrowserTab?.reload()
-    }}
-    on:zoom-in={() => {
-      $activeBrowserTab?.zoomIn()
-    }}
-    on:zoom-out={() => {
-      $activeBrowserTab?.zoomOut()
-    }}
-    on:reset-zoom={() => {
-      $activeBrowserTab?.resetZoom()
-    }}
-    on:toggle-sidebar={() => changeLeftSidebarState()}
-    on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
-    on:create-note={() => createNewNote(EventContext.CommandMenu)}
-    on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.CommandMenu)}
-    on:toggle-bookmark={() =>
-      handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
-    on:show-history-tab={handleCreateHistoryTab}
-    on:create-new-space={handleOpenCreateSpaceMenu}
-    on:open-chat-with-tab={handleOpenTabChat}
-    on:open-space-and-chat={handleOpenSpaceAndChat}
-    on:open-space={async (e) => {
-      const space = e.detail
-      showNewTabOverlay.set(2)
-      await tick()
+{#if $showNewTabOverlay == 1}
+  <div class="teletype-motion fixed bottom-0 left-0 right-0 z-[5001] h-[1px]">
+    <TeletypeEntry
+      open={$showNewTabOverlay == 1}
+      on:close={() => {
+        showNewTabOverlay.set(0)
+      }}
+      on:ask={handleCreateChatWithQuery}
+      on:open-url={(e) => {
+        tabsManager.addPageTab(e.detail, {
+          active: true,
+          trigger: CreateTabEventTrigger.AddressBar
+        })
+      }}
+      on:open-url-in-minibrowser={openURLDetailsModal}
+      on:open-resource-in-minibrowser={(e) =>
+        openResourceDetailsModal(e.detail, OpenInMiniBrowserEventFrom.CommandMenu)}
+      on:reload={() => {
+        $activeBrowserTab?.reload()
+      }}
+      on:zoom-in={() => {
+        $activeBrowserTab?.zoomIn()
+      }}
+      on:zoom-out={() => {
+        $activeBrowserTab?.zoomOut()
+      }}
+      on:reset-zoom={() => {
+        $activeBrowserTab?.resetZoom()
+      }}
+      on:toggle-sidebar={() => changeLeftSidebarState()}
+      on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
+      on:create-note={() => createNewNote(EventContext.CommandMenu)}
+      on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.CommandMenu)}
+      on:toggle-bookmark={() =>
+        handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
+      on:show-history-tab={handleCreateHistoryTab}
+      on:create-new-space={handleOpenCreateSpaceMenu}
+      on:open-chat-with-tab={handleOpenTabChat}
+      on:open-space-and-chat={handleOpenSpaceAndChat}
+      on:open-space={async (e) => {
+        const space = e.detail
+        showNewTabOverlay.set(2)
+        await tick()
 
-      newTabSelectedSpaceId.set(space.id)
-    }}
-    on:open-stuff={async (e) => {
-      const searchValue = e.detail
-      selectedSpace.set(oasis.defaultSpaceID)
-      updateSearchValue.set(searchValue)
-      await tick()
-      showNewTabOverlay.set(2)
-    }}
-    on:openScreenshot={() => {
-      showNewTabOverlay.set(0)
-      openScreenshotPicker()
-    }}
-  />
-</div>
-<!-- {/if} -->
+        newTabSelectedSpaceId.set(space.id)
+      }}
+      on:open-stuff={async (e) => {
+        const searchValue = e.detail
+        selectedSpace.set(oasis.defaultSpaceID)
+        updateSearchValue.set(searchValue)
+        await tick()
+        showNewTabOverlay.set(2)
+      }}
+      on:openScreenshot={() => {
+        showNewTabOverlay.set(0)
+        openScreenshotPicker()
+      }}
+    />
+  </div>
+{/if}
 
 <div
   id="app-contents"

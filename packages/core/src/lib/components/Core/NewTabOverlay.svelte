@@ -873,12 +873,7 @@
     on:click={handleCloseOverlay}
   ></div>
 {/if}
-<div
-  class="stuff-motion-wrapper relative z-[100000000]"
-  use:springAppear={{
-    visible: $showTabSearch === 2
-  }}
->
+<div class="stuff-motion-wrapper relative z-[100000000]">
   <div
     id="drawer"
     bind:this={stuffWrapperRef}
@@ -995,36 +990,32 @@
           <Tooltip rootID="stuff" />
 
           {#if !$isBuiltInSpace}
-            {#await new Promise((resolve) => setTimeout(resolve, 175))}
-              <!-- wait -->
-            {:then}
-              {#key $selectedSpaceId}
-                <OasisSpaceRenderer
-                  bind:this={oasisSpace}
-                  spaceId={$selectedSpaceId}
-                  active
-                  handleEventsOutside
-                  insideDrawer
-                  on:open={handleOpen}
-                  on:open-and-chat
-                  on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                  on:go-back={() => oasis.changeSelectedSpace(oasis.defaultSpaceID)}
-                  on:deleted={handleSpaceDeleted}
-                  on:updated-space={handleUpdatedSpace}
-                  on:creating-new-space={handleCreatingNewSpace}
-                  on:done-creating-new-space={handleDoneCreatingNewSpace}
-                  on:select-space={handleSpaceSelected}
-                  on:batch-open
-                  on:batch-remove={handleResourceRemove}
-                  on:handled-drop={handlePostDropOnSpace}
-                  on:created-space={handleCreatedSpace}
-                  on:close={closeOverlay}
-                  on:seekToTimestamp
-                  on:highlightWebviewText
-                  on:open-space-and-chat
-                />
-              {/key}
-            {/await}
+            {#key $selectedSpaceId}
+              <OasisSpaceRenderer
+                bind:this={oasisSpace}
+                spaceId={$selectedSpaceId}
+                active
+                handleEventsOutside
+                insideDrawer
+                on:open={handleOpen}
+                on:open-and-chat
+                on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                on:go-back={() => oasis.changeSelectedSpace(oasis.defaultSpaceID)}
+                on:deleted={handleSpaceDeleted}
+                on:updated-space={handleUpdatedSpace}
+                on:creating-new-space={handleCreatingNewSpace}
+                on:done-creating-new-space={handleDoneCreatingNewSpace}
+                on:select-space={handleSpaceSelected}
+                on:batch-open
+                on:batch-remove={handleResourceRemove}
+                on:handled-drop={handlePostDropOnSpace}
+                on:created-space={handleCreatedSpace}
+                on:close={closeOverlay}
+                on:seekToTimestamp
+                on:highlightWebviewText
+                on:open-space-and-chat
+              />
+            {/key}
           {:else}
             <DropWrapper
               {spaceId}
@@ -1045,147 +1036,143 @@
               zonePrefix="drawer-"
             >
               <LazyScroll items={renderContents} let:renderedItems>
-                {#await new Promise((resolve) => setTimeout(resolve, 175))}
-                  <!-- wait -->
-                {:then}
-                  {#key $selectedSpaceId}
-                    <!--
+                {#key $selectedSpaceId}
+                  <!--
                         TODO: Needs extended api
                         on:changedSortBy={handleSortBySettingsChanged}
                         on:changedOrder={handleOrderSettingsChanged}
                       -->
 
-                    <OasisSpaceNavbar {searchValue}>
-                      <svelte:fragment slot="left">
-                        <Icon
-                          name={isInboxSpace
-                            ? inboxContext.icon
-                            : isNotesSpace
-                              ? notesContext.icon
-                              : everythingContext.icon}
-                          size="1.4rem"
-                          color="currentColor"
-                          style="color: currentColor;"
-                        />
-
-                        <span class="context-name"
-                          >{isInboxSpace
-                            ? inboxContext.label
-                            : isNotesSpace
-                              ? notesContext.label
-                              : everythingContext.label}</span
-                        >
-                      </svelte:fragment>
-                      <svelte:fragment slot="right">
-                        {#if isInboxSpace}
-                          <button
-                            use:tooltip={{
-                              position: 'left',
-                              text:
-                                $searchValue.length > 0
-                                  ? 'Create new chat with this context'
-                                  : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
-                            }}
-                            class="chat-with-space pointer-all"
-                            class:activated={$searchValue.length > 0}
-                            on:click={() => handleChatWithSpace('inbox')}
-                          >
-                            <Icon name="face" size="1.6em" />
-
-                            <div class="chat-text">Ask Context</div>
-                          </button>
-                        {/if}
-                        {#if $isBuiltInSpace && !!$searchValue}
-                          <Select {selectedFilter} on:change={handleOasisFilterChange}>
-                            <option value="all">Show All</option>
-                            <option value="saved_by_user">Saved by Me</option>
-                          </Select>
-                        {/if}
-                      </svelte:fragment>
-                      <svelte:fragment slot="right-dynamic">
-                        <SpaceFilterViewButtons
-                          hideSortingSettings
-                          filter={$selectedFilterTypeId ?? null}
-                          viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                            ?.viewType}
-                          viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                            ?.viewDensity}
-                          sortBy={'resource_added_to_space'}
-                          order={'desc'}
-                          on:changedView={handleViewSettingsChanges}
-                          on:changedFilter={handleFilterTypeChange}
-                        />
-                      </svelte:fragment>
-                    </OasisSpaceNavbar>
-
-                    <ContextHeader
-                      headline={isInboxSpace
-                        ? inboxContext.label
-                        : isNotesSpace
-                          ? notesContext.label
-                          : everythingContext.label}
-                      description={isInboxSpace
-                        ? inboxContext.description
-                        : isNotesSpace
-                          ? notesContext.description
-                          : everythingContext.description}
-                      headlineEditable={false}
-                      descriptionEditable={false}
-                    >
-                      <svelte:fragment slot="icon">
-                        <Icon
-                          name={isInboxSpace
-                            ? inboxContext.icon
-                            : isNotesSpace
-                              ? notesContext.icon
-                              : everythingContext.icon}
-                          size="xl"
-                          color="currentColor"
-                          style="color: currentColor;"
-                        />
-                      </svelte:fragment>
-                    </ContextHeader>
-
-                    {#if isInboxSpace}
-                      <ContextTabsBar
-                        on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                        on:handled-drop={handlePostDropOnSpace}
-                        on:select-space={handleSpaceSelected}
-                        on:reload={handleReload}
+                  <OasisSpaceNavbar {searchValue}>
+                    <svelte:fragment slot="left">
+                      <Icon
+                        name={isInboxSpace
+                          ? inboxContext.icon
+                          : isNotesSpace
+                            ? notesContext.icon
+                            : everythingContext.icon}
+                        size="1.4rem"
+                        color="currentColor"
+                        style="color: currentColor;"
                       />
-                    {/if}
 
-                    <OasisResourcesView
-                      resources={renderedItems}
-                      {searchValue}
-                      isInSpace={false}
-                      status={$loadingContents
-                        ? { icon: 'spinner', message: 'Loading contents…' }
-                        : $isSearching && $searchValue?.length > 0
-                          ? { icon: 'spinner', message: 'Searching your stuff…' }
-                          : undefined}
-                      viewType={$builtInSpacesViewSettings[
-                        isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
-                      ]?.viewType}
-                      viewDensity={$builtInSpacesViewSettings[
-                        isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
-                      ]?.viewDensity}
-                      hideSortingSettings
-                      hideFilterSettings={isNotesSpace}
-                      on:click={handleItemClick}
-                      on:open={(e) => handleOpen(e, true)}
-                      on:open-and-chat
-                      on:open-space-as-tab
-                      on:remove={handleResourceRemove}
-                      on:batch-remove={handleResourceRemove}
-                      on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-                      on:batch-open
-                      on:new-tab
-                      on:changedView={handleViewSettingsChanges}
-                      on:changedFilter={handleFilterTypeChange}
+                      <span class="context-name"
+                        >{isInboxSpace
+                          ? inboxContext.label
+                          : isNotesSpace
+                            ? notesContext.label
+                            : everythingContext.label}</span
+                      >
+                    </svelte:fragment>
+                    <svelte:fragment slot="right">
+                      {#if isInboxSpace}
+                        <button
+                          use:tooltip={{
+                            position: 'left',
+                            text:
+                              $searchValue.length > 0
+                                ? 'Create new chat with this context'
+                                : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                          }}
+                          class="chat-with-space pointer-all"
+                          class:activated={$searchValue.length > 0}
+                          on:click={() => handleChatWithSpace('inbox')}
+                        >
+                          <Icon name="face" size="1.6em" />
+
+                          <div class="chat-text">Ask Context</div>
+                        </button>
+                      {/if}
+                      {#if $isBuiltInSpace && !!$searchValue}
+                        <Select {selectedFilter} on:change={handleOasisFilterChange}>
+                          <option value="all">Show All</option>
+                          <option value="saved_by_user">Saved by Me</option>
+                        </Select>
+                      {/if}
+                    </svelte:fragment>
+                    <svelte:fragment slot="right-dynamic">
+                      <SpaceFilterViewButtons
+                        hideSortingSettings
+                        filter={$selectedFilterTypeId ?? null}
+                        viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                          ?.viewType}
+                        viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                          ?.viewDensity}
+                        sortBy={'resource_added_to_space'}
+                        order={'desc'}
+                        on:changedView={handleViewSettingsChanges}
+                        on:changedFilter={handleFilterTypeChange}
+                      />
+                    </svelte:fragment>
+                  </OasisSpaceNavbar>
+
+                  <ContextHeader
+                    headline={isInboxSpace
+                      ? inboxContext.label
+                      : isNotesSpace
+                        ? notesContext.label
+                        : everythingContext.label}
+                    description={isInboxSpace
+                      ? inboxContext.description
+                      : isNotesSpace
+                        ? notesContext.description
+                        : everythingContext.description}
+                    headlineEditable={false}
+                    descriptionEditable={false}
+                  >
+                    <svelte:fragment slot="icon">
+                      <Icon
+                        name={isInboxSpace
+                          ? inboxContext.icon
+                          : isNotesSpace
+                            ? notesContext.icon
+                            : everythingContext.icon}
+                        size="xl"
+                        color="currentColor"
+                        style="color: currentColor;"
+                      />
+                    </svelte:fragment>
+                  </ContextHeader>
+
+                  {#if isInboxSpace}
+                    <ContextTabsBar
+                      on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                      on:handled-drop={handlePostDropOnSpace}
+                      on:select-space={handleSpaceSelected}
+                      on:reload={handleReload}
                     />
-                  {/key}
-                {/await}
+                  {/if}
+
+                  <OasisResourcesView
+                    resources={renderedItems}
+                    {searchValue}
+                    isInSpace={false}
+                    status={$loadingContents
+                      ? { icon: 'spinner', message: 'Loading contents…' }
+                      : $isSearching && $searchValue?.length > 0
+                        ? { icon: 'spinner', message: 'Searching your stuff…' }
+                        : undefined}
+                    viewType={$builtInSpacesViewSettings[
+                      isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
+                    ]?.viewType}
+                    viewDensity={$builtInSpacesViewSettings[
+                      isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
+                    ]?.viewDensity}
+                    hideSortingSettings
+                    hideFilterSettings={isNotesSpace}
+                    on:click={handleItemClick}
+                    on:open={(e) => handleOpen(e, true)}
+                    on:open-and-chat
+                    on:open-space-as-tab
+                    on:remove={handleResourceRemove}
+                    on:batch-remove={handleResourceRemove}
+                    on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+                    on:batch-open
+                    on:new-tab
+                    on:changedView={handleViewSettingsChanges}
+                    on:changedFilter={handleFilterTypeChange}
+                  />
+                {/key}
               </LazyScroll>
             </DropWrapper>
           {/if}
@@ -1331,22 +1318,23 @@
       height: 100px;
     }
 
-    box-shadow:
-      inset 0px 1px 1px -1px white,
-      inset 0px -1px 1px -1px white,
-      inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
-      0px 0px 89px 0px rgba(0, 0, 0, 0.18),
-      0px 4px 18px 0px rgba(0, 0, 0, 0.18),
-      0px 1px 1px 0px rgba(126, 168, 240, 0.3),
-      0px 4px 4px 0px rgba(126, 168, 240, 0.15);
-    box-shadow:
-      inset 0px 1px 4px -1px white,
-      inset 0px -1px 1p2 0 white,
-      inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
-      0px 0px 89px 0px color(display-p3 0 0 0 / 0.18),
-      0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
-      0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
-      0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
+    // NOTE: Didnt seem to visually change anything perf nuked
+    //box-shadow:
+    //  inset 0px 1px 1px -1px white,
+    //  inset 0px -1px 1px -1px white,
+    //  inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
+    //  0px 0px 89px 0px rgba(0, 0, 0, 0.18),
+    //  0px 4px 18px 0px rgba(0, 0, 0, 0.18),
+    //  0px 1px 1px 0px rgba(126, 168, 240, 0.3),
+    //  0px 4px 4px 0px rgba(126, 168, 240, 0.15);
+    //box-shadow:
+    //  inset 0px 1px 4px -1px white,
+    //  inset 0px -1px 1p2 0 white,
+    //  inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
+    //  0px 0px 89px 0px color(display-p3 0 0 0 / 0.18),
+    //  0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
+    //  0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
+    //  0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
 
     > .drawer-content {
       position: relative;
@@ -1358,6 +1346,7 @@
       max-height: min(95vh, 1400px);
       overflow: hidden !important;
       border-radius: 24px 24px 16px 16px;
+
       @apply bg-white dark:bg-gray-700;
       display: flex;
     }
