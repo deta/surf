@@ -26,6 +26,10 @@ impl Worker {
         self.db.get_space(space_id)
     }
 
+    pub fn search_spaces(&self, query: &str) -> BackendResult<Vec<Space>> {
+        self.db.search_spaces(query)
+    }
+
     pub fn list_spaces(&self) -> BackendResult<Vec<Space>> {
         self.db.list_spaces()
     }
@@ -104,6 +108,10 @@ pub fn handle_space_message(
         }
         SpaceMessage::GetSpace(space_id) => {
             let result = worker.get_space(&space_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        SpaceMessage::SearchSpace { query } => {
+            let result = worker.search_spaces(&query);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         SpaceMessage::ListSpaces => {

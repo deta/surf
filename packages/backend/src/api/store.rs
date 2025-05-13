@@ -68,6 +68,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_create_space", js_create_space)?;
     cx.export_function("js__store_get_space", js_get_space)?;
     cx.export_function("js__store_list_spaces", js_list_spaces)?;
+    cx.export_function("js__store_search_spaces", js_search_spaces)?;
     cx.export_function("js__store_update_space", js_update_space)?;
     cx.export_function("js__store_delete_space", js_delete_space)?;
     cx.export_function("js__store_create_space_entries", js_create_space_entries)?;
@@ -118,6 +119,19 @@ fn js_list_spaces(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::SpaceMessage(SpaceMessage::ListSpaces),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_search_spaces(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let query = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::SearchSpace { query }),
         deferred,
     );
 

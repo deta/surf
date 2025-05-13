@@ -61,6 +61,9 @@ pub enum SpaceMessage {
     },
     GetSpace(String),
     ListSpaces,
+    SearchSpace {
+        query: String,
+    },
     UpdateSpace {
         space_id: String,
         name: String,

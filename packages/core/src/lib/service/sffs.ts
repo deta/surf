@@ -514,6 +514,18 @@ export class SFFS {
     return spaces.map((space) => this.convertRawSpaceToSpace(space))
   }
 
+  async searchSpaces(query: string) {
+    this.log.debug('searching spaces with query', query)
+    const raw = await this.backend.js__store_search_spaces(query)
+    const spaces = this.parseData<any[]>(raw)
+
+    if (!spaces) {
+      return []
+    }
+
+    return spaces.map((space) => this.convertRawSpaceToSpace(space))
+  }
+
   async updateSpace(spaceId: string, name: SpaceData) {
     this.log.debug('updating space', spaceId, name)
     const rawName = JSON.stringify(name)
