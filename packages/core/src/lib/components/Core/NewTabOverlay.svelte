@@ -1308,15 +1308,15 @@
       translate 100ms ease-out,
       transform 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
 
-    &::before {
-      content: '';
-      position: fixed;
-      background: transparent;
-      left: -100vw;
-      right: -100vw;
-      top: 100%;
-      height: 100px;
-    }
+    //&::before {
+    //  content: '';
+    //  position: fixed;
+    //  background: transparent;
+    //  left: -100vw;
+    //  right: -100vw;
+    //  top: 100%;
+    //  height: 100px;
+    //}
 
     // NOTE: Didnt seem to visually change anything perf nuked
     //box-shadow:
