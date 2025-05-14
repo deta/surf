@@ -13,7 +13,7 @@
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
-  import { Editor } from '@horizon/editor'
+  import ReadOnlyRichText from '@horizon/editor/src/lib/components/ReadOnlyRichText.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { ResourceTypes, WEB_RESOURCE_TYPES } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
@@ -325,12 +325,7 @@
                 />
               {:else}
                 <div class="editor-wrapper">
-                  <Editor
-                    content={truncate(content, MAX_CONTENT_LENGTH)}
-                    resourceComponent={EmbeddedResource}
-                    resourceComponentPreview
-                    readOnly
-                  />
+                  <ReadOnlyRichText content={truncate(content, MAX_CONTENT_LENGTH)} />
                 </div>
               {/if}
             {:else if contentType === 'html'}

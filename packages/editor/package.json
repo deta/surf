@@ -18,6 +18,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "dompurify": "^3.2.4",
     "@horizon/eslint-config": "*",
     "@horizon/icons": "*",
     "@horizon/typescript-config": "*",
