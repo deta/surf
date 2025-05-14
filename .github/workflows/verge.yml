@@ -73,7 +73,7 @@ jobs:
     needs: next-pro-max-version
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -140,7 +140,7 @@ jobs:
           yarn install --frozen-lockfile --network-timeout 300000
 
       - name: build for ${{ matrix.os }}
-        run: yarn build:desktop:${{ matrix.os == 'macos-latest' && 'mac:arm' || 'win:x64' }}
+        run: yarn build:desktop:${{ matrix.os == 'macos-latest' && 'mac:arm' || matrix.os == 'windows-latest' && 'win:x64' || 'lin:x64' }}
         env:
           APP_VERSION: ${{ needs.next-pro-max-version.outputs.version }}
           M_VITE_APP_VERSION: ${{ needs.next-pro-max-version.outputs.version }}
@@ -169,7 +169,7 @@ jobs:
           R_VITE_CHANGELOG_URL: ${{ secrets.CHANGELOG_URL }}/${{ needs.next-pro-max-version.outputs.version }}
           P_VITE_API_BASE: ${{ secrets.API_BASE }}
           M_VITE_API_BASE: ${{ secrets.API_BASE }}
-          M_VITE_APP_UPDATES_PROXY_URL: ${{ secrets.APP_UPDATES_PROXY_URL }}
+          M_VITE_APP_UPDATES_PROXY_URL: ${{ secrets.APP_UPDATES_PROXY_URL_VERGE }}
           M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
           M_VITE_APP_UPDATES_CHANNEL: surf-verge
 
