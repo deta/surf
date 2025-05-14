@@ -141,6 +141,7 @@
   import { openContextMenu } from '../../../Core/ContextMenu.svelte'
   import {
     createResourcesFromMediaItems,
+    processDrop,
     processPaste,
     type MediaParserResult
   } from '../../../../service/mediaImporter'
@@ -551,7 +552,7 @@
       ])
 
       for (const resource of newResources) {
-        if ($activeSpace) {
+        if ($activeSpace && $userSettings.save_to_active_context) {
           oasis.addResourcesToSpace($activeSpace.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
         }
         const editor = editorElem.getEditor()
@@ -579,49 +580,45 @@
       log.debug('dropped something at', position, 'is block', isBlock)
 
       if (drag.isNative) {
-        if (drag.dataTransfer?.getData('text/html')?.includes('<img ')) {
-          toast = toasts.loading('Embedding image…')
+        log.debug('dropped native', drag.event)
 
-          try {
-            let srcUrl = drag.dataTransfer?.getData('text/html').split('<img ')[1].split('src="')[1]
-            srcUrl = srcUrl.slice(0, srcUrl.indexOf('"'))
-            log.debug('fetching dropped image url: ', srcUrl)
+        const parsed = await processDrop(drag.event!)
+        log.debug('Parsed', parsed)
 
-            const blob = await window.api.fetchRemoteBlob(srcUrl)
-
-            const resource = await resourceManager.createResourceOther(
-              blob,
-              {
-                name: srcUrl,
-                sourceURI: srcUrl,
-                alt: srcUrl,
-                userContext: ''
-              },
-              [ResourceTag.dragBrowser()]
-            )
-
-            log.debug('Newly created image resource: ', resource)
-
-            if ($activeSpace) {
-              oasis.addResourcesToSpace(
-                $activeSpace.id,
-                [resource.id],
-                SpaceEntryOrigin.ManuallyAdded
-              )
-            }
-
-            await processDropResource(position, resource, isBlock)
-          } catch (error) {
-            log.error('Failed to embedd image: ', error)
-            toast.error('Failed to embedd image!')
-            drag.abort()
-            return
-          }
-
-          toast.success('Image embedded!')
-          drag.continue()
+        if (parsed.length <= 0) {
+          log.debug('No resources found in drop! Aborting drop!')
+          drag.abort()
           return
         }
+
+        toast = toasts.loading('Importing dropped items…')
+        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+          ResourceTag.dragLocal()
+        ])
+
+        log.debug('Resources', newResources)
+
+        if (newResources.length <= 0) {
+          log.warn('No resources created after drop! Aborting drop!')
+          toast?.error('Failed to import dropped items!')
+          drag.abort()
+          return
+        }
+
+        for (const resource of newResources) {
+          if ($activeSpace && $userSettings.save_to_active_context) {
+            oasis.addResourcesToSpace(
+              $activeSpace.id,
+              [resource.id],
+              SpaceEntryOrigin.ManuallyAdded
+            )
+          }
+
+          await processDropResource(position, resource, isBlock, { x: 0, y: 0 })
+        }
+
+        toast.success('Items imported!')
+        drag.continue()
       } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
         const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
         const tab = await tabsManager.get(tabId)
