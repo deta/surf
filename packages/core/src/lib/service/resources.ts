@@ -1321,6 +1321,40 @@ export class ResourceManager {
     await this.updateResource(resourceId, { created_at: new Date().toISOString() })
   }
 
+  async preventHiddenResourceFromAutodeletion(resourceOrId: ResourceObject | string) {
+    const resource =
+      typeof resourceOrId === 'string' ? await this.getResource(resourceOrId) : resourceOrId
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    const isSilent =
+      (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+      'true'
+    const isHideInEverything =
+      (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+        ?.value === 'true'
+
+    this.log.debug('preventing resource from autodeletion', resource, {
+      isSilent,
+      isHideInEverything
+    })
+
+    if (isSilent) {
+      this.log.debug('Removing silent tag from resource')
+      await this.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+
+      if (!isHideInEverything) {
+        this.log.debug('Adding hide in everything tag to resource')
+        await this.createResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING,
+          'true'
+        )
+      }
+    }
+  }
+
   async createResourceNote(
     content: string,
     metadata?: Partial<SFFSResourceMetadata>,

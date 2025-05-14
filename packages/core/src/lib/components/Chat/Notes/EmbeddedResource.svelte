@@ -21,6 +21,7 @@
   const resourceManager = useResourceManager()
 
   let resource: Resource | null = null
+  let loading: boolean = true
 
   $: generatedResource = (resource?.tags ?? []).some(
     (tag) => tag.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION && tag.value === 'generated'
@@ -36,8 +37,14 @@
   $: hidePreview = preview || !expanded
 
   onMount(async () => {
-    resource = await resourceManager.getResource(id)
-    log.debug('Resource:', resource, preview, expanded)
+    try {
+      resource = await resourceManager.getResource(id)
+      log.debug('Resource:', resource, preview, expanded)
+    } catch (error) {
+      log.error('Error loading resource:', error)
+    } finally {
+      loading = false
+    }
   })
 </script>
 
@@ -86,10 +93,15 @@
   {:else}
     <OasisResourceLoader resourceOrId={resource} />
   {/if}
-{:else}
+{:else if loading}
   <div class="loading">
     <Icon name="spinner" />
     Loading...
+  </div>
+{:else}
+  <div class="loading">
+    <Icon name="alert-triangle" />
+    Embedded resource not found
   </div>
 {/if}
 

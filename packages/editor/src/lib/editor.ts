@@ -25,6 +25,7 @@ import Table from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
+import UniqueID from '@tiptap-pro/extension-unique-id'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { all, createLowlight } from 'lowlight'
 
@@ -155,6 +156,27 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
 
       return opts?.placeholder ?? "Write something or type '/' for options…"
     }
+  }),
+  UniqueID.configure({
+    attributeName: 'uuid',
+    types: [
+      'heading',
+      'paragraph',
+      'resource',
+      'output',
+      'surflet',
+      'taskItem',
+      'taskList',
+      'blockquote',
+      'details',
+      'image',
+      'link',
+      'codeBlock',
+      'orderedList',
+      'bulletList',
+      'listItem',
+      'table'
+    ]
   }),
   ...conditionalArrayItem(
     !opts?.disableHashtag,

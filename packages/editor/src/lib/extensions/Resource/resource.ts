@@ -100,9 +100,11 @@ export const Resource = Node.create<ResourceOptions>({
   addNodeView() {
     return ({ node, editor }) => {
       const container = document.createElement('resource')
-      container.setAttribute('id', node.attrs.id)
-      container.setAttribute('data-type', node.attrs.type)
-      container.setAttribute('data-expanded', node.attrs.expanded === true ? 'true' : 'false')
+
+      // Set the HTML attributes
+      Object.entries(node.attrs).forEach(([key, value]) => {
+        container.setAttribute(`data-${key}`, `${value}`)
+      })
 
       console.log('resource node', node)
 

@@ -428,6 +428,16 @@
     }
   }
 
+  const insertResourceEmbed = async (resource: Resource, position: number) => {
+    await resourceManager.preventHiddenResourceFromAutodeletion(resource)
+
+    const editor = editorElem.getEditor()
+    editor.commands.insertContentAt(
+      position,
+      `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
+    )
+  }
+
   const processDropResource = async (
     position: number,
     resource: Resource,
@@ -443,10 +453,7 @@
       WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
 
     if (resource.type.startsWith('image/')) {
-      editor.commands.insertContentAt(
-        position,
-        `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
-      )
+      insertResourceEmbed(resource, position)
     } else if (isGeneratedResource(resource) || canBeEmbedded) {
       openContextMenu({
         x: coords.x,
@@ -457,10 +464,7 @@
             text: 'Insert as Embed',
             icon: 'world',
             action: () => {
-              editor.commands.insertContentAt(
-                position,
-                `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
-              )
+              insertResourceEmbed(resource, position)
             }
           },
           {
@@ -632,6 +636,7 @@
 
         if (tab.type === 'page') {
           if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
+            log.debug('Tab already bookmarked', tab.resourceBookmark)
             const resource = await resourceManager.getResource(tab.resourceBookmark)
             if (resource) {
               processDropResource(

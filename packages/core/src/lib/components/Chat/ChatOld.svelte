@@ -392,29 +392,7 @@
       const chatOutputResource = await resourceManager.getResource(chatOutputResources[0])
       log.debug('Chat output resource', chatOutputResource)
       if (chatOutputResource) {
-        const isSilent =
-          (chatOutputResource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
-            ?.value === 'true'
-        const isHideInEverything =
-          (chatOutputResource.tags ?? []).find(
-            (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-          )?.value === 'true'
-
-        log.debug('isSilent', isSilent)
-        if (isSilent) {
-          log.debug('Removing silent tag from chat output resource')
-          await resourceManager.deleteResourceTag(
-            chatOutputResource.id,
-            ResourceTagsBuiltInKeys.SILENT
-          )
-          if (!isHideInEverything) {
-            await resourceManager.createResourceTag(
-              chatOutputResource.id,
-              ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING,
-              'true'
-            )
-          }
-        }
+        await resourceManager.preventHiddenResourceFromAutodeletion(chatOutputResource)
       }
     }
 
