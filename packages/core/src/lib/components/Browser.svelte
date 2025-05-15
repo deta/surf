@@ -31,7 +31,8 @@
     shortenFilename,
     parseStringIntoUrl,
     parseURL,
-    parseSurfProtocolURL
+    parseSurfProtocolURL,
+    flyAndScale
   } from '@horizon/utils'
   import {
     createResourcesFromFiles,
@@ -141,6 +142,7 @@
   import { contextMenu, prepareContextMenu, type CtxItem } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
   import Tooltip from './Onboarding/Tooltip.svelte'
+  import { Tooltip as BitsTooltip } from 'bits-ui'
   import { launchTimeline, endTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import { createSyncService } from '@horizon/core/src/lib/service/sync'
@@ -4604,30 +4606,6 @@
                     />
                   {/if}
                 {/each}
-
-                <!-- <div
-                  class:w-fit={horizontalTabs}
-                  class:h-full={horizontalTabs}
-                  class="select-none flex items-center justify-center"
-                  class:opacity-100={!$showEndMask}
-                  class:opacity-0={$showEndMask}
-                  class:pointer-events-auto={!$showEndMask}
-                  class:pointer-events-none={$showEndMask}
-                >
-                  <button
-                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
-                      ? 'w-fit rounded-[0.625rem] p-1.5'
-                      : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors duration-200 text-sky-800 dark:text-sky-100"
-                    class:bg-sky-200={$showNewTabOverlay === 1}
-                    class:dark:bg-sky-900={$showNewTabOverlay === 1}
-                    on:click|preventDefault={() => tabsManager.showNewTab()}
-                  >
-                    <Icon name="add" />
-                    {#if !horizontalTabs}
-                      <span class="label">New Tab</span>
-                    {/if}
-                  </button>
-                </div> -->
               </div>
             {:else}
               <div
@@ -4796,23 +4774,35 @@
             >
               <div slot="tools" class="flex flex-row items-center space-x-2">
                 {#if horizontalTabs}
-                  <button
-                    class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
+                  <BitsTooltip.Root openDelay={400} closeDelay={10}>
+                    <BitsTooltip.Trigger>
+                      <button
+                        class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
-                      ? 'w-fit rounded-xl p-2'
-                      : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
-                    on:click|preventDefault={() => tabsManager.showNewTab()}
-                    class:active={$showNewTabOverlay === 1}
-                    class:opacity-100={$showEndMask || horizontalTabs}
-                    class:opacity-0={!$showEndMask}
-                    class:pointer-events-auto={$showEndMask || horizontalTabs}
-                    class:pointer-events-none={!$showEndMask}
-                  >
-                    <Icon name="add" stroke-width="2" />
-                    {#if !horizontalTabs}
-                      <span class="label">New Tab</span>
-                    {/if}
-                  </button>
+                          ? 'w-fit rounded-xl p-2'
+                          : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
+                        on:click|preventDefault={() => tabsManager.showNewTab()}
+                        class:active={$showNewTabOverlay === 1}
+                        class:opacity-100={$showEndMask || horizontalTabs}
+                        class:opacity-0={!$showEndMask}
+                        class:pointer-events-auto={$showEndMask || horizontalTabs}
+                        class:pointer-events-none={!$showEndMask}
+                      >
+                        <Icon name="add" stroke-width="2" />
+                      </button>
+                    </BitsTooltip.Trigger>
+                    <BitsTooltip.Content
+                      transition={flyAndScale}
+                      transitionConfig={{ y: 8, duration: 150 }}
+                      sideOffset={8}
+                    >
+                      <div
+                        class="custom-button-color flex items-center justify-center rounded-input border text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 rounded-xl p-3 text-sm font-medium shadow-md outline-none"
+                      >
+                        New Tab ({#if isMac()}⌘{:else}Ctrl{/if} + T)
+                      </div>
+                    </BitsTooltip.Content>
+                  </BitsTooltip.Root>
                   <button
                     class="new-tab-button transform select-none no-drag active:scale-95 space-x-2
                     {horizontalTabs
