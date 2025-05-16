@@ -50,7 +50,7 @@ env:
 
 jobs:
   determine_builds:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -70,7 +70,7 @@ jobs:
             matrix="$matrix{\"os\":\"linux-arm64-large\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:lin:arm\"},"
           fi
           if [[ "${{ inputs.i_run_linux_x64 }}" == "true" ]]; then
-            matrix="$matrix{\"os\":\"ubuntu-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
+            matrix="$matrix{\"os\":\"ubuntu-22.04\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
           fi
           matrix="${matrix%,}]}"
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
@@ -86,7 +86,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.15.0
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -200,7 +200,7 @@ jobs:
 
   create-release:
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
         with:

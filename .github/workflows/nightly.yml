@@ -16,7 +16,7 @@ env:
 
 jobs:
   latest-nightly-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.latest-nightly-version.outputs.version }}
 
@@ -31,7 +31,7 @@ jobs:
 
   next-nightly-version:
     needs: latest-nightly-version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     outputs:
       version: ${{ steps.next-nightly-version.outputs.version }}
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.15.0
 
       - run: npm install semver
 
@@ -197,7 +197,7 @@ jobs:
 
   create-release:
     needs: [next-nightly-version, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
         with:

@@ -23,14 +23,14 @@ env:
 jobs:
   build:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.15.0
 
       - name: Cache node_modules
         uses: actions/cache@v3

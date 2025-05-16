@@ -18,7 +18,7 @@ env:
 
 jobs:
   latest-pro-max-version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.latest-pro-max-version.outputs.version }}
 
@@ -33,7 +33,7 @@ jobs:
 
   next-pro-max-version:
     needs: latest-pro-max-version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     outputs:
       version: ${{ steps.next-pro-max-version.outputs.version }}
@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.15.0
 
       - run: npm install semver
 
@@ -73,7 +73,7 @@ jobs:
     needs: next-pro-max-version
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -199,7 +199,7 @@ jobs:
 
   create-release:
     needs: [next-pro-max-version, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
         with:
