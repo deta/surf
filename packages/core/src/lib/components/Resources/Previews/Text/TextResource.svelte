@@ -24,6 +24,7 @@
   } from '../../../../service/resources'
   import {
     conditionalArrayItem,
+    generateID,
     getFileKind,
     getFileType,
     getFormattedDate,
@@ -214,7 +215,12 @@
     }
   })
 
-  type ChatSubmitOptions = { focusEnd: boolean; autoScroll: boolean; showPrompt: boolean }
+  type ChatSubmitOptions = {
+    focusEnd: boolean
+    autoScroll: boolean
+    showPrompt: boolean
+    generationID?: string
+  }
 
   const similarityResults = writable<null | {
     sources: AIChatMessageSource[]
@@ -986,7 +992,8 @@
     const options = {
       focusEnd: opts?.focusEnd ?? false,
       autoScroll: opts?.autoScroll ?? false,
-      showPrompt: opts?.showPrompt ?? false
+      showPrompt: opts?.showPrompt ?? false,
+      generationID: opts?.generationID
     } as ChatSubmitOptions
 
     // Hide the caret popover when generation starts
@@ -1138,6 +1145,7 @@
         `${query} \n ${systemPrompt ?? ''}`,
         {
           trigger,
+          generationID: options.generationID,
           onboarding: showOnboarding,
           noteResourceId: useNoteResource ? resourceId : undefined
         },
@@ -1999,22 +2007,41 @@
     editor.commands.focus('end')
   }
 
+  let chatInputGenerationID: string | null = null
+
   const handleChatSubmit = async (e: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
     try {
       const { query, mentions } = e.detail
-      log.debug('Handling submit', query, mentions)
+
+      chatInputGenerationID = generateID()
+
+      log.debug('Handling submit', chatInputGenerationID, query, mentions)
 
       if (note) {
-        generateAndInsertAIOutput(
+        await generateAndInsertAIOutput(
           query,
           undefined,
           mentions,
           PageChatMessageSentEventTrigger.NoteChatInput,
-          { focusEnd: true, autoScroll: true, showPrompt: true }
+          {
+            focusEnd: true,
+            autoScroll: true,
+            showPrompt: true,
+            generationID: chatInputGenerationID
+          }
         )
       }
     } catch (e) {
       log.error('Error doing magic', e)
+    } finally {
+      chatInputGenerationID = null
+    }
+  }
+
+  const handleStopGeneration = () => {
+    log.debug('Stopping generation')
+    if (chat) {
+      chat.stopGeneration(chatInputGenerationID ?? undefined)
     }
   }
 
@@ -2325,6 +2352,7 @@
             showInput={$userSettings.experimental_notes_chat_input &&
               $userSettings.experimental_notes_chat_sidebar}
             on:submit={handleChatSubmit}
+            on:stop={handleStopGeneration}
           />
         {/if}
       </div>

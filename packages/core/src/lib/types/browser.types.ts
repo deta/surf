@@ -145,7 +145,7 @@ export type AIChatMessageParsed = {
   sources?: AIChatMessageSource[]
   usedPageScreenshot?: boolean
   usedInlineScreenshot?: boolean
-  status?: 'success' | 'pending' | 'error'
+  status?: 'success' | 'pending' | 'error' | 'cancelled'
 }
 
 export type AIChatMessageSource = {

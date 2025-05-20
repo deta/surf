@@ -52,6 +52,7 @@ export type ChatError = {
 }
 
 export type ChatMessageOptions = {
+  generationID?: string
   useContext?: boolean
   role?: AIChatMessageRole
   query?: string
@@ -96,6 +97,9 @@ export class AIChat {
   sffs: SFFS
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
+
+  private activeGenerations = new Map<string, boolean>()
+  private generationPromiseResolvers = new Map<string, () => void>()
 
   constructor(
     data: AIChatData,
@@ -316,6 +320,35 @@ export class AIChat {
     this.log.debug('selected model', model)
 
     return model
+  }
+
+  stopGeneration(id?: string) {
+    if (id) {
+      // Stop specific generation
+      this.log.debug('Stopping generation with id', id)
+      this.activeGenerations.set(id, false)
+
+      // Resolve the promise for this specific generation if it exists
+      const resolver = this.generationPromiseResolvers.get(id)
+      if (resolver) {
+        resolver()
+        this.generationPromiseResolvers.delete(id)
+      }
+    } else {
+      this.log.debug('Stopping all generations')
+      // Stop all active generations
+      for (const [genId, _] of this.activeGenerations) {
+        this.activeGenerations.set(genId, false)
+
+        // Resolve all pending promises
+        const resolver = this.generationPromiseResolvers.get(genId)
+        if (resolver) {
+          resolver()
+          this.generationPromiseResolvers.delete(genId)
+        }
+      }
+      this.status.set('idle')
+    }
   }
 
   async sendMessage(
@@ -542,7 +575,18 @@ export class AIChat {
       ...opts
     } as Required<ChatMessageOptions>
 
+    if (!options.generationID) {
+      options.generationID = generateID()
+    }
+
     this.error.set(null)
+
+    // Create a promise that will be resolved when generation completes or is stopped
+    let resolveGenerationPromise: (() => void) | null = null
+    const generationPromise = new Promise<void>((resolve) => {
+      resolveGenerationPromise = resolve
+      this.generationPromiseResolvers.set(options.generationID, resolve)
+    })
 
     const contextItems = this.contextItemsValue
 
@@ -589,7 +633,7 @@ export class AIChat {
 
     try {
       response = {
-        id: generateID(),
+        id: options.generationID,
         role: options.role,
         query: options.query ?? prompt,
         status: 'pending',
@@ -598,6 +642,9 @@ export class AIChat {
         content: '',
         citations: {}
       } as AIChatMessageParsed
+
+      // Track this generation as active
+      this.activeGenerations.set(options.generationID, true)
 
       this.status.set('running')
       this.addParsedResponse(response)
@@ -690,6 +737,19 @@ export class AIChat {
       let content = ''
 
       const chatCallback = (chunk: string) => {
+        // Check if this generation has been stopped
+        if (!this.activeGenerations.get(options.generationID)) {
+          this.log.debug('Generation stopped, aborting')
+          if (this.statusValue !== 'idle') {
+            this.log.debug('Generation stopped, aborting')
+            this.status.set('idle')
+            this.updateParsedResponse(response?.id ?? '', {
+              status: 'cancelled'
+            })
+          }
+          return
+        }
+
         if (step === 'idle') {
           this.log.debug('sources chunk', chunk)
 
@@ -723,7 +783,8 @@ export class AIChat {
         }
       }
 
-      await this.sendMessage(chatCallback, prompt, {
+      // Start the AI message generation in the background
+      const sendMessagePromise = this.sendMessage(chatCallback, prompt, {
         model,
         limit: options.limit,
         ragOnly: options.ragOnly,
@@ -734,29 +795,60 @@ export class AIChat {
         noteResourceId: options.noteResourceId
       })
 
-      this.updateParsedResponse(response.id, {
-        status: 'success',
-        content: content.replace('<answer>', '').replace('</answer>', '')
-      })
+      // Wait for either the generation to complete or be stopped
+      const sendMessageResult = await Promise.race([
+        sendMessagePromise,
+        generationPromise.then(() => ({ cancelled: true }))
+      ])
 
-      this.status.set('idle')
+      // If generation wasn't cancelled, continue with normal processing
+      if (!sendMessageResult || !('cancelled' in sendMessageResult)) {
+        await sendMessagePromise
 
-      if (content.includes('```html')) {
-        basicTelemtryData.generatedArtifact = true
+        if (this.activeGenerations.get(options.generationID)) {
+          this.updateParsedResponse(response.id, {
+            status: 'success',
+            content: content.replace('<answer>', '').replace('</answer>', '')
+          })
+
+          this.status.set('idle')
+
+          if (content.includes('```html')) {
+            basicTelemtryData.generatedArtifact = true
+          }
+
+          if (options.trigger) {
+            if (options.ragOnly) {
+              await this.telemetry.trackSimilaritySearch(basicTelemtryData)
+            } else {
+              await this.telemetry.trackPageChatMessageSent(basicTelemtryData)
+              if (
+                contextItemCount.spaces > 0 &&
+                options.trigger === PageChatMessageSentEventTrigger.SidebarChat
+              ) {
+                await this.telemetry.trackChatWithSpace(options.trigger)
+              }
+            }
+          }
+        } else {
+          this.log.debug('Generation stopped, not updating response')
+          this.status.set('idle')
+          this.updateParsedResponse(response.id, {
+            status: 'cancelled'
+          })
+        }
+      } else {
+        // If generation was cancelled, we don't need to do anything else
+        this.log.debug('Generation was cancelled, skipping further processing')
       }
 
-      if (options.trigger) {
-        if (options.ragOnly) {
-          await this.telemetry.trackSimilaritySearch(basicTelemtryData)
-        } else {
-          await this.telemetry.trackPageChatMessageSent(basicTelemtryData)
-          if (
-            contextItemCount.spaces > 0 &&
-            options.trigger === PageChatMessageSentEventTrigger.SidebarChat
-          ) {
-            await this.telemetry.trackChatWithSpace(options.trigger)
-          }
-        }
+      // Clean up the generation tracking
+      this.activeGenerations.delete(options.generationID)
+      this.generationPromiseResolvers.delete(options.generationID)
+
+      // Always resolve the promise
+      if (resolveGenerationPromise) {
+        ;(resolveGenerationPromise as any)()
       }
     } catch (e) {
       this.log.error('Error doing magic', typeof e, e)
@@ -799,9 +891,21 @@ export class AIChat {
         }
       }
 
+      // Clean up the generation tracking even in case of error
+      this.activeGenerations.delete(options.generationID)
+      this.generationPromiseResolvers.delete(options.generationID)
+
+      // Always resolve the promise
+      if (resolveGenerationPromise) {
+        ;(resolveGenerationPromise as any)()
+      }
+
       throw e
     } finally {
       this.status.set('idle')
+
+      // Ensure we clean up in all cases
+      this.generationPromiseResolvers.delete(options.generationID)
     }
   }
 
@@ -817,24 +921,7 @@ export class AIChat {
         ...opts
       }
 
-      const promise = this.sendMessageAndHandle(prompt, options, callback)
-
-      let previousContent = ''
-
-      // const content = derived(this.responses, ($responses) => {
-      //   const lastResponse = $responses[$responses.length - 1]
-      //   if (lastResponse) {
-      //     const fullContent = lastResponse.content
-      //     const newContent = fullContent.replace(previousContent, '')
-      //     previousContent = fullContent
-
-      //     return lastResponse
-      //   }
-      // })
-
-      // content.subscribe(() => {})
-
-      await promise
+      await this.sendMessageAndHandle(prompt, options, callback)
 
       return {
         chat: this,

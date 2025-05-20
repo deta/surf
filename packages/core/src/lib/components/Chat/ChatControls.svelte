@@ -48,6 +48,7 @@
     'open-context-item': ContextItem
     'process-context-item': ContextItem
     submit: { query: string; mentions: MentionItem[] }
+    stop: void
   }>()
 
   const log = useLogScope('ChatControls')
@@ -181,7 +182,15 @@
   }
 
   const handleInputSubmit = () => {
-    if (!inputValue || !editor) return
+    if (!editor) return
+
+    if ($isGeneratingAI) {
+      log.debug('Already generating AI response')
+      dispatch('stop')
+      return
+    }
+
+    if (!inputValue) return
 
     const mentions = editor.getMentions()
     dispatch('submit', { query: inputValue, mentions })
@@ -457,7 +466,7 @@
             on:click={handleInputSubmit}
             data-tooltip-action="send-chat-message"
             data-tooltip-target="send-chat-message"
-            disabled={!inputValue || $isGeneratingAI}
+            disabled={!inputValue && !$isGeneratingAI}
           >
             {#if $isGeneratingAI}
               <Icon name="spinner" />
