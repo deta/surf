@@ -23,7 +23,6 @@
   import { Icon, type Icons } from '@horizon/icons'
   import GridView from './GridView.svelte'
   import SpaceFilterViewButtons from '../SpaceFilterViewButtons.svelte'
-  import { selection } from '../utils/select'
 
   export let resources: Readable<(Resource | string | { id: string } | { resource: Resource })[]>
 
@@ -189,7 +188,6 @@
   class="resources-view"
   class:fadeIn
   data-density={viewDensity ?? ContextViewDensities.Cozy}
-  use:selection
   use:contextMenu={{
     canOpen: $selectedItemIds.length > 1,
     items: CONTEXT_MENU_ITEMS
