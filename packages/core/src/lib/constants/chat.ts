@@ -65,22 +65,32 @@ export const WIKIPEDIA_SEARCH_MENTION = {
 
 export const MODEL_CLAUDE_MENTION = {
   id: 'model-anthropic',
-  label: 'Anthropic',
-  suggestionLabel: 'Ask Anthropic',
+  label: 'Claude',
+  suggestionLabel: 'Ask Claude',
   aliases: ['anthropic', 'claude', 'sonnet'],
   icon: 'icon;;claude',
   type: MentionItemType.MODEL,
-  hideInSearch: true
+  hideInSearch: false
 } as MentionItem
 
 export const MODEL_GPT_MENTION = {
   id: 'model-openai',
-  label: 'OpenAI',
-  suggestionLabel: 'Ask OpenAI',
+  label: 'ChatGPT',
+  suggestionLabel: 'Ask ChatGPT',
   aliases: ['openai', 'gpt', 'gpt-4o'],
   icon: 'icon;;open-ai',
   type: MentionItemType.MODEL,
-  hideInSearch: true
+  hideInSearch: false
+} as MentionItem
+
+export const MODEL_GEMINI_MENTION = {
+  id: 'model-gemini',
+  label: 'Gemini',
+  suggestionLabel: 'Ask Gemini',
+  aliases: ['gemini', 'flash'],
+  icon: 'icon;;gemini',
+  type: MentionItemType.MODEL,
+  hideInSearch: false
 } as MentionItem
 
 export const NOTE_MENTION = {
@@ -96,7 +106,8 @@ export const BUILT_IN_MENTIONS_BASE = [
   TABS_MENTION,
   EVERYTHING_MENTION,
   MODEL_CLAUDE_MENTION,
-  MODEL_GPT_MENTION
+  MODEL_GPT_MENTION,
+  MODEL_GEMINI_MENTION
   //NO_CONTEXT_MENTION
   // WIKIPEDIA_SEARCH_MENTION // This is a conditional mention, depends on user settings
 ]

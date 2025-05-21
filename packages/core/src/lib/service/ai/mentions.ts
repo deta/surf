@@ -104,20 +104,25 @@ export const createMentionsFetcher = (
       ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION)
     ]
 
-    const modelMentions = models.map(
-      (model) =>
-        ({
-          id: `model-${model.id}`,
-          label: model.label,
-          suggestionLabel: `Ask ${model.label}`,
-          aliases: ['model', 'ai', model.custom_model_name, model.provider].filter(
-            Boolean
-          ) as string[],
-          icon: model.icon,
-          type: MentionItemType.MODEL,
-          hideInRoot: model.provider !== Provider.Custom
-        }) as MentionItem
-    )
+    let modelMentions: MentionItem[] = []
+
+    if (query) {
+      // With query: show all matching models, else only show the default models
+      modelMentions = models.map(
+        (model) =>
+          ({
+            id: `model-${model.id}`,
+            label: model.label,
+            suggestionLabel: `Ask ${model.label}`,
+            aliases: ['model', 'ai', model.custom_model_name, model.provider].filter(
+              Boolean
+            ) as string[],
+            icon: model.icon,
+            type: MentionItemType.MODEL,
+            hideInRoot: model.provider !== Provider.Custom
+          }) as MentionItem
+      )
+    }
 
     const spaceItems = spaces
       .sort((a, b) => {
