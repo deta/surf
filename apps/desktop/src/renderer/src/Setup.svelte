@@ -18,6 +18,7 @@
   import { onMount } from 'svelte'
   import { useLogScope, wait } from '@horizon/utils'
   import ContextView from './components/setup/ContextView.svelte'
+  import ImportView from './components/setup/ImportView.svelte'
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -46,6 +47,7 @@
   type ViewType =
     | 'invite'
     | 'persona'
+    | 'import'
     | 'explainer.stuff'
     | 'contexts'
     | 'explainer.chat'
@@ -149,6 +151,8 @@
         on:viewChange={handleViewChange}
         on:back={handleBack}
       />
+    {:else if view === 'import'}
+      <ImportView on:viewChange={handleViewChange} on:back={handleBack} />
     {:else if view === 'explainer.stuff'}
       <ExplainerStuff
         persona={selectedPersonas}

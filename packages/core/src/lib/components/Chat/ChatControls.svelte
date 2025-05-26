@@ -192,8 +192,9 @@
 
     if (!inputValue) return
 
-    const mentions = editor.getMentions()
-    dispatch('submit', { query: inputValue, mentions })
+    const { text, mentions } = editor.getParsedEditorContent()
+
+    dispatch('submit', { query: text, mentions })
 
     inputValue = ''
     editor.clear()

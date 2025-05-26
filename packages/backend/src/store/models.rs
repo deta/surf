@@ -589,9 +589,24 @@ impl CardPosition {
 
 #[derive(Debug, Serialize, Deserialize, Clone, strum::EnumString, strum::AsRefStr)]
 #[strum(ascii_case_insensitive)]
+#[serde(rename_all = "snake_case")]
 pub enum HistoryEntryType {
     Search,
     Navigation,
+    // Chrome-based browsers
+    ImportChrome,
+    ImportBrave,
+    ImportEdge,
+    ImportOpera,
+    ImportVivaldi,
+    ImportArc,
+    ImportDia,
+    // Firefox-based browsers
+    ImportFirefox,
+    ImportTor,
+    ImportWaterfox,
+    ImportSafari,
+    ImportZen,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -29,7 +29,9 @@ import {
   type SFFSResource,
   type DownloadPathResponseMessage,
   SettingsWindowTab,
-  UserStats
+  UserStats,
+  ImportedBrowserHistoryItem,
+  BrowserType
 } from '@horizon/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
@@ -483,6 +485,26 @@ const eventHandlers = {
         )
 
         callback(files)
+      } catch (err) {
+        console.error('Failed to import files: ', err)
+      }
+    })
+  },
+
+  onImportBrowserHistory: (callback: (type: BrowserType) => void) => {
+    return IPC_EVENTS_RENDERER.importBrowserHistory.on(async (_, type) => {
+      try {
+        callback(type)
+      } catch (err) {
+        console.error('Failed to import files: ', err)
+      }
+    })
+  },
+
+  onImportBrowserBookmarks: (callback: (type: BrowserType) => void) => {
+    return IPC_EVENTS_RENDERER.importBrowserBookmarks.on(async (_, type) => {
+      try {
+        callback(type)
       } catch (err) {
         console.error('Failed to import files: ', err)
       }

@@ -1,0 +1,44 @@
+<script lang="ts">
+  import type { BrowserTypeItem } from '@horizon/types'
+  import type { ImportStatus } from './ImporterV2.svelte'
+
+  export let currentStepIdx: number = 0
+  export let selectedBrowser: BrowserTypeItem | null = null
+  export let importStatus: ImportStatus
+  export let initialImport: boolean = false
+</script>
+
+{#if currentStepIdx === 0}
+  <p>
+    Surf can import your browser history and bookmarks from your old browser so you can continue
+    where you left off.
+  </p>
+  {#if initialImport}
+    <p>Which browser did you use before Surf?</p>
+  {/if}
+{:else if currentStepIdx === 1}
+  <p>Choose what data you want to import from {selectedBrowser?.name} into Surf.</p>
+{:else if currentStepIdx === 2 && (importStatus === 'idle' || importStatus === 'importing')}
+  <p>
+    We are importing your data from {selectedBrowser?.name} into Surf. This may take a couple seconds.
+  </p>
+{:else if currentStepIdx === 2 && importStatus === 'done'}
+  <p>Your data from {selectedBrowser?.name} has been imported to Surf successfully!</p>
+{:else if currentStepIdx === 2 && importStatus === 'error'}
+  <p>
+    Failed to import from {selectedBrowser?.name}. Please make sure it is installed and closed, then
+    try again.
+  </p>
+  <p>If the problem persists, contact us: <a href="mailto:hello@deta.surf">hello@deta.surf</a></p>
+{/if}
+
+<style>
+  p {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: #666;
+    margin-bottom: 1rem;
+    text-wrap: pretty;
+  }
+</style>

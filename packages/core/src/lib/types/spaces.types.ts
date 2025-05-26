@@ -35,6 +35,7 @@ export interface SpaceData {
   viewType?: ContextViewType
   viewDensity?: ContextViewDensity
   selectedNoteResource?: string
+  imported?: boolean
 }
 
 export interface SpaceSource {

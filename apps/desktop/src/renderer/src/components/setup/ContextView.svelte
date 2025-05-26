@@ -52,7 +52,7 @@
       log.debug('Created new context', newContext)
     }
 
-    dispatch('viewChange', 'explainer.chat')
+    dispatch('viewChange', 'language')
   }
 
   const handleBack = () => {

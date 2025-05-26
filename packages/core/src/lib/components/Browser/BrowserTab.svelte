@@ -56,6 +56,7 @@
     DeleteAnnotationEventTrigger,
     EventContext,
     OpenInMiniBrowserEventFrom,
+    ResourceTagDataStateValue,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger,
@@ -508,6 +509,7 @@
           resolve(resource)
           return
         }
+
         resource.updateExtractionState('running')
 
         // Run resource detection on a fresh webview to get the latest data
@@ -522,6 +524,15 @@
             name: (detectedResource.data as any).title || tab.title || '',
             sourceURI: url
           })
+        }
+
+        if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+          log.debug('updating resource data state to complete')
+          await resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.DATA_STATE,
+            ResourceTagDataStateValue.COMPLETE
+          )
         }
 
         resource.updateExtractionState('idle')
@@ -1169,8 +1180,16 @@
       log.debug('bookmarked resource found', bookmarkedResource, tab)
 
       if (bookmarkedResource) {
+        const isPartialResource =
+          (bookmarkedResource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.DATA_STATE
+          )?.value === ResourceTagDataStateValue.PARTIAL
+
         if (detectedResourceType === ResourceTypes.DOCUMENT_NOTION) {
           log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
+          await refreshResourceWithPage(bookmarkedResource, url, false)
+        } else if (isPartialResource) {
+          log.debug('updating partial resource with fresh content', bookmarkedResource.id)
           await refreshResourceWithPage(bookmarkedResource, url, false)
         }
       } else {

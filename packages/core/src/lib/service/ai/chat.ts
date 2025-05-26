@@ -28,6 +28,8 @@ import type { Telemetry } from '../telemetry'
 import {
   PageChatMessageSentEventError,
   PageChatMessageSentEventTrigger,
+  ResourceTagDataStateValue,
+  ResourceTagsBuiltInKeys,
   ResourceTypes,
   type PageChatMessageSentData
 } from '@horizon/types'
@@ -560,6 +562,75 @@ export class AIChat {
     }
   }
 
+  async getPartialChatResources(prompt: string, opts?: ChatMessageOptions) {
+    this.log.debug('Getting partial chat resources', prompt, opts)
+    const result = await this.createChatCompletion(prompt, {
+      ragOnly: true,
+      limit: 10,
+      ...opts
+    })
+
+    const rawSources = result.output?.sources ?? []
+    const resourceIds = [...new Set(rawSources.map((s) => s.resource_id))]
+
+    this.log.debug('Resource ids', resourceIds)
+
+    // get full resources
+    const resourcesRaw = await Promise.all(
+      resourceIds.map(async (id) => {
+        const res = await this.resourceManager.getResource(id)
+        return res
+      })
+    )
+
+    const resources = resourcesRaw.filter((res) => res !== null)
+    this.log.debug('Resources', resources)
+
+    const partialResources = resources.filter((res) => {
+      return (res.tags ?? []).find(
+        (tag) =>
+          tag.name === ResourceTagsBuiltInKeys.DATA_STATE &&
+          tag.value === ResourceTagDataStateValue.PARTIAL
+      )
+    })
+
+    this.log.debug('Partial resources', partialResources)
+
+    return partialResources
+  }
+
+  async checkAndPreparePartialResources(prompt: string, model: Model, resourceIds: string[]) {
+    this.log.debug('Looking for partial resources', prompt, model, resourceIds)
+
+    const backendModel = this.ai.modelToBackendModel(model)
+    const customKey = model.custom_key
+
+    const matchingResources = await this.resourceManager.searchChatResourcesAI(
+      prompt,
+      backendModel,
+      {
+        customKey: customKey,
+        resourceIds
+      }
+    )
+
+    this.log.debug('Found matching resources', matchingResources)
+    const partialResources = matchingResources.filter((res) =>
+      (res.tags ?? []).find(
+        (tag) =>
+          tag.name === ResourceTagsBuiltInKeys.DATA_STATE &&
+          tag.value === ResourceTagDataStateValue.PARTIAL
+      )
+    )
+
+    this.log.debug('Preparing partial resources', partialResources)
+    await Promise.all(
+      partialResources.map(async (resource) => {
+        await this.resourceManager.refreshResourceData(resource)
+      })
+    )
+  }
+
   async sendMessageAndHandle(
     prompt: string,
     opts?: ChatMessageOptions,
@@ -726,6 +797,8 @@ export class AIChat {
       if (!generalMode && resourceIds.length > 0) {
         contextSize = resourceIds.length + inlineImages.length
       }
+
+      await this.checkAndPreparePartialResources(prompt, model, resourceIds)
 
       this.updateParsedResponse(response.id, {
         status: 'pending',

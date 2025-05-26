@@ -46,6 +46,8 @@ pub enum HistoryMessage {
     SearchHistoryEntriesByHostnamePrefix(String, Option<f64>),
     SearchHistoryEntriesByHostname(String),
     SearchHistoryEntriesByUrlAndTitle(String, Option<f64>),
+    ImportBrowserHistory(String),
+    ImportBrowserBookmarks(String),
 }
 
 #[derive(Debug)]
@@ -210,6 +212,13 @@ pub enum MiscMessage {
     GetQuotas,
     SetVisionTaggingFlag(bool),
     SetSurfBackendHealth(bool),
+    SearchChatResources {
+        query: String,
+        model: Model,
+        custom_key: Option<String>,
+        number_documents: i32,
+        resource_ids: Option<Vec<String>>,
+    }
 }
 
 #[derive(Debug, serde::Serialize)]

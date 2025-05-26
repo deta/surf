@@ -57,6 +57,14 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         "js__store_search_history_entries_by_url_and_title",
         js_search_history_entries_by_url_and_title,
     )?;
+    cx.export_function(
+        "js__store_import_browser_history",
+        js_import_browser_history,
+    )?;
+    cx.export_function(
+        "js__store_import_browser_bookmarks",
+        js_import_browser_bookmarks,
+    )?;
 
     cx.export_function("js__store_create_ai_chat", js_create_ai_chat)?;
     cx.export_function("js__store_update_ai_chat", js_update_ai_chat)?;
@@ -590,6 +598,32 @@ fn js_search_history_entries_by_url_and_title(mut cx: FunctionContext) -> JsResu
         WorkerMessage::HistoryMessage(HistoryMessage::SearchHistoryEntriesByUrlAndTitle(
             query, since,
         )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_import_browser_history(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let browser_type = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::HistoryMessage(HistoryMessage::ImportBrowserHistory(browser_type)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_import_browser_bookmarks(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let browser_type = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::HistoryMessage(HistoryMessage::ImportBrowserBookmarks(browser_type)),
         deferred,
     );
 

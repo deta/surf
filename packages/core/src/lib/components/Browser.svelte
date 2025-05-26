@@ -83,7 +83,7 @@
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import { HorizonDatabase } from '../service/storage'
-  import Importer from './Core/Importer.svelte'
+  import TabImporter from './Core/TabImporter.svelte'
   import OasisDiscovery from './Core/OasisDiscovery.svelte'
   import MagicSidebar from './Sidebars/MagicSidebar.svelte'
   import {
@@ -113,7 +113,9 @@
     OpenInMiniBrowserEventFrom,
     ChangeContextEventTrigger,
     PageChatUpdateContextItemType,
-    PromptType
+    PromptType,
+    type ImportedBrowserHistoryItem,
+    ResourceTagDataStateValue
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -193,7 +195,7 @@
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
-  import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
+  import type { AIChatMessageSource, HistoryEntry } from '@horizon/core/src/lib/types'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import { migrateHomeContext } from '@horizon/core/src/lib/service/migration'
 
@@ -2949,6 +2951,91 @@
       }
     })
 
+    horizonPreloadEvents.onImportBrowserHistory(async (type) => {
+      const toast = toasts.loading('Importing Browser History...')
+      try {
+        log.debug('importing browser history', type)
+
+        const items = await resourceManager.sffs.importBrowserHistory(type)
+        log.debug('imported browser history', items)
+
+        toast.success(`Imported ${items.length} links!`)
+      } catch (err) {
+        log.error('Failed to import', err)
+
+        const message = typeof err === 'string' ? err : (err as Error).message
+        if (message?.startsWith('Generic error:')) {
+          toast.error('Error: make sure the browser is installed and the history is not empty')
+        } else {
+          toast.error('Failed to import browser history')
+        }
+      }
+    })
+
+    horizonPreloadEvents.onImportBrowserBookmarks(async (type) => {
+      const toast = toasts.loading('Importing Browser Bookmarks...')
+      try {
+        log.debug('importing browser bookmarks', type)
+
+        const folders = await resourceManager.sffs.importBrowserBookmarks(type)
+        log.debug('imported browser bookmarks', folders)
+
+        // for each folder, create a space, then create a link resource for each bookmark in the space
+
+        for (const [idx, folder] of folders.entries()) {
+          log.debug('creating space for folder', folder)
+          toast.update({
+            message: `Importing Folder ${idx + 1} / ${folders.length} ...`
+          })
+
+          // check if the folder already exists
+          let space = oasis.spacesObjectsValue.find(
+            (space) => space.dataValue.folderName === folder.title
+          )
+
+          if (!space) {
+            space = await oasis.createSpace({
+              folderName: folder.title,
+              showInSidebar: true,
+              imported: true
+            })
+          } else {
+            await space.updateData({
+              imported: true
+            })
+          }
+
+          let resources: Resource[] = []
+          for (const item of folder.children) {
+            const resource = await resourceManager.createResourceLink(
+              {
+                title: item.title,
+                url: item.url
+              },
+              {
+                name: item.title,
+                sourceURI: item.url
+              },
+              [ResourceTag.import(), ResourceTag.dataState(ResourceTagDataStateValue.PARTIAL)]
+            )
+
+            resources.push(resource)
+          }
+
+          await oasis.addResourcesToSpace(
+            space.id,
+            resources.map((r) => r.id),
+            SpaceEntryOrigin.ManuallyAdded
+          )
+        }
+
+        toast.success(`Imported ${folders.flat().length} bookmarks!`)
+      } catch (err) {
+        log.error('Failed to import', err)
+        toast.error('Failed to import browser bookmarks')
+      }
+    })
+
     horizonPreloadEvents.onSaveLink(async (rawUrl, spaceId) => {
       const url = parseStringIntoUrl(rawUrl)
       if (!url) {
@@ -5044,7 +5131,7 @@
                   on:highlightWebviewText={highlightWebviewText}
                 />
               {:else if tab.type === 'importer'}
-                <Importer {resourceManager} />
+                <TabImporter {tab} />
               {:else if tab.type === 'oasis-discovery'}
                 <OasisDiscovery {resourceManager} />
               {:else if tab.type === 'space'}

@@ -45,7 +45,8 @@ export enum ResourceTagsBuiltInKeys {
   CONTENT_HASH = 'contentHash', // hash of the content of the resource
   PREVIEW_IMAGE_RESOURCE = 'previewImageResource', // resource id of the custom preview image set by the user
   USER_VIEW_PREFS = 'userViewPreferences',
-  LINKED_CHAT = 'linkedChat' // resource is linked to a chat
+  LINKED_CHAT = 'linkedChat', // resource is linked to a chat
+  DATA_STATE = 'dataState' // state of the resource data (e.g. 'partial', 'complete')
 }
 
 export interface ResourceTagsBuiltIn {
@@ -69,11 +70,18 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.CREATED_FOR_CHAT]: boolean
   [ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE]: string
   [ResourceTagsBuiltInKeys.USER_VIEW_PREFS]: UserViewPrefsTagValue
+  [ResourceTagsBuiltInKeys.LINKED_CHAT]: string
+  [ResourceTagsBuiltInKeys.DATA_STATE]: ResourceTagDataStateValue
 }
 
 export type UserViewPrefsTagValue = {
   blockHeight: string
   blockCollapsed: boolean
+}
+
+export enum ResourceTagDataStateValue {
+  PARTIAL = 'partial',
+  COMPLETE = 'complete'
 }
 
 export interface SFFSResource {

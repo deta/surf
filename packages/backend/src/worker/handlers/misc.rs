@@ -587,6 +587,114 @@ impl Worker {
     pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {
         self.ai.get_quotas()
     }
+
+    pub fn search_chat_resources(
+        &mut self,
+        query: String,
+        model: Model,
+        custom_key: Option<&str>,
+        number_documents: i32,
+        resource_ids: Option<Vec<String>>,
+    ) -> BackendResult<Vec<CompositeResource>> {
+        let query = match query.strip_suffix("<p></p>") {
+            Some(q) => q.to_string(),
+            None => query,
+        };
+
+        // If no resource_ids provided, no filtering needed 
+        let mut ids = resource_ids.unwrap_or_default();
+        
+        // Only check clustering if we have resource IDs
+        let mut should_cluster = false;
+        if !ids.is_empty() {
+            let send_cluster_query = self.should_send_cluster_query(&ids)?;
+            
+            if send_cluster_query {
+                let composite_resources = self.db.list_resources_metadata_by_ids(&ids)?;
+                let should_cluster_result = self.ai.should_cluster(
+                    &query,
+                    &model,
+                    custom_key,
+                    self.ai.llm_metadata_messages_from_sources(&composite_resources),
+                )?;
+                should_cluster = should_cluster_result.embeddings_search_needed;
+                
+                // Narrow down the search space if LLM pre-determines it
+                if let Some(search_space) = should_cluster_result.relevant_context_ids {
+                    if !search_space.is_empty() {
+                        let mut pruned_resources_ids: Vec<String> = vec![];
+
+                        for str_index in search_space {
+                            match str_index.parse::<usize>() {
+                                Ok(i) => {
+                                    pruned_resources_ids.push(composite_resources[i].resource.id.clone());
+                                }
+                                Err(_) => continue,
+                            };
+                        }
+                        ids = pruned_resources_ids;
+                    }
+                }
+            }
+        }
+
+        // If should_cluster is true or no resource_ids provided, do vector search
+        // Otherwise, just return the resources by IDs
+        if should_cluster || ids.is_empty() {
+            let mut seen_keys: HashSet<String> = HashSet::new();
+            let mut results: Vec<CompositeResource> = vec![];
+
+            if !ids.is_empty() {
+                let db_results = self.db.search_resources(
+                    &query,
+                    &Some(ids.clone()),
+                    false,
+                    Some(number_documents as i64)
+                )?;
+
+                for result in db_results.items {
+                    if result.resource.resource.resource_type.ends_with(".ignore") {
+                        continue;
+                    }
+                    if seen_keys.contains(&result.resource.resource.id) {
+                        continue;
+                    }
+                    seen_keys.insert(result.resource.resource.id.clone());
+                    results.push(result.resource);
+                }
+            }
+
+            let vector_search_results = self.ai.vector_search(
+                &self.db,
+                query,
+                number_documents as usize,
+                if ids.is_empty() { None } else { Some(ids.clone()) },
+                false,
+                Some(0.5),
+            )?;
+
+            // Add vector search results
+            for result in vector_search_results {
+                if result.resource.resource_type.ends_with(".ignore") {
+                    continue;
+                }
+                if seen_keys.contains(&result.resource.id) {
+                    continue;
+                }
+                seen_keys.insert(result.resource.id.clone());
+                results.push(result);
+            }
+
+            if results.is_empty() {
+                return self.db.list_resources_by_ids(ids);
+            }
+
+            Ok(results)
+        } else {
+            // If not clustering, just return the resources by IDs
+            self.db.list_resources_by_ids(ids)
+        }
+    }
 }
 
 #[tracing::instrument(level = "trace", skip(worker, oneshot))]
@@ -762,6 +870,22 @@ pub fn handle_misc_message(
             worker.surf_backend_health.set_health(state);
             send_worker_response(&mut worker.channel, oneshot, Ok(()));
             tracing::debug!("surf backend health: {state:?}");
+        }
+        MiscMessage::SearchChatResources {
+            query,
+            model,
+            custom_key,
+            number_documents,
+            resource_ids,
+        } => {
+            let result = worker.search_chat_resources(
+                query,
+                model,
+                custom_key.as_deref(),
+                number_documents,
+                resource_ids,
+            );
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
     }
 }

@@ -24,7 +24,8 @@ import type {
   SFFSRawResource,
   AIChatMessageRaw,
   AIChatRaw,
-  SpaceEntrySearchOptions
+  SpaceEntrySearchOptions,
+  SFFSRawBookmarkFolder
 } from '../types'
 
 import type {
@@ -34,7 +35,7 @@ import type {
   AIDocsSimilarity,
   YoutubeTranscript
 } from '../types/browser.types'
-import type { EventBusMessage } from '@horizon/types'
+import type { BookmarkFolder, BrowserType, EventBusMessage } from '@horizon/types'
 import type {
   App,
   Model,
@@ -164,6 +165,24 @@ export class SFFS {
       url: entry.url ?? null,
       title: entry.title ?? null,
       search_query: entry.searchQuery ?? null
+    }
+  }
+
+  convertRawBookmarkFolderToBookmarkFolder(rawEntry: SFFSRawBookmarkFolder): BookmarkFolder {
+    return {
+      guid: rawEntry.guid,
+      title: rawEntry.title,
+      createdAt: rawEntry.created_at,
+      updatedAt: rawEntry.updated_at,
+      lastUsedAt: rawEntry.last_used_at,
+      children: (rawEntry.children ?? []).map((child) => ({
+        guid: child.guid,
+        title: child.title,
+        url: child.url,
+        createdAt: child.created_at,
+        updatedAt: child.updated_at,
+        lastUsedAt: child.last_used_at
+      }))
     }
   }
 
@@ -475,6 +494,36 @@ export class SFFS {
     }))
   }
 
+  async searchChatResourcesAI(
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      limit?: number
+      resourceIds?: string[]
+    }
+  ): Promise<SFFSResource[]> {
+    this.log.debug('searching resources with AI query', query, 'model:', model, 'opts:', opts)
+    const rawResponse: string = await this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_search_chat_resources,
+      JSON.stringify({
+        query,
+        model,
+        custom_key: opts?.customKey,
+        number_documents: opts?.limit ?? 20,
+        resource_ids: opts?.resourceIds
+      })
+    )
+
+    const compositeResources = this.parseData<SFFSRawCompositeResource[]>(rawResponse)
+    if (!compositeResources) {
+      return []
+    }
+
+    return compositeResources.map((resource) => this.convertCompositeResourceToResource(resource))
+  }
+
   async createSpace(name: SpaceData) {
     this.log.debug('creating space with name:', name)
 
@@ -655,6 +704,28 @@ export class SFFS {
   async deleteHistoryEntry(id: string): Promise<void> {
     this.log.debug('deleting history entry', id)
     await this.backend.js__store_remove_history_entry(id)
+  }
+
+  async importBrowserHistory(type: BrowserType) {
+    this.log.debug('importing browser history')
+    const rawEntries = await this.backend.js__store_import_browser_history(type)
+    const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawHistoryEntryToHistoryEntry(e))
+  }
+
+  async importBrowserBookmarks(type: BrowserType) {
+    this.log.debug('importing browser bookmarks')
+    const rawEntries = await this.backend.js__store_import_browser_bookmarks(type)
+    const entries = this.parseData<SFFSRawBookmarkFolder[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawBookmarkFolderToBookmarkFolder(e))
   }
 
   // returns a list of unique hostnames

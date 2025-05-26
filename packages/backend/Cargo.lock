@@ -149,6 +149,7 @@ dependencies = [
  "lopdf",
  "neon",
  "ocrs",
+ "once_cell",
  "pkg-config",
  "rand",
  "reqwest",

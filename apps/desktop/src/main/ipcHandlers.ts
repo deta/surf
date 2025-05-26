@@ -12,7 +12,9 @@ import {
 } from './config'
 import { handleDragStart } from './drag'
 import {
+  BrowserType,
   ElectronAppInfo,
+  ImportedBrowserHistoryItem,
   RightSidebarTab,
   SFFSResource,
   UserSettings,
@@ -766,6 +768,18 @@ export const ipcSenders = {
     const mainWindow = getMainWindow()
     if (!mainWindow) return
     IPC_EVENTS_MAIN.importedFiles.sendToWebContents(mainWindow.webContents, files)
+  },
+
+  importBrowserHistory(type: BrowserType) {
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return
+    IPC_EVENTS_MAIN.importBrowserHistory.sendToWebContents(mainWindow.webContents, type)
+  },
+
+  importBrowserBookmarks(type: BrowserType) {
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return
+    IPC_EVENTS_MAIN.importBrowserBookmarks.sendToWebContents(mainWindow.webContents, type)
   },
 
   saveLink(url: string, spaceId?: string) {

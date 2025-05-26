@@ -16,6 +16,7 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_get_docs_similarity", js_get_ai_docs_similarity)?;
     cx.export_function("js__ai_get_youtube_transcript", js_get_youtube_transcript)?;
     cx.export_function("js__ai_get_quotas", js_get_quotas)?;
+    cx.export_function("js__ai_search_chat_resources", js_search_chat_resources)?;
     Ok(())
 }
 
@@ -280,6 +281,44 @@ fn js_get_quotas(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(WorkerMessage::MiscMessage(MiscMessage::GetQuotas), deferred);
+
+    Ok(promise)
+}
+
+fn js_search_chat_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    fn default_limit() -> i32 {
+        20
+    }
+
+    #[derive(Serialize, Deserialize, Debug)]
+    struct SearchResourcesOptions {
+        pub query: String,
+        pub model: Model,
+        pub custom_key: Option<String>,
+        #[serde(default = "default_limit")]
+        pub number_documents: i32,
+        pub resource_ids: Option<Vec<String>>,
+    }
+
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
+    let mut opts: SearchResourcesOptions = match serde_json::from_str(&json_opt) {
+        Ok(opts) => opts,
+        Err(err) => return cx.throw_error(format!("failed to parse options: {err}")),
+    };
+    opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::SearchChatResources {
+            query: opts.query,
+            model: opts.model,
+            custom_key: opts.custom_key,
+            number_documents: opts.number_documents,
+            resource_ids: opts.resource_ids,
+        }),
+        deferred,
+    );
 
     Ok(promise)
 }

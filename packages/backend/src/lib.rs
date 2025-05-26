@@ -15,6 +15,8 @@ pub enum BackendError {
     ChronoError(#[from] chrono::ParseError),
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
     #[error("LLM Error: {r#type}: {message}")]
     LLMClientError { r#type: String, message: String },
     #[error("LLM Too Many Requests error")]

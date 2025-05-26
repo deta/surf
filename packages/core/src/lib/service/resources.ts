@@ -42,6 +42,7 @@ import {
   EventBusMessageType,
   EventContext,
   ResourceProcessingStateType,
+  ResourceTagDataStateValue,
   TelemetryEventTypes,
   WEB_RESOURCE_TYPES,
   type DetectedResource,
@@ -205,6 +206,10 @@ export class ResourceTag {
 
   static linkedChat(value: string) {
     return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: value }
+  }
+
+  static dataState(value: ResourceTagDataStateValue) {
+    return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: value }
   }
 }
 
@@ -1517,6 +1522,20 @@ export class ResourceManager {
     return this.createCodeResource(data, metadata, tags)
   }
 
+  async searchChatResourcesAI(
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      limit?: number
+      resourceIds?: string[]
+    }
+  ) {
+    const rawResources = await this.sffs.searchChatResourcesAI(query, model, opts)
+    const resources = rawResources.map((r) => this.findOrCreateResourceObject(r))
+    return resources
+  }
+
   static SearchTagResourceType(
     type: ResourceTypes | string,
     op: SFFSResourceTag['op'] = 'eq'
@@ -1730,6 +1749,15 @@ export class ResourceManager {
           resource.type
         )
         await this.sffs.backend.js__store_resource_post_process(resource.id)
+
+        if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+          await this.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.DATA_STATE,
+            ResourceTagDataStateValue.COMPLETE
+          )
+        }
+
         return
       }
 
@@ -1763,6 +1791,14 @@ export class ResourceManager {
             name: (detectedResource.data as any).title
           })
         }
+      }
+
+      if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+        await this.updateResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.DATA_STATE,
+          ResourceTagDataStateValue.COMPLETE
+        )
       }
 
       resource.updateExtractionState('idle')
@@ -1815,6 +1851,10 @@ export class ResourceManager {
 
   static SearchTagPreviewImageResource(id: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: id, op: 'eq' }
+  }
+
+  static SearchTagDataState(state: ResourceTagDataStateValue) {
+    return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: state, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry, config: ConfigService) {

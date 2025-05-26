@@ -11,7 +11,9 @@ import type {
   SFFSResource,
   SettingsWindowTab,
   Announcement,
-  UserStats
+  UserStats,
+  ImportedBrowserHistoryItem,
+  BrowserType
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -219,6 +221,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   showAppMenuPopup: ipcService.addEvent<void>('show-app-menu-popup'),
   resetBackgroundImage: ipcService.addEvent<void>('reset-background-image'),
   importedFiles: ipcService.addEvent<string[]>('imported-files'),
+  importBrowserHistory: ipcService.addEvent<BrowserType>('import-browser-history'),
+  importBrowserBookmarks: ipcService.addEvent<BrowserType>('import-browser-bookmarks'),
   setSurfBackendHealth: ipcService.addEvent<boolean>('set-surf-backend-health'),
   setActiveTabWebContentsId: ipcService.addEvent<number>('set-active-tab-webcontents-id'),
   closeTabWebContentsId: ipcService.addEvent<number>('close-tab-webcontents-id'),

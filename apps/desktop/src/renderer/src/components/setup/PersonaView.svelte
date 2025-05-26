@@ -29,7 +29,7 @@
       selectedPersonas = ['Other']
     }
     dispatch('personasChange', selectedPersonas)
-    dispatch('viewChange', 'explainer.stuff')
+    dispatch('viewChange', 'import')
   }
 
   const handleBack = () => {

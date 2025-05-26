@@ -1,4 +1,17 @@
-export type HistoryEntryType = 'navigation' | 'search' | 'chat' | 'rag'
+export type HistoryEntryType =
+  | 'search'
+  | 'navigation'
+  // Chrome-based browsers
+  | 'import_chrome'
+  | 'import_brave'
+  | 'import_edge'
+  | 'import_opera'
+  | 'import_vivaldi'
+  | 'import_arc'
+  // Firefox-based browsers
+  | 'import_firefox'
+  | 'import_tor'
+  | 'import_waterfox'
 
 export interface HistoryEntry {
   id: string

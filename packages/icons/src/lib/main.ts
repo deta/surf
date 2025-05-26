@@ -121,6 +121,15 @@ import Squircle from './Icons/Squircle.svelte'
 import Underline from './Icons/Underline.svelte'
 import ListDetails from './Icons/ListDetails.svelte'
 import Table from './Icons/Table.svelte'
+import Chrome from './Icons/Chrome.svelte'
+import Edge from './Icons/Edge.svelte'
+import Brave from './Icons/Brave.svelte'
+import Firefox from './Icons/Firefox.svelte'
+import Arc from './Icons/Arc.svelte'
+import Opera from './Icons/Opera.svelte'
+import Vivaldi from './Icons/Vivaldi.svelte'
+import ZenBrowser from './Icons/ZenBrowser.svelte'
+import TorBrowser from './Icons/TorBrowser.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -249,7 +258,16 @@ export const icons = {
   squircle: Squircle,
   underline: Underline,
   'list-details': ListDetails,
-  table: Table
+  table: Table,
+  'browser.chrome': Chrome,
+  'browser.edge': Edge,
+  'browser.brave': Brave,
+  'browser.firefox': Firefox,
+  'browser.arc': Arc,
+  'browser.opera': Opera,
+  'browser.vivaldi': Vivaldi,
+  'browser.zen': ZenBrowser,
+  'browser.tor': TorBrowser
 }
 
 export type Icons = keyof typeof icons
@@ -377,5 +395,14 @@ export {
   Squircle,
   Underline,
   ListDetails,
-  Table
+  Table,
+  Chrome,
+  Edge,
+  Brave,
+  Firefox,
+  Arc,
+  Opera,
+  Vivaldi,
+  ZenBrowser,
+  TorBrowser
 }

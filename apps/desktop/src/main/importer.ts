@@ -1,5 +1,7 @@
 import { dialog } from 'electron'
+
 import { useLogScope } from '@horizon/utils'
+import { BrowserType } from '@horizon/types'
 
 import { ipcSenders } from './ipcHandlers'
 
@@ -14,5 +16,21 @@ export const importFiles = async () => {
     ipcSenders.importedFiles(result.filePaths)
   } catch (error) {
     log.error('Error importing files:', error)
+  }
+}
+
+export const importBrowserHistory = async (type: BrowserType) => {
+  try {
+    ipcSenders.importBrowserHistory(type)
+  } catch (error) {
+    log.error('Error importing browser history:', error)
+  }
+}
+
+export const importBrowserBookmarks = async (type: BrowserType) => {
+  try {
+    ipcSenders.importBrowserBookmarks(type)
+  } catch (error) {
+    log.error('Error importing browser bookmarks:', error)
   }
 }
