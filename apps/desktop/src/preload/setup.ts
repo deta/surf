@@ -53,6 +53,11 @@ const api = {
   resendInviteCode: async (email: string) => {
     const api = createAPI(import.meta.env.P_VITE_API_BASE)
     return await api.resendInviteCode(email)
+  },
+
+  signup: async (email: string) => {
+    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+    return await api.signup(email)
   }
 }
 
