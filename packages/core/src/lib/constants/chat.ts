@@ -1,5 +1,5 @@
 import { MentionItemType, type MentionItem } from '@horizon/editor'
-import { generalContext } from './browsingContext'
+import { ContextItemTypes } from '../service/ai/context/types'
 
 export const NO_CONTEXT_MENTION = {
   id: 'general',
@@ -10,28 +10,37 @@ export const NO_CONTEXT_MENTION = {
   type: MentionItemType.BUILT_IN
 } as MentionItem
 
-export const GENERAL_CONTEXT_MENTION = {
-  id: generalContext.id,
-  label: generalContext.label,
-  suggestionLabel: 'Home Context',
-  aliases: ['inbox', 'general'],
-  icon: 'icon;;circle-dot',
-  type: MentionItemType.BUILT_IN
-} as MentionItem
-
 export const EVERYTHING_MENTION = {
-  id: 'everything',
+  id: ContextItemTypes.EVERYTHING,
   label: 'Surf',
-  suggestionLabel: 'Everything in Surf',
+  suggestionLabel: 'All my Stuff',
   aliases: ['everything', 'all my stuff', 'all your stuff', 'surf'],
   icon: 'icon;;save',
   type: MentionItemType.BUILT_IN
 } as MentionItem
 
+export const INBOX_MENTION = {
+  id: ContextItemTypes.INBOX,
+  label: 'Inbox',
+  suggestionLabel: 'Inbox',
+  aliases: ['inbox', 'home', 'stuff', 'surf', 'recent'],
+  icon: 'icon;;circle-dot',
+  type: MentionItemType.BUILT_IN
+} as MentionItem
+
 export const ACTIVE_CONTEXT_MENTION = {
-  id: 'active-context',
+  id: ContextItemTypes.ACTIVE_SPACE,
   label: 'Active',
   suggestionLabel: 'Active Context',
+  icon: 'icon;;sparkles',
+  type: MentionItemType.BUILT_IN
+} as MentionItem
+
+export const ACTIVE_TAB_MENTION = {
+  id: ContextItemTypes.ACTIVE_TAB,
+  label: 'Active Tab',
+  suggestionLabel: 'Active Tab',
+  aliases: ['tab', 'active'],
   icon: 'icon;;sparkles',
   type: MentionItemType.BUILT_IN
 } as MentionItem
@@ -39,47 +48,66 @@ export const ACTIVE_CONTEXT_MENTION = {
 export const TABS_MENTION = {
   id: 'tabs',
   label: 'Tabs',
-  suggestionLabel: 'Your Tabs',
+  suggestionLabel: 'Open Tabs',
   aliases: ['tabs', 'context', 'active'],
   icon: 'icon;;world',
   type: MentionItemType.BUILT_IN
 } as MentionItem
 
 export const WIKIPEDIA_SEARCH_MENTION = {
-  id: 'wikipedia',
+  id: ContextItemTypes.WIKIPEDIA,
   label: 'Wikipedia',
   suggestionLabel: 'Ask Wikipedia',
   aliases: ['wiki'],
-  icon: 'favicon;;https://wikipedia.org',
+  icon: 'image;;https://en.wikipedia.org/static/favicon/wikipedia.ico',
   type: MentionItemType.BUILT_IN
 } as MentionItem
 
 export const MODEL_CLAUDE_MENTION = {
   id: 'model-anthropic',
-  label: 'Anthropic',
-  suggestionLabel: 'Ask Anthropic',
+  label: 'Claude',
+  suggestionLabel: 'Ask Claude',
   aliases: ['anthropic', 'claude', 'sonnet'],
   icon: 'icon;;claude',
   type: MentionItemType.MODEL,
-  hideInSearch: true
+  hideInSearch: false
 } as MentionItem
 
 export const MODEL_GPT_MENTION = {
   id: 'model-openai',
-  label: 'OpenAI',
-  suggestionLabel: 'Ask OpenAI',
+  label: 'ChatGPT',
+  suggestionLabel: 'Ask ChatGPT',
   aliases: ['openai', 'gpt', 'gpt-4o'],
   icon: 'icon;;open-ai',
   type: MentionItemType.MODEL,
-  hideInSearch: true
+  hideInSearch: false
+} as MentionItem
+
+export const MODEL_GEMINI_MENTION = {
+  id: 'model-gemini',
+  label: 'Gemini',
+  suggestionLabel: 'Ask Gemini',
+  aliases: ['gemini', 'flash'],
+  icon: 'icon;;gemini',
+  type: MentionItemType.MODEL,
+  hideInSearch: false
+} as MentionItem
+
+export const NOTE_MENTION = {
+  id: 'note',
+  label: 'Note',
+  suggestionLabel: 'This Note',
+  aliases: ['this', 'myself', 'active'],
+  icon: 'icon;;docs',
+  type: MentionItemType.BUILT_IN
 } as MentionItem
 
 export const BUILT_IN_MENTIONS_BASE = [
-  GENERAL_CONTEXT_MENTION,
-  EVERYTHING_MENTION,
   TABS_MENTION,
+  EVERYTHING_MENTION,
   MODEL_CLAUDE_MENTION,
-  MODEL_GPT_MENTION
+  MODEL_GPT_MENTION,
+  MODEL_GEMINI_MENTION
   //NO_CONTEXT_MENTION
   // WIKIPEDIA_SEARCH_MENTION // This is a conditional mention, depends on user settings
 ]

@@ -29,7 +29,9 @@ import {
   type SFFSResource,
   type DownloadPathResponseMessage,
   SettingsWindowTab,
-  UserStats
+  UserStats,
+  ImportedBrowserHistoryItem,
+  BrowserType
 } from '@horizon/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
@@ -153,6 +155,16 @@ const eventHandlers = {
 
   onOpenCheatSheet: (callback: () => void) => {
     return IPC_EVENTS_RENDERER.openCheatSheet.on((_) => {
+      try {
+        callback()
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onOpenChangelog: (callback: () => void) => {
+    return IPC_EVENTS_RENDERER.openChangelog.on((_) => {
       try {
         callback()
       } catch (error) {
@@ -479,6 +491,26 @@ const eventHandlers = {
     })
   },
 
+  onImportBrowserHistory: (callback: (type: BrowserType) => void) => {
+    return IPC_EVENTS_RENDERER.importBrowserHistory.on(async (_, type) => {
+      try {
+        callback(type)
+      } catch (err) {
+        console.error('Failed to import files: ', err)
+      }
+    })
+  },
+
+  onImportBrowserBookmarks: (callback: (type: BrowserType) => void) => {
+    return IPC_EVENTS_RENDERER.importBrowserBookmarks.on(async (_, type) => {
+      try {
+        callback(type)
+      } catch (err) {
+        console.error('Failed to import files: ', err)
+      }
+    })
+  },
+
   onSaveLink: (callback: (url: string, spaceId?: string) => void) => {
     return IPC_EVENTS_RENDERER.saveLink.on((_, { url, spaceId }) => {
       try {
@@ -571,6 +603,18 @@ const api = {
     } catch (error) {
       throw error
     }
+  },
+
+  fetchRemoteBlob: (url: string) => {
+    return fetch(url)
+      .then(async (res) => {
+        return [res.headers.get('Content-Type'), await res.arrayBuffer()]
+      })
+      .then(([type, buffer]) => {
+        return new Blob([buffer], {
+          type
+        })
+      })
   },
 
   openResourceLocally: (resource: SFFSResource) => {
@@ -1195,9 +1239,7 @@ if (process.contextIsolated) {
   window.preloadEvents = eventHandlers
 }
 
-if (userConfig.settings?.extensions) {
-  injectBrowserAction()
-}
+injectBrowserAction()
 
 export type API = typeof api
 export type PreloadEventHandlers = typeof eventHandlers

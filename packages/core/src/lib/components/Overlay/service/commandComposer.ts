@@ -38,10 +38,9 @@ import {
 } from '../../../service/resources'
 import { ResourceTagsBuiltInKeys, ResourceTypes, SearchOasisEventTrigger } from '@horizon/types'
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
-import { GENERAL_CONTEXT_ID, type HistoryEntry, type Tab } from '../../../types'
+import { type HistoryEntry, type Tab } from '../../../types'
 import Fuse from 'fuse.js'
 import type { TabsManager } from '../../../service/tabs'
-import { generalContext } from '../../../constants/browsingContext'
 
 export class CommandComposer {
   private log = useLogScope('CommandComposer')
@@ -80,7 +79,7 @@ export class CommandComposer {
       { name: 'value', weight: 0.4 },
       { name: 'type', weight: 0.1 }
     ],
-    threshold: 0.7,
+    threshold: 0.2,
     includeScore: true
   }
 
@@ -94,17 +93,7 @@ export class CommandComposer {
     this.telemetry = this.resourceManager.telemetry
     this.userConfigSettings = this.config.settings
     this.tabsManager = this.tabsManager
-    this.spaces = derived(this.oasis.spaces, ($spaces) => {
-      const generalContextSpace = this.oasis.createFakeSpace(
-        {
-          folderName: generalContext.label
-        },
-        GENERAL_CONTEXT_ID,
-        true
-      )
-
-      return [generalContextSpace, ...$spaces]
-    })
+    this.spaces = this.oasis.spaces
 
     // Subscribe to search value changes
     this.searchValue.subscribe((value) => {
@@ -146,6 +135,8 @@ export class CommandComposer {
         ...searchEngineSuggestionResults.map((suggestion) =>
           searchEngineSuggestionToTeletypeItem(suggestion)
         ),
+
+        // TODO:  this doesn't do anything? uncecessary load? they dont seem to get used / rendered
         ...oasisSearchResults.map((resource) => resourceToTeletypeItem(resource)),
         ...historyEntriesResults.map((entry) =>
           historyEntryToTeletypeItem(entry, get(this.historyEntriesResults))
@@ -229,8 +220,8 @@ export class CommandComposer {
         !get(this.isFetchingHostnameHistoryEntriesResults) && this.fetchHostnameEntries(value),
         !get(this.isFetchingTabEntryResults) && this.fetchTabEntries(value),
         !get(this.isFilteringCommandItems) && this.filterBrowserCommands(value),
-        !get(this.isFilteringBrowserCommands) && this.filterBrowserCommands(value),
-        !get(this.isFetchingOasisSearchResults) && this.fetchOasisResults(value)
+        !get(this.isFilteringBrowserCommands) && this.filterBrowserCommands(value)
+        //!get(this.isFetchingOasisSearchResults) && this.fetchOasisResults(value)
       ].filter(Boolean)
 
       await Promise.all(tasks)
@@ -341,7 +332,7 @@ export class CommandComposer {
       )
       this.log.debug('Fetched history entries:', entries)
 
-      this.historyEntriesResults.set(entries.slice(0, 10))
+      this.historyEntriesResults.set(entries.slice(0, 5))
 
       const filteredEntries = get(this.historyEntriesResults).filter(
         (entry: HistoryEntry) =>
@@ -426,7 +417,7 @@ export class CommandComposer {
 
     const fuse = new Fuse(fuseSpaces, {
       keys: [{ name: 'name.folderName', weight: 0.7 }],
-      threshold: 0.4,
+      threshold: 0.2,
       includeScore: true
     })
 

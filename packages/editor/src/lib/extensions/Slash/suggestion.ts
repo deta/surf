@@ -16,7 +16,6 @@ export default {
   render: () => {
     let component: Slash
     let popup: any
-    let selected = false
 
     return {
       onStart: (props) => {
@@ -28,6 +27,7 @@ export default {
             range: props.range,
             items: props.items,
             query: props.query,
+            loading: props.loading,
             callback: (payload: SlashCommandPayload) => {
               console.log('slash command callback', payload)
               props.command(payload)
@@ -51,6 +51,7 @@ export default {
           editor: props.editor,
           range: props.range,
           items: props.items,
+          loading: props.loading,
           query: props.query
         })
         if (!props.clientRect) {
@@ -67,16 +68,17 @@ export default {
           popup[0].hide()
           return true
         }
-        if (props.event.key === 'Enter') {
-          selected = true
-          props.event.preventDefault()
-          return true
-        }
+
+        return component.onKeyDown(props.event)
       },
 
       onExit() {
-        popup[0].destroy()
-        component.$destroy()
+        if (popup && popup[0]) {
+          popup[0].destroy()
+        }
+        if (component) {
+          component.$destroy()
+        }
       }
     }
   }

@@ -368,13 +368,3 @@ export function setupChromeWebStoreApi() {
     ;(window.navigation as any).addEventListener('navigate', maybeUpdateBranding)
   }
 }
-
-export async function checkIfExtensionsEnabled() {
-  try {
-    const result = await ipcRenderer.invoke('get-extensions-enabled')
-    return result
-  } catch (error) {
-    console.error('Error getting user config:', error)
-    return false
-  }
-}

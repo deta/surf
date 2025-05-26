@@ -42,6 +42,7 @@ import {
   EventBusMessageType,
   EventContext,
   ResourceProcessingStateType,
+  ResourceTagDataStateValue,
   TelemetryEventTypes,
   WEB_RESOURCE_TYPES,
   type DetectedResource,
@@ -75,11 +76,10 @@ export const everythingSpace = {
     colors: ['#76E0FF', '#4EC9FB'],
     showInSidebar: false,
     liveModeEnabled: false,
-    hideViewed: false,
     smartFilterQuery: null,
     sql_query: null,
     embedding_query: null,
-    sortBy: 'created_at'
+    sortBy: 'resource_added_to_space'
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -94,11 +94,28 @@ export const inboxSpace = {
     colors: ['#76E0FF', '#4EC9FB'],
     showInSidebar: false,
     liveModeEnabled: false,
-    hideViewed: false,
     smartFilterQuery: null,
     sql_query: null,
     embedding_query: null,
-    sortBy: 'created_at'
+    sortBy: 'resource_added_to_space'
+  },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  deleted: 0,
+  type: 'space'
+} as Space
+
+export const notesSpace = {
+  id: 'notes',
+  name: {
+    folderName: 'Notes',
+    colors: ['#76E0FF', '#4EC9FB'],
+    showInSidebar: false,
+    liveModeEnabled: false,
+    smartFilterQuery: null,
+    sql_query: null,
+    embedding_query: null,
+    sortBy: 'resource_added_to_space'
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -133,6 +150,10 @@ export class ResourceTag {
 
   static generated() {
     return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'generated' }
+  }
+
+  static chat() {
+    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'chat' }
   }
 
   static rightClickSave() {
@@ -181,6 +202,14 @@ export class ResourceTag {
 
   static previewImageResource(previewId: string) {
     return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: previewId }
+  }
+
+  static linkedChat(value: string) {
+    return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: value }
+  }
+
+  static dataState(value: ResourceTagDataStateValue) {
+    return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: value }
   }
 }
 
@@ -494,6 +523,10 @@ export class ResourceNote extends Resource {
 
   parsedData: Writable<string | null>
 
+  get contentValue() {
+    return get(this.parsedData)
+  }
+
   constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
     super(sffs, resourceManager, data)
     // this.data = writable(null)
@@ -791,7 +824,9 @@ export class ResourceManager {
 
     // We only want to cleanup traditional file types, not web resources or PDFs (which are already handled in BrowserTab)
     const typeSupportsCleanup =
-      !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) && type !== ResourceTypes.PDF
+      !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) &&
+      type !== ResourceTypes.PDF &&
+      type !== ResourceTypes.DOCUMENT_SPACE_NOTE
     if (typeSupportsCleanup && this.config.settingsValue.cleanup_filenames) {
       const filename = metadata?.name
       if (filename) {
@@ -1291,6 +1326,40 @@ export class ResourceManager {
     await this.updateResource(resourceId, { created_at: new Date().toISOString() })
   }
 
+  async preventHiddenResourceFromAutodeletion(resourceOrId: ResourceObject | string) {
+    const resource =
+      typeof resourceOrId === 'string' ? await this.getResource(resourceOrId) : resourceOrId
+    if (!resource) {
+      throw new Error('resource not found')
+    }
+
+    const isSilent =
+      (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)?.value ===
+      'true'
+    const isHideInEverything =
+      (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
+        ?.value === 'true'
+
+    this.log.debug('preventing resource from autodeletion', resource, {
+      isSilent,
+      isHideInEverything
+    })
+
+    if (isSilent) {
+      this.log.debug('Removing silent tag from resource')
+      await this.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+
+      if (!isHideInEverything) {
+        this.log.debug('Adding hide in everything tag to resource')
+        await this.createResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING,
+          'true'
+        )
+      }
+    }
+  }
+
   async createResourceNote(
     content: string,
     metadata?: Partial<SFFSResourceMetadata>,
@@ -1453,6 +1522,20 @@ export class ResourceManager {
     return this.createCodeResource(data, metadata, tags)
   }
 
+  async searchChatResourcesAI(
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      limit?: number
+      resourceIds?: string[]
+    }
+  ) {
+    const rawResources = await this.sffs.searchChatResourcesAI(query, model, opts)
+    const resources = rawResources.map((r) => this.findOrCreateResourceObject(r))
+    return resources
+  }
+
   static SearchTagResourceType(
     type: ResourceTypes | string,
     op: SFFSResourceTag['op'] = 'eq'
@@ -1487,6 +1570,10 @@ export class ResourceManager {
     return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag, op: 'eq' }
   }
 
+  static SearchTagLinkedChat(chatId: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: chatId, op: 'eq' }
+  }
+
   async createSpace(name: SpaceData) {
     return await this.sffs.createSpace(name)
   }
@@ -1494,10 +1581,10 @@ export class ResourceManager {
   async getSpace(id: string) {
     if (id === 'all') {
       return everythingSpace
-    }
-
-    if (id === 'inbox') {
+    } else if (id === 'inbox') {
       return inboxSpace
+    } else if (id === 'notes') {
+      return notesSpace
     }
 
     return await this.sffs.getSpace(id)
@@ -1662,6 +1749,15 @@ export class ResourceManager {
           resource.type
         )
         await this.sffs.backend.js__store_resource_post_process(resource.id)
+
+        if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+          await this.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.DATA_STATE,
+            ResourceTagDataStateValue.COMPLETE
+          )
+        }
+
         return
       }
 
@@ -1695,6 +1791,14 @@ export class ResourceManager {
             name: (detectedResource.data as any).title
           })
         }
+      }
+
+      if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+        await this.updateResourceTag(
+          resource.id,
+          ResourceTagsBuiltInKeys.DATA_STATE,
+          ResourceTagDataStateValue.COMPLETE
+        )
       }
 
       resource.updateExtractionState('idle')
@@ -1747,6 +1851,10 @@ export class ResourceManager {
 
   static SearchTagPreviewImageResource(id: string): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: id, op: 'eq' }
+  }
+
+  static SearchTagDataState(state: ResourceTagDataStateValue) {
+    return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: state, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry, config: ConfigService) {

@@ -68,6 +68,9 @@
   }
 
   let observer: ResizeObserver
+
+  // PERF: This probably creates many "unnecessary" observers / at least create them many times?
+  // Can we simplify this, by just .observer / .disconnect if the list item changed?
   $: if (listElement) {
     observer = new ResizeObserver(() => {
       checkOverflow()

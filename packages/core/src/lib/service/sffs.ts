@@ -24,7 +24,8 @@ import type {
   SFFSRawResource,
   AIChatMessageRaw,
   AIChatRaw,
-  SpaceEntrySearchOptions
+  SpaceEntrySearchOptions,
+  SFFSRawBookmarkFolder
 } from '../types'
 
 import type {
@@ -34,11 +35,12 @@ import type {
   AIDocsSimilarity,
   YoutubeTranscript
 } from '../types/browser.types'
-import type { EventBusMessage } from '@horizon/types'
+import type { BookmarkFolder, BrowserType, EventBusMessage } from '@horizon/types'
 import type {
   App,
   Model,
   ChatMessageOptions,
+  NoteMessageOptions,
   CreateAppOptions,
   QueryResourcesOptions,
   Quota,
@@ -166,6 +168,24 @@ export class SFFS {
     }
   }
 
+  convertRawBookmarkFolderToBookmarkFolder(rawEntry: SFFSRawBookmarkFolder): BookmarkFolder {
+    return {
+      guid: rawEntry.guid,
+      title: rawEntry.title,
+      createdAt: rawEntry.created_at,
+      updatedAt: rawEntry.updated_at,
+      lastUsedAt: rawEntry.last_used_at,
+      children: (rawEntry.children ?? []).map((child) => ({
+        guid: child.guid,
+        title: child.title,
+        url: child.url,
+        createdAt: child.created_at,
+        updatedAt: child.updated_at,
+        lastUsedAt: child.last_used_at
+      }))
+    }
+  }
+
   convertRawSpaceToSpace(raw: any): Space {
     const parsedName = this.parseData<SpaceData>(raw.name)
     const nameData =
@@ -177,11 +197,23 @@ export class SFFS {
             showInSidebar: false,
             sources: [],
             liveModeEnabled: false,
-            hideViewed: false,
             smartFilterQuery: null,
-            sortBy: 'created_at'
+            sortBy: 'resource_added_to_space'
           } as SpaceData)
         : parsedName
+
+    // Convert legacy sortBy values to new ones
+    if (nameData.sortBy) {
+      const sortBy = nameData.sortBy as string
+      if (sortBy === 'created_at') {
+        nameData.sortBy = 'resource_added_to_space'
+      } else if (sortBy === 'updated_at') {
+        nameData.sortBy = 'resource_updated'
+      } else if (sortBy === 'source_published_at') {
+        nameData.sortBy = 'resource_source_published'
+      }
+    }
+
     return {
       id: raw.id,
       name: nameData,
@@ -462,6 +494,36 @@ export class SFFS {
     }))
   }
 
+  async searchChatResourcesAI(
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      limit?: number
+      resourceIds?: string[]
+    }
+  ): Promise<SFFSResource[]> {
+    this.log.debug('searching resources with AI query', query, 'model:', model, 'opts:', opts)
+    const rawResponse: string = await this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_search_chat_resources,
+      JSON.stringify({
+        query,
+        model,
+        custom_key: opts?.customKey,
+        number_documents: opts?.limit ?? 20,
+        resource_ids: opts?.resourceIds
+      })
+    )
+
+    const compositeResources = this.parseData<SFFSRawCompositeResource[]>(rawResponse)
+    if (!compositeResources) {
+      return []
+    }
+
+    return compositeResources.map((resource) => this.convertCompositeResourceToResource(resource))
+  }
+
   async createSpace(name: SpaceData) {
     this.log.debug('creating space with name:', name)
 
@@ -492,6 +554,18 @@ export class SFFS {
     this.log.debug('listing all spaces')
     const raw = await this.backend.js__store_list_spaces()
 
+    const spaces = this.parseData<any[]>(raw)
+
+    if (!spaces) {
+      return []
+    }
+
+    return spaces.map((space) => this.convertRawSpaceToSpace(space))
+  }
+
+  async searchSpaces(query: string) {
+    this.log.debug('searching spaces with query', query)
+    const raw = await this.backend.js__store_search_spaces(query)
     const spaces = this.parseData<any[]>(raw)
 
     if (!spaces) {
@@ -630,6 +704,28 @@ export class SFFS {
   async deleteHistoryEntry(id: string): Promise<void> {
     this.log.debug('deleting history entry', id)
     await this.backend.js__store_remove_history_entry(id)
+  }
+
+  async importBrowserHistory(type: BrowserType) {
+    this.log.debug('importing browser history')
+    const rawEntries = await this.backend.js__store_import_browser_history(type)
+    const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawHistoryEntryToHistoryEntry(e))
+  }
+
+  async importBrowserBookmarks(type: BrowserType) {
+    this.log.debug('importing browser bookmarks')
+    const rawEntries = await this.backend.js__store_import_browser_bookmarks(type)
+    const entries = this.parseData<SFFSRawBookmarkFolder[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawBookmarkFolderToBookmarkFolder(e))
   }
 
   // returns a list of unique hostnames
@@ -927,6 +1023,53 @@ export class SFFS {
     return this.withErrorHandling(
       this.backend,
       this.backend.js__ai_send_chat_message,
+      JSON.stringify(data),
+      callback
+    )
+  }
+
+  async sendAINoteMessage(
+    callback: (chunk: string) => void,
+    noteResourceId: string,
+    query: string,
+    model: Model,
+    opts?: {
+      customKey?: string
+      limit?: number
+      resourceIds?: string[]
+      inlineImages?: string[]
+      general?: boolean
+    }
+  ): Promise<void> {
+    this.log.debug(
+      'sending ai note message with note resource id',
+      noteResourceId,
+      'query:',
+      query,
+      'model',
+      model,
+      'custom_key',
+      !!opts?.customKey,
+      'limit:',
+      opts?.limit,
+      'resource ids filter:',
+      opts?.resourceIds,
+      'inline images length:',
+      opts?.inlineImages?.length
+    )
+    const data: NoteMessageOptions = {
+      query,
+      note_resource_id: noteResourceId,
+      model,
+      custom_key: opts?.customKey,
+      resource_ids: opts?.resourceIds,
+      inline_images: opts?.inlineImages,
+      limit: opts?.limit ?? 20,
+      general: opts?.general
+    }
+    return this.withErrorHandling(
+      this.backend,
+      this.backend.js__ai_send_note_message,
       JSON.stringify(data),
       callback
     )

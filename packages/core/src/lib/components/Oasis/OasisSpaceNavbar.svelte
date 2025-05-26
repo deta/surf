@@ -77,6 +77,7 @@
       font-weight: 420;
       color: #1a1a1a;
       color: var(--contrast-color);
+      max-width: 200px;
     }
 
     .dynamic-buttons {

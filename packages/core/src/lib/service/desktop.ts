@@ -123,8 +123,6 @@ export class DesktopManager {
         : (writable(null) as Readable<null>)
     })
 
-    this.loadDefault()
-
     // TODO: This doesnt have unsubscribers.. thats fine? should we have them? maybe
     window.api.onResetBackgroundImage(() => {
       if (get(this.activeDesktop)) {
@@ -158,17 +156,6 @@ export class DesktopManager {
   }
   attachColorService(colorService: ColorService) {
     this.colorService = colorService
-  }
-
-  async loadDefault() {
-    let desktop = await this.useDesktop('$$default')
-    if (!desktop) {
-      desktop = await this.createDesktop({
-        id: '$$default',
-        items: []
-      })
-    }
-    this._activeDesktop.set(desktop)
   }
 
   /** Used to retrieve all desktops data that exist, NOTE: This doesnt not load them fully / add them to

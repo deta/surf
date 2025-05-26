@@ -1,1 +1,1 @@
-export type RightSidebarTab = 'chat' | 'annotations'
+export type RightSidebarTab = 'chat' | 'annotations' | 'root'

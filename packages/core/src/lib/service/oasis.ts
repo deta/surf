@@ -29,9 +29,10 @@ import {
   type Space,
   type SpaceData,
   type SpaceEntry,
-  type SpaceEntrySearchOptions
+  type SpaceEntrySearchOptions,
+  type TabPage
 } from '../types'
-import { ResourceManager, type Resource } from './resources'
+import { ResourceManager, ResourceNote, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
@@ -41,6 +42,8 @@ import { RESOURCE_FILTERS } from '../constants/resourceFilters'
 import type { SpaceBasicData } from './ipc/events'
 import { createContextService, type ContextService } from './contexts'
 import { addSelectionById } from '../components/Oasis/utils/select'
+import { SavingItem, type SaveItemMetadata } from './saving'
+import type { SmartNoteManager } from './ai/note'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -54,9 +57,9 @@ export type OasisEvents = {
 
 export type OptionalSpaceData = Optional<
   SpaceData,
+  | 'default'
   | 'showInSidebar'
   | 'liveModeEnabled'
-  | 'hideViewed'
   | 'smartFilterQuery'
   | 'sortBy'
   | 'viewType'
@@ -66,8 +69,6 @@ export type OptionalSpaceData = Optional<
   | 'embedding_query'
   | 'builtIn'
 >
-
-export const DEFAULT_SPACE_ID = 'inbox'
 
 export const getSpaceIconString = (space: SpaceData) => {
   if (space.emoji) {
@@ -259,13 +260,18 @@ export class OasisService {
   loadingEverythingContents: Writable<boolean>
   selectedFilterTypeId: Writable<string | null>
   selectedFilterType: Readable<FilterItem | null>
+  sortedSpacesList: Readable<{ pinned: OasisSpace[]; linked: OasisSpace[]; unpinned: OasisSpace[] }>
+  sortedSpacesListFlat: Readable<OasisSpace[]>
 
   stackKey: Writable<{}>
+  pendingSave: Writable<SavingItem | null>
+  pendingSaveTimeout: ReturnType<typeof setTimeout> | null
   pendingStackActions: Array<{ resourceId: string; origin: { x: number; y: number } }>
 
   private eventEmitter: TypedEmitter<OasisEvents>
   tabsManager!: TabsManager
   resourceManager: ResourceManager
+  smartNotes: SmartNoteManager
   config: ConfigService
   contextService: ContextService
   telemetry: Telemetry
@@ -273,16 +279,20 @@ export class OasisService {
 
   static self: OasisService
 
-  constructor(resourceManager: ResourceManager, config: ConfigService) {
+  constructor(
+    resourceManager: ResourceManager,
+    config: ConfigService,
+    smartNotes: SmartNoteManager
+  ) {
     this.log = useLogScope('OasisService')
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
+    this.smartNotes = smartNotes
     this.config = config
-    this.contextService = createContextService(this)
     this.eventEmitter = new EventEmitter() as TypedEmitter<OasisEvents>
 
     this.spaces = writable<OasisSpace[]>([])
-    this.selectedSpace = writable<string>(DEFAULT_SPACE_ID)
+    this.selectedSpace = writable<string>(this.defaultSpaceID)
     this.detailedResource = writable<Resource | null>(null)
 
     this.everythingContents = writable([])
@@ -290,10 +300,56 @@ export class OasisService {
     this.selectedFilterTypeId = writable<string | null>(null)
 
     this.stackKey = writable({})
+    this.pendingSave = writable(null)
+    this.pendingSaveTimeout = null
     this.pendingStackActions = []
 
     this.selectedFilterType = derived(this.selectedFilterTypeId, (id) => {
       return RESOURCE_FILTERS.find((filter) => filter.id === id) ?? null
+    })
+
+    this.contextService = createContextService(this)
+
+    this.sortedSpacesList = derived(
+      [this.spaces, this.contextService.rankedSpaces, this.config.settings],
+      ([$spaces, $sourceSpaces, $userSettings]) => {
+        const filteredSpaces = $spaces
+          .filter(
+            (space) =>
+              space.dataValue.folderName !== '.tempspace' &&
+              space.id !== 'all' &&
+              space.id !== 'inbox'
+          )
+          .sort((a, b) => {
+            return a.indexValue - b.indexValue
+          })
+
+        const pinnedSpaces = filteredSpaces.filter((space) => space.dataValue.pinned)
+
+        const unpinnedSpaces = filteredSpaces.filter((space) => {
+          if ($userSettings.experimental_context_linking) {
+            return (
+              $sourceSpaces.findIndex((s) => s.id === space.id) === -1 && !space.dataValue.pinned
+            )
+          }
+
+          return !space.dataValue.pinned
+        })
+
+        const sourceSpaces = $sourceSpaces.filter(
+          (space) => pinnedSpaces.findIndex((s) => s.id === space.id) === -1
+        )
+
+        return {
+          pinned: pinnedSpaces,
+          linked: $userSettings.experimental_context_linking ? sourceSpaces : [],
+          unpinned: unpinnedSpaces
+        }
+      }
+    )
+
+    this.sortedSpacesListFlat = derived(this.sortedSpacesList, (sorted) => {
+      return [...sorted.pinned, ...sorted.linked, ...sorted.unpinned]
     })
 
     this.initSpaces()
@@ -324,15 +380,20 @@ export class OasisService {
     return new OasisSpace(space, this)
   }
 
+  getActiveSpace() {
+    return (
+      get(this.spaces).find((space) => space.id === this.tabsManager.activeScopeIdValue) ?? null
+    )
+  }
+
   createFakeSpace(data: Partial<SpaceData>, id?: string, skipUpdate = false) {
     const fullData = {
       showInSidebar: false,
       liveModeEnabled: false,
-      hideViewed: false,
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
-      sortBy: 'created_at',
+      sortBy: 'resource_added_to_space',
       builtIn: false,
       index: this.spacesValue.length,
       sources: [],
@@ -365,6 +426,30 @@ export class OasisService {
     return get(this.spaces).map((space) => space.spaceValue)
   }
 
+  get spacesObjectsValue() {
+    return get(this.spaces)
+  }
+
+  get sortedSpacesListValue() {
+    return get(this.sortedSpacesList)
+  }
+
+  get sortedSpacesListFlatValue() {
+    return get(this.sortedSpacesListFlat)
+  }
+
+  get pendingSaveValue() {
+    return get(this.pendingSave)
+  }
+
+  get defaultSpaceID() {
+    if (this.config.settingsValue.save_to_active_context) {
+      return 'all'
+    } else {
+      return 'inbox'
+    }
+  }
+
   on<E extends keyof OasisEvents>(event: E, listener: OasisEvents[E]): () => void {
     this.eventEmitter.on(event, listener)
 
@@ -378,19 +463,41 @@ export class OasisService {
   }
 
   updateMainProcessSpacesList() {
-    const items = this.spacesValue
-      .filter(
-        (e) =>
-          e.id !== 'all' && e.id !== 'inbox' && e.name.folderName?.toLowerCase() !== '.tempspace'
-      )
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            name: space.name.folderName,
-            pinned: space.name.pinned ?? false
-          }) as SpaceBasicData
-      )
+    const { pinned, unpinned, linked } = this.sortedSpacesListValue
+
+    const pinnedItems = pinned.map(
+      (space) =>
+        ({
+          id: space.id,
+          name: space.dataValue.folderName,
+          pinned: true,
+          linked: false
+        }) as SpaceBasicData
+    )
+
+    const linkedItems = linked.map(
+      (space) =>
+        ({
+          id: space.id,
+          name: space.dataValue.folderName,
+          pinned: false,
+          linked: true
+        }) as SpaceBasicData
+    )
+
+    const unpinnedItems = unpinned.map(
+      (space) =>
+        ({
+          id: space.id,
+          name: space.dataValue.folderName,
+          pinned: false,
+          linked: false
+        }) as SpaceBasicData
+    )
+
+    const items = [...pinnedItems, ...linkedItems, ...unpinnedItems].filter(
+      (e) => e.id !== 'all' && e.id !== 'inbox' && e.name?.toLowerCase() !== '.tempspace'
+    )
 
     this.log.debug('updating spaces list in main process', items)
     window.api.updateSpacesList(items)
@@ -449,12 +556,12 @@ export class OasisService {
     const defaults = {
       showInSidebar: false,
       liveModeEnabled: false,
-      hideViewed: false,
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
-      sortBy: 'created_at',
+      sortBy: 'resource_added_to_space',
       builtIn: false,
+      default: false,
       index: this.spacesValue.length,
       sources: []
     }
@@ -519,7 +626,7 @@ export class OasisService {
     this.spaces.set(filtered)
 
     if (get(this.selectedSpace) === spaceId && spaceId !== '.tempspace') {
-      this.changeSelectedSpace(DEFAULT_SPACE_ID)
+      this.changeSelectedSpace(this.defaultSpaceID)
     }
 
     await this.tabsManager.deleteScopedTabs(spaceId)
@@ -576,6 +683,42 @@ export class OasisService {
     }
 
     return space.fetchContents(opts)
+  }
+
+  /**
+   * Fetches note resources from a specific space
+   * @param spaceId - ID of the space to fetch notes from
+   * @returns Array of ResourceNote objects from the space
+   */
+  async fetchNoteResourcesFromSpace(spaceId: string) {
+    this.log.debug('Fetching note resources for space:', spaceId)
+
+    // Get the space
+    const space = await this.getSpace(spaceId)
+    if (!space) {
+      this.log.error('Space not found:', spaceId)
+      return []
+    }
+
+    // Get space contents
+    const spaceContents = (await space.fetchContents()) ?? []
+
+    // Extract IDs of note resources
+    const noteIds = spaceContents
+      .filter(
+        (entry) =>
+          entry.manually_added !== SpaceEntryOrigin.Blacklisted &&
+          entry.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE
+      )
+      .map((entry) => entry.resource_id)
+
+    // Load all note resources in parallel
+    const resources = await Promise.all(noteIds.map((id) => this.resourceManager.getResource(id)))
+
+    // Filter valid resources
+    const filteredResources = resources.filter(Boolean) as ResourceNote[]
+
+    return filteredResources
   }
 
   /** Deletes the provided resources from Oasis and gets rid of all references in any space */
@@ -659,6 +802,17 @@ export class OasisService {
 
     this.log.debug('removing resource bookmarks from tabs', validResourceIDs)
     await Promise.all(validResourceIDs.map((id) => this.tabsManager.removeResourceBookmarks(id)))
+
+    this.log.debug('removing deleted smart notes', validResourceIDs)
+    this.smartNotes.handleDeletedResources(validResourceIDs)
+
+    if (
+      this.pendingSaveValue?.resourceValue?.id &&
+      validResourceIDs.includes(this.pendingSaveValue.resourceValue.id)
+    ) {
+      this.log.debug('pending save resource was deleted, clearing pending save')
+      await this.removePendingSave()
+    }
 
     this.log.debug('updating everything after resource deletion')
     this.everythingContents.update((contents) => {
@@ -775,10 +929,6 @@ export class OasisService {
       this.everythingContents.set([])
       await tick()
 
-      if (initialLoad) {
-        this.telemetry.trackOpenOasis()
-      }
-
       const excludeAnnotations = !get(this.config.settings).show_annotations_in_oasis
       const selectedFilterType = get(this.selectedFilterType)
 
@@ -793,6 +943,10 @@ export class OasisService {
           ...conditionalArrayItem(
             excludeAnnotations,
             ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
+          ),
+          ...conditionalArrayItem(
+            get(this.selectedSpace) === 'notes',
+            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
           )
         ],
         { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }
@@ -816,7 +970,7 @@ export class OasisService {
   }
 
   async resetSelectedSpace() {
-    this.changeSelectedSpace(DEFAULT_SPACE_ID)
+    this.changeSelectedSpace(this.defaultSpaceID)
   }
 
   async createNewBrowsingSpace(
@@ -902,12 +1056,17 @@ export class OasisService {
     this.log.debug('moved space', spaceId, 'to index', index, this.spacesValue)
   }
 
+  /**
+   *
+   * @param resourceOrId resource or resource id
+   * @param opts - options
+   * @param opts.select - whether to select the resource in the sidebar
+   * @param opts.selectedSpace - the space to select, or 'auto' to select the space that contains the resource
+   */
   async openResourceDetailsSidebar(
     resourceOrId: Resource | string,
-    opts?: { select?: boolean; selectedSpace?: string }
+    opts?: { select?: boolean; selectedSpace?: 'auto' | string }
   ) {
-    const options = Object.assign({ select: true, selectedSpace: 'all' }, opts)
-
     const resource =
       typeof resourceOrId === 'string'
         ? await this.resourceManager.getResource(resourceOrId)
@@ -917,21 +1076,92 @@ export class OasisService {
       return
     }
 
+    let selectedSpace: string | undefined = undefined
+
+    if (opts?.selectedSpace === 'auto') {
+      if (
+        this.tabsManager.activeScopeIdValue &&
+        resource.spaceIdsValue.includes(this.tabsManager.activeScopeIdValue)
+      ) {
+        selectedSpace = this.tabsManager.activeScopeIdValue
+      } else if (resource.spaceIdsValue.length === 1) {
+        selectedSpace = resource.spaceIdsValue[0]
+      }
+    } else if (opts?.selectedSpace) {
+      selectedSpace = opts?.selectedSpace
+    }
+
+    const options = {
+      select: opts?.select ?? true,
+      selectedSpace: selectedSpace
+    }
+
+    this.log.debug('Opening resource details sidebar', resource, options)
+
     if (this.tabsManager.showNewTabOverlayValue !== 2) {
       this.tabsManager.showNewTabOverlay.set(2)
+
+      if (!options.selectedSpace) {
+        this.selectedSpace.set('all')
+      }
+    }
+
+    if (options.selectedSpace) {
       this.selectedSpace.set(options.selectedSpace)
     }
 
     this.detailedResource.set(resource)
 
     if (options.select) {
-      await wait(200)
+      await wait(300)
       addSelectionById(resource.id, { removeOthers: true })
     }
   }
 
-  static provide(resourceManager: ResourceManager, config: ConfigService) {
-    const service = new OasisService(resourceManager, config)
+  addPendingSave(data: SaveItemMetadata, resource?: Resource) {
+    this.log.debug('Adding pending save', resource)
+
+    const item = new SavingItem(
+      { resourceManager: this.resourceManager, oasis: this },
+      data,
+      resource
+    )
+
+    this.pendingSave.set(item)
+
+    item.on('destroy', () => {
+      this.pendingSave.set(null)
+    })
+
+    return item
+  }
+
+  addPendingSaveTab(tab: TabPage, resource?: Resource) {
+    this.log.debug('Adding pending save tab', tab, resource)
+
+    return this.addPendingSave(
+      {
+        title: tab.title,
+        description: '',
+        url: tab.currentLocation || tab.initialLocation,
+        icon: `image;;${tab.icon}`
+      },
+      resource
+    )
+  }
+
+  async removePendingSave() {
+    this.log.debug('Removing pending save')
+    await this.pendingSaveValue?.destroy()
+    this.pendingSave.set(null)
+  }
+
+  static provide(
+    resourceManager: ResourceManager,
+    config: ConfigService,
+    smartNotes: SmartNoteManager
+  ) {
+    const service = new OasisService(resourceManager, config, smartNotes)
 
     setContext('oasis', service)
 

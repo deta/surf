@@ -39,6 +39,8 @@
   } from '@horizon/core/src/lib/types'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
+  import OasisResourceLoader from './OasisResourceLoader.svelte'
+  import type { Origin } from '../../utils/resourcePreview'
 
   export let resource: Resource
   export let tab: TabResource | undefined = undefined
@@ -55,6 +57,7 @@
   export let initialHeight: string = '400px'
   export let expandable = true
   export let hideHeader = false
+  export let origin: Origin = 'stuff'
 
   let isResizing = false
   let startY = 0
@@ -79,6 +82,8 @@
   let codeBlockELem: HTMLElement
   let containerHeight = initialHeight
   let webview: WebviewTag | null = null
+  let webviewMediaPlaying = false
+  let webviewMuted = true
 
   let showHiddenPreview = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
@@ -228,6 +233,14 @@
     }
   }
 
+  const setWebviewMuted = (value?: boolean) => {
+    if (webview) {
+      const muted = value ?? !webviewMuted
+      webview.setAudioMuted(muted)
+      webviewMuted = muted
+    }
+  }
+
   const renderHTMLPreview = async () => {
     await tick()
     if (!appContainer || !canonicalUrl) {
@@ -256,7 +269,9 @@
 
     webview.addEventListener('did-start-loading', () => appIsLoading.set(true))
     webview.addEventListener('did-stop-loading', () => appIsLoading.set(false))
-    webview.addEventListener('dom-ready', () => webview.setAudioMuted(true))
+    webview.addEventListener('dom-ready', () => setWebviewMuted(true))
+    webview.addEventListener('media-started-playing', () => (webviewMediaPlaying = true))
+    webview.addEventListener('media-paused', () => (webviewMediaPlaying = false))
 
     appContainer.appendChild(webview)
 
@@ -312,8 +327,10 @@
 
     isResizing = true
     startY = e.clientY
-    const container = codeBlockELem?.querySelector('.code-container') as HTMLElement
-    startHeight = container?.offsetHeight || parseInt(containerHeight)
+    const codeContainer = codeBlockELem?.querySelector('.code-container') as HTMLElement
+    const imgContainer = codeBlockELem?.querySelector('article') as HTMLElement
+    startHeight =
+      codeContainer?.offsetHeight ?? imgContainer?.offsetHeight ?? parseInt(containerHeight)
 
     // Capture events on window to prevent losing track during fast movements
     window.addEventListener('mousemove', handleResizeMove, { capture: true })
@@ -487,6 +504,24 @@
             </div>
           {:else}
             <div class="flex items-center gap-2">
+              {#if webviewMediaPlaying}
+                <button
+                  tabindex="-1"
+                  use:tooltip={{
+                    text: webviewMuted ? 'Unmute Audio' : 'Mute Audio',
+                    position: 'left'
+                  }}
+                  class="flex items-center p-1 rounded-md transition-colors"
+                  on:click|stopPropagation={() => setWebviewMuted()}
+                >
+                  {#if webviewMuted}
+                    <Icon name="mute" size="16px" />
+                  {:else}
+                    <Icon name="unmute" size="16px" />
+                  {/if}
+                </button>
+              {/if}
+
               {#if saveable}
                 <SaveToStuffButton
                   state={saveState}
@@ -537,13 +572,30 @@
   {/if}
 
   {#if !collapsed && expandable}
-    <div
-      bind:this={appContainer}
-      class="bg-white w-full flex-grow overflow-auto {fullSize || resizable || collapsed
-        ? ''
-        : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
-      style={resizable && !fullSize && !collapsed ? `height: ${containerHeight};` : ''}
-    />
+    {#if !resource?.type?.startsWith('image/')}
+      <div
+        bind:this={appContainer}
+        class="bg-white w-full flex-grow overflow-auto {fullSize || resizable || collapsed
+          ? ''
+          : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
+        style={resizable && !fullSize && !collapsed ? ` height: ${containerHeight}; ` : ''}
+      />
+    {:else}
+      <div
+        style={resizable && !fullSize && !collapsed
+          ? ` max-height: max-content; height: ${containerHeight === '-1' ? 'auto' : containerHeight};`
+          : ''}
+      >
+        <OasisResourceLoader
+          resourceOrId={resource}
+          frameless
+          {origin}
+          interactive={false}
+          draggable={false}
+          hideProcessing
+        />
+      </div>
+    {/if}
   {/if}
 
   {#if resizable && !collapsed}
@@ -703,6 +755,23 @@
           color-mix(in srgb, var(--base-color), 5% var(--background-fill-mix)),
           color-mix(in srgb, var(--base-color), 60% var(--background-fill-mix))
         );
+      }
+    }
+  }
+
+  // @maxu god forgive me.. who made these resource preview stylings :'(… right… I
+  :global(resource[data-type^='image/'] .wrapper) {
+    height: 100% !important;
+    :global(> article) {
+      height: 100% !important;
+      :global(.preview) {
+        :global(.inner) {
+          height: 100% !important;
+          :global(img) {
+            height: 100% !important;
+            object-fit: cover;
+          }
+        }
       }
     }
   }

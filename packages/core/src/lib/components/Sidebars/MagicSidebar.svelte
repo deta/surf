@@ -6,13 +6,14 @@
 </script>
 
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
 
   import { useLogScope, isMac } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
 
   import Chat from '@horizon/core/src/lib/components/Chat/Chat.svelte'
+  import ChatOld from '@horizon/core/src/lib/components/Chat/ChatOld.svelte'
   import Onboarding from '@horizon/core/src/lib/components/Core/Onboarding.svelte'
 
   import chatContextDemo from '../../../../public/assets/demo/chatcontext.gif'
@@ -23,31 +24,41 @@
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { EventContext } from '@horizon/types'
 
   const log = useLogScope('MagicSidebar')
   const resourceManager = useResourceManager()
   const toasts = useToasts()
+  const config = useConfig()
   const ai = useAI()
+  const smartNotes = useSmartNotes()
 
-  const activeChat = ai.activeSidebarChat
   const activeChatId = ai.activeSidebarChatId
+  const activeChat = ai.activeSidebarChat
+  const activeNoteId = smartNotes.activeNoteId
+  const activeNote = smartNotes.activeNote
   const telemetry = resourceManager.telemetry
+  const userSettings = config.settings
 
   const onboardingOpen = writable(false)
 
   const modKeyShortcut = isMac() ? '⌘' : 'Ctrl'
 
-  let chatComponent: Chat
+  let chatComponent: Chat | ChatOld
 
-  $: responses = $activeChat?.responses
+  $: log.debug('Active chat note ID:', $activeNoteId)
+  $: log.debug('Active chat note:', $activeNote)
 
+  // TODO: what to do with this?
   export const startChatWithQuery = async (query: string) => {
-    const messagesLength = ($activeChat?.responsesValue ?? []).length
+    const messagesLength = 0
 
     if (messagesLength > 0) {
       const { closeType: confirmed } = await openDialog({
-        title: 'Start New Chat',
-        message: 'Are you sure you want to start a new chat? This will clear the current chat.',
+        title: 'Create New Note',
+        message: 'Are you sure you want to start a new note? This will clear the current note.',
         actions: [
           { title: 'Cancel', type: 'reset' },
           { title: 'OK', type: 'submit' }
@@ -61,15 +72,26 @@
       }
     }
 
-    await handleClearChat()
+    await handleClear()
 
     log.debug('Starting new chat with query', query)
     chatComponent?.updateChatInput(query)
     chatComponent?.submitChatMessage('active')
   }
 
-  export const insertQueryIntoChat = (query: string) => {
-    chatComponent?.insertQueryIntoChat(query)
+  export const insertQueryIntoChat = async (query: string) => {
+    if (chatComponent && typeof chatComponent.insertQueryIntoChat === 'function') {
+      await chatComponent.insertQueryIntoChat(query)
+
+      await tick()
+    }
+  }
+
+  export const submitChatMessage = async () => {
+    if (chatComponent && typeof chatComponent.submitCurrentChatMessage === 'function') {
+      return await chatComponent.submitCurrentChatMessage()
+    }
+    return false
   }
 
   export const addChatWithQuery = async (query: string) => {
@@ -77,37 +99,103 @@
   }
 
   export const clearExistingChat = async () => {
-    await handleClearChat()
+    await handleClear()
   }
 
   const handleClearErrors = () => {
     // todo: implement
   }
 
+  const handleClearNote = async () => {
+    log.debug('Clearing note')
+
+    if (!$activeNote) {
+      log.error('No note found to clear')
+      return
+    }
+
+    try {
+      await clearNote()
+
+      toasts.success('Note cleared!')
+      await telemetry.trackCreateNote(EventContext.Chat)
+    } catch (e) {
+      log.error('Error clearing note:', e)
+      toasts.error('Failed to clear note')
+    }
+  }
+
   const handleClearChat = async () => {
     log.debug('Clearing chat')
 
-    if (!$activeChatId) {
+    if (!$activeChat) {
       log.error('No chat found to clear')
       return
     }
 
     try {
-      const messagesLength = ($activeChat?.responsesValue ?? []).length
+      await clearChat()
 
-      await clearChat($activeChatId)
-
-      if (messagesLength > 0) {
-        toasts.success('Chat cleared!')
-      }
-      await telemetry.trackPageChatClear(messagesLength)
+      toasts.success('Chat cleared!')
+      await telemetry.trackPageChatClear(0) // TODO: fix metrics
     } catch (e) {
       log.error('Error clearing chat:', e)
       toasts.error('Failed to clear chat')
     }
   }
 
-  const clearChat = async (id: string) => {
+  const handleClear = () => {
+    if ($userSettings.experimental_notes_chat_sidebar) {
+      handleClearNote()
+    } else {
+      handleClearChat()
+    }
+  }
+
+  const clearNote = async () => {
+    log.debug('creating new chat...')
+    await createNewNote()
+  }
+
+  const fetchExistingNote = async (id: string) => {
+    try {
+      if ($activeNote?.id === id) {
+        log.debug('Chat already fetched', id)
+        await smartNotes.changeActiveNote($activeNote)
+        return
+      }
+
+      const fetched = await smartNotes.getNote(id)
+      if (!fetched) {
+        log.error('Failed to fetch chat', id)
+        await createNewNote()
+        return
+      }
+
+      await tick()
+
+      log.debug('Fetched chat', fetched, fetched.contentValue)
+
+      await smartNotes.changeActiveNote(fetched)
+    } catch (e) {
+      log.error('Error fetching chat:', e)
+      await createNewNote()
+    }
+  }
+
+  const createNewNote = async () => {
+    const createdNote = await smartNotes.createNote('')
+    if (!createdNote) {
+      log.error('Failed to create chat')
+      return
+    }
+
+    log.debug('Chat created', createdNote)
+
+    await smartNotes.changeActiveNote(createdNote)
+  }
+
+  const clearChat = async () => {
     log.debug('creating new chat...')
     await createNewChat()
   }
@@ -118,14 +206,12 @@
         log.debug('Chat already fetched', id)
         return
       }
-
       const fetched = await ai.getChat(id)
       if (!fetched) {
         log.error('Failed to fetch chat', id)
         createNewChat()
         return
       }
-
       activeChat.set(fetched)
     } catch (e) {
       log.error('Error fetching chat:', e)
@@ -141,20 +227,41 @@
     }
 
     log.debug('Chat created', $activeChat)
-
     activeChatId.set(createdChat.id)
     activeChat.set(createdChat)
   }
 
   onMount(async () => {
-    log.debug('Magic Sidebar mounted', $activeChatId)
+    try {
+      if ($userSettings.experimental_notes_chat_sidebar) {
+        log.debug('Magic Sidebar mounted, loading note', $activeNoteId)
 
-    if ($activeChatId) {
-      log.debug('Existing chat found', $activeChatId)
-      await fetchExistingChat($activeChatId)
-    } else {
-      log.debug('No existing chat found, creating new chat')
-      await createNewChat()
+        await smartNotes.loadNotes()
+
+        if ($activeNoteId) {
+          log.debug('Existing chat found', $activeNoteId)
+          await fetchExistingNote($activeNoteId)
+        } else {
+          log.debug('No existing chat found, creating new chat')
+          await createNewNote()
+        }
+
+        await tick()
+
+        return
+      }
+
+      log.debug('Magic sidebar mounted, loading chat', $activeChatId)
+
+      if ($activeChatId) {
+        log.debug('Existing chat found', $activeChatId)
+        await fetchExistingChat($activeChatId)
+      } else {
+        log.debug('No existing chat found, creating new chat')
+        await createNewChat()
+      }
+    } catch (err) {
+      log.error('Error mounting Magic Sidebar:', err)
     }
   })
 
@@ -223,14 +330,32 @@
 {/if}
 
 <div class="flex flex-col h-full relative overflow-hidden">
-  {#if $activeChat}
-    {#key $activeChat.id}
+  {#if $userSettings.experimental_notes_chat_sidebar && $activeNote}
+    {#key $activeNote.id + $activeNote.contextManager.key}
       <Chat
+        bind:this={chatComponent}
+        note={$activeNote}
+        preparingTabs={false}
+        on:clear-chat={handleClear}
+        on:clear-errors={handleClearErrors}
+        on:close-chat
+        on:open-context-item
+        on:process-context-item
+        on:highlightWebviewText
+        on:seekToTimestamp
+        on:open-onboarding={() => {
+          $onboardingOpen = true
+        }}
+      />
+    {/key}
+  {:else if !$userSettings.experimental_notes_chat_sidebar && $activeChat}
+    {#key $activeChat.id}
+      <ChatOld
         bind:this={chatComponent}
         chat={$activeChat}
         contextItemErrors={[]}
         preparingTabs={false}
-        on:clear-chat={handleClearChat}
+        on:clear-chat={handleClear}
         on:clear-errors={handleClearErrors}
         on:close-chat
         on:open-context-item

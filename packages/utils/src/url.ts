@@ -18,6 +18,14 @@ export const prependProtocol = (url: string, secure = true) => {
   }
 }
 
+export const parseURL = (url: string) => {
+  try {
+    return new URL(url)
+  } catch (e) {
+    return null
+  }
+}
+
 export const makeAbsoluteURL = (urlOrPath: string, base: URL) => {
   try {
     return new URL(urlOrPath, base.origin).href
@@ -198,7 +206,9 @@ export const normalizeURL = (url: string): string => {
     .replace(/\/+$/, '') // Remove trailing slash(es) from the root domain, not affecting paths
 }
 
-// truncate the URL path and query params so the beggining and end of the URL are always visible, max length is 50. Make sure the full hostname is always visible
+/**
+ * Truncates the URL path and query params so the hostname and beggining and end of the URL are always visible
+ */
 export const truncateURL = (url: string, maxLength = 75) => {
   try {
     if (!url) {
@@ -217,23 +227,21 @@ export const truncateURL = (url: string, maxLength = 75) => {
       fullPath = ''
     }
 
-    if (fullPath.length <= maxLength) {
-      if (protocol === 'https:') {
-        return hostname + fullPath
-      } else {
-        return `http://${hostname}${fullPath}`
-      }
+    const prefix = protocol === 'https:' ? hostname : `http://${hostname}`
+    const remainingLength = maxLength - prefix.length
+
+    if (fullPath.length <= remainingLength) {
+      return prefix + fullPath
     }
 
-    const start = fullPath.slice(0, maxLength / 2)
-    const end = fullPath.slice(-maxLength / 2)
+    const ellipsis = '...'
+    // Add 1 to start chunk to use any remaining character from odd-length remaining space
+    const startChunkSize = Math.ceil((remainingLength - ellipsis.length) / 2)
+    const endChunkSize = Math.floor((remainingLength - ellipsis.length) / 2)
+    const start = fullPath.slice(0, startChunkSize)
+    const end = fullPath.slice(-endChunkSize)
 
-    // if the URL is https, we don't need to show the protocol
-    if (protocol === 'https:') {
-      return `${hostname}${start}...${end}`
-    } else {
-      return `http://${hostname}${start}...${end}`
-    }
+    return `${prefix}${start}${ellipsis}${end}`
   } catch (error) {
     return ''
   }
@@ -375,4 +383,28 @@ export const appendURLPath = (url: string, path: string) => {
   } catch {
     return url
   }
+}
+
+/**
+ * Try to parse a surf protocol URL and return the resourceId
+ * Surf protocol URL format: surf://resource/<id>
+ * @param rawUrl The URL to parse
+ * @returns resourceId or null if the URL is not a surf protocol URL
+ */
+export const parseSurfProtocolURL = (rawUrl: URL | string) => {
+  const url = typeof rawUrl === 'string' ? parseURL(rawUrl) : rawUrl
+  if (!url) {
+    return null
+  }
+
+  if (url.protocol === 'surf:') {
+    const resourceId = url.pathname.replace('/', '')
+    if (!resourceId) {
+      return null
+    }
+
+    return resourceId
+  }
+
+  return null
 }

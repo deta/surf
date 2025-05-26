@@ -14,25 +14,59 @@
 
   // Import or define UserSettings type
   import type { UserSettings } from '@horizon/types'
+  import { provideConfig } from '@horizon/core/src/lib/service/config'
+  import { createResourceManager } from '@horizon/core/src/lib/service/resources'
+  import { provideOasis } from '@horizon/core/src/lib/service/oasis'
+  import { createTelemetry } from '@horizon/core/src/lib/service/telemetry'
+  import ContextView from './components/setup/ContextView.svelte'
+  import ImportView from './components/setup/ImportView.svelte'
+  import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
+
+  let telemetryAPIKey = ''
+  let telemetryActive = false
+  let telemetryProxyUrl: string | undefined = undefined
+  if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
+    telemetryActive = true
+    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
+    if (!telemetryProxyUrl) {
+      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
+    }
+  }
+
+  const telemetry = createTelemetry({
+    apiKey: telemetryAPIKey,
+    active: telemetryActive,
+    trackHostnames: false,
+    proxyUrl: telemetryProxyUrl
+  })
+
+  const config = provideConfig()
+  const resourceManager = createResourceManager(telemetry, config)
+  const smartNotes = provideSmartNotes(resourceManager)
+  provideOasis(resourceManager, config, smartNotes)
 
   type ViewType =
     | 'email'
     | 'invite'
-    | 'disclaimer'
-    | 'app_preferences'
+    | 'persona'
+    | 'import'
+    | 'explainer.stuff'
+    | 'contexts'
+    | 'explainer.chat'
     | 'language'
     | 'prefs'
-    | 'persona'
-    | 'explainer.stuff'
-    | 'explainer.chat'
     | 'done'
+    // not used
+    | 'disclaimer'
+    | 'app_preferences'
 
   //@ts-ignore
   let presetInviteCode: string = window.presetInviteCode || ''
   // @ts-ignore
   let presetEmail: string = window.presetEmail || ''
 
-  let initialView: ViewType = presetInviteCode ? 'invite' : 'email'
+  //let initialView: ViewType = presetInviteCode ? 'invite' : 'email'
+  let initialView: ViewType = 'invite'
   let view: ViewType = initialView
 
   let viewHistory: ViewType[] = [initialView]
@@ -50,9 +84,7 @@
   const mountUnsubscribers: (() => void)[] = []
 
   onMount(() => {
-    console.log('presetInviteCode', presetInviteCode)
     if (presetInviteCode) {
-      console.log('submitting invite code')
       inviteView.submitInviteCode(presetInviteCode)
     }
   })
@@ -83,8 +115,44 @@
     inviteView.submitInviteCode(code)
   })
 
+  /**
+   * Check if the experimental notes chat sidebar feature is enabled
+   * @returns {Promise<boolean>} True if the feature is enabled, false otherwise
+   */
+  const isNotesChatSidebarEnabled = async (): Promise<boolean> => {
+    try {
+      //@ts-ignore
+      const userConfig = await window.api.getUserConfig()
+      console.log(
+        'User config notes sidebar setting:',
+        userConfig?.settings?.experimental_notes_chat_sidebar
+      )
+      return userConfig?.settings?.experimental_notes_chat_sidebar === true
+    } catch (error) {
+      console.error('Error checking experimental_notes_chat_sidebar setting:', error)
+      return false
+    }
+  }
+
+  /**
+   * Handle view changes in the setup flow
+   */
   const handleViewChange = async (event: CustomEvent<ViewType>) => {
-    view = event.detail
+    // Get the target view from the event
+    let targetView = event.detail
+
+    // Skip the chat explainer if we're going to explainer.chat and the feature is enabled
+    if (targetView === 'explainer.chat') {
+      const isNotesSidebarEnabled = await isNotesChatSidebarEnabled()
+
+      if (isNotesSidebarEnabled) {
+        console.log('Skipping chat explainer due to notes chat sidebar feature being enabled')
+        targetView = 'language' // Skip directly to the language view
+      }
+    }
+
+    // Set the view and update history
+    view = targetView
     viewHistory.push(view)
   }
 
@@ -134,10 +202,33 @@
         emailStore={userEmailStore}
         on:viewChange={handleViewChange}
       />
+    {:else if view === 'persona'}
+      <PersonaView
+        {selectedPersonas}
+        on:personasChange={handlePersonasChange}
+        on:viewChange={handleViewChange}
+        on:back={handleBack}
+      />
     {:else if view === 'disclaimer'}
       <DisclaimerView on:viewChange={handleViewChange} />
     {:else if view === 'app_preferences'}
       <AppPreferencesSetup on:viewChange={handleViewChange} on:back={handleBack} />
+    {:else if view === 'import'}
+      <ImportView on:viewChange={handleViewChange} on:back={handleBack} />
+    {:else if view === 'explainer.stuff'}
+      <ExplainerStuff
+        persona={selectedPersonas}
+        on:viewChange={handleViewChange}
+        on:back={handleBack}
+      />
+    {:else if view === 'contexts'}
+      <ContextView {selectedPersonas} on:viewChange={handleViewChange} on:back={handleBack} />
+    {:else if view === 'explainer.chat'}
+      <ExplainerChat
+        persona={selectedPersonas}
+        on:viewChange={handleViewChange}
+        on:back={handleBack}
+      />
     {:else if view === 'language'}
       <LanguageView
         {embeddingModel}
@@ -152,25 +243,10 @@
         on:viewChange={handleViewChange}
         on:back={handleBack}
       />
-    {:else if view === 'persona'}
-      <PersonaView
-        {selectedPersonas}
-        on:personasChange={handlePersonasChange}
-        on:viewChange={handleViewChange}
-        on:back={handleBack}
-      />
-    {:else if view === 'explainer.stuff'}
-      <ExplainerStuff
-        persona={selectedPersonas}
-        on:viewChange={handleViewChange}
-        on:back={handleBack}
-      />
-    {:else if view === 'explainer.chat'}
-      <ExplainerChat
-        persona={selectedPersonas}
-        on:viewChange={handleViewChange}
-        on:back={handleBack}
-      />
+      <!-- {:else if view === 'disclaimer'}
+      <DisclaimerView on:viewChange={handleViewChange} />
+    {:else if view === 'app_preferences'}
+      <AppPreferencesSetup on:viewChange={handleViewChange} on:back={handleBack} /> -->
     {:else if view === 'done'}
       <DoneView on:start={handleStart} />
     {/if}
@@ -231,7 +307,7 @@
 
   :global(p span.pill) {
     background: #4592f0;
-    color: #fff;
+    color: #e0e0e0;
     font-size: 1.1rem;
     font-family: 'Inter', sans-serif;
     font-weight: 400;

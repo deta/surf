@@ -10,6 +10,7 @@
 
   import { onMount } from 'svelte'
   import { derived, writable, type Readable } from 'svelte/store'
+  import { selection } from '@horizon/core/src/lib/components/Oasis/utils/select'
 
   //import { createEventDispatcher, tick } from 'svelte'
   /**
@@ -104,6 +105,7 @@
  -->
 <div
   class="lazyScroll-container"
+  use:selection
   on:wheel|passive={(e) => {
     handleScroll(e)
     //if (raf === null) raf = requestAnimationFrame(() => handleWheel(e))

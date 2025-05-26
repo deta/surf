@@ -115,6 +115,24 @@ export interface SFFSRawHistoryEntry {
   updated_at: string
 }
 
+export interface SFFSRawBookmarkItem {
+  guid: string
+  title: string
+  url: string
+  created_at: string
+  updated_at: string
+  last_used_at: string
+}
+
+export interface SFFSRawBookmarkFolder {
+  guid: string
+  title: string
+  created_at: string
+  updated_at: string
+  last_used_at: string
+  children: SFFSRawBookmarkItem[]
+}
+
 export type AIChatRaw = {
   id: string
   title: string
@@ -132,7 +150,13 @@ export type AIChatMessageRaw = {
   sources?: AIChatMessageSource[]
 }
 
+export type SpaceEntrySortBy =
+  | 'resource_created'
+  | 'resource_updated'
+  | 'resource_added_to_space'
+  | 'resource_source_published' // | 'resource_name'
+
 export type SpaceEntrySearchOptions = {
-  sort_by?: 'created_at' | 'updated_at' | 'source_published_at' | 'name'
+  sort_by?: SpaceEntrySortBy
   order?: 'asc' | 'desc'
 }

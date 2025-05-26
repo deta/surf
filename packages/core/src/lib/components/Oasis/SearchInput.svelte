@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
 
   import { isMac, isModKeyPressed } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
@@ -49,6 +49,12 @@
       dispatch('search', value)
     }
   }
+
+  onMount(() => {
+    tick()
+      .then(() => inputEl.focus())
+      .then(() => inputEl.blur())
+  })
 </script>
 
 <svelte:window

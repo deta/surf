@@ -25,7 +25,7 @@
     tooltip,
     isMac
   } from '@horizon/utils'
-  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
@@ -195,7 +195,6 @@
     log.debug('Active, loading space contents...')
     if (spaceId === 'all') {
       loadEverything()
-      telemetry.trackOpenOasis()
     } else {
       loadSpaceContents(spaceId)
     }
@@ -218,7 +217,7 @@
       log.debug('Fetched space:', fetchedSpace)
       space.set(fetchedSpace)
 
-      const sortBy = $space?.dataValue.sortBy ?? 'updated_at'
+      const sortBy = $space?.dataValue.sortBy ?? 'resource_updated'
       const order = $space?.dataValue.sortOrder ?? 'desc'
 
       log.debug('Loading space contents:', id, sortBy, order)
@@ -1147,7 +1146,7 @@
 
       await tabsManager.removeSpaceTabs(spaceId)
 
-      oasis.changeSelectedSpace(DEFAULT_SPACE_ID)
+      oasis.changeSelectedSpace(oasis.defaultSpaceID)
       dispatch('deleted', spaceId)
 
       if (!abortSpaceCreation) {
@@ -1165,23 +1164,6 @@
           'Error deleting context: ' +
             (typeof error === 'string' ? error : (error as Error).message)
         )
-      }
-    }
-  }
-
-  const handleLoadResource = (e: CustomEvent<Resource>) => {
-    const resource = e.detail
-    log.debug('Load resource:', resource)
-
-    if ($space?.dataValue.hideViewed) {
-      const viewedByUser =
-        resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.VIEWED_BY_USER)?.value ===
-        'true'
-
-      if (viewedByUser) {
-        log.debug('Resource already viewed by user')
-
-        $spaceContents = $spaceContents.filter((x) => x.resource_id !== resource.id)
       }
     }
   }
@@ -1484,7 +1466,7 @@
                 filter={$selectedFilterType?.id ?? null}
                 viewType={$spaceData?.viewType}
                 viewDensity={$spaceData?.viewDensity}
-                sortBy={$spaceData?.sortBy ?? 'created_at'}
+                sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
                 order={$spaceData?.sortOrder ?? 'desc'}
                 on:changedView={handleViewSettingsChanges}
                 on:changedFilter={handleFilterSettingsChanged}
@@ -1564,14 +1546,13 @@
             isInSpace={!isEverythingSpace}
             viewType={$spaceData?.viewType}
             viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
             order={$spaceData?.sortOrder ?? 'desc'}
             fadeIn
             on:click={handleItemClick}
             on:open={handleOpen}
             on:open-and-chat
             on:remove={handleResourceRemove}
-            on:load={handleLoadResource}
             on:batch-remove={handleResourceRemove}
             on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
             on:batch-open
@@ -1594,7 +1575,7 @@
             isInSpace={false}
             viewType={$spaceData?.viewType}
             viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'created_at'}
+            sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
             order={$spaceData?.sortOrder ?? 'desc'}
             fadeIn
             on:click={handleItemClick}

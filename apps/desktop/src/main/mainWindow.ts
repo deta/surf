@@ -88,6 +88,8 @@ export function createWindow() {
   mainWindow = new BrowserWindow({
     width: boundWindow.width,
     height: boundWindow.height,
+    minWidth: 542,
+    minHeight: 330,
     x: boundWindow.x,
     y: boundWindow.y,
     fullscreen: winState.state.isFullScreen,
@@ -97,7 +99,7 @@ export function createWindow() {
     frame: isMac() ? false : true,
     titleBarStyle: 'hidden',
     // ...(isLinux() ? { icon } : {}),
-    trafficLightPosition: { x: 12.5, y: 12.5 },
+    trafficLightPosition: { x: 16, y: 17 },
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
       additionalArguments: [
@@ -335,7 +337,8 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
     const mainWindow = getMainWindow()
     if (mainWindow) {
       IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-        url: event.url
+        url: event.url,
+        disposition: 'foreground-tab'
         // we are explicitly not sending the webContentsId here
       })
     }

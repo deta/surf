@@ -161,9 +161,18 @@ class AppMenu {
           click: () => importFiles()
         },
         {
+          id: 'importBrowserHistory',
+          label: 'Import Browser History',
+          click: () => {
+            ipcSenders.openImporter()
+          }
+        },
+        {
           id: 'importBookmarks',
-          label: 'Import Bookmarks',
-          click: () => ipcSenders.openImporter()
+          label: 'Import Browser Bookmarks',
+          click: () => {
+            ipcSenders.openImporter()
+          }
         },
         ...(isMac() ? [] : [{ type: 'separator' }, { role: 'quit' }])
       ] as MenuConfig[]
@@ -335,9 +344,14 @@ class AppMenu {
           accelerator: 'F1'
         },
         {
+          label: 'Open Changelog',
+          click: () => ipcSenders.openChangelog()
+        },
+        {
           label: 'Open Welcome Page',
           click: () => ipcSenders.openWelcomePage()
         },
+        { type: 'separator' },
         {
           label: 'Give Feedback',
           click: () => ipcSenders.openFeedbackPage(),

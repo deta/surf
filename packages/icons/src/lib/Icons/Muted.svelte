@@ -20,19 +20,3 @@
     stroke-width="0"
   />
 </svg>
-
-<style lang="scss">
-  svg {
-    &:hover {
-      fill: rgba(0, 0, 0, 0.05);
-      path {
-        fill: #e173a8;
-        stroke: #e173a8;
-      }
-
-      path:last-child {
-        fill: #e173a8;
-      }
-    }
-  }
-</style>

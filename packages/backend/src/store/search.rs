@@ -68,7 +68,7 @@ impl Database {
             limit_clause
         );
 
-        let match_phrase = format!("{{name alt}}: {}", keyword);
+        let match_phrase = format!("{{name user_context alt}}: {}", keyword);
         let base_query = format!(
             "SELECT M.id, M.resource_id, M.name, M.source_uri, M.alt, M.user_context, R.* 
             FROM (

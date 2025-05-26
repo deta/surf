@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import WebviewWrapper from '../Webview/WebviewWrapper.svelte'
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
@@ -46,6 +46,7 @@
   import type { MiniBrowserSelection } from '@horizon/core/src/lib/service/miniBrowser'
   import CodeRenderer from '../Chat/CodeRenderer.svelte'
   import { isGeneratedResource } from '../../utils/resourcePreview'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let tab: TabPage
   // export let url: Writable<string>
@@ -69,9 +70,11 @@
   const historyEntriesManager = tabsManager.historyEntriesManager
   const toasts = useToasts()
   const oasis = useOasis()
+  const config = useConfig()
 
   const spaces = oasis.spaces
   const telemetry = resourceManager.telemetry
+  const userConfigSettings = config.settings
 
   const injectYouTubeTimestamp = (value: string, timestamp: number) => {
     const url = new URL(value)
@@ -244,7 +247,12 @@
         [OpenInMiniBrowserEventFrom.WebPage, OpenInMiniBrowserEventFrom.Chat].includes(
           selected.from
         )
-      if (!savedToSpace && scopedToSpace && tabsManager.activeScopeIdValue) {
+      if (
+        !savedToSpace &&
+        scopedToSpace &&
+        tabsManager.activeScopeIdValue &&
+        $userConfigSettings.save_to_active_context
+      ) {
         await oasis.addResourcesToSpace(
           tabsManager.activeScopeIdValue,
           [resource.id],
@@ -366,7 +374,7 @@
   }
 
   onMount(async () => {
-    log.debug('Resource modal mounted', resource, selection?.timestamp, $url)
+    log.debug('Resource modal mounted', resource, selection, $url)
 
     if (resource) {
       const viewedByUserTag = (resource.tags ?? []).find(
@@ -395,15 +403,23 @@
           )
         }
       }
+    }
 
-      if (selection?.text && !selection?.timestamp) {
-        let source = null
-        if (selection.sourceUid)
-          source = await resourceManager.sffs.getAIChatDataSource(selection.sourceUid)
+    if (selection?.text && !selection?.timestamp) {
+      log.debug(
+        'Highlighting text in webview',
+        selection.text,
+        selection.source ?? selection.sourceUid
+      )
+      let source = selection.source ?? null
+      if (!source && selection.sourceUid) {
+        source = await resourceManager.sffs.getAIChatDataSource(selection.sourceUid)
+      }
 
-        if (browserTab) {
-          await browserTab.highlightWebviewText(resource.id, selection?.text, source)
-        }
+      if (browserTab) {
+        await browserTab.highlightWebviewText(selection?.text, source)
+      } else {
+        log.error('No browser tab found to highlight text in webview')
       }
     }
   })

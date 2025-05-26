@@ -60,7 +60,6 @@
   import { useTelemetry } from '../../service/telemetry'
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   import { onboardingSpace } from '../../constants/examples'
@@ -556,7 +555,7 @@
         ? [
             {
               type: 'action',
-              icon: generalContext.icon,
+              icon: 'circle-dot',
               text: 'Open Context',
               action: handleOpenAsContext
             },

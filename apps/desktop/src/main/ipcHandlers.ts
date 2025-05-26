@@ -12,7 +12,9 @@ import {
 } from './config'
 import { handleDragStart } from './drag'
 import {
+  BrowserType,
   ElectronAppInfo,
+  ImportedBrowserHistoryItem,
   RightSidebarTab,
   SFFSResource,
   UserSettings,
@@ -229,8 +231,11 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!url || !url.startsWith('https://chromewebstore.google.com/')) {
       return null
     }
+    return true
+    /*
     const userConfig = getUserConfig()
     return userConfig.settings.extensions
+    */
   })
 
   IPC_EVENTS_MAIN.listExtensions.handle((event) => {
@@ -434,6 +439,16 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.openCheatSheet.sendToWebContents(window.webContents)
+  },
+
+  openChangelog: () => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.openChangelog.sendToWebContents(window.webContents)
   },
 
   openInvitePage: () => {
@@ -753,6 +768,18 @@ export const ipcSenders = {
     const mainWindow = getMainWindow()
     if (!mainWindow) return
     IPC_EVENTS_MAIN.importedFiles.sendToWebContents(mainWindow.webContents, files)
+  },
+
+  importBrowserHistory(type: BrowserType) {
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return
+    IPC_EVENTS_MAIN.importBrowserHistory.sendToWebContents(mainWindow.webContents, type)
+  },
+
+  importBrowserBookmarks(type: BrowserType) {
+    const mainWindow = getMainWindow()
+    if (!mainWindow) return
+    IPC_EVENTS_MAIN.importBrowserBookmarks.sendToWebContents(mainWindow.webContents, type)
   },
 
   saveLink(url: string, spaceId?: string) {

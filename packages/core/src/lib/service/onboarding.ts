@@ -1,0 +1,484 @@
+import { getContext, setContext } from 'svelte'
+import { useLogScope } from '@horizon/utils'
+import { writable, get, derived, type Writable } from 'svelte/store'
+import type { TabsManager } from './tabs'
+import type { MagicSidebar } from '../components/Sidebars/MagicSidebar.svelte'
+import type { AIService } from './ai/ai'
+import {
+  startAIGeneration,
+  endAIGeneration,
+  isGeneratingAI,
+  updateAIGenerationProgress
+} from './ai/generationState'
+
+const ONBOARDING_CONTEXT_KEY = 'onboarding'
+
+// Define loading state types
+export enum OnboardingLoadingState {
+  Idle = 'idle',
+  LoadingContent = 'loading-content', // For when content is loading (PDF, YouTube, etc.)
+  GeneratingAI = 'generating-ai', // For when AI is generating content
+  ProcessingAction = 'processing-action' // For other actions
+}
+
+export interface OnboardingLoadingInfo {
+  state: OnboardingLoadingState
+  message?: string
+  actionId?: string
+}
+
+export class OnboardingService {
+  log = useLogScope('OnboardingService')
+  tabsManager: TabsManager
+  magicSidebar: MagicSidebar | null = null
+  aiService: AIService | null = null
+
+  // Loading state store
+  loadingState: Writable<OnboardingLoadingInfo> = writable({
+    state: OnboardingLoadingState.Idle,
+    message: undefined,
+    actionId: undefined
+  })
+
+  // Derived store that simply tells if any loading is happening
+  isLoading = derived(this.loadingState, ($state) => $state.state !== OnboardingLoadingState.Idle)
+
+  static self: OnboardingService
+
+  constructor(tabsManager: TabsManager) {
+    this.tabsManager = tabsManager
+
+    // Subscribe to the global AI generation state
+    // This will synchronize our loading state with the global AI generation state
+    this.unsubscribeFromAIGeneration = isGeneratingAI.subscribe((isGenerating) => {
+      if (isGenerating) {
+        // If AI generation has started, update our loading state
+        this.setLoadingState(OnboardingLoadingState.GeneratingAI, 'AI is generating content...')
+      } else if (this.getLoadingState().state === OnboardingLoadingState.GeneratingAI) {
+        // Only clear if we're in AI generation state (don't affect other loading states)
+        this.clearLoadingState()
+      }
+    })
+  }
+
+  // Store the unsubscribe function
+  private unsubscribeFromAIGeneration: () => void
+
+  /**
+   * Set the loading state
+   * @param state The loading state
+   * @param message Optional message describing the loading state
+   * @param actionId Optional identifier for the action causing the loading state
+   */
+  setLoadingState(state: OnboardingLoadingState, message?: string, actionId?: string) {
+    this.log.debug('Setting loading state', { state, message, actionId })
+    this.loadingState.set({ state, message, actionId })
+  }
+
+  /**
+   * Clear the loading state
+   */
+  clearLoadingState() {
+    this.log.debug('Clearing loading state')
+    this.loadingState.set({
+      state: OnboardingLoadingState.Idle,
+      message: undefined,
+      actionId: undefined
+    })
+  }
+
+  /**
+   * Get the current loading state
+   */
+  getLoadingState(): OnboardingLoadingInfo {
+    return get(this.loadingState)
+  }
+
+  /**
+   * Register the AI service with the onboarding service
+   */
+  attachAIService(aiService: AIService) {
+    this.aiService = aiService
+    this.log.debug('AIService registered with OnboardingService')
+  }
+
+  /**
+   * Register the MagicSidebar component with the onboarding service
+   */
+  attachMagicSidebar(sidebar: MagicSidebar) {
+    this.magicSidebar = sidebar
+    this.log.debug('MagicSidebar registered with OnboardingService')
+  }
+
+  /**
+   * Open a URL and trigger the chat onboarding flow
+   * @param url The URL to open
+   * @param question Optional question to ask about the content
+   */
+  async openURLAndChat(url: string, question?: string) {
+    this.log.debug('Opening URL and starting chat', url)
+
+    // Set loading state for content loading
+    this.setLoadingState(OnboardingLoadingState.LoadingContent, 'Loading content...', url)
+
+    try {
+      // Open the URL in a new tab and get the tab ID
+      const tabResult = await this.tabsManager.addPageTab(url, { active: true })
+
+      if (tabResult) {
+        const tabId = tabResult.id
+        this.log.debug('Created new tab with ID', tabId)
+
+        // Explicitly activate the tab to ensure it's selected
+        this.tabsManager.activateTab(tabId)
+        this.log.debug('Explicitly activated tab', tabId)
+
+        // Wait for the content to load
+        await this.waitForContentLoad(tabId)
+
+        // Explicitly add the active tab to the context
+        this.log.debug('Explicitly adding active tab to context')
+        this.setLoadingState(
+          OnboardingLoadingState.LoadingContent,
+          'Adding tab to context...',
+          tabId
+        )
+
+        // Wait for the tab to be added to the context
+        await this.addActiveTabToContext()
+
+        // Give a small delay to ensure everything is ready
+        await new Promise((r) => setTimeout(r, 500))
+
+        // Update loading state to indicate content is loaded
+        this.clearLoadingState()
+
+        // If a question was provided, generate a response
+        if (question && this.magicSidebar) {
+          this.log.debug('Preparing to ask question about content', question)
+
+          // Set loading state for AI generation
+          this.setLoadingState(
+            OnboardingLoadingState.GeneratingAI,
+            'Preparing AI response...',
+            question
+          )
+
+          // Generate the response with the provided question
+          // The question will be inserted by the insertQuestionAndGenerateResponse method
+          await this.insertQuestionAndGenerateResponse(question)
+
+          // The loading state will be cleared by the AI generation process
+        }
+      } else {
+        this.log.error('Failed to create tab for URL', url)
+        this.clearLoadingState()
+      }
+    } catch (error) {
+      this.log.error('Error in openURLAndChat', error)
+      this.clearLoadingState()
+    }
+  }
+
+  /**
+   * Wait for the content to load and show the right sidebar
+   * @private
+   */
+  private async waitForContentLoad(tabId: string): Promise<void> {
+    return new Promise(async (resolve) => {
+      // Show the right sidebar if we have access to it
+      if (this.tabsManager.showRightSidebar) {
+        this.tabsManager.showRightSidebar.set(true)
+      }
+
+      try {
+        // Update loading state with more specific message
+        this.setLoadingState(
+          OnboardingLoadingState.LoadingContent,
+          'Waiting for tab to initialize...',
+          tabId
+        )
+
+        // Wait for active tab to be available (try up to 10 times with 200ms intervals)
+        let activeTab = this.tabsManager.activeTabValue
+        let attempts = 0
+        const maxAttempts = 10
+
+        while (!activeTab && attempts < maxAttempts) {
+          this.log.debug(
+            `Waiting for active tab to be available (attempt ${attempts + 1}/${maxAttempts})`
+          )
+          await new Promise((r) => setTimeout(r, 200))
+          activeTab = this.tabsManager.activeTabValue
+          attempts++
+        }
+
+        if (!activeTab) {
+          this.log.error(`No active tab found after ${maxAttempts} attempts`)
+          this.setLoadingState(OnboardingLoadingState.Idle, 'Failed to find active tab')
+          setTimeout(resolve, 2000) // Fallback to timeout
+          return
+        }
+
+        // Wait for the browser tab to be available
+        let browserTab = this.tabsManager.browserTabsValue[activeTab.id]
+        if (!browserTab) {
+          this.log.debug(
+            'Browser tab not immediately available, waiting for it to initialize...',
+            activeTab.id
+          )
+
+          // Update loading state
+          this.setLoadingState(
+            OnboardingLoadingState.LoadingContent,
+            'Waiting for browser tab to initialize...',
+            activeTab.id
+          )
+
+          // Try to get the browser tab for up to 5 attempts with 300ms intervals
+          let attempts = 0
+          const maxAttempts = 5
+
+          while (!browserTab && attempts < maxAttempts) {
+            await new Promise((r) => setTimeout(r, 300))
+            browserTab = this.tabsManager.browserTabsValue[activeTab.id]
+            attempts++
+            this.log.debug(`Waiting for browser tab (attempt ${attempts}/${maxAttempts})`)
+          }
+
+          if (!browserTab) {
+            this.log.error(`Browser tab not found after ${maxAttempts} attempts`, activeTab.id)
+            this.setLoadingState(OnboardingLoadingState.Idle, 'Failed to find browser tab')
+            setTimeout(resolve, 2000) // Fallback to timeout
+            return
+          }
+
+          this.log.debug('Browser tab found after waiting', activeTab.id)
+        }
+
+        this.log.debug('Waiting for app detection to complete')
+        this.setLoadingState(
+          OnboardingLoadingState.LoadingContent,
+          'Detecting content type...',
+          activeTab.id
+        )
+
+        // Wait for app detection to complete with a timeout
+        const detectedApp = await browserTab.waitForAppDetection(5000)
+
+        if (detectedApp) {
+          this.log.debug('App detection completed successfully', detectedApp)
+          // Update loading state
+          this.setLoadingState(
+            OnboardingLoadingState.LoadingContent,
+            'Content loaded successfully',
+            activeTab.id
+          )
+          // Give a small additional delay for any final processing
+          setTimeout(() => {
+            this.clearLoadingState()
+            resolve()
+          }, 500)
+        } else {
+          this.log.debug('App detection timed out, proceeding anyway')
+          // Update loading state
+          this.setLoadingState(
+            OnboardingLoadingState.LoadingContent,
+            'Content loaded (timeout)',
+            activeTab.id
+          )
+          // If app detection times out, we still proceed but with a slightly longer delay
+          setTimeout(() => {
+            this.clearLoadingState()
+            resolve()
+          }, 1000)
+        }
+      } catch (error) {
+        this.log.error('Error waiting for content to load:', error)
+        // Update loading state to indicate error
+        this.setLoadingState(OnboardingLoadingState.Idle, 'Error loading content')
+        // Fallback to timeout in case of errors
+        setTimeout(resolve, 2000)
+      }
+    })
+  }
+
+  /**
+   * Add the active tab to the context manager and wait for the resource to be fully prepared
+   * @private
+   */
+  private async addActiveTabToContext(): Promise<void> {
+    if (!this.aiService) {
+      this.log.error('AIService not registered, cannot add active tab to context')
+      return
+    }
+
+    try {
+      const contextManager = this.aiService.contextManager
+      if (!contextManager) {
+        this.log.error('Context manager not available')
+        return
+      }
+
+      // Verify that there is an active tab before proceeding
+      let activeTab = this.tabsManager.activeTabValue
+      if (!activeTab) {
+        this.log.warn('No active tab found when trying to add to context, waiting...')
+
+        // Wait for active tab to be available (try up to 10 times with 200ms intervals)
+        let attempts = 0
+        const maxAttempts = 10
+
+        while (!activeTab && attempts < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 200))
+          activeTab = this.tabsManager.activeTabValue
+          attempts++
+          this.log.debug(`Waiting for active tab (attempt ${attempts}/${maxAttempts})`)
+        }
+
+        if (!activeTab) {
+          this.log.error(`No active tab found after ${maxAttempts} attempts, cannot add to context`)
+          return
+        }
+      }
+
+      this.log.debug('Adding active tab to context before submitting message')
+
+      // Add the active tab to the context
+      const activeTabItem = await contextManager.addActiveTab()
+
+      if (!activeTabItem) {
+        this.log.error('Failed to add active tab to context, item not created')
+        return
+      }
+
+      // Wait for the active tab item to finish loading and prepare the resource
+      if (activeTabItem.loadingValue) {
+        this.log.debug('Waiting for active tab item to finish loading')
+
+        // Create a promise that resolves when loading is complete
+        await new Promise<void>((resolve) => {
+          const unsubscribe = activeTabItem.loading.subscribe((loading) => {
+            if (!loading) {
+              this.log.debug('Active tab item finished loading')
+              unsubscribe()
+              resolve()
+            }
+          })
+        })
+      }
+
+      // Wait for the resource to be available in the context
+      let resourceReady = false
+      let waitAttempts = 0
+      const maxWaitAttempts = 15 // 3 seconds total max wait time
+
+      while (!resourceReady && waitAttempts < maxWaitAttempts) {
+        const item = activeTabItem.itemValue
+        if (item) {
+          this.log.debug('Resource is ready in context', item.id)
+          resourceReady = true
+        } else {
+          this.log.debug(
+            `Waiting for resource to be ready (attempt ${waitAttempts + 1}/${maxWaitAttempts})`
+          )
+          await new Promise((r) => setTimeout(r, 200))
+          waitAttempts++
+        }
+      }
+
+      if (!resourceReady) {
+        this.log.warn(`Resource not ready after ${maxWaitAttempts} attempts, continuing anyway`)
+      }
+
+      // Ensure the context is persisted
+      contextManager.persistItems()
+      this.log.debug('Active tab added to context successfully')
+    } catch (error) {
+      this.log.error('Failed to add active tab to context:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Insert a question into the chat and trigger AI completion
+   * @param question Optional question to ask, defaults to a generic question about the paper
+   */
+  async insertQuestionAndGenerateResponse(question?: string): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.magicSidebar) {
+        this.log.error('MagicSidebar not registered, cannot insert question')
+        this.clearLoadingState()
+        resolve()
+        return
+      }
+
+      const defaultQuestion = 'What are the key findings of this paper?'
+      const finalQuestion = question?.includes('?') ? question : question || defaultQuestion
+
+      // Start AI generation using the global state
+      startAIGeneration('onboarding', `Preparing to answer: ${finalQuestion}`)
+
+      // Insert the question
+      if (typeof this.magicSidebar.insertQueryIntoChat === 'function') {
+        this.magicSidebar.insertQueryIntoChat(finalQuestion)
+
+        // The active tab has already been added to the context in openURLAndChat
+        // Just update the progress and submit the chat message
+        updateAIGenerationProgress(25, 'Preparing to submit query...')
+
+        // Wait longer for the question to be inserted and editor to be fully initialized
+        // This helps prevent the "No output node found" error
+        setTimeout(() => {
+          if (typeof this.magicSidebar?.submitChatMessage === 'function') {
+            this.log.debug('Submitting chat message after ensuring editor is initialized')
+            updateAIGenerationProgress(50, 'Submitting query to AI...')
+            this.magicSidebar.submitChatMessage()
+
+            // The global AI generation state will be updated by TextResource
+            // when the generation completes, which will automatically update our loading state
+            // through the subscription we set up in the constructor
+          } else {
+            // If we can't submit the message, end the AI generation
+            endAIGeneration()
+          }
+          resolve()
+        }, 2500) // Increased timeout to ensure editor is ready
+      } else {
+        this.log.error('insertQueryIntoChat not available on MagicSidebar')
+        // End AI generation if we can't insert the query
+        endAIGeneration()
+        resolve()
+      }
+    })
+  }
+
+  /**
+   * Provide the onboarding service to the Svelte context
+   */
+  static provide(tabsManager: TabsManager) {
+    const service = new OnboardingService(tabsManager)
+    OnboardingService.self = service
+    setContext(ONBOARDING_CONTEXT_KEY, service)
+    return service
+  }
+
+  /**
+   * Use the onboarding service from the Svelte context
+   */
+  static use() {
+    if (OnboardingService.self) {
+      return OnboardingService.self
+    }
+
+    const service = getContext<OnboardingService>(ONBOARDING_CONTEXT_KEY)
+    if (!service) {
+      throw new Error('OnboardingService not provided')
+    }
+
+    return service
+  }
+}
+
+export const provideOnboardingService = OnboardingService.provide
+export const useOnboardingService = OnboardingService.use

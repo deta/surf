@@ -23,6 +23,80 @@ impl Database {
         Ok(())
     }
 
+    pub fn create_history_entries_batch(&mut self, entries: &[HistoryEntry]) -> BackendResult<Vec<HistoryEntry>> {
+        let tx = self.conn.transaction()?;
+        
+        // let mut existing_urls = {
+        //     // Build a comma-separated list of URLs to check
+        //     let urls_to_check: Vec<_> = entries.iter()
+        //         .filter_map(|entry| entry.url.as_ref())
+        //         .collect();
+            
+        //     if urls_to_check.is_empty() {
+        //         std::collections::HashSet::new()
+        //     } else {
+        //         // Create a single string of placeholders for the SQL query (?1, ?2, ?3, etc.)
+        //         let placeholders = (1..=urls_to_check.len())
+        //             .map(|i| format!("?{}", i))
+        //             .collect::<Vec<_>>()
+        //             .join(",");
+                
+        //         let query = format!(
+        //             "SELECT DISTINCT url FROM history_entries WHERE url IN ({})",
+        //             placeholders
+        //         );
+                
+        //         let mut stmt = tx.prepare(&query)?;
+        //         let mut urls = std::collections::HashSet::new();
+                
+        //         let rows = stmt.query_map(rusqlite::params_from_iter(urls_to_check), |row| {
+        //             row.get::<_, String>(0)
+        //         })?;
+                
+        //         for url in rows {
+        //             urls.insert(url?);
+        //         }
+                
+        //         urls
+        //     }
+        // };
+        
+        let query = "
+            INSERT INTO history_entries (id, entry_type, url, title, search_query, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+            
+        let mut inserted_entries = Vec::new();
+        for entry in entries {
+            // // Skip if URL already exists
+            // if let Some(url) = &entry.url {
+            //     if existing_urls.contains(url) {
+            //         continue;
+            //     }
+                
+            //     // Add to existing_urls set to prevent duplicates within the batch
+            //     existing_urls.insert(url.clone());
+            // }
+            
+            tx.execute(
+                query,
+                rusqlite::params![
+                    entry.id,
+                    entry.entry_type.as_ref(),
+                    entry.url,
+                    entry.title,
+                    entry.search_query,
+                    entry.created_at,
+                    entry.updated_at,
+                ],
+            )?;
+
+            inserted_entries.push(entry.clone());
+        }
+        
+        tx.commit()?;
+        Ok(inserted_entries)
+    }
+
     pub fn get_history_entry(&self, id: &str) -> BackendResult<Option<HistoryEntry>> {
         let query = "
             SELECT id, entry_type, url, title, search_query, created_at, updated_at

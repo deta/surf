@@ -132,6 +132,8 @@ export enum CreateTabEventTrigger {
   HomescreenSpace = 'homescreen_space',
   /** Tab was created from a note */
   NoteCitation = 'note_citation',
+  /** Tab was created from a link in a note */
+  NoteLink = 'note_link',
   /** Tab was created by a unknown or other interaction */
   Other = 'Other'
 }
@@ -204,7 +206,8 @@ export enum OpenInMiniBrowserEventFrom {
   WebPage = 'web_page',
   Homescreeen = 'homescreen',
   CommandMenu = 'command_menu',
-  Note = 'note'
+  Note = 'note',
+  NoteLink = 'note_link'
 }
 
 export enum DeleteResourceEventTrigger {
@@ -413,7 +416,8 @@ export enum PageChatMessageSentEventTrigger {
   NoteAutocompletion = 'note_autocompletion',
   NoteUseSuggestion = 'note_use_suggestion',
   NoteRewrite = 'note_rewrite',
-  NoteSimilaritySearch = 'note_similarity_search'
+  NoteSimilaritySearch = 'note_similarity_search',
+  NoteChatInput = 'note_chat_input'
 }
 
 export enum PromptType {
@@ -444,9 +448,10 @@ export type UpdateSpaceSettingsEventChange = {
     | null
     | 'added'
     | 'removed'
-    | 'created_at'
-    | 'updated_at'
-    | 'source_published_at'
+    | 'resource_created'
+    | 'resource_updated'
+    | 'resource_added_to_space'
+    | 'resource_source_published'
     | 'name'
     | 'asc'
     | 'desc'
@@ -527,7 +532,9 @@ export enum MentionEventType {
   GeneralContext = 'general_context',
   ActiveContext = 'active_context',
   Everything = 'everything',
-  Tabs = 'tabs'
+  Tabs = 'tabs',
+  Resource = 'resource',
+  BUILT_IN = 'built-in'
 }
 
 export enum SummarizeEventContentSource {

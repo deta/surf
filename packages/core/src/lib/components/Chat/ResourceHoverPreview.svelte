@@ -25,9 +25,11 @@
       draggable
     />
   {:else}
-    <div class="text-gray-900 dark:text-gray-100 font-medium text-lg">
-      {truncate(title, MAX_TITLE_LENGTH)}
-    </div>
+    {#if title}
+      <div class="text-gray-900 dark:text-gray-100 font-medium text-lg">
+        {truncate(title, MAX_TITLE_LENGTH)}
+      </div>
+    {/if}
 
     {#if loading}
       <div class="flex items-center gap-2">
@@ -36,7 +38,7 @@
       </div>
     {:else}
       <div class="text-gray-500 dark:text-gray-400">
-        {type ? getFileType(type) : 'Resource'}
+        {type ? getFileType(type) : 'Source'}
       </div>
     {/if}
   {/if}

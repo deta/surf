@@ -6,3 +6,5 @@ export const dist = (p1: { x: number; y: number }, p2: { x: number; y: number },
 
 export const isInsideRect = ({ x, y }: Point, rect: Rect) =>
   x > rect.x && x < rect.x + rect.width && y > rect.y && y < rect.y + rect.height
+
+export const getRandomBooleanWithProbability = (probability = 0.5) => Math.random() < probability

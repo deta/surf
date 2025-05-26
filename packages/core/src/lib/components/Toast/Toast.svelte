@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Toast } from '../../service/toast'
   import { Icon } from '@horizon/icons'
-  import { hover } from '@horizon/utils'
+  import { hover, tooltip } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
   import { scale } from 'svelte/transition'
 
@@ -52,7 +52,11 @@
   {/if}
 
   {#if toast.dismissable}
-    <button class="close" on:click={() => dispatch('dismiss')}>
+    <button
+      use:tooltip={{ text: toast.dismissText, position: 'right' }}
+      class="close"
+      on:click={() => dispatch('dismiss')}
+    >
       <Icon name="close" size="15px" />
     </button>
   {/if}

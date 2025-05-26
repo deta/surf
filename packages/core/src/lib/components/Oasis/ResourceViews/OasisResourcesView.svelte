@@ -23,7 +23,6 @@
   import { Icon, type Icons } from '@horizon/icons'
   import GridView from './GridView.svelte'
   import SpaceFilterViewButtons from '../SpaceFilterViewButtons.svelte'
-  import { selection } from '../utils/select'
 
   export let resources: Readable<(Resource | string | { id: string } | { resource: Resource })[]>
 
@@ -31,7 +30,9 @@
   export let searchValue: Writable<string> | undefined
   export let resourcesBlacklistable: boolean = false
   export let fadeIn = false
+  export let openIn: 'tab' | 'sidebar' = 'tab'
   export let hideViewSettings = false
+  export let hideFilterSettings: boolean = false
   export let hideSortingSettings: boolean = false
 
   export let interactive: boolean = true
@@ -46,10 +47,11 @@
 
   const log = useLogScope('OasisResourcesView')
   const oasis = useOasis()
-  const spaces = oasis.spaces
   const toasts = useToasts()
   const telemetry = useTelemetry()
 
+  const spaces = oasis.spaces
+  const sortedSpaces = oasis.sortedSpacesListFlat
   const selectedFilterTypeId = oasis.selectedFilterTypeId
 
   const renderContents = derived([resources], ([resources]) => {
@@ -120,7 +122,7 @@
       type: 'sub-menu',
       icon: '',
       text: 'Add to Context',
-      items: $spaces
+      items: $sortedSpaces
         .filter(
           (e) =>
             e.id !== 'all' &&
@@ -186,7 +188,6 @@
   class="resources-view"
   class:fadeIn
   data-density={viewDensity ?? ContextViewDensities.Cozy}
-  use:selection
   use:contextMenu={{
     canOpen: $selectedItemIds.length > 1,
     items: CONTEXT_MENU_ITEMS
@@ -200,6 +201,7 @@
         {viewDensity}
         {sortBy}
         {order}
+        {hideFilterSettings}
         {hideSortingSettings}
         on:changedView
         on:changedFilter
@@ -241,10 +243,12 @@
               {interactive}
               {isInSpace}
               {resourcesBlacklistable}
+              {openIn}
               viewMode="card"
               on:click
               on:open
               on:open-and-chat
+              on:open-in-sidebar
               on:remove
               on:load
               on:space-selected
@@ -261,11 +265,13 @@
               {interactive}
               {isInSpace}
               {resourcesBlacklistable}
+              {openIn}
               mode="full"
               viewMode="responsive"
               on:click
               on:open
               on:open-and-chat
+              on:open-in-sidebar
               on:remove
               on:load
               on:space-selected

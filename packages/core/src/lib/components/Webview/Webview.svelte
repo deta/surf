@@ -24,6 +24,7 @@
   import type { WebviewTag } from 'electron'
   import { derived, writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { useConfig } from '../../service/config'
   import {
     ResourceTypes,
     WebViewEventSendNames,
@@ -39,7 +40,10 @@
     parseUrlIntoCanonical,
     generateID,
     shouldIgnoreWebviewErrorCode,
-    isPDFViewerURL
+    isPDFViewerURL,
+    processFavicons,
+    getFallbackFavicon,
+    getHostname
   } from '@horizon/utils'
   import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
   import {
@@ -59,6 +63,9 @@
   } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
   import type { NewWindowRequest } from '../../service/ipc/events'
+
+  const config = useConfig()
+  const userConfig = config.settings
 
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
@@ -88,6 +95,8 @@
 
   let newWindowHandlerRegistered = false
   let programmaticNavigation = false
+  let lastReceivedFavicons: string[] = []
+  let unsubscribeTheme: () => void
 
   const debouncedHistoryChange = useDebounce((stack: string[], index: number) => {
     dispatch('history-change', { stack, index })
@@ -328,7 +337,8 @@
     }
   }
 
-  const handleFaviconChange = (newFaviconURL: string) => {
+  const handleFaviconChange = useDebounce((newFaviconURL: string) => {
+    // NOTE: This is an expensive operation invoking main thread! Make sure it is debounced
     if (webview?.getURL()) {
       if (isPDFViewerURL(webview?.getURL(), window.api.PDFViewerEntryPoint)) return
     }
@@ -339,7 +349,38 @@
 
     faviconURL.set(newFaviconURL)
     dispatch('favicon-change', newFaviconURL)
+  }, 250)
+
+  const updateFaviconForTheme = () => {
+    if (lastReceivedFavicons.length === 0 || !webview) return
+
+    const currentUrl = webview.getURL()
+    const domain = getHostname(currentUrl) || ''
+
+    if (!domain) {
+      log.warn('Failed to parse URL for favicon domain', currentUrl)
+    }
+
+    const isDarkMode = $userConfig.app_style === 'dark'
+    const bestFavicon = processFavicons(lastReceivedFavicons, domain, isDarkMode)
+    handleFaviconChange(bestFavicon)
   }
+
+  onMount(() => {
+    if (!webview) return
+
+    unsubscribeTheme = userConfig.subscribe(
+      useDebounce(() => {
+        updateFaviconForTheme()
+      }, 500)
+    )
+  })
+
+  onDestroy(() => {
+    if (unsubscribeTheme) {
+      unsubscribeTheme()
+    }
+  })
 
   /**
    * Convert drag data into serialized format transferable to webview.
@@ -617,27 +658,27 @@ Made with Deta Surf.`
     webview.addEventListener('page-title-updated', (e: Electron.PageTitleUpdatedEvent) => {
       handlePageTitleChange(e.title)
     })
+
     webview.addEventListener('page-favicon-updated', (event: Electron.PageFaviconUpdatedEvent) => {
-      const getSize = (url: string): number => {
-        const dims = url.match(/(\d+)x(\d+)/)
-        return dims
-          ? parseInt(dims[1]) * parseInt(dims[2])
-          : Math.pow(parseInt(url.match(/\d+/)?.[0] || '0'), 2)
+      // Store the favicons for later theme changes
+      lastReceivedFavicons = event.favicons
+
+      // Get the current URL's domain for caching
+      const currentUrl = webview.getURL()
+      const domain = getHostname(currentUrl) || ''
+
+      if (!domain) {
+        log.warn('Failed to parse URL for favicon domain', currentUrl)
       }
 
-      const getPriority = (url: string): number => {
-        if (url.startsWith('data:image/')) return 3
-        if (url.endsWith('.svg')) return 2
-        if (url.endsWith('.ico')) return 1
-        return 0
-      }
+      // Use the favicon utility to get the best favicon
+      const isDarkMode = $userConfig.app_style === 'dark'
+      const bestFavicon = processFavicons(event.favicons, domain, isDarkMode)
 
-      const sortedFavicons = event.favicons.sort((a, b) => {
-        return getPriority(b) - getPriority(a) || getSize(b) - getSize(a)
-      })
-
-      handleFaviconChange(sortedFavicons[0])
+      // Update the favicon
+      handleFaviconChange(bestFavicon)
     })
+
     webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
       dispatch('update-target-url', e.url)
     })

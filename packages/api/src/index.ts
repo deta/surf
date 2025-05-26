@@ -23,7 +23,9 @@ export class API {
     const res = await this.fetch(`${this.base}${path}`, options)
 
     if (!res.ok) {
-      throw new Error(`Request failed: ${res.statusText}`)
+      let error = new Error(`Request failed: ${res.statusText}`)
+      ;(error as any).status = res.status
+      throw error
     }
 
     return res
@@ -41,6 +43,33 @@ export class API {
     })
 
     return res.json()
+  }
+
+  async requestJSONWithRetry(path: string, maxRetries: number = 5, options: RequestInit = {}) {
+    let retries = 0
+    let lastError: Error | null = null
+
+    while (retries <= maxRetries) {
+      try {
+        const res = await this.request(path, {
+          method: 'GET',
+          ...options
+        })
+
+        return res.json()
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+
+        if (retries === maxRetries) {
+          break
+        }
+
+        const delay = 100 * Math.pow(2, retries)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        retries++
+      }
+    }
+    throw lastError || new Error('Request failed after maximum retries')
   }
 
   async postJSON(path: string, data: any, options: RequestInit = {}) {
@@ -120,13 +149,7 @@ export class AuthenticatedAPI extends API {
   }
 
   async getUserData() {
-    try {
-      const data = (await this.requestJSON(ENDPOINTS.userdata)) as Promise<UserDataResponse>
-      return data
-    } catch (error) {
-      console.error('Error getting user data:', error)
-      return null
-    }
+    return (await this.requestJSONWithRetry(ENDPOINTS.userdata, 5)) as Promise<UserDataResponse>
   }
 
   async setUserTelemetryId(telemetryId: string) {

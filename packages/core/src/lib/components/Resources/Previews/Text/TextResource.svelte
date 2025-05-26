@@ -2,9 +2,11 @@
   import { writable, derived, get } from 'svelte/store'
   import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte'
   import tippy, { type Instance, type Placement, type Props } from 'tippy.js'
+  import type { Editor as TiptapEditor } from '@tiptap/core'
 
   import {
     Editor,
+    getEditorContentText,
     MentionItemType,
     type EditorAutocompleteEvent,
     type EditorRewriteEvent,
@@ -14,16 +16,24 @@
   } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
-  import { Resource, ResourceNote, useResourceManager } from '../../../../service/resources'
+  import {
+    Resource,
+    ResourceNote,
+    ResourceTag,
+    useResourceManager
+  } from '../../../../service/resources'
   import {
     conditionalArrayItem,
+    generateID,
     getFileKind,
     getFileType,
     getFormattedDate,
     isMac,
     isModKeyPressed,
     markdownToHtml,
+    parseSurfProtocolURL,
     tooltip,
+    truncate,
     truncateURL,
     useDebounce,
     useLocalStorageStore,
@@ -37,9 +47,17 @@
   } from '../../../Chat/CitationItem.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import {
+    generateContentHash,
     mapCitationsToText,
-    useEditorSpaceMentions
+    parseChatOutputToHtml,
+    parseChatOutputToSurfletCode
   } from '@horizon/core/src/lib/service/ai/helpers'
+  import {
+    startAIGeneration,
+    endAIGeneration,
+    updateAIGenerationProgress,
+    isGeneratingAI as globalIsGeneratingAI
+  } from '@horizon/core/src/lib/service/ai/generationState'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import {
     ChangeContextEventTrigger,
@@ -60,6 +78,7 @@
   } from '@horizon/types'
   import {
     DragTypeNames,
+    SpaceEntryOrigin,
     type AIChatMessageParsed,
     type AIChatMessageSource,
     type DragTypes,
@@ -74,13 +93,14 @@
   } from '@horizon/core/src/lib/service/ai/contextManager'
   import {
     INLINE_TRANSFORM,
-    SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
+    SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT,
+    CHAT_TITLE_GENERATOR_PROMPT
   } from '@horizon/core/src/lib/constants/prompts'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
   import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
-  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
-  import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
+  import { inboxContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { ChatMode, ModelTiers, Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import ChangeContextBtn from '@horizon/core/src/lib/components/Chat/Notes/ChangeContextBtn.svelte'
   import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
@@ -97,10 +117,14 @@
   import { createWikipediaAPI } from '@horizon/web-parser'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { updateCaretPopoverVisibility } from '@horizon/editor/src/lib/extensions/CaretIndicator/utils'
   import {
     MODEL_CLAUDE_MENTION,
     MODEL_GPT_MENTION,
-    NO_CONTEXT_MENTION
+    NO_CONTEXT_MENTION,
+    NOTE_MENTION,
+    EVERYTHING_MENTION,
+    INBOX_MENTION
   } from '@horizon/core/src/lib/constants/chat'
   import ModelPicker from '@horizon/core/src/lib/components/Chat/ModelPicker.svelte'
   import type {
@@ -110,6 +134,23 @@
   import type { SlashItemsFetcher } from '@horizon/editor/src/lib/extensions/Slash/suggestion'
   import { BUILT_IN_SLASH_COMMANDS } from '@horizon/editor/src/lib/extensions/Slash/actions'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
+  import { useSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
+  import CaretPopover from './CaretPopover.svelte'
+  import type { CaretPosition } from '@horizon/editor/src/lib/extensions/CaretIndicator'
+  import Surflet from '@horizon/core/src/lib/components/Chat/Notes/Surflet.svelte'
+  import ChatControls from '@horizon/core/src/lib/components/Chat/ChatControls.svelte'
+  import { openContextMenu } from '../../../Core/ContextMenu.svelte'
+  import {
+    createResourcesFromMediaItems,
+    processPaste,
+    type MediaParserResult
+  } from '../../../../service/mediaImporter'
+  import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+  import {
+    createMentionsFetcher,
+    createResourcesMentionsFetcher
+  } from '@horizon/core/src/lib/service/ai/mentions'
+  import type { LinkClickHandler } from '@horizon/editor/src/lib/extensions/Link/helpers/clickHandler'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -118,6 +159,11 @@
   export let showCodegenOnboarding: boolean = false
   export let minimal: boolean = false
   export let hideContextSwitcher: boolean = false
+  export let similaritySearch: boolean = false
+  export let manualContextControl: boolean = false
+  export let autoGenerateTitle: boolean = false
+  export let contextManager: ContextManager | undefined = undefined
+  export let note: SmartNote | null = null
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
@@ -131,6 +177,7 @@
   const codegenOnboarding = useCodegenNote()
   const noteOnboarding = useOnboardingNote(oasis)
   const wikipediaAPI = createWikipediaAPI()
+  const smartNotes = useSmartNotes()
 
   const dispatch = createEventDispatcher<{
     'update-title': string
@@ -140,6 +187,7 @@
   }>()
 
   const userSettings = config.settings
+  const activeNoteId = smartNotes.activeNoteId
 
   const content = writable('')
   const autocompleting = writable(false)
@@ -151,6 +199,29 @@
   const showBubbleMenu = writable(true)
   const bubbleMenuLoading = writable(false)
   const generatingSimilarities = writable(false)
+  // Local store that syncs with the global AI generation state
+  const isGeneratingAI = writable(false)
+
+  // Set up synchronization between local and global state
+  onMount(() => {
+    // Subscribe to global state and update local state
+    const unsubscribeGlobal = globalIsGeneratingAI.subscribe((isGenerating) => {
+      isGeneratingAI.set(isGenerating)
+    })
+
+    return () => {
+      // Clean up subscription when component is destroyed
+      unsubscribeGlobal()
+    }
+  })
+
+  type ChatSubmitOptions = {
+    focusEnd: boolean
+    autoScroll: boolean
+    showPrompt: boolean
+    generationID?: string
+  }
+
   const similarityResults = writable<null | {
     sources: AIChatMessageSource[]
     range: Range
@@ -166,6 +237,12 @@
   let clientWidth = 0
   let disableSimilaritySearch = false
   let tippyPopover: Instance<Props> | null = null
+  let editorFocused = false
+  let disableAutoscroll = false
+
+  // Caret indicator state
+  let caretPosition: CaretPosition | null = null
+  let showCaretPopover = false
 
   const emptyPlaceholder = 'Start typing or hit space for suggestions…'
 
@@ -225,18 +302,16 @@
         if ($onboardingNote.id === 'intro') {
           return ``
         } else if ($onboardingNote.id === 'basics') {
-          return `Press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf continue writing…`
+          return `Press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf continue writing…`
         } else if ($onboardingNote.id === 'suggestions') {
           return `Press space to generate suggestions…`
         }
       }
 
-      let contextName = generalContext.label
+      let contextName = ''
       if ($selectedContext) {
         if ($selectedContext === 'everything') {
           contextName = 'all your stuff'
-        } else if ($selectedContext === generalContext.id) {
-          contextName = `"${generalContext.label}"`
         } else if ($selectedContext === 'tabs') {
           contextName = 'your tabs'
         } else if ($selectedContext === 'active-context') {
@@ -257,23 +332,20 @@
           return `Generating suggestions based on "${contextName}"${mentions.length > 0 ? ' and the mentioned contexts' : ''}…`
         } else if ($showPrompts) {
           if (!contextName) {
-            return `Select a suggestion or press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf continue writing…`
+            return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf continue writing…`
           }
-          return `Select a suggestion or press ${isMac() ? '⌥' : 'alt'} + ↵ to let Surf write based on ${contextName}`
+          return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf write based on ${contextName}`
         } else {
           return `Write something or type / for commands…`
         }
       }
 
-      return `Press ${isMac() ? '⌥' : 'alt'} + ↵ to autocomplete based on ${contextName}`
+      return `Write something or type / for commands…`
     }
   )
 
-  const mentionItems = useEditorSpaceMentions(oasis, ai)
-
-  const isBuiltInMention = (id: string) => {
-    return $mentionItems.some((mention) => mention.id === id && mention.type === 'built-in')
-  }
+  const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager }, resourceId)
+  const linkItemsFetcher = createResourcesMentionsFetcher(resourceManager, resourceId)
 
   const prepLoadingPhrases = [
     'Analysing your context…',
@@ -310,36 +382,31 @@
   }
 
   let initialLoad = true
-  let resource: ResourceNote | null = null
   let focusEditor: () => void
   let title = ''
   let chat: AIChat | null = null
-  let contextManager: ContextManager | null = null
+
+  $: resource = note?.resource
 
   let editorElem: Editor
+  let editorElement: HTMLElement
   let editorWrapperElem: HTMLElement
 
-  const trackUpdateContent = useDebounce(() => {
-    if ($autocompleting) {
-      return
-    }
-
-    telemetry.trackUpdateNote()
-  }, 1000)
+  const isEditorNodeEmptyAtPosition = (editor: TiptapEditor, position: number) => {
+    return (
+      (editor.view.domAtPos(position).node as HTMLElement).textContent.replaceAll(
+        /[\s\\n\\t\\r]+/g,
+        ''
+      ).length <= 0
+    )
+  }
 
   const debouncedSaveContent = useDebounce((value: string) => {
-    const newHash = generateContentHash(value)
+    note?.saveContent(value)
 
-    if (newHash === $contentHash) {
-      log.debug('content hash has not changed, skipping save')
-      return
-    }
-
-    if (resource) {
-      log.debug('saving content', value.length)
-      resource.updateContent(value)
-      contentHash.set(generateContentHash(value))
-      trackUpdateContent()
+    if (editorElem && !resource?.metadata?.name && autoGenerateTitle) {
+      const { text } = editorElem.getParsedEditorContent()
+      note?.generateTitle(text)
     }
   }, 500)
 
@@ -366,7 +433,22 @@
     }
   }
 
-  const processDropResource = (position: number, resource: Resource, tryToEmbed = false) => {
+  const insertResourceEmbed = async (resource: Resource, position: number) => {
+    await resourceManager.preventHiddenResourceFromAutodeletion(resource)
+
+    const editor = editorElem.getEditor()
+    editor.commands.insertContentAt(
+      position,
+      `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
+    )
+  }
+
+  const processDropResource = async (
+    position: number,
+    resource: Resource,
+    tryToEmbed = false,
+    coords: { x: number; y: number }
+  ) => {
     const editor = editorElem.getEditor()
 
     const canonicalUrl = (resource?.tags ?? []).find(
@@ -376,12 +458,42 @@
       WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
 
     if (resource.type.startsWith('image/')) {
-      editor.commands.insertContentAt(position, `<img src="surf://resource/${resource.id}">`)
-    } else if ((isGeneratedResource(resource) || canBeEmbedded) && tryToEmbed) {
-      editor.commands.insertContentAt(
-        position,
-        `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
-      )
+      insertResourceEmbed(resource, position)
+    } else if (isGeneratedResource(resource) || canBeEmbedded) {
+      openContextMenu({
+        x: coords.x,
+        y: coords.y,
+        items: [
+          {
+            type: 'action',
+            text: 'Insert as Embed',
+            icon: 'world',
+            action: () => {
+              insertResourceEmbed(resource, position)
+            }
+          },
+          {
+            type: 'action',
+            text: 'Insert as Citation',
+            icon: 'link',
+            action: () => {
+              const citationElem = createCitationHTML({
+                id: resource.id,
+                metadata: {
+                  url: resource.url
+                },
+                resource_id: resource.id,
+                all_chunk_ids: [resource.id],
+                render_id: resource.id,
+                content: ''
+              })
+
+              editor.commands.insertContentAt(position, citationElem)
+            }
+          }
+        ],
+        key: Math.random().toString()
+      })
     } else {
       const citationElem = createCitationHTML({
         id: resource.id,
@@ -432,6 +544,40 @@
     )
   }
 
+  const handlePaste = async (e: ClipboardEvent) => {
+    let toast: Toast | null = null
+    e.preventDefault()
+    try {
+      var parsed = await processPaste(e)
+
+      // NOTE: We only process files as other types are already handled by tiptap
+      parsed = parsed.filter((e) => e.type === 'file')
+      if (parsed.length <= 0) return
+
+      toast = toasts.loading('Importing pasted items…')
+
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+        ResourceTag.paste()
+      ])
+
+      for (const resource of newResources) {
+        if ($activeSpace) {
+          oasis.addResourcesToSpace($activeSpace.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+        }
+        const editor = editorElem.getEditor()
+        const position = editor.view.state.selection.from
+
+        await processDropResource(position, resource, true, { x: 0, y: 0 })
+      }
+
+      toast.success('Items imported!')
+    } catch (e) {
+      toast?.error('Failed to import pasted items!')
+
+      log.error(e)
+    }
+  }
+
   const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
     let toast: Toast | null = null
     try {
@@ -443,7 +589,49 @@
       log.debug('dropped something at', position, 'is block', isBlock)
 
       if (drag.isNative) {
-        log.warn('Not yet implemented!')
+        if (drag.dataTransfer?.getData('text/html')?.includes('<img ')) {
+          toast = toasts.loading('Embedding image…')
+
+          try {
+            let srcUrl = drag.dataTransfer?.getData('text/html').split('<img ')[1].split('src="')[1]
+            srcUrl = srcUrl.slice(0, srcUrl.indexOf('"'))
+            log.debug('fetching dropped image url: ', srcUrl)
+
+            const blob = await window.api.fetchRemoteBlob(srcUrl)
+
+            const resource = await resourceManager.createResourceOther(
+              blob,
+              {
+                name: srcUrl,
+                sourceURI: srcUrl,
+                alt: srcUrl,
+                userContext: ''
+              },
+              [ResourceTag.dragBrowser()]
+            )
+
+            log.debug('Newly created image resource: ', resource)
+
+            if ($activeSpace) {
+              oasis.addResourcesToSpace(
+                $activeSpace.id,
+                [resource.id],
+                SpaceEntryOrigin.ManuallyAdded
+              )
+            }
+
+            await processDropResource(position, resource, isBlock)
+          } catch (error) {
+            log.error('Failed to embedd image: ', error)
+            toast.error('Failed to embedd image!')
+            drag.abort()
+            return
+          }
+
+          toast.success('Image embedded!')
+          drag.continue()
+          return
+        }
       } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
         const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
         const tab = await tabsManager.get(tabId)
@@ -457,9 +645,18 @@
 
         if (tab.type === 'page') {
           if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
+            log.debug('Tab already bookmarked', tab.resourceBookmark)
             const resource = await resourceManager.getResource(tab.resourceBookmark)
             if (resource) {
-              processDropResource(position, resource, isBlock)
+              processDropResource(
+                position,
+                resource,
+                isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
+                {
+                  x: drag.event.clientX,
+                  y: drag.event.clientY
+                }
+              )
               drag.continue()
               return
             }
@@ -469,7 +666,15 @@
             const { resource } = await tabsManager.createResourceFromTab(tab, { silent: true })
             if (resource) {
               log.debug('Created resource from tab', resource)
-              processDropResource(position, resource, isBlock)
+              processDropResource(
+                position,
+                resource,
+                isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
+                {
+                  x: drag.event.clientX,
+                  y: drag.event.clientY
+                }
+              )
               toast.success(isBlock ? 'Tab Embedded!' : 'Tab Linked!')
               drag.continue()
               return
@@ -478,7 +683,7 @@
         } else if (tab.type === 'space') {
           const space = await oasis.getSpace(tab.spaceId)
           if (space) {
-            processDropSpace(space)
+            processDropSpace(position, space)
             drag.continue()
             return
           }
@@ -510,7 +715,15 @@
         }
 
         log.debug('dropped resource', resource)
-        processDropResource(position, resource, isBlock)
+        await processDropResource(
+          position,
+          resource,
+          isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
+          {
+            x: drag.event.clientX,
+            y: drag.event.clientY
+          }
+        )
 
         drag.continue()
       }
@@ -526,8 +739,13 @@
   }
 
   const handleTitleBlur = () => {
-    if (resource && title) {
-      resourceManager.updateResourceMetadata(resourceId, { name: title })
+    if (title) {
+      if (note) {
+        note.updateTitle(title)
+      } else if (resourceId) {
+        resourceManager.updateResourceMetadata(resourceId, { name: title })
+      }
+
       dispatch('update-title', title)
     }
   }
@@ -572,52 +790,60 @@
     }
 
     const resource = await resourceManager.getResource(source.resource_id)
-    if (!resource) {
-      log.error('Resource not found', source.resource_id)
-      return
-    }
-
     log.debug('Resource linked to citation', resource)
 
     if (
-      (resource.type === ResourceTypes.PDF ||
+      (!resource ||
+        resource.type === ResourceTypes.PDF ||
         resource.type === ResourceTypes.LINK ||
         resource.type === ResourceTypes.ARTICLE ||
         resource.type.startsWith(ResourceTypes.POST)) &&
       !skipHighlight
     ) {
-      if (
-        resource.type === ResourceTypes.POST_YOUTUBE &&
-        source.metadata?.timestamp !== undefined &&
-        source.metadata?.timestamp !== null
-      ) {
+      if (source.metadata?.timestamp !== undefined && source.metadata?.timestamp !== null) {
         const timestamp = source.metadata.timestamp
         dispatch('seekToTimestamp', {
-          resourceId: resource.id,
+          resourceId: resource?.id,
           timestamp: timestamp,
+          sourceUid: source.uid,
+          source: source,
           preview: preview ?? false,
           context: EventContext.Note
         })
       } else {
         // TODO: pass correct from and trigger telemetry properties
         dispatch('highlightWebviewText', {
-          resourceId: resource.id,
+          resourceId: resource?.id,
           answerText: text,
           sourceUid: source.uid,
+          source: source,
           preview: preview ?? false,
           context: EventContext.Note
         })
       }
     } else {
       if (preview) {
-        globalMiniBrowser.openResource(resource.id, {
-          from: OpenInMiniBrowserEventFrom.Note
-        })
+        if (resource) {
+          globalMiniBrowser.openResource(resource.id, {
+            from: OpenInMiniBrowserEventFrom.Note
+          })
+        } else {
+          globalMiniBrowser.openWebpage(source.metadata?.url ?? '', {
+            from: OpenInMiniBrowserEventFrom.Note
+          })
+        }
       } else {
-        tabsManager.openResourcFromContextAsPageTab(resource.id, {
-          active: true,
-          trigger: CreateTabEventTrigger.NoteCitation
-        })
+        if (resource) {
+          tabsManager.openResourcFromContextAsPageTab(resource.id, {
+            active: true,
+            trigger: CreateTabEventTrigger.NoteCitation
+          })
+        } else {
+          tabsManager.addPageTab(source.metadata?.url ?? '', {
+            active: true,
+            trigger: CreateTabEventTrigger.NoteCitation
+          })
+        }
       }
     }
   }
@@ -633,75 +859,6 @@
     toasts.success('Note created!')
   }
 
-  const populateRenderAndChunkIds = (sources: AIChatMessageSource[] | undefined) => {
-    if (!sources) return
-    sources.forEach((source, idx) => {
-      source.render_id = (idx + 1).toString()
-      source.all_chunk_ids = [source.id]
-    })
-    return sources
-  }
-
-  const renderIDFromCitationID = (citationID: string | null, sources?: AIChatMessageSource[]) => {
-    if (!citationID || !sources) return ''
-
-    for (const source of sources) {
-      if ((source.all_chunk_ids ?? []).includes(citationID)) {
-        return source.render_id
-      }
-    }
-    return ''
-  }
-
-  const getCitationInfo = (id: string, sources?: AIChatMessageSource[]) => {
-    const renderID = renderIDFromCitationID(id, sources)
-    const source = sources?.find((source) => source.render_id === renderID)
-
-    return {
-      id,
-      source,
-      renderID
-    }
-  }
-
-  const parseChatOutput = async (output: AIChatMessageParsed) => {
-    const content = output.content
-    const sources = populateRenderAndChunkIds(output.sources)
-
-    const domParser = new DOMParser()
-    const doc = domParser.parseFromString(content, 'text/html')
-
-    const citations = doc.querySelectorAll('citation')
-
-    citations.forEach((elem) => {
-      const id = elem.textContent
-      if (!id) {
-        log.error('No citation id found')
-        return
-      }
-
-      const info = getCitationInfo(id, sources)
-      elem.setAttribute('test', 'hello')
-      elem.setAttribute('data-info', encodeURIComponent(JSON.stringify(info)))
-    })
-
-    // separate the <think> block from the rest of the content and convert both separately to html
-    const thinkBlock = doc.querySelector('think')
-    let thinkHtml = ''
-    if (thinkBlock) {
-      thinkHtml = await markdownToHtml(thinkBlock.innerHTML)
-      thinkBlock.remove()
-    }
-
-    const markdown = doc.body.innerHTML
-    let html = await markdownToHtml(markdown)
-    if (thinkHtml) {
-      html = `<think>${thinkHtml}</think>\n${html}`
-    }
-
-    return html
-  }
-
   const getLastNode = (type: string) => {
     const editor = editorElem.getEditor()
     const nodes = editor.$nodes(type)
@@ -710,6 +867,16 @@
     }
 
     return nodes[nodes.length - 1]
+  }
+
+  const getOutputNodeByID = (id: string) => {
+    const editor = editorElem.getEditor()
+    const nodePositions = editor.$nodes('output')
+    if (!nodePositions || nodePositions.length === 0) {
+      return null
+    }
+
+    return nodePositions.find((nodePos) => nodePos.node.attrs.id === id) ?? null
   }
 
   const createCitationHTML = (source: AIChatMessageSource, skipHighlight = false) => {
@@ -731,67 +898,6 @@
     return elem.outerHTML
   }
 
-  const createNewNoteChat = async (mentions?: MentionItem[]) => {
-    if (!contextManager) {
-      log.error('No context manager found')
-      return null
-    }
-
-    const chatContextManager = contextManager.clone()
-
-    if (mentions && mentions.length > 0) {
-      log.debug('Adding spaces to context', mentions)
-
-      const contextMentions = mentions.filter((mention) => mention.type !== MentionItemType.MODEL)
-      if (contextMentions.length > 0) {
-        contextMentions.forEach((mention) => {
-          chatContextManager.addMentionItem(mention)
-        })
-
-        ai.telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Add,
-          contextManager.itemsValue.length,
-          mentions.length,
-          undefined,
-          PageChatUpdateContextEventTrigger.EditorMention
-        )
-      }
-    } else if ($selectedContext) {
-      log.debug('Adding selected context to context', $selectedContext)
-      chatContextManager.addMentionItem($selectedContext)
-    } else {
-      log.debug('Adding active space to context', resourceId)
-      chatContextManager.addActiveSpaceContext('resources')
-    }
-
-    const chat = await ai.createChat({ contextManager: chatContextManager })
-    if (!chat) {
-      log.error('Failed to create chat')
-      return null
-    }
-
-    log.debug('Chat created', chat)
-
-    const modelMention = (mentions ?? [])
-      .reverse()
-      .find((mention) => mention.type === MentionItemType.MODEL)
-
-    log.debug('Model mention', modelMention)
-
-    if (modelMention) {
-      if (modelMention.id === MODEL_CLAUDE_MENTION.id) {
-        chat.selectProviderModel(Provider.Anthropic)
-      } else if (modelMention.id === MODEL_GPT_MENTION.id) {
-        chat.selectProviderModel(Provider.OpenAI)
-      } else {
-        const modelId = modelMention.id.replace('model-', '')
-        chat.selectModel(modelId)
-      }
-    }
-
-    return chat
-  }
-
   const cleanupCompletion = () => {
     const editor = editorElem.getEditor()
     const loading = getLastNode('loading')
@@ -806,14 +912,112 @@
     }
   }
 
-  const generateAndInsertAIOutput = async (
+  export const submitChatMessage = async () => {
+    try {
+      if (!note) return
+
+      const editor = editorElem.getEditor()
+      const content = editor.getHTML()
+      const query = getEditorContentText(content)
+
+      if (!query.trim()) return
+
+      // Submit the message and generate AI output
+      await generateAndInsertAIOutput(query)
+      return true
+    } catch (err) {
+      log.error('Error submitting chat message', err)
+      return false
+    }
+  }
+
+  const createNewNoteChat = async (mentions?: MentionItem[]) => {
+    if (!contextManager) {
+      log.error('No context manager found')
+      return null
+    }
+    const chatContextManager = contextManager.clone()
+    if (mentions && mentions.length > 0) {
+      log.debug('Adding spaces to context', mentions)
+      const contextMentions = mentions.filter((mention) => mention.type !== MentionItemType.MODEL)
+      if (contextMentions.length > 0) {
+        contextMentions.forEach((mention) => {
+          chatContextManager.addMentionItem(mention)
+        })
+        ai.telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.Add,
+          contextManager.itemsValue.length,
+          mentions.length,
+          undefined,
+          PageChatUpdateContextEventTrigger.EditorMention
+        )
+      }
+    } else if ($selectedContext) {
+      log.debug('Adding selected context to context', $selectedContext)
+      chatContextManager.addSpace($selectedContext)
+    } else {
+      log.debug('Adding active space to context', resourceId)
+      chatContextManager.addActiveSpaceContext('resources')
+    }
+    const chat = await ai.createChat({ contextManager: chatContextManager })
+    if (!chat) {
+      log.error('Failed to create chat')
+      return null
+    }
+    log.debug('Chat created', chat)
+    const modelMention = (mentions ?? [])
+      .reverse()
+      .find((mention) => mention.type === MentionItemType.MODEL)
+    log.debug('Model mention', modelMention)
+    if (modelMention) {
+      if (modelMention.id === MODEL_CLAUDE_MENTION.id) {
+        chat.selectProviderModel(Provider.Anthropic)
+      } else if (modelMention.id === MODEL_GPT_MENTION.id) {
+        chat.selectProviderModel(Provider.OpenAI)
+      } else {
+        const modelId = modelMention.id.replace('model-', '')
+        chat.selectModel(modelId)
+      }
+    }
+    return chat
+  }
+
+  export const generateAndInsertAIOutput = async (
     query: string,
     systemPrompt?: string,
     mentions?: MentionItem[],
-    trigger?: PageChatMessageSentEventTrigger
+    trigger: PageChatMessageSentEventTrigger = PageChatMessageSentEventTrigger.NoteAutocompletion,
+    opts?: Partial<ChatSubmitOptions>
   ) => {
+    const options = {
+      focusEnd: opts?.focusEnd ?? false,
+      autoScroll: opts?.autoScroll ?? false,
+      showPrompt: opts?.showPrompt ?? false,
+      generationID: opts?.generationID
+    } as ChatSubmitOptions
+
+    // Hide the caret popover when generation starts
+    hidePopover()
+
+    // Update both local and global AI generation state
+    isGeneratingAI.set(true)
+    startAIGeneration('text-resource', `Generating response to: ${query.substring(0, 30)}...`)
+
+    if (options.focusEnd) {
+      editorElem.focusEnd()
+    }
+
+    if (options.autoScroll) {
+      disableAutoscroll = false
+    }
+
     try {
-      const chat = await createNewNoteChat(mentions)
+      if (note) {
+        chat = await note.getChatWithMentions(mentions)
+      } else {
+        chat = await createNewNoteChat(mentions)
+      }
+
       if (!chat || !query) {
         log.error('Failed to create chat')
         return
@@ -827,20 +1031,43 @@
       const replace = trigger === PageChatMessageSentEventTrigger.NoteRewrite
 
       if (!replace) {
-        editor.commands.insertContentAt(currentPosition, `<loading>${getPrepPhrase()}</loading>`, {
-          updateSelection: false
+        editor.commands.insertContentAt(
+          currentPosition,
+          `<loading data-text="${getPrepPhrase()}"></loading>`,
+          {
+            updateSelection: false
+          }
+        )
+
+        wait(300).then(() => {
+          const elem = editor.contentElement
+          if (elem) {
+            const domElem = elem.querySelector('loading')
+            if (domElem) {
+              domElem.scrollIntoView({
+                behavior: 'instant',
+                block: 'start'
+              })
+            }
+          }
         })
       }
 
       let createdLoading = false
 
+      // Update progress
+      updateAIGenerationProgress(25, 'Determining chat mode...')
+
+      const textQuery = getEditorContentText(query)
+
+      let createdOutputNode = false
+
+      // TODO: chatMode is already also figured out in `createChatCompletion` API
+      // we need to refactor this to avoid double calls
+      const chatMode = await chat.getChatModeForNoteAndTab(query, editor.getText(), null)
       const renderFunction = useThrottle(async (message: AIChatMessageParsed) => {
         if (!createdLoading) {
           createdLoading = true
-
-          editor.commands.insertContentAt(currentPosition, '<output> </output>', {
-            updateSelection: false
-          })
 
           const loading = getLastNode('loading')
           if (loading) {
@@ -848,10 +1075,10 @@
           }
 
           if (!replace) {
-            let outputNode = getLastNode('output')
+            // let outputNode = getOutputNodeByID(message.id)
             editor.commands.insertContentAt(
-              outputNode?.range.to ?? currentPosition,
-              `<loading>${getWritingPhrase()}</loading>`,
+              currentPosition,
+              `<loading data-text="${getWritingPhrase()}"></loading>`,
               {
                 updateSelection: false
               }
@@ -859,30 +1086,69 @@
           }
 
           await tick()
+
+          if (options.autoScroll) {
+            disableAutoscroll = false
+          }
         }
+
+        await tick()
 
         //log.debug('chat message', message)
-        const html = await parseChatOutput(message)
-        let outputNode = getLastNode('output')
-        if (!outputNode) {
-          log.error('No output node found')
-          return
-        }
+        const outputContent =
+          chatMode === ChatMode.AppCreation
+            ? await parseChatOutputToSurfletCode(message)
+            : await parseChatOutputToHtml(message)
 
         const tr = editor.view.state.tr
-        const json = editorElem.generateJSONFromHTML(html)
+        const json = editorElem.generateJSONFromHTML(outputContent)
         const newOutputNode = editor.view.state.schema.nodeFromJSON({
           type: 'output',
-          content: json.content
+          content: json.content,
+          attrs: {
+            id: message.id,
+            prompt: options.showPrompt ? textQuery : undefined
+          }
         })
 
-        tr.replaceRangeWith(outputNode.range.from, outputNode.range.to, newOutputNode)
+        const nodeContent = newOutputNode.content
+
+        const outputNode = getOutputNodeByID(message.id)
+        if (outputNode) {
+          tr.replaceRangeWith(outputNode.from - 1, outputNode.to + 1, newOutputNode)
+        } else if (!createdOutputNode) {
+          createdOutputNode = true
+          tr.insert(currentPosition, newOutputNode)
+        }
+
         editor.view.dispatch(tr)
+
+        if (options.autoScroll && !disableAutoscroll) {
+          let outputNodePos = getOutputNodeByID(message.id)
+          if (outputNodePos) {
+            const domElem = outputNodePos.element
+            domElem.scrollIntoView({
+              behavior: 'instant',
+              block: 'start'
+            })
+          }
+        }
       }, 15)
+
+      // Use the note resource in the chat if the note is mentioned or automaticall if nothing is mentioned
+      const useNoteResource =
+        mentions?.some((mention) => mention.id === NOTE_MENTION.id) ||
+        !mentions ||
+        mentions.filter((mention) => mention.type !== MentionItemType.MODEL).length === 0
 
       const response = await chat.createChatCompletion(
         `${query} \n ${systemPrompt ?? ''}`,
-        { trigger, onboarding: showOnboarding },
+        {
+          trigger,
+          generationID: options.generationID,
+          onboarding: showOnboarding,
+          noteResourceId: useNoteResource ? resourceId : undefined
+        },
         renderFunction
       )
 
@@ -910,29 +1176,54 @@
         toasts.error('Failed to generate AI output')
         cleanupCompletion()
       } else {
-        const html = await parseChatOutput(response.output)
+        const content =
+          chatMode === ChatMode.AppCreation
+            ? await parseChatOutputToSurfletCode(response.output)
+            : await parseChatOutputToHtml(response.output)
 
         const loading = getLastNode('loading')
         if (loading) {
           editor.commands.deleteRange(loading.range)
         }
 
-        const outputNode = getLastNode('output')
-        if (!outputNode) {
-          log.error('No output node found')
-          editor.commands.insertContent(html, {
-            updateSelection: false
-          })
-          return
-        }
+        // const outputNode = getLastNode('output')
+        // if (!outputNode) {
+        //   log.error('No output node found')
+        //   editor.commands.insertContent(content, {
+        //     updateSelection: false
+        //   })
+        //   return
+        // }
 
-        const range = outputNode.range
-        editor.commands.deleteRange(range)
-        editor.commands.insertContentAt(range.from, html, {
-          updateSelection: false
-        })
+        // const range = outputNode.range
+        // editor.commands.deleteRange(range)
+        // editor.commands.insertContentAt(range.from, content, {
+        //   updateSelection: false
+        // })
 
-        log.debug('inserted output', html)
+        log.debug('inserted output', content)
+
+        // await wait(700)
+
+        // let outputNode = getOutputNodeByID(response.output.id)
+        // if (!outputNode) {
+        //   log.error('No output node found')
+        //   return
+        // }
+
+        // const tr = editor.view.state.tr
+        // const json = editorElem.generateJSONFromHTML(content)
+        // const newOutputNode = editor.view.state.schema.nodeFromJSON({
+        //   type: 'output',
+        //   content: json.content,
+        //   attrs: {
+        //     id: response.output.id,
+        //     prompt: textQuery
+        //   }
+        // })
+
+        // tr.replaceRangeWith(outputNode.range.from, outputNode.range.to, newOutputNode)
+        // editor.view.dispatch(tr)
 
         // insert new line
         // editor.commands.insertContentAt(range.to, '<br>', {
@@ -948,7 +1239,13 @@
         const editor = editorElem.getEditor()
         editor.commands.deleteRange(loading.range)
       }
+
+      // Update global AI generation state to indicate error
+      updateAIGenerationProgress(100, 'Error generating AI output')
     } finally {
+      // Reset both local and global generation state
+      isGeneratingAI.set(false)
+      endAIGeneration()
       autocompleting.set(false)
     }
   }
@@ -958,17 +1255,13 @@
     tabsManager.showNewTabOverlay.set(2)
   }
 
-  const getMentionType = (id: string) => {
+  const getMentionType = (id: string, type?: MentionEventType) => {
     if (id === 'everything') {
       return MentionEventType.Everything
-    } else if (id === 'tabs') {
-      return MentionEventType.Tabs
-    } else if (id === generalContext.id) {
-      return MentionEventType.GeneralContext
     } else if (id === 'active-context') {
       return MentionEventType.ActiveContext
     } else {
-      return MentionEventType.Context
+      return type ?? MentionEventType.Context
     }
   }
 
@@ -978,17 +1271,41 @@
     try {
       log.debug('mention click', e.detail)
       const { item, action } = e.detail
-      const { id } = item
+      const { id, type } = item
 
-      telemetry.trackNoteOpenMention(getMentionType(id), action, showOnboarding)
+      telemetry.trackNoteOpenMention(getMentionType(id, type), action, showOnboarding)
 
-      if (id === 'tabs') {
-        return
-      }
+      if (action === 'overlay') {
+        if (id === INBOX_MENTION.id) {
+          openSpaceInStuff('inbox')
+        } else if (id === EVERYTHING_MENTION.id) {
+          openSpaceInStuff('all')
+        } else if (type === MentionItemType.RESOURCE) {
+          oasis.openResourceDetailsSidebar(id, { select: true, selectedSpace: 'auto' })
+        } else if (type === MentionItemType.CONTEXT) {
+          openSpaceInStuff(id)
+        } else {
+          toasts.info('This is a built-in mention and cannot be opened')
+        }
+      } else {
+        if (type === MentionItemType.BUILT_IN || type === MentionItemType.MODEL) {
+          toasts.info('This is a built-in mention and cannot be opened')
+          return
+        }
 
-      if (action === 'new-tab' || action === 'new-background-tab') {
-        if (isBuiltInMention(id)) {
-          tabsManager.changeScope(null, ChangeContextEventTrigger.Note)
+        if (type === MentionItemType.RESOURCE) {
+          tabsManager.openResourcFromContextAsPageTab(id, {
+            active: action !== 'new-background-tab'
+          })
+          return
+        }
+
+        if (action === 'open') {
+          tabsManager.changeScope(
+            id === INBOX_MENTION.id || id === EVERYTHING_MENTION.id ? null : id,
+            ChangeContextEventTrigger.Note
+          )
+
           return
         }
 
@@ -1001,19 +1318,6 @@
         tabsManager.addSpaceTab(space, {
           active: action === 'new-tab'
         })
-      } else if (action === 'overlay') {
-        if (id === generalContext.id) {
-          openSpaceInStuff('inbox')
-        } else if (id === 'everything') {
-          openSpaceInStuff('all')
-        } else if (!isBuiltInMention(id)) {
-          openSpaceInStuff(id)
-        }
-      } else {
-        tabsManager.changeScope(
-          id === generalContext.id || id === 'everything' ? null : id,
-          ChangeContextEventTrigger.Note
-        )
       }
     } catch (e) {
       log.error('Error handling mention click', e)
@@ -1022,10 +1326,10 @@
   }
 
   const handleMentionInsert = (e: CustomEvent<MentionItem>) => {
-    const { id } = e.detail
-    log.debug('mention insert', id)
+    const { id, type } = e.detail
+    log.debug('mention insert', id, type)
 
-    telemetry.trackNoteCreateMention(getMentionType(id), showOnboarding)
+    telemetry.trackNoteCreateMention(getMentionType(id, type), showOnboarding)
   }
 
   const handleRewrite = async (e: CustomEvent<EditorRewriteEvent>) => {
@@ -1044,7 +1348,12 @@
 
       hideInfoPopover()
 
-      const chat = await createNewNoteChat(mentions)
+      if (note) {
+        chat = await note.getChatWithMentions(mentions)
+      } else {
+        chat = await createNewNoteChat(mentions)
+      }
+
       if (!chat) {
         log.error('Failed to create chat')
         return
@@ -1074,7 +1383,7 @@
       }
 
       if (response.output) {
-        const html = await parseChatOutput(response.output)
+        const html = await parseChatOutputToHtml(response.output)
 
         // replace the text with the new text
         const editor = editorElem.getEditor()
@@ -1118,13 +1427,22 @@
       const node = editor.view.state.doc.cut(range.from, range.to)
       const mentions = editorElem.getMentions(node)
 
-      const chat = await createNewNoteChat(mentions)
+      if (note) {
+        chat = await note.getChatWithMentions(mentions)
+      } else {
+        chat = await createNewNoteChat(mentions)
+      }
+
       if (!chat) {
         log.error('Failed to create chat')
         return
       }
 
-      // await chat.contextManager.addEverythingContext()
+      // check if the active context is included in the chat.contextManager
+      const items = chat.contextManager.itemsValue
+      if (items.length === 0) {
+        chat.contextManager.addActiveSpaceContext('resources')
+      }
 
       const result = await chat.similaritySearch(text, {
         trigger: PageChatMessageSentEventTrigger.NoteSimilaritySearch,
@@ -1225,6 +1543,119 @@
     }
   }
 
+  const handleCaretPositionUpdate = (position: CaretPosition) => {
+    if (position) {
+      // Create a new object to ensure reactivity
+      caretPosition = { ...position }
+
+      // Don't show popover if AI generation is in progress
+      if ($isGeneratingAI) {
+        showCaretPopover = false
+        return
+      }
+
+      // Use our utility to determine whether to show the popover
+      if (editorElem) {
+        const editor = editorElem.getEditor()
+        updateCaretPopoverVisibility(editor, caretPosition, (visible) => {
+          showCaretPopover = visible && !$isGeneratingAI
+        })
+      }
+    }
+  }
+
+  const handleLinkClick: LinkClickHandler = async (e, href) => {
+    const target =
+      e.shiftKey && !isModKeyPressed(e)
+        ? 'preview'
+        : e.altKey
+          ? 'details'
+          : isModKeyPressed(e)
+            ? 'new-tab'
+            : 'current-tab'
+    const activeTab = target === 'current-tab'
+
+    log.debug('Link clicked', href, target)
+
+    const resourceId = parseSurfProtocolURL(href)
+    if (resourceId) {
+      log.debug('Trying to open resource', resourceId)
+      const resource = await resourceManager.getResource(resourceId)
+      if (!resource) {
+        log.error('Resource not found', resourceId)
+        toasts.error('Resource to open not found')
+        return
+      }
+
+      if (target === 'preview') {
+        globalMiniBrowser.openResource(resource.id, {
+          from: OpenInMiniBrowserEventFrom.NoteLink
+        })
+      } else if (target === 'details') {
+        oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: 'auto' })
+      } else {
+        tabsManager.openResourcFromContextAsPageTab(resource.id, {
+          active: activeTab,
+          trigger: CreateTabEventTrigger.NoteLink
+        })
+      }
+
+      return
+    }
+
+    if (target === 'preview') {
+      globalMiniBrowser.openWebpage(href, {
+        from: OpenInMiniBrowserEventFrom.NoteLink
+      })
+    } else {
+      tabsManager.addPageTab(href, {
+        active: activeTab,
+        trigger: CreateTabEventTrigger.NoteLink
+      })
+    }
+  }
+
+  const handleEditorKeyDown = (e: KeyboardEvent) => {
+    // Only prevent propagation when the editor exists AND is focused
+    if (editorElem) {
+      // Prevent Option+Arrow or Command+Arrow keys from navigating the browser
+      if (
+        (e.altKey || e.metaKey) &&
+        (e.key === 'ArrowLeft' ||
+          e.key === 'ArrowRight' ||
+          e.key === 'ArrowUp' ||
+          e.key === 'ArrowDown')
+      ) {
+        // Stop propagation to prevent the event from bubbling up
+        e.stopPropagation()
+      }
+    }
+  }
+
+  const hidePopover = () => {
+    showCaretPopover = false
+  }
+
+  const checkIfAlreadyRunning = (kind: string = 'ai generation') => {
+    if ($isGeneratingAI) {
+      log.debug(`Ignoring ${kind} request - AI generation already in progress`)
+      toasts.info('AI generation already running, please wait')
+      return true
+    }
+
+    return false
+  }
+
+  const handleCaretPopoverAutocomplete = () => {
+    // Prevent starting a new generation if one is already running
+    if (checkIfAlreadyRunning('caret autocomplete')) return
+
+    // Trigger autocomplete like Opt+Enter would do
+    if (editorElem) {
+      editorElem.triggerAutocomplete()
+    }
+  }
+
   const handleCloseBubbleMenu = () => {
     const editor = editorElem.getEditor()
     const currentSelection = editor.view.state.selection
@@ -1303,8 +1734,14 @@
     log.debug('Slash command', item)
 
     if (item.id === 'autocomplete') {
+      // Prevent starting a new generation if one is already running
+      if (checkIfAlreadyRunning('slash autocomplete')) return
+
       editorElem.triggerAutocomplete()
     } else if (item.id === 'suggestions') {
+      // Prevent starting a new generation if one is already running
+      if (checkIfAlreadyRunning('slash suggestions')) return
+
       generatePrompts()
     } else if (item.id.startsWith('resource-')) {
       const resourceId = item.id.replace('resource-', '')
@@ -1314,7 +1751,14 @@
         return
       }
 
-      processDropResource(range.from, resource, true)
+      const coords = editorElem
+        .getEditor()
+        .view.coordsAtPos(editorElem.getEditor().view.state.selection.from)
+
+      processDropResource(range.from, resource, true, {
+        x: coords.left,
+        y: coords.top
+      })
     } else {
       log.warn('Unknown slash command', item)
     }
@@ -1335,7 +1779,7 @@
 
     let stuffResults: SlashMenuItem[] = []
 
-    if (query.length > 3) {
+    if (query.length > 0) {
       const result = await resourceManager.searchResources(
         query,
         [
@@ -1349,24 +1793,27 @@
         }
       )
 
-      stuffResults = result.slice(0, 5).map((item) => {
-        const resource = item.resource
+      stuffResults = result
+        .filter((item) => item.resource.id !== resourceId)
+        .slice(0, 5)
+        .map((item) => {
+          const resource = item.resource
 
-        log.debug('search result item', resource)
+          log.debug('search result item', resource)
 
-        const canonicalURL =
-          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
-            ?.value || resource.metadata?.sourceURI
+          const canonicalURL =
+            (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+              ?.value || resource.metadata?.sourceURI
 
-        return {
-          id: `resource-${resource.id}`,
-          section: 'My Stuff',
-          title:
-            resource.metadata?.name ||
-            (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
-          icon: canonicalURL ? `favicon;;${canonicalURL}` : `file;;${getFileKind(resource.type)}`
-        } as SlashMenuItem
-      })
+          return {
+            id: `resource-${resource.id}`,
+            section: 'My Stuff',
+            title:
+              resource.metadata?.name ||
+              (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
+            icon: canonicalURL ? `favicon;;${canonicalURL}` : `file;;${getFileKind(resource.type)}`
+          } as SlashMenuItem
+        })
     }
 
     return [...filteredActions, ...stuffResults]
@@ -1421,7 +1868,11 @@
   }
 
   const showBasicsPopover = async () => {
-    showInfoPopover('output[data-id="basics-query"]', `Press ${isMac() ? '⌥' : 'Alt'} + ↵`, 'right')
+    showInfoPopover(
+      'output[data-id="basics-query"]',
+      `Press ${isMac() ? '⌥' : 'ctrl'} + ↵`,
+      'right'
+    )
   }
 
   const showSimilarityPopover = async () => {
@@ -1430,6 +1881,7 @@
 
   let unsubscribeValue: () => void
   let unsubscribeContent: () => void
+  let unsubscribeTitle: () => void
 
   $: if (!$floatingMenuShown) {
     $showPrompts = false
@@ -1439,6 +1891,9 @@
     try {
       log.debug('autocomplete', e.detail)
 
+      // Prevent starting a new generation if one is already running
+      if (checkIfAlreadyRunning('autocomplete')) return
+
       hideInfoPopover()
 
       const { query, mentions } = e.detail
@@ -1446,19 +1901,13 @@
         query,
         'Stay short and use citations!',
         mentions,
-        PageChatMessageSentEventTrigger.NoteAutocompletion
+        PageChatMessageSentEventTrigger.NoteAutocompletion,
+        { autoScroll: false }
       )
     } catch (e) {
       log.error('Error doing magic', e)
       toasts.error('Failed to autocomplete')
     }
-  }
-
-  const generateContentHash = (content: string) => {
-    return content
-      .split('')
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-      .toString()
   }
 
   const generatePrompts = useDebounce(async () => {
@@ -1509,9 +1958,13 @@
     }
   }, 500)
 
-  const runPrompt = async (prompt: ChatPrompt) => {
+  export const runPrompt = async (prompt: ChatPrompt, opts?: Partial<ChatSubmitOptions>) => {
     try {
       log.debug('Handling prompt submit', prompt)
+
+      // Prevent starting a new generation if one is already running
+      if (checkIfAlreadyRunning('run prompt')) return
+
       const mentions = editorElem.getMentions()
 
       telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, undefined, showOnboarding)
@@ -1522,12 +1975,79 @@
         prompt.prompt,
         'Stay short and use citations!',
         mentions,
-        PageChatMessageSentEventTrigger.NoteUseSuggestion
+        PageChatMessageSentEventTrigger.NoteUseSuggestion,
+        opts
       )
     } catch (e) {
       log.error('Error doing magic', e)
       toasts.error('Failed to generate suggestion')
     }
+  }
+
+  export const insertText = (text: string, end = false) => {
+    const editor = editorElem.getEditor()
+
+    const currentPosition = editor.view.state.selection.from
+    const position = end ? editor.view.state.doc.content.size : currentPosition
+    editor.commands.insertContentAt(position, text, {
+      updateSelection: false
+    })
+
+    if (end) {
+      editor.commands.focus('end')
+    } else {
+      editor.commands.focus()
+    }
+  }
+
+  export const replaceContent = (text: string) => {
+    const editor = editorElem.getEditor()
+
+    editorElem.setContent(text)
+    editor.commands.focus('end')
+  }
+
+  let chatInputGenerationID: string | null = null
+
+  const handleChatSubmit = async (e: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
+    try {
+      const { query, mentions } = e.detail
+
+      chatInputGenerationID = generateID()
+
+      log.debug('Handling submit', chatInputGenerationID, query, mentions)
+
+      if (note) {
+        await generateAndInsertAIOutput(
+          query,
+          undefined,
+          mentions,
+          PageChatMessageSentEventTrigger.NoteChatInput,
+          {
+            focusEnd: true,
+            autoScroll: true,
+            showPrompt: true,
+            generationID: chatInputGenerationID
+          }
+        )
+      }
+    } catch (e) {
+      log.error('Error doing magic', e)
+    } finally {
+      chatInputGenerationID = null
+    }
+  }
+
+  const handleStopGeneration = () => {
+    log.debug('Stopping generation')
+    if (chat) {
+      chat.stopGeneration(chatInputGenerationID ?? undefined)
+    }
+  }
+
+  const handleScroll = () => {
+    log.debug('scroll')
+    disableAutoscroll = true
   }
 
   onMount(async () => {
@@ -1583,20 +2103,26 @@
       return
     }
 
-    resource = (await resourceManager.getResource(resourceId)) as ResourceNote | null
-    if (!resource) {
-      log.error('Resource not found', resourceId)
-      return
+    if (!note) {
+      note = await smartNotes.getNote(resourceId)
+      if (!note) {
+        log.error('Note not found', resourceId)
+        return
+      }
     }
 
-    const value = resource.parsedData
+    const value = note.resource.parsedData
     unsubscribeValue = value.subscribe((value) => {
       if (value) {
         content.set(value)
+
+        if (!editorFocused) {
+          editorElem?.setContent(value)
+        }
       }
     })
 
-    await resource.getContent()
+    await note.loadContent()
 
     initialLoad = false
 
@@ -1604,14 +2130,26 @@
       debouncedSaveContent(value ?? '')
     })
 
-    title = resource.metadata?.name ?? 'Untitled'
+    title = note.titleValue ?? 'Untitled'
+    unsubscribeTitle = note.title.subscribe((value) => {
+      if (value) {
+        title = value
+      }
+    })
 
     log.debug('text resource', resource, title, $content)
 
     contentHash.set(generateContentHash($content))
 
-    contextManager = ai.createContextManager()
-    contextManager.clear()
+    if (!contextManager) {
+      contextManager = note.contextManager
+    }
+
+    await wait(500)
+
+    if (editorElement) {
+      editorElement.addEventListener('scroll', handleScroll)
+    }
   })
 
   onDestroy(() => {
@@ -1625,6 +2163,14 @@
 
     if (unsubscribeValue) {
       unsubscribeValue()
+    }
+
+    if (unsubscribeTitle) {
+      unsubscribeTitle()
+    }
+
+    if (editorElement) {
+      editorElement.removeEventListener('scroll', handleScroll)
     }
   })
 </script>
@@ -1651,6 +2197,7 @@
   }}
   on:Drop={handleDrop}
   on:dragover={handleDragOver}
+  on:paste={handlePaste}
 >
   <div class="content">
     {#if showTitle}
@@ -1671,57 +2218,84 @@
 
     {#if !initialLoad}
       {#key `${showOnboarding}-${$onboardingNote.id}`}
-        <div class="notes-editor-wrapper" bind:this={editorWrapperElem}>
-          <Editor
-            bind:this={editorElem}
-            bind:focus={focusEditor}
-            bind:content={$content}
-            bind:floatingMenuShown={$floatingMenuShown}
-            placeholder={emptyPlaceholder}
-            placeholderNewLine={$editorPlaceholder}
-            citationComponent={CitationItem}
-            resourceComponent={EmbeddedResource}
-            mentionItems={$mentionItems}
-            autocomplete
-            floatingMenu
-            readOnlyMentions={false}
-            bubbleMenu={$showBubbleMenu &&
-              !minimal &&
-              (showOnboarding ? $onboardingIndex > 2 : true)}
-            bubbleMenuLoading={$bubbleMenuLoading}
-            autoSimilaritySearch={$userSettings.auto_note_similarity_search && !minimal}
-            enableRewrite={$userSettings.experimental_note_inline_rewrite}
-            resourceComponentPreview={minimal}
-            showDragHandle={!minimal}
-            showSlashMenu={!minimal}
-            parseMentions
-            {tabsManager}
-            {slashItemsFetcher}
-            on:click
-            on:dragstart
-            on:citation-click={handleCitationClick}
-            on:autocomplete={handleAutocomplete}
-            on:suggestions={() => generatePrompts()}
-            on:mention-click={handleMentionClick}
-            on:mention-insert={handleMentionInsert}
-            on:rewrite={handleRewrite}
-            on:similarity-search={handleSimilaritySearch}
-            on:close-bubble-menu={handleCloseBubbleMenu}
-            on:open-bubble-menu={handleOpenBubbleMenu}
-            on:button-click={handleNoteButtonClick}
-            on:slash-command={handleSlashCommand}
-            {autofocus}
-          >
-            <div slot="floating-menu">
-              <FloatingMenu
-                bind:showPrompts={$showPrompts}
-                {prompts}
-                {generatingPrompts}
-                on:generatePrompts={() => generatePrompts()}
-                on:runPrompt={(e) => runPrompt(e.detail)}
-              />
-            </div>
-          </Editor>
+        <div
+          class="notes-editor-wrapper"
+          bind:this={editorWrapperElem}
+          on:keydown={handleEditorKeyDown}
+        >
+          <div class="editor-container">
+            <Editor
+              bind:this={editorElem}
+              bind:focus={focusEditor}
+              bind:content={$content}
+              bind:floatingMenuShown={$floatingMenuShown}
+              bind:focused={editorFocused}
+              bind:editorElement
+              placeholder={emptyPlaceholder}
+              placeholderNewLine={$editorPlaceholder}
+              citationComponent={CitationItem}
+              surfletComponent={Surflet}
+              resourceComponent={EmbeddedResource}
+              autocomplete
+              floatingMenu
+              readOnlyMentions={false}
+              bubbleMenu={$showBubbleMenu &&
+                !minimal &&
+                (showOnboarding ? $onboardingIndex > 2 : true)}
+              bubbleMenuLoading={$bubbleMenuLoading}
+              autoSimilaritySearch={$userSettings.auto_note_similarity_search &&
+                !minimal &&
+                similaritySearch}
+              enableRewrite={$userSettings.experimental_note_inline_rewrite}
+              resourceComponentPreview={minimal}
+              showDragHandle={!minimal}
+              showSlashMenu={!minimal}
+              showSimilaritySearch={!minimal && similaritySearch}
+              parseMentions
+              enableCaretIndicator={true}
+              onCaretPositionUpdate={handleCaretPositionUpdate}
+              onLinkClick={handleLinkClick}
+              {tabsManager}
+              {slashItemsFetcher}
+              {mentionItemsFetcher}
+              {linkItemsFetcher}
+              on:blur={hidePopover}
+              on:click
+              on:dragstart
+              on:citation-click={handleCitationClick}
+              on:autocomplete={handleAutocomplete}
+              on:suggestions={() => generatePrompts()}
+              on:mention-click={handleMentionClick}
+              on:mention-insert={handleMentionInsert}
+              on:rewrite={handleRewrite}
+              on:similarity-search={handleSimilaritySearch}
+              on:close-bubble-menu={handleCloseBubbleMenu}
+              on:open-bubble-menu={handleOpenBubbleMenu}
+              on:button-click={handleNoteButtonClick}
+              on:slash-command={handleSlashCommand}
+              {autofocus}
+            >
+              <div slot="floating-menu">
+                <FloatingMenu
+                  bind:showPrompts={$showPrompts}
+                  {prompts}
+                  {generatingPrompts}
+                  on:generatePrompts={() => generatePrompts()}
+                  on:runPrompt={(e) => runPrompt(e.detail)}
+                />
+              </div>
+              <div slot="caret-popover">
+                <!-- CaretPopover positioned absolutely over the editor -->
+                {#if showCaretPopover && caretPosition}
+                  <CaretPopover
+                    visible={showCaretPopover}
+                    position={caretPosition}
+                    on:autocomplete={handleCaretPopoverAutocomplete}
+                  />
+                {/if}
+              </div>
+            </Editor>
+          </div>
         </div>
       {/key}
     {/if}
@@ -1742,7 +2316,7 @@
   {/if}
 
   {#if !minimal}
-    {#if $similarityResults}
+    {#if $similarityResults && similaritySearch}
       <SimilarityResults
         {activeSpace}
         {selectedContext}
@@ -1756,20 +2330,35 @@
         on:highlightWebviewText
         on:seekToTimestamp
       />
-    {:else if !hideContextSwitcher}
+    {/if}
+
+    {#if !hideContextSwitcher}
       <div class="change-context-wrapper">
-        <ModelPicker />
+        <!-- <ModelPicker />
 
         <ChangeContextBtn
           spaces={oasis.spaces}
           {selectedContext}
           {activeSpace}
           on:select={handleSelectContext}
-        />
+        /> -->
+        {#if note}
+          <ChatControls
+            chatId={note.id}
+            active={note.id === $activeNoteId}
+            contextManager={note.contextManager}
+            floating={false}
+            excludeActiveTab
+            showInput={$userSettings.experimental_notes_chat_input &&
+              $userSettings.experimental_notes_chat_sidebar}
+            on:submit={handleChatSubmit}
+            on:stop={handleStopGeneration}
+          />
+        {/if}
       </div>
     {/if}
 
-    {#if !showOnboarding}
+    {#if !showOnboarding && !manualContextControl}
       <button
         on:click={() => showOnboardingNote()}
         class="info-btn"
@@ -1906,13 +2495,19 @@
   }
 
   .change-context-wrapper {
+    // position: absolute;
+    // top: 1em;
+    // right: 1em;
+    // z-index: 100;
+    // display: flex;
+    // align-items: center;
+    // gap: 0.25em;
     position: absolute;
-    top: 1em;
-    right: 1em;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 0.25em;
+    bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    max-width: 730px;
   }
 
   .onboarding-wrapper {
@@ -1949,11 +2544,18 @@
   }
 
   .notes-editor-wrapper {
-    flex-grow: 1;
+    height: 100%;
+    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1em;
+    flex: 1 1 auto;
     overflow: hidden;
+    position: relative;
+  }
+
+  .editor-container {
+    position: relative;
+    height: 100%;
     width: 100%;
   }
 
@@ -1962,7 +2564,7 @@
     margin: auto;
     padding: 0 2em;
     box-sizing: content-box;
-    padding-bottom: 12em;
+    padding-bottom: 90vh;
   }
 
   :global(body.custom .text-resource-wrapper .tiptap ::selection) {
@@ -2023,21 +2625,6 @@
       accent-color: var(--contrast-color) !important;
     }
 
-    :global(pre) {
-      background: #030712;
-      margin: 1em 0;
-      padding: 1em;
-      border-radius: 4px;
-      overflow-x: auto;
-
-      :global(code) {
-        color: #fff;
-        :global(.hljs-*) {
-          color: inherit;
-        }
-      }
-    }
-
     :global(code:not(pre code)) {
       background: #030712;
       padding: 0.2em 0.4em;
@@ -2045,7 +2632,7 @@
     }
 
     :global(.dark) & {
-      :global(*):not(.mention, a) {
+      :global(*):not(.mention, a, span) {
         color: var(--text-color-dark) !important;
       }
     }

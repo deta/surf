@@ -11,7 +11,9 @@ import type {
   SFFSResource,
   SettingsWindowTab,
   Announcement,
-  UserStats
+  UserStats,
+  ImportedBrowserHistoryItem,
+  BrowserType
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -159,6 +161,7 @@ export type SpaceBasicData = {
   id: string
   name: string
   pinned: boolean
+  linked: boolean
 }
 
 const IPC_EVENTS = ipcService.registerEvents({
@@ -186,6 +189,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   resetPrompt: ipcService.addEvent<string>('reset-prompt'),
   updatePrompt: ipcService.addEvent<Pick<EditablePrompt, 'id' | 'content'>>('update-prompt'),
   openCheatSheet: ipcService.addEvent<void>('open-cheat-sheet'),
+  openChangelog: ipcService.addEvent<void>('open-changelog'),
   openShortcutsPage: ipcService.addEvent<void>('open-shortcuts-page'),
   openInvitePage: ipcService.addEvent<void>('open-invite-page'),
   openFeedbackPage: ipcService.addEvent<void>('open-feedback-page'),
@@ -217,6 +221,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   showAppMenuPopup: ipcService.addEvent<void>('show-app-menu-popup'),
   resetBackgroundImage: ipcService.addEvent<void>('reset-background-image'),
   importedFiles: ipcService.addEvent<string[]>('imported-files'),
+  importBrowserHistory: ipcService.addEvent<BrowserType>('import-browser-history'),
+  importBrowserBookmarks: ipcService.addEvent<BrowserType>('import-browser-bookmarks'),
   setSurfBackendHealth: ipcService.addEvent<boolean>('set-surf-backend-health'),
   setActiveTabWebContentsId: ipcService.addEvent<number>('set-active-tab-webcontents-id'),
   closeTabWebContentsId: ipcService.addEvent<number>('close-tab-webcontents-id'),

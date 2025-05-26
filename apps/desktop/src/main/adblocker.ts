@@ -2,7 +2,7 @@ import { ElectronBlocker } from '@ghostery/adblocker-electron'
 import fetch from 'cross-fetch'
 import { session } from 'electron'
 import { changeMenuItemLabel } from './appMenu'
-import { getBrowserConfig, setBrowserConfig } from './config'
+import { getUserConfig, updateUserConfigSettings } from './config'
 import { ipcSenders } from './ipcHandlers'
 import { getWebRequestManager } from './webRequestManager'
 
@@ -25,8 +25,8 @@ export function initAdblocker(partition: string) {
   if (!blocker) return
 
   // Get initial state
-  const config = getBrowserConfig()
-  const isEnabled = config.adblockerEnabled ?? false
+  const config = getUserConfig()
+  const isEnabled = config.settings.adblockerEnabled ?? false
 
   setAdblockerState(partition, isEnabled)
 }
@@ -59,7 +59,7 @@ export function setAdblockerState(partition: string, state: boolean): void {
     }
   }
   // Store state
-  setBrowserConfig({ ...getBrowserConfig(), adblockerEnabled: state })
+  updateUserConfigSettings({ adblockerEnabled: state })
 
   // Notify renderer
   ipcSenders.adBlockChanged(partition, state)
@@ -72,8 +72,8 @@ export function getAdblockerState(partition: string): boolean {
   if (!blocker) return false
   const isEnabled = blocker.isBlockingEnabled(session.fromPartition(partition))
 
-  const config = getBrowserConfig()
-  const stored = config.adblockerEnabled ?? false
+  const config = getUserConfig()
+  const stored = config.settings.adblockerEnabled ?? false
 
   if (stored !== isEnabled) {
     setAdblockerState(partition, isEnabled)

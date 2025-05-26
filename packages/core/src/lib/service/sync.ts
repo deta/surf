@@ -6,7 +6,7 @@ import { ResourceTypes } from '@horizon/types'
 
 import { ResourceTag, type ResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
-import { useToasts } from './toast'
+import { Toast, useToasts } from './toast'
 import { useConfig } from './config'
 
 // If the sync gets called within that time it won't sync again
@@ -132,70 +132,82 @@ export class SyncService {
   }
 
   async sync() {
-    const config = this.getConfig()
-    if (!config) {
-      this.log.info('Sync service not configured')
-      return
-    }
+    let toast: Toast | null = null
 
-    const toast = this.toasts.loading('Checking for links to sync…')
-    const links = await this.get<SyncLinkItem[]>('/links')
+    try {
+      const config = this.getConfig()
+      if (!config) {
+        this.log.info('Sync service not configured')
+        return
+      }
 
-    this.log.debug('links', links)
+      toast = this.toasts.loading('Checking for links to sync…')
+      const links = await this.get<SyncLinkItem[]>('/links')
 
-    if (links.length === 0) {
+      this.log.debug('links', links)
+
+      if (links.length === 0) {
+        toast.success('Sync complete!')
+        return
+      }
+
+      const MAX_CONCURRENT_ITEMS = 8
+      const PROCESS_TIMEOUT = 1000 * 15 // give each item max 15 seconds to process
+
+      const processedItems: SyncLinkItem[] = []
+
+      this.log.debug('processing items:', links)
+      const queue = new PQueue({
+        concurrency: MAX_CONCURRENT_ITEMS,
+        timeout: PROCESS_TIMEOUT,
+        autoStart: false
+      })
+
+      let count = 0
+
+      queue.on('completed', () => {
+        toast?.update({ message: `Syncing links (${++count}/${links.length})…` })
+      })
+
+      links.forEach((link) => {
+        queue.add(async () => {
+          this.log.debug('processing item:', link)
+          const resource = await this.processLink(link)
+          this.log.debug('processed resource:', resource)
+
+          if (resource) {
+            processedItems.push(link)
+          }
+        })
+      })
+
+      queue.start()
+
+      toast.update({ message: `Syncing ${links.length} link${links.length > 1 ? 's' : ''}…` })
+
+      await queue.onIdle()
+      this.log.debug('queue finished')
+      toast.update({ message: 'Imported all links' })
+
+      if (processedItems.length > 0) {
+        this.log.debug('marking links as synced', processedItems)
+        toast.update({ message: 'Finishing up sync…' })
+        await this.post('/synced', {
+          ids: processedItems.map((link) => link.id)
+        })
+      }
+
+      this.log.debug('sync complete')
       toast.success('Sync complete!')
-      return
+    } catch (e) {
+      this.log.error('sync error', e)
+      const message = e instanceof Error ? e.message : 'unknown error'
+      if (toast) {
+        toast.error('Sync failed: ' + message)
+      } else {
+        this.toasts.error('Sync failed: ' + message)
+      }
     }
-
-    const MAX_CONCURRENT_ITEMS = 8
-    const PROCESS_TIMEOUT = 1000 * 15 // give each item max 15 seconds to process
-
-    const processedItems: SyncLinkItem[] = []
-
-    this.log.debug('processing items:', links)
-    const queue = new PQueue({
-      concurrency: MAX_CONCURRENT_ITEMS,
-      timeout: PROCESS_TIMEOUT,
-      autoStart: false
-    })
-
-    let count = 0
-
-    queue.on('completed', () => {
-      toast.update(`Syncing links (${++count}/${links.length})…`)
-    })
-
-    links.forEach((link) => {
-      queue.add(async () => {
-        this.log.debug('processing item:', link)
-        const resource = await this.processLink(link)
-        this.log.debug('processed resource:', resource)
-
-        if (resource) {
-          processedItems.push(link)
-        }
-      })
-    })
-
-    queue.start()
-
-    toast.update(`Syncing ${links.length} link${links.length > 1 ? 's' : ''}…`)
-
-    await queue.onIdle()
-    this.log.debug('queue finished')
-    toast.update('Imported all links')
-
-    if (processedItems.length > 0) {
-      this.log.debug('marking links as synced', processedItems)
-      toast.update('Finishing up sync…')
-      await this.post('/synced', {
-        ids: processedItems.map((link) => link.id)
-      })
-    }
-
-    this.log.debug('sync complete')
-    toast.success('Sync complete!')
   }
 
   async init() {
@@ -210,11 +222,8 @@ export class SyncService {
 export const createSyncService = (resourceManager: ResourceManager) => {
   const service = new SyncService(resourceManager)
 
-  const isDev = import.meta.env.DEV
-  if (isDev) {
-    // @ts-ignore
-    window.syncService = service
-  }
+  // @ts-ignore
+  window.syncService = service
 
   return service
 }

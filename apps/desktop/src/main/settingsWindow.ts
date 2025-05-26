@@ -4,6 +4,7 @@ import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
 import { isMac } from '@horizon/utils'
 import { SettingsWindowTab } from '@horizon/types/src/window.types'
+import { SettingsWindowEntrypoint } from './utils'
 
 let settingsWindow: BrowserWindow | undefined
 
@@ -31,7 +32,10 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
     // ...(isLinux() ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/horizon.js'),
-      additionalArguments: [`--userDataPath=${app.getPath('userData')}`],
+      additionalArguments: [
+        `--userDataPath=${app.getPath('userData')}`,
+        `--settings-window-entry-point=${SettingsWindowEntrypoint}`
+      ],
       defaultFontSize: 14,
       session: settingsWindowSession,
       webviewTag: false,

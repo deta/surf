@@ -48,7 +48,7 @@
   }
 
   const handleContinueToDemo = () => {
-    dispatch('viewChange', 'explainer.chat')
+    dispatch('viewChange', 'contexts')
   }
 
   const handleBack = () => {
@@ -98,7 +98,7 @@
       {#if showButton}
         <div in:fade={{ duration: 300 }}>
           <Button on:click={expanded ? handleSubmit : handleContinueToDemo} disabled={false}
-            >Continue with Chat</Button
+            >Continue</Button
           >
         </div>
       {/if}

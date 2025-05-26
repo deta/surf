@@ -54,6 +54,7 @@
   import ContextsSection from '../Onboarding/sections/06.Contexts.svelte'
   import SmartNotesSection from '../Onboarding/sections/07.SmartNotes.svelte'
   import Codegen from '../Onboarding/sections/08.Codegen.svelte'
+  import NewNotes from '../Onboarding/sections/09.NewNotes.svelte'
   import Done from '../Onboarding/sections/00.Done.svelte'
   import { OpenHomescreenEventTrigger } from '@horizon/types'
   import { MAIN_ONBOARDING_VIDEO_URL } from '@horizon/core/src/lib/utils/env'
@@ -75,8 +76,18 @@
     { id: 'your-stuff', label: 'Your Stuff' },
     { id: 'desktop', label: 'Desktop' },
     { id: 'vision', label: 'Vision' },
-    { id: 'chat', label: 'Chat' },
-    { id: 'smart-notes', label: 'Notes' },
+
+    ...($userSettings.experimental_notes_chat_sidebar
+      ? [
+          {
+            id: 'notes',
+            label: 'Notes'
+          }
+        ]
+      : [
+          { id: 'chat', label: 'Chat' },
+          { id: 'smart-notes', label: 'Notes' }
+        ]),
     { id: 'surflets', label: 'Surflets' }
     // { id: 'contexts', label: 'Contexts' }
   ]
@@ -325,19 +336,25 @@
       <VisionSection {modShortcut} on:tryVision={handleTryVision} />
     </section>
 
-    <section id="chat" style="position: relative; z-index: 1;">
-      <ChatSection
-        on:tryChatWithSpace={handleTryChatWithSpace}
-        on:tryChatWithTabs={handleTryChatWithTabs}
-        on:tryChatWithPDF={handleTryChatWithPDF}
-        on:tryChatWithYoutubeVideo={handleTryChatWithYoutubeVideo}
-        on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
-      />
-    </section>
+    {#if $userSettings.experimental_notes_chat_sidebar}
+      <section id="notes">
+        <NewNotes {modShortcut} on:launchTimeline />
+      </section>
+    {:else}
+      <section id="chat" style="position: relative; z-index: 1;">
+        <ChatSection
+          on:tryChatWithSpace={handleTryChatWithSpace}
+          on:tryChatWithTabs={handleTryChatWithTabs}
+          on:tryChatWithPDF={handleTryChatWithPDF}
+          on:tryChatWithYoutubeVideo={handleTryChatWithYoutubeVideo}
+          on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
+        />
+      </section>
 
-    <section id="smart-notes">
-      <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
-    </section>
+      <section id="smart-notes">
+        <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
+      </section>
+    {/if}
 
     <section id="surflets">
       <Codegen {modShortcut} on:tryVision={handleTryVision} />

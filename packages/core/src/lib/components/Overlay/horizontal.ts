@@ -5,13 +5,13 @@ import {
   ActionSelectPriority
 } from '@deta/teletype/src/components/Teletype/types'
 import type { ResourceManager } from '../../service/resources'
-import { GENERAL_CONTEXT_ID, ResourceTagsBuiltInKeys, type SpaceEntry } from '../../types'
+import { ResourceTagsBuiltInKeys, type SpaceEntry } from '../../types'
 import {
   TeletypeAction,
   TeletypeActionGroup,
   dispatchTeletypeEvent
 } from './service/teletypeActions'
-import ResourcePreview from '../Resources/ResourcePreview.svelte'
+import TeletypeResourcePreview from './TeletypeResourcePreview.svelte'
 import { type Resource } from '../../service/resources'
 import { staticActions } from './service/staticActions'
 import { createExecutioner } from './service/translations'
@@ -29,16 +29,9 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
     description: resource.metadata?.userContext || '',
     icon: getPrimaryResourceType(resource.type) || 'document',
     execute: TeletypeAction.OpenResource,
-    component: ResourcePreview,
+    component: TeletypeResourcePreview,
     componentProps: {
-      resource: resource,
-      mode: 'compact',
-      viewMode: 'responsive',
-      interactive: false,
-      frameless: true,
-      draggable: true,
-      titleEditable: false,
-      origin: 'cmdt'
+      resource
     },
     view: 'Inline',
     actionPanel: [
@@ -74,7 +67,7 @@ const createSpaceAction = async (
     })
   )
 
-  const validItems = horizontalItems.filter((item) => item !== null).slice(0, 100)
+  const validItems = horizontalItems.filter((item) => item !== null).slice(0, 10)
 
   const horizontalAction = {
     id: result.id,
@@ -104,9 +97,7 @@ const createSpaceAction = async (
 
   const actions: (Action | HorizontalAction)[] = [openSpaceAction]
 
-  if (result.id !== GENERAL_CONTEXT_ID) {
-    actions.push(horizontalAction)
-  }
+  actions.push(horizontalAction)
 
   return actions
 }
@@ -145,16 +136,9 @@ const createResourceAction = async (entry: { id: string }, resourceManager: Reso
       icon: getPrimaryResourceType(resource.type) || 'document',
       execute: TeletypeAction.OpenResource,
       group: TeletypeActionGroup.Resources,
-      component: ResourcePreview,
+      component: TeletypeResourcePreview,
       componentProps: {
-        resource,
-        mode: 'compact',
-        viewMode: 'responsive',
-        interactive: false,
-        draggable: true,
-        frameless: true,
-        titleEditable: false,
-        origin: 'cmdt'
+        resource
       },
       view: 'Inline',
       actionPanel: [

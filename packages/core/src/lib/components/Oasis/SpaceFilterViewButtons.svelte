@@ -34,6 +34,7 @@
   export let sortBy: string | undefined
   export let order: string | null
   export let hideSortingSettings: boolean = false
+  export let hideFilterSettings: boolean = false
 
   const dispatch = createEventDispatcher<{
     changedFilter: FilterChangeEvent
@@ -86,40 +87,42 @@
   const filterPopoverOpen = writable(false)
 </script>
 
-<CustomPopover
-  position="bottom"
-  openDelay={200}
-  sideOffset={10}
-  popoverOpened={filterPopoverOpen}
-  disableTransition={false}
-  forceOpen
-  portal="body"
-  triggerClassName="w-fit h-full"
-  disableHover
-  disabled={false}
->
-  <div slot="trigger" class="w-fit shrink-1">
-    <button class:active={$filterPopoverOpen}> <Icon name="filter" size="1.4em" /> </button>
-  </div>
-
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div slot="content" class="no-drag p-4 flex flex-col gap-2" data-ignore-click-outside>
-    <div class="row flex space-between">
-      <span class="font-medium opacity-80">Filter by</span>
-      <select
-        bind:this={viewFilterEl}
-        value={filter ?? 'all'}
-        on:change={handleFilterSettingsUpdate}
-      >
-        <option value="all" selected>All Types</option>
-
-        {#each RESOURCE_FILTERS as filter (filter.id)}
-          <option value={filter.id}>{filter.label}</option>
-        {/each}
-      </select>
+{#if !hideFilterSettings}
+  <CustomPopover
+    position="bottom"
+    openDelay={200}
+    sideOffset={10}
+    popoverOpened={filterPopoverOpen}
+    disableTransition={false}
+    forceOpen
+    portal="body"
+    triggerClassName="w-fit h-full"
+    disableHover
+    disabled={false}
+  >
+    <div slot="trigger" class="w-fit shrink-1">
+      <button class:active={$filterPopoverOpen}> <Icon name="filter" size="1.4em" /> </button>
     </div>
-  </div>
-</CustomPopover>
+
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div slot="content" class="no-drag p-4 flex flex-col gap-2" data-ignore-click-outside>
+      <div class="row flex space-between">
+        <span class="font-medium opacity-80">Filter by</span>
+        <select
+          bind:this={viewFilterEl}
+          value={filter ?? 'all'}
+          on:change={handleFilterSettingsUpdate}
+        >
+          <option value="all" selected>All Types</option>
+
+          {#each RESOURCE_FILTERS as filter (filter.id)}
+            <option value={filter.id}>{filter.label}</option>
+          {/each}
+        </select>
+      </div>
+    </div>
+  </CustomPopover>
+{/if}
 
 <CustomPopover
   position="bottom"
@@ -171,12 +174,13 @@
         <span class="font-medium opacity-80">Sort by</span>
         <select
           bind:this={viewSortingEl}
-          value={sortBy ?? 'created_at'}
+          value={sortBy ?? 'resource_added_to_space'}
           on:change={handleSortingSettingsUpdate}
         >
-          <option value="created_at">Added to Context</option>
-          <option value="updated_at">Last Modified</option>
-          <option value="source_published_at">Source Published</option>
+          <option value="resource_added_to_space">Added to Context</option>
+          <option value="resource_created">First Saved</option>
+          <option value="resource_updated">Last Modified</option>
+          <option value="resource_source_published">Source Published</option>
           <!-- <option value="name">Name</option> -->
         </select>
       </div>
@@ -188,24 +192,8 @@
           value={order ?? 'desc'}
           on:change={handleOrderSettingsUpdate}
         >
-          <option value="desc">
-            {#if sortBy === 'created_at'}
-              Most Recent First
-            {:else if sortBy === 'updated_at'}
-              Most Recent First
-            {:else if sortBy === 'source_published_at'}
-              Most Recent First
-            {/if}
-          </option>
-          <option value="asc">
-            {#if sortBy === 'created_at'}
-              Oldest First
-            {:else if sortBy === 'updated_at'}
-              Oldest First
-            {:else if sortBy === 'source_published_at'}
-              Oldest First
-            {/if}
-          </option>
+          <option value="desc"> Most Recent First </option>
+          <option value="asc"> Oldest First </option>
         </select>
       </div>
     {/if}

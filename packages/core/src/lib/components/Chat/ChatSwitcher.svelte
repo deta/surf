@@ -33,8 +33,6 @@
   const searching = writable(false)
   const searchResults = writable<AIChatData[]>([])
 
-  $: chats = ai.chats
-
   $: if ($searchValue) {
     handleSearch($searchValue)
   }

@@ -9,6 +9,8 @@ export default Extension.create({
       suggestion: {
         char: '/',
         allowSpaces: true,
+        preventReTrigger: true,
+        dismissOnSpace: true,
         placeholder: 'filter or search stuff…'
       }
     }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get, writable } from 'svelte/store'
-  import { useDesktopManager } from '../../service/desktop'
+  import { useDesktopManager, type DesktopService } from '../../service/desktop'
   import { useTabsManager } from '../../service/tabs'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { quadOut } from 'svelte/easing'
@@ -18,8 +18,12 @@
   const desktopVisible = desktopManager.activeDesktopVisible
   const activeScopeId = tabsManager.activeScopeId
 
-  let targetDesktop = writable(null)
-  desktopManager.useDesktop(desktopId).then((desktop) => ($targetDesktop = desktop))
+  let targetDesktop = writable<DesktopService | null>(null)
+  let isLoading = true
+  desktopManager.useDesktop(desktopId).then((desktop) => {
+    $targetDesktop = desktop
+    isLoading = false
+  })
 
   const space = $spaces.find((space) => space.id === desktopId)
 
@@ -74,21 +78,14 @@
         aria-hidden="true"
       >
         <div class="show-desktop-label">
-          {#if $items?.length}
-            Show Desktop
-          {:else}
-            <div class="create-desktop-label">
-              <Icon name="add" size="16" />
-              <span>Create Desktop</span>
-            </div>
-          {/if}
+          <div class="create-desktop-label">
+            <span>Show Desktop</span>
+          </div>
         </div>
 
-        {#await new Promise((resolve) => {
-          setTimeout(resolve, 200)
-        })}
+        {#if isLoading}
           <div class="loading"></div>
-        {:then}
+        {:else}
           <div style="isolation: isolate;">
             {#if $items && $targetDesktop}
               {#each $items as item}
@@ -113,7 +110,7 @@
               {/each}
             {/if}
           </div>
-        {/await}
+        {/if}
       </div>
     </div>
   {/if}
@@ -154,9 +151,10 @@
     border-radius: 20px;
     outline: 3px solid var(--contrast-color);
     border-radius: 18px;
-    background-size: cover;
 
     &:hover .show-desktop-label {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
       opacity: 1;
     }
 

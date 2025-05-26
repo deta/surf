@@ -6,6 +6,8 @@ export enum Provider {
 }
 
 export enum BuiltInModelIDs {
+  GPT4_1 = 'gpt-4.1',
+  GPT4_1_Mini = 'gpt-4.1-mini',
   GPT4o = 'gpt-4o',
   GPT4oMini = 'gpt-4o-mini',
   O3Mini = 'o3-mini',
@@ -34,6 +36,8 @@ export namespace ChatMode {
 }
 
 export const BuiltInModelLabels = {
+  [BuiltInModelIDs.GPT4_1]: 'GPT-4.1',
+  [BuiltInModelIDs.GPT4_1_Mini]: 'GPT-4.1 Mini',
   [BuiltInModelIDs.GPT4o]: 'GPT-4o',
   [BuiltInModelIDs.GPT4oMini]: 'GPT-4o Mini',
   [BuiltInModelIDs.O3Mini]: 'o3 Mini',
@@ -68,6 +72,24 @@ export type Model = {
 export const OPEN_AI_PATH_SUFFIX = '/v1/chat/completions'
 
 export const BUILT_IN_MODELS = [
+  {
+    id: BuiltInModelIDs.GPT4_1,
+    label: BuiltInModelLabels[BuiltInModelIDs.GPT4_1],
+    provider: Provider.OpenAI,
+    tier: ModelTiers.Premium,
+    icon: 'open-ai',
+    vision: true,
+    supports_json_format: true
+  },
+  {
+    id: BuiltInModelIDs.GPT4_1_Mini,
+    label: BuiltInModelLabels[BuiltInModelIDs.GPT4_1_Mini],
+    provider: Provider.OpenAI,
+    tier: ModelTiers.Standard,
+    icon: 'open-ai',
+    vision: true,
+    supports_json_format: true
+  },
   {
     id: BuiltInModelIDs.GPT4o,
     label: BuiltInModelLabels[BuiltInModelIDs.GPT4o],

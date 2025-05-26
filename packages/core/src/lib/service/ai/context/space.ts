@@ -4,7 +4,7 @@ import { type TabSpace, SpaceEntryOrigin, type SpaceData } from '../../../types'
 import type { OasisSpace } from '../../oasis'
 
 import { ContextItemBase } from './base'
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './types'
 
 export class ContextItemSpace extends ContextItemBase {
@@ -12,8 +12,8 @@ export class ContextItemSpace extends ContextItemBase {
   sourceTab?: TabSpace
   data: OasisSpace
 
-  constructor(manager: ContextManager, space: OasisSpace, sourceTab?: TabSpace) {
-    super(manager, space.id, 'circle-dot')
+  constructor(service: ContextService, space: OasisSpace, sourceTab?: TabSpace) {
+    super(service, space.id, 'circle-dot')
 
     this.sourceTab = sourceTab
     this.data = space
@@ -33,7 +33,7 @@ export class ContextItemSpace extends ContextItemBase {
   }
 
   async getResourceIds(_prompt?: string) {
-    const spaceContents = await this.manager.tabsManager.oasis.getSpaceContents(this.data.id)
+    const spaceContents = await this.service.tabsManager.oasis.getSpaceContents(this.data.id)
     const filteredContents = spaceContents
       .filter((content) => content.manually_added !== SpaceEntryOrigin.Blacklisted)
       .map((content) => content.resource_id)

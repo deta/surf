@@ -134,12 +134,34 @@ export const BUILT_IN_SLASH_COMMANDS = [
     }
   },
   {
+    id: 'details-block',
+    icon: 'list-details',
+    title: 'Toggle List',
+    section: 'Basic Elements',
+    keywords: ['list', 'block', '>', 'details', 'summary'],
+    tagline: '>',
+    command: (_, editor, range) => {
+      editor.chain().deleteRange(range).focus().setDetails().run()
+    }
+  },
+  {
+    id: 'table-block',
+    icon: 'table',
+    title: 'Table',
+    section: 'Basic Elements',
+    keywords: ['table', 'grid', '|'],
+    tagline: '',
+    command: (_, editor, range) => {
+      editor.chain().deleteRange(range).focus().insertTable().run()
+    }
+  },
+  {
     id: 'blockquote',
     icon: 'quote',
     title: 'Blockquote',
     section: 'Basic Elements',
-    keywords: ['quote', '>'],
-    tagline: '>',
+    keywords: ['quote', '|'],
+    tagline: '|',
     command: (_, editor, range) => {
       editor.chain().deleteRange(range).focus().toggleBlockquote().run()
     }

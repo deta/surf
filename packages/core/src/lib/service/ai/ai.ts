@@ -1,7 +1,8 @@
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from '../config'
-import { type ResourceManager } from '../resources'
+import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
 import type { SFFS } from '../sffs'
+
 import {
   QuotaDepletedError,
   type App,
@@ -29,17 +30,22 @@ import {
   OPEN_AI_PATH_SUFFIX,
   type Model
 } from '@horizon/types/src/ai.types'
-import { handleQuotaDepletedError, parseAIError } from './helpers'
+import { convertChatOutputToNoteContent, handleQuotaDepletedError, parseAIError } from './helpers'
 import type { TabsManager } from '../tabs'
 import type { Telemetry } from '../telemetry'
 import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
-import { type ContextItem, ContextManager } from './contextManager'
+import { type ContextItem, ContextManager, ContextService } from './contextManager'
 import {
   EventContext,
   GeneratePromptsEventTrigger,
   PromptType,
+  ResourceTypes,
   SummarizeEventContentSource
 } from '@horizon/types'
+import { SmartNoteManager, type SmartNote } from './note'
+
+import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
+import type { OasisService } from '../oasis'
 
 export class AIService {
   static self: AIService
@@ -48,9 +54,12 @@ export class AIService {
   sffs: SFFS
   tabsManager: TabsManager
   config: ConfigService
+  oasis: OasisService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
-  contextManager: ContextManager
+  smartNotes: SmartNoteManager
+  contextService: ContextService
+  fallbackContextManager: ContextManager
 
   showChatSidebar: Writable<boolean>
   chats: Writable<AIChat[]>
@@ -62,17 +71,27 @@ export class AIService {
   models: Readable<Model[]>
   alwaysIncludeScreenshotInChat: Readable<boolean>
   contextItems: Readable<ContextItem[]>
+  activeContextManager: Readable<ContextManager>
 
   customAIApps: Writable<App[]> = writable([])
 
-  constructor(resourceManager: ResourceManager, tabsManager: TabsManager, config: ConfigService) {
+  constructor(
+    resourceManager: ResourceManager,
+    tabsManager: TabsManager,
+    oasis: OasisService,
+    config: ConfigService,
+    smartNotes: SmartNoteManager
+  ) {
     this.resourceManager = resourceManager
     this.sffs = resourceManager.sffs
     this.tabsManager = tabsManager
+    this.oasis = oasis
     this.config = config
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
-    this.contextManager = new ContextManager(this, tabsManager, resourceManager)
+    this.contextService = ContextService.create(this, tabsManager, resourceManager)
+    this.fallbackContextManager = this.contextService.createDefault()
+    this.smartNotes = smartNotes
 
     this.showChatSidebar = writable(false)
     this.chats = writable([])
@@ -109,9 +128,20 @@ export class AIService {
       return settings.always_include_screenshot_in_chat
     })
 
-    this.contextItems = derived([this.contextManager.items], ([$contextItems]) => {
+    this.contextItems = derived([this.fallbackContextManager.items], ([$contextItems]) => {
       return $contextItems
     })
+
+    this.activeContextManager = derived(
+      [this.smartNotes.activeNote, this.config.settings],
+      ([activeNote, settings]) => {
+        if (settings.experimental_notes_chat_sidebar && activeNote) {
+          return activeNote.contextManager
+        }
+
+        return this.fallbackContextManager
+      }
+    )
 
     this.refreshCustomAiApps()
 
@@ -119,6 +149,10 @@ export class AIService {
       // @ts-ignore
       window.aiService = this
     }
+  }
+
+  get contextManager() {
+    return get(this.activeContextManager)
   }
 
   get showChatSidebarValue() {
@@ -139,6 +173,14 @@ export class AIService {
 
   get chatsValue() {
     return get(this.chats)
+  }
+
+  get activeSidebarChatValue() {
+    return get(this.activeSidebarChat)
+  }
+
+  get activeSidebarChatIdValue() {
+    return get(this.activeSidebarChatId)
   }
 
   addMissingChats(chats: AIChat[]) {
@@ -212,8 +254,13 @@ export class AIService {
     return this.modelToBackendModel(model)
   }
 
-  createContextManager() {
-    return new ContextManager(this, this.tabsManager, this.resourceManager)
+  createContextManager(key?: string) {
+    this.log.debug('creating context manager', key)
+    return this.contextService.create(undefined, key)
+  }
+
+  cloneContextManager() {
+    return this.contextManager.clone()
   }
 
   async createChat(opts?: {
@@ -649,9 +696,11 @@ export class AIService {
   static provide(
     resourceManager: ResourceManager,
     tabsManager: TabsManager,
-    config: ConfigService
+    oasis: OasisService,
+    config: ConfigService,
+    smartNotes: SmartNoteManager
   ) {
-    const service = new AIService(resourceManager, tabsManager, config)
+    const service = new AIService(resourceManager, tabsManager, oasis, config, smartNotes)
 
     setContext('ai', service)
     if (!AIService.self) AIService.self = service

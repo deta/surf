@@ -30,11 +30,19 @@ export class ContextService {
   oasis: OasisService
 
   private links: Writable<ContextLinkRaw[]>
+  rankedSpaces: Readable<OasisSpace[]>
 
   constructor(oasis: OasisService) {
     this.log = useLogScope('ContextService')
     this.oasis = oasis
     this.links = useLocalStorageStore('space-context-links', [], true)
+
+    this.log.debug('ContextService initialized', get(this.links))
+
+    this.rankedSpaces = derived([this.links, this.oasis.spaces], ([$links, $spaces]) => {
+      this.log.debug('Ranking spaces', $links, $spaces)
+      return this.rankSpaces($links, $spaces, 10)
+    })
 
     if (isDev) {
       // @ts-ignore
@@ -180,7 +188,14 @@ export class ContextService {
     return this.populateLinks(links)
   }
 
-  rankSpaces(links: ContextLinkRaw[], limit?: number): OasisSpace[] {
+  /**
+   * Returns the most relevant high level spaces based on the number of links to other spaces.
+   *
+   * Implements a version of the PageRank algorithm to rank spaces based on the number of links to other spaces
+   * as well as the number of links pointing to it. Also takes into account the *quality* of the links (how often they are used).
+   *
+   */
+  rankSpaces(links: ContextLinkRaw[], spaces: OasisSpace[], limit?: number): OasisSpace[] {
     const CONNECTIVITY_WEIGHT = 10
     const QUALITY_WEIGHT = 14
 
@@ -195,7 +210,7 @@ export class ContextService {
       // spaceQualityMap.set(link.target, (spaceQualityMap.get(link.target) || 0) + link.used)
     }
 
-    const spaces = this.spacesValue
+    const filterdSpaces = spaces
       .filter((space) => spaceMap.has(space.id)) // Filter out spaces not used as a source
       .map((space) => {
         const numConnections = spaceMap.get(space.id) || 0
@@ -218,8 +233,8 @@ export class ContextService {
       .sort((a, b) => b.rank - a.rank)
       .slice(0, limit || this.spacesValue.length)
 
-    this.log.debug('Ranked spaces', spaces)
-    return spaces.map((item) => item.space)
+    this.log.debug('Ranked spaces', filterdSpaces)
+    return filterdSpaces.map((item) => item.space)
   }
 
   useSpaceLinks(
@@ -270,7 +285,7 @@ export class ContextService {
         getLinks(spaceId, 1, false)
       }
 
-      const rankedSpaces = this.rankSpaces(this.linksValue)
+      const rankedSpaces = this.rankSpaces(this.linksValue, this.spacesValue)
 
       this.log.debug('ranked spaces', rankedSpaces)
 
@@ -297,17 +312,8 @@ export class ContextService {
     })
   }
 
-  /**
-   * Returns the most relevant high level spaces based on the number of links to other spaces.
-   *
-   * Implements a version of the PageRank algorithm to rank spaces based on the number of links to other spaces
-   * as well as the number of links pointing to it. Also takes into account the *quality* of the links (how often they are used).
-   *
-   */
-  useRankedSpaces(limit: number = 5): Readable<OasisSpace[]> {
-    return derived(this.links, ($links) => {
-      return this.rankSpaces($links, limit)
-    })
+  getRankedSpaces(limit?: number) {
+    return this.rankSpaces(this.linksValue, this.spacesValue, limit)
   }
 
   static provide(oasis: OasisService): ContextService {

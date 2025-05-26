@@ -1,9 +1,7 @@
 pub mod ai;
-pub mod backend;
-pub mod embeddings;
-pub mod llm;
+pub mod api;
 pub mod store;
-pub mod vision;
+pub mod worker;
 
 use neon::{prelude::ModuleContext, result::NeonResult};
 
@@ -15,10 +13,10 @@ pub enum BackendError {
     DatabaseError(#[from] rusqlite::Error),
     #[error("Chrono error: {0}")]
     ChronoError(#[from] chrono::ParseError),
-    // #[error("RustBert error: {0}")]
-    // RustBertError(#[from] rust_bert::RustBertError),
     #[error("Reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
     #[error("LLM Error: {r#type}: {message}")]
     LLMClientError { r#type: String, message: String },
     #[error("LLM Too Many Requests error")]
@@ -38,8 +36,6 @@ type BackendResult<T> = Result<T, BackendError>;
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-    backend::register_exported_functions(&mut cx)?;
-    store::register_exported_functions(&mut cx)?;
-    ai::register_exported_functions(&mut cx)?;
+    api::register_exported_functions(&mut cx)?;
     Ok(())
 }

@@ -9,12 +9,15 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes
   } from '@horizon/types'
-  import { get, writable } from 'svelte/store'
+  import { derived, get, writable } from 'svelte/store'
   import { isMac, useDebounce } from '@horizon/utils'
   import { useTabsManager } from '../../../service/tabs'
   import { Icon } from '@horizon/icons'
   import { DragTypeNames } from '../../../types'
   import ResourcePreview from '../../Resources/ResourcePreview.svelte'
+  import SaveItem from './SaveItem.svelte'
+  import { fly } from 'svelte/transition'
+  import { useConfig } from '../../../service/config'
 
   export let wasMouseInside = writable(false)
   const dispatch = createEventDispatcher<{
@@ -32,7 +35,15 @@
   const stackKey = oasis.stackKey
   const pendingStackActions = oasis.pendingStackActions
   const resourceManager = oasis.resourceManager
+  const pendingSave = oasis.pendingSave
   const tabsManager = useTabsManager()
+  const config = useConfig()
+  const userSettings = config.settings
+
+  const horizontalTabs = derived(
+    userSettings,
+    (settings) => settings.tabs_orientation === 'horizontal'
+  )
 
   const stackCardWidth = 60
   const items = writable<{ resource: ResourceObject; originTabId?: string }[]>([])
@@ -175,9 +186,7 @@
     })
   )
   onDestroy(() => {
-    const sidebarEl = document.querySelector('#left-sidebar')
-    if (!sidebarEl) return
-    resizeObserver?.unobserve(sidebarEl)
+    resizeObserver?.disconnect()
   })
 
   onMount(async () => {
@@ -203,6 +212,16 @@
     }
   }
 </script>
+
+{#if $pendingSave}
+  <div
+    class="pending-wrapper"
+    style:--sidebar-width={sidebarWidth + 'px'}
+    transition:fly={{ ...($horizontalTabs ? { x: 400 } : { x: -400 }), duration: 200 }}
+  >
+    <SaveItem item={$pendingSave} />
+  </div>
+{/if}
 
 <div
   id="stuff-stack"
@@ -716,7 +735,7 @@
       }
       &:not(.isMac)::before {
         width: 300px !important;
-        position: relative;
+        position: absolute;
         transform: translateX(25%);
         background: radial-gradient(circle at 50% 0%, #cce1f9bb 0%, transparent 70%);
         mask-image: linear-gradient(90deg, #0000 0%, #000 50%, #0000 100%);
@@ -1131,5 +1150,43 @@
 
   :global(.horizontalTabs .verticalOnly) {
     display: none !important;
+  }
+
+  .pending-wrapper {
+    position: fixed;
+    z-index: 100000000;
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    transition: transform 234ms ease-out;
+
+    :global(body:has(#app-contents.verticalTabs)) & {
+      left: 0;
+      width: var(--sidebar-width);
+      padding-inline: 1.2rem;
+      bottom: 6rem;
+    }
+    :global(body:has(#app-contents.horizontalTabs)) & {
+      right: 0.5rem;
+      top: 3.5rem;
+      justify-content: end;
+    }
+
+    :global(
+        body:has(#app-contents.horizontalTabs):has(
+            .sidebar-meta.mouseInside #stuff-stack.wasMouseInside
+          )
+      )
+      & {
+      transform: translateX(200%);
+    }
+    :global(
+        body:has(#app-contents.verticalTabs):has(
+            .sidebar-meta.mouseInside #stuff-stack.wasMouseInside
+          )
+      )
+      & {
+      transform: translateX(-200%);
+    }
   }
 </style>

@@ -24,6 +24,7 @@ export const htmlToMarkdown = async (html: string) => {
 export const markdownToHtml = async (markdown: string) => {
   const content = await unified()
     .use(remarkParse)
+    .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeSanitize, {

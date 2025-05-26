@@ -13,7 +13,7 @@
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
-  import { Editor } from '@horizon/editor'
+  import ReadOnlyRichText from '@horizon/editor/src/lib/components/ReadOnlyRichText.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
   import { ResourceTypes, WEB_RESOURCE_TYPES } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
@@ -29,7 +29,7 @@
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import CodeRenderer from '../../Chat/CodeRenderer.svelte'
-  import CollapsableResourceBlock from '@horizon/core/src/lib/components/Oasis/CollapsableResourceBlock.svelte'
+  import CollapsableResourceEmbed from '@horizon/core/src/lib/components/Chat/Notes/CollapsableResourceEmbed.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -211,6 +211,7 @@
   $: showContentBlock =
     (content && content.length > 0) ||
     (title && title.length > 0) ||
+    editTitle ||
     (annotations && annotations.length > 0)
 
   $: showMetadataBlock = (metadata && metadata.length > 0) || isProcessing
@@ -237,8 +238,9 @@
         fullSize
       />
     {:else if WEB_RESOURCE_TYPES.some( (x) => resource.type.startsWith(x) ) && origin === 'homescreen' && viewMode === 'full'}
-      <CollapsableResourceBlock
+      <CollapsableResourceEmbed
         {resource}
+        isEditable={false}
         showPreview
         language={mimeTypeToCodeLanguage(resource.type)}
         initialCollapsed={false}
@@ -266,7 +268,7 @@
 
       {#if showContentBlock}
         <hgroup class="content">
-          {#if title && title.length > 0}
+          {#if (title && title.length > 0) || editTitle}
             {#if editTitle}
               <h1
                 contenteditable
@@ -322,12 +324,9 @@
                   on:seekToTimestamp
                 />
               {:else}
-                <Editor
-                  content={truncate(content, MAX_CONTENT_LENGTH)}
-                  resourceComponent={EmbeddedResource}
-                  resourceComponentPreview
-                  readOnly
-                />
+                <div class="editor-wrapper">
+                  <ReadOnlyRichText content={truncate(content, MAX_CONTENT_LENGTH)} />
+                </div>
               {/if}
             {:else if contentType === 'html'}
               <iframe
@@ -1008,6 +1007,12 @@
     100% {
       mask-size: 190%;
     }
+  }
+
+  .editor-wrapper {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
   }
 
   /////////// Responsive Mode overrides

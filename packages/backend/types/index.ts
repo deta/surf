@@ -48,6 +48,17 @@ export interface ChatMessageOptions {
   app_creation?: boolean
 }
 
+export interface NoteMessageOptions {
+  query: string
+  note_resource_id: string
+  model: Model
+  custom_key?: string
+  limit?: number
+  resource_ids?: string[]
+  inline_images?: string[]
+  general?: boolean
+}
+
 export interface QueryResourcesOptions {
   query: string
   model: Model

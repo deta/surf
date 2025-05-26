@@ -60,6 +60,7 @@
         showOnboarding
         hideContextSwitcher
         autofocus={false}
+        similaritySearch
         on:change-onboarding-note={handleChangeOnboardingNote}
         on:highlightWebviewText
         on:seekToTimestamp

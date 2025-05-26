@@ -51,6 +51,25 @@ impl Database {
             .optional()?)
     }
 
+    pub fn search_spaces(&self, keyword: &str) -> BackendResult<Vec<Space>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, created_at, updated_at FROM spaces WHERE json_extract(name, '$.folderName') LIKE ?1 ORDER BY updated_at DESC",
+        )?;
+        let spaces = stmt.query_map(rusqlite::params![format!("%{}%", keyword)], |row| {
+            Ok(Space {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                created_at: row.get(2)?,
+                updated_at: row.get(3)?,
+            })
+        })?;
+        let mut result = Vec::new();
+        for space in spaces {
+            result.push(space?);
+        }
+        Ok(result)
+    }
+
     pub fn list_spaces(&self) -> BackendResult<Vec<Space>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, name, created_at, updated_at FROM spaces ORDER BY updated_at DESC",
@@ -136,9 +155,10 @@ impl Database {
     ) -> BackendResult<Vec<SpaceEntryExtended>> {
         // Use specific column selection instead of table.*
         let (sort_field, join_clause) = match sort_by {
-            Some("created_at") => ("se.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
-            Some("updated_at") => ("r.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
-            Some("source_published_at") => (
+            Some("resource_added_to_space") => ("se.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("resource_updated") => ("r.updated_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("resource_created") => ("r.created_at", "LEFT JOIN resources r ON se.resource_id = r.id"),
+            Some("resource_source_published") => (
                 "COALESCE(rt.tag_value, se.created_at)", 
                 "LEFT JOIN resources r ON se.resource_id = r.id \
                  LEFT JOIN resource_tags rt ON r.id = rt.resource_id AND rt.tag_name = 'sourcePublishedAt'"
@@ -195,5 +215,163 @@ impl Database {
             result.push(space_id?);
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::store::db::Database;
+    use crate::store::models::{current_time, Space};
+    use tempfile::tempdir;
+
+    fn setup_test_db() -> Database {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test.db");
+        Database::new(&db_path.to_string_lossy(), true).unwrap()
+    }
+
+    fn create_test_spaces(db: &mut Database) -> Vec<Space> {
+        let now = current_time();
+        let spaces = vec![
+            Space {
+                id: "space1".to_string(),
+                name: r#"{"folderName":"Work Projects"}"#.to_string(),
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            },
+            Space {
+                id: "space2".to_string(),
+                name: r#"{"folderName":"Personal Notes"}"#.to_string(),
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            },
+            Space {
+                id: "space3".to_string(),
+                name: r#"{"folderName":"Research Papers"}"#.to_string(),
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            },
+            Space {
+                id: "space4".to_string(),
+                name: r#"{"folderName":"Project Ideas"}"#.to_string(),
+                created_at: now.clone(),
+                updated_at: now,
+            },
+        ];
+        for space in &spaces {
+            db.create_space(space).unwrap();
+        }
+        spaces
+    }
+
+    #[test]
+    fn test_search_spaces_exact_match() {
+        let mut db = setup_test_db();
+        create_test_spaces(&mut db);
+
+        let results = db.search_spaces("Personal Notes").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "space2");
+        assert_eq!(results[0].name, r#"{"folderName":"Personal Notes"}"#);
+    }
+
+    #[test]
+    fn test_search_spaces_partial_match() {
+        let mut db = setup_test_db();
+        create_test_spaces(&mut db);
+
+        let results = db.search_spaces("Project").unwrap();
+        assert_eq!(results.len(), 2);
+
+        let ids: Vec<String> = results.iter().map(|space| space.id.clone()).collect();
+        assert!(ids.contains(&"space4".to_string()));
+        assert!(ids.contains(&"space1".to_string()));
+    }
+
+    #[test]
+    fn test_search_spaces_case_insensitive() {
+        let mut db = setup_test_db();
+        create_test_spaces(&mut db);
+
+        let results = db.search_spaces("project").unwrap();
+        assert_eq!(results.len(), 2);
+
+        let results2 = db.search_spaces("PROJECT").unwrap();
+        assert_eq!(results2.len(), 2);
+    }
+
+    #[test]
+    fn test_search_spaces_no_match() {
+        let mut db = setup_test_db();
+        create_test_spaces(&mut db);
+
+        let results = db.search_spaces("Nonexistent").unwrap();
+        assert_eq!(results.len(), 0);
+    }
+
+    #[test]
+    fn test_search_spaces_empty_string() {
+        let mut db = setup_test_db();
+        create_test_spaces(&mut db);
+
+        // empty string should match all spaces (like a wildcard)
+        let results = db.search_spaces("").unwrap();
+        assert_eq!(results.len(), 4);
+    }
+
+    #[test]
+    fn test_search_spaces_special_characters() {
+        let mut db = setup_test_db();
+
+        let space = Space {
+            id: "space5".to_string(),
+            name: r#"{"folderName":"SQL% Test_Name"}"#.to_string(),
+            created_at: current_time(),
+            updated_at: current_time(),
+        };
+        db.create_space(&space).unwrap();
+
+        let results = db.search_spaces("%").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "space5");
+
+        let results2 = db.search_spaces("_").unwrap();
+        assert_eq!(results2.len(), 1);
+        assert_eq!(results2[0].id, "space5");
+    }
+
+    #[test]
+    fn test_search_spaces_json_structure() {
+        let mut db = setup_test_db();
+
+        let spaces = vec![
+            Space {
+                id: "space6".to_string(),
+                name: r#"{"folderName":"Valid JSON"}"#.to_string(),
+                created_at: current_time(),
+                updated_at: current_time(),
+            },
+            Space {
+                id: "space7".to_string(),
+                name: r#"{"folderName":"Nested", "metadata": {"tags": ["important"]}}"#.to_string(),
+                created_at: current_time(),
+                updated_at: current_time(),
+            },
+        ];
+
+        for space in &spaces {
+            db.create_space(space).unwrap();
+        }
+
+        // test that json_extract still works with the nested structure
+        let results = db.search_spaces("Nested").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "space7");
+
+        // and original structure is preserved
+        assert_eq!(
+            results[0].name,
+            r#"{"folderName":"Nested", "metadata": {"tags": ["important"]}}"#
+        );
     }
 }

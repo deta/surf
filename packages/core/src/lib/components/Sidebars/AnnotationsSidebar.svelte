@@ -198,7 +198,9 @@
 
 <div class="flex flex-col gap-4 overflow-hidden p-4 pt-0 h-full">
   {#if !$userSettings.annotations_sidebar}
-    <div class="flex items-center justify-between gap-3 px-4 py-4 border-b-2 border-sky-100 -mx-4">
+    <div
+      class="flex items-center justify-between gap-3 px-4 py-2 border-b border-dashed border-sky-100 -mx-4"
+    >
       <div class="flex items-center justify-start text-lg p-1.5 font-semibold">Annotations</div>
 
       <!-- svelte-ignore a11y-click-events-have-key-events -->

@@ -3,7 +3,13 @@ import { isMac } from '@horizon/utils'
 export enum OnboardingAction {
   SendChatMessage = 'send-chat-message',
   CreateSpace = 'create-space',
-  OpenStuff = 'open-stuff'
+  OpenStuff = 'open-stuff',
+  OpenPDF = 'open-pdf',
+  OpenYouTubeVideo = 'open-youtube-video',
+  InsertQuestion = 'insert-question',
+  StartAICompletion = 'start-ai-completion',
+  CreateSurflet = 'create-surflet',
+  ReturnToWelcomePage = 'return-to-welcome-page'
 }
 
 export interface TooltipStep {
@@ -17,6 +23,8 @@ export interface TooltipStep {
   domTarget: string
   /** Root DOM element for positioning context */
   domRoot: string
+  /** Optional DOM element with data-tooltip-anchor attribute for positioning */
+  domAnchor?: string
   /** Positioning configuration for the tooltip */
   position: {
     /** Vertical alignment (top/bottom/center) */
@@ -32,8 +40,8 @@ export interface TooltipStep {
   nextButtonLabel?: string
   /** Text for the previous step button */
   prevButtonLabel?: string
-  /** Optional action to trigger on step */
-  action?: OnboardingAction
+  /** Optional actions to trigger on step */
+  actions?: OnboardingAction[]
   /** ID of associated media content */
   mediaID?: string
   /** Type of media content (image/video) */
@@ -57,7 +65,8 @@ export enum OnboardingFeature {
   StuffOnboarding = 'stuffOnboarding',
   SmartSpacesOnboarding = 'smartSpacesOnboarding',
   DesktopOnboarding = 'desktopOnboarding',
-  SmartNotesOnboarding = 'smartNotesOnboarding'
+  SmartNotesOnboarding = 'smartNotesOnboarding',
+  NotesOnboarding = 'notesOnboarding'
 }
 
 export const savingTimeline: OnboardingTimeline = {
@@ -310,6 +319,206 @@ export const smartNotesTimeline: OnboardingTimeline = {
       domTarget: 'onboarding-output-basics',
       domRoot: 'body',
       nextButtonLabel: "Alright, let's go!"
+    }
+  ]
+}
+
+export const notesOnboardingTimeline: OnboardingTimeline = {
+  name: OnboardingFeature.NotesOnboarding,
+  steps: [
+    {
+      target: '#notes.onboarding.1',
+      headline: 'Say hello to your new cursor.',
+      content: `Say hello to your new cursor. Click the caret — or hit ${isMac() ? '⌘' : 'CTRL'} + ⏎ — to start writing in the sidebar. It follows you as you type, ready to help, suggest, and respond.`,
+      domTarget: 'sidebar-right',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Continue',
+      prevButtonLabel: 'Back',
+      mediaID: 'caret',
+      mediaType: 'image',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.2',
+      headline: 'Need to bring something in?',
+      content:
+        'Type @ to mention tabs, saved stuff, or your whole Surf to use them as the context you are chatting with.',
+      domTarget: 'sidebar-right',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Continue',
+      prevButtonLabel: 'Back',
+      action: undefined,
+      mediaID: 'at.menu',
+      mediaType: 'video',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.3',
+      headline: 'Quick actions',
+      content: 'Type / to see what you can do — from inserting elements to asking a question.',
+      domTarget: 'sidebar-right',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Continue',
+      prevButtonLabel: 'Back',
+      action: undefined,
+      mediaID: 'slash.menu',
+      mediaType: 'video',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.4',
+      headline: 'Suggestions',
+      content: "Don't know where to start? Hit space to see suggestions.",
+      domTarget: 'sidebar-right',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Continue',
+      prevButtonLabel: 'Back',
+      action: undefined,
+      mediaID: 'suggestions',
+      mediaType: 'video',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.5',
+      headline: 'Chat with YouTube Videos',
+      content:
+        "Now let's try chatting with a YouTube video. Surf can analyze video content and answer questions about it.",
+      domTarget: 'sidebar-right',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Open the Video',
+      prevButtonLabel: 'Back',
+      actions: [OnboardingAction.OpenYouTubeVideo],
+      mediaID: 'youtube.chat',
+      mediaType: 'image',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.6',
+      headline: 'Video Analysis',
+      content:
+        'Great! The video is now loaded and Surf is analyzing the content. You can see how Surf processes the video and provides valuable insights.',
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      domAnchor: 'sidebar-right',
+      position: {
+        vertical: 'bottom',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: -440
+      },
+      nextButtonLabel: 'Continue',
+      prevButtonLabel: 'Back',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.7',
+      headline: 'View Citations',
+      content:
+        'Surf provides citations for its answers. Click on any citation to jump directly to that part of the video.',
+      domTarget: 'chat-citation',
+      domRoot: 'body',
+      position: {
+        vertical: 'bottom',
+        horizontal: 'right',
+        offsetX: 20,
+        offsetY: 150
+      },
+      nextButtonLabel: 'Next',
+      prevButtonLabel: 'Back',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.10',
+      headline: 'Create a Surflet',
+      content:
+        "Surflets are AI-generated mini-apps that can help you accomplish specific tasks or visualize information. Let's create one now to see how they work. Note: Surflets work best with the latest Claude Sonnet AI models.",
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      domAnchor: 'sidebar-right',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Create Surflet',
+      prevButtonLabel: 'Back',
+      actions: [OnboardingAction.CreateSurflet],
+      mediaID: 'create.surflet',
+      mediaType: 'image',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.11',
+      headline: 'Generating Surflet',
+      content:
+        'Your Surflet is being generated right now! Surf is analyzing your content and creating a custom mini-app to help you understand it better. This may take a moment.',
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      domAnchor: 'sidebar-right',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      nextButtonLabel: 'Continue',
+      prevButtonLabel: 'Back',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.11',
+      headline: 'Congratulations!',
+      content:
+        "You've completed the onboarding tour and learned about Surf's key features. Continue exploring and discovering what Surf can do for you!",
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      domAnchor: 'sidebar-right',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 100
+      },
+      actions: [OnboardingAction.ReturnToWelcomePage],
+      nextButtonLabel: 'Return to Onboarding',
+      prevButtonLabel: 'Back',
+      zIndex: 1000
     }
   ]
 }

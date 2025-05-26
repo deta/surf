@@ -28,6 +28,7 @@
     type ContextItem
   } from '@horizon/core/src/lib/service/ai/contextManager'
   import { ResourceTypes } from '@horizon/types'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let item: ContextItem
   export let pillProperties: PillProperties
@@ -35,6 +36,9 @@
   export let failed: boolean = false
   export let opened: Writable<boolean> = writable(false)
   export let additionalLabel: string | undefined = undefined
+
+  const config = useConfig()
+  const userConfigSettings = config.settings
 
   const dispatch = createEventDispatcher<{
     select: string
@@ -98,19 +102,21 @@
   <div slot="trigger" class="flex items-center gap-2">
     <div
       role="none"
-      class="shine-border pill transform hover:translate-y-[-6px] group/pill"
+      class="shine-border pill transform group/pill"
+      class:experimental={$userConfigSettings.experimental_notes_chat_input &&
+        $userConfigSettings.experimental_notes_chat_sidebar}
       on:click={() => handleSelect(item.id)}
       use:contextMenu={contextMenuData}
-      style="transform: rotate({pillProperties.rotate}deg); transform-origin: center center;"
+      style="transform: transform-origin: center center;"
     >
       <div
         role="none"
-        class="pill flex items-center border-[1px] border-gray-200 dark:border-gray-600 {failed
+        class="pill flex items-center border-[0.5px] border-l border-t border-r border-gray-200 dark:border-gray-600 {failed
           ? 'bg-red-50 hover:bg-red-100 dark:bg-red-800 dark:hover:bg-red-700'
-          : 'bg-white dark:bg-gray-800'} z-0 shadow-md {item.type === 'screenshot'
-          ? 'pl-[5px]'
-          : 'pl-[11px]'} hover:bg-gray-50 dark:hover:bg-gray-700 transform hover:translate-y-[-6px]"
-        style="min-width: 40px; height: 40px; border-radius: {pillProperties.borderRadius}px; transition: transform 0.3s, background-color 0.3s;"
+          : 'bg-white dark:bg-gray-800'} z-0 {item.type === 'screenshot'
+          ? 'px-[5px]'
+          : 'px-[11px]'} hover:bg-gray-50 dark:hover:bg-gray-700 transform"
+        style="min-width: 40px; height: 36px; transition: transform 0.3s, background-color 0.3s;"
       >
         <button
           class="remove absolute top-0 left-0 shadow-sm transform"
@@ -168,6 +174,17 @@
   .pill {
     cursor: default;
     transition: transform 0.3s ease;
+    border-radius: 11px 11px 11px 11px;
+  }
+
+  .experimental {
+    &.pill,
+    .pill {
+      border-radius: 11px 11px 0 0;
+      transform: none !important;
+      transform-origin: center center;
+      height: 36px;
+    }
   }
 
   .pill {

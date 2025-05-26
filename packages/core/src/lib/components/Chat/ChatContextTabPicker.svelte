@@ -41,12 +41,23 @@
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import type { ContextManager } from '@horizon/core/src/lib/service/ai/contextManager'
+  import {
+    type ContextManager,
+    ContextItemTypes
+  } from '@horizon/core/src/lib/service/ai/contextManager'
   import { requestUserScreenshot } from '../Core/ScreenPicker.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
+  import {
+    ACTIVE_CONTEXT_MENTION,
+    EVERYTHING_MENTION,
+    INBOX_MENTION,
+    ACTIVE_TAB_MENTION,
+    WIKIPEDIA_SEARCH_MENTION
+  } from '@horizon/core/src/lib/constants/chat'
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager
+  export let excludeActiveTab: boolean = false
 
   const log = useLogScope('ChatContextTabPicker')
   const oasis = useOasis()
@@ -81,48 +92,33 @@
   const searchValue = writable('')
 
   const activeTabItem = {
-    id: 'active-tab',
-    type: 'built-in',
-    label: 'Active Tab',
-    value: `active-tab`,
-    icon: 'sparkles'
+    ...ACTIVE_TAB_MENTION,
+    label: ACTIVE_TAB_MENTION.suggestionLabel,
+    value: ACTIVE_TAB_MENTION.id
   } as TabItem
 
   const activeContextItem = {
-    id: 'active-space',
-    type: 'built-in',
-    label: 'Active Context',
-    value: `active-space`,
-    icon: 'circle-dot'
+    ...ACTIVE_CONTEXT_MENTION,
+    label: ACTIVE_CONTEXT_MENTION.suggestionLabel,
+    value: ACTIVE_CONTEXT_MENTION.id
   } as TabItem
 
-  const homeContextItem = {
-    id: 'home',
-    type: 'built-in',
-    label: 'Home Context',
-    value: `home`,
-    searchOnly: true,
-    icon: 'circle-dot',
-    aliases: ['inbox', 'general']
+  const inboxContextItem = {
+    ...INBOX_MENTION,
+    label: INBOX_MENTION.suggestionLabel,
+    value: INBOX_MENTION.id
   } as TabItem
 
   const everythingContextItem = {
-    id: 'everything',
-    type: 'built-in',
-    label: 'All My Stuff',
-    value: `everything`,
-    icon: 'save',
-    aliases: ['everything']
+    ...EVERYTHING_MENTION,
+    label: EVERYTHING_MENTION.suggestionLabel,
+    value: EVERYTHING_MENTION.id
   } as TabItem
 
   const wikipediaContextItem = {
-    id: 'wikipedia',
-    type: 'built-in',
-    label: 'Wikipedia Search',
-    value: `wikipedia`,
-    searchOnly: true,
-    icon: 'image;;https://en.wikipedia.org/static/favicon/wikipedia.ico',
-    aliases: ['wiki']
+    ...WIKIPEDIA_SEARCH_MENTION,
+    label: WIKIPEDIA_SEARCH_MENTION.suggestionLabel,
+    value: WIKIPEDIA_SEARCH_MENTION.id
   } as TabItem
 
   function tabToTabItem(tab: Tab) {
@@ -130,7 +126,7 @@
       id: tab.id,
       type: 'page',
       label: tab.title,
-      value: `tab;;${tab.id}`,
+      value: `${ContextItemTypes.PAGE_TAB};;${tab.id}`,
       ...(tab.type === 'space' ? { iconSpaceId: tab.spaceId } : { iconUrl: tab.icon })
     } as TabItem
   }
@@ -140,16 +136,16 @@
       id: space.id,
       type: 'space',
       label: space.dataValue.folderName,
-      value: `space;;${space.id}`,
+      value: `${ContextItemTypes.SPACE};;${space.id}`,
       iconSpaceId: space.id
     } as TabItem
   }
 
   const builtInItems = derived(userConfigSettings, (userConfigSettings) => {
     return [
-      activeTabItem,
+      ...conditionalArrayItem(!excludeActiveTab, activeTabItem),
       activeContextItem,
-      homeContextItem,
+      ...conditionalArrayItem(!userConfigSettings.save_to_active_context, inboxContextItem),
       everythingContextItem,
       ...conditionalArrayItem(userConfigSettings.experimental_chat_web_search, wikipediaContextItem)
     ]
@@ -231,35 +227,35 @@
 
       log.debug('submitting item', type, id)
 
-      if (type === 'tab') {
+      if (type === ContextItemTypes.PAGE_TAB) {
         contextManager.addTab(id, { trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu })
-      } else if (type === 'space') {
+      } else if (type === ContextItemTypes.SPACE) {
         contextManager.addSpace(id, {
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
-      } else if (type === 'resource') {
+      } else if (type === ContextItemTypes.RESOURCE) {
         contextManager.addResource(id, {
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
 
         // for built-in items 'type' is the value
-      } else if (type === 'active-tab') {
+      } else if (type === ContextItemTypes.ACTIVE_TAB) {
         contextManager.addActiveTab({
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
-      } else if (type === 'active-space') {
+      } else if (type === ContextItemTypes.ACTIVE_SPACE) {
         contextManager.addActiveSpaceContext(undefined, {
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
-      } else if (type === 'home') {
-        contextManager.addHomeContext({
+      } else if (type === ContextItemTypes.INBOX) {
+        contextManager.addInboxContext({
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
-      } else if (type === 'everything') {
+      } else if (type === ContextItemTypes.EVERYTHING) {
         contextManager.addEverythingContext({
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
-      } else if (type === 'wikipedia') {
+      } else if (type === ContextItemTypes.WIKIPEDIA) {
         contextManager.addWikipediaContext({
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
@@ -374,7 +370,7 @@
 
   onMount(() => {
     // wtf are we doing at this point.. svelte component libaries which dont fucking expose their stuf.f.. aaa
-    ref = document.querySelector('.chat [data-cmdk-root]') as HTMLDivElement
+    ref = document.querySelector('.context-controls [data-cmdk-root]') as HTMLDivElement
   })
 </script>
 
@@ -480,7 +476,7 @@
 
 <style lang="scss">
   /* NOTE: WHyyyy only tailwind? cant select anything by a meaningful name any more :') */
-  :global(.chat-wrapper [data-cmdk-root]) {
+  :global(.context-controls [data-cmdk-root]) {
     position: absolute;
     /* we should just use isolation: isolate for contained things like the sidebar insted of these zindices */
     z-index: 99999999;

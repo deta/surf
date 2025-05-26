@@ -17,6 +17,7 @@
   export let draggable: boolean = true
   export let frameless: boolean = false
   export let hideProcessing: boolean = false
+  export let openIn: 'tab' | 'sidebar' = 'tab'
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -84,10 +85,12 @@
           {draggable}
           {frameless}
           {hideProcessing}
+          {openIn}
           on:load
           on:click
           on:open
           on:open-and-chat
+          on:open-in-sidebar
           on:remove
           on:blacklist-resource
           on:whitelist-resource
@@ -111,10 +114,12 @@
           {draggable}
           {frameless}
           {hideProcessing}
+          {openIn}
           on:load
           on:click
           on:open
           on:open-and-chat
+          on:open-in-sidebar
           on:remove
           on:blacklist-resource
           on:whitelist-resource

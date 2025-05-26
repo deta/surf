@@ -56,6 +56,7 @@
     DeleteAnnotationEventTrigger,
     EventContext,
     OpenInMiniBrowserEventFrom,
+    ResourceTagDataStateValue,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger,
@@ -92,6 +93,7 @@
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
+  import type { SavingItem } from '@horizon/core/src/lib/service/saving'
 
   export let tab: TabPage
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
@@ -507,6 +509,7 @@
           resolve(resource)
           return
         }
+
         resource.updateExtractionState('running')
 
         // Run resource detection on a fresh webview to get the latest data
@@ -521,6 +524,15 @@
             name: (detectedResource.data as any).title || tab.title || '',
             sourceURI: url
           })
+        }
+
+        if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+          log.debug('updating resource data state to complete')
+          await resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.DATA_STATE,
+            ResourceTagDataStateValue.COMPLETE
+          )
         }
 
         resource.updateExtractionState('idle')
@@ -562,6 +574,12 @@
       return await resourceManager.getResource(surfResourceId)
     }
 
+    let saveItem: SavingItem | undefined
+    if (!silent) {
+      log.debug('adding pending save item')
+      saveItem = oasis.addPendingSaveTab(tab)
+    }
+
     // strip &t from url suffix
     let youtubeHostnames = [
       'youtube.com',
@@ -592,6 +610,8 @@
           if (!silent) {
             tab.resourceBookmarkedManually = true
             await resourceManager.markResourceAsSavedByUser(fetchedResource.id)
+
+            saveItem?.addResource(fetchedResource)
           }
 
           // Make sure the resource is up to date with at least the latest title and sourceURI
@@ -630,6 +650,9 @@
       createdForChat,
       freshWebview
     })
+
+    log.debug('adding resource to save item', resource, saveItem)
+    saveItem?.addResource(resource)
 
     // if (resource.type === ResourceTypes.PDF) {
     //   window.api.openResourceLocally({
@@ -691,7 +714,6 @@
   }
 
   export const highlightWebviewText = async (
-    resourceId: string,
     answerText: string,
     source: AIChatMessageSource | null
   ) => {
@@ -699,7 +721,7 @@
     const toast = pdfPage === null ? toasts.loading('Highlighting Citation…') : undefined
 
     try {
-      log.debug('highlighting text', resourceId, answerText, source)
+      log.debug('highlighting text', answerText, source)
 
       const detectedResource = await detectResource()
       if (!detectedResource) {
@@ -953,7 +975,7 @@
         EventContext.Inline
       )
 
-      if (tabs.activeScopeIdValue) {
+      if (tabs.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
         await oasis.addResourcesToSpace(
           tabs.activeScopeIdValue,
           [resource.id],
@@ -1014,7 +1036,7 @@
       ]
     )
 
-    if (tabs.activeScopeIdValue) {
+    if (tabs.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
       await oasis.addResourcesToSpace(
         tabs.activeScopeIdValue,
         [annotationResource.id],
@@ -1158,8 +1180,16 @@
       log.debug('bookmarked resource found', bookmarkedResource, tab)
 
       if (bookmarkedResource) {
+        const isPartialResource =
+          (bookmarkedResource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.DATA_STATE
+          )?.value === ResourceTagDataStateValue.PARTIAL
+
         if (detectedResourceType === ResourceTypes.DOCUMENT_NOTION) {
           log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
+          await refreshResourceWithPage(bookmarkedResource, url, false)
+        } else if (isPartialResource) {
+          log.debug('updating partial resource with fresh content', bookmarkedResource.id)
           await refreshResourceWithPage(bookmarkedResource, url, false)
         }
       } else {

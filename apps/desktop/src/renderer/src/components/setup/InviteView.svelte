@@ -3,6 +3,7 @@
   import type { Readable } from 'svelte/store'
   import icon from '../../assets/icon_512.png'
   import Button from './Button.svelte'
+  import { isDev } from '@horizon/utils'
 
   const dispatch = createEventDispatcher()
 
@@ -56,7 +57,10 @@
           default:
             break
         }
-        return
+
+        if (!isDev) {
+          return
+        }
       }
       dispatch('viewChange', 'persona')
     } catch (e) {
@@ -150,6 +154,7 @@
     width: 15rem;
     height: 15rem;
     margin-bottom: 1rem;
+    display: inline;
   }
 
   .title {
@@ -161,7 +166,8 @@
 
   .invite-input {
     width: 100%;
-    padding: 0.75rem;
+    max-width: 400px;
+    padding: 0.5rem 0.75rem;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     font-size: 16px;

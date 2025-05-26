@@ -62,7 +62,9 @@
       log.debug('fetching history...')
       const entries = await resourceManager.getHistoryEntries()
 
-      const filtered = entries.filter((entry) => entry.url && entry.type === 'navigation')
+      const filtered = entries.filter(
+        (entry) => entry.url && (entry.type === 'navigation' || entry.type.startsWith('import'))
+      )
       const sorted = filtered.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )

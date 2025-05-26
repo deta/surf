@@ -5,7 +5,7 @@ import { optimisticParseJSON } from '@horizon/utils'
 import { ModelTiers } from '@horizon/types/src/ai.types'
 
 import { ContextItemBase } from './base'
-import type { ContextManager } from '../contextManager'
+import type { ContextService } from '../contextManager'
 import { ContextItemIconTypes, ContextItemTypes } from './types'
 import { ResourceTag } from '../../resources'
 import { WIKIPEDIA_TITLE_EXTRACTOR_PROMPT } from '../../../constants/prompts'
@@ -17,8 +17,8 @@ export class ContextItemWikipedia extends ContextItemBase {
 
   createdResourceIds: string[] = []
 
-  constructor(manager: ContextManager) {
-    super(manager, 'wikipedia', 'search', {
+  constructor(service: ContextService) {
+    super(service, 'wikipedia', 'search', {
       type: ContextItemIconTypes.IMAGE,
       data: `https://www.google.com/s2/favicons?domain=https://wikipedia.org&sz=48`
     })
@@ -35,7 +35,7 @@ export class ContextItemWikipedia extends ContextItemBase {
     }
 
     this.log.debug('Getting Wikipedia title from prompt:', prompt)
-    const completion = await this.manager.ai.createChatCompletion(
+    const completion = await this.service.ai.createChatCompletion(
       prompt,
       WIKIPEDIA_TITLE_EXTRACTOR_PROMPT,
       { tier: ModelTiers.Standard }
@@ -80,7 +80,7 @@ export class ContextItemWikipedia extends ContextItemBase {
 
     const resourceIds = await Promise.all(
       pages.map(async (page) => {
-        const resource = await this.manager.resourceManager.createResourceLink(
+        const resource = await this.service.resourceManager.createResourceLink(
           {
             url: page.url,
             content_html: page.content,
@@ -114,7 +114,7 @@ export class ContextItemWikipedia extends ContextItemBase {
     this.log.debug('Destroying Wikipedia context item, cleaning up', this.createdResourceIds)
 
     if (this.createdResourceIds.length > 0) {
-      this.manager.resourceManager.deleteResources(this.createdResourceIds)
+      this.service.resourceManager.deleteResources(this.createdResourceIds)
     }
   }
 }

@@ -1,8 +1,15 @@
 <script lang="ts">
   import { type Writable, derived, writable, get, type Readable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import { useLogScope, useDebounce, useLocalStorageStore, tooltip, isMac } from '@horizon/utils'
-  import { DEFAULT_SPACE_ID, OasisSpace, useOasis } from '../../service/oasis'
+  import {
+    useLogScope,
+    useDebounce,
+    useLocalStorageStore,
+    tooltip,
+    isMac,
+    conditionalArrayItem
+  } from '@horizon/utils'
+  import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts, type ToastItem } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
@@ -61,6 +68,11 @@
   import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
   import OasisSpaceNavbar from '../Oasis/OasisSpaceNavbar.svelte'
   import SpaceFilterViewButtons from '../Oasis/SpaceFilterViewButtons.svelte'
+  import {
+    everythingContext,
+    inboxContext,
+    notesContext
+  } from '@horizon/core/src/lib/constants/browsingContext'
 
   export let showTabSearch: Writable<number>
   export let spaceId: string
@@ -123,9 +135,11 @@
   let previousSearchValue = ''
   let showDragHint = writable(false)
   let drawerHide = writable(false) // Whether to slide the drawer away
+  let lastShowTabSearch = 0
 
   $: isEverythingSpace = $selectedSpaceId === 'all'
   $: isInboxSpace = $selectedSpaceId === 'inbox'
+  $: isNotesSpace = $selectedSpaceId === 'notes'
   $: darkMode = $userConfigSettings.app_style === 'dark'
 
   $: if (updateSearchValue) {
@@ -133,8 +147,16 @@
   }
 
   $: if ($showTabSearch === 2) {
-    loadEverything(true)
+    if (['all', 'inbox', 'notes'].includes($selectedSpaceId)) {
+      loadEverything()
+    }
+    if (lastShowTabSearch !== $showTabSearch) {
+      telemetry.trackOpenOasis()
+    }
     $drawerHide = false
+    lastShowTabSearch = $showTabSearch
+  } else {
+    lastShowTabSearch = $showTabSearch
   }
 
   $: if ($showTabSearch === 2 && $searchValue !== previousSearchValue) {
@@ -152,12 +174,6 @@
 
   $: if ($showTabSearch !== 2) {
     closeResourceDetailsModal()
-  }
-
-  $: if ($selectedSpaceId === 'all') {
-    loadEverything()
-  } else if ($selectedSpaceId === 'inbox') {
-    loadEverything()
   }
 
   const everythingContents = derived(
@@ -197,15 +213,19 @@
   )
 
   const isBuiltInSpace = derived([selectedSpaceId], ([$selectedSpaceId]) => {
-    return $selectedSpaceId === 'all' || $selectedSpaceId === 'inbox'
+    return ['all', 'inbox', 'notes'].includes($selectedSpaceId)
   })
 
   const builtInSpacesViewSettings = useLocalStorageStore<{
-    all: {
+    all?: {
       viewType?: ContextViewType
       viewDensity?: ContextViewDensity
     }
-    inbox: {
+    inbox?: {
+      viewType?: ContextViewType
+      viewDensity?: ContextViewDensity
+    }
+    notes?: {
       viewType?: ContextViewType
       viewDensity?: ContextViewDensity
     }
@@ -213,7 +233,8 @@
     'stuff_built_in_spaces_view_settings',
     {
       all: {},
-      inbox: {}
+      inbox: {},
+      notes: {}
     },
     true
   )
@@ -236,7 +257,8 @@
         return
       }
 
-      const isInSpace = $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox'
+      const isInSpace =
+        $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox' && $selectedSpaceId != 'notes'
       const res = await oasis.removeResourcesFromSpaceOrOasis(
         resourceIds,
         isInSpace ? $selectedSpaceId : undefined
@@ -249,7 +271,7 @@
         await telemetry.trackMultiSelectResourceAction(
           MultiSelectResourceEventAction.Delete,
           resourceIds.length,
-          isEverythingSpace || isInboxSpace ? 'oasis' : 'space'
+          isEverythingSpace || isInboxSpace || isNotesSpace ? 'oasis' : 'space'
         )
       }
 
@@ -315,7 +337,7 @@
         ])
         log.debug('Resources', newResources)
 
-        if (!isEverythingSpace && !isInboxSpace) {
+        if (!isEverythingSpace && !isInboxSpace && !isNotesSpace) {
           await oasis.addResourcesToSpace(
             spaceId,
             newResources.map((r) => r.id),
@@ -327,7 +349,7 @@
           telemetry.trackSaveToOasis(
             r.type,
             SaveToOasisEventTrigger.Drop,
-            !isEverythingSpace && !isInboxSpace
+            !isEverythingSpace && !isInboxSpace && !isNotesSpace
           )
         }
       } else if (
@@ -371,12 +393,32 @@
   const handlePaste = async (e: ClipboardEvent) => {
     if ($showTabSearch !== 2 || get(miniBrowserService.isOpen)) return
 
+    const target = e.target as HTMLElement
+    const isFocused = target === document.activeElement
+
+    if (
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.getAttribute('contenteditable') === 'true') &&
+      isFocused
+    ) {
+      log.debug('Ignoring paste event in input field or editable content')
+      return
+    }
+
     let toast: ToastItem | null = null
+
+    log.debug('Handling paste event')
 
     try {
       // NOTE: We filter plain text items, as that just leads to too many issue with the input fields
       // for right now.
       const mediaItems = (await processPaste(e)).filter((item) => item.type !== 'text')
+      if (mediaItems.length === 0) {
+        log.debug('No valid media items found in paste event')
+        return
+      }
+
       toast = toasts.loading(
         `Importing ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}…`
       )
@@ -388,7 +430,7 @@
         [ResourceTag.paste()]
       )
 
-      if (!isEverythingSpace && !isInboxSpace) {
+      if (!isEverythingSpace && !isInboxSpace && !isNotesSpace) {
         const space = await oasis.getSpace($selectedSpaceId)
         if (!space) {
           toast.warning('Could not find active space! Import still succeeded!')
@@ -462,7 +504,7 @@
   }
 
   const handleSpaceDeleted = async (e: CustomEvent) => {
-    oasis.changeSelectedSpace(DEFAULT_SPACE_ID)
+    oasis.changeSelectedSpace(oasis.defaultSpaceID)
   }
 
   const handleSpaceSelected = async (e: CustomEvent<string>) => {
@@ -574,7 +616,11 @@
           ...($selectedFilter === 'saved_by_user'
             ? [ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)]
             : []),
-          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x)),
+          ...conditionalArrayItem(
+            $selectedSpaceId === 'notes',
+            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          )
         ],
         {
           semanticEnabled: $userConfigSettings.use_semantic_search
@@ -611,14 +657,23 @@
   const handleViewSettingsChanges = async (e: CustomEvent<ViewChangeEvent>) => {
     const { viewType, viewDensity } = e.detail
 
-    const prevViewType = $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all'].viewType
-    const prevViewDensity = $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all'].viewDensity
+    const prevViewType =
+      $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all']?.viewType
+    const prevViewDensity =
+      $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all']
+        ?.viewDensity
 
     builtInSpacesViewSettings.update((v) => {
       if (isInboxSpace) {
+        if (v.inbox === undefined) v.inbox = {}
         v.inbox.viewType = viewType
         v.inbox.viewDensity = viewDensity
+      } else if (isNotesSpace) {
+        if (v.notes === undefined) v.notes = {}
+        v.notes.viewType = viewType
+        v.notes.viewDensity = viewDensity
       } else {
+        if (v.all === undefined) v.all = {}
         v.all.viewType = viewType
         v.all.viewDensity = viewDensity
       }
@@ -699,10 +754,8 @@
   }
 
   const cleanupDragStuck = () => {
-    showDragHint.set(false)
     stuffWrapperRef?.classList.remove('hovering')
     updateWebviewPointerEvents('unset')
-    window.removeEventListener('drag', handleDrag)
     window.removeEventListener('click', dragClickHandler, { capture: true })
     window.removeEventListener('keydown', dragClickHandler, { capture: true })
   }
@@ -713,18 +766,7 @@
     Dragcula.get().cleanupDragOperation()
   }
 
-  const handleDrag = async (e: DragEvent) => {
-    if ($showTabSearch !== 0) return
-    if (e.clientY > window.innerHeight - 80) {
-      stuffWrapperRef.classList.add('hovering')
-      showTabSearch.set(2)
-      // await tick()
-    }
-  }
-
   const handleDragculaDragStart = (drag: DragOperation) => {
-    showDragHint.set(true)
-    window.addEventListener('drag', handleDrag)
     window.addEventListener('click', dragClickHandler, { capture: true })
     window.addEventListener('keydown', dragClickHandler, { capture: true })
   }
@@ -785,12 +827,6 @@
   onMount(() => {
     Dragcula.get().on('dragstart', handleDragculaDragStart)
     Dragcula.get().on('dragend', handleDragculaDragEnd)
-
-    window.api.onBrowserFocusChange((v) => {
-      if (v === 'unfocused') {
-        showDragHint.set(false)
-      }
-    })
   })
 
   onDestroy(() => {
@@ -803,15 +839,15 @@
       if (v === 0) {
         if (searchResetTimeout !== null) clearTimeout(searchResetTimeout)
 
-        if ($selectedSpaceId === DEFAULT_SPACE_ID) {
-          selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
+        if ($selectedSpaceId === oasis.defaultSpaceID) {
+          selectedSpaceId.set($activeScopeId ?? oasis.defaultSpaceID)
         }
 
         detailedResource.set(null)
 
         searchResetTimeout = setTimeout(() => {
           searchValue.set('')
-          selectedSpaceId.set($activeScopeId ?? DEFAULT_SPACE_ID)
+          selectedSpaceId.set($activeScopeId ?? oasis.defaultSpaceID)
           selectedFilterTypeId.set(null)
           searchResetTimeout = null
         }, SEARCH_RESET_TIMEOUT)
@@ -827,10 +863,6 @@
 
 <svelte:window on:paste={handlePaste} />
 
-<div id="drawer-hint" class:show={$showDragHint && $showTabSearch === 0} use:portal={'body'}>
-  <span>Hover to open your Stuff</span>
-</div>
-
 {#if $showTabSearch === 2}
   <div
     class="drawer-backdrop"
@@ -841,12 +873,7 @@
     on:click={handleCloseOverlay}
   ></div>
 {/if}
-<div
-  class="stuff-motion-wrapper relative z-[100000000]"
-  use:springAppear={{
-    visible: $showTabSearch === 2
-  }}
->
+<div class="stuff-motion-wrapper relative z-[100000000]">
   <div
     id="drawer"
     bind:this={stuffWrapperRef}
@@ -937,24 +964,22 @@
           />
         {/if}
 
-        {#key $spaces}
-          <SpacesView
-            bind:this={createSpaceRef}
-            {spaces}
-            {resourceManager}
-            showPreview={true}
-            type="horizontal"
-            interactive={false}
-            on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
-            on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
-            on:create-empty-space={handleCreateEmptySpace}
-            on:open-space-and-chat
-            on:delete-space={handleDeleteSpace}
-            on:handled-drop={handlePostDropOnSpace}
-            on:close-oasis={closeOverlay}
-            on:Drop
-          />
-        {/key}
+        <SpacesView
+          bind:this={createSpaceRef}
+          {spaces}
+          {resourceManager}
+          showPreview={true}
+          type="horizontal"
+          interactive={false}
+          on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
+          on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
+          on:create-empty-space={handleCreateEmptySpace}
+          on:open-space-and-chat
+          on:delete-space={handleDeleteSpace}
+          on:handled-drop={handlePostDropOnSpace}
+          on:close-oasis={closeOverlay}
+          on:Drop
+        />
 
         <div
           class="stuff-view h-full w-full relative"
@@ -965,36 +990,32 @@
           <Tooltip rootID="stuff" />
 
           {#if !$isBuiltInSpace}
-            {#await new Promise((resolve) => setTimeout(resolve, 175))}
-              <!-- wait -->
-            {:then}
-              {#key $selectedSpaceId}
-                <OasisSpaceRenderer
-                  bind:this={oasisSpace}
-                  spaceId={$selectedSpaceId}
-                  active
-                  handleEventsOutside
-                  insideDrawer
-                  on:open={handleOpen}
-                  on:open-and-chat
-                  on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                  on:go-back={() => oasis.changeSelectedSpace(DEFAULT_SPACE_ID)}
-                  on:deleted={handleSpaceDeleted}
-                  on:updated-space={handleUpdatedSpace}
-                  on:creating-new-space={handleCreatingNewSpace}
-                  on:done-creating-new-space={handleDoneCreatingNewSpace}
-                  on:select-space={handleSpaceSelected}
-                  on:batch-open
-                  on:batch-remove={handleResourceRemove}
-                  on:handled-drop={handlePostDropOnSpace}
-                  on:created-space={handleCreatedSpace}
-                  on:close={closeOverlay}
-                  on:seekToTimestamp
-                  on:highlightWebviewText
-                  on:open-space-and-chat
-                />
-              {/key}
-            {/await}
+            {#key $selectedSpaceId}
+              <OasisSpaceRenderer
+                bind:this={oasisSpace}
+                spaceId={$selectedSpaceId}
+                active
+                handleEventsOutside
+                insideDrawer
+                on:open={handleOpen}
+                on:open-and-chat
+                on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                on:go-back={() => oasis.changeSelectedSpace(oasis.defaultSpaceID)}
+                on:deleted={handleSpaceDeleted}
+                on:updated-space={handleUpdatedSpace}
+                on:creating-new-space={handleCreatingNewSpace}
+                on:done-creating-new-space={handleDoneCreatingNewSpace}
+                on:select-space={handleSpaceSelected}
+                on:batch-open
+                on:batch-remove={handleResourceRemove}
+                on:handled-drop={handlePostDropOnSpace}
+                on:created-space={handleCreatedSpace}
+                on:close={closeOverlay}
+                on:seekToTimestamp
+                on:highlightWebviewText
+                on:open-space-and-chat
+              />
+            {/key}
           {:else}
             <DropWrapper
               {spaceId}
@@ -1015,121 +1036,143 @@
               zonePrefix="drawer-"
             >
               <LazyScroll items={renderContents} let:renderedItems>
-                {#await new Promise((resolve) => setTimeout(resolve, 175))}
-                  <!-- wait -->
-                {:then}
-                  {#key $selectedSpaceId}
-                    <!--
+                {#key $selectedSpaceId}
+                  <!--
                         TODO: Needs extended api
                         on:changedSortBy={handleSortBySettingsChanged}
                         on:changedOrder={handleOrderSettingsChanged}
                       -->
 
-                    <OasisSpaceNavbar {searchValue}>
-                      <svelte:fragment slot="left">
-                        <Icon
-                          name={isInboxSpace ? 'circle-dot' : 'save'}
-                          size="1.4rem"
-                          color="currentColor"
-                          style="color: currentColor;"
-                        />
-
-                        <span class="context-name">{isInboxSpace ? 'Home' : 'All My Stuff'}</span>
-                      </svelte:fragment>
-                      <svelte:fragment slot="right">
-                        {#if isInboxSpace}
-                          <button
-                            use:tooltip={{
-                              position: 'left',
-                              text:
-                                $searchValue.length > 0
-                                  ? 'Create new chat with this context'
-                                  : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
-                            }}
-                            class="chat-with-space pointer-all"
-                            class:activated={$searchValue.length > 0}
-                            on:click={() => handleChatWithSpace('inbox')}
-                          >
-                            <Icon name="face" size="1.6em" />
-
-                            <div class="chat-text">Ask Context</div>
-                          </button>
-                        {/if}
-                        {#if $isBuiltInSpace && !!$searchValue}
-                          <Select {selectedFilter} on:change={handleOasisFilterChange}>
-                            <option value="all">Show All</option>
-                            <option value="saved_by_user">Saved by Me</option>
-                          </Select>
-                        {/if}
-                      </svelte:fragment>
-                      <svelte:fragment slot="right-dynamic">
-                        <SpaceFilterViewButtons
-                          hideSortingSettings
-                          filter={$selectedFilterTypeId ?? null}
-                          viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                            ?.viewType}
-                          viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                            ?.viewDensity}
-                          sortBy={'created_at'}
-                          order={'desc'}
-                          on:changedView={handleViewSettingsChanges}
-                          on:changedFilter={handleFilterTypeChange}
-                        />
-                      </svelte:fragment>
-                    </OasisSpaceNavbar>
-
-                    <ContextHeader
-                      headline={isInboxSpace ? 'Home' : 'All Your Stuff'}
-                      headlineEditable={false}
-                      descriptionEditable={false}
-                    >
-                      <svelte:fragment slot="icon">
-                        <Icon
-                          name={isInboxSpace ? 'circle-dot' : 'save'}
-                          size="xl"
-                          color="currentColor"
-                          style="color: currentColor;"
-                        />
-                      </svelte:fragment>
-                    </ContextHeader>
-
-                    {#if isInboxSpace}
-                      <ContextTabsBar
-                        on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                        on:handled-drop={handlePostDropOnSpace}
-                        on:select-space={handleSpaceSelected}
-                        on:reload={handleReload}
+                  <OasisSpaceNavbar {searchValue}>
+                    <svelte:fragment slot="left">
+                      <Icon
+                        name={isInboxSpace
+                          ? inboxContext.icon
+                          : isNotesSpace
+                            ? notesContext.icon
+                            : everythingContext.icon}
+                        size="1.4rem"
+                        color="currentColor"
+                        style="color: currentColor;"
                       />
-                    {/if}
 
-                    <OasisResourcesView
-                      resources={renderedItems}
-                      {searchValue}
-                      isInSpace={false}
-                      status={$loadingContents
-                        ? { icon: 'spinner', message: 'Loading contents…' }
-                        : $isSearching && $searchValue?.length > 0
-                          ? { icon: 'spinner', message: 'Searching your stuff…' }
-                          : undefined}
-                      viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                        ?.viewType}
-                      viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                        ?.viewDensity}
-                      hideSortingSettings
-                      on:click={handleItemClick}
-                      on:open={(e) => handleOpen(e, true)}
-                      on:open-and-chat
-                      on:open-space-as-tab
-                      on:remove={handleResourceRemove}
-                      on:batch-remove={handleResourceRemove}
-                      on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-                      on:batch-open
-                      on:new-tab
-                      on:changedView={handleViewSettingsChanges}
-                      on:changedFilter={handleFilterTypeChange}
+                      <span class="context-name"
+                        >{isInboxSpace
+                          ? inboxContext.label
+                          : isNotesSpace
+                            ? notesContext.label
+                            : everythingContext.label}</span
+                      >
+                    </svelte:fragment>
+                    <svelte:fragment slot="right">
+                      {#if isInboxSpace}
+                        <button
+                          use:tooltip={{
+                            position: 'left',
+                            text:
+                              $searchValue.length > 0
+                                ? 'Create new chat with this context'
+                                : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                          }}
+                          class="chat-with-space pointer-all"
+                          class:activated={$searchValue.length > 0}
+                          on:click={() => handleChatWithSpace('inbox')}
+                        >
+                          <Icon name="face" size="1.6em" />
+
+                          <div class="chat-text">Ask Context</div>
+                        </button>
+                      {/if}
+                      {#if $isBuiltInSpace && !!$searchValue}
+                        <Select {selectedFilter} on:change={handleOasisFilterChange}>
+                          <option value="all">Show All</option>
+                          <option value="saved_by_user">Saved by Me</option>
+                        </Select>
+                      {/if}
+                    </svelte:fragment>
+                    <svelte:fragment slot="right-dynamic">
+                      <SpaceFilterViewButtons
+                        hideSortingSettings
+                        filter={$selectedFilterTypeId ?? null}
+                        viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                          ?.viewType}
+                        viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
+                          ?.viewDensity}
+                        sortBy={'resource_added_to_space'}
+                        order={'desc'}
+                        on:changedView={handleViewSettingsChanges}
+                        on:changedFilter={handleFilterTypeChange}
+                      />
+                    </svelte:fragment>
+                  </OasisSpaceNavbar>
+
+                  <ContextHeader
+                    headline={isInboxSpace
+                      ? inboxContext.label
+                      : isNotesSpace
+                        ? notesContext.label
+                        : everythingContext.label}
+                    description={isInboxSpace
+                      ? inboxContext.description
+                      : isNotesSpace
+                        ? notesContext.description
+                        : everythingContext.description}
+                    headlineEditable={false}
+                    descriptionEditable={false}
+                  >
+                    <svelte:fragment slot="icon">
+                      <Icon
+                        name={isInboxSpace
+                          ? inboxContext.icon
+                          : isNotesSpace
+                            ? notesContext.icon
+                            : everythingContext.icon}
+                        size="xl"
+                        color="currentColor"
+                        style="color: currentColor;"
+                      />
+                    </svelte:fragment>
+                  </ContextHeader>
+
+                  {#if isInboxSpace}
+                    <ContextTabsBar
+                      on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+                      on:handled-drop={handlePostDropOnSpace}
+                      on:select-space={handleSpaceSelected}
+                      on:reload={handleReload}
                     />
-                  {/key}
-                {/await}
+                  {/if}
+
+                  <OasisResourcesView
+                    resources={renderedItems}
+                    {searchValue}
+                    isInSpace={false}
+                    status={$loadingContents
+                      ? { icon: 'spinner', message: 'Loading contents…' }
+                      : $isSearching && $searchValue?.length > 0
+                        ? { icon: 'spinner', message: 'Searching your stuff…' }
+                        : undefined}
+                    viewType={$builtInSpacesViewSettings[
+                      isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
+                    ]?.viewType}
+                    viewDensity={$builtInSpacesViewSettings[
+                      isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
+                    ]?.viewDensity}
+                    hideSortingSettings
+                    hideFilterSettings={isNotesSpace}
+                    on:click={handleItemClick}
+                    on:open={(e) => handleOpen(e, true)}
+                    on:open-and-chat
+                    on:open-space-as-tab
+                    on:remove={handleResourceRemove}
+                    on:batch-remove={handleResourceRemove}
+                    on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
+                    on:batch-open
+                    on:new-tab
+                    on:changedView={handleViewSettingsChanges}
+                    on:changedFilter={handleFilterTypeChange}
+                  />
+                {/key}
               </LazyScroll>
             </DropWrapper>
           {/if}
@@ -1265,32 +1308,33 @@
       translate 100ms ease-out,
       transform 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
 
-    &::before {
-      content: '';
-      position: fixed;
-      background: transparent;
-      left: -100vw;
-      right: -100vw;
-      top: 100%;
-      height: 100px;
-    }
+    //&::before {
+    //  content: '';
+    //  position: fixed;
+    //  background: transparent;
+    //  left: -100vw;
+    //  right: -100vw;
+    //  top: 100%;
+    //  height: 100px;
+    //}
 
-    box-shadow:
-      inset 0px 1px 1px -1px white,
-      inset 0px -1px 1px -1px white,
-      inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
-      0px 0px 89px 0px rgba(0, 0, 0, 0.18),
-      0px 4px 18px 0px rgba(0, 0, 0, 0.18),
-      0px 1px 1px 0px rgba(126, 168, 240, 0.3),
-      0px 4px 4px 0px rgba(126, 168, 240, 0.15);
-    box-shadow:
-      inset 0px 1px 4px -1px white,
-      inset 0px -1px 1p2 0 white,
-      inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
-      0px 0px 89px 0px color(display-p3 0 0 0 / 0.18),
-      0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
-      0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
-      0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
+    // NOTE: Didnt seem to visually change anything perf nuked
+    //box-shadow:
+    //  inset 0px 1px 1px -1px white,
+    //  inset 0px -1px 1px -1px white,
+    //  inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
+    //  0px 0px 89px 0px rgba(0, 0, 0, 0.18),
+    //  0px 4px 18px 0px rgba(0, 0, 0, 0.18),
+    //  0px 1px 1px 0px rgba(126, 168, 240, 0.3),
+    //  0px 4px 4px 0px rgba(126, 168, 240, 0.15);
+    //box-shadow:
+    //  inset 0px 1px 4px -1px white,
+    //  inset 0px -1px 1p2 0 white,
+    //  inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
+    //  0px 0px 89px 0px color(display-p3 0 0 0 / 0.18),
+    //  0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
+    //  0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
+    //  0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
 
     > .drawer-content {
       position: relative;
@@ -1302,6 +1346,7 @@
       max-height: min(95vh, 1400px);
       overflow: hidden !important;
       border-radius: 24px 24px 16px 16px;
+
       @apply bg-white dark:bg-gray-700;
       display: flex;
     }

@@ -3,21 +3,30 @@ import { ipcSenders } from './ipcHandlers'
 import { getCachedSpaces } from './spaces'
 import { type MenuItemConstructorOptions } from 'electron'
 import { SpaceBasicData } from '@horizon/core/src/lib/service/ipc/events'
+import { conditionalArrayItem } from '@horizon/utils'
 
 const createSpaceAction = (space: SpaceBasicData, handler: () => void) => {
   return {
     label: space.name,
     click: handler
-  }
+  } as Electron.MenuItemConstructorOptions
 }
 
 const createSpaceActions = (
   pinnedSpaces: SpaceBasicData[],
+  linkedSpaces: SpaceBasicData[],
   unpinnedSpaces: SpaceBasicData[],
   handler: (space: SpaceBasicData) => void
 ) => {
   return [
     ...pinnedSpaces.map((space) => createSpaceAction(space, () => handler(space))),
+    ...conditionalArrayItem<Electron.MenuItemConstructorOptions>(pinnedSpaces.length > 0, {
+      type: 'separator'
+    }),
+    ...linkedSpaces.map((space) => createSpaceAction(space, () => handler(space))),
+    ...conditionalArrayItem<Electron.MenuItemConstructorOptions>(linkedSpaces.length > 0, {
+      type: 'separator'
+    }),
     {
       label: 'More Contexts',
       submenu: unpinnedSpaces.map((space) => createSpaceAction(space, () => handler(space)))
@@ -42,16 +51,27 @@ export function setupContextMenu(window: Electron.WebContents, options: contextM
       let openInSpaceItems: MenuItemConstructorOptions[] = []
 
       const pinnedSpaces = spaces.filter((space) => space.pinned)
-      const unpinnedSpaces = spaces.filter((space) => !space.pinned)
+      const linkedSpaces = spaces.filter((space) => space.linked)
+      const unpinnedSpaces = spaces.filter((space) => !space.pinned && !space.linked)
 
-      if (pinnedSpaces.length > 0) {
-        saveToSpaceItems = createSpaceActions(pinnedSpaces, unpinnedSpaces, (space) => {
-          ipcSenders.saveLink(parameters.linkURL, space.id)
-        })
+      if ([...pinnedSpaces, ...linkedSpaces].length > 0) {
+        saveToSpaceItems = createSpaceActions(
+          pinnedSpaces,
+          linkedSpaces,
+          unpinnedSpaces,
+          (space) => {
+            ipcSenders.saveLink(parameters.linkURL, space.id)
+          }
+        )
 
-        openInSpaceItems = createSpaceActions(pinnedSpaces, unpinnedSpaces, (space) => {
-          ipcSenders.openURL(parameters.linkURL, false, space.id)
-        })
+        openInSpaceItems = createSpaceActions(
+          pinnedSpaces,
+          linkedSpaces,
+          unpinnedSpaces,
+          (space) => {
+            ipcSenders.openURL(parameters.linkURL, false, space.id)
+          }
+        )
       } else {
         saveToSpaceItems = spaces.map((space) =>
           createSpaceAction(space, () => {

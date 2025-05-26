@@ -40,12 +40,13 @@ function nodeDOMAtCoords(coords: { x: number; y: number }) {
             'pre',
             'blockquote',
             'h1, h2, h3',
+            'resource',
+            'output',
             '[data-type=callout]',
             '[data-type=horizontalRule]',
             '.tableWrapper',
             '.node-subdocument',
-            '.node-equationBlock',
-            'img'
+            '.node-equationBlock'
           ].join(', ')
         )
     )
@@ -82,6 +83,12 @@ export function nodePosAtDOM(node: Element, view: EditorView) {
       $pos = view.state.doc.resolve($pos.pos - 1)
     }
     return undefined
+  }
+
+  // for output nodes grab the entire output node
+  if (node.matches('output')) {
+    const $pos = view.state.doc.resolve(pos.pos)
+    return $pos.before($pos.depth)
   }
 
   // For all other nodes

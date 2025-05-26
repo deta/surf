@@ -29,7 +29,8 @@
     truncateURL,
     conditionalArrayItem,
     tooltip,
-    parseUrlIntoCanonical
+    parseUrlIntoCanonical,
+    isDev
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
@@ -54,6 +55,7 @@
     isGeneratedResource
   } from '@horizon/core/src/lib/utils/resourcePreview'
   import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
+  import { debugMode } from '@horizon/core/src/lib/stores/debug'
 
   export let resource: Resource
   export let selected: boolean = false
@@ -61,6 +63,7 @@
   export let draggable = interactive
   export let frameless: boolean = false
   export let titleEditable = interactive
+  export let openIn: 'tab' | 'sidebar' = 'tab'
 
   /// View
   export let mode: ContentMode = 'full'
@@ -94,6 +97,7 @@
     load: string
     open: string
     'open-and-chat': string
+    'open-in-sidebar': string
     'created-tab': void
     'whitelist-resource': string
     'blacklist-resource': string
@@ -110,6 +114,10 @@
     stack: {
       quality: 20,
       maxDimension: 200
+    },
+    cmdt: {
+      quality: 40,
+      maxDimension: 500
     }
   } as const
   const getPreviewPair = (otigin: Origin) =>
@@ -121,6 +129,7 @@
         }
 
   const spaces = oasis.spaces
+  const sortedSpaces = oasis.sortedSpacesListFlat
   const resourceState = resource.state
   const selectedSpaceId = oasis.selectedSpace
   const activeTab = tabsManager.activeTab
@@ -143,37 +152,40 @@
     }
   )
 
-  const contextMenuSpaces = derived([spaces, resource.spaceIds], ([spaces, resourceSpaceIds]) => {
-    return spaces
-      .filter(
-        (e) =>
-          e.id !== 'all' &&
-          e.id !== 'inbox' &&
-          e.dataValue?.folderName?.toLowerCase() !== '.tempspace'
-      )
-      .map(
-        (space) =>
-          ({
-            type: 'action',
-            icon: resourceSpaceIds.includes(space.id) ? 'check' : space,
-            disabled: resourceSpaceIds.includes(space.id),
-            text: space.dataValue.folderName,
-            action: async () => {
-              try {
-                await oasis.addResourcesToSpace(
-                  space.id,
-                  [resource.id],
-                  SpaceEntryOrigin.ManuallyAdded
-                )
+  const contextMenuSpaces = derived(
+    [sortedSpaces, resource.spaceIds],
+    ([spaces, resourceSpaceIds]) => {
+      return spaces
+        .filter(
+          (e) =>
+            e.id !== 'all' &&
+            e.id !== 'inbox' &&
+            e.dataValue?.folderName?.toLowerCase() !== '.tempspace'
+        )
+        .map(
+          (space) =>
+            ({
+              type: 'action',
+              icon: resourceSpaceIds.includes(space.id) ? 'check' : space,
+              disabled: resourceSpaceIds.includes(space.id),
+              text: space.dataValue.folderName,
+              action: async () => {
+                try {
+                  await oasis.addResourcesToSpace(
+                    space.id,
+                    [resource.id],
+                    SpaceEntryOrigin.ManuallyAdded
+                  )
 
-                toasts.success(`Added to ${space.dataValue.folderName}`)
-              } catch (e) {
-                toasts.error(`Failed to add to ${space.dataValue.folderName}`)
+                  toasts.success(`Added to ${space.dataValue.folderName}`)
+                } catch (e) {
+                  toasts.error(`Failed to add to ${space.dataValue.folderName}`)
+                }
               }
-            }
-          }) as CtxItem
-      )
-  })
+            }) as CtxItem
+        )
+    }
+  )
 
   $: annotations = resource.annotations ?? []
 
@@ -290,8 +302,7 @@
 
   const openSpace = (space: OasisSpace) => {
     log.debug('Opening space', space.id)
-    tabsManager.showNewTabOverlay.set(2)
-    oasis.changeSelectedSpace(space.id)
+    oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: space.id })
   }
 
   const openResourceAsTab = (resourceId: string, opts?: CreateTabOptions) => {
@@ -337,7 +348,7 @@
       dispatch('open', resourceToOpen)
     } else if (e.altKey) {
       oasis.openResourceDetailsSidebar(resource, { select: true })
-    } else {
+    } else if (openIn === 'tab') {
       log.debug('opening resource in new tab', resourceToOpen)
       const active = !isModKeyPressed(e) || e.shiftKey
       openResourceAsTab(resourceToOpen, {
@@ -353,6 +364,9 @@
       if (active) {
         tabsManager.showNewTabOverlay.set(0)
       }
+    } else if (openIn === 'sidebar') {
+      log.debug('opening resource in sidebar', resourceToOpen)
+      dispatch('open-in-sidebar', resourceToOpen)
     }
 
     resourceManager.telemetry.trackOpenResource(
@@ -575,7 +589,7 @@
     ...conditionalArrayItem<CtxItem>($contextMenuSpaces.length > 0, [
       {
         type: 'sub-menu',
-        icon: '',
+        icon: 'add',
         disabled: $contextMenuSpaces.length === 0,
         text: 'Add to Context',
         items: $contextMenuSpaces
@@ -617,6 +631,18 @@
       text: `${isMac() ? 'Reveal in Finder' : 'Open in Explorer'}`,
       action: () => handleOpenAsFile()
     }),
+    ...conditionalArrayItem<CtxItem>($debugMode, [
+      { type: 'separator' },
+      {
+        type: 'action',
+        icon: 'code',
+        text: 'Copy Resource ID',
+        action: () => {
+          copyToClipboard(resource.id)
+          toasts.success('Copied resource ID to clipboard!')
+        }
+      }
+    ]),
     ...conditionalArrayItem<CtxItem>(isGeneratedResource(resource) && $activeTab?.type === 'page', {
       type: 'action',
       icon: 'sidebar.right',
@@ -877,7 +903,8 @@
 
   /// New resource previews // TODO: Clean up old styles
   article.resource-preview {
-    &[data-origin='stuff'] {
+    &[data-origin='stuff'],
+    &[data-origin='chat'] {
       content-visibility: auto;
       contain: layout paint style;
 
@@ -1114,5 +1141,6 @@
     justify-content: center;
     transition: opacity 125ms ease;
     opacity: 0.75;
+    cursor: default;
   }
 </style>

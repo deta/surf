@@ -1,4 +1,5 @@
 import type { ContextViewDensity, ContextViewType } from '@horizon/types'
+import type { SpaceEntrySortBy } from './sffs.types'
 
 export interface CreateSpaceEntryInput {
   resource_id: string
@@ -22,17 +23,19 @@ export interface SpaceData {
   showInSidebar: boolean
   sources?: SpaceSource[]
   liveModeEnabled: boolean
-  hideViewed: boolean
   smartFilterQuery: string | null
-  sortBy: 'created_at' | 'updated_at' | 'source_published_at' | 'name'
+  sortBy?: SpaceEntrySortBy
   sortOrder?: 'asc' | 'desc'
   sql_query: string | null
   embedding_query: string | null
   builtIn?: boolean
+  default?: boolean
   index?: number
   pinned?: boolean
   viewType?: ContextViewType
   viewDensity?: ContextViewDensity
+  selectedNoteResource?: string
+  imported?: boolean
 }
 
 export interface SpaceSource {
@@ -67,5 +70,3 @@ export interface AiSFFSQueryResponse {
   embedding_search_query: string | null
   embedding_search_results: string[] | null // narrowed down resource ids, is null if the query is null
 }
-
-export const GENERAL_CONTEXT_ID = '__general_context'

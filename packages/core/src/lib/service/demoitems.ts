@@ -63,7 +63,6 @@ export async function createDemoItems(
   //         colors: ['#76E0FF', '#4EC9FB'],
   //         showInSidebar: false,
   //         liveModeEnabled: false,
-  //         hideViewed: false,
   //         smartFilterQuery: null,
   //         sql_query: null,
   //         embedding_query: null,
@@ -76,6 +75,12 @@ export async function createDemoItems(
   //     log.debug('Created built-in space:', space)
   //   }
   // }
+
+  const defaultSpace = existingSpaces.find((space) => space.name.default)
+  if (defaultSpace) {
+    log.debug('Changing scope to default space:', defaultSpace.id)
+    await tabsManager.changeScope(defaultSpace.id)
+  }
 
   const existingOnboardingSpace = existingSpaces.find(
     (space) => space.name.folderName === onboardingSpace.name

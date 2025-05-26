@@ -9,6 +9,7 @@
   export let range: any
   export let items: SlashMenuItem[] = []
   export let query: string
+  export let loading: boolean = false
   export let callback: (payload: SlashCommandPayload) => void
 
   let selectedSection = 0
@@ -45,32 +46,28 @@
     callback({ item, query, editor })
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      selectedIndex = (selectedIndex + items.length - 1) % items.length
-      return true
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      selectedIndex = (selectedIndex + 1) % items.length
-      return true
-    }
-
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      const item = items[selectedIndex]
-
-      if (item) {
-        runCommand(item)
-      }
-      return true
+  export function onKeyDown(e: KeyboardEvent) {
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        selectedIndex = (selectedIndex + items.length - 1) % items.length
+        return true
+      case 'ArrowDown':
+        e.preventDefault()
+        selectedIndex = (selectedIndex + 1) % items.length
+        return true
+      case 'Enter':
+        e.preventDefault()
+        const item = items[selectedIndex]
+        if (item) {
+          runCommand(item)
+        }
+        return true
+      default:
+        return false
     }
   }
 </script>
-
-<svelte:window on:keydown={handleKeydown} />
 
 <div class="slash-container">
   <!-- <div class="slash-header">Select element to insert:</div> -->
@@ -115,12 +112,16 @@
           </div>
         {/each}
       {/each}
-    {:else}
+    {:else if loading}
       <div class="slash-item">
         <div class="slash-item-icon">
           <DynamicIcon name="spinner" size="16px" />
         </div>
         <p class="slash-item-title">Searching your stuff…</p>
+      </div>
+    {:else}
+      <div class="slash-item">
+        <p class="slash-item-title">Nothing found</p>
       </div>
     {/if}
   </div>

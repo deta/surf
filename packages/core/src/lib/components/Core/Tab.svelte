@@ -38,7 +38,7 @@
   } from '@horizon/core/src/lib/service/miniBrowser'
   import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { generalContext, newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
   import { useDesktopManager } from '../../service/desktop'
   import SoundVisualizerBars from '../Effects/SoundVisualizerBars.svelte'
@@ -110,10 +110,10 @@
 
   const desktopVisible = desktopManager.activeDesktopVisible
   const userSettings = userConfig.settings
-  const chatContext = ai.contextManager
-  const tabsInContext = chatContext.tabsInContext
+  const chatContext = ai.activeContextManager
   const selectedTabs = tabsManager.selectedTabs
   const activeSpaceId = tabsManager.activeScopeId
+  const sortedSpaces = oasis.sortedSpacesListFlat
 
   const liveSpacePopoverOpened = writable(false)
   const saveToSpacePopoverOpened = writable(false)
@@ -136,12 +136,22 @@
   // TODO: CAN WE NUKE THIS SHIT?
   let space: OasisSpace | null = null
 
+  const MIN_TAB_WIDTH = 92
+  const HIDE_SAVE_BUTTON_BELOW = 120
+
+  // Calculate padding based on active space's folder name length
+  // Max width is 15ch, for each character the padding is reduced
+  $: currentSpace = $spaces.find((space) => space.id === $activeSpaceId)
+  $: activeSpaceName = currentSpace?.dataValue?.folderName || ''
+  $: TAB_HORIZONTAL_PADDING = 36
+
   // Why is there no better way in Svelte :/
   $: isScopedMiniBrowserOpenStore = $scopedMiniBrowser ? $scopedMiniBrowser.isOpen : null
   $: isScopedMiniBrowserOpen = $isScopedMiniBrowserOpenStore ?? false
 
   $: resourceSpaceIdsStore = $resource?.spaceIds
   $: isActive = tab.id === $activeTabId && !removeHighlight && !$desktopVisible
+  $: tabsInContext = $chatContext.tabsInContext
   $: isInChatContext = $tabsInContext.findIndex((e) => e.id === tab.id) !== -1
   $: isSavedInSpace = $activeSpaceId && ($resourceSpaceIdsStore ?? []).includes($activeSpaceId)
   $: isBookmarkedByUser =
@@ -343,6 +353,11 @@
   }
 
   const handleBookmark = (trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click) => {
+    if (isBookmarkedByUser) {
+      handleRemoveBookmark()
+      return
+    }
+
     dispatch('bookmark', { trigger })
     saveToSpacePopoverOpened.set(false)
   }
@@ -387,17 +402,26 @@
   }
 
   const handleExcludeOthers = () => {
-    chatContext.removeAllExcept(tab.id)
+    $chatContext.removeAllExcept(tab.id)
   }
 
   const handleExcludeTab = () => {
-    chatContext.removeTabItem(tab.id, PageChatUpdateContextEventTrigger.TabSelection)
+    $chatContext.removeTabItem(tab.id, PageChatUpdateContextEventTrigger.TabSelection)
   }
 
   const handleIncludeTab = () => {
     if (tab.type === 'page' || tab.type === 'space') {
-      chatContext.addTab(tab, { trigger: PageChatUpdateContextEventTrigger.TabSelection })
+      $chatContext.addTab(tab, { trigger: PageChatUpdateContextEventTrigger.TabSelection })
     }
+  }
+
+  const openResourceDetails = async () => {
+    if (!$resource) return
+
+    await oasis.openResourceDetailsSidebar($resource, {
+      select: true,
+      selectedSpace: 'auto'
+    })
   }
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
@@ -447,7 +471,7 @@
   /// MISC
 
   const contextMenuMoveTabsToSpaces = derived(
-    [spaces, tabsManager.activeScopeId],
+    [sortedSpaces, tabsManager.activeScopeId],
     ([spaces, activeScopeId]) => {
       const handleMove = async (spaceId: string | null, label: string, makeActive = false) => {
         try {
@@ -474,12 +498,6 @@
       return [
         {
           type: 'action',
-          icon: generalContext.icon,
-          text: generalContext.label,
-          action: () => handleMove(null, generalContext.label)
-        } as CtxItem,
-        {
-          type: 'action',
           icon: newContext.icon,
           text: newContext.label,
           action: async () => {
@@ -499,7 +517,6 @@
               e.id !== 'all' &&
               e.id !== 'inbox' &&
               e.dataValue?.folderName?.toLowerCase() !== '.tempspace' &&
-              !e.dataValue.builtIn &&
               e.id !== activeScopeId
           )
           .map(
@@ -516,22 +533,18 @@
   )
 
   const saveToSpaceItems = derived(
-    [spaces, spaceSearchValue, resourceSpaceIds],
-    ([spaces, searchValue, resourceSpaceIds]) => {
-      const spaceItems = spaces
-        .sort((a, b) => {
-          return a.indexValue - b.indexValue
-        })
-        .map(
-          (space) =>
-            ({
-              id: space.id,
-              label: space.dataValue.folderName,
-              disabled: resourceSpaceIds.includes(space.id),
-              icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
-              data: space
-            }) as SelectItem
-        )
+    [sortedSpaces, spaceSearchValue, resourceSpaceIds],
+    ([sortedSpaces, searchValue, resourceSpaceIds]) => {
+      const spaceItems = sortedSpaces.map(
+        (space) =>
+          ({
+            id: space.id,
+            label: space.dataValue.folderName,
+            disabled: resourceSpaceIds.includes(space.id),
+            icon: resourceSpaceIds.includes(space.id) ? 'check' : undefined,
+            data: space
+          }) as SelectItem
+      )
 
       if (!searchValue) return spaceItems
 
@@ -584,8 +597,7 @@
       'items-center',
       'group',
       'transform',
-      'active:scale-[98%]',
-      'gap-3',
+      // 'active:scale-[98%]',
       'justify-center',
       'relative',
       'text-sky-900 dark:text-sky-100',
@@ -610,7 +622,7 @@
     let styleClasses = ''
     if (pinned) {
       if (horizontalTabs) {
-        styleClasses = 'w-[34.5px] min-w-fit px-[0.563rem] py-[0.438rem] h-[34.5px]'
+        styleClasses = 'w-[40px] h-[40px] min-w-fit px-[0.563rem] py-[0.438rem]'
       } else {
         styleClasses = 'w-full p-3'
       }
@@ -687,12 +699,28 @@
       { type: 'separator', hidden: tab.type !== 'page' },
       {
         type: 'action',
+        hidden: !isBookmarkedByUser,
+        icon: 'info',
+        text: 'View Details',
+        action: () => openResourceDetails()
+      },
+      {
+        type: 'action',
         hidden: tab.type !== 'space',
-        icon: generalContext.icon,
+        icon: 'circle-dot',
         text: 'Open Context',
         action: () => {
           if (tab.type !== 'space') return
           tabsManager.changeScope(tab.spaceId, ChangeContextEventTrigger.Tab)
+        }
+      },
+      {
+        type: 'action',
+        hidden: tab.type !== 'page',
+        icon: 'link',
+        text: 'Copy URL',
+        action: () => {
+          if (url) navigator.clipboard.writeText(url)
         }
       },
       {
@@ -719,22 +747,13 @@
         text: `${isInChatContext ? 'Remove from' : 'Add to'} Chat`,
         action: () => (isInChatContext ? handleExcludeTab() : handleIncludeTab())
       },
-      {
-        type: 'action',
-        hidden: tab.type !== 'page',
-        icon: 'link',
-        text: 'Copy URL',
-        action: () => {
-          if (url) navigator.clipboard.writeText(url)
-        }
-      },
+      { type: 'separator' },
       {
         type: 'sub-menu',
-        icon: 'circle.dot',
-        text: 'Move Tabs to Context',
+        icon: 'arrow.right',
+        text: 'Move Tab to Context',
         items: $contextMenuMoveTabsToSpaces
       },
-      { type: 'separator' },
       {
         type: 'action',
         icon: tab.pinned ? `pinned-off` : `pin`,
@@ -789,8 +808,9 @@
   !$desktopVisible && isSelected}
   class:magic={isInChatContext && isMagicActive}
   class:inStuffBar
+  class:collapsed={!isActive && tabSize && tabSize < MIN_TAB_WIDTH}
   style={tabSize
-    ? `width: ${tabSize}px; min-width: ${isActive && !pinned ? 260 : tabSize}px; max-width: ${tabSize}px;`
+    ? `min-width: ${isActive && !pinned ? 292 : tabSize - TAB_HORIZONTAL_PADDING}px;`
     : ''}
   role="none"
   use:HTMLDragItem.action={{}}
@@ -842,24 +862,27 @@
     class:emoji-adjustment={$spaceData?.emoji}
     class:group-hover:!hidden={(!isActive &&
       showClose &&
-      ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs) &&
+      ((tabSize && tabSize > MIN_TAB_WIDTH && horizontalTabs) || !horizontalTabs) &&
       !pinned &&
-      hovered) ||
+      hovered &&
+      !(tabSize && tabSize < MIN_TAB_WIDTH)) ||
       (isActive && showClose && !pinned && hovered)}
   >
     <!--     style:view-transition-name="tab-icon-{tab.id}" -->
     {#if $resource}
       {#if isGeneratedResource($resource)}
         <Icon name="code-block" size="16px" />
+      {:else if $resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+        <Icon name="docs" size="16px" />
       {:else}
         <Image
-          src={`https://www.google.com/s2/favicons?domain=${$resource?.metadata?.sourceURI}&sz=48`}
+          src={`https://www.google.com/s2/favicons?domain=${$resource?.metadata?.sourceURI}&sz=64`}
           alt={tab.title}
-          fallbackIcon="world"
+          fallbackIcon="squircle"
         />
       {/if}
     {:else if tab.icon}
-      <Image src={tab.icon} alt={tab.title} fallbackIcon="world" />
+      <Image src={tab.icon} alt={tab.title} fallbackIcon="squircle" />
     {:else if tab.type === 'horizon'}
       <Icon name="grid" size="16px" />
     {:else if tab.type === 'importer'}
@@ -879,7 +902,7 @@
     {/if}
   </div>
 
-  {#if showClose && ((tabSize && tabSize > 64 && horizontalTabs) || !horizontalTabs || isActive) && hovered}
+  {#if showClose && ((tabSize && tabSize > MIN_TAB_WIDTH && horizontalTabs) || !horizontalTabs || isActive) && hovered}
     {#if tab.type == 'space'}
       <button
         on:click|stopPropagation={handleRemoveSpaceFromSidebar}
@@ -904,7 +927,7 @@
       </button>
     {/if}
   {/if}
-  {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize && tabSize < 48))}
+  {#if (!tab.pinned || !pinned) && ((horizontalTabs && isActive) || !(horizontalTabs && tabSize && tabSize < MIN_TAB_WIDTH))}
     <div class="title relative flex-grow truncate mr-1">
       {#if isRenamingTab && !tab.pinned && tab.type === 'page'}
         <input
@@ -967,7 +990,7 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > 64) || !horizontalTabs) && !showExcludeOthersButton}
+    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > HIDE_SAVE_BUTTON_BELOW) || !horizontalTabs) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
@@ -1013,7 +1036,7 @@
               search={$spaces.length > 0 ? 'manual' : 'disabled'}
               searchValue={spaceSearchValue}
               footerItem={newContext}
-              inputPlaceholder="Select a Context to save to…"
+              inputPlaceholder="Select a context to save to…"
               open={saveToSpacePopoverOpened}
               openOnHover={500}
               disabled={disableContextmenu}
@@ -1131,12 +1154,16 @@
 
   .tab {
     view-transition-class: tab !important;
-    padding: 0.65rem 0.85rem;
+    padding: 0.68rem 0.85rem;
     font-weight: 400;
     -webkit-font-smoothing: auto;
     letter-spacing: 0.00925em;
     position: relative;
     overflow: visible;
+
+    &.collapsed {
+      padding: 0 !important;
+    }
 
     @include utils.light-dark-custom(
       'color',
@@ -1158,22 +1185,24 @@
       @include utils.light-dark-custom(
         'fill',
         var(--white-88),
-        var(--dark-on-unpinned-surface),
+        var(--white-26),
         var(--white-55),
-        var(--dark-on-unpinned-surface)
+        var(--white-26)
       );
 
       :global(body:not(.dark)) & {
         // Removed because shadows push the background inwards, which looks shitty
         //--squircle-shadow: 0px 2px 2px -1px var(--black-09);
-        --squircle-inner-shadow: inset 0px 3px 4px -1px var(--ring-color-shade),
-          inset 0px 1.25px 0px -1.25px var(--white-60), inset 1.25px 0px 0px -1.25px var(--white-60),
+        --squircle-inner-shadow: inset 0px -0.5px 2px -1px var(--ring-color-shade),
+          inset 0px -3px 5px -7px rgba(0, 0, 0, 0.4), inset 0px 1.25px 0px -1.25px var(--white-60),
+          inset 1.25px 0px 0px -1.25px var(--white-60),
           inset -1.25px 0px 0px -1.25px var(--white-60),
-          inset 0px -1.25px 0px -1.25px var(--white-60);
+          inset 0px -1.25px 0px -1.25px var(--white-60), inset 0px 1px 2px -1px var(--white-60),
+          inset 0px 2px 5px -9px var(--white-85), inset 0px 0px 0px 0.75px var(--white-40);
       }
       :global(body.dark) & {
-        --squircle-outline-width: 1.5px;
-        --squircle-outline-color: var(--ring-color);
+        // --squircle-outline-width: 1.5px;
+        // --squircle-outline-color: var(--ring-color);
       }
     }
 
@@ -1192,19 +1221,25 @@
   // Horizontal Tabs
   :global(.app-contents.horizontalTabs) {
     .tab {
-      --radius: 8px;
-      @include utils.squircle($fill: var(--fill), $radius: 8px, $smooth: 0.28);
+      --radius: 14px;
+      @include utils.squircle($fill: var(--fill), $radius: var(--radius), $smooth: 0.28);
+      max-width: 292px !important;
+      gap: 0.533rem;
 
-      padding: 0.5rem 0.5rem;
+      padding: 0.5rem 0.75rem 0.5rem 0.75rem;
 
       &:not(.active) {
         @include utils.light-dark-custom(
           'fill',
-          var(--white-33),
-          var(--dark-on-unpinned-surface-horizontal),
-          var(--white-33),
-          var(--dark-on-unpinned-surface-horizontal)
+          transparent,
+          transparent,
+          transparent,
+          transparent
         );
+
+        &:not(.pinned) {
+          width: -webkit-fill-available;
+        }
       }
 
       &.hovered:not(.active) {
@@ -1219,10 +1254,32 @@
       }
 
       &.pinned {
-        padding: 0.5rem;
-        --fill: var(--white-15);
-        --squircle-inner-shadow: inset 0px 0px 0px 0.75px var(--white-26);
+        padding: 0.2rem;
+        --fill: var(--white-20);
+        --squircle-inner-shadow: inset 0px 0px 0px 0.75px var(--white-40);
         --squircle-shadow: 0px 2px 2px -1px var(--black-01);
+        --radius: 12.5px;
+        @include utils.squircle($fill: var(--fill), $radius: var(--radius), $smooth: 0.24);
+      }
+
+      &.pinned.active {
+        @include utils.light-dark-custom(
+          'fill',
+          var(--white),
+          var(--white-26),
+          var(--white-55),
+          var(--white-35)
+        );
+      }
+
+      &.pinned.hovered:not(.active) {
+        @include utils.light-dark-custom(
+          'fill',
+          var(--white-60),
+          var(--white-15),
+          var(--white-25),
+          var(--white-15)
+        );
       }
 
       /// Radii definitions
@@ -1260,6 +1317,8 @@
       --fill: transparent;
       --radius: 16px;
       @include utils.squircle($fill: var(--fill), $radius: var(--radius), $smooth: 0.33);
+
+      gap: 0.7rem;
 
       &.hovered:not(.active) {
         @include utils.light-dark-custom(

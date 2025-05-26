@@ -375,6 +375,30 @@ export const processPaste = async (e: ClipboardEvent) => {
 
   e.preventDefault()
 
+  const result: MediaParserResult[] = []
+
+  // Manual fix to allow reading files, dont want to change the clipboard methods yet so nothing breaks
+  const clipboardDataItems = Array.from(e.clipboardData?.items || [])
+
+  if (clipboardDataItems.length > 0) {
+    for (const item of clipboardDataItems) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile()
+        result.push({
+          data: file as Blob,
+          type: 'file',
+          metadata: {
+            name: file?.name,
+            alt: '',
+            sourceURI: file?.path
+          }
+        })
+      }
+    }
+    return result
+  }
+
+  // Old way we got the items which breaks for files tho
   const clipboardItems = await navigator.clipboard.read()
   log.debug('clipboardItems', clipboardItems)
 
@@ -385,8 +409,6 @@ export const processPaste = async (e: ClipboardEvent) => {
     'parsed items',
     blobs.map((blob) => blob.type)
   )
-
-  const result: MediaParserResult[] = []
 
   await Promise.all(
     blobs.map(async (blob) => {

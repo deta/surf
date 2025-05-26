@@ -80,4 +80,6 @@ export default {
       }
     }
   }
-} as Omit<SuggestionOptions<any>, 'editor'>
+} as Omit<SuggestionOptions<MentionItem>, 'editor'>
+
+export type MentionItemsFetcher = SuggestionOptions<MentionItem>['items']

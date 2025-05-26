@@ -1,44 +1,59 @@
 import {
   type JSONContent,
   generateHTML,
-  generateText,
   generateJSON,
+  generateText,
   Editor,
-  type Range
+  type Range,
+  Extension,
+  wrappingInputRule,
+  nodeInputRule
 } from '@tiptap/core'
-import Link from '@tiptap/extension-link'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
 import ListKeymap from '@tiptap/extension-list-keymap'
 import Image from '@tiptap/extension-image'
-import { Markdown } from 'tiptap-markdown'
+import Underline from '@tiptap/extension-underline'
+import { Mathematics } from '@tiptap-pro/extension-mathematics'
+import Blockquote from '@tiptap/extension-blockquote'
+import Details from '@tiptap-pro/extension-details'
+import DetailsContent from '@tiptap-pro/extension-details-content'
+import DetailsSummary from '@tiptap-pro/extension-details-summary'
+import Table from '@tiptap/extension-table'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import TableRow from '@tiptap/extension-table-row'
+import UniqueID from '@tiptap-pro/extension-unique-id'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { all, createLowlight } from 'lowlight'
 
 import { DragHandle } from './extensions/DragHandle/DragHandleExtension'
-import {
-  SlashExtension,
-  SlashSuggestion,
-  type SlashCommandPayload,
-  type SlashMenuItem
-} from './extensions/Slash/index'
+import { SlashExtension, SlashSuggestion, type SlashCommandPayload } from './extensions/Slash/index'
 import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
 import Mention, { type MentionAction } from './extensions/Mention/index'
 // import Mention from '@tiptap/extension-mention'
-import mentionSuggestion from './extensions/Mention/suggestion'
+import mentionSuggestion, { type MentionItemsFetcher } from './extensions/Mention/suggestion'
+import { CaretIndicatorExtension, type CaretPosition } from './extensions/CaretIndicator'
 import Loading from './extensions/Loading'
 import Thinking from './extensions/Thinking'
 import TrailingNode from './extensions/TrailingNode'
 import AIOutput from './extensions/AIOutput'
 import type { MentionItem } from './types'
-import type { SuggestionOptions } from '@tiptap/suggestion'
 import Button from './extensions/Button'
 import Resource from './extensions/Resource'
 import type { ComponentType, SvelteComponent } from 'svelte'
 import { conditionalArrayItem } from '@horizon/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
 import { Citation } from './extensions/Citation/citation'
+import { Surflet } from './extensions/Surflet/surflet'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import Link from './extensions/Link'
+import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
+import { detailsInputRule } from './utilities/inputRules/details'
+import TableAddRowColumn from './extensions/TableAddRowColumn'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -46,10 +61,6 @@ export type ExtensionOptions = {
   enhanceCodeBlock?: boolean
   parseMentions?: boolean
   readOnlyMentions?: boolean
-  searchMentions?: (props: {
-    query: string
-    editor: Editor
-  }) => MentionItem[] | Promise<MentionItem[]>
   mentionClick?: (item: MentionItem, action: MentionAction) => void
   mentionInsert?: (item: MentionItem) => void
   buttonClick?: (action: string) => void
@@ -61,43 +72,111 @@ export type ExtensionOptions = {
   showSlashMenu?: boolean
   onSlashCommand?: (payload: SlashCommandPayload) => void
   slashItems?: SlashItemsFetcher
+  mentionItems?: MentionItemsFetcher
+  enableCaretIndicator?: boolean
+  onCaretPositionUpdate?: (position: CaretPosition) => void
+  surfletComponent?: ComponentType<SvelteComponent>
+  onLinkClick?: LinkClickHandler
 }
+
+const lowlight = createLowlight(all)
+
+// match the > char followed by a space
+const detailsRegex = /^\s*>\s$/
+
+// match the | char followed by a space
+const blockquoteRegex = /^\s*\|\s$/
 
 export const createEditorExtensions = (opts?: ExtensionOptions) => [
   StarterKit.configure({
     heading: {
       levels: [1, 2, 3]
+    },
+    dropcursor: {
+      color: 'var(--contrast-color)',
+      width: 2
+    },
+    codeBlock: false,
+    blockquote: false
+  }),
+  Mathematics,
+  Underline,
+  Link.configure({
+    onClick: opts?.onLinkClick,
+    protocols: ['surf'],
+    HTMLAttributes: {
+      target: '_blank'
     }
   }),
-  Link.extend({
-    addAttributes() {
-      return {
-        href: {
-          default: null
-        },
-        'data-sveltekit-reload': {
-          default: true
-        },
-        target: {
-          default: null,
-          renderHTML: () => {
-            return {
-              target:
-                window.location.origin.includes('deta.space') ||
-                window.location.origin.includes('localhost')
-                  ? '_self'
-                  : '_blank'
-            }
-          }
-        }
-      }
+  CodeBlockLowlight.configure({
+    lowlight
+  }),
+  Blockquote.extend({
+    addInputRules() {
+      return [
+        wrappingInputRule({
+          find: blockquoteRegex,
+          type: this.type
+        })
+      ]
     }
   }),
+  Details.configure({
+    persist: true,
+    HTMLAttributes: {
+      class: 'details'
+    }
+  }).extend({
+    addInputRules() {
+      return [
+        detailsInputRule({
+          find: detailsRegex,
+          type: this.type
+        })
+      ]
+    }
+  }),
+  DetailsSummary,
+  DetailsContent,
+  Table.configure({
+    resizable: true
+  }),
+  TableRow,
+  TableHeader,
+  TableCell,
+  TableAddRowColumn,
   Button.configure({
     onClick: opts?.buttonClick
   }),
   Placeholder.configure({
-    placeholder: opts?.placeholder ?? "Write something or type '/' for options…"
+    placeholder: ({ node }) => {
+      if (node.type.name === 'detailsSummary') {
+        return 'Toggle'
+      }
+
+      return opts?.placeholder ?? "Write something or type '/' for options…"
+    }
+  }),
+  UniqueID.configure({
+    attributeName: 'uuid',
+    types: [
+      'heading',
+      'paragraph',
+      'resource',
+      'output',
+      'surflet',
+      'taskItem',
+      'taskList',
+      'blockquote',
+      'details',
+      'image',
+      'link',
+      'codeBlock',
+      'orderedList',
+      'bulletList',
+      'listItem',
+      'table'
+    ]
   }),
   ...conditionalArrayItem(
     !opts?.disableHashtag,
@@ -113,7 +192,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       },
       suggestion: {
         ...mentionSuggestion,
-        items: opts?.searchMentions
+        items: opts?.mentionItems
       },
       renderText({ options, node }) {
         return `${options.suggestion.char}${node.attrs.label ?? node.attrs.id}`
@@ -135,6 +214,12 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     Citation.configure({
       component: opts?.citationComponent,
       onClick: opts?.citationClick
+    })
+  ),
+  ...conditionalArrayItem(
+    !!opts?.surfletComponent,
+    Surflet.configure({
+      component: opts?.surfletComponent
     })
   ),
   ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),
@@ -177,8 +262,42 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   Thinking,
   TrailingNode,
   AIOutput,
-  Image
-  // Markdown,
+  Image,
+  ...conditionalArrayItem(
+    !!opts?.enableCaretIndicator,
+    CaretIndicatorExtension.configure({
+      debug: false,
+      onSelectionUpdate: ({ editor }) => {
+        const pos = editor.storage.caretIndicator.caretPosition
+        if (pos && opts?.onCaretPositionUpdate) {
+          opts.onCaretPositionUpdate(pos)
+        }
+      },
+      updateDelay: 10 // Reduced delay for more responsive updates
+    })
+  ),
+  Extension.create<{ pluginKey?: PluginKey }>({
+    name: 'paste-handler',
+
+    addProseMirrorPlugins() {
+      const plugin = new Plugin({
+        key: this.options.pluginKey,
+
+        props: {
+          handleDOMEvents: {
+            paste(_, e) {
+              const clipboardDataItems = Array.from(e.clipboardData?.items || [])
+              if (clipboardDataItems.map((e) => e.kind).includes('file')) {
+                e.preventDefault()
+              }
+            }
+          }
+        }
+      })
+
+      return [plugin]
+    }
+  })
 ]
 
 const extensions = createEditorExtensions()

@@ -8,6 +8,7 @@ export type EditorAutocompleteEvent = {
 export enum MentionItemType {
   BUILT_IN = 'built-in',
   CONTEXT = 'context',
+  RESOURCE = 'resource',
   MODEL = 'model',
   OTHER = 'other'
 }
@@ -36,3 +37,5 @@ export type EditorSimilaritiesSearchEvent = {
   range: Range
   loading: boolean
 }
+
+export type LinkItemsFetcher = (query: string) => Promise<MentionItem[]>

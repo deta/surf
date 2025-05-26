@@ -7,12 +7,10 @@
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { createEventDispatcher } from 'svelte'
   import { DynamicIcon, Icon } from '@horizon/icons'
-  import { generalContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { tooltip } from '@horizon/utils'
   import {
     ACTIVE_CONTEXT_MENTION,
     EVERYTHING_MENTION,
-    GENERAL_CONTEXT_MENTION,
     NO_CONTEXT_MENTION,
     TABS_MENTION
   } from '@horizon/core/src/lib/constants/chat'
@@ -65,12 +63,8 @@
           )
         })
 
-      const generalSelected =
-        selectedContext === generalContext.id || (!activeSpace && !selectedContext)
-
       spaceItems.unshift(
         ...[
-          createItem(generalContext, generalSelected),
           createItem(
             {
               id: NO_CONTEXT_MENTION.id,
@@ -137,8 +131,6 @@
   >
     {#if $selectedContext === NO_CONTEXT_MENTION.id}
       <DynamicIcon name={NO_CONTEXT_MENTION.icon} />
-    {:else if $selectedContext === GENERAL_CONTEXT_MENTION.id}
-      <DynamicIcon name={GENERAL_CONTEXT_MENTION.icon} />
     {:else if $selectedContext === EVERYTHING_MENTION.id}
       <DynamicIcon name={EVERYTHING_MENTION.icon} />
     {:else if $selectedContext === ACTIVE_CONTEXT_MENTION.id}

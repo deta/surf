@@ -9,11 +9,6 @@ export type Config = {
   [key: string]: any
 }
 
-export type BrowserConfig = {
-  adblockerEnabled: boolean
-  historySwipeGesture: boolean
-}
-
 export interface PermissionDecision {
   [origin: string]: {
     [permission: string]: boolean
@@ -64,14 +59,6 @@ export const setConfig = <T extends Config>(
   }
 }
 
-export const getBrowserConfig = () => {
-  return getConfig<BrowserConfig>(app.getPath('userData'), BROWSER_CONFIG_NAME)
-}
-
-export const setBrowserConfig = (config: BrowserConfig) => {
-  setConfig(app.getPath('userData'), config, BROWSER_CONFIG_NAME)
-}
-
 export const getAnnouncementsState = () => {
   return getConfig(app.getPath('userData'), SEEN_ANNOUNCEMENTS_STATE)
 }
@@ -92,6 +79,9 @@ export const getUserConfig = (path?: string) => {
     setUserConfig(storedConfig as UserConfig)
   }
 
+  /*
+    --- Default settings values for new users ---
+  */
   if (!storedConfig.settings) {
     storedConfig.settings = {
       search_engine: 'google',
@@ -100,20 +90,12 @@ export const getUserConfig = (path?: string) => {
       app_style: 'light',
       use_semantic_search: false,
       save_to_user_downloads: true,
-      show_annotations_in_oasis: true,
       automatic_chat_prompt_generation: true,
-      live_spaces: false,
+      adblockerEnabled: true,
+      historySwipeGesture: false,
       annotations_sidebar: false,
-      homescreen_link_cmdt: false,
-      always_include_screenshot_in_chat: false,
-      auto_note_similarity_search: false,
-      experimental_note_inline_rewrite: false,
-      experimental_chat_web_search: false,
-      experimental_desktop_embeds: false,
-      experimental_context_linking: false,
-      experimental_context_linking_sidebar: false,
-      extensions: false,
       cleanup_filenames: false,
+      save_to_active_context: true,
       onboarding: {
         completed_welcome: false,
         completed_welcome_v2: false,
@@ -126,13 +108,29 @@ export const getUserConfig = (path?: string) => {
       vision_image_tagging: false,
       turntable_favicons: true,
       auto_toggle_pip: false,
-      show_resource_contexts: false
+      show_resource_contexts: true,
+
+      /// Deprecated
+      homescreen_link_cmdt: false,
+      show_annotations_in_oasis: false,
+      always_include_screenshot_in_chat: false,
+      live_spaces: false,
+      experimental_context_linking: false,
+      experimental_context_linking_sidebar: false,
+      experimental_notes_chat_sidebar: true,
+      experimental_notes_chat_input: false,
+      experimental_chat_web_search: true,
+      experimental_note_inline_rewrite: false,
+      auto_note_similarity_search: false
     }
     setUserConfig(storedConfig as UserConfig)
   }
 
   let changedConfig = false
 
+  /*
+    --- Migration for existing users to new config structure ---
+  */
   if (storedConfig.settings.app_style === undefined) {
     storedConfig.settings.app_style = 'light'
     changedConfig = true
@@ -153,8 +151,13 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
 
-  if (storedConfig.settings.show_annotations_in_oasis === undefined) {
-    storedConfig.settings.show_annotations_in_oasis = true
+  if (storedConfig.settings.adblockerEnabled === undefined) {
+    storedConfig.settings.adblockerEnabled = true
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.historySwipeGesture === undefined) {
+    storedConfig.settings.historySwipeGesture = false
     changedConfig = true
   }
 
@@ -170,28 +173,13 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
 
-  if (storedConfig.settings.live_spaces === undefined) {
-    storedConfig.settings.live_spaces = false
-    changedConfig = true
-  }
-
   if (storedConfig.settings.automatic_chat_prompt_generation === undefined) {
     storedConfig.settings.automatic_chat_prompt_generation = true
     changedConfig = true
   }
 
-  if (storedConfig.settings.homescreen_link_cmdt === undefined) {
-    storedConfig.settings.homescreen_link_cmdt = false
-    changedConfig = true
-  }
-
   if (storedConfig.settings.save_to_user_downloads === undefined) {
     storedConfig.settings.save_to_user_downloads = true
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.always_include_screenshot_in_chat === undefined) {
-    storedConfig.settings.always_include_screenshot_in_chat = false
     changedConfig = true
   }
 
@@ -219,48 +207,75 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
 
-  if (storedConfig.settings.auto_note_similarity_search === undefined) {
-    storedConfig.settings.auto_note_similarity_search = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.experimental_note_inline_rewrite === undefined) {
-    storedConfig.settings.experimental_note_inline_rewrite = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.experimental_chat_web_search === undefined) {
-    storedConfig.settings.experimental_chat_web_search = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.show_resource_contexts === undefined) {
-    storedConfig.settings.show_resource_contexts = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.experimental_context_linking === undefined) {
-    storedConfig.settings.experimental_context_linking = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.experimental_context_linking_sidebar === undefined) {
-    storedConfig.settings.experimental_context_linking_sidebar = false
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.extensions === undefined) {
-    storedConfig.settings.extensions = false
-    changedConfig = true
-  }
-
   if (storedConfig.settings.cleanup_filenames === undefined) {
     storedConfig.settings.cleanup_filenames = false
     changedConfig = true
   }
 
-  if (storedConfig.settings.experimental_desktop_embeds === undefined) {
-    storedConfig.settings.experimental_desktop_embeds = false
+  if (storedConfig.settings.save_to_active_context === undefined) {
+    storedConfig.settings.save_to_active_context = true
+    changedConfig = true
+  }
+
+  // "Migration" for late april settings cleanup
+  if (storedConfig.settings.show_annotations_in_oasis === undefined) {
+    storedConfig.settings.show_annotations_in_oasis = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.show_annotations_in_oasis === true) {
+    storedConfig.settings.show_annotations_in_oasis = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.show_resource_contexts === undefined) {
+    storedConfig.settings.show_resource_contexts = true
+    changedConfig = true
+  }
+  if (storedConfig.settings.show_resource_contexts === false) {
+    storedConfig.settings.show_resource_contexts = true
+    changedConfig = true
+  }
+  if (storedConfig.settings.always_include_screenshot_in_chat === undefined) {
+    storedConfig.settings.always_include_screenshot_in_chat = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.always_include_screenshot_in_chat === true) {
+    storedConfig.settings.always_include_screenshot_in_chat = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.live_spaces === undefined) {
+    storedConfig.settings.live_spaces = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.experimental_context_linking === undefined) {
+    storedConfig.settings.experimental_context_linking = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.experimental_context_linking_sidebar === undefined) {
+    storedConfig.settings.experimental_context_linking_sidebar = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.experimental_notes_chat_sidebar === undefined) {
+    storedConfig.settings.experimental_notes_chat_sidebar = true
+    changedConfig = true
+  }
+  if (storedConfig.settings.experimental_chat_web_search === undefined) {
+    storedConfig.settings.experimental_chat_web_search = true
+    changedConfig = true
+  }
+  if (storedConfig.settings.experimental_chat_web_search === false) {
+    storedConfig.settings.experimental_chat_web_search = true
+    changedConfig = true
+  }
+  if (storedConfig.settings.experimental_note_inline_rewrite === undefined) {
+    storedConfig.settings.experimental_note_inline_rewrite = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.auto_note_similarity_search === undefined) {
+    storedConfig.settings.auto_note_similarity_search = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.auto_note_similarity_search === true) {
+    storedConfig.settings.auto_note_similarity_search = false
     changedConfig = true
   }
 
@@ -278,6 +293,11 @@ export const getUserConfig = (path?: string) => {
         changedConfig = true
       }
     }
+  }
+
+  if (storedConfig.settings.experimental_notes_chat_input === undefined) {
+    storedConfig.settings.experimental_notes_chat_input = false
+    changedConfig = true
   }
 
   if (changedConfig) {

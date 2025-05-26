@@ -43,7 +43,7 @@ import type { Telemetry } from './telemetry'
 import { getContext, setContext, tick } from 'svelte'
 import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
-import { DEFAULT_SPACE_ID, type OasisService, type OasisSpace } from './oasis'
+import { type OasisService, type OasisSpace } from './oasis'
 import type { DesktopManager } from './desktop'
 import type { AIService } from './ai/ai'
 import { ContextItemResource } from './ai/context'
@@ -666,8 +666,8 @@ export class TabsManager {
       if (activeTabElement) {
         activeTabElement.scrollIntoView({
           behavior: 'smooth',
-          block: 'end',
-          inline: 'end'
+          block: 'nearest',
+          inline: 'nearest'
         })
       }
     }, 0)
@@ -1008,6 +1008,21 @@ export class TabsManager {
     const currentActiveScope = this.activeScopeIdValue
     this.log.debug('changing active scope from', currentActiveScope, 'to', scopeId)
 
+    if (scopeId === null) {
+      const defaultSpace = this.oasis.spacesValue.find((space) => space.name.default)
+      if (defaultSpace) {
+        this.log.debug('using default space as scope', defaultSpace.id)
+        scopeId = defaultSpace.id
+      } else {
+        scopeId = this.oasis.spacesValue[0]?.id
+      }
+    }
+
+    if (scopeId === null) {
+      this.log.error('No default space found')
+      return
+    }
+
     this.activeScopeId.set(scopeId)
 
     if (scopeId !== null) {
@@ -1026,7 +1041,7 @@ export class TabsManager {
     await this.desktopManager.setActive(desktopId)
 
     if (this.showNewTabOverlayValue === 0) {
-      this.oasis.selectedSpace.set(scopeId ?? DEFAULT_SPACE_ID)
+      this.oasis.selectedSpace.set(scopeId ?? this.oasis.defaultSpaceID)
     }
 
     await tick()

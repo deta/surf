@@ -1,4 +1,4 @@
-import { mergeAttributes, Node } from '@tiptap/core'
+import { Editor, mergeAttributes, Node, type Range } from '@tiptap/core'
 import { type DOMOutputSpec, Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { PluginKey } from '@tiptap/pm/state'
 import Suggestion, { type SuggestionOptions } from '@horizon/editor/src/lib/utilities/Suggestion'
@@ -24,7 +24,7 @@ export interface MentionNodeAttrs {
   /**
    * The type of the mention, stored as a `data-type` attribute.
    */
-  type?: string | null
+  mentionType?: string | null
 
   /**
    * The icon to be rendered by the editor as the displayed icon for this mentioned
@@ -89,7 +89,7 @@ export type MentionOptions<
    * @default {}
    * @example { char: '@', pluginKey: MentionPluginKey, command: ({ editor, range, props }) => { ... } }
    */
-  suggestion: Omit<SuggestionOptions<SuggestionItem, Attrs>, 'editor'>
+  suggestion: Omit<SuggestionOptions<SuggestionItem, MentionItem>, 'editor'>
 
   onClick?: (item: MentionItem, action: MentionAction) => void
 
@@ -130,6 +130,8 @@ export const Mention = Node.create<MentionOptions>({
       suggestion: {
         char: '@',
         pluginKey: MentionPluginKey,
+        preventReTrigger: true,
+        dismissOnSpace: true,
         placeholder: 'filter mentions…',
         command: ({ editor, range, props }) => {
           // increase range.to by one when the next node is of type "text"
@@ -147,7 +149,12 @@ export const Mention = Node.create<MentionOptions>({
             .insertContentAt(range, [
               {
                 type: this.name,
-                attrs: props
+                attrs: {
+                  id: props.id,
+                  label: props.label,
+                  mentionType: props.type,
+                  icon: props.icon
+                }
               },
               {
                 type: 'text',
@@ -228,16 +235,16 @@ export const Mention = Node.create<MentionOptions>({
         }
       },
 
-      type: {
+      mentionType: {
         default: null,
         parseHTML: (element) => element.getAttribute('data-mention-type'),
         renderHTML: (attributes) => {
-          if (!attributes.type) {
+          if (!attributes.mentionType) {
             return {}
           }
 
           return {
-            'data-mention-type': attributes.type
+            'data-mention-type': attributes.mentionType
           }
         }
       },
@@ -326,7 +333,7 @@ export const Mention = Node.create<MentionOptions>({
           id: node.attrs.id,
           label: node.attrs.label ?? node.attrs.id,
           char: this.options.suggestion.char,
-          type: node.attrs.type,
+          type: node.attrs.mentionType || node.attrs.type,
           icon: node.attrs.icon,
           onClick: this.options.onClick,
           ...this.options.HTMLAttributes

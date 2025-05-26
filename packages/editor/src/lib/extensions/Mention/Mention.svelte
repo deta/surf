@@ -13,17 +13,13 @@
 
   const dispatchClick = (action: MentionAction) => {
     if (onClick) {
-      onClick({ id, label }, action)
+      onClick({ id, label, type, icon }, action)
     }
   }
 
   const handleClick = (e: MouseEvent) => {
     e.preventDefault()
     e.stopImmediatePropagation()
-
-    if (type === MentionItemType.MODEL) {
-      return
-    }
 
     if (isModKeyPressed(e)) {
       if (e.shiftKey) {

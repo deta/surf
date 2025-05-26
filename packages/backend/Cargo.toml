@@ -10,18 +10,19 @@ crate-type = ["cdylib"]
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
-rusqlite = { version = "0.31.0", features = ["bundled", "array", "chrono", "load_extension"] }
+once_cell = "1.18"
+rusqlite = { version = "0.31.0", features = ["bundled", "array", "chrono", "load_extension", "backup", "hooks", "functions"] }
 rust-embed = "8.2.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 thiserror = "1.0.57"
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.43.1", features = ["full"] }
 uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
 strum = { version = "0.25.0", features = ["derive"] }
 rand = "0.8.5"
 text-splitter = { version = "0.6.3" }
 url = "2.5.0"
-crossbeam-channel = "0.5.12"
+crossbeam-channel = "0.5.15"
 lopdf = "0.32.0"
 reqwest = { version = "0.11.25", features = ["json", "stream", "blocking"] }
 futures = "0.3.30"
@@ -46,3 +47,6 @@ features = ["napi-8"]
 
 [build-dependencies]
 pkg-config = "0.3.30"
+
+[dev-dependencies]
+tempfile = "3.18.0"

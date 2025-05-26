@@ -1,9 +1,13 @@
-import { type ResourceManager } from '../resources'
+import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
 import type { SFFS } from '../sffs'
 import { QuotaDepletedError } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { generateID, useLogScope } from '@horizon/utils'
-import { CHAT_TITLE_GENERATOR_PROMPT, CLASSIFY_CHAT_MODE } from '../../constants/prompts'
+import {
+  CHAT_TITLE_GENERATOR_PROMPT,
+  CLASSIFY_CHAT_MODE,
+  CLASSIFY_NOTE_CHAT_MODE
+} from '../../constants/prompts'
 import {
   type AIChatData,
   type AIChatMessage,
@@ -14,11 +18,19 @@ import {
   type TabResource
 } from '../../types'
 import { ChatMode, ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
-import { handleQuotaDepletedError, parseAIError, parseChatResponseSources } from './helpers'
+import {
+  convertChatOutputToNoteContent,
+  handleQuotaDepletedError,
+  parseAIError,
+  parseChatResponseSources
+} from './helpers'
 import type { Telemetry } from '../telemetry'
 import {
   PageChatMessageSentEventError,
   PageChatMessageSentEventTrigger,
+  ResourceTagDataStateValue,
+  ResourceTagsBuiltInKeys,
+  ResourceTypes,
   type PageChatMessageSentData
 } from '@horizon/types'
 import type { AIService } from './ai'
@@ -42,6 +54,7 @@ export type ChatError = {
 }
 
 export type ChatMessageOptions = {
+  generationID?: string
   useContext?: boolean
   role?: AIChatMessageRole
   query?: string
@@ -50,6 +63,7 @@ export type ChatMessageOptions = {
   ragOnly?: boolean
   trigger?: PageChatMessageSentEventTrigger
   onboarding?: boolean
+  noteResourceId?: string
 }
 
 export type ChatCompletionResponse = {
@@ -85,6 +99,9 @@ export class AIChat {
   sffs: SFFS
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
+
+  private activeGenerations = new Map<string, boolean>()
+  private generationPromiseResolvers = new Map<string, () => void>()
 
   constructor(
     data: AIChatData,
@@ -197,7 +214,7 @@ export class AIChat {
 
   async changeTitle(title: string) {
     this.title.set(title)
-    return this.ai.renameChat(this.id, title)
+    await this.ai.renameChat(this.id, title)
   }
 
   async getMessages() {
@@ -307,6 +324,35 @@ export class AIChat {
     return model
   }
 
+  stopGeneration(id?: string) {
+    if (id) {
+      // Stop specific generation
+      this.log.debug('Stopping generation with id', id)
+      this.activeGenerations.set(id, false)
+
+      // Resolve the promise for this specific generation if it exists
+      const resolver = this.generationPromiseResolvers.get(id)
+      if (resolver) {
+        resolver()
+        this.generationPromiseResolvers.delete(id)
+      }
+    } else {
+      this.log.debug('Stopping all generations')
+      // Stop all active generations
+      for (const [genId, _] of this.activeGenerations) {
+        this.activeGenerations.set(genId, false)
+
+        // Resolve all pending promises
+        const resolver = this.generationPromiseResolvers.get(genId)
+        if (resolver) {
+          resolver()
+          this.generationPromiseResolvers.delete(genId)
+        }
+      }
+      this.status.set('idle')
+    }
+  }
+
   async sendMessage(
     callback: (chunk: string) => void,
     query: string,
@@ -320,6 +366,7 @@ export class AIChat {
       inlineImages?: string[]
       general?: boolean
       appCreation?: boolean
+      noteResourceId?: string
     }
   ) {
     const model = opts?.model ?? this.getModel(opts)
@@ -329,15 +376,25 @@ export class AIChat {
 
     this.log.debug('sending chat message to chat with id', this.id, model, opts, query)
 
-    await this.sffs.sendAIChatMessage(callback, this.id, query, backendModel, {
-      customKey: customKey,
-      limit: opts?.limit,
-      ragOnly: opts?.ragOnly,
-      resourceIds: opts?.resourceIds,
-      inlineImages: opts?.inlineImages,
-      general: opts?.general,
-      appCreation: opts?.appCreation
-    })
+    if (opts?.noteResourceId) {
+      await this.sffs.sendAINoteMessage(callback, opts.noteResourceId, query, backendModel, {
+        customKey: customKey,
+        limit: opts?.limit,
+        resourceIds: opts?.resourceIds,
+        inlineImages: opts?.inlineImages,
+        general: opts?.general
+      })
+    } else {
+      await this.sffs.sendAIChatMessage(callback, this.id, query, backendModel, {
+        customKey: customKey,
+        limit: opts?.limit,
+        ragOnly: opts?.ragOnly,
+        resourceIds: opts?.resourceIds,
+        inlineImages: opts?.inlineImages,
+        general: opts?.general,
+        appCreation: opts?.appCreation
+      })
+    }
 
     return {
       model
@@ -349,10 +406,64 @@ export class AIChat {
   }
 
   async getChatPrompts(contextItem: ContextItem) {
-    return this.contextManager.getPromptsForItem(contextItem)
+    return this.ai.contextService.getPromptsForItem(contextItem)
+  }
+
+  async getChatModeForNoteAndTab(
+    prompt: string,
+    noteContent: string,
+    activeTab: TabPage | null,
+    tier?: ModelTiers
+  ): Promise<ChatMode> {
+    try {
+      const payload = {
+        prompt,
+        note_content: noteContent,
+        ...(activeTab && {
+          title: activeTab.title,
+          url:
+            activeTab.currentLocation ??
+            activeTab.currentDetectedApp?.canonicalUrl ??
+            activeTab.initialLocation
+        })
+      }
+      const completion = await this.ai.createChatCompletion(
+        JSON.stringify(payload),
+        CLASSIFY_NOTE_CHAT_MODE,
+        { tier: tier ?? ModelTiers.Standard }
+      )
+
+      if (completion.error || !completion.output) {
+        this.log.error('Error determining if a screenshot is needed')
+        return ChatMode.TextOnly
+      }
+
+      let raw = completion.output
+      if (raw.startsWith('Final Answer:')) {
+        raw = raw.replace('Final Answer:', '').trim()
+      } else if (raw.startsWith('Answer:')) {
+        raw = raw.replace('Answer:', '').trim()
+      } else if (raw.startsWith('```json')) {
+        raw = raw.replace('```json', '').replace('```', '').trim()
+      }
+
+      const mode = JSON.parse(raw) as ChatMode
+      if (!ChatMode.isValid(mode)) {
+        this.log.error('Invalid chat mode response from llm: ', mode)
+        return ChatMode.TextOnly
+      }
+      if (mode === ChatMode.TextOnly && get(this.ai.alwaysIncludeScreenshotInChat)) {
+        return ChatMode.TextWithScreenshot
+      }
+      return mode
+    } catch (e) {
+      this.log.error('Error determining if a screenshot is needed', e)
+      return ChatMode.TextOnly
+    }
   }
 
   // TODO: we return TextOnly mode on errors, should we handle this differently?
+  // TODO: this should always use a fast reliable model with a fallback
   async getChatModeForPromptAndTab(
     prompts: string[],
     activeTab: TabPage | null,
@@ -433,7 +544,12 @@ export class AIChat {
   }
 
   async processContextItems(prompt: string) {
-    this.log.debug('Processing context items for chat', prompt)
+    this.log.debug(
+      'Processing context items for chat',
+      prompt,
+      this.contextItemsValue,
+      this.contextManager.itemsValue
+    )
     const resourceIds = await this.contextManager.getResourceIds(prompt)
     const inlineImages = await this.contextManager.getInlineImages()
     const usedScreenshots =
@@ -444,6 +560,75 @@ export class AIChat {
       inlineImages: inlineImages,
       usedInlineScreenshot: usedScreenshots
     }
+  }
+
+  async getPartialChatResources(prompt: string, opts?: ChatMessageOptions) {
+    this.log.debug('Getting partial chat resources', prompt, opts)
+    const result = await this.createChatCompletion(prompt, {
+      ragOnly: true,
+      limit: 10,
+      ...opts
+    })
+
+    const rawSources = result.output?.sources ?? []
+    const resourceIds = [...new Set(rawSources.map((s) => s.resource_id))]
+
+    this.log.debug('Resource ids', resourceIds)
+
+    // get full resources
+    const resourcesRaw = await Promise.all(
+      resourceIds.map(async (id) => {
+        const res = await this.resourceManager.getResource(id)
+        return res
+      })
+    )
+
+    const resources = resourcesRaw.filter((res) => res !== null)
+    this.log.debug('Resources', resources)
+
+    const partialResources = resources.filter((res) => {
+      return (res.tags ?? []).find(
+        (tag) =>
+          tag.name === ResourceTagsBuiltInKeys.DATA_STATE &&
+          tag.value === ResourceTagDataStateValue.PARTIAL
+      )
+    })
+
+    this.log.debug('Partial resources', partialResources)
+
+    return partialResources
+  }
+
+  async checkAndPreparePartialResources(prompt: string, model: Model, resourceIds: string[]) {
+    this.log.debug('Looking for partial resources', prompt, model, resourceIds)
+
+    const backendModel = this.ai.modelToBackendModel(model)
+    const customKey = model.custom_key
+
+    const matchingResources = await this.resourceManager.searchChatResourcesAI(
+      prompt,
+      backendModel,
+      {
+        customKey: customKey,
+        resourceIds
+      }
+    )
+
+    this.log.debug('Found matching resources', matchingResources)
+    const partialResources = matchingResources.filter((res) =>
+      (res.tags ?? []).find(
+        (tag) =>
+          tag.name === ResourceTagsBuiltInKeys.DATA_STATE &&
+          tag.value === ResourceTagDataStateValue.PARTIAL
+      )
+    )
+
+    this.log.debug('Preparing partial resources', partialResources)
+    await Promise.all(
+      partialResources.map(async (resource) => {
+        await this.resourceManager.refreshResourceData(resource)
+      })
+    )
   }
 
   async sendMessageAndHandle(
@@ -461,7 +646,18 @@ export class AIChat {
       ...opts
     } as Required<ChatMessageOptions>
 
+    if (!options.generationID) {
+      options.generationID = generateID()
+    }
+
     this.error.set(null)
+
+    // Create a promise that will be resolved when generation completes or is stopped
+    let resolveGenerationPromise: (() => void) | null = null
+    const generationPromise = new Promise<void>((resolve) => {
+      resolveGenerationPromise = resolve
+      this.generationPromiseResolvers.set(options.generationID, resolve)
+    })
 
     const contextItems = this.contextItemsValue
 
@@ -508,7 +704,7 @@ export class AIChat {
 
     try {
       response = {
-        id: generateID(),
+        id: options.generationID,
         role: options.role,
         query: options.query ?? prompt,
         status: 'pending',
@@ -517,6 +713,9 @@ export class AIChat {
         content: '',
         citations: {}
       } as AIChatMessageParsed
+
+      // Track this generation as active
+      this.activeGenerations.set(options.generationID, true)
 
       this.status.set('running')
       this.addParsedResponse(response)
@@ -599,6 +798,8 @@ export class AIChat {
         contextSize = resourceIds.length + inlineImages.length
       }
 
+      await this.checkAndPreparePartialResources(prompt, model, resourceIds)
+
       this.updateParsedResponse(response.id, {
         status: 'pending',
         usedPageScreenshot: usedPageScreenshot
@@ -609,6 +810,19 @@ export class AIChat {
       let content = ''
 
       const chatCallback = (chunk: string) => {
+        // Check if this generation has been stopped
+        if (!this.activeGenerations.get(options.generationID)) {
+          this.log.debug('Generation stopped, aborting')
+          if (this.statusValue !== 'idle') {
+            this.log.debug('Generation stopped, aborting')
+            this.status.set('idle')
+            this.updateParsedResponse(response?.id ?? '', {
+              status: 'cancelled'
+            })
+          }
+          return
+        }
+
         if (step === 'idle') {
           this.log.debug('sources chunk', chunk)
 
@@ -642,39 +856,72 @@ export class AIChat {
         }
       }
 
-      await this.sendMessage(chatCallback, prompt, {
+      // Start the AI message generation in the background
+      const sendMessagePromise = this.sendMessage(chatCallback, prompt, {
         model,
         limit: options.limit,
         ragOnly: options.ragOnly,
         resourceIds: resourceIds,
         inlineImages: inlineImages,
         general: resourceIds.length === 0,
-        appCreation: chatMode === ChatMode.AppCreation
+        appCreation: chatMode === ChatMode.AppCreation,
+        noteResourceId: options.noteResourceId
       })
 
-      this.updateParsedResponse(response.id, {
-        status: 'success',
-        content: content.replace('<answer>', '').replace('</answer>', '')
-      })
+      // Wait for either the generation to complete or be stopped
+      const sendMessageResult = await Promise.race([
+        sendMessagePromise,
+        generationPromise.then(() => ({ cancelled: true }))
+      ])
 
-      this.status.set('idle')
+      // If generation wasn't cancelled, continue with normal processing
+      if (!sendMessageResult || !('cancelled' in sendMessageResult)) {
+        await sendMessagePromise
 
-      if (content.includes('```html')) {
-        basicTelemtryData.generatedArtifact = true
+        if (this.activeGenerations.get(options.generationID)) {
+          this.updateParsedResponse(response.id, {
+            status: 'success',
+            content: content.replace('<answer>', '').replace('</answer>', '')
+          })
+
+          this.status.set('idle')
+
+          if (content.includes('```html')) {
+            basicTelemtryData.generatedArtifact = true
+          }
+
+          if (options.trigger) {
+            if (options.ragOnly) {
+              await this.telemetry.trackSimilaritySearch(basicTelemtryData)
+            } else {
+              await this.telemetry.trackPageChatMessageSent(basicTelemtryData)
+              if (
+                contextItemCount.spaces > 0 &&
+                options.trigger === PageChatMessageSentEventTrigger.SidebarChat
+              ) {
+                await this.telemetry.trackChatWithSpace(options.trigger)
+              }
+            }
+          }
+        } else {
+          this.log.debug('Generation stopped, not updating response')
+          this.status.set('idle')
+          this.updateParsedResponse(response.id, {
+            status: 'cancelled'
+          })
+        }
+      } else {
+        // If generation was cancelled, we don't need to do anything else
+        this.log.debug('Generation was cancelled, skipping further processing')
       }
 
-      if (options.trigger) {
-        if (options.ragOnly) {
-          await this.telemetry.trackSimilaritySearch(basicTelemtryData)
-        } else {
-          await this.telemetry.trackPageChatMessageSent(basicTelemtryData)
-          if (
-            contextItemCount.spaces > 0 &&
-            options.trigger === PageChatMessageSentEventTrigger.SidebarChat
-          ) {
-            await this.telemetry.trackChatWithSpace(options.trigger)
-          }
-        }
+      // Clean up the generation tracking
+      this.activeGenerations.delete(options.generationID)
+      this.generationPromiseResolvers.delete(options.generationID)
+
+      // Always resolve the promise
+      if (resolveGenerationPromise) {
+        ;(resolveGenerationPromise as any)()
       }
     } catch (e) {
       this.log.error('Error doing magic', typeof e, e)
@@ -717,9 +964,21 @@ export class AIChat {
         }
       }
 
+      // Clean up the generation tracking even in case of error
+      this.activeGenerations.delete(options.generationID)
+      this.generationPromiseResolvers.delete(options.generationID)
+
+      // Always resolve the promise
+      if (resolveGenerationPromise) {
+        ;(resolveGenerationPromise as any)()
+      }
+
       throw e
     } finally {
       this.status.set('idle')
+
+      // Ensure we clean up in all cases
+      this.generationPromiseResolvers.delete(options.generationID)
     }
   }
 
@@ -735,24 +994,7 @@ export class AIChat {
         ...opts
       }
 
-      const promise = this.sendMessageAndHandle(prompt, options, callback)
-
-      let previousContent = ''
-
-      // const content = derived(this.responses, ($responses) => {
-      //   const lastResponse = $responses[$responses.length - 1]
-      //   if (lastResponse) {
-      //     const fullContent = lastResponse.content
-      //     const newContent = fullContent.replace(previousContent, '')
-      //     previousContent = fullContent
-
-      //     return lastResponse
-      //   }
-      // })
-
-      // content.subscribe(() => {})
-
-      await promise
+      await this.sendMessageAndHandle(prompt, options, callback)
 
       return {
         chat: this,

@@ -39,8 +39,12 @@ export class HistoryEntriesManager {
     return entries.get(id)
   }
 
-  async addEntry(entry: HistoryEntry): Promise<HistoryEntry> {
+  async addEntry(entry: HistoryEntry, skipStore = false): Promise<HistoryEntry> {
     const newEntry = await this.sffs.createHistoryEntry(entry)
+    if (skipStore) {
+      return newEntry
+    }
+
     this.entries.update((entries) => entries.set(newEntry.id, newEntry))
     return newEntry
   }

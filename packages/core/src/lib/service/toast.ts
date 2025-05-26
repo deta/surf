@@ -16,6 +16,7 @@ export type ToastData = {
   message: string
   timeout: number
   dismissable: boolean
+  dismissText: string
   action?: ToastAction
 }
 
@@ -46,6 +47,7 @@ export class Toast {
   message: string
   timeout: number
   dismissable: boolean
+  dismissText: string
   action?: ToastAction
 
   manager: Toasts
@@ -62,6 +64,7 @@ export class Toast {
     this.message = data.message
     this.timeout = data.timeout
     this.dismissable = data.dismissable
+    this.dismissText = data.dismissText
     this.action = data.action
 
     this.createdAt = Date.now()
@@ -112,6 +115,7 @@ export class Toast {
     this.type = data.type ?? this.type
     this.timeout = data.timeout ?? this.timeout
     this.dismissable = data.dismissable ?? this.dismissable
+    this.dismissText = data.dismissText ?? this.dismissText
     this.action = data.action ?? this.action
 
     if (data.timeout) {
@@ -185,13 +189,14 @@ export class Toasts {
     this.toasts.update((toasts) => toasts.map((t) => (t.id === toast.id ? toast : t)))
   }
 
-  create(data: Optional<ToastData, 'id' | 'timeout' | 'type' | 'dismissable'>) {
+  create(data: Optional<ToastData, 'id' | 'timeout' | 'type' | 'dismissable' | 'dismissText'>) {
     const id = generateID()
     const defaults = {
       id,
       type: 'info',
       timeout: DEFAULT_TIMEOUT,
-      dismissable: true
+      dismissable: true,
+      dismissText: 'Dismiss'
     } as Toast
 
     const toastData = {
