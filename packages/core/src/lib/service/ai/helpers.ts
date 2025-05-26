@@ -79,6 +79,7 @@ export const parseXMLChatResponseSources = (xml: Document) => {
     const content = source.getElementsByTagName('content')[0]?.textContent
     const timestamp = source.getElementsByTagName('timestamp')[0]?.textContent
     const url = source.getElementsByTagName('url')[0]?.textContent
+    const page = source.getElementsByTagName('page')[0]?.textContent
 
     return {
       id,
@@ -87,7 +88,8 @@ export const parseXMLChatResponseSources = (xml: Document) => {
       content,
       metadata: {
         timestamp: timestamp ? Number(timestamp) : undefined,
-        url: url ? String(url) : undefined
+        url: url ? String(url) : undefined,
+        page: page ? Number(page) : undefined
       }
     } as AIChatMessageSource
   })

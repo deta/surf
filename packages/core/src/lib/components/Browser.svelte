@@ -1542,6 +1542,18 @@
     source?: AIChatMessageSource,
     sourceUid?: string
   ) => {
+    if (!source && sourceUid) {
+      const fetchedSource = await sffs.getAIChatDataSource(sourceUid)
+      source = fetchedSource ?? undefined
+
+      if (!resourceId && fetchedSource?.resource_id) {
+        const resource = await resourceManager.getResource(fetchedSource.resource_id)
+        if (resource) {
+          resourceId = fetchedSource.resource_id
+        }
+      }
+    }
+
     if (!resourceId && source?.metadata?.url) {
       log.debug(
         'no resource id provided, searching for existing resource with the same url',
@@ -1559,11 +1571,6 @@
         log.debug('found existing resource with the same url', matchingResources[0])
         resourceId = matchingResources[0].id
       }
-    }
-
-    if (!source && sourceUid) {
-      const fetchedSource = await sffs.getAIChatDataSource(sourceUid)
-      source = fetchedSource ?? undefined
     }
 
     if (!source) {
@@ -1650,7 +1657,7 @@
     let { resourceId, answerText, sourceUid, source, preview, context } = e.detail
     log.debug('highlighting text', resourceId, answerText, sourceUid)
 
-    if (!resourceId && !source) {
+    if (!resourceId && !source && !sourceUid) {
       log.error('no resourceId or source provided', resourceId, source)
       toasts.error('Failed to highlight citation')
       return
