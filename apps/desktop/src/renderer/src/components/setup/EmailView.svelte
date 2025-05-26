@@ -80,6 +80,9 @@
   }
 
   .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 0 9rem 9rem 9rem;
     text-align: center;
     width: 100%;
