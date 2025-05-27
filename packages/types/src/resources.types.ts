@@ -81,7 +81,8 @@ export type UserViewPrefsTagValue = {
 
 export enum ResourceTagDataStateValue {
   PARTIAL = 'partial',
-  COMPLETE = 'complete'
+  COMPLETE = 'complete',
+  ERROR = 'error'
 }
 
 export interface SFFSResource {

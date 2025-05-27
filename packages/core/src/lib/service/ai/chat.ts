@@ -600,35 +600,48 @@ export class AIChat {
   }
 
   async checkAndPreparePartialResources(prompt: string, model: Model, resourceIds: string[]) {
-    this.log.debug('Looking for partial resources', prompt, model, resourceIds)
+    try {
+      this.log.debug('Looking for partial resources', prompt, model, resourceIds)
 
-    const backendModel = this.ai.modelToBackendModel(model)
-    const customKey = model.custom_key
+      const backendModel = this.ai.modelToBackendModel(model)
+      const customKey = model.custom_key
 
-    const matchingResources = await this.resourceManager.searchChatResourcesAI(
-      prompt,
-      backendModel,
-      {
-        customKey: customKey,
-        resourceIds
-      }
-    )
-
-    this.log.debug('Found matching resources', matchingResources)
-    const partialResources = matchingResources.filter((res) =>
-      (res.tags ?? []).find(
-        (tag) =>
-          tag.name === ResourceTagsBuiltInKeys.DATA_STATE &&
-          tag.value === ResourceTagDataStateValue.PARTIAL
+      const matchingResources = await this.resourceManager.searchChatResourcesAI(
+        prompt,
+        backendModel,
+        {
+          customKey: customKey,
+          resourceIds
+        }
       )
-    )
 
-    this.log.debug('Preparing partial resources', partialResources)
-    await Promise.all(
-      partialResources.map(async (resource) => {
-        await this.resourceManager.refreshResourceData(resource)
-      })
-    )
+      this.log.debug('Found matching resources', matchingResources)
+      const partialResources = matchingResources.filter((res) =>
+        (res.tags ?? []).find(
+          (tag) =>
+            tag.name === ResourceTagsBuiltInKeys.DATA_STATE &&
+            tag.value === ResourceTagDataStateValue.PARTIAL
+        )
+      )
+
+      this.log.debug('Preparing partial resources', partialResources)
+      await Promise.all(
+        partialResources.map(async (resource) => {
+          try {
+            await this.resourceManager.refreshResourceData(resource)
+          } catch (error) {
+            this.log.error('Error preparing partial resource', resource.id, error)
+            await this.resourceManager.updateResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.DATA_STATE,
+              ResourceTagDataStateValue.ERROR
+            )
+          }
+        })
+      )
+    } catch (error) {
+      this.log.error('Error checking and preparing partial resources', error)
+    }
   }
 
   async sendMessageAndHandle(
