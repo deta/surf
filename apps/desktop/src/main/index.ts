@@ -118,6 +118,12 @@ const registerProtocols = () => {
 
 const handleOpenUrl = (url: string) => {
   try {
+    const u = new URL(url)
+    if (u.protocol === 'surf:') {
+      surfProtocolExternalURLHandler(u)
+      return
+    }
+
     if (!isAppSetup) {
       log.warn('App not setup yet, cannot handle open URL')
       return
@@ -138,11 +144,7 @@ const handleOpenUrl = (url: string) => {
 
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.focus()
-    const u = new URL(url)
-    if (u.protocol === 'surf:') {
-      surfProtocolExternalURLHandler(u)
-      return
-    }
+
     IPC_EVENTS_MAIN.openURL.sendToWebContents(mainWindow.webContents, { url, active: true })
   } catch (error) {
     log.error('Error handling open URL:', error)
