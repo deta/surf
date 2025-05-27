@@ -57,7 +57,7 @@
       <div class="skip-link">
         <p class="info">
           <a href="#" on:click|preventDefault={() => dispatch('viewChange', 'invite')}>
-            Already have an activation code?
+            Already verified your email?
           </a>
         </p>
       </div>
