@@ -736,9 +736,23 @@
           toast?.error('Failed to find source text in the page for citation')
           return
         }
+
+        let targetText = source.content
+        if (!targetText) {
+          log.debug('no source content, hydrating source', source.uid)
+          const fetchedSource = await resourceManager.sffs.getAIChatDataSource(source.uid)
+          if (fetchedSource) {
+            targetText = fetchedSource.content
+          } else {
+            log.debug('no source found for chat message, using answer text')
+            targetText = answerText
+          }
+        }
+
+        log.debug('highlighting PDF page', pdfPage, targetText)
         sendWebviewEvent(WebViewEventReceiveNames.GoToPDFPage, {
           page: pdfPage,
-          targetText: source!.content
+          targetText: targetText
         })
         return
       }
