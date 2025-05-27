@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import type { Readable } from 'svelte/store'
   import icon from '../../assets/icon_512.png'
   import Button from './Button.svelte'
@@ -9,7 +9,6 @@
 
   export let emailStore: Readable<string>
 
-  let showCodeInput = false
   let resentEmail = false
   let loading = false
   let error = ''
@@ -17,7 +16,6 @@
 
   export const submitInviteCode = (code: string) => {
     inviteCode = code
-    showCodeInput = false
     handleSubmitInvite()
   }
 
@@ -70,10 +68,6 @@
       loading = false
     }
   }
-
-  const toggleShowCodeInput = () => {
-    showCodeInput = !showCodeInput
-  }
 </script>
 
 <div class="container">
@@ -84,43 +78,47 @@
     {#if error}
       <p class="error">
         {error}
-        <a href="#" on:click|preventDefault={resendVerificationEmail}>
-          Resend verification email.</a
-        >
       </p>
       <p class="info">Send us an email (<i>hello@deta.surf</i>) if the issue persists.</p>
     {/if}
 
-    {#if !error}
+    {#if !error && $emailStore}
       <p class="info">
         Open the link in your email ({$emailStore}) to verify your email address.
       </p>
     {/if}
 
-    <div class="links">
-      {#if !resentEmail}
-        <a href="#" on:click|preventDefault={resendVerificationEmail} class="apply-link">
-          Resend verification email
-        </a>
-      {:else}
-        <p class="success">Verification email resent!</p>
-      {/if}
+    {#if $emailStore}
+      <p class="info">You can also manually enter your invite code below.</p>
+    {/if}
 
-      {#if !showCodeInput}
-        <a href="#" on:click|preventDefault={toggleShowCodeInput} class="apply-link">
-          Enter activation code manually
-        </a>
-      {/if}
-    </div>
-
-    {#if showCodeInput}
+    <div class="form-wrapper">
       <form on:submit|preventDefault={handleSubmitInvite}>
         <input
           bind:value={inviteCode}
           class="invite-input"
-          placeholder="Enter your Invite Code"
+          placeholder="Enter your Activation Code"
           required
         />
+
+        <div class="links">
+          {#if !$emailStore}
+            <a
+              href="#"
+              on:click|preventDefault={() => dispatch('viewChange', 'email')}
+              class="apply-link"
+            >
+              Go Back
+            </a>
+          {/if}
+          {#if !resentEmail}
+            <a href="#" on:click|preventDefault={resendVerificationEmail} class="apply-link">
+              Resend verification email
+            </a>
+          {:else}
+            <p class="success">Verification email resent!</p>
+          {/if}
+        </div>
 
         <div class="bottom">
           <div class="button-warpper">
@@ -130,7 +128,7 @@
           </div>
         </div>
       </form>
-    {/if}
+    </div>
   </div>
 </div>
 
@@ -186,6 +184,15 @@
       outline: 4px solid rgba(36, 159, 252, 0.5);
       outline-offset: 0;
     }
+  }
+
+  .form-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
   }
 
   .button-wrapper {

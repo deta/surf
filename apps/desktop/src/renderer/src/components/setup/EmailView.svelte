@@ -16,17 +16,19 @@
   const handleSubmitEmail = async () => {
     try {
       // @ts-ignore
+      /*
       const res = await window.api.signup(email)
       if (!res.ok) {
         error = 'Sorry, we could not send the verification email.'
         console.error('could not send the verification email, res status: ', res.status)
         return
       }
+      */
+      dispatch('setUserEmail', email)
     } catch (e) {
       console.error(e)
       error = `Sorry, we countered an error: ${e}`
     }
-    dispatch('setUserEmail', email)
   }
 </script>
 
@@ -51,6 +53,14 @@
       <div class="details">
         <p class="info text-md">
           We need to verify your email address to provide you the best experience with Surf.
+        </p>
+      </div>
+
+      <div class="skip-link">
+        <p class="info">
+          <a href="#" on:click|preventDefault={() => dispatch('viewChange', 'invite')}>
+            Already have an activation code?
+          </a>
         </p>
       </div>
 
@@ -196,5 +206,13 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+  }
+
+  .skip-link {
+    color: #1995f5;
+  }
+
+  .skip-link:hover {
+    text-decoration: underline;
   }
 </style>

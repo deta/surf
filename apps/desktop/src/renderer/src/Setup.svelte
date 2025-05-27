@@ -3,8 +3,6 @@
   import { writable } from 'svelte/store'
   import EmailView from './components/setup/EmailView.svelte'
   import InviteView from './components/setup/InviteView.svelte'
-  import DisclaimerView from './components/setup/DisclaimerView.svelte'
-  import AppPreferencesSetup from './components/setup/AppPreferencesSetup.svelte'
   import LanguageView from './components/setup/LanguageView.svelte'
   import PrefsView from './components/setup/PrefsView.svelte'
   import PersonaView from './components/setup/PersonaView.svelte'
@@ -12,7 +10,6 @@
   import ExplainerChat from './components/setup/ExplainerChat.svelte'
   import DoneView from './components/setup/DoneView.svelte'
 
-  // Import or define UserSettings type
   import type { UserSettings } from '@horizon/types'
   import { provideConfig } from '@horizon/core/src/lib/service/config'
   import { createResourceManager } from '@horizon/core/src/lib/service/resources'
@@ -192,7 +189,7 @@
 <main>
   <div class="wrapper" class:wide={view === 'disclaimer'}>
     {#if view === 'email'}
-      <EmailView on:setUserEmail={handleSetUserEmail} />
+      <EmailView on:setUserEmail={handleSetUserEmail} on:viewChange={handleViewChange} />
     {:else if view === 'invite'}
       <InviteView
         bind:this={inviteView}
@@ -206,10 +203,6 @@
         on:viewChange={handleViewChange}
         on:back={handleBack}
       />
-    {:else if view === 'disclaimer'}
-      <DisclaimerView on:viewChange={handleViewChange} />
-    {:else if view === 'app_preferences'}
-      <AppPreferencesSetup on:viewChange={handleViewChange} on:back={handleBack} />
     {:else if view === 'import'}
       <ImportView on:viewChange={handleViewChange} on:back={handleBack} />
     {:else if view === 'explainer.stuff'}

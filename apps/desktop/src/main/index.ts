@@ -251,7 +251,7 @@ const initializeApp = async () => {
   await setupAdblocker()
   setAppMenu()
 
-  if (CONFIG.forceSetupWindow) {
+  if (CONFIG.forceSetupWindow || true) {
     createSetupWindow()
     return
   }
