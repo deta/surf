@@ -65,8 +65,7 @@
   // @ts-ignore
   let presetEmail: string = window.presetEmail || ''
 
-  //let initialView: ViewType = presetInviteCode ? 'invite' : 'email'
-  let initialView: ViewType = 'invite'
+  let initialView: ViewType = presetInviteCode ? 'invite' : 'email'
   let view: ViewType = initialView
 
   let viewHistory: ViewType[] = [initialView]
