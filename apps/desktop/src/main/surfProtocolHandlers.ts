@@ -301,7 +301,9 @@ const extractActivationCodeAndEmail = (
 
 export const surfProtocolExternalURLHandler = async (url: URL) => {
   // only activations are supported for now
+  console.log('handling url:', url.href)
   const { activationCode, email } = extractActivationCodeAndEmail(url)
+  console.log('surfProtocolExternalURLHandler', activationCode, email)
   if (!activationCode) {
     // TODO: handle ux
     return
