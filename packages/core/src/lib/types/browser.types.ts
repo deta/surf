@@ -92,6 +92,7 @@ export interface TabResource extends BaseTab {
 
 export interface TabOnboarding extends BaseTab {
   type: 'onboarding'
+  section?: string
 }
 
 export interface TabInvites extends BaseTab {

@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store'
 
-type Value = string | number | boolean | null | { [key: string]: unknown } | Value[]
+type Value = string | number | boolean | null | { [key: string]: unknown } | Object | Value[]
 
 export const setValue = (key: string, value: Value) => {
   const stringValue = typeof value !== 'string' ? JSON.stringify(value) : value

@@ -57,14 +57,15 @@ export const builtInSpaces = [
 ] as WithRequired<SpaceData, 'folderName' | 'colors'>[]
 
 export const onboardingSpace = {
-  name: 'Computing History',
+  name: 'Surf Onboarding',
   query: "Why hasn't the computer revolution happened yet?",
   urls: [
-    'https://de.wikipedia.org/wiki/Xerox_PARC',
-    'https://www.youtube.com/watch?v=NdSD07U5uBs',
-    'https://www.youtube.com/watch?v=oKg1hTOQXoY',
-    'https://de.wikipedia.org/wiki/Alan_Kay',
-    'https://arstechnica.com/gadgets/2023/03/plato-how-an-educational-computer-system-from-the-60s-shaped-the-future'
+    'https://www.xda-developers.com/deta-surf-promising-new-browser/',
+    'https://www.youtube.com/watch?v=uY2UsSETRaU',
+    'https://www.youtube.com/watch?v=OpvMnmEPWZM',
+    'https://deta.surf/people/efe',
+    'https://deta.surf/people/reese',
+    'https://productidentity.co/p/surf-the-browser'
   ]
 }
 

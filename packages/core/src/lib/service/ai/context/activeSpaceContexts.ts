@@ -30,7 +30,7 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
   activeSpaceUnsub: () => void
 
   constructor(service: ContextService, include: ActiveSpaceContextInclude = 'everything') {
-    super(service, ContextItemTypes.ACTIVE_SPACE, 'browser')
+    super(service, ContextItemTypes.ACTIVE_SPACE, 'sparkles')
 
     this.include = include
     this.item = writable(null)
@@ -70,11 +70,16 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
     })
 
     this.icon = derived([this.item], ([item]) => {
-      if (item) {
-        return item.iconValue
-      } else {
-        return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon
-      }
+      return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon
+      // if (item) {
+      //   return item.iconValue
+      // } else {
+      //   return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon
+      // }
+    })
+
+    this.iconString = derived([this.icon], ([icon]) => {
+      return this.contextItemIconToString(icon, this.fallbackIcon)
     })
 
     // This is a hack to make sure the derived function above actually runs

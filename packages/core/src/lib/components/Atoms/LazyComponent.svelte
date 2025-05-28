@@ -1,6 +1,3 @@
-<!-- Does not seem to improve stuff: -->
-<svelte:options immutable={true} />
-
 <script>
   let loadComponent
   export { loadComponent as this }

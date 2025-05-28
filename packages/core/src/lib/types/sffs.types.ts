@@ -1,24 +1,35 @@
 import type { ResourceProcessingState } from '@horizon/types'
-import type { AIChatMessageRole, AIChatMessageSource, Optional } from '.'
+import type { AIChatMessageRole, AIChatMessageSource, Optional, SpaceEntry } from '.'
 
 export type SFFSSearchResultEngineRaw = 'Keyword' | 'Proximity' | 'Semantic'
 
 export interface SFFSSearchResultRawItem {
   resource: SFFSRawCompositeResource
-  card_ids: string[]
+  engine: SFFSSearchResultEngineRaw
+}
+
+export interface SFFSSearchResultRawItemSpace {
+  space: SFFSRawSpace
   engine: SFFSSearchResultEngineRaw
 }
 
 export interface SFFSSearchResult {
   items: SFFSSearchResultRawItem[]
+  spaces: SFFSSearchResultRawItemSpace[]
   total: number
-  // limit: number
-  // offset: number
+  space_entries?: SpaceEntry[]
 }
 
 /*
  RAW TYPES FROM SFFS BASED ON model.rs
 */
+
+export type SFFSRawSpace = {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
 
 export type SFFSRawResource = {
   id: string
@@ -103,7 +114,7 @@ export interface SFFSRawHorizon {
 
 export type SFFSRawHorizonToCreate = Optional<SFFSRawHorizon, 'id' | 'created_at' | 'updated_at'>
 
-export type SFFSRawHistoryEntryType = 'Search' | 'Navigation'
+export type SFFSRawHistoryEntryType = 'search' | 'navigation'
 
 export interface SFFSRawHistoryEntry {
   id: string
@@ -157,6 +168,8 @@ export type SpaceEntrySortBy =
   | 'resource_source_published' // | 'resource_name'
 
 export type SpaceEntrySearchOptions = {
+  search_query?: string
   sort_by?: SpaceEntrySortBy
   order?: 'asc' | 'desc'
+  limit?: number
 }

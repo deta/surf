@@ -330,3 +330,29 @@ export class ContextService {
 
 export const createContextService = (oasis: OasisService) => ContextService.provide(oasis)
 export const useContextService = () => ContextService.use()
+
+/**
+ * Utility function to sort spaces by their position in a lastUsedScopes array
+ * @param a First space to compare
+ * @param b Second space to compare
+ * @param lastUsedScopes Array of space IDs sorted by last used (first = most recently used)
+ * @returns Sort comparison value (-1, 0, 1)
+ */
+export const sortSpacesByLastUsed = (a: OasisSpace, b: OasisSpace, lastUsedScopes: string[]) => {
+  const aLastUsedIndex = lastUsedScopes.indexOf(a.id)
+  const bLastUsedIndex = lastUsedScopes.indexOf(b.id)
+
+  if (aLastUsedIndex !== -1 && bLastUsedIndex !== -1) {
+    return aLastUsedIndex - bLastUsedIndex
+  }
+
+  if (aLastUsedIndex !== -1) {
+    return -1
+  }
+
+  if (bLastUsedIndex !== -1) {
+    return 1
+  }
+
+  return a.indexValue - b.indexValue
+}

@@ -2,8 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 import type { Optional } from '../types'
 import { useLogScope, generateID, isDev } from '@horizon/utils'
 import { getContext, setContext } from 'svelte'
-import EventEmitter from 'events'
-import type TypedEmitter from 'typed-emitter'
+import { EventEmitterBase } from './events'
 
 export type ToastAction = {
   label: string
@@ -162,18 +161,16 @@ export class Toast {
   }
 }
 
-export class Toasts {
+export class Toasts extends EventEmitterBase<ToastsEvents> {
   toasts: Writable<Toast[]>
   log: ReturnType<typeof useLogScope>
-  eventEmitter: TypedEmitter<ToastsEvents>
 
   static self: Toasts
 
   constructor() {
+    super()
     this.toasts = writable([])
     this.log = useLogScope('Toasts')
-    // Svelte 5 would solve needing this event shit to notify
-    this.eventEmitter = new EventEmitter() as TypedEmitter<ToastsEvents>
 
     if (isDev) {
       // @ts-ignore
@@ -244,7 +241,7 @@ export class Toasts {
     const toast = this.toastsValue.find((e) => e.id === id)
     if (!toast) return
 
-    this.eventEmitter.emit('will-dismiss', toast)
+    this.emit('will-dismiss', toast)
 
     setTimeout(() => this.toasts.update((all) => all.filter((t) => t.id !== id)), 300)
 

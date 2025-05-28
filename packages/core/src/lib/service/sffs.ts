@@ -17,6 +17,7 @@ import type {
   SFFSSearchResult,
   SFFSSearchResultEngine,
   SFFSSearchResultItem,
+  SFFSSearchResultItemSpace,
   Space,
   SpaceEntry,
   SpaceData,
@@ -35,7 +36,12 @@ import type {
   AIDocsSimilarity,
   YoutubeTranscript
 } from '../types/browser.types'
-import type { BookmarkFolder, BrowserType, EventBusMessage } from '@horizon/types'
+import type {
+  BookmarkFolder,
+  BrowserType,
+  EventBusMessage,
+  SFFSResourceOrSpace
+} from '@horizon/types'
 import type {
   App,
   Model,
@@ -160,8 +166,7 @@ export class SFFS {
       id: entry.id,
       created_at: entry.createdAt,
       updated_at: entry.updatedAt,
-      entry_type: (entry.type.charAt(0).toUpperCase() +
-        entry.type.slice(1)) as SFFSRawHistoryEntryType,
+      entry_type: entry.type as SFFSRawHistoryEntryType,
       url: entry.url ?? null,
       title: entry.title ?? null,
       search_query: entry.searchQuery ?? null
@@ -201,6 +206,13 @@ export class SFFS {
             sortBy: 'resource_added_to_space'
           } as SpaceData)
         : parsedName
+
+    nameData.nestingData = {
+      parentSpaces: raw.parent_space_ids || [],
+      childSpaces: raw.child_space_ids || [],
+      hasChildren: raw.child_space_ids?.length > 0 || false,
+      hasParents: raw.parent_space_ids?.length > 0 || false
+    }
 
     // Convert legacy sortBy values to new ones
     if (nameData.sortBy) {
@@ -449,11 +461,34 @@ export class SFFS {
     return parsed?.items ?? []
   }
 
+  async listAllResourcesAndSpaces(tags: SFFSResourceTag[]) {
+    this.log.debug('listing all resources and spaces by tags', tags)
+    const tagsData = JSON.stringify(
+      tags.map(
+        (tag) =>
+          ({
+            id: '',
+            resource_id: '',
+            tag_name: tag.name,
+            tag_value: tag.value,
+            op: tag.op ?? 'eq'
+          }) as SFFSRawResourceTag
+      )
+    )
+    const raw = await this.backend.js__store_list_all_resources_and_spaces(tagsData)
+    const parsed = this.parseData<SFFSResourceOrSpace[]>(raw)
+    return parsed ?? []
+  }
+
   async searchResources(
     query: string,
     tags?: SFFSResourceTag[],
     parameters?: SFFSSearchParameters
-  ): Promise<SFFSSearchResultItem[]> {
+  ): Promise<{
+    items: SFFSSearchResultItem[]
+    spaces: SFFSSearchResultItemSpace[]
+    space_entries?: SpaceEntry[]
+  }> {
     this.log.debug(
       'searching resources with query',
       query,
@@ -485,13 +520,24 @@ export class SFFS {
       parameters?.keywordLimit
     )
     const parsed = this.parseData<SFFSSearchResult>(raw)
-    const items = parsed?.items ?? []
+    const parsedItems = parsed?.items ?? []
+    const parsedSpaces = parsed?.spaces ?? []
 
-    return items.map((item) => ({
+    const items = parsedItems.map((item) => ({
       ...item,
       engine: item.engine.toLowerCase() as SFFSSearchResultEngine,
       resource: this.convertCompositeResourceToResource(item.resource)
     }))
+
+    const spaces = parsedSpaces.map((space) => ({
+      ...space,
+      engine: space.engine.toLowerCase() as SFFSSearchResultEngine
+    }))
+    return {
+      items,
+      spaces,
+      space_entries: parsed?.space_entries
+    }
   }
 
   async searchChatResourcesAI(
@@ -566,13 +612,12 @@ export class SFFS {
   async searchSpaces(query: string) {
     this.log.debug('searching spaces with query', query)
     const raw = await this.backend.js__store_search_spaces(query)
-    const spaces = this.parseData<any[]>(raw)
-
-    if (!spaces) {
+    const result = this.parseData<any[]>(raw)
+    this.log.debug('search spaces result', result)
+    if (!result) {
       return []
     }
-
-    return spaces.map((space) => this.convertRawSpaceToSpace(space))
+    return result.map((item) => this.convertRawSpaceToSpace(item.space))
   }
 
   async updateSpace(spaceId: string, name: SpaceData) {
@@ -592,11 +637,25 @@ export class SFFS {
     origin: SpaceEntryOrigin
   ): Promise<void> {
     const typedItems = resourceIds.map((id) => ({
-      resource_id: id,
+      entry_id: id,
+      entry_type: 'resource',
       manually_added: origin
     }))
-
     this.log.debug('creating space entries for space', space_id, 'entries:', typedItems)
+    await this.backend.js__store_create_space_entries(space_id, typedItems)
+  }
+
+  async addSubspacesToSpace(
+    space_id: string,
+    space_ids: string[],
+    origin: SpaceEntryOrigin
+  ): Promise<void> {
+    const typedItems = space_ids.map((id) => ({
+      entry_id: id,
+      entry_type: 'space',
+      manually_added: origin
+    }))
+    this.log.debug('creating sub space entries for space', space_id, 'entries:', typedItems)
     await this.backend.js__store_create_space_entries(space_id, typedItems)
   }
 
@@ -605,7 +664,8 @@ export class SFFS {
     const rawEntries = await this.backend.js__store_get_space_entries(
       space_id,
       opts?.sort_by,
-      opts?.order
+      opts?.order,
+      opts?.limit
     )
     const entries = this.parseData<SpaceEntry[]>(rawEntries)
     if (!entries) {
@@ -615,9 +675,34 @@ export class SFFS {
     return entries
   }
 
-  async deleteSpaceEntries(entryIds: string[]): Promise<void> {
-    this.log.debug('deleting space entries with ids', entryIds)
-    await this.backend.js__store_delete_space_entries(entryIds)
+  // NOTE: the ids here are the ids of the entries themselves and NOT THE RESOURCE/SPACE IDS
+  async deleteSpaceEntries(ids: string[], isResourceType = true): Promise<void> {
+    this.log.debug('deleting space entries with ids', ids)
+    const typedItems = ids.map((id) => ({
+      id: id,
+      entry_type: isResourceType ? 'resource' : 'space'
+    }))
+    await this.backend.js__store_delete_space_entries(typedItems)
+  }
+
+  async deleteEntriesInSpaceByEntryIds(
+    spaceId: string,
+    entryIds: string[],
+    isResourceType = true
+  ): Promise<void> {
+    this.log.debug('deleting entries in space ', spaceId, ' with entry ids', entryIds)
+    const resourceType = isResourceType ? 'resource' : 'space'
+
+    await this.backend.js__store_delete_entries_in_space_by_entry_ids(
+      spaceId,
+      entryIds,
+      resourceType
+    )
+  }
+
+  async moveSpace(spaceId: string, toSpaceId: string): Promise<void> {
+    this.log.debug('moving space', spaceId, 'to space', toSpaceId)
+    await this.backend.js__store_move_space(spaceId, toSpaceId)
   }
 
   // async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {

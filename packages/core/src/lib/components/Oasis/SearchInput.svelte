@@ -4,6 +4,7 @@
   import { isMac, isModKeyPressed } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import { writable } from 'svelte/store'
+  import { tooltip } from '@horizon/utils'
 
   export let value: string = ''
   export let loading = false
@@ -104,6 +105,11 @@
     {placeholder}
     class="flex bg-transparent outline-none disabled:cursor-not-allowed disabled:opacity-50"
     on:keydown={handleKeyDown}
+    use:tooltip={{
+      position: 'top',
+      text: 'Search',
+      disabled: $expanded
+    }}
   />
   {#if value.length <= 0 && $expanded}
     <span class="shortcut">{isMac() ? '⌘' : 'Ctrl'} + F</span>

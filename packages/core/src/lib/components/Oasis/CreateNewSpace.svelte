@@ -27,11 +27,10 @@
   import { CreateSpaceEventFrom } from '@horizon/types'
   import { writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, tick } from 'svelte'
-  import { Editor } from '@horizon/editor'
   import { fly, scale } from 'svelte/transition'
   import { quartOut } from 'svelte/easing'
 
-  import { colorPairs, OasisSpace, useOasis } from '../../service/oasis'
+  import { colorPairs, OasisSpace } from '../../service/oasis'
   import SpacePreview from './SpacePreview.svelte'
   import LoadingParticles from '../Effects/LoadingParticles.svelte'
   import type { SpaceIconChange } from './IconSelector.svelte'
@@ -54,8 +53,7 @@
 
   const aiEnabled = writable(false)
   const name = writable('')
-  const userPrompt = writable('<p></p>')
-  const previousUserPrompt = writable('<p></p>')
+  const userPrompt = writable('')
   const colors = writable(colorPairs[Math.floor(Math.random() * colorPairs.length)])
   const userEnteredName = writable(false)
   const previewIDs = writable<PreviewID[]>([])
@@ -68,44 +66,21 @@
   const pillContent = writable('')
   const clickedPill = writable(0)
   const activePillConfig = writable<PromptConfig['pill'] | null>(null)
-  const semanticSearchThreshold = writable(0.4)
-  const semanticInputValue = writable(0.4)
   const resultHasSemanticSearch = writable(false)
-  const activeFetchingQuery = writable<string | null>(null)
   const blacklistedResources = writable<string[]>([])
   const selectedEmoji = writable<string | null>(null)
   const selectedImage = writable<string | null>(null)
 
-  let editor: Editor
   let shakeClass = ''
 
   const log = useLogScope('CreateNewSpace')
   const dispatch = createEventDispatcher<CreateNewSpaceEvents>()
   const resourceManager = useResourceManager()
-  const oasis = useOasis()
   const ai = useAI()
   const telemetry = resourceManager.telemetry
 
   export let space: OasisSpace
   export let isCreatingNewSpace: Writable<boolean> = writable(false)
-
-  // const templatePrompts: PromptConfig[] = [
-  //   { name: 'Images', prompt: 'All my Images' },
-  //   { name: 'Notion Documents', prompt: 'All my Notion Documents' },
-  //   { name: 'YouTube Videos', prompt: 'Youtube Videos' },
-  //   {
-  //     name: 'Articles',
-  //     prompt: 'Articles about',
-  //     pill: {
-  //       placeholder: 'Enter topic',
-  //       position: 'after'
-  //     }
-  //   },
-  //   {
-  //     name: 'PDFs',
-  //     prompt: 'Every PDF'
-  //   }
-  // ]
 
   const templatePrompts: PromptConfig[] = [
     { name: 'YouTube Videos', prompt: 'Youtube Videos' },
@@ -124,13 +99,11 @@
     }
   }
 
-  $: aiEnabled.set($userPrompt !== '<p></p>')
+  $: aiEnabled.set($userPrompt !== '')
 
-  $: resultEmpty.set(
-    $previewIDs.length === 0 && $userPrompt !== '<p></p>' && !$isLoading && !$isTyping
-  )
+  $: resultEmpty.set($previewIDs.length === 0 && $userPrompt !== '' && !$isLoading && !$isTyping)
 
-  $: isCreateButtonDisabled = $name === '' && $userPrompt === '<p></p>'
+  $: isCreateButtonDisabled = $name === '' && $userPrompt === ''
 
   $: if ($resultEmpty) {
     shakeClass = 'shake'
@@ -138,6 +111,8 @@
       shakeClass = ''
     }, 500) // Duration of the animation
   }
+
+  $: log.debug('create new space', space)
 
   const handleAbortSpaceCreation = () => {
     dispatch('abort-space-creation', space.id)
@@ -230,9 +205,12 @@
 
       if (resourceIds.length > 0) {
         const loadedResources = await Promise.all(
-          resourceIds.map((id) => resourceManager.getResourceWithAnnotations(id.id))
+          resourceIds
+            .filter((id) => !id.blacklisted)
+            .map((id) => resourceManager.getResourceWithAnnotations(id.id))
         )
-        previewResources.set(loadedResources)
+        const filteredResources = loadedResources.filter((resource) => resource !== null)
+        previewResources.set(filteredResources)
       } else {
         previewResources.set([])
       }
@@ -264,16 +242,21 @@
 
   const debouncedPreviewAISpace = useDebounce(previewAISpace, 860)
 
-  const handleEditorUpdate = (event: CustomEvent<string>) => {
-    previousUserPrompt.set($userPrompt)
-    userPrompt.set(event.detail)
-    isTyping.set(true)
+  const resetSmartFetchingState = () => {
+    previewIDs.set([])
+    previewResources.set([])
+    isLoading.set(false)
+    isTyping.set(false)
+    aiEnabled.set(false)
+    fineTuneEnabled.set(false)
+    userPrompt.set('')
+  }
 
-    if (event.detail === '<p></p>') {
-      previewIDs.set([])
+  const handleEditorUpdate = () => {
+    if ($userPrompt === '') {
+      resetSmartFetchingState()
       return
     }
-
     debouncedPreviewAISpace($userPrompt)
   }
 
@@ -347,10 +330,10 @@
 />
 
 <div
-  class="flex flex-col items-center justify-center h-full w-full bg-[#f6faff] dark:bg-gray-900 overflow-y-auto pb-48 border border-natural-100 border-l-natural-100 dark:border-gray-800 text-gray-900 dark:text-gray-100"
+  class="flex flex-col items-center justify-center p-3 h-full w-full bg-[#f6faff] dark:bg-gray-900 overflow-y-auto pb-48 border border-natural-100 border-l-natural-100 dark:border-gray-800 text-gray-900 dark:text-gray-100"
 >
   <div
-    class="top-bar fixed top-0 left-0 right-0 flex justify-between items-center w-[calc(100%-1.75rem)] px-4 py-2 bg-white dark:bg-gray-800 z-50 border border-gray-200 dark:border-gray-700"
+    class="top-bar top-0 left-0 right-0 absolute flex justify-between items-center w-[calc(100%-1.75rem)] px-4 py-2 bg-white dark:bg-gray-800 z-50 border border-gray-200 dark:border-gray-700"
     style="border-bottom-width: 0.5px; margin: 0.75rem; border-radius: 12px;"
   >
     <div class="input-wrapper flex-grow">
@@ -382,70 +365,44 @@
     </div>
   </div>
   {#if !$fineTuneEnabled}
-    <!-- <ResourceOverlay
-      caption="Click to change color."
-      interactive={$previewIDs.length === 0 ? true : false}
-    > -->
-    <div
-      class="space-icon-wrapper transform active:scale-[98%] relative {shakeClass}"
-      class:has-preview={$previewIDs.length > 0}
-      transition:scale={{ duration: 300, easing: quartOut }}
-    >
-      {#if $isLoading}
-        <div
-          class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
-        >
-          <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
-        </div>
-      {/if}
-      {#if $previewIDs.length > 0}
-        <div class="absolute inset-0 z-10">
-          {#key $previewIDs}
-            <SpacePreview
-              resourceIDs={$previewIDs.filter((id) => !id.blacklisted).map((id) => id.id)}
-              showHeader={false}
-            />
-          {/key}
-        </div>
-      {:else if $resultEmpty}
-        <div
-          class="fixed z-50 flex items-center justify-center w-full h-full flex-col pointer-events-none"
-        >
-          <div class="empty-state-icon text-gray-50 mb-2 mix-blend-darken opacity-100">
-            <Icon name="sparkles.fill" size="42px" color="#ffffff" />
-          </div>
-          <h3
-            class="empty-state-title text-2xl font-medium text-gray-50 mix-blend-darken opacity-100 mb-[0.25rem]"
-            style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
-          >
-            Create empty context
-          </h3>
-          <p
-            class="empty-state-description text-center max-w-md text-gray-50 mb-2 mix-blend-darken opacity-100"
-            style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
-          >
-            future items will be<br /> dropped here.
-          </p>
-        </div>
-      {/if}
-      <div class="relative z-0">
-        {#if space}
+    <div class="flex flex-col justify-center items-center">
+      <div
+        class="space-icon-wrapper transform active:scale-[98%] relative {shakeClass}"
+        class:has-preview={$previewIDs.length > 0}
+        transition:scale={{ duration: 300, easing: quartOut }}
+      >
+        {#if $isLoading}
           <div
-            class="w-full h-full aspect-square bg-white dark:bg-gray-800/95 rounded-full flex items-center justify-center"
+            class={`absolute inset-4 z-20 flex items-center justify-center ${$previewIDs.length > 0 ? 'pt-[12rem]' : ''}`}
           >
-            <SpaceIcon
-              on:update={handleSpaceIconUpdate}
-              folder={space}
-              size="2xl"
-              round
-              isCreating
-            />
+            <LoadingParticles size={$previewIDs.length === 0 ? 300 : 700} />
           </div>
-
-          <p class="text-center py-6 text-gray-600 dark:text-gray-400">
-            Click the circle to change the icon
-          </p>
         {/if}
+        {#if $previewIDs.length > 0}
+          <div class="absolute inset-0 z-10">
+            {#key $previewIDs}
+              <SpacePreview resources={previewResources} origin="smartcontext" />
+            {/key}
+          </div>
+        {/if}
+        <div class="relative z-0">
+          {#if space}
+            <div
+              class="w-full h-full aspect-square bg-white dark:bg-gray-800/95 rounded-full flex items-center justify-center"
+            >
+              <SpaceIcon
+                on:update={handleSpaceIconUpdate}
+                folder={space}
+                size="2xl"
+                round
+                isCreating
+              />
+            </div>
+            <p class="text-center py-6 text-gray-600 dark:text-gray-400">
+              Click the circle to change the icon.
+            </p>
+          {/if}
+        </div>
       </div>
     </div>
     <!-- </ResourceOverlay> -->
@@ -478,8 +435,8 @@
   {/if}
   <div
     class="input-group absolute transition-all duration-300 z-20"
-    class:bottom-0={$fineTuneEnabled}
-    class:bottom-4={!$fineTuneEnabled}
+    class:bottom-0={!$fineTuneEnabled}
+    class:bottom-6={$fineTuneEnabled}
   >
     {#if $isLoading && $fineTuneEnabled}
       <div
@@ -504,7 +461,7 @@
       class="ai-voodoo bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-8 pt-4 pb-4 mb-20 mt-4 rounded-[3rem] relative border-[0.5px] border-gray-200 dark:border-gray-800 border-opacity-20"
       class:loading={$fineTuneEnabled && $isLoading}
     >
-      {#if $aiEnabled && !$fineTuneEnabled}
+      {#if $aiEnabled && $fineTuneEnabled}
         <div
           class="ai-description text-gray-900 dark:text-gray-100 bg-sky-50 dark:bg-sky-900"
           transition:fly={{
@@ -514,10 +471,9 @@
             easing: quartOut
           }}
         >
-          <span
-            >Surf will from now automatically add content to your context that matches your
-            description.</span
-          >
+          <span>
+            Surf will automatically add content that match your description to this context.
+          </span>
           <Icon name="sparkles.fill" size="22px" className="text-[#29A6F3] dark:text-sky-100" />
         </div>
       {/if}
@@ -527,9 +483,9 @@
             class={$fineTuneEnabled
               ? 'fine-tune-button bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50'
               : 'fine-tune-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'}
-            on:click={() => fineTuneEnabled.set(!$fineTuneEnabled)}
+            on:click={() => resetSmartFetchingState()}
           >
-            {$fineTuneEnabled ? 'Back' : 'Show Grid View'}
+            {$fineTuneEnabled ? 'Cancel' : 'Show Grid View'}
           </button>
         </div>
       {/if}
@@ -553,20 +509,12 @@
             </div>
           {:else}
             {#key $clickedPill}
-              <Editor
-                bind:this={editor}
-                content={$userPrompt}
-                on:update={handleEditorUpdate}
-                placeholder="Describe your context and stuff will be auto-fetched."
-                tabindex="1"
-                submitOnEnter
-                autofocus={false}
-                on:keydown={(e) => {
-                  if (e.key === 'Tab') {
-                    e.stopPropagation()
-                    e.stopImmediatePropagation()
-                  }
-                }}
+              <input
+                class="w-full border-none focus:outline-none font-medium"
+                type="text"
+                placeholder="Describe your context for auto-fetching."
+                bind:value={$userPrompt}
+                on:input={handleEditorUpdate}
               />
             {/key}
           {/if}
@@ -696,9 +644,9 @@
   }
 
   .preview-resources-wrapper {
+    position: absolute;
     width: -webkit-fill-available;
-    height: calc(100vh - 4rem);
-    position: fixed;
+    height: 100%;
     top: 4.75rem;
     overflow-y: auto;
   }
@@ -766,7 +714,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 5rem;
   }
 
   .input-wrapper {

@@ -61,6 +61,7 @@ import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@horizon/web-parser'
 import type { ConfigService } from './config'
 import type { AIService } from './ai/ai'
+import { EventEmitterBase } from './events'
 
 /*
  TODO:
@@ -68,60 +69,6 @@ import type { AIService } from './ai/ai'
  - handle errors
  - use the relevant enum, and do not hard code the values
 */
-
-export const everythingSpace = {
-  id: 'all',
-  name: {
-    folderName: 'All my Stuff',
-    colors: ['#76E0FF', '#4EC9FB'],
-    showInSidebar: false,
-    liveModeEnabled: false,
-    smartFilterQuery: null,
-    sql_query: null,
-    embedding_query: null,
-    sortBy: 'resource_added_to_space'
-  },
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  deleted: 0,
-  type: 'space'
-} as Space
-
-export const inboxSpace = {
-  id: 'inbox',
-  name: {
-    folderName: 'Inbox',
-    colors: ['#76E0FF', '#4EC9FB'],
-    showInSidebar: false,
-    liveModeEnabled: false,
-    smartFilterQuery: null,
-    sql_query: null,
-    embedding_query: null,
-    sortBy: 'resource_added_to_space'
-  },
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  deleted: 0,
-  type: 'space'
-} as Space
-
-export const notesSpace = {
-  id: 'notes',
-  name: {
-    folderName: 'Notes',
-    colors: ['#76E0FF', '#4EC9FB'],
-    showInSidebar: false,
-    liveModeEnabled: false,
-    smartFilterQuery: null,
-    sql_query: null,
-    embedding_query: null,
-    sortBy: 'resource_added_to_space'
-  },
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  deleted: 0,
-  type: 'space'
-} as Space
 
 export class ResourceTag {
   static download() {
@@ -252,7 +199,7 @@ export type ResourceEvents = {
   'updated-data': (data: Blob) => void
 }
 
-export class Resource {
+export class Resource extends EventEmitterBase<ResourceEvents> {
   id: string
   type: string
   path: string
@@ -277,13 +224,12 @@ export class Resource {
   sffs: SFFS
   resourceManager: ResourceManager
   log: ScopedLogger
-  eventEmitter: TypedEmitter<ResourceEvents>
 
   constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
+    super()
     this.log = useLogScope(`SFFSResource ${data.id}`)
     this.sffs = sffs
     this.resourceManager = resourceManager
-    this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceEvents>
 
     this.id = data.id
     this.type = data.type
@@ -350,14 +296,6 @@ export class Resource {
     return get(this.spaceIds)
   }
 
-  on<E extends keyof ResourceEvents>(event: E, listener: ResourceEvents[E]): () => void {
-    this.eventEmitter.on(event, listener)
-
-    return () => {
-      this.eventEmitter.off(event, listener)
-    }
-  }
-
   private async readDataAsBlob() {
     const buffer = await this.sffs.readDataFile(this.id)
 
@@ -403,8 +341,8 @@ export class Resource {
     this.rawData = data
     this.updatedAt = new Date().toISOString()
 
-    this.eventEmitter.emit('updated-data', data)
-    this.resourceManager.eventEmitter.emit('updated', this)
+    this.emit('updated-data', data)
+    this.resourceManager.emit('updated', this)
     if (write) {
       return this.writeData()
     } else {
@@ -417,7 +355,7 @@ export class Resource {
 
     this.metadata = { ...(this.metadata ?? {}), ...updates } as SFFSResourceMetadata
     this.updatedAt = new Date().toISOString()
-    this.eventEmitter.emit('updated-metadata', this.metadata)
+    this.emit('updated-metadata', this.metadata)
   }
 
   updateTags(updates: SFFSResourceTag[]) {
@@ -425,7 +363,7 @@ export class Resource {
 
     this.tags = [...(this.tags ?? []), ...updates]
     this.updatedAt = new Date().toISOString()
-    this.eventEmitter.emit('updated-tags', this.tags ?? [])
+    this.emit('updated-tags', this.tags ?? [])
   }
 
   updateTag(name: string, value: string) {
@@ -439,7 +377,7 @@ export class Resource {
     }
 
     this.updatedAt = new Date().toISOString()
-    this.eventEmitter.emit('updated-tags', this.tags ?? [])
+    this.emit('updated-tags', this.tags ?? [])
   }
 
   addTag(tag: SFFSResourceTag) {
@@ -447,7 +385,7 @@ export class Resource {
 
     this.tags = [...(this.tags ?? []), tag]
     this.updatedAt = new Date().toISOString()
-    this.eventEmitter.emit('updated-tags', this.tags ?? [])
+    this.emit('updated-tags', this.tags ?? [])
   }
 
   removeTag(name: string) {
@@ -455,7 +393,7 @@ export class Resource {
 
     this.tags = this.tags?.filter((t) => t.name !== name)
     this.updatedAt = new Date().toISOString()
-    this.eventEmitter.emit('updated-tags', this.tags ?? [])
+    this.emit('updated-tags', this.tags ?? [])
   }
 
   removeTagByID(id: string) {
@@ -463,7 +401,7 @@ export class Resource {
 
     this.tags = this.tags?.filter((t) => t?.id !== id)
     this.updatedAt = new Date().toISOString()
-    this.eventEmitter.emit('updated-tags', this.tags ?? [])
+    this.emit('updated-tags', this.tags ?? [])
   }
 
   getData() {
@@ -619,11 +557,16 @@ export type ResourceSearchResultItem = {
   id: string // resource id
   resource: ResourceObject
   annotations?: ResourceAnnotation[]
-  cardIds: string[]
   engine: SFFSSearchResultEngine
 }
 
-export class ResourceManager {
+export type SpaceSearchResultItem = {
+  id: string
+  space: Space
+  engine: SFFSSearchResultEngine
+}
+
+export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   resources: Writable<ResourceObject[]>
 
   log: ScopedLogger
@@ -633,16 +576,14 @@ export class ResourceManager {
   ai!: AIService
 
   static self: ResourceManager
-  eventEmitter: TypedEmitter<ResourceManagerEvents>
 
   constructor(telemetry: Telemetry, config: ConfigService) {
+    super()
     this.log = useLogScope('SFFSResourceManager')
     this.resources = writable([])
     this.sffs = new SFFS()
     this.telemetry = telemetry
     this.config = config
-
-    this.eventEmitter = new EventEmitter() as TypedEmitter<ResourceManagerEvents>
 
     if (isDev) {
       // @ts-ignore
@@ -656,17 +597,6 @@ export class ResourceManager {
       this.log.debug('unregistering event bus handler')
       unregister()
     })
-  }
-
-  on<E extends keyof ResourceManagerEvents>(
-    event: E,
-    listener: ResourceManagerEvents[E]
-  ): () => void {
-    this.eventEmitter.on(event, listener)
-
-    return () => {
-      this.eventEmitter.off(event, listener)
-    }
   }
 
   attachAIService(ai: AIService) {
@@ -704,7 +634,7 @@ export class ResourceManager {
     }
 
     let res = this.createResourceObject(resource)
-    this.eventEmitter.emit('created', res)
+    this.emit('created', res)
     return res
   }
 
@@ -743,6 +673,16 @@ export class ResourceManager {
     }
 
     this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
+  }
+
+  static NonHiddenDefaultTags(): SFFSResourceTag[] {
+    return [
+      ResourceManager.SearchTagDeleted(false),
+      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
+      ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+      ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+      ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+    ]
   }
 
   async createDummyResource(
@@ -792,7 +732,7 @@ export class ResourceManager {
 
     this.resources.update((resources) => [...resources, resource])
 
-    this.eventEmitter.emit('created', resource)
+    this.emit('created', resource)
     return resource as ResourceObject
   }
 
@@ -865,7 +805,7 @@ export class ResourceManager {
     //   })
     // }
 
-    this.eventEmitter.emit('created', resource)
+    this.emit('created', resource)
     return resource
   }
 
@@ -894,6 +834,36 @@ export class ResourceManager {
     )) as Resource[]
   }
 
+  async listAllResourcesAndSpaces(tags: SFFSResourceTag[]) {
+    const result = await this.sffs.listAllResourcesAndSpaces(tags)
+    this.log.debug('all resources and spaces', result)
+    if (!result) {
+      return []
+    }
+    let mapped = await Promise.all(
+      result.map(async (item) => {
+        if (item.item_type === 'resource') {
+          const resource = await this.findOrGetResourceObject(item.id)
+          if (resource) {
+            return {
+              id: item.id,
+              type: 'resource',
+              data: resource
+            }
+          }
+        } else if (item.item_type === 'space') {
+          const space = this.sffs.convertRawSpaceToSpace(item)
+          return {
+            id: item.id,
+            type: 'space',
+            data: space
+          }
+        }
+      })
+    )
+    return mapped.filter((item) => item !== undefined)
+  }
+
   // NOTE: if no `keyword_limit` is provided, the backend uses 100 as the default value
   async searchResources(
     query: string,
@@ -901,21 +871,28 @@ export class ResourceManager {
     parameters?: SFFSSearchParameters
   ) {
     const rawResults = await this.sffs.searchResources(query, tags, parameters)
-    const results = rawResults.map(
+    const resources = rawResults.items.map(
       (item) =>
         ({
           id: item.resource.id,
           engine: item.engine,
-          cardIds: item.card_ids,
           resource: this.findOrCreateResourceObject(item.resource),
           annotations: item.resource.annotations?.map((a) => this.findOrCreateResourceObject(a))
         }) as ResourceSearchResultItem
     )
-
-    // we probably don't want to overwrite the existing resources
-    // this.resources.set(resources)
-
-    return results
+    const spaces = rawResults.spaces.map(
+      (item) =>
+        ({
+          id: item.space.id,
+          engine: item.engine,
+          space: this.sffs.convertRawSpaceToSpace(item.space)
+        }) as SpaceSearchResultItem
+    )
+    return {
+      resources,
+      spaces,
+      space_entries: rawResults.space_entries
+    }
   }
 
   // async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
@@ -1114,7 +1091,7 @@ export class ResourceManager {
     }
 
     this.resources.update((resources) => resources.filter((r) => r.id !== id))
-    this.eventEmitter.emit('deleted', id)
+    this.emit('deleted', id)
   }
 
   async cleanupResourceTags(ids: string[]) {
@@ -1147,7 +1124,7 @@ export class ResourceManager {
     this.resources.update((resources) => resources.filter((r) => !ids.includes(r.id)))
 
     ids.forEach((id) => {
-      this.eventEmitter.emit('deleted', id)
+      this.emit('deleted', id)
     })
   }
 
@@ -1182,7 +1159,7 @@ export class ResourceManager {
       return resources
     })
 
-    this.eventEmitter.emit('updated', resource)
+    this.emit('updated', resource)
     return resource
   }
 
@@ -1579,14 +1556,6 @@ export class ResourceManager {
   }
 
   async getSpace(id: string) {
-    if (id === 'all') {
-      return everythingSpace
-    } else if (id === 'inbox') {
-      return inboxSpace
-    } else if (id === 'notes') {
-      return notesSpace
-    }
-
     return await this.sffs.getSpace(id)
   }
 
@@ -1605,11 +1574,12 @@ export class ResourceManager {
   }
 
   async addItemsToSpace(space_id: string, resourceIds: string[], origin: SpaceEntryOrigin) {
+    // TODO: is addItemsToSpace not idempotent? is this check needed?
     const existingItems = await this.getSpaceContents(space_id)
     const newItems = resourceIds.filter(
       (id) =>
         existingItems.findIndex(
-          (item) => item.resource_id === id && item.manually_added === origin
+          (item) => item.entry_id === id && item.manually_added === origin
         ) === -1
     )
 
@@ -1631,7 +1601,23 @@ export class ResourceManager {
   }
 
   async getSpaceContents(space_id: string, opts?: SpaceEntrySearchOptions): Promise<SpaceEntry[]> {
-    return await this.sffs.getSpaceContents(space_id, opts)
+    if (!opts?.search_query) {
+      return await this.sffs.getSpaceContents(space_id, opts)
+    }
+    const results = await this.searchResources(
+      opts.search_query,
+      [
+        ResourceManager.SearchTagDeleted(false),
+        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+      ],
+      {
+        spaceId: space_id,
+        keywordLimit: opts.limit,
+        semanticLimit: opts.limit
+      }
+    )
+    return results.space_entries || []
   }
 
   async deleteSpaceEntries(entries: SpaceEntry[]) {
@@ -1641,8 +1627,8 @@ export class ResourceManager {
 
     // update the spaceIds of the resources if we have them loaded
     const loadedResources = get(this.resources)
-    await entries.map(async (entry) => {
-      const resource = loadedResources.find((r) => r.id === entry.resource_id)
+    entries.map(async (entry) => {
+      const resource = loadedResources.find((r) => r.id === entry.entry_id)
       this.log.debug('deleting space entry', entry, resource)
       if (resource) {
         this.log.debug('updating resource spaceIds', resource.id, resource.spaceIdsValue)
@@ -1656,13 +1642,17 @@ export class ResourceManager {
     this.resources.update((resources) => resources)
   }
 
+  async deleteSubSpaceEntries(ids: string[]) {
+    await this.sffs.deleteSpaceEntries(ids, false)
+  }
+
   async getNumberOfReferencesInSpaces(resourceId: string): Promise<number> {
     const allFolders = await this.sffs.listSpaces()
 
     let count = 0
     for (const folder of allFolders) {
       const folderContents = await this.sffs.getSpaceContents(folder.id)
-      const references = folderContents.filter((content) => content.resource_id === resourceId)
+      const references = folderContents.filter((content) => content.entry_id === resourceId)
 
       count += references.length
     }
@@ -1681,10 +1671,10 @@ export class ResourceManager {
     for (const folder of allFolders) {
       const folderContents = await this.sffs.getSpaceContents(folder.id)
       const folderReferences = folderContents
-        .filter((content) => content.resource_id === resourceId)
+        .filter((content) => content.entry_id === resourceId)
         .map((content) => ({
           folderId: folder.id,
-          resourceId: content.resource_id,
+          resourceId: content.entry_id,
           entryId: content.id
         }))
 

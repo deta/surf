@@ -94,11 +94,7 @@
       {/if}
     </div>
     {#key $scope}
-      <button
-        class="header-btn"
-        on:click|stopPropagation={() => dispatch('ask')}
-        use:floatyButtons={buttonConfigs}
-      >
+      <button class="header-btn" on:click|stopPropagation={() => dispatch('ask')}>
         <Icon name="face.animated" size="34px" />
         <span>Ask</span>
       </button>

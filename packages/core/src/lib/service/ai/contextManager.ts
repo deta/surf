@@ -693,11 +693,51 @@ export class ContextManager {
     const item = this.getTabItem(tabId)
 
     if (item) {
-      this.log.trace('Removing tab item from context', tabId, item.id)
+      this.log.debug('Removing tab item from context', tabId, item.id)
       this.removeContextItem(item.id, trigger)
       return true
     } else {
       this.log.debug('Tab item not found in context', tabId)
+      return false
+    }
+  }
+
+  removeSpaceItem(spaceId: string, trigger?: PageChatUpdateContextEventTrigger) {
+    const item = this.itemsValue.find((item) => {
+      if (item instanceof ContextItemSpace) {
+        return item.data.id === spaceId
+      } else {
+        return false
+      }
+    })
+
+    if (item) {
+      this.log.debug('Removing space item from context', spaceId, item.id)
+      this.removeContextItem(item.id, trigger)
+      return true
+    } else {
+      this.log.debug('Space item not found in context', spaceId)
+      return false
+    }
+  }
+
+  removeResourceItem(resourceId: string, trigger?: PageChatUpdateContextEventTrigger) {
+    const item = this.itemsValue.find((item) => {
+      if (item instanceof ContextItemResource) {
+        return item.data.id === resourceId
+      } else if (item instanceof ContextItemPageTab) {
+        return get(item.item)?.data?.id === resourceId
+      } else {
+        return false
+      }
+    })
+
+    if (item) {
+      this.log.debug('Removing resource item from context', resourceId, item.id)
+      this.removeContextItem(item.id, trigger)
+      return true
+    } else {
+      this.log.debug('Resource item not found in context', resourceId)
       return false
     }
   }

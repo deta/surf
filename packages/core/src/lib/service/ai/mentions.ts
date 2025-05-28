@@ -44,7 +44,7 @@ export const createResourcesMentionsFetcher = (
         }
       )
 
-      return result
+      return result.resources
         .filter((item) => item.resource.id !== notResourceId)
         .slice(0, 10)
         .map((item) => {

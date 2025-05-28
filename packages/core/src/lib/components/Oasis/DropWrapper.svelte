@@ -16,6 +16,10 @@
   }>()
 
   const handleDrop = (drag: DragculaDragEvent) => {
+    console.log('DropWrapper handleDrop:', drag)
+    // Forward the drag event to the parent component
+    dispatch('drop', drag)
+    // Also dispatch the Drop event for backward compatibility
     dispatch('Drop', drag)
     drag.continue()
   }
@@ -24,7 +28,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
   id={`${zonePrefix ?? ''}oasis-space-${spaceId}`}
-  class="drop-wrapper bg-[#f7f7f7] dark:bg-gray-900"
+  class="drop-wrapper bg-[#F7F9FB] dark:bg-gray-900"
   class:dragover={dragOver}
   use:HTMLDragZone.action={{
     id: `${zonePrefix ?? ''}oasis-space-${spaceId}`,
@@ -45,11 +49,5 @@
       background-color 0.2s,
       border-color 175ms;
     transition-timing-function: ease-in-out;
-    //border: 1.5px dashed transparent;
-  }
-
-  :global(.drop-wrapper[data-drag-target]) {
-    //outline: 1.5px dashed gray !important;
-    //outline-offset: -1.5px;
   }
 </style>

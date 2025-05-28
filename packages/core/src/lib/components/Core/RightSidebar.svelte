@@ -19,7 +19,15 @@
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   import { launchTimeline, endTimeline } from '../Onboarding/timeline'
-  import { OnboardingFeature } from '../Onboarding/onboardingScripts'
+
+  import { CompletionEventID } from '../Onboarding/onboardingScripts'
+  import { OnboardingFeature, OnboardingAction } from '../Onboarding/onboardingScripts'
+  import ModelPicker from '../Chat/ModelPicker.svelte'
+  import AppBarButton from '../Browser/AppBarButton.svelte'
+  import A1 from '../Onboarding/sections/01.SaveAnything.svelte'
+  import NoteSettingsMenu from '../Chat/NoteSettingsMenu.svelte'
+  import Tooltip from '../Atoms/Tooltip.svelte'
+  import { debugMode } from '@horizon/core/src/lib/stores/debug'
 
   export let activeTab: Writable<RightSidebarTab>
 
@@ -64,6 +72,7 @@
   const handleOpenAsTab = async () => {
     log.debug('Opening active note as tab')
 
+    document.dispatchEvent(new CustomEvent(CompletionEventID.OpenNoteAsTab, { bubbles: true }))
     if (!$activeNote) {
       return
     }
@@ -92,13 +101,12 @@
     <div class="w-full overflow-hidden">
       {#if $activeTab === 'chat' || $activeTab === 'root'}
         <div class="flex items-center gap-1 w-full overflow-hidden">
-          <button
-            class="flex-shrink-0 flex items-center gap-2 p-1 rounded-md opacity-60 hover:opacity-100 hover:bg-sky-200 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100"
-            on:click={handleNewChat}
-          >
-            <Icon name="add" />
-            <!-- New Chat -->
-          </button>
+          <Tooltip side="bottom">
+            <AppBarButton on:click={handleNewChat} data-tooltip-disable>
+              <Icon name="edit" size="1.2rem" />
+            </AppBarButton>
+            <svelte:fragment slot="content">New Note</svelte:fragment>
+          </Tooltip>
 
           <!-- <button on:click={() => activeTab.set('root')}>
             <ChatContext />
@@ -123,9 +131,16 @@
             {/if}
 
             {#if $userSettings.experimental_notes_chat_sidebar}
-              <NoteSwitcher selectedChatId={activeNoteId} />
+              <div data-tooltip-disable>
+                <NoteSwitcher selectedChatId={activeNoteId} />
+              </div>
             {:else}
-              <ChatSwitcher selectedChatId={activeSidebarChatId} selectedChat={activeSidebarChat} />
+              <div data-tooltip-disable>
+                <ChatSwitcher
+                  selectedChatId={activeSidebarChatId}
+                  selectedChat={activeSidebarChat}
+                />
+              </div>
             {/if}
           {/if}
         </div>
@@ -135,69 +150,60 @@
         </div>
       {/if}
     </div>
-    <div class="flex-shrink-0 flex items-center {smallLayout ? 'gap-1' : 'gap-4'}">
-      {#if $userSettings.annotations_sidebar}
+    <div class="flex-shrink-0 flex items-center gap-2">
+      <!--
+{#if $userSettings.annotations_sidebar}
         <div class="flex items-center {smallLayout ? 'gap-1' : 'gap-3'}">
-          <button
-            class="flex-shrink-0 flex items-center gap-2 py-2 px-3 rounded-lg opacity-60 hover:opacity-100 hover:bg-sky-100 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 {$activeTab ===
-            'chat'
-              ? ' text-gray-900 dark:text-gray-100 bg-sky-200/70 dark:bg-gray-700 hover:bg-sky-200 dark:hover:bg-gray-800 !opacity-100'
-              : ''}"
-            on:click={() => activeTab.set('chat')}
-          >
+          <AppBarButton on:click={() => activeTab.set('chat')} active={$activeTab === 'chat'}>
             <Icon name="chat" size="16px" />
             {#if !smallLayout}
               Chat
             {/if}
-          </button>
+          </AppBarButton>
 
-          <button
-            class="flex-shrink-0 flex items-center gap-2 py-2 px-3 rounded-lg opacity-60 hover:opacity-100 hover:bg-sky-100 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 {$activeTab ===
-            'annotations'
-              ? ' text-gray-900 dark:text-gray-100 bg-sky-200/70 dark:bg-gray-700 hover:bg-sky-200 dark:hover:bg-gray-800 !opacity-100'
-              : ''}"
+          <AppBarButton
             on:click={() => activeTab.set('annotations')}
+            active={$activeTab === 'annotations'}
           >
-            <Icon name="marker" size="16px" />
+            <Icon name="marker" size="1.2rem" />
             {#if !smallLayout}
               Annotations
             {/if}
-          </button>
+          </AppBarButton>
         </div>
+      {/if}-->
+
+      {#if $debugMode}
+        <ModelPicker />
       {/if}
 
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <!--
       {#if $userSettings.experimental_notes_chat_sidebar}
-        <div
-          role="button"
-          tabindex="0"
-          on:click={handleLaunchOnboarding}
-          class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg
-          hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
-        >
-          <Icon name="help.circle" size="20px" />
-        </div>
+        <AppBarButton on:click={handleLaunchOnboarding}>
+          <Icon name="help.circle" size="1.2rem" />
+        </AppBarButton>
 
-        <div
-          role="button"
-          tabindex="0"
-          on:click={handleOpenAsTab}
-          class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
-        >
-          <Icon name="arrow.diagonal" size="20px" />
+        <AppBarButton on:click={handleOpenAsTab}>
+          <Icon name="arrow.diagonal" size="1.2rem" />
+        </AppBarButton>
+      {/if}
+      -->
+
+      {#if $activeNote}
+        <div data-tooltip-target="open-note-as-tab">
+          <NoteSettingsMenu
+            resource={$activeNote.resource}
+            showOnboarding={true}
+            on:close-sidebar={() => dispatch('close')}
+          />
         </div>
       {/if}
-
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <div
-        role="button"
-        tabindex="0"
-        on:click={handleClose}
-        class="flex items-center gap-2 p-1 text-sky-800/50 dark:text-gray-300 rounded-lg hover:bg-sky-100 hover:text-sky-800 dark:hover:bg-gray-700 group"
-      >
-        <Icon name="sidebar.right" class="group-hover:!hidden" size="20px" />
-        <Icon name="close" class="hidden group-hover:!block" size="20px" />
-      </div>
+      {#if $userSettings.tabs_orientation === 'vertical'}
+        <AppBarButton on:click={handleClose} class="group" data-tooltip-disable>
+          <Icon name="sidebar.right" class="group-hover:!hidden" size="1.2rem" />
+          <Icon name="close" class="hidden group-hover:!block" size="1.2rem" />
+        </AppBarButton>
+      {/if}
     </div>
   </div>
 

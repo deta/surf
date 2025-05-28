@@ -6,8 +6,7 @@ import {
   Editor,
   type Range,
   Extension,
-  wrappingInputRule,
-  nodeInputRule
+  wrappingInputRule
 } from '@tiptap/core'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
@@ -39,11 +38,13 @@ import mentionSuggestion, { type MentionItemsFetcher } from './extensions/Mentio
 import { CaretIndicatorExtension, type CaretPosition } from './extensions/CaretIndicator'
 import Loading from './extensions/Loading'
 import Thinking from './extensions/Thinking'
-import TrailingNode from './extensions/TrailingNode'
+import TrailingNode, { EnsureTrailingParagraph } from './extensions/TrailingNode'
 import AIOutput from './extensions/AIOutput'
 import type { MentionItem } from './types'
 import Button from './extensions/Button'
 import Resource from './extensions/Resource'
+import UseAsDefaultBrowser from './extensions/UseAsDefaultBrowser'
+import OpenStuff from './extensions/OpenStuff/openStuff'
 import type { ComponentType, SvelteComponent } from 'svelte'
 import { conditionalArrayItem } from '@horizon/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
@@ -53,7 +54,10 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Link from './extensions/Link'
 import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
 import { detailsInputRule } from './utilities/inputRules/details'
+import FloatyInput from './FloatyInput'
 import TableAddRowColumn from './extensions/TableAddRowColumn'
+import AIPrompt from './extensions/AIPrompt'
+import AIGeneration from './extensions/AIGeneration'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -75,6 +79,9 @@ export type ExtensionOptions = {
   mentionItems?: MentionItemsFetcher
   enableCaretIndicator?: boolean
   onCaretPositionUpdate?: (position: CaretPosition) => void
+  onFloatyInputStateChange?: (state: 'inline' | 'floaty' | 'bottom') => void
+  onFirstLineStateChanged?: (isFirstLine: boolean) => void
+  onLastLineVisibilityChanged?: (visible: boolean) => void
   surfletComponent?: ComponentType<SvelteComponent>
   onLinkClick?: LinkClickHandler
 }
@@ -148,6 +155,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   Button.configure({
     onClick: opts?.buttonClick
   }),
+  UseAsDefaultBrowser,
+  OpenStuff,
   Placeholder.configure({
     placeholder: ({ node }) => {
       if (node.type.name === 'detailsSummary') {
@@ -262,6 +271,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   Thinking,
   TrailingNode,
   AIOutput,
+  AIPrompt,
+  AIGeneration,
   Image,
   ...conditionalArrayItem(
     !!opts?.enableCaretIndicator,
@@ -275,6 +286,20 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       },
       updateDelay: 10 // Reduced delay for more responsive updates
     })
+  ),
+  ...conditionalArrayItem(
+    !!opts?.enableCaretIndicator && opts?.onFloatyInputStateChange !== undefined,
+    [
+      FloatyInput.configure({
+        onLastLineVisibilityChanged: opts?.onLastLineVisibilityChanged,
+        onFirstLineStateChanged: opts?.onFirstLineStateChanged,
+        observerOptions: {
+          threshold: 1,
+          rootMargin: '0px'
+        }
+      })
+      //EnsureTrailingParagraph
+    ]
   ),
   Extension.create<{ pluginKey?: PluginKey }>({
     name: 'paste-handler',

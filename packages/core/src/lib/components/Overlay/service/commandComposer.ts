@@ -12,7 +12,7 @@
 import { writable, derived, get } from 'svelte/store'
 import { useLogScope, useDebounce, normalizeURL, optimisticCheckIfUrl } from '@horizon/utils'
 import { staticActions } from './staticActions'
-import { TeletypeAction, TeletypeActionGroup, type TeletypeStaticAction } from './teletypeActions'
+import { TeletypeActionGroup, type TeletypeStaticAction } from './teletypeActions'
 import type { OasisService, OasisSpace } from '../../../service/oasis'
 import type { ConfigService } from '../../../service/config'
 import type { CMDMenuItem } from '../types'
@@ -291,7 +291,7 @@ export class CommandComposer {
           )
           this.log.debug('Oasis search results:', data)
 
-          const resources = data.map((x) => x.resource)
+          const resources = data.resources.map((x) => x.resource)
 
           await Promise.all(
             resources.map((resource) => {

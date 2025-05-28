@@ -157,4 +157,4 @@ export const BUILT_IN_MODELS = [
   }
 ] as Model[]
 
-export const DEFAULT_AI_MODEL = BuiltInModelIDs.ClaudeSonnet37
+export const DEFAULT_AI_MODEL = BuiltInModelIDs.GPT4_1

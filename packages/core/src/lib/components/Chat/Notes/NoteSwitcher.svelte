@@ -1,11 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { derived, writable, type Writable, get } from 'svelte/store'
+  import { derived, writable, type Writable } from 'svelte/store'
 
   import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
 
-  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import {
     SelectDropdown,
     SelectDropdownItem,
@@ -17,35 +16,30 @@
   } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { ResourceTypes, ResourceTagsBuiltInKeys } from '@horizon/core/src/lib/types'
-  import { SmartNote, useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
+  import { ResourceTypes } from '@horizon/core/src/lib/types'
+  import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { useConfig } from '@horizon/core/src/lib/service/config'
   import { EventContext } from '@horizon/types'
 
   export let selectedChatId: Writable<string> = writable('')
   export let open: Writable<boolean> = writable(false)
 
-  const ai = useAI()
   const toasts = useToasts()
   const log = useLogScope('ChatSwitcher')
   const oasis = useOasis()
   const resourceManager = useResourceManager()
   const smartNotes = useSmartNotes()
   const tabsManager = useTabsManager()
-  const config = useConfig()
 
   const loadingChat = writable(false)
   const searchValue = writable('')
   const searching = writable(false)
   const searchResults = writable<ResourceNote[]>([])
   const filteredNotes = writable<ResourceNote[]>([])
-
-  const userSettings = config.settings
   const notes = smartNotes.rawNotes
 
   $: if ($searchValue) {
@@ -64,73 +58,22 @@
   })
 
   // Filter notes based on the current space
-  async function filterNotesBySpace(
-    spaceId: string,
-    notes: ResourceNote[] = smartNotes.rawNotesValue
+  async function loadNotes(
+    notes: ResourceNote[] = smartNotes.rawNotesValue,
+    maxItems: number = 50
   ) {
-    if (!spaceId) return
-
-    try {
-      log.debug('Filtering notes for space:', spaceId)
-
-      // Use the provided notes or get all available notes
-      const allNotes = notes
-
-      // If Context is Inbox: Show only notes that aren't in any other space
-      if (spaceId === 'inbox') {
-        log.debug('Filtering notes for inbox')
-
-        // Get all spaces except inbox
-        const spaces = oasis.spacesValue.filter((space) => space.id !== 'inbox')
-
-        // Get all note IDs that are in other spaces
-        const notesInOtherSpaces = new Set<string>()
-        await Promise.all(
-          spaces.map(async (space) => {
-            const spaceNotes = await oasis.fetchNoteResourcesFromSpace(space.id)
-            spaceNotes.forEach((note) => notesInOtherSpaces.add(note.id))
-          })
-        )
-
-        // Filter notes to only those that aren't in any other space
-        const inboxNotes = allNotes.filter((note) => !notesInOtherSpaces.has(note.id))
-
-        log.debug('Filtered inbox notes:', inboxNotes.length)
-        filteredNotes.set(inboxNotes)
-        return
-      }
-
-      // Regular space: Only show notes from this space using the reusable method
-      const noteResources = await oasis.fetchNoteResourcesFromSpace(spaceId)
-      if (noteResources.length === 0) {
-        log.debug('No notes found in space:', spaceId)
-        filteredNotes.set([])
-        return
-      }
-
-      // Get the note IDs from the resources
-      const noteIds = noteResources.map((resource) => resource.id)
-
-      log.debug('Note IDs in space:', noteIds.length)
-
-      // Filter notes to only those in the current space
-      const spacesNotes = allNotes.filter((note) => noteIds.includes(note.id))
-
-      log.debug('Filtered notes for space:', spacesNotes.length)
-      filteredNotes.set(spacesNotes)
-    } catch (error) {
-      log.error('Error filtering notes by space:', error)
-      filteredNotes.set([])
-    }
+    filteredNotes.set(
+      notes
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, maxItems)
+    )
   }
 
-  // Watch for changes to the current space and notes
-  $: filterNotesBySpace($currentSpaceId, $notes)
+  $: loadNotes($notes)
 
   const items = derived([filteredNotes, selectedChatId], ([notes, selectedChatId]) => {
     return notes
       .filter((note) => !!note.metadata?.name && note.id !== selectedChatId)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .map(
         (note) =>
           ({
@@ -175,7 +118,7 @@
         ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
       ])
 
-      const resources = results.map((r) => r.resource) as ResourceNote[]
+      const resources = results.resources.map((r) => r.resource) as ResourceNote[]
       searchResults.set(resources)
     } catch (err) {
       log.error('Failed to search chats:', err)
@@ -229,12 +172,13 @@
     }
   }
 
-  const deleteNote = async (note: SmartNote) => {
+  const deleteNote = async (note: ResourceNote) => {
     try {
-      log.debug('Deleting note:', note.id)
+      log.debug('Deleting note:', note)
 
+      const messageSuffix = note.metadata?.name ? ` "${note.metadata.name}"` : ''
       const { closeType: confirmed } = await openDialog({
-        message: `Are you sure you want to delete the note "${note.titleValue}"?`,
+        message: `Are you sure you want to delete the note ${messageSuffix}?`,
         actions: [
           { title: 'Cancel', type: 'reset' },
           { title: 'Delete', type: 'submit', kind: 'danger' }
@@ -250,7 +194,10 @@
         await createNote()
       }
 
-      await oasis.deleteResourcesFromOasis([note.resource.id], false)
+      await oasis.deleteResourcesFromOasis([note.id], false)
+
+      // TODO: why store is not udpated on delete?
+      filteredNotes.update((notes) => notes.filter((n) => n.id !== note.id))
 
       toasts.success('Note deleted!')
     } catch (error) {
@@ -258,7 +205,7 @@
     }
   }
 
-  const getContextItems = (note: SmartNote, active: boolean) =>
+  const getContextItems = (note: ResourceNote, active: boolean) =>
     [
       {
         type: 'action',
@@ -289,11 +236,7 @@
   onMount(async () => {
     try {
       loadingChat.set(true)
-
-      // Initial filtering of notes based on current space
-      if ($currentSpaceId) {
-        await filterNotesBySpace($currentSpaceId)
-      }
+      await loadNotes($notes)
     } catch (err) {
       log.error('Failed to list chats:', err)
     } finally {
@@ -306,14 +249,14 @@
       if (space.id !== $currentSpaceId) return
       if (resourceIds.length === 0) return
 
-      filterNotesBySpace($currentSpaceId)
+      loadNotes($notes)
     })
 
     const unsubRemoved = oasis.on('removed-resources', (space, resourceIds) => {
       if (space.id !== $currentSpaceId) return
       if (resourceIds.length === 0) return
 
-      filterNotesBySpace($currentSpaceId)
+      loadNotes($notes)
     })
 
     return () => {
@@ -329,6 +272,7 @@
   selected={$selectedChatId}
   footerItem={selectNewItem}
   loading={$searching}
+  disabled={$loadingChat}
   {searchValue}
   {open}
   side="top"
@@ -342,12 +286,9 @@
   <button
     use:tooltip={{ text: 'Switch Note', position: 'right' }}
     class="transform whitespace-nowrap active:scale-95 disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center p-1 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-md text-sky-1000 dark:text-gray-100 text-sm"
+    disabled={$loadingChat}
   >
-    {#if $loadingChat}
-      <Icon name="spinner" className="opacity-40" size="16px" />
-    {:else}
-      <Icon name="chevron.down" className="opacity-60 {$open ? 'rotate-180' : ''}" />
-    {/if}
+    <Icon name="chevron.down" className="opacity-60 {$open ? 'rotate-180' : ''}" />
   </button>
 
   <div

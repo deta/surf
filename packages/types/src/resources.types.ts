@@ -99,6 +99,18 @@ export interface SFFSResource {
   spaceIds?: string[]
 }
 
+export interface SFFSSpace {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SFFSResourceOrSpace {
+  id: string
+  item_type: 'resource' | 'space'
+}
+
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'
 
 export interface SFFSSearchGeneralParameters {
@@ -117,7 +129,11 @@ export type SFFSSearchParameters = SFFSSearchGeneralParameters & SFFSSearchSeman
 
 export interface SFFSSearchResultItem {
   resource: SFFSResource
-  card_ids: string[]
+  engine: SFFSSearchResultEngine
+}
+
+export interface SFFSSearchResultItemSpace {
+  space: SFFSSpace
   engine: SFFSSearchResultEngine
 }
 

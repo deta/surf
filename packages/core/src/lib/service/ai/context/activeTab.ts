@@ -22,18 +22,16 @@ export class ContextItemActiveTab extends ContextItemBase {
   cachedItemPrompts: Map<string, ChatPrompt[]>
   loadingUnsub: (() => void) | null = null
 
-  loading: Writable<boolean>
   currentTab: Writable<Tab | null>
   item: Writable<ContextItemResource | ContextItemSpace | null>
 
   activeTabUnsub: () => void
 
   constructor(service: ContextService) {
-    super(service, ContextItemTypes.ACTIVE_TAB, 'browser')
+    super(service, ContextItemTypes.ACTIVE_TAB, 'sparkles')
 
     this.item = writable(null)
     this.currentTab = writable(null)
-    this.loading = writable(false)
 
     this.cachedItemPrompts = new Map()
 
@@ -51,6 +49,10 @@ export class ContextItemActiveTab extends ContextItemBase {
       } else {
         return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon
       }
+    })
+
+    this.iconString = derived([this.icon], ([icon]) => {
+      return this.contextItemIconToString(icon, this.fallbackIcon)
     })
 
     this.activeTabUnsub = this.service.tabsManager.activeTab.subscribe((activeTab) => {
@@ -74,10 +76,6 @@ export class ContextItemActiveTab extends ContextItemBase {
 
   get currentTabValue() {
     return get(this.currentTab)
-  }
-
-  get loadingValue() {
-    return get(this.loading)
   }
 
   compareTabs(tab1: Tab, tab2: Tab) {

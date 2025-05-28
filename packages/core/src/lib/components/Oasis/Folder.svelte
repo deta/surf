@@ -16,42 +16,43 @@
     'update-data': UpdateFolderDataEvent
     select: string
     'open-space-as-tab': OpenSpaceAsTabEvent
+    'navigate-context': string
     'space-selected': SpaceSelectedEvent
     'open-space-and-chat': { spaceId: string }
     'use-as-context': string
     pin: string
     unpin: string
     Drop: { drag: DragculaDragEvent; spaceId: string }
+    'batch-open-as-tabs': void
+    'batch-use-as-context': void
+    'batch-remove': {
+      spaceIds: string[]
+      deleteFromStuff: boolean
+    }
+    'force-reload': void
   }
 </script>
 
 <script lang="ts">
   import { createEventDispatcher, tick, onMount, onDestroy } from 'svelte'
-  import { writable, type Readable } from 'svelte/store'
-  import { Resource, ResourceManager, useResourceManager } from '../../service/resources'
+  import { writable, get, type Readable } from 'svelte/store'
+  import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { selectedFolder } from '../../stores/oasis'
+  import { selectedItemIds } from './utils/select'
   import type { DragTypes } from '../../types'
-  import {
-    DragTypeNames,
-    ResourceTagsBuiltInKeys,
-    ResourceTypes,
-    SpaceEntryOrigin
-  } from '../../types'
+  import { DragTypeNames, SpaceEntryOrigin } from '../../types'
   import {
     useLogScope,
     hover,
     isModKeyPressed,
     conditionalArrayItem,
-    generateID,
-    wait
+    generateID
   } from '@horizon/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
   import {
-    ChangeContextEventTrigger,
-    CreateSpaceEventFrom,
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
     UpdateSpaceSettingsEventTrigger
@@ -68,15 +69,23 @@
   import { DynamicIcon, Icon } from '@horizon/icons'
   import ContextLinksSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/ContextLinksSidebar.svelte'
   import { useContextService } from '@horizon/core/src/lib/service/contexts'
+  import SpacePreviewSimple from './SpacePreviewSimple.svelte'
+
+  // TODO: check if we're passing these in still
+  export const showPreview = false
+  export const expandable = false
+  export const selectedItemsCount: number = 0
+  //
 
   export let folder: OasisSpace
   export let depth: number = 0
   export let selected: boolean
-  export let showPreview = false
+  export let isInSpace: boolean = false
   export let isEditing = false // New prop to control editing state
   export let allowPinning = false
-  export let expandable = false
-  export let editingFolderId: Readable<string | null>
+  export let editingSpaceId: Readable<string | null>
+  export let displayMode: 'list' | 'card' = 'list'
+  export let loadResources: boolean = displayMode === 'card'
 
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher<FolderEvents>()
@@ -100,10 +109,11 @@
 
   const editMode = writable(false)
   const hovered = writable(false)
-  const draggedOver = writable(false)
   const inView = writable(false)
   const previousName = writable($folderDetails.folderName)
   const expanded = writable(false)
+  const loadingResources = writable(false)
+  //const cardResources = writable<Resource[]>([])
 
   const uid = generateID()
 
@@ -128,37 +138,12 @@
     }, 100)
   }
 
-  const getPreviewResources = async (numberOfLatestResourcesToFetch: number) => {
-    let result: Resource[] = []
-
-    if (folder.id === 'all') {
-      result = await resourceManager.listResourcesByTags([
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-      ])
-    } else {
-      const contents = await resourceManager.getSpaceContents(folder.id)
-
-      for (const item of contents.slice(0, numberOfLatestResourcesToFetch)) {
-        const resource = await resourceManager.getResource(item.resource_id)
-        if (resource) result.push(resource)
-
-        await tick() // Yield to the event loop to avoid blocking
-      }
-    }
-
-    log.debug('Resources:', result)
-
-    return result
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, numberOfLatestResourcesToFetch)
-  }
-
   const handleClick = () => {
     dispatch('select', folder.id)
+  }
+
+  const handleNavigateContext = () => {
+    dispatch('navigate-context', folder.id)
   }
 
   const handleSpaceSelect = async (event: MouseEvent) => {
@@ -181,14 +166,15 @@
 
   const handleStartEdit = () => {
     if (folder.id !== 'all') {
+      // Store the current name before editing starts
+      previousName.set($folderDetails.folderName)
+      // Set edit mode to true
+      editMode.set(true)
       dispatch('editing-start', { id: folder.id })
     }
   }
 
   const handleDoubleClick = () => {
-    // if (folder.id !== 'all') {
-    //   dispatch('editing-start', { id: folder.id })
-    // }
     dispatch('use-as-context', folder.id)
   }
 
@@ -201,6 +187,8 @@
       previousName.set($folderDetails.folderName)
       await tick()
     }
+    // Explicitly set edit mode to false
+    editMode.set(false)
     dispatch('editing-end')
 
     resourceManager.telemetry.trackUpdateSpaceSettings(
@@ -232,29 +220,67 @@
     }
   }
 
-  const handleDelete = async () => {
+  const getAllSpacesForSubmenu = () => {
+    const spaces = get(oasis.spaces)
+    return spaces
+      .filter((space) => space && space.id !== folder.id) // Don't include the current folder
+      .filter(
+        (space) =>
+          space && !space.dataValue.nestingData?.path?.some((item) => item.id === folder.id)
+      ) // Don't include child spaces
+      .map((space) => ({
+        type: 'action' as const,
+        text: space.dataValue.folderName,
+        action: () => handleCreateLink(space.id, space.dataValue.folderName)
+      }))
+  }
+
+  const handleCreateLink = async (targetSpaceId: string, targetSpaceName: string) => {
     try {
-      const { closeType: confirmed } = await openDialog({
-        icon: `space;;${folder.id}`,
-        message: `Are you sure you want to delete "${folder.dataValue.folderName}?"`,
-        actions: [
-          { title: 'Cancel', type: 'reset' },
-          { title: 'Delete', type: 'submit', kind: 'danger' }
-        ]
-      })
-      if (!confirmed) {
-        return
+      const success = await oasis.nestSpaceWithin(folder.id, targetSpaceId)
+      if (success) {
+        toast.success(`Created a link to '${$folderDetails.folderName}' in '${targetSpaceName}'`)
+        dispatch('force-reload')
+      } else {
+        toast.error('Failed to move space')
       }
-
-      log.debug('deleting space', folder.id)
-      await oasis.deleteSpace(folder.id)
-
-      await tabsManager.removeSpaceTabs(folder.id)
-
-      await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
-      toast.success('Context deleted!')
     } catch (error) {
-      log.error('Failed to delete folder:', error)
+      log.error('Error moving space:', error)
+      toast.error('Failed to move space')
+    }
+  }
+
+  const handleRemove = async (event?: MouseEvent, deleteFromStuff = true) => {
+    try {
+      log.debug('handling folder removal', folder.id, 'deleteFromStuff:', deleteFromStuff)
+
+      if (deleteFromStuff) {
+        const { closeType: confirmed } = await openDialog({
+          icon: `space;;${folder.id}`,
+          message: `Are you sure you want to delete "${folder.dataValue.folderName}"?(Resources inside will not be deleted)`,
+          actions: [
+            { title: 'Cancel', type: 'reset' },
+            { title: 'Delete', type: 'submit', kind: 'danger' }
+          ]
+        })
+        if (!confirmed) {
+          return
+        }
+        // Delete the folder completely
+        await oasis.deleteSpace(folder.id)
+        await tabsManager.removeSpaceTabs(folder.id)
+        await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
+        toast.success(deleteFromStuff ? 'Context deleted!' : 'Context removed!')
+        dispatch('force-reload')
+      } else {
+        dispatch('batch-remove', {
+          spaceIds: [folder.id],
+          deleteFromStuff
+        })
+      }
+    } catch (error) {
+      log.error('Failed to handle folder removal:', error)
+      toast.error(deleteFromStuff ? 'Failed to delete context' : 'Failed to remove context')
     }
   }
 
@@ -303,26 +329,6 @@
     }
   }
 
-  const createLinkedContext = async () => {
-    const newSpace = await oasis.createNewBrowsingSpace(
-      ChangeContextEventTrigger.SpaceInOasis,
-      CreateSpaceEventFrom.OasisSpacesView,
-      { switch: false, newTab: false }
-    )
-
-    contextService.createLink(folder.id, newSpace.id)
-
-    oasis.selectedSpace.set(newSpace.id)
-
-    await wait(150)
-
-    // pls don't sue me
-    const elem = document.getElementById(`expand-btn-${folder.id}`)
-    if (elem) {
-      elem.click()
-    }
-  }
-
   const handleDragStart = (drag: DragculaDragEvent<DragTypes>) => {
     drag.item!.data.setData(DragTypeNames.SURF_SPACE, folder)
     drag.continue()
@@ -343,16 +349,45 @@
   }
 
   const handleDrop = async (drag: DragculaDragEvent) => {
+    log.debug('handling drop', drag)
     if (dragoverTimeout) clearTimeout(dragoverTimeout)
-    dispatch('Drop', { drag, spaceId: folder.id })
+
+    // Check if the drag contains a space
+    if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+      const droppedSpace = drag.item.data.getData(DragTypeNames.SURF_SPACE) as OasisSpace
+
+      // Don't allow dropping a space onto itself
+      if (droppedSpace.id === folder.id) {
+        log.debug('Cannot drop a space onto itself')
+        return
+      }
+
+      try {
+        const droppedFolderName = droppedSpace.dataValue.folderName
+        const folderName = folder.dataValue.folderName
+
+        // Move the space into this folder
+        await oasis.nestSpaceWithin(droppedSpace.id, folder.id)
+        toast.success(`Created a link to '${droppedFolderName}' in '${folderName}'`)
+
+        // Select the folder we just dropped into
+        dispatch('select', folder.id)
+
+        // Stop propagation for folder nesting drops
+        drag.stopPropagation()
+      } catch (error) {
+        log.error('Error moving space:', error)
+        toast.error('Error moving space')
+      }
+    } else {
+      // Handle other types of drops
+      dispatch('Drop', { drag, spaceId: folder.id })
+      drag.continue()
+    }
   }
 
   const handleColorChange = async (event: CustomEvent<[string, string]>) => {
     dispatch('update-data', { colors: event.detail })
-  }
-
-  const handleOpenAsContext = () => {
-    dispatch('use-as-context', folder.id)
   }
 
   const handleChatWithSpace = () => {
@@ -371,6 +406,8 @@
     } else if (e.code === 'Enter') {
       e.preventDefault()
       if (value.trim() !== '') {
+        // Explicitly set edit mode to false
+        editMode.set(false)
         dispatch('editing-end')
       }
     } else if (e.code === 'Enter' && e.shiftKey) {
@@ -378,14 +415,17 @@
       createFolderWithAI(value)
     } else if (e.code === 'Escape') {
       e.preventDefault()
+      // Explicitly set edit mode to false
+      editMode.set(false)
       dispatch('editing-end')
     }
   }
 
-  const getRandomRotation = () => {
-    const maxRotation = 1.5
-    const minRotation = -1.5
-    return `${Math.random() * (maxRotation - minRotation) + minRotation}deg`
+  // Function for handling keyboard events in card mode
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !$editMode) {
+      handleClick()
+    }
   }
 
   const initializeIntersectionObserver = () => {
@@ -490,10 +530,24 @@
     deepest?.elem.classList.remove('faded-nested-folder')
   }
 
-  onMount(() => {
+  onMount(async () => {
     if ($userSettings.experimental_context_linking_sidebar) {
       initializeIntersectionObserver()
       applyFolderNestingStyles(false)
+    }
+
+    // Load resources if in card mode
+    if (displayMode === 'card' && loadResources) {
+      loadingResources.set(true)
+      try {
+        //const resources = await getPreviewResources(4) // Limit to 4 for the grid
+        //cardResources.set(resources)
+      } catch (error) {
+        //log.error('Error loading resources for card view:', error)
+        //cardResources.set([])
+      } finally {
+        loadingResources.set(false)
+      }
     }
   })
 
@@ -508,161 +562,342 @@
   }
 </script>
 
-<div
-  id={`folder-${folder.id}`}
-  data-folder-uid={folderUID}
-  data-depth={depth}
-  class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
-  class:selected-folder={selected}
-  data-vaul-no-drag
-  data-folder-id={folder.id}
-  role="none"
-  draggable={true}
-  use:HTMLDragItem.action={{}}
-  on:mouseup={(e) => {
-    if (e.button === 1) {
-      // Middle mouse button
-      e.preventDefault()
-      addItemToTabs()
-    }
-  }}
-  on:DragStart={handleDragStart}
-  use:HTMLDragZone.action={{
-    accepts: (drag) => {
-      if (
-        drag.isNative ||
-        drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-        drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-        drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-      ) {
-        // Cancel if tab dragged is a space itself
-        if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
-          return false
-        }
-
-        return true
-      }
-      return false
-    }
-  }}
-  on:DragEnter={handleDragEnter}
-  on:DragLeave={handleDragLeave}
-  on:Drop={handleDrop}
-  use:contextMenu={{
-    canOpen: folder.id !== 'all',
-    items: [
-      ...(folder.id !== 'all'
-        ? [
-            {
-              type: 'action',
-              icon: 'circle-dot',
-              text: 'Open Context',
-              action: handleOpenAsContext
-            },
-            { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
-            {
-              type: 'action',
-              icon: 'chat',
-              text: 'Open in Chat',
-              action: () => handleChatWithSpace()
-            },
-            { type: 'separator' },
-            {
-              type: 'action',
-              icon: 'add',
-              text: 'Create Linked Context',
-              action: () => createLinkedContext()
-            },
-            { type: 'separator' },
-            ...conditionalArrayItem(allowPinning, {
-              type: 'action',
-              icon: $folderDetails.pinned ? `pinned-off` : `pin`,
-              text: $folderDetails.pinned ? 'Unpin' : 'Pin',
-              action: () =>
-                $folderDetails.pinned ? dispatch('unpin', folder.id) : dispatch('pin', folder.id)
-            }),
-            { type: 'action', icon: 'edit', text: 'Rename', action: handleStartEdit },
-            { type: 'action', icon: 'trash', text: 'Delete', kind: 'danger', action: handleDelete }
-          ]
-        : [])
-    ]
-  }}
->
+{#if displayMode === 'list'}
   <div
-    class="folder {selected
-      ? 'bg-sky-100 dark:bg-gray-700'
-      : 'hover:bg-sky-50 dark:hover:bg-gray-600'}"
-    data-has-links={$spaceLinks.length > 0 && $userSettings.experimental_context_linking_sidebar}
-    on:click={$editMode ? null : handleSpaceSelect}
-    on:dblclick={handleDoubleClick}
+    id={`folder-${folder.id}`}
+    data-folder-uid={folderUID}
+    data-depth={depth}
+    class="folder-wrapper {processing ? 'magic-in-progress' : ''}"
+    class:list={displayMode === 'list'}
+    class:selected-folder={selected}
+    data-vaul-no-drag
+    data-folder-id={folder.id}
     role="none"
-    use:hover={hovered}
-    bind:this={previewContainer}
+    draggable={true}
+    use:HTMLDragItem.action={{}}
+    on:mouseup={(e) => {
+      if (e.button === 1) {
+        // Middle mouse button
+        e.preventDefault()
+        addItemToTabs()
+      }
+    }}
+    on:DragStart={handleDragStart}
+    use:HTMLDragZone.action={{
+      accepts: (drag) => {
+        if (
+          drag.isNative ||
+          drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+          drag.item?.data.hasData(DragTypeNames.SURF_SPACE) ||
+          drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+          drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        ) {
+          // Cancel if tab dragged is a space itself
+          if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
+            return false
+          }
+
+          return true
+        }
+        return false
+      }
+    }}
+    on:DragEnter={handleDragEnter}
+    on:DragLeave={handleDragLeave}
+    on:Drop={handleDrop}
+    use:contextMenu={{
+      canOpen: true,
+      items: [
+        { type: 'action', icon: 'list-add', text: 'Open as New Tab', action: addItemToTabs },
+        {
+          type: 'action',
+          icon: 'chat',
+          text: 'Ask Context',
+          action: () => handleChatWithSpace()
+        },
+        { type: 'separator' },
+        {
+          type: 'sub-menu',
+          search: true,
+          icon: 'link',
+          text: 'Link this context in...',
+          items: getAllSpacesForSubmenu()
+        },
+        { type: 'separator' },
+        ...conditionalArrayItem(allowPinning, {
+          type: 'action',
+          icon: $folderDetails.pinned ? `pinned-off` : `pin`,
+          text: $folderDetails.pinned ? 'Unpin' : 'Pin',
+          action: () =>
+            $folderDetails.pinned ? dispatch('unpin', folder.id) : dispatch('pin', folder.id)
+        }),
+        {
+          type: 'action',
+          icon: 'trash',
+          text: 'Delete from Stuff',
+          kind: 'danger',
+          action: () => handleRemove(undefined, true)
+        }
+      ]
+    }}
   >
     <div
-      class="folder-label"
-      data-tooltip-target={$folderDetails.folderName === onboardingSpace.name ? 'demo-space' : ''}
+      class="folder {selected
+        ? 'bg-sky-100 dark:bg-gray-700'
+        : 'hover:bg-sky-50 dark:hover:bg-gray-600'}"
+      data-has-links={$spaceLinks.length > 0 && $userSettings.experimental_context_linking_sidebar}
+      on:click={$editMode ? null : handleSpaceSelect}
+      on:dblclick={handleDoubleClick}
+      role="none"
+      use:hover={hovered}
+      bind:this={previewContainer}
     >
-      <div class="folder-leading">
-        <div class="folder-icon">
-          <button
-            id="expand-btn-{folder.id}"
-            on:click={() => ($expanded = !$expanded)}
-            class="expand-toggle"
-          >
-            <Icon name="chevron.right" className={$expanded ? 'rotate-90' : ''} size="17px" />
-          </button>
+      <div
+        class="folder-label"
+        data-tooltip-target={$folderDetails.folderName === onboardingSpace.name ? 'demo-space' : ''}
+      >
+        <div class="folder-leading">
+          <div class="folder-icon">
+            <button
+              id="expand-btn-{folder.id}"
+              on:click={() => ($expanded = !$expanded)}
+              class="expand-toggle"
+            >
+              <Icon name="chevron.right" className={$expanded ? 'rotate-90' : ''} size="17px" />
+            </button>
 
-          <div class="space-icon-wrapper" on:click|stopPropagation role="none">
-            <!-- <SpaceIcon on:change={handleColorChange} {folder} disablePopoverTransition /> -->
-            <DynamicIcon name={folder.getIconString()} size="17px" />
+            <div class="space-icon-wrapper" on:click|stopPropagation role="none">
+              <!-- <SpaceIcon on:change={handleColorChange} {folder} disablePopoverTransition /> -->
+              <DynamicIcon name={folder.getIconString()} size="14px" />
+            </div>
           </div>
+
+          {#if $editMode}
+            <input
+              bind:this={inputElement}
+              id={`folder-input-${folder.id}`}
+              style={`width: 100%;`}
+              type="text"
+              bind:value={$folderDetails.folderName}
+              class="folder-input isEditing"
+              on:keydown={handleKeyDown}
+              on:blur={handleBlur}
+            />
+          {:else}
+            <div
+              class="folder-input text-[#244581] dark:text-sky-100/90"
+              style={`width: ${inputWidth};`}
+              role="none"
+              on:click|stopPropagation={handleSpaceSelect}
+            >
+              {$folderDetails.folderName}
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+
+    {#if $expanded && $userSettings.experimental_context_linking_sidebar}
+      <ContextLinksSidebar
+        space={folder}
+        {editingSpaceId}
+        depth={depth + 1}
+        on:select
+        on:space-selected
+        on:open-space-as-tab
+        on:update-data
+        on:use-as-context
+        on:open-space-and-chat
+        on:Drop
+        on:editing-start
+        on:editing-end
+        on:pin
+        on:unpin
+        on:navigate-context
+        on:batch-open-as-tabs
+        on:batch-use-as-context
+      />
+    {/if}
+  </div>
+{:else}
+  <!-- Card View Mode -->
+  <div
+    class="context-card"
+    class:selected
+    draggable={true}
+    on:click={handleNavigateContext}
+    on:keydown={handleKeydown}
+    tabindex="0"
+    role="button"
+    aria-label="Open {$folderDetails.folderName} context"
+    data-selectable={true}
+    data-selectable-id={folder.id}
+    data-selectable-type="space"
+    data-folder-id={folder.id}
+    on:select
+    on:space-selected
+    on:open-space-as-tab
+    on:update-data
+    on:use-as-context
+    on:open-space-and-chat
+    on:Drop
+    on:editing-start
+    on:editing-end
+    on:pin
+    on:unpin
+    on:batch-open-as-tabs
+    on:batch-use-as-context
+    use:HTMLDragItem.action={{}}
+    on:DragStart={handleDragStart}
+    use:HTMLDragZone.action={{
+      accepts: (drag) => {
+        if (
+          drag.isNative ||
+          drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+          drag.item?.data.hasData(DragTypeNames.SURF_SPACE) ||
+          drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+          drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+        ) {
+          // Cancel if tab dragged is a space itself
+          if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {
+            return false
+          }
+
+          return true
+        }
+        return false
+      }
+    }}
+    on:DragEnter={handleDragEnter}
+    on:DragLeave={handleDragLeave}
+    on:Drop={handleDrop}
+    on:mouseup={(e) => {
+      if (e.button === 1) {
+        // Middle mouse button
+        e.preventDefault()
+        addItemToTabs()
+      }
+    }}
+    use:contextMenu={{
+      canOpen: folder.id !== 'all' && $selectedItemIds.length === 0,
+      items: [
+        {
+          type: 'action',
+          icon: 'list-add',
+          text: 'Open as New Tab',
+          action: addItemToTabs
+        },
+        {
+          type: 'action',
+          icon: 'chat',
+          text: 'Ask Context',
+          action: () => handleChatWithSpace()
+        },
+        { type: 'separator' },
+        {
+          type: 'sub-menu',
+          icon: 'link',
+          search: true,
+          text: 'Link this context in...',
+          items: getAllSpacesForSubmenu()
+        },
+        { type: 'separator' },
+        ...conditionalArrayItem(allowPinning, {
+          type: 'action',
+          icon: $folderDetails.pinned ? `pinned-off` : `pin`,
+          text: $folderDetails.pinned ? 'Unpin' : 'Pin',
+          action: () =>
+            $folderDetails.pinned ? dispatch('unpin', folder.id) : dispatch('pin', folder.id)
+        }),
+        { type: 'action', icon: 'edit', text: 'Rename', action: handleStartEdit },
+        ...(isInSpace
+          ? [
+              {
+                type: 'sub-menu',
+                icon: 'trash',
+                text: 'Delete',
+                kind: 'danger',
+                items: [
+                  {
+                    type: 'action',
+                    icon: 'close',
+                    text: 'Delete Link',
+                    kind: 'danger',
+                    action: () => {
+                      handleRemove(undefined, false)
+                    }
+                  },
+                  {
+                    type: 'action',
+                    icon: 'trash',
+                    text: 'Delete Context',
+                    kind: 'danger',
+                    action: () => {
+                      handleRemove(undefined, true)
+                    }
+                  }
+                ]
+              }
+            ]
+          : [
+              {
+                type: 'action',
+                icon: 'trash',
+                text: 'Delete from Stuff',
+                kind: 'danger',
+                action: () => {
+                  handleRemove(undefined, true)
+                }
+              }
+            ])
+      ]
+    }}
+  >
+    <!-- Resources preview section -->
+    <div class="context-resources">
+      {#if $loadingResources}
+        <div class="loading-resources">
+          <Icon name="spinner" size="24px" />
+          <span>Loading...</span>
+        </div>
+      {:else}
+        <SpacePreviewSimple icon={folder.getIconString()} isLink={isInSpace} />
+      {/if}
+      <!--
+      {:else if $cardResources && $cardResources.length > 0}
+        <div class="resources-grid">
+          <SpacePreviewSimple icon={folder.getIconString()} />
+        </div>
+      {:else}
+        <div class="empty-resources">
+          <SpacePreviewSimple icon={folder.getIconString()} />
+        </div>
+      {/if}
+      -->
+    </div>
+    <div class="context-footer">
+      <div class="context-title-row">
+        <!-- Icon next to the title -->
+        <div class="icon-wrapper">
+          <SpaceIcon {folder} disablePopoverTransition on:change={handleColorChange} />
         </div>
 
         {#if $editMode}
           <input
             bind:this={inputElement}
-            id={`folder-input-${folder.id}`}
-            style={`width: 100%;`}
             type="text"
             bind:value={$folderDetails.folderName}
-            class="folder-input isEditing"
+            class="context-name-input isEditing"
             on:keydown={handleKeyDown}
             on:blur={handleBlur}
           />
         {:else}
-          <div
-            class="folder-input text-[#244581] dark:text-sky-100/90"
-            style={`width: ${inputWidth};`}
-            role="none"
-            on:click|stopPropagation={handleSpaceSelect}
-          >
-            {$folderDetails.folderName}
-          </div>
+          <h3 class="context-name">{$folderDetails.folderName}</h3>
         {/if}
       </div>
     </div>
   </div>
-
-  {#if $expanded && $userSettings.experimental_context_linking_sidebar}
-    <ContextLinksSidebar
-      space={folder}
-      {editingFolderId}
-      depth={depth + 1}
-      on:select
-      on:space-selected
-      on:open-space-as-tab
-      on:update-data
-      on:use-as-context
-      on:open-space-and-chat
-      on:Drop
-      on:editing-start
-      on:editing-end
-      on:pin
-      on:unpin
-    />
-  {/if}
-</div>
+{/if}
 
 <style lang="scss">
   .folder-wrapper {
@@ -672,15 +907,33 @@
     width: 100%;
   }
 
-  :global(.folder-wrapper[data-drag-preview]) {
+  :global([data-density='compact'] .masonry-grid .context-card),
+  :global([data-density='compact'] .masonry-grid .card-container) {
+    min-height: 175px;
+  }
+
+  :global([data-density='cozy'] .masonry-grid .context-card),
+  :global([data-density='cozy'] .masonry-grid .card-container) {
+    min-height: 250px;
+  }
+
+  :global([data-density='comfortable'] .masonry-grid .context-card),
+  :global([data-density='comfortable'] .masonry-grid .card-container) {
+    min-height: 420px;
+  }
+
+  :global([data-density='spacious'] .masonry-grid .context-card),
+  :global([data-density='spacious'] .masonry-grid .card-container) {
+    min-height: 420px;
+  }
+
+  :global(.folder-wrapper[data-drag-preview]),
+  :global(.context-card[data-drag-preview]) {
     width: var(--drag-width, auto) !important;
     height: var(--drag-height, auto) !important;
-
-    background: rgba(255, 255, 255, 1);
-    border-radius: 16px;
-    border: 2px solid rgba(10, 12, 24, 0.1) !important;
   }
-  :global(.folder-wrapper:not([data-drag-preview])[data-drag-target]) {
+  :global(.folder-wrapper:not([data-drag-preview])[data-drag-target]),
+  :global(.context-card:not([data-drag-preview])[data-drag-target]) {
     border-radius: 16px;
     outline: 1.5px dashed gray;
     outline-offset: -1.5px;
@@ -918,7 +1171,7 @@
   .folder.active {
     color: #585130;
     z-index: 1000;
-    background-color: #blue;
+    background-color: blue;
   }
 
   .draggedOver {
@@ -975,6 +1228,242 @@
     }
     100% {
       background-position: 0% 50%;
+    }
+  }
+
+  /* Card View Mode Styles */
+  .context-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    max-height: 700px;
+    height: 100%;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    position: relative;
+
+    &.selected,
+    &:global(.selected) {
+      outline: 3px solid rgba(10, 143, 255, 0.4) !important;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    &[data-drag-target] {
+      outline: 2px dashed rgba(10, 143, 255, 0.6) !important;
+      background: rgba(10, 143, 255, 0.05);
+    }
+
+    &:focus {
+      outline: 2px solid rgba(59, 130, 246, 0.5);
+    }
+    .context-footer {
+      background: rgba(245, 250, 255, 0.5);
+      padding: 0 1.5rem 0;
+      .context-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.25rem;
+        .icon-wrapper {
+          width: 24px;
+          height: 24px;
+          min-width: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          .emoji {
+            font-size: 1.1rem;
+            line-height: 1;
+          }
+          .image {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 4px;
+            object-fit: cover;
+          }
+          .color-icon {
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+          }
+        }
+      }
+      .context-name {
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .context-name-input {
+        border: none;
+        background: transparent;
+        font-size: 0.95rem;
+        font-weight: 500;
+        width: 100%;
+        padding: 0.25rem;
+        outline: none;
+
+        &.isEditing {
+          border-radius: 4px;
+          outline: 4px solid rgba(0, 110, 255, 0.4);
+
+          :global(.dark) & {
+            outline: 4px solid rgba(0, 110, 255, 0.4);
+            color: #fff;
+          }
+        }
+
+        &:focus {
+          background-color: transparent;
+        }
+
+        &::selection {
+          background-color: rgba(0, 110, 255, 0.2);
+        }
+      }
+      .context-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        opacity: 0.7;
+        .tab-count {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          background-color: rgba(0, 123, 255, 0.1);
+          color: #0284c7;
+          padding: 0.15rem 0.4rem;
+          border-radius: 1rem;
+          font-weight: 500;
+          font-size: 0.7rem;
+          opacity: 1;
+        }
+      }
+      .live-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: #0284c7;
+        font-weight: 500;
+      }
+    }
+    .context-resources {
+      flex: 1;
+      overflow: hidden;
+      background: rgba(245, 250, 255, 0.5);
+      display: flex;
+      flex-direction: column;
+      .resources-grid {
+        flex-grow: 1;
+        height: 100%;
+        width: -webkit-fill-available;
+        gap: 0.5rem;
+        display: flex;
+      }
+
+      .empty-resources {
+        flex-grow: 1;
+      }
+
+      .resource-preview-wrapper {
+        height: 100%;
+        overflow: hidden;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: white;
+        :global(.resource-preview) {
+          height: 100%;
+          border-radius: 0;
+          box-shadow: none;
+        }
+      }
+      .empty-resources,
+      .loading-resources {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        opacity: 0.6;
+        font-size: 0.85rem;
+      }
+
+      .loading-resources {
+        :global(svg) {
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
+  }
+  :global(.dark) {
+    .context-card {
+      background: rgba(31, 41, 55, 0.8);
+      border-color: rgba(250, 250, 250, 0.075);
+      box-shadow:
+        0 0 0 1px rgba(205, 205, 161, 0.06),
+        0 2px 5px 0 rgba(205, 205, 161, 0.04),
+        0 1px 1.5px 0 rgba(255, 255, 255, 0.01);
+      &:hover {
+        outline: 2px solid rgba(250, 250, 250, 0.2);
+      }
+      &.selected,
+      &:global(.selected) {
+        outline: 3px solid rgba(10, 143, 255, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      .context-footer {
+        background: rgba(15, 23, 42, 0.3);
+        color: #e2e8f0;
+
+        .context-name {
+          color: #f1f5f9;
+        }
+
+        .context-name-input {
+          color: #f1f5f9;
+
+          &::placeholder {
+            color: rgba(241, 245, 249, 0.6);
+          }
+        }
+
+        .context-meta {
+          color: rgba(226, 232, 240, 0.7);
+
+          .tab-count {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+          }
+        }
+
+        .live-badge {
+          color: #60a5fa;
+        }
+      }
+
+      .context-resources {
+        background: rgba(15, 23, 42, 0.3);
+        .resource-preview-wrapper {
+          background: rgba(30, 41, 59, 0.8);
+        }
+      }
     }
   }
 </style>

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import { type PillProperties } from './ContextBubbleItemWrapper.svelte'
   import {
     ContextItemResource,
     ContextItemSpace,
@@ -12,7 +11,6 @@
   import ContextBubbleItemPlaceholder from './ContextBubbleItemPlaceholder.svelte'
 
   export let item: ContextItemActiveTab
-  export let pillProperties: PillProperties
 
   $: label = item.label
   $: icon = item.icon
@@ -30,7 +28,6 @@
   {#if $activeItem instanceof ContextItemSpace}
     <ContextBubbleSpace
       item={$activeItem}
-      {pillProperties}
       additionalLabel="Active Tab"
       loading={$loading}
       on:remove-item={handleRemove}
@@ -40,7 +37,6 @@
   {:else if $activeItem instanceof ContextItemResource}
     <ContextBubbleResource
       item={$activeItem}
-      {pillProperties}
       additionalLabel="Active Tab"
       loading={$loading}
       on:remove-item={handleRemove}
@@ -50,7 +46,6 @@
   {:else}
     <ContextBubbleItemPlaceholder
       id={item.id}
-      {pillProperties}
       loading={$loading}
       additionalLabel={$loading ? 'Active Tab' : 'No Active Tab'}
       on:remove-item={handleRemove}

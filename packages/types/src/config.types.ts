@@ -21,6 +21,7 @@ export type UserSettings = {
   automatic_chat_prompt_generation: boolean
   adblockerEnabled: boolean
   historySwipeGesture: boolean
+  has_seen_hero_screen: boolean
 
   // Experiments
   annotations_sidebar: boolean
@@ -42,6 +43,7 @@ export type UserSettings = {
   vision_image_tagging: boolean
   turntable_favicons: boolean
   auto_toggle_pip: boolean
+  enable_custom_prompts: boolean
 
   /**
    * @deprecated use individual feature flags instead

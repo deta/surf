@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte'
-import { useLogScope } from '@horizon/utils'
+import { useLogScope, wait } from '@horizon/utils'
 import { writable, get, derived, type Writable } from 'svelte/store'
 import type { TabsManager } from './tabs'
 import type { MagicSidebar } from '../components/Sidebars/MagicSidebar.svelte'
@@ -10,6 +10,12 @@ import {
   isGeneratingAI,
   updateAIGenerationProgress
 } from './ai/generationState'
+import { nextStep, activeStep, prevStep } from '../components/Onboarding/timeline'
+import { CompletionEventID } from '../components/Onboarding/onboardingScripts'
+
+export const screenPickerSelectionActive = writable(false)
+export const visionViewState = writable<'default' | 'empty'>('default')
+export const activeOnboardingTabId = writable<string | null>(null)
 
 const ONBOARDING_CONTEXT_KEY = 'onboarding'
 
@@ -53,16 +59,36 @@ export class OnboardingService {
     this.unsubscribeFromAIGeneration = isGeneratingAI.subscribe((isGenerating) => {
       if (isGenerating) {
         // If AI generation has started, update our loading state
-        this.setLoadingState(OnboardingLoadingState.GeneratingAI, 'AI is generating content...')
+        this.setLoadingState(OnboardingLoadingState.GeneratingAI, 'Surf is generating content...')
       } else if (this.getLoadingState().state === OnboardingLoadingState.GeneratingAI) {
         // Only clear if we're in AI generation state (don't affect other loading states)
         this.clearLoadingState()
+
+        // Check if we need to automatically proceed to the next step
+        this.checkAndProceedAfterAIGeneration()
       }
     })
   }
 
   // Store the unsubscribe function
   private unsubscribeFromAIGeneration: () => void
+
+  /**
+   * Check if the current onboarding step has proceedAfterAIGeneration set to true
+   * and automatically proceed to the next step if needed
+   */
+  private checkAndProceedAfterAIGeneration() {
+    // Get the current active step
+    const currentStep = get(activeStep)
+
+    document.dispatchEvent(new CustomEvent(CompletionEventID.AIGenerationDone))
+
+    // If there's an active step and it has proceedAfterAIGeneration set to true, proceed to the next step
+    if (currentStep && currentStep.proceedAfterAIGeneration === true) {
+      this.log.debug('Automatically proceeding to next step after AI generation completed')
+      nextStep()
+    }
+  }
 
   /**
    * Set the loading state
@@ -111,6 +137,75 @@ export class OnboardingService {
   }
 
   /**
+   * Create a surflet in the current editor
+   * @param surfletCode The code to use for the surflet
+   */
+  createSurflet(surfletCode?: string) {
+    this.log.debug('Creating surflet')
+    // This method will be called from the Tooltip component
+    // It will dispatch a custom event that can be listened for in TextResource.svelte
+    const event = new CustomEvent('create-surflet', {
+      detail: { code: surfletCode },
+      bubbles: true,
+      composed: true
+    })
+    document.dispatchEvent(event)
+    this.log.debug('Dispatched create-surflet event')
+  }
+
+  /**
+   * Stream surflet code to simulate AI generation
+   * @param fullCode The complete code to stream
+   * @param initialChunkSize Initial code chunk size to show immediately
+   * @param chunkSize Size of each chunk to add during streaming
+   * @param delayBetweenChunks Delay in ms between adding chunks
+   */
+  streamSurfletCode(
+    fullCode: string,
+    initialChunkSize = 200,
+    chunkSize = 50,
+    delayBetweenChunks = 100
+  ) {
+    this.log.debug('Starting surflet code streaming')
+
+    // Clean the code by removing markdown code block markers if present
+    const cleanCode = fullCode.replace(/```javascript|```/g, '')
+
+    // Create initial surflet with just the first chunk
+    const initialCode = cleanCode.substring(0, initialChunkSize)
+    this.createSurflet(initialCode)
+
+    // Stream the rest of the code in chunks
+    let currentPosition = initialChunkSize
+
+    const streamNextChunk = () => {
+      if (currentPosition >= cleanCode.length) {
+        this.log.debug('Surflet code streaming complete')
+        return
+      }
+
+      // Calculate next chunk end position
+      const nextPosition = Math.min(currentPosition + chunkSize, cleanCode.length)
+      const updatedCode = cleanCode.substring(0, nextPosition)
+
+      // Update the surflet with the new chunk added
+      const updateEvent = new CustomEvent('update-surflet', {
+        detail: { code: updatedCode },
+        bubbles: true,
+        composed: true
+      })
+      document.dispatchEvent(updateEvent)
+
+      // Update position and schedule next chunk
+      currentPosition = nextPosition
+      setTimeout(streamNextChunk, delayBetweenChunks)
+    }
+
+    // Start streaming after a short delay
+    setTimeout(streamNextChunk, delayBetweenChunks * 2)
+  }
+
+  /**
    * Open a URL and trigger the chat onboarding flow
    * @param url The URL to open
    * @param question Optional question to ask about the content
@@ -148,7 +243,7 @@ export class OnboardingService {
         await this.addActiveTabToContext()
 
         // Give a small delay to ensure everything is ready
-        await new Promise((r) => setTimeout(r, 500))
+        await wait(500)
 
         // Update loading state to indicate content is loaded
         this.clearLoadingState()
@@ -160,15 +255,13 @@ export class OnboardingService {
           // Set loading state for AI generation
           this.setLoadingState(
             OnboardingLoadingState.GeneratingAI,
-            'Preparing AI response...',
+            "Preparing Surf's response...",
             question
           )
-
+          await wait(500)
           // Generate the response with the provided question
           // The question will be inserted by the insertQuestionAndGenerateResponse method
-          await this.insertQuestionAndGenerateResponse(question)
-
-          // The loading state will be cleared by the AI generation process
+          await this.insertQuestion(question)
         }
       } else {
         this.log.error('Failed to create tab for URL', url)
@@ -177,6 +270,7 @@ export class OnboardingService {
     } catch (error) {
       this.log.error('Error in openURLAndChat', error)
       this.clearLoadingState()
+      prevStep()
     }
   }
 
@@ -208,7 +302,7 @@ export class OnboardingService {
           this.log.debug(
             `Waiting for active tab to be available (attempt ${attempts + 1}/${maxAttempts})`
           )
-          await new Promise((r) => setTimeout(r, 200))
+          await wait(200)
           activeTab = this.tabsManager.activeTabValue
           attempts++
         }
@@ -240,7 +334,7 @@ export class OnboardingService {
           const maxAttempts = 5
 
           while (!browserTab && attempts < maxAttempts) {
-            await new Promise((r) => setTimeout(r, 300))
+            await wait(300)
             browserTab = this.tabsManager.browserTabsValue[activeTab.id]
             attempts++
             this.log.debug(`Waiting for browser tab (attempt ${attempts}/${maxAttempts})`)
@@ -271,14 +365,14 @@ export class OnboardingService {
           // Update loading state
           this.setLoadingState(
             OnboardingLoadingState.LoadingContent,
-            'Content loaded successfully',
+            'Parsing page content...',
             activeTab.id
           )
           // Give a small additional delay for any final processing
           setTimeout(() => {
             this.clearLoadingState()
             resolve()
-          }, 500)
+          }, 1000)
         } else {
           this.log.debug('App detection timed out, proceeding anyway')
           // Update loading state
@@ -330,7 +424,7 @@ export class OnboardingService {
         const maxAttempts = 10
 
         while (!activeTab && attempts < maxAttempts) {
-          await new Promise((r) => setTimeout(r, 200))
+          await new Promise((r) => setTimeout(r, 400))
           activeTab = this.tabsManager.activeTabValue
           attempts++
           this.log.debug(`Waiting for active tab (attempt ${attempts}/${maxAttempts})`)
@@ -404,7 +498,7 @@ export class OnboardingService {
    * Insert a question into the chat and trigger AI completion
    * @param question Optional question to ask, defaults to a generic question about the paper
    */
-  async insertQuestionAndGenerateResponse(question?: string): Promise<void> {
+  async insertQuestion(question?: string): Promise<void> {
     return new Promise((resolve) => {
       if (!this.magicSidebar) {
         this.log.error('MagicSidebar not registered, cannot insert question')
@@ -421,35 +515,54 @@ export class OnboardingService {
 
       // Insert the question
       if (typeof this.magicSidebar.insertQueryIntoChat === 'function') {
-        this.magicSidebar.insertQueryIntoChat(finalQuestion)
+        this.magicSidebar.insertQueryIntoChat(`<p>${finalQuestion}</p>`, 'input')
 
         // The active tab has already been added to the context in openURLAndChat
         // Just update the progress and submit the chat message
-        updateAIGenerationProgress(25, 'Preparing to submit query...')
+        updateAIGenerationProgress(25, 'Hit submit to ask Surf...')
 
-        // Wait longer for the question to be inserted and editor to be fully initialized
-        // This helps prevent the "No output node found" error
-        setTimeout(() => {
-          if (typeof this.magicSidebar?.submitChatMessage === 'function') {
-            this.log.debug('Submitting chat message after ensuring editor is initialized')
-            updateAIGenerationProgress(50, 'Submitting query to AI...')
-            this.magicSidebar.submitChatMessage()
+        document.dispatchEvent(
+          new CustomEvent(CompletionEventID.ArticleAddedToContext, { bubbles: true })
+        )
 
-            // The global AI generation state will be updated by TextResource
-            // when the generation completes, which will automatically update our loading state
-            // through the subscription we set up in the constructor
-          } else {
-            // If we can't submit the message, end the AI generation
-            endAIGeneration()
-          }
-          resolve()
-        }, 2500) // Increased timeout to ensure editor is ready
+        endAIGeneration()
       } else {
         this.log.error('insertQueryIntoChat not available on MagicSidebar')
         // End AI generation if we can't insert the query
         endAIGeneration()
         resolve()
       }
+    })
+  }
+
+  /**
+   * Insert a question into the chat and trigger AI completion
+   * @param question Optional question to ask, defaults to a generic question about the paper
+   */
+  async generateResponse(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.magicSidebar) {
+        this.log.error('MagicSidebar not registered, cannot insert question')
+        this.clearLoadingState()
+        resolve()
+        return
+      }
+
+      if (typeof this.magicSidebar?.submitChatMessage === 'function') {
+        this.log.debug('Submitting chat message after ensuring editor is initialized')
+        updateAIGenerationProgress(50, 'Submitting query to AI...')
+        this.magicSidebar.submitChatMessage()
+
+        // The global AI generation state will be updated by TextResource
+        // when the generation completes, which will automatically update our loading state
+        // through the subscription we set up in the constructor
+      } else {
+        // If we can't submit the message, end the AI generation
+        this.log.error('insertQueryIntoChat not available on MagicSidebar')
+        endAIGeneration()
+      }
+
+      resolve()
     })
   }
 
@@ -463,9 +576,6 @@ export class OnboardingService {
     return service
   }
 
-  /**
-   * Use the onboarding service from the Svelte context
-   */
   static use() {
     if (OnboardingService.self) {
       return OnboardingService.self
@@ -477,6 +587,50 @@ export class OnboardingService {
     }
 
     return service
+  }
+
+  /**
+   * Create an onboarding space and ensure context is switched
+   * @param tabsManager TabsManager instance
+   * @param oasis OasisService instance
+   * @param createSpaceTab Function to create a space tab
+   * @param resourceManager ResourceManager instance
+   * @param callback Optional callback function to signal completion
+   * @returns Promise that resolves when space creation and context switch are complete
+   */
+  async createOnboardingSpace(
+    tabsManager: TabsManager,
+    oasis: any, // Using any here to avoid circular dependencies
+    createSpaceTab: any,
+    resourceManager: any,
+    callback?: (success: boolean) => void
+  ) {
+    try {
+      // Create the onboarding space and wait for it to complete
+      this.log.debug('Creating onboarding space')
+
+      // Import the createOnboardingSpace function from demoitems
+      const { createOnboardingSpace } = await import('./demoitems')
+
+      const space = await createOnboardingSpace(tabsManager, oasis, createSpaceTab, resourceManager)
+      this.log.debug('Onboarding space creation and context switch complete')
+
+      // Call the callback to signal completion if provided
+      if (typeof callback === 'function') {
+        callback(true)
+      }
+
+      return space
+    } catch (error) {
+      this.log.error('Error creating onboarding space:', error)
+
+      // Call the callback with false to signal failure if provided
+      if (typeof callback === 'function') {
+        callback(false)
+      }
+
+      throw error
+    }
   }
 }
 

@@ -5,7 +5,7 @@
   import Folder from '../Folder.svelte'
 
   export let space: OasisSpace
-  export let editingFolderId: Readable<string | null>
+  export let editingSpaceId: Readable<string | null>
   export let onlySelected: boolean = false
   export let depth: number = 0
 
@@ -27,9 +27,9 @@
     <Folder
       folder={space}
       selected={$selectedSpace === space.id}
-      isEditing={$editingFolderId === space.id}
+      isEditing={$editingSpaceId === space.id}
       {depth}
-      {editingFolderId}
+      {editingSpaceId}
       allowPinning
       on:select
       on:space-selected

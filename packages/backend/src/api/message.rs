@@ -51,9 +51,16 @@ pub enum HistoryMessage {
 }
 
 #[derive(Debug)]
-pub struct CreateSpaceEntryInput {
-    pub resource_id: String,
+pub struct SpaceEntryInput {
+    pub entry_type: SpaceEntryType,
+    pub entry_id: String,
     pub manually_added: i32,
+}
+
+#[derive(Debug)]
+pub struct DeleteSpaceEntryInput {
+    pub id: String,
+    pub entry_type: SpaceEntryType,
 }
 
 #[derive(Debug)]
@@ -74,14 +81,24 @@ pub enum SpaceMessage {
     // here the string is `resource_id`, bool is `manually_added`
     CreateSpaceEntries {
         space_id: String,
-        entries: Vec<CreateSpaceEntryInput>,
+        entries: Vec<SpaceEntryInput>,
     },
     GetSpaceEntries {
         space_id: String,
         sort_by: Option<String>,
         order_by: Option<String>,
+        limit: Option<usize>,
     },
-    DeleteSpaceEntries(Vec<String>),
+    DeleteSpaceEntries(Vec<DeleteSpaceEntryInput>),
+    MoveSpace {
+        space_id: String,
+        new_parent_space_id: String,
+    },
+    DeleteEntriesInSpaceByEntryIds {
+        space_id: String,
+        entry_ids: Vec<String>,
+        entry_type: SpaceEntryType,
+    },
 }
 
 #[derive(Debug)]
@@ -96,6 +113,7 @@ pub enum ResourceMessage {
     RecoverResource(String),
     ListResourcesByTags(Vec<ResourceTagFilter>),
     ListResourcesByTagsNoSpace(Vec<ResourceTagFilter>),
+    ListAllResourcesAndSpaces(Vec<ResourceTagFilter>),
     SearchResources {
         query: String,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,

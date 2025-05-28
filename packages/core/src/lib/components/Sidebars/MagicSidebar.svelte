@@ -79,9 +79,9 @@
     chatComponent?.submitChatMessage('active')
   }
 
-  export const insertQueryIntoChat = async (query: string) => {
+  export const insertQueryIntoChat = async (query: string, target?: 'note' | 'input') => {
     if (chatComponent && typeof chatComponent.insertQueryIntoChat === 'function') {
-      await chatComponent.insertQueryIntoChat(query)
+      await chatComponent.insertQueryIntoChat(query, target)
 
       await tick()
     }

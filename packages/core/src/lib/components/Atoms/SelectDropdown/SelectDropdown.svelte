@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { derived, writable, type Readable } from 'svelte/store'
-  import { DropdownMenu, Separator, type CustomEventHandler } from 'bits-ui'
+  import { DropdownMenu, type CustomEventHandler } from 'bits-ui'
 
   import { flyAndScaleDirectional, focus } from '@horizon/utils'
   import type { SelectItem } from '.'
@@ -149,7 +149,7 @@
       </div>
     </DropdownMenu.Trigger>
     <DropdownMenu.Content
-      class="xw-full rounded-xl max-w-[250px] border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
+      class="xw-full rounded-xl w-[26ch] border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
       transition={(node, params) => flyAndScaleDirectional(node, { ...params, side })}
       sideOffset={8}
       {side}
@@ -164,15 +164,12 @@
         on:mouseleave={(e) => closeOnMouseLeave && handleMouseLeave(e)}
       >
         {#if search !== 'disabled'}
-          <div
-            class="flex-shrink-0 px-1.5 py-1.5 pb-1 z-10 relative"
-            class:bottom-shadow={overflowTop}
-          >
+          <div class="flex-shrink-0 p-1 pb-1 z-10 relative" class:bottom-shadow={overflowTop}>
             <input
               bind:this={inputElem}
               bind:value={$searchValue}
               placeholder={inputPlaceholder}
-              class="w-full px-3 py-1.5 font-[450] dark:text-gray-100 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg outline-1 outline outline-sky-700 focus:outline focus:outline-1"
+              class="w-full px-2 py-1 text-[0.95rem] font-[450] dark:text-gray-100 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg outline-1 outline outline-sky-700 focus:outline focus:outline-1"
               use:focus={inputFocused}
             />
 
@@ -187,20 +184,20 @@
         {/if}
 
         <div
-          class="w-full h-full overflow-auto px-1 py-1.5"
+          class="w-full h-full overflow-auto px-1 py-1"
           bind:this={listElem}
           on:scroll={handleScrollCheck}
         >
           {#if $filterdItems.length > 0}
             {#each $filterdItems as item, idx (item.id + idx)}
               {#if item.topSeparator}
-                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px]" />
+                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px] my-1" />
               {/if}
 
               <DropdownMenu.Item
                 on:click={() => dispatch('select', item.id)}
                 disabled={item.disabled}
-                class="flex h-10 select-none items-center rounded-lg py-3 pl-3 pr-1.5 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none {item.disabled
+                class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none {item.disabled
                   ? 'opacity-50'
                   : ''} {selected === item.id
                   ? 'text-sky-600 dark:text-sky-400'
@@ -214,7 +211,7 @@
               </DropdownMenu.Item>
 
               {#if item.bottomSeparator}
-                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px]" />
+                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px] my-1" />
               {/if}
             {/each}
           {:else if loading}
@@ -237,7 +234,7 @@
           >
             <DropdownMenu.Item
               on:click={() => dispatch('select', footerItem.id)}
-              class="flex h-10 select-none items-center rounded-lg py-3 pl-3 pr-1.5 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
+              class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
               footerItem.id
                 ? 'text-sky-600 dark:text-sky-400'
                 : 'dark:text-gray-100'}"

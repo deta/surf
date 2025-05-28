@@ -2,9 +2,7 @@ import { type SvelteComponent } from 'svelte'
 
 import {
   type ActionBase,
-  ActionDisplayPriority,
   type ActionPanelOption,
-  ActionSelectPriority,
   type Handler
 } from '@deta/teletype/src/components/Teletype/types'
 
@@ -54,8 +52,10 @@ export const TeletypeActionDisplayLabels = {
   [TeletypeAction.NavigateSuggestionHostname]: 'Suggestion Hostname',
   [TeletypeAction.OpenResource]: 'Resource',
   [TeletypeAction.OpenTab]: 'Open Tab',
-  [TeletypeAction.OpenSpaceInStuff]: 'Open Context in Stuff ↗',
-  [TeletypeAction.OpenSpaceAsContext]: 'Open Context ↗',
+  //[TeletypeAction.OpenSpaceInStuff]: 'Open Context in Stuff ↗',
+  //[TeletypeAction.OpenSpaceAsContext]: 'Switch as Browsing Context ↗',
+  [TeletypeAction.OpenSpaceInStuff]: '',
+  [TeletypeAction.OpenSpaceAsContext]: '',
   [TeletypeAction.OpenSpaceAsTab]: 'Open as Tab ↗',
   [TeletypeAction.OpenStuff]: 'Open Stuff',
   [TeletypeAction.CopyURL]: 'Copy URL',

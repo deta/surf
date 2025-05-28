@@ -71,3 +71,12 @@ export const RESOURCE_FILTERS: FilterItem[] = [
     tags: [...filterMediaTags('neprefix'), ...filterSpaceResourcesTags('neprefix')]
   }
 ]
+
+export const CONTEXT_FILTERS: FilterItem[] = [
+  {
+    id: 'contexts',
+    label: 'Contexts'
+  }
+]
+
+export const ALL_FILTERS: FilterItem[] = RESOURCE_FILTERS.concat(CONTEXT_FILTERS)

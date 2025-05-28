@@ -1,15 +1,3 @@
-<script lang="ts" context="module">
-  export type PillProperties = {
-    x: number
-    y: number
-    rotate: number
-    borderRadius: number
-    textOpacity: number
-    textBlur: number
-    textX: number
-  }
-</script>
-
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
@@ -31,7 +19,6 @@
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let item: ContextItem
-  export let pillProperties: PillProperties
   export let loading: boolean = false
   export let failed: boolean = false
   export let opened: Writable<boolean> = writable(false)
@@ -102,7 +89,7 @@
   <div slot="trigger" class="flex items-center gap-2">
     <div
       role="none"
-      class="shine-border pill transform group/pill"
+      class="shine-border transform group/pill"
       class:experimental={$userConfigSettings.experimental_notes_chat_input &&
         $userConfigSettings.experimental_notes_chat_sidebar}
       on:click={() => handleSelect(item.id)}
@@ -113,10 +100,8 @@
         role="none"
         class="pill flex items-center border-[0.5px] border-l border-t border-r border-gray-200 dark:border-gray-600 {failed
           ? 'bg-red-50 hover:bg-red-100 dark:bg-red-800 dark:hover:bg-red-700'
-          : 'bg-white dark:bg-gray-800'} z-0 {item.type === 'screenshot'
-          ? 'px-[5px]'
-          : 'px-[11px]'} hover:bg-gray-50 dark:hover:bg-gray-700 transform"
-        style="min-width: 40px; height: 36px; transition: transform 0.3s, background-color 0.3s;"
+          : 'bg-white dark:bg-gray-800'} z-0 hover:bg-gray-50 dark:hover:bg-gray-700 transform"
+        style="transition: transform 0.3s, background-color 0.3s;"
       >
         <button
           class="remove absolute top-0 left-0 shadow-sm transform"
@@ -127,10 +112,7 @@
         </button>
 
         <div
-          class="flex items-center justify-center flex-shrink-0 group-hover/pill:opacity-100 {item.type ===
-          'screenshot'
-            ? 'w-8 h-8'
-            : 'w-5 h-5'}"
+          class="flex items-center justify-center flex-shrink-0 group-hover/pill:opacity-100 w-[1.25rem] h-[1.25rem]"
           class:loading
           class:failed
           class:opacity-100={!loading && !failed}
@@ -139,17 +121,10 @@
         </div>
 
         {#if additionalLabel}
-          <div class="px-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+          <div class="px-2 font-medium text-gray-700 dark:text-gray-200">
             {additionalLabel}
           </div>
         {/if}
-
-        <!-- <span
-          class="ml-2 whitespace-nowrap overflow-hidden text-sm"
-          style="opacity: {pillProperties.textOpacity}; filter: blur({pillProperties.textBlur}px); transform: translateX({pillProperties.textX}px); transition: opacity 0.3s, filter 0.3s;"
-        >
-          {$label}
-        </span> -->
       </div>
     </div>
   </div>
@@ -174,18 +149,23 @@
   .pill {
     cursor: default;
     transition: transform 0.3s ease;
-    border-radius: 11px 11px 11px 11px;
+
+    padding: 0.35rem 0.85rem;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
   }
 
-  .experimental {
-    &.pill,
-    .pill {
-      border-radius: 11px 11px 0 0;
-      transform: none !important;
-      transform-origin: center center;
-      height: 36px;
-    }
-  }
+  //.experimental {
+  //  &.pill,
+  //  .pill {
+  //    border-top: 0;
+  //    border-radius: 0 0 11px 11px;
+  //    transform: none !important;
+  //    transform-origin: center center;
+  //    height: 36px;
+  //  }
+  //}
 
   .pill {
     button.remove {

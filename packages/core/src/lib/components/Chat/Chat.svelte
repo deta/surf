@@ -22,6 +22,7 @@
   import type { SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import ChatControls from './ChatControls.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { onMount } from 'svelte'
 
   export let note: SmartNote
 
@@ -51,11 +52,14 @@
     noteComp.replaceContent(text)
   }
 
-  export const insertQueryIntoChat = async (query: string) => {
+  export const insertQueryIntoChat = async (query: string, target: 'note' | 'input' = 'note') => {
     if (!noteComp) return
-    console.log('xxx-insert')
 
-    noteComp.insertText(query, true)
+    if (target === 'input') {
+      noteComp.setChatInputContent(query, true)
+    } else {
+      noteComp.insertText(query, true)
+    }
   }
 
   export const addChatWithQuery = async (query: string, replace = false) => {
@@ -196,6 +200,11 @@
       log.error('Error doing magic', e)
     }
   }
+
+  onMount(async () => {
+    log.debug('Mounting chat', note.id)
+    await contextManager.generatePrompts()
+  })
 </script>
 
 <div
@@ -242,7 +251,7 @@
         hideContextSwitcher
         manualContextControl
         autoGenerateTitle
-        autofocus={false}
+        autofocus={true}
         showTitle={false}
         on:highlightWebviewText
         on:seekToTimestamp
@@ -251,6 +260,7 @@
     </div>
   {/if}
 
+  <!--
   <ChatControls
     chatId={note.id}
     active={note.id === $activeNoteId}
@@ -262,7 +272,7 @@
     on:process-context-item
     on:run-prompt={handleRunPrompt}
     on:submit={handleSubmit}
-  />
+  />-->
 </div>
 
 <style lang="scss">

@@ -158,6 +158,7 @@
   export const getMediaPlaybackState = () => isMediaPlaying
   export const requestEnterPip = () => webview?.requestEnterPip()
   export const requestExitPip = () => webview?.requestExitPip()
+  export const setMute = (v: boolean) => webview?.setMute(v)
   export const isUsingPictureInPicture = () => webview?.isUsingPictureInPicture()
 
   let app: DetectedWebApp | null = null

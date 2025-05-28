@@ -1,7 +1,8 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { conditionalArrayItem, hover, isModKeyPressed, useLogScope, wait } from '@horizon/utils'
+  import { isModKeyPressed, useLogScope, wait } from '@horizon/utils'
+  import { sortSpacesByLastUsed } from '@horizon/core/src/lib/service/contexts'
   import { Icon } from '@horizon/icons'
   import {
     SelectDropdown,
@@ -9,21 +10,20 @@
     type SelectItem
   } from '../../Atoms/SelectDropdown/index'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
-  import { contextMenu, type CtxItem } from '../ContextMenu.svelte'
   import {
     ChangeContextEventTrigger,
     CreateSpaceEventFrom,
-    DeleteSpaceEventTrigger,
     OpenHomescreenEventTrigger
   } from '@horizon/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
+  import { configureBrowsingContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { tick } from 'svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { HTMLDragArea } from '@horizon/dragcula'
-  import { openDialog } from '../Dialog/Dialog.svelte'
   import ScopeActionButtons from './ScopeActionButtons.svelte'
+  import BrowsingContextSelector from '../../Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
+  import { applyBrowsingContextSelection } from '@horizon/core/src/lib/service/migration'
 
   export let horizontalTabs = false
   export let backgroundImage: Readable<{ path: string } | undefined>
@@ -34,7 +34,6 @@
   const toasts = useToasts()
   const desktopManager = useDesktopManager()
 
-  const telemetry = oasis.telemetry
   const spaces = oasis.spaces
   const activeScopeId = tabsManager.activeScopeId
   const lastUsedScopes = tabsManager.lastUsedScopes
@@ -45,6 +44,7 @@
   const searchValue = writable('')
   const titleHovered = writable(false)
   const forceShowTitle = writable(false)
+  const showBrowsingContextSelector = writable(false)
 
   let inputElem: HTMLInputElement
 
@@ -54,45 +54,85 @@
     return spaces.find((space) => space.id === activeScopeId)
   })
 
-  const items = derived(
-    [spaces, activeScopeId, lastUsedScopes],
-    ([spaces, activeScopeId, lastUsedScopes]) => {
-      const spaceItems = spaces
-        .filter((space) => space.id !== activeScopeId)
+  // Helper function to convert spaces to SelectItems
+  const spacesToSelectItems = (spaces: OasisSpace[]) => {
+    return spaces.map((space) => ({
+      id: space.id,
+      label: space.dataValue.folderName,
+      data: space
+    }))
+  }
+
+  // Filtered spaces for browsing context display
+  const allSpaceItems = derived([spaces, lastUsedScopes], ([spaces, lastUsedScopes]) => {
+    const sortedSpaces = [...spaces].sort((a, b) => sortSpacesByLastUsed(a, b, lastUsedScopes))
+    return spacesToSelectItems(sortedSpaces)
+  })
+
+  const directSearchResults = derived(
+    [spaces, lastUsedScopes, searchValue],
+    ([$spaces, $lastUsedScopes, $searchValue]) => {
+      if (!$searchValue) return []
+
+      const lowerSearchValue = $searchValue.toLowerCase()
+      const filteredSpaces = $spaces
+        .filter((space) => space.dataValue.folderName.toLowerCase().includes(lowerSearchValue))
+        .sort((a, b) => sortSpacesByLastUsed(a, b, $lastUsedScopes))
         .sort((a, b) => {
-          // Sort by last used at the top
-          const aLastUsedIndex = lastUsedScopes.indexOf(a.id)
-          const bLastUsedIndex = lastUsedScopes.indexOf(b.id)
-
-          if (aLastUsedIndex !== -1 && bLastUsedIndex !== -1) {
-            return aLastUsedIndex - bLastUsedIndex
-          }
-
-          if (aLastUsedIndex !== -1) {
-            return -1
-          }
-
-          if (bLastUsedIndex !== -1) {
-            return 1
-          }
-
-          return a.indexValue - b.indexValue
+          const aUseAsBrowsingContext = a.data.dataValue?.useAsBrowsingContext ? 1 : 0
+          const bUseAsBrowsingContext = b.data.dataValue?.useAsBrowsingContext ? 1 : 0
+          return bUseAsBrowsingContext - aUseAsBrowsingContext
         })
-        .map((space) => ({
-          id: space.id,
-          label: space.dataValue.folderName,
-          data: space
-        }))
 
-      return spaceItems
+      return spacesToSelectItems(filteredSpaces)
     }
   )
 
-  const filterdItems = derived([items, searchValue], ([$items, $searchValue]) => {
-    if (!$searchValue) return $items
+  // Filtered spaces for browsing context selection
+  const items = derived([spaces, lastUsedScopes], ([spaces, lastUsedScopes]) => {
+    const spaceItems = spaces
+      .filter((space) => {
+        // Filter spaces based on useAsBrowsingContext flag
+        try {
+          const spaceData = space.dataValue
+          return spaceData.useAsBrowsingContext === true
+        } catch (error) {
+          log.error('Error filtering spaces:', error)
+          return false
+        }
+      })
+      .sort((a, b) => sortSpacesByLastUsed(a, b, lastUsedScopes))
+      .map((space) => ({
+        id: space.id,
+        label: space.dataValue.folderName,
+        data: space
+      }))
 
-    return $items.filter((item) => item.label.toLowerCase().includes($searchValue.toLowerCase()))
+    return spaceItems
   })
+
+  // Items for display - when searching, use direct search results; otherwise use filtered browsing contexts
+  const filterdItems = derived(
+    [items, allSpaceItems, searchValue, directSearchResults],
+    ([$items, $allSpaceItems, $searchValue, $directSearchResults]) => {
+      // If not searching, use the filtered browsing contexts
+      if (!$searchValue) {
+        return $items
+      }
+
+      // When searching, use direct search results if available
+      if ($directSearchResults.length > 0) {
+        return $directSearchResults
+      }
+
+      // Fallback to filtering allSpaceItems if direct results aren't ready yet
+      return $allSpaceItems.filter(
+        (item) =>
+          item.label.toLowerCase().includes($searchValue.toLowerCase()) &&
+          item.data.dataValue?.useAsBrowsingContext
+      )
+    }
+  )
 
   $: activeSpaceData = $activeSpace?.data
 
@@ -128,6 +168,15 @@
 
   const handleChange = async (e: CustomEvent<string>) => {
     const value = e.detail
+
+    if (value === 'configure') {
+      showBrowsingContextSelector.set(true)
+      return
+    }
+
+    if (value !== 'new') {
+      await oasis.toggleBrowsingContext(value, true)
+    }
 
     await switchSpace(value)
   }
@@ -171,48 +220,6 @@
     }
   }
 
-  const handleDeleteSpace = async (space: OasisSpace) => {
-    try {
-      const { closeType: confirmed } = await openDialog({
-        icon: `space;;${space.id}`,
-        message: `Are you sure you want to delete "${space.dataValue.folderName}?"`,
-        actions: [
-          { title: 'Cancel', type: 'reset' },
-          { title: 'Delete', type: 'submit', kind: 'danger' }
-        ]
-      })
-
-      if (!confirmed) {
-        return
-      }
-
-      if (space.id === $activeScopeId) {
-        await switchSpace('default')
-      }
-
-      log.debug('deleting space', space.id)
-      await oasis.deleteSpace(space.id)
-
-      await tabsManager.removeSpaceTabs(space.id)
-
-      await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
-      toasts.success('Context deleted!')
-    } catch (error) {
-      log.error('Failed to delete folder:', error)
-    }
-  }
-
-  const handleRenameSpace = async (space: OasisSpace) => {
-    if (space.id !== $activeScopeId) {
-      await switchSpace(space.id)
-      await tick()
-    }
-
-    await wait(300)
-
-    handleEditName()
-  }
-
   const handleEditName = async () => {
     if ($activeScopeId === null) {
       return
@@ -244,31 +251,6 @@
     desktopManager.setVisible(!$desktopVisible, { trigger: OpenHomescreenEventTrigger.Click })
   }
 
-  const getSpaceContextItems = (space: OasisSpace, active: boolean) =>
-    [
-      {
-        type: 'action',
-        icon: 'arrow.right',
-        hidden: active,
-        text: 'Open in Stuff',
-        action: () => handleOpenSpaceInOasis(space.id)
-      },
-      { type: 'separator', hidden: active },
-      {
-        type: 'action',
-        icon: 'edit',
-        text: 'Rename Context',
-        action: () => handleRenameSpace(space)
-      },
-      {
-        type: 'action',
-        icon: 'trash',
-        text: 'Delete Context',
-        kind: 'danger',
-        action: () => handleDeleteSpace(space)
-      }
-    ] satisfies CtxItem[]
-
   let hideTimeout: ReturnType<typeof setTimeout>
 
   const handleTitleMouseEnter = () => {
@@ -280,7 +262,34 @@
     // No delay
     titleHovered.set(false)
   }
+
+  const useAsBrowsingContext = (space: OasisSpace) => {
+    oasis.toggleBrowsingContext(space.id, true)
+  }
+
+  const removeFromBrowsingContext = (space: OasisSpace) => {
+    oasis.toggleBrowsingContext(space.id, false)
+  }
+
+  const handleBrowsingContextSelection = async (
+    event: CustomEvent<{ selectedSpaces: string[] }>
+  ) => {
+    const selectedSpaceIds = event.detail.selectedSpaces
+    log.debug('Applying browsing context selection for spaces:', selectedSpaceIds)
+    await applyBrowsingContextSelection({ oasis }, selectedSpaceIds)
+    showBrowsingContextSelector.set(false)
+  }
 </script>
+
+<BrowsingContextSelector
+  {spaces}
+  open={$showBrowsingContextSelector}
+  allowCancel={true}
+  on:close={handleBrowsingContextSelection}
+  on:cancel={() => {
+    showBrowsingContextSelector.set(false)
+  }}
+/>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
@@ -294,30 +303,6 @@
   }}
   on:DragEnter={() => {
     desktopManager.setVisible(true, { trigger: OpenHomescreenEventTrigger.DragOver })
-  }}
-  use:contextMenu={{
-    canOpen: $activeScopeId !== null,
-    items: [
-      {
-        type: 'action',
-        icon: 'arrow.right',
-        text: 'Open in Stuff',
-        action: () => handleOpenSpaceInOasis()
-      },
-      {
-        type: 'action',
-        icon: 'edit',
-        text: 'Rename Context',
-        action: () => $activeSpace && handleRenameSpace($activeSpace)
-      },
-      {
-        type: 'action',
-        icon: 'trash',
-        text: 'Delete Context',
-        kind: 'danger',
-        action: () => $activeSpace && handleDeleteSpace($activeSpace)
-      }
-    ]
   }}
 >
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -366,7 +351,7 @@
   <SelectDropdown
     items={filterdItems}
     selected={$activeScopeId}
-    footerItem={newContext}
+    footerItem={configureBrowsingContext}
     {searchValue}
     search="manual"
     inputPlaceholder="Search your contexts…"
@@ -376,16 +361,10 @@
       <Icon name="chevron.down" />
     </div>
 
-    <div
-      slot="item"
-      class="w-full"
-      let:item
-      use:contextMenu={{
-        canOpen: !!item?.data,
-        items: getSpaceContextItems(item?.data, item?.id === $activeScopeId)
-      }}
-    >
-      <SelectDropdownItem {item} />
+    <div slot="item" class="w-full" let:item>
+      {#if item}
+        <SelectDropdownItem {item} />
+      {/if}
     </div>
   </SelectDropdown>
 </div>

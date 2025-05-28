@@ -4,6 +4,8 @@
   import { createEventDispatcher } from 'svelte'
   import stuffOnboarding01 from '../../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
   import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
+  import { ShortcutVisualizer } from '../../Utils/Keyboard'
+  import { isMac } from '@horizon/utils'
 
   export let modShortcut: string
 
@@ -16,6 +18,8 @@
     dispatch('launchTimeline', OnboardingFeature.StuffOnboarding)
     dispatch('tryStuff')
   }
+
+  $: shortcutKeys = [isMac() ? 'cmd' : 'ctrl', 'shift', 'O']
 </script>
 
 <section
@@ -43,7 +47,7 @@
       </div>
 
       <p class="text-sm text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
-        or use {modShortcut} + O to open.
+        or use <ShortcutVisualizer shortcut={shortcutKeys} size="small" interactive={true} /> to open.
       </p>
     </div>
   </div>

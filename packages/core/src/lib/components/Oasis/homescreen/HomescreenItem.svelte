@@ -322,7 +322,6 @@ TODO: Fix resizing logic for other corners
         {@const space = $spaces.find((s) => s.id === $item.spaceId)}
         {#if space}
           <HomescreenSpaceItem
-            {interactive}
             {space}
             renderContents={$item.width > 2 && $item.height > 2}
             on:set-resource-as-background

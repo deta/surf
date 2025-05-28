@@ -16,6 +16,7 @@ export class ContextItemScreenshot extends ContextItemBase {
 
     this.data = screenshot
     this.icon = writable({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
+    this.label = writable('Screenshot')
 
     this.setIcon()
   }

@@ -5,8 +5,11 @@
 
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import type { ContentMode, Origin, ViewMode } from '@horizon/core/src/lib/utils/resourcePreview'
+  import Folder from './Folder.svelte'
+  import { OasisSpace } from '../../service/oasis'
+  import { writable } from 'svelte/store'
 
-  export let resourceOrId: string | Resource
+  export let resourceOrId: string | Resource | OasisSpace
   export let selected: boolean = false
   export let isInSpace: boolean = false
   export let resourcesBlacklistable: boolean = false
@@ -19,6 +22,14 @@
   export let hideProcessing: boolean = false
   export let openIn: 'tab' | 'sidebar' = 'tab'
 
+  $: isFolder =
+    resourceOrId instanceof OasisSpace ||
+    (typeof resourceOrId === 'object' &&
+      resourceOrId !== null &&
+      'id' in resourceOrId &&
+      'data' in resourceOrId &&
+      resourceOrId.data?.folderName)
+
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<{ load: Resource; rendered: void }>()
@@ -29,24 +40,30 @@
 
   const loadResource = async () => {
     try {
-      if (typeof resourceOrId !== 'string') {
+      if (isFolder) {
+        return
+      }
+
+      if (resourceOrId instanceof Resource) {
         fetchedResource = resourceOrId
         dispatch('load', fetchedResource)
         return
       }
 
-      resourceManager
-        .getResourceWithAnnotations(resourceOrId)
-        .then((res) => {
-          if (!res) {
-            return
-          }
-          fetchedResource = res
-          dispatch('load', fetchedResource)
-        })
-        .catch((e) => {
-          log.error(e)
-        })
+      if (typeof resourceOrId === 'string') {
+        resourceManager
+          .getResourceWithAnnotations(resourceOrId)
+          .then((res) => {
+            if (!res) {
+              return
+            }
+            fetchedResource = res
+            dispatch('load', fetchedResource)
+          })
+          .catch((e) => {
+            log.error(e)
+          })
+      }
     } catch (e) {
       log.error(e)
     }
@@ -57,8 +74,45 @@
   })
 </script>
 
-<div class="wrapper" class:full-height={viewMode === 'responsive'} class:loaded={resource}>
-  {#if resource}
+<div
+  class="wrapper"
+  class:full-height={viewMode === 'responsive'}
+  class:loaded={resource || isFolder}
+>
+  {#if isFolder}
+    <Folder
+      folder={resourceOrId}
+      depth={0}
+      {selected}
+      showPreview={false}
+      isEditing={false}
+      editingSpaceId={writable(null)}
+      displayMode="card"
+      loadResources={true}
+      allowPinning={true}
+      expandable={false}
+      selectedItemsCount={0}
+      multipleItemsSelected={false}
+      {isInSpace}
+      on:select
+      on:update-data
+      on:editing-start
+      on:editing-end
+      on:navigate-context
+      on:Drop={(event) => {
+        // Forward the Drop event with its original detail structure
+        dispatch('Drop', event.detail)
+      }}
+      on:open-space-as-tab
+      on:open-space-and-chat
+      on:use-as-context
+      on:force-reload
+      on:batch-remove
+      on:pin
+      on:unpin
+    />
+  {:else if resource}
+    <!-- Render ResourcePreview for regular resources -->
     <slot
       {resource}
       {mode}
@@ -100,7 +154,6 @@
           on:highlightWebviewText
           on:seekToTimestamp
         />
-        <!--{/if}-->
       {:else}
         <ResourcePreview
           {resource}

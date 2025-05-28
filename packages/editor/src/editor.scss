@@ -88,7 +88,7 @@
   --background-menu-muted: #353535;
 }
 
-.dark .tiptap .details > button::before {
+.dark .tiptap .details>button::before {
   background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m9 6 6 6-6 6' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E");
 }
 
@@ -378,7 +378,7 @@ body.custom .editor {
       padding: 0 2px;
     }
 
-    > button {
+    >button {
       align-items: center;
       background: transparent;
       border-radius: 4px;
@@ -400,30 +400,33 @@ body.custom .editor {
         --size: 1.25em;
         content: '';
         background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m9 6 6 6-6 6' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E");
-        background-size: var(--size) var(--size);  /* Increased from 1em */
+        background-size: var(--size) var(--size);
+        /* Increased from 1em */
         background-repeat: no-repeat;
         background-position: center;
-        width: var(--size);                  /* Increased from 1em */
-        height: var(--size);                 /* Increased from 1em */
+        width: var(--size);
+        /* Increased from 1em */
+        height: var(--size);
+        /* Increased from 1em */
       }
 
     }
 
-    &.is-open > button::before {
+    &.is-open>button::before {
       transform: rotate(90deg);
     }
 
-    > div {
+    >div {
       display: flex;
       flex-direction: column;
       gap: 0;
       width: 100%;
 
-      > [data-type="detailsContent"] > :last-child {
+      >[data-type="detailsContent"]> :last-child {
         margin-bottom: 0.5rem;
       }
 
-      > [data-type="detailsContent"] > p:first-child:not(.is-empty):has(> br.ProseMirror-trailingBreak)::before {
+      >[data-type="detailsContent"]>p:first-child:not(.is-empty):has(> br.ProseMirror-trailingBreak)::before {
         content: "Toggle list";
         color: var(--color-text-muted);
         float: left;
@@ -458,7 +461,7 @@ body.custom .editor {
       border-left: 0;
       border-top: 0;
 
-      > * {
+      >* {
         margin-bottom: 0;
       }
     }
@@ -475,7 +478,9 @@ body.custom .editor {
     }
 
     tr {
-      th:first-child, td:first-child {
+
+      th:first-child,
+      td:first-child {
         border-left: 1px solid var(--background-menu-muted);
       }
     }
@@ -507,7 +512,10 @@ body.custom .editor {
     .selectedCell:after {
       background: rgba(4, 104, 255, 0.1);
       content: "";
-      left: 0; right: 0; top: 0; bottom: 0;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
       pointer-events: none;
       position: absolute;
       z-index: 2;
@@ -549,29 +557,55 @@ body.custom .editor {
     border-radius: 0.4em;
     // padding: 0.5rem 0.75rem;
     // margin: -0.5rem -0.75rem;
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
 
     // use the prompt from data-prompt and position it before the output, only if it exists
     &[data-prompt]::before {
       display: block;
       content: attr(data-prompt);
-      color: var(--color-brand);
-      font-weight: 500;
       margin-right: 5px;
-      font-size: 0.8em;
-      opacity: 0.75;
+      margin-bottom: 6px;
+      padding-left: 1ch;
+      max-width: 52ch;
+
+      color: var(--color-text-muted); //rgba(0, 0, 0, 0.35);
+      font-weight: 500;
+      font-size: 0.825em;
+      line-height: 1.456rem;
+      text-wrap: balance;
+      border-left: 2px dotted var(--color-text-muted);
 
       // truncate it after two lines
       overflow: hidden;
       text-overflow: ellipsis;
       display: -webkit-box;
-      -webkit-line-clamp: 1;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
-      width: 100%;
       white-space: normal;
 
     }
+  }
+
+  prompt {
+    display: block;
+    margin-right: 5px;
+    margin-bottom: 6px;
+    padding-left: 1ch;
+    max-width: 54ch;
+
+    color: var(--color-text-muted); //rgba(0, 0, 0, 0.35);
+    font-weight: 500;
+    font-size: 0.825em;
+    line-height: 1.456rem;
+    text-wrap: balance;
+    border-left: 2px dotted var(--color-text-muted);
+
+    // truncate it after two lines
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    white-space: normal;
   }
 
   .table-add-row-column-container {
@@ -593,7 +627,7 @@ body.custom .editor {
   .table-add-button.row {
     cursor: row-resize;
   }
-  
+
   .table-add-button.column {
     cursor: col-resize;
   }

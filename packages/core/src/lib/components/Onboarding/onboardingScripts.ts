@@ -1,15 +1,69 @@
 import { isMac } from '@horizon/utils'
+import Onboarding from '../Core/Onboarding.svelte'
 
 export enum OnboardingAction {
   SendChatMessage = 'send-chat-message',
   CreateSpace = 'create-space',
   OpenStuff = 'open-stuff',
+  CloseStuff = 'close-stuff',
   OpenPDF = 'open-pdf',
-  OpenYouTubeVideo = 'open-youtube-video',
+  OpenURL = 'open-url',
   InsertQuestion = 'insert-question',
   StartAICompletion = 'start-ai-completion',
   CreateSurflet = 'create-surflet',
-  ReturnToWelcomePage = 'return-to-welcome-page'
+  ReturnToWelcomePage = 'return-to-welcome-page',
+  ToggleTabBar = 'toggle-tab-bar',
+  ToggleRightSidebar = 'toggle-right-sidebar',
+  FinishNotesOnboarding = 'finish-notes-onboarding',
+  OpenNoteInSidebar = 'open-note-in-sidebar',
+  OpenNoteAsTab = 'open-note-as-tab',
+  OpenTab = 'open-tab',
+  OpenYouTubeVideo = 'open-youtube-video',
+  OpenOnboardingTab = 'open-onboarding-tab',
+  TriggerVision = 'trigger-vision',
+  SubmitVisionPrompt = 'submit-vision-prompt',
+  AddTextToNote = 'add-text-to-note',
+  AskOnboardingSpace = 'ask-onboarding-space',
+  InsertUseAsDefaultBrowserIntoNote = 'insert-use-as-default-browser-into-note',
+  InsertOnboardingFooterIntoNote = 'insert-onboarding-footer-into-note',
+  HideVision = 'hide-vision',
+  ReloadWelcomePage = 'reload-welcome-page',
+  TrackOnboardingTab = 'track-onboarding-tab'
+}
+
+/**
+ * Enum for completion event IDs used in onboarding steps
+ */
+export enum CompletionEventID {
+  VisionSelected = 'vision-selected',
+  VisionSend = 'vision-send',
+  OpenVisionNoteInSidebar = 'open-vision-note-in-sidebar',
+  OpenStuff = 'onboarding-open-stuff',
+  UseVision = 'use-vision',
+  OpenNoteAsTab = 'open-note-as-tab',
+  CaretClicked = 'caret-clicked',
+  AIGenerationDone = 'ai-generation-done',
+  ArticleAddedToContext = 'article-added-to-context',
+  AIGenerationStarted = 'ai-generation-started'
+}
+
+// Interface for action with parameters
+export interface OnboardingActionWithParams {
+  action: OnboardingAction
+  params?: Record<string, any>
+}
+
+// Type that can be either a simple action or an action with parameters
+export type OnboardingActionType = OnboardingAction | OnboardingActionWithParams
+
+/** Configuration for completion event that must be triggered to advance to the next step */
+export interface CompletionEventConfig {
+  /** Event ID that will automatically advance to the next step when dispatched */
+  eventId: CompletionEventID | string
+  /** Message to display while waiting for the event to be triggered */
+  message: string
+  /** If true, the completion event is optional and won't block advancing to the next step */
+  optional?: boolean
 }
 
 export interface TooltipStep {
@@ -25,8 +79,25 @@ export interface TooltipStep {
   domRoot: string
   /** Optional DOM element with data-tooltip-anchor attribute for positioning */
   domAnchor?: string
+  /** If true, only shows the tooltip header and a loading spinner */
+  minimized?: boolean
+  /** If true, hides the tooltip visually but keeps all handlers and events working */
+  invisible?: boolean
   /** Positioning configuration for the tooltip */
   position: {
+    /** Vertical alignment (top/bottom/center) */
+    vertical: 'top' | 'bottom' | 'center'
+    /** Horizontal alignment (left/right/center) */
+    horizontal: 'left' | 'right' | 'center'
+    /** Optional X-axis offset in pixels */
+    offsetX?: number
+    /** Optional Y-axis offset in pixels */
+    offsetY?: number
+  }
+  /** Optional array of DOM selectors with data-tooltip-safearea attributes to avoid collisions */
+  safeArea?: string[]
+  /** Alternative positioning to use when tooltip collides with safe area elements */
+  alternativePosition?: {
     /** Vertical alignment (top/bottom/center) */
     vertical: 'top' | 'bottom' | 'center'
     /** Horizontal alignment (left/right/center) */
@@ -41,18 +112,28 @@ export interface TooltipStep {
   /** Text for the previous step button */
   prevButtonLabel?: string
   /** Optional actions to trigger on step */
-  actions?: OnboardingAction[]
+  actions?: OnboardingActionType[]
+  /** Optional actions to trigger when the step is first displayed */
+  initialActions?: OnboardingActionType[]
   /** ID of associated media content */
   mediaID?: string
   /** Type of media content (image/video) */
   mediaType?: 'image' | 'video'
   /** Optional z-index override */
   zIndex?: number
+  /** Optional completion event configuration that must be triggered to advance to the next step */
+  completionEvent?: CompletionEventConfig | string
+  /** If true, automatically proceed to the next step when AI generation completes */
+  proceedAfterAIGeneration?: boolean
+  /** If true, the next button will be enabled even when a completion event is defined */
+  actionCanSkipCompletionEvent?: boolean
 }
 
 export interface OnboardingTimeline {
   name: string
   steps: TooltipStep[]
+  initialActions?: OnboardingActionType[]
+  dismissable?: boolean
 }
 
 export enum OnboardingFeature {
@@ -66,7 +147,8 @@ export enum OnboardingFeature {
   SmartSpacesOnboarding = 'smartSpacesOnboarding',
   DesktopOnboarding = 'desktopOnboarding',
   SmartNotesOnboarding = 'smartNotesOnboarding',
-  NotesOnboarding = 'notesOnboarding'
+  NotesOnboarding = 'notesOnboarding',
+  AppOnboarding = 'appOnboarding'
 }
 
 export const savingTimeline: OnboardingTimeline = {
@@ -94,7 +176,7 @@ export const chatWithSpaceOnboardingInStuffTimeline: OnboardingTimeline = {
       target: '#chat.onboarding.stuff.1',
       headline: 'Chatting with a Context',
       content:
-        "In Surf, you can chat with all of the items you save. This includes contexts, tabs, and bookmarks. Let's start by chatting with a space.",
+        "In Surf, you can chat with all of the items you save. This includes contexts, tabs, and bookmarks. Let's start by chatting with a context.",
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
       domTarget: 'demo-space',
       domRoot: 'stuff',
@@ -102,9 +184,9 @@ export const chatWithSpaceOnboardingInStuffTimeline: OnboardingTimeline = {
     },
     {
       target: '#chat.onboarding.stuff.2',
-      headline: 'Add a Context into Context',
+      headline: 'Add a Context into Chat',
       content:
-        'We created a demo space for you. Add the space into context by dragging it into the context bar. Alternatively, you could also do a right-click and select "Chat with Context".',
+        'We created a demo context for you. Add it into the chat by dragging it into the input bar. Alternatively, you could also do a right-click and select "Chat with Context".',
       position: { vertical: 'top', horizontal: 'left', offsetY: 26, offsetX: 10 },
       domTarget: 'demo-space',
       domRoot: 'stuff',
@@ -131,7 +213,7 @@ export const chatWithSpaceOnboardingInChatTimeline: OnboardingTimeline = {
       target: '#chat.onboarding.chat.2',
       headline: 'Context Bar',
       content:
-        'This is your context bar. It currently contains a space, but you can also chat with any number of tabs if you want.',
+        'This is your context bar. It currently contains a context, but you can also chat with any number of tabs if you want.',
       position: { vertical: 'bottom', horizontal: 'right', offsetY: 150, offsetX: 150 },
       domTarget: 'context-bar',
       domRoot: 'body',
@@ -145,7 +227,7 @@ export const chatWithSpaceOnboardingInChatTimeline: OnboardingTimeline = {
       position: { vertical: 'bottom', horizontal: 'right', offsetY: 150, offsetX: 150 },
       domTarget: 'send-chat-message',
       domRoot: 'body',
-      action: OnboardingAction.SendChatMessage,
+      actions: [{ action: OnboardingAction.SendChatMessage }],
       prevButtonLabel: 'Back',
       nextButtonLabel: 'Send it!'
     },
@@ -256,21 +338,21 @@ export const smartSpacesOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#smartspaces.stuff.2',
       headline: 'Chatting with a Context',
-      content: "Let's create a smart space together. Click the + button to create a new space.",
+      content: "Let's create a smart context together. Click the + button to create a new context.",
       position: { vertical: 'top', horizontal: 'left', offsetY: 120, offsetX: 10 },
       domTarget: 'create-space',
-      action: OnboardingAction.CreateSpace,
+      actions: [{ action: OnboardingAction.CreateSpace }],
       domRoot: 'stuff',
       nextButtonLabel: 'Next'
     },
     {
       target: '#smartspaces.stuff.3',
-      headline: 'Creating a live space',
+      headline: 'Creating a live context',
       content:
         'You can add a description to auto-fetch from your existing stuff. New saves will appear automatically.',
       position: { vertical: 'bottom', horizontal: 'center', offsetY: 350, offsetX: 0 },
       domTarget: 'smart-space-description',
-      action: OnboardingAction.CreateSpace,
+      actions: [{ action: OnboardingAction.CreateSpace }],
       domRoot: 'stuff',
       nextButtonLabel: 'Start'
     }
@@ -284,7 +366,7 @@ export const desktopTimeline: OnboardingTimeline = {
       target: '#desktop.onboarding.1',
       headline: 'Your New Desktop',
       content:
-        "Hey there! <br/><br/>Here's your customizable desktop space. Drop in websites you visit daily, add quick notes, or populate it with images that inspire you - it's all yours to design. <br/><br/>Think of it as your personal corner of the web where everything that matters is just a click away. And yes, you can even switch up the background to match your style.",
+        "Hey there! <br/><br/>Here's your customizable desktop context. Drop in websites you visit daily, add quick notes, or populate it with images that inspire you - it's all yours to design. <br/><br/>Think of it as your personal corner of the web where everything that matters is just a click away. And yes, you can even switch up the background to match your style.",
       position: { vertical: 'bottom', horizontal: 'left', offsetY: 120, offsetX: 10 },
       domTarget: 'desktop-demo',
       domRoot: 'body',
@@ -302,7 +384,7 @@ export const desktopTimeline: OnboardingTimeline = {
       domRoot: 'body',
       nextButtonLabel: 'Open my Stuff!',
       mediaID: 'desktop.onboarding.howtodrop',
-      action: OnboardingAction.OpenStuff,
+      actions: [{ action: OnboardingAction.OpenStuff }],
       mediaType: 'video'
     }
   ]
@@ -454,9 +536,9 @@ export const notesOnboardingTimeline: OnboardingTimeline = {
       domRoot: 'body',
       position: {
         vertical: 'bottom',
-        horizontal: 'right',
-        offsetX: 20,
-        offsetY: 150
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: -440
       },
       nextButtonLabel: 'Next',
       prevButtonLabel: 'Back',
@@ -518,6 +600,463 @@ export const notesOnboardingTimeline: OnboardingTimeline = {
       actions: [OnboardingAction.ReturnToWelcomePage],
       nextButtonLabel: 'Return to Onboarding',
       prevButtonLabel: 'Back',
+      zIndex: 1000
+    }
+  ]
+}
+
+export const appOnboardingTimeline: OnboardingTimeline = {
+  name: OnboardingFeature.AppOnboarding,
+  dismissable: false,
+  initialActions: [
+    { action: OnboardingAction.ToggleTabBar, params: { visible: false } },
+    { action: OnboardingAction.ToggleRightSidebar, params: { visible: false } },
+    { action: OnboardingAction.OpenOnboardingTab, params: { section: 'vision' } },
+    { action: OnboardingAction.TrackOnboardingTab }
+  ],
+  steps: [
+    {
+      target: '#notes.onboarding.0',
+      headline: 'Welcome to Surf',
+      content: `Surf does a few things differently, compared to your previous browser.</br></br> <b>It has vision</b> — and you can ask it questions about anything that you can see.`,
+      domTarget: 'sidebar-right',
+      domRoot: 'body',
+      actions: [{ action: OnboardingAction.TriggerVision }],
+      invisible: true,
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: 20,
+        offsetY: 20
+      },
+      completionEvent: {
+        eventId: CompletionEventID.UseVision,
+        message: 'Use the button or the shortcut to start start vision.',
+        optional: true
+      },
+      nextButtonLabel: 'Use Vision',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.1',
+      headline: 'Select everything that you see',
+      content: '',
+      domTarget: 'screen-picker',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'center',
+        offsetX: 20,
+        offsetY: 20
+      },
+      nextButtonLabel: 'Continue',
+      invisible: true,
+      zIndex: 2147483647,
+      completionEvent: {
+        eventId: CompletionEventID.VisionSelected,
+        message: '→ Select something.'
+      }
+    },
+    {
+      target: '#notes.onboarding.2000',
+      headline: 'Ask anything',
+      content: '',
+      domTarget: '',
+      domRoot: 'body',
+      invisible: true,
+      position: {
+        vertical: 'top',
+        horizontal: 'center',
+        offsetX: 20,
+        offsetY: 20
+      },
+      completionEvent: {
+        eventId: CompletionEventID.VisionSend,
+        message: '→ Input the example text into the chat input and hit send.'
+      },
+
+      nextButtonLabel: 'Continue',
+      actions: undefined,
+      zIndex: 2147483647
+    },
+    {
+      target: '#notes.onboarding.2001',
+      headline: 'Generating answer',
+      content: '',
+      minimized: true,
+      domTarget: '',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: 20,
+        offsetY: 20
+      },
+      proceedAfterAIGeneration: true,
+      nextButtonLabel: 'Continue',
+      zIndex: 2147483647
+    },
+    {
+      target: '#app.onboarding.open-in-sidebar',
+      headline: 'Open in Sidebar',
+      content: '',
+      domTarget: 'open-in-sidebar-button',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'right',
+        offsetX: 20,
+        offsetY: 20
+      },
+      safeArea: ['message-box'],
+      alternativePosition: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: 20,
+        offsetY: 20
+      },
+      nextButtonLabel: 'Jump to Next Step',
+      completionEvent: {
+        eventId: CompletionEventID.OpenVisionNoteInSidebar,
+        message: 'Open the note in the sidebar'
+      },
+      actions: [{ action: OnboardingAction.OpenNoteInSidebar }],
+      actionCanSkipCompletionEvent: true,
+      zIndex: 2147483647
+    },
+    {
+      target: '#notes.onboarding.4',
+      headline: 'Welcome to the Sidebar',
+      content: 'Your answer is now a note—ready to edit in the Sidebar.',
+      domTarget: '',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 650
+      },
+      initialActions: [{ action: OnboardingAction.HideVision }],
+      mediaID: 'note-sidebar',
+      mediaType: 'image',
+      nextButtonLabel: 'Continue',
+      actions: undefined,
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.5',
+      headline: 'Chat with all your Tabs',
+      content:
+        'Let’s try chatting with a Tab. Surf can break down and answer questions on any content—even YouTube videos.',
+      domTarget: '',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      initialActions: [
+        {
+          action: OnboardingAction.HideVision
+        }
+      ],
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 650
+      },
+      nextButtonLabel: 'Open a Surf Article',
+      actions: [
+        {
+          action: OnboardingAction.OpenURL,
+          params: {
+            url: 'https://productidentity.co/p/surf-the-browser',
+            question: 'What is the role of AI in Surf?'
+          }
+        }
+      ],
+      mediaID: 'article.chat',
+      mediaType: 'image',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.6',
+      headline: 'Article Analysis',
+      content: 'Surf is preparing the article for the chat, this usually just takes a few seconds.',
+      domTarget: '',
+      domRoot: 'body',
+      domAnchor: 'sidebar-right',
+      position: {
+        vertical: 'bottom',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: -440
+      },
+      initialActions: [
+        {
+          action: OnboardingAction.TrackOnboardingTab
+        }
+      ],
+      completionEvent: {
+        eventId: CompletionEventID.ArticleAddedToContext,
+        message: ''
+      },
+      actionCanSkipCompletionEvent: true,
+      nextButtonLabel: 'Continue',
+      zIndex: 1000
+    },
+    {
+      target: '#app.onboarding.sendmessage',
+      headline: 'Send Message',
+      content: 'Hit ↵ or click the submit button to send your question',
+      domTarget: '',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 650
+      },
+      completionEvent: {
+        eventId: CompletionEventID.AIGenerationStarted,
+        message: ''
+      },
+      mediaID: 'note-chat-submit',
+      mediaType: 'video',
+      actionCanSkipCompletionEvent: false,
+      nextButtonLabel: 'Next',
+      zIndex: 1000
+    },
+    {
+      target: '#app.onboarding.generateanswer',
+      headline: 'Generating Answer',
+      content:
+        'Surf is now using the article as context to answer your question. Watch the response come in...',
+      domTarget: '',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 650
+      },
+      actionCanSkipCompletionEvent: false,
+      proceedAfterAIGeneration: true,
+      nextButtonLabel: 'Next',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.7',
+      headline: 'View Citations',
+      content:
+        'Nice! As you can see every answer comes with citations. Click any citation to jump to that spot in the article.',
+      domTarget: 'chat-citation',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 650
+      },
+      mediaID: 'citations',
+      mediaType: 'image',
+      nextButtonLabel: 'Next',
+      zIndex: 1000
+    },
+    // {
+    //   target: '#notes.onboarding.10',
+    //   headline: 'Create a Surflet',
+    //   content:
+    //     "Surflets are AI-generated mini-apps that can help you accomplish specific tasks or visualize information. Let's create one now to see how they work. Note: Surflets work best with the latest Claude Sonnet AI models.",
+    //   domTarget: 'chat-input',
+    //   domRoot: 'body',
+    //   domAnchor: 'sidebar-right',
+    //   position: {
+    //     vertical: 'top',
+    //     horizontal: 'left',
+    //     offsetX: -440,
+    //     offsetY: 100
+    //   },
+    //   nextButtonLabel: 'Create Surflet',
+    //   prevButtonLabel: 'Back',
+    //   actions: [{ action: OnboardingAction.CreateSurflet }],
+    //   mediaID: 'create.surflet',
+    //   mediaType: 'image',
+    //   zIndex: 1000
+    // },
+    // {
+    //   target: '#notes.onboarding.11',
+    //   headline: 'Generating Surflet',
+    //   content:
+    //     'Your Surflet is being generated right now! Surf is analyzing your content and creating a custom mini-app to help you understand it better. This may take a moment.',
+    //   domTarget: 'chat-input',
+    //   domRoot: 'body',
+    //   domAnchor: 'sidebar-right',
+    //   position: {
+    //     vertical: 'top',
+    //     horizontal: 'left',
+    //     offsetX: -440,
+    //     offsetY: 100
+    //   },
+    //   nextButtonLabel: 'Continue',
+    //   prevButtonLabel: 'Back',
+    //   zIndex: 1000
+    // },
+    {
+      target: '#app.onboarding.open-note-as-tab',
+      headline: 'Open as Tab',
+      content: '',
+      domTarget: 'open-note-as-tab',
+      domAnchor: 'sidebar-right',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'left',
+        offsetX: -440,
+        offsetY: 650
+      },
+      actions: [{ action: OnboardingAction.OpenNoteAsTab }],
+      completionEvent: {
+        eventId: CompletionEventID.OpenNoteAsTab,
+        message: '↗ Click “Open as Tab” (inside the dot menu) to launch your note as a tab.'
+      },
+      actionCanSkipCompletionEvent: true,
+      nextButtonLabel: 'Open the Note as a Tab',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.11',
+      headline: 'How does it work?',
+      content:
+        'You can type @ to mention tabs, saved stuff, or your entire Surf to use them as the context you are chatting with. We prepared a question about a context that we created earlier for you. Just continue.',
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'right',
+        offsetX: 20,
+        offsetY: 20
+      },
+      initialActions: [{ action: OnboardingAction.TrackOnboardingTab }],
+      mediaType: 'video',
+      mediaID: 'at.menu',
+      actions: [
+        {
+          action: OnboardingAction.AskOnboardingSpace,
+          params: {
+            mention: 'Surf Onboarding',
+            query:
+              'what is Stuff in Surf and how can Surf notes help me create something out of everything I consume?'
+          }
+        }
+      ],
+      nextButtonLabel: 'Insert Ask Context Prompt',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.11',
+      headline: 'Get Insights From Your Context',
+      content: '',
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      position: {
+        vertical: 'top',
+        horizontal: 'right',
+        offsetX: 20,
+        offsetY: 20
+      },
+      nextButtonLabel: 'Continue',
+      completionEvent: {
+        eventId: CompletionEventID.AIGenerationDone,
+        message: 'Hit ↵ or click the submit button next to the inserted question ask Surf AI.'
+      },
+      actions: [
+        {
+          action: OnboardingAction.InsertUseAsDefaultBrowserIntoNote
+        },
+        {
+          action: OnboardingAction.AddTextToNote
+        },
+        {
+          action: OnboardingAction.InsertOnboardingFooterIntoNote,
+          params: {
+            links: [
+              {
+                url: 'https://deta.notion.site/surf-alpha',
+                title: 'Cheat Sheet'
+              },
+              {
+                url: 'https://deta.notion.site/changelogs',
+                title: 'Changelog'
+              },
+              {
+                url: 'https://deta.notion.site/keyboard-shortcuts',
+                title: 'Learn Keyboard Shortcuts'
+              },
+              {
+                url: 'https://deta.surf',
+                title: 'Surf'
+              }
+            ]
+          }
+        }
+      ],
+      proceedAfterAIGeneration: true,
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.11',
+      headline: 'Congratulations!',
+      content:
+        'You’ve finished the tour. We opened a Surf Playground tab for you to explore what else you can do with Surf.',
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      position: {
+        vertical: 'bottom',
+        horizontal: 'right',
+        offsetX: 100,
+        offsetY: 100
+      },
+      actions: [
+        {
+          action: OnboardingAction.ToggleTabBar,
+          params: {
+            visible: true
+          }
+        },
+        {
+          action: OnboardingAction.ReloadWelcomePage
+        }
+      ],
+      nextButtonLabel: 'Start Browsing',
+      zIndex: 1000
+    },
+    {
+      target: '#notes.onboarding.11',
+      headline: 'Congratulations!',
+      content:
+        'You’ve finished the tour. We opened a Surf Playground tab for you to explore what else you can do with Surf.',
+      domTarget: 'chat-input',
+      domRoot: 'body',
+      position: {
+        vertical: 'bottom',
+        horizontal: 'right',
+        offsetX: 100,
+        offsetY: 100
+      },
+      actions: [
+        {
+          action: OnboardingAction.ToggleTabBar,
+          params: {
+            visible: true
+          }
+        },
+        {
+          action: OnboardingAction.ReloadWelcomePage
+        }
+      ],
+      nextButtonLabel: 'Start Browsing',
       zIndex: 1000
     }
   ]

@@ -1,4 +1,6 @@
 import { mergeAttributes, Node } from '@tiptap/core'
+import { SvelteNodeViewRenderer } from 'svelte-tiptap'
+import AiOutput from '../../components/AIOutput.svelte'
 
 export interface AIOutputOptions {
   /**
@@ -86,6 +88,8 @@ export const AIOutput = Node.create<AIOutputOptions>({
   selectable: true,
 
   draggable: true,
+
+  defining: true,
 
   parseHTML() {
     return [{ tag: 'output' }]

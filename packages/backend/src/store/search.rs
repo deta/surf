@@ -1,5 +1,8 @@
 use super::models::*;
-use crate::{store::db::Database, BackendResult};
+use crate::{
+    store::{db::Database, resource_tags::list_resource_ids_by_tags_query},
+    BackendResult,
+};
 
 fn escape_fts_query(keyword: &str) -> String {
     let escaped_quotes = keyword.replace(r#"""#, r#"""""#);
@@ -13,7 +16,6 @@ fn escape_fts_query(keyword: &str) -> String {
 }
 
 fn map_resource_and_metadata(
-    ref_resource_id: Option<String>,
     engine: SearchEngine,
 ) -> impl FnMut(&rusqlite::Row<'_>) -> Result<SearchResultItem, rusqlite::Error> {
     move |row| {
@@ -42,9 +44,6 @@ fn map_resource_and_metadata(
                 post_processing_job: None,
                 space_ids: None,
             },
-            distance: row.get(12).unwrap_or(None),
-            ref_resource_id: ref_resource_id.clone(),
-            card_ids: Vec::new(),
             engine: engine.clone(),
         })
     }
@@ -93,7 +92,7 @@ impl Database {
             params.extend(filtered_resource_ids);
             (filtered_query, params)
         };
-        let row_map_fn = map_resource_and_metadata(None, SearchEngine::KeywordMetadata);
+        let row_map_fn = map_resource_and_metadata(SearchEngine::KeywordMetadata);
         let mut stmt = self.conn.prepare(&query)?;
         let items = stmt.query_map(rusqlite::params_from_iter(params.iter()), row_map_fn)?;
         for item in items {
@@ -147,7 +146,7 @@ impl Database {
             (filtered_query, params)
         };
 
-        let row_map_fn = map_resource_and_metadata(None, SearchEngine::KeywordContent);
+        let row_map_fn = map_resource_and_metadata(SearchEngine::KeywordContent);
         let mut stmt = self.conn.prepare(&query)?;
         let items = stmt.query_map(rusqlite::params_from_iter(params.iter()), row_map_fn)?;
         for item in items {
@@ -175,6 +174,56 @@ impl Database {
             total: filtered_resource_ids.len() as i64,
             items: filtered_resource_ids,
         })
+    }
+
+    pub fn list_all_resources_and_spaces(
+        &self,
+        resource_tags: Vec<ResourceTagFilter>,
+    ) -> BackendResult<Vec<ResourceOrSpace>> {
+        let mut combined_query = String::from(
+            "SELECT id, 'Resource' as item_type, created_at FROM resources WHERE id IN (",
+        );
+
+        let mut params: Vec<String> = Vec::new();
+
+        if !resource_tags.is_empty() {
+            let (tag_query, tag_params) = list_resource_ids_by_tags_query(&resource_tags, 0);
+            combined_query.push_str(&tag_query);
+            params.extend(tag_params);
+        } else {
+            combined_query.push_str("SELECT id FROM resources WHERE deleted = 0");
+        }
+
+        combined_query.push_str(") AND deleted = 0");
+        combined_query.push_str(" UNION ALL ");
+        combined_query.push_str("SELECT id, 'Space' as item_type, created_at FROM spaces");
+        combined_query.push_str(" ORDER BY created_at DESC");
+
+        let mut stmt = self.conn.prepare(&combined_query)?;
+
+        let results = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            let id: String = row.get(0)?;
+            let type_str: String = row.get(1)?;
+
+            let item_type = match type_str.as_str() {
+                "Resource" => SpaceEntryType::Resource,
+                "Space" => SpaceEntryType::Space,
+                _ => {
+                    return Err(rusqlite::Error::InvalidColumnType(
+                        2,
+                        "Invalid item_type".to_string(),
+                        rusqlite::types::Type::Text,
+                    ))
+                }
+            };
+
+            Ok(ResourceOrSpace { id, item_type })
+        })?;
+        let mut items = Vec::new();
+        for result in results {
+            items.push(result?);
+        }
+        Ok(items)
     }
 
     // list all resources that are not in a space by list of tags
@@ -211,7 +260,9 @@ impl Database {
                 if ids.is_empty() {
                     return Ok(SearchResult {
                         items: vec![],
+                        spaces: vec![],
                         total: 0,
+                        space_entries: None,
                     });
                 }
                 ids
@@ -248,6 +299,8 @@ impl Database {
         Ok(SearchResult {
             total: results.len() as i64,
             items: results,
+            spaces: vec![],
+            space_entries: None,
         })
     }
 }

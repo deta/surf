@@ -1,8 +1,11 @@
 use crate::{
-    api::message::{CreateSpaceEntryInput, SpaceMessage, TunnelOneshot},
+    api::message::{DeleteSpaceEntryInput, SpaceEntryInput, SpaceMessage, TunnelOneshot},
     store::{
         db::Database,
-        models::{current_time, random_uuid, Space, SpaceEntry, SpaceEntryExtended},
+        models::{
+            current_time, random_uuid, SearchResultSpaceItem, Space, SpaceEntry,
+            SpaceEntryExtended, SpaceEntryType, SpaceExtended, SubSpaceEntry,
+        },
     },
     worker::worker::{send_worker_response, Worker},
     BackendResult,
@@ -22,15 +25,15 @@ impl Worker {
         Ok(space)
     }
 
-    pub fn get_space(&self, space_id: &str) -> BackendResult<Option<Space>> {
+    pub fn get_space(&self, space_id: &str) -> BackendResult<Option<SpaceExtended>> {
         self.db.get_space(space_id)
     }
 
-    pub fn search_spaces(&self, query: &str) -> BackendResult<Vec<Space>> {
+    pub fn search_spaces(&self, query: &str) -> BackendResult<Vec<SearchResultSpaceItem>> {
         self.db.search_spaces(query)
     }
 
-    pub fn list_spaces(&self) -> BackendResult<Vec<Space>> {
+    pub fn list_spaces(&self) -> BackendResult<Vec<SpaceExtended>> {
         self.db.list_spaces()
     }
 
@@ -47,30 +50,63 @@ impl Worker {
     pub fn create_space_entries(
         &mut self,
         space_id: String,
-        entries: Vec<CreateSpaceEntryInput>,
-    ) -> BackendResult<Vec<SpaceEntry>> {
+        entries: Vec<SpaceEntryInput>,
+    ) -> BackendResult<Vec<SpaceEntryExtended>> {
         let current_time = current_time();
         let mut space_entries = Vec::new();
         let mut tx = self.db.begin()?;
         for entry in entries {
-            // check if the new entry was added by the user and only then delete the old entries
-            if entry.manually_added == 1 {
-                Database::delete_space_entry_by_resource_id_tx(
-                    &mut tx,
-                    &space_id,
-                    &entry.resource_id,
-                )?;
+            match entry.entry_type {
+                SpaceEntryType::Resource => {
+                    if entry.manually_added == 1 {
+                        Database::delete_space_entry_by_resource_id_tx(
+                            &mut tx,
+                            &space_id,
+                            &entry.entry_id,
+                        )?;
+                    }
+                    let space_entry = SpaceEntry {
+                        id: random_uuid(),
+                        space_id: space_id.clone(),
+                        resource_id: entry.entry_id,
+                        created_at: current_time,
+                        updated_at: current_time,
+                        manually_added: entry.manually_added,
+                    };
+                    Database::create_space_entry_tx(&mut tx, &space_entry)?;
+                    space_entries.push(SpaceEntryExtended {
+                        id: space_entry.id.clone(),
+                        space_id: space_entry.space_id.clone(),
+                        created_at: space_entry.created_at,
+                        updated_at: space_entry.updated_at,
+                        manually_added: space_entry.manually_added,
+                        entry_type: SpaceEntryType::Resource,
+                        entry_id: space_entry.resource_id.clone(),
+                        resource_type: None,
+                    });
+                }
+                SpaceEntryType::Space => {
+                    let sub_space_entry = SubSpaceEntry {
+                        id: random_uuid(),
+                        parent_space_id: space_id.clone(),
+                        child_space_id: entry.entry_id,
+                        created_at: current_time,
+                        updated_at: current_time,
+                        manually_added: entry.manually_added,
+                    };
+                    Database::create_sub_space_entry_tx(&mut tx, &sub_space_entry)?;
+                    space_entries.push(SpaceEntryExtended {
+                        id: sub_space_entry.id.clone(),
+                        space_id: sub_space_entry.parent_space_id.clone(),
+                        created_at: sub_space_entry.created_at,
+                        updated_at: sub_space_entry.updated_at,
+                        manually_added: sub_space_entry.manually_added,
+                        entry_type: SpaceEntryType::Space,
+                        entry_id: sub_space_entry.child_space_id.clone(),
+                        resource_type: None,
+                    });
+                }
             }
-            let space_entry = SpaceEntry {
-                id: random_uuid(),
-                space_id: space_id.clone(),
-                resource_id: entry.resource_id,
-                created_at: current_time,
-                updated_at: current_time,
-                manually_added: entry.manually_added,
-            };
-            Database::create_space_entry_tx(&mut tx, &space_entry)?;
-            space_entries.push(space_entry);
         }
         tx.commit()?;
         Ok(space_entries)
@@ -81,15 +117,57 @@ impl Worker {
         space_id: &str,
         sort_by: Option<&str>,
         order_by: Option<&str>,
+        limit: Option<usize>,
     ) -> BackendResult<Vec<SpaceEntryExtended>> {
-        self.db.list_space_entries(space_id, sort_by, order_by)
+        self.db
+            .list_space_entries(space_id, sort_by, order_by, limit)
     }
 
-    pub fn delete_space_entries(&mut self, entry_ids: Vec<String>) -> BackendResult<()> {
+    pub fn delete_space_entries(
+        &mut self,
+        entries: Vec<DeleteSpaceEntryInput>,
+    ) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
-        for entry_id in entry_ids {
-            Database::delete_space_entry_tx(&mut tx, &entry_id)?;
+        for entry in entries {
+            match entry.entry_type {
+                SpaceEntryType::Resource => {
+                    Database::delete_space_entry_tx(&mut tx, &entry.id)?;
+                }
+                SpaceEntryType::Space => {
+                    Database::delete_sub_space_entry_tx(&mut tx, &entry.id)?;
+                }
+            }
         }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn delete_entries_in_space(
+        &mut self,
+        space_id: &str,
+        entry_ids: &[String],
+        entry_type: SpaceEntryType,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        match entry_type {
+            SpaceEntryType::Resource => {
+                Database::delete_space_entries_in_space_tx(&mut tx, space_id, entry_ids)?
+            }
+            SpaceEntryType::Space => {
+                Database::delete_sub_space_entries_in_space_tx(&mut tx, space_id, entry_ids)?
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn update_sub_space_parent_id(
+        &mut self,
+        space_id: &str,
+        new_parent_space_id: &str,
+    ) -> BackendResult<()> {
+        let mut tx = self.db.begin()?;
+        Database::update_sub_space_entry_parent_id_tx(&mut tx, space_id, new_parent_space_id)?;
         tx.commit()?;
         Ok(())
     }
@@ -134,13 +212,29 @@ pub fn handle_space_message(
             space_id,
             sort_by,
             order_by,
+            limit,
         } => {
             let result =
-                worker.get_space_entries(&space_id, sort_by.as_deref(), order_by.as_deref());
+                worker.get_space_entries(&space_id, sort_by.as_deref(), order_by.as_deref(), limit);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        SpaceMessage::DeleteSpaceEntries(entry_ids) => {
-            let result = worker.delete_space_entries(entry_ids);
+        SpaceMessage::DeleteSpaceEntries(entries) => {
+            let result = worker.delete_space_entries(entries);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        SpaceMessage::MoveSpace {
+            space_id,
+            new_parent_space_id,
+        } => {
+            let result = worker.update_sub_space_parent_id(&space_id, &new_parent_space_id);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        SpaceMessage::DeleteEntriesInSpaceByEntryIds {
+            space_id,
+            entry_ids,
+            entry_type,
+        } => {
+            let result = worker.delete_entries_in_space(&space_id, &entry_ids, entry_type);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
     }

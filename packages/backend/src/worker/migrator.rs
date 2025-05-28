@@ -106,15 +106,21 @@ impl Worker {
             println!("\tcreated metadata");
         }
 
-        let spaces = old_db.list_spaces()?;
-        for (i, space) in spaces.iter().enumerate() {
-            println!("migrating space {}/{}...", i + 1, spaces.len());
-            Database::create_space_tx(&mut tx, space)?;
+        let extended_spaces = old_db.list_spaces()?;
+        for (i, e_space) in extended_spaces.iter().enumerate() {
+            println!("migrating space {}/{}...", i + 1, extended_spaces.len());
+            let space = Space {
+                id: e_space.id.clone(),
+                name: e_space.name.clone(),
+                created_at: e_space.created_at,
+                updated_at: e_space.updated_at,
+            };
+            Database::create_space_tx(&mut tx, &space)?;
             println!("\tcreated space");
 
-            let space_entries = old_db.list_space_entries(&space.id, None, None)?;
+            let space_entries = old_db.list_space_entries(&space.id, None, None, None)?;
             for entry in space_entries {
-                let resource_id = entry.resource_id.clone();
+                let resource_id = entry.entry_id.clone();
                 let space_entry = SpaceEntry {
                     id: entry.id,
                     space_id: entry.space_id,
@@ -128,7 +134,7 @@ impl Worker {
                     Err(_) => {
                         println!(
                             "\tSkipping (deleted) resource id '{:?}' for space entry",
-                            entry.resource_id
+                            entry.entry_id
                         );
                     }
                 }

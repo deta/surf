@@ -11,7 +11,7 @@
   const willDismiss = writable(new Set<string>())
 
   onMount(() => {
-    service.eventEmitter.on('will-dismiss', (toast) => {
+    service.on('will-dismiss', (toast) => {
       willDismiss.update((v) => {
         v.add(toast.id)
         return v

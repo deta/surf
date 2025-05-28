@@ -608,6 +608,7 @@
 <style lang="scss">
   :global(.response-wrapper citation) {
     padding: 0.45em 0.6em !important;
+    display: none;
   }
   :global(.response-wrapper citation img) {
     width: 1.3em !important;

@@ -2,6 +2,8 @@
   import { Icon } from '@horizon/icons'
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
+  import { isMac } from '@horizon/utils'
+  import ShortcutVisualizer from '../../Utils/Keyboard/ShortcutVisualizer.svelte'
 
   export let modShortcut: string
 
@@ -26,6 +28,8 @@
     //@ts-ignore
     window.showCodegenOnboarding()
   }
+
+  $: shortcutKeys = [isMac() ? 'cmd' : 'ctrl', 'shift', '1']
 </script>
 
 <section
@@ -59,7 +63,7 @@
       </p>
       <Button on:click={handleTryVision}>Try it out</Button>
       <p class="text-center text-sm md:!text-md text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]">
-        or use <span class="px-2 rounded-md">{modShortcut} + Shift + 1</span> to activate.
+        or use <ShortcutVisualizer shortcut={shortcutKeys} size="small" interactive={true} /> to activate.
       </p>
     </div>
   </div>

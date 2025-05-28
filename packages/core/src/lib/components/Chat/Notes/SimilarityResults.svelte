@@ -145,7 +145,7 @@
         <h2>No similar sources found</h2>
 
         {#if $selectedContext !== 'everything'}
-          <button on:click={handleSearchEverything}>Search All My Stuff</button>
+          <button on:click={handleSearchEverything}>Search All my Stuff</button>
         {/if}
       </div>
     {/if}

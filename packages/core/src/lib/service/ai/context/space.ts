@@ -30,13 +30,21 @@ export class ContextItemSpace extends ContextItemBase {
         return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon
       }
     })
+
+    this.iconString = derived([this.icon], ([icon]) => {
+      return this.contextItemIconToString(icon, this.fallbackIcon)
+    })
   }
 
   async getResourceIds(_prompt?: string) {
     const spaceContents = await this.service.tabsManager.oasis.getSpaceContents(this.data.id)
     const filteredContents = spaceContents
-      .filter((content) => content.manually_added !== SpaceEntryOrigin.Blacklisted)
-      .map((content) => content.resource_id)
+      // TODO: support sub spaces in the context
+      .filter(
+        (content) =>
+          content.manually_added !== SpaceEntryOrigin.Blacklisted && content.entry_type !== 'space'
+      )
+      .map((content) => content.entry_id)
     return filteredContents
   }
 

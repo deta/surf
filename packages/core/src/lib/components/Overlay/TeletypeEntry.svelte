@@ -24,12 +24,11 @@
 
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte'
-  import { get, readable, writable, derived } from 'svelte/store'
+  import { get, writable, derived } from 'svelte/store'
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
   import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
   import NewFeatureDialog from '../Onboarding/Dialog/NewFeatureDialog.svelte'
   import FloatyButton from '../Atoms/FloatyButton.svelte'
-  import { useLocalStorageStore } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
   import { versions, completedFeatures, showFeatureModal } from '../Onboarding/featured'
 
@@ -41,18 +40,13 @@
     useCancelableDebounce,
     useLogScope
   } from '@horizon/utils'
-  import {
-    type Action,
-    type HandlerAction,
-    type ParentAction,
-    type HorizontalAction
-  } from '@deta/teletype/src'
+  import { type HandlerAction, type ParentAction } from '@deta/teletype/src'
   import { useCommandComposer } from '../Overlay/service/commandComposer'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useConfig } from '../../service/config'
   import { Resource, useResourceManager } from '../../service/resources'
   import { teletypeActionStore, TeletypeAction } from './service/teletypeActions'
-  import { useTabsManager, type TabsManager } from '../../service/tabs'
+  import { useTabsManager } from '../../service/tabs'
   import type {
     TeletypeActionEvent,
     TeletypeActionHandler,
@@ -69,7 +63,6 @@
   import TeletypeHeader from './TeletypeHeader.svelte'
   import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { useDebounce } from '@horizon/utils'
   import { type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
   export let open: boolean
@@ -711,6 +704,7 @@
   }
 
   .teletype-close-wrapper {
+    display: none;
     position: fixed;
     left: 0;
     right: 0;
@@ -718,5 +712,9 @@
     height: 100vh;
     width: 100vw;
     background: transparent;
+  }
+
+  :global(body.onboarding .teletype-motion .inner-wrapper) {
+    bottom: -100% !important;
   }
 </style>

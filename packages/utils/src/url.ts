@@ -316,6 +316,16 @@ export const parseUrlIntoCanonical = (value: string | URL) => {
       url.hostname = 'notion.so'
       return url.toString()
     }
+  } else if (cleanHostname === 'youtube.com') {
+    // if video URL remove unecessary search params
+    if (url.pathname.startsWith('/watch')) {
+      const videoId = url.searchParams.get('v')
+      if (videoId) {
+        url.pathname = `/watch`
+        url.search = ''
+        url.searchParams.set('v', videoId)
+      }
+    }
   }
 
   const normalized = normalizeURL(url.href)

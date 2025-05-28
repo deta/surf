@@ -9,9 +9,10 @@ use crate::{
         models::{
             current_time, random_uuid, CompositeResource, EmbeddingResource, EmbeddingType,
             InternalResourceTagNames, PostProcessingJob, Resource, ResourceMetadata,
-            ResourceProcessingState, ResourceTag, ResourceTagFilter, ResourceTextContentMetadata,
-            ResourceTextContentType, SearchEngine, SearchResult, SearchResultItem,
-            SearchResultSimple,
+            ResourceOrSpace, ResourceProcessingState, ResourceTag, ResourceTagFilter,
+            ResourceTextContentMetadata, ResourceTextContentType, SearchEngine, SearchResult,
+            SearchResultItem, SearchResultSimple, SearchResultSpaceItem, SpaceEntryExtended,
+            SpaceEntryType,
         },
     },
     worker::worker::{send_worker_response, Worker},
@@ -231,6 +232,14 @@ impl Worker {
         self.db.list_resources_by_tags(tags)
     }
 
+    #[instrument(level = "trace", skip(self))]
+    pub fn list_all_resources_and_spaces(
+        &mut self,
+        tags: Vec<ResourceTagFilter>,
+    ) -> BackendResult<Vec<ResourceOrSpace>> {
+        self.db.list_all_resources_and_spaces(tags)
+    }
+
     // Only return resource ids
     pub fn list_resources_by_tags_no_space(
         &mut self,
@@ -296,7 +305,7 @@ impl Worker {
         let mut results: Vec<SearchResultItem> = vec![];
 
         let filtered_resource_ids =
-            self.get_filtered_ids_for_search(resource_tag_filters, space_id)?;
+            self.get_filtered_ids_for_search(resource_tag_filters, space_id.clone())?;
 
         let db_results = self.db.search_resources(
             &query,
@@ -319,7 +328,7 @@ impl Worker {
         if semantic_search_enabled {
             let vector_search_results = self.ai.vector_search(
                 &self.db,
-                query,
+                query.clone(),
                 embeddings_limit as usize,
                 filtered_resource_ids,
                 true,
@@ -336,15 +345,63 @@ impl Worker {
                 results.push(SearchResultItem {
                     resource: result,
                     engine: SearchEngine::Embeddings,
-                    card_ids: vec![],
-                    ref_resource_id: None,
-                    distance: None,
                 });
             }
         }
+        let spaces: Vec<SearchResultSpaceItem>;
+        let mut space_entries: Option<Vec<SpaceEntryExtended>> = None;
+        match space_id {
+            Some(space_id) => {
+                spaces = self.db.search_sub_space_entries(&space_id, &query)?;
+                let resource_ids = results
+                    .iter()
+                    .map(|r| r.resource.resource.id.clone())
+                    .collect::<Vec<_>>();
+                let child_space_ids = spaces
+                    .iter()
+                    .map(|s| s.space.id.clone())
+                    .collect::<Vec<_>>();
+
+                let mut entries: Vec<SpaceEntryExtended> = vec![];
+                let r_entries = self.db.get_space_entries_by_resource_ids(&resource_ids)?;
+                r_entries.iter().for_each(|entry| {
+                    entries.push(SpaceEntryExtended {
+                        id: entry.id.clone(),
+                        space_id: space_id.clone(),
+                        entry_id: entry.resource_id.clone(),
+                        entry_type: SpaceEntryType::Resource,
+                        created_at: entry.created_at,
+                        updated_at: entry.updated_at,
+                        manually_added: entry.manually_added,
+                        resource_type: None,
+                    });
+                });
+                let s_entries = self
+                    .db
+                    .get_sub_space_entries_by_space_ids(&space_id, &child_space_ids)?;
+                s_entries.iter().for_each(|entry| {
+                    entries.push(SpaceEntryExtended {
+                        id: entry.id.clone(),
+                        space_id: space_id.clone(),
+                        entry_id: entry.child_space_id.clone(),
+                        entry_type: SpaceEntryType::Space,
+                        created_at: entry.created_at,
+                        updated_at: entry.updated_at,
+                        manually_added: entry.manually_added,
+                        resource_type: None,
+                    });
+                });
+                space_entries = Some(entries);
+            }
+            None => {
+                spaces = self.db.search_spaces(&query)?;
+            }
+        }
         Ok(SearchResult {
-            total: results.len() as i64,
+            total: results.len() as i64 + spaces.len() as i64,
             items: results,
+            spaces,
+            space_entries,
         })
     }
 
@@ -726,6 +783,10 @@ pub fn handle_resource_message(
         }
         ResourceMessage::ListResourcesByTags(tags) => {
             let result = worker.list_resources_by_tags(tags);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::ListAllResourcesAndSpaces(tags) => {
+            let result = worker.list_all_resources_and_spaces(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ListResourcesByTagsNoSpace(tags) => {

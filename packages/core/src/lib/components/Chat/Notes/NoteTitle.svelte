@@ -66,7 +66,8 @@
     --squircle-radius: 8px;
     --squircle-smooth: 0.28;
 
-    &:hover {
+    &:hover,
+    &:focus-within {
       --squircle-fill: rgba(0, 0, 0, 0.05);
     }
 

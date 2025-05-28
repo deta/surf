@@ -3,6 +3,7 @@
   import RecentsStack from './RecentsStack.svelte'
   import dotNoiseLightGrey from '../../../../../public/assets/dotnoise-light-grey.png'
 
+  export let horizontalTabs: boolean
   const containerHeight = writable<null | string>(null)
 
   function handleUpdateContainerHeight(e: CustomEvent<string | null>) {
@@ -29,6 +30,7 @@
   <div class="bottom" style="gap: 0.5em;">
     <RecentsStack
       wasMouseInside={wasMouseInsideStack}
+      canHover={!horizontalTabs}
       on:open
       on:open-stuff
       on:open-and-chat

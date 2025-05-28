@@ -1,9 +1,17 @@
 <script lang="ts">
   export let active: boolean = false
   export let disabled: boolean = false
+  export let muted: boolean = true
 </script>
 
-<button {disabled} on:click {...$$restProps} class="no-drag {$$restProps['class']}" class:active>
+<button
+  {disabled}
+  on:click
+  {...$$restProps}
+  class="no-drag {$$restProps['class']}"
+  class:active
+  class:muted
+>
   <slot />
 </button>
 
@@ -24,13 +32,22 @@
     justify-items: center;
     padding: 0.5rem;
     appearance: none;
-    opacity: 0.6;
     outline: none;
+
+    &.muted {
+      opacity: 0.6;
+    }
 
     &:hover,
     &.active {
       --bg: var(--black-09);
-      @include utils.light-dark-custom('bg', var(--white-60), var(--black-55), var(--black-09));
+      @include utils.light-dark-custom(
+        'bg',
+        var(--black-09),
+        var(--white-15),
+        var(--black-09),
+        var(--white-15)
+      );
 
       @include utils.squircle($fill: var(--bg), $radius: 14px, $smooth: 0.44);
     }

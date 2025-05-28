@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { writable, derived, get } from 'svelte/store'
-  import { createEventDispatcher, getContext, onDestroy, onMount, tick } from 'svelte'
+  import { writable, derived } from 'svelte/store'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import tippy, { type Instance, type Placement, type Props } from 'tippy.js'
   import type { Editor as TiptapEditor } from '@tiptap/core'
 
@@ -16,12 +16,7 @@
   } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
-  import {
-    Resource,
-    ResourceNote,
-    ResourceTag,
-    useResourceManager
-  } from '../../../../service/resources'
+  import { Resource, ResourceTag, useResourceManager } from '../../../../service/resources'
   import {
     conditionalArrayItem,
     generateID,
@@ -30,16 +25,14 @@
     getFormattedDate,
     isMac,
     isModKeyPressed,
-    markdownToHtml,
     parseSurfProtocolURL,
-    tooltip,
-    truncate,
     truncateURL,
     useDebounce,
     useLocalStorageStore,
     useLogScope,
     useThrottle,
-    wait
+    wait,
+    htmlToMarkdown
   } from '@horizon/utils'
   import CitationItem, {
     type CitationClickData,
@@ -83,26 +76,19 @@
     type AIChatMessageSource,
     type DragTypes,
     type HighlightWebviewTextEvent,
-    type JumpToWebviewTimestampEvent,
-    type TabResource
+    type JumpToWebviewTimestampEvent
   } from '@horizon/core/src/lib/types'
   import { AIChat, useAI, type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
-  import {
-    ContextItemTypes,
-    type ContextManager
-  } from '@horizon/core/src/lib/service/ai/contextManager'
+  import { type ContextManager } from '@horizon/core/src/lib/service/ai/contextManager'
   import {
     INLINE_TRANSFORM,
-    SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT,
-    CHAT_TITLE_GENERATOR_PROMPT
+    SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
   } from '@horizon/core/src/lib/constants/prompts'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
   import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
-  import { inboxContext } from '@horizon/core/src/lib/constants/browsingContext'
-  import { ChatMode, ModelTiers, Provider } from '@horizon/types/src/ai.types'
+  import { ChatMode, Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
-  import ChangeContextBtn from '@horizon/core/src/lib/components/Chat/Notes/ChangeContextBtn.svelte'
   import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
   import type { InsertSourceEvent } from '@horizon/core/src/lib/components/Chat/Notes/SimilarityItem.svelte'
@@ -111,8 +97,7 @@
   import { useOnboardingNote, useCodegenNote } from '@horizon/core/src/lib/service/demoitems'
   import OnboardingControls from '@horizon/core/src/lib/components/Chat/Notes/OnboardingControls.svelte'
   import { launchTimeline } from '../../../Onboarding/timeline'
-  import { OnboardingFeature } from '../../../Onboarding/onboardingScripts'
-  import { Icon } from '@horizon/icons'
+  import { CompletionEventID, OnboardingFeature } from '../../../Onboarding/onboardingScripts'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
   import { createWikipediaAPI } from '@horizon/web-parser'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
@@ -138,19 +123,19 @@
   import CaretPopover from './CaretPopover.svelte'
   import type { CaretPosition } from '@horizon/editor/src/lib/extensions/CaretIndicator'
   import Surflet from '@horizon/core/src/lib/components/Chat/Notes/Surflet.svelte'
-  import ChatControls from '@horizon/core/src/lib/components/Chat/ChatControls.svelte'
   import { openContextMenu } from '../../../Core/ContextMenu.svelte'
-  import {
-    createResourcesFromMediaItems,
-    processPaste,
-    type MediaParserResult
-  } from '../../../../service/mediaImporter'
-  import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+  import { createResourcesFromMediaItems, processPaste } from '../../../../service/mediaImporter'
+  import { predefinedSurfletCode } from '../../../Onboarding/predefinedSurflets'
   import {
     createMentionsFetcher,
     createResourcesMentionsFetcher
   } from '@horizon/core/src/lib/service/ai/mentions'
   import type { LinkClickHandler } from '@horizon/editor/src/lib/extensions/Link/helpers/clickHandler'
+  import NoteSettingsMenu from '@horizon/core/src/lib/components/Chat/Notes/NoteSettingsMenu.svelte'
+  import { EditorAIGeneration, NoteEditor } from '@horizon/core/src/lib/service/editor'
+  import ChatInput from '../../../Notes/ChatInput.svelte'
+  import NoteTitle from '../../../Notes/Atoms/NoteTitle.svelte'
+  import ChatControls from '../../../Chat/ChatControls.svelte'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -164,6 +149,7 @@
   export let autoGenerateTitle: boolean = false
   export let contextManager: ContextManager | undefined = undefined
   export let note: SmartNote | null = null
+  export let origin: string = ''
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
@@ -201,6 +187,33 @@
   const generatingSimilarities = writable(false)
   // Local store that syncs with the global AI generation state
   const isGeneratingAI = writable(false)
+  // We use these to determine whether to display the big prompt bubbles
+  // need to wire thi back when fixing the prompts with the new input bar
+  const isEmpty = writable(false)
+
+  const floatyBarState = writable<'inline' | 'floaty' | 'bottom'>('inline')
+  const inlineBarStyle = derived(
+    [floatyBarState, isGeneratingAI],
+    ([$floatyBarState, $isGeneratingAI]) => {
+      // TODO: @maxu / maxi): Ideally we keep it in the floaty state and let it figure out its position
+      // by itself, but due to the way we insert text into the editor rn this looks reeeealy janky
+      // fixed it to bottom for now
+      //if ($isGeneratingAI) return $floatyBarState !== 'inline' ? $floatyBarState : 'bottom'
+      if ($isGeneratingAI) return 'bottom'
+      else return $floatyBarState
+    }
+  )
+  const handleFloatyInputStateUpdate = (e: CustomEvent<'inline' | 'floaty' | 'bottom'>) => {
+    floatyBarState.set(e.detail)
+  }
+  const lastLineVisible = writable<boolean>(true)
+  const isFirstLine = writable<boolean>(true)
+  const handleLastLineVisibilityChanged = (e: CustomEvent<boolean>) => {
+    lastLineVisible.set(e.detail)
+  }
+  const handleIsFirstLineChanged = (e: CustomEvent<boolean>) => {
+    isFirstLine.set(e.detail)
+  }
 
   // Set up synchronization between local and global state
   onMount(() => {
@@ -239,10 +252,13 @@
   let tippyPopover: Instance<Props> | null = null
   let editorFocused = false
   let disableAutoscroll = false
+  let focusInlineBar: () => void
 
   // Caret indicator state
   let caretPosition: CaretPosition | null = null
   let showCaretPopover = false
+
+  let focusInput: () => void
 
   const emptyPlaceholder = 'Start typing or hit space for suggestions…'
 
@@ -347,40 +363,6 @@
   const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager }, resourceId)
   const linkItemsFetcher = createResourcesMentionsFetcher(resourceManager, resourceId)
 
-  const prepLoadingPhrases = [
-    'Analysing your context…',
-    'Getting to the essence…',
-    'Surfing the data…',
-    'Unpacking details…',
-    'Summoning the goodies…',
-    'Charging the knowledge battery…',
-    'Gathering bits of brilliance…',
-    'Preparing the magic…',
-    'Crafting the wisdom…',
-    'Cooking up the insights…',
-    'Brewing the brilliance…'
-  ]
-
-  const writingLoadingPhrases = [
-    'Writing…',
-    'Composing…',
-    'Gathering thoughts…',
-    'Crafting the words…',
-    'Weaving the wisdom…',
-    'Spinning the story…',
-    'Painting the picture…',
-    'Sculpting the text…',
-    'Inking the ideas…'
-  ]
-
-  const getPrepPhrase = () => {
-    return prepLoadingPhrases[Math.floor(Math.random() * prepLoadingPhrases.length)]
-  }
-
-  const getWritingPhrase = () => {
-    return writingLoadingPhrases[Math.floor(Math.random() * writingLoadingPhrases.length)]
-  }
-
   let initialLoad = true
   let focusEditor: () => void
   let title = ''
@@ -389,6 +371,8 @@
   $: resource = note?.resource
 
   let editorElem: Editor
+  let chatInputComp: ChatInput
+  let chatInputEditorElem: Editor
   let editorElement: HTMLElement
   let editorWrapperElem: HTMLElement
 
@@ -747,12 +731,6 @@
       }
 
       dispatch('update-title', title)
-    }
-  }
-
-  const handleTitleKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleTitleBlur()
 
       editorElem.focus()
     }
@@ -869,16 +847,6 @@
     return nodes[nodes.length - 1]
   }
 
-  const getOutputNodeByID = (id: string) => {
-    const editor = editorElem.getEditor()
-    const nodePositions = editor.$nodes('output')
-    if (!nodePositions || nodePositions.length === 0) {
-      return null
-    }
-
-    return nodePositions.find((nodePos) => nodePos.node.attrs.id === id) ?? null
-  }
-
   const createCitationHTML = (source: AIChatMessageSource, skipHighlight = false) => {
     const citationInfo = encodeURIComponent(
       JSON.stringify({
@@ -984,7 +952,6 @@
 
   export const generateAndInsertAIOutput = async (
     query: string,
-    systemPrompt?: string,
     mentions?: MentionItem[],
     trigger: PageChatMessageSentEventTrigger = PageChatMessageSentEventTrigger.NoteAutocompletion,
     opts?: Partial<ChatSubmitOptions>
@@ -995,6 +962,9 @@
       showPrompt: opts?.showPrompt ?? false,
       generationID: opts?.generationID
     } as ChatSubmitOptions
+
+    const editor = editorElem.getEditor()
+    const noteEditor = NoteEditor.create(editor, editorElem, editorElement)
 
     // Hide the caret popover when generation starts
     hidePopover()
@@ -1011,6 +981,8 @@
       disableAutoscroll = false
     }
 
+    let aiGeneration: EditorAIGeneration | null = null
+
     try {
       if (note) {
         chat = await note.getChatWithMentions(mentions)
@@ -1020,38 +992,16 @@
 
       if (!chat || !query) {
         log.error('Failed to create chat')
+        updateAIGenerationProgress(100, 'Error generating AI output')
         return
       }
 
-      const editor = editorElem.getEditor()
       const currentPosition = editor.view.state.selection.from
 
       autocompleting.set(true)
 
-      const replace = trigger === PageChatMessageSentEventTrigger.NoteRewrite
-
-      if (!replace) {
-        editor.commands.insertContentAt(
-          currentPosition,
-          `<loading data-text="${getPrepPhrase()}"></loading>`,
-          {
-            updateSelection: false
-          }
-        )
-
-        wait(300).then(() => {
-          const elem = editor.contentElement
-          if (elem) {
-            const domElem = elem.querySelector('loading')
-            if (domElem) {
-              domElem.scrollIntoView({
-                behavior: 'instant',
-                block: 'start'
-              })
-            }
-          }
-        })
-      }
+      // TODO: handle rewriting again to skip the output block
+      // const replace = trigger === PageChatMessageSentEventTrigger.NoteRewrite
 
       let createdLoading = false
 
@@ -1060,7 +1010,12 @@
 
       const textQuery = getEditorContentText(query)
 
-      let createdOutputNode = false
+      aiGeneration = noteEditor.createAIGeneration(currentPosition, {
+        id: options.generationID,
+        textQuery: textQuery,
+        autoScroll: options.autoScroll,
+        showPrompt: options.showPrompt
+      })
 
       // TODO: chatMode is already also figured out in `createChatCompletion` API
       // we need to refactor this to avoid double calls
@@ -1069,21 +1024,10 @@
         if (!createdLoading) {
           createdLoading = true
 
-          const loading = getLastNode('loading')
-          if (loading) {
-            editor.commands.deleteRange(loading.range)
-          }
+          aiGeneration?.updateStatus('generating')
 
-          if (!replace) {
-            // let outputNode = getOutputNodeByID(message.id)
-            editor.commands.insertContentAt(
-              currentPosition,
-              `<loading data-text="${getWritingPhrase()}"></loading>`,
-              {
-                updateSelection: false
-              }
-            )
-          }
+          // Update progress
+          updateAIGenerationProgress(50, 'Generating response...')
 
           await tick()
 
@@ -1100,38 +1044,12 @@
             ? await parseChatOutputToSurfletCode(message)
             : await parseChatOutputToHtml(message)
 
-        const tr = editor.view.state.tr
-        const json = editorElem.generateJSONFromHTML(outputContent)
-        const newOutputNode = editor.view.state.schema.nodeFromJSON({
-          type: 'output',
-          content: json.content,
-          attrs: {
-            id: message.id,
-            prompt: options.showPrompt ? textQuery : undefined
-          }
-        })
-
-        const nodeContent = newOutputNode.content
-
-        const outputNode = getOutputNodeByID(message.id)
-        if (outputNode) {
-          tr.replaceRangeWith(outputNode.from - 1, outputNode.to + 1, newOutputNode)
-        } else if (!createdOutputNode) {
-          createdOutputNode = true
-          tr.insert(currentPosition, newOutputNode)
+        if (aiGeneration && outputContent) {
+          aiGeneration.updateOutput(outputContent)
         }
 
-        editor.view.dispatch(tr)
-
-        if (options.autoScroll && !disableAutoscroll) {
-          let outputNodePos = getOutputNodeByID(message.id)
-          if (outputNodePos) {
-            const domElem = outputNodePos.element
-            domElem.scrollIntoView({
-              behavior: 'instant',
-              block: 'start'
-            })
-          }
+        if (disableAutoscroll && aiGeneration) {
+          aiGeneration.autoScroll = false
         }
       }, 15)
 
@@ -1141,8 +1059,13 @@
         !mentions ||
         mentions.filter((mention) => mention.type !== MentionItemType.MODEL).length === 0
 
+      let markdownQuery = await htmlToMarkdown(query)
+      if (!markdownQuery) {
+        markdownQuery = query
+      }
+
       const response = await chat.createChatCompletion(
-        `${query} \n ${systemPrompt ?? ''}`,
+        markdownQuery,
         {
           trigger,
           generationID: options.generationID,
@@ -1170,10 +1093,14 @@
         } else {
           toasts.error('Failed to generate AI output')
         }
+
+        aiGeneration.updateStatus('failed')
         cleanupCompletion()
       } else if (!response.output) {
         log.error('No output found')
         toasts.error('Failed to generate AI output')
+
+        aiGeneration.updateStatus('failed')
         cleanupCompletion()
       } else {
         const content =
@@ -1181,49 +1108,10 @@
             ? await parseChatOutputToSurfletCode(response.output)
             : await parseChatOutputToHtml(response.output)
 
-        const loading = getLastNode('loading')
-        if (loading) {
-          editor.commands.deleteRange(loading.range)
-        }
-
-        // const outputNode = getLastNode('output')
-        // if (!outputNode) {
-        //   log.error('No output node found')
-        //   editor.commands.insertContent(content, {
-        //     updateSelection: false
-        //   })
-        //   return
-        // }
-
-        // const range = outputNode.range
-        // editor.commands.deleteRange(range)
-        // editor.commands.insertContentAt(range.from, content, {
-        //   updateSelection: false
-        // })
-
         log.debug('inserted output', content)
 
-        // await wait(700)
-
-        // let outputNode = getOutputNodeByID(response.output.id)
-        // if (!outputNode) {
-        //   log.error('No output node found')
-        //   return
-        // }
-
-        // const tr = editor.view.state.tr
-        // const json = editorElem.generateJSONFromHTML(content)
-        // const newOutputNode = editor.view.state.schema.nodeFromJSON({
-        //   type: 'output',
-        //   content: json.content,
-        //   attrs: {
-        //     id: response.output.id,
-        //     prompt: textQuery
-        //   }
-        // })
-
-        // tr.replaceRangeWith(outputNode.range.from, outputNode.range.to, newOutputNode)
-        // editor.view.dispatch(tr)
+        await wait(200)
+        aiGeneration.updateStatus('completed')
 
         // insert new line
         // editor.commands.insertContentAt(range.to, '<br>', {
@@ -1234,11 +1122,13 @@
       log.error('Error generating AI output', err)
       toasts.error('Failed to generate AI output')
 
-      const loading = getLastNode('loading')
-      if (loading) {
-        const editor = editorElem.getEditor()
-        editor.commands.deleteRange(loading.range)
-      }
+      // const loading = getLastNode('loading')
+      // if (loading) {
+      //   const editor = editorElem.getEditor()
+      //   editor.commands.deleteRange(loading.range)
+      // }
+
+      aiGeneration?.updateStatus('failed')
 
       // Update global AI generation state to indicate error
       updateAIGenerationProgress(100, 'Error generating AI output')
@@ -1628,6 +1518,23 @@
       ) {
         // Stop propagation to prevent the event from bubbling up
         e.stopPropagation()
+
+        if (e.key === 'ArrowDown') {
+          focusInput()
+          e.preventDefault()
+          // Focus inline bar if floaty or bottom
+          //if (['floaty', 'bottom'].includes($floatyBarState)) {
+          //  focusInlineBar()
+          //  e.preventDefault()
+          //} else {
+          //  // TODO: Switch to floaty if floaty in view, othweise bottom
+          //  //floatyBarState.set('bottom')
+          //  tick().then(() => {
+          //    focusInlineBar()
+          //  })
+          //  e.preventDefault()
+          //}
+        }
       }
     }
   }
@@ -1654,6 +1561,12 @@
     if (editorElem) {
       editorElem.triggerAutocomplete()
     }
+  }
+
+  const handleRunPrompt = (e: CustomEvent<{ prompt: ChatPrompt; custom: boolean }>) => {
+    const { prompt, custom } = e.detail
+    log.debug('Handling run prompt', prompt)
+    runProoompt(prompt, custom)
   }
 
   const handleCloseBubbleMenu = () => {
@@ -1707,6 +1620,7 @@
         createNewNote()
       } else if (action === 'onboarding-open-stuff') {
         openSpaceInStuff('all')
+        document.dispatchEvent(new CustomEvent('onboarding-open-stuff', { bubbles: true }))
       } else if (action === 'onboarding-select-text') {
         selectElemText('output[data-id="similarity-selection"]')
       } else if (action === 'onboarding-generate-suggestions') {
@@ -1793,7 +1707,7 @@
         }
       )
 
-      stuffResults = result
+      stuffResults = result.resources
         .filter((item) => item.resource.id !== resourceId)
         .slice(0, 5)
         .map((item) => {
@@ -1817,23 +1731,6 @@
     }
 
     return [...filteredActions, ...stuffResults]
-  }
-
-  const showOnboardingNote = async () => {
-    const newTab = await tabsManager.create<TabResource>(
-      {
-        title: 'Intro to Surf Notes',
-        icon: '',
-        type: 'resource',
-        resourceId: 'onboarding',
-        resourceType: ResourceTypes.DOCUMENT_SPACE_NOTE
-      },
-      {
-        active: true
-      }
-    )
-
-    log.debug('created onboarding tab', newTab)
   }
 
   const showBasicsTimeline = async () => {
@@ -1896,13 +1793,13 @@
 
       hideInfoPopover()
 
+      setTimeout(() => focusInput(), 150)
       const { query, mentions } = e.detail
       await generateAndInsertAIOutput(
         query,
-        'Stay short and use citations!',
         mentions,
         PageChatMessageSentEventTrigger.NoteAutocompletion,
-        { autoScroll: false }
+        { focusEnd: true, autoScroll: false, showPrompt: false }
       )
     } catch (e) {
       log.error('Error doing magic', e)
@@ -1958,6 +1855,29 @@
     }
   }, 500)
 
+  const runProoompt = async (prompt: ChatPrompt, custom: boolean = false) => {
+    try {
+      log.debug('Handling prompt submit', prompt)
+
+      let promptType = PromptType.BuiltIn
+      if (custom) {
+        promptType = PromptType.Custom
+      } else {
+        //const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
+        //promptType = builtIn ? PromptType.BuiltIn : PromptType.Generated
+      }
+      telemetry.trackUsePrompt(
+        promptType,
+        EventContext.Chat,
+        prompt.label ? prompt.label.toLowerCase() : undefined
+      )
+
+      runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: true })
+    } catch (e) {
+      log.error('Error doing magic', e)
+    }
+  }
+
   export const runPrompt = async (prompt: ChatPrompt, opts?: Partial<ChatSubmitOptions>) => {
     try {
       log.debug('Handling prompt submit', prompt)
@@ -1973,7 +1893,6 @@
 
       await generateAndInsertAIOutput(
         prompt.prompt,
-        'Stay short and use citations!',
         mentions,
         PageChatMessageSentEventTrigger.NoteUseSuggestion,
         opts
@@ -2000,6 +1919,15 @@
     }
   }
 
+  export const setChatInputContent = (content: string, focus = false) => {
+    if (!chatInputComp) {
+      log.error('Chat input component not initialized')
+      return
+    }
+
+    chatInputComp.setContent(content, focus)
+  }
+
   export const replaceContent = (text: string) => {
     const editor = editorElem.getEditor()
 
@@ -2007,26 +1935,137 @@
     editor.commands.focus('end')
   }
 
+  export const handleCreateSurflet = (code?: string) => {
+    try {
+      const editor = editorElem.getEditor()
+
+      // Get the current position
+      const currentPosition = editor.view.state.selection.from
+
+      // Use the provided code or fall back to predefined code
+      const surfletCode = code || predefinedSurfletCode
+
+      // Remove markdown code block markers if present
+      const cleanCode = surfletCode.replace(/```javascript|```/g, '')
+
+      // Create a surflet node with the code
+      const surfletNode = editor.view.state.schema.nodes.surflet.create(
+        { codeContent: cleanCode },
+        null
+      )
+
+      // Insert the surflet node at the current position
+      const tr = editor.view.state.tr
+      tr.insert(currentPosition, surfletNode)
+      editor.view.dispatch(tr)
+
+      // Focus the editor after insertion
+      editor.commands.focus()
+
+      log.debug('Surflet inserted successfully')
+    } catch (err) {
+      log.error('Error inserting surflet', err)
+    }
+  }
+
+  /**
+   * Update the content of the most recently created surflet
+   * @param code The new code to set for the surflet
+   */
+  const updateSurfletContent = (code?: string) => {
+    if (!code) {
+      log.debug('No code provided to update surflet')
+      return
+    }
+
+    // Check if editorElem exists and is initialized
+    if (!editorElem) {
+      log.debug('Editor element not available for surflet update')
+      return
+    }
+
+    try {
+      // Get the editor and check if it's available
+      const editor = editorElem.getEditor()
+      if (!editor || !editor.state || !editor.view) {
+        log.debug('Editor not fully initialized for surflet update')
+        return
+      }
+
+      // Find the surflet node in the document
+      const surfletNodes: { pos: number; node: any }[] = []
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === 'surflet') {
+          surfletNodes.push({ pos, node })
+        }
+        return true
+      })
+
+      // If no surflet nodes found, log debug and return
+      if (surfletNodes.length === 0) {
+        log.debug('No surflet node found to update')
+        return
+      }
+
+      // Get the last surflet node (most recently created)
+      const lastSurflet = surfletNodes[surfletNodes.length - 1]
+
+      // Create a transaction to update the node's attributes
+      const tr = editor.state.tr
+      tr.setNodeMarkup(lastSurflet.pos, undefined, {
+        ...lastSurflet.node.attrs,
+        codeContent: code
+      })
+
+      // Dispatch the transaction to update the editor
+      editor.view.dispatch(tr)
+
+      log.debug('Surflet content updated successfully')
+    } catch (err) {
+      // Use debug level instead of error to avoid spamming console
+      log.debug('Could not update surflet content', err)
+    }
+  }
+
   let chatInputGenerationID: string | null = null
 
   const handleChatSubmit = async (e: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
     try {
-      const { query, mentions } = e.detail
+      let query = ''
+      let mentions: MentionItem[]
+      let needsFocusChatBar = false
+      let showPromptAndScroll = false
+
+      if (e.detail === null) {
+        const { html: text, mentions: editorMentions } = editorElem.getParsedEditorContent()
+        query = text
+        mentions = editorMentions
+        needsFocusChatBar = true
+      } else {
+        query = e.detail.query
+        mentions = e.detail.mentions
+        showPromptAndScroll = true
+      }
 
       chatInputGenerationID = generateID()
 
       log.debug('Handling submit', chatInputGenerationID, query, mentions)
 
+      document.dispatchEvent(
+        new CustomEvent(CompletionEventID.AIGenerationStarted, { bubbles: true })
+      )
+
       if (note) {
+        if (needsFocusChatBar) setTimeout(() => focusInput(), 150)
+
         await generateAndInsertAIOutput(
           query,
-          undefined,
           mentions,
           PageChatMessageSentEventTrigger.NoteChatInput,
           {
             focusEnd: true,
-            autoScroll: true,
-            showPrompt: true,
+            autoScroll: showPromptAndScroll,
+            showPrompt: showPromptAndScroll,
             generationID: chatInputGenerationID
           }
         )
@@ -2038,6 +2077,10 @@
     }
   }
 
+  const handleChatInputBlur = () => {
+    editorElem.focus()
+  }
+
   const handleStopGeneration = () => {
     log.debug('Stopping generation')
     if (chat) {
@@ -2046,13 +2089,266 @@
   }
 
   const handleScroll = () => {
-    log.debug('scroll')
     disableAutoscroll = true
+  }
+
+  // Function to handle inserting an onboarding mention into the editor
+  const handleInsertOnboardingMention = async (
+    event: CustomEvent<MentionItem & { query?: string }>
+  ) => {
+    await wait(100)
+    try {
+      const mentionItem = event.detail
+      if (!mentionItem || !mentionItem.id || !mentionItem.label) {
+        log.error('Invalid mention data provided')
+        return
+      }
+
+      if (!editorElem) {
+        log.error('Editor element not initialized')
+        return
+      }
+
+      const noteEditor = editorElem.getEditor()
+      if (!noteEditor) {
+        log.error('Editor instance is not available')
+        return
+      }
+
+      if (!chatInputEditorElem) {
+        log.error('Could not get chat input editor instance')
+        return
+      }
+
+      const chatInputEditor = chatInputEditorElem.getEditor()
+      if (!chatInputEditor) {
+        log.error('Chat input editor instance is not available')
+        return
+      }
+
+      noteEditor
+        .chain()
+        .focus('end')
+        .insertContent([
+          {
+            type: 'paragraph'
+          },
+          {
+            type: 'paragraph'
+          }
+        ])
+        .run()
+
+      // Insert two line breaks followed by the mention
+      chatInputEditor
+        .chain()
+        .focus('end')
+        .insertContent([
+          {
+            type: 'mention',
+            attrs: {
+              id: mentionItem.id,
+              label: mentionItem.label,
+              mentionType: mentionItem.type,
+              icon: mentionItem.icon
+            }
+          },
+          {
+            type: 'text',
+            text: ' '
+          }
+        ])
+        .run()
+
+      // If there's a query, insert it after the mention
+      if (mentionItem.query) {
+        chatInputEditor.chain().insertContent(mentionItem.query).run()
+      }
+
+      chatInputEditor.commands.focus('end')
+
+      // Dispatch the mention-insert event to handle any side effects
+      dispatch('mention-insert', mentionItem)
+
+      log.debug('Inserted onboarding mention into editor', mentionItem)
+    } catch (error) {
+      log.error('Error inserting onboarding mention', error)
+      toasts.error('Failed to insert mention')
+    }
+  }
+
+  // Function to handle inserting the UseAsDefaultBrowser extension into the editor
+  const handleInsertUseAsDefaultBrowser = async () => {
+    await wait(100)
+    try {
+      const editor = editorElem.getEditor()
+
+      // Get the end position - insert at the end of the document
+      const position = editor.view.state.doc.content.size
+
+      // Create a transaction to insert the UseAsDefaultBrowser node
+      const tr = editor.view.state.tr
+
+      // Insert a blank line first
+      editor.commands.insertContentAt(position, [
+        { type: 'paragraph', content: [{ type: 'text', text: ' ' }] }, // Add a blank line
+        { type: 'useAsDefaultBrowser' } // Then add the UseAsDefaultBrowser node
+      ])
+
+      await tick()
+      // Focus the editor after insertion
+      editor.commands.focus()
+
+      const element = document.querySelector('.default-browser-container')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+
+      log.debug('UseAsDefaultBrowser extension inserted successfully at the end of the document')
+    } catch (err) {
+      log.error('Error inserting UseAsDefaultBrowser extension', err)
+      toasts.error('Failed to insert default browser prompt')
+    }
+  }
+
+  // Function to handle inserting a Button extension into the editor
+  const handleInsertButtonToNote = async (event: CustomEvent<{ text: string; action: string }>) => {
+    await wait(100)
+    try {
+      const editor = editorElem.getEditor()
+      const { action } = event.detail
+
+      // Get the end position - insert at the end of the document
+      const position = editor.view.state.doc.content.size
+
+      // Check if this is the onboarding-open-stuff action
+      if (action === 'onboarding-open-stuff') {
+        // Insert a blank line followed by the OpenStuff node
+        editor.commands.insertContentAt(position, [
+          { type: 'paragraph', content: [{ type: 'text', text: ' ' }] }, // Add a blank line
+          { type: 'openStuff' }, // Then add the OpenStuff node
+          { type: 'paragraph', content: [{ type: 'text', text: ' ' }] } // Add another blank line after
+        ])
+
+        log.debug('OpenStuff extension inserted successfully at the end of the document')
+      } else {
+        // Original button behavior for other actions
+        const { text } = event.detail
+
+        // Insert a blank line followed by the Button node
+        editor.commands.insertContentAt(position, [
+          { type: 'paragraph', content: [{ type: 'text', text: ' ' }] }, // Add a blank line
+          {
+            type: 'button',
+            attrs: {
+              text: { text: text }, // Properly structure the text attribute as an object with a text property
+              action: action
+            }
+          },
+          { type: 'paragraph', content: [{ type: 'text', text: ' ' }] } // Add another blank line after the button
+        ])
+
+        log.debug('Button extension inserted successfully at the end of the document', text, action)
+      }
+
+      await tick()
+
+      // Focus the editor after insertion
+      // editor.commands.focus()
+    } catch (err) {
+      log.error('Error inserting extension', err)
+      toasts.error('Failed to insert content')
+    }
+  }
+
+  // Function to handle inserting the onboarding footer with links into the editor
+  const handleInsertOnboardingFooter = async (
+    event: CustomEvent<{ links: Array<{ url: string; title: string }> }>
+  ) => {
+    await wait(100)
+    try {
+      const editor = editorElem.getEditor()
+      const links = event.detail.links || []
+
+      if (!links.length) {
+        log.warn('No links provided for onboarding footer')
+        return
+      }
+
+      // Get the end position - insert at the end of the document
+      const position = editor.view.state.doc.content.size
+
+      // Create content for the footer
+      let content = [
+        { type: 'paragraph', content: [{ type: 'text', text: ' ' }] }, // Use a space instead of empty string
+        { type: 'paragraph', content: [{ type: 'text', text: 'Useful resources:' }] },
+        {
+          type: 'bulletList',
+          content: links.map((link) => ({
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    marks: [
+                      {
+                        type: 'link',
+                        attrs: {
+                          href: link.url,
+                          target: '_blank'
+                        }
+                      }
+                    ],
+                    text: link.title || link.url
+                  }
+                ]
+              }
+            ]
+          }))
+        }
+      ]
+
+      // Insert the footer content
+      editor.commands.insertContentAt(position, content)
+
+      await tick()
+
+      // Focus the editor after insertion
+      //editor.commands.focus()
+
+      log.debug('Onboarding footer with links inserted successfully')
+    } catch (err) {
+      log.error('Error inserting onboarding footer', err)
+      toasts.error('Failed to insert resource links')
+    }
   }
 
   onMount(async () => {
     // @ts-ignore
     window.wikipediaAPI = wikipediaAPI
+
+    // Add event listener for onboarding mention
+    document.addEventListener(
+      'insert-onboarding-mention',
+      handleInsertOnboardingMention as EventListener
+    )
+
+    // Add event listener for UseAsDefaultBrowser extension
+    document.addEventListener(
+      'insert-use-as-default-browser',
+      handleInsertUseAsDefaultBrowser as EventListener
+    )
+
+    // Add event listener for onboarding footer with links
+    document.addEventListener(
+      'insert-onboarding-footer',
+      handleInsertOnboardingFooter as EventListener
+    )
+
+    // Add event listener for button insertion
+    document.addEventListener('insert-button-to-note', handleInsertButtonToNote as EventListener)
 
     if (showOnboarding) {
       initialLoad = false
@@ -2128,6 +2424,10 @@
 
     unsubscribeContent = content.subscribe((value) => {
       debouncedSaveContent(value ?? '')
+
+      if (editorElem) {
+        isEmpty.set(editorElem.isEmptyy())
+      }
     })
 
     title = note.titleValue ?? 'Untitled'
@@ -2147,8 +2447,38 @@
 
     await wait(500)
 
+    // Add event listeners for surflet events
+    const handleCreateSurfletEvent = (e: CustomEvent) => {
+      log.debug('Received create-surflet event', e.detail)
+      handleCreateSurflet(e.detail?.code)
+    }
+
+    const handleUpdateSurfletEvent = (e: CustomEvent) => {
+      log.debug('Received update-surflet event', e.detail)
+      updateSurfletContent(e.detail?.code)
+    }
+
+    const handleOpenStuffEvent = () => {
+      log.debug('Received onboarding-open-stuff event')
+      tabsManager.showNewTabOverlay.set(2)
+    }
+
+    if (editorElem) {
+      isEmpty.set(editorElem.isEmptyy())
+    }
+
     if (editorElement) {
       editorElement.addEventListener('scroll', handleScroll)
+    }
+
+    document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
+    document.addEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
+    document.addEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
+
+    return () => {
+      document.removeEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
+      document.removeEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
+      document.removeEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
     }
   })
 
@@ -2172,6 +2502,21 @@
     if (editorElement) {
       editorElement.removeEventListener('scroll', handleScroll)
     }
+
+    // Remove the UseAsDefaultBrowser event listener
+    document.removeEventListener(
+      'insert-use-as-default-browser',
+      handleInsertUseAsDefaultBrowser as EventListener
+    )
+
+    // Remove the onboarding footer event listener
+    document.removeEventListener(
+      'insert-onboarding-footer',
+      handleInsertOnboardingFooter as EventListener
+    )
+
+    // Remove the button insertion event listener
+    document.removeEventListener('insert-button-to-note', handleInsertButtonToNote as EventListener)
   })
 </script>
 
@@ -2201,19 +2546,25 @@
 >
   <div class="content">
     {#if showTitle}
-      <div class="details-wrapper">
-        <div class="details">
-          <input
-            type="text"
-            placeholder="Note Title"
-            disabled={showOnboarding}
-            bind:value={title}
-            on:blur={handleTitleBlur}
-            on:keydown={handleTitleKeydown}
-            on:click
-          />
-        </div>
-      </div>
+      <NoteTitle bind:value={title} placeholder="New Note" on:blur={handleTitleBlur} />
+    {/if}
+
+    {#if !initialLoad && origin !== 'homescreen'}
+      <ChatInput
+        {contextManager}
+        bind:this={chatInputComp}
+        bind:editor={chatInputEditorElem}
+        bind:focus={focusInput}
+        state={$lastLineVisible ? 'floaty' : 'bottom'}
+        firstLine={$isFirstLine}
+        disabled={showCaretPopover && editorFocused && !$isFirstLine}
+        {mentionItemsFetcher}
+        on:run-prompt={handleRunPrompt}
+        on:submit={handleChatSubmit}
+        on:cancel-completion={handleStopGeneration}
+        on:blur={handleChatInputBlur}
+        on:autocomplete={handleCaretPopoverAutocomplete}
+      />
     {/if}
 
     {#if !initialLoad}
@@ -2231,7 +2582,7 @@
               bind:floatingMenuShown={$floatingMenuShown}
               bind:focused={editorFocused}
               bind:editorElement
-              placeholder={emptyPlaceholder}
+              placeholder={`Start writing your new document`}
               placeholderNewLine={$editorPlaceholder}
               citationComponent={CitationItem}
               surfletComponent={Surflet}
@@ -2252,7 +2603,7 @@
               showSlashMenu={!minimal}
               showSimilaritySearch={!minimal && similaritySearch}
               parseMentions
-              enableCaretIndicator={true}
+              enableCaretIndicator={origin !== 'homescreen'}
               onCaretPositionUpdate={handleCaretPositionUpdate}
               onLinkClick={handleLinkClick}
               {tabsManager}
@@ -2273,6 +2624,9 @@
               on:open-bubble-menu={handleOpenBubbleMenu}
               on:button-click={handleNoteButtonClick}
               on:slash-command={handleSlashCommand}
+              on:floaty-input-state-update={handleFloatyInputStateUpdate}
+              on:last-line-visbility-changed={handleLastLineVisibilityChanged}
+              on:is-first-line-changed={handleIsFirstLineChanged}
               {autofocus}
             >
               <div slot="floating-menu">
@@ -2286,7 +2640,7 @@
               </div>
               <div slot="caret-popover">
                 <!-- CaretPopover positioned absolutely over the editor -->
-                {#if showCaretPopover && caretPosition}
+                {#if showCaretPopover && caretPosition && !$isFirstLine}
                   <CaretPopover
                     visible={showCaretPopover}
                     position={caretPosition}
@@ -2332,40 +2686,14 @@
       />
     {/if}
 
-    {#if !hideContextSwitcher}
-      <div class="change-context-wrapper">
-        <!-- <ModelPicker />
+    {#if !showOnboarding && !manualContextControl}
+      <div class="note-settings">
+        <ModelPicker />
 
-        <ChangeContextBtn
-          spaces={oasis.spaces}
-          {selectedContext}
-          {activeSpace}
-          on:select={handleSelectContext}
-        /> -->
-        {#if note}
-          <ChatControls
-            chatId={note.id}
-            active={note.id === $activeNoteId}
-            contextManager={note.contextManager}
-            floating={false}
-            excludeActiveTab
-            showInput={$userSettings.experimental_notes_chat_input &&
-              $userSettings.experimental_notes_chat_sidebar}
-            on:submit={handleChatSubmit}
-            on:stop={handleStopGeneration}
-          />
+        {#if resource}
+          <NoteSettingsMenu {resource} showOnboarding={!showOnboarding && !manualContextControl} />
         {/if}
       </div>
-    {/if}
-
-    {#if !showOnboarding && !manualContextControl}
-      <button
-        on:click={() => showOnboardingNote()}
-        class="info-btn"
-        use:tooltip={{ text: 'Intro to Surf Notes', position: 'right' }}
-      >
-        <Icon name="info" />
-      </button>
     {/if}
   {/if}
 </div>
@@ -2395,19 +2723,20 @@
     height: 100%;
     overflow: hidden;
     position: relative;
-    padding-top: 3em;
+    //padding-top: 3em;
     padding-bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2em;
   }
 
   :global([data-origin='homescreen']) {
     .content {
       padding-top: 0em;
     }
-    :global(.notes-editor-wrapper .editor-wrapper div.tiptap) {
+    :global(
+        .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
+      ) {
       padding: 0 !important;
     }
   }
@@ -2415,7 +2744,8 @@
     max-width: 730px;
     width: 100%;
     margin: auto;
-    padding: 0 2em;
+    padding: 2em 2em;
+    padding-bottom: 0;
     box-sizing: content-box;
   }
 
@@ -2543,6 +2873,16 @@
     }
   }
 
+  .note-settings {
+    position: fixed;
+    top: 1em;
+    right: 1em;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
   .notes-editor-wrapper {
     height: 100%;
     width: 100%;
@@ -2559,12 +2899,13 @@
     width: 100%;
   }
 
-  :global(.notes-editor-wrapper .editor-wrapper div.tiptap) {
+  :global(
+      .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
+    ) {
     max-width: 730px;
     margin: auto;
-    padding: 0 2em;
+    padding: 2em 2em;
     box-sizing: content-box;
-    padding-bottom: 90vh;
   }
 
   :global(body.custom .text-resource-wrapper .tiptap ::selection) {

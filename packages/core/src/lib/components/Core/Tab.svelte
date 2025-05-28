@@ -752,6 +752,7 @@
         type: 'sub-menu',
         icon: 'arrow.right',
         text: 'Move Tab to Context',
+        search: true,
         items: $contextMenuMoveTabsToSpaces
       },
       {
@@ -1225,6 +1226,8 @@
       @include utils.squircle($fill: var(--fill), $radius: var(--radius), $smooth: 0.28);
       max-width: 292px !important;
       gap: 0.533rem;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: subpixel-antialiased;
 
       padding: 0.5rem 0.75rem 0.5rem 0.75rem;
 

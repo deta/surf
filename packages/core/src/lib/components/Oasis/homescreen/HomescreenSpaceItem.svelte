@@ -1,20 +1,19 @@
 <script lang="ts">
-  import { derived, get, writable, type Readable } from 'svelte/store'
-  import type { OasisSpace } from '../../../service/oasis'
+  import { writable } from 'svelte/store'
+  import { useOasis, type OasisSpace } from '../../../service/oasis'
   import { createEventDispatcher, onMount } from 'svelte'
-  import LazyScroll, { type LazyItem } from '../../Utils/LazyScroll.svelte'
-  import LazyComponent from '../../Atoms/LazyComponent.svelte'
-  import MasonryView from '../ResourceViews/MasonryView.svelte'
-  import OasisResourceLoader from '../OasisResourceLoader.svelte'
+  import LazyScroll from '../../Utils/LazyScroll.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { useToasts } from '../../../service/toast'
-  import { contextMenu } from '../../Core/ContextMenu.svelte'
-  import { SpaceEntryOrigin, type SpaceEntry } from '../../../types'
+  import { contextMenu, type CtxItem } from '../../Core/ContextMenu.svelte'
+  import { SpaceEntryOrigin, type RenderableItem } from '../../../types'
   import OasisResourcesView from '../ResourceViews/OasisResourcesView.svelte'
+  import SpacePreviewSimple from '../SpacePreviewSimple.svelte'
 
   export let space: OasisSpace
   export let renderContents: boolean = true
-  export let viewLayout: 'list' | 'masonry' = 'masonry'
+
+  const oasis = useOasis()
 
   const dispatch = createEventDispatcher<{
     'open-space': { space: OasisSpace; background: boolean }
@@ -27,25 +26,30 @@
   const toasts = useToasts()
 
   const spaceData = space.data
-  const renderedItemsCnt = writable(10)
 
-  const renderedContents = derived<[Readable<SpaceEntry[]>], LazyItem[]>(
-    [space.contents],
-    ([contents]) => {
-      if (!renderContents) return []
-      return contents
-        .filter((e) => e.manually_added !== SpaceEntryOrigin.Blacklisted)
-        .map((e) => ({ id: e.resource_id, data: null }))
+  const renderedContents = writable<RenderableItem[]>([])
+  space.contents.subscribe(async (contents) => {
+    if (!renderContents) {
+      renderedContents.set([])
+      return
     }
-  )
+
+    const items = await Promise.all(
+      contents
+        .filter((e) => e.manually_added !== SpaceEntryOrigin.Blacklisted)
+        .map(async (e) => {
+          return {
+            id: e.entry_id,
+            type: e.entry_type,
+            data: e.entry_type === 'space' ? await oasis.getSpace(e.entry_id) : null
+          } as RenderableItem
+        })
+    )
+    renderedContents.set(items)
+  })
 
   let clickTimeout: ReturnType<typeof setTimeout>
   let handledDoubleClick = false
-
-  function handleLazyLoad(e: CustomEvent<[number, number, number]>) {
-    const [velocity, remainingAdjusted, remaining] = e.detail
-    $renderedItemsCnt = $renderedItemsCnt + 5 * velocity
-  }
 
   function handleClick(e: MouseEvent) {
     clickTimeout = setTimeout(() => {
@@ -58,12 +62,6 @@
     }, 200)
   }
 
-  function handleDoubleClick() {
-    handledDoubleClick = true
-    clearTimeout(clickTimeout)
-    dispatch('open-space-as-context', space)
-  }
-
   function getContextMenuItems() {
     return [
       {
@@ -73,15 +71,6 @@
         action: () => {
           dispatch('open-space-as-tab', space)
           toasts.success('Opened space in new tab')
-        }
-      },
-      {
-        type: 'action' as const,
-        icon: 'circle-dot',
-        text: 'Open as Context',
-        action: () => {
-          dispatch('open-space-as-context', space)
-          toasts.success('Opened space as context')
         }
       },
       {
@@ -100,7 +89,7 @@
         text: 'Remove from Desktop',
         action: () => dispatch('remove-from-homescreen')
       }
-    ]
+    ] as CtxItem[]
   }
 
   onMount(() => {
@@ -114,50 +103,27 @@
     items: getContextMenuItems()
   }}
 >
-  <header on:click={handleClick} on:dblclick={handleDoubleClick}>
+  <header on:click={handleClick}>
     <div class="icon">
       <SpaceIcon folder={space} interactive={false} size="sm" />
     </div>
     <span class="name">{$spaceData.folderName}</span>
   </header>
+
   {#if renderContents}
-    <div class="content view-{viewLayout}">
-      {#if viewLayout === 'list'}
-        <LazyScroll on:lazyLoad={handleLazyLoad}>
-          {#each $renderedContents as item, i (item.resource_id)}
-            <LazyComponent this={() => import('../../Oasis/OasisResourceLoader.svelte')}>
-              <svelte:fragment slot="component" let:Component>
-                <Component
-                  style="--even: {i % 2 === 0 ? 0 : 1};"
-                  resourceOrId={item.resource_id}
-                  mode="card"
-                  viewMode="inline"
-                  frameless={true}
-                  origin="homescreen-space"
-                  on:open
-                  on:click
-                  on:open-and-chat
-                  on:remove
-                  on:set-resource-as-background
-                />
-              </svelte:fragment>
-            </LazyComponent>
-          {/each}
-        </LazyScroll>
-      {:else}
-        <LazyScroll items={renderedContents} let:renderedItems>
-          <OasisResourcesView
-            resources={renderedItems}
-            searchValue={writable('')}
-            viewType={'grid'}
-            fadeIn={false}
-            viewDensity={'cozy'}
-            sortBy={'resource_added_to_space'}
-            order={'desc'}
-            hideViewSettings
-          />
-        </LazyScroll>
-      {/if}
+    <div class="content view-masonry">
+      <LazyScroll items={renderedContents} let:renderedItems>
+        <OasisResourcesView
+          items={renderedItems}
+          searchValue={writable('')}
+          viewType={'grid'}
+          fadeIn={false}
+          viewDensity={'cozy'}
+          sortBy={'resource_added_to_space'}
+          order={'desc'}
+          isInSpace={true}
+        />
+      </LazyScroll>
     </div>
   {/if}
 </div>
@@ -173,6 +139,7 @@
 
     position: relative;
     height: 100%;
+    padding: 0;
 
     container: space-container / size;
 
@@ -197,6 +164,7 @@
 
       .icon {
         max-width: 22px;
+        flex-shrink: 0;
       }
 
       .name {
@@ -220,16 +188,17 @@
     &:not(:has(.content)) {
       > header {
         height: 100%;
-      }
+        justify-content: center;
 
-      @container space-container (aspect-ratio <= 1 / 1) {
-        > header {
+        @container space-container (aspect-ratio <= 1 / 1) {
           flex-direction: column;
+          gap: 1em;
 
           .name {
             order: -1;
             white-space: unset;
             text-align: center;
+            max-width: 100%;
 
             overflow: hidden;
             display: -webkit-box;
@@ -239,34 +208,37 @@
           }
 
           .icon {
-            position: absolute;
-            bottom: -3em;
-            max-width: 100%;
-            width: 100%;
+            position: static;
+            max-width: 60px;
+            max-height: 60px;
+
             :global(span) {
-              font-size: 7em !important;
+              font-size: 3em !important;
             }
             :global(.color-icon) {
-              --size: 90% !important;
+              --size: 60px !important;
             }
           }
         }
-      }
 
-      @container space-container (aspect-ratio > 1 / 1) {
-        > header {
+        @container space-container (aspect-ratio > 1 / 1) {
+          gap: 1em;
+
           .icon {
-            position: absolute;
-            right: -3em;
-            max-width: 100%;
-            //max-height: 100%;
-            height: 120%;
+            position: static;
+            max-width: 40px;
+            max-height: 40px;
+
             :global(span) {
-              font-size: 5em !important;
+              font-size: 2.5em !important;
             }
             :global(.color-icon) {
-              --size: 90% !important;
+              --size: 40px !important;
             }
+          }
+
+          .name {
+            flex: 1;
           }
         }
       }

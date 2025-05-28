@@ -1,11 +1,10 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import ContextBubbleItemWrapper, { type PillProperties } from './ContextBubbleItemWrapper.svelte'
+  import ContextBubbleItemWrapper from './ContextBubbleItemWrapper.svelte'
   import { blobToDataUrl } from '../../../utils/screenshot'
   import type { ContextItemScreenshot } from '@horizon/core/src/lib/service/ai/contextManager'
 
   export let item: ContextItemScreenshot
-  export let pillProperties: PillProperties
 
   $: label = item.label
   $: icon = item.icon
@@ -15,12 +14,12 @@
   }
 </script>
 
-<ContextBubbleItemWrapper {item} {pillProperties} on:remove-item on:select on:retry>
+<ContextBubbleItemWrapper {item} on:remove-item on:select on:retry>
   {#if $icon.type === 'image'}
     <img
       src={$icon.data}
       alt={$label}
-      class="w-full h-full object-contain rounded"
+      class="w-[1.25rem] h-[1.25rem] object-contain rounded"
       style="transition: transform 0.3s;"
       loading="lazy"
     />

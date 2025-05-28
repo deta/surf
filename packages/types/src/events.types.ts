@@ -42,6 +42,7 @@ export enum TelemetryEventTypes {
   RefreshSpaceContent = 'Refresh Space Content',
   ChatWithSpace = 'Chat with Space',
   OpenResourceInChat = 'Open Resource in Chat',
+  LinkSpace = 'Link Space in Another Space',
 
   // AI
   UseInlineAI = 'Use Inline AI',

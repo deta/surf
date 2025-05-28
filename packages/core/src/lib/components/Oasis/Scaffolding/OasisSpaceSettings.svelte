@@ -213,13 +213,6 @@
           />
         </div>
       </div>
-
-      <Switch
-        label="Auto-refresh"
-        color="#ff4eed"
-        bind:checked={isLiveModeOn}
-        on:update={handleLiveModeUpdate}
-      />
     </div>
 
     <div class="content-wrapper">
@@ -263,9 +256,15 @@
                 external sources. Provide a RSS feed and Surf will fetch the latest content.
               </p>
 
-              {#if !isLiveModeOn}
-                <p><b>Note:</b> Since auto-refresh is turned off, you need to manually refresh.</p>
-              {/if}
+              <div>
+                <Switch
+                  label="Auto-refresh"
+                  color="#ff4eed"
+                  bind:checked={isLiveModeOn}
+                  on:update={handleLiveModeUpdate}
+                />
+                <p>Automatically refresh the contents of this context on load.</p>
+              </div>
             </div>
 
             {#if $spaceData.sources}
@@ -338,8 +337,16 @@
               on:keydown={handleKeyDown}
             />
 
-            {#if !isLiveModeOn}
-              <p><b>Note:</b> Since auto-refresh is turned off, you need to manually refresh.</p>
+            {#if smartFilterQuery}
+              <div>
+                <Switch
+                  label="Auto-refresh"
+                  color="#ff4eed"
+                  bind:checked={isLiveModeOn}
+                  on:update={handleLiveModeUpdate}
+                />
+                <p>Automatically refresh the contents of this context on load.</p>
+              </div>
             {/if}
           </div>
         {:else}

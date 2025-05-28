@@ -187,9 +187,21 @@ const surfProtocolHandleImages = async ({
     const url = new URL(requestURL)
     const options = extractImageOptions(url)
 
+    // cache control headers
+    const cacheHeaders = {
+      'Cache-Control': 'max-age=172800', // Cache for 24 hours
+      // TODO: do we ned a hash?
+      ETag: `"${resourceId}"`,
+      'Last-Modified': new Date().toUTCString()
+    }
+
     // return original file if no processing needed
     if (options.quality === null && options.maxDimension === null) {
-      return net.fetch(`file://${imgPath}`)
+      const response = await net.fetch(`file://${imgPath}`)
+      return new Response(response.body, {
+        status: response.status,
+        headers: { ...Object.fromEntries(response.headers), ...cacheHeaders }
+      })
     }
 
     const cachedPath = generateCachedPath(resourceId, cacheDir, options)
@@ -197,18 +209,27 @@ const surfProtocolHandleImages = async ({
     // return cached file if exists
     const stats = await stat(cachedPath).catch(() => null)
     if (stats) {
-      return net.fetch(`file://${cachedPath}`)
+      const response = await net.fetch(`file://${cachedPath}`)
+      return new Response(response.body, {
+        status: response.status,
+        headers: { ...Object.fromEntries(response.headers), ...cacheHeaders }
+      })
     }
 
     if (!imageProcessor) {
       initializeImageProcessor()
     }
 
-    return processImageWithWorker(imageProcessor!, {
+    const response = await processImageWithWorker(imageProcessor!, {
       imgPath,
       savePath: cachedPath,
       quality: options.quality,
       maxDimension: options.maxDimension
+    })
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: { ...Object.fromEntries(response.headers), ...cacheHeaders }
     })
   } catch (err) {
     log.error('Image processing error:', err)

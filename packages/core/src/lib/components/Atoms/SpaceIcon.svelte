@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { useLogScope } from '@horizon/utils'
+  import { Icon } from '@horizon/icons'
   import ColorIcon from './ColorIcon.svelte'
   import IconSelector from '../Oasis/IconSelector.svelte'
   import { OasisSpace, pickRandomColorPair } from '../../service/oasis'
@@ -76,6 +77,8 @@
     <div class="list space-icon">
       {#if pickedEmoji || ($spaceData && $spaceData.emoji)}
         <span class="emoji" data-size={size}>{pickedEmoji || $spaceData.emoji}</span>
+      {:else if $spaceData && $spaceData.icon}
+        <Icon name={$spaceData.icon} {size} />
       {:else if $spaceData && $spaceData.imageIcon}
         <img src={$spaceData.imageIcon} alt="Space icon" class="image" class:round />
       {:else}
@@ -87,6 +90,8 @@
   <div class="list space-icon">
     {#if pickedEmoji || ($spaceData && $spaceData.emoji)}
       <span class="emoji" data-size={size}>{pickedEmoji || $spaceData?.emoji}</span>
+    {:else if $spaceData && $spaceData.icon}
+      <Icon name={$spaceData.icon} {size} />
     {:else if $spaceData && $spaceData.imageIcon}
       <img src={$spaceData.imageIcon} alt="Space icon" class="image" class:round />
     {:else}

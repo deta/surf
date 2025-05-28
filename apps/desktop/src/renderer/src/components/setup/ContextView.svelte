@@ -36,7 +36,8 @@
         folderName: contextName,
         emoji: contextEmoji,
         colors: contextColors,
-        imageIcon: contextImage
+        imageIcon: contextImage,
+        useAsBrowsingContext: true
       })
 
       log.debug('Updated default context', space)
@@ -46,7 +47,9 @@
         emoji: contextEmoji,
         colors: contextColors,
         imageIcon: contextImage,
-        default: true
+        default: true,
+        pinned: true,
+        useAsBrowsingContext: true
       })
 
       log.debug('Created new context', newContext)

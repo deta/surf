@@ -17,6 +17,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         "js__store_list_resources_by_tags_no_space",
         js_list_resources_by_tags_no_space,
     )?;
+    cx.export_function(
+        "js__store_list_all_resources_and_spaces",
+        js_list_all_resources_and_spaces,
+    )?;
     cx.export_function("js__store_resource_post_process", js_resource_post_process)?;
     cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function(
@@ -82,6 +86,11 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_create_space_entries", js_create_space_entries)?;
     cx.export_function("js__store_get_space_entries", js_get_space_entries)?;
     cx.export_function("js__store_delete_space_entries", js_delete_space_entries)?;
+    cx.export_function(
+        "js__store_delete_entries_in_space_by_entry_ids",
+        js_delete_entries_in_space_by_entry_ids,
+    )?;
+    cx.export_function("js__store_move_space", js_move_space)?;
 
     cx.export_function("js__store_upsert_resource_hash", js_upsert_resource_hash)?;
     cx.export_function("js__store_get_resource_hash", js_get_resource_hash)?;
@@ -176,26 +185,36 @@ fn js_delete_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_create_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
     let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
-    let entries = cx.argument::<JsArray>(2)?.to_vec(&mut cx)?;
 
+    let entries = cx.argument::<JsArray>(2)?.to_vec(&mut cx)?;
     let entries = entries
         .iter()
         .map(|entry| {
             let obj = entry.downcast_or_throw::<JsObject, FunctionContext>(&mut cx)?;
-            let resource_id = obj
-                .get_value::<FunctionContext, &str>(&mut cx, "resource_id")?
+            let entry_id = obj
+                .get_value::<FunctionContext, &str>(&mut cx, "entry_id")?
                 .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
                 .value(&mut cx);
+            let entry_type = obj
+                .get_value::<FunctionContext, &str>(&mut cx, "entry_type")?
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx);
+            let entry_type = match entry_type.parse::<models::SpaceEntryType>() {
+                Ok(entry_type) => entry_type,
+                Err(err) => return cx.throw_error(err.to_string()),
+            };
+
             let manually_added = obj
                 .get_value::<FunctionContext, &str>(&mut cx, "manually_added")?
                 .downcast_or_throw::<JsNumber, FunctionContext>(&mut cx)?
                 .value(&mut cx) as i32;
-            Ok(CreateSpaceEntryInput {
-                resource_id,
+            Ok(SpaceEntryInput {
+                entry_id,
+                entry_type,
                 manually_added,
             })
         })
-        .collect::<NeonResult<Vec<CreateSpaceEntryInput>>>()?;
+        .collect::<NeonResult<Vec<SpaceEntryInput>>>()?;
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -219,6 +238,11 @@ fn js_get_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .ok()
             .map(|js_string| js_string.value(&mut cx))
     });
+    let limit = cx.argument_opt(4).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as usize)
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
@@ -226,6 +250,7 @@ fn js_get_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
             space_id,
             sort_by,
             order_by,
+            limit,
         }),
         deferred,
     );
@@ -235,8 +260,43 @@ fn js_get_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
 fn js_delete_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-    let entry_ids = cx.argument::<JsArray>(1)?.to_vec(&mut cx)?;
 
+    let entries = cx.argument::<JsArray>(2)?.to_vec(&mut cx)?;
+    let entries = entries
+        .iter()
+        .map(|entry| {
+            let obj = entry.downcast_or_throw::<JsObject, FunctionContext>(&mut cx)?;
+            let id = obj
+                .get_value::<FunctionContext, &str>(&mut cx, "id")?
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx);
+            let entry_type = obj
+                .get_value::<FunctionContext, &str>(&mut cx, "entry_type")?
+                .downcast_or_throw::<JsString, FunctionContext>(&mut cx)?
+                .value(&mut cx);
+            let entry_type = match entry_type.parse::<models::SpaceEntryType>() {
+                Ok(entry_type) => entry_type,
+                Err(err) => return cx.throw_error(err.to_string()),
+            };
+            Ok(DeleteSpaceEntryInput { id, entry_type })
+        })
+        .collect::<NeonResult<Vec<DeleteSpaceEntryInput>>>()?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::DeleteSpaceEntries(entries)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_delete_entries_in_space_by_entry_ids(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let entry_ids = cx.argument::<JsArray>(2)?.to_vec(&mut cx)?;
     let entry_ids = entry_ids
         .iter()
         .map(|value| {
@@ -246,9 +306,36 @@ fn js_delete_space_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
         })
         .collect::<NeonResult<Vec<String>>>()?;
 
+    let entry_type = cx.argument::<JsString>(3)?.value(&mut cx);
+    let entry_type = match entry_type.parse::<models::SpaceEntryType>() {
+        Ok(entry_type) => entry_type,
+        Err(err) => return cx.throw_error(err.to_string()),
+    };
+
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::SpaceMessage(SpaceMessage::DeleteSpaceEntries(entry_ids)),
+        WorkerMessage::SpaceMessage(SpaceMessage::DeleteEntriesInSpaceByEntryIds {
+            space_id,
+            entry_ids,
+            entry_type,
+        }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_move_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let space_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let new_parent_space_id = cx.argument::<JsString>(2)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::SpaceMessage(SpaceMessage::MoveSpace {
+            space_id,
+            new_parent_space_id,
+        }),
         deferred,
     );
 
@@ -391,6 +478,31 @@ fn js_list_resources_by_tags_no_space(mut cx: FunctionContext) -> JsResult<JsPro
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(resource_tags)),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_list_all_resources_and_spaces(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let resource_tags_json = cx
+        .argument_opt(1)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
+    let resource_tags: Vec<models::ResourceTagFilter> = match resource_tags_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(Some(tags)) => tags,
+        Ok(None) => return cx.throw_error("Resource tags must be provided"),
+        Err(err) => return cx.throw_error(err.to_string()),
+    };
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::ListAllResourcesAndSpaces(resource_tags)),
         deferred,
     );
 

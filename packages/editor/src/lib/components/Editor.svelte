@@ -1,7 +1,5 @@
-<svelte:options immutable={true} />
-
 <script lang="ts">
-  import type { Readable } from 'svelte/store'
+  import { get, writable, type Readable, type Writable } from 'svelte/store'
   import {
     createEventDispatcher,
     onMount,
@@ -11,24 +9,11 @@
   } from 'svelte'
 
   import { createEditor, Editor, EditorContent, FloatingMenu } from 'svelte-tiptap'
-  import {
-    Extension,
-    generateJSON,
-    generateText,
-    Node,
-    nodePasteRule,
-    type Range
-  } from '@tiptap/core'
-  import Placeholder from '@tiptap/extension-placeholder'
-  import { conditionalArrayItem, useAnimationFrameThrottle } from '@horizon/utils'
+  import { Extension, generateHTML, generateJSON, generateText } from '@tiptap/core'
+  import { useAnimationFrameThrottle } from '@horizon/utils'
 
-  import { createEditorExtensions, getEditorContentText, type ExtensionOptions } from '../editor'
-  import type {
-    EditorAutocompleteEvent,
-    LinkItemsFetcher,
-    MentionItem,
-    MentionItemType
-  } from '../types'
+  import { createEditorExtensions } from '../editor'
+  import type { EditorAutocompleteEvent, LinkItemsFetcher, MentionItem } from '../types'
   import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
   import type { MentionAction, MentionNodeAttrs } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
@@ -43,7 +28,7 @@
 
   export let content: string
   export let readOnly: boolean = false
-  export let placeholder: string = `Write something or type '/' for options…`
+  export let placeholder: string | null = `Write something or type '/' for options…`
   export let placeholderNewLine: string = ''
   export let autofocus: boolean = true
   export let focused: boolean = false
@@ -72,9 +57,15 @@
 
   export let enableCaretIndicator: boolean = false
   export let onCaretPositionUpdate: ((position: any) => void) | undefined = undefined
+  undefined
   export let showSimilaritySearch: boolean = false
   export let editorElement: HTMLElement
 
+  export const isEmptyy = () => !get(editor)?.state.doc.textContent.trim().length
+
+  export const isEmpty: Writable<boolean> = writable(false)
+
+  let editorWrapperEl: HTMLElement
   let editor: Readable<Editor>
   let editorWidth: number = 350
   let resizeObserver: ResizeObserver | null = null
@@ -99,6 +90,8 @@
     'button-click': string
     'slash-command': SlashCommandPayload
     'caret-position-update': any
+    'last-line-visbility-changed': boolean
+    'is-first-line-changed': bool
   }>()
 
   export const getEditor = () => {
@@ -210,7 +203,8 @@
 
     const json = selectedNode.toJSON()
     const text = generateText(json, extensions)
-    return { text, mentions }
+    const html = generateHTML(json, extensions)
+    return { text, html, mentions }
   }
 
   export const triggerAutocomplete = () => {
@@ -231,8 +225,8 @@
           })
 
           const json = selectedNode.toJSON()
-          const text = generateText(json, extensions)
-          return { text, mentions }
+          const html = generateHTML(json, extensions)
+          return { text: html, mentions }
         }
       } else {
         const node = editor.view.state.doc.cut(from, to)
@@ -313,6 +307,14 @@
     dispatch('caret-position-update', position)
   }
 
+  const handleLastLineVisibilityChanged = (visible: boolean) => {
+    dispatch('last-line-visbility-changed', visible)
+  }
+
+  const handleFirstLineChanged = (val: boolean) => {
+    dispatch('is-first-line-changed', val)
+  }
+
   const baseExtensions = createEditorExtensions({
     placeholder,
     parseMentions,
@@ -332,6 +334,9 @@
     citationClick: handleCitationClick,
     enableCaretIndicator: enableCaretIndicator,
     onCaretPositionUpdate: handleCaretPositionUpdate,
+    onFloatyInputStateChange: () => {},
+    onFirstLineStateChanged: handleFirstLineChanged,
+    onLastLineVisibilityChanged: handleLastLineVisibilityChanged,
     surfletComponent: surfletComponent,
     onLinkClick: onLinkClick
   })
@@ -344,6 +349,14 @@
     addKeyboardShortcuts() {
       return {
         Enter: () => {
+          if (submitOnEnter) {
+            onSubmit()
+            return true
+          }
+
+          return false
+        },
+        'Meta-Enter': () => {
           if (submitOnEnter) {
             onSubmit()
             return true
@@ -470,9 +483,12 @@
       },
       onUpdate: ({ editor }) => {
         editor = editor
+
         const html = editor.getHTML()
         // const oldContent = content
         content = html
+
+        isEmpty.set(editor.state.doc.textContent.trim().length === 0)
         dispatch('update', content)
 
         if (parseHashtags) {
@@ -524,8 +540,9 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
+  bind:this={editorWrapperEl}
   class="editor"
-  style="--data-placeholder: '{placeholder}'; --data-placeholder-new-line: '{placeholderNewLine}';"
+  style="--data-placeholder: '{placeholder}'; --data-placeholder-new-line: '{placeholderNewLine}'; "
   on:click
   on:dragstart
 >

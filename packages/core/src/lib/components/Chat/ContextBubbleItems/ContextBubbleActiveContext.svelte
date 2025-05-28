@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import { type PillProperties } from './ContextBubbleItemWrapper.svelte'
   import {
     type ContextItemActiveSpaceContext,
     ContextItemSpace
@@ -10,7 +9,6 @@
   import ContextBubbleItemPlaceholder from './ContextBubbleItemPlaceholder.svelte'
 
   export let item: ContextItemActiveSpaceContext
-  export let pillProperties: PillProperties
 
   $: activeItem = item.item
 
@@ -25,7 +23,6 @@
   {#if $activeItem instanceof ContextItemSpace}
     <ContextBubbleSpace
       item={$activeItem}
-      {pillProperties}
       additionalLabel="Active Context"
       on:remove-item={handleRemove}
       on:select
@@ -33,7 +30,6 @@
     />
   {:else}
     <ContextBubbleItemPlaceholder
-      {pillProperties}
       id={item.id}
       icon="circle-dot"
       additionalLabel="Active Context"

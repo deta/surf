@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { derived, get, type Readable } from 'svelte/store'
+  import { derived, type Readable, writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
   import { useLogScope } from '@horizon/utils'
   import MasonryView from '../ResourceViews/MasonryView.svelte'
-  import { selectedItemIds, deselectAll } from '../utils/select'
+  import {
+    selectedItemIds,
+    selectedSpaceIds,
+    selectedResourceIds,
+    deselectAll
+  } from '../utils/select'
   import { contextMenu, type CtxItem } from '../../Core/ContextMenu.svelte'
   import { useOasis } from '../../../service/oasis'
   import { useToasts } from '../../../service/toast'
@@ -22,61 +27,85 @@
   import OasisResourceLoader from '../../Oasis/OasisResourceLoader.svelte'
   import { Icon, type Icons } from '@horizon/icons'
   import GridView from './GridView.svelte'
-  import SpaceFilterViewButtons from '../SpaceFilterViewButtons.svelte'
+  import type { ResourceRenderableItem, RenderableItem } from '../../../types'
+  import { selection } from '@horizon/core/src/lib/components/Oasis/utils/select'
 
-  export let resources: Readable<(Resource | string | { id: string } | { resource: Resource })[]>
+  export let resources: Readable<(Resource | string | { id: string } | { resource: Resource })[]> =
+    writable([])
+
+  // TODO: we should migrate to using the new items for all cases
+  export let items: Readable<RenderableItem[]> | undefined = undefined
 
   export let isInSpace: boolean = false
   export let searchValue: Writable<string> | undefined
   export let resourcesBlacklistable: boolean = false
   export let fadeIn = false
   export let openIn: 'tab' | 'sidebar' = 'tab'
-  export let hideViewSettings = false
-  export let hideFilterSettings: boolean = false
-  export let hideSortingSettings: boolean = false
-
   export let interactive: boolean = true
-  export let viewType: ContextViewType | undefined = ContextViewTypes.Grid // TODO: (@maxu) impl
+  export let viewType: ContextViewType | undefined = ContextViewTypes.Grid
   export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Compact
-  export let sortBy: string | undefined
-  export let order: string | null
+
+  export const hideViewSettings = false
+  export const hideFilterSettings: boolean = false
+  export const hideSortingSettings: boolean = false
+  export const sortBy: string | undefined = undefined
+  export const order: string | null = null
 
   export let status: undefined | { icon: Icons | undefined; message: string } = undefined
 
   const dispatch = createEventDispatcher()
 
   const log = useLogScope('OasisResourcesView')
+
   const oasis = useOasis()
   const toasts = useToasts()
   const telemetry = useTelemetry()
 
   const spaces = oasis.spaces
   const sortedSpaces = oasis.sortedSpacesListFlat
-  const selectedFilterTypeId = oasis.selectedFilterTypeId
 
-  const renderContents = derived([resources], ([resources]) => {
-    return resources
-      .map((idOrResource) => {
-        if (typeof idOrResource === 'string') {
-          return { id: idOrResource, data: null }
-        } else if (idOrResource instanceof Resource) {
-          return { id: idOrResource.id, data: idOrResource }
-        } else if (typeof idOrResource === 'object') {
-          if (idOrResource.resource !== undefined) {
-            return { id: idOrResource.resource.id, data: idOrResource.resource }
-          } else if (idOrResource.id !== undefined) {
-            return { id: idOrResource, data: null }
-          }
+  function resourceToRenderableItem(
+    idOrResource: Resource | string | { id: string } | { resource: Resource }
+  ): ResourceRenderableItem | undefined {
+    if (typeof idOrResource === 'string') {
+      return { id: idOrResource, data: null, type: 'resource' }
+    } else if (idOrResource instanceof Resource) {
+      return { id: idOrResource.id, data: idOrResource, type: 'resource' }
+    } else if (typeof idOrResource === 'object') {
+      if ('resource' in idOrResource && idOrResource.resource !== undefined) {
+        return { id: idOrResource.resource.id, data: idOrResource.resource, type: 'resource' }
+      } else if ('id' in idOrResource) {
+        const result: ResourceRenderableItem = { id: idOrResource.id, data: null, type: 'resource' }
+        if ('createdAt' in idOrResource) {
+          result.createdAt = idOrResource.createdAt as string
         }
-        log.warn('Cannot render invalid object in OasisResourcesView', idOrResource)
-        return undefined
-      })
-      .filter((e) => e !== undefined)
-  })
+        return result
+      }
+    }
+    log.warn('Cannot render invalid object in OasisResourcesView', idOrResource)
+    return undefined
+  }
+
+  const renderableItems = derived(
+    [items || writable<RenderableItem[]>([]), resources],
+    ([items, resources]): RenderableItem[] => {
+      // if items provided, use it directly
+      if (items && items.length > 0) {
+        return items
+      }
+      return resources
+        .map(resourceToRenderableItem)
+        .filter((item) => item !== undefined) as RenderableItem[]
+    }
+  )
 
   const handleRemove = async (e?: MouseEvent, deleteFromStuff = false) => {
-    e?.stopImmediatePropagation() // TODO: Still needed?
-    dispatch('batch-remove', { ids: $selectedItemIds, deleteFromStuff })
+    e?.stopImmediatePropagation()
+    dispatch('batch-remove', {
+      resourceIds: $selectedResourceIds,
+      spaceIds: $selectedSpaceIds,
+      deleteFromStuff
+    })
     deselectAll()
   }
 
@@ -122,6 +151,7 @@
       type: 'sub-menu',
       icon: '',
       text: 'Add to Context',
+      search: true,
       items: $sortedSpaces
         .filter(
           (e) =>
@@ -167,7 +197,7 @@
                 }
               }
             ]
-          }
+          } as CtxItem
         ]
       : [
           {
@@ -179,7 +209,7 @@
               handleRemove(undefined, true)
               deselectAll()
             }
-          }
+          } as CtxItem
         ])
   ]
 </script>
@@ -188,28 +218,12 @@
   class="resources-view"
   class:fadeIn
   data-density={viewDensity ?? ContextViewDensities.Cozy}
+  use:selection
   use:contextMenu={{
     canOpen: $selectedItemIds.length > 1,
     items: CONTEXT_MENU_ITEMS
   }}
 >
-  {#if !hideViewSettings}
-    <header>
-      <SpaceFilterViewButtons
-        filter={$selectedFilterTypeId}
-        {viewType}
-        {viewDensity}
-        {sortBy}
-        {order}
-        {hideFilterSettings}
-        {hideSortingSettings}
-        on:changedView
-        on:changedFilter
-        on:changedSortBy
-        on:changedOrder
-      />
-    </header>
-  {/if}
   <div class="content">
     {#if status !== undefined}
       <div class="w-full h-full flex items-center justify-center">
@@ -222,21 +236,21 @@
           <span class="max-w-lg">{status.message}</span>
         </div>
       </div>
-    {:else if $renderContents.length === 0 && $searchValue && $searchValue.length > 0}
+    {:else if $renderableItems.length === 0 && $searchValue && $searchValue.length > 0}
       <div class="w-full h-full flex items-center justify-center">
         <div
           class="h-min flex flex-col gap-4 items-center justify-center text-center text-lg font-medium text-gray-500"
         >
           <Icon name="save" size="1.3em" class="mb-2" />
           <span class="max-w-lg"
-            >No stuff found for "{$searchValue}". <br />Try a different search term.</span
+            >No results found for "{$searchValue}". <br />Try a different search term.</span
           >
         </div>
       </div>
     {:else}
       {#key $searchValue === ''}
         {#if (viewType ?? ContextViewTypes.Masonry) === 'masonry'}
-          <MasonryView items={resources} let:item>
+          <MasonryView items={renderableItems} let:item>
             <OasisResourceLoader
               resourceOrId={item.data ?? item.id}
               draggable
@@ -249,16 +263,33 @@
               on:open
               on:open-and-chat
               on:open-in-sidebar
+              on:navigate-context
               on:remove
+              on:batch-remove
               on:load
               on:space-selected
               on:blacklist-resource
               on:whitelist-resource
               on:set-resource-as-space-icon
+              on:select={(e) =>
+                item.type === 'space' ? dispatch('space-selected', e.detail) : null}
+              on:update-data
+              on:editing-start
+              on:editing-end
+              on:Drop={(e) => {
+                log.debug('OasisResourcesView forwarding Drop event:', e.detail)
+                dispatch('Drop', e.detail)
+              }}
+              on:open-space-as-tab
+              on:open-space-and-chat
+              on:use-as-context
+              on:force-reload
+              on:pin
+              on:unpin
             />
           </MasonryView>
         {:else if viewType === 'grid'}
-          <GridView items={resources} let:item>
+          <GridView items={renderableItems} let:item>
             <OasisResourceLoader
               resourceOrId={item.data ?? item.id}
               draggable
@@ -272,12 +303,29 @@
               on:open
               on:open-and-chat
               on:open-in-sidebar
+              on:navigate-context
               on:remove
+              on:batch-remove
               on:load
               on:space-selected
               on:blacklist-resource
               on:whitelist-resource
               on:set-resource-as-space-icon
+              on:select={(e) =>
+                item.type === 'space' ? dispatch('space-selected', e.detail) : null}
+              on:update-data
+              on:editing-start
+              on:editing-end
+              on:Drop={(e) => {
+                log.debug('OasisResourcesView forwarding Drop event:', e.detail)
+                dispatch('Drop', e.detail)
+              }}
+              on:open-space-as-tab
+              on:open-space-and-chat
+              on:use-as-context
+              on:force-reload
+              on:pin
+              on:unpin
             />
           </GridView>
         {/if}

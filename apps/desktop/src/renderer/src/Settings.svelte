@@ -508,6 +508,14 @@
           <SmartNotesOptions on:update={handleSettingsUpdate} bind:userConfigSettings />
 
           <SettingsOption
+            icon="chat.square.heart"
+            title="Custom Prompts"
+            description="Save custom prompts inside notes for quick re-use."
+            bind:value={userConfigSettings.enable_custom_prompts}
+            on:update={handleSettingsUpdate}
+          />
+
+          <SettingsOption
             icon="save"
             title="Save to Active Context"
             description="If enabled clicking the save button on a tab or chat message or downloading something will save it to the currently active context instead of the inbox."

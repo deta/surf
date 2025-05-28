@@ -42,6 +42,11 @@
 
 <div class="context-header">
   <div class="header-content">
+    {#if $$slots['breadcrumb']}
+      <div class="breadcrumb">
+        <slot name="breadcrumb" />
+      </div>
+    {/if}
     <div class="inputs-section">
       <div class="headline-container">
         {#if headline !== undefined || headlineEditable}
@@ -55,7 +60,7 @@
             <input
               bind:this={headlineInput}
               bind:value={headline}
-              class="editable headline font-gambarino"
+              class="editable headline"
               type="text"
               disabled={!headlineEditable}
               on:blur={exitEditingHeadline}
@@ -93,11 +98,6 @@
 
       <slot name="header-content" />
     </div>
-    {#if $$slots['meta-section']}
-      <div class="meta-section">
-        <slot name="meta-section" />
-      </div>
-    {/if}
   </div>
 </div>
 
@@ -113,7 +113,7 @@
   .context-header {
     position: relative;
     display: flex;
-    padding: 6rem 8rem 3rem 8rem;
+    padding: 3.5rem 3rem 3rem 3rem;
     view-timeline-name: --context-header;
     view-timeline-axis: block;
     z-index: 1;
@@ -127,8 +127,8 @@
 
       background: linear-gradient(
           to bottom,
-          color-mix(in srgb, light-dark(#f7f7f7, #101827), transparent 50%),
-          light-dark(#f7f7f7, #101827)
+          color-mix(in srgb, light-dark(#f7f9fb, #101827), transparent 50%),
+          light-dark(#f7f9fb, #101827)
         ),
         var(--background-image);
       background-size: cover;
@@ -155,6 +155,7 @@
 
   .header-content {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     width: 100%;
     margin-right: 4rem;
@@ -174,6 +175,7 @@
         opacity: 0.15;
         background: var(--contrast-color);
         mix-blend-mode: multiply;
+        z-index: -1;
         :global(.dark) & {
           opacity: 0.1;
           filter: blur(20px) hue-rotate(4deg) brightness(0);
@@ -255,7 +257,6 @@
 
   .editable.headline {
     font-size: 3rem;
-    font-family: 'Gambarino-Display';
   }
 
   .editable.description {
@@ -269,15 +270,5 @@
       'Helvetica Neue',
       Arial,
       sans-serif;
-  }
-
-  .meta-section {
-    z-index: 0;
-    opacity: 1;
-    translate: 0 0;
-    transition: opacity, translate;
-    transition-duration: 434ms;
-    transition-timing-function: ease-out;
-    transition-delay: 483ms;
   }
 </style>

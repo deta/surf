@@ -6,7 +6,6 @@
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let id: string
-  export let pillProperties: PillProperties
   export let loading: boolean = false
   export let failed: boolean = false
   export let icon: Icons | undefined = undefined
@@ -29,7 +28,7 @@
   class="shine-border pill transform group/pill"
   class:experimental={$userConfigSettings.experimental_notes_chat_input &&
     $userConfigSettings.experimental_notes_chat_sidebar}
-  style="transform: rotate({pillProperties.rotate}deg); transform-origin: center center;"
+  style="transform-origin: center center;"
 >
   <div
     role="none"
@@ -56,9 +55,9 @@
         class:opacity-100={!loading && !failed}
       >
         {#if icon}
-          <Icon name={icon} />
+          <Icon name={icon} size="1rem" />
         {:else}
-          <Icon name="spinner" />
+          <Icon name="spinner" size="1rem" />
         {/if}
       </div>
     {/if}
@@ -81,16 +80,6 @@
     cursor: default;
     transition: transform 0.3s ease;
     border-radius: 11px 11px 11px 11px;
-  }
-
-  .experimental {
-    &.pill,
-    .pill {
-      border-radius: 11px 11px 0 0;
-      transform: none !important;
-      transform-origin: center center;
-      height: 36px;
-    }
   }
 
   .pill {

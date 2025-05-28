@@ -1,54 +1,52 @@
 <script lang="ts">
-  import { DynamicIcon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@horizon/icons'
   import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import SpaceIcon from '../SpaceIcon.svelte'
   import type { SelectItem } from '.'
-  import { tooltip } from '@horizon/utils'
+  import { ContextItemTypes } from '../../../service/ai/contextManager'
 
   export let item: SelectItem
 
   $: space = item.data instanceof OasisSpace ? (item.data as OasisSpace) : undefined
-  $: spaceData = space?.data
+
+  const getAlternativeLabel = (item: SelectItem) => {
+    if (!item.data?.type || item.data.type !== 'context-item') return undefined
+
+    const contextItem = item.data
+
+    if (contextItem.value === `context-item;;${ContextItemTypes.ACTIVE_SPACE}`) {
+      return 'Active Context'
+    } else if (contextItem.value === `context-item;;${ContextItemTypes.ACTIVE_TAB}`) {
+      return 'Active Tab'
+    } else {
+      return undefined
+    }
+  }
+
+  $: label = item.label
+  $: labelValue = getAlternativeLabel(item) ?? label
 </script>
 
 <div class="item">
-  {#if item.icon}
-    <div class="icon">
-      <DynamicIcon name={item.icon} />
-    </div>
-  {:else if space}
-    <div class="icon">
-      <SpaceIcon folder={space} interactive={false} />
-    </div>
-  {/if}
-
-  <div class="name">
-    {#if item.label}
-      {item.label}
-    {:else if $spaceData}
-      {$spaceData.folderName}
+  <div class="icon">
+    {#if space}
+      <SpaceIcon folder={space} size="sm" interactive={false} />
+    {:else if item.iconUrl}
+      <img src={item.iconUrl} alt="" class="w-4 h-4" />
+    {:else if item.icon}
+      <DynamicIcon name={item.icon} size="1rem" />
     {:else}
-      {item.id}
+      <Icon name="file" width="1rem" height="1rem" />
     {/if}
   </div>
-
-  {#if item.description || item.descriptionIcon}
+  <div class="name">
+    {labelValue}
+  </div>
+  {#if item.description}
     <div class="description">
+      <span class="description-text">{item.description}</span>
       {#if item.descriptionIcon}
-        <div
-          class="icon"
-          use:tooltip={{
-            text: item.description ?? '',
-            disabled: !item.description,
-            position: 'left'
-          }}
-        >
-          <DynamicIcon name={item.descriptionIcon} size="16px" />
-        </div>
-      {/if}
-
-      {#if item.description && !item.descriptionIcon}
-        <div class="description-text">{item.description}</div>
+        <Icon name={item.descriptionIcon} size="1rem" />
       {/if}
     </div>
   {/if}
@@ -61,6 +59,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    position: relative;
   }
 
   .icon {
@@ -72,7 +71,7 @@
   }
   .name {
     width: 100%;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 400;
     white-space: nowrap;
     overflow: hidden;

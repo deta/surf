@@ -2,7 +2,7 @@
   import { Icon, type Icons } from '@horizon/icons'
   import ColorIcon from './ColorIcon.svelte'
   import FileIcon from './FileIcon.svelte'
-  import type { IconImage, IconEmoji, IconColors, IconIcon } from './types.ts'
+  import type { IconImage, IconEmoji, IconColors, IconIcon, IconFile } from './types.ts'
 
   export let name: string
   export let size: string | number = '18px'
@@ -37,15 +37,17 @@
         data: [colors[1], colors[2]] as [string, string]
       } as IconColors
     } else if (isIcon) {
+      const [_, iconName] = name.split(';;')
       return {
         type: 'icon',
-        data: name.split(';;')[1] as Icons
+        data: iconName as Icons
       } as IconIcon
     } else if (isFile) {
+      const [_, iconName] = name.split(';;')
       return {
         type: 'file',
-        data: name.split(';;')[1] as string
-      } as IconIcon
+        data: iconName
+      } as IconFile
     } else {
       return {
         type: 'icon',

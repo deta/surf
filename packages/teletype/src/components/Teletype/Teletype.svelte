@@ -83,17 +83,23 @@
     width: 100%;
     height: 100vh;
     z-index: 100;
+    pointer-events: none;
     //margin-top: -100vh;
   }
 
   .inner-wrapper {
+    pointer-events: all;
+    transition: transform 123ms ease-out;
     position: fixed;
     bottom: 2rem;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(var(--offsetY, 0px));
     z-index: 100;
     max-width: 600px;
     width: 90%;
+  }
+  :global(body:not(:has(.instructions)) .teletype-motion .inner-wrapper) {
+    --offsetY: 200%;
   }
 
   .modal {

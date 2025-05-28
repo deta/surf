@@ -1,5 +1,7 @@
 <script lang="ts" context="module">
   import ScreenPicker from './ScreenPicker.svelte'
+  import { OnboardingAction } from '../Onboarding/onboardingScripts'
+  import { screenPickerSelectionActive } from '../../service/onboarding'
 
   // Standalone is self contained, where as-input ask user to define area  and capture it for some
   // other action
@@ -28,16 +30,19 @@
    * @maxu: Add layout check for super small rect at bottom of screen, if space above -> move toolbox
    *        above rect, not inside.
    */
+  import { onMount } from 'svelte'
+
   import { dist, isInsideRect, useLogScope, wait } from '@horizon/utils'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import { derived, get, readable, writable } from 'svelte/store'
   import { useToasts } from '../../service/toast'
   import { AIChat, useAI, type ChatPrompt } from '../../service/ai/ai'
   import { DynamicIcon, Icon } from '@horizon/icons'
-  import { hasParent } from '../../utils/dom'
+  import { hasParent, startingClass } from '../../utils/dom'
   import Chat from '../Chat/Chat.svelte'
   import ChatOld from '../Chat/ChatOld.svelte'
   import { captureScreenshot } from '../../utils/screenshot'
+  import { CompletionEventID } from '../Onboarding/onboardingScripts'
   import {
     EventContext,
     PageChatMessageSentEventTrigger,
@@ -58,6 +63,7 @@
   import { SmartNote, useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import AppBarButton from '@horizon/core/src/lib/components/Browser/AppBarButton.svelte'
 
   type Point = { x: number; y: number }
   type Rect = { x: number; y: number; width: number; height: number }
@@ -80,6 +86,7 @@
   } as SelectItem
 
   export let mode: ScreenPickerMode = 'standalone'
+  export let fromTty: boolean = false
   // TODO: impl as-input
 
   const dispatch = createEventDispatcher<{
@@ -178,6 +185,15 @@
 
   // Reactive State
   $: validRectSelection = $selectionRect.width * $selectionRect.height >= 900
+
+  // Set the global state when component is mounted/unmounted
+  onMount(() => {
+    screenPickerSelectionActive.set(true)
+  })
+
+  onDestroy(() => {
+    screenPickerSelectionActive.set(false)
+  })
 
   function rafCbk() {
     _selectionRect.update((v) => {
@@ -324,6 +340,9 @@
       showAddPromptDialog
     )
       return
+    if (!hasParent(e.target, backdropEl)) return
+    e.preventDefault()
+    e.stopPropagation()
 
     if ($state.isResizing === false && $state.resizeDirection !== undefined) {
       $state.isResizing = true
@@ -424,6 +443,13 @@
         if (raf !== null) cancelAnimationFrame(raf)
 
         await tick()
+        if ($selectionRect.width <= 2 || $selectionRect.height <= 2) {
+          dispatch('close')
+          return
+        }
+
+        document.dispatchEvent(new CustomEvent(CompletionEventID.VisionSelected, { bubbles: true }))
+
         if (!validRectSelection) {
           selectionRect.set({ x: 0, y: 0, width: 0, height: 0 })
           raf = requestAnimationFrame(rafCbk)
@@ -431,7 +457,7 @@
       }
 
       window.addEventListener('mousemove', handleMove)
-      window.addEventListener('mouseup', handleUp, { once: true })
+      window.addEventListener('mouseup', handleUp, { once: true, capture: true })
     }
   }
 
@@ -462,6 +488,10 @@
         chat: $activeChat
       })
     }
+
+    document.dispatchEvent(
+      new CustomEvent(CompletionEventID.OpenVisionNoteInSidebar, { bubbles: true })
+    )
   }
 
   function handleOpenAsTab() {
@@ -529,7 +559,8 @@
     }
   }
 
-  async function handlePromptInputSubmit(input: string) {
+  // Make handlePromptInputSubmit accessible to the module context
+  export async function handlePromptInputSubmit(input: string) {
     if (input.length < 1 || $state.isCapturing === true) {
       return
     }
@@ -538,6 +569,8 @@
     $state.isCapturing = true
     await tick()
     await new Promise((r) => setTimeout(r, 100))
+
+    document.dispatchEvent(new CustomEvent(CompletionEventID.VisionSend, { bubbles: true }))
 
     const blob = await captureScreenshot($selectionRect)
     $state.isCapturing = false
@@ -626,20 +659,32 @@
   <div
     bind:this={backdropEl}
     id="screen-picker-backdrop"
+    class="no-drag"
+    data-tooltip-anchor="screen-picker"
     class:disabled={$state.isLocked}
     style="view-transition-name: screen-picker-backdrop;"
     style:--rect-x={$_selectionRect.x + 'px'}
     style:--rect-y={$_selectionRect.y + 'px'}
     style:--rect-w={$_selectionRect.width + 'px'}
     style:--rect-h={$_selectionRect.height + 'px'}
+    class:blurred={!fromTty || $_selectionRect.width + $_selectionRect.height > 2}
   >
     {#if !validRectSelection}
-      <div class="instructions">
-        <Icon name="cursor-arrow-rays" size="22px" />
-        Click and drag anywhere to select a region
+      <div class="instructions" class:edge={!fromTty} use:startingClass={{}}>
+        <Icon name="cursor-arrow-rays" size="1.25rem" />
+        Click and drag to use Vision
       </div>
     {/if}
   </div>
+  {#if !$state.isLocked}
+    <div
+      id="screen-picker-frame"
+      style:--rect-x={$_selectionRect.x + 'px'}
+      style:--rect-y={$_selectionRect.y + 'px'}
+      style:--rect-w={$_selectionRect.width + 'px'}
+      style:--rect-h={$_selectionRect.height + 'px'}
+    ></div>
+  {/if}
   <div
     bind:this={pickerEl}
     id="screen-picker"
@@ -851,13 +896,14 @@
             <div
               class="messageBox"
               class:expanded={$state.isChatExpanded}
+              data-tooltip-safearea="message-box"
               style="view-transition-name: screen-picker-chat;"
             >
               <header>
                 <div class="messageBoxHeaderLeft">
-                  <button on:click|preventDefault={handleClose}>
-                    <Icon name="close" size="1.3em" />
-                  </button>
+                  <AppBarButton on:click={handleClose} data-tooltip-disable>
+                    <Icon name="close" size="1rem" />
+                  </AppBarButton>
 
                   {#if $userConfigSettings.experimental_notes_chat_sidebar}
                     {#if $note}
@@ -870,14 +916,18 @@
 
                 <div class="messageBoxHeaderRight">
                   {#if $userConfigSettings.experimental_notes_chat_sidebar}
-                    <button on:click|preventDefault={handleOpenAsTab}>
-                      <Icon name="arrow.diagonal" size="1.3em" />
-                    </button>
+                    <AppBarButton on:click={handleOpenAsTab} data-tooltip-disable>
+                      <Icon name="arrow.diagonal" size="1rem" />
+                    </AppBarButton>
                   {/if}
 
-                  <button on:click|preventDefault={handleExpandChat}>
-                    <Icon name="sidebar.right" size="1.3em" />
-                  </button>
+                  <AppBarButton
+                    on:click={handleExpandChat}
+                    data-tooltip-target="open-in-sidebar-button"
+                    data-tooltip-action={OnboardingAction.OpenNoteInSidebar}
+                  >
+                    <Icon name="sidebar.right" size="1rem" />
+                  </AppBarButton>
                 </div>
               </header>
 
@@ -952,10 +1002,19 @@
     inset: 0;
     isolation: isolate;
 
-    z-index: 99932313232132131231231211239;
+    z-index: 99;
 
-    background: rgb(0 0 0 / 0.25);
-    backdrop-filter: blur(0.5px);
+    &.blurred {
+      //background: rgb(0 0 0 / 0.25);
+      backdrop-filter: blur(1.25px);
+      background: rgba(0, 0, 0, 0.075);
+    }
+    //background: linear-gradient(to top, rgba(255, 255, 255, 2) 10%, rgba(255, 255, 255, 0) 100%);
+    //background: radial-gradient(
+    //  circle at 50% 109%,
+    //  rgb(190 205 212 / 67%) 20%,
+    //  rgba(255, 255, 255, 0) 70%
+    //);
     &:not(.disabled) {
       cursor: crosshair;
     }
@@ -973,10 +1032,67 @@
       var(--rect-x) var(--rect-y),
       0% var(--rect-y)
     );
+    margin-top: -3px;
+    margin-left: -3px;
 
     .instructions {
-      @apply fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-black/90 text-white px-5 py-2.5 rounded-full text-lg flex items-center gap-2 select-none pointer-events-none;
+      transition-property: opacity, transform;
+      transition-duration: 145ms;
+      transition-delay: 123ms;
+      transition-timing-function: ease-out;
+      --offsetY: 0px;
+
+      position: fixed;
+      bottom: 11.5rem;
+      &.edge {
+        bottom: 1rem;
+      }
+      left: 50%;
+      transform: translateX(-50%) translateY(var(--offsetY, 0px));
+      background: #222;
+      background: var(--background-dark-p3);
+      color: var(--text);
+      padding-block: 0.5rem;
+      padding-left: 0.5rem;
+      padding-right: 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 450;
+      border-radius: 5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      user-select: none;
+      pointer-events: none;
+      border: var(--border-width) solid var(--border-color);
+
+      &:global(._starting) {
+        opacity: 0;
+        --offsetY: 3px;
+      }
+      opacity: 1;
     }
+  }
+
+  #screen-picker-frame {
+    box-sizing: content-box;
+    position: absolute;
+    z-index: 9993231322131232132131231231211240;
+
+    top: var(--rect-y);
+    left: var(--rect-x);
+    width: var(--rect-w);
+    height: var(--rect-h);
+    margin-top: -6px;
+    margin-left: -6px;
+
+    background: none;
+    box-sizing: content-box;
+    border: 3px dotted #fff;
+    border-radius: 0.75rem;
+    // filter: invert(100%);
+    mix-blend-mode: difference;
+
+    mix-blend-mode: exclusion;
   }
 
   #screen-picker {
@@ -992,7 +1108,12 @@
 
     background: none;
     box-sizing: content-box;
-    border: 3px dotted #fff;
+    border-radius: 8px;
+    //border: 3px dotted #fff;
+    //backdrop-filter: invert(100%);
+    // filter: invert(100%);
+    // mix-blend-mode: exclusion;
+    // mix-blend-mode: difference;
 
     // Makes the border fit outside the screenshot area
     margin-top: -3px;
@@ -1000,7 +1121,6 @@
     &.isLocked {
       border: 3px solid #999;
     }
-    border-radius: 8px;
 
     &.isResizing .toolbox * {
       pointer-events: none !important;
@@ -1311,7 +1431,7 @@
             display: flex;
             align-items: center;
             gap: 0.5em;
-            overflow: hidden;
+            overflow: visible;
           }
 
           button {
@@ -1443,5 +1563,9 @@
       font-size: 1rem;
       font-weight: 400;
     }
+  }
+
+  :global(body.onboarding #screen-picker-backdrop .instructions) {
+    bottom: 1rem !important;
   }
 </style>

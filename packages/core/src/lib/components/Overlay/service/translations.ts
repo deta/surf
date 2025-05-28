@@ -276,6 +276,7 @@ export const spaceToTeletypeItem = (space: OasisSpace) =>
     section: 'Context',
     actionIcon: 'circle-dot',
     actionText: 'Open Context',
+    /*
     actionPanel: [
       createSecondaryAction({
         id: `open-space-in-overlay-${space.id}`,
@@ -288,6 +289,7 @@ export const spaceToTeletypeItem = (space: OasisSpace) =>
         handler: createExecutioner(TeletypeAction.OpenSpaceAsTab, { space })
       })
     ],
+    */
     handler: createExecutioner(TeletypeAction.OpenSpaceAsContext, { space })
   }) as Action
 

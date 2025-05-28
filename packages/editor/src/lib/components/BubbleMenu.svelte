@@ -375,6 +375,8 @@
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
     user-select: none;
     font-size: 0.95em;
+    position: relative;
+    z-index: 10010;
 
     animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
 
@@ -444,6 +446,7 @@
     gap: 0.5rem;
     width: 335px; /* Set a fixed width for the bubble menu */
     max-height: 120px;
+    padding: 0.25rem 0.5rem;
   }
 
   .link-menu {

@@ -1,15 +1,9 @@
-<script lang="ts" context="module">
-  export interface MasonryItem {
-    id: string
-    data: any // TODO: Svelte component typong -> succs in Svelte4 btu nice in svelte 5
-  }
-</script>
-
 <script lang="ts">
   import type { Readable } from 'svelte/store'
   import type { ContextViewDensity } from '@horizon/types'
+  import type { RenderableItem } from '../../../types'
 
-  export let items: Readable<MasonryItem[]>
+  export let items: Readable<RenderableItem[]>
 
   export let paddingInline: number = 46
   export let paddingBlock: number = 46
@@ -25,10 +19,10 @@
   style:--masonry-padding-block={paddingBlock}
 >
   <!--     on:wheel|passive={handleScroll} -->
-  <div class="masonry-grid bg-[#f7f7f7] dark:bg-gray-900">
+  <div class="masonry-grid bg-[#F7F9FB] dark:bg-gray-900">
     {#each $items as item, index (`${item.id}-${index}`)}
       <div class="item">
-        <slot item={{ id: item.id, data: item.data }}></slot>
+        <slot item={{ id: item.id, type: item.type, data: item.data }}></slot>
       </div>
     {/each}
   </div>

@@ -26,6 +26,11 @@ import { MentionItemType, type MentionItem } from '@horizon/editor'
 import { MODEL_CLAUDE_MENTION, MODEL_GPT_MENTION, NOTE_MENTION } from '../../constants/chat'
 import { tick } from 'svelte'
 import type { OasisService } from '../oasis'
+import { EventEmitterBase } from '../events'
+
+export type SmartNotesEvents = {
+  'open-sidebar': (id: string) => void
+}
 
 export class SmartNote {
   log: ReturnType<typeof useLogScope>
@@ -139,33 +144,19 @@ export class SmartNote {
    * Also adds it to the active context if it's enabled
    */
   private async checkAndSurfaceEmptyNote(newData: { title?: string; content?: string } = {}) {
-    const oldData = {
-      title: this.titleValue,
-      content: this.contentValue
+    const hasContent = newData.content || this.contentValue
+    const hasTitle = newData.title || this.titleValue
+
+    if (!hasContent && !hasTitle) {
+      this.log.debug('Note is still empty, not surfacing')
+      return
     }
 
-    const titleAdded = !oldData.title && newData.title
-    const contentAdded = !oldData.content && newData.content
-
-    if (titleAdded || contentAdded) {
-      this.log.debug('Note is no longer empty, removing hide tag and adding to active context')
-
-      await this.resourceManager.deleteResourceTag(
-        this.resource.id,
-        ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
-      )
-
-      const currentSpaceId = this.ai.tabsManager.activeScopeIdValue
-      const saveToActiveContext = this.ai.config.settingsValue.save_to_active_context
-
-      if (currentSpaceId && saveToActiveContext) {
-        await this.ai.oasis.addResourcesToSpace(
-          currentSpaceId,
-          [this.resource.id],
-          SpaceEntryOrigin.ManuallyAdded
-        )
-      }
-    }
+    this.log.debug('Note has content, surfacing in stuff')
+    await this.resourceManager.deleteResourceTag(
+      this.id,
+      ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+    )
   }
 
   async saveContent(value: string) {
@@ -324,7 +315,7 @@ export class SmartNote {
   }
 }
 
-export class SmartNoteManager {
+export class SmartNoteManager extends EventEmitterBase<SmartNotesEvents> {
   static self: SmartNoteManager
 
   log: ReturnType<typeof useLogScope>
@@ -337,6 +328,8 @@ export class SmartNoteManager {
   activeNote: Readable<SmartNote | null>
 
   constructor(resourceManager: ResourceManager) {
+    super()
+
     this.log = useLogScope(`SmartNoteManager`)
     this.resourceManager = resourceManager
 
@@ -543,6 +536,7 @@ export class SmartNoteManager {
     const note = this.convertResourceToNote(resource)
     //await note.loadContent()
 
+    /*
     const currentSpaceId = this.ai.tabsManager.activeScopeIdValue
     const saveToActiveContext = this.ai.config.settingsValue.save_to_active_context
 
@@ -553,6 +547,7 @@ export class SmartNoteManager {
         SpaceEntryOrigin.ManuallyAdded
       )
     }
+    */
 
     this.rawNotes.update((notes) => [...notes, resource])
     this.notes.update((notes) => [...notes, note])
@@ -577,6 +572,17 @@ export class SmartNoteManager {
 
     this.rawNotes.update((notes) => notes.filter((n) => n.id !== noteId))
     this.notes.update((notes) => notes.filter((n) => n.id !== noteId))
+  }
+
+  async openNoteInSidebar(noteId: string) {
+    const note = await this.getNote(noteId)
+    if (!note) return
+
+    this.log.debug('Switching note:', note.id)
+
+    this.changeActiveNote(note)
+
+    this.emit('open-sidebar', note.id)
   }
 
   static provide(resourceManager: ResourceManager) {

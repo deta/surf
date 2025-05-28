@@ -20,8 +20,6 @@ import {
   type DeleteTabEventTrigger,
   type UserSettings
 } from '@horizon/types'
-import EventEmitter from 'events'
-import type TypedEmitter from 'typed-emitter'
 
 import type {
   CreateTabOptions,
@@ -49,6 +47,7 @@ import type { AIService } from './ai/ai'
 import { ContextItemResource } from './ai/context'
 import type { ConfigService } from './config'
 import type { BookmarkPageOpts } from '../components/Browser/BrowserTab.svelte'
+import { EventEmitterBase } from './events'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -95,12 +94,11 @@ class ClosedTabs {
   }
 }
 
-export class TabsManager {
+export class TabsManager extends EventEmitterBase<TabEvents> {
   private log: ReturnType<typeof useLogScope>
   private db: HorizonStore<Tab>
   resourceManager: ResourceManager
   private telemetry: Telemetry
-  private eventEmitter: TypedEmitter<TabEvents>
   private closedTabs: ClosedTabs
   private config: ConfigService
   oasis: OasisService
@@ -129,6 +127,7 @@ export class TabsManager {
   activeTabs: Readable<Tab[]>
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
+  spaceTabCounts: Readable<Record<string, number>>
 
   static self: TabsManager
 
@@ -140,6 +139,7 @@ export class TabsManager {
     desktopManager: DesktopManager,
     config: ConfigService
   ) {
+    super()
     const storage = new HorizonDatabase()
     this.db = storage.tabs
     this.resourceManager = resourceManager
@@ -149,7 +149,6 @@ export class TabsManager {
     this.oasis = oasis
     this.desktopManager = desktopManager
     this.log = useLogScope('TabsService')
-    this.eventEmitter = new EventEmitter() as TypedEmitter<TabEvents>
     this.closedTabs = new ClosedTabs()
 
     this.tabs = writable<Tab[]>([])
@@ -177,8 +176,23 @@ export class TabsManager {
       return tabs.find((tab) => tab.id === activeTabId)
     })
 
-    this.activeBrowserTab = derived([this.tabs, this.activeTabId], ([tabs, activeTabId]) => {
-      return this.browserTabsValue[activeTabId]
+    this.activeBrowserTab = derived(
+      [this.browserTabs, this.activeTabId],
+      ([$browserTabs, $activeTabId]) => {
+        return $browserTabs[$activeTabId]
+      }
+    )
+
+    this.spaceTabCounts = derived([this.tabs], ([$tabs]) => {
+      const counts: Record<string, number> = {}
+
+      $tabs.forEach((tab) => {
+        if (tab.scopeId) {
+          counts[tab.scopeId] = (counts[tab.scopeId] || 0) + 1
+        }
+      })
+
+      return counts
     })
 
     this.activeTabLocation = derived(this.activeTab, (activeTab) => {
@@ -288,6 +302,10 @@ export class TabsManager {
     return get(this.scopedActiveTabs)
   }
 
+  get spaceTabCountsValue() {
+    return get(this.spaceTabCounts)
+  }
+
   private addToActiveTabsHistory(tabId: string) {
     this.activeTabsHistory.update((history) => {
       if (history[history.length - 1] !== tabId) {
@@ -305,18 +323,6 @@ export class TabsManager {
 
   async bulkPersistChanges(items: { id: string; updates: Partial<Tab> }[]) {
     await this.db.bulkUpdate(items)
-  }
-
-  on<E extends keyof TabEvents>(event: E, listener: TabEvents[E]): () => void {
-    this.eventEmitter.on(event, listener)
-
-    return () => {
-      this.eventEmitter.off(event, listener)
-    }
-  }
-
-  emit<E extends keyof TabEvents>(event: E, ...args: Parameters<TabEvents[E]>) {
-    this.eventEmitter.emit(event, ...args)
   }
 
   get(id: string) {
@@ -892,14 +898,15 @@ export class TabsManager {
     return newTab
   }
 
-  async addOnboardingTab(pinned = false, opts?: CreateTabOptions) {
+  async addOnboardingTab(pinned = false, opts?: CreateTabOptions, section?: string) {
     this.log.debug('Creating new onboarding tab')
     const newTab = await this.create<TabOnboarding>(
       {
-        title: 'Welcome to Surf',
+        title: 'Surf Playground',
         icon: 'https://deta.surf/favicon-32x32.png',
         type: 'onboarding',
-        pinned: pinned
+        pinned: pinned,
+        section
       },
       { active: true, ...opts }
     )
@@ -1001,6 +1008,99 @@ export class TabsManager {
     }
   }
 
+  /**
+   * Validates that the current active scope is still valid as a browsing context
+   * If not, switches to another valid browsing context
+   * This is called when a space is toggled off as a browsing context
+   */
+  async validateActiveScope(): Promise<void> {
+    try {
+      const currentScopeId = this.activeScopeIdValue
+      if (!currentScopeId) return // No active scope to validate
+
+      this.log.debug('Validating active scope:', currentScopeId)
+
+      // Check if the current scope is still valid as a browsing context
+      const currentSpace = this.oasis.spacesValue.find((space) => space.id === currentScopeId)
+      if (!currentSpace) {
+        this.log.debug('Current scope not found, switching to default')
+        await this.changeScope(null)
+        return
+      }
+
+      try {
+        // Check if the space has name property and space metadata
+        if (!currentSpace.name) {
+          this.log.debug('Current space has no name property, switching to default')
+          await this.changeScope(null)
+          return
+        }
+
+        // Check if the space has nested space metadata and is still valid as a browsing context
+        const nestingData = currentSpace.name.nestingData
+        if (nestingData?.hasChildren && currentSpace.name.useAsBrowsingContext !== true) {
+          this.log.debug(
+            'Current scope is no longer a valid browsing context, switching to another context'
+          )
+
+          // Find another valid browsing context
+          await this.findAndSwitchToValidContext(currentScopeId)
+        }
+      } catch (err) {
+        this.log.error('Error checking space metadata:', err)
+        await this.changeScope(null) // Fall back to default space on error
+      }
+    } catch (error) {
+      this.log.error('Error validating active scope:', error)
+    }
+  }
+
+  /**
+   * Finds a valid browsing context and switches to it
+   * @param currentScopeId The current scope ID to exclude from the search
+   */
+  private async findAndSwitchToValidContext(currentScopeId: string): Promise<void> {
+    try {
+      const spaces = this.oasis.spacesValue || []
+      this.log.debug(`Available spaces for switching: ${spaces.length}`)
+      let targetSpaceId = null
+
+      // Try to use defaultSpaceID from oasis
+      if (this.oasis.defaultSpaceID) {
+        const defaultSpace = spaces.find((space) => space.id === this.oasis.defaultSpaceID)
+        if (defaultSpace) {
+          targetSpaceId = defaultSpace.id
+          this.log.debug('Switching to default space:', targetSpaceId)
+        }
+      }
+
+      // If no default space found, find another browsing context
+      if (!targetSpaceId && spaces.length > 0) {
+        const otherBrowsingContext = spaces.find((space) => {
+          if (!space || space.id === currentScopeId) {
+            return false
+          }
+          return space.name?.useAsBrowsingContext === true
+        })
+
+        if (otherBrowsingContext) {
+          targetSpaceId = otherBrowsingContext.id
+          this.log.debug('Switching to alternative space:', targetSpaceId)
+        }
+      }
+
+      // Switch to the target space or null if none found
+      if (targetSpaceId) {
+        await this.changeScope(targetSpaceId, ChangeContextEventTrigger.ContextSwitcher)
+      } else {
+        this.log.debug('No alternative space found, switching to null')
+        await this.changeScope(null, ChangeContextEventTrigger.ContextSwitcher)
+      }
+    } catch (error) {
+      this.log.error('Error finding and switching to valid context:', error)
+    }
+  }
+
   async changeScope(
     scopeId: string | null,
     trigger: ChangeContextEventTrigger = ChangeContextEventTrigger.ContextSwitcher
@@ -1016,6 +1116,12 @@ export class TabsManager {
       } else {
         scopeId = this.oasis.spacesValue[0]?.id
       }
+    }
+
+    // If we have a valid scopeId, ensure it's marked as a browsing context
+    if (scopeId) {
+      this.log.debug('Ensuring space is marked as browsing context:', scopeId)
+      await this.oasis.ensureSpaceIsBrowsingContext(scopeId)
     }
 
     if (scopeId === null) {

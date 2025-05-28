@@ -1,3 +1,4 @@
+import type { FileKind } from 'human-filetypes/data'
 import type { Icons } from './main'
 
 export type IconImage = {
@@ -20,4 +21,9 @@ export type IconIcon = {
   data: Icons
 }
 
-export type Icon = IconImage | IconEmoji | IconColors | IconIcon
+export type IconFile = {
+  type: 'file'
+  data: FileKind | 'code'
+}
+
+export type Icon = IconImage | IconEmoji | IconColors | IconIcon | IconFile

@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { onMount, afterUpdate, tick } from 'svelte'
-  import { spring } from 'svelte/motion'
-
   import ContextBubbleImage from './ContextBubbleItems/ContextBubbleImage.svelte'
   import ContextBubbleResource from './ContextBubbleItems/ContextBubbleResource.svelte'
   import ContextBubbleSpace from './ContextBubbleItems/ContextBubbleSpace.svelte'
@@ -19,143 +16,83 @@
   import ContextBubblePageTab from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubblePageTab.svelte'
   import ContextBubbleBasic from '@horizon/core/src/lib/components/Chat/ContextBubbleItems/ContextBubbleBasic.svelte'
   import { isEmpty } from 'lodash'
-  import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { startingClass } from '../../utils/dom'
 
   export let contextManager: ContextManager
-
-  const config = useConfig()
-  const userConfigSettings = config.settings
+  export let layout: 'floaty' | 'bottom' = 'bottom'
 
   const contextItems = contextManager.items
-  const containerWidth = spring(220, { stiffness: 0.2, damping: 0.7 })
 
   $: items = $contextItems.filter((item) => item.visibleValue).slice(0, 10)
 
-  let isInitialized = false
-
-  $: pillProperties = spring(
-    items.map((_, index) => ({
-      x: index * 30,
-      y: getSubtleVerticalOffset(),
-      rotate: getSubtleRotation(),
-      borderRadius: 9,
-      textOpacity: 0,
-      textBlur: 10,
-      textX: -20
-    })),
-    { stiffness: 0.5, damping: 0.8 }
-  )
-
-  async function initializePositions() {
-    await tick()
-    pillProperties.set(
-      items.map((_, index) => ({
-        x: index * 30,
-        y: getSubtleVerticalOffset(),
-        rotate: getSubtleRotation(),
-        borderRadius: 9,
-        textOpacity: 0,
-        textBlur: 10,
-        textX: -20
-      }))
-    )
-  }
-
-  function getSubtleVerticalOffset() {
-    return (Math.random() * 2 - 1) * 2.5 + 8
-  }
-
-  function getSubtleRotation() {
-    return 0
-  }
-
-  async function resetAnimation() {
-    await initializePositions()
-  }
-
-  onMount(async () => {
-    await initializePositions()
-    isInitialized = true
-  })
-
-  afterUpdate(async () => {
-    if (isInitialized && items.length !== $pillProperties.length) {
-      await resetAnimation()
-    }
-  })
+  const DELAY = 30
 </script>
 
 <div
-  class="relative w-full h-fit"
-  role="none"
-  class:experimental={$userConfigSettings.experimental_notes_chat_input &&
-    $userConfigSettings.experimental_notes_chat_sidebar}
+  class="flex items-center h-fit relative overflow-x-auto overflow-y-visible {layout} pr-4"
+  style="overflow-clip-margin: 2px;"
   class:isEmpty={isEmpty(items)}
 >
-  <div
-    class="flex items-center -space-x-3 h-fit relative"
-    style="width: {$containerWidth}px; min-width: 100%;"
-  >
-    {#each items as item (item.id)}
-      {#if item instanceof ContextItemSpace}
-        <ContextBubbleSpace
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {:else if item instanceof ContextItemScreenshot}
-        <ContextBubbleImage
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {:else if item instanceof ContextItemResource}
-        <ContextBubbleResource
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {:else if item instanceof ContextItemPageTab}
-        <ContextBubblePageTab
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {:else if item instanceof ContextItemActiveTab}
-        <ContextBubbleActiveTab
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {:else if item instanceof ContextItemActiveSpaceContext}
-        <ContextBubbleActiveContext
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {:else}
-        <ContextBubbleBasic
-          {item}
-          pillProperties={$pillProperties[items.findIndex((p) => p?.id === item?.id)] ?? {}}
-          on:remove-item
-          on:select
-          on:retry
-        />
-      {/if}
-    {/each}
-  </div>
+  {#each items as item, i (item.id)}
+    {@const idx = i}
+    {#if item instanceof ContextItemSpace}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubbleSpace {item} on:remove-item on:select on:retry />
+      </div>
+    {:else if item instanceof ContextItemScreenshot}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubbleImage {item} on:remove-item on:select on:retry />
+      </div>
+    {:else if item instanceof ContextItemResource}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubbleResource {item} on:remove-item on:select on:retry />
+      </div>
+    {:else if item instanceof ContextItemPageTab}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubblePageTab {item} on:remove-item on:select on:retry />
+      </div>
+    {:else if item instanceof ContextItemActiveTab}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubbleActiveTab {item} on:remove-item on:select on:retry />
+      </div>
+    {:else if item instanceof ContextItemActiveSpaceContext}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubbleActiveContext {item} on:remove-item on:select on:retry />
+      </div>
+    {:else}
+      <div
+        class="bubble-wrapper"
+        style="--i: {i};--delay: {(idx + 0) * DELAY}ms;"
+        use:startingClass={{}}
+      >
+        <ContextBubbleBasic {item} on:remove-item on:select on:retry />
+      </div>
+    {/if}
+  {/each}
 </div>
 
 <style lang="scss">
@@ -163,14 +100,46 @@
     display: none;
   }
 
-  .experimental {
-    .flex {
-      gap: 4px;
-      margin-left: 0.5rem;
+  .isEmpty {
+    //display: none;
+  }
+
+  .floaty .bubble-wrapper {
+    &:global(._starting) {
+      opacity: 0 !important;
+      --offset-x: -1px;
+      --offset-y: -4px;
+    }
+  }
+  .bottom .bubble-wrapper {
+    &:global(._starting) {
+      opacity: 0 !important;
+      --offset-x: -1px;
+      --offset-y: 4px;
     }
   }
 
-  .isEmpty {
-    display: none;
+  .bubble-wrapper {
+    transition-property: transform, opacity;
+    transition-duration: 123ms;
+    transition-delay: var(--delay, 0ms);
+    transition-timing-function: ease-out;
+
+    --scale: 1;
+    --offset-x: 0px;
+    --offset-y: 0px;
+
+    opacity: 1;
+    flex-shrink: 0;
+    border-radius: 16px;
+
+    transform-origin: left center;
+    transform: translate(var(--offset-x), var(--offset-y)) scale(var(--scale));
+
+    &:hover {
+      z-index: 999;
+      box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+      --offset-y: -1px;
+    }
   }
 </style>

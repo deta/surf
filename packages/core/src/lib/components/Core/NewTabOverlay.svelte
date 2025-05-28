@@ -1,44 +1,14 @@
 <script lang="ts">
-  import { type Writable, derived, writable, get, type Readable } from 'svelte/store'
+  import { type Writable, writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import {
-    useLogScope,
-    useDebounce,
-    useLocalStorageStore,
-    tooltip,
-    isMac,
-    conditionalArrayItem
-  } from '@horizon/utils'
+  import { useLogScope, useLocalStorageStore } from '@horizon/utils'
   import { OasisSpace, useOasis } from '../../service/oasis'
-  import { useToasts, type ToastItem } from '../../service/toast'
+  import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import type { OverlayEvents } from '../Overlay/types'
-  import { Icon } from '@horizon/icons'
-  import { DragOperation, Dragcula, DragculaDragEvent, HTMLDragArea } from '@horizon/dragcula'
-  import {
-    Resource,
-    ResourceManager,
-    ResourceTag,
-    type ResourceSearchResultItem
-  } from '../../service/resources'
-  import {
-    DragTypeNames,
-    ResourceTagsBuiltInKeys,
-    ResourceTypes,
-    SpaceEntryOrigin,
-    type DragTypes
-  } from '../../types'
-  import type { HistoryEntriesManager } from '../../service/history'
-  import {
-    type ContextViewDensity,
-    type ContextViewType,
-    MultiSelectResourceEventAction,
-    OpenInMiniBrowserEventFrom,
-    SaveToOasisEventTrigger,
-    SearchOasisEventTrigger
-  } from '@horizon/types'
-  import DropWrapper from '../Oasis/DropWrapper.svelte'
+  import { DragOperation, Dragcula, HTMLDragArea } from '@horizon/dragcula'
+  import { OpenInMiniBrowserEventFrom } from '@horizon/types'
   import OasisSpaceRenderer from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/Scaffolding/SpacesView.svelte'
   import Onboarding from './Onboarding.svelte'
@@ -46,40 +16,14 @@
   import stuffAdd from '../../../../public/assets/demo/stuffsave.gif'
   import stuffSmart from '../../../../public/assets/demo/stuffsmart.gif'
   import stuffSearch from '../../../../public/assets/demo/stuffsearch.gif'
-  import { portal } from '../Core/Portal.svelte'
   import Tooltip from '../Onboarding/Tooltip.svelte'
   import { getBackgroundImageUrlFromId } from '../../service/colors'
-  import Select from '../Atoms/Select.svelte'
-  import {
-    createResourcesFromMediaItems,
-    processDrop,
-    processPaste
-  } from '../../service/mediaImporter'
-  import { springAppear } from '../motion/springAppear'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
   import ResourceDetails from '@horizon/core/src/lib/components/Oasis/Scaffolding/ResourceDetails.svelte'
   import { removeSelectionById } from '@horizon/core/src/lib/components/Oasis/utils/select'
   import StuffRightSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/StuffRightSidebar.svelte'
 
-  import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
-  import type { FilterChangeEvent, ViewChangeEvent } from '../Oasis/SpaceFilterViewButtons.svelte'
-  import ContextHeader from '../Oasis/ContextHeader.svelte'
-  import ContextTabsBar from '../Oasis/ContextTabsBar.svelte'
-  import OasisSpaceNavbar from '../Oasis/OasisSpaceNavbar.svelte'
-  import SpaceFilterViewButtons from '../Oasis/SpaceFilterViewButtons.svelte'
-  import {
-    everythingContext,
-    inboxContext,
-    notesContext
-  } from '@horizon/core/src/lib/constants/browsingContext'
-
   export let showTabSearch: Writable<number>
-  export let spaceId: string
-  export let historyEntriesManager: HistoryEntriesManager
-  export let updateSearchValue: Writable<string>
-
-  const SEARCH_RESET_TIMEOUT = 8000
 
   const log = useLogScope('NewTabOverlay')
   const dispatch = createEventDispatcher<OverlayEvents>()
@@ -94,24 +38,12 @@
   const telemetry = resourceManager.telemetry
   const spaces = oasis.spaces
   const selectedSpaceId = oasis.selectedSpace
-  const everythingContentsResources = oasis.everythingContents
   const userConfigSettings = config.settings
-  const selectedFilterTypeId = oasis.selectedFilterTypeId
   const detailedResource = oasis.detailedResource
   const activeScopeId = tabsManager.activeScopeId
 
-  const searchValue = writable('')
-  const searchResults = writable<ResourceSearchResultItem[]>([])
-  const isSearching = writable(false)
-  const hasSearched = writable(false)
-  const selectedItem = writable<string | null>(null)
   const onboardingOpen = writable($userConfigSettings.onboarding.completed_stuff === false)
-  const loadingContents = writable(false)
   const isCreatingNewSpace = writable(false)
-  const selectedFilter = useLocalStorageStore<'all' | 'saved_by_user'>(
-    'oasis-filter-resources',
-    'all'
-  )
 
   const isResizing = writable(false)
   const resizingDirection = writable<
@@ -127,29 +59,14 @@
 
   let stuffWrapperRef: HTMLElement
   let createSpaceRef: SpacesView
-  let hasLoadedEverything = false
   let oasisSpace: OasisSpaceRenderer
 
-  let searchTimeout: NodeJS.Timeout | null = null
-  let searchResetTimeout: NodeJS.Timeout | null = null
-  let previousSearchValue = ''
-  let showDragHint = writable(false)
   let drawerHide = writable(false) // Whether to slide the drawer away
   let lastShowTabSearch = 0
 
-  $: isEverythingSpace = $selectedSpaceId === 'all'
-  $: isInboxSpace = $selectedSpaceId === 'inbox'
-  $: isNotesSpace = $selectedSpaceId === 'notes'
   $: darkMode = $userConfigSettings.app_style === 'dark'
 
-  $: if (updateSearchValue) {
-    searchValue.set($updateSearchValue)
-  }
-
   $: if ($showTabSearch === 2) {
-    if (['all', 'inbox', 'notes'].includes($selectedSpaceId)) {
-      loadEverything()
-    }
     if (lastShowTabSearch !== $showTabSearch) {
       telemetry.trackOpenOasis()
     }
@@ -159,299 +76,11 @@
     lastShowTabSearch = $showTabSearch
   }
 
-  $: if ($showTabSearch === 2 && $searchValue !== previousSearchValue) {
-    isSearching.set(true)
-    previousSearchValue = $searchValue
-
-    if (searchTimeout) {
-      clearTimeout(searchTimeout)
-    }
-
-    searchTimeout = setTimeout(async () => {
-      await debouncedSearch($searchValue)
-    }, 300)
-  }
-
   $: if ($showTabSearch !== 2) {
     closeResourceDetailsModal()
   }
 
-  const everythingContents = derived(
-    [everythingContentsResources],
-    ([everythingContentsResources]) => {
-      return everythingContentsResources
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map(
-          (resource) =>
-            ({
-              id: resource.id,
-              resource: resource,
-              annotations: resource.annotations,
-              engine: 'local'
-            }) as ResourceSearchResultItem
-        )
-    }
-  )
-
-  const resourcesToShow = derived(
-    [searchValue, searchResults, everythingContents],
-    ([searchValue, searchResults, everythingContents]) => {
-      if (searchValue && $showTabSearch === 2) {
-        return searchResults
-      }
-      return everythingContents
-    }
-  )
-
-  const renderContents = derived<[Readable<ResourceSearchResultItem[]>], LazyItem[]>(
-    [resourcesToShow],
-    ([resourcesToShow]) => {
-      return (resourcesToShow ?? []).map((item) => {
-        return { id: item.id, data: null }
-      })
-    }
-  )
-
-  const isBuiltInSpace = derived([selectedSpaceId], ([$selectedSpaceId]) => {
-    return ['all', 'inbox', 'notes'].includes($selectedSpaceId)
-  })
-
-  const builtInSpacesViewSettings = useLocalStorageStore<{
-    all?: {
-      viewType?: ContextViewType
-      viewDensity?: ContextViewDensity
-    }
-    inbox?: {
-      viewType?: ContextViewType
-      viewDensity?: ContextViewDensity
-    }
-    notes?: {
-      viewType?: ContextViewType
-      viewDensity?: ContextViewDensity
-    }
-  }>(
-    'stuff_built_in_spaces_view_settings',
-    {
-      all: {},
-      inbox: {},
-      notes: {}
-    },
-    true
-  )
-
-  const loadEverything = async (initialLoad = false) => {
-    await tick()
-    await oasis.loadEverything(initialLoad)
-  }
-
-  const handleResourceRemove = async (
-    e: CustomEvent<{ ids: string; deleteFromStuff: boolean }>
-  ) => {
-    const ids = e.detail.ids
-    try {
-      const resourceIds = Array.isArray(ids) ? ids : [ids]
-      log.debug('removing resources', resourceIds)
-
-      if (resourceIds.length === 0) {
-        toasts.error('No resources found to remove.')
-        return
-      }
-
-      const isInSpace =
-        $selectedSpaceId !== 'all' && $selectedSpaceId !== 'inbox' && $selectedSpaceId != 'notes'
-      const res = await oasis.removeResourcesFromSpaceOrOasis(
-        resourceIds,
-        isInSpace ? $selectedSpaceId : undefined
-      )
-      if (!res) {
-        return
-      }
-
-      if (resourceIds.length > 1) {
-        await telemetry.trackMultiSelectResourceAction(
-          MultiSelectResourceEventAction.Delete,
-          resourceIds.length,
-          isEverythingSpace || isInboxSpace || isNotesSpace ? 'oasis' : 'space'
-        )
-      }
-
-      if ($detailedResource && resourceIds.includes($detailedResource.id)) {
-        detailedResource.set(null)
-      }
-
-      if ($searchValue) {
-        await debouncedSearch($searchValue)
-      }
-
-      toasts.success('Resources deleted!')
-    } catch (error) {
-      log.error('Error removing resources:', error)
-      if (error instanceof Error) {
-        toasts.error('Error removing resources: ' + error.message)
-      } else if (typeof error === 'string') {
-        toasts.error('Error removing resources: ' + error)
-      } else {
-        toasts.error('Error removing resources')
-      }
-    }
-  }
-
-  const handleSavedResourceInSpace = (e: CustomEvent<string>) => {
-    const spaceId = e.detail
-    log.debug('Saved resource in space:', spaceId)
-    if (spaceId !== 'inbox' && spaceId !== 'all') {
-      loadEverything()
-    }
-  }
-
-  const handleUseResourceAsSpaceIcon = async (e: CustomEvent<string>) => {
-    const resourceId = e.detail
-    const space = $spaces.find((x) => x.id === $selectedSpaceId)
-    if (!space) {
-      log.error('Space not found:', $selectedSpaceId)
-      return
-    }
-    await space.useResourceAsIcon(resourceId)
-    toasts.success('Context icon updated!')
-  }
-
-  const handleItemClick = (e: CustomEvent<string>) => {
-    log.debug('Item clicked:', e.detail)
-    selectedItem.set(e.detail)
-  }
-
-  let handledDrop = false
-
-  const handleDropOnSpace = async (spaceId: string, drag: DragculaDragEvent<DragTypes>) => {
-    //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
-    const toast = toasts.loading(`Adding to context...`)
-
-    try {
-      if (drag.isNative) {
-        handledDrop = true
-        const parsed = await processDrop(drag.event!)
-        log.debug('Parsed', parsed)
-
-        const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
-          ResourceTag.dragLocal()
-        ])
-        log.debug('Resources', newResources)
-
-        if (!isEverythingSpace && !isInboxSpace && !isNotesSpace) {
-          await oasis.addResourcesToSpace(
-            spaceId,
-            newResources.map((r) => r.id),
-            SpaceEntryOrigin.ManuallyAdded
-          )
-        }
-
-        for (const r of newResources) {
-          telemetry.trackSaveToOasis(
-            r.type,
-            SaveToOasisEventTrigger.Drop,
-            !isEverythingSpace && !isInboxSpace && !isNotesSpace
-          )
-        }
-      } else if (
-        drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-        drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-      ) {
-        let resource: Resource | null = null
-        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
-          resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
-        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
-          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
-          resource = await resourceFetcher()
-        }
-
-        if (resource === null) {
-          log.warn('Dropped resource but resource is null! Aborting drop!')
-          drag.abort()
-          return
-        }
-
-        await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-
-        // FIX: Not exposed outside OasisSpace component.. cannot reload directlry :'( !?
-        //await loadSpaceContents(spaceId)
-      }
-
-      await loadEverything()
-    } catch (error) {
-      log.error('Error dropping:', error)
-      toast.error('Error dropping: ' + (error as Error).message)
-      drag.abort()
-      return
-    }
-    drag.continue()
-
-    toast.success(`Resources added!`)
-    await tick()
-    showTabSearch.set(2)
-  }
-
-  const handlePaste = async (e: ClipboardEvent) => {
-    if ($showTabSearch !== 2 || get(miniBrowserService.isOpen)) return
-
-    const target = e.target as HTMLElement
-    const isFocused = target === document.activeElement
-
-    if (
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.getAttribute('contenteditable') === 'true') &&
-      isFocused
-    ) {
-      log.debug('Ignoring paste event in input field or editable content')
-      return
-    }
-
-    let toast: ToastItem | null = null
-
-    log.debug('Handling paste event')
-
-    try {
-      // NOTE: We filter plain text items, as that just leads to too many issue with the input fields
-      // for right now.
-      const mediaItems = (await processPaste(e)).filter((item) => item.type !== 'text')
-      if (mediaItems.length === 0) {
-        log.debug('No valid media items found in paste event')
-        return
-      }
-
-      toast = toasts.loading(
-        `Importing ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}…`
-      )
-
-      const resources = await createResourcesFromMediaItems(
-        resourceManager,
-        mediaItems,
-        `Imported at ${new Date().toLocaleString()}`,
-        [ResourceTag.paste()]
-      )
-
-      if (!isEverythingSpace && !isInboxSpace && !isNotesSpace) {
-        const space = await oasis.getSpace($selectedSpaceId)
-        if (!space) {
-          toast.warning('Could not find active space! Import still succeeded!')
-        }
-
-        await space?.addResources(
-          resources.map((e) => e.id),
-          SpaceEntryOrigin.ManuallyAdded
-        )
-
-        oasis.reloadSpace($selectedSpaceId)
-      } else {
-        oasis.loadEverything(false)
-      }
-
-      toast?.success(`Imported ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}!`)
-    } catch (e) {
-      if (toast) toast.error('Could not import item(s)!')
-      else toasts.error('Could not import item(s)!')
-    }
-  }
+  $: log.debug('selectedSpaceId', $selectedSpaceId)
 
   const openResourceDetailsModal = (resourceId: string) => {
     scopedMiniBrowser.openResource(resourceId, {
@@ -471,15 +100,6 @@
     scopedMiniBrowser.openWebpage(e.detail, {
       from: OpenInMiniBrowserEventFrom.Oasis
     })
-  }
-
-  const handleChatWithSpace = (spaceId: string) => {
-    dispatch('open-space-and-chat', {
-      spaceId,
-      text: $searchValue
-    })
-    showTabSearch.set(0)
-    searchValue.set('')
   }
 
   const handleCloseOverlay = () => {
@@ -535,35 +155,6 @@
     isCreatingNewSpace.set(true)
   }
 
-  const handleOasisFilterChange = async (e: CustomEvent<string>) => {
-    log.debug('Filter change:', e.detail)
-    await debouncedSearch($searchValue)
-  }
-
-  const handleFilterTypeChange = (e: CustomEvent<FilterChangeEvent>) => {
-    log.debug('Filter type change:', e.detail)
-    oasis.selectedFilterTypeId.set(e.detail.filter?.id ?? null)
-    loadEverything()
-  }
-
-  // TODO: (@maxu / @maxi): cant do rn only for contexts
-  /*const handleSortBySettingsChanged = async (e: CustomEvent<SortByChangeEvent>) => {
-    const { sortBy } = e.detail
-
-    const prevSortby = $spaceData?.sortBy
-
-    // TODO: Typing we dont expose a type for the sort exactly so this is scudffed
-    await $space.updateData({ sortBy })
-    loadSpaceContents(spaceId, true)
-
-    if (prevSortby !== sortBy) {
-      telemetry.trackUpdateSpaceSettings({
-        setting: 'sort_by',
-        change: sortBy
-      })
-    }
-  }*/
-
   const closeOnboarding = async () => {
     onboardingOpen.set(false)
 
@@ -575,66 +166,6 @@
       }
     })
   }
-
-  // Add this debounced search function
-  const debouncedSearch = useDebounce(async (value: string) => {
-    if (!value) return
-
-    if (value.length === 0) {
-      searchResults.set([])
-      hasSearched.set(false)
-      isSearching.set(false)
-      if (!hasLoadedEverything) {
-        hasLoadedEverything = true
-        loadEverything()
-      }
-      return
-    }
-
-    try {
-      isSearching.set(true)
-
-      const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
-      const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
-
-      if (hashtags.length === value.split(' ').length) {
-        value = ''
-      }
-
-      // Only track telemetry if first search after reset
-      if (!$hasSearched) {
-        await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, false)
-        hasSearched.set(true)
-      }
-
-      const result = await resourceManager.searchResources(
-        value,
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ...($selectedFilter === 'saved_by_user'
-            ? [ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)]
-            : []),
-          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x)),
-          ...conditionalArrayItem(
-            $selectedSpaceId === 'notes',
-            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          )
-        ],
-        {
-          semanticEnabled: $userConfigSettings.use_semantic_search
-        }
-      )
-
-      searchResults.set(result)
-    } catch (error) {
-      log.error('Search error:', error)
-      searchResults.set([])
-    } finally {
-      isSearching.set(false)
-    }
-  }, 300)
 
   const closeOverlay = () => {
     showTabSearch.set(0)
@@ -652,51 +183,6 @@
       removeSelectionById($detailedResource.id)
     }
     detailedResource.set(null)
-  }
-
-  const handleViewSettingsChanges = async (e: CustomEvent<ViewChangeEvent>) => {
-    const { viewType, viewDensity } = e.detail
-
-    const prevViewType =
-      $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all']?.viewType
-    const prevViewDensity =
-      $builtInSpacesViewSettings[isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all']
-        ?.viewDensity
-
-    builtInSpacesViewSettings.update((v) => {
-      if (isInboxSpace) {
-        if (v.inbox === undefined) v.inbox = {}
-        v.inbox.viewType = viewType
-        v.inbox.viewDensity = viewDensity
-      } else if (isNotesSpace) {
-        if (v.notes === undefined) v.notes = {}
-        v.notes.viewType = viewType
-        v.notes.viewDensity = viewDensity
-      } else {
-        if (v.all === undefined) v.all = {}
-        v.all.viewType = viewType
-        v.all.viewDensity = viewDensity
-      }
-      return v
-    })
-
-    if (viewType !== undefined && prevViewType !== viewType) {
-      telemetry.trackUpdateSpaceSettings({
-        setting: 'view_type',
-        change: viewType
-      })
-    }
-    if (viewDensity !== undefined && prevViewDensity !== viewDensity) {
-      telemetry.trackUpdateSpaceSettings({
-        setting: 'view_density',
-        change: viewDensity
-      })
-    }
-  }
-
-  const handleReload = async () => {
-    await tick()
-    await loadEverything()
   }
 
   const resizeRafCbk = () => {
@@ -779,33 +265,9 @@
     if (!drag) return
 
     log.debug('Drag end', drag, drag?.to, drag?.from)
-
-    // Check if drag target is within drawer or related components
-    const containedIds = ['drawer', 'folder-', 'overlay-']
-    const isTargetWithinContainer =
-      drag?.to && containedIds.some((id) => drag.to!.id.startsWith(id))
-    const isSourceWithinContainer =
-      drag?.from && containedIds.some((id) => drag.from!.id.startsWith(id))
-
-    // Don't close if dragged within container components
-    if (isTargetWithinContainer && isSourceWithinContainer) {
-      return
-    }
-
-    log.warn('Drag end - closing', handledDrop)
-    // Only close drawer if item wasn't successfully dropped
-    if (!handledDrop) {
-      showTabSearch.set(0)
-    } else {
-      handledDrop = false
-    }
-
-    handledDrop = false
   }
 
-  const handlePostDropOnSpace = () => {
-    handledDrop = true
-  }
+  const handlePostDropOnSpace = () => {}
 
   const updateWebviewPointerEvents = (value: string) => {
     // TODO: find a better way to do this
@@ -832,36 +294,19 @@
   onDestroy(() => {
     Dragcula.get().off('dragstart', handleDragculaDragStart)
     Dragcula.get().off('dragend', handleDragculaDragEnd)
-  })
 
-  onDestroy(
     showTabSearch.subscribe((v) => {
       if (v === 0) {
-        if (searchResetTimeout !== null) clearTimeout(searchResetTimeout)
-
         if ($selectedSpaceId === oasis.defaultSpaceID) {
           selectedSpaceId.set($activeScopeId ?? oasis.defaultSpaceID)
         }
 
         detailedResource.set(null)
-
-        searchResetTimeout = setTimeout(() => {
-          searchValue.set('')
-          selectedSpaceId.set($activeScopeId ?? oasis.defaultSpaceID)
-          selectedFilterTypeId.set(null)
-          searchResetTimeout = null
-        }, SEARCH_RESET_TIMEOUT)
-      } else {
-        if (searchResetTimeout) {
-          clearTimeout(searchResetTimeout)
-          searchResetTimeout = null
-        }
       }
+      oasis.resetNavigationHistory()
     })
-  )
+  })
 </script>
-
-<svelte:window on:paste={handlePaste} />
 
 {#if $showTabSearch === 2}
   <div
@@ -970,7 +415,6 @@
           {resourceManager}
           showPreview={true}
           type="horizontal"
-          interactive={false}
           on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
           on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
           on:create-empty-space={handleCreateEmptySpace}
@@ -987,195 +431,32 @@
           style:--base-color={themeOverride?.colors?.base}
           style:--contrast-color={themeOverride?.colors?.contrast}
         >
-          <Tooltip rootID="stuff" />
-
-          {#if !$isBuiltInSpace}
-            {#key $selectedSpaceId}
-              <OasisSpaceRenderer
-                bind:this={oasisSpace}
-                spaceId={$selectedSpaceId}
-                active
-                handleEventsOutside
-                insideDrawer
-                on:open={handleOpen}
-                on:open-and-chat
-                on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                on:go-back={() => oasis.changeSelectedSpace(oasis.defaultSpaceID)}
-                on:deleted={handleSpaceDeleted}
-                on:updated-space={handleUpdatedSpace}
-                on:creating-new-space={handleCreatingNewSpace}
-                on:done-creating-new-space={handleDoneCreatingNewSpace}
-                on:select-space={handleSpaceSelected}
-                on:batch-open
-                on:batch-remove={handleResourceRemove}
-                on:handled-drop={handlePostDropOnSpace}
-                on:created-space={handleCreatedSpace}
-                on:close={closeOverlay}
-                on:seekToTimestamp
-                on:highlightWebviewText
-                on:open-space-and-chat
-              />
-            {/key}
-          {:else}
-            <DropWrapper
-              {spaceId}
-              acceptsDrag={(drag) => {
-                if (drag.from?.id.startsWith('drawer-') && drag.from?.id.endsWith(spaceId))
-                  return false
-                if (
-                  drag.isNative ||
-                  drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-                  drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-                  drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-                ) {
-                  return true
-                }
-                return false
-              }}
-              on:Drop={(e) => handleDropOnSpace(spaceId, e.detail)}
-              zonePrefix="drawer-"
-            >
-              <LazyScroll items={renderContents} let:renderedItems>
-                {#key $selectedSpaceId}
-                  <!--
-                        TODO: Needs extended api
-                        on:changedSortBy={handleSortBySettingsChanged}
-                        on:changedOrder={handleOrderSettingsChanged}
-                      -->
-
-                  <OasisSpaceNavbar {searchValue}>
-                    <svelte:fragment slot="left">
-                      <Icon
-                        name={isInboxSpace
-                          ? inboxContext.icon
-                          : isNotesSpace
-                            ? notesContext.icon
-                            : everythingContext.icon}
-                        size="1.4rem"
-                        color="currentColor"
-                        style="color: currentColor;"
-                      />
-
-                      <span class="context-name"
-                        >{isInboxSpace
-                          ? inboxContext.label
-                          : isNotesSpace
-                            ? notesContext.label
-                            : everythingContext.label}</span
-                      >
-                    </svelte:fragment>
-                    <svelte:fragment slot="right">
-                      {#if isInboxSpace}
-                        <button
-                          use:tooltip={{
-                            position: 'left',
-                            text:
-                              $searchValue.length > 0
-                                ? 'Create new chat with this context'
-                                : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
-                          }}
-                          class="chat-with-space pointer-all"
-                          class:activated={$searchValue.length > 0}
-                          on:click={() => handleChatWithSpace('inbox')}
-                        >
-                          <Icon name="face" size="1.6em" />
-
-                          <div class="chat-text">Ask Context</div>
-                        </button>
-                      {/if}
-                      {#if $isBuiltInSpace && !!$searchValue}
-                        <Select {selectedFilter} on:change={handleOasisFilterChange}>
-                          <option value="all">Show All</option>
-                          <option value="saved_by_user">Saved by Me</option>
-                        </Select>
-                      {/if}
-                    </svelte:fragment>
-                    <svelte:fragment slot="right-dynamic">
-                      <SpaceFilterViewButtons
-                        hideSortingSettings
-                        filter={$selectedFilterTypeId ?? null}
-                        viewType={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                          ?.viewType}
-                        viewDensity={$builtInSpacesViewSettings[isInboxSpace ? 'inbox' : 'all']
-                          ?.viewDensity}
-                        sortBy={'resource_added_to_space'}
-                        order={'desc'}
-                        on:changedView={handleViewSettingsChanges}
-                        on:changedFilter={handleFilterTypeChange}
-                      />
-                    </svelte:fragment>
-                  </OasisSpaceNavbar>
-
-                  <ContextHeader
-                    headline={isInboxSpace
-                      ? inboxContext.label
-                      : isNotesSpace
-                        ? notesContext.label
-                        : everythingContext.label}
-                    description={isInboxSpace
-                      ? inboxContext.description
-                      : isNotesSpace
-                        ? notesContext.description
-                        : everythingContext.description}
-                    headlineEditable={false}
-                    descriptionEditable={false}
-                  >
-                    <svelte:fragment slot="icon">
-                      <Icon
-                        name={isInboxSpace
-                          ? inboxContext.icon
-                          : isNotesSpace
-                            ? notesContext.icon
-                            : everythingContext.icon}
-                        size="xl"
-                        color="currentColor"
-                        style="color: currentColor;"
-                      />
-                    </svelte:fragment>
-                  </ContextHeader>
-
-                  {#if isInboxSpace}
-                    <ContextTabsBar
-                      on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
-                      on:handled-drop={handlePostDropOnSpace}
-                      on:select-space={handleSpaceSelected}
-                      on:reload={handleReload}
-                    />
-                  {/if}
-
-                  <OasisResourcesView
-                    resources={renderedItems}
-                    {searchValue}
-                    isInSpace={false}
-                    status={$loadingContents
-                      ? { icon: 'spinner', message: 'Loading contents…' }
-                      : $isSearching && $searchValue?.length > 0
-                        ? { icon: 'spinner', message: 'Searching your stuff…' }
-                        : undefined}
-                    viewType={$builtInSpacesViewSettings[
-                      isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
-                    ]?.viewType}
-                    viewDensity={$builtInSpacesViewSettings[
-                      isInboxSpace ? 'inbox' : isNotesSpace ? 'notes' : 'all'
-                    ]?.viewDensity}
-                    hideSortingSettings
-                    hideFilterSettings={isNotesSpace}
-                    on:click={handleItemClick}
-                    on:open={(e) => handleOpen(e, true)}
-                    on:open-and-chat
-                    on:open-space-as-tab
-                    on:remove={handleResourceRemove}
-                    on:batch-remove={handleResourceRemove}
-                    on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-                    on:batch-open
-                    on:new-tab
-                    on:changedView={handleViewSettingsChanges}
-                    on:changedFilter={handleFilterTypeChange}
-                  />
-                {/key}
-              </LazyScroll>
-            </DropWrapper>
-          {/if}
+          <Tooltip rootID="stuff" on:close-stuff={closeOverlay} />
+          {#key $selectedSpaceId}
+            <OasisSpaceRenderer
+              bind:this={oasisSpace}
+              spaceId={$selectedSpaceId}
+              active
+              handleEventsOutside
+              insideDrawer
+              on:open={handleOpen}
+              on:open-and-chat
+              on:open-page-in-mini-browser={handleOpenPageInMiniBrowser}
+              on:go-back={() => oasis.changeSelectedSpace(oasis.defaultSpaceID)}
+              on:deleted={handleSpaceDeleted}
+              on:updated-space={handleUpdatedSpace}
+              on:creating-new-space={handleCreatingNewSpace}
+              on:done-creating-new-space={handleDoneCreatingNewSpace}
+              on:select-space={handleSpaceSelected}
+              on:batch-open
+              on:handled-drop={handlePostDropOnSpace}
+              on:created-space={handleCreatedSpace}
+              on:close={closeOverlay}
+              on:seekToTimestamp
+              on:highlightWebviewText
+              on:open-space-and-chat
+            />
+          {/key}
         </div>
 
         {#if $detailedResource}
@@ -1185,7 +466,6 @@
                 resource={$detailedResource}
                 on:open={(e) => handleOpen(e)}
                 on:close={handleCloseDetailedResource}
-                on:remove={handleResourceRemove}
                 on:open-and-chat
               />
             {/key}
@@ -1298,7 +578,7 @@
     overflow: visible !important;
     display: flex;
 
-    border-radius: 24px 24px 16px 16px;
+    border-radius: 16px 7px 16px 16px;
 
     -webkit-font-smoothing: antialiased;
     -webkit-app-region: no-drag;
@@ -1345,10 +625,25 @@
       min-height: 50ch;
       max-height: min(95vh, 1400px);
       overflow: hidden !important;
-      border-radius: 24px 24px 16px 16px;
-
+      border-radius: 16px 7px 16px 16px;
       @apply bg-white dark:bg-gray-700;
       display: flex;
+      border: 0.25px solid rgba(0, 0, 0, 0.05);
+      border: 0.25px solid color(display-p3 0 0 0 / 0.05);
+      box-shadow:
+        0px 0px 0px 0.2px rgba(0, 0, 0, 0.15) inset,
+        0px 1px 1px 0px rgba(255, 255, 255, 0.15) inset;
+      box-shadow:
+        0px 0px 0px 0.2px color(display-p3 0 0 0 / 0.15) inset,
+        0px 1px 1px 0px color(display-p3 1 1 1 / 0.15) inset;
+      :global(.dark) & {
+        box-shadow:
+          0px 0px 0px 0.2px rgba(255, 255, 255, 0.15) inset,
+          0px 1px 1px 0px rgba(255, 255, 255, 0.15) inset;
+        box-shadow:
+          0px 0px 0px 0.2px color(display-p3 255 255 255 / 0.15) inset,
+          0px 1px 1px 0px color(display-p3 255 255 255 / 0.15) inset;
+      }
     }
     .resize-handle {
       position: absolute;
@@ -1488,5 +783,6 @@
   }
   .stuff-view {
     overflow: hidden;
+    border-top-right-radius: 8px;
   }
 </style>

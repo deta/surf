@@ -31,6 +31,7 @@
   import onboVision from '../../../../public/assets/demo/onbovision.gif'
   import onboBg from '../../../../public/assets/demo/bag_full_bg.png'
   import onboardingSky from '../../../../public/assets/demo/onboarding-sky.png'
+  import { CompletionEventID } from '../Onboarding/onboardingScripts'
 
   import stuffOnboarding01 from '../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
   import smartSpacesOnboarding from '../../../../public/assets/onboarding/smartspaces.webp'
@@ -67,6 +68,7 @@
 
   export let resourceManager: ResourceManager
   export const onboardingRunning = writable(true)
+  export let section: string | undefined = undefined
 
   // Navigation state and config
   let activeSection = 'welcome'
@@ -102,6 +104,7 @@
   $: modShortcut = isMac() ? '⌘' : 'Ctrl'
 
   const handleTryVision = () => {
+    document.dispatchEvent(new CustomEvent(CompletionEventID.UseVision, { bubbles: true }))
     dispatch('openScreenshot')
   }
 
@@ -238,133 +241,157 @@
   <div class="background-gradient" />
 
   <div class="h-screen overflow-y-auto">
-    <section
-      id="welcome"
-      class="hero h-[80vh] flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
-      style="background-image: url({onboardingSky})"
-    >
-      <div class="absolute top-4 right-1 p-3 bg-white/90 z-50 rounded-xl w-full md:!w-auto mx-4">
-        <div class="flex flex-col items-center justify-center">
-          <p class="text-center text-gray-700 text-sm md:!text-base">
-            Need help? Check out our <a
-              rel="noopener noreferrer"
-              target="_blank"
-              href="https://deta.notion.site/Surf-Zero-e9c49ddf02a8476fb3c53b7efdc7e0fd"
-              class="text-[#2497e9] underline">documentation</a
-            >
-            or join our
-            <a
-              rel="noopener noreferrer"
-              target="_blank"
-              href="https://deta.surf/discord"
-              class="text-[#2497e9] underline">Discord community</a
-            >.
+    {#if !section || section === 'welcome'}
+      <section
+        id="welcome"
+        class="hero h-[80vh] flex flex-col items-center justify-center relative z-10 p-4 md:!p-8 lg:!p-32"
+        style="background-image: url({onboardingSky})"
+      >
+        <div class="absolute top-4 right-1 p-3 bg-white/90 z-50 rounded-xl w-full md:!w-auto mx-4">
+          <div class="flex flex-col items-center justify-center">
+            <p class="text-center text-gray-700 text-sm md:!text-base">
+              Need help? Check out our <a
+                rel="noopener noreferrer"
+                target="_blank"
+                href="https://deta.notion.site/Surf-Zero-e9c49ddf02a8476fb3c53b7efdc7e0fd"
+                class="text-[#2497e9] underline">documentation</a
+              >
+              or join our
+              <a
+                rel="noopener noreferrer"
+                target="_blank"
+                href="https://deta.surf/discord"
+                class="text-[#2497e9] underline">Discord community</a
+              >.
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4 w-full max-w-7xl mx-auto px-4" style="z-index: 2147483647">
+          <h1
+            class="font-gambarino text-3xl md:!text-5xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+          >
+            Welcome to Surf
+          </h1>
+          <p
+            class="text-lg md:!text-xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+          >
+            It's a browser, file manager, and AI assistant — all in one.
           </p>
         </div>
-      </div>
-      <div class="flex flex-col gap-4 w-full max-w-7xl mx-auto px-4" style="z-index: 2147483647">
-        <h1
-          class="font-gambarino text-3xl md:!text-5xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+        <div
+          class="flex flex-col my-8 gap-4 w-full max-w-7xl max-h-full aspect-video"
+          style="z-index: 2147483647;"
         >
-          Welcome to Surf
-        </h1>
-        <p
-          class="text-lg md:!text-xl text-center text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
-        >
-          It's a browser, file manager, and AI assistant — all in one.
-        </p>
-      </div>
-      <div
-        class="flex flex-col my-8 gap-4 w-full max-w-7xl max-h-full aspect-video"
-        style="z-index: 2147483647;"
-      >
-        <webview
-          src={MAIN_ONBOARDING_VIDEO_URL}
-          class="w-full h-full shadow-xl rounded-xl overflow-hidden"
-          partition="app"
-        />
-      </div>
-    </section>
-
-    <div
-      class="sticky-topbar sticky z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm top-2 ml-2 rounded-lg"
-    >
-      <nav class="max-w-7xl mx-auto px-4">
-        <ul class="flex items-center justify-center space-x-1 h-16">
-          {#each sections as section}
-            <li>
-              <button
-                on:click={() => scrollToSection(section.id)}
-                class="px-4 py-2 rounded-lg text-sm transition-colors duration-200 {activeSection ===
-                section.id
-                  ? 'bg-[#4592ef] text-white'
-                  : 'text-gray-600 hover:bg-gray-100'}"
-              >
-                {section.label}
-              </button>
-            </li>
-          {/each}
-        </ul>
-      </nav>
-    </div>
-
-    <section id="save-anything">
-      <SaveAnythingSection
-        {onboardingResources}
-        {resourceManager}
-        on:resourcesSaved={handleResourcesSaved}
-      />
-    </section>
-
-    <section id="your-stuff">
-      <YourStuffSection
-        {modShortcut}
-        on:tryStuff={handleTryStuff}
-        on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
-      />
-    </section>
-
-    <section id="desktop">
-      <DesktopSection
-        {modShortcut}
-        on:tryDesktop={handleTryDesktop}
-        savedResources={allSavedResources}
-      />
-    </section>
-
-    <section id="vision">
-      <VisionSection {modShortcut} on:tryVision={handleTryVision} />
-    </section>
-
-    {#if $userSettings.experimental_notes_chat_sidebar}
-      <section id="notes">
-        <NewNotes {modShortcut} on:launchTimeline />
-      </section>
-    {:else}
-      <section id="chat" style="position: relative; z-index: 1;">
-        <ChatSection
-          on:tryChatWithSpace={handleTryChatWithSpace}
-          on:tryChatWithTabs={handleTryChatWithTabs}
-          on:tryChatWithPDF={handleTryChatWithPDF}
-          on:tryChatWithYoutubeVideo={handleTryChatWithYoutubeVideo}
-          on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
-        />
-      </section>
-
-      <section id="smart-notes">
-        <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
+          <webview
+            src={MAIN_ONBOARDING_VIDEO_URL}
+            class="w-full h-full shadow-xl rounded-xl overflow-hidden"
+            partition="app"
+          />
+        </div>
       </section>
     {/if}
 
-    <section id="surflets">
-      <Codegen {modShortcut} on:tryVision={handleTryVision} />
-    </section>
+    {#if !section}
+      <div
+        class="sticky-topbar sticky z-50 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm top-2 ml-2 rounded-lg"
+      >
+        <nav class="max-w-7xl mx-auto px-4">
+          <ul class="flex items-center justify-center space-x-1 h-16">
+            {#each sections as sectionItem}
+              <li>
+                <button
+                  on:click={() => scrollToSection(sectionItem.id)}
+                  class="px-4 py-2 rounded-lg text-sm transition-colors duration-200 {activeSection ===
+                  sectionItem.id
+                    ? 'bg-[#4592ef] text-white'
+                    : 'text-gray-600 hover:bg-gray-100'}"
+                >
+                  {sectionItem.label}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </nav>
+      </div>
+    {/if}
 
-    <!-- <section id="contexts">
+    {#if !section || section === 'save-anything'}
+      <section id="save-anything">
+        <SaveAnythingSection
+          {onboardingResources}
+          {resourceManager}
+          on:resourcesSaved={handleResourcesSaved}
+        />
+      </section>
+    {/if}
+
+    {#if !section || section === 'your-stuff'}
+      <section id="your-stuff">
+        <YourStuffSection
+          {modShortcut}
+          on:tryStuff={handleTryStuff}
+          on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
+        />
+      </section>
+    {/if}
+
+    {#if !section || section === 'desktop'}
+      <section id="desktop">
+        <DesktopSection
+          {modShortcut}
+          on:tryDesktop={handleTryDesktop}
+          savedResources={allSavedResources}
+        />
+      </section>
+    {/if}
+
+    {#if !section || section === 'vision'}
+      <section id="vision">
+        <VisionSection {modShortcut} on:tryVision={handleTryVision} />
+      </section>
+    {/if}
+
+    {#if $userSettings.experimental_notes_chat_sidebar}
+      {#if !section || section === 'notes'}
+        <section id="notes">
+          <NewNotes {modShortcut} on:launchTimeline />
+        </section>
+      {/if}
+    {:else}
+      {#if !section || section === 'chat'}
+        <section id="chat" style="position: relative; z-index: 1;">
+          <ChatSection
+            on:tryChatWithSpace={handleTryChatWithSpace}
+            on:tryChatWithTabs={handleTryChatWithTabs}
+            on:tryChatWithPDF={handleTryChatWithPDF}
+            on:tryChatWithYoutubeVideo={handleTryChatWithYoutubeVideo}
+            on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
+          />
+        </section>
+      {/if}
+
+      {#if !section || section === 'smart-notes'}
+        <section id="smart-notes">
+          <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
+        </section>
+      {/if}
+    {/if}
+
+    {#if !section || section === 'surflets'}
+      <section id="surflets">
+        <Codegen {modShortcut} on:tryVision={handleTryVision} />
+      </section>
+    {/if}
+
+    <!-- {#if !section || section === 'contexts'}
+    <section id="contexts">
       <ContextsSection />
-    </section> -->
+    </section>
+    {/if} -->
 
-    <Done {modShortcut} />
+    {#if !section}
+      <Done {modShortcut} />
+    {/if}
   </div>
 </div>
 

@@ -309,6 +309,7 @@
                   autofocus={false}
                   showTitle={false}
                   minimal
+                  origin={'homescreen'}
                   on:click={(e) => {
                     e.preventDefault()
                     e.stopPropagation()

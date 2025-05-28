@@ -20,25 +20,30 @@ export class ContextItemPageTab extends ContextItemBase {
     this.data = writable(tab)
     this.item = writable(null)
 
-    this.label = derived([this.item], ([item]) => {
+    this.label = derived([this.item, this.data], ([item, data]) => {
       if (item) {
         return item.labelValue
+      } else if (data) {
+        return data.title
       } else {
         return 'Tab'
       }
     })
 
-    this.icon = derived([this.item], ([item]) => {
+    this.icon = derived([this.item, this.data], ([item, data]) => {
       if (item) {
         return item.iconValue
       }
 
-      const tab = this.dataValue
-      if (tab) {
-        return { type: ContextItemIconTypes.IMAGE, data: this.dataValue.icon } as ContextItemIcon
+      if (data) {
+        return { type: ContextItemIconTypes.IMAGE, data: data.icon } as ContextItemIcon
       }
 
       return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon
+    })
+
+    this.iconString = derived([this.icon], ([icon]) => {
+      return this.contextItemIconToString(icon, this.fallbackIcon)
     })
 
     this.initPageTab()

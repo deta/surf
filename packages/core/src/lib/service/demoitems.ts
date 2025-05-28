@@ -107,6 +107,22 @@ export async function createOnboardingSpace(
   createSpaceTab: any,
   resourceManager: ResourceManager
 ) {
+  // Check if an onboarding space with the same name already exists
+  const existingSpaces = await oasis.loadSpaces()
+  const existingOnboardingSpace = existingSpaces.find(
+    (space) => space.name.folderName === onboardingSpace.name
+  )
+
+  // If an onboarding space already exists, make it active and return it
+  if (existingOnboardingSpace) {
+    log.debug('Onboarding space already exists, making it active')
+    // Make the existing onboarding space active in the context
+    await tabsManager.changeScope(existingOnboardingSpace.id)
+    return existingOnboardingSpace
+  }
+
+  // Create a new onboarding space if one doesn't exist
+  log.debug('cccc-Creating new onboarding space')
   const space = await oasis.createSpace({
     folderName: onboardingSpace.name,
     showInSidebar: true,
@@ -133,6 +149,12 @@ export async function createOnboardingSpace(
 
     await oasis.addResourcesToSpace(space.id, resources, SpaceEntryOrigin.ManuallyAdded)
   }
+
+  // Make the newly created onboarding space active in the context
+  log.debug('cccc-Making new onboarding space active in context', space.id)
+  await tabsManager.changeScope(space.id)
+
+  return space
 }
 
 export function useOnboardingNote(oasis: OasisService, type: 'notes' | 'codegen' = 'notes') {

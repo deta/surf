@@ -79,8 +79,8 @@
 
 <div
   bind:this={el}
-  class="rounded-xl shadow-md p-4 w-full max-w-md bg-neutral-50 dark:bg-gray-800 border border-blue-300 dark:border-gray-700"
-  in:fly={{ y: 10, duration: 123, delay: 25, easing: quartOut }}
+  class=" p-4 max-w-md w-[45ch] bg-neutral-50 dark:bg-gray-800 border border-blue-300 dark:border-gray-700 rounded-xl shadow-md"
+  in:fly={{ y: 10, duration: 123, delay: 0, easing: quartOut }}
   out:fly={{ y: 10, duration: 123, delay: 0, easing: quartOut }}
 >
   <div class="flex gap-6 items-start">

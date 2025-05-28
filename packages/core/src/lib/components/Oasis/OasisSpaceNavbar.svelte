@@ -1,6 +1,7 @@
 <script lang="ts">
   import SearchInput from './SearchInput.svelte'
   import type { Readable } from 'svelte/store'
+  import { tooltip } from '@horizon/utils'
 
   export let searchValue: Readable<string>
 </script>
@@ -10,12 +11,14 @@
     <slot name="left" />
   </div>
 
-  <div class="section trailing flex items-center gap-2">
-    <SearchInput bind:value={$searchValue} on:search on:chat placeholder="Search this Context" />
-    <slot name="right" />
-
+  <div class="section trailing flex items-center gap-3">
+    <SearchInput bind:value={$searchValue} on:search on:chat placeholder="Search" />
     <div class="dynamic-buttons">
       <slot name="right-dynamic" />
+    </div>
+    <slot name="right" />
+    <div class="desktop-preview-wrapper">
+      <slot name="desktop" />
     </div>
   </div>
 </nav>
@@ -50,7 +53,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0em 1.75em;
+    padding: 0em 0.5em;
 
     &::before {
       content: '';
@@ -59,7 +62,7 @@
       z-index: -1;
 
       background-color: light-dark(
-        rgba(from #f7f7f7 r g b / 0.95),
+        rgba(from #f7f9fb r g b / 0.95),
         rgba(from #101827 r g b / 0.95)
       );
       backdrop-filter: blur(20px);
@@ -84,14 +87,6 @@
       display: flex;
       overflow: hidden;
       gap: 0.5em;
-      width: 0;
-
-      interpolate-size: allow-keywords;
-      animation: reveal-buttons-right 0.2s ease-out forwards;
-      animation-timeline: scroll(nearest block);
-      animation-range: 200px 300px;
-
-      transition: width 123ms ease-out;
     }
 
     > .section {
@@ -159,6 +154,22 @@
         }
       }
     }
+  }
+
+  .desktop-preview-wrapper {
+    position: relative;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: fit-content;
+    background: transparent;
+  }
+  .desktop-preview-wrapper :global(.desktop-preview) {
+    position: relative;
+    height: 2.5rem;
+    width: 4rem;
+    border-radius: 8px;
+    outline: 1.25px dashed black;
   }
 
   :global(nav.context-navbar .chat-with-space) {

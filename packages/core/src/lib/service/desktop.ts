@@ -27,9 +27,8 @@ import { createResourcesFromMediaItems, processDrop } from './mediaImporter'
 import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@horizon/utils'
 import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
-import EventEmitter from 'events'
-import type TypedEmitter from 'typed-emitter'
 import { ColorService, type CustomColorData } from './colors'
+import { EventEmitterBase } from './events'
 
 const DEFAULT_CARD_SIZES: Record<ResourceTypes, { x: number; y: number }> = {
   [ResourceTypes.DOCUMENT_SPACE_NOTE]: { x: 5, y: 6 }
@@ -43,10 +42,8 @@ export type DesktopManagerEvents = {
   'changed-desktop-background': (desktop: DesktopService) => void
 }
 
-export class DesktopManager {
+export class DesktopManager extends EventEmitterBase<DesktopManagerEvents> {
   // Refs
-  private readonly eventEmitter: TypedEmitter<DesktopManagerEvents>
-
   static self: DesktopManager
   private telemetry: Telemetry
   readonly oasis: OasisService
@@ -88,8 +85,7 @@ export class DesktopManager {
     toasts: Toasts
     miniBrowserService: MiniBrowserService
   }) {
-    this.eventEmitter = new EventEmitter() as TypedEmitter<DesktopManagerEvents>
-
+    super()
     this.telemetry = refs.telemetry
     this.config = refs.config
     this.oasis = refs.oasis
@@ -131,24 +127,6 @@ export class DesktopManager {
         desktop?.store()
       }
     })
-  }
-
-  on<E extends keyof DesktopManagerEvents>(
-    event: E,
-    listener: DesktopManagerEvents[E]
-  ): () => void {
-    this.eventEmitter.on(event, listener)
-
-    return () => {
-      this.eventEmitter.off(event, listener)
-    }
-  }
-
-  emit<E extends keyof DesktopManagerEvents>(
-    event: E,
-    ...args: Parameters<DesktopManagerEvents[E]>
-  ) {
-    this.eventEmitter.emit(event, ...args)
   }
 
   attachTabsManager(tabsManager: TabsManager) {

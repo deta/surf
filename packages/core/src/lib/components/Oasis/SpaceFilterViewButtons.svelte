@@ -25,7 +25,8 @@
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
-  import { RESOURCE_FILTERS } from '../../constants/resourceFilters'
+  import { RESOURCE_FILTERS, CONTEXT_FILTERS, ALL_FILTERS } from '../../constants/resourceFilters'
+  import { tooltip } from '@horizon/utils'
   import type { FilterItem } from './FilterSelector.svelte'
 
   export let viewType: ContextViewType | undefined
@@ -35,6 +36,7 @@
   export let order: string | null
   export let hideSortingSettings: boolean = false
   export let hideFilterSettings: boolean = false
+  export let showContextsFilter: boolean = false
 
   const dispatch = createEventDispatcher<{
     changedFilter: FilterChangeEvent
@@ -60,11 +62,12 @@
 
   const handleFilterSettingsUpdate = () => {
     const value = viewFilterEl.value as string
-    const filter = RESOURCE_FILTERS.find((filter) => filter.id === value) ?? null
-
-    dispatch('changedFilter', {
-      filter
-    })
+    const filter = ALL_FILTERS.find((filter) => filter.id === value)
+    if (filter) {
+      dispatch('changedFilter', {
+        filter
+      })
+    }
   }
 
   const handleSortingSettingsUpdate = () => {
@@ -101,7 +104,15 @@
     disabled={false}
   >
     <div slot="trigger" class="w-fit shrink-1">
-      <button class:active={$filterPopoverOpen}> <Icon name="filter" size="1.4em" /> </button>
+      <button
+        class:active={$filterPopoverOpen}
+        use:tooltip={{
+          position: 'bottom',
+          text: 'Filter items by type'
+        }}
+      >
+        <Icon name="filter" size="1.4em" />
+      </button>
     </div>
 
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -118,6 +129,11 @@
           {#each RESOURCE_FILTERS as filter (filter.id)}
             <option value={filter.id}>{filter.label}</option>
           {/each}
+          {#if showContextsFilter}
+            {#each CONTEXT_FILTERS as filter (filter.id)}
+              <option value={filter.id}>{filter.label}</option>
+            {/each}
+          {/if}
         </select>
       </div>
     </div>
@@ -137,7 +153,15 @@
   disabled={false}
 >
   <div slot="trigger" class="w-fit shrink-1">
-    <button class:active={$viewPopoverOpened}> <Icon name="grid" size="1.4em" /> </button>
+    <button
+      class:active={$viewPopoverOpened}
+      use:tooltip={{
+        position: 'bottom',
+        text: 'Change how items are shown'
+      }}
+    >
+      <Icon name="grid" size="1.4em" />
+    </button>
   </div>
 
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->

@@ -1,4 +1,4 @@
-import { type Writable, type Readable, writable, get } from 'svelte/store'
+import { type Writable, type Readable, writable, get, derived } from 'svelte/store'
 import { useLogScope } from '@horizon/utils'
 
 import { blobToSmallImageUrl } from '../../../utils/screenshot'
@@ -15,9 +15,12 @@ export abstract class ContextItemBase {
 
   label: Readable<string>
   icon: Readable<ContextItemIcon>
+  iconString: Readable<string>
   prompts: Writable<ChatPrompt[]>
   generatingPrompts: Writable<boolean>
   visible: Writable<boolean>
+  loading: Writable<boolean>
+  promptsPromise: Promise<ChatPrompt[]> | null = null
 
   service: ContextService
   log: ReturnType<typeof useLogScope>
@@ -33,6 +36,11 @@ export abstract class ContextItemBase {
     this.prompts = writable([])
     this.generatingPrompts = writable(false)
     this.visible = writable(true)
+    this.loading = writable(false)
+
+    this.iconString = derived([this.icon], ([icon]) => {
+      return this.contextItemIconToString(icon, this.fallbackIcon)
+    })
   }
 
   get iconValue() {
@@ -49,6 +57,14 @@ export abstract class ContextItemBase {
 
   get visibleValue() {
     return get(this.visible)
+  }
+
+  get iconStringValue() {
+    return get(this.iconString)
+  }
+
+  get loadingValue() {
+    return get(this.loading)
   }
 
   setVisibility(visible: boolean) {
@@ -91,9 +107,34 @@ export abstract class ContextItemBase {
       return storedPrompts
     }
 
-    const generatedPrompts = await this.generatePrompts()
+    if (this.promptsPromise) {
+      this.log.debug('Prompts are already being generated, waiting for them to finish')
+      return this.promptsPromise
+    }
+
+    this.promptsPromise = this.generatePrompts()
+    const generatedPrompts = await this.promptsPromise
+    this.promptsPromise = null
+
     this.prompts.set(generatedPrompts)
     return generatedPrompts
+  }
+
+  contextItemIconToString = (icon: ContextItemIcon, fallback: string): string => {
+    if (icon.type === ContextItemIconTypes.ICON) {
+      return `icon;;${icon.data}`
+    } else if (icon.type === ContextItemIconTypes.ICON_FILE) {
+      return `file;;${icon.data}`
+    } else if (icon.type === ContextItemIconTypes.EMOJI) {
+      return `emoji;;${icon.data}`
+    } else if (icon.type === ContextItemIconTypes.IMAGE) {
+      return `image;;${icon.data}`
+    } else if (icon.type === ContextItemIconTypes.COLORS) {
+      const [color1, color2] = icon.data
+      return `colors;;${color1};;${color2}`
+    } else {
+      return `icon;;${fallback}`
+    }
   }
 
   onDestroy() {

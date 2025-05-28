@@ -3,12 +3,7 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useOasis } from '../../../service/oasis'
   import { ResourceManager, type ResourceObject } from '../../../service/resources'
-  import {
-    CreateTabEventTrigger,
-    OpenResourceEventFrom,
-    ResourceTagsBuiltInKeys,
-    ResourceTypes
-  } from '@horizon/types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
   import { derived, get, writable } from 'svelte/store'
   import { isMac, useDebounce } from '@horizon/utils'
   import { useTabsManager } from '../../../service/tabs'
@@ -18,8 +13,11 @@
   import SaveItem from './SaveItem.svelte'
   import { fly } from 'svelte/transition'
   import { useConfig } from '../../../service/config'
+  import Tooltip from '@horizon/core/src/lib/components/Atoms/Tooltip.svelte'
 
   export let wasMouseInside = writable(false)
+  export let canHover = false
+
   const dispatch = createEventDispatcher<{
     'open-stuff': void
     Drop: DragculaDragEvent
@@ -229,12 +227,17 @@
   class:isMac={isMac()}
   class:wasMouseInside={$wasMouseInside}
   class:empty={$items.length <= 0}
+  class:canHover
   style:--sidebar-width={sidebarWidth + 'px'}
   style:--gridColumns={gridColumns}
   style:--cardWidth={stackCardWidth + 'px'}
   on:mouseenter={() => dispatch('update-container-height', `${containerExpandedHeight}px`)}
   on:mouseleave={() => dispatch('update-container-height', $items.length > 0 ? '110px' : 'auto')}
   on:mouseenter={() => wasMouseInside.set(true)}
+  on:click={() => {
+    if (canHover) return
+    dispatch('open-stuff')
+  }}
   use:HTMLDragZone.action={{
     accepts: (drag) => {
       if (
@@ -257,34 +260,36 @@
     dragover = false
   }}
 >
-  <div
-    class="stack no-drag"
-    class:dragover
-    bind:this={stackEl}
-    style="--card-width: {stackCardWidth}px;"
-  >
-    <!--{#if $items.length <= 0}
+  <Tooltip side="bottom">
+    <div
+      class="stack no-drag"
+      class:dragover
+      class:canHover
+      bind:this={stackEl}
+      style="--card-width: {stackCardWidth}px;"
+    >
+      <!--{#if $items.length <= 0}
       <div class="card empty"></div>
       <div class="card empty"></div>
     {/if}-->
-    {#each $items as item, i (item.resource.id)}
-      {@const resource = item.resource.resource}
-      {#if resource !== undefined}
-        <div
-          class="card stack-card relative no-drag"
-          data-id={resource.id}
-          use:originTransition={{ resourceId: resource.id }}
-          style:--origin-x={item.fromOrigin
-            ? getRelativeOriginOffset(item.fromOrigin.origin).x + 'px'
-            : undefined}
-          style:--origin-y={item.fromOrigin
-            ? getRelativeOriginOffset(item.fromOrigin.origin).y + 'px'
-            : undefined}
-          style:--o={1 - i * 0.33}
-          style:--r={i % 2 === 0
-            ? -5 + (Math.random() - 0.5) + 'deg'
-            : 5 + (Math.random() - 0.5) + 'deg'}
-          style={`--item: ${i};
+      {#each $items as item, i (item.resource.id)}
+        {@const resource = item.resource.resource}
+        {#if resource !== undefined}
+          <div
+            class="card stack-card relative no-drag"
+            data-id={resource.id}
+            use:originTransition={{ resourceId: resource.id }}
+            style:--origin-x={item.fromOrigin
+              ? getRelativeOriginOffset(item.fromOrigin.origin).x + 'px'
+              : undefined}
+            style:--origin-y={item.fromOrigin
+              ? getRelativeOriginOffset(item.fromOrigin.origin).y + 'px'
+              : undefined}
+            style:--o={1 - i * 0.33}
+            style:--r={i % 2 === 0
+              ? -5 + (Math.random() - 0.5) + 'deg'
+              : 5 + (Math.random() - 0.5) + 'deg'}
+            style={`--item: ${i};
 --grid-x: ${i % gridColumns};
 --grid-y: ${Math.floor(i / gridColumns)};
 --even: ${1 * (i % 2 === 0 ? 1 : -1)};
@@ -298,32 +303,34 @@
 --horizontal-grid-x: ${i % 2};
 --horizontal-grid-y: ${Math.floor(i / 2)};
 `}
-          draggable={true}
-          use:HTMLDragItem.action={{}}
-          on:DragStart={(drag) => {
-            drag.item?.data.setData(DragTypeNames.SURF_RESOURCE, resource)
-            drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
-            drag.item?.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
-            drag.continue()
-          }}
-        >
-          <ResourcePreview
-            {resource}
-            mode="media"
-            viewMode="responsive"
-            origin="stack"
-            frameless={true}
-            interactive
-            draggable={false}
-            hideProcessing
-            on:open
-            on:open-and-chat
-            on:remove
-          />
-        </div>
-      {/if}
-    {/each}
-  </div>
+            draggable={true}
+            use:HTMLDragItem.action={{}}
+            on:DragStart={(drag) => {
+              drag.item?.data.setData(DragTypeNames.SURF_RESOURCE, resource)
+              drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+              drag.item?.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+              drag.continue()
+            }}
+          >
+            <ResourcePreview
+              {resource}
+              mode="media"
+              viewMode="responsive"
+              origin="stack"
+              frameless={true}
+              interactive
+              draggable={false}
+              hideProcessing
+              on:open
+              on:open-and-chat
+              on:remove
+            />
+          </div>
+        {/if}
+      {/each}
+    </div>
+    <svelte:fragment slot="content">Open Stuff</svelte:fragment>
+  </Tooltip>
   <button
     class="transform active:scale-95 appearance-none disabled:opacity-40 disabled:cursor-not-allowed border-0 margin-0 group flex items-center justify-center p-2 transition-colors duration-200 rounded-xl flex active:outline-none focus:outline-none"
     on:click={() => dispatch('open-stuff')}
@@ -546,7 +553,7 @@
       }
     }
 
-    &:hover,
+    &.canHover:hover,
     &.empty,
     :global(body:has(#app-contents.verticalTabs #homescreen.visible.empty)) & {
       button {
@@ -653,7 +660,7 @@
       }
     }
 
-    &:hover,
+    &.canHover:hover,
     &:has([data-context-menu-anchor]),
     :global(body:has(#app-contents.verticalTabs #homescreen.visible.empty)) & {
       .stack {
@@ -677,9 +684,9 @@
     }
   }
 
-  :global(.horizontalTabs .sidebar-meta.mouseInside),
-  :global(.horizontalTabs .sidebar-meta .stack-wrapper:has([data-context-menu-anchor])) {
-    :global(.stack-wrapper.wasMouseInside),
+  :global(.horizontalTabs .sidebar-meta.canHover.mouseInside),
+  :global(.horizontalTabs .sidebar-meta .stack-wrapper.canHover:has([data-context-menu-anchor])) {
+    :global(.stack-wrapper.canHover.wasMouseInside),
     &:has([data-context-menu-anchor]) {
       button {
         opacity: 1 !important;
@@ -866,6 +873,17 @@
     }
   }
 
+  :global(#app-contents.horizontalTabs:not(:has(#homescreen.visible.empty)) .stack-wrapper) {
+    &:not(.canHover) {
+      transition: scale 123ms ease-out;
+      &:hover {
+        scale: 0.95;
+      }
+      * {
+        pointer-events: none !important;
+      }
+    }
+  }
   :global(.horizontalTabs) .wrapper.stack-wrapper {
     min-width: 60px;
     display: flex;
@@ -911,8 +929,8 @@
       }
     }
 
-    &:hover,
-    &:has([data-context-menu-anchor]) {
+    &.canHover:hover,
+    &.canHover:has([data-context-menu-anchor]) {
       &::before {
         content: '';
         position: absolute;
@@ -1174,7 +1192,7 @@
 
     :global(
         body:has(#app-contents.horizontalTabs):has(
-            .sidebar-meta.mouseInside #stuff-stack.wasMouseInside
+            .sidebar-meta.mouseInside #stuff-stack.canHover.wasMouseInside
           )
       )
       & {
@@ -1182,7 +1200,7 @@
     }
     :global(
         body:has(#app-contents.verticalTabs):has(
-            .sidebar-meta.mouseInside #stuff-stack.wasMouseInside
+            .sidebar-meta.mouseInside #stuff-stack.canHover.wasMouseInside
           )
       )
       & {

@@ -1,6 +1,6 @@
 import { EventContext, GeneratePromptsEventTrigger, ResourceTagsBuiltInKeys } from '@horizon/types'
-import { truncateURL, getFileType, getURLBase } from '@horizon/utils'
-import { get, type Writable, writable } from 'svelte/store'
+import { truncateURL, getFileType, getURLBase, getFileKind } from '@horizon/utils'
+import { derived, get, type Writable, writable } from 'svelte/store'
 
 import type { TabPage, TabResource } from '../../../types'
 import { blobToDataUrl } from '../../../utils/screenshot'
@@ -12,7 +12,6 @@ import { ContextItemBase } from './base'
 import { ModelTiers } from '@horizon/types/src/ai.types'
 import type { ChatPrompt } from '../chat'
 import { WebParser, type ResourceContent } from '@horizon/web-parser'
-import { PAGE_PROMPTS_GENERATOR_PROMPT } from '../../../constants/prompts'
 import { QuotaDepletedError } from '@horizon/backend/types'
 import { handleQuotaDepletedError } from '../helpers'
 import { isGeneratedResource } from '../../../utils/resourcePreview'
@@ -23,7 +22,7 @@ export class ContextItemResource extends ContextItemBase {
   type = ContextItemTypes.RESOURCE
 
   label: Writable<string>
-  icon: Writable<ContextItemIcon>
+  dynamicIcon: Writable<ContextItemIcon>
   generatingPromptsPromise: Promise<ChatPrompt[]> | null
   processingUnsubPrompt: Writable<(() => void) | null>
   processingUnsubGetResource: Writable<(() => void) | null>
@@ -47,12 +46,25 @@ export class ContextItemResource extends ContextItemBase {
       null
 
     this.label = writable('')
-    this.icon = writable({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
+    this.dynamicIcon = writable({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
     this.processingUnsubPrompt = writable(null)
     this.processingUnsubGetResource = writable(null)
     this.generatingPromptsPromise = null
 
     this.setIcon()
+    this.setLabel()
+
+    this.icon = derived([this.dynamicIcon], ([icon]) => {
+      return icon
+    })
+
+    this.iconString = derived([this.icon], ([icon]) => {
+      return this.contextItemIconToString(icon, this.fallbackIcon)
+    })
+  }
+
+  get iconValue() {
+    return get(this.icon)
   }
 
   setLabel() {
@@ -69,24 +81,30 @@ export class ContextItemResource extends ContextItemBase {
     if (this.data.type.startsWith('image')) {
       const imagePreview = await this.getImageResourcePreview(this.data.id)
       if (imagePreview) {
-        this.icon.set({ type: ContextItemIconTypes.IMAGE, data: imagePreview ?? this.fallbackIcon })
+        this.dynamicIcon.set({
+          type: ContextItemIconTypes.IMAGE,
+          data: imagePreview ?? this.fallbackIcon
+        })
         return
       }
     }
     if (isGeneratedResource(this.data)) {
-      this.icon.set({ type: ContextItemIconTypes.ICON, data: 'code-block' })
+      this.dynamicIcon.set({ type: ContextItemIconTypes.ICON, data: 'code-block' })
       return
     }
 
     const url = this.url ? getURLBase(this.url) : null
+    this.log.debug('Setting icon for resource', this.data.id, url)
     if (url) {
-      this.icon.set({
+      this.dynamicIcon.set({
         type: ContextItemIconTypes.IMAGE,
         data: `https://www.google.com/s2/favicons?domain=${url}&sz=48`
       })
     } else {
-      // TODO: use icon based on resource type
-      this.icon.set({ type: ContextItemIconTypes.ICON, data: this.fallbackIcon })
+      this.dynamicIcon.set({
+        type: ContextItemIconTypes.ICON_FILE,
+        data: getFileKind(this.data.type)
+      })
     }
   }
 

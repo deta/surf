@@ -179,8 +179,7 @@
 
     // Capture events on window to prevent losing track during fast movements
     window.addEventListener('mousemove', handleResizeMove, { capture: true })
-    window.addEventListener('mouseup', handleResizeEnd, { capture: true })
-    window.addEventListener('mouseleave', handleResizeEnd, { capture: true })
+    window.addEventListener('mouseup', handleResizeEnd, { capture: true, once: true })
 
     e.preventDefault()
     e.stopPropagation()
@@ -207,8 +206,6 @@
 
     isResizing = false
     window.removeEventListener('mousemove', handleResizeMove, { capture: true })
-    window.removeEventListener('mouseup', handleResizeEnd, { capture: true })
-    window.removeEventListener('mouseleave', handleResizeEnd, { capture: true })
   }
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
@@ -351,6 +348,7 @@
       collapsed
         ? ''
         : 'h-[750px]'}"
+      class:disabled={isResizing}
       style={resizable && !fullSize && !collapsed
         ? `height: ${containerHeight === '-1' ? 'auto' : containerHeight}; ${additionalWrapperStyles}`
         : ''}
@@ -377,15 +375,19 @@
     outline: none;
   }
 
-  :global(body:has(collapsable-block.isResizing)) {
-    cursor: ns-resize;
-    user-select: none;
-    pointer-events: none;
-
-    collapsable-block.isResizing .resize-handle {
-      pointer-events: auto;
-    }
+  .code-container.disabled {
+    pointer-events: none !important;
   }
+
+  //:global(body:has(collapsable-block.isResizing)) {
+  //  cursor: ns-resize;
+  //  user-select: none;
+  //  pointer-events: none;
+
+  //  collapsable-block.isResizing .resize-handle {
+  //    pointer-events: auto;
+  //  }
+  //}
 
   // Prevent drag preview from being too large
   :global(collapsable-block[data-drag-preview]) {

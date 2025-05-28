@@ -1,23 +1,15 @@
-<script lang="ts" context="module">
-  export interface GridItem {
-    id: string
-    data: any // TODO: Svelte component typong -> succs in Svelte4 btu nice in svelte 5
-  }
-</script>
-
 <script lang="ts">
   import type { Readable } from 'svelte/store'
-
-  import { selection } from '../utils/select'
   import type { ContextViewDensity } from '@horizon/types'
+  import type { RenderableItem } from '../../../types'
 
-  export let items: Readable<GridItem[]>
+  export let items: Readable<RenderableItem[]>
   export let density: ContextViewDensity | undefined = undefined // Allow specific override if needed
 </script>
 
 <div class="grid-view" data-density={density}>
   <!--     on:wheel|passive={handleScroll} -->
-  <div class="grid-content bg-[#f7f7f7] dark:bg-gray-900">
+  <div class="grid-content bg-[#F7F9FB] dark:bg-gray-900">
     {#each $items as item, index (`${item.id}-${index}`)}
       <div class="item">
         <slot item={{ id: item.id, data: item.data }}></slot>

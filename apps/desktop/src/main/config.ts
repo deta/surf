@@ -93,6 +93,7 @@ export const getUserConfig = (path?: string) => {
       automatic_chat_prompt_generation: true,
       adblockerEnabled: true,
       historySwipeGesture: false,
+      has_seen_hero_screen: false,
       annotations_sidebar: false,
       cleanup_filenames: false,
       save_to_active_context: true,
@@ -198,6 +199,11 @@ export const getUserConfig = (path?: string) => {
     storedConfig.settings.vision_image_tagging = false
     changedConfig = true
   }
+  if (storedConfig.settings.has_seen_hero_screen === undefined) {
+    storedConfig.settings.has_seen_hero_screen = false
+    changedConfig = true
+  }
+
   if (storedConfig.settings.turntable_favicons === undefined) {
     storedConfig.settings.turntable_favicons = true
     changedConfig = true
@@ -214,6 +220,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.save_to_active_context === undefined) {
     storedConfig.settings.save_to_active_context = true
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.enable_custom_prompts === undefined) {
+    storedConfig.settings.enable_custom_prompts = true
     changedConfig = true
   }
 

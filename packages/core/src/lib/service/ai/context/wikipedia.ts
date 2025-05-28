@@ -23,7 +23,7 @@ export class ContextItemWikipedia extends ContextItemBase {
       data: `https://www.google.com/s2/favicons?domain=https://wikipedia.org&sz=48`
     })
 
-    this.label = writable('Wikipedia')
+    this.label = writable('Ask Wikipedia')
 
     this.api = createWikipediaAPI()
   }

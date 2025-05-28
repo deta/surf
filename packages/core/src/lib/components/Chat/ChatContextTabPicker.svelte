@@ -2,14 +2,20 @@
   // prettier-ignore
   export type TabItem = {
     id: string
-    type: 'page' | 'space' | 'resource' | 'built-in'
-    label: string
+    type: 'page' | 'space' | 'resource' | 'built-in' | 'context-item'
+    label: string | Writable<string>
+    section?: string
     value: string
+    data?: any
     icon?: string
     iconUrl?: string
     iconSpaceId?: string
     searchOnly?: boolean
     aliases?: string[]
+    selected?: boolean
+    description?: string
+    descriptionIcon?: string
+    canRetryProcessing?: boolean
   };
 </script>
 
@@ -25,6 +31,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import {
+    clickOutside,
     conditionalArrayItem,
     getFileKind,
     getFileType,
@@ -37,13 +44,15 @@
   import { ResourceManager, useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
-  import { derived, writable, type Readable } from 'svelte/store'
+  import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import {
+    type ContextItem,
     type ContextManager,
-    ContextItemTypes
+    ContextItemTypes,
+    ContextItemResource
   } from '@horizon/core/src/lib/service/ai/contextManager'
   import { requestUserScreenshot } from '../Core/ScreenPicker.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
@@ -54,6 +63,8 @@
     ACTIVE_TAB_MENTION,
     WIKIPEDIA_SEARCH_MENTION
   } from '@horizon/core/src/lib/constants/chat'
+  import type { Resource } from '@horizon/core/src/lib/service/resources'
+  import ChatContextTabPickerItem from './ChatContextTabPickerItem.svelte'
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager
@@ -94,7 +105,8 @@
   const activeTabItem = {
     ...ACTIVE_TAB_MENTION,
     label: ACTIVE_TAB_MENTION.suggestionLabel,
-    value: ACTIVE_TAB_MENTION.id
+    value: ACTIVE_TAB_MENTION.id,
+    canRetryProcessing: true
   } as TabItem
 
   const activeContextItem = {
@@ -118,7 +130,8 @@
   const wikipediaContextItem = {
     ...WIKIPEDIA_SEARCH_MENTION,
     label: WIKIPEDIA_SEARCH_MENTION.suggestionLabel,
-    value: WIKIPEDIA_SEARCH_MENTION.id
+    value: WIKIPEDIA_SEARCH_MENTION.id,
+    searchOnly: true
   } as TabItem
 
   function tabToTabItem(tab: Tab) {
@@ -127,6 +140,8 @@
       type: 'page',
       label: tab.title,
       value: `${ContextItemTypes.PAGE_TAB};;${tab.id}`,
+      description: 'Tab',
+      canRetryProcessing: true,
       ...(tab.type === 'space' ? { iconSpaceId: tab.spaceId } : { iconUrl: tab.icon })
     } as TabItem
   }
@@ -137,7 +152,54 @@
       type: 'space',
       label: space.dataValue.folderName,
       value: `${ContextItemTypes.SPACE};;${space.id}`,
+      description: 'Context',
       iconSpaceId: space.id
+    } as TabItem
+  }
+
+  function resourceToTabItem(resource: Resource) {
+    log.debug('search result item', resource)
+
+    const canonicalURL =
+      (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)
+        ?.value || resource.metadata?.sourceURI
+
+    return {
+      id: resource.id,
+      type: 'resource',
+      label:
+        resource.metadata?.name ||
+        (canonicalURL ? truncateURL(canonicalURL, 15) : getFileType(resource.type)),
+      value: `resource;;${resource.id}`,
+      description: 'Stuff',
+      ...(canonicalURL
+        ? {
+            iconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(canonicalURL)}`
+          }
+        : { icon: getFileKind(resource.type) }),
+      canRetryProcessing:
+        (Object.values(ResourceTypes) as string[]).includes(resource.type) ||
+        resource.type === 'application/pdf'
+    } as TabItem
+  }
+
+  function contextItemToTabItem(item: ContextItem) {
+    return {
+      id: item.id,
+      type: 'context-item',
+      label: item.label,
+      value: `context-item;;${item.id}`,
+      section: 'Note Context',
+
+      data: item,
+      icon: item.iconStringValue,
+      selected: true,
+      descriptionIcon: 'close',
+      canRetryProcessing:
+        (item instanceof ContextItemResource &&
+          ((Object.values(ResourceTypes) as string[]).includes(item.data.type) ||
+            item.data.type === 'application/pdf')) ||
+        item.id === 'active-tab'
     } as TabItem
   }
 
@@ -178,23 +240,31 @@
         (item) => contextItems.findIndex((ci) => ci.id === item.id) === -1
       )
 
+      const itemsInContext = contextItems.map((item) => contextItemToTabItem(item))
+
       if (searchValue.length === 0) {
         const currentScopeTabs = tabs.filter((tab) => tab.scopeId === (activeScopeId ?? undefined))
-        const tabItems = currentScopeTabs.map(tabToTabItem)
-        return [...filteredBuiltInItems.filter((item) => !item.searchOnly), ...tabItems]
+        // const tabItems = currentScopeTabs.map(tabToTabItem)
+        return [
+          ...filteredBuiltInItems
+            .filter((item) => !item.searchOnly)
+            .map((item) => ({ ...item, section: 'Suggested' })),
+          ...itemsInContext
+        ]
       }
-
-      const tabMatches = tabs.filter(
-        (tab) =>
-          tab.title.toLowerCase().includes(searchValue.toLowerCase()) &&
-          tabsInContext.findIndex((ci) => ci.id === tab.id) === -1
-      )
 
       const spaceMatches = $spaces.filter(
         (space) =>
           spacesInContext.findIndex((ci) => ci.id === space.id) === -1 &&
-          space.dataValue.folderName.toLowerCase().includes(searchValue.toLowerCase()) &&
-          tabMatches.findIndex((t) => t.type === 'space' && t.spaceId === space.id) === -1
+          space.dataValue.folderName.toLowerCase().includes(searchValue.toLowerCase())
+      )
+
+      const tabMatches = tabs.filter(
+        (tab) =>
+          tab.title.toLowerCase().includes(searchValue.toLowerCase()) &&
+          tabsInContext.findIndex((ci) => ci.id === tab.id) === -1 &&
+          !(tab.type === 'space' && spaceMatches.findIndex((ci) => ci.id === tab.spaceId) !== -1) &&
+          !(tab.type === 'space' && spacesInContext.findIndex((ci) => ci.id === tab.spaceId) !== -1)
       )
 
       const stuffMatches = searchResult.filter(
@@ -206,7 +276,9 @@
 
       const builtInMatches = filteredBuiltInItems.filter(
         (item) =>
-          item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+          (typeof item.label === 'string' ? item.label : get(item.label))
+            .toLowerCase()
+            .includes(searchValue.toLowerCase()) ||
           item.aliases?.some((alias) => alias.toLowerCase().includes(searchValue.toLowerCase()))
       )
 
@@ -214,9 +286,23 @@
       const spaceItems = spaceMatches.slice(0, 5).map((space) => spaceToTabItem(space))
       const stuffItems = stuffMatches
 
-      return [...builtInMatches, ...tabItems, ...spaceItems, ...stuffItems]
+      const searchResultsCombined = [
+        ...builtInMatches,
+        ...tabItems,
+        ...spaceItems,
+        ...stuffItems
+      ].map((item) => ({ ...item, section: 'Search Results' }))
+      return [...searchResultsCombined, ...itemsInContext]
     }
   )
+
+  const tabItemsSectioned = derived(tabItems, ($tabItems) => {
+    const sections = new Set($tabItems.map((item) => item.section ?? 'Other'))
+    return Array.from(sections).map((section) => ({
+      section,
+      items: $tabItems.filter((item) => item.section === section)
+    }))
+  })
 
   $: handleSearchValueChange($searchValue)
 
@@ -226,6 +312,20 @@
       const [type, id] = value.split(';;')
 
       log.debug('submitting item', type, id)
+
+      const item = $tabItems.find((item) => item.value === value)
+      if (!item) {
+        log.error('item not found', value)
+        return
+      }
+
+      if (item.type === 'context-item' && item.selected) {
+        contextManager.removeContextItem(
+          item.id,
+          PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        )
+        return
+      }
 
       if (type === ContextItemTypes.PAGE_TAB) {
         contextManager.addTab(id, { trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu })
@@ -262,7 +362,7 @@
       }
 
       // $searchValue = ''
-      const inpEl = ref.querySelector('input') as HTMLInputElement
+      const inpEl = ref?.querySelector('input') as HTMLInputElement
       inpEl?.focus()
     } catch (e) {
       log.error('submit error', e)
@@ -293,7 +393,7 @@
         }
       )
 
-      const items = result.slice(0, 5).map((item) => {
+      const items = result.resources.slice(0, 5).map((item) => {
         const resource = item.resource
 
         log.debug('search result item', resource)
@@ -364,13 +464,15 @@
       dispatch('close')
       return
     }
-    const inpEl = ref.querySelector('input') as HTMLInputElement
+    const inpEl = ref?.querySelector('input') as HTMLInputElement
     inpEl?.focus()
   }
 
   onMount(() => {
     // wtf are we doing at this point.. svelte component libaries which dont fucking expose their stuf.f.. aaa
-    ref = document.querySelector('.context-controls [data-cmdk-root]') as HTMLDivElement
+    ref = document.querySelector('[data-cmdk-root]') as HTMLDivElement
+
+    clickOutside(ref, () => dispatch('close'))
   })
 </script>
 
@@ -385,8 +487,9 @@
   class={cn(
     'bg-sky-100 dark:bg-gray-900 shadow-xl p-2 border-sky-200 dark:border-gray-800 border-2 rounded-xl relative'
   )}
+  data-ignore-click-outside
 >
-  <div class="picker-actions">
+  <div class="picker-actions" data-ignore-click-outside>
     {#if $tabItems.length > 0}
       <button
         on:click={() => {
@@ -408,6 +511,7 @@
     {#if $selectedModel.vision}
       <button
         on:click={async () => {
+          dispatch('close')
           const blob = await requestUserScreenshot()
           if (!blob) return
 
@@ -431,34 +535,34 @@
         No tabs open, try searching your stuff
       {/if}
     </Command.Empty>
-    {#each $tabItems as item, idx (item.id + idx)}
-      <Command.Item value={item.value} on:click={handleSubmitItem}>
-        <div class="flex items-center justify-center select-none shrink-0 aspect-square w-4">
-          {#if item.iconUrl}
-            <img
-              src={item.iconUrl}
-              alt={item.label}
-              class="w-full h-full object-contain flex-shrink-0"
-              style="transition: transform 0.3s;"
-              loading="lazy"
+
+    {#each $tabItemsSectioned as blocks}
+      {#if blocks.section !== 'Other'}
+        <Command.Group heading={blocks.section}>
+          {#each blocks.items as item, idx (item.id + idx)}
+            <ChatContextTabPickerItem
+              {item}
+              on:click={handleSubmitItem}
+              on:open-as-tab
+              on:retry-processing
+              on:remove-from-ctx={handleSubmitItem}
+              disableCtxMenu={blocks.section === 'Suggested'}
             />
-          {:else if item.iconSpaceId}
-            {#await oasis.getSpace(item.iconSpaceId) then fetchedSpace}
-              {#if fetchedSpace}
-                <SpaceIcon folder={fetchedSpace} size="sm" interactive={false} />
-              {/if}
-            {/await}
-          {:else if item.icon && item.type === 'built-in'}
-            <DynamicIcon name={item.icon} size="14px" />
-          {:else if item.icon}
-            <FileIcon kind={item.icon} />
-          {:else}
-            <Icon name="world" size="100%" />
-          {/if}
-        </div>
-        <span class="truncate">{item.label}</span>
-      </Command.Item>
+          {/each}
+        </Command.Group>
+      {:else}
+        {#each blocks.items as item, idx (item.id + idx)}
+          <ChatContextTabPickerItem {item} on:click={handleSubmitItem} />
+        {/each}
+      {/if}
     {/each}
+
+    <!-- {#each $tabItems as item, idx (item.id + idx)}
+      <ChatContextTabPickerItem
+        item={item}
+        on:click={handleSubmitItem}
+      />
+    {/each} -->
   </Command.List>
   <Command.Input
     bind:value={$searchValue}
@@ -466,6 +570,7 @@
     on:keydown={handleKeyDown}
     placeholder="Search tabs or your stuff"
     class={cn('rounded-lg px-2 py-1 mt-2')}
+    data-ignore-click-outside
   />
   {#if $isSearching}
     <div class="absolute right-[0.85rem] bottom-[0.85rem] z-10 opacity-75">
@@ -476,15 +581,38 @@
 
 <style lang="scss">
   /* NOTE: WHyyyy only tailwind? cant select anything by a meaningful name any more :') */
-  :global(.context-controls [data-cmdk-root]) {
+  // NOTE: Please for god sake let us remember to remove these war crimes
+  :global(.text-resource-wrapper:has(.editor-input-bar.bottom) [data-cmdk-root]) {
+    transform: none;
+    bottom: 7rem;
+    right: 2rem;
+    position-anchor: unset;
+    position-area: unset;
+  }
+  :global(.text-resource-wrapper:has(.editor-input-bar:not(.bottom).floaty) [data-cmdk-root]) {
+    bottom: calc(anchor(--floaty-bar-attach top) - 2.5rem);
+  }
+  :global(.text-resource-wrapper:has(.editor-input-bar.floaty.flip-picker) [data-cmdk-root]) {
+    top: calc(anchor(--floaty-bar-attach bottom) + 3.75rem);
+  }
+  :global(.text-resource-wrapper:has(.editor-input-bar.flip-picker) [data-cmdk-root]) {
+    bottom: unset !important;
+    top: calc(anchor(--floaty-bar-attach bottom) + 3rem);
+  }
+  :global([data-cmdk-root]) {
     position: absolute;
+    position-anchor: --floaty-bar-attach;
+    bottom: calc(anchor(--floaty-bar-attach top) - 1.75rem);
+    right: anchor(--floaty-bar-attach right);
+
     /* we should just use isolation: isolate for contained things like the sidebar insted of these zindices */
     z-index: 99999999;
-    top: -0.75rem;
-    right: 0;
-    transform: translateY(-100%);
+    //top: -0.75rem;
+    //right: 0;
+    //transform: translateY(-100%);
     min-width: 30ch;
     max-width: 30ch;
+    margin-right: 1.25rem;
 
     :global([data-cmdk-empty]) {
       opacity: 0.8;
@@ -527,12 +655,25 @@
       background-color: rgba(0, 0, 0, 0.1);
     }
 
+    :global([data-item-selected='true']) {
+      opacity: 0.65;
+    }
+
+    :global([data-cmdk-group-heading]) {
+      font-size: 0.9em;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      opacity: 0.5;
+      padding: 3px 0;
+      color: light-dark(black, white);
+    }
+
     :global(.picker-actions) {
-      position: absolute;
-      top: 0;
-      left: 0;
+      //position: absolute;
+      //top: 0;
+      //left: 0;
       width: 100%;
-      transform: translateY(-50%);
+      //transform: translateY(-50%);
       display: flex;
       align-items: center;
       justify-content: center;

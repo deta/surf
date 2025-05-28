@@ -1,5 +1,3 @@
-<svelte:options immutable />
-
 <script lang="ts">
   import { createEventDispatcher, getContext, onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -64,6 +62,7 @@
   export let frameless: boolean = false
   export let titleEditable = interactive
   export let openIn: 'tab' | 'sidebar' = 'tab'
+  export let selectable: boolean = true
 
   /// View
   export let mode: ContentMode = 'full'
@@ -120,7 +119,8 @@
       maxDimension: 500
     }
   } as const
-  const getPreviewPair = (otigin: Origin) =>
+
+  const getPreviewPair = (origin: Origin) =>
     Object.keys(PREVIEW_PAIRS).includes(origin)
       ? PREVIEW_PAIRS[origin]
       : {
@@ -592,6 +592,7 @@
         icon: 'add',
         disabled: $contextMenuSpaces.length === 0,
         text: 'Add to Context',
+        search: true,
         items: $contextMenuSpaces
       },
       { type: 'separator' }
@@ -765,7 +766,8 @@
   data-origin={origin}
   data-resource-type={resource.type}
   data-resource-id={resource.id}
-  data-selectable
+  data-selectable={selectable ? 'true' : 'false'}
+  data-selectable-type="resource"
   data-selectable-id={origin === 'stuff' ? resource.id : undefined}
   data-vaul-no-drag
   data-tooltip-target="stuff-example-resource"

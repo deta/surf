@@ -6,7 +6,6 @@
   import { quadOut } from 'svelte/easing'
   import { fly } from 'svelte/transition'
   import { ChangeContextEventTrigger, OpenHomescreenEventTrigger } from '@horizon/types'
-  import { Icon } from '@horizon/icons'
 
   export let desktopId: string // NOTE: This is the same as the space id for now to get the corresponding desktop
   export let willReveal = false
@@ -79,7 +78,7 @@
       >
         <div class="show-desktop-label">
           <div class="create-desktop-label">
-            <span>Show Desktop</span>
+            <span>Desktop</span>
           </div>
         </div>
 
@@ -207,8 +206,8 @@
     transform: translate(-50%, -50%);
     background: rgba(0, 0, 0, 0.7);
     color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
+    padding: 2px 5px;
+    border-radius: 16px;
     font-size: 11px;
     white-space: pre;
     font-weight: 500;
@@ -221,7 +220,7 @@
   .create-desktop-label {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
   }
 
   .loading {

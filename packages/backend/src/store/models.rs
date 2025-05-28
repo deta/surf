@@ -68,6 +68,14 @@ impl FromSql for EmbeddingType {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, EnumString, Clone)]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
+pub enum SpaceEntryType {
+    Resource,
+    Space,
+}
+
 #[derive(
     strum_macros::Display, Debug, Eq, PartialEq, EnumString, Serialize, Deserialize, Clone, Hash,
 )]
@@ -785,6 +793,19 @@ pub struct Space {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpaceExtended {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub name: String,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub parent_space_ids: Vec<String>,
+    pub child_space_ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SpaceEntry {
     #[serde(default = "random_uuid")]
     pub id: String,
@@ -798,17 +819,31 @@ pub struct SpaceEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SpaceEntryExtended {
+pub struct SubSpaceEntry {
     #[serde(default = "random_uuid")]
     pub id: String,
-    pub space_id: String,
-    pub resource_id: String,
-    pub resource_type: String,
+    pub parent_space_id: String,
+    pub child_space_id: String,
     #[serde(default = "current_time")]
     pub created_at: chrono::DateTime<chrono::Utc>,
     #[serde(default = "current_time")]
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub manually_added: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpaceEntryExtended {
+    #[serde(default = "random_uuid")]
+    pub id: String,
+    pub space_id: String,
+    pub entry_id: String,
+    pub entry_type: SpaceEntryType,
+    #[serde(default = "current_time")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    #[serde(default = "current_time")]
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub manually_added: i32,
+    pub resource_type: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -889,22 +924,34 @@ pub enum SearchEngine {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResultItem {
     pub resource: CompositeResource,
-    pub card_ids: Vec<String>,
-    pub ref_resource_id: Option<String>,
-    pub distance: Option<f32>,
+    pub engine: SearchEngine,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchResultSpaceItem {
+    pub space: Space,
     pub engine: SearchEngine,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     pub items: Vec<SearchResultItem>,
+    pub spaces: Vec<SearchResultSpaceItem>,
     pub total: i64,
+    pub space_entries: Option<Vec<SpaceEntryExtended>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResultSimple {
     pub items: Vec<String>,
     pub total: i64,
+}
+
+// TODO: is there a better way to do this?
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResourceOrSpace {
+    pub id: String,
+    pub item_type: SpaceEntryType,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

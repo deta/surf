@@ -76,7 +76,9 @@
     isHovering = false
     if (popoverElement) {
       transitionTimeout = setTimeout(() => {
-        popoverElement.style.transition = 'none'
+        if (popoverElement) {
+          popoverElement.style.transition = 'none'
+        }
         transitionTimeout = null
       }, TRANSITION_DURATION_MS) as unknown as number
     }
@@ -99,12 +101,17 @@
     // Add visible class after 150ms
     if (popoverElement) {
       setTimeout(() => {
-        popoverElement.classList.add('visible')
+        // Check if popoverElement still exists before accessing classList
+        if (popoverElement) {
+          popoverElement.classList.add('visible')
 
-        // Lock the element after transition is complete by removing the transition
-        transitionTimeout = setTimeout(() => {
-          popoverElement.style.transition = 'none'
-        }, TRANSITION_DURATION_MS) as unknown as number
+          // Lock the element after transition is complete by removing the transition
+          transitionTimeout = setTimeout(() => {
+            if (popoverElement) {
+              popoverElement.style.transition = 'none'
+            }
+          }, TRANSITION_DURATION_MS) as unknown as number
+        }
       }, 150)
     }
   })
@@ -126,6 +133,7 @@
   function handleClickPopover(event: MouseEvent) {
     event.stopPropagation()
     event.preventDefault()
+
     // Dispatch an event to trigger autocomplete (like Opt+Enter)
     dispatch('autocomplete')
   }

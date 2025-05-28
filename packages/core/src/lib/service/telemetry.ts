@@ -470,6 +470,10 @@ export class Telemetry {
     })
   }
 
+  async trackLinkSpace() {
+    await this.trackEvent(TelemetryEventTypes.LinkSpace, {})
+  }
+
   async trackRefreshSpaceContent(
     trigger: RefreshSpaceEventTrigger,
     metadata?: { fetchedSources?: boolean; usedSmartQuery?: boolean; addedResources?: boolean }

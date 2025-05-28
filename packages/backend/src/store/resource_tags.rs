@@ -3,7 +3,7 @@ use super::models::*;
 use crate::{BackendError, BackendResult};
 use std::collections::HashMap;
 
-fn list_resource_ids_by_tags_query(
+pub fn list_resource_ids_by_tags_query(
     tag_filters: &Vec<ResourceTagFilter>,
     param_start_index: usize,
 ) -> (String, Vec<String>) {
@@ -220,14 +220,17 @@ impl Database {
             return Ok(Vec::new());
         }
         let mut result = Vec::new();
-        let (mut query, params) = list_resource_ids_by_tags_query(tags, 0);
+        let (query, params) = list_resource_ids_by_tags_query(tags, 0);
 
-        query = format!(
-            "{} EXCEPT SELECT resource_id FROM space_entries WHERE manually_added = 1",
-            query
-        );
+        let final_query = format!(
+        "SELECT rt.resource_id FROM ({}) rt 
+         JOIN resources r ON rt.resource_id = r.id 
+         WHERE rt.resource_id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)
+         ORDER BY r.created_at DESC",
+        query
+    );
 
-        let mut stmt = self.conn.prepare(&query)?;
+        let mut stmt = self.conn.prepare(&final_query)?;
         let resource_ids =
             stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
         for resource_id in resource_ids {

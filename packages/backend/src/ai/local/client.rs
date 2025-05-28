@@ -1,4 +1,7 @@
-use crate::{ai::{llm::models::Message, ai::DocsSimilarity}, BackendError, BackendResult};
+use crate::{
+    ai::{ai::DocsSimilarity, llm::models::Message},
+    BackendError, BackendResult,
+};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};

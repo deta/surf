@@ -27,37 +27,35 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.275rem 0.75rem;
+    padding: 0.35rem 0.85rem;
     width: fit-content;
     border-radius: 0.75rem;
-    transition-property: color;
+    transition-property: color, background, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
-    color: #075985;
-    background-color: white;
-    border: 0.5px solid rgba(0, 0, 0, 0.12);
+    color: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.035);
+    border: 0.5px solid rgba(0, 0, 0, 0.05);
     user-select: none;
 
     &:hover {
-      background-color: #dbeafe;
+      color: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.075);
+      transform: translateX(1px);
     }
 
     :global(.dark) & {
-      color: #f3f4f6;
-      background-color: #1f2937;
+      color: #bbb !important;
+      background: rgba(255, 255, 255, 0.075) !important;
 
       &:hover {
-        background-color: #374151;
+        color: #fff !important;
+        background: rgba(255, 255, 255, 0.125);
       }
     }
 
     div {
-      color: #075985;
-
-      :global(.dark) & {
-        color: #f3f4f6;
-      }
-
+      color: currentColor;
       &:last-child {
         width: 100%;
         overflow: hidden;

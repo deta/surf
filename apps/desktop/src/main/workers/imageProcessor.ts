@@ -1,4 +1,4 @@
-import { writeFile, open } from 'fs/promises'
+import { open } from 'fs/promises'
 import { workerData, parentPort } from 'worker_threads'
 import { readFile } from 'fs/promises'
 
@@ -42,22 +42,6 @@ parentPort?.on('message', async (message: Job) => {
     }
 
     const buf = await pipeline.toBuffer()
-    //writeFile(savePath, buf)
-    //  .then(() => {
-    //    parentPort?.postMessage({
-    //      messageID,
-    //      success: true,
-    //      buffer: buf
-    //    })
-    //  })
-    //  .catch((err) => {
-    //    parentPort?.postMessage({
-    //      messageID,
-    //      success: false,
-    //      error: err.message
-    //    })
-    //  })
-
     open(savePath, 'w+')
       .then((fileHandle) => {
         fileHandle

@@ -3,6 +3,10 @@
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
+  import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
+  import { onMount } from 'svelte'
+  import { ShortcutVisualizer } from '../../Utils/Keyboard'
+  import { isMac } from '@horizon/utils'
   import OasisResourceLoader from '@horizon/core/src/lib/components/Oasis/OasisResourceLoader.svelte'
   import background01 from '../../../../../public/assets/demo/backgrounds/01.webp'
   import background02 from '../../../../../public/assets/demo/backgrounds/02.webp'
@@ -27,6 +31,8 @@
   const handleTryDesktop = () => {
     dispatch('tryDesktop')
   }
+
+  $: shortcutKeys = [isMac() ? 'cmd' : 'ctrl', '1']
 </script>
 
 <section class="min-h-screen flex flex-col items-center justify-center relative z-10 px-4 gap-8">
@@ -105,7 +111,14 @@
       <div class="w-48 md:!w-64" on:click={handleTryDesktop} role="none">
         <Button>Open your Desktop</Button>
       </div>
-      <p class="text-xs md:!text-sm text-sky-900/70">or use {modShortcut} + 1 to open.</p>
+      <p class="text-xs md:!text-sm text-sky-900/70">
+        or use <ShortcutVisualizer
+          shortcut={shortcutKeys}
+          size="small"
+          interactive={true}
+          separatorStyle="dark"
+        /> to open.
+      </p>
     </div>
   </div>
   <div class="text-center text-white text-lg">

@@ -51,54 +51,49 @@ const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) 
   }
 }
 
-const createSpaceAction = async (
-  result: TeletypeStaticAction,
-  resourceManager: ResourceManager,
-  oasis: OasisService
-) => {
-  const spaceContents = await resourceManager.getSpaceContents(result.id)
+const createSpaceAction = async (result: TeletypeStaticAction, oasis: OasisService) => {
+  const actions: Action[] = []
   const space = await oasis.getSpace(result.id)
+  if (!space) {
+    return actions
+  }
+  if (space.dataValue.useAsBrowsingContext) {
+    const openSpaceAction = {
+      section: 'Switch to Browsing Context',
+      id: result.id + '-open',
+      name: result.name,
+      selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
+      displayPriority: result.displayPriority || ActionDisplayPriority.HIGH,
+      execute: TeletypeAction.OpenSpaceAsContext,
+      icon: result.icon,
+      actionIcon: result.actionIcon,
+      // NOTE: overriding this because it is a context switch
+      // not sure completely how the flow of resultAction and this function is composed
+      actionText: 'Switch to Context',
+      actionPanel: result.actionPanel,
+      handler: result.handler
+    } as Action
+    actions.push(openSpaceAction)
+  }
 
-  const horizontalItems = await Promise.all(
-    spaceContents.map(async (entry: SpaceEntry) => {
-      const resource = await resourceManager.getResource(entry.resource_id)
-      if (!resource) return null
-      return createSpaceHorizontalItem(entry, resource)
-    })
-  )
-
-  const validItems = horizontalItems.filter((item) => item !== null).slice(0, 10)
-
-  const horizontalAction = {
-    id: result.id,
-    section: result.name ? `Context → ${result.name}` : `Context → ${result.name}`,
+  /*
+  TODO: @aavash we should offer this but can't yet fully 
+  // grok the logic of the action execution
+  const openInStuffAction = {
+    id: result.id + '-stuff-open',
+    section: 'Open Context in Stuff',
+    icon: result.icon,
     name: result.name,
-    keywords: result.keywords || [],
     selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
     displayPriority: result.displayPriority || ActionDisplayPriority.HIGH,
-    horizontalItems: validItems as unknown as Action[],
-    horizontalParentAction: TeletypeAction.OpenSpaceInStuff,
-    payload: { space }
-  } as HorizontalAction
-
-  const openSpaceAction = {
-    id: result.id + '-open',
-    name: result.name,
-    selectPriority: result.selectPriority || ActionSelectPriority.HIGH,
-    displayPriority: result.displayPriority || ActionDisplayPriority.HIGHEST,
-    execute: TeletypeAction.OpenSpaceAsContext,
-    icon: result.icon,
+    execute: TeletypeAction.OpenSpaceInStuff,
     actionIcon: result.actionIcon,
-    actionText: result.actionText,
+    actionText: 'Open',
     actionPanel: result.actionPanel,
-    section: 'Contexts',
     handler: result.handler
   } as Action
-
-  const actions: (Action | HorizontalAction)[] = [openSpaceAction]
-
-  actions.push(horizontalAction)
-
+  actions.push(openInStuffAction)
+  */
   return actions
 }
 
@@ -203,17 +198,8 @@ export const createActionsFromResults = async (
 
       switch (result.group) {
         case TeletypeActionGroup.Space: {
-          const [openSpaceAction, horizontalAction] = await createSpaceAction(
-            result,
-            resourceManager,
-            oasis
-          )
-
-          if (horizontalAction) {
-            return [openSpaceAction, horizontalAction]
-          }
-
-          return [openSpaceAction]
+          const actions = await createSpaceAction(result, oasis)
+          return actions
         }
         default:
           return createDefaultAction(result)

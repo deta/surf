@@ -121,6 +121,8 @@ import Squircle from './Icons/Squircle.svelte'
 import Underline from './Icons/Underline.svelte'
 import ListDetails from './Icons/ListDetails.svelte'
 import Table from './Icons/Table.svelte'
+import ChatSquareHeart from './Icons/ChatSquareHeart.svelte'
+import CameraPlus from './Icons/CameraPlus.svelte'
 import Chrome from './Icons/Chrome.svelte'
 import Edge from './Icons/Edge.svelte'
 import Brave from './Icons/Brave.svelte'
@@ -259,6 +261,8 @@ export const icons = {
   underline: Underline,
   'list-details': ListDetails,
   table: Table,
+  'chat.square.heart': ChatSquareHeart,
+  'camera.plus': CameraPlus,
   'browser.chrome': Chrome,
   'browser.edge': Edge,
   'browser.brave': Brave,
@@ -396,6 +400,8 @@ export {
   Underline,
   ListDetails,
   Table,
+  ChatSquareHeart,
+  CameraPlus,
   Chrome,
   Edge,
   Brave,

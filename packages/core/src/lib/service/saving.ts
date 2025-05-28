@@ -1,12 +1,10 @@
 import { get, writable, type Writable } from 'svelte/store'
-import EventEmitter from 'events'
-import type TypedEmitter from 'typed-emitter'
-
 import { generateID, useLogScope } from '@horizon/utils'
 
 import { ResourceJSON, ResourceManager, type Resource } from './resources'
 import { getResourcePreview } from '../utils/resourcePreview'
 import type { OasisService } from './oasis'
+import { EventEmitterBase } from './events'
 
 export type SaveItemMetadata = {
   url: string
@@ -21,11 +19,10 @@ export type SavingItemEvents = {
 
 const CLOSE_TIMEOUT = 3500
 
-export class SavingItem {
+export class SavingItem extends EventEmitterBase<SavingItemEvents> {
   log: ReturnType<typeof useLogScope>
   resourceManager: ResourceManager
   oasis: OasisService
-  private eventEmitter: TypedEmitter<SavingItemEvents>
 
   id: string
   resource: Writable<Resource | null>
@@ -45,11 +42,11 @@ export class SavingItem {
     data: SaveItemMetadata,
     resource?: Resource
   ) {
+    super()
     this.id = generateID()
     this.log = useLogScope(`SavingItem ${this.id}`)
     this.resourceManager = services.resourceManager
     this.oasis = services.oasis
-    this.eventEmitter = new EventEmitter() as TypedEmitter<SavingItemEvents>
 
     this.resource = writable(resource || null)
 
@@ -83,18 +80,6 @@ export class SavingItem {
 
   get preventCloseValue() {
     return get(this.preventClose)
-  }
-
-  on<E extends keyof SavingItemEvents>(event: E, listener: SavingItemEvents[E]): () => void {
-    this.eventEmitter.on(event, listener)
-
-    return () => {
-      this.eventEmitter.off(event, listener)
-    }
-  }
-
-  emit<E extends keyof SavingItemEvents>(event: E, ...args: Parameters<SavingItemEvents[E]>) {
-    this.eventEmitter.emit(event, ...args)
   }
 
   async addResource(resource: Resource) {

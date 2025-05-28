@@ -678,3 +678,37 @@ export const parseChatOutputToSurfletCode = async (output: AIChatMessageParsed) 
   surflet.appendChild(codeElement)
   return surflet.outerHTML
 }
+
+const prepLoadingPhrases = [
+  'Analysing your context…',
+  'Getting to the essence…',
+  'Surfing the data…',
+  'Unpacking details…',
+  'Summoning the goodies…',
+  'Charging the knowledge battery…',
+  'Gathering bits of brilliance…',
+  'Preparing the magic…',
+  'Crafting the wisdom…',
+  'Cooking up the insights…',
+  'Brewing the brilliance…'
+]
+
+const writingLoadingPhrases = [
+  'Writing…',
+  'Composing…',
+  'Gathering thoughts…',
+  'Crafting the words…',
+  'Weaving the wisdom…',
+  'Spinning the story…',
+  'Painting the picture…',
+  'Sculpting the text…',
+  'Inking the ideas…'
+]
+
+export const getPrepPhrase = () => {
+  return prepLoadingPhrases[Math.floor(Math.random() * prepLoadingPhrases.length)]
+}
+
+export const getWritingPhrase = () => {
+  return writingLoadingPhrases[Math.floor(Math.random() * writingLoadingPhrases.length)]
+}

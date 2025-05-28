@@ -1,135 +1,164 @@
-<script lang="ts" context="module">
-  export interface LazyItem {
-    id: string
-    data: any
-  }
-</script>
-
 <script lang="ts">
-  import { useThrottle } from '@horizon/utils'
-
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { derived, writable, type Readable } from 'svelte/store'
-  import { selection } from '@horizon/core/src/lib/components/Oasis/utils/select'
+  import type { RenderableItem } from '../../types'
 
-  //import { createEventDispatcher, tick } from 'svelte'
-  /**
-   * A LazyLoading / Infinite scroll implementation using native browser features.
-   TODO: Update custom implementation. For now it is faster to just force load things on scroll
-   * without custom calculations and everything
-   */
-  /*
-  const dispatch = createEventDispatcher<{
-    /// Notify parent to load more items -> number is velocity which determines
-    /// how many items to load.
-    /// [scrollVelocity, TODO:]
-    lazyLoad: [number, number, number]
-  }>()
-  export let baseItemHeight = 500
-  export let loadSensitivity = 1
-  let canLoad = true
-  let scrollContainerEl: HTMLElement
-  const scrollState = {
-    scrollTop: 0,
-    timestamp: 0,
-    velocity: 0,
-    scrollRemaining: 0
-  }
-  let raf: number | null = null
-  function handleWheel(e: WheelEvent) {
-    const newScrollTop = scrollContainerEl?.scrollTop
-    const newTimestamp = e.timeStamp
-    if (scrollState !== undefined && newScrollTop) {
-      const deltaY = newScrollTop - scrollState.scrollTop
-      const deltaT = newTimestamp - scrollState.timestamp
-      scrollState.velocity = deltaY / deltaT
-    }
-    scrollState.scrollTop = newScrollTop
-    scrollState.timestamp = newTimestamp
-    scrollState.velocity = scrollState ? scrollState.velocity : 0
-    scrollState.scrollRemaining =
-      scrollContainerEl.scrollHeight - scrollContainerEl.clientHeight - scrollState.scrollTop
-    const clampedVelocity = (scrollState.velocity < 1 ? 1 : scrollState.velocity) * loadSensitivity
-    const remainingAdjusted = scrollState.scrollRemaining - clampedVelocity * baseItemHeight
-    if (remainingAdjusted < baseItemHeight && canLoad) {
-      canLoad = false
-      handleTriggerLoad(scrollState.velocity, remainingAdjusted, scrollState.scrollRemaining)
-      tick().then(() => {
-        canLoad = true
-      })
-    }
-    raf = null
-  }
-  function handleTriggerLoad(velocity: number, remainingAdjusted: number, remaining: number) {
-    dispatch('lazyLoad', [velocity, remainingAdjusted, remaining])
-  }*/
+  export let items: Readable<RenderableItem[]>
 
-  export let items: Readable<LazyItem[]>
+  const INITIAL_ITEMS = 50
+  const BATCH_SIZE = 10
+  const LOAD_THRESHOLD = 800
+  const PRELOAD_THRESHOLD = 1200
 
-  const LAZY_N = 6 // NOTE: seems to be the best working value from testing
+  const renderedItemsN = writable(INITIAL_ITEMS)
 
-  let renderedItemsN = writable(30)
-  /*  $: renderedItems = [
-    ...new Map($items.slice(0, renderedItemsN).map((item) => [item.id, item])).values()
-  ]*/
+  let itemsCache: RenderableItem[] = []
+  let lastItemsLength = 0
+  let lastRenderedN = 0
+
   const renderedItems = derived([items, renderedItemsN], ([$items, $renderedItemsN]) => {
-    return [...new Map($items.slice(0, $renderedItemsN).map((item) => [item.id, item])).values()]
+    if ($items.length !== lastItemsLength || $renderedItemsN !== lastRenderedN) {
+      lastItemsLength = $items.length
+      lastRenderedN = $renderedItemsN
+
+      itemsCache = $items.slice(0, $renderedItemsN)
+    }
+
+    return itemsCache
   })
 
-  const scheduleLoad = () => {
-    if ($renderedItemsN > $items.length) return
+  let scrollContainer: HTMLElement
+  let isLoading = false
+  let scrollHandler: () => void
+  let preloadTimeout: number | null = null
 
-    // @ts-ignore - yes, this exists!
-    scheduler.postTask(
-      () => {
-        $renderedItemsN += LAZY_N
-      },
-      {
-        priority: 'background'
-      }
-    )
+  function checkAndLoadMore() {
+    if (!scrollContainer || isLoading) return
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer
+    const remainingScroll = scrollHeight - scrollTop - clientHeight
+
+    if (remainingScroll < PRELOAD_THRESHOLD) {
+      loadMoreItems(BATCH_SIZE * 2)
+    } else if (remainingScroll < LOAD_THRESHOLD) {
+      loadMoreItems(BATCH_SIZE)
+    }
   }
-  const throttledScheduleLoad = useThrottle(scheduleLoad, 5)
+
+  function loadMoreItems(batchSize: number = BATCH_SIZE) {
+    if (isLoading || $renderedItemsN >= $items.length) return
+
+    isLoading = true
+
+    requestAnimationFrame(() => {
+      renderedItemsN.update((n) => Math.min(n + batchSize, $items.length))
+      isLoading = false
+
+      preloadTimeout = setTimeout(() => {
+        checkAndLoadMore()
+      }, 16) // ~60fps timing
+    })
+  }
+
+  function throttledScrollHandler() {
+    if (preloadTimeout) {
+      clearTimeout(preloadTimeout)
+      preloadTimeout = null
+    }
+
+    requestAnimationFrame(checkAndLoadMore)
+  }
 
   onMount(() => {
-    throttledScheduleLoad()
+    loadMoreItems(INITIAL_ITEMS)
+
+    scrollHandler = throttledScrollHandler
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', scrollHandler, { passive: true })
+
+      const resizeObserver = new ResizeObserver(() => {
+        requestAnimationFrame(checkAndLoadMore)
+      })
+      resizeObserver.observe(scrollContainer)
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', scrollHandler)
+        resizeObserver.disconnect()
+        if (preloadTimeout) {
+          clearTimeout(preloadTimeout)
+        }
+      }
+    }
   })
 
-  const handleScroll = (e: WheelEvent) => {
-    if (Math.sign(e.deltaY) <= 0) return
-    throttledScheduleLoad()
-  }
+  onDestroy(() => {
+    if (scrollContainer) {
+      scrollContainer.removeEventListener('scroll', scrollHandler)
+    }
+    if (preloadTimeout) {
+      clearTimeout(preloadTimeout)
+    }
+  })
 </script>
 
-<!--   bind:this={scrollContainerEl}
- -->
 <div
   class="lazyScroll-container"
-  use:selection
-  on:wheel|passive={(e) => {
-    handleScroll(e)
-    //if (raf === null) raf = requestAnimationFrame(() => handleWheel(e))
-  }}
+  bind:this={scrollContainer}
+  on:wheel={throttledScrollHandler}
   data-container
 >
   <slot {renderedItems} />
-  <!--{#each renderedItems as item, index (`${item.id}-${index}`)}
-    <slot item={{ id: item.id, data: item.data }}></slot>
-  {/each}-->
-
-  <!--<slot />-->
 </div>
 
 <style lang="scss">
   .lazyScroll-container {
-    contain: strict;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
 
-    position: relative;
+    position: absolute;
     overflow-y: auto;
     overflow-x: hidden;
+    top: 0;
     width: 100%;
     height: 100%;
 
-    timeline-scope: --contextHeaderReveal;
+    will-change: transform;
+
+    &::-webkit-scrollbar {
+      width: 12px;
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track,
+    &::-webkit-scrollbar-track-piece {
+      background: transparent;
+      border: none;
+    }
+
+    &::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      margin-top: 200px;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      transition: background-color 0.2s linear;
+      border: 3px solid transparent;
+      background-clip: content-box;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(0, 0, 0, 0.3);
+    }
+
+    :global(.dark) &::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    :global(.dark) &::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
   }
 </style>

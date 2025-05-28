@@ -3,13 +3,12 @@
   import { getFileKind } from '@horizon/utils'
 
   import FileIcon from '../../Resources/Previews/File/FileIcon.svelte'
-  import ContextBubbleItemWrapper, { type PillProperties } from './ContextBubbleItemWrapper.svelte'
+  import ContextBubbleItemWrapper from './ContextBubbleItemWrapper.svelte'
   import ResourceHoverPreview from '../ResourceHoverPreview.svelte'
   import type { ContextItemResource } from '@horizon/core/src/lib/service/ai/contextManager'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   export let item: ContextItemResource
-  export let pillProperties: PillProperties
   export let additionalLabel: string | undefined = undefined
   export let loading: boolean = false
 
@@ -33,7 +32,6 @@
 
 <ContextBubbleItemWrapper
   {item}
-  {pillProperties}
   loading={isProcessing || loading}
   failed={processingFailed}
   {additionalLabel}

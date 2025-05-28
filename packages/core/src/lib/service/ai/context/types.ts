@@ -22,6 +22,7 @@ export enum ContextItemTypes {
 export enum ContextItemIconTypes {
   IMAGE = 'image',
   ICON = 'icon',
+  ICON_FILE = 'icon-file',
   EMOJI = 'emoji',
   COLORS = 'colors'
 }
@@ -33,6 +34,11 @@ export type ContextItemIconColors = {
 
 export type ContextItemIconIcon = {
   type: ContextItemIconTypes.ICON
+  data: string
+}
+
+export type ContextItemIconFile = {
+  type: ContextItemIconTypes.ICON_FILE
   data: string
 }
 
@@ -51,6 +57,7 @@ export type ContextItemIcon =
   | ContextItemIconIcon
   | ContextItemIconImage
   | ContextItemIconEmoji
+  | ContextItemIconFile
 
 export type StoredContextItem = {
   id: string

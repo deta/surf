@@ -10,7 +10,7 @@
 </script>
 
 <script lang="ts">
-  import { derived, get, writable, type Readable } from 'svelte/store'
+  import { get, writable, derived } from 'svelte/store'
   import { type ThemeData, getBackgroundImageUrlFromId } from '../../service/colors'
 
   import {
@@ -23,7 +23,8 @@
     useDebounce,
     clickOutside,
     tooltip,
-    isMac
+    isMac,
+    conditionalArrayItem
   } from '@horizon/utils'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { DynamicIcon, Icon } from '@horizon/icons'
@@ -34,7 +35,8 @@
     ResourcePost,
     ResourceTag,
     type ResourceObject,
-    type ResourceSearchResultItem
+    type ResourceSearchResultItem,
+    type SpaceSearchResultItem
   } from '../../service/resources'
   import OasisResourcesView from './ResourceViews/OasisResourcesView.svelte'
   import {
@@ -51,15 +53,16 @@
   import {
     createResourcesFromMediaItems,
     extractAndCreateWebResource,
-    processDrop
+    processDrop,
+    processPaste
   } from '../../service/mediaImporter'
 
-  import { useToasts } from '../../service/toast'
+  import { Toast, useToasts } from '../../service/toast'
   import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
   import type { ResourceContent } from '@horizon/web-parser'
   import { DragculaDragEvent } from '@horizon/dragcula'
-  import type { ChatWithSpaceEvent } from '../../types/browser.types'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
+  import type { ChatWithSpaceEvent, RenderableItem, SpaceRenderableItem } from '../../types'
   import {
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
@@ -68,7 +71,10 @@
     RefreshSpaceEventTrigger,
     SaveToOasisEventTrigger,
     SearchOasisEventTrigger,
-    SummarizeEventContentSource
+    SummarizeEventContentSource,
+    ChangeContextEventTrigger,
+    MultiSelectResourceEventAction,
+    OpenSpaceEventTrigger
   } from '@horizon/types'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
@@ -78,13 +84,12 @@
   import CreateNewSpace, { type CreateNewSpaceEvents } from './CreateNewSpace.svelte'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
-  import { type FilterItem } from './FilterSelector.svelte'
   import ContextTabsBar from './ContextTabsBar.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
   import ContextLinks from './Scaffolding/ContextLinks.svelte'
-  import LazyScroll, { type LazyItem } from '../Utils/LazyScroll.svelte'
+  import LazyScroll from '../Utils/LazyScroll.svelte'
   import ContextHeader from './ContextHeader.svelte'
   import OasisSpaceNavbar from './OasisSpaceNavbar.svelte'
   import { useColorService } from '../../service/colors'
@@ -101,17 +106,32 @@
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import DesktopPreview from '../Chat/DesktopPreview.svelte'
   import SpaceFilterViewButtons from './SpaceFilterViewButtons.svelte'
+  import OasisSpaceEmpty from './OasisSpaceEmpty.svelte'
+  import { BuiltInSpaceId, isBuiltInSpaceId } from '../../constants/spaces'
 
   export let spaceId: string
   export let active: boolean = false
   export let handleEventsOutside: boolean = false
   export let insideDrawer: boolean = false
 
-  $: isEverythingSpace = spaceId === 'all'
+  $: isEverythingSpace = spaceId === BuiltInSpaceId.Everything
+  $: isAllContextsSpace = spaceId === BuiltInSpaceId.AllSpaces
+  $: isNotesSpace = spaceId === BuiltInSpaceId.Notes
+  $: isInboxSpace = spaceId === BuiltInSpaceId.Inbox
+  $: isPinnedContextsSpace = spaceId === BuiltInSpaceId.PinnedSpaces
+  $: isSpaceView = !isBuiltInSpaceId(spaceId)
 
   const log = useLogScope('OasisSpace')
   const oasis = useOasis()
   const config = useConfig()
+
+  const pinnedSpaces = derived(oasis.sortedSpacesList, ($sortedSpaces) => {
+    const spaceMap = new Map()
+    $sortedSpaces.pinned.forEach((space) => {
+      spaceMap.set(space.id, space)
+    })
+    return Array.from(spaceMap.values())
+  })
 
   const dispatch = createEventDispatcher<{
     open: string
@@ -125,6 +145,11 @@
     'handled-drop': void
     'created-space': OasisSpace
     'open-page-in-mini-browser': string
+    'open-in-sidebar': string
+    'chat-with-resource': {
+      resourceId: string
+      trigger: string
+    }
     close: void
   }>()
   const toasts = useToasts()
@@ -139,181 +164,385 @@
   const resourceManager = oasis.resourceManager
   const selectedFilterType = oasis.selectedFilterType
   const telemetry = resourceManager.telemetry
+
   const userConfigSettings = config.settings
 
   const searchValue = writable('')
-  const showChat = writable(false)
-  const resourceIds = writable<string[]>([])
-  const chatPrompt = writable('')
-  const searchResults = writable<string[]>([])
   const selectedItem = writable<string | null>(null)
   const showSettingsModal = writable(false)
   const loadingContents = writable(false)
   const loadingSpaceSources = writable(false)
   const space = writable<OasisSpace | null>(null)
-  // const selectedFilter = writable<'all' | 'saved_by_user'>('all')
-
-  const canGoBack = writable(false)
+  const oasisRenderableItems = writable<RenderableItem[]>([])
 
   const REFRESH_SPACE_SOURCES_AFTER = 15 * 60 * 1000 // 15 minutes
 
-  const spaceContents = writable<SpaceEntry[]>([])
-  const everythingContents = writable<ResourceSearchResultItem[]>([])
   const newlyLoadedResources = writable<string[]>([])
   const processingSourceItems = writable<string[]>([])
 
   $: spaceData = $space?.data
   $: darkMode = $userConfigSettings.app_style === 'dark'
 
-  const spaceResourceIds = derived(
-    [searchValue, spaceContents, searchResults],
-    ([searchValue, spaceContents, searchResults]) => {
-      const ids = spaceContents.map((x) => x.resource_id)
-
-      if (searchValue) {
-        if (isEverythingSpace) {
-          return searchResults
-        } else {
-          return ids.filter((x) => searchResults.includes(x))
-        }
-      }
-
-      return ids
-    }
-  )
-
-  const renderContents = derived<[Readable<string[]>], LazyItem[]>(
-    [spaceResourceIds],
-    ([spaceResourceIds]) => {
-      return (spaceResourceIds ?? []).map((id) => {
-        return { id, data: null }
-      })
-    }
-  )
-
   $: if (active) {
-    log.debug('Active, loading space contents...')
-    if (spaceId === 'all') {
-      loadEverything()
-    } else {
-      loadSpaceContents(spaceId)
+    setSelectedSpace(spaceId)
+    loadSpaceContents(spaceId)
+    telemetry.trackOpenOasis()
+  }
+
+  $: if (isPinnedContextsSpace && active) {
+    pinnedSpaces.subscribe(() => {
+      if (active && isPinnedContextsSpace) {
+        loadSpaceContents(spaceId, true)
+      }
+    })
+  }
+
+  const setSelectedSpace = async (spaceId: string) => {
+    const sp = await oasis.getSpace(spaceId)
+    if (!sp) {
+      log.error('failed to set selected space with id', spaceId, 'space not found')
+      return
+    }
+    oasis.addToNavigationHistory(spaceId)
+    oasis.selectedSpace.set(spaceId)
+    space.set(sp)
+    await loadSpaceContents(spaceId)
+  }
+
+  const navigateToSubSpace = async (e: CustomEvent<string> | string) => {
+    const spaceId = typeof e === 'string' ? e : e.detail
+    await setSelectedSpace(spaceId)
+  }
+
+  const navigateBack = async () => {
+    const previousSpaceId = oasis.getPreviousSpaceInNavigationHistory()
+    if (previousSpaceId) {
+      await oasis.navigateBack()
+      await setSelectedSpace(previousSpaceId)
     }
   }
 
-  const loadSpaceContents = async (id: string, skipSources = false) => {
-    try {
-      loadingContents.set(true)
-      everythingContents.set([])
+  const filterSpaceEntriesByType = async (
+    entries: SpaceEntry[],
+    filterTypeId: string | null
+  ): Promise<SpaceEntry[]> => {
+    if (filterTypeId === null) {
+      return entries
+    }
 
-      const startTime = performance.now()
+    const filteredItems = await Promise.all(
+      entries.map(async (item) => {
+        if (item.entry_type === 'resource' && filterTypeId !== 'contexts') {
+          let type = item.resource_type
+          let resource
 
-      const fetchedSpace = await oasis.getSpace(id)
-      if (!fetchedSpace) {
-        log.error('Space not found')
-        toasts.error('Context not found')
-        return
-      }
-
-      log.debug('Fetched space:', fetchedSpace)
-      space.set(fetchedSpace)
-
-      const sortBy = $space?.dataValue.sortBy ?? 'resource_updated'
-      const order = $space?.dataValue.sortOrder ?? 'desc'
-
-      log.debug('Loading space contents:', id, sortBy, order)
-      let items = await oasis.getSpaceContents(id, { order: order, sort_by: sortBy })
-      log.debug('Loaded space contents:', items)
-
-      items = items.filter((item) => item.manually_added !== SpaceEntryOrigin.Blacklisted)
-
-      searchValue.set('')
-      searchResults.set([])
-
-      spaceContents.set([])
-
-      await tick()
-
-      if ($selectedFilterType !== null) {
-        const filteredItems = await Promise.all(
-          items.map(async (item) => {
-            let type = item.resource_type
-            let resource
-
-            // Fetch resource if type is missing or if we're filtering for surflets
-            if (!type || $selectedFilterType.id === 'surflets') {
-              log.debug('Fetching resource:', item.resource_id)
-              resource = await resourceManager.getResource(item.resource_id)
-              if (!resource) {
-                return false
-              }
-
-              type = resource.type
-            }
-
-            if (!type) {
+          if (!type || filterTypeId === 'surflets') {
+            resource = await resourceManager.getResource(item.entry_id)
+            if (!resource) {
               return false
             }
 
-            if ($selectedFilterType.id === 'media') {
-              return type.startsWith('image/') ||
-                type.startsWith('video/') ||
-                type.startsWith('audio/')
-                ? item
-                : false
-            } else if ($selectedFilterType.id === 'notes') {
-              return type === ResourceTypes.DOCUMENT_SPACE_NOTE ? item : false
-            } else if ($selectedFilterType.id === 'files') {
-              return !type.startsWith('application/vnd.space.') &&
-                !type.startsWith('image/') &&
-                !type.startsWith('video/') &&
-                !type.startsWith('audio/')
-                ? item
-                : false
-            } else if ($selectedFilterType.id === 'links') {
-              return type.startsWith('application/vnd.space.') ? item : false
-            } else if ($selectedFilterType.id === 'surflets') {
-              return resource && isGeneratedResource(resource) ? item : false
-            } else {
-              return item
+            type = resource.type
+          }
+
+          if (!type) {
+            return false
+          }
+          return matchesFilterType(type, filterTypeId, resource) ? item : false
+        } else if (item.entry_type === 'space' && filterTypeId === 'contexts') {
+          return item
+        } else {
+          return false
+        }
+      })
+    )
+    return filteredItems.filter((item): item is SpaceEntry => item !== false)
+  }
+
+  const filterRenderableItemsByType = async (
+    items: RenderableItem[],
+    filterTypeId: string | null
+  ): Promise<RenderableItem[]> => {
+    if (filterTypeId === null) {
+      return items
+    }
+
+    const filteredItems = await Promise.all(
+      items.map(async (item) => {
+        if (item.type === 'resource' && filterTypeId !== 'contexts') {
+          let resource = item.data
+
+          if (!resource) {
+            resource = await resourceManager.getResource(item.id)
+            if (!resource) {
+              return false
             }
-          })
+          }
+
+          const type = resource.type
+          if (!type) {
+            return false
+          }
+
+          return matchesFilterType(type, filterTypeId, resource) ? item : false
+        } else if (item.type === 'space' && filterTypeId === 'contexts') {
+          return item
+        } else {
+          return false
+        }
+      })
+    )
+    return filteredItems.filter(
+      (item): item is RenderableItem => item !== false && item !== undefined
+    )
+  }
+
+  const matchesFilterType = (
+    type: string,
+    filterTypeId: string,
+    resource?: Resource
+  ): boolean | SpaceEntry => {
+    switch (filterTypeId) {
+      case 'media':
+        return type.startsWith('image/') || type.startsWith('video/') || type.startsWith('audio/')
+      case 'notes':
+        return type === ResourceTypes.DOCUMENT_SPACE_NOTE
+      case 'files':
+        return (
+          !type.startsWith('application/vnd.space.') &&
+          !type.startsWith('image/') &&
+          !type.startsWith('video/') &&
+          !type.startsWith('audio/')
         )
+      case 'links':
+        return type.startsWith('application/vnd.space.')
+      case 'surflets':
+        return resource ? isGeneratedResource(resource) : false
+      default:
+        return true
+    }
+  }
 
-        // Filter out false values from the Promise.all results
-        items = filteredItems.filter((item) => item !== false)
+  const loadFilteredContexts = async (query: string, pinned: boolean = false) => {
+    const filteredSpaces = await resourceManager.sffs.searchSpaces(query)
+    let renderableItems = await Promise.all(
+      filteredSpaces.map(async (space) => ({
+        id: space.id,
+        type: 'space',
+        data: space.id ? await oasis.getSpace(space.id) : null
+      }))
+    )
+    if (pinned) {
+      renderableItems = renderableItems
+        .filter((item) => item.data && item.data.dataValue.pinned)
+        .sort((a, b) => a.data!.indexValue - b.data!.indexValue)
+    }
+    let filteredItems = renderableItems.filter(
+      (item): item is SpaceRenderableItem => item.data !== null
+    )
+    oasisRenderableItems.set([])
+    oasisRenderableItems.set(filteredItems)
+  }
 
-        log.debug('Filtered items:', items)
+  const loadAllContexts = async (pinned: boolean = false) => {
+    try {
+      loadingContents.set(true)
+
+      let spacesData: OasisSpace[] = []
+      if (pinned) {
+        spacesData = $pinnedSpaces
+      } else {
+        spacesData = oasis.spacesObjectsValue
       }
 
-      spaceContents.set(items)
+      let userSpaces = spacesData.filter((space) => space.dataValue.folderName !== '.tempspace')
 
-      const endTime = performance.now()
-      log.debug('Loaded space contents in', (endTime - startTime).toFixed(2), 'ms')
+      if (pinned) {
+        userSpaces = userSpaces.sort((a, b) => {
+          return a.indexValue - b.indexValue
+        })
+      } else {
+        userSpaces = userSpaces.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      }
+      oasisRenderableItems.set(
+        userSpaces.map((space) => ({
+          id: space.id,
+          type: 'space',
+          data: space
+        }))
+      )
+    } catch (error) {
+      log.error('Error loading all contexts:', error)
+      toasts.error('Failed to load contexts')
+    } finally {
+      loadingContents.set(false)
+    }
+  }
+
+  const loadNoteContents = async () => {
+    try {
+      loadingContents.set(true)
+      const tags = ResourceManager.NonHiddenDefaultTags().concat([
+        ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+      ])
+      const result = await resourceManager.listResourceIDsByTags(tags)
+      const notes = await Promise.all(
+        result.map(async (id) => {
+          const resource = await resourceManager.getResource(id)
+          if (resource) {
+            return {
+              id: resource.id,
+              type: 'resource',
+              data: resource
+            } as RenderableItem
+          }
+          return null
+        })
+      )
+      const filteredNotes = notes.filter((item): item is RenderableItem => item !== null)
+      oasisRenderableItems.set(filteredNotes)
+    } catch (error) {
+      log.error('Error loading notes:', error)
+    } finally {
+      loadingContents.set(false)
+    }
+  }
+
+  const spaceEntriesToRenderableItems = async (
+    entries: SpaceEntry[]
+  ): Promise<RenderableItem[]> => {
+    const promises = entries.map(async (entry) => {
+      if (entry.entry_type === 'resource') {
+        return {
+          id: entry.entry_id,
+          type: entry.entry_type,
+          data: null
+        } as RenderableItem
+      } else if (entry.entry_type === 'space') {
+        const oasisSpace = await oasis.getSpace(entry.entry_id)
+        if (oasisSpace) {
+          // @ts-ignore
+          return {
+            id: entry.entry_id,
+            type: entry.entry_type,
+            data: oasisSpace
+          } as RenderableItem
+        }
+      }
+      return null
+    })
+    const results = await Promise.all(promises)
+    return results.filter((item): item is RenderableItem => item !== null)
+  }
+
+  const setSpaceContents = async (folderContents: SpaceEntry[]) => {
+    folderContents = folderContents.filter(
+      (entry) => entry.manually_added !== SpaceEntryOrigin.Blacklisted
+    )
+    if (folderContents.length === 0) {
+      oasisRenderableItems.set([])
+      return
+    }
+    folderContents = await filterSpaceEntriesByType(folderContents, $selectedFilterType?.id || null)
+    const renderableItems = await spaceEntriesToRenderableItems(folderContents)
+    if (renderableItems) {
+      oasisRenderableItems.set(renderableItems)
+    }
+  }
+
+  const setRenderableItemsWithFilter = async (
+    items: RenderableItem[],
+    filterTypeId: string | null = null
+  ) => {
+    if (!items || items.length === 0) {
+      oasisRenderableItems.set([])
+      return
+    }
+    if (filterTypeId !== null) {
+      const filteredItems = await filterRenderableItemsByType(items, filterTypeId)
+      oasisRenderableItems.set(filteredItems)
+    } else {
+      oasisRenderableItems.set(items)
+    }
+  }
+
+  // TODO: contents loading & searching should also be handled by the oasis service
+  const loadSpaceContents = async (id: string, skipSources = false) => {
+    if ($searchValue) {
+      await runSearch()
+      return
+    }
+
+    if (isEverythingSpace) {
+      await loadEverything()
+      return
+    }
+    if (isAllContextsSpace) {
+      await loadAllContexts(false)
+      return
+    }
+    if (isPinnedContextsSpace) {
+      await loadAllContexts(true)
+      return
+    }
+    if (isNotesSpace) {
+      await loadNoteContents()
+      return
+    }
+    if (isInboxSpace) {
+      await loadInbox()
+      return
+    }
+    loadingContents.set(true)
+
+    const fetchedSpace = await oasis.getSpace(id)
+    if (!fetchedSpace) {
+      log.error('Space not found')
+      toasts.error('Context not found')
+      return
+    }
+
+    space.set(fetchedSpace)
+
+    const sortBy = $space?.dataValue.sortBy ?? 'resource_updated'
+    const order = $space?.dataValue.sortOrder ?? 'desc'
+
+    const fetchedSpaceData = fetchedSpace.dataValue
+    try {
+      let folderContents = await oasis.getSpaceContents(id, {
+        sort_by: sortBy,
+        order: order,
+        search_query: $searchValue
+      })
+      if (folderContents) {
+        await setSpaceContents(folderContents)
+      }
 
       if (skipSources) {
         return
       }
 
-      const spaceData = fetchedSpace.dataValue
-
+      // fetchedSpaceData is already declared above
       let addedResources = 0
       let fetchedSources = false
       let usedSmartQuery = false
-      if (spaceData.liveModeEnabled) {
-        if ((spaceData.sources ?? []).length > 0) {
+      if (fetchedSpaceData.liveModeEnabled) {
+        if ((fetchedSpaceData.sources ?? []).length > 0) {
           fetchedSources = true
-          const fetchedResources = await loadSpaceSources(spaceData.sources!)
+          const fetchedResources = await loadSpaceSources(fetchedSpaceData.sources!)
           if (fetchedResources) {
             addedResources = fetchedResources.length
           }
         }
 
-        if (spaceData.smartFilterQuery) {
+        if (fetchedSpaceData.smartFilterQuery) {
           usedSmartQuery = true
           const fetchedResources = await updateLiveSpaceContentsWithAI(
-            spaceData.smartFilterQuery,
-            spaceData.sql_query,
-            spaceData.embedding_query
+            fetchedSpaceData.smartFilterQuery,
+            fetchedSpaceData.sql_query,
+            fetchedSpaceData.embedding_query
           )
           if (fetchedResources) {
             addedResources += fetchedResources.length
@@ -321,7 +550,7 @@
         }
       }
 
-      if ($newlyLoadedResources.length > 0 && $spaceContents.length === 0) {
+      if ($newlyLoadedResources.length > 0 && $oasisRenderableItems.length === 0) {
         await loadSpaceContents(spaceId, true)
         newlyLoadedResources.set([])
         processingSourceItems.set([])
@@ -336,7 +565,7 @@
         })
       }
     } catch (error) {
-      log.error('Error loading space contents:', error)
+      log.error('Error loading folder contents:', error)
     } finally {
       loadingContents.set(false)
     }
@@ -344,42 +573,72 @@
 
   const loadEverything = async () => {
     try {
-      if ($loadingContents) {
-        log.debug('Already loading everything')
-        return
-      }
-
       loadingContents.set(true)
-      spaceContents.set([])
 
-      const resources = await resourceManager.listResourcesByTags(
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-        ],
-        { includeAnnotations: true }
+      oasisRenderableItems.set([])
+      const items = await resourceManager.listAllResourcesAndSpaces(
+        ResourceManager.NonHiddenDefaultTags()
       )
-
-      const items = resources
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map(
-          (resource) =>
-            ({
-              id: resource.id,
-              resource: resource,
-              annotations: resource.annotations,
-              engine: 'local'
-            }) as ResourceSearchResultItem
+      if (items) {
+        const renderableItems = await Promise.all(
+          items.map(async (item) => {
+            if (!item) {
+              return null
+            }
+            if (item.type === 'resource') {
+              return item
+            } else if (item.type === 'space') {
+              const oasisSpace = await oasis.getSpace(item.id)
+              if (oasisSpace) {
+                return {
+                  id: item.id,
+                  type: item.type,
+                  data: oasisSpace
+                } as RenderableItem
+              }
+            }
+            return null
+          })
         )
+        const filtered = renderableItems.filter((item): item is RenderableItem => item !== null)
+        await setRenderableItemsWithFilter(filtered, $selectedFilterType?.id || null)
+      }
+    } catch (error) {
+      log.error('Error loading everything:', error)
+    } finally {
+      loadingContents.set(false)
+    }
+  }
 
-      log.debug('Loaded everything:', items)
+  const getInboxItems = async () => {
+    return await resourceManager.listResourcesByTags(ResourceManager.NonHiddenDefaultTags(), {
+      excludeWithinSpaces: true
+    })
+  }
 
-      searchValue.set('')
-      searchResults.set([])
-      everythingContents.set(items)
+  const loadInbox = async () => {
+    try {
+      loadingContents.set(true)
+
+      oasisRenderableItems.set([])
+
+      const items = await getInboxItems()
+      if (items) {
+        const renderableItems = await Promise.all(
+          items.map(async (item) => {
+            if (!item) {
+              return null
+            }
+            return {
+              id: item.id,
+              type: 'resource',
+              data: item
+            } as RenderableItem
+          })
+        )
+        const filtered = renderableItems.filter((item): item is RenderableItem => item !== null)
+        await setRenderableItemsWithFilter(filtered, $selectedFilterType?.id || null)
+      }
     } catch (error) {
       log.error('Error loading everything:', error)
     } finally {
@@ -430,7 +689,7 @@
 
       const fullSpaceContents = await oasis.getSpaceContents(spaceId)
       const newResults = resourceIds.filter((x) => {
-        const entry = fullSpaceContents.find((y) => y.resource_id === x)
+        const entry = fullSpaceContents.find((y) => y.entry_id === x)
         if (!entry) return true
 
         return entry.manually_added !== SpaceEntryOrigin.Blacklisted
@@ -450,6 +709,10 @@
     } finally {
       loadingSpaceSources.set(false)
     }
+  }
+
+  const forceReload = async () => {
+    await loadAllContexts()
   }
 
   const loadSpaceSources = async (sources: SpaceSource[], forceFetch = false) => {
@@ -593,36 +856,6 @@
       }
 
       const canonicalURL = item.link
-
-      // add dummy item to space while processing
-      // const data = {
-      //   url: canonicalURL,
-      //   title: item.title,
-      //   date_published: item.pubDate,
-      //   provider: sourceURL.hostname
-      // } as ResourceDataLink
-
-      // const dummyResource = await resourceManager.createDummyResource(
-      //   ResourceTypes.LINK,
-      //   new Blob([JSON.stringify(data)], { type: 'application/json' })
-      // )
-
-      // log.debug('Created fake resource:', dummyResource)
-
-      // spaceContents.update((contents) => {
-      //   return [
-      //     ...contents,
-      //     {
-      //       id: dummyResource.id,
-      //       resource_id: dummyResource.id,
-      //       space_id: $space!.id,
-      //       manually_added: 0,
-      //       created_at: new Date().toISOString(),
-      //       updated_at: new Date().toISOString()
-      //     }
-      //   ]
-      // })
-
       const existingResourceIds = await resourceManager.listResourceIDsByTags([
         ResourceManager.SearchTagDeleted(false),
         ResourceManager.SearchTagCanonicalURL(canonicalURL),
@@ -636,7 +869,9 @@
         log.debug('Resource already exists', resourceId)
 
         // check if resource is in space
-        const resourceInSpace = $spaceContents.find((x) => x.resource_id === resourceId)
+        const resourceInSpace = $oasisRenderableItems.find(
+          (x) => x.id === resourceId && x.type === 'resource'
+        )
         if (resourceInSpace) {
           log.debug('Resource already in space, skipping')
           return null
@@ -645,21 +880,6 @@
           const resource = await resourceManager.getResource(resourceId)
           if (resource) {
             newlyLoadedResources.update((resources) => [...resources, resource.id])
-            // spaceContents.update((contents) => {
-            //   return [
-            //     // remove dummy item
-            //     ...contents.filter((x) => x.resource_id !== dummyResource.id),
-            //     {
-            //       id: resource.id,
-            //       resource_id: resource.id,
-            //       space_id: $space!.id,
-            //       manually_added: 0,
-            //       created_at: new Date().toISOString(),
-            //       updated_at: new Date().toISOString()
-            //     }
-            //   ]
-            // })
-
             return resource
           }
         }
@@ -718,19 +938,6 @@
         )
       }
 
-      // spaceContents.update((contents) => [
-      //   // remove dummy item
-      //   ...contents.filter((x) => x.resource_id !== dummyResource.id),
-      //   {
-      //     id: parsed.resource.id,
-      //     resource_id: parsed.resource.id,
-      //     space_id: $space!.id,
-      //     manually_added: 0,
-      //     created_at: new Date().toISOString(),
-      //     updated_at: new Date().toISOString()
-      //   }
-      // ])
-
       try {
         let contentToSummarize: string | null = null
         if (parsed.resource.type === ResourceTypes.POST_YOUTUBE) {
@@ -787,6 +994,38 @@
     }
   }
 
+  const handlePin = async (e: CustomEvent) => {
+    try {
+      const id = e.detail
+      const space = await oasis.getSpace(id)
+      if (space) {
+        const lastPinnedIndex = oasis.sortedSpacesListValue.pinned.length
+        await space.updateData({ pinned: true })
+        await oasis.moveSpaceToIndex(id, lastPinnedIndex)
+        if (isPinnedContextsSpace) {
+          loadSpaceContents(spaceId, true)
+        }
+      }
+    } catch (error) {
+      log.error('Failed to pin Space:', error)
+    }
+  }
+
+  const handleUnpin = async (e: CustomEvent) => {
+    try {
+      const id = e.detail
+      const space = await oasis.getSpace(id)
+      if (space) {
+        await space.updateData({ pinned: false })
+        if (isPinnedContextsSpace) {
+          loadSpaceContents(spaceId, true)
+        }
+      }
+    } catch (error) {
+      log.error('Failed to unpin Space:', error)
+    }
+  }
+
   const handleRefreshLiveSpace = async () => {
     if (!$space) {
       log.error('No space found')
@@ -836,36 +1075,59 @@
     })
   }
 
-  const handleCloseChat = () => {
-    showChat.set(false)
+  const handleEscKey = () => {
     searchValue.set('')
-    chatPrompt.set('')
-    resourceIds.set([])
   }
 
-  const handleOpenSettingsModal = () => {
-    if ($showSettingsModal === true) {
-      showSettingsModal.set(false)
-    } else {
-      showSettingsModal.set(true)
-    }
+  // TODO: a more efficient way to do this
+  const searchResultsToRenderableItems = async (
+    resources: ResourceSearchResultItem[],
+    spaces: SpaceSearchResultItem[]
+  ) => {
+    const resourceItems = await Promise.all(
+      resources.map(async (item) => ({
+        id: item.id,
+        type: 'resource',
+        data: await resourceManager.getResource(item.id)
+      }))
+    )
+
+    const spaceItems = await Promise.all(
+      spaces.map(async (item) => ({
+        id: item.id,
+        type: 'space',
+        data: await oasis.getSpace(item.id)
+      }))
+    )
+    const allItems = [...resourceItems, ...spaceItems]
+    const filteredItems = allItems.filter((item): item is RenderableItem => item.data !== null)
+    return filteredItems
   }
 
-  const handleCloseSettingsModal = () => {
-    showSettingsModal.set(false)
-  }
-
+  // TODO: I've put most of the complexity of search and setting the items in this function
+  // we have to refactor this later
   const runSearch = useDebounce(async () => {
     try {
-      loadingContents.set(true)
-
       let value = $searchValue
 
       if (!value) {
-        searchResults.set([])
+        if (isSpaceView) {
+          await loadSpaceContents(spaceId)
+        } else if (isAllContextsSpace) {
+          await loadAllContexts(false)
+        } else if (isPinnedContextsSpace) {
+          await loadAllContexts(true)
+        } else if (isNotesSpace) {
+          await loadNoteContents()
+        } else if (isEverythingSpace) {
+          await loadEverything()
+        } else if (isInboxSpace) {
+          await loadInbox()
+        }
         return
       }
 
+      loadingContents.set(true)
       const hashtagMatch = value.match(/#[a-zA-Z0-9]+/g)
       const hashtags = hashtagMatch ? hashtagMatch.map((x) => x.slice(1)) : []
 
@@ -876,38 +1138,125 @@
 
       await telemetry.trackSearchOasis(SearchOasisEventTrigger.Oasis, !isEverythingSpace)
 
+      if (isAllContextsSpace) {
+        loadFilteredContexts(value, false)
+        return
+      }
+      if (isPinnedContextsSpace) {
+        loadFilteredContexts(value, true)
+        return
+      }
+
+      // TODO: this behavior should just be managed by oasis service
+      let searchInSpace: string | undefined = spaceId
+      if (isBuiltInSpaceId(searchInSpace)) {
+        searchInSpace = undefined
+      }
       const result = await resourceManager.searchResources(
         value,
         [
           ResourceManager.SearchTagDeleted(false),
           ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
           ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x)),
+          ...conditionalArrayItem(isNotesSpace, [
+            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          ])
         ],
         {
           semanticEnabled: $userConfigSettings.use_semantic_search,
-          spaceId: spaceId ? spaceId : undefined
+          spaceId: searchInSpace
         }
       )
-
-      log.debug('search in space results:', result)
-
-      searchResults.set(result.map((r) => r.resource.id))
+      // TODO: this is bad, we should use resource tags to indicate if a resource is in a space
+      if (isInboxSpace) {
+        const inboxItems = await getInboxItems()
+        if (!inboxItems) {
+          oasisRenderableItems.set([])
+          return
+        }
+        const inboxItemIds = inboxItems.map((x) => x.id)
+        result.resources = result.resources.filter((x) => inboxItemIds.includes(x.id))
+      }
+      if (result.space_entries) {
+        await setSpaceContents(result.space_entries)
+      } else {
+        const items = await searchResultsToRenderableItems(result.resources, result.spaces)
+        await setRenderableItemsWithFilter(items, $selectedFilterType?.id || null)
+      }
     } catch (error) {
       log.error('Error searching:', error)
     } finally {
       loadingContents.set(false)
     }
-  }, 350)
+  }, 500)
 
-  const handleSearch = async (e: CustomEvent<string>) => {
-    loadingContents.set(true)
-    runSearch()
+  const handleBatchRemove = async (
+    e: CustomEvent<{ resourceIds: string[]; spaceIds: string[]; deleteFromStuff: boolean }>
+  ) => {
+    const resourceIds = e.detail.resourceIds || []
+    const spaceIds = e.detail.spaceIds || []
+    const deleteFromStuff = e.detail.deleteFromStuff
+
+    const totalItems = resourceIds.length + spaceIds.length
+    if (totalItems === 0) {
+      return
+    }
+
+    const titlePrefix = deleteFromStuff ? 'Delete' : 'Unlink'
+
+    const confirmMessage = deleteFromStuff
+      ? `Are you sure you want to delete ${totalItems} Item${totalItems > 1 ? 's' : ''} from your Stuff?`
+      : `Are you sure you want to unlink ${totalItems} Item${totalItems > 1 ? 's' : ''} from this Context?`
+    const { closeType: confirmed } = await openDialog({
+      title: `${titlePrefix} ${totalItems} Item${totalItems > 1 ? 's' : ''}`,
+      message: confirmMessage,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Remove', type: 'submit', kind: 'primary' }
+      ]
+    })
+
+    if (!confirmed) {
+      return
+    }
+    try {
+      if (resourceIds.length > 0) {
+        await oasis.removeResourcesFromSpaceOrOasis(
+          resourceIds,
+          deleteFromStuff ? undefined : spaceId,
+          false
+        )
+      }
+      if (spaceIds.length > 0) {
+        if (deleteFromStuff) {
+          for (const id of spaceIds) {
+            await oasis.deleteSpace(id)
+            await tabsManager.removeSpaceTabs(id)
+            await telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpacesView)
+          }
+        } else {
+          const parentId = spaceId // this is a top level variable
+          await oasis.removeSpacesFromNestedSpace(parentId, spaceIds, false)
+          await telemetry.trackMultiSelectResourceAction(
+            MultiSelectResourceEventAction.Delete,
+            1,
+            'space'
+          )
+        }
+      }
+      toasts.success(deleteFromStuff ? 'Items deleted!' : 'Items removed!')
+      loadSpaceContents(spaceId)
+    } catch (error: any) {
+      log.error('Error removing resources or space ids:', error)
+      toasts.error(`Failed to remove items: ${error}`)
+    }
   }
 
   const handleResourceRemove = async (
     e: CustomEvent<{ ids: string | string[]; deleteFromStuff: boolean }>
   ) => {
+    log.debug('Removing resources:', e.detail)
     const ids = e.detail.ids
     const deleteFromStuff = e.detail.deleteFromStuff
 
@@ -925,26 +1274,27 @@
       )
 
       // HACK: this is needed for the preview to update with the summary
-      if (isEverythingSpace) {
-        const contents = $everythingContents.filter((x) => !ids.includes(x.id))
-        everythingContents.set([])
-      } else {
-        const contents = $spaceContents.filter((x) => !ids.includes(x.resource_id))
-        spaceContents.set([])
-        await tick()
-        spaceContents.set(contents)
-      }
-    } catch (e) {
+      const contents = $oasisRenderableItems.filter((x) => !ids.includes(x.id))
+      oasisRenderableItems.set([])
+      await tick()
+      oasisRenderableItems.set(contents)
+    } catch (e: any) {
       toasts.error(e.toString())
       throw e
     }
   }
 
-  const handleUseResourceAsSpaceIcon = async (e: CustomEvent<string>) => {
+  const handleItemOpen = (e: CustomEvent<string>) => {
+    log.debug('Opening resource item:', e.detail)
     const resourceId = e.detail
-    if (!$space) return
-    await $space.useResourceAsIcon(resourceId)
-    toasts.success('Context icon updated!')
+    scopedMiniBrowser.openResource(resourceId, {
+      from: OpenInMiniBrowserEventFrom.Oasis
+    })
+  }
+
+  const handleOpenInSidebar = (e: CustomEvent<string>) => {
+    log.debug('Opening resource in sidebar:', e.detail)
+    dispatch('open-in-sidebar', e.detail)
   }
 
   const handleItemClick = async (e: CustomEvent<string>) => {
@@ -960,7 +1310,7 @@
     log.debug('Key down:', e.key)
     if (e.key === 'Escape') {
       e.preventDefault()
-      handleCloseChat()
+      handleEscKey()
     } else if (
       e.key === ' ' &&
       $selectedItem &&
@@ -986,16 +1336,56 @@
         active: e.shiftKey,
         trigger: CreateTabEventTrigger.OasisItem
       })
-    } else if (isModKeyAndKeyPressed(e, 'Enter')) {
-      handleChatWithSpace()
     }
+    // NOTE: This also triggered when the context was open as a tab
+    // so it cleared the note
+    //else if (isModKeyAndKeyPressed(e, 'Enter')) {
+    //  handleChatWithSpace()
+    //}
   }
 
-  const handleDrop = async (drag: DragculaDragEvent<DragTypes>) => {
-    //const toast = toasts.loading(`${drag.effect === 'move' ? 'Moving' : 'Copying'} to space...`)
-    const toast = toasts.loading(`Copying to space...`)
+  const handleDrop = async (event: CustomEvent | DragculaDragEvent<DragTypes>) => {
+    // Handle both CustomEvent and DragculaDragEvent
+    const drag = 'item' in event ? event : event.detail
 
     log.debug('dropping onto DropWrapper', drag, ' | ', drag.from?.id, ' >> ', drag.to?.id, ' | ')
+    log.debug('Current space ID:', spaceId)
+    log.debug('Drag item data:', drag.item?.data)
+
+    if (drag.from?.id === drag.to?.id) {
+      log.debug('Drag from and to are the same, aborting drop')
+      return
+    }
+
+    // Check if this is a space being dropped
+    if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+      const droppedSpace = drag.item.data.getData(DragTypeNames.SURF_SPACE) as OasisSpace
+
+      // Don't allow dropping a space onto itself
+      if (droppedSpace.id === spaceId) {
+        return
+      }
+
+      try {
+        const droppedFolderName = droppedSpace.dataValue.folderName
+        const folderNameSuffix = `in ${$spaceData?.folderName}` || ''
+
+        // Move the space into this folder
+        await oasis.nestSpaceWithin(droppedSpace.id, spaceId)
+        toasts.success(`Created a link to '${droppedFolderName}' '${folderNameSuffix}'`)
+
+        // Stop propagation for folder nesting drops
+        drag.stopPropagation()
+      } catch (error) {
+        log.error('Error moving space:', error)
+        toasts.error('Error moving space')
+      }
+
+      return
+    }
+
+    // Handle other types of drops (files, resources, etc.)
+    const toast = toasts.loading(`Copying to context...`)
 
     if (drag.isNative) {
       dispatch('handled-drop')
@@ -1138,20 +1528,13 @@
       if (shouldDeleteAllResources) {
         log.debug('Deleting all resources in space', spaceId)
         const resources = await oasis.getSpaceContents($space!.id)
-        await resourceManager.deleteResources(resources.map((x) => x.resource_id))
+        await resourceManager.deleteResources(resources.map((x) => x.entry_id))
       }
 
       log.debug('Deleting space', spaceId)
       await oasis.deleteSpace(spaceId)
 
       await tabsManager.removeSpaceTabs(spaceId)
-
-      oasis.changeSelectedSpace(oasis.defaultSpaceID)
-      dispatch('deleted', spaceId)
-
-      if (!abortSpaceCreation) {
-        toast?.success('Context deleted!')
-      }
 
       if ($spaceData?.folderName !== '.tempspace')
         telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
@@ -1178,27 +1561,146 @@
     })
   }
 
-  const handleOpen = (e: CustomEvent<string>) => {
-    const resourceId = e.detail
-    if (handleEventsOutside) {
-      dispatch('open', resourceId)
+  const handleItemOpenAndChat = (e: CustomEvent<{ resource: Resource }>) => {
+    const { resource } = e.detail
+    dispatch('chat-with-resource', {
+      resourceId: resource.id,
+      trigger: EventContext.Space
+    })
+  }
+
+  const handleUseAsContext = (e: CustomEvent<string>) => {
+    const spaceId = e.detail
+    log.debug('Opening space as context:', spaceId)
+    tabsManager.changeScope(spaceId, ChangeContextEventTrigger.SpaceInOasis)
+  }
+
+  const handleFolderDrop = async (event: CustomEvent) => {
+    // Log the event to debug what's being received
+    log.debug('Folder drop event received:', event)
+
+    // If the event has null detail, it's likely that the action was already handled
+    // in the Folder component directly, so we can just return
+    if (!event.detail) {
+      log.debug('Drop event with null detail - action likely already handled in Folder component')
+      return
+    }
+
+    // The event structure might vary depending on how it's forwarded through components
+    let drag, targetSpaceId
+
+    // Try to extract the drag and targetSpaceId from different possible event structures
+    if (event.detail && event.detail.drag && event.detail.spaceId) {
+      // Direct event from Folder component
+      drag = event.detail.drag
+      targetSpaceId = event.detail.spaceId
+    } else if (
+      event.detail &&
+      event.detail.detail &&
+      event.detail.detail.drag &&
+      event.detail.detail.spaceId
+    ) {
+      // Event forwarded through OasisResourceLoader
+      drag = event.detail.detail.drag
+      targetSpaceId = event.detail.detail.spaceId
     } else {
-      openResourceDetailsModal(resourceId)
+      log.debug(
+        'Drop event with unexpected structure - action likely already handled in Folder component'
+      )
+      return
+    }
+
+    if (!drag || !targetSpaceId) {
+      log.error('Missing drag or target space ID in drop event:', event.detail)
+      toasts.error('Error processing drop: Missing data')
+      return
+    }
+
+    try {
+      // Check if the drag contains a space
+      if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
+        const droppedSpace = drag.item!.data.getData(DragTypeNames.SURF_SPACE) as OasisSpace
+
+        if (!droppedSpace) {
+          return
+        }
+
+        if (droppedSpace.id === targetSpaceId) {
+          return
+        }
+
+        const targetSpace = await oasis.getSpace(targetSpaceId)
+        const folderNameSuffix = targetSpace?.dataValue.folderName
+          ? `in (${targetSpace.dataValue.folderName})`
+          : ''
+
+        // When dragging from the current space view, we know the source space ID is the current space
+        const success = await oasis.nestSpaceWithin(droppedSpace.id, targetSpaceId)
+        if (success) {
+          // reload the current space contents
+          await loadSpaceContents(spaceId)
+          toasts.success(
+            `Created a link to '${droppedSpace.dataValue.folderName}' ${folderNameSuffix}`
+          )
+        } else {
+          toasts.error('')
+        }
+      } else if (
+        drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+        drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+      ) {
+        let resource: Resource | null = null
+
+        if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
+          resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
+        } else if (drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)) {
+          const resourceFetcher = drag.item!.data.getData(DragTypeNames.ASYNC_SURF_RESOURCE)
+          resource = await resourceFetcher()
+        }
+
+        if (resource === null) {
+          log.warn('Dropped resource but resource is null! Aborting drop!')
+          drag.abort()
+          return
+        }
+
+        // When dragging from the current space view, we know the source space ID is the current space
+        const sourceSpaceId = spaceId
+        const success = await oasis.moveResourceToSpace(resource.id, targetSpaceId, sourceSpaceId)
+        if (success) {
+          toasts.success(`Moved item`)
+        } else {
+          toasts.error('Failed to item')
+        }
+        await loadSpaceContents(spaceId)
+      }
+    } catch (error) {
+      log.error('Error in handleFolderDrop:', error)
+      toasts.error('Error processing drop')
     }
   }
 
-  const handleSpaceSelected = (e: CustomEvent<{ id: string; canGoBack: boolean }>) => {
-    const spaceEvent = e.detail
-    log.debug('Space selected:', spaceEvent)
+  const handleOpenSpaceAsTab = async (e: CustomEvent<{ space: OasisSpace; active: boolean }>) => {
+    const { space, active } = e.detail
+    log.debug('Opening space as tab:', space.id, active)
 
-    oasis.getSpaceContents(spaceEvent.id).then((resources) => {
-      log.debug('Space contents:', resources)
-      $spaceContents = resources
+    await tabsManager.addSpaceTab(space, { active: true })
+
+    await tick()
+
+    await telemetry.trackOpenSpace(OpenSpaceEventTrigger.SpacesView, {
+      isLiveSpace: space.dataValue.liveModeEnabled,
+      hasSources: (space.dataValue.sources ?? []).length > 0,
+      hasSmartQuery: !!space.dataValue.smartFilterQuery
     })
+    dispatch('close')
+  }
 
-    if (spaceEvent.canGoBack) {
-      canGoBack.set(spaceEvent.canGoBack)
-    }
+  const handleOpenSpaceAndChat = (e: CustomEvent<{ spaceId: string }>) => {
+    const { spaceId } = e.detail
+    log.debug('Opening space in chat:', spaceId)
+    dispatch('open-space-and-chat', { spaceId })
+    dispatch('close')
   }
 
   const handleUpdateExistingSpace = async (
@@ -1231,7 +1733,8 @@
         emoji: emoji,
         imageIcon: imageIcon,
         folderName: name,
-        smartFilterQuery: processNaturalLanguage ? userPrompt : undefined
+        smartFilterQuery: processNaturalLanguage ? userPrompt : undefined,
+        pinned: true // Automatically pin the newly created context
       })
 
       dispatch('created-space', createdSpace)
@@ -1256,7 +1759,7 @@
       $space = createdSpace
       await loadSpaceContents(createdSpace.id)
       showSettingsModal.set(false)
-      toasts.success('Context updated successfully!')
+      toasts.success('Created New Context!')
 
       dispatch('select-space', createdSpace.id)
     } catch (error) {
@@ -1282,11 +1785,6 @@
     dispatch('open-space-and-chat', { spaceId: $space.id, text: $searchValue })
     dispatch('close')
     searchValue.set('')
-  }
-
-  const handleFilterTypeChange = (e: CustomEvent<FilterItem | null>) => {
-    log.debug('Filter type change:', e.detail)
-    loadSpaceContents(spaceId, true)
   }
 
   const handleOpenPageMiniBrowser = async (e: CustomEvent<string>) => {
@@ -1372,6 +1870,62 @@
     await loadSpaceContents(spaceId, true)
   }
 
+  const handlePaste = async (e: ClipboardEvent) => {
+    const target = e.target as HTMLElement
+    const isFocused = target === document.activeElement
+
+    if (
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.getAttribute('contenteditable') === 'true') &&
+      isFocused
+    ) {
+      log.debug('Ignoring paste event in input field or editable content')
+      return
+    }
+
+    let toast: Toast | null
+
+    log.debug('Handling paste event')
+
+    try {
+      // Check if we have items in our clipboard service first
+      const clipboardContent = oasis.clipboardService.getClipboardContent()
+
+      if (clipboardContent) {
+        log.debug('clipboard service already has content, skipping paste handling here')
+        return
+      }
+      const mediaItems = (await processPaste(e)).filter((item) => item.type !== 'text')
+      if (mediaItems.length === 0) {
+        log.debug('No valid media items found in paste event')
+        return
+      }
+
+      toast = toasts.loading(
+        `Importing ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}…`
+      )
+
+      const resources = await createResourcesFromMediaItems(
+        resourceManager,
+        mediaItems,
+        `Imported at ${new Date().toLocaleString()}`,
+        [ResourceTag.paste()]
+      )
+
+      await $space?.addResources(
+        resources.map((e) => e.id),
+        SpaceEntryOrigin.ManuallyAdded
+      )
+      if ($space?.id) {
+        oasis.reloadSpace($space.id)
+      }
+      toast?.success(`Imported ${mediaItems.length} item${mediaItems.length > 1 ? 's' : ''}!`)
+    } catch (e) {
+      toasts.error('Could not import item(s)!')
+    }
+  }
+
   onDestroy(
     oasis.on('reload-space', (id: string) => {
       if (id !== spaceId) return
@@ -1399,7 +1953,9 @@
       theme.set(themeData)
     })
   }
+
   $: calcThemeColors($userConfigSettings.app_style === 'dark')
+
   onDestroy(
     desktopManager.on('changed-desktop-background', () =>
       calcThemeColors($userConfigSettings.app_style === 'dark')
@@ -1407,50 +1963,36 @@
   )
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
+<svelte:window on:keydown={handleKeyDown} on:paste={handlePaste} />
 
-<MiniBrowser service={scopedMiniBrowser} {active} on:seekToTimestamp on:highlightWebviewText />
+{#if $spaceData?.folderName !== '.tempspace'}
+  <MiniBrowser service={scopedMiniBrowser} {active} on:seekToTimestamp on:highlightWebviewText />
 
-<DropWrapper
-  {spaceId}
-  on:Drop={(e) => handleDrop(e.detail)}
-  acceptsDrag={(drag) => {
-    if (
-      drag.isNative ||
-      drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
-      drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-      drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
-    ) {
-      return true
-    }
-    return false
-  }}
-  zonePrefix={insideDrawer ? 'drawer-' : undefined}
->
+  <!-- TODO: the oasisRenderableItems should only load additional data from backend on scroll -->
   <div
-    class="relative wrapper"
+    class="relative-wrapper"
     style:--background-image={getBackgroundImageUrlFromId($theme?.backgroundImage, darkMode)}
     style:--base-color={$theme?.colors?.base}
     style:--contrast-color={$theme?.colors?.contrast}
   >
-    {#if $space && $spaceData && $theme !== undefined}
-      <LazyScroll items={renderContents} let:renderedItems>
-        {#if !isEverythingSpace && $spaceData?.folderName !== '.tempspace'}
-          <OasisSpaceNavbar {searchValue} on:search={handleSearch} on:chat={handleChatWithSpace}>
-            <svelte:fragment slot="left">
-              {#key `${$spaceData.imageIcon}-${$spaceData.colors}-${$spaceData.emoji}`}
-                <DynamicIcon name={$space.getIconString()} />
-              {/key}
-              <span class="context-name">{$spaceData.folderName}</span>
-            </svelte:fragment>
-            <svelte:fragment slot="right">
+    <LazyScroll items={oasisRenderableItems} let:renderedItems>
+      {#if $space && $spaceData && $theme !== undefined}
+        <OasisSpaceNavbar {searchValue} on:search={runSearch} on:chat={handleChatWithSpace}>
+          <svelte:fragment slot="left">
+            {#key `${$spaceData.icon}-${$spaceData.imageIcon}-${$spaceData.colors}-${$spaceData.emoji}`}
+              <DynamicIcon name={$space.getIconString()} />
+            {/key}
+            <span class="context-name">{$spaceData.folderName}</span>
+          </svelte:fragment>
+          <svelte:fragment slot="right">
+            {#if !$space.isBuiltInSpace}
               <button
                 use:tooltip={{
-                  position: 'left',
+                  position: 'bottom',
                   text:
                     $searchValue.length > 0
-                      ? 'Create new chat with this context'
-                      : `Create new chat with this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
+                      ? 'Ask Surf AI about the items in this context'
+                      : `Ask Surf AI about the items in this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
                 }}
                 class="chat-with-space pointer-all"
                 class:activated={$searchValue.length > 0}
@@ -1460,171 +2002,213 @@
 
                 <div class="chat-text">Ask Context</div>
               </button>
-            </svelte:fragment>
-            <svelte:fragment slot="right-dynamic">
-              <SpaceFilterViewButtons
-                filter={$selectedFilterType?.id ?? null}
-                viewType={$spaceData?.viewType}
-                viewDensity={$spaceData?.viewDensity}
-                sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
-                order={$spaceData?.sortOrder ?? 'desc'}
-                on:changedView={handleViewSettingsChanges}
-                on:changedFilter={handleFilterSettingsChanged}
-                on:changedSortBy={handleSortBySettingsChanged}
-                on:changedOrder={handleOrderSettingsChanged}
-              />
-            </svelte:fragment>
-          </OasisSpaceNavbar>
+            {/if}
+          </svelte:fragment>
+          <svelte:fragment slot="right-dynamic">
+            <!-- TODO: fix sorting for spaces -->
+            <SpaceFilterViewButtons
+              hideFilterSettings={isNotesSpace || isAllContextsSpace}
+              hideSortingSettings={true}
+              showContextsFilter={$spaceData?.nestingData?.hasChildren || isEverythingSpace}
+              filter={$selectedFilterType?.id ?? null}
+              viewType={$spaceData?.viewType}
+              viewDensity={$spaceData?.viewDensity}
+              sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
+              order={$spaceData?.sortOrder ?? 'desc'}
+              on:changedView={handleViewSettingsChanges}
+              on:changedFilter={handleFilterSettingsChanged}
+              on:changedSortBy={handleSortBySettingsChanged}
+              on:changedOrder={handleOrderSettingsChanged}
+            />
+          </svelte:fragment>
+          <svelte:fragment slot="desktop">
+            {#if !$space.isBuiltInSpace && $spaceData?.useAsBrowsingContext}
+              <DesktopPreview desktopId={$space.id} />
+            {/if}
+          </svelte:fragment>
+        </OasisSpaceNavbar>
 
-          {#if $userConfigSettings.experimental_context_linking && $space}
-            <ContextLinks space={$space} />
-          {/if}
+        {#if $userConfigSettings.experimental_context_linking && $space && !$space.isBuiltInSpace}
+          <ContextLinks space={$space} />
+        {/if}
 
-          <ContextHeader
-            bind:headline={$spaceData.folderName}
-            bind:description={$spaceData.description}
-            themeData={theme}
-            on:changed-headline={({ detail: headline }) =>
-              oasis.updateSpaceData($space.id, { folderName: headline })}
-            on:changed-description={({ detail: description }) =>
-              oasis.updateSpaceData($space.id, { description })}
-          >
-            <svelte:fragment slot="icon">
-              <SpaceIcon folder={$space} size="xl" />
-            </svelte:fragment>
-            <svelte:fragment slot="headline-content">
+        <ContextHeader
+          bind:headline={$spaceData.folderName}
+          bind:description={$spaceData.description}
+          headlineEditable={!$space.isBuiltInSpace}
+          descriptionEditable={!$space.isBuiltInSpace}
+          on:changed-headline={({ detail: headline }) =>
+            oasis.updateSpaceData($space.id, { folderName: headline })}
+          on:changed-description={({ detail: description }) =>
+            oasis.updateSpaceData($space.id, { description })}
+        >
+          <svelte:fragment slot="breadcrumb">
+            {#if isSpaceView && oasis.canNavigateBackValue && insideDrawer}
+              <button class="back-button" on:click={navigateBack}>
+                <Icon name="arrow.left" size="sm" />
+              </button>
+            {/if}
+          </svelte:fragment>
+
+          <svelte:fragment slot="icon">
+            <SpaceIcon folder={$space} interactive={!$space.isBuiltInSpace} size="xl" />
+          </svelte:fragment>
+          <svelte:fragment slot="headline-content">
+            {#if !$space.isBuiltInSpace}
               <button
                 class="edit-button"
                 on:click={() => ($showSettingsModal = !$showSettingsModal)}
                 ><Icon name="settings" size="1.6em" /></button
               >
+            {/if}
 
-              <OasisSpaceUpdateIndicator
-                {space}
-                {newlyLoadedResources}
-                {loadingSpaceSources}
-                {processingSourceItems}
-                on:refresh={handleRefreshLiveSpace}
-              />
-            </svelte:fragment>
-            <svelte:fragment slot="header-content">
-              {#if $showSettingsModal}
-                <div
-                  class="settings-modal-wrapper"
-                  transition:fly={{ y: 10, duration: 160 }}
-                  use:clickOutside={() => ($showSettingsModal = false)}
-                >
-                  <OasisSpaceSettings
-                    bind:space={$space}
-                    on:refresh={handleRefreshLiveSpace}
-                    on:clear={handleClearSpace}
-                    on:delete={(e) => handleDeleteSpace(e.detail)}
-                    on:load={handleLoadSpace}
-                    on:delete-auto-saved={handleDeleteAutoSaved}
-                  />
-                </div>
-              {/if}
-            </svelte:fragment>
-            <svelte:fragment slot="meta-section">
-              <DesktopPreview desktopId={$space.id} />
-            </svelte:fragment>
-          </ContextHeader>
+            <OasisSpaceUpdateIndicator
+              {space}
+              {newlyLoadedResources}
+              {loadingSpaceSources}
+              {processingSourceItems}
+              on:refresh={handleRefreshLiveSpace}
+            />
+          </svelte:fragment>
+          <svelte:fragment slot="header-content">
+            {#if $showSettingsModal && !$space.isBuiltInSpace}
+              <div
+                class="settings-modal-wrapper"
+                transition:fly={{ y: 10, duration: 160 }}
+                use:clickOutside={() => ($showSettingsModal = false)}
+              >
+                <OasisSpaceSettings
+                  bind:space={$space}
+                  on:refresh={handleRefreshLiveSpace}
+                  on:clear={handleClearSpace}
+                  on:delete={(e) => handleDeleteSpace(e.detail)}
+                  on:load={handleLoadSpace}
+                  on:delete-auto-saved={handleDeleteAutoSaved}
+                />
+              </div>
+            {/if}
+          </svelte:fragment>
+        </ContextHeader>
 
-          <ContextTabsBar
-            {spaceId}
-            on:open-page-in-mini-browser={handleOpenPageMiniBrowser}
-            on:handled-drop
-            on:select-space
-            on:reload={handleReload}
-          />
-        {/if}
-
-        {#if $spaceResourceIds.length > 0 && !isEverythingSpace}
-          <OasisResourcesView
-            resources={renderedItems}
-            {searchValue}
-            isInSpace={!isEverythingSpace}
-            viewType={$spaceData?.viewType}
-            viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
-            order={$spaceData?.sortOrder ?? 'desc'}
-            fadeIn
-            on:click={handleItemClick}
-            on:open={handleOpen}
-            on:open-and-chat
-            on:remove={handleResourceRemove}
-            on:batch-remove={handleResourceRemove}
-            on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-            on:batch-open
-            on:create-tab-from-space
-            on:changedView={handleViewSettingsChanges}
-            on:changedFilter={handleFilterSettingsChanged}
-            on:changedSortBy={handleSortBySettingsChanged}
-            on:changedOrder={handleOrderSettingsChanged}
-          />
-
-          {#if $loadingContents}
-            <div class="floating-loading">
-              <Icon name="spinner" size="20px" />
-            </div>
-          {/if}
-        {:else if isEverythingSpace && $everythingContents.length > 0}
-          <OasisResourcesView
-            resources={everythingContents}
-            {searchValue}
-            isInSpace={false}
-            viewType={$spaceData?.viewType}
-            viewDensity={$spaceData?.viewDensity}
-            sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
-            order={$spaceData?.sortOrder ?? 'desc'}
-            fadeIn
-            on:click={handleItemClick}
-            on:open={handleOpen}
-            on:open-and-chat
-            on:remove={handleResourceRemove}
-            on:space-selected={handleSpaceSelected}
-            on:set-resource-as-space-icon={handleUseResourceAsSpaceIcon}
-            on:batch-remove
-            on:batch-open
-            on:open-space-as-tab
-            on:changedView={handleViewSettingsChanges}
-            on:changedFilter={handleFilterSettingsChanged}
-            on:changedSortBy={handleSortBySettingsChanged}
-            on:changedOrder={handleOrderSettingsChanged}
-          />
-
-          {#if $loadingContents}
-            <div class="floating-loading">
-              <Icon name="spinner" size="20px" />
-            </div>
-          {/if}
-        {:else if $space && $spaceData?.folderName === '.tempspace'}
-          <CreateNewSpace
-            on:update-existing-space={handleUpdateExistingSpace}
-            on:abort-space-creation={handleAbortSpaceCreation}
-            on:creating-new-space
-            on:done-creating-new-space
-            space={$space}
-          />
-        {:else if $loadingContents}
-          <div class="content-wrapper">
-            <div class="content">
-              <Icon name="spinner" size="22px" />
-              <p>Loading…</p>
-            </div>
-          </div>
-        {:else}
-          <div class="content-wrapper">
-            <div class="content">
-              <Icon name="save" size="22px" />
-              <p>Oops! It seems like this Context is feeling a bit empty.</p>
+        <ContextTabsBar
+          {spaceId}
+          on:open-page-in-mini-browser={handleOpenPageMiniBrowser}
+          on:handled-drop
+          on:select-space
+          on:reload={handleReload}
+        />
+        {#if $selectedFilterType && $selectedFilterType.id !== null}
+          <div
+            class="active-filter-indicator bg-[#F7F9FB] dark:bg-gray-900"
+            transition:fly={{ y: 5, duration: 160 }}
+          >
+            <div class="filter-badge">
+              <Icon name="filter" size="1em" />
+              <span>Filtering by: {$selectedFilterType.label}</span>
+              <button
+                class="clear-filter-btn"
+                on:click={() => {
+                  oasis.selectedFilterTypeId.set(null)
+                  loadSpaceContents(spaceId, true)
+                }}
+              >
+                <Icon name="close" size="0.9em" />
+              </button>
             </div>
           </div>
         {/if}
-      </LazyScroll>
-    {/if}
+
+        <DropWrapper
+          {spaceId}
+          dragOver={false}
+          on:Drop={handleDrop}
+          on:dragover={(e) => {
+            e.preventDefault()
+          }}
+          on:DragEnter={(e) => {
+            log.debug('Drag enter on OasisSpace:', e)
+          }}
+          acceptsDrag={(drag) => {
+            // Always accept space drops, regardless of what's being viewed
+            if (drag.item?.data.hasData(DragTypeNames.SURF_SPACE)) {
+              const droppedSpace = drag.item.data.getData(DragTypeNames.SURF_SPACE)
+              // Don't accept if trying to drop onto itself
+              if (droppedSpace && droppedSpace.id === spaceId) {
+                return false
+              }
+              return true
+            }
+
+            // For other types, use the standard checks
+            if (
+              drag.isNative ||
+              drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
+              drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
+              drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+            ) {
+              return true
+            }
+            return false
+          }}
+          zonePrefix={insideDrawer ? 'drawer-' : undefined}
+        >
+          {#if renderedItems}
+            <OasisResourcesView
+              items={renderedItems}
+              {searchValue}
+              isInSpace={isSpaceView}
+              viewType={$spaceData?.viewType}
+              viewDensity={$spaceData?.viewDensity}
+              sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
+              order={$spaceData?.sortOrder ?? 'desc'}
+              fadeIn
+              on:click={handleItemClick}
+              on:open={handleItemOpen}
+              on:open-and-chat={handleItemOpenAndChat}
+              on:open-in-sidebar={handleOpenInSidebar}
+              on:navigate-context={navigateToSubSpace}
+              on:remove={handleResourceRemove}
+              on:batch-remove={handleBatchRemove}
+              on:batch-open
+              on:create-tab-from-space
+              on:changedView={handleViewSettingsChanges}
+              on:changedFilter={handleFilterSettingsChanged}
+              on:changedSortBy={handleSortBySettingsChanged}
+              on:changedOrder={handleOrderSettingsChanged}
+              on:space-selected={(e) => navigateToSubSpace(e.detail)}
+              on:open-space-as-tab={handleOpenSpaceAsTab}
+              on:open-space-and-chat={handleOpenSpaceAndChat}
+              on:use-as-context={handleUseAsContext}
+              on:Drop={handleFolderDrop}
+              on:force-reload={handleReload}
+              on:pin={handlePin}
+              on:unpin={handleUnpin}
+            />
+            {#if $loadingContents}
+              <div class="floating-loading">
+                <Icon name="spinner" size="20px" />
+              </div>
+            {/if}
+          {:else}
+            <div class="content-wrapper">
+              <div class="content">
+                <OasisSpaceEmpty />
+              </div>
+            </div>
+          {/if}
+        </DropWrapper>
+      {/if}
+    </LazyScroll>
   </div>
-</DropWrapper>
+{:else if $space && $spaceData?.folderName === '.tempspace'}
+  <CreateNewSpace
+    on:update-existing-space={handleUpdateExistingSpace}
+    on:abort-space-creation={handleAbortSpaceCreation}
+    on:creating-new-space
+    on:done-creating-new-space
+    space={$space}
+  />
+{/if}
 
 <style lang="scss">
   .wrapper {
@@ -1632,6 +2216,146 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+  }
+
+  .back-button {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 0.5rem;
+    max-width: 2.25rem;
+    border-radius: 0.5rem;
+    color: var(--contrast-color);
+    opacity: 0.7;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
+
+    &:hover {
+      opacity: 1;
+      background: rgb(from var(--base-color) r g b / 0.4);
+      transform: translateX(-2px);
+    }
+
+    :global(.dark) & {
+      color: #fff;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  .folder-view {
+    padding: 1rem;
+
+    .folder-section-title {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #666;
+
+      :global(.dark) & {
+        color: #ccc;
+      }
+    }
+
+    .folder-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .folder-loading,
+    .folder-error {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 1.1em;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: #666;
+
+      :global(.dark) & {
+        background: rgba(31, 41, 55, 0.8);
+        color: #aaa;
+      }
+    }
+
+    .folder-error {
+      color: #e53e3e;
+
+      :global(.dark) & {
+        color: #fc8181;
+      }
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      background-color: #f5f5f5;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #e8e8e8;
+      }
+
+      :global(.dark) & {
+        background-color: rgba(255, 255, 255, 0.05);
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      .folder-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+
+        .emoji {
+          font-size: 1.5rem;
+        }
+      }
+
+      .folder-details {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        .folder-name {
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .folder-description {
+          font-size: 0.75rem;
+          color: #666;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+
+          :global(.dark) & {
+            color: #aaa;
+          }
+        }
+      }
+    }
   }
 
   .edit-button {
@@ -1662,6 +2386,46 @@
     }
   }
 
+  :global(nav.context-navbar .chat-with-space),
+  :global(nav.context-navbar .context-toggle-button) {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    appearance: none;
+    padding: 0.5em;
+    border-radius: 0.75rem;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition-property: color, background, opacity;
+    transition-duration: 123ms;
+    transition-timing-function: ease-out;
+
+    opacity: 0.7;
+
+    &:hover {
+      color: #0369a1;
+      background: rgb(232, 238, 241);
+      color: var(--contrast-color);
+      background: rgb(from var(--base-color) r g b / 0.4);
+      opacity: 1;
+    }
+  }
+
+  :global(nav.context-navbar .context-toggle-button) {
+    margin-left: 0.5em;
+
+    .button-text {
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      .button-text {
+        display: inline;
+      }
+    }
+  }
+
   .settings-modal-wrapper {
     position: fixed;
     position-anchor: --edit-button;
@@ -1671,13 +2435,16 @@
   }
 
   .content-wrapper {
+    position: relative;
     width: 100%;
-    height: 100%;
+    height: -webkit-fill-available;
     display: flex;
     align-items: center;
     justify-content: center;
 
     .content {
+      position: absolute;
+      top: 0;
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -1702,5 +2469,90 @@
     gap: 0.5rem;
     padding: 0.5rem;
     opacity: 0.75;
+  }
+
+  .all-contexts-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    gap: 1rem;
+
+    :global(svg) {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    gap: 1rem;
+
+    p {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+
+  .active-filter-indicator {
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .filter-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgb(from var(--base-color) r g b / 0.3);
+    color: var(--contrast-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.875rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    :global(.dark) & {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .clear-filter-btn {
+    appearance: none;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    padding: 0;
+    margin-left: 0.25rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 150ms ease;
+    color: var(--contrast-color);
+
+    &:hover {
+      opacity: 1;
+      background: rgb(from var(--base-color) r g b / 0.4);
+    }
   }
 </style>

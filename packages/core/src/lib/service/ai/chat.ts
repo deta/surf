@@ -995,6 +995,71 @@ export class AIChat {
     }
   }
 
+  /**
+   * Append text to the current AI response
+   * Used for streaming in chunks of text, particularly for predefined content
+   */
+  appendToCurrentAIResponse(text: string) {
+    // Find the last response message
+    const responses = this.responsesValue
+    const lastResponse = responses[responses.length - 1]
+
+    if (lastResponse) {
+      // Update the content of the last response
+      this.updateParsedResponse(lastResponse.id, {
+        content: lastResponse.content + text
+      })
+    } else {
+      // If no response exists yet, create a new one
+      const newResponse: AIChatMessageParsed = {
+        id: generateID(),
+        role: 'assistant',
+        status: 'success',
+        content: text,
+        citations: {},
+        usedPageScreenshot: false,
+        usedInlineScreenshot: false
+      }
+
+      this.addParsedResponse(newResponse)
+    }
+
+    // Update the messages store to reflect the changes
+    this.messages.update((messages) => {
+      const lastAssistantIndex = [...messages].reverse().findIndex((m) => m.role === 'assistant')
+
+      if (lastAssistantIndex >= 0) {
+        // Get the actual index in the original array
+        const actualIndex = messages.length - 1 - lastAssistantIndex
+
+        // Create a copy of the messages array
+        const updatedMessages = [...messages]
+
+        // Update the content of the last assistant message
+        updatedMessages[actualIndex] = {
+          ...updatedMessages[actualIndex],
+          content: updatedMessages[actualIndex].content + text
+        }
+
+        return updatedMessages
+      }
+
+      // If no assistant message found, create a new one
+      return [
+        ...messages,
+        {
+          id: generateID(),
+          role: 'assistant',
+          content: text,
+          createdAt: new Date().toISOString(),
+          sources: []
+        }
+      ]
+    })
+
+    this.updatedAt = new Date().toISOString()
+  }
+
   async createChatCompletion(
     prompt: string,
     opts?: ChatMessageOptions,

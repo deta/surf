@@ -13,7 +13,7 @@ export class ContextItemEverything extends ContextItemBase {
   constructor(service: ContextService) {
     super(service, 'everything', 'save')
 
-    this.label = writable('All My Stuff')
+    this.label = writable('All my Stuff')
   }
 
   async getResourceIds(_prompt?: string) {

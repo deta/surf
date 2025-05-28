@@ -72,7 +72,7 @@ export const Loading = Node.create<LoadingOptions>({
 
   addNodeView() {
     return ({ node }) => {
-      const container = document.createElement('div')
+      const container = document.createElement('loading')
 
       console.log('loading node', node)
 
