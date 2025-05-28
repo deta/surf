@@ -371,8 +371,8 @@
     overflow-y: auto;
     margin: 0 -24px;
     padding: 0 24px;
-    height: 50vh;
-    min-height: 300px;
+    height: 100%;
+    flex-grow: 1;
   }
 
   .space-item {
