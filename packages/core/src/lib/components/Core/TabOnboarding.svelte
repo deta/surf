@@ -104,7 +104,6 @@
   $: modShortcut = isMac() ? '⌘' : 'Ctrl'
 
   const handleTryVision = () => {
-    document.dispatchEvent(new CustomEvent(CompletionEventID.UseVision, { bubbles: true }))
     dispatch('openScreenshot')
   }
 

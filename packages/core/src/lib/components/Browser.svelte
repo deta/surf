@@ -4266,10 +4266,8 @@
     on:open-note-in-sidebar={handleOpenInlineNoteInSidebar}
     on:use-screenshot-in-chat={handleTakeScreenshotForChat}
     on:close={() => {
-      if ($showNewTabOverlay === 1) {
-        $showNewTabOverlay = 0
-      }
       $showScreenshotPicker = false
+      $showNewTabOverlay = 0
     }}
   />
 {/if}

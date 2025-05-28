@@ -475,6 +475,7 @@
   }
 
   async function handleExpandChat() {
+    dispatch('close', null)
     if ($userConfigSettings.experimental_notes_chat_sidebar) {
       if (!$note) return
 
@@ -647,6 +648,12 @@
 
     telemetry.trackUsePrompt(PromptType.Custom, EventContext.Inline)
   }
+
+  onMount(() => {
+    if (document.body.classList.contains('onboarding')) {
+      document.dispatchEvent(new CustomEvent(CompletionEventID.UseVision, { bubbles: true }))
+    }
+  })
 </script>
 
 <svelte:window
