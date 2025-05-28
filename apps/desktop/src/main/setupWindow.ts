@@ -6,8 +6,25 @@ import { isDev } from '@horizon/utils'
 
 let setupWindow: BrowserWindow | undefined
 
-export function createSetupWindow() {
+export function createSetupWindow(options?: { presetInviteCode?: string; presetEmail?: string }) {
   const setupWindowSession = session.fromPartition('persist:surf-app-session')
+
+  const additionalArgs = [
+    `--userDataPath=${app.getPath('userData')}`,
+    `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+    ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
+    ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS ? ['--disable-tab-switching-shortcuts'] : [])
+  ]
+
+  if (options?.presetInviteCode) {
+    additionalArgs.push(`--presetInviteCode=${options.presetInviteCode}`)
+  }
+
+  if (options?.presetEmail) {
+    additionalArgs.push(`--presetEmail=${options.presetEmail}`)
+  }
+
+  console.log('createSetupWindow: all additional args', additionalArgs)
 
   setupWindow = new BrowserWindow({
     width: 1270,
@@ -21,14 +38,7 @@ export function createSetupWindow() {
     // ...(isLinux() ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/setup.js'),
-      additionalArguments: [
-        `--userDataPath=${app.getPath('userData')}`,
-        `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
-        ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
-        ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS
-          ? ['--disable-tab-switching-shortcuts']
-          : [])
-      ],
+      additionalArguments: additionalArgs,
       defaultFontSize: 14,
       session: setupWindowSession,
       webviewTag: false,

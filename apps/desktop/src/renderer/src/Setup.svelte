@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { onDestroy, onMount, tick } from 'svelte'
+  import { writable } from 'svelte/store'
+  import EmailView from './components/setup/EmailView.svelte'
   import InviteView from './components/setup/InviteView.svelte'
-  import DisclaimerView from './components/setup/DisclaimerView.svelte'
-  import AppPreferencesSetup from './components/setup/AppPreferencesSetup.svelte'
   import LanguageView from './components/setup/LanguageView.svelte'
   import PrefsView from './components/setup/PrefsView.svelte'
   import PersonaView from './components/setup/PersonaView.svelte'
@@ -9,16 +10,14 @@
   import ExplainerChat from './components/setup/ExplainerChat.svelte'
   import DoneView from './components/setup/DoneView.svelte'
 
-  // Import or define UserSettings type
   import type { UserSettings } from '@horizon/types'
   import { provideConfig } from '@horizon/core/src/lib/service/config'
   import { createResourceManager } from '@horizon/core/src/lib/service/resources'
   import { provideOasis } from '@horizon/core/src/lib/service/oasis'
   import { createTelemetry } from '@horizon/core/src/lib/service/telemetry'
-  import { onMount } from 'svelte'
-  import { useLogScope, wait } from '@horizon/utils'
   import ContextView from './components/setup/ContextView.svelte'
   import ImportView from './components/setup/ImportView.svelte'
+  import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -40,11 +39,11 @@
 
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
-  const oasis = provideOasis(resourceManager, config)
-
-  const log = useLogScope('Setup')
+  const smartNotes = provideSmartNotes(resourceManager)
+  provideOasis(resourceManager, config, smartNotes)
 
   type ViewType =
+    | 'email'
     | 'invite'
     | 'persona'
     | 'import'
@@ -57,11 +56,58 @@
     // not used
     | 'disclaimer'
     | 'app_preferences'
-  let viewHistory: ViewType[] = ['invite']
-  let view: ViewType = 'invite'
+
+  //@ts-ignore
+  let presetInviteCode: string = window.presetInviteCode || ''
+  // @ts-ignore
+  let presetEmail: string = window.presetEmail || ''
+
+  let initialView: ViewType = presetInviteCode ? 'invite' : 'email'
+  let view: ViewType = initialView
+
+  let viewHistory: ViewType[] = [initialView]
   let embeddingModel: UserSettings['embedding_model'] = 'english_small'
   let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let selectedPersonas: string[] = []
+
+  let inviteView: InviteView
+
+  const userEmailStore = writable(presetEmail)
+  const mountUnsubscribers: (() => void)[] = []
+
+  onMount(() => {
+    console.log('presetInviteCode:', presetInviteCode)
+    console.log('presetEmail:', presetEmail)
+    if (presetInviteCode) {
+      inviteView.submitInviteCode(presetInviteCode)
+    }
+  })
+
+  onDestroy(() => {
+    mountUnsubscribers.forEach((unsub) => unsub())
+  })
+
+  let setupPreloadEvents = {} as typeof window.preloadEvents
+  for (const [key, value] of Object.entries(window.preloadEvents)) {
+    if (typeof value === 'function') {
+      setupPreloadEvents[key as keyof typeof window.preloadEvents] = (...args: any[]) => {
+        const unsubscribe = (value as Function).apply(window.preloadEvents, args)
+        if (typeof unsubscribe === 'function') {
+          mountUnsubscribers.push(unsubscribe)
+        }
+        return unsubscribe
+      }
+    } else {
+      setupPreloadEvents[key as keyof typeof window.preloadEvents] = value
+    }
+  }
+
+  // @ts-ignore
+  setupPreloadEvents.onSetupVerificationCode(async (code: string) => {
+    view = 'invite'
+    await tick()
+    inviteView.submitInviteCode(code)
+  })
 
   /**
    * Check if the experimental notes chat sidebar feature is enabled
@@ -104,6 +150,12 @@
     viewHistory.push(view)
   }
 
+  const handleSetUserEmail = (event: CustomEvent<string>) => {
+    userEmailStore.set(event.detail)
+    view = 'invite'
+    viewHistory.push(view)
+  }
+
   const handleBack = () => {
     if (viewHistory.length > 1) {
       viewHistory.pop() // Remove current view
@@ -132,18 +184,18 @@
 
     window.api.restartApp()
   }
-
-  onMount(async () => {
-    await wait(300)
-    const spaces = oasis.spacesValue
-    log.debug('spaces', spaces)
-  })
 </script>
 
 <main>
   <div class="wrapper" class:wide={view === 'disclaimer'}>
-    {#if view === 'invite'}
-      <InviteView on:viewChange={handleViewChange} />
+    {#if view === 'email'}
+      <EmailView on:setUserEmail={handleSetUserEmail} on:viewChange={handleViewChange} />
+    {:else if view === 'invite'}
+      <InviteView
+        bind:this={inviteView}
+        emailStore={userEmailStore}
+        on:viewChange={handleViewChange}
+      />
     {:else if view === 'persona'}
       <PersonaView
         {selectedPersonas}

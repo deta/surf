@@ -6,7 +6,8 @@ export const ENDPOINTS = {
   userdata: '/v0/deta-os-auth/userdata',
   userdata_telemetry_id: '/v0/deta-os-auth/userdata/tel-id',
   check_extension: '/v0/deta-os-auth/check-extension',
-  extension_installations: '/v0/deta-os-auth/extensions/installations'
+  extension_installations: '/v0/deta-os-auth/extensions/installations',
+  signup: '/v0/deta-os-auth/signup'
 }
 
 export class API {
@@ -108,6 +109,12 @@ export class API {
     return await this.postJSONReturnRes(ENDPOINTS.app_activations, {
       key: key,
       accepted_terms: acceptedTerms
+    })
+  }
+
+  async signup(email: string) {
+    return await this.postJSONReturnRes(ENDPOINTS.signup, {
+      email: email
     })
   }
 

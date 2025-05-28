@@ -231,6 +231,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   setExtensionMode: ipcService.addEvent<'horizontal' | 'vertical'>('set-extension-mode'),
   extensionModeChange: ipcService.addEvent<ExtensionModeChange>('extension-mode-change'),
   removeExtension: ipcService.addEvent<string>('remove-extension'),
+  setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

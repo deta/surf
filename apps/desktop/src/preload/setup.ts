@@ -60,6 +60,35 @@ const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
+// TODO: moved to utils?
+function parseArguments() {
+  const args = {}
+
+  process.argv.forEach((arg) => {
+    if (arg.startsWith('--')) {
+      const [key, value] = arg.substring(2).split('=')
+      args[key] = value || true
+    }
+  })
+
+  return args
+}
+const args = parseArguments()
+const presetEmail: string = args['presetEmail'] || ''
+const presetInviteCode: string = args['presetInviteCode'] || ''
+
+const eventHandlers = {
+  onSetupVerificationCode: (callback: (code: string) => void) => {
+    return IPC_EVENTS_RENDERER.setupVerificationCode.on((_, code) => {
+      try {
+        callback(code)
+      } catch (error) {
+        console.error(error)
+      }
+    })
+  }
+}
+
 const api = {
   getUserConfigSettings: () => userConfig.settings,
 
@@ -99,6 +128,11 @@ const api = {
   resendInviteCode: async (email: string) => {
     const api = createAPI(import.meta.env.P_VITE_API_BASE)
     return await api.resendInviteCode(email)
+  },
+
+  signup: async (email: string) => {
+    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+    return await api.signup(email)
   },
 
   updateSpacesList: async (data: SpaceBasicData[]) => {
@@ -543,6 +577,9 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('preloadEvents', eventHandlers)
+    contextBridge.exposeInMainWorld('presetInviteCode', presetInviteCode)
+    contextBridge.exposeInMainWorld('presetEmail', presetEmail)
     contextBridge.exposeInMainWorld('backend', {
       sffs,
       resources
@@ -556,7 +593,16 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api
   // @ts-ignore (define in dts)
+  window.preloadEvents = eventHandlers
+  // @ts-ignore (define in dts)
+  window.processArgs = parseArguments()
+  // @ts-ignore (define in dts)
+  window.presetInviteCode = presetInviteCode
+  // @ts-ignore (define in dts)
+  window.presetEmail = presetEmail
+  // @ts-ignore (define in dts)
   window.backend = { sffs, resources }
 }
 
 export type API = typeof api
+export type PreloadEventHandlers = typeof eventHandlers
