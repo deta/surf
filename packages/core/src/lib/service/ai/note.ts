@@ -9,6 +9,7 @@ import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
 import type { AIChat, AIService } from './ai'
 import type { ContextManager } from './contextManager'
 import {
+  EventContext,
   PageChatUpdateContextEventAction,
   PageChatUpdateContextEventTrigger,
   ResourceTagsBuiltInKeys,
@@ -521,11 +522,12 @@ export class SmartNoteManager {
   async createNote(
     name?: string,
     content?: string,
-    opts?: { switch: boolean; reuseContext?: boolean }
+    opts?: { switch: boolean; reuseContext?: boolean; eventContext?: EventContext }
   ) {
     const options = {
       switch: opts?.switch ?? false,
-      reuseContext: opts?.reuseContext ?? true
+      reuseContext: opts?.reuseContext ?? true,
+      eventContext: opts?.eventContext ?? null
     }
 
     const isEmpty = !name && !content
@@ -559,6 +561,10 @@ export class SmartNoteManager {
 
     if (options.switch) {
       await this.changeActiveNote(note, options.reuseContext)
+    }
+
+    if (options.eventContext) {
+      this.resourceManager.telemetry.trackCreateNote(options.eventContext)
     }
 
     return note

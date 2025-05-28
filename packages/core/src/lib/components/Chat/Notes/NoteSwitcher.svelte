@@ -25,6 +25,7 @@
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useConfig } from '@horizon/core/src/lib/service/config'
+  import { EventContext } from '@horizon/types'
 
   export let selectedChatId: Writable<string> = writable('')
   export let open: Writable<boolean> = writable(false)
@@ -219,7 +220,7 @@
       loadingChat.set(true)
       log.debug('Creating new chat')
 
-      const note = await smartNotes.createNote('')
+      const note = await smartNotes.createNote('', { eventContext: EventContext.Chat })
       switchNote(note.id)
     } catch (err) {
       log.error('Failed to create chat:', err)
