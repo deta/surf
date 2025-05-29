@@ -62,7 +62,8 @@ function electronBuilderConfig() {
       signingHashAlgorithms: ['sha256'],
       forceCodeSigning: params.shouldSignWindows === 'true',
       sign: 'build/winSign.js',
-      publisherName: 'Deta GmbH'
+      publisherName: 'Deta GmbH',
+      signExts: ['.node', '.dll']
       //verifyUpdateCodeSignature: false
     },
     nsis: {
