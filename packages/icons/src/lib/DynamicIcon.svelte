@@ -62,7 +62,7 @@
 {#if icon.type === 'image'}
   <img src={icon.data} alt="icon" style="width: {size}; height: {size}" class="image" />
 {:else if icon.type === 'emoji'}
-  <div style="max-height: {size};" class="flex items-center justify-center overflow-hidden">
+  <div style="max-height: {size};" class="flex items-center justify-center">
     <span style="font-size: {size}; transfrom: scale(0.95);">{icon.data}</span>
   </div>
 {:else if icon.type === 'colors'}
