@@ -45,6 +45,7 @@
   const titleHovered = writable(false)
   const forceShowTitle = writable(false)
   const showBrowsingContextSelector = writable(false)
+  const dropdownOpen = writable(false)
 
   let inputElem: HTMLInputElement
 
@@ -164,6 +165,16 @@
         folderName: $activeSpaceData?.folderName
       })
     }
+  }
+
+  const configureContexts = () => {
+    dropdownOpen.set(false)
+    showBrowsingContextSelector.set(true)
+  }
+
+  const createNewContext = async () => {
+    dropdownOpen.set(false)
+    await switchSpace('new')
   }
 
   const handleChange = async (e: CustomEvent<string>) => {
@@ -351,7 +362,8 @@
   <SelectDropdown
     items={filterdItems}
     selected={$activeScopeId}
-    footerItem={configureBrowsingContext}
+    footerItem={true}
+    open={dropdownOpen}
     {searchValue}
     search="manual"
     inputPlaceholder="Search your contexts…"
@@ -365,6 +377,20 @@
       {#if item}
         <SelectDropdownItem {item} />
       {/if}
+    </div>
+
+    <div slot="footer" class="switcher-actions">
+      <button
+        on:click={() => createNewContext()}
+        class="switcher-action-btn switcher-action-btn-full"
+      >
+        <Icon name="add" />
+        New Context
+      </button>
+
+      <button on:click={() => configureContexts()} class="switcher-action-btn">
+        <Icon name="settings" />
+      </button>
     </div>
   </SelectDropdown>
 </div>
@@ -636,6 +662,45 @@
     input {
       font-size: 0.9rem;
       padding: 0.15rem;
+    }
+  }
+
+  .switcher-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem;
+    padding: 0.15rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--background-color);
+
+    :global(.dark) & {
+      border-top-color: var(--dark-border-color);
+      background-color: var(--dark-background-color);
+    }
+
+    .switcher-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+
+      &:hover {
+        background-color: rgba(2, 132, 199, 0.1);
+        color: rgb(2 132 199); // text-sky-600
+
+        :global(.dark) & {
+          background-color: rgb(59, 80, 111);
+          color: rgb(2 132 199); // text-sky-600
+        }
+      }
+    }
+
+    .switcher-action-btn-full {
+      flex: 1;
     }
   }
 </style>

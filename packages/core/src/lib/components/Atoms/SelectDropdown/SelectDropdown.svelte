@@ -10,7 +10,7 @@
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null
-  export let footerItem: SelectItem | null = null
+  export let footerItem: SelectItem | null | boolean = null
   export let search: 'auto' | 'manual' | 'disabled' = 'disabled'
   export let searchValue = writable<string>('')
   export let inputPlaceholder = 'Filter...'
@@ -232,17 +232,19 @@
             class="flex-shrink-0 border-t border-gray-200 dark:border-gray-600 px-0.5 py-0.5"
             class:top-shadow={overflowBottom}
           >
-            <DropdownMenu.Item
-              on:click={() => dispatch('select', footerItem.id)}
-              class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
-              footerItem.id
-                ? 'text-sky-600 dark:text-sky-400'
-                : 'dark:text-gray-100'}"
-            >
-              <slot name="item" item={footerItem}>
-                <SelectDropdownItem item={footerItem} />
-              </slot>
-            </DropdownMenu.Item>
+            <slot name="footer">
+              <DropdownMenu.Item
+                on:click={() => dispatch('select', footerItem.id)}
+                class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
+                footerItem.id
+                  ? 'text-sky-600 dark:text-sky-400'
+                  : 'dark:text-gray-100'}"
+              >
+                <slot name="item" item={footerItem}>
+                  <SelectDropdownItem item={footerItem} />
+                </slot>
+              </DropdownMenu.Item>
+            </slot>
           </div>
         {/if}
       </div>
