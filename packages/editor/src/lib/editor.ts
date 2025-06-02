@@ -106,7 +106,9 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     codeBlock: false,
     blockquote: false
   }),
-  Mathematics,
+  Mathematics.configure({
+    regex: /\$\$([^$]+)\$\$|\$(?!\s)([^$\n]+)(?<!\s)\$/gi
+  }),
   Underline,
   Link.configure({
     onClick: opts?.onLinkClick,
