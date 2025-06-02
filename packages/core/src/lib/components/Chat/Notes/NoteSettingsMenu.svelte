@@ -13,7 +13,6 @@
   import { ResourceTypes, type TabResource } from '@horizon/core/src/lib/types'
   import { Icon } from '@horizon/icons'
   import { conditionalArrayItem, copyToClipboard, useLogScope } from '@horizon/utils'
-  import { createEventDispatcher } from 'svelte'
   import { derived, writable } from 'svelte/store'
   import AppBarButton from '../../Browser/AppBarButton.svelte'
 
@@ -25,10 +24,6 @@
   const tabsManager = useTabsManager()
   const smartNotes = useSmartNotes()
   const toasts = useToasts()
-
-  const dispatch = createEventDispatcher<{
-    onboarding: void
-  }>()
 
   const isOpen = writable(false)
 

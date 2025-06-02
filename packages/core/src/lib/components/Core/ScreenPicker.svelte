@@ -37,7 +37,7 @@
   import { derived, get, readable, writable } from 'svelte/store'
   import { useToasts } from '../../service/toast'
   import { AIChat, useAI, type ChatPrompt } from '../../service/ai/ai'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { Icon } from '@horizon/icons'
   import { hasParent, startingClass } from '../../utils/dom'
   import Chat from '../Chat/Chat.svelte'
   import ChatOld from '../Chat/ChatOld.svelte'
@@ -50,7 +50,6 @@
     type App
   } from '@horizon/types'
   import { useTelemetry } from '../../service/telemetry'
-  import PromptItem from '../Chat/PromptItem.svelte'
   import ChatInput from '../Chat/ChatInput.svelte'
   import { SelectDropdown, SelectDropdownItem, type SelectItem } from '../Atoms/SelectDropdown'
   import { quartOut } from 'svelte/easing'
@@ -143,7 +142,6 @@
   let chatComponent: Chat | ChatOld
 
   let showAddPromptDialog = false
-  let promptValue: string = ''
 
   const appModalContent = writable<App | null>(null)
   const note = writable<SmartNote | null>(null)
@@ -942,13 +940,8 @@
                 {#if $note}
                   <Chat
                     bind:this={chatComponent}
-                    bind:inputValue={promptValue}
                     note={$note}
-                    contextItemErrors={[]}
-                    preparingTabs={false}
                     inputOnly={!$state.isChatExpanded}
-                    showAddToContext={false}
-                    showContextBar={false}
                     on:clear-chat={() => {}}
                     on:clear-errors={() => {}}
                     on:close-chat
@@ -961,7 +954,6 @@
               {:else if $activeChat}
                 <ChatOld
                   bind:this={chatComponent}
-                  bind:inputValue={promptValue}
                   chat={$activeChat}
                   contextItemErrors={[]}
                   preparingTabs={false}

@@ -10,41 +10,26 @@
     PromptType
   } from '@horizon/types'
 
-  import type { AIChatMessageRole } from '../../types/browser.types'
   import { DragTypeNames, type DragTypes } from '../../types'
 
   import { Resource, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
-  import { useAI, type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
+  import { type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
 
   import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'
   import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { SmartNote } from '@horizon/core/src/lib/service/ai/note'
-  import ChatControls from './ChatControls.svelte'
-  import { useConfig } from '@horizon/core/src/lib/service/config'
   import { onMount } from 'svelte'
 
   export let note: SmartNote
-
-  // TDOO: replace with new context store in AI service
-  export let preparingTabs: boolean = false
-
   export let inputOnly = false
-  export let showAddToContext = true
 
   const log = useLogScope('Chat')
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-  const ai = useAI()
-  const config = useConfig()
-  const smartNotes = ai.smartNotes
 
-  const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
-  const activeNoteId = smartNotes.activeNoteId
   const contextManager = note.contextManager
-
-  $: chat = note.chat
 
   let noteComp: TextResource
 
@@ -259,70 +244,12 @@
       />
     </div>
   {/if}
-
-  <!--
-  <ChatControls
-    chatId={note.id}
-    active={note.id === $activeNoteId}
-    contextManager={note.contextManager}
-    showInput={$userConfigSettings.experimental_notes_chat_input}
-    {preparingTabs}
-    {showAddToContext}
-    on:open-context-item
-    on:process-context-item
-    on:run-prompt={handleRunPrompt}
-    on:submit={handleSubmit}
-  />-->
 </div>
 
 <style lang="scss">
   :global(#magic-chat[data-drag-target]) {
     outline: 2px dashed gray;
     outline-offset: -2px;
-  }
-
-  /* Prevent copy button cuttof */
-  .response-wrapper:hover {
-    position: relative;
-    z-index: 5;
-  }
-
-  .icon {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .query {
-    flex: 1;
-  }
-
-  .empty {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 1rem;
-    opacity: 0.75;
-    transition: opacity 0.2s ease;
-
-    .empty-title {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      h1 {
-        font-size: 1.25rem;
-        font-weight: 500;
-      }
-    }
-
-    p {
-      text-align: center;
-    }
   }
 
   :global(.chat-message-content h2) {

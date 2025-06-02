@@ -135,7 +135,6 @@
   import { EditorAIGeneration, NoteEditor } from '@horizon/core/src/lib/service/editor'
   import ChatInput from '../../../Notes/ChatInput.svelte'
   import NoteTitle from '../../../Notes/Atoms/NoteTitle.svelte'
-  import ChatControls from '../../../Chat/ChatControls.svelte'
 
   export let resourceId: string
   export let autofocus: boolean = true

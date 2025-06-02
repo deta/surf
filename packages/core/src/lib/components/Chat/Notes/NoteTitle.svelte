@@ -6,12 +6,12 @@
   export let small: boolean = false
   export let fallback = 'New Note'
 
-  $: title = note.title
-  $: generatingTitle = note.generatingTitle
-
+  let inputElem: HTMLInputElement
   let showReveal = false
   let startedGenerating = false
 
+  $: title = note.title
+  $: generatingTitle = note.generatingTitle
   $: if ($generatingTitle) {
     startedGenerating = true
   }
@@ -24,8 +24,6 @@
       showReveal = false
     }, 400)
   }
-
-  let inputElem: HTMLInputElement
 
   const handleUpdateTitle = useDebounce((e) => {
     const value = e.target.value

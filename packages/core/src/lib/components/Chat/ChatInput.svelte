@@ -3,7 +3,6 @@
   import { Editor } from '@horizon/editor'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
-  import type { AIChat } from '../../service/ai/chat'
   import { useLogScope } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
   import ModelPicker from './ModelPicker.svelte'
@@ -14,8 +13,6 @@
 
   export let loading: boolean = false
   export let viewTransitionName: string | undefined = undefined
-
-  const log = useLogScope('ChatInput')
 
   let editor: unknown
   let inputValue: string = ''
@@ -79,36 +76,6 @@
   </div>
 
   <div class="flex items-center gap-2 relative justify-end">
-    <!--{#if $tabPickerOpen}
-      <ChatContextTabPicker
-        tabs={contextPickerTabs}
-        {contextManager}
-        on:close={() => {
-          $tabPickerOpen = false
-          if (editor) {
-            editor.focus()
-          }
-        }}
-      />
-    {/if}-->
-
-    <!--{#if showAddToContext}
-      <button
-        disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
-        popovertarget="chat-add-context-tabs"
-        class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
-        on:click={(e) => {
-          $tabPickerOpen = !$tabPickerOpen
-        }}
-        use:tooltip={{
-          text: 'Add tab',
-          position: 'left'
-        }}
-      >
-        <Icon name={'add'} size={'18px'} className="opacity-60" />
-      </button>
-    {/if}-->
-
     <ModelPicker />
 
     <button

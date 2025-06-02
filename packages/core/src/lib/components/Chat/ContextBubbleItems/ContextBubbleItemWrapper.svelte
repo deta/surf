@@ -33,19 +33,6 @@
     'remove-item': string
   }>()
 
-  const handleSelect = (id: string) => {
-    dispatch('select', id)
-  }
-
-  const handleExcludeItem = (id: string) => {
-    dispatch('remove-item', id)
-  }
-
-  const handleRety = (id: string) => {
-    dispatch('retry', id)
-  }
-
-  $: label = item.label
   $: contextMenuKey = `context-item-${item.id}`
 
   $: canRetry =
@@ -77,6 +64,18 @@
       }
     ]
   } satisfies CtxMenuProps
+
+  const handleSelect = (id: string) => {
+    dispatch('select', id)
+  }
+
+  const handleExcludeItem = (id: string) => {
+    dispatch('remove-item', id)
+  }
+
+  const handleRety = (id: string) => {
+    dispatch('retry', id)
+  }
 </script>
 
 <CustomPopover
@@ -155,17 +154,6 @@
     border-radius: 0.75rem;
     font-size: 0.85rem;
   }
-
-  //.experimental {
-  //  &.pill,
-  //  .pill {
-  //    border-top: 0;
-  //    border-radius: 0 0 11px 11px;
-  //    transform: none !important;
-  //    transform-origin: center center;
-  //    height: 36px;
-  //  }
-  //}
 
   .pill {
     button.remove {

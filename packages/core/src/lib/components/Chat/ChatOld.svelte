@@ -25,7 +25,6 @@
     PageChatUpdateContextEventAction,
     PageChatUpdateContextEventTrigger,
     PromptType,
-    ResourceTagsBuiltInKeys,
     ResourceTypes,
     SaveToOasisEventTrigger
   } from '@horizon/types'
@@ -47,8 +46,6 @@
   import { AIChat, useAI, type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
 
   import ChatMessageMarkdown from './ChatMessageMarkdown.svelte'
-  import ContextBubbles from './ContextBubbles.svelte'
-  import ChatContextTabPicker from './ChatContextTabPicker.svelte'
   import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import PromptItem from './PromptItem.svelte'
@@ -68,6 +65,7 @@
   import { Provider } from '@horizon/types/src/ai.types'
   import ModelPicker from './ModelPicker.svelte'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
+  import NoteContextBubbles from '@horizon/core/src/lib/components/Notes/NoteContextBubbles.svelte'
 
   export let chat: AIChat
   export let inputValue = ''
@@ -1266,28 +1264,13 @@
             transition:slide={{ duration: 150, axis: 'y', delay: 350 }}
             data-tooltip-target="context-bar"
           >
-            <div class=" flex-row items-center gap-2 flex">
-              <ContextBubbles
-                {contextManager}
-                on:select={handleSelectContextItem}
-                on:remove-item={handleRemoveContextItem}
-                on:retry={handleRetryContextItem}
-              />
-              {#if $visibleContextItems.length > 0}
-                <button
-                  class="flex items-center gap-2 p-2 text-sm rounded-lg opacity-60 hover:bg-blue-200 dark:hover:bg-gray-800"
-                  on:click={() => {
-                    handleClearContext()
-                  }}
-                  use:tooltip={{
-                    text: 'Shift + ⌫',
-                    position: 'left'
-                  }}
-                >
-                  <Icon name="close" />
-                </button>
-              {/if}
-            </div>
+            <NoteContextBubbles
+              {contextManager}
+              pickerOpen={writable(true)}
+              layout={'bottom'}
+              canClose={false}
+            />
+            <div class=" flex-row items-center gap-2 flex mb-8"></div>
           </div>
         {/if}
       {/if}
@@ -1299,6 +1282,7 @@
       class:rounded-xl={!smallSize}
       class:flex-col={!smallSize}
       class:items-center={smallSize}
+      role="none"
       on:keydown={handleInputKeydown}
       on:keyup={handleInputKeyup}
     >
@@ -1316,36 +1300,6 @@
       </div>
 
       <div class="flex items-center gap-2 relative justify-end context-controls">
-        {#if $tabPickerOpen}
-          <ChatContextTabPicker
-            tabs={contextPickerTabs}
-            {contextManager}
-            on:close={() => {
-              $tabPickerOpen = false
-              if (editor) {
-                editor.focus()
-              }
-            }}
-          />
-        {/if}
-
-        {#if showAddToContext}
-          <button
-            disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
-            popovertarget="chat-add-context-tabs"
-            class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-2 py-2 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
-            on:click={(e) => {
-              $tabPickerOpen = !$tabPickerOpen
-            }}
-            use:tooltip={{
-              text: 'Add tab',
-              position: 'left'
-            }}
-          >
-            <Icon name={'add'} size={'18px'} className="opacity-60" />
-          </button>
-        {/if}
-
         <ModelPicker />
 
         <button
@@ -1382,22 +1336,10 @@
       opacity: 1;
     }
   }
-  .animate-blur {
-    animation: blurIn 0.42s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-  }
 
   :global(#magic-chat[data-drag-target]) {
     outline: 2px dashed gray;
     outline-offset: -2px;
-  }
-
-  .content {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    flex: 1;
-    overflow: auto;
-    padding-bottom: 4rem;
   }
 
   /* Prevent copy button cuttof */
@@ -1412,72 +1354,6 @@
     flex-direction: column;
     font-family: inherit;
     z-index: 10;
-
-    .editor-wrapper {
-      flex: 1;
-      background: #fff;
-      border: 1px solid #eeece0;
-      border-radius: 12px;
-      padding: 0.75rem;
-      font-size: 1rem;
-      font-family: inherit;
-      resize: vertical;
-      min-height: 80px;
-    }
-  }
-
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #2b2715;
-    white-space: nowrap;
-
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 500;
-    }
-  }
-
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-    border-radius: 8px;
-    color: #3f3f3f;
-
-    p {
-      flex: 1;
-      font-size: 1rem;
-      font-weight: 500;
-      color: #3f3f3f;
-      margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  .output-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  .input {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    overflow: hidden;
-    opacity: 0.75;
   }
 
   .icon {
@@ -1489,93 +1365,6 @@
 
   .query {
     flex: 1;
-  }
-
-  .output-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    button {
-      appearance: none;
-      border: none;
-      background: none;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-
-      &:hover {
-        opacity: 1 !important;
-      }
-    }
-  }
-
-  input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    font-size: 1rem;
-    background-color: #fff;
-    color: #3f3f3f;
-
-    &:hover {
-      background: #eeece0;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: #f73b95;
-      color: #000;
-      background-color: #ffffff;
-    }
-  }
-
-  .prompts {
-    position: absolute;
-    bottom: 4.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    width: 100%;
-    padding: 15px 0;
-    overflow-x: auto;
-    // linear gradient from bottom background color to transparent top
-    background: linear-gradient(180deg, transparent, #eeece0);
-
-    button {
-      flex-shrink: 0;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background: #fff;
-      color: #353535;
-      font-size: 1rem;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      transition: background 0.2s;
-
-      &:hover {
-        background: #f6f5ef;
-      }
-    }
-  }
-
-  .clear-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: auto;
-    border: none;
-    background: none;
-    color: #616179;
-    font-size: 1rem;
-
-    &:hover {
-      color: #2b2b3d;
-    }
   }
 
   .empty {

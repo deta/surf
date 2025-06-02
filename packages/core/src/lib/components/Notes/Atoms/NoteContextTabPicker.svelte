@@ -20,7 +20,6 @@
 </script>
 
 <script lang="ts">
-  import { createState } from '@horizon/cmdk-sv'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
@@ -49,7 +48,6 @@
     ContextItemTypes,
     ContextItemResource
   } from '@horizon/core/src/lib/service/ai/contextManager'
-  import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import {
     ACTIVE_CONTEXT_MENTION,
     EVERYTHING_MENTION,
@@ -72,7 +70,6 @@
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
   const config = useConfig()
-  const ai = useAI()
 
   const userConfigSettings = config.settings
   const spaces = oasis.spaces
@@ -538,111 +535,6 @@
 <svelte:window on:mouseup={handleMouseUp} />
 
 <style lang="scss">
-  /* NOTE: WHyyyy only tailwind? cant select anything by a meaningful name any more :') */
-  // NOTE: Please for god sake let us remember to remove these war crimes
-  :global(.text-resource-wrapper:has(.editor-input-bar.bottom) [data-cmdk-root]) {
-    transform: none;
-    bottom: 7rem;
-    right: 2rem;
-    position-anchor: unset;
-    position-area: unset;
-  }
-  :global(.text-resource-wrapper:has(.editor-input-bar:not(.bottom).floaty) [data-cmdk-root]) {
-    bottom: calc(anchor(--floaty-bar-attach top) - 2.5rem);
-  }
-  :global(.text-resource-wrapper:has(.editor-input-bar.floaty.flip-picker) [data-cmdk-root]) {
-    top: calc(anchor(--floaty-bar-attach bottom) + 3.75rem);
-  }
-  :global(.text-resource-wrapper:has(.editor-input-bar.flip-picker) [data-cmdk-root]) {
-    bottom: unset !important;
-    top: calc(anchor(--floaty-bar-attach bottom) + 3rem);
-  }
-  :global([data-cmdk-root]) {
-    position: absolute;
-    position-anchor: --floaty-bar-attach;
-    bottom: calc(anchor(--floaty-bar-attach top) - 1.75rem);
-    right: anchor(--floaty-bar-attach right);
-
-    /* we should just use isolation: isolate for contained things like the sidebar insted of these zindices */
-    z-index: 99999999;
-    //top: -0.75rem;
-    //right: 0;
-    //transform: translateY(-100%);
-    min-width: 30ch;
-    max-width: 30ch;
-    margin-right: 1.25rem;
-
-    :global([data-cmdk-empty]) {
-      opacity: 0.8;
-    }
-
-    :global([data-cmdk-list]) {
-      height: var(--cmdk-list-height);
-      max-height: 310px;
-      transition: height 100ms ease-out;
-      scroll-padding-block-start: 8px;
-      scroll-padding-block-end: 8px;
-      overflow: hidden;
-      overflow-y: auto;
-      font-size: 0.9em;
-    }
-
-    :global(input[type='text']) {
-      width: 100%;
-
-      &:focus {
-        outline: 1.5px solid rgba(202, 205, 212, 1);
-      }
-    }
-
-    :global([data-cmdk-item]) {
-      padding: 0.25rem 0.5rem;
-      border-radius: 0.5rem;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-
-      :global(.color-icon) {
-        min-width: unset;
-        min-height: unset;
-      }
-    }
-
-    :global([data-selected='true']) {
-      background-color: rgba(0, 0, 0, 0.1);
-    }
-
-    :global([data-item-selected='true']) {
-      opacity: 0.65;
-    }
-
-    :global([data-cmdk-group-heading]) {
-      font-size: 0.9em;
-      font-weight: 400;
-      letter-spacing: 0.01em;
-      opacity: 0.5;
-      padding: 3px 0;
-      color: light-dark(black, white);
-    }
-
-    :global(.picker-actions) {
-      //position: absolute;
-      //top: 0;
-      //left: 0;
-      width: 100%;
-      //transform: translateY(-50%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-
-      button {
-        flex-shrink: 0;
-      }
-    }
-  }
-
   // Holy fuck, fire me for this code.. but our icon components are just doing whatever they want
   :global(div[role='menuitem']) {
     //overflow: hidden;
@@ -653,8 +545,5 @@
   :global(div[role='menuitem']:has(> div.section)) {
     pointer-events: none !important;
     background: none !important;
-    &[data-highlighted] {
-      background: none !important;
-    }
   }
 </style>

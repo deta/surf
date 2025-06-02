@@ -5,7 +5,6 @@
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import { createEventDispatcher } from 'svelte'
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { tooltip } from '@horizon/utils'
   import {
@@ -19,10 +18,6 @@
   export let selectedContext = writable<string | null>(null)
   export let spaces = readable<OasisSpace[]>([])
   export let disabled: boolean = false
-
-  const dispatch = createEventDispatcher<{
-    select: string
-  }>()
 
   const searchValue = writable('')
   const open = writable(false)

@@ -1,13 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { readable, writable } from 'svelte/store'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { Icon } from '@horizon/icons'
   import { tooltip } from '@horizon/utils'
 
   import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
   import SimilarityItem from './SimilarityItem.svelte'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import ChangeContextBtn from './ChangeContextBtn.svelte'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useLogScope } from '@horizon/utils/src/log'
   // import CardSwipeStack from '@horizon/core/src/lib/components/Atoms/CardSwipeStack.svelte'

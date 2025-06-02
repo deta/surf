@@ -32,7 +32,7 @@
     submit: { query: string; mentions: MentionItem[] }
   }>()
 
-  const log = useLogScope('ChatControls')
+  const log = useLogScope('NoteInputSavedPrompts')
   const config = useConfig()
   const ai = useAI()
 
@@ -63,6 +63,7 @@
   const runPrompt = async (prompt: ChatPrompt, custom: boolean = false) => {
     dispatch('run-prompt', { prompt, custom })
   }
+
   onMount(() => {
     log.debug('mounted', contextManager, contextManager.key)
 

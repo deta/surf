@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SurfletRenderer from '../SurfletRenderer.svelte'
-  import { useLogScope } from '@horizon/utils'
 
-  import { type Editor, NodeViewWrapper, NodeViewContent } from '@horizon/editor'
+  import { type Editor } from '@horizon/editor'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   export let node

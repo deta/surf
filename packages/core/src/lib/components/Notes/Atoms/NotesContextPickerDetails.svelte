@@ -14,6 +14,7 @@
   export let contextManager = ContextManager
   export let layout: 'floaty' | 'bottom' = 'floaty'
   export let firstLine: boolean = false
+  export let canClose: boolean = true
 
   const dispatch = createEventDispatcher<{
     close: void
@@ -24,8 +25,7 @@
 
   const tabsManager = useTabsManager()
   const tabs = tabsManager.tabs
-
-  const { items: contextItems, tabsInContext, generatingPrompts, generatedPrompts } = contextManager
+  const tabsInContext = contextManager.tabsInContext
 
   const contextPickerTabs = derived([tabs, tabsInContext], ([tabs, tabsInContext]) => {
     return tabs
@@ -72,16 +72,18 @@
       <svelte:fragment slot="content">Add Context</svelte:fragment>
     </Tooltip>
 
-    <Tooltip side="top">
-      <AppBarButton
-        on:click={() => {
-          dispatch('close')
-        }}
-      >
-        <Icon name="close" size="1rem" />
-      </AppBarButton>
-      <svelte:fragment slot="content">Close</svelte:fragment>
-    </Tooltip>
+    {#if canClose}
+      <Tooltip side="top">
+        <AppBarButton
+          on:click={() => {
+            dispatch('close')
+          }}
+        >
+          <Icon name="close" size="1rem" />
+        </AppBarButton>
+        <svelte:fragment slot="content">Close</svelte:fragment>
+      </Tooltip>
+    {/if}
   </div>
 </div>
 

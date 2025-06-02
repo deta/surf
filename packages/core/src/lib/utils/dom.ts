@@ -1,5 +1,3 @@
-import { tick } from 'svelte'
-
 export function hasParent(node: HTMLElement | EventTarget | null, el: HTMLElement) {
   let test: HTMLElement | null = node as HTMLElement | null
   while (test && test !== el) {

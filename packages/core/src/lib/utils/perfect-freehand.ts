@@ -1,5 +1,4 @@
 import { getStroke } from 'perfect-freehand'
-import { cubicInOut } from 'svelte/easing'
 
 const linear = (t: number) => t
 

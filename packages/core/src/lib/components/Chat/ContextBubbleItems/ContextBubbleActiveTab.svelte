@@ -12,8 +12,6 @@
 
   export let item: ContextItemActiveTab
 
-  $: label = item.label
-  $: icon = item.icon
   $: activeItem = item.item
   $: loading = item.loading
 

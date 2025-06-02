@@ -6,7 +6,7 @@
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { quartOut } from 'svelte/easing'
   import { fly } from 'svelte/transition'
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import type { App } from '@horizon/backend/types'
   import { Editor } from '@horizon/editor'
   import { wait } from '@horizon/utils'

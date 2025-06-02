@@ -91,7 +91,6 @@
   const id = generateID()
 
   let copyIcon: IconConfirmation
-  let saveIcon: IconConfirmation
   let copyOutputIcon: IconConfirmation
 
   let preElem: HTMLPreElement
@@ -838,7 +837,7 @@
     makeCodeEditable()
   }
 
-  const handleResizeStart = (e: MouseEvent) => {
+  const handleResizeStart = (e: MouseEvent | PointerEvent) => {
     if (!resizable) return
 
     isResizing = true
@@ -1303,6 +1302,7 @@
       bind:this={preElem}
       class="h-full overflow-auto code-wrapper"
       style="color: white;"
+      role="none"
       on:input={handleCodeInput}
       on:click|stopPropagation><slot>{codeContent}</slot></pre>
   </div>
@@ -1333,6 +1333,7 @@
   {#if resizable && !collapsed}
     <div
       class="resize-handle"
+      role="none"
       on:mousedown|stopPropagation={handleResizeStart}
       on:touchstart|preventDefault={handleResizeStart}
     />

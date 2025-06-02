@@ -1,10 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { Resource, ResourceAnnotation, ResourceManager } from '../../service/resources'
+  import type { Resource, ResourceManager } from '../../service/resources'
   import type { AIChatMessageSource } from '../../types/browser.types'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
-  //import { get } from 'svelte/store'
-  //import { oasisAPIEndpoint } from './BrowserHomescreen.svelte'
   import { useLogScope } from '@horizon/utils'
 
   export let source: AIChatMessageSource

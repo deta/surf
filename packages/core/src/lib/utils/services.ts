@@ -26,7 +26,7 @@ import slackIcon from '@horizon/core/public/assets/services/slack.svg'
 import discordIcon from '@horizon/core/public/assets/services/discord.svg'
 import youtubeIcon from '@horizon/core/public/assets/services/youtube.svg'
 import twitterIcon from '@horizon/core/public/assets/services/twitter.svg'
-import { SERVICES, type WebService } from '@horizon/web-parser'
+import { SERVICES } from '@horizon/web-parser'
 
 export function getServiceIcon(id: (typeof SERVICES)[number]['id']) {
   switch (id) {

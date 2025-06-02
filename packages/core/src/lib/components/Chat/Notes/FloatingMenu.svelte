@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import { Icon } from '@horizon/icons'
   import { horizontalScroll } from '@horizon/utils'
 
   import type { ChatPrompt } from '@horizon/core/src/lib/service/ai/chat'
-  import SuggestionItem from './SuggestionItem.svelte'
   import PromptItem from '../PromptItem.svelte'
   import { startingClass } from '../../../utils/dom'
 
@@ -21,10 +19,6 @@
 
   const runPrompt = (prompt: ChatPrompt) => {
     dispatch('runPrompt', prompt)
-  }
-
-  const generatePrompts = () => {
-    dispatch('generatePrompts')
   }
 </script>
 

@@ -100,10 +100,6 @@
     display: none;
   }
 
-  .isEmpty {
-    //display: none;
-  }
-
   .floaty .bubble-wrapper {
     &:global(._starting) {
       opacity: 0 !important;
@@ -138,8 +134,7 @@
 
     &:hover {
       z-index: 999;
-      box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
-      --offset-y: -1px;
+      --offset-y: -0.5px;
     }
   }
 </style>

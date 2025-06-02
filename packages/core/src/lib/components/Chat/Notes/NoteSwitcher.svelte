@@ -42,15 +42,16 @@
   const filteredNotes = writable<ResourceNote[]>([])
   const notes = smartNotes.rawNotes
 
-  $: if ($searchValue) {
-    handleSearch($searchValue)
-  }
-
   const selectNewItem = {
     id: 'new',
     label: 'Create Note',
     icon: 'add'
   } as SelectItem
+
+  $: if ($searchValue) {
+    handleSearch($searchValue)
+  }
+  $: loadNotes($notes)
 
   // Get the current space ID from activeScopeId
   const currentSpaceId = derived([tabsManager.activeScopeId], ([$activeScopeId]) => {
@@ -68,8 +69,6 @@
         .slice(0, maxItems)
     )
   }
-
-  $: loadNotes($notes)
 
   const items = derived([filteredNotes, selectedChatId], ([notes, selectedChatId]) => {
     return notes

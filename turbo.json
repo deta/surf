@@ -74,10 +74,6 @@
       "outputs": [".dist/**"],
       "outputLogs": "new-only"
     },
-    "@horizon/cmdk-sv#build": {
-      "outputs": [".dist/**"],
-      "outputLogs": "new-only"
-    },
     "@horizon/types#build": {
       "outputs": [".build/**"],
       "outputLogs": "new-only"
@@ -92,11 +88,7 @@
       "outputLogs": "new-only"
     },
     "build:app:frontend": {
-      "dependsOn": [
-        "@horizon/core#build:tailwind",
-        "@horizon/dragcula#build",
-        "@horizon/cmdk-sv#build"
-      ],
+      "dependsOn": ["@horizon/core#build:tailwind", "@horizon/dragcula#build"],
       "outputs": [".dist/**", ".out/**"]
     },
     "build:app:backend": {
@@ -123,8 +115,7 @@
         "@horizon/dragcula#build",
         "@horizon/trackpad#dev",
         "@horizon/backend#dev",
-        "@horizon/backend-server#dev",
-        "@horizon/cmdk-sv#build"
+        "@horizon/backend-server#dev"
       ],
       "outputs": [".dist/**", ".out/**"]
     },
@@ -133,8 +124,7 @@
         "@horizon/dragcula#build",
         "@horizon/trackpad#dev",
         "@horizon/backend#dev",
-        "@horizon/backend-server#build",
-        "@horizon/cmdk-sv#build"
+        "@horizon/backend-server#build"
       ],
       "cache": false,
       "persistent": true

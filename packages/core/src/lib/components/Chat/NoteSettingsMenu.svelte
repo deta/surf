@@ -24,7 +24,6 @@
   const log = useLogScope('NoteSettingsMenu')
   const oasis = useOasis()
   const tabsManager = useTabsManager()
-  const smartNotes = useSmartNotes()
   const toasts = useToasts()
 
   const dispatch = createEventDispatcher<{

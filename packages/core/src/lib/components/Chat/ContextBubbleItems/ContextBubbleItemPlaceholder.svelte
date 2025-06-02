@@ -2,7 +2,6 @@
   import { createEventDispatcher } from 'svelte'
   import { Icon, type Icons } from '@horizon/icons'
 
-  import type { PillProperties } from './ContextBubbleItemWrapper.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let id: string

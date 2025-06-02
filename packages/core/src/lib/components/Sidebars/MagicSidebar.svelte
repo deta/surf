@@ -335,7 +335,6 @@
       <Chat
         bind:this={chatComponent}
         note={$activeNote}
-        preparingTabs={false}
         on:clear-chat={handleClear}
         on:clear-errors={handleClearErrors}
         on:close-chat
@@ -378,21 +377,5 @@
   :global(#magic-chat[data-drag-target]) {
     outline: 2px dashed gray;
     outline-offset: -2px;
-  }
-
-  .chat-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem;
-    border-bottom: 1px dashed rgb(203, 234, 255);
-  }
-
-  .chat-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
   }
 </style>

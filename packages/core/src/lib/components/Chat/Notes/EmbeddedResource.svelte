@@ -10,7 +10,6 @@
 
   import SurfletRenderer from '../SurfletRenderer.svelte'
   import CollapsableResourceEmbed from '@horizon/core/src/lib/components/Chat/Notes/CollapsableResourceEmbed.svelte'
-  import CollapsableResourceBlock from '@horizon/core/src/lib/components/Oasis/CollapsableResourceBlock.svelte'
 
   export let id: string
   export let preview: boolean = false

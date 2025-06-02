@@ -37,10 +37,6 @@
   export let loadingMessage: string | undefined = undefined
   export let additionalWrapperStyles = ''
 
-  let isResizing = false
-  let startY = 0
-  let startHeight = 0
-
   const log = useLogScope('CodeBlock')
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<{ 'change-title': string }>()
@@ -51,9 +47,11 @@
   let codeBlockELem: HTMLElement
   let containerHeight = initialHeight
   let savedPrefs: UserViewPrefsTagValue | null = null
+  let isResizing = false
+  let startY = 0
+  let startHeight = 0
 
   // Load saved height from resource tag
-
   $: updateResourceViewPrefs(containerHeight, collapsed)
 
   $: if (resource) {

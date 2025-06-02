@@ -1,16 +1,15 @@
-<script>
+<script lang="ts">
   import { createEventDispatcher, onMount, afterUpdate } from 'svelte'
   import { fade, fly } from 'svelte/transition'
 
-  let popoverEl
-  let backdropEl
+  let popoverEl: HTMLElement
+  let backdropEl: HTMLElement
 
   export let opened = false
   export let arrow = true
   export let targetEl
   export let position = 'bottom-center' // Default position
   export let backdrop = true
-  export let backdropUnique = false
   export let closeByBackdropClick = true
   export let closeByOutsideClick = true
   export let closeOnEscape = false
@@ -35,7 +34,7 @@
     if (closeByBackdropClick) closePopover()
   }
 
-  const handleOutsideClick = (event) => {
+  const handleOutsideClick = (event: MouseEvent) => {
     if (
       closeByOutsideClick &&
       !popoverEl.contains(event.target) &&

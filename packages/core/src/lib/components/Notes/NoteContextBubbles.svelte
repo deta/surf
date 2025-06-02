@@ -15,6 +15,7 @@
   export let pickerOpen: Writable<boolean> = writable(false)
   export let layout: 'floaty' | 'bottom' = 'floaty'
   export let firstLine: boolean = false
+  export let canClosePicker: boolean = true
 
   const log = useLogScope('NoteContextBubbles')
   const tabsManager = useTabsManager()
@@ -132,6 +133,7 @@
         on:close={() => ($pickerOpen = false)}
         {layout}
         {firstLine}
+        canClose={canClosePicker}
         on:retry={handleRetryContextItem}
         on:select={handleOpenAsTab}
         on:remove-item={handleRemoveContextItem}

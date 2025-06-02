@@ -45,6 +45,12 @@
   export let hideHeader = false
   export let isEditable: boolean = true
 
+  export const reloadApp = async () => {
+    if (showPreview || showHiddenPreview) {
+      renderHTMLPreview()
+    }
+  }
+
   const log = useLogScope('CollapsableResourceEmbed')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
@@ -194,12 +200,6 @@
 
     // @ts-ignore
     webview.src = canonicalUrl
-  }
-
-  export const reloadApp = async () => {
-    if (showPreview || showHiddenPreview) {
-      renderHTMLPreview()
-    }
   }
 
   const openMiniBrowser = async () => {

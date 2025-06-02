@@ -19,7 +19,6 @@
     "build:backend": "yarn turbo run @horizon/backend#build",
     "build:tela": "yarn workspace @horizon/tela build",
     "build:dragcula": "yarn workspace @horizon/dragcula build",
-    "build:cmdk": "yarn workspace @horizon/cmdk-sv build",
     "lint": "turbo lint",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md,svelte}\"",
     "prepare": "husky",

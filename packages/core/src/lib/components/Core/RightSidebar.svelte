@@ -11,20 +11,16 @@
   import ChatTitle from '@horizon/core/src/lib/components/Chat/ChatTitle.svelte'
   import NoteTitle from '@horizon/core/src/lib/components/Chat/Notes/NoteTitle.svelte'
 
-  import ChatContext from '@horizon/core/src/lib/components/Chat/ChatContext.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import type { RightSidebarTab } from '@horizon/types'
   import { useLogScope } from '@horizon/utils'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
-  import { launchTimeline, endTimeline } from '../Onboarding/timeline'
-
   import { CompletionEventID } from '../Onboarding/onboardingScripts'
-  import { OnboardingFeature, OnboardingAction } from '../Onboarding/onboardingScripts'
+  import { OnboardingFeature } from '../Onboarding/onboardingScripts'
   import ModelPicker from '../Chat/ModelPicker.svelte'
   import AppBarButton from '../Browser/AppBarButton.svelte'
-  import A1 from '../Onboarding/sections/01.SaveAnything.svelte'
   import NoteSettingsMenu from '../Chat/NoteSettingsMenu.svelte'
   import Tooltip from '../Atoms/Tooltip.svelte'
   import { debugMode } from '@horizon/core/src/lib/stores/debug'
@@ -108,13 +104,7 @@
             <svelte:fragment slot="content">New Note</svelte:fragment>
           </Tooltip>
 
-          <!-- <button on:click={() => activeTab.set('root')}>
-            <ChatContext />
-          </button> -->
-
           {#if $activeTab === 'chat'}
-            <!-- <span>/</span> -->
-
             {#if $userSettings.experimental_notes_chat_sidebar && $activeNote}
               <div class="w-fit max-w-full overflow-hidden">
                 <NoteTitle note={$activeNote} />

@@ -2,13 +2,11 @@
   import { ContextItemTypes, type ContextItem } from '@horizon/core/src/lib/service/ai/context'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { DynamicIcon, Icon } from '@horizon/icons'
-  import { useLogScope } from '@horizon/utils'
   import type { Readable } from 'svelte/store'
 
   export let item: ContextItem
   export let loading: boolean = false
 
-  const log = useLogScope('NoteContextItemIcon')
   const resourceManager = useResourceManager()
   const resources = resourceManager.resources
 
