@@ -885,7 +885,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     this.log.debug('Creating new importer tab')
     const newTab = await this.create<TabImporter>(
       {
-        title: 'Import Bookmarks',
+        title: 'Browser Importer',
         icon: '',
         type: 'importer',
         index: 0,

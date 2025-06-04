@@ -161,15 +161,8 @@ class AppMenu {
           click: () => importFiles()
         },
         {
-          id: 'importBrowserHistory',
-          label: 'Import Browser History',
-          click: () => {
-            ipcSenders.openImporter()
-          }
-        },
-        {
-          id: 'importBookmarks',
-          label: 'Import Browser Bookmarks',
+          id: 'openImporter',
+          label: 'Import Bookmarks and History',
           click: () => {
             ipcSenders.openImporter()
           }

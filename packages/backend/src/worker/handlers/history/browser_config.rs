@@ -60,12 +60,11 @@ fn edge_history_path(home_dir: &str) -> PathBuf {
         _ => Path::new(home_dir).join(""),
     }
 }
-
 fn opera_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/com.operasoftware.Opera/History"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/History"),
-        "linux" => Path::new(home_dir).join(".config/opera/History"),
+        "macos" => Path::new(home_dir).join("Library/Application Support/com.operasoftware.Opera/Default/History"),
+        "windows" => Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Default/History"),
+        "linux" => Path::new(home_dir).join(".config/opera/Default/History"),
         _ => Path::new(home_dir).join(""),
     }
 }
@@ -205,9 +204,9 @@ fn edge_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn opera_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/com.operasoftware.Opera/Bookmarks"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Bookmarks"),
-        "linux" => Path::new(home_dir).join(".config/opera/Bookmarks"),
+        "macos" => Path::new(home_dir).join("Library/Application Support/com.operasoftware.Opera/Default/Bookmarks"),
+        "windows" => Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Default/Bookmarks"),
+        "linux" => Path::new(home_dir).join(".config/opera/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
     }
 }
