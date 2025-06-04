@@ -409,6 +409,9 @@
   }
 
   const handleReloadWelcomePage = () => {
+    // This marks the onboarding as completed
+    config.updateSettings({ has_seen_hero_screen: true })
+
     dispatch('reload-welcome-page')
   }
 
@@ -647,6 +650,9 @@
   }
 
   const handleReturnToWelcomePage = (params: Record<string, any> = {}) => {
+    // This marks the onboarding as completed
+    config.updateSettings({ has_seen_hero_screen: true })
+
     // Find existing onboarding tab
     const existingOnboardingTab = tabsManager.tabsValue.find((tab) => tab.type === 'onboarding')
 
@@ -657,9 +663,6 @@
     } else {
       tabsManager.addOnboardingTab(false, { active: makeActive })
     }
-
-    // This marks the onboarding as completed
-    config.updateSettings({ has_seen_hero_screen: true })
   }
 
   const handleOpenTab = (params: Record<string, any> = {}) => {
