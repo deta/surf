@@ -24,11 +24,15 @@ export type BrowserTypeItem = {
   type: BrowserType
   family: BrowserFamily
   icon: string
+  unsupported_systems?: string[]
   supports: {
     history: boolean
     bookmarks: boolean
   }
 }
+
+// @ts-ignore - can't import @horizon/utils package in @horizon/types so using import.meta.env directly
+export const PLATFORM = import.meta.env.PLATFORM as 'darwin' | 'linux' | 'win32'
 
 export const BROWSER_TYPE_DATA: BrowserTypeItem[] = [
   {
@@ -76,6 +80,7 @@ export const BROWSER_TYPE_DATA: BrowserTypeItem[] = [
     type: BrowserType.Arc,
     family: BrowserFamily.Chromium,
     icon: 'browser.arc',
+    unsupported_systems: ['win32', 'linux'],
     supports: {
       history: true,
       bookmarks: false
@@ -125,14 +130,14 @@ export const BROWSER_TYPE_DATA: BrowserTypeItem[] = [
       bookmarks: true
     }
   }
-]
+].filter((browser) => !(browser.unsupported_systems || []).includes(PLATFORM))
 
 export const PRIMARY_BROWSRS = [
   BrowserType.Chrome,
   BrowserType.Edge,
   BrowserType.Firefox,
   BrowserType.Opera,
-  BrowserType.Arc
+  ...(PLATFORM === 'darwin' ? [BrowserType.Arc] : [BrowserType.Brave])
 ]
 
 export type BookmarkItem = {
