@@ -563,13 +563,13 @@
     align-items: center;
     gap: 0.5rem;
 
-    h1 {
-      font-size: 1.4rem;
-      font-weight: 600;
-      font-smooth: always;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
+    //h1 {
+    //  font-size: 1.4rem;
+    //  font-weight: 600;
+    //  font-smooth: always;
+    //  -webkit-font-smoothing: antialiased;
+    //  -moz-osx-font-smoothing: grayscale;
+    //}
 
     .icon-wrapper {
       width: 1.5rem;
@@ -601,11 +601,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-
-    h2 {
-      font-size: 1.2rem;
-      font-weight: 500;
-    }
 
     p {
       font-size: 1rem;
@@ -853,11 +848,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-
-    h2 {
-      font-size: 1.2rem;
-      font-weight: 500;
-    }
 
     p {
       font-size: 1rem;

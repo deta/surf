@@ -958,7 +958,6 @@
                   contextItemErrors={[]}
                   preparingTabs={false}
                   inputOnly={!$state.isChatExpanded}
-                  showAddToContext={false}
                   showContextBar={false}
                   on:clear-chat={() => {}}
                   on:clear-errors={() => {}}
@@ -1378,24 +1377,6 @@
         pointer-events: all;
         cursor: default;
 
-        form {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5ch;
-          padding: 0.2em 0.4em;
-
-          button {
-            margin-left: -0.2em;
-            color: var(--contrast-color) !important;
-            background-color: var(--base-color);
-
-            &:hover {
-              background-color: color-mix(in srgb, var(--base-color), black 60%) !important;
-              background-color: red !important;
-            }
-          }
-        }
-
         > header {
           //height: 3em;
           display: flex;
@@ -1535,10 +1516,10 @@
     color: var(--contrast-color);
 
     &:hover {
-      background: color-mix(in hsl, var(--base-color), 15% hsl(0, 0, 0%));
+      background: color-mix(in hsl, var(--base-color), 15% hsl(0, 0%, 0%));
     }
     :global(body.dark) &:hover {
-      background: color-mix(in hsl, var(--base-color), 20% hsl(0, 0, 100%));
+      background: color-mix(in hsl, var(--base-color), 20% hsl(0, 0%, 100%));
     }
   }
 

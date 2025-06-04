@@ -359,22 +359,6 @@
       animation-delay: 113ms;
       opacity: 0;
     }
-
-    > header {
-      display: flex;
-      justify-content: end;
-      gap: 0.25em;
-      padding-inline: 2em;
-      margin-bottom: -1em;
-
-      :global(button) {
-        opacity: 0.8;
-        &:hover,
-        &.active {
-          opacity: 1;
-        }
-      }
-    }
   }
 
   .content {

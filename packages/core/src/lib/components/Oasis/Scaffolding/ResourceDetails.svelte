@@ -618,13 +618,6 @@
     }
   }
 
-  .divider {
-    width: 100%;
-    height: 1px;
-    background-color: #e5e5e5;
-    margin: 0.25rem 0;
-  }
-
   .header {
     display: flex;
     align-items: center;
@@ -666,15 +659,6 @@
 
     &:hover {
       background: #e5e5e5;
-    }
-  }
-
-  .action-danger {
-    background: #fde8e8;
-    border-color: #f9acac;
-
-    &:hover {
-      background: #f9acac;
     }
   }
 

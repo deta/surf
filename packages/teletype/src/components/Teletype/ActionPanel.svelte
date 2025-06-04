@@ -42,7 +42,6 @@
 </script>
 
 <div class="action-panel">
-  {#if action.icon}{/if}
   <div class="title">Actions for {action.name}</div>
   <ActionList actions={parsedOptions} on:execute={handleOptionClick} isOption />
 </div>

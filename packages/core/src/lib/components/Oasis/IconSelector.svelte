@@ -254,26 +254,6 @@
     padding: 0rem 0.75rem;
   }
 
-  .color-picker {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 0.25rem;
-
-    .circle-wrapper {
-      width: 50px;
-      height: 50px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    p {
-      opacity: 0.75;
-    }
-  }
-
   .emoji-wrapper {
     margin-top: -0.5rem;
   }
@@ -331,12 +311,6 @@
 
     .content {
       background-color: rgb(26, 32, 44);
-    }
-
-    .color-picker {
-      .circle-wrapper {
-        background-color: rgb(26, 32, 44);
-      }
     }
 
     .emoji-wrapper {

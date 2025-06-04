@@ -434,15 +434,6 @@
     border-radius: 12px;
   }
 
-  .menu-drag-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 8px;
-    cursor: grab;
-    pointer-events: auto;
-  }
-
   .ai-menu {
     width: 400px;
     border-radius: 0.5rem;
@@ -588,35 +579,6 @@
         outline: none;
       }
     }
-  }
-
-  textarea {
-    padding: 10px;
-    border: 1px solid #f0f0f0;
-    background: #ebebeb;
-    border-radius: 8px;
-    font-size: 16px;
-    width: 100%;
-    pointer-events: auto;
-    min-width: 350px;
-    resize: vertical;
-    font-family: inherit;
-
-    &:focus {
-      outline: none;
-      border-color: #fd1bdf;
-    }
-  }
-
-  .context-check {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
-    color: #666;
-    border-top: 1px solid #eeeeee;
-    padding-top: 9px;
-    padding-bottom: 4px;
   }
 
   .editor-wrapper {

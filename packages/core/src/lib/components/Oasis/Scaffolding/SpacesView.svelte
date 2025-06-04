@@ -741,15 +741,6 @@
     }
   }
 
-  .unpinned-container {
-    position: relative;
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-  }
-
   /* Scroll indicators styling */
   .scroll-indicator {
     position: absolute;
@@ -812,57 +803,6 @@
     &.bottom {
       bottom: -5px;
     }
-  }
-
-  .folders-wrapper {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    position: relative;
-    transition: max-height 0.3s ease;
-    max-height: 2.5rem; /* Just enough for the header */
-
-    /* When collapsed, position at the bottom */
-    margin-top: auto;
-
-    /* When all spaces list is expanded */
-    .folders-sidebar:not(.all-spaces-hidden) & {
-      flex: 1 1 auto;
-    }
-
-    &.expanded {
-      max-height: none;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      margin-top: 0; /* Reset margin */
-
-      /* When expanded, take remaining available space, but don't force it */
-      flex: 1 1 auto;
-
-      /* When expanded and all-spaces is applied */
-      &.all-spaces {
-        .unpinned-container {
-          height: 100%;
-
-          .folders-list {
-            max-height: none;
-          }
-        }
-      }
-    }
-  }
-
-  .folders-sidebar hr {
-    margin-inline: 1rem;
-    margin-block: 0.35rem;
-    @include utils.light-dark-custom(
-      'border-color',
-      var(--black-09),
-      var(--white-15) var(--black-09),
-      var(--white-15)
-    );
-    border-color: var(--border-color);
   }
 
   .folders-sidebar::-webkit-scrollbar {
@@ -934,14 +874,6 @@
 
     @apply text-[#324f86] dark:text-gray-300;
 
-    .separator-line {
-      flex: 1;
-      height: 1px;
-      opacity: 0.25;
-
-      @apply bg-[#244581] dark:bg-gray-100;
-    }
-
     :global(.dark) & {
       background: rgba(17, 24, 39, 0.95);
     }
@@ -995,62 +927,6 @@
         .pinned-list-drag-indicator-wrapper
     ) {
     display: flex;
-  }
-
-  .folders-list {
-    height: 100%;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    position: relative;
-    padding: 0.5rem 0;
-    display: flex;
-    flex-direction: column;
-
-    /* Hide scrollbar but keep functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-    &::-webkit-scrollbar {
-      width: 0px;
-      background: transparent; /* Chrome/Safari/Opera */
-    }
-  }
-
-  .folders-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    gap: 0.5rem;
-    padding-left: 0.75rem;
-    padding-right: 0.5rem;
-  }
-
-  .folders-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-
-    transition: all 0.2s ease;
-    border-radius: 8px;
-    padding: 0.25rem 0.5rem;
-    padding-left: 0.2rem;
-    margin-left: -0.2rem;
-
-    @apply hover:bg-sky-100 hover:text-sky-500 dark:hover:bg-gray-700 dark:hover:text-sky-400;
-  }
-
-  .folders-header-text {
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.0025em;
-    line-height: 1;
-    font-smooth: always;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    line-height: 1;
-
-    @apply text-[#3b578a] dark:text-gray-300;
   }
 
   button {

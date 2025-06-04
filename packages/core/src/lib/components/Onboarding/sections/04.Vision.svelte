@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
@@ -8,9 +7,6 @@
   import { fade } from 'svelte/transition'
 
   import example from '../../../../../public/assets/onboarding/vision/example.png'
-
-  export let modShortcut: string
-
   const dispatch = createEventDispatcher<{
     tryVision: void
   }>()

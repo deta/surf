@@ -95,18 +95,6 @@
     gap: 1.5rem;
     max-width: 600px;
     width: 90%;
-
-    h1 {
-      font-size: 2rem;
-      font-weight: 500;
-    }
-
-    h2 {
-      font-size: 1.2rem;
-      font-weight: 500;
-      color: #4b5563;
-      line-height: 1.5;
-    }
   }
 
   .header {

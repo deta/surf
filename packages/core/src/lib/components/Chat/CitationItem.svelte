@@ -639,6 +639,7 @@
     padding-top: calc(0.4em + 1px);
     padding-bottom: calc(0.4em - 1px);
     padding-inline: 0.6rem;
+    width: fit-content;
 
     div {
       font-size: 0.8rem;

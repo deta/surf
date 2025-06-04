@@ -5,7 +5,11 @@
   export let confirmationPrompt: Confirmation
 </script>
 
-<div class="outer-wrapper modal modal-small" on:click|self={confirmationPrompt.cancelHandler}>
+<div
+  class="outer-wrapper modal modal-small"
+  role="none"
+  on:click|self={confirmationPrompt.cancelHandler}
+>
   <div class="inner-wrapper">
     <form
       on:submit|preventDefault={() => confirmationPrompt.confirmHandler(confirmationPrompt.value)}
@@ -74,13 +78,6 @@
     &.modal-small {
       & :global(.inner-wrapper) {
         max-width: 500px;
-      }
-    }
-
-    &.modal-large {
-      & :global(.inner-wrapper) {
-        width: 80%;
-        max-width: 1536px;
       }
     }
   }

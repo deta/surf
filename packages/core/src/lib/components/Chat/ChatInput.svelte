@@ -111,10 +111,10 @@
       color: var(--contrast-color);
 
       &:hover {
-        background: color-mix(in hsl, var(--base-color), 15% hsl(0, 0, 0%));
+        background: color-mix(in hsl, var(--base-color), 15% hsl(0, 0%, 0%));
       }
       :global(body.dark) &:hover {
-        background: color-mix(in hsl, var(--base-color), 20% hsl(0, 0, 100%));
+        background: color-mix(in hsl, var(--base-color), 20% hsl(0, 0%, 100%));
       }
     }
   }

@@ -102,10 +102,6 @@
         gap: 0.75em;
       }
 
-      &.center {
-        max-width: 30ch;
-      }
-
       &.trailing {
         position: relative;
         &:before {
@@ -126,31 +122,6 @@
             opacity: 0.2;
             filter: blur(20px) hue-rotate(4deg) brightness(0);
           }
-        }
-      }
-
-      button {
-        appearance: none;
-        display: flex;
-        align-items: center;
-        padding: 0.5em;
-        border-radius: 0.75rem;
-        border: none;
-        font-size: 0.9rem;
-        font-weight: 500;
-        letter-spacing: 0.02rem;
-        transition-property: color, background, opacity;
-        transition-duration: 123ms;
-        transition-timing-function: ease-out;
-
-        opacity: 0.7;
-
-        &:hover {
-          color: #0369a1;
-          background: rgb(232, 238, 241);
-          color: var(--contrast-color);
-          background: rgb(from var(--base-color) r g b / 0.4);
-          opacity: 1;
         }
       }
     }

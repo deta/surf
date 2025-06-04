@@ -101,16 +101,6 @@
     }
   }
 
-  .background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--background);
-    z-index: -1;
-  }
-
   .details {
     position: relative;
     z-index: 2;
@@ -123,12 +113,6 @@
     width: 100%;
     max-width: 800px;
     text-align: center;
-
-    &.row {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-    }
   }
 
   .info {
@@ -136,14 +120,6 @@
     align-items: center;
     justify-content: center;
     gap: 0.5em;
-  }
-
-  .type-info {
-    display: flex;
-    align-items: center;
-    gap: 0.25em;
-    overflow: hidden;
-    color: var(--color-text-muted);
   }
 
   .icon {
@@ -161,14 +137,6 @@
     color: var(--color-text-muted);
     overflow: hidden;
     font-weight: 500;
-  }
-
-  .bottom {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
   }
 
   .title {

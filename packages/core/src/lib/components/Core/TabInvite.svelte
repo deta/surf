@@ -790,23 +790,6 @@
       'calt' 1;
   }
 
-  button.selector {
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    .index {
-      display: inline;
-      margin-right: 0.5rem;
-      font-size: 1rem;
-      opacity: 0.7;
-    }
-
-    &.active {
-      background: #4592ef !important;
-      color: #fff;
-    }
-  }
-
   // Add this to hide scrollbar but keep functionality
   .scrollbar-hide {
     -ms-overflow-style: none;

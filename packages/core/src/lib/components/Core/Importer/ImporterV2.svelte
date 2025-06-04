@@ -332,25 +332,6 @@
     gap: 1.5rem;
     max-width: 600px;
     width: 90%;
-
-    h1 {
-      font-size: 2rem;
-      font-weight: 500;
-    }
-
-    h2 {
-      font-size: 1.2rem;
-      font-weight: 500;
-      color: #4b5563;
-      line-height: 1.5;
-    }
-  }
-
-  .header {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
   }
 
   .step-wrapper {
@@ -464,48 +445,5 @@
     flex-direction: column;
     gap: 0.75rem;
     width: 100%;
-  }
-
-  .data-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    border-radius: 12px;
-    background-color: #f3f4f6;
-    color: #000000;
-
-    &.data-item--disabled {
-      opacity: 0.5;
-    }
-
-    input[type='checkbox'] {
-      cursor: pointer;
-      width: 20px;
-      height: 20px;
-      margin-left: auto;
-
-      &:disabled {
-        opacity: 0.5;
-      }
-    }
-
-    .data-label {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-
-      .data-name {
-        font-size: 1.2rem;
-        font-weight: 500;
-      }
-    }
-  }
-
-  .hint {
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: #001330bd;
-    text-align: center;
   }
 </style>

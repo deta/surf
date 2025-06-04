@@ -327,7 +327,6 @@
     {#if !section || section === 'your-stuff'}
       <section id="your-stuff">
         <YourStuffSection
-          {modShortcut}
           on:tryStuff={handleTryStuff}
           on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
         />
@@ -336,24 +335,20 @@
 
     {#if !section || section === 'desktop'}
       <section id="desktop">
-        <DesktopSection
-          {modShortcut}
-          on:tryDesktop={handleTryDesktop}
-          savedResources={allSavedResources}
-        />
+        <DesktopSection on:tryDesktop={handleTryDesktop} savedResources={allSavedResources} />
       </section>
     {/if}
 
     {#if !section || section === 'vision'}
       <section id="vision">
-        <VisionSection {modShortcut} on:tryVision={handleTryVision} />
+        <VisionSection on:tryVision={handleTryVision} />
       </section>
     {/if}
 
     {#if $userSettings.experimental_notes_chat_sidebar}
       {#if !section || section === 'notes'}
         <section id="notes">
-          <NewNotes {modShortcut} on:launchTimeline />
+          <NewNotes on:launchTimeline />
         </section>
       {/if}
     {:else}
@@ -371,14 +366,14 @@
 
       {#if !section || section === 'smart-notes'}
         <section id="smart-notes">
-          <SmartNotesSection {modShortcut} on:highlightWebviewText on:seekToTimestamp />
+          <SmartNotesSection on:highlightWebviewText on:seekToTimestamp />
         </section>
       {/if}
     {/if}
 
     {#if !section || section === 'surflets'}
       <section id="surflets">
-        <Codegen {modShortcut} on:tryVision={handleTryVision} />
+        <Codegen on:tryVision={handleTryVision} />
       </section>
     {/if}
 
@@ -431,23 +426,6 @@
     width: 100%;
     height: 100%;
     z-index: 0;
-  }
-
-  button.selector {
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    .index {
-      display: inline;
-      margin-right: 0.5rem;
-      font-size: 1rem;
-      opacity: 0.7;
-    }
-
-    &.active {
-      background: #4592ef !important;
-      color: #fff;
-    }
   }
 
   .onboarding-wrapper {

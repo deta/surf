@@ -112,57 +112,13 @@
       & * {
         user-select: none;
       }
-
-      &.pinned {
-        padding: 0.75rem;
-      }
     }
   }
-  .search-input {
-    font-family: 'Inter', sans-serif;
-    border: 0;
-    padding: 1rem;
-    border-radius: 12px;
-    background-color: #f5f5f5;
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: #585130;
-    letter-spacing: 0.0025em;
-    font-smooth: always;
-    background: transparent;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 
-    :global(.dark) & {
-      color: #d1d1c2;
-      background-color: #1a1a1a;
-    }
-
-    ::placeholder {
-      color: #b8b5a4;
-
-      :global(.dark) & {
-        color: #d1d1c2;
-      }
-    }
-    &:focus {
-      outline: none;
-    }
-  }
   span {
     padding: 8px;
     font-size: 1.1rem;
     text-align: left;
-  }
-  .active {
-    background-color: #ffffff;
-    border-radius: 8px;
-    color: white;
-
-    :global(.dark) & {
-      color: #d1d1c2;
-      background-color: #1a1a1a;
-    }
   }
 
   .info {

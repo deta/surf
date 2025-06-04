@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import stuffOnboarding01 from '../../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
   import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
   import { isMac } from '@horizon/utils'
-
-  export let modShortcut: string
 
   const dispatch = createEventDispatcher<{
     tryStuff: void

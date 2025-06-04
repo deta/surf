@@ -1,7 +1,13 @@
-html {
-  color-scheme: light;
-}
+  *,
+  button {
+    cursor: default;
+    user-select: none;
+  }
 
-html:has(body.dark) {
-  color-scheme: dark !important;
-}
+  html {
+    color-scheme: light;
+  }
+
+  html:has(body.dark) {
+    color-scheme: dark !important;
+  }

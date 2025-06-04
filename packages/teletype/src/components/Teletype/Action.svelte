@@ -11,7 +11,6 @@
   export let action: Action
   export let active = false
   export let isOption = false
-  export let animations = true
 
   export let horizontalItems: Action[] = action.horizontalItems || []
   let selectedItemIndex = 0
@@ -260,7 +259,7 @@
 <div
   bind:this={elem}
   id={action.id}
-  role="option"
+  role="none"
   in:slide={{ duration: 200 }}
   class="action"
   class:active
@@ -457,21 +456,15 @@
     width: 100%;
 
     &.has-left-overflow .horizontal-list {
-      -webkit-mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        #000 2%,
-        #000 98%,
-        transparent 100%
-      );
+      mask-image: linear-gradient(to right, transparent 0%, #000 2%, #000 98%, transparent 100%);
     }
 
     &.has-right-overflow:not(.has-left-overflow) .horizontal-list {
-      -webkit-mask-image: linear-gradient(to right, #000 95%, transparent 100%);
+      mask-image: linear-gradient(to right, #000 95%, transparent 100%);
     }
 
     &.has-left-overflow:not(.has-right-overflow) .horizontal-list {
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 5%);
+      mask-image: linear-gradient(to right, transparent 0%, #000 5%);
     }
   }
 

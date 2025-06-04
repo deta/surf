@@ -240,7 +240,12 @@
     user-select: none;
     cursor: default;
 
-    @apply border-[1px] border-gray-200 dark:bg-[#006eff] dark:border-[#006eff];
+    :global(body) & {
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    :global(body.dark) & {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
   }
 
   :global(citation.wide:hover) {
@@ -248,28 +253,6 @@
   }
 
   :global(citation.wide),
-  .citation-item.wide {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    flex-shrink: 0;
-    gap: 0.5rem;
-    padding: 0.1rem 0.4rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    border-radius: 10px;
-    user-select: none;
-    cursor: default;
-    width: fit-content;
-    height: auto;
-
-    :global(.dark) & {
-      background: #111827;
-      border: 1px solid #374151;
-    }
-  }
-
   :global(citation.wide) {
     margin-top: -4px;
     margin-bottom: -4px;
@@ -277,16 +260,14 @@
     top: 2px;
   }
 
-  :global(citation img),
-  .citation-item img {
+  :global(citation img) {
     width: 1rem;
     height: 1rem;
     flex-shrink: 0;
     border-radius: 5px;
   }
 
-  :global(citation div),
-  .citation-item div {
+  :global(citation div) {
     font-size: 0.9rem;
     font-weight: 500;
   }

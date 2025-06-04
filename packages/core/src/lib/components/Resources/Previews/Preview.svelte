@@ -577,13 +577,6 @@
     box-shadow:
       0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
       0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center;
-    }
   }
 
   .interactive .title {

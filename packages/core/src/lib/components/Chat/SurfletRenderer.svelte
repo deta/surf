@@ -1204,8 +1204,7 @@
     }
   }
 
-  header,
-  footer {
+  header {
     color: var(--contrast-color);
 
     :global(body.custom) & {
@@ -1237,25 +1236,6 @@
     @include utils.light-dark-custom(
       'fill',
       #f3faff,
-      rgb(29 33 44),
-      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
-      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
-    );
-
-    background: var(--fill);
-  }
-
-  footer {
-    @include utils.light-dark-custom(
-      'background-fill-mix',
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1),
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1)
-    );
-    @include utils.light-dark-custom(
-      'fill',
-      #eaf3fa,
       rgb(29 33 44),
       color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
       color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))

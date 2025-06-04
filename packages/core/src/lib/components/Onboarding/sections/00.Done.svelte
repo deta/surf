@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
-
   export let modShortcut: string
 </script>
 

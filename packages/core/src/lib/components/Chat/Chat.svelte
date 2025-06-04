@@ -233,7 +233,6 @@
         bind:this={noteComp}
         resourceId={note.id}
         {note}
-        hideContextSwitcher
         manualContextControl
         autoGenerateTitle
         autofocus={true}

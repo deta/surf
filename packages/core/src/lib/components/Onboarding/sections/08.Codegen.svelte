@@ -5,8 +5,6 @@
   import { isMac } from '@horizon/utils'
   import ShortcutVisualizer from '../../Utils/Keyboard/ShortcutVisualizer.svelte'
 
-  export let modShortcut: string
-
   let copyText = 'Build an interactive double pendulum simulation with trails.'
   let copied = false
 

@@ -16,7 +16,6 @@
   export let hide: boolean = false
   export let autofocus: boolean = false
   export let submitOnEnter: boolean = true
-  export let isEmpty: Writable<boolean> = writable(false)
   export let parseMentions: boolean = false
   export let mentionItemsFetcher: MentionItemsFetcher | undefined = undefined
   export let editor: Editor

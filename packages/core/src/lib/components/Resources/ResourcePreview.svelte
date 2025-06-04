@@ -73,7 +73,6 @@
   export let resourcesBlacklistable: boolean = false
   export let resourceBlacklisted: boolean = false
 
-  export let processingText: string | undefined = undefined
   export let failedText: string | undefined = undefined
   export let hideProcessing: boolean = false
   export let disableContextMenu: boolean = false

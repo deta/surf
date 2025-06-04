@@ -651,16 +651,6 @@
     overflow-y: auto;
   }
 
-  h2 {
-    margin: 0 0 2rem;
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: #28568f;
-    opacity: 0.4;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
   .space-icon-wrapper {
     width: 16rem;
     height: 16rem;
@@ -832,13 +822,6 @@
   .template-prompts {
     width: 30rem;
     margin-top: 1rem;
-  }
-
-  .template-prompts h3 {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #28568f;
-    margin-bottom: 0.5rem;
   }
 
   .prompt-pills {

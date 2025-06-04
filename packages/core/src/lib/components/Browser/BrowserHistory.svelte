@@ -9,7 +9,6 @@
   import { useToasts } from '../../service/toast'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
-  export let tab: TabHistory
   export let active: boolean = false
 
   const log = useLogScope('BrowserHistory')

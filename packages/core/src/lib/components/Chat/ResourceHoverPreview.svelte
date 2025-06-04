@@ -18,7 +18,6 @@
       {resource}
       interactive={false}
       mode="compact"
-      processingText="Preparing for chat…"
       failedText="Processing failed, not available for chat"
       origin="chat"
       frameless

@@ -342,14 +342,6 @@
 </div>
 
 <style lang="scss">
-  .icon {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
   /* NOTE: Overrides to make ResourcePreviews work at small card scale. */
   :global(.stack-card) {
     font-size: 0.5em;
@@ -528,27 +520,6 @@
           border-radius: 0;
         }
 
-        .favicon {
-          max-width: 20px;
-        }
-        .animation-favicon {
-          object-fit: cover;
-          object-position: center;
-          width: 100%;
-          height: 100%;
-          position: absolute;
-          inset: 0;
-          z-index: 5;
-
-          opacity: 0;
-          animation: faviconFadeOut 1500ms forwards;
-        }
-
-        &.empty {
-          background: rgba(255, 255, 255, 0.7);
-          border-color: rgba(180, 180, 180, 0.1);
-        }
-
         @apply bg-[#fefefe] border-[1.5px] border-white dark:bg-gray-900 dark:border-gray-700;
       }
     }
@@ -635,30 +606,30 @@
       }
     }
 
-    .title {
-      color: #fff;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      display: block;
-      font-family: 'Bayshore';
-      font-size: 2rem;
-      mix-blend-mode: plus-lighter;
-      user-select: none;
-      transform: translate(6px, 3px) rotate(6deg);
+    //.title {
+    //  color: #fff;
+    //  position: absolute;
+    //  bottom: 0;
+    //  left: 0;
+    //  display: block;
+    //  font-family: 'Bayshore';
+    //  font-size: 2rem;
+    //  mix-blend-mode: plus-lighter;
+    //  user-select: none;
+    //  transform: translate(6px, 3px) rotate(6deg);
 
-      transition:
-        transform 230ms,
-        font-size 230ms;
-      transition-timing-function: cubic-bezier(0.52, 0.58, 0.11, 0.84);
-    }
-    &.empty {
-      min-height: auto;
-      .title {
-        font-size: 1.8rem;
-        transform: translate(-50px, 50px) rotate(45deg) scale(1);
-      }
-    }
+    //  transition:
+    //    transform 230ms,
+    //    font-size 230ms;
+    //  transition-timing-function: cubic-bezier(0.52, 0.58, 0.11, 0.84);
+    //}
+    //&.empty {
+    //  min-height: auto;
+    //  .title {
+    //    font-size: 1.8rem;
+    //    transform: translate(-50px, 50px) rotate(45deg) scale(1);
+    //  }
+    //}
 
     &.canHover:hover,
     &:has([data-context-menu-anchor]),
@@ -675,12 +646,12 @@
         }
       }
 
-      .title {
-        font-size: 1.8rem;
-        transform: translate(-50px, 50px) rotate(45deg) scale(1);
+      //.title {
+      //  font-size: 1.8rem;
+      //  transform: translate(-50px, 50px) rotate(45deg) scale(1);
 
-        mix-blend-mode: normal;
-      }
+      //  mix-blend-mode: normal;
+      //}
     }
   }
 

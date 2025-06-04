@@ -77,6 +77,3 @@
   on:update-code={handleUpdateCode}
   on:created-resource={handleCreateResource}
 ></SurfletRenderer>
-
-<style>
-</style>

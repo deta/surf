@@ -37,15 +37,6 @@
     flex-shrink: 0;
     width: 1.25em;
     height: 1.25em;
-
-    img {
-      width: 1.35em;
-      height: 1.35em;
-      border-radius: 5.1px;
-      box-shadow:
-        0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
-        0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
-    }
   }
 
   .text {
@@ -61,9 +52,6 @@
   .themed {
     .text {
       opacity: 1;
-    }
-
-    .icon {
     }
   }
 </style>

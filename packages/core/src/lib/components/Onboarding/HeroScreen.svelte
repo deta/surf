@@ -287,21 +287,6 @@
     box-shadow: 0 4px 12px rgba(73, 82, 242, 0.15);
   }
 
-  .loading-spinner {
-    width: 1.2rem;
-    height: 1.2rem;
-    border: 2px solid rgba(0, 138, 215, 0.3);
-    border-top-color: #008ad7;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .start-button:active {
     transform: translateY(1px);
     box-shadow: 0 2px 8px rgba(73, 82, 242, 0.2);

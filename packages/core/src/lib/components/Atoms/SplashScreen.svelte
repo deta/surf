@@ -75,22 +75,6 @@
       background: #181818;
     }
   }
-  .cls-1 {
-    fill: none;
-    stroke: #000;
-    stroke-width: 0;
-    stroke-miterlimit: 10;
-    stroke-dasharray: 250;
-    stroke-dashoffset: 0;
-    animation: stroke-reveal 1.1s ease-out infinite;
-
-    :global(.dark) & {
-      stroke: #fff;
-    }
-  }
-  .ttr {
-    animation: title-reveal 1.1s ease-out infinite;
-  }
 
   .flipbook {
     position: relative;

@@ -6,7 +6,6 @@
   import type { SlashMenuItem, SlashCommandPayload } from './types'
 
   export let editor: Editor
-  export let range: any
   export let items: SlashMenuItem[] = []
   export let query: string
   export let loading: boolean = false
@@ -171,14 +170,6 @@
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
 
     font-family: 'Inter', sans-serif;
-  }
-
-  .slash-header {
-    color: var(--ctx-item-text-muted);
-    font-size: 0.85em;
-    font-weight: 400;
-    letter-spacing: 0.03em;
-    padding: 0.25rem;
   }
 
   .slash-list {

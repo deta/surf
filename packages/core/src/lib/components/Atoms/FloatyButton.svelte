@@ -1,9 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { generateUUID } from '@horizon/utils'
   import { Icon } from '@horizon/icons'
-
-  export let id: string = generateUUID()
 
   // Props with default configuration
   export let config = {

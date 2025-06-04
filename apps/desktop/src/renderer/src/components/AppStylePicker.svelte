@@ -100,7 +100,6 @@
     color: #333;
   }
 
-  video,
   img {
     width: 240px;
     height: 100%;

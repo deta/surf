@@ -2211,13 +2211,6 @@
 {/if}
 
 <style lang="scss">
-  .wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-  }
-
   .back-button {
     appearance: none;
     border: none;
@@ -2244,116 +2237,6 @@
 
       &:hover {
         background: rgba(255, 255, 255, 0.1);
-      }
-    }
-  }
-
-  .folder-view {
-    padding: 1rem;
-
-    .folder-section-title {
-      margin: 0 0 0.75rem 0;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #666;
-
-      :global(.dark) & {
-        color: #ccc;
-      }
-    }
-
-    .folder-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 0.5rem;
-    }
-
-    .folder-loading,
-    .folder-error {
-      background: rgba(255, 255, 255, 0.8);
-      border-radius: 1.1em;
-      padding: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 120px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      gap: 0.5rem;
-      font-size: 0.9rem;
-      color: #666;
-
-      :global(.dark) & {
-        background: rgba(31, 41, 55, 0.8);
-        color: #aaa;
-      }
-    }
-
-    .folder-error {
-      color: #e53e3e;
-
-      :global(.dark) & {
-        color: #fc8181;
-      }
-    }
-
-    .folder-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem;
-      border-radius: 8px;
-      background-color: #f5f5f5;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-
-      &:hover {
-        background-color: #e8e8e8;
-      }
-
-      :global(.dark) & {
-        background-color: rgba(255, 255, 255, 0.05);
-
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-      }
-
-      .folder-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-
-        .emoji {
-          font-size: 1.5rem;
-        }
-      }
-
-      .folder-details {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-
-        .folder-name {
-          font-weight: 500;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .folder-description {
-          font-size: 0.75rem;
-          color: #666;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-
-          :global(.dark) & {
-            color: #aaa;
-          }
-        }
       }
     }
   }
@@ -2414,16 +2297,6 @@
 
   :global(nav.context-navbar .context-toggle-button) {
     margin-left: 0.5em;
-
-    .button-text {
-      display: none;
-    }
-
-    @media (min-width: 768px) {
-      .button-text {
-        display: inline;
-      }
-    }
   }
 
   .settings-modal-wrapper {
@@ -2450,10 +2323,6 @@
       gap: 1rem;
       padding: 1rem;
       opacity: 0.75;
-
-      p {
-        font-size: 1.2rem;
-      }
     }
 
     @apply text-[#7d7448] dark:text-gray-300;
@@ -2469,45 +2338,6 @@
     gap: 0.5rem;
     padding: 0.5rem;
     opacity: 0.75;
-  }
-
-  .all-contexts-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
-  }
-
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 300px;
-    gap: 1rem;
-
-    :global(svg) {
-      animation: spin 1s linear infinite;
-    }
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 300px;
-    gap: 1rem;
-
-    p {
-      font-size: 1.1rem;
-      margin: 0;
-    }
-
-    .subtitle {
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
   }
 
   .active-filter-indicator {

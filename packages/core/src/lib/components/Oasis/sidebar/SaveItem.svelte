@@ -680,12 +680,6 @@
     color: var(--col-text-muted);
     border: 1px solid #c9c9c9;
 
-    &:global(.dark) & {
-      background: #1a1a1a;
-      color: #fff;
-      border: 1px solid #333;
-    }
-
     &:hover {
       opacity: 0.9;
     }

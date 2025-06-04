@@ -32,9 +32,4 @@
       transition: width 0.3s;
     }
   }
-
-  .text {
-    margin-top: 0.5rem;
-    font-size: 1rem;
-  }
 </style>

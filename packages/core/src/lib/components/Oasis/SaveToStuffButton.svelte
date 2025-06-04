@@ -7,7 +7,6 @@
     SelectDropdown,
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
-  import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import type { BookmarkTabState } from '@horizon/core/src/lib/types'
   import type { Resource } from '@horizon/core/src/lib/service/resources'

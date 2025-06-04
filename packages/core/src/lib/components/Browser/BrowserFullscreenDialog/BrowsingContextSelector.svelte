@@ -251,15 +251,6 @@
     border: none;
     outline: none;
 
-    &.text {
-      background: transparent;
-      color: var(--color-primary);
-
-      &:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
-    }
-
     &.primary {
       background: var(--color-primary, #4952f2);
       color: white;
@@ -475,16 +466,6 @@
     align-items: center;
     justify-content: center;
     margin-right: 12px;
-
-    .emoji {
-      font-size: 16px;
-    }
-
-    .color-icon {
-      width: 16px;
-      height: 16px;
-      border-radius: 4px;
-    }
   }
 
   .space-name {

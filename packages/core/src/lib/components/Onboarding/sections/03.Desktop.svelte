@@ -12,7 +12,6 @@
   import background02 from '../../../../../public/assets/demo/backgrounds/02.webp'
   import background03 from '../../../../../public/assets/demo/backgrounds/03.webp'
 
-  export let modShortcut: string
   export let savedResources: Resource[]
 
   const dispatch = createEventDispatcher<{

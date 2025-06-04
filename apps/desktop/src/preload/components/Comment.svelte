@@ -10,7 +10,7 @@
   import Editor from '@horizon/editor/src/lib/components/Editor.svelte'
   import { useDebounce } from '@horizon/utils'
   import { getEditorContentText } from '@horizon/editor'
-  import { fade, slide } from 'svelte/transition'
+  import { slide } from 'svelte/transition'
 
   export let text = ''
 
@@ -126,10 +126,6 @@
     border-radius: 8px;
     user-select: text;
     border: 2px solid #d4d4d4;
-
-    p {
-      margin: 0;
-    }
   }
 
   .footer {
@@ -153,20 +149,11 @@
     opacity: 1;
   }
 
-  .actions {
-    display: flex;
-    align-items: stretch;
-  }
-
   .success {
     display: flex;
     align-items: center;
     gap: 6px;
     color: #4caf50;
     padding: 0 8px;
-
-    p {
-      margin: 0;
-    }
   }
 </style>

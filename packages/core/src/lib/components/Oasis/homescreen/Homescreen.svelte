@@ -430,53 +430,6 @@
           color: var(--contrast-color) !important;
         }
       }
-
-      button {
-        font-size: 1.2em;
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.8);
-        line-height: 1.5;
-        background: rgba(255, 255, 255, 0.5);
-        border: none;
-        border-radius: 64px;
-        padding: 0.75rem 1.5rem;
-        margin-top: 1em;
-
-        transition: all 0.2s ease;
-        @apply text-sky-500/60;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.7);
-          transform: translateY(-2px);
-        }
-
-        :global(.dark) & {
-          background: rgba(0, 0, 0, 0.5);
-          @apply text-sky-500/80;
-
-          &:hover {
-            background: rgba(0, 0, 0, 0.7);
-          }
-        }
-
-        :global(.custom) & {
-          background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.2)) !important;
-          color: var(--contrast-color) !important;
-
-          &:hover {
-            background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 0%, 0.3)) !important;
-          }
-        }
-
-        :global(.dark.custom) & {
-          background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.65)) !important;
-          color: var(--contrast-color) !important;
-
-          &:hover {
-            background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 50%, 0.75)) !important;
-          }
-        }
-      }
     }
   }
 

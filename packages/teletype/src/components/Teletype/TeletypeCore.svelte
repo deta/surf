@@ -396,7 +396,6 @@
             on:execute={handleActionClick}
             on:selected={handleSelectedAction}
             freeze={$showActionPanel}
-            animations={$animations}
             value={inputValue}
           />
         {/if}
@@ -631,20 +630,6 @@
     color: var(--text-light) !important;
   }
 
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    padding: 2rem;
-  }
-
   .modal-content {
     background: var(--background-dark);
     background: var(--background-dark-p3);
@@ -665,12 +650,6 @@
       max-width: 1536px;
       width: 80%;
     }
-  }
-
-  .modal-title {
-    font-weight: 400;
-    padding: 0.65rem 0.75rem;
-    border-bottom: 4px solid var(--border-color);
   }
 
   .modal-component-wrapper {
@@ -700,10 +679,10 @@
       0px 2px 2px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.05),
       0px 1px 1px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.06);
 
-    & img {
-      width: 24px;
-      margin-right: 0.25rem;
-    }
+    //& img {
+    //  width: 24px;
+    //  margin-right: 0.25rem;
+    //}
 
     & .icon-wrapper {
       margin-right: 0.2rem;
@@ -770,17 +749,17 @@
       }
     }
 
-    & .helper {
-      margin-left: auto;
+    //& .helper {
+    //  margin-left: auto;
 
-      opacity: 0.8;
+    //  opacity: 0.8;
 
-      :global(svg) {
-        width: 20px;
-        height: 20px;
-        color: var(--text-light);
-      }
-    }
+    //  :global(svg) {
+    //    width: 20px;
+    //    height: 20px;
+    //    color: var(--text-light);
+    //  }
+    //}
 
     & p {
       margin: 0;

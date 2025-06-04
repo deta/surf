@@ -275,7 +275,6 @@
   <Input
     bind:editor
     value={inputValue}
-    isEmpty={isEditorEmpty}
     active={$contextManagementDialogOpen}
     placeholder={writable('Ask me anything…')}
     bind:focusInput

@@ -36,7 +36,6 @@
   export let submitOnEnter: boolean = false
   export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let surfletComponent: ComponentType<SvelteComponent> | undefined = undefined
-  export let tabsManager: any | undefined = undefined
   export let autocomplete: boolean = false
   export let floatingMenu: boolean = false
   export let floatingMenuShown: boolean = false

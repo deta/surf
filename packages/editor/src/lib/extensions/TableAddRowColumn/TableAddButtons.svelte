@@ -1,14 +1,11 @@
 <!-- TableAddButtons.svelte -->
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte'
-  import type { Editor } from '@tiptap/core'
+  import { createEventDispatcher } from 'svelte'
 
-  export let editor: Editor
   export let visible: boolean = false
   export let position: 'row' | 'column' = 'row'
   export let buttonPosition: { x: number; y: number } = { x: 0, y: 0 }
-  export let cell: HTMLElement | undefined = undefined
 
   let buttonElement: HTMLDivElement
   let isHovering = false

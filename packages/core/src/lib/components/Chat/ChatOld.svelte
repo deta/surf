@@ -76,7 +76,6 @@
 
   export let inputOnly = false
   export let showContextBar = true
-  export let showAddToContext = true
   export let onSubmitChatHook: ((input: string) => void) | undefined = undefined
 
   const dispatch = createEventDispatcher<{
@@ -1410,5 +1409,10 @@
     font-size: 1.4rem;
     margin-top: 1rem !important;
     margin-bottom: 0.5rem !important;
+  }
+  :global(#magic-chat .context-bubbles-wrapper .context-picker) {
+    left: 0.75rem;
+    right: 0.25rem;
+    width: unset !important;
   }
 </style>

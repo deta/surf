@@ -498,78 +498,6 @@
     cursor: nesw-resize !important;
   }
 
-  #drawer-hint {
-    pointer-events: none;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 4rem;
-    z-index: 9;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    font-weight: 500;
-    letter-spacing: 0.07px;
-    font-size: 0.9em;
-    mix-blend-mode: exclude;
-    transition: transform 105ms ease-out;
-    transform: translateY(100%);
-    text-align: center;
-
-    background: linear-gradient(to top, #00000022, #00000000);
-
-    > span {
-      background: #fff;
-      padding: 0.5em 1em;
-      border-radius: 1.3em 1.3em 0 0;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      border-bottom: 0;
-      width: 90%;
-    }
-    &.show {
-      transform: translateY(0) !important;
-    }
-  }
-  :global(body.dark) #drawer-hint {
-    background: linear-gradient(to top, #ffffff22, #ffffff00);
-    > span {
-      background: #121828;
-      color: #aaaaaacc;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-  }
-
-  .onboarding-button {
-    position: relative;
-
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 200ms;
-
-    height: fit-content;
-    width: fit-content;
-    background: white;
-    padding: 0.5rem;
-    left: 0.5rem;
-    border-radius: 0.5rem;
-
-    &:hover {
-      background: rgba(244, 114, 182, 0.5);
-    }
-
-    &:focus-visible {
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
-  }
-
   #drawer {
     position: absolute;
     z-index: 100001;
@@ -718,54 +646,6 @@
   }
   :global(body[data-dragging='true'] .drawer-backdrop.showing) {
     opacity: 1;
-  }
-
-  .global-search-wrapper {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: calc(100% - 19rem);
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 4rem;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(
-      143.56% 143.56% at 50% -43.39%,
-      color(display-p3 0.9373 0.9569 1) 0%,
-      color(display-p3 0.9321 0.9531 1) 50%,
-      color(display-p3 0.8349 0.8849 0.9974) 100%
-    );
-    border: 0.5px solid #58688460;
-    backdrop-filter: blur(30px);
-    z-index: 10;
-    padding: 0.5rem;
-    margin: 0.5rem;
-    border-radius: 1rem;
-    outline: 1px solid rgba(126, 168, 240, 0.05);
-    box-shadow:
-      inset 0px 1px 1px -1px white,
-      inset 0px -1px 1px -1px white,
-      inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
-      0px 0px 30px 0px rgba(0, 0, 0, 0.12),
-      0px 2px 8px 0px rgba(0, 0, 0, 0.12),
-      0px 1px 1px 0px rgba(126, 168, 240, 0.3),
-      0px 2px 2px 0px rgba(126, 168, 240, 0.15);
-    box-shadow:
-      inset 0px 1px 4px -1px white,
-      inset 0px -1px 1p2 0 white,
-      inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
-      0px 0px 30px 0px color(display-p3 0 0 0 / 0.12),
-      0px 2px 8px 0px color(display-p3 0 0 0 / 0.12),
-      0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
-      0px 2px 2px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
-  }
-
-  .input-wrapper {
-    width: fit-content;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
   }
 
   /* FIXES double drop as webview still consumes drop if pointer is inside overlay. */

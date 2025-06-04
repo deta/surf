@@ -5241,7 +5241,7 @@
                     on:highlightWebviewText={highlightWebviewText}
                   />
                 {:else if tab.type === 'history'}
-                  <BrowserHistory {tab} active={$activeTabId === tab.id} />
+                  <BrowserHistory active={$activeTabId === tab.id} />
                 {:else if tab.type === 'resource'}
                   <ResourceTab
                     {tab}
@@ -5339,7 +5339,6 @@
                   on:scrollTo={handleAnnotationScrollTo}
                   on:create={handleAnnotationSidebarCreate}
                   on:reload={handleAnnotationSidebarReload}
-                  {horizontalTabs}
                   on:close={() => toggleRightSidebarTab('annotations')}
                 />
               {:else}
@@ -5409,19 +5408,16 @@
 
 <style lang="scss">
   @use '@horizon/core/src/lib/styles/utils' as utils;
-  @import '@horizon/core/src/lib/styles/colors';
+  @use '@horizon/core/src/lib/styles/colors';
 
-  *,
-  a,
-  button {
-    cursor: default;
-    user-select: none;
+  :global(body.custom ::selection) {
+    color: var(--mixed-bg) !important;
+    background: var(--contrast-color) !important;
   }
 
-  .ai-wrapper {
-    position: relative;
-    outline: 2px solid rgba(73, 82, 242, 0.4);
-    border-radius: 16px;
+  :global(body.custom.dark ::selection) {
+    color: var(--mixed-bg-dark);
+    background: var(--contrast-color);
   }
 
   /// App Scaffolding

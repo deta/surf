@@ -533,27 +533,24 @@
     width: 1.5rem;
     height: 1.5rem;
 
-    &.hover-effect {
-      color: rgb(2 132 199);
-      background: rgba(2, 132, 199, 0.1);
+    // TODO: This was unused as this class is not set on context-icon but only on context-name
+    //&.hover-effect {
+    //  color: rgb(2 132 199);
+    //  background: rgba(2, 132, 199, 0.1);
 
-      :global(.dark) & {
-        color: rgb(2 132 199);
-        background-color: rgb(59, 80, 111);
-      }
+    //  :global(.dark) & {
+    //    color: rgb(2 132 199);
+    //    background-color: rgb(59, 80, 111);
+    //  }
 
-      :global(.custom) & {
-        color: var(--contrast-color) !important;
-        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 90%, 0.3)) !important;
-      }
-      :global(.custom.dark) & {
-        background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 00%, 0.65)) !important;
-      }
-    }
-
-    div {
-      pointer-events: none;
-    }
+    //  :global(.custom) & {
+    //    color: var(--contrast-color) !important;
+    //    background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 90%, 0.3)) !important;
+    //  }
+    //  :global(.custom.dark) & {
+    //    background: color-mix(in hsl, var(--base-color), hsla(0, 80%, 00%, 0.65)) !important;
+    //  }
+    //}
   }
 
   .input {

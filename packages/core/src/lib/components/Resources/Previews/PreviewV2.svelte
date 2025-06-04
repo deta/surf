@@ -27,7 +27,6 @@
     type ViewMode
   } from '@horizon/core/src/lib/utils/resourcePreview'
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
-  import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import CodeRenderer from '../../Chat/CodeRenderer.svelte'
   import CollapsableResourceEmbed from '@horizon/core/src/lib/components/Chat/Notes/CollapsableResourceEmbed.svelte'
 
@@ -37,7 +36,7 @@
   export let resource: Resource
   export let type: string
   export let viewMode: ViewMode = 'card'
-  export let mode: ContentMode = 'full'
+  export const mode: ContentMode = 'full'
 
   export let origin: Origin = 'stuff'
   export let interactive: boolean = false
@@ -51,7 +50,7 @@
   export let content: string | undefined = undefined
   export let contentType: ContentType | undefined = undefined
   export let annotations: Annotation[] | undefined = undefined
-  export let url: string | undefined = undefined
+  export const url: string | undefined = undefined
   export let metadata: PreviewMetadata[] | undefined = undefined
 
   export let status: 'processing' | 'static' | undefined = undefined
@@ -653,43 +652,43 @@
         gap: 0.1em;
         flex-grow: 1;
 
-        > h1 {
-          width: fit-content;
-          max-width: 100%;
+        //> h1 {
+        //  width: fit-content;
+        //  max-width: 100%;
 
-          font-family: SN Pro;
-          font-weight: 650;
+        //  font-family: SN Pro;
+        //  font-weight: 650;
 
-          font-weight: 550;
-          font-size: 1.5em;
-          line-height: 1.25em;
-          letter-spacing: 0.002em;
+        //  font-weight: 550;
+        //  font-size: 1.5em;
+        //  line-height: 1.25em;
+        //  letter-spacing: 0.002em;
 
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: var(--MAX_title_lines, 4);
-          overflow-wrap: break-word;
-          text-wrap: balance;
-          text-overflow: ellipsis;
+        //  overflow: hidden;
+        //  display: -webkit-box;
+        //  -webkit-box-orient: vertical;
+        //  -webkit-line-clamp: var(--MAX_title_lines, 4);
+        //  overflow-wrap: break-word;
+        //  text-wrap: balance;
+        //  text-overflow: ellipsis;
 
-          margin-bottom: 0.35em;
-          border-bottom: 1px solid transparent;
-          transition: border-bottom 125ms ease;
+        //  margin-bottom: 0.35em;
+        //  border-bottom: 1px solid transparent;
+        //  transition: border-bottom 125ms ease;
 
-          // TODO: Remove pointer events when not interactive
-          pointer-events: none;
-          //:global(.interactive) & {
-          pointer-events: unset;
-          //}
+        //  // TODO: Remove pointer events when not interactive
+        //  pointer-events: none;
+        //  //:global(.interactive) & {
+        //  pointer-events: unset;
+        //  //}
 
-          &:empty:before {
-            content: attr(placeholder);
-            pointer-events: none;
-            display: block; /* For Firefox */
-            opacity: 0.5;
-          }
-        }
+        //  &:empty:before {
+        //    content: attr(placeholder);
+        //    pointer-events: none;
+        //    display: block; /* For Firefox */
+        //    opacity: 0.5;
+        //  }
+        //}
         > p {
           font-size: 1em;
           font-weight: 400;
@@ -730,14 +729,13 @@
         gap: 0.35em;
         align-items: center;
 
-        .separator {
-          font-size: 0.8em;
-          opacity: var(--text-muted-opacity);
-        }
+        //.separator {
+        //  font-size: 0.8em;
+        //  opacity: var(--text-muted-opacity);
+        //}
       }
 
-      .source,
-      .status {
+      .source {
         order: 0;
         display: flex;
         align-items: center;
@@ -761,8 +759,6 @@
         }
       }
 
-      .annotation {
-      }
       .annotation-info {
         display: flex;
         align-items: center;
@@ -770,47 +766,47 @@
         gap: 0.5em;
       }
 
-      .status {
-        width: 100%;
-        padding: 0;
-        &:not(:has(.failed)) {
-          animation: breathe 1.75s infinite ease;
-        }
-        > span {
-          font-size: 1em;
+      //.status {
+      //  width: 100%;
+      //  padding: 0;
+      //  &:not(:has(.failed)) {
+      //    animation: breathe 1.75s infinite ease;
+      //  }
+      //  > span {
+      //    font-size: 1em;
 
-          display: flex;
-          align-items: center;
-          gap: 0.5em;
-        }
-        margin-top: 0em;
-      }
+      //    display: flex;
+      //    align-items: center;
+      //    gap: 0.5em;
+      //  }
+      //  margin-top: 0em;
+      //}
 
-      .author,
-      .page-title {
-        order: 1;
-        display: flex;
-        align-items: center;
-        gap: 0.5em;
-        max-width: 100%;
-        width: min-content;
+      //.author,
+      //.page-title {
+      //  order: 1;
+      //  display: flex;
+      //  align-items: center;
+      //  gap: 0.5em;
+      //  max-width: 100%;
+      //  width: min-content;
 
-        > :global(img) {
-          border-radius: 0.3em;
-        }
-        > span {
-          font-size: 1em;
-          font-weight: 500;
-          letter-spacing: 0.2px;
-          opacity: var(--text-muted-opacity);
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
+      //  > :global(img) {
+      //    border-radius: 0.3em;
+      //  }
+      //  > span {
+      //    font-size: 1em;
+      //    font-weight: 500;
+      //    letter-spacing: 0.2px;
+      //    opacity: var(--text-muted-opacity);
+      //    -webkit-font-smoothing: antialiased;
+      //    -moz-osx-font-smoothing: grayscale;
 
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-      }
+      //    white-space: nowrap;
+      //    overflow: hidden;
+      //    text-overflow: ellipsis;
+      //  }
+      //}
     }
 
     &.view-inline {
@@ -853,12 +849,12 @@
         .metadata {
           justify-content: space-between;
         }
-        .page-title {
-          order: -1;
-          flex-shrink: 1;
-          flex-grow: 1;
-          max-width: 80%;
-        }
+        //.page-title {
+        //  order: -1;
+        //  flex-shrink: 1;
+        //  flex-grow: 1;
+        //  max-width: 80%;
+        //}
         .source {
           flex-shrink: 0;
           > span {
@@ -911,10 +907,10 @@
         .annotation {
           min-height: 0;
           overflow: hidden;
-          > h1 {
-            //min-height: 0;
-            flex-shrink: 0;
-          }
+          //> h1 {
+          //  //min-height: 0;
+          //  flex-shrink: 0;
+          //}
           > p {
             min-height: 0;
           }

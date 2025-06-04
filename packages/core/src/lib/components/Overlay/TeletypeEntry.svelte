@@ -606,21 +606,22 @@
 
     --border-radius: 18px;
   }
-  .dark {
-    --text: #ffffff; // white
-    --text-light: #cccccc; // light gray
-    --background-dark: #121212; // very dark gray
-    --background-accent: #1e1e1e; // dark gray
-    --border-color: #33333383; // dark gray with opacity
-    --outline-color: #33333337; // dark gray with low opacity
-    --primary: #4d73e0; // default
-    --primary-dark: #a48e8e;
-    --green: #0ec463; // default
-    --red: #f24441; // default
-    --orange: #fa870c; // default
+  // unused?
+  //.dark {
+  //  --text: #ffffff; // white
+  //  --text-light: #cccccc; // light gray
+  //  --background-dark: #121212; // very dark gray
+  //  --background-accent: #1e1e1e; // dark gray
+  //  --border-color: #33333383; // dark gray with opacity
+  //  --outline-color: #33333337; // dark gray with low opacity
+  //  --primary: #4d73e0; // default
+  //  --primary-dark: #a48e8e;
+  //  --green: #0ec463; // default
+  //  --red: #f24441; // default
+  //  --orange: #fa870c; // default
 
-    --border-radius: 8px;
-  }
+  //  --border-radius: 8px;
+  //}
 
   :global(#tty-default) {
     view-transition-name: teletype;

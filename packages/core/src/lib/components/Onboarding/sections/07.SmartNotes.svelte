@@ -1,20 +1,10 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
-  import Button from '@horizon/core/src/lib/components/Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
-  import stuffOnboarding01 from '../../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
   import { OnboardingFeature } from '../onboardingScripts'
   import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
 
   import { completedFeatures } from '../featured'
-
-  export let modShortcut: string
-
-  const dispatch = createEventDispatcher<{
-    tryStuff: void
-    launchTimeline: OnboardingFeature
-  }>()
 
   let showLiveTip = true
   let showHelperText = true
@@ -58,7 +48,6 @@
       <TextResource
         resourceId="onboarding"
         showOnboarding
-        hideContextSwitcher
         autofocus={false}
         similaritySearch
         on:change-onboarding-note={handleChangeOnboardingNote}

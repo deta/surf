@@ -142,7 +142,6 @@
   export let showOnboarding: boolean = false
   export let showCodegenOnboarding: boolean = false
   export let minimal: boolean = false
-  export let hideContextSwitcher: boolean = false
   export let similaritySearch: boolean = false
   export let manualContextControl: boolean = false
   export let autoGenerateTitle: boolean = false
@@ -2605,7 +2604,6 @@
               enableCaretIndicator={origin !== 'homescreen'}
               onCaretPositionUpdate={handleCaretPositionUpdate}
               onLinkClick={handleLinkClick}
-              {tabsManager}
               {slashItemsFetcher}
               {mentionItemsFetcher}
               {linkItemsFetcher}
@@ -2739,105 +2737,6 @@
       padding: 0 !important;
     }
   }
-  .details-wrapper {
-    max-width: 730px;
-    width: 100%;
-    margin: auto;
-    padding: 2em 2em;
-    padding-bottom: 0;
-    box-sizing: content-box;
-  }
-
-  .details {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-    padding-bottom: 0.25em;
-    border-bottom: 1px dashed #ddd;
-    width: 100%;
-
-    input {
-      font-size: 2.25em;
-      font-weight: 600;
-      border: none;
-      outline: none;
-      background: transparent;
-      padding: 0;
-      margin: 0;
-      width: 100%;
-
-      font-family: SN Pro;
-      letter-spacing: 0.3px;
-
-      color: var(--text-color);
-
-      :global(.dark) & {
-        color: var(--text-color-dark) !important;
-      }
-    }
-
-    &:active,
-    &:focus,
-    &:focus-within {
-      border-color: #aaa;
-    }
-
-    :global(.dark) & {
-      border-color: #444;
-
-      &:active,
-      &:focus,
-      &:focus-within {
-        border-color: #777;
-      }
-    }
-  }
-
-  .prompts-wrapper {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-  }
-
-  .prompts {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5em;
-    width: 100%;
-    margin-bottom: 0.5em;
-    overflow: auto;
-    z-index: 0;
-  }
-
-  .prompts-list {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .change-context-wrapper {
-    // position: absolute;
-    // top: 1em;
-    // right: 1em;
-    // z-index: 100;
-    // display: flex;
-    // align-items: center;
-    // gap: 0.25em;
-    position: absolute;
-    bottom: 0;
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-    max-width: 730px;
-  }
 
   .onboarding-wrapper {
     position: absolute;
@@ -2845,31 +2744,6 @@
     left: 50%;
     bottom: 1.5em;
     transform: translateX(-50%);
-  }
-
-  .info-btn {
-    position: fixed;
-    top: 1em;
-    left: 1em;
-    z-index: 100;
-    background: #fff;
-    border: none;
-    padding: 0.25rem;
-    border-radius: 0.5rem;
-    opacity: 0.5;
-
-    :global(.dark) & {
-      background: #333;
-    }
-
-    &:hover {
-      background: #f8f8f8;
-      opacity: 1;
-
-      :global(.dark) & {
-        background: #444;
-      }
-    }
   }
 
   .note-settings {

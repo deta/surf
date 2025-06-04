@@ -499,7 +499,7 @@
         }
       }
 
-      &.hover-override {
+      &.hover-override & {
         background: transparent;
         color: var(--ctx-item-text);
 

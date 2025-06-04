@@ -1,11 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import {
-    formatCodeLanguage,
-    getNormalizedHostname,
-    mimeTypeToCodeLanguage,
-    useLogScope
-  } from '@horizon/utils'
+  import { mimeTypeToCodeLanguage, useLogScope } from '@horizon/utils'
   import {
     ResourceManager,
     useResourceManager,
@@ -31,7 +26,14 @@
   export let tab: TabPage
   export let resourceId: string | null = null
   export let activeAnnotation: string | null = null
-  export let horizontalTabs = false
+
+  export const reload = async (showLoading?: boolean) => {
+    if (resourceId) {
+      await loadAnnotations(resourceId, showLoading)
+      await loadApps(tab, showLoading)
+      savingNotes = false
+    }
+  }
 
   const log = useLogScope('AnnotationsSidebar')
   const resourceManager = useResourceManager()
@@ -64,14 +66,6 @@
 
   $: if (tab) {
     loadApps(tab)
-  }
-
-  export const reload = async (showLoading?: boolean) => {
-    if (resourceId) {
-      await loadAnnotations(resourceId, showLoading)
-      await loadApps(tab, showLoading)
-      savingNotes = false
-    }
   }
 
   const loadApps = async (tab: TabPage, showLoading = false) => {
@@ -309,14 +303,6 @@
 </div>
 
 <style lang="scss">
-  .wrapper {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding-top: 2rem;
-    height: 100%;
-  }
-
   .content {
     display: flex;
     flex-direction: column;
@@ -325,29 +311,6 @@
     overflow: auto;
     margin-top: 1rem;
     padding-bottom: 1rem;
-  }
-
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #2b2715;
-    white-space: nowrap;
-
-    :global(.dark) & {
-      color: #e0e7ff;
-    }
-
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 500;
-    }
   }
 
   .empty-annotations {
@@ -404,24 +367,6 @@
 
     :global(.dark) & {
       border-color: #2e2e2e;
-    }
-
-    textarea {
-      flex: 1;
-      border: none;
-      border-radius: 8px;
-      padding: 0.75rem;
-      font-size: 1rem;
-      resize: vertical;
-      outline: none;
-      background: #f8f8f8;
-      border: 1px solid #e0e0e0;
-      font-family: inherit;
-
-      :global(.dark) & {
-        background: #1e1e1e;
-        border-color: #2e2e2e;
-      }
     }
 
     button {

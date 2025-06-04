@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { type Writable } from 'svelte/store'
   import { slide } from 'svelte/transition'
   import {
     type Action,
@@ -18,8 +17,6 @@
   export let actions: Action[]
   export let freeze = false
   export let isOption = false
-  export let animations = true
-  export let value: Writable<string>
 
   const dispatch = createEventDispatcher<{
     execute: Action
@@ -229,7 +226,6 @@
           {#if actions[0]?.horizontalParentAction}
             <button
               class="trailing"
-              role="none"
               on:click={() => {
                 dispatchTeletypeEvent({
                   execute: actions[0].horizontalParentAction,
@@ -265,7 +261,6 @@
             on:execute
             on:selected={() => (activeActionIndex = getActionIndex(action.id))}
             active={getActionIndex(action.id) === activeActionIndex}
-            {animations}
           />
         {/if}
       {/each}

@@ -101,10 +101,4 @@
     color: var(--color-text);
     font-weight: 500;
   }
-
-  h4 {
-    font-size: 1.1rem;
-    color: var(--color-text);
-    margin-bottom: 0.35em;
-  }
 </style>

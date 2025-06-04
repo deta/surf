@@ -30,7 +30,6 @@
   export let desktop: DesktopService
   export let item: Writable<DesktopItemData>
   export let interactive: boolean = true
-  export let skeleton = false
 
   const desktopManager = useDesktopManager()
   const desktopVisible = desktopManager.activeDesktopVisible
@@ -501,30 +500,30 @@ TODO: Fix resizing logic for other corners
         --offset: 35%;
         --stroke-width: 4;
 
-        &.top-left {
-          top: 0;
-          left: 0;
-          transform: translate(calc(-1 * var(--offset)), calc(-1 * var(--offset))) rotate(180deg);
-          cursor: nwse-resize;
-        }
-        &.top-right {
-          top: 0;
-          right: 0;
-          transform: translate(var(--offset), calc(-1 * var(--offset))) rotate(-90deg);
-          cursor: nesw-resize;
-        }
+        //&.top-left {
+        //  top: 0;
+        //  left: 0;
+        //  transform: translate(calc(-1 * var(--offset)), calc(-1 * var(--offset))) rotate(180deg);
+        //  cursor: nwse-resize;
+        //}
+        //&.top-right {
+        //  top: 0;
+        //  right: 0;
+        //  transform: translate(var(--offset), calc(-1 * var(--offset))) rotate(-90deg);
+        //  cursor: nesw-resize;
+        //}
         &.bottom-right {
           bottom: 0;
           right: 0;
           transform: translate(var(--offset), var(--offset));
           cursor: nwse-resize;
         }
-        &.bottom-left {
-          bottom: 0;
-          left: 0;
-          transform: translate(calc(-1 * var(--offset)), var(--offset)) rotate(90deg);
-          cursor: nesw-resize;
-        }
+        //&.bottom-left {
+        //  bottom: 0;
+        //  left: 0;
+        //  transform: translate(calc(-1 * var(--offset)), var(--offset)) rotate(90deg);
+        //  cursor: nesw-resize;
+        //}
       }
     }
   }

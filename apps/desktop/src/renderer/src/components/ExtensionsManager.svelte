@@ -64,10 +64,6 @@
 
 <style lang="scss">
   .wrapper {
-    h3 {
-      margin-bottom: 20px;
-    }
-
     .extensions {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

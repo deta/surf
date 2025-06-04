@@ -145,17 +145,5 @@
       gap: 0.75rem;
       padding: 0.5rem;
     }
-
-    .install-options {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-
-      .install-option {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-    }
   }
 </style>

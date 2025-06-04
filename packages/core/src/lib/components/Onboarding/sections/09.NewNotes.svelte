@@ -1,21 +1,14 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
   import Button from '@horizon/core/src/lib/components/Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import newNotesVideo from '../../../../../public/assets/demo/new.notes.mp4'
   import newNotesImage from '../../../../../public/assets/demo/new.notes.png'
   import { OnboardingFeature } from '../onboardingScripts'
-  import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
-
-  import { completedFeatures } from '../featured'
-
-  export let modShortcut: string
 
   const dispatch = createEventDispatcher<{
     launchTimeline: OnboardingFeature
   }>()
 
-  let showLiveTip = true
   let showHelperText = true
 
   const handleTryNotes = () => {

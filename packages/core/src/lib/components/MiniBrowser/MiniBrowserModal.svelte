@@ -675,39 +675,6 @@
     }
   }
 
-  .close-hitarea {
-    position: absolute;
-    top: 2rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 2rem;
-    background: linear-gradient(to bottom, #34393d, transparent);
-
-    .label {
-      transition: 240ms ease-out;
-      color: #d4dce0;
-      user-select: none;
-      opacity: 0;
-    }
-
-    &:hover {
-      .label {
-        opacity: 1;
-        padding-top: 2.5rem;
-      }
-    }
-
-    &:hover ~ .mini-browser {
-      transform: translateY(2.75rem) scale(0.98);
-      backdrop-filter: blur(4px);
-      .label {
-        opacity: 1;
-      }
-    }
-  }
-
   .mini-browser {
     position: relative;
     display: flex;
@@ -783,70 +750,12 @@
     flex-shrink: 0;
   }
 
-  .resource-details {
-    position: relative;
-    width: 40rem;
-    border-radius: 12px;
-    overflow: hidden;
-    background: white;
-  }
-
-  .annotations-view {
-    position: relative;
-    width: 40rem;
-    height: 100%;
-    border-radius: 12px;
-    background: white;
-    padding: 1rem;
-  }
-
-  .annotations {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    overflow: auto;
-    height: 100%;
-  }
-
   .loading {
     margin: auto;
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-  }
-
-  .empty-annotations {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    opacity: 0.5;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-      opacity: 1;
-    }
-
-    p {
-      font-size: 1rem;
-      color: #666;
-      text-align: center;
-    }
-  }
-
-  .empty-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-
-    h1 {
-      font-size: 1.25rem;
-      font-weight: 500;
-    }
   }
 
   .mini-webview-wrapper {

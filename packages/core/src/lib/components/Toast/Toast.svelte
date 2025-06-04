@@ -147,9 +147,6 @@
       font-weight: 500;
       letter-spacing: 0.006px;
 
-      &.starting {
-        opacity: 0;
-      }
       transition:
         opacity 125ms cubic-bezier(0.4, 0, 0, 1),
         width 588.4ms
