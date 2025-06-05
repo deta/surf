@@ -5410,15 +5410,17 @@
   @use '@horizon/core/src/lib/styles/utils' as utils;
   @use '@horizon/core/src/lib/styles/colors';
 
-  :global(body.custom ::selection) {
-    color: var(--mixed-bg) !important;
-    background: var(--contrast-color) !important;
-  }
+  // ISSUE: Watch out, this snipept will crash renderer if mouse over the tab input text selection
+  // TODO: (maxu): Figure out if this is caused by our Houdini squircles when text selection is on top
+  //:global(body.custom ::selection) {
+  //  color: var(--mixed-bg) !important;
+  //  background: var(--contrast-color) !important;
+  //}
 
-  :global(body.custom.dark ::selection) {
-    color: var(--mixed-bg-dark);
-    background: var(--contrast-color);
-  }
+  //:global(body.custom.dark ::selection) {
+  //  color: var(--mixed-bg-dark);
+  //  background: var(--contrast-color);
+  //}
 
   /// App Scaffolding
 
