@@ -1,3 +1,14 @@
+<script lang="ts" context="module">
+  // prettier-ignore
+  export type ChatSubmitOptions = {
+    focusEnd: boolean
+    focusInput: boolean
+    autoScroll: boolean
+    showPrompt: boolean
+    generationID?: string
+  };
+</script>
+
 <script lang="ts">
   import { writable, derived } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
@@ -225,13 +236,6 @@
       unsubscribeGlobal()
     }
   })
-
-  type ChatSubmitOptions = {
-    focusEnd: boolean
-    autoScroll: boolean
-    showPrompt: boolean
-    generationID?: string
-  }
 
   const similarityResults = writable<null | {
     sources: AIChatMessageSource[]
@@ -956,6 +960,7 @@
   ) => {
     const options = {
       focusEnd: opts?.focusEnd ?? false,
+      focusInput: opts?.focusInput ?? false,
       autoScroll: opts?.autoScroll ?? false,
       showPrompt: opts?.showPrompt ?? false,
       generationID: opts?.generationID
@@ -1014,6 +1019,10 @@
         autoScroll: options.autoScroll,
         showPrompt: options.showPrompt
       })
+
+      if (options.focusInput) {
+        focusChatInput()
+      }
 
       // TODO: chatMode is already also figured out in `createChatCompletion` API
       // we need to refactor this to avoid double calls
@@ -1931,6 +1940,16 @@
 
     editorElem.setContent(text)
     editor.commands.focus('end')
+  }
+
+  export const focusChatInput = () => {
+    if (!chatInputEditorElem) {
+      log.error('Could not get chat input editor instance')
+      return
+    }
+
+    const chatInputEditor = chatInputEditorElem.getEditor()
+    chatInputEditor.commands.focus()
   }
 
   export const handleCreateSurflet = (code?: string) => {

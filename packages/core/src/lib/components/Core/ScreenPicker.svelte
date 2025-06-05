@@ -580,12 +580,11 @@
 
       await wait(500)
 
-      chatComponent.addChatWithQuery(input, true)
-      chatComponent.createChatCompletion(
+      await chatComponent.createChatCompletion(
         input,
         undefined,
-        undefined,
-        PageChatMessageSentEventTrigger.InlineAI
+        PageChatMessageSentEventTrigger.InlineAI,
+        { showPrompt: true, focusInput: true }
       )
     } else {
       const contextManager = ai.createContextManager()
@@ -620,12 +619,11 @@
 
       await wait(800)
 
-      chatComponent.addChatWithQuery(prompt.label, true)
-      chatComponent.createChatCompletion(
+      await chatComponent.createChatCompletion(
         prompt.prompt,
         undefined,
-        undefined,
-        PageChatMessageSentEventTrigger.InlineAI
+        PageChatMessageSentEventTrigger.InlineAI,
+        { showPrompt: true, focusInput: true }
       )
     } else {
       const contextManager = ai.createContextManager()

@@ -17,7 +17,9 @@
   import { type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
 
   import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'
-  import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
+  import TextResource, {
+    type ChatSubmitOptions
+  } from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import { onMount } from 'svelte'
 
@@ -72,12 +74,12 @@
 
   export const createChatCompletion = async (
     query: string,
-    systemPrompt?: string,
     mentions?: MentionItem[],
-    trigger?: PageChatMessageSentEventTrigger
+    trigger?: PageChatMessageSentEventTrigger,
+    opts?: Partial<ChatSubmitOptions>
   ) => {
     try {
-      await noteComp.generateAndInsertAIOutput(query, systemPrompt, mentions, trigger)
+      await noteComp.generateAndInsertAIOutput(query, mentions, trigger, opts)
     } catch (e) {
       log.error('Error creating chat completion', e)
       toasts.error('Error creating chat completion')
