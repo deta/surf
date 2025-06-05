@@ -1671,6 +1671,14 @@ export class OasisService extends EventEmitterBase<OasisEvents> {
 
       const spaceData = space.dataValue
       const currentValue = spaceData.useAsBrowsingContext
+
+      if (useAsBrowsingContext !== undefined && useAsBrowsingContext === currentValue) {
+        this.log.debug(
+          `Browsing context for space ${spaceId} is already set to ${useAsBrowsingContext}, no change needed`
+        )
+        return true
+      }
+
       const newValue = useAsBrowsingContext !== undefined ? useAsBrowsingContext : !currentValue
       const isActiveInBrowser = this.tabsManager?.activeScopeIdValue === spaceId
 
