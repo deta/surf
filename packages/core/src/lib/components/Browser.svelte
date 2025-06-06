@@ -399,9 +399,6 @@
 
   $: sffs.setVisionTaggingFlag($userConfigSettings.vision_image_tagging)
 
-  // Set global context
-  setContext('selectedFolder', 'inbox')
-
   $: activeTabMiniBrowser = useScopedMiniBrowserAsStore(`tab-${$activeTabId}`)
   $: activeTabMiniBrowserIsOpen = $activeTabMiniBrowser?.isOpen
 
