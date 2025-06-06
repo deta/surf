@@ -606,22 +606,6 @@
 
     --border-radius: 18px;
   }
-  // unused?
-  //.dark {
-  //  --text: #ffffff; // white
-  //  --text-light: #cccccc; // light gray
-  //  --background-dark: #121212; // very dark gray
-  //  --background-accent: #1e1e1e; // dark gray
-  //  --border-color: #33333383; // dark gray with opacity
-  //  --outline-color: #33333337; // dark gray with low opacity
-  //  --primary: #4d73e0; // default
-  //  --primary-dark: #a48e8e;
-  //  --green: #0ec463; // default
-  //  --red: #f24441; // default
-  //  --orange: #fa870c; // default
-
-  //  --border-radius: 8px;
-  //}
 
   :global(#tty-default) {
     view-transition-name: teletype;
@@ -641,18 +625,6 @@
       :global(> .inner :last-child:not(.media)) {
         margin-bottom: 0.3em;
       }
-      /*border: 0 !important;
-      :global(.preview-card .inner) {
-        height: 100%;
-        :global(.image) {
-          height: 100%;
-          object-fit: cover;
-          :global(img) {
-            height: 100%;
-            object-fit: cover;
-          }
-        }
-      }*/
     }
   }
   :global(.resource-preview[data-origin='cmdt'][data-drag-preview]) {

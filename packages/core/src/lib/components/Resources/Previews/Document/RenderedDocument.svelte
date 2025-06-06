@@ -1,12 +1,6 @@
 <script lang="ts">
   export let html: string
-  import { Icon } from '@horizon/icons'
-
   let isOpen = false
-
-  function toggleSpoiler() {
-    isOpen = !isOpen
-  }
 </script>
 
 <div class="spoiler-container">

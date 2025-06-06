@@ -45,8 +45,6 @@
   let editing = false
   let inputEl: HTMLInputElement
 
-  $: iterableSites = $sites || []
-
   $: if (inputEl) {
     log.debug('inputEl', inputEl)
     setTimeout(() => {
@@ -103,12 +101,6 @@
   }
 
   let showBrowserHomescreen: boolean = true
-
-  function handleClick(url: string) {
-    // webview?.navigate(url)
-    dispatch('navigate', url)
-    showBrowserHomescreen = false
-  }
 
   const handleAddressToolbarAction = (e: CustomEvent<ActionEvent>) => {
     const { type, value } = e.detail
@@ -257,84 +249,6 @@
     height: 40rem;
     object-fit: cover;
   }
-
-  //.top-bar {
-  //  position: fixed;
-  //  top: 0;
-  //  width: 100%;
-  //  height: 4rem;
-  //  padding: 0.5rem;
-  //  z-index: 10;
-  //  .show-all-spaces {
-  //    display: flex;
-  //    align-items: center;
-  //    gap: 0.75rem;
-  //    padding: 1rem 1.125rem;
-  //    border: 0;
-  //    width: 100%;
-  //    background: transparent;
-  //    border-radius: 12px;
-  //    width: fit-content;
-
-  //    &:hover {
-  //      background-color: #ffffff;
-  //    }
-  //    .label {
-  //      flex: 1;
-  //      text-align: left;
-  //      white-space: nowrap;
-  //      overflow: hidden;
-  //      text-overflow: ellipsis;
-  //      font-size: 1.1rem;
-  //      color: #7d7448;
-  //      font-weight: 500;
-  //      letter-spacing: 0.0025em;
-  //      font-smooth: always;
-  //      -webkit-font-smoothing: antialiased;
-  //      -moz-osx-font-smoothing: grayscale;
-  //    }
-  //  }
-  //}
-
-  //.browser-homescreen {
-  //  position: relative;
-  //  bottom: 0;
-  //  z-index: 0;
-  //  width: 100%;
-  //  height: 100%;
-  //  top: 12rem;
-
-  //  .homescreen-content {
-  //    display: flex;
-  //    flex-direction: column;
-  //    align-items: center;
-  //    justify-content: center;
-  //    height: 100%;
-  //    gap: 2rem;
-  //    margin: 0 auto;
-  //    max-width: 50rem;
-  //    padding: 2rem 2rem 20rem 2rem;
-
-  //    h2.subheadline {
-  //      font-size: 1.25rem;
-  //      font-weight: 500;
-  //      opacity: 0.6;
-  //      padding: 1.5rem 0 0.75rem 0;
-  //    }
-
-  //    .create-wrapper {
-  //      display: flex;
-  //      gap: 1rem;
-  //    }
-  //  }
-  //}
-
-  //.navbar-wrapper {
-  //  position: relative;
-  //  display: flex;
-  //  gap: 0.75rem;
-  //  width: 100%;
-  //}
 
   .address-bar-wrapper {
     position: relative;

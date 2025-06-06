@@ -25,7 +25,7 @@
               on:click|preventDefault={() => handleClick(item.browserActionUrl)}
               role="none"
             >
-              <Create service={item.id} index={i} />
+              <Create service={item.id} />
             </div>
           {/each}
         </div>

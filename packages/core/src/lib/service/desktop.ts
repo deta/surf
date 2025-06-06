@@ -27,7 +27,7 @@ import { createResourcesFromMediaItems, processDrop } from './mediaImporter'
 import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@horizon/utils'
 import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
-import { ColorService, type CustomColorData } from './colors'
+import { ColorService, type ColorRGB, type CustomColorData } from './colors'
 import { EventEmitterBase } from './events'
 
 const DEFAULT_CARD_SIZES: Record<ResourceTypes, { x: number; y: number }> = {
@@ -323,7 +323,7 @@ export const useDesktopManager = (): DesktopManager => {
 
 export interface DesktopBackgroundData {
   resourceId: string
-  colorPalette: [number, number, number][]
+  colorPalette: ColorRGB[]
 }
 
 export class DesktopService {

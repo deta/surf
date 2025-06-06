@@ -17,13 +17,8 @@
   let link: ResourceDataHistoryEntry | null = null
   let title = ''
   let subtitle = ''
-  let image = ''
   let error = ''
   let loading = true
-
-  const handleLoad = () => {
-    dispatch('load')
-  }
 
   onMount(async () => {
     try {

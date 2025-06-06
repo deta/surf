@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
   import { createEventDispatcher } from 'svelte'
   import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
-  import chat01 from '../../../../../public/assets/demo/backgrounds/03.webp'
   import chatBackground01 from '../../../../../public/assets/demo/backgrounds/chat.background.01.webp'
   import chatBackground02 from '../../../../../public/assets/demo/backgrounds/chat.background.02.webp'
   import chatBackground03 from '../../../../../public/assets/demo/backgrounds/chat.background.03.webp'

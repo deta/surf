@@ -30,7 +30,6 @@
   const spaceLinks = contextService.useSpaceLinks(space.id, 'all')
 
   const popoverOpened = writable(false)
-  const expanded = writable(false)
 
   let selectTimeout: ReturnType<typeof setTimeout>
   let forceExpanded = false

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { afterUpdate } from 'svelte'
-  import { writable, get } from 'svelte/store'
+  import { writable } from 'svelte/store'
   import { generateRootDomain } from '@horizon/utils'
 
   import { Icon } from '@horizon/icons'
@@ -39,18 +39,6 @@
       {name}
     </div>
   {/if}
-  <!-- {#if type == 'adblock'}
-    <div class="item-adblock">
-      <div class="icon-wrapper">
-        {#if adblockerState}
-          <Icon name="adblockon" color={active ? '#FFB5D8' : '#e173a8'} />
-        {:else}
-          <Icon name="adblockoff" color={active ? '#FFB5D8' : '#e173a8'} />
-        {/if}
-      </div>
-      {name}
-    </div>
-  {/if} -->
 
   {#if group == 'Search'}
     <div class="item-search">
@@ -59,7 +47,6 @@
           {searchQuery || inputValue}
         </div>
       </div>
-      <!-- <span class="input-value">{searchQuery || inputValue}</span> -->
       <div class="right">
         <span class="service">{name}</span>
         <div class="icon-wrapper">
@@ -67,13 +54,6 @@
         </div>
       </div>
     </div>
-    <!-- {:else if type == 'action'}
-    <div class="item-action">
-      {name}
-      <div class="icon-wrapper">
-        <Icon name="arrow" color={active ? '#FFFFFF' : '#000000'} />
-      </div>
-    </div> -->
   {:else if group == 'Chat'}
     <div class="item-search">
       <div class="title-wrapper">
@@ -81,7 +61,6 @@
           {searchQuery || inputValue}
         </div>
       </div>
-      <!-- <span class="input-value">{searchQuery || inputValue}</span> -->
       <div class="right">
         <span class="service">{name}</span>
         <div class="icon-wrapper">

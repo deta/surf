@@ -67,7 +67,6 @@ main browser so it follows you around throughout your daily workflows.`
 
   $: open = false
   let outro = false
-  const rot = Math.random() + 0.5
 
   function handleClose() {
     outro = true

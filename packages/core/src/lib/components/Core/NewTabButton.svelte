@@ -8,7 +8,6 @@
 </script>
 
 <script lang="ts">
-  import { everythingSpace } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
@@ -18,7 +17,6 @@
   export let spaces: Writable<OasisSpace[]>
 
   let selectedSpaceIndex = 0
-  let isLoading = true
   let inputRef: HTMLInputElement
   const searchQuery = writable('')
   let isOpen = false
@@ -30,10 +28,6 @@
 
   const filteredSpaces = derived([spaces, searchQuery], ([spaces, searchQuery]) => {
     return spaces.filter((space) => {
-      // if (space.name.showInSidebar) {
-      //   return false
-      // }
-
       if (searchQuery) {
         return space.dataValue.folderName.toLowerCase().includes(searchQuery.toLowerCase())
       }
@@ -41,15 +35,6 @@
       return true
     })
   })
-  const handleCreateNewHistoryTab = () => {
-    dispatch('create-new-history-tab')
-    isOpen = false
-  }
-
-  const handleCreateNewTab = () => {
-    dispatch('create-new-tab')
-    isOpen = false
-  }
 
   const handleClick = (index: number) => {
     selectedSpaceIndex = index
@@ -65,14 +50,6 @@
 
   const handleBlur = () => {
     isCreatingNewSpace.set(false)
-  }
-
-  const startCreatingNewSpace = async (e: any) => {
-    isOpen = true
-    isCreatingNewSpace.set(true)
-    await tick().then(() => {
-      inputRef.focus()
-    })
   }
 
   const cancelCreatingNewSpace = () => {

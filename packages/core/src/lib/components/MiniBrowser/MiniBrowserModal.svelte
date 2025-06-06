@@ -49,7 +49,6 @@
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let tab: TabPage
-  // export let url: Writable<string>
   export let resource: Resource | undefined = undefined
   export let active: boolean = true
   export let selection: MiniBrowserSelection | undefined = undefined
@@ -59,7 +58,6 @@
 
   let webview: WebviewWrapper
   let codeRenderer: CodeRenderer
-  let copyConfirmation: IconConfirmation
 
   const dispatch = createEventDispatcher<{
     close: boolean
@@ -202,11 +200,6 @@
     }
   }
 
-  // const handleCopy = () => {
-  //   copyToClipboard($url)
-  //   copyConfirmation.showConfirmation()
-  // }
-
   async function handleBookmark(
     savedToSpace = false
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
@@ -334,10 +327,6 @@
     }
   }
 
-  const handleDownload = () => {
-    // TODO
-  }
-
   const handleUpdateNoteTitle = (e: CustomEvent<string>) => {
     tab.title = e.detail
   }
@@ -434,9 +423,6 @@
   class:global-modal={isGlobal}
   on:click|self={() => close()}
 >
-  <!-- <div class="close-hitarea" on:click={close}>
-    <span class="label">Click or ESC to close</span>
-  </div> -->
   <div id="mini-browser" class="mini-browser w-[90vw] mx-auto">
     <div class="header">
       <div class="info">
@@ -539,16 +525,6 @@
         >
           <Icon name="arrow.diagonal" />
         </button>
-
-        <!-- {#if $url}
-          <button
-            use:tooltip={{ text: 'Copy URL' }}
-            on:click={handleCopy}
-            class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg "
-          >
-            <IconConfirmation bind:this={copyConfirmation} name="copy" />
-          </button>
-        {/if} -->
 
         {#key isBookmarkedResource}
           <SelectDropdown

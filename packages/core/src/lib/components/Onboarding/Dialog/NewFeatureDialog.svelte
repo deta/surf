@@ -2,7 +2,7 @@
   import { createEventDispatcher, tick } from 'svelte'
   import type { VersionContent } from '../featured'
   import { versions, completedFeatures } from '../featured'
-  import { useTabsManager, type TabsManager } from '../../../service/tabs'
+  import { useTabsManager } from '../../../service/tabs'
 
   const dispatch = createEventDispatcher()
   const tabsManager = useTabsManager()

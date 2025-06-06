@@ -1,5 +1,4 @@
 import { isMac } from '@horizon/utils'
-import Onboarding from '../Core/Onboarding.svelte'
 
 export enum OnboardingAction {
   SendChatMessage = 'send-chat-message',

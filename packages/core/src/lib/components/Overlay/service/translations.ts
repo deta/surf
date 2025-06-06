@@ -22,7 +22,6 @@ import {
 } from '@deta/teletype/src/components/Teletype/types'
 import {
   createSecondaryAction,
-  createTertiaryAction,
   dispatchTeletypeEvent,
   TeletypeAction,
   TeletypeActionGroup,
@@ -276,20 +275,6 @@ export const spaceToTeletypeItem = (space: OasisSpace) =>
     section: 'Context',
     actionIcon: 'circle-dot',
     actionText: 'Open Context',
-    /*
-    actionPanel: [
-      createSecondaryAction({
-        id: `open-space-in-overlay-${space.id}`,
-        name: 'Open in Overlay',
-        handler: createExecutioner(TeletypeAction.OpenSpaceInStuff, { space })
-      }),
-      createTertiaryAction({
-        id: `open-space-as-tab-${space.id}`,
-        name: 'Open as Tab',
-        handler: createExecutioner(TeletypeAction.OpenSpaceAsTab, { space })
-      })
-    ],
-    */
     handler: createExecutioner(TeletypeAction.OpenSpaceAsContext, { space })
   }) as Action
 

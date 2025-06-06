@@ -6,7 +6,6 @@
   import { Icon } from '@horizon/icons'
   import { OnboardingFeature } from './onboardingScripts'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import BrowserTab from '@horizon/core/src/lib/components/Browser/BrowserTab.svelte'
 
   const dispatch = createEventDispatcher()
 

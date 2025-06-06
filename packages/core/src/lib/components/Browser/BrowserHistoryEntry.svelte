@@ -3,7 +3,6 @@
   import { isModKeyPressed, useLogScope } from '@horizon/utils'
   import { CreateTabEventTrigger } from '@horizon/types'
   import { Icon } from '@horizon/icons'
-  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import type { HistoryEntry } from '../../types'
   import { useTabsManager } from '../../service/tabs'
 

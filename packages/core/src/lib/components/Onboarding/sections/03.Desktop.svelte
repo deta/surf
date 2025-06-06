@@ -1,10 +1,7 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
-  import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
-  import { onMount } from 'svelte'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
   import { isMac } from '@horizon/utils'
   import OasisResourceLoader from '@horizon/core/src/lib/components/Oasis/OasisResourceLoader.svelte'

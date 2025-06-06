@@ -59,15 +59,6 @@
       <PDFView {resource} on:load={handleLoad} />
     {:else if resource.type.startsWith('image/')}
       <ImageView resourceId={resource.id} fit="contain" on:load={handleLoad} />
-      <!-- {#if preview}
-        <ImageView blob={data} on:load={handleLoad} />
-      {:else}
-        <img
-          src="surf://resource/{resource.id}"
-          alt={resource.name}
-          style="width: 100%; height: 100%; object-fit: contain;"
-        />
-      {/if} -->
     {:else if data && resource.type.startsWith('video/')}
       <VideoView {resource} blob={data} on:load={handleLoad} />
     {:else if data && resource.type.startsWith('audio/')}
@@ -90,9 +81,5 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-
-    &.preview {
-      //border-radius: 16px;
-    }
   }
 </style>

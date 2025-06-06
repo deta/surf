@@ -141,43 +141,9 @@
       {/if}
     </div>
     <div class="flex-shrink-0 flex items-center gap-2">
-      <!--
-{#if $userSettings.annotations_sidebar}
-        <div class="flex items-center {smallLayout ? 'gap-1' : 'gap-3'}">
-          <AppBarButton on:click={() => activeTab.set('chat')} active={$activeTab === 'chat'}>
-            <Icon name="chat" size="16px" />
-            {#if !smallLayout}
-              Chat
-            {/if}
-          </AppBarButton>
-
-          <AppBarButton
-            on:click={() => activeTab.set('annotations')}
-            active={$activeTab === 'annotations'}
-          >
-            <Icon name="marker" size="1.2rem" />
-            {#if !smallLayout}
-              Annotations
-            {/if}
-          </AppBarButton>
-        </div>
-      {/if}-->
-
       {#if $debugMode}
         <ModelPicker />
       {/if}
-
-      <!--
-      {#if $userSettings.experimental_notes_chat_sidebar}
-        <AppBarButton on:click={handleLaunchOnboarding}>
-          <Icon name="help.circle" size="1.2rem" />
-        </AppBarButton>
-
-        <AppBarButton on:click={handleOpenAsTab}>
-          <Icon name="arrow.diagonal" size="1.2rem" />
-        </AppBarButton>
-      {/if}
-      -->
 
       {#if $activeNote}
         <div data-tooltip-target="open-note-as-tab">

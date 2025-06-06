@@ -31,7 +31,6 @@
     load: void
     'delete-auto-saved': void
   }>()
-  const log = useLogScope('OasisSpaceSettings')
   const oasis = useOasis()
   const toasts = useToasts()
   const tabsManager = useTabsManager()
@@ -40,8 +39,6 @@
   let spaceData = space?.data
   let isLiveModeOn = $spaceData?.liveModeEnabled
   let smartFilterQuery = $spaceData?.smartFilterQuery
-  let sortBy = $spaceData?.sortBy ?? 'resource_added_to_space'
-  let sortOrder = $spaceData?.sortOrder ?? 'desc'
 
   let sourceValue = ''
   let loading = false

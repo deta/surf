@@ -21,27 +21,22 @@
     generateID,
     useLogScope,
     truncate,
-    tooltip,
     type LogLevel,
     isMac,
     isDev,
     conditionalArrayItem,
-    useLocalStorageStore,
     shortenFilename,
     parseStringIntoUrl,
-    parseURL,
     parseSurfProtocolURL,
     flyAndScale
   } from '@horizon/utils'
   import {
     createResourcesFromFiles,
     createResourcesFromMediaItems,
-    processDrop,
-    processPaste
+    processDrop
   } from '../service/mediaImporter'
   import SidebarPane, { leftSize, rightSize } from './Sidebars/SidebarPane.svelte'
 
-  import type { PaneAPI } from 'paneforge'
   import {
     Resource,
     ResourceTag,
@@ -83,7 +78,6 @@
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import { HorizonDatabase } from '../service/storage'
   import TabImporter from './Core/TabImporter.svelte'
-  import OasisDiscovery from './Core/OasisDiscovery.svelte'
   import MagicSidebar from './Sidebars/MagicSidebar.svelte'
   import {
     ActivateTabEventTrigger,
@@ -113,7 +107,6 @@
     ChangeContextEventTrigger,
     PageChatUpdateContextItemType,
     PromptType,
-    type ImportedBrowserHistoryItem,
     ResourceTagDataStateValue
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
@@ -137,10 +130,9 @@
   import { spawnBoxSmoke } from './Effects/SmokeParticle.svelte'
   import DevOverlay from './Browser/DevOverlay.svelte'
   import BrowserActions from './Browser/BrowserActions.svelte'
-  import { createTabsManager, getBrowserContextScopeType, TABS_CONTEXT_KEY } from '../service/tabs'
+  import { createTabsManager, getBrowserContextScopeType } from '../service/tabs'
   import ResourceTab from './Oasis/ResourceTab.svelte'
   import { captureScreenshot, getHostFromURL, getScreenshotFileName } from '../utils/screenshot'
-  import { useResizeObserver } from '../utils/observers'
   import { contextMenu, prepareContextMenu, type CtxItem } from './Core/ContextMenu.svelte'
   import TabOnboarding from './Core/TabOnboarding.svelte'
   import Tooltip from './Onboarding/Tooltip.svelte'
@@ -148,24 +140,19 @@
   import { launchTimeline, endTimeline } from './Onboarding/timeline'
   import SidebarMetaOverlay from './Oasis/sidebar/SidebarMetaOverlay.svelte'
   import { createSyncService } from '@horizon/core/src/lib/service/sync'
-  import {
-    provideOnboardingService,
-    useOnboardingService
-  } from '@horizon/core/src/lib/service/onboarding'
+  import { provideOnboardingService } from '@horizon/core/src/lib/service/onboarding'
   import TabInvite from './Core/TabInvite.svelte'
   import Ask from './Core/Ask.svelte'
   import Homescreen from './Oasis/homescreen/Homescreen.svelte'
   import { debugMode } from '../stores/debug'
   import MiniBrowser from './MiniBrowser/MiniBrowser.svelte'
   import ScopeSwitcher from './Core/ScopeSwitcher/ScopeSwitcher.svelte'
-  import ExtensionBrowserActions from './Browser/ExtensionBrowserActions.svelte'
   import {
     createMiniBrowserService,
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
   import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'
   import vendorBackgroundDark from '../../../public/assets/vendorBackgroundDark.webp'
-  import { springVisibility } from './motion/springVisibility'
   import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { provideDesktopManager } from '../service/desktop'
   import { AIChat, provideAI } from '@horizon/core/src/lib/service/ai/ai'
@@ -184,7 +171,7 @@
   import '$styles/tippy.scss'
   import { floatyButtons } from './Atoms/floatyButtons'
   import FloatyButton from './Atoms/FloatyButton.svelte'
-  import ScreenPicker, { requestUserScreenshot } from './Core/ScreenPicker.svelte'
+  import ScreenPicker from './Core/ScreenPicker.svelte'
   import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
   import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
   import {
@@ -195,7 +182,7 @@
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
-  import type { AIChatMessageSource, HistoryEntry } from '@horizon/core/src/lib/types'
+  import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
     migrateHomeContext,
@@ -204,7 +191,7 @@
     applyBrowsingContextSelection
   } from '@horizon/core/src/lib/service/migration'
   import BrowsingContextSelector from './Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
-  import { BuiltInSpaceId, isBuiltInSpaceId } from '../constants/spaces'
+  import { BuiltInSpaceId } from '../constants/spaces'
 
   /*
   NOTE: Funky notes on our z-index issue.
@@ -218,22 +205,15 @@
   const addressBarFocus = writable(false)
   let showLeftSidebar = true
   let showRightSidebar = false
-  let rightPane: PaneAPI | undefined = undefined
-  let sidebarComponent: SidebarPane | null = null
   let annotationsSidebar: AnnotationsSidebar
   let magicSidebar: any
-  let rightSidebar: any
 
   // Register the MagicSidebar with the onboarding service when it's initialized
   $: if (magicSidebar && onboardingService) {
     onboardingService.attachMagicSidebar(magicSidebar)
   }
-  let isFirstButtonVisible = true
   let containerRef: Element
-  let pinnedTabsWrapper: HTMLElement
-  let pinnedTabsScrollArea: HTMLElement
   let initializedApp = false
-  let showNewChatButton = false
 
   const onboardingActive = writable(false)
   const onboardingTabVisible = writable(false)
@@ -354,10 +334,8 @@
   const showScreenshotPicker = writable(false)
   const addressValue = writable('')
   const sidebarTab = writable<'active' | 'archive' | 'oasis'>('active')
-  const showCreateLiveSpaceDialog = writable(false)
   const bookmarkingTabsState = writable<Record<string, BookmarkTabState>>({})
   const isCreatingLiveSpace = writable(false)
-  const activeAppId = writable<string>('')
   const rightSidebarTab = writable<RightSidebarTab>('chat')
   const showSplashScreen = writable(true)
   const showHeroScreen = writable(!$userConfigSettings.has_seen_hero_screen)
@@ -368,8 +346,6 @@
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
-
-  const CHAT_DOWNLOAD_INTERCEPT_TIMEOUT = 1000 * 60 // 60s
 
   $: desktopColorScheme = $activeDesktopColorScheme
   $: {
@@ -429,11 +405,6 @@
   $: {
     handleRightSidebarTabsChange($rightSidebarTab)
   }
-
-  // $: if ($activeTab?.archived !== ($sidebarTab === 'archive')) {
-  //   log.debug('Active tab is not in view, resetting')
-  //   tabsManager.makePreviousActive()
-  // }
 
   $: {
     if ($onboardingActive) {
@@ -658,7 +629,6 @@
 
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
-  $: showSidebarTools = $userConfigSettings.annotations_sidebar
 
   const handleCollapseRight = () => {
     if (showRightSidebar) {
@@ -726,7 +696,6 @@
     }, 50)
 
     if (tab === 'chat' && ($showChatSidebar || showRightSidebar)) {
-      showNewChatButton = true
       if (!$showChatSidebar) {
         setPageChatState(true)
       }
@@ -735,7 +704,6 @@
     }
 
     if (tab === 'annotations' && showRightSidebar) {
-      showNewChatButton = false
       reloadAnnotationsSidebar(false)
     }
   }
@@ -1128,11 +1096,7 @@
 
     log.debug('passive select', tabId)
 
-    await tabsManager.toggleTabSelection(
-      tabId,
-      true,
-      PageChatUpdateContextEventTrigger.TabSelection
-    )
+    tabsManager.toggleTabSelection(tabId, true, PageChatUpdateContextEventTrigger.TabSelection)
   }
 
   const selectTabWhileKeepingOthersSelected = (tabId: string) => {
@@ -1257,8 +1221,6 @@
     spaceId: string | false = false,
     trigger: SaveToOasisEventTrigger = SaveToOasisEventTrigger.Click
   ): Promise<{ resource: Resource | null; isNew: boolean }> {
-    let toast: Toast | null = null
-
     try {
       const tab = $tabs.find((t: Tab) => t.id === tabId)
 
@@ -1272,8 +1234,6 @@
       let isNew = false
 
       if (tab.type === 'resource') {
-        // toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
-
         resource = await resourceManager.getResource(tab.resourceId)
       } else if (tab.type !== 'page') {
         log.error('invalid tab for bookmarking', tab)
@@ -1287,7 +1247,6 @@
         }
 
         updateBookmarkingTabState(tabId, 'in_progress')
-        // toast = toasts.loading(spaceId ? 'Saving page to context…' : 'Saving page…')
 
         const isActivated = $activatedTabs.includes(tab.id)
         if (!isActivated) {
@@ -1342,17 +1301,6 @@
           [resource.id],
           SpaceEntryOrigin.ManuallyAdded
         )
-
-        // toasts.success(`Page saved to active context!`, {
-        //   action: {
-        //     label: 'View',
-        //     handler: () => {
-        //       oasis.openResourceDetailsSidebar(resource.id, {
-        //         selectedSpace: tabsManager.activeScopeIdValue ?? undefined
-        //       })
-        //     }
-        //   }
-        // })
       } else if (spaceId) {
         log.debug('will add item', resource.id, 'to space', spaceId)
         await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
@@ -1360,26 +1308,6 @@
           resource.type,
           AddResourceToSpaceEventTrigger.TabMenu
         )
-
-        // toasts.success('Page saved to context!', {
-        //   action: {
-        //     label: 'View',
-        //     handler: () => {
-        //       oasis.openResourceDetailsSidebar(resource.id, {
-        //         selectedSpace: spaceId
-        //       })
-        //     }
-        //   }
-        // })
-      } else {
-        // toasts.success('Page saved!', {
-        //   action: {
-        //     label: 'View',
-        //     handler: () => {
-        //       oasis.openResourceDetailsSidebar(resource.id)
-        //     }
-        //   }
-        // })
       }
 
       updateBookmarkingTabState(tabId, 'success')
@@ -1830,7 +1758,6 @@
     log.debug('Toggling magic sidebar', enabled)
     const tab = $activeTab as TabPage | null
 
-    showNewChatButton = enabled
     if (!enabled) {
       selectedTabs.set(new Set())
       lastSelectedTabId.set(null)
@@ -1871,7 +1798,6 @@
       }
     } else {
       showChatSidebar.set(false)
-      // $chatContext.clear()
     }
   }
 
@@ -1904,6 +1830,13 @@
 
       const resource = await $activeBrowserTab.bookmarkPage({ silent: true })
       bookmarkedResource = resource.id
+    }
+    if (!bookmarkedResource) {
+      log.error(
+        'Failed to bookmark page for annotation, could not get valid resource id for bookmark page'
+      )
+      toasts.error('Failed to save annotation')
+      return
     }
 
     log.debug('creating annotation', data)
@@ -2045,26 +1978,6 @@
     }
 
     log.debug('detected app', app)
-    // if (app.appId === 'youtube') {
-    //   // For youtube we have to manually refresh the tab to make sure we are grabbing the feed of the right page as they don't update it on client side navigations
-    //   const validTypes = [ResourceTypes.CHANNEL_YOUTUBE, ResourceTypes.PLAYLIST_YOUTUBE]
-
-    //   if (validTypes.includes(app.resourceType as any)) {
-    //     log.debug('reloading tab to get RSS feed')
-
-    //     $activeBrowserTab.reload()
-
-    //     const detectedApp = await $activeBrowserTab.waitForAppDetection(5000)
-    //     if (!detectedApp) {
-    //       log.debug('No app detected after reload')
-    //       return null
-    //     }
-
-    //     log.debug('reloaded tab app', detectedApp)
-    //     app = detectedApp
-    //   }
-    // }
-
     if (!app.rssFeedUrl) {
       log.debug('No RSS feed found for app', app)
       return null
@@ -2267,7 +2180,9 @@
       } else {
         // Alternative approach: create a new note directly if magicSidebar isn't available
         log.debug('Magic sidebar not available, creating new note instead')
-        const smartNote = await smartNotes.createNote('', { eventContext: EventContext.Chat })
+        const smartNote = await smartNotes.createNote('', '', {
+          eventContext: EventContext.Chat
+        })
         await smartNotes.changeActiveNote(smartNote)
       }
     } catch (error) {
@@ -2304,9 +2219,12 @@
     const usingNotesSidebar = $userConfigSettings.experimental_notes_chat_sidebar
 
     if (usingNotesSidebar) {
-      hasContent =
+      if (
         smartNotes.activeNoteValue?.contentValue &&
         smartNotes.activeNoteValue.contentValue.length > 0
+      ) {
+        hasContent = true
+      }
     } else {
       const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
       hasContent = messagesLength > 0
@@ -2337,7 +2255,7 @@
       await openChatSidebar(false)
 
       if (clearExistingChat) {
-        await $chatContext.clear()
+        $chatContext.clear()
         await magicSidebar.clearExistingChat()
       }
 
@@ -2425,7 +2343,7 @@
           : PageChatUpdateContextEventTrigger.Onboarding
       })
 
-      await $chatContext.removeAllExcept(spaceContextItem.id)
+      $chatContext.removeAllExcept(spaceContextItem.id)
 
       if (isOnboarding && !text) {
         text = onboardingSpace.query
@@ -2447,45 +2365,6 @@
       toasts.error('Failed to start chat with space')
     }
   }
-
-  // const handleOnboardingChatWithSpace = async (e: CustomEvent<{ id: string; query: string }>) => {
-  //   const { id: spaceId, query } = e.detail
-
-  //   const space = await oasis.getSpace(spaceId)
-
-  //   if (space) {
-  //     let tab = $tabs.find((t) => t.spaceId === spaceId)
-  //     log.debug('Current tabs:', $tabs)
-  //     if (!tab) {
-  //       tab = await tabsManager.addSpaceTab(space, { active: false })
-  //       log.debug('Added new space tab:', tab)
-  //     }
-  //     if (tab) {
-  //       await tick()
-  //       await chatContext.onlyUseTabInContext(tab.id)
-  //       openRightSidebarTab('chat')
-
-  //       const attemptInsertQuery = (retries = 3) => {
-  //         if (magicSidebar) {
-  //           magicSidebar.insertQueryIntoChat(query)
-  //         } else if (retries > 0) {
-  //           setTimeout(() => attemptInsertQuery(retries - 1), 1000)
-  //         } else {
-  //           log.error('Magic sidebar not found after multiple attempts')
-  //           toasts.error('Failed to start chat with prefilled message')
-  //         }
-  //       }
-
-  //       attemptInsertQuery()
-  //     } else {
-  //       log.error('Failed to open space as tab')
-  //       toasts.error('Failed to open space')
-  //     }
-  //   } else {
-  //     log.error('Context not found', spaceId)
-  //     toasts.error('Context not found')
-  //   }
-  // }
 
   const handleOnboardingChatWithQuery = async (
     e: CustomEvent<{ query: string; preserveContext?: boolean }>
@@ -3045,7 +2924,6 @@
         return
       }
 
-      // const toast = toasts.loading('Saving link…')
       let saveItem: SavingItem | undefined
       try {
         saveItem = oasis.addPendingSave({ url: url.href })
@@ -3061,16 +2939,12 @@
 
         if (spaceId) {
           await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-          // toast.success('Link saved to context!')
         } else if (tabsManager.activeScopeIdValue && $userConfigSettings.save_to_active_context) {
           await oasis.addResourcesToSpace(
             tabsManager.activeScopeIdValue,
             [resource.id],
             SpaceEntryOrigin.ManuallyAdded
           )
-          // toast.success('Link saved to active context!')
-        } else {
-          // toast.success('Link saved!')
         }
       } catch (err) {
         log.error('Failed to save link', err)
@@ -3145,7 +3019,6 @@
         return {
           path: downloadData.savePath,
           copyToDownloads: $userConfigSettings.save_to_user_downloads
-          // copyToDownloads: !downloadIntercepter && $userConfigSettings.save_to_user_downloads
         }
       } catch (err) {
         log.error('download path error', err)
@@ -3298,20 +3171,18 @@
 
     const activeTabs = tabsList.filter((tab) => !tab.archived)
 
-    if (activeTabs.length === 0) {
-      // tabsManager.showNewTab()
-    } else if ($activeTabId) {
+    if ($activeTabId) {
       const tab = activeTabs.find((tab) => tab.id === $activeTabId)
 
       if (tabsManager.activeScopeIdValue) {
         if (tabsManager.activeScopeIdValue !== tab?.scopeId || tab.pinned) {
-          desktopManager.setVisible(true, { desktop: desktopId })
+          desktopManager.setVisible(true, { desktop: desktopId || undefined })
         } else {
           const desktopOpen = get(desktopManager.activeDesktopVisible)
           tabsManager.makeActive($activeTabId, undefined, !desktopOpen)
         }
       } else if (tab?.scopeId) {
-        desktopManager.setVisible(true, { desktop: desktopId })
+        desktopManager.setVisible(true, { desktop: desktopId || undefined })
       } else {
         tabsManager.makeActive($activeTabId)
       }
@@ -3412,8 +3283,6 @@
   onDestroy(() => {
     log.debug('app destroyed', mountUnsubscribers)
     mountUnsubscribers.forEach((unsub) => unsub())
-
-    // Event listeners are cleaned up via mountUnsubscribers
   })
 
   onMount(async () => {
@@ -3738,13 +3607,6 @@
       // adding into CreateTabOptions doesnt match other tab apis props
       if (pinned) await tabsManager.update(tab!.id, { pinned, index: drag.index ?? 0 })
 
-      /*await tabsManager.bulkPersistChanges(
-        get(tabs).map((tab) => ({
-          id: tab.id,
-          updates: { pinned: tab.pinned, magic: tab.magic, index: tab.index }
-        }))
-      )*/
-
       log.debug('State updated successfully')
 
       drag.continue()
@@ -3767,7 +3629,7 @@
   }
 
   // TODO: (dragcula): migrate
-  const handleTabDragEnd = async (drag: DragculaDragEvent) => {
+  const handleTabDragEnd = async (_drag: DragculaDragEvent) => {
     return
   }
 
@@ -4036,9 +3898,6 @@
     tabsManager.unpinTab(tabId)
   }
 
-  let leftSidebarWidth = 0
-  let leftSidebarHeight = 0
-
   let isVendorBackground = true
   $: backgroundImage =
     $desktopBackgroundStore === undefined
@@ -4068,8 +3927,6 @@
             }
           }
         )
-
-  $: app.style.setProperty('--background-image', $backgroundImage?.path)
 
   const contextMenuMoveTabsToSpaces = derived(
     [sortedSpaces, tabsManager.activeScopeId],
@@ -4210,20 +4067,7 @@
     // Use the onboarding service to handle PDF opening and chat initialization
     onboardingService.openURLAndChat(e.detail)
   }}
-  on:insert-question={(e) => {
-    // Use the onboarding service to insert a question
-    if (magicSidebar) {
-      onboardingService.insertQuestionAndGenerateResponse(e.detail)
-    }
-  }}
-  on:start-ai-completion={(e) => {
-    // Use the onboarding service to start a chat with the query
-    if (magicSidebar) {
-      onboardingService.openPDFAndChat(e.detail)
-    }
-  }}
   on:close={() => toggleRightSidebar()}
-  on:open-note-in-sidebar={handleOpenInlineNoteInSidebar}
   on:toggle-sidebar={(e) => changeLeftSidebarState(e.detail)}
   on:toggle-right-sidebar={(e) => toggleRightSidebar(e.detail)}
   on:open-onboarding-tab={(e) => {
@@ -4238,21 +4082,6 @@
   on:reload-welcome-page={() => reloadWelcomePage()}
   rootID="body"
 />
-<!-- <pre
-  style="position: fixed; bottom: 1rem; right: 1rem; top:1rem; z-index: 10000; background: black; color: white; overflow-y: scroll;"
-  aria-hidden={true}>
-    {JSON.stringify(
-    {
-      timestamp: new Date().getTime(),
-      lastSelectedTabId: $lastSelectedTabId,
-      selectedTabs: Array.from($selectedTabs).map(
-        (tabId) => $tabs.find((tab) => tab.id === tabId)?.id
-      )
-    },
-    null,
-    2
-  )}
-</pre> -->
 
 {#if $showScreenshotPicker === true || $showNewTabOverlay === 1}
   <ScreenPicker
@@ -4418,18 +4247,6 @@
       {/key}
     {/if}
 
-    <!--
-    NOTE: Removed from SidebarPane to disable chat peek for now.
-
-    on:rightPeekOpen={() => {
-      setPageChatState(true)
-      telemetry.trackOpenRightSidebar($rightSidebarTab)
-    }}
-    on:rightPeekClose={() => {
-      cachedMagicTabs.clear()
-      setPageChatState(false)
-    }}
--->
     <SidebarPane
       {horizontalTabs}
       bind:showLeftSidebar
@@ -4444,8 +4261,6 @@
         class="left-sidebar flex-grow {horizontalTabs ? 'w-full h-full' : 'h-full'}"
         class:homescreenVisible={$desktopVisible}
         class:horizontalTabs
-        bind:clientWidth={leftSidebarWidth}
-        bind:clientHeight={leftSidebarHeight}
       >
         {#if $sidebarTab !== 'oasis'}
           <div
@@ -4529,7 +4344,6 @@
                   : 'absolute top-8 h-2 left-4 right-4 rounded-md no-drag my-auto flex-shrink-0 transition-colors overflow-hidden'}
               class:horizontalTabs
               class:empty={$pinnedTabs.length === 0}
-              bind:this={pinnedTabsWrapper}
               style="scroll-behavior: smooth;"
             >
               {#key horizontalTabs}
@@ -4539,7 +4353,6 @@
                   axis={horizontalTabs ? 'horizontal' : 'both'}
                   dragdeadzone="5"
                   role="none"
-                  bind:this={pinnedTabsScrollArea}
                   use:HTMLAxisDragZone.action={{
                     accepts: (drag) => {
                       if (
@@ -4561,7 +4374,6 @@
                   {:else}
                     {#each $pinnedTabs as tab, index (tab.id + index)}
                       <TabItem
-                        hibernated={!$activatedTabs.includes(tab.id)}
                         removeHighlight={$showNewTabOverlay !== 0}
                         {tab}
                         {horizontalTabs}
@@ -4685,7 +4497,6 @@
                     <!-- check if this tab is active -->
                     {#if $activeTabId === tab.id}
                       <TabItem
-                        hibernated={!$activatedTabs.includes(tab.id)}
                         removeHighlight={$showNewTabOverlay !== 0}
                         showClose
                         tabSize={Math.min(300, Math.max(24, tabSize)) +
@@ -4728,7 +4539,6 @@
                     {:else}
                       <TabItem
                         showClose
-                        hibernated={!$activatedTabs.includes(tab.id)}
                         {tab}
                         tabSize={Math.min(300, Math.max(24, tabSize))}
                         {activeTabId}
@@ -4790,7 +4600,6 @@
                     <!-- check if this tab is active -->
                     {#if $activeTabId === tab.id}
                       <TabItem
-                        hibernated={!$activatedTabs.includes(tab.id)}
                         removeHighlight={$showNewTabOverlay !== 0}
                         showClose
                         horizontalTabs={false}
@@ -4816,7 +4625,7 @@
                         on:delete-tab={handleDeleteTab}
                         on:input-enter={handleBlur}
                         on:bookmark={(e) => handleBookmark(tab.id, false, e.detail.trigger)}
-                        on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
+                        on:remove-bookmark={(_e) => handleRemoveBookmark(tab.id)}
                         on:create-live-space={() => handleCreateLiveSpace()}
                         on:add-source-to-space={handleAddSourceToSpace}
                         on:save-resource-in-space={(e) =>
@@ -4831,7 +4640,6 @@
                       />
                     {:else}
                       <TabItem
-                        hibernated={!$activatedTabs.includes(tab.id)}
                         showClose
                         {tab}
                         horizontalTabs={false}
@@ -4857,7 +4665,7 @@
                         on:save-resource-in-space={(e) =>
                           handleBookmark(tab.id, e.detail.id, SaveToOasisEventTrigger.Click)}
                         on:create-new-space={handleOpenCreateSpaceMenu}
-                        on:remove-bookmark={(e) => handleRemoveBookmark(tab.id)}
+                        on:remove-bookmark={(_e) => handleRemoveBookmark(tab.id)}
                         on:chat-with-tab={handleOpenTabChat}
                         on:pin={handlePinTab}
                         on:unpin={handleUnpinTab}
@@ -4923,7 +4731,9 @@
                 {horizontalTabs}
                 on:open-stuff={() => ($showNewTabOverlay = 2)}
                 on:open={(e) =>
-                  miniBrowserService.globalBrowser.openResource(e.detail, { from: 'stack' })}
+                  miniBrowserService.globalBrowser.openResource(e.detail, {
+                    from: OpenInMiniBrowserEventFrom.Stack
+                  })}
                 on:remove={(e) => oasis.removeResourcesFromSpaceOrOasis(e.detail.ids)}
                 on:open-and-chat={handleOpenAndChat}
                 on:open-resource-in-mini-browser={(e) =>
@@ -4972,8 +4782,6 @@
                       >
                         {#if $userConfigSettings.experimental_notes_chat_sidebar}
                           <Icon name="sidebar.right" size="1.35rem" stroke-width="1.75" />
-                          <!--<Icon name="file-text-spark" size="1.35rem" stroke-width="1.84" />
--->
                         {:else}
                           <Icon name="chat" size="1.4rem" stroke-width="1.84" />
                         {/if}
@@ -5057,8 +4865,6 @@
                       >
                         {#if $userConfigSettings.experimental_notes_chat_sidebar}
                           <Icon name="sidebar.right" size="1.35rem" stroke-width="1.75" />
-                          <!--<Icon name="file-text-spark" size="1.35rem" stroke-width="1.84" />
--->
                         {:else}
                           <Icon name="chat" size="1.4rem" stroke-width="1.84" />
                         {/if}
@@ -5146,8 +4952,6 @@
               </SidebarMetaOverlay>
             </div>
           </div>
-        {:else}
-          <!-- <OasisSidebar on:tabsManager.create={handleCreateTabFromSpace} /> -->
         {/if}
       </div>
 
@@ -5186,24 +4990,6 @@
                 style="--scaling: 1;"
                 class:active={$activeTabId === tab.id && $sidebarTab !== 'oasis'}
               >
-                <!-- {#if !horizontalTabs}<div
-                  class="w-full h-3 pointer-events-none fixed z-[1002] drag"
-                />{/if} -->
-
-                <!-- {#if $onboardingTabVisible && $onboardingTabOpened && !$userConfigSettings?.onboarding?.ignore_back_to_onboarding_button}
-                <button
-                  class="transform no-drag active:scale-95 appearance-none select-none outline-none border-2 border-sky-100 margin-0 group flex items-center justify-center p-2 hover:bg-sky-200 transition-colors duration-200 rounded-xl text-sky-800  bg-white w-fit fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
-                  on:click={() => openWelcomeTab()}
-                >
-                  <span>← Back to Surf Onboarding</span>
-                </button>
-                <span
-                  class="transform no-drag active:scale-95 appearance-none select-none outline-none margin-0 group flex items-center justify-center p-2 transition-colors duration-200 text-sky-800  w-fit fixed bottom-16 left-1/2 -translate-x-1/2 z-50 underline"
-                >
-                  <span>Dismiss this</span>
-                </span>
-              {/if} -->
-
                 {#if tab.type === 'page'}
                   <BrowserTab
                     {historyEntriesManager}
@@ -5223,8 +5009,6 @@
                   />
                 {:else if tab.type === 'importer'}
                   <TabImporter {tab} />
-                {:else if tab.type === 'oasis-discovery'}
-                  <OasisDiscovery {resourceManager} />
                 {:else if tab.type === 'space'}
                   <OasisSpaceRenderer
                     spaceId={tab.spaceId}
@@ -5360,14 +5144,9 @@
 {/if}
 
 <NewTabOverlay
-  spaceId={oasis.defaultSpaceID}
-  {updateSearchValue}
   showTabSearch={showNewTabOverlay}
-  selectedSpaceId={newTabSelectedSpaceId}
   on:open-space-as-tab={handleCreateTabForSpace}
   on:deleted={handleDeletedSpace}
-  {historyEntriesManager}
-  activeTabs={$activeTabs}
   on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.Click)}
   on:close-active-tab={() => tabsManager.deleteActive(DeleteTabEventTrigger.CommandMenu)}
   on:bookmark={() => handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}

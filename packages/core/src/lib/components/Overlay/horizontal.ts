@@ -5,51 +5,11 @@ import {
   ActionSelectPriority
 } from '@deta/teletype/src/components/Teletype/types'
 import type { ResourceManager } from '../../service/resources'
-import { ResourceTagsBuiltInKeys, type SpaceEntry } from '../../types'
-import {
-  TeletypeAction,
-  TeletypeActionGroup,
-  dispatchTeletypeEvent
-} from './service/teletypeActions'
+import { ResourceTagsBuiltInKeys } from '../../types'
+import { TeletypeAction, TeletypeActionGroup } from './service/teletypeActions'
 import TeletypeResourcePreview from './TeletypeResourcePreview.svelte'
-import { type Resource } from '../../service/resources'
-import { staticActions } from './service/staticActions'
 import { createExecutioner } from './service/translations'
-import { truncate } from '@horizon/utils'
 import type { OasisService } from '../../service/oasis'
-
-const createSpaceHorizontalItem = async (entry: SpaceEntry, resource: Resource) => {
-  const url =
-    resource.metadata?.sourceURI ??
-    resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
-
-  return {
-    id: entry.id,
-    name: truncate(resource.metadata?.name || 'Untitled', 30),
-    description: resource.metadata?.userContext || '',
-    icon: getPrimaryResourceType(resource.type) || 'document',
-    execute: TeletypeAction.OpenResource,
-    component: TeletypeResourcePreview,
-    componentProps: {
-      resource
-    },
-    view: 'Inline',
-    actionPanel: [
-      createSecondaryAction({
-        id: 'open-history-in-mini-browser',
-        name: 'Open in Mini-Browser',
-        handler: createExecutioner(TeletypeAction.OpenResourceInMiniBrowser, { resource })
-      }),
-      {
-        id: `copy-history`,
-        name: 'Copy URL',
-        icon: 'copy',
-        handler: createExecutioner(TeletypeAction.CopyURL, { url })
-      }
-    ],
-    handler: createExecutioner(TeletypeAction.OpenResource, { resource })
-  }
-}
 
 const createSpaceAction = async (result: TeletypeStaticAction, oasis: OasisService) => {
   const actions: Action[] = []

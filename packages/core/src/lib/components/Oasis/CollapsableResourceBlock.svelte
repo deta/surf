@@ -263,10 +263,6 @@
     webview.style.height = '100%'
     webview.style.border = 'none'
 
-    // webview.addEventListener('page-title-updated', (e) => {
-    //   $generatedName = e.title
-    // })
-
     webview.addEventListener('did-start-loading', () => appIsLoading.set(true))
     webview.addEventListener('did-stop-loading', () => appIsLoading.set(false))
     webview.addEventListener('dom-ready', () => setWebviewMuted(true))

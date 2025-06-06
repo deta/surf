@@ -3,7 +3,6 @@
   import { DragTypeNames } from '../../../types'
   import { useOasis } from '../../../service/oasis'
   import { createEventDispatcher } from 'svelte'
-  import OasisResourceLoader from '../OasisResourceLoader.svelte'
   import { HTMLDragItem } from '@horizon/dragcula'
   import {
     CreateTabEventTrigger,
@@ -20,8 +19,6 @@
 <script lang="ts">
   import HomescreenSpaceItem from './HomescreenSpaceItem.svelte'
   import { clamp } from '../../../../../../dragcula/dist/utils/internal'
-  import CodeRenderer from '../../Chat/CodeRenderer.svelte'
-  import { mimeTypeToCodeLanguage } from '@horizon/utils'
   import ResourcePreview from '../../Resources/ResourcePreview.svelte'
   import { contextMenu } from '../../Core/ContextMenu.svelte'
   import LazyComponent from '../../Atoms/LazyComponent.svelte'
@@ -38,8 +35,6 @@
   const oasis = useOasis()
   const spaces = oasis.spaces
   const resourceManager = oasis.resourceManager
-  const config = oasis.config
-  const userSettings = config.settings
   const tabs = useTabsManager()
   const dispatch = createEventDispatcher<{
     'remove-from-homescreen': string
@@ -47,7 +42,7 @@
 
   let bentoItemEl: HTMLElement
 
-  const calcViewMode = (viewMode, item, resource, settings) => {
+  const calcViewMode = (viewMode, item, resource) => {
     if (isGeneratedResource(resource)) {
       return item.width * item.height > 12 ? 'full' : viewMode
     } else if (WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))) {
@@ -63,12 +58,6 @@
       e.preventDefault()
       e.stopImmediatePropagation()
       resizing = true
-      const init = {
-        x: e.clientX,
-        y: e.clientY,
-        offsetX: 0,
-        offsetY: 0
-      }
 
       const handleMouseMove = (e: MouseEvent) => {
         const clientX = e.clientX - desktop.CELL_SIZE / 2
@@ -152,56 +141,6 @@
     ]
   }}
 >
-  <!--
-TODO: Fix resizing logic for other corners
-<svg
-    class="resize-handle corner top-left"
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    on:mousedown={handleResizeMouseDown('nw')}
-  >
-    <path
-      d="M2 18C13 18 18 13 18 2"
-      stroke="currentColor"
-      stroke-width="var(--stroke-width)"
-      stroke-linecap="round"
-    />
-  </svg>
-  <svg
-    class="resize-handle corner top-right"
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    on:mousedown={handleResizeMouseDown('ne')}
-  >
-    <path
-      d="M2 18C13 18 18 13 18 2"
-      stroke="currentColor"
-      stroke-width="var(--stroke-width)"
-      stroke-linecap="round"
-    />
-  </svg>
-  <svg
-    class="resize-handle corner bottom-left"
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    on:mousedown={handleResizeMouseDown('sw')}
-  >
-    <path
-      d="M2 18C13 18 18 13 18 2"
-      stroke="currentColor"
-      stroke-width="var(--stroke-width)"
-      stroke-linecap="round"
-    />
-  </svg>-->
   <svg
     class="resize-handle corner bottom-right"
     width="20"
@@ -254,7 +193,7 @@ TODO: Fix resizing logic for other corners
             let:frameless
             let:hideProcessing
           >
-            {@const calcedViewMode = calcViewMode(viewMode, $item, resource, $userSettings)}
+            {@const calcedViewMode = calcViewMode(viewMode, $item, resource)}
             {#if (resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && $desktopVisible) || (WEB_RESOURCE_TYPES.some( (x) => resource.type.startsWith(x) ) && $desktopVisible && calcedViewMode === 'full') || (isGeneratedResource(resource) && $desktopVisible) || (!resource?.type.startsWith(ResourceTypes.DOCUMENT_SPACE_NOTE) && !isGeneratedResource(resource))}
               {#if interactive}
                 <ResourcePreview
@@ -352,8 +291,6 @@ TODO: Fix resizing logic for other corners
 
     position: relative;
     z-index: var(--z, 0);
-    //overflow: hidden;
-    //isolation: isolate;
 
     grid-column: var(--cell-x) / span var(--span-x);
     grid-row: var(--cell-y) / span var(--span-y);
@@ -500,30 +437,12 @@ TODO: Fix resizing logic for other corners
         --offset: 35%;
         --stroke-width: 4;
 
-        //&.top-left {
-        //  top: 0;
-        //  left: 0;
-        //  transform: translate(calc(-1 * var(--offset)), calc(-1 * var(--offset))) rotate(180deg);
-        //  cursor: nwse-resize;
-        //}
-        //&.top-right {
-        //  top: 0;
-        //  right: 0;
-        //  transform: translate(var(--offset), calc(-1 * var(--offset))) rotate(-90deg);
-        //  cursor: nesw-resize;
-        //}
         &.bottom-right {
           bottom: 0;
           right: 0;
           transform: translate(var(--offset), var(--offset));
           cursor: nwse-resize;
         }
-        //&.bottom-left {
-        //  bottom: 0;
-        //  left: 0;
-        //  transform: translate(calc(-1 * var(--offset)), var(--offset)) rotate(90deg);
-        //  cursor: nesw-resize;
-        //}
       }
     }
   }

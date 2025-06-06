@@ -7,7 +7,6 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     type CreateTabOptions,
-    type ResourceData,
     SpaceEntryOrigin,
     type DragTypes,
     DragTypeNames,
@@ -24,17 +23,15 @@
     hover,
     isMac,
     copyToClipboard,
-    truncateURL,
     conditionalArrayItem,
     tooltip,
-    parseUrlIntoCanonical,
-    isDev
+    parseUrlIntoCanonical
   } from '@horizon/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
   import { useOasis, type OasisSpace } from '../../service/oasis'
   import { type Origin } from './Previews/Preview.svelte'
-  import Preview from './Previews/PreviewV2.svelte'
+  import Preview from './Previews/Preview.svelte'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
@@ -186,9 +183,6 @@
     }
   )
 
-  $: annotations = resource.annotations ?? []
-
-  $: isSilent = resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.SILENT)
   $: canonicalUrl = parseStringIntoUrl(
     resource.tags?.find((x) => x.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value ||
       resource.metadata?.sourceURI ||
@@ -202,11 +196,6 @@
   $: showOpenAsFile =
     resource.type === ResourceTypes.PDF ||
     !(Object.values(ResourceTypes) as string[]).includes(resource.type)
-
-  $: processingSource =
-    (canonicalUrl
-      ? truncateURL(canonicalUrl, 25) || getFileType(resource.type)
-      : getFileType(resource.type)) || resource.type
 
   $: if ($resourceState === 'extracting') {
     handleUpdating()
@@ -235,7 +224,6 @@
       !PAGE_TABS_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))) &&
     (isLiveSpaceResource ? sourceURL.hostname === 'news.ycombinator.com' : true)
 
-  let resourceData: ResourceData | null = null
   let previewData: PreviewData | null = null
   let dragging = false
   let showEditMode = false
@@ -257,32 +245,6 @@
         unsubscribe()
       }
     })
-  }
-
-  const cleanSource = (text: string) => {
-    if (text.trim() === 'Wikimedia Foundation, Inc.') {
-      return 'Wikipedia'
-    } else {
-      return text.trim()
-    }
-  }
-
-  const cleanContent = (text: string, hostname: string | null) => {
-    if (!text) {
-      return null
-    }
-
-    if (hostname === 'github.com') {
-      const regex = /Contribute to ([\w-]+\/[\w-]+) development by creating an account on GitHub\./
-      const match = text.match(regex)
-      if (match) {
-        return null
-      }
-
-      return text
-    }
-
-    return text
   }
 
   const loadResource = async () => {
@@ -441,10 +403,6 @@
     dispatch('set-resource-as-space-icon', resource.id)
   }
 
-  const handleToggleBlacklisted = () => {
-    resourceBlacklisted = !resourceBlacklisted
-  }
-
   const handleCopyToClipboard = () => {
     if (canonicalUrl) {
       copyToClipboard(canonicalUrl)
@@ -536,28 +494,9 @@
     drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
     drag.item!.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
 
-    // const citationInfo = encodeURIComponent(
-    //   JSON.stringify({
-    //     id: '1',
-    //     renderID: '1',
-    //     source: {
-    //       id: '1',
-    //       all_chunk_ids: [],
-    //       render_id: '1',
-    //       resource_id: resource.id,
-    //       content: '',
-    //       metadata: {
-    //         url: canonicalUrl
-    //       }
-    //     }
-    //   } as CitationInfo)
-    // )
-    // const citationElem = `<citation id="1" data-info="${citationInfo}">1</citation>`
-    // drag.dataTransfer?.setData('text/html', citationElem)
-    // drag.dataTransfer?.setData('text/plain', citationElem)
-
     drag.continue()
   }
+
   $: contextMenuItems = [
     {
       type: 'action',

@@ -4,8 +4,6 @@
   import { useLogScope } from '@horizon/utils'
   import type { ResourcePost } from '../../../../service/resources'
   import type { ResourceDataPost } from '../../../../types'
-  import { Icon } from '@horizon/icons'
-  import Link from '../../../Atoms/Link.svelte'
   import LoadingBox from '../../../Atoms/LoadingBox.svelte'
   import type { ResourcePreviewEvents } from '../../../Resources/events'
   import fallback from '../../../../../../public/assets/fallback.youtube.png'
@@ -18,15 +16,10 @@
 
   let post: ResourceDataPost | null = null
   let title = ''
-  let subtitle = ''
-  let error = ''
-  let isTwitter = false
-  let isReddit = false
   let youtubeThumbnailURL = ''
   let loading = true
 
   const MAX_TITLE_LENGTH = 300
-  const MAX_SUBTITLE_LENGTH = 100
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.slice(0, length) + '...' : text

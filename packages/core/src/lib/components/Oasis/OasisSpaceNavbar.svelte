@@ -1,7 +1,6 @@
 <script lang="ts">
   import SearchInput from './SearchInput.svelte'
   import type { Readable } from 'svelte/store'
-  import { tooltip } from '@horizon/utils'
 
   export let searchValue: Readable<string>
 </script>

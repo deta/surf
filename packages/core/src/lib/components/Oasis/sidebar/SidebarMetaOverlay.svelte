@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { writable, type Writable } from 'svelte/store'
+  import { writable } from 'svelte/store'
   import RecentsStack from './RecentsStack.svelte'
   import dotNoiseLightGrey from '../../../../../public/assets/dotnoise-light-grey.png'
 

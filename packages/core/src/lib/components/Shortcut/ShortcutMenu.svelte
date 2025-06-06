@@ -16,7 +16,6 @@
 </script>
 
 <script lang="ts">
-  import { everythingSpace } from '../../service/resources'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { writable, derived, type Writable } from 'svelte/store'
@@ -27,7 +26,6 @@
   export let closePopover: () => void
 
   let selectedSpaceIndex = 0
-  let isLoading = true
   let inputRef: HTMLInputElement
   const searchQuery = writable('')
 
@@ -49,34 +47,6 @@
       return true
     })
   })
-
-  // const loadSpaces = async () => {
-  //   try {
-  //     const notInSidebar = $spaces.filter((space) => !space.name.showInSidebar)
-
-  //     notInSidebar.push({
-  //       id: 'all',
-  //       name: {
-  //         folderName: 'Everything',
-  //         colors: ['#76E0FF', '#4EC9FB'],
-  //         showInSidebar: false,
-  //         liveModeEnabled: false,
-  //       },
-  //       created_at: new Date().toISOString(),
-  //       updated_at: new Date().toISOString(),
-  //       deleted: 0
-  //     })
-
-  //     console.log('Spaces:', spaces)
-  //     filteredSpaces = $spaces
-  //   } catch (error) {
-  //     console.error('Error loading spaces:', error)
-  //     spaces = []
-  //     filteredSpaces = []
-  //   } finally {
-  //     isLoading = false
-  //   }
-  // }
 
   const handleKeydown = (event: KeyboardEvent) => {
     if (inputRef && inputRef === document.activeElement) {
@@ -112,12 +82,6 @@
     }
   }
 
-  // const handleSearch = () => {
-  //   filteredSpaces = spaces.filter((space) =>
-  //     space.name.folderName.toLowerCase().includes(searchQuery.toLowerCase())
-  //   )
-  // }
-
   const startCreatingNewSpace = async () => {
     isCreatingNewSpace.set(true)
     await tick().then(() => {
@@ -138,7 +102,6 @@
   }
 
   onMount(() => {
-    // loadSpaces()
     window.addEventListener('keydown', handleKeydown, true)
     focusInput()
     return () => {
@@ -160,7 +123,6 @@
   {:else}
     <span>No spaces available</span>
   {/if}
-  <!-- <span class="label" role="none"> Show All Spaces</span> -->
   {#if $isCreatingNewSpace}
     <div class="create-input-wrapper">
       <input
@@ -181,12 +143,6 @@
       <div class="hint" use:tooltip={{ text: 'Use shift + ↵ to use AI', position: 'left' }}>
         <span class="cmd">↵</span>
       </div>
-      <!-- <button on:click|stopPropagation={confirmCreatingNewSpace} data-keep-open>
-        <Icon name="check" color="#7d7448" />
-      </button>
-      <button on:click|stopPropagation={cancelCreatingNewSpace} data-keep-open>
-        <Icon name="close" color="#7d7448" />
-      </button> -->
     </div>
   {:else}
     <span class="label" role="none" on:click={startCreatingNewSpace} data-keep-open>

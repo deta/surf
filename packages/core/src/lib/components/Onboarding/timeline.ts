@@ -1,22 +1,12 @@
 import { writable, get, derived } from 'svelte/store'
-import type { TooltipStep, OnboardingTimeline, CompletionEventConfig } from './onboardingScripts'
-import { OnboardingAction, CompletionEventID } from './onboardingScripts'
+import type { TooltipStep, OnboardingTimeline } from './onboardingScripts'
+import { OnboardingAction } from './onboardingScripts'
 import * as scripts from './onboardingScripts'
-import type { OnboardingActionType, OnboardingActionWithParams } from './onboardingScripts'
+import type { OnboardingActionType } from './onboardingScripts'
 import { activeOnboardingTabId } from '../../service/onboarding'
 
 import { OnboardingFeature } from './onboardingScripts'
 import { ConfigService } from '@horizon/core/src/lib/service/config'
-
-// Helper function to convert legacy action format to new format
-function normalizeAction(
-  action: OnboardingAction | OnboardingActionWithParams
-): OnboardingActionWithParams {
-  if (typeof action === 'string' || action instanceof OnboardingAction) {
-    return { action: action as OnboardingAction }
-  }
-  return action
-}
 
 interface Timeline {
   steps: TooltipStep[]

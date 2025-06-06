@@ -8,11 +8,10 @@
 </script>
 
 <div class="grid-view" data-density={density}>
-  <!--     on:wheel|passive={handleScroll} -->
   <div class="grid-content bg-[#F7F9FB] dark:bg-gray-900">
     {#each $items as item, index (`${item.id}-${index}`)}
       <div class="item">
-        <slot item={{ id: item.id, data: item.data }}></slot>
+        <slot {item}></slot>
       </div>
     {/each}
   </div>

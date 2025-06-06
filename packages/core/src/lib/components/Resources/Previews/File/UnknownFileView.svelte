@@ -21,7 +21,6 @@
 
   $: name = resource?.metadata?.name || 'Unknown File'
   $: kind = getFileKind(resource.type)
-  $: type = getFileType(resource.type)
 
   const openFile = () => {
     window.api.openResourceLocally({
@@ -44,7 +43,6 @@
   <div class="details">
     <div class="icon" style="color: {generateRandomPastelColor(resource.id, 0.2)}">
       <FileIcon {kind} width="3em" height="3em" />
-      <!-- <Icon name="file" size="25px" /> -->
     </div>
 
     {#if !preview}

@@ -16,7 +16,6 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import {
-    CreateTabEventTrigger,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
     WebViewGestureRequiredEventNames,
@@ -26,7 +25,7 @@
   } from '@horizon/types'
   import { createHistorySwipeRecognizer, SWIPE_THRESHOLD } from '../../utils/historySwipeRecognizer'
   import type { HistoryEntriesManager } from '../../service/history'
-  import { isModKeyAndKeyPressed, toHumanFileSize, useLogScope } from '@horizon/utils'
+  import { isModKeyAndKeyPressed, useLogScope } from '@horizon/utils'
   import type { DetectedResource } from '../../types'
   import type { WebServiceActionInputs } from '@horizon/web-parser'
   import Webview, { type WebviewEvents } from './Webview.svelte'
@@ -34,7 +33,6 @@
   import HistorySwipeOverlay from './HistorySwipeOverlay.svelte'
   import HoverLinkPreview from './HoverLinkPreview.svelte'
   import ZoomPreview from './ZoomPreview.svelte'
-  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import ErrorPage from './ErrorPage.svelte'
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'

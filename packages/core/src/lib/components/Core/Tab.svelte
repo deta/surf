@@ -4,8 +4,7 @@
     tooltip as tooltip2,
     getFileKind,
     getHostname,
-    checkIfSecureURL,
-    conditionalArrayItem
+    checkIfSecureURL
   } from '@horizon/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
@@ -142,7 +141,6 @@
   // Calculate padding based on active space's folder name length
   // Max width is 15ch, for each character the padding is reduced
   $: currentSpace = $spaces.find((space) => space.id === $activeSpaceId)
-  $: activeSpaceName = currentSpace?.dataValue?.folderName || ''
   $: TAB_HORIZONTAL_PADDING = 36
 
   // Why is there no better way in Svelte :/

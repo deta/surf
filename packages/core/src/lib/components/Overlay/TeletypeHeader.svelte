@@ -3,10 +3,7 @@
   import { type Writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
 
-  import { floatyButtons } from '../../components/Atoms/floatyButtons'
-  import FloatyButton from '../Atoms/FloatyButton.svelte'
   import { useTabsManager } from '../../service/tabs'
-  import { conditionalArrayItem } from '@horizon/utils'
   import { tooltip, isMac } from '@horizon/utils'
 
   export let showActionsPanel: Writable<boolean>
@@ -22,53 +19,6 @@
   const tabsManager = useTabsManager()
 
   const scope = tabsManager.activeScopeId
-
-  $: buttonConfigs = {
-    buttons: [
-      ...conditionalArrayItem($scope !== null, {
-        component: FloatyButton,
-        offsetX: -100,
-        offsetY: -70,
-        props: {
-          text: 'Ask this Context',
-          icon: '',
-          onClick: () => {
-            dispatch('open-space-and-chat', { spaceId: $scope as string })
-          }
-        }
-      }),
-      {
-        component: FloatyButton,
-        offsetX: 100,
-        offsetY: -70,
-        props: {
-          text: 'Ask this Tab',
-          icon: '',
-          onClick: () => {
-            const activeTabId = tabsManager.activeTabIdValue
-            dispatch('open-chat-with-tab', activeTabId)
-          }
-        }
-      },
-      {
-        component: FloatyButton,
-        offsetX: 20,
-        offsetY: -130,
-        props: {
-          text: 'Use Vision',
-          icon: document.body.classList.contains('dark') ? 'vision.light' : 'vision',
-          onClick: (e) => {
-            dispatch('openScreenshot')
-            return false
-          }
-        }
-      }
-    ],
-    springConfig: {
-      stiffness: 0.15,
-      damping: 0.6
-    }
-  }
 </script>
 
 <div class="tty-header-wrapper">

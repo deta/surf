@@ -92,7 +92,7 @@
     scopedMiniBrowser.close()
   }
 
-  const handleOpen = async (e: CustomEvent<string>, trackSource: boolean = false) => {
+  const handleOpen = async (e: CustomEvent<string>) => {
     openResourceDetailsModal(e.detail)
   }
 
@@ -123,7 +123,7 @@
     isCreatingNewSpace.set(false)
   }
 
-  const handleSpaceDeleted = async (e: CustomEvent) => {
+  const handleSpaceDeleted = async (_e: CustomEvent) => {
     oasis.changeSelectedSpace(oasis.defaultSpaceID)
   }
 
@@ -252,7 +252,7 @@
     Dragcula.get().cleanupDragOperation()
   }
 
-  const handleDragculaDragStart = (drag: DragOperation) => {
+  const handleDragculaDragStart = (_drag: DragOperation) => {
     window.addEventListener('click', dragClickHandler, { capture: true })
     window.addEventListener('keydown', dragClickHandler, { capture: true })
   }
@@ -413,7 +413,6 @@
           bind:this={createSpaceRef}
           {spaces}
           {resourceManager}
-          showPreview={true}
           type="horizontal"
           on:space-selected={(e) => oasis.changeSelectedSpace(e.detail.id)}
           on:createTab={(e) => dispatch('create-tab-from-space', e.detail)}
@@ -515,34 +514,6 @@
     transition:
       translate 100ms ease-out,
       transform 175ms cubic-bezier(0.165, 0.84, 0.44, 1);
-
-    //&::before {
-    //  content: '';
-    //  position: fixed;
-    //  background: transparent;
-    //  left: -100vw;
-    //  right: -100vw;
-    //  top: 100%;
-    //  height: 100px;
-    //}
-
-    // NOTE: Didnt seem to visually change anything perf nuked
-    //box-shadow:
-    //  inset 0px 1px 1px -1px white,
-    //  inset 0px -1px 1px -1px white,
-    //  inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
-    //  0px 0px 89px 0px rgba(0, 0, 0, 0.18),
-    //  0px 4px 18px 0px rgba(0, 0, 0, 0.18),
-    //  0px 1px 1px 0px rgba(126, 168, 240, 0.3),
-    //  0px 4px 4px 0px rgba(126, 168, 240, 0.15);
-    //box-shadow:
-    //  inset 0px 1px 4px -1px white,
-    //  inset 0px -1px 1p2 0 white,
-    //  inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
-    //  0px 0px 89px 0px color(display-p3 0 0 0 / 0.18),
-    //  0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
-    //  0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
-    //  0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
 
     > .drawer-content {
       position: relative;

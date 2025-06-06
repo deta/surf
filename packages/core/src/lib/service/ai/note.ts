@@ -515,7 +515,7 @@ export class SmartNoteManager extends EventEmitterBase<SmartNotesEvents> {
   async createNote(
     name?: string,
     content?: string,
-    opts?: { switch: boolean; reuseContext?: boolean; eventContext?: EventContext }
+    opts?: { switch?: boolean; reuseContext?: boolean; eventContext?: EventContext }
   ) {
     const options = {
       switch: opts?.switch ?? false,

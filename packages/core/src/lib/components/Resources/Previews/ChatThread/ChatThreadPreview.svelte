@@ -19,7 +19,6 @@
   let chatMessage = ''
   let error = ''
   let isSlack = false
-  let showFullMessages = false
 
   const MAX_TITLE_LENGTH = 300
 

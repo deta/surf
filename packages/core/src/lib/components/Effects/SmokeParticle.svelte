@@ -184,7 +184,7 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
 
   export let xOrigin: number
   export let yOrigin: number
@@ -226,8 +226,6 @@
     for (let i = 0; i < points.length; i++) {
       const point = points[i]
       const nextPoint = points[(i + 1) % points.length]
-      const midX = (point.x + nextPoint.x) / 2
-      const midY = (point.y + nextPoint.y) / 2
       const dx = nextPoint.x - point.x
       const dy = nextPoint.y - point.y
       const radius = Math.sqrt(dx * dx + dy * dy) / 2

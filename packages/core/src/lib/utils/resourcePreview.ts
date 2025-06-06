@@ -44,6 +44,8 @@ export type ViewMode =
   | 'card' // Layout with auto height based on content size
   | 'responsive' // Layout filling max available width & height
   | 'inline'
+  | 'full'
+
 export type Origin = 'stuff' | 'stack' | 'homescreen' | 'homescreen-space'
 export type ContentType = 'plain' | 'rich_text' | 'html' | 'markdown'
 

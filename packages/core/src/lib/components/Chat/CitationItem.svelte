@@ -36,11 +36,7 @@
     type CtxItem
   } from '../Core/ContextMenu.svelte'
   import ResourceHoverPreview from './ResourceHoverPreview.svelte'
-  import {
-    ResourceJSON,
-    useResourceManager,
-    type Resource
-  } from '@horizon/core/src/lib/service/resources'
+  import { ResourceJSON, type Resource } from '@horizon/core/src/lib/service/resources'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'

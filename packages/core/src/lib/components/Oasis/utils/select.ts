@@ -1,4 +1,4 @@
-import { writable, get, derived } from 'svelte/store'
+import { writable, get } from 'svelte/store'
 import { useLogScope } from '@horizon/utils'
 import type { ClipboardService } from '../../../service/clipboard'
 
@@ -44,15 +44,6 @@ export function deselectAll() {
 export function selectAll() {
   // Only select elements with data-selectable="true"
   const items = Array.from(document.querySelectorAll('[data-selectable="true"]')) as HTMLElement[]
-  const currentSelectedIds = get(selectedItemIds)
-
-  if (currentSelectedIds.length === items.length) {
-    // TODO: All items are already selected, trigger load all contents
-    console.log('Triggering load all contents')
-    // After loading all contents, select them
-    // This is a placeholder and should be replaced with actual implementation
-  }
-
   items.forEach((item) => {
     item.classList.add('selected')
   })

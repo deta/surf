@@ -2,8 +2,6 @@
   import type { Resource } from '../../../../service/resources'
   import { useLogScope } from '@horizon/utils'
 
-  const log = useLogScope('VideoViewCard')
-
   export let resource: Resource
   export let blob: Blob
 

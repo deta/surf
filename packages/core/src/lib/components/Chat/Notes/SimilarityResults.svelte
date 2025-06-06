@@ -7,9 +7,6 @@
   import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
   import SimilarityItem from './SimilarityItem.svelte'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useLogScope } from '@horizon/utils/src/log'
-  // import CardSwipeStack from '@horizon/core/src/lib/components/Atoms/CardSwipeStack.svelte'
 
   export let sources: AIChatMessageSource[]
   export let floating = true
@@ -23,10 +20,6 @@
     'open-space': string
     'change-context': string
   }>()
-  const log = useLogScope('SimilarityResults')
-  const oasis = useOasis()
-
-  const spaces = oasis.spaces
 
   const processSources = (sources: AIChatMessageSource[], collapsed: boolean) => {
     if (!collapsed) {
@@ -59,20 +52,6 @@
 
       return firstSource
     })
-  }
-
-  const handleOpenContext = () => {
-    if ($activeSpace) {
-      dispatch('open-space', $activeSpace.id)
-    } else {
-      dispatch('open-space', 'all')
-    }
-  }
-
-  const handleSelectContext = (e: CustomEvent<string>) => {
-    log.debug('Selected context', e.detail)
-
-    dispatch('change-context', e.detail)
   }
 
   const handleSearchEverything = () => {
@@ -108,20 +87,8 @@
             <Icon name="sparkles" size="16px" />
           </button>
         {/if}
-
-        <!-- <ChangeContextBtn
-          {spaces}
-          {selectedContext}
-          {activeSpace}
-          on:click={handleOpenContext}
-          on:select={handleSelectContext}
-        /> -->
       </div>
     </div>
-
-    <!-- <CardSwipeStack items={sources} let:item={source}>
-              <SimilarityItem source={source} />
-          </CardSwipeStack> -->
 
     {#if loading}
       <div class="empty">

@@ -15,6 +15,7 @@
   import { DragTypeNames } from '@horizon/core/src/lib/types'
   import { useLogScope, hover } from '@horizon/utils'
   import { HTMLDragZone, DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import type { Timer } from '@horizon/types'
 
   export let id: string
   export let name: string
@@ -47,7 +48,7 @@
   }
 
   let dragoverTimeout: Timer | null = null
-  const handleDragEnter = (drag: DragculaDragEvent) => {
+  const handleDragEnter = (_drag: DragculaDragEvent) => {
     if (dragoverTimeout) clearTimeout(dragoverTimeout)
 
     dragoverTimeout = setTimeout(() => {
@@ -56,7 +57,7 @@
     }, 800)
   }
 
-  const handleDragLeave = (drag: DragculaDragEvent) => {
+  const handleDragLeave = (_drag: DragculaDragEvent) => {
     if (dragoverTimeout) clearTimeout(dragoverTimeout)
   }
 

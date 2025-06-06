@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, afterUpdate } from 'svelte'
-  import type { HistoryEntry, TabHistory } from '../../types'
+  import type { HistoryEntry } from '../../types'
   import { tooltip, useLogScope } from '@horizon/utils'
   import { useResourceManager } from '../../service/resources'
   import { derived, writable } from 'svelte/store'

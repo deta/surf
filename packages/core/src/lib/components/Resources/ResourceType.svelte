@@ -8,15 +8,9 @@
 </script>
 
 <div class="type">
-  {#if type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-    <!-- <Icon name="docs" size="20px" />
-    <div class="label">Note</div> -->
-  {:else if type === ResourceTypes.LINK}
+  {#if type === ResourceTypes.LINK}
     <Icon name="link" size="20px" />
     <div class="label">Link</div>
-    <!-- {:else if type.startsWith(ResourceTypes.POST)}
-    <Icon name="link" size="20px" />
-    <div class="label">Post</div> -->
   {:else if type.startsWith(ResourceTypes.ARTICLE)}
     <Icon name="link" size="20px" />
     <div class="label">Article</div>

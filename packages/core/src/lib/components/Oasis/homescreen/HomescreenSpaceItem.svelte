@@ -119,8 +119,6 @@
           viewType={'grid'}
           fadeIn={false}
           viewDensity={'cozy'}
-          sortBy={'resource_added_to_space'}
-          order={'desc'}
           isInSpace={true}
         />
       </LazyScroll>

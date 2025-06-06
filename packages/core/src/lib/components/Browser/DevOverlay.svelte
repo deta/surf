@@ -3,7 +3,6 @@
 
   let fps = 0
   let domNodes = 0
-  let renderingPipeline = 'N/A'
   let v8Metrics = 'Checking...'
 
   function getV8Metrics() {

@@ -1,9 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import type { Resource } from '../../../../service/resources'
-  import { getFileType, useLogScope } from '@horizon/utils'
-
-  const log = useLogScope('AudioViewCard')
+  import { getFileType } from '@horizon/utils'
 
   export let resource: Resource
   export let blob: Blob

@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
-
   // Create a helper array for the repeated elements
   const contextCards = Array(3)
   const gridItems = Array(4)

@@ -11,7 +11,6 @@
     isMac,
     isModKeyPressed,
     parseStringIntoUrl,
-    tooltip,
     useDebounce,
     useLogScope,
     wait
@@ -818,12 +817,6 @@
       border-color: rgb(75 85 99);
       color: rgb(209 213 219);
     }
-
-    // max-height: 700px;
-    // min-height: 100px;
-    // height: 300px;
-    // resize: vertical;
-    // overflow: hidden;
   }
 
   .spaces-wrapper {

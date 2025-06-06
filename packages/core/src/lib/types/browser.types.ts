@@ -23,7 +23,6 @@ export interface BaseTab {
     | 'empty'
     | 'importer'
     | 'space'
-    | 'oasis-discovery'
     | 'history'
     | 'resource'
     | 'onboarding'
@@ -70,10 +69,6 @@ export interface TabImporter extends BaseTab {
   type: 'importer'
 }
 
-export interface TabOasisDiscovery extends BaseTab {
-  type: 'oasis-discovery'
-}
-
 export interface TabSpace extends BaseTab {
   type: 'space'
   spaceId: string
@@ -106,7 +101,6 @@ export type Tab =
   | TabEmpty
   | TabImporter
   | TabSpace
-  | TabOasisDiscovery
   | TabHistory
   | TabResource
   | TabOnboarding

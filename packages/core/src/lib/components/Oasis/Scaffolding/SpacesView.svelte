@@ -78,7 +78,6 @@
 
   export let spaces: Readable<OasisSpace[]>
   export let resourceManager: ResourceManager
-  export let showPreview = true
 
   const editingSpaceId = writable<string | null>(null)
   const didChangeOrder = writable(false)
@@ -588,7 +587,6 @@
               selected={$selectedSpace === folder.id}
               isEditing={$editingSpaceId === folder.id}
               allowPinning
-              {showPreview}
             />
           {/each}
         {/if}
@@ -597,10 +595,7 @@
       {#if $missingSourceSpaces.length > 0}
         <div class="connected-list">
           {#if $userSettings.experimental_context_linking}
-            <div class="separator">
-              Most Connected
-              <!-- <div class="separator-line"></div> -->
-            </div>
+            <div class="separator">Most Connected</div>
 
             {#each $missingSourceSpaces as folder (folder.id)}
               <div class="space-source-item">
@@ -621,7 +616,6 @@
                   selected={$selectedSpace === folder.id}
                   isEditing={$editingSpaceId === folder.id}
                   allowPinning
-                  {showPreview}
                 />
               </div>
             {/each}

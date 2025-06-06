@@ -10,7 +10,6 @@
 
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 
@@ -24,11 +23,8 @@
 
   const log = useLogScope('SavingItem')
   const oasis = useOasis()
-  const tabsManager = useTabsManager()
   const resourceManager = useResourceManager()
   const toasts = useToasts()
-
-  const activeSpace = tabsManager.activeScopeId
 
   type State = ResourceStateCombined | 'loading'
 

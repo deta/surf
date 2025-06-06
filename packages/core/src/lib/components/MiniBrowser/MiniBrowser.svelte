@@ -1,7 +1,6 @@
 <script lang="ts">
   import { useLogScope } from '@horizon/utils'
   import {
-    MINI_BROWSER_CONTEXT_KEY,
     MINI_BROWSER_SERVICE_CONTEXT_KEY,
     MiniBrowser
   } from '@horizon/core/src/lib/service/miniBrowser'

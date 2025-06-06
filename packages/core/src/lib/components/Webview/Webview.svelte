@@ -25,13 +25,7 @@
   import { derived, writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { useConfig } from '../../service/config'
-  import {
-    ResourceTypes,
-    WebViewEventSendNames,
-    WebviewAnnotationEventNames,
-    type WebViewReceiveEvents,
-    type WebViewSendEvents
-  } from '@horizon/types'
+  import { ResourceTypes, WebViewEventSendNames, type WebViewSendEvents } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
   import {
@@ -42,18 +36,16 @@
     shouldIgnoreWebviewErrorCode,
     isPDFViewerURL,
     processFavicons,
-    getFallbackFavicon,
     getHostname
   } from '@horizon/utils'
-  import { DragTypeNames, type AnnotationHighlightData, type HistoryEntry } from '../../types'
+  import { DragTypeNames, type HistoryEntry } from '../../types'
   import {
     useResourceManager,
     type ResourceAnnotation,
-    type ResourceChatThread,
     type ResourceLink,
     type ResourceObject
   } from '../../service/resources'
-  import type { Tab, TabPage } from '../../types/browser.types'
+  import type { TabPage } from '../../types/browser.types'
   import {
     Dragcula,
     DragOperation,
@@ -152,20 +144,6 @@
       programmaticNavigation = false
     }
   }, NAVIGATION_DEBOUNCE_TIME)
-
-  const handleRedirectNavigation = (newUrl: string) => {
-    log.debug('Changing current location and history to', newUrl)
-    historyStackIds.update((stack) => {
-      const index = $currentHistoryIndex
-      if (index >= 0 && index < stack.length) {
-        stack[index] = newUrl
-      }
-      return stack
-    })
-
-    programmaticNavigation = true
-    updateUrl(newUrl)
-  }
 
   const handleNavigation = (newUrl: string) => {
     if (isPDFViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
@@ -382,124 +360,6 @@
     }
   })
 
-  /**
-   * Convert drag data into serialized format transferable to webview.
-   * @param typesOnly - Use for all events except on:Drop, so that it doesnt fetch the data all the time during a drag as it should only be readable on drop anyways.
-   */
-  const serializeDragDataForWebview = async (
-    data: { [key: string]: unknown } | DataTransfer,
-    typesOnly = false
-  ): Promise<{
-    strings: { type: string; value: string | undefined }[]
-    files: { name: string; type: string; buffer: ArrayBuffer | undefined }[]
-  }> => {
-    const serialized: {
-      strings: { type: string; value: string | undefined }[]
-      files: {
-        name: string
-        type: string
-        buffer: ArrayBuffer | undefined
-      }[]
-    } = {
-      strings: [],
-      files: []
-    }
-    /// When the drag is a native drag, we need to handle it differently
-    if (data instanceof DataTransfer) {
-      for (const item of data.items) {
-        if (item.kind === 'string') {
-          const value = await new Promise<string>((resolve) => item.getAsString(resolve))
-          serialized.strings.push({ type: item.type, value })
-        } else if (item.kind === 'file') {
-          const file = item.getAsFile()
-          if (!file) continue
-          serialized.files.push({
-            name: file.name ?? `File ${serialized.files.length + 1}`,
-            type: file.type,
-            buffer: await file.arrayBuffer()
-          })
-        }
-      }
-    } else {
-      if (data['surf/tab'] !== undefined) {
-        const tab = data['surf/tab'] as TabPage // TODO: This is prob the wrong type re: currentLocation ? @Maxi
-        if (typesOnly) {
-          serialized.strings.push({ type: 'surf/tab', value: undefined })
-        } else {
-          serialized.strings.push({ type: 'text/uri-list', value: tab.currentLocation })
-        }
-      }
-      if (data['oasis/resource'] !== undefined) {
-        const resource = data['oasis/resource'] as ResourceObject
-        if (
-          (
-            [
-              ResourceTypes.LINK,
-              ResourceTypes.ARTICLE,
-              ResourceTypes.POST,
-              ResourceTypes.POST_REDDIT,
-              ResourceTypes.POST_TWITTER,
-              ResourceTypes.POST_YOUTUBE,
-              ResourceTypes.CHANNEL_YOUTUBE,
-              ResourceTypes.PLAYLIST_YOUTUBE,
-              ResourceTypes.CHAT_THREAD,
-              ResourceTypes.CHAT_THREAD_SLACK
-            ] as string[]
-          ).includes(resource.type)
-        ) {
-          if (typesOnly) {
-            serialized.strings.push({ type: 'text/uri-list', value: undefined })
-          } else {
-            let url = ''
-            if (
-              (
-                [ResourceTypes.LINK, ResourceTypes.POST, ResourceTypes.ARTICLE] as string[]
-              ).includes(resource.type)
-            ) {
-              url = (await (resource as ResourceLink).getParsedData())?.url
-            } else {
-              url = resource.metadata?.sourceURI ?? ''
-            }
-            serialized.strings.push({ type: 'text/uri-list', value: url })
-          }
-        } else if (([ResourceTypes.ANNOTATION] as string[]).includes(resource.type)) {
-          let text = ''
-          if (typesOnly) {
-            serialized.strings.push({ type: 'text/plain', value: undefined })
-          } else {
-            const data = await (resource as ResourceAnnotation).getParsedData()
-            const userComment = data.data.content_plain ?? ''
-
-            text = `Highlight: ${data.anchor?.data['content_plain']}\n
-${userComment === '' ? '' : `Comment: ${userComment}`}\n
-Page: ${(resource as ResourceAnnotation).metadata?.sourceURI}\n
-Made with Deta Surf.`
-            serialized.strings.push({ type: 'text/plain', value: text })
-          }
-        }
-
-        /// Default case is to treat as file
-        else {
-          if (typesOnly) {
-            serialized.files.push({
-              name: resource.metadata?.name ?? `File ${serialized.files.length + 1}`,
-              type: resource.type,
-              buffer: undefined
-            })
-          } else {
-            const blob = await resource.getData()
-            serialized.files.push({
-              name: resource.metadata?.name ?? `File ${serialized.files.length + 1}`,
-              type: blob.type,
-              buffer: await blob.arrayBuffer()
-            })
-          }
-        }
-      }
-    }
-    return serialized
-  }
-
   const handleDragEnter = async (drag: DragculaDragEvent) => {
     const resourceId = drag.item?.data.getData(DragTypeNames.SURF_RESOURCE_ID)
     webview.focus()
@@ -715,16 +575,6 @@ Made with Deta Surf.`
 
       handleNavigation(e.url)
     })
-
-    // webview.addEventListener(
-    //   'did-redirect-navigation',
-    //   (e: Electron.DidRedirectNavigationEvent) => {
-    //     // log.debug('did redirect navigation', e.url)
-    //     if (!e.isMainFrame || !e.isInPlace) return
-
-    //     handleRedirectNavigation(e.url)
-    //   }
-    // )
   })
 
   onDestroy(() => {

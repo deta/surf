@@ -25,22 +25,9 @@
     onboardingPDF,
     onboardingYoutube
   } from '../../constants/examples'
-  import { Icon } from '@horizon/icons'
-  import Button from '../Atoms/Button.svelte'
-  import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import onboVision from '../../../../public/assets/demo/onbovision.gif'
-  import onboBg from '../../../../public/assets/demo/bag_full_bg.png'
   import onboardingSky from '../../../../public/assets/demo/onboarding-sky.png'
-  import { CompletionEventID } from '../Onboarding/onboardingScripts'
-
-  import stuffOnboarding01 from '../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
-  import smartSpacesOnboarding from '../../../../public/assets/onboarding/smartspaces.webp'
-  import { createOnboardingSpace } from '../../service/demoitems'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
-  import { ResourceTag } from '../../service/resources'
-
-  import { extractAndCreateWebResource } from '../../service/mediaImporter'
   import type { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
 
@@ -52,7 +39,6 @@
   import DesktopSection from '../Onboarding/sections/03.Desktop.svelte'
   import VisionSection from '../Onboarding/sections/04.Vision.svelte'
   import ChatSection from '../Onboarding/sections/05.Chat.svelte'
-  import ContextsSection from '../Onboarding/sections/06.Contexts.svelte'
   import SmartNotesSection from '../Onboarding/sections/07.SmartNotes.svelte'
   import Codegen from '../Onboarding/sections/08.Codegen.svelte'
   import NewNotes from '../Onboarding/sections/09.NewNotes.svelte'
@@ -164,11 +150,6 @@
 
   const handleTryStuff = () => {
     dispatch('launchTimeline', OnboardingFeature.StuffOnboarding)
-    dispatch('openStuff')
-  }
-
-  const handleTrySmartSpaces = () => {
-    dispatch('launchTimeline', OnboardingFeature.SmartSpacesOnboarding)
     dispatch('openStuff')
   }
 

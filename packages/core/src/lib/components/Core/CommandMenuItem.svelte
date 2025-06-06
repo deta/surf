@@ -37,19 +37,6 @@
 
   const dispatch = createEventDispatcher<{ select: CMDMenuItem }>()
 
-  //   function getItemIcon(item: CMDMenuItem) {
-  //     if (item.type === 'tab' || item.type === 'history') {
-  //       return (
-  //         item.icon || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(item.value!)}`
-  //       )
-  //     } else if (item.type === 'command') {
-  //       return item.icon || 'command' // Default icon for commands
-  //     } else if (item.type === 'google-search' || item.type === 'suggestion') {
-  //       return 'search' // Icon for Google search and suggestions
-  //     }
-  //     return 'arrow.right' // Default icon for other types
-  //   }
-
   function getDescriptionFromType(type: CMDMenuItem['type']) {
     switch (type) {
       case 'command':

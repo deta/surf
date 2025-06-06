@@ -44,13 +44,6 @@
   export let interactive: boolean = true
   export let viewType: ContextViewType | undefined = ContextViewTypes.Grid
   export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Compact
-
-  export const hideViewSettings = false
-  export const hideFilterSettings: boolean = false
-  export const hideSortingSettings: boolean = false
-  export const sortBy: string | undefined = undefined
-  export const order: string | null = null
-
   export let status: undefined | { icon: Icons | undefined; message: string } = undefined
 
   const dispatch = createEventDispatcher()

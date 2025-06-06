@@ -98,14 +98,12 @@
   const tabsManager = useTabsManager()
   const oasis = useOasis()
   const ai = useAI()
-  const globalMiniBrowser = useGlobalMiniBrowser()
 
   const tabs = tabsManager.tabs
   const userConfigSettings = config.settings
   const telemetry = resourceManager.telemetry
   const activeTabId = tabsManager.activeTabId
   const customAIApps = ai.customAIApps
-  const activeChatId = ai.activeSidebarChatId
 
   const { contextManager, contextItems, status, error } = chat
   const { tabsInContext, generatingPrompts, generatedPrompts } = contextManager
@@ -573,7 +571,7 @@
         chat.selectModel(null)
 
         for await (const contextItem of contextItems) {
-          await contextManager.removeContextItem(contextItem.id)
+          contextManager.removeContextItem(contextItem.id)
         }
       } catch (e) {
         log.error('Error removing context items', e)
@@ -594,7 +592,6 @@
     }
 
     const lastQuery = lastResponse.query
-    const lastRole = lastResponse.role
 
     const { closeType: confirmed } = await openDialog({
       message:
@@ -615,13 +612,6 @@
     // dispatch('new-chat-with-prompt', { query: lastQuery, role: lastRole, skipScreenshot: true })
   }
 
-  const scrollToBottom = () => {
-    if (!autoScrollChat) return
-    if (listElem) {
-      listElem.scrollTop = listElem.scrollHeight
-    }
-  }
-
   const handleListWheel = (e: WheelEvent) => {
     autoScrollChat = false
   }
@@ -631,38 +621,7 @@
     editor.focus()
   }
 
-  const handleRemoveContextItem = (e: CustomEvent<string>) => {
-    const id = e.detail
-    log.debug('Removing context item', id)
-    contextManager.removeContextItem(id, PageChatUpdateContextEventTrigger.ChatContextItem)
-  }
-
-  const handleSelectContextItem = async (e: CustomEvent<string>) => {
-    const id = e.detail
-    const contextItem = contextManager.getItem(id)
-    if (!contextItem) {
-      log.error('Context item not found', id)
-      return
-    }
-
-    dispatch('open-context-item', contextItem)
-  }
-
-  const handleRetryContextItem = async (e: CustomEvent<string>) => {
-    const id = e.detail
-    log.debug('Retrying context item', id)
-    const contextItem = contextManager.getItem(id)
-    if (!contextItem) {
-      log.error('Context item not found', id)
-      return
-    }
-
-    dispatch('process-context-item', contextItem)
-  }
-
   const handleInputKeydown = (e: KeyboardEvent) => {
-    const currentTime = Date.now()
-
     if (e.key === 'Alt' || e.key === 'Option') {
       $optPressed = true
     } else if (e.key === 'Meta' || e.key === 'Control') {
@@ -712,12 +671,6 @@
       }
     } else if (e.key === 'Enter' && $shiftPressed && $cmdPressed) {
       if (inputValue !== '') {
-        // itemsInContext = $tabs.map((tab) => {
-        //   return {
-        //     type: 'tab',
-        //     data: tab
-        //   }
-        // })
         handleChatSubmit()
       }
     }
@@ -791,11 +744,6 @@
 
   let selectedMode: 'general' | 'all' | 'active' | 'context' = 'general'
 
-  // const generateChatPrompts = useDebounce(async (contextItem: ContextItem) => {
-  //   await tick()
-  //   await chat.getChatPrompts(contextItem)
-  // }, 500)
-
   const runPrompt = async (prompt: ChatPrompt, custom: boolean = false) => {
     try {
       log.debug('Handling prompt submit', prompt)
@@ -821,12 +769,6 @@
     }
   }
 
-  const handleRunPrompt = (e: CustomEvent<{ prompt: ChatPrompt; custom: boolean }>) => {
-    const { prompt, custom } = e.detail
-    log.debug('Handling run prompt', prompt)
-    runPrompt(prompt, custom)
-  }
-
   const sendChatMessage = async (
     prompt: string,
     role: AIChatMessageRole = 'user',
@@ -839,16 +781,6 @@
       role,
       query,
       skipScreenshot
-    })
-  }
-
-  const clearChat = async () => {
-    log.debug('Clearing chat')
-
-    dispatch('clear-chat')
-
-    await tick().then(() => {
-      editor?.focus()
     })
   }
 

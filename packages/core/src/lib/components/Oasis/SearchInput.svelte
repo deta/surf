@@ -168,9 +168,6 @@
       background: rgb(from var(--base-color) r g b / 0.4);
       opacity: 1;
     }
-
-    // transition: width 33ms cubic-bezier(0, 1.22, 0.73, 1.13);
-    //transition-timing-function: ease-out;
   }
 
   .shortcut {

@@ -37,7 +37,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
   import type { HistoryEntriesManager } from '../../service/history'
-  import type { AIChatMessageSource, PageMagic, TabPage } from '../../types/browser.types'
+  import type { AIChatMessageSource, TabPage } from '../../types/browser.types'
   import {
     useLogScope,
     useDebounce,
@@ -46,8 +46,7 @@
     truncate,
     parseUrlIntoCanonical,
     useTimeout,
-    compareURLs,
-    checkIfYoutubeUrl
+    compareURLs
   } from '@horizon/utils'
   import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
   import {
@@ -76,7 +75,6 @@
   import {
     Resource,
     ResourceAnnotation,
-    ResourceJSON,
     ResourceTag,
     useResourceManager
   } from '../../service/resources'
@@ -85,10 +83,7 @@
   import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
-  import {
-    useMiniBrowserService,
-    type MiniBrowserSelected
-  } from '@horizon/core/src/lib/service/miniBrowser'
+  import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import MiniBrowser from '../MiniBrowser/MiniBrowser.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
@@ -128,7 +123,6 @@
   const activeTabId = tabs.activeTabId
   const showNewTabOverlay = tabs.showNewTabOverlay
   const userConfigSettings = config.settings
-  const showChatSidebar = ai.showChatSidebar
 
   const isMediaPlaying = writable(false)
 
@@ -654,18 +648,6 @@
 
     log.debug('adding resource to save item', resource, saveItem)
     saveItem?.addResource(resource)
-
-    // if (resource.type === ResourceTypes.PDF) {
-    //   window.api.openResourceLocally({
-    //     id: resource.id,
-    //     metadata: resource.metadata,
-    //     type: resource.type,
-    //     path: resource.path,
-    //     deleted: resource.deleted,
-    //     createdAt: resource.createdAt,
-    //     updatedAt: resource.updatedAt
-    //   })
-    // }
 
     tab.resourceBookmark = resource.id
     tab.chatResourceBookmark = resource.id

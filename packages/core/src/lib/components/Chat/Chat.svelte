@@ -157,35 +157,10 @@
     }
   }
 
-  const handleRunPrompt = (e: CustomEvent<{ prompt: ChatPrompt; custom: boolean }>) => {
-    const { prompt, custom } = e.detail
-    log.debug('Handling run prompt', prompt)
-    runPrompt(prompt, custom)
-  }
-
   const handleUpdateNoteTitle = async (e: CustomEvent<string>) => {
     const title = e.detail
 
     await note.updateTitle(title)
-  }
-
-  const handleSubmit = async (e: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
-    try {
-      const { query, mentions } = e.detail
-      log.debug('Handling submit', query, mentions)
-
-      if (note) {
-        noteComp?.generateAndInsertAIOutput(
-          query,
-          undefined,
-          mentions,
-          PageChatMessageSentEventTrigger.NoteChatInput,
-          { focusEnd: true, autoScroll: true, showPrompt: true }
-        )
-      }
-    } catch (e) {
-      log.error('Error doing magic', e)
-    }
   }
 
   onMount(async () => {

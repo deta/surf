@@ -3,7 +3,6 @@
 
   export let headline: string | undefined = undefined
   export let description: string | undefined = undefined
-  //export let themeData: ThemeData | undefined = undefined
 
   export let headlineEditable = true
   export let descriptionEditable = true
@@ -136,13 +135,6 @@
       filter: blur(2px);
 
       animation: fadeIn 234ms ease-in;
-
-      /*
-      opacity: 1;
-      transition: opacity;
-      transition-duration: 234ms;
-      transition-timing-function: ease-out;
-      transition-delay: 100ms;*/
     }
 
     &:hover {

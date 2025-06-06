@@ -3,7 +3,6 @@
   import { Editor } from '@horizon/editor'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
-  import { useLogScope } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
   import ModelPicker from './ModelPicker.svelte'
 

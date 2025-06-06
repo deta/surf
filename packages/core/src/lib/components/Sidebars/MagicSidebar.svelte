@@ -72,7 +72,7 @@
       }
     }
 
-    await handleClear()
+    handleClear()
 
     log.debug('Starting new chat with query', query)
     chatComponent?.updateChatInput(query)
@@ -99,7 +99,7 @@
   }
 
   export const clearExistingChat = async () => {
-    await handleClear()
+    handleClear()
   }
 
   const handleClearErrors = () => {

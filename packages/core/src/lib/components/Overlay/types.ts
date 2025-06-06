@@ -25,10 +25,12 @@ export type OverlayEvents = {
   'open-url': string
   'activate-tab': string
   'create-chat': string
+  // TODO: UMM WHAT SPACE IS THIS???
   'open-space': Space
   'toggle-homescreen': void
   open: string
   'create-resource-from-oasis': string
+  // TODO: WHAT TABSPACE IS THIS???
   'create-tab-from-space': { tab: TabSpace; active: boolean }
   deleted: string
 }

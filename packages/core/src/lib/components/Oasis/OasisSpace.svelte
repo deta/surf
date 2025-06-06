@@ -62,7 +62,12 @@
   import type { ResourceContent } from '@horizon/web-parser'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
-  import type { ChatWithSpaceEvent, RenderableItem, SpaceRenderableItem } from '../../types'
+  import type {
+    ChatWithSpaceEvent,
+    RenderableItem,
+    SpaceEntrySortBy,
+    SpaceRenderableItem
+  } from '../../types'
   import {
     CreateTabEventTrigger,
     DeleteSpaceEventTrigger,
@@ -654,11 +659,6 @@
     try {
       loadingSpaceSources.set(true)
 
-      // const stringifiedQuery = JSON.stringify(query)
-      // const stringifiedSqlQuery = JSON.stringify(sql_query === '' ? undefined : sql_query)
-      // const stringifiedEmbeddingQuery = JSON.stringify(
-      //   embedding_query === '' ? undefined : sql_query
-      // )
       log.debug('AI prompt:', query, sql_query, embedding_query)
 
       const response = await ai.getResourcesViaPrompt(query, {
@@ -700,19 +700,12 @@
       newlyLoadedResources.update((resources) => [...resources, ...newResults])
 
       await oasis.addResourcesToSpace(spaceId, newResults, SpaceEntryOrigin.LlmQuery)
-
-      // await loadSpaceContents(spaceId, true)
-
       return newResults
     } catch (error) {
       log.error('Error updating live space contents with AI:', error)
     } finally {
       loadingSpaceSources.set(false)
     }
-  }
-
-  const forceReload = async () => {
-    await loadAllContexts()
   }
 
   const loadSpaceSources = async (sources: SpaceSource[], forceFetch = false) => {
@@ -791,9 +784,6 @@
           SpaceEntryOrigin.ManuallyAdded
         )
       }
-
-      // await loadSpaceContents(spaceId, true)
-
       return resources
     } catch (error) {
       log.error('Error loading space sources:', error)
@@ -1213,7 +1203,7 @@
       message: confirmMessage,
       actions: [
         { title: 'Cancel', type: 'reset' },
-        { title: 'Remove', type: 'submit', kind: 'primary' }
+        { title: 'Remove', type: 'submit', kind: 'danger' }
       ]
     })
 
@@ -1337,11 +1327,6 @@
         trigger: CreateTabEventTrigger.OasisItem
       })
     }
-    // NOTE: This also triggered when the context was open as a tab
-    // so it cleared the note
-    //else if (isModKeyAndKeyPressed(e, 'Enter')) {
-    //  handleChatWithSpace()
-    //}
   }
 
   const handleDrop = async (event: CustomEvent | DragculaDragEvent<DragTypes>) => {
@@ -1756,7 +1741,6 @@
         log.debug('LLM fetched resources added to space:', llmFetchedResourceIds)
       }
 
-      $space = createdSpace
       await loadSpaceContents(createdSpace.id)
       showSettingsModal.set(false)
       toasts.success('Created New Context!')
@@ -1794,7 +1778,6 @@
     if (handleEventsOutside) {
       dispatch('open-page-in-mini-browser', url)
     } else {
-      // openResourceDetailsModal(tab.resourceBookmark || tab.chatResourceBookmark)
       scopedMiniBrowser.openWebpage(url, { from: OpenInMiniBrowserEventFrom.PinnedTab })
     }
   }
@@ -1835,8 +1818,7 @@
 
     const prevSortby = $spaceData?.sortBy
 
-    // TODO: Typing we dont expose a type for the sort exactly so this is scudffed
-    await $space.updateData({ sortBy })
+    await $space.updateData({ sortBy: sortBy as SpaceEntrySortBy })
     loadSpaceContents(spaceId, true)
 
     if (prevSortby !== sortBy) {
@@ -1937,16 +1919,17 @@
   const theme = writable<ThemeData | undefined>(undefined)
   const calcThemeColors = (darkMode: boolean) => {
     desktopManager.getDesktopThemeData(spaceId).then((data) => {
-      const themeData: ThemeData = { colors: {} }
+      const themeData: ThemeData = { colors: { base: '', contrast: '' } }
       if (data && data.colorPalette) {
         const colorData =
-          colors.calculateColors(data.colorPalette.at(darkMode ? -1 : 0), darkMode) ?? undefined
-        themeData.colors.contrast = colorData.contrastColor
-        themeData.colors.base = colorData.color
+          colors.calculateColors(data.colorPalette.at(darkMode ? -1 : 0) || [0, 0, 0], darkMode) ??
+          undefined
+        themeData.colors!.contrast = colorData.contrastColor
+        themeData.colors!.base = colorData.color
         themeData.backgroundImage = data.resourceId
       } else {
-        themeData.colors.contrast = darkMode ? 'hsl(212, 92%, 92%)' : 'hsl(212, 92%, 8%)'
-        themeData.colors.base = '#808080'
+        themeData.colors!.contrast = darkMode ? 'hsl(212, 92%, 92%)' : 'hsl(212, 92%, 8%)'
+        themeData.colors!.base = '#808080'
         themeData.backgroundImage = getBackgroundImageUrlFromId(undefined, darkMode)
       }
 
@@ -2159,8 +2142,6 @@
               isInSpace={isSpaceView}
               viewType={$spaceData?.viewType}
               viewDensity={$spaceData?.viewDensity}
-              sortBy={$spaceData?.sortBy ?? 'resource_added_to_space'}
-              order={$spaceData?.sortOrder ?? 'desc'}
               fadeIn
               on:click={handleItemClick}
               on:open={handleItemOpen}

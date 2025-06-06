@@ -11,8 +11,7 @@
   import {
     DeleteAnnotationEventTrigger,
     type AnnotationCommentData,
-    type ResourceDataAnnotation,
-    type WebViewEventAnnotation
+    type ResourceDataAnnotation
   } from '@horizon/types'
   import { createEventDispatcher, onMount } from 'svelte'
   import { Editor, getEditorContentText } from '@horizon/editor'

@@ -19,7 +19,6 @@
   let searchInputElement: HTMLInputElement
   let selectedIndex = -1
   let menuElement: HTMLUListElement
-  let activeSubMenuRef: string | null = null
   let isUsingKeyboard = false // Track if user is using keyboard navigation
 
   // Define the type for our active submenu store

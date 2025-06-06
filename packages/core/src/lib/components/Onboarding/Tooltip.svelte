@@ -65,7 +65,6 @@
   export let rootID: string
 
   let tooltip: HTMLDivElement
-  let unsubscribeFromActiveTabId: () => void
 
   const dispatch = createEventDispatcher<{
     'open-stuff': void
@@ -232,10 +231,6 @@
     // Update the tracking variable
     wasGeneratingAI = $isGeneratingAI
   }
-
-  // Get anchor position CSS properties
-  $: anchorPosition = $currentStep?.domAnchor || null
-  $: hasAnchor = Boolean(anchorPosition)
 
   // Track if we're using alternative positioning due to collision
   let usingAlternativePosition = false

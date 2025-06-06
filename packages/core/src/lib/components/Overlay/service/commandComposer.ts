@@ -30,15 +30,10 @@ import {
   staticActionToTeletypeItem
 } from './translations'
 
-import {
-  Resource,
-  ResourceJSON,
-  ResourceManager,
-  type ResourceSearchResultItem
-} from '../../../service/resources'
+import { Resource, ResourceJSON, ResourceManager } from '../../../service/resources'
 import { ResourceTagsBuiltInKeys, ResourceTypes, SearchOasisEventTrigger } from '@horizon/types'
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
-import { type HistoryEntry, type Tab } from '../../../types'
+import { type HistoryEntry, type Tab, type TabPage } from '../../../types'
 import Fuse from 'fuse.js'
 import type { TabsManager } from '../../../service/tabs'
 
@@ -70,7 +65,6 @@ export class CommandComposer {
   // State variables
   private searchTimeout: NodeJS.Timeout | null = null
   private hasSearched = false
-  private isSearching = false
 
   // Constants
   private readonly fuseOptions = {
@@ -104,7 +98,6 @@ export class CommandComposer {
   public readonly defaultActionsTeletype = derived(
     [
       this.searchValue,
-      this.filteredCommandItems,
       this.oasisSearchResults,
       this.searchEngineSuggestionResults,
       this.historyEntriesResults,
@@ -115,7 +108,6 @@ export class CommandComposer {
     ],
     ([
       searchValue,
-      filteredCommandItems,
       oasisSearchResults,
       searchEngineSuggestionResults,
       historyEntriesResults,
@@ -129,7 +121,7 @@ export class CommandComposer {
           ? navigateActionToTeletypeItem(searchValue)
           : searchActionToTeletypeItem(searchValue),
         ...filteredBrowserCommands.map((command) => browserCommandToTeletypeItem(command)),
-        ...tabEntriesResults.map((tab) => tabToTeletypeItem(tab)),
+        ...tabEntriesResults.map((tab) => tabToTeletypeItem(tab as TabPage)),
         ...hostnameHistoryEntriesResults.map((entry) => hostnameHistoryEntryToTeletypeItem(entry)),
         ...spaceSearchResults.map((space) => spaceToTeletypeItem(space)),
         ...searchEngineSuggestionResults.map((suggestion) =>
@@ -195,8 +187,6 @@ export class CommandComposer {
   }
 
   private async onSearchValueChange(value: string) {
-    this.isSearching = true
-
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout)
     }
@@ -232,8 +222,6 @@ export class CommandComposer {
     } else {
       resetResults()
     }
-
-    this.isSearching = false
   }
 
   /* === FETCHING AND DOING THE ACTUAL SEARCH LOGIC FOR ITEMS === */
@@ -464,9 +452,7 @@ export class CommandComposer {
       this.reset()
       return
     }
-    void this.handleSearch(value).then(() => {
-      this.isSearching = false
-    })
+    this.handleSearch(value)
   }, 300)
 
   /* === PUBLIC SETTERS FOR STORES === */
@@ -523,7 +509,6 @@ export class CommandComposer {
     this.hostnameHistoryEntriesResults.set([])
     this.filteredCommandItems.set([])
     this.hasSearched = false
-    this.isSearching = false
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout)
       this.searchTimeout = null

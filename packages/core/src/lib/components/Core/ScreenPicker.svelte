@@ -64,7 +64,6 @@
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import AppBarButton from '@horizon/core/src/lib/components/Browser/AppBarButton.svelte'
 
-  type Point = { x: number; y: number }
   type Rect = { x: number; y: number; width: number; height: number }
   type Direction = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
   const DIRECTION_CURSORS: Record<Direction, string> = {
@@ -158,8 +157,6 @@
       await tick()
     })
   }
-
-  $: activeChatTitle = $activeChat?.title
 
   const promptItems = derived([ai?.customAIApps ?? readable([])], ([customAiApps]) => {
     return customAiApps.map(

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, onDestroy } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import {
@@ -32,10 +32,7 @@
     tooltip
   } from '@horizon/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
-  import OasisResourceDetails from './OasisResourceDetails.svelte'
-  import ResourceOverlay from '../Core/ResourceOverlay.svelte'
 
-  import AnnotationItem from './AnnotationItem.svelte'
   import { useToasts } from '../../service/toast'
   import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
   import { useTabsManager } from '../../service/tabs'
@@ -405,10 +402,6 @@
     copyConfirmation.showConfirmation()
   }
 
-  const handleDownload = () => {
-    // TODO
-  }
-
   onMount(async () => {
     log.debug('Resource modal mounted', resource)
 
@@ -491,10 +484,6 @@
           >
             <IconConfirmation bind:this={copyConfirmation} name="copy" />
           </button>
-          <!-- {:else}
-        <button on:click={handleDownload} class="flex items-center justify-center appearance-none border-none p-1 -m-1 h-min-content bg-none transition-colors text-sky-800 hover:text-sky-950 hover:bg-sky-200/80 rounded-lg ">
-          <IconConfirmation bind:this={copyConfirmation} name="download" />
-        </button> -->
         {/if}
 
         <button

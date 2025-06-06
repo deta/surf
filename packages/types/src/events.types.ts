@@ -444,21 +444,22 @@ export type UpdateSpaceSettingsEventChange = {
     | 'smart_filter'
     | 'view_type'
     | 'view_density'
-  change: (
-    | boolean
-    | null
-    | 'added'
-    | 'removed'
-    | 'resource_created'
-    | 'resource_updated'
-    | 'resource_added_to_space'
-    | 'resource_source_published'
-    | 'name'
-    | 'asc'
-    | 'desc'
-  ) &
-    ContextViewType &
-    ContextViewDensity
+  change:
+    | (
+        | boolean
+        | null
+        | 'added'
+        | 'removed'
+        | 'resource_created'
+        | 'resource_updated'
+        | 'resource_added_to_space'
+        | 'resource_source_published'
+        | 'name'
+        | 'asc'
+        | 'desc'
+      )
+    | ContextViewType
+    | ContextViewDensity
 }
 
 export type InlineAIEventPromptType = WebViewEventTransform['type']

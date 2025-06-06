@@ -6,7 +6,6 @@
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
   import { derived, get, writable } from 'svelte/store'
   import { isMac, useDebounce } from '@horizon/utils'
-  import { useTabsManager } from '../../../service/tabs'
   import { Icon } from '@horizon/icons'
   import { DragTypeNames } from '../../../types'
   import ResourcePreview from '../../Resources/ResourcePreview.svelte'
@@ -25,16 +24,12 @@
     'update-container-height': string | null
   }>()
   const getRand = () => Math.floor(Math.random() * 100) + 1 - 50
-  const getRandX = (i: number, rand: number) => (i % 2 === 0 ? 1 : -1) * rand * 0.14
-  const getRandY = (i: number, rand: number) => (i % 2 === 0 ? 1 : -1) * rand * -0.11
-  const getRandRot = (i: number, rand: number) => (i % 2 === 0 ? 1 : -1) * rand * 0.26
 
   const oasis = useOasis()
   const stackKey = oasis.stackKey
   const pendingStackActions = oasis.pendingStackActions
   const resourceManager = oasis.resourceManager
   const pendingSave = oasis.pendingSave
-  const tabsManager = useTabsManager()
   const config = useConfig()
   const userSettings = config.settings
 
@@ -268,10 +263,6 @@
       bind:this={stackEl}
       style="--card-width: {stackCardWidth}px;"
     >
-      <!--{#if $items.length <= 0}
-      <div class="card empty"></div>
-      <div class="card empty"></div>
-    {/if}-->
       {#each $items as item, i (item.resource.id)}
         {@const resource = item.resource.resource}
         {#if resource !== undefined}
@@ -338,41 +329,12 @@
     <Icon name="arrow.up.right" size="18px" />
     <span>Open My Stuff</span>
   </button>
-  <!--<span class="title verticalOnly">Your Stuff</span>-->
 </div>
 
 <style lang="scss">
   /* NOTE: Overrides to make ResourcePreviews work at small card scale. */
   :global(.stack-card) {
     font-size: 0.5em;
-    /*:global(div.image) {
-      //position: unset !important;
-      border-radius: 0px !important;
-    }
-    :global(div.details) {
-      padding: 0.5em !important;
-    }
-
-    :global(.resource-preview) {
-      height: 100% !important;
-      :global(.preview) {
-        height: 100%;
-        border: 0 !important;
-
-        :global(.file-card .icon > svg) {
-          --width: 2em !important;
-          --height: 2em !important;
-        }
-        :global(> .inner) {
-          height: 100%;
-          :global(.media img),
-          :global(.media > .wrapper) {
-            height: 100% !important;
-            object-fit: cover;
-          }
-        }
-      }
-    }*/
   }
 
   :global(.stack-card[data-drag-preview]) {
@@ -606,31 +568,6 @@
       }
     }
 
-    //.title {
-    //  color: #fff;
-    //  position: absolute;
-    //  bottom: 0;
-    //  left: 0;
-    //  display: block;
-    //  font-family: 'Bayshore';
-    //  font-size: 2rem;
-    //  mix-blend-mode: plus-lighter;
-    //  user-select: none;
-    //  transform: translate(6px, 3px) rotate(6deg);
-
-    //  transition:
-    //    transform 230ms,
-    //    font-size 230ms;
-    //  transition-timing-function: cubic-bezier(0.52, 0.58, 0.11, 0.84);
-    //}
-    //&.empty {
-    //  min-height: auto;
-    //  .title {
-    //    font-size: 1.8rem;
-    //    transform: translate(-50px, 50px) rotate(45deg) scale(1);
-    //  }
-    //}
-
     &.canHover:hover,
     &:has([data-context-menu-anchor]),
     :global(body:has(#app-contents.verticalTabs #homescreen.visible.empty)) & {
@@ -645,13 +582,6 @@
             scale(1) rotate(0) scale(var(--scale));
         }
       }
-
-      //.title {
-      //  font-size: 1.8rem;
-      //  transform: translate(-50px, 50px) rotate(45deg) scale(1);
-
-      //  mix-blend-mode: normal;
-      //}
     }
   }
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { type Resource, useResourceManager } from '../../service/resources'
-  import { useLogScope, parseStringIntoUrl, tooltip } from '@horizon/utils'
+  import { parseStringIntoUrl, tooltip } from '@horizon/utils'
   import { formatDistanceToNow, parseISO } from 'date-fns'
   import autosize from 'svelte-autosize'
 
@@ -13,10 +13,7 @@
   import { Icon } from '@horizon/icons'
   import { useToasts } from '../../service/toast'
   import { createEventDispatcher } from 'svelte'
-  import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import { useTabsManager } from '../../service/tabs'
-
-  const log = useLogScope('OasisResourceDetails')
 
   export let draggable = true
   export let resource: Resource

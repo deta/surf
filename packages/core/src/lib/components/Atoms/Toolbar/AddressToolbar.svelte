@@ -4,14 +4,7 @@
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { writable } from 'svelte/store'
-  import {
-    isModKeyPressed,
-    useLogScope,
-    optimisticCheckIfUrl,
-    parseStringIntoBrowserLocation,
-    parseStringIntoUrl
-  } from '@horizon/utils'
+  import { isModKeyPressed, useLogScope, parseStringIntoBrowserLocation } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
 
   import type { HistoryEntry, Optional } from '@horizon/core/src/lib/types'
@@ -41,84 +34,16 @@
     }))
     .splice(1, 5)
 
-  let origin = cardHistory[0]
-
-  let originalItems = [
-    { type: 'group', name: 'History', group: 'History' },
-    ...cardHistoryItems,
-
-    { type: 'group', name: 'Search', group: 'Search' },
-    { type: 'search', name: 'Use Perplexity', group: 'Search', searchEngine: 'perplexity' },
-    { type: 'search', name: 'Search with Google', group: 'Search', searchEngine: 'google' }
-  ]
-
   let filteredItems: any[] = []
   let selectedIndex = 0
 
   let itemElements: HTMLElement[] = []
-
-  // Add additional search results for sites that have no root results
-  const addAddtionalSearchResults = (
-    searchResults: ReturnType<typeof historyEntriesManager.searchEntries>,
-    query: string
-  ) => {
-    const sites = Array.from(
-      new Set(searchResults.map((item) => historyEntriesManager.extractSite(item.entry.url ?? '')))
-    ).filter((site) => site !== '')
-    const rootResults = searchResults.filter(
-      (item) => historyEntriesManager.extractPathname(item.entry.url ?? '') === '/'
-    )
-
-    const scoreHostname = (hostname: string, query: string) => {
-      if (hostname === query) {
-        return 2
-      } else if (hostname.startsWith(query)) {
-        return 1.5
-      } else if (hostname.includes(query)) {
-        return 1
-      } else {
-        return 0
-      }
-    }
-
-    const missingRootResultsForSites = sites
-      .filter(
-        (site) =>
-          !rootResults.some(
-            (item) => historyEntriesManager.extractSite(item.entry.url ?? '') === site
-          )
-      )
-      .map((site) => {
-        const entry = searchResults.find(
-          (item) => historyEntriesManager.extractSite(item.entry.url ?? '') === site
-        )
-        const hostname = historyEntriesManager.extractHostname(entry?.entry.url ?? '')
-        const url = `https://${hostname ?? ''}`
-
-        return {
-          entry: {
-            id: `root:${url}`,
-            updatedAt: new Date().toISOString(),
-            type: 'navigation',
-            title: historyEntriesManager.extractTitle(url),
-            url: url,
-            searchQuery: ''
-          } as HistoryEntry,
-          score: query.split(' ').reduce((acc, word) => acc + scoreHostname(hostname, word), 0)
-        }
-      })
-
-    return missingRootResultsForSites
-  }
 
   // Reactive statement to selectively filter items and control visibility of the Search group
   $: {
     if (inputValue) {
       let isInitial = inputValue === initialValue
       const lowerInputValue = inputValue.toLowerCase().trim()
-
-      //const searchResults = historyEntriesManager.searchEntries(lowerInputValue)
-      //const additionalSearchResults = addAddtionalSearchResults(searchResults, lowerInputValue)
 
       const searchResults: any[] = []
       const additionalSearchResults: any[] = []
@@ -268,36 +193,14 @@
         })
       }
 
-      // results.reverse()
-
       let historyItemsFiltered = isInitial ? cardHistoryItems : results
 
-      // let historyGroupHeader =
-      //   historyItemsFiltered.length > 0
-      //     ? [originalItems.find((item) => item.group === 'History' && item.type === 'group')]
-      //     : []
-
-      // let searchItemsVisibility = optimisticCheckIfUrl(inputValue)
-      //   ? []
-      //   : originalItems.filter((item) => item.group === 'Search')
-
       if (isInitial) {
-        filteredItems = [
-          // ...historyGroupHeader,
-          ...historyItemsFiltered
-          // ...searchItemsVisibility
-        ]
+        filteredItems = [...historyItemsFiltered]
       } else {
-        filteredItems = [
-          // ...searchItemsVisibility,
-          // ...historyGroupHeader,
-          ...historyItemsFiltered
-        ]
+        filteredItems = [...historyItemsFiltered]
       }
     }
-
-    // Update selectedIndex to point to the last item by default when filteredItems changes
-    // selectedIndex = filteredItems.length - 1
   }
 
   function handleKeydown(event: KeyboardEvent) {

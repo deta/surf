@@ -70,12 +70,7 @@
   import ContextLinksSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/ContextLinksSidebar.svelte'
   import { useContextService } from '@horizon/core/src/lib/service/contexts'
   import SpacePreviewSimple from './SpacePreviewSimple.svelte'
-
-  // TODO: check if we're passing these in still
-  export const showPreview = false
-  export const expandable = false
-  export const selectedItemsCount: number = 0
-  //
+  import type { Timer } from '@horizon/core/src/lib/types'
 
   export let folder: OasisSpace
   export let depth: number = 0
@@ -85,7 +80,6 @@
   export let allowPinning = false
   export let editingSpaceId: Readable<string | null>
   export let displayMode: 'list' | 'card' = 'list'
-  export let loadResources: boolean = displayMode === 'card'
 
   const log = useLogScope('Folder')
   const dispatch = createEventDispatcher<FolderEvents>()
@@ -112,8 +106,6 @@
   const inView = writable(false)
   const previousName = writable($folderDetails.folderName)
   const expanded = writable(false)
-  const loadingResources = writable(false)
-  //const cardResources = writable<Resource[]>([])
 
   const uid = generateID()
 
@@ -250,7 +242,7 @@
     }
   }
 
-  const handleRemove = async (event?: MouseEvent, deleteFromStuff = true) => {
+  const handleRemove = async (_event?: MouseEvent, deleteFromStuff = true) => {
     try {
       log.debug('handling folder removal', folder.id, 'deleteFromStuff:', deleteFromStuff)
 
@@ -335,7 +327,7 @@
   }
 
   let dragoverTimeout: Timer | null = null
-  const handleDragEnter = (drag: DragculaDragEvent) => {
+  const handleDragEnter = (_drag: DragculaDragEvent) => {
     if (dragoverTimeout) clearTimeout(dragoverTimeout)
 
     dragoverTimeout = setTimeout(() => {
@@ -344,7 +336,7 @@
     }, 800)
   }
 
-  const handleDragLeave = (drag: DragculaDragEvent) => {
+  const handleDragLeave = (_drag: DragculaDragEvent) => {
     if (dragoverTimeout) clearTimeout(dragoverTimeout)
   }
 
@@ -534,20 +526,6 @@
     if ($userSettings.experimental_context_linking_sidebar) {
       initializeIntersectionObserver()
       applyFolderNestingStyles(false)
-    }
-
-    // Load resources if in card mode
-    if (displayMode === 'card' && loadResources) {
-      loadingResources.set(true)
-      try {
-        //const resources = await getPreviewResources(4) // Limit to 4 for the grid
-        //cardResources.set(resources)
-      } catch (error) {
-        //log.error('Error loading resources for card view:', error)
-        //cardResources.set([])
-      } finally {
-        loadingResources.set(false)
-      }
     }
   })
 
@@ -855,25 +833,7 @@
   >
     <!-- Resources preview section -->
     <div class="context-resources">
-      {#if $loadingResources}
-        <div class="loading-resources">
-          <Icon name="spinner" size="24px" />
-          <span>Loading...</span>
-        </div>
-      {:else}
-        <SpacePreviewSimple icon={folder.getIconString()} isLink={isInSpace} />
-      {/if}
-      <!--
-      {:else if $cardResources && $cardResources.length > 0}
-        <div class="resources-grid">
-          <SpacePreviewSimple icon={folder.getIconString()} />
-        </div>
-      {:else}
-        <div class="empty-resources">
-          <SpacePreviewSimple icon={folder.getIconString()} />
-        </div>
-      {/if}
-      -->
+      <SpacePreviewSimple icon={folder.getIconString()} isLink={isInSpace} />
     </div>
     <div class="context-footer">
       <div class="context-title-row">

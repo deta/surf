@@ -1,8 +1,7 @@
 <script lang="ts">
   import { useLogScope } from '@horizon/utils'
-  import { createEventDispatcher, onDestroy, onMount, setContext, tick } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { useTelemetry } from '../../../service/telemetry'
   import { OasisSpace, useOasis } from '../../../service/oasis'
   import { HTMLDragZone } from '@horizon/dragcula'
   import HomescreenItem from './HomescreenItem.svelte'
@@ -23,7 +22,6 @@
     'space-selected': OasisSpace
     'open-stuff': void
   }>()
-  const telemetry = useTelemetry()
   const oasis = useOasis()
   const toasts = useToasts()
   const desktopManager = useDesktopManager()
@@ -38,7 +36,7 @@
   const gridTargetPreview = desktop.gridTargetPreview
 
   /// Drag Handlers
-  async function handleDrawEnd(e: CustomEvent<GridRect>) {
+  async function handleDrawEnd(_e: CustomEvent<GridRect>) {
     // NOTE: Disabled for now
   }
 

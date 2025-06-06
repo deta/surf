@@ -3,7 +3,6 @@
   import { flyAndScale } from '@horizon/utils'
   import { Tooltip } from 'bits-ui'
   import { createEventDispatcher } from 'svelte'
-  import { type Writable } from 'svelte/store'
   import ExtensionBrowserActions from './ExtensionBrowserActions.svelte'
   import AppBarButton from './AppBarButton.svelte'
 

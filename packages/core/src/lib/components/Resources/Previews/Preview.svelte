@@ -29,90 +29,98 @@
 </script>
 
 <script lang="ts">
-  import { getFileKind, useLogScope } from '@horizon/utils'
-  import type { Resource } from '@horizon/core/src/lib/service/resources'
-  import Link from '../../Atoms/Link.svelte'
+  /**
+   * Our new Resource preview has 3 big sections:
+   * 1. Media
+   * 2. Content
+   * 3. Metadata
+   *
+   * Any section can be hidden by setting its props to undefined.
+   * NOTE: The content section is a bit more involved, as it can also show up, if e.g. annotations exist.
+   */
+  import { getFileKind, mimeTypeToCodeLanguage, truncate } from '@horizon/utils'
+  import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
-  import { Editor } from '@horizon/editor'
+  import ReadOnlyRichText from '@horizon/editor/src/lib/components/ReadOnlyRichText.svelte'
   import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
-  import { ResourceTypes } from '@horizon/types'
+  import { ResourceTypes, WEB_RESOURCE_TYPES } from '@horizon/types'
   import FilePreview from './File/FilePreview.svelte'
-  import SourceItem from './Source.svelte'
   import { createEventDispatcher } from 'svelte'
-  import { isDebugModeEnabled } from '../../../stores/debug'
   import TextResource from './Text/TextResource.svelte'
+  import { useConfig } from '../../../service/config'
+  import {
+    isGeneratedResource,
+    type ContentMode,
+    type PreviewMetadata,
+    type ViewMode
+  } from '@horizon/core/src/lib/utils/resourcePreview'
+  import type { ContentType, Annotation, Origin } from './Preview.svelte'
+  import CodeRenderer from '../../Chat/CodeRenderer.svelte'
+  import CollapsableResourceEmbed from '@horizon/core/src/lib/components/Chat/Notes/CollapsableResourceEmbed.svelte'
+
+  const config = useConfig()
+  const userConfig = config.settings
 
   export let resource: Resource
-
   export let type: string
-  export let title: string | undefined = undefined
-  export let image: string | undefined = undefined
-  export let content: string | undefined = undefined
-  export let contentType: ContentType = 'plain'
-  export let annotations: Annotation[] | undefined = undefined
-  export let url: string | undefined = undefined
-  export let source: Source | undefined = undefined
-  export let author: Author | undefined = undefined
-  export let theme: [string, string] | undefined = undefined
-  export let editTitle: boolean = false
-  export let titleValue: string = ''
-  export let interactive: boolean = false
-  export let frameless: boolean = false
-  export let processingText: string = 'Processing…'
-  export let failedText: string | undefined = undefined
-  export let hideProcessing: boolean = false
+  export let viewMode: ViewMode = 'card'
+  export const mode: ContentMode = 'full'
+
   export let origin: Origin = 'stuff'
-  export let background: boolean = true
+  export let interactive: boolean = false
 
-  export let mode: Mode = 'full'
+  export let title: string | undefined = undefined
+  export let titleValue: string = ''
+  export let editTitle: boolean = false
+  export let titleEditable: boolean = interactive
 
-  const log = useLogScope('ResourcePreview')
+  export let media: string | undefined = undefined
+  export let content: string | undefined = undefined
+  export let contentType: ContentType | undefined = undefined
+  export let annotations: Annotation[] | undefined = undefined
+  export const url: string | undefined = undefined
+  export let metadata: PreviewMetadata[] | undefined = undefined
+
+  export let status: 'processing' | 'static' | undefined = undefined
+  export let statusText: string | undefined = undefined
+
+  const resourceState = resource.state
+
+  let hideProcessing = false
+
+  $: isDarkMode = $userConfig.app_style === 'dark'
+  $: IFRAME_STYLES = `<style> html { ${isDarkMode ? 'color: #fff !important;' : ''} font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif; } </style>`
+
+  const MAX_CONTENT_LENGTH = 500
+
+  const LOADING_PHRASES = [
+    'Summoning the goodies',
+    'Decoding the secrets',
+    'Filling in the blanks',
+    'Loading the good stuff',
+    'Extracting the essence',
+    'Surfing the data',
+    'Unpacking details'
+  ]
+  const randomPhrase = () => LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)]
+
   const dispatch = createEventDispatcher<{
     'edit-title': string
     'start-edit-title': void
     click: MouseEvent
   }>()
 
-  const resourceState = resource.state
+  // Editing title
+  let titleInputEl: HTMLElement
+  const handleEditTitleBlur = () => dispatch('edit-title', titleValue)
 
-  let error = ''
-  let titleInputElem: HTMLElement
+  $: isProcessing =
+    (status === 'processing' && !hideProcessing) ||
+    ($resourceState === 'post-processing' && !hideProcessing)
 
-  const MAX_TITLE_LENGTH = 300
-  const MAX_CONTENT_LENGTH = 500
-
-  const isModeResponsive = mode === 'responsive'
-
-  $: showTitle = (isModeResponsive && image) || !(mode === 'media' && image)
-  $: showContent =
-    isModeResponsive ||
-    ((mode === 'full' ||
-      mode === 'content' ||
-      (!title && !image && !resource.type.startsWith(ResourceTypes.DOCUMENT))) &&
-      !((annotations || []).length > 0 && type !== ResourceTypes.ANNOTATION))
-  $: showAnnotations =
-    isModeResponsive || mode === 'full' || mode === 'content' || (!title && !image)
-  $: showMedia =
-    isModeResponsive || mode === 'full' || mode === 'media' || (!title && !content && image)
-  $: showAuthor = isModeResponsive || mode === 'full' || mode === 'content'
-  $: showSource =
-    isModeResponsive || (mode !== 'tiny' && !(mode === 'media' && type.startsWith('image/')))
-  $: isProcessing = $resourceState === 'post-processing' && !hideProcessing
-  $: failedProcessing = ($isDebugModeEnabled || failedText) && $resourceState === 'error'
-
-  const truncate = (text: string, length: number) => {
-    return text.length > length ? text.slice(0, length) + '...' : text
-  }
-
-  const handleEditTitleBlur = () => {
-    dispatch('edit-title', titleValue)
-  }
-
-  const handleTitleDoubleClick = () => {
-    dispatch('start-edit-title')
-  }
+  const handleTitleDoubleClick = () => dispatch('start-edit-title')
 
   // Forward clicks on the title to the parent component if not handled by the double click
   const handleTitleClick = (e: MouseEvent) => {
@@ -137,7 +145,7 @@
   }
 
   let previousEditTitle: boolean | null = null
-  $: if (editTitle && titleInputElem && previousEditTitle !== editTitle) {
+  $: if (editTitle && titleInputEl && previousEditTitle !== editTitle) {
     previousEditTitle = editTitle
 
     if (title && title !== content) {
@@ -147,12 +155,12 @@
     }
 
     setTimeout(() => {
-      titleInputElem.focus()
+      titleInputEl.focus()
 
       // Since the elem is not a real input, we need to set the cursor to the end of the text manually
       const s = window.getSelection()
       const r = document.createRange()
-      const e = titleInputElem.childElementCount > 0 ? titleInputElem.lastChild : titleInputElem
+      const e = titleInputEl.childElementCount > 0 ? titleInputEl.lastChild : titleInputEl
       r.setStart(e!, 1)
       r.setEnd(e!, 1)
       s?.removeAllRanges()
@@ -162,656 +170,779 @@
     previousEditTitle = editTitle
   }
 
-  const IFRAME_STYLES = `<style>
-    html {
-      font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', sans-serif;
-      color: #6b7280;
-      -ms-overflow-style: none;
+  // States
+  $: showMediaBlock =
+    media !== undefined ||
+    ![
+      ResourceTypes.LINK,
+      ResourceTypes.ARTICLE,
+      ResourceTypes.POST,
+      ResourceTypes.DOCUMENT,
+      ResourceTypes.ANNOTATION
+    ].some((t) => type.startsWith(t))
 
-    }
-    html::-webkit-scrollbar {
-      display: none;
-    }
+  $: showContentBlock =
+    (content && content.length > 0) ||
+    (title && title.length > 0) ||
+    editTitle ||
+    (annotations && annotations.length > 0)
 
-  </style>`
+  $: showMetadataBlock = (metadata && metadata.length > 0) || isProcessing
 </script>
 
 <div
-  class="preview origin-{origin} mode-{mode} bg-[#FDFDFD] dark:bg-gray-800 {mode !== 'compact'
-    ? 'border-[1px] border-gray-200 dark:border-gray-700'
-    : ''}"
-  class:interactive
-  class:frame={!frameless}
-  class:themed={!!theme}
-  class:background
-  style="--color1: {theme && theme[0]}; --color2: {theme && theme[1]}"
-  data-resource-type={type}
+  class="preview view-{viewMode}"
   data-origin={origin}
+  data-resource-type={type}
+  data-resource-id={resource.id}
+  class:interactive
+  class:processing={isProcessing}
+  class:titleEditable
 >
-  <div class="preview-card relative">
-    <!-- <div class="absolute top-1 right-1 z-50 {theme ? 'text-white/50' : 'text-black/50'}">
-      {mode} {type}
-    </div> -->
-
-    <div class="inner">
-      <!--<div class="minimal">
-        <div class="icon">
-          {#if source?.imageUrl}
-            <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
-          {:else if source?.icon}
-            <Icon name={source.icon} />
-          {:else}
-            <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
-          {/if}
-        </div>
-        <span class="title">{title || content || source?.text || author?.text || 'Untitled'}</span>
-      </div>-->
-
-      {#if error}
-        <div class="title">{error}</div>
-        <div class="subtitle">{url}</div>
-      {:else if mode === 'tiny'}
-        <div class="tiny-wrapper text-[#281b53] dark:text-gray-300">
-          <div class="tiny-icon">
-            {#if source?.imageUrl}
-              <div class="favicon">
-                <Image src={source.imageUrl} alt={source.text} fallbackIcon="link" />
-              </div>
-            {:else if source?.icon}
-              <Icon name={source.icon} />
-            {:else}
-              <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
-            {/if}
-          </div>
-
-          <div class="from text-[#281b53] dark:text-gray-300">
-            {title || content || source?.text || author?.text || 'Untitled'}
-          </div>
-        </div>
-      {:else}
-        {#if showMedia}
-          {#if image}
-            <div class="image">
-              <Image src={image} alt={title ?? ''} emptyOnError />
-            </div>
+  <div class="inner">
+    {#if isGeneratedResource(resource) && origin === 'homescreen' && viewMode === 'full'}
+      <CodeRenderer
+        {resource}
+        showPreview
+        language={mimeTypeToCodeLanguage(resource.type)}
+        initialCollapsed={false}
+        collapsable={false}
+        draggable={false}
+        fullSize
+      />
+    {:else if WEB_RESOURCE_TYPES.some( (x) => resource.type.startsWith(x) ) && origin === 'homescreen' && viewMode === 'full'}
+      <CollapsableResourceEmbed
+        {resource}
+        isEditable={false}
+        showPreview
+        language={mimeTypeToCodeLanguage(resource.type)}
+        initialCollapsed={false}
+        collapsable={false}
+        draggable={false}
+        fullSize
+      />
+    {:else}
+      {#if showMediaBlock}
+        <div class="media" class:processing={isProcessing} class:og={!type.startsWith('image/')}>
+          {#if media}
+            <!--  NOTE: Explicit async&eager so masonry flows better -->
+            <Image
+              src={media}
+              alt={title ?? ''}
+              emptyOnError
+              decoding={origin === 'stuff' ? 'async' : 'auto'}
+              loading="eager"
+            />
           {:else if ![ResourceTypes.LINK, ResourceTypes.ARTICLE, ResourceTypes.POST, ResourceTypes.DOCUMENT, ResourceTypes.ANNOTATION].some( (t) => type.startsWith(t) )}
             <FilePreview {resource} preview />
           {/if}
-        {/if}
+        </div>
+      {/if}
 
-        {#if showSource || (showTitle && title) || (showContent && content) || (showAuthor && author)}
-          <div class="details text-[#281b53] dark:text-gray-300" class:background>
-            {#if showSource && mode !== 'compact' && source}
-              <div
-                class="flex items-center justify-between gap-2 overflow-hidden text-[#281b53] dark:text-gray-300"
+      {#if showContentBlock}
+        <hgroup class="content">
+          {#if (title && title.length > 0) || editTitle}
+            {#if editTitle}
+              <h1
+                contenteditable
+                placeholder="Edit Title"
+                spellcheck="false"
+                bind:this={titleInputEl}
+                bind:textContent={titleValue}
+                on:click|stopPropagation
+                on:blur={handleEditTitleBlur}
+                on:keydown={handleTitleKeydown}
+                draggable
+                on:dragstart|preventDefault|stopPropagation={() => {}}
               >
-                <div class="flex-grow overflow-hidden">
-                  <SourceItem {type} {source} themed={!!theme} />
-                </div>
-
-                {#if !(showAuthor && author && (author.text || author.imageUrl || author.icon))}
-                  {#if isProcessing}
-                    <div class="processing text-[#281b53] dark:text-gray-300">
-                      <Icon name="spinner" size="14px" />
-                      <div>{processingText}</div>
-                    </div>
-                  {:else if failedProcessing}
-                    <div class="processing text-[#281b53] dark:text-gray-300">
-                      <div>{failedText || 'Failed to process'}</div>
-                    </div>
-                  {/if}
-                {/if}
-              </div>
+                {title}
+              </h1>
+            {:else}
+              <h1
+                on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
+                on:click|stopPropagation={handleTitleClick}
+              >
+                {title}
+              </h1>
             {/if}
+          {/if}
 
-            {#if showTitle}
-              {#if editTitle}
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <div
-                  class="title edit text-[#281b53] dark:text-gray-300"
-                  contenteditable="true"
-                  placeholder="Enter title"
-                  bind:this={titleInputElem}
-                  bind:textContent={titleValue}
-                  on:click|stopPropagation
-                  on:blur={handleEditTitleBlur}
-                  on:keydown={handleTitleKeydown}
-                  draggable={true}
-                  on:dragstart|preventDefault|stopPropagation
-                ></div>
-              {:else if title}
-                <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-                <div
-                  class="title text-[#281b53] dark:text-gray-300"
-                  on:dblclick|preventDefault|stopPropagation={handleTitleDoubleClick}
-                  on:click|stopPropagation={handleTitleClick}
-                >
-                  {truncate(title, MAX_TITLE_LENGTH)}
+          {#if content && content.length > 0}
+            {@const content = content}
+            {@const contentType = contentType}
+
+            {#if contentType === 'plain'}
+              <p>
+                {truncate(content, MAX_CONTENT_LENGTH)}
+              </p>
+            {:else if contentType === 'rich_text'}
+              {#if origin === 'homescreen'}
+                <TextResource
+                  resourceId={resource.id}
+                  autofocus={false}
+                  showTitle={false}
+                  minimal
+                  origin={'homescreen'}
+                  on:click={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  on:dragstart={(e) => {
+                    // TODO: proper prevention
+                    if (['#text', 'p'].includes(e.target?.nodeName.toLowerCase())) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }
+                  }}
+                  on:highlightWebviewText
+                  on:seekToTimestamp
+                />
+              {:else}
+                <div class="editor-wrapper">
+                  <ReadOnlyRichText content={truncate(content, MAX_CONTENT_LENGTH)} />
                 </div>
               {/if}
+            {:else if contentType === 'html'}
+              <iframe
+                title="Document Preview"
+                srcdoc="{IFRAME_STYLES}{content}"
+                frameborder="0"
+                sandbox=""
+              />
+            {:else if contentType === 'markdown'}
+              <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
             {/if}
+          {/if}
 
-            {#if showAnnotations && annotations && (annotations || []).length > 0}
-              {@const annotation = annotations[0]}
+          <!-- Annotations -->
+          {#if annotations && annotations.length > 0}
+            {@const annotation = annotations[0]}
 
-              <div class="annotation text-[#281b53] dark:text-gray-300">
-                {#if annotation.type === 'highlight'}
-                  <div class="content quote">
-                    <mark>
-                      {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
-                    </mark>
-                  </div>
-                {:else}
-                  <div class="icon">
-                    <Icon name="message" />
-                  </div>
-                  <div class="content">
+            <div class="annotation">
+              {#if annotation.type === 'highlight'}
+                <p class="content quote">
+                  <mark>
                     {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
-                  </div>
-                {/if}
-              </div>
-            {/if}
+                  </mark>
+                </p>
+              {:else}
+                <div class="icon">
+                  <Icon name="message" size="1.15em" />
+                </div>
+                <div class="content">
+                  {truncate(annotations[0].content, MAX_CONTENT_LENGTH)}
+                </div>
+              {/if}
+            </div>
 
-            {#if showContent && content}
-              <div class="content no-scrollbar">
-                {#if contentType === 'plain'}
-                  {truncate(content, MAX_CONTENT_LENGTH)}
-                {:else if contentType === 'rich_text'}
-                  {#if origin === 'homescreen'}
-                    <TextResource
-                      resourceId={resource.id}
-                      autofocus={false}
-                      showTitle={false}
-                      minimal
-                      on:click={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                      }}
-                      on:dragstart={(e) => {
-                        // TODO: proper prevention
-                        if (['#text', 'p'].includes(e.target?.nodeName.toLowerCase())) {
-                          e.preventDefault()
-                          e.stopPropagation()
-                        }
-                      }}
-                    />
-                  {:else}
-                    <Editor content={truncate(content, MAX_CONTENT_LENGTH)} readOnly />
-                  {/if}
-                {:else if contentType === 'html'}
-                  <iframe
-                    title="Document Preview"
-                    srcdoc="{IFRAME_STYLES}{content}"
-                    frameborder="0"
-                    sandbox=""
-                  />
-                {:else if contentType === 'markdown'}
-                  <MarkdownRenderer content={truncate(content, MAX_CONTENT_LENGTH)} />
-                {/if}
-              </div>
-            {/if}
-
-            {#if showAnnotations && annotations && annotations.length > 0}
+            {#if annotations && annotations.length > 0}
               {#if annotations.length > 1}
-                <div class="annotation-info text-[#281b53] dark:text-gray-300">
-                  <Icon name="marker" />
+                <div class="annotation-info">
+                  <Icon name="marker" size="1.15em" />
                   + {annotations.length - 1} more annotation{annotations.length > 2 ? 's' : ''}
                 </div>
               {:else if annotations[0].type === 'highlight'}
                 <div class="annotation-info">
-                  <Icon name="marker" />
+                  <Icon name="marker" size="1.15em" />
                   Your Highlight
                 </div>
               {/if}
             {/if}
-
-            {#if showSource && mode === 'compact' && source && source.text}
-              <div
-                class="flex items-center gap-2 justify-between text-[#281b53] dark:text-gray-300"
-              >
-                <div class="flex-grow overflow-hidden text-[#281b53] dark:text-gray-300">
-                  {#if type === ResourceTypes.POST_YOUTUBE}
-                    <SourceItem
-                      {type}
-                      source={{ ...source, text: author?.text || source.text }}
-                      themed={!!theme}
-                    />
-                  {:else}
-                    <SourceItem {type} {source} themed={!!theme} />
-                  {/if}
-                </div>
-
-                {#if isProcessing}
-                  <div class="processing">
-                    <Icon name="spinner" size="14px" />
-                    <div>{processingText}</div>
-                  </div>
-                {:else if failedProcessing}
-                  <div class="processing">
-                    <div>{failedText || 'Failed to process'}</div>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-
-            {#if showAuthor && author && (author.text || author.imageUrl || author.icon)}
-              <div class="metadata text-[#281b53] dark:text-gray-300">
-                <div class="author">
-                  {#if author.imageUrl}
-                    <div class="favicon text-[#281b53] dark:text-gray-300">
-                      <Image src={author.imageUrl} alt={author.text ?? ''} emptyOnError />
-                    </div>
-                  {:else if author.icon}
-                    <div class="favicon text-[#281b53] dark:text-gray-300">
-                      <Icon name={author.icon} />
-                    </div>
-                  {/if}
-
-                  {#if author.text}
-                    <div class="from text-[#281b53] dark:text-gray-300">
-                      {author.text}
-                    </div>
-                  {/if}
-                </div>
-
-                {#if isProcessing}
-                  <div class="processing text-[#281b53] dark:text-gray-300">
-                    <Icon name="spinner" size="14px" />
-                    <div>{processingText}</div>
-                  </div>
-                {:else if failedProcessing}
-                  <div class="processing">
-                    <div>{failedText || 'Failed to process'}</div>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-          </div>
-        {/if}
+          {/if}
+        </hgroup>
       {/if}
-    </div>
+
+      {#if showMetadataBlock}
+        <hgroup class="metadata">
+          {#if isProcessing}
+            <div class="source">
+              {#if status !== 'static'}<Icon name="spinner" size="12px" />{/if}
+              <span>{statusText === undefined ? randomPhrase() : statusText}</span>
+            </div>
+          {/if}
+          {#if metadata?.length === 1 && !isProcessing}
+            {@const pill = metadata[0]}
+            <div class="source" style="width: 100%;justify-content: space-between;">
+              {#if pill.imageUrl}
+                <Image
+                  src={pill.imageUrl}
+                  alt={pill.text ?? ''}
+                  emptyOnError
+                  fallbackIcon="link"
+                  class="favicon"
+                />
+              {:else if pill.icon}
+                <div class="favicon">
+                  <Icon name={pill.icon} size="100%" />
+                </div>
+              {:else}
+                <div class="favicon">
+                  <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
+                </div>
+              {/if}
+              {#if pill.text}
+                <span style="order: -1;">{pill.text}</span>
+              {/if}
+            </div>
+          {:else}
+            {#each metadata ?? [] as pill}
+              <div class="source">
+                {#if pill.imageUrl}
+                  <Image
+                    src={pill.imageUrl}
+                    alt={pill.text ?? ''}
+                    emptyOnError
+                    fallbackIcon="link"
+                    class="favicon"
+                  />
+                {:else if pill.icon}
+                  <div class="favicon">
+                    <Icon name={pill.icon} size="100%" />
+                  </div>
+                {:else}
+                  <div class="favicon">
+                    <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
+                  </div>
+                {/if}
+                {#if pill.text}
+                  <span>{pill.text}</span>
+                {/if}
+              </div>
+            {/each}
+          {/if}
+          <!--{#if isProcessing}
+            <hgroup class="status">
+              {#if failedText}
+                <span class="failed text-red-700">{failedText ?? 'Error'}</span>
+              {:else}
+                <span
+                  ><Icon name="spinner" size="12px" />{processingText === undefined
+                    ? randomPhrase()
+                    : processingText}</span
+                >
+              {/if}
+            </hgroup>
+          {:else}
+            {#if titleBottom}
+              <div class="page-title">
+                <span>{title}</span>
+              </div>
+            {/if}
+            {#if source}
+              <div class="source">
+                {#if source.imageUrl}
+                  <Image
+                    src={source.imageUrl}
+                    alt={source.text}
+                    emptyOnError
+                    fallbackIcon="link"
+                    class="favicon"
+                  />
+                {:else if source.icon}
+                  <div class="favicon">
+                    <Icon name={source.icon} />
+                  </div>
+                {:else}
+                  <div class="favicon">
+                    <FileIcon kind={getFileKind(type)} width="100%" height="100%" />
+                  </div>
+                {/if}
+                <span>{source.text}</span>
+              </div>
+            {/if}
+            {#if source && author?.text}
+              <!--<span class="separator">//</span>--
+              <span class="separator">•</span>
+            {/if}
+            {#if author}
+              <div class="author">
+                {#if author.imageUrl}
+                  <Image
+                    src={author.imageUrl}
+                    alt={author.text ?? ''}
+                    emptyOnError
+                    class="favicon"
+                  />
+                {:else if author.icon}
+                  <div class="favicon">
+                    <Icon name={author.icon} />
+                  </div>
+                {/if}
+
+                {#if author.text}
+                  <span>{author.text}</span>
+                {/if}
+              </div>
+            {/if}
+          {/if}-->
+        </hgroup>
+      {/if}
+    {/if}
   </div>
 </div>
 
 <style lang="scss">
-  .preview {
-    width: 100%;
-    transition: background, border, outline;
-    transition-duration: 60ms;
-    transition-timing-function: ease-out;
-    position: relative;
+  /// Rest overrides from old previews throughout the app
+  :global(article.preview) {
+    padding: 0 !important;
 
-    &.themed {
-      background: radial-gradient(100% 100% at 50% 0%, var(--color1) 0%, var(--color2) 100%);
+    :global(.file-card) {
+      border-radius: 0;
     }
+  }
+  :global(.preview img) {
+    border-radius: 0;
+  }
 
-    &.frame {
-      border-radius: 16px;
-      box-shadow:
-        0px 1px 0px 0px rgba(65, 58, 86, 0.25),
-        0px 0px 1px 0px rgba(0, 0, 0, 0.25);
-
-      &:hover {
-        outline: 3px solid rgba(0, 0, 0, 0.15);
+  .preview.titleEditable > .inner > .content > h1 {
+    &:hover {
+      border-bottom: 1px dashed rgba(50, 50, 50, 0.2);
+      :global(.dark) & {
+        border-color: rgba(255, 255, 255, 0.4);
       }
+    }
+    &:focus,
+    &:active {
+      outline: none;
+      border: none;
+      border-bottom: 1px dashed rgba(50, 50, 50, 0.75);
+      cursor: text;
 
       :global(.dark) & {
-        &:hover {
-          outline: none;
-        }
+        border-color: rgba(255, 255, 255, 0.75);
       }
     }
   }
-
-  .frame .preview-card {
-    padding: 0.65em;
-  }
-
-  .preview-card {
+  .preview {
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    gap: 1em;
-    color: inherit;
-    text-decoration: none;
-    user-select: none;
-    -webkit-user-drag: none;
-    background: transparent;
 
-    &.loading {
-      padding: 0 !important;
-    }
-  }
-
-  .inner {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    flex-shrink: 1;
-    flex-grow: 1;
-  }
-
-  .tiny-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.5em;
-    font-weight: 500;
-  }
-
-  .details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75em;
-    width: 100%;
-    flex-shrink: 1;
-    flex-grow: 1;
-    padding: 1em;
-  }
-
-  .themed {
-    .title,
-    .content,
-    .from,
-    .from,
-    .processing {
-      opacity: 1;
-    }
-  }
-
-  .favicon {
-    flex-shrink: 0;
-    width: 1.25em;
-    height: 1.25em;
-    border-radius: 5.1px;
-    box-shadow:
-      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
-  }
-
-  .processing {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
     font-size: 0.85em;
-    font-weight: 500;
-    padding-left: 1em;
-  }
+    letter-spacing: 0.025em;
+    font-weight: 420;
+    font-family: -apple-system, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    font-synthesis: none;
+    text-rendering: optimizeSpeed;
 
-  .author {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    overflow: hidden;
-  }
-
-  .from {
-    font-size: 1em;
-    font-weight: 500;
-    text-decoration: none;
-    opacity: 0.65;
-    width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .author .from {
-    font-size: 0.85em;
-  }
-
-  .tiny-icon {
-    flex-shrink: 0;
-    width: 1.25em;
-    height: 1.25em;
-  }
-
-  .image {
-    width: 100%;
-    max-height: 300px;
-    position: relative;
-    overflow: hidden;
-    border-radius: 0.5em;
-    box-shadow:
-      0px 0.425px 0px 0px rgba(65, 58, 86, 0.25),
-      0px 0px 0.85px 0px rgba(0, 0, 0, 0.25);
-  }
-
-  .interactive .title {
-    pointer-events: unset;
-  }
-
-  .title {
-    font-size: 1.25em;
-    line-height: 1.775em;
-    letter-spacing: 0.02em;
-    font-weight: 500;
-    flex-shrink: 0;
-    overflow-wrap: break-word;
-    pointer-events: none;
-
-    &.edit {
-      outline: none;
-      border-radius: 5px;
-      background: transparent;
-      width: 100%;
-      max-height: 16rem;
-      overflow: auto;
-
-      &:focus {
-        outline: 2px solid rgba(65, 128, 173, 0.851);
-        outline-offset: 3px;
-      }
-
-      &:empty:before {
-        content: attr(placeholder);
-        pointer-events: none;
-        display: block; /* For Firefox */
-        opacity: 0.5;
-      }
-    }
-  }
-
-  .content {
-    font-size: 1em;
-    line-height: 1.5em;
-    letter-spacing: 0.02em;
-    font-weight: 400;
-    flex-shrink: 0;
-    max-width: 95%;
-    overflow-wrap: break-word;
-    hyphens: auto;
-
-    mark {
-      background-color: rgb(238, 229, 251);
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      user-select: none;
-      pointer-events: none;
-    }
-  }
-
-  .annotation {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5em;
-    font-size: 0.85em;
-
-    .icon {
+    /// Global overrides
+    :global(.favicon) {
+      --size: 1.25em;
+      width: var(--size);
+      height: var(--size);
+      max-width: var(--size);
       flex-shrink: 0;
-      margin-top: 2px;
     }
-  }
 
-  .annotation-info {
-    font-size: 0.85em;
-    opacity: 0.65;
-    display: flex;
-    align-items: center;
-    gap: 0.25em;
-  }
+    .inner .media {
+      position: relative;
+      z-index: 0;
+    }
 
-  .metadata {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5em;
-  }
+    &.processing > .inner .media::after {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      background: radial-gradient(rgba(255, 255, 255, 0.1) 30%, rgba(255, 255, 255, 1));
+      backdrop-filter: blur(12px);
+      mask: radial-gradient(circle, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.9) 80%);
+      mask-position: center;
+      mix-blend-mode: lighten;
+      mask-repeat: no-repeat;
+      animation: breathing-blur 2.5s infinite ease-in-out;
+    }
 
-  /////////// Responsive Mode overrides
-
-  /// Make card image media use full height on homescreen
-  /*:global(.preview.mode-responsive[data-resource-type^='image/'] .inner > .image) {
-    flex-grow: 1;
-  }
-  /// Make card image media use full height on homescreen
-  :global(.preview.mode-responsive[data-resource-type^='image/'] .inner .details) {
-    display: none !important;
-  }*/
-
-  /// Container queries
-  /// NOTE: All scoped to homescreen for now, not to break anthing and homescreen is a good place to
-  /// try out the different sizes easily.
-
-  // NOTE: For calculations:
-  // cell: 50x50px
-  // gap: 10px
-
-  // Applies when wider > taller
-  /*@container preview-card (aspect-ratio > 1 / 1) {
-    .mode-responsive {
-      .title {
-        // DBG
-        //background: blue;
+    > .inner {
+      p {
+        margin: 0;
+        font-weight: 400;
+      }
+      h1 {
+        margin: 0;
+      }
+      hgroup {
+        padding-inline: var(--section-padding-inline);
+      }
+      > hgroup:first-child {
+        margin-top: var(--section-padding-block);
+      }
+      > hgroup:last-child {
+        margin-bottom: var(--section-padding-block);
       }
 
-      .inner {
-        flex-direction: row;
-      }
+      display: flex;
+      flex-direction: column;
+      gap: calc(var(--section-padding-block, 0.9em) - 0.4em);
 
-      @container preview-card (height <= calc(50px * 3 + 2 * 10px)) {
-        :has(.image) {
-          .inner > .image {
-            flex-grow: 1;
-          }
+      .media {
+        position: relative;
+        z-index: 0;
+        flex-grow: 1;
+        flex-shrink: 1;
+        overflow: hidden;
+        &:has(+ *) {
+          margin-bottom: 0.2em;
+        }
 
-          .details {
-            padding: 0.5em;
+        // TODO: Hovering title / metadata
+        /*&::after {
+          content: 'File name.jpg';
+          position: absolute;
+          --offset: 1.25em;
+          bottom: calc(var(--offset) - 0.25em);
+          left: var(--offset);
+          z-index: 10;
+          color: #fff;
 
-            .content {
-              display: none !important;
-            }
-            .source {
-              display: none !important;
-            }
-          }
+          font-weight: 500;
+          mix-blend-mode: exclusion;
+        }*/
+
+        :global(img) {
+          width: 100%;
+          height: auto;
+        }
+
+        &.og :global(img) {
+          max-height: 30em;
+          object-fit: cover;
         }
       }
 
-      @container preview-card (width >= calc(50px * 8 + 7 * 10px)) {
-        :has(.image) {
-          .inner > .image {
-            flex-grow: 1;
-          }
+      &:has(.content):has(.metadata):not(:has(.media)):not(:has(.content > p)) > .content {
+        margin-bottom: -0.5em;
+      }
 
-          .details {
-            width: 50%;
-          }
+      .content:has(.annotation-info) {
+        gap: 0.4em;
+      }
+
+      .content,
+      .annotation {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1em;
+        flex-grow: 1;
+
+        //> h1 {
+        //  width: fit-content;
+        //  max-width: 100%;
+
+        //  font-family: SN Pro;
+        //  font-weight: 650;
+
+        //  font-weight: 550;
+        //  font-size: 1.5em;
+        //  line-height: 1.25em;
+        //  letter-spacing: 0.002em;
+
+        //  overflow: hidden;
+        //  display: -webkit-box;
+        //  -webkit-box-orient: vertical;
+        //  -webkit-line-clamp: var(--MAX_title_lines, 4);
+        //  overflow-wrap: break-word;
+        //  text-wrap: balance;
+        //  text-overflow: ellipsis;
+
+        //  margin-bottom: 0.35em;
+        //  border-bottom: 1px solid transparent;
+        //  transition: border-bottom 125ms ease;
+
+        //  // TODO: Remove pointer events when not interactive
+        //  pointer-events: none;
+        //  //:global(.interactive) & {
+        //  pointer-events: unset;
+        //  //}
+
+        //  &:empty:before {
+        //    content: attr(placeholder);
+        //    pointer-events: none;
+        //    display: block; /* For Firefox */
+        //    opacity: 0.5;
+        //  }
+        //}
+        > p {
+          font-size: 1em;
+          font-weight: 400;
+          letter-spacing: 0.035em;
+          opacity: 0.8;
+
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: var(--MAX_content_lines, 4);
+          overflow-wrap: break-word;
+          text-wrap: pretty;
+
+          text-overflow: ellipsis;
+        }
+
+        mark {
+          background-color: rgb(238, 229, 251);
+          color: #1c1c3b;
+        }
+
+        iframe {
+          width: 100%;
+          height: 100%;
+          border: none;
+          user-select: none;
+          pointer-events: none;
         }
       }
 
-      @container preview-card (width <= calc(50px * 4 + 3 * 10px)) and (height <= calc(50px * 2 + 1 * 10px)) {
-        :has(.image) {
-          .inner > .image {
-            flex-grow: 1;
-          }
+      .metadata {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        /*border-top: 2px dotted #eee;
+      padding-top: 0.75em;*/
 
-          .details {
-            .content,
-            .title {
-              display: none !important;
-            }
+        gap: 0.35em;
+        align-items: center;
+
+        //.separator {
+        //  font-size: 0.8em;
+        //  opacity: var(--text-muted-opacity);
+        //}
+      }
+
+      .source {
+        order: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        font-size: 1em;
+        max-width: 100%;
+        width: min-content;
+
+        > :global(img) {
+          border-radius: 0.3em;
+        }
+        > span {
+          font-family: SN Pro;
+          font-weight: 550;
+          letter-spacing: 0.035em;
+          opacity: var(--text-muted-opacity);
+
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+
+      .annotation-info {
+        display: flex;
+        align-items: center;
+        font-size: 1em;
+        gap: 0.5em;
+      }
+
+      //.status {
+      //  width: 100%;
+      //  padding: 0;
+      //  &:not(:has(.failed)) {
+      //    animation: breathe 1.75s infinite ease;
+      //  }
+      //  > span {
+      //    font-size: 1em;
+
+      //    display: flex;
+      //    align-items: center;
+      //    gap: 0.5em;
+      //  }
+      //  margin-top: 0em;
+      //}
+
+      //.author,
+      //.page-title {
+      //  order: 1;
+      //  display: flex;
+      //  align-items: center;
+      //  gap: 0.5em;
+      //  max-width: 100%;
+      //  width: min-content;
+
+      //  > :global(img) {
+      //    border-radius: 0.3em;
+      //  }
+      //  > span {
+      //    font-size: 1em;
+      //    font-weight: 500;
+      //    letter-spacing: 0.2px;
+      //    opacity: var(--text-muted-opacity);
+      //    -webkit-font-smoothing: antialiased;
+      //    -moz-osx-font-smoothing: grayscale;
+
+      //    white-space: nowrap;
+      //    overflow: hidden;
+      //    text-overflow: ellipsis;
+      //  }
+      //}
+    }
+
+    &.view-inline {
+      min-height: 10ch;
+
+      > .inner {
+        flex-direction: row !important;
+        align-items: center;
+
+        > .media {
+          max-width: 15ch;
+          width: 100%;
+          max-height: 75px;
+          :global(img) {
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+        > .content {
+          --MAX_title_lines: 2;
+          height: 100%;
+        }
+
+        > .metadata {
+          max-width: 20ch;
+          margin-bottom: 0;
+        }
+
+        > .metadata {
+          margin-bottom: calc(var(--section-padding-block) - 0.3em) !important;
+        }
+      }
+    }
+
+    &.content-compact {
+      gap: 0.8em;
+      --section-padding-block: 0.8em;
+
+      &:has(.page-title) {
+        .metadata {
+          justify-content: space-between;
+        }
+        //.page-title {
+        //  order: -1;
+        //  flex-shrink: 1;
+        //  flex-grow: 1;
+        //  max-width: 80%;
+        //}
+        .source {
+          flex-shrink: 0;
+          > span {
+            display: none;
+          }
+        }
+      }
+      &:not(:has(.page-title)) {
+        .source {
+          width: 100%;
+          justify-content: space-between;
+          > :global(.favicon) {
+            order: 2;
           }
         }
       }
     }
-  }
 
-  // Applies when taller > wider
-  @container preview-card (aspect-ratio < 1 / 1) {
-    .mode-responsive {
-      .title {
-        // DBG
-        //background: lime;
-      }
-
-      :has(.image) {
-        .inner > .image {
-          flex-grow: 1;
-        }
-      }
-      @container preview-card (height <= calc(50px * 4 + 3 * 10px)) {
-        .content {
-          display: none !important;
-        }
-      }
-      @container preview-card (height < 200px) {
-        .content {
-          display: none !important;
-        }
-      }
-      @container preview-card (height < 160px) {
-        .title {
-          display: none !important;
+    :global(article.content-responsive) & {
+      > .inner {
+        height: 100%;
+        .media {
+          height: 100%;
+          :global(img) {
+            height: 100%;
+            width: 100%;
+            object-fit: cover;
+            max-height: unset !important;
+          }
         }
       }
     }
-  }
 
-  // Applies when square
-  @container preview-card (aspect-ratio = 1 / 1) {
-    .mode-responsive {
-      :has(.image) {
-        .inner > .image {
-          flex-grow: 1 !important;
+    &.view-responsive {
+      container: preview-card / size;
+      width: 100% !important;
+      height: 100% !important;
+
+      > .inner {
+        width: 100%;
+        height: 100%;
+        .media {
+          :global(img) {
+            max-height: unset !important;
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+        .content,
+        .annotation {
+          min-height: 0;
+          overflow: hidden;
+          //> h1 {
+          //  //min-height: 0;
+          //  flex-shrink: 0;
+          //}
+          > p {
+            min-height: 0;
+          }
         }
       }
 
-      // Only show icon if 1 x 1
-      @container preview-card (height <= calc(50px * 1 + 0 * 10px)) {
-        .image {
-          display: none !important;
+      @container preview-card (height < calc(50px * 3 + 2 * 10px)) {
+        &:not(.content-media):has(.content) {
+          .media {
+            //display: none !important;
+          }
         }
+      }
 
-        .details {
-          padding: 0.3em;
-          .title {
-            display: none !important;
+      @container preview-card (height <= calc(50px * 1 + 0 * 10px) and width > 150px) {
+        .inner {
+          flex-direction: row;
+          gap: 0.2em;
+
+          .media {
+            flex-shrink: 0;
+            flex-grow: 0;
+            width: fit-content;
+            :global(img) {
+              height: 100%;
+              width: auto;
+            }
           }
           .content {
-            display: none !important;
+            width: fit-content;
+            justify-content: center;
+            flex-grow: 1;
+            flex-shrink: 1;
+            > h1 {
+              font-size: 1em;
+              max-width: 100%;
+              //white-space: nowrap;
+            }
+            > p {
+              display: none;
+            }
           }
-          .source .text {
-            display: none !important;
+
+          .metadata {
+            flex-shrink: 0;
+            width: fit-content;
+            height: 100%;
           }
         }
       }
     }
-  }*/
+  }
 
+  // HACK:
+  /// Make notion show more of the content
+
+  // HACK: Need to fix properly
   :global([data-resource-type='application/vnd.space.document.space-note']) {
-    :global(.inner > .details) {
-      overflow-y: scroll;
-      :global(> div:first-child) {
-        flex-shrink: 0;
-      }
-    }
     :global(.content > .wrapper) {
       padding: 0;
       :global(.content) {
@@ -819,9 +950,71 @@
         padding-top: 1em;
         padding-inline: 0.25em;
       }
+
       :global(*) {
         user-select: none !important;
       }
     }
   }
+
+  @keyframes breathe {
+    0% {
+      opacity: 0.8;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 0.8;
+    }
+  }
+  @keyframes breathing-blur {
+    0% {
+      mask-size: 190%;
+    }
+    50% {
+      mask-size: 125%;
+    }
+    100% {
+      mask-size: 190%;
+    }
+  }
+
+  .editor-wrapper {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /////////// Responsive Mode overrides
+  // Not setting them when not in preview mode will nuke Masonry.
+
+  /* @container preview-card (aspect-ratio > 1 / 1) {
+    .preview.view-responsive {
+      flex-direction: row !important;
+      height: 100%;
+
+      .media {
+        max-width: 40%;
+
+        > :global(img) {
+          height: 100% !important;
+          object-fit: cover;
+        }
+      }
+    }
+  }
+
+  @container preview-card (aspect-ratio <= 1 / 1) {
+    .preview.view-responsive {
+      .media {
+        height: 100%;
+
+        > :global(img) {
+          height: 100% !important;
+          object-fit: cover;
+        }
+      }
+    }
+  }*/
 </style>

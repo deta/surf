@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
-  import { OnboardingFeature } from '../onboardingScripts'
   import TextResource from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
 

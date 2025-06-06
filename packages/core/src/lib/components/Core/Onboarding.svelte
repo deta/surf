@@ -6,8 +6,6 @@
 
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import overviewDemoFull from '../../../../public/assets/demo/overview-demo-full.gif'
-  import ResourceOverlay from './ResourceOverlay.svelte'
   import { Icon } from '@horizon/icons'
 
   export let title: string

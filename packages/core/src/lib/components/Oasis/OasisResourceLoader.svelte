@@ -84,7 +84,6 @@
       folder={resourceOrId}
       depth={0}
       {selected}
-      showPreview={false}
       isEditing={false}
       editingSpaceId={writable(null)}
       displayMode="card"

@@ -7,7 +7,6 @@
   export let infoText: string | undefined = undefined
 
   let selectedSpaceIndex = 0
-  let inputRef: HTMLInputElement
 
   const dispatch = createEventDispatcher<{ 'save-resource-in-space': OasisSpace }>()
 
@@ -21,42 +20,11 @@
     )
   })
 
-  const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      event.stopPropagation()
-
-      if (event.key === 'ArrowDown') {
-        selectedSpaceIndex = (selectedSpaceIndex + 1) % $filteredSpaces.length
-      } else if (event.key === 'ArrowUp') {
-        selectedSpaceIndex =
-          (selectedSpaceIndex - 1 + $filteredSpaces.length) % $filteredSpaces.length
-      }
-    } else if (event.key === 'Enter') {
-      console.log('Dispatching custom event from handleKeydown')
-      dispatch('save-resource-in-space', $filteredSpaces[selectedSpaceIndex])
-    }
-  }
-
   const handleClick = (index: number) => {
     selectedSpaceIndex = index
     console.log('Dispatching custom event from handleClick')
     dispatch('save-resource-in-space', $filteredSpaces[selectedSpaceIndex])
   }
-
-  const focusInput = () => {
-    if (inputRef) {
-      inputRef.focus()
-    }
-  }
-
-  // onMount(() => {
-  //   window.addEventListener('keydown', handleKeydown, true)
-  //   focusInput()
-  //   return () => {
-  //     window.removeEventListener('keydown', handleKeydown, true)
-  //   }
-  // })
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->

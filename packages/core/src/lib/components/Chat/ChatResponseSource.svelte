@@ -19,20 +19,6 @@
 
     log.debug('Fetching resource with id', source.resource_id)
 
-    /*
-    let remoteOasisEndpoint = get(oasisAPIEndpoint)
-    let fetchedResource
-    if (remoteOasisEndpoint) {
-      log.debug('Fetching resource from remote oasis endpoint', remoteOasisEndpoint)
-      fetchedResource = await resourceManager.getRemoteResource(
-        source.resource_id,
-        remoteOasisEndpoint
-      )
-    } else {
-      fetchedResource = await resourceManager.getResource(source.resource_id)
-    }
-    */
-
     const res = await resourceManager.getResourceWithAnnotations(source.resource_id)
     if (!res) {
       log.error(`Resource with id ${source.resource_id} not found`)

@@ -30,7 +30,6 @@
   const MIN_VERTICAL_RIGHT_SIZE = 380
   const MAX_VERTICAL_RIGHT_SIZE = 800
   const HORIZONTAL_SIZE = 50
-  const TRANSITION_DURATION = 300
   const BUFFER = 50
   const CLOSE_THRESHOLD = 75
 
@@ -41,9 +40,6 @@
   let startPos: number
   let startSize: number
   let ownerDocument: Document
-  let peekTimeout: ReturnType<typeof setTimeout> | null = null
-  let transitionEndTimeout: ReturnType<typeof setTimeout> | null = null
-  let leftIsTransitioning = false
   let rightIsTransitioning = false
   let previousOrientation: boolean
   let isDraggingTab = false
@@ -58,8 +54,6 @@
         : 'panelSize-right-sidebar'
     localStorage.setItem(key, size.toString())
   }, 100)
-
-  function startTransition(side: 'left' | 'right') {}
 
   function loadSavedSizes() {
     const savedVerticalSize =
@@ -158,11 +152,6 @@
       if (horizontalTabs && mouseY > HORIZONTAL_SIZE + BUFFER) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
-
-        // wait for the transition to finish, then change peekbg to transparent
-        // peekTimeout = setTimeout(() => {
-        //   peekBg = ''
-        // }, 300)
       } else if (!horizontalTabs && mouseX > $leftSize + BUFFER && !isDraggingLeft) {
         leftIsOpen = State.Closed
         dispatch('leftPeekClose')
@@ -182,10 +171,8 @@
     if (showLeftSidebar === true) {
       leftIsOpen = State.Open
       peekBg = ''
-      startTransition('left')
     } else if (showLeftSidebar === false) {
       leftIsOpen = State.Closed
-      startTransition('left')
     }
   }
 
@@ -193,10 +180,8 @@
     document.startViewTransition(async () => {
       if (showRightSidebar === true) {
         rightIsOpen = State.Open
-        startTransition('right')
       } else if (showRightSidebar === false) {
         rightIsOpen = State.Closed
-        startTransition('right')
       }
       await tick()
     })
@@ -377,10 +362,4 @@
       </div>
     </div>
   {/if}
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <!--<div
-    class={rightPeakAreaClasses}
-    on:mouseenter={() => handleMouseEnter('right')}
-    style={rightSidebarStyle}
-  />-->
 </div>
