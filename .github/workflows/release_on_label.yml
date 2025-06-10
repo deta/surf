@@ -16,6 +16,7 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-22.04
+    if: contains(fromJSON('["mac-build", "win-build", "linux-build"]'), github.event.label.name)
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       version_tag: ${{ steps.set-version-tag.outputs.VERSION_TAG }}
