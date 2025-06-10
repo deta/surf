@@ -44,6 +44,7 @@ export type UserSettings = {
   turntable_favicons: boolean
   auto_toggle_pip: boolean
   enable_custom_prompts: boolean
+  tab_bar_visible: boolean
 
   /**
    * @deprecated use individual feature flags instead

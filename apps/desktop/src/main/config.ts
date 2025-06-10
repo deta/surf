@@ -228,6 +228,11 @@ export const getUserConfig = (path?: string) => {
     changedConfig = true
   }
 
+  if (storedConfig.settings?.tab_bar_visible === undefined) {
+    storedConfig.settings.tab_bar_visible = true
+    changedConfig = true
+  }
+
   // "Migration" for late april settings cleanup
   if (storedConfig.settings.show_annotations_in_oasis === undefined) {
     storedConfig.settings.show_annotations_in_oasis = false

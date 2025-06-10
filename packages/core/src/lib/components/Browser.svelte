@@ -193,17 +193,8 @@
   import BrowsingContextSelector from './Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
   import { BuiltInSpaceId } from '../constants/spaces'
 
-  /*
-  NOTE: Funky notes on our z-index issue.
-
-  Left Sidebar: 502
-  Right Sidebar: 490
-  Content: 500
-  */
-
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
-  let showLeftSidebar = true
   let showRightSidebar = false
   let annotationsSidebar: AnnotationsSidebar
   let magicSidebar: any
@@ -292,6 +283,8 @@
   const spaces = oasis.spaces
   const sortedSpaces = oasis.sortedSpacesListFlat
   const selectedSpace = oasis.selectedSpace
+
+  let showLeftSidebar = $userConfigSettings.tab_bar_visible ?? true
 
   const chatContext = aiService.activeContextManager
   const chatContextItems = aiService.contextItems
@@ -673,12 +666,15 @@
   const handleCollapse = () => {
     log.debug('Collapsing sidebar')
     showLeftSidebar = false
+    config.updateSettings({ tab_bar_visible: showLeftSidebar })
+
     changeTraficLightsVisibility(false)
   }
 
   const handleExpand = () => {
     log.debug('Expanding sidebar')
     showLeftSidebar = true
+    config.updateSettings({ tab_bar_visible: showLeftSidebar })
     changeTraficLightsVisibility(true)
   }
 
@@ -750,6 +746,8 @@
     }
 
     showLeftSidebar = value
+    config.updateSettings({ tab_bar_visible: showLeftSidebar })
+
     changeTraficLightsVisibility(value)
 
     telemetry.trackToggleSidebar(showLeftSidebar)
@@ -757,6 +755,7 @@
 
   const changeLeftSidebarState = (value?: boolean) => {
     const newState = value ?? !showLeftSidebar
+    config.updateSettings({ tab_bar_visible: newState })
 
     if (newState) {
       handleExpand()
