@@ -97,4 +97,35 @@
       }
     }
   }
+  :global(.text-resource-wrapper:has(.note-chat-input.floaty.firstLine) .editor p.active-line) {
+    position: relative;
+    z-index: 1;
+  }
+
+  :global(
+      .text-resource-wrapper:has(.note-chat-input.floaty.firstLine) .editor p.active-line::after
+    ) {
+    transition-property: background, border-color, opacity;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    inset: -3px;
+
+    margin-inline: -5px;
+
+    border-radius: 12px;
+    border: 1px solid currentColor;
+    border-color: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.025));
+    background: light-dark(rgba(0, 0, 0, 0.02), rgba(255, 255, 255, 0.04));
+
+    border-color: light-dark(rgba(0, 0, 0, 0.085), rgba(255, 255, 255, 0.095));
+    background: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.025));
+    box-shadow:
+      rgba(50, 50, 93, 0.05) 0px 2px 5px -1px,
+      rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+  }
 </style>

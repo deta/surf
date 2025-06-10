@@ -354,11 +354,11 @@
           }
           return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf write based on ${contextName}`
         } else {
-          return `Write something or type / for commands…`
+          return `Write or type / for commands…`
         }
       }
 
-      return `Write something or type / for commands…`
+      return `Write or type / for commands…`
     }
   )
 
@@ -1902,7 +1902,7 @@
         prompt.prompt,
         mentions,
         PageChatMessageSentEventTrigger.NoteUseSuggestion,
-        opts
+        { ...opts, focusInput: true }
       )
     } catch (e) {
       log.error('Error doing magic', e)
@@ -2599,7 +2599,7 @@
               bind:floatingMenuShown={$floatingMenuShown}
               bind:focused={editorFocused}
               bind:editorElement
-              placeholder={`Start writing your new document`}
+              placeholder={`Ask or start writing a note…`}
               placeholderNewLine={$editorPlaceholder}
               citationComponent={CitationItem}
               surfletComponent={Surflet}

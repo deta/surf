@@ -1343,7 +1343,7 @@
     margin-bottom: 0.5rem !important;
   }
   :global(#magic-chat .context-bubbles-wrapper .context-picker) {
-    left: 0.75rem;
+    //left: 0.75rem;
     right: 0.25rem;
     width: unset !important;
   }

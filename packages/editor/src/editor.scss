@@ -328,7 +328,7 @@ body.custom .editor {
   }
 
   code {
-    background-color: var(--background-menu-muted);
+    background: var(--background-menu-muted) !important;
     border-radius: min(5px, var(--theme-border-radius));
     color: var(--color-menu);
     padding: 0 5px !important;
@@ -348,7 +348,7 @@ body.custom .editor {
     code {
       color: #fff;
       padding: 0 !important;
-      background: none;
+      background: none !important;
       font-size: 0.85em;
     }
   }

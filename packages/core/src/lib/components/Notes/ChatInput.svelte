@@ -287,15 +287,17 @@
   >
     {#if !disabled}
       <div class="submit-btn" use:startingClass={{}}>
-        {#if firstLine}
+        <!--{#if firstLine}
           <span class="submit-hint">{isMac() ? 'CMD' : 'Ctrl'} + ⮐</span>
-        {/if}
+        {/if}-->
         <Tooltip side="left">
           <AppBarButton class="-mr-1.5" on:click={handleSubmit} muted={false}>
             <Icon name={$isGeneratingAI ? 'spinner' : 'cursor'} size="1.15rem" />
           </AppBarButton>
           <svelte:fragment slot="content"
-            >{$isGeneratingAI ? 'Stop completion' : 'Send Message'}</svelte:fragment
+            >{$isGeneratingAI ? 'Stop completion' : `Send Message`}
+            {#if !$isGeneratingAI}
+              &nbsp;<small>⮐</small>{/if}</svelte:fragment
           >
         </Tooltip>
       </div>
@@ -345,7 +347,7 @@
 
       &.firstLine {
         header {
-          margin-top: -1.75rem;
+          margin-top: -1.25rem;
         }
         :global(.input-container .submit-btn) {
           margin-top: -3.3rem;

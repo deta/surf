@@ -28,7 +28,7 @@
 
   export let content: string
   export let readOnly: boolean = false
-  export let placeholder: string | null = `Write something or type '/' for options…`
+  export let placeholder: string | null = `Write or type '/' for options…`
   export let placeholderNewLine: string = ''
   export let autofocus: boolean = true
   export let focused: boolean = false
@@ -68,6 +68,7 @@
   let editor: Readable<Editor>
   let editorWidth: number = 350
   let resizeObserver: ResizeObserver | null = null
+  let isFirstLine = true
 
   // Create a throttled version of the caret position update function
   // This will ensure we don't update too frequently during resize events
@@ -90,7 +91,7 @@
     'slash-command': SlashCommandPayload
     'caret-position-update': any
     'last-line-visbility-changed': boolean
-    'is-first-line-changed': bool
+    'is-first-line-changed': boolean
   }>()
 
   export const getEditor = () => {
@@ -311,6 +312,7 @@
   }
 
   const handleFirstLineChanged = (val: boolean) => {
+    isFirstLine = val
     dispatch('is-first-line-changed', val)
   }
 
@@ -387,6 +389,12 @@
                 triggerAutocomplete()
 
                 return false
+              },
+
+              Enter: () => {
+                if (!autocomplete || !isFirstLine) return false
+                triggerAutocomplete()
+                return true
               },
 
               'Meta-Enter': () => {

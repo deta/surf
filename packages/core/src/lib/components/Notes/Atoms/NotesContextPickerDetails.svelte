@@ -97,14 +97,15 @@
 
     position: absolute;
 
-    padding-right: 0.5rem;
+    padding-right: 0.3rem;
 
     &.floaty {
       top: 3.25rem;
       &.firstLine {
-        top: -0.5rem;
+        top: -0rem;
       }
       left: calc(anchor(--editor-last-line start) - 0.6rem);
+      left: 0;
       right: calc(anchor(--editor-last-line end) - 0.6rem);
       left: 0;
     }

@@ -165,7 +165,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
         return 'Toggle'
       }
 
-      return opts?.placeholder ?? "Write something or type '/' for options…"
+      return opts?.placeholder ?? "Write or type '/' for options…"
     }
   }),
   UniqueID.configure({
