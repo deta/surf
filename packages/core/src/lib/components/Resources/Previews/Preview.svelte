@@ -626,43 +626,43 @@
         gap: 0.1em;
         flex-grow: 1;
 
-        //> h1 {
-        //  width: fit-content;
-        //  max-width: 100%;
+        > h1 {
+          width: fit-content;
+          max-width: 100%;
 
-        //  font-family: SN Pro;
-        //  font-weight: 650;
+          font-family: SN Pro;
+          font-weight: 650;
 
-        //  font-weight: 550;
-        //  font-size: 1.5em;
-        //  line-height: 1.25em;
-        //  letter-spacing: 0.002em;
+          font-weight: 550;
+          font-size: 1.5em;
+          line-height: 1.25em;
+          letter-spacing: 0.002em;
 
-        //  overflow: hidden;
-        //  display: -webkit-box;
-        //  -webkit-box-orient: vertical;
-        //  -webkit-line-clamp: var(--MAX_title_lines, 4);
-        //  overflow-wrap: break-word;
-        //  text-wrap: balance;
-        //  text-overflow: ellipsis;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: var(--MAX_title_lines, 4);
+          overflow-wrap: break-word;
+          text-wrap: balance;
+          text-overflow: ellipsis;
 
-        //  margin-bottom: 0.35em;
-        //  border-bottom: 1px solid transparent;
-        //  transition: border-bottom 125ms ease;
+          margin-bottom: 0.35em;
+          border-bottom: 1px solid transparent;
+          transition: border-bottom 125ms ease;
 
-        //  // TODO: Remove pointer events when not interactive
-        //  pointer-events: none;
-        //  //:global(.interactive) & {
-        //  pointer-events: unset;
-        //  //}
+          // TODO: Remove pointer events when not interactive
+          pointer-events: none;
+          //:global(.interactive) & {
+          pointer-events: unset;
+          //}
 
-        //  &:empty:before {
-        //    content: attr(placeholder);
-        //    pointer-events: none;
-        //    display: block; /* For Firefox */
-        //    opacity: 0.5;
-        //  }
-        //}
+          &:empty:before {
+            content: attr(placeholder);
+            pointer-events: none;
+            display: block; /* For Firefox */
+            opacity: 0.5;
+          }
+        }
         > p {
           font-size: 1em;
           font-weight: 400;
