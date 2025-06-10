@@ -632,6 +632,34 @@ body.custom .editor {
     cursor: col-resize;
   }
 
+  // Mathematics extension styles
+  .Tiptap-mathematics-editor {
+    background: var(--background-menu-muted);
+    color: var(--color-menu);
+    font-family: monospace;
+    padding: 0 5px;
+  }
+
+  .Tiptap-mathematics-render {
+    padding: 0 0.25rem;
+    pointer-events: none;
+
+    // TODO: enable hover styles again when we can get rid of pointer-events: none
+    // &--editable {
+    //   transition: background 0.2s;
+
+    //   &:hover {
+    //     background: #eee;
+    //   }
+    // }
+  }
+
+  .Tiptap-mathematics-editor,
+  .Tiptap-mathematics-render {
+    border-radius: min(5px, var(--theme-border-radius));
+    display: inline-block;
+  }
+
 }
 
 .dark .tiptap {
