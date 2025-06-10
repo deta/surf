@@ -73,6 +73,8 @@ export class ContextManager {
   activeTabContextItem: Readable<ContextItemActiveTab | undefined>
   activeSpaceContextItem: Readable<ContextItemActiveSpaceContext | undefined>
 
+  cachedItemPrompts: Map<string, ChatPrompt[]>
+
   service: ContextService
   ai: AIService
   tabsManager: TabsManager
@@ -94,6 +96,8 @@ export class ContextManager {
     this.resourceManager = resourceManager
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope(`ContextManager ${key}`)
+
+    this.cachedItemPrompts = new Map()
 
     this.generatingPrompts = writable(false)
     this.generatedPrompts = writable([])
@@ -800,20 +804,11 @@ export class ContextManager {
     return [...new Set(imageItems.flat())]
   }
 
-  async getPromptsForItem(idOrItem: string | ContextItem, fresh = false) {
+  async getPrompts(forceGenerate = false) {
     try {
       this.generatingPrompts.set(true)
 
-      const item =
-        typeof idOrItem === 'string'
-          ? get(this.items).find((item) => item.id === idOrItem)
-          : idOrItem
-      if (!item) {
-        this.generatedPrompts.set([])
-        return []
-      }
-
-      this.log.debug('Getting chat prompts for contextItem', item)
+      this.log.debug('Getting chat prompts', this.itemsValue)
       const model = this.ai.selectedModelValue
       const supportsJsonFormat = model.supports_json_format
       if (!supportsJsonFormat) {
@@ -822,10 +817,36 @@ export class ContextManager {
         return []
       }
 
-      const prompts = await item.getPrompts(fresh)
-      this.log.debug('Got chat prompts for contextItem', item, prompts)
-      this.generatedPrompts.set(prompts)
-      return prompts
+      const activeTabItem = get(this.activeTabContextItem)
+      if (!activeTabItem) {
+        this.log.debug('No active tab item found, returning empty prompts')
+        this.generatedPrompts.set([])
+        return []
+      }
+
+      const item = activeTabItem.itemValue
+      this.log.debug('Getting prompts for active tab item', item)
+      if (!item) {
+        this.log.debug('No item found for active tab, returning empty prompts')
+        this.generatedPrompts.set([])
+        return []
+      }
+
+      const cacheKey = item instanceof ContextItemResource ? item.data.id : item.id
+      const storedPrompts = this.cachedItemPrompts.get(cacheKey)
+      this.log.debug('Cached prompts for item', cacheKey, storedPrompts)
+      if (storedPrompts && storedPrompts.length > 0 && !forceGenerate) {
+        this.generatedPrompts.set(storedPrompts)
+        return storedPrompts
+      }
+
+      const generatedPrompts = await item.generatePrompts()
+      this.log.debug('Got chat prompts for contextItem', item, generatedPrompts)
+
+      this.cachedItemPrompts.set(cacheKey, generatedPrompts)
+      this.generatedPrompts.set(generatedPrompts)
+
+      return generatedPrompts
     } catch (err) {
       this.log.error('Error getting prompts for item', err)
       return []
@@ -834,14 +855,10 @@ export class ContextManager {
     }
   }
 
-  async generatePrompts() {
-    const activeTabItem = get(this.activeTabContextItem)
-
-    if (activeTabItem) {
-      return this.getPromptsForItem(activeTabItem)
-    }
-
-    return []
+  resetPrompts() {
+    this.log.debug('Resetting prompts for context manager', this.key)
+    this.generatedPrompts.set([])
+    this.generatingPrompts.set(false)
   }
 
   // Clone the context manager into a new instance
@@ -936,14 +953,14 @@ export class ContextService {
     this._items.set(allItems)
   }
 
-  async getPromptsForItem(idOrItem: string | ContextItem, fresh = false) {
+  async getActivePrompts(forceGenerate?: boolean) {
     const usingNotesSidebar = this.ai.config.settingsValue.experimental_notes_chat_sidebar
 
     const activeContextManager = usingNotesSidebar
       ? this.ai.smartNotes.activeNoteValue?.contextManager
       : this.ai.contextManager
     if (activeContextManager) {
-      return activeContextManager.getPromptsForItem(idOrItem, fresh)
+      return activeContextManager.getPrompts(forceGenerate)
     }
 
     return []

@@ -26,7 +26,7 @@ You are given information about the page and the full page content in the follow
 
 For each prompt, you should provide a label and the prompt itself. The label will be shown to the user and if the user selects it the prompt will be used in a new chat with the page. You don't need to mention the page title or URL in the prompts or labels.
 
-Respond with an array of prompts as JSON in the following format:
+Respond with an array of up to 4 prompts as JSON in the following format:
 
 ```json
 [

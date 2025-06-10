@@ -1,39 +1,51 @@
 <script lang="ts">
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope, wait } from '@horizon/utils'
   import { DragculaDragEvent, HTMLDragZone } from '@horizon/dragcula'
   import { type MentionItem } from '@horizon/editor'
 
   import {
-    EventContext,
     PageChatMessageSentEventTrigger,
-    PageChatUpdateContextEventTrigger,
-    PromptType
+    PageChatUpdateContextEventTrigger
   } from '@horizon/types'
 
   import { DragTypeNames, type DragTypes } from '../../types'
 
-  import { Resource, useResourceManager } from '../../service/resources'
+  import { type Resource } from '../../service/resources'
   import { useToasts } from '../../service/toast'
-  import { type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'
 
-  import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'
   import TextResource, {
     type ChatSubmitOptions
   } from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
   import type { SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import { onMount } from 'svelte'
+  import { useConfig } from '@horizon/core/src/lib/service/config'
+  import type {
+    ContextItemResource,
+    ContextItemSpace
+  } from '@horizon/core/src/lib/service/ai/context'
 
   export let note: SmartNote
   export let inputOnly = false
 
   const log = useLogScope('Chat')
-  const resourceManager = useResourceManager()
   const toasts = useToasts()
+  const config = useConfig()
 
-  const telemetry = resourceManager.telemetry
+  const userSettings = config.settings
   const contextManager = note.contextManager
+  const ai = note.ai
 
   let noteComp: TextResource
+
+  $: activeTabContextItem = contextManager.activeTabContextItem
+  $: activeTabContextItemItem = $activeTabContextItem?.item
+
+  $: if ($activeTabContextItemItem) {
+    log.debug('Active tab context item changed', $activeTabContextItemItem)
+    generatePrompts($activeTabContextItemItem)
+  } else {
+    contextManager.resetPrompts()
+  }
 
   export const updateChatInput = (text: string, focus = true) => {
     noteComp.replaceContent(text)
@@ -126,46 +138,36 @@
     }
   }
 
-  let selectedMode: 'general' | 'all' | 'active' | 'context' = 'general'
-
-  // const generateChatPrompts = useDebounce(async (contextItem: ContextItem) => {
-  //   await tick()
-  //   await chat.getChatPrompts(contextItem)
-  // }, 500)
-
-  const runPrompt = async (prompt: ChatPrompt, custom: boolean = false) => {
-    try {
-      log.debug('Handling prompt submit', prompt)
-      selectedMode = 'active'
-
-      let promptType = PromptType.BuiltIn
-      if (custom) {
-        promptType = PromptType.Custom
-      } else {
-        const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
-        promptType = builtIn ? PromptType.BuiltIn : PromptType.Generated
-      }
-      telemetry.trackUsePrompt(
-        promptType,
-        EventContext.Chat,
-        prompt.label ? prompt.label.toLowerCase() : undefined
-      )
-
-      noteComp?.runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: true })
-    } catch (e) {
-      log.error('Error doing magic', e)
-    }
-  }
-
   const handleUpdateNoteTitle = async (e: CustomEvent<string>) => {
     const title = e.detail
 
     await note.updateTitle(title)
   }
 
+  const generatePrompts = async (contextItem: ContextItemResource | ContextItemSpace) => {
+    if (!contextItem) {
+      log.debug('No active tab context item found, skipping auto prompt generation')
+      return
+    }
+
+    const showChatSidebar = ai.showChatSidebarValue
+    const autoGeneratePrompts = $userSettings.automatic_chat_prompt_generation
+
+    if (!showChatSidebar || !autoGeneratePrompts) {
+      log.debug('Skipping auto prompt generation for active tab as it is disabled')
+      return
+    }
+
+    // give the new item some time to be fully registered
+    await wait(200)
+
+    log.debug('Getting prompts for active tab')
+    await contextManager.getPrompts()
+  }
+
   onMount(async () => {
     log.debug('Mounting chat', note.id)
-    await contextManager.generatePrompts()
+    await contextManager.getPrompts(true)
   })
 </script>
 

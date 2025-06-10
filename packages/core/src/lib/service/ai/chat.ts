@@ -405,8 +405,8 @@ export class AIChat {
     return this.ai.deleteChat(this.id)
   }
 
-  async getChatPrompts(contextItem: ContextItem) {
-    return this.ai.contextService.getPromptsForItem(contextItem)
+  async getChatPrompts(forceGenerate?: boolean) {
+    return this.ai.contextService.getActivePrompts(forceGenerate)
   }
 
   async getChatModeForNoteAndTab(

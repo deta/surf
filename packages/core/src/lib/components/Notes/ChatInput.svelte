@@ -122,7 +122,7 @@
         [
           ...$filteredBuiltInPrompts,
           ...conditionalArrayItem($generatingPrompts, {
-            label: 'Anaylzing Page',
+            label: 'Analyzing Page',
             prompt: '',
             loading: true
           }),

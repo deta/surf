@@ -19,7 +19,6 @@ import { useDebounce, wait } from '@horizon/utils'
 export class ContextItemActiveTab extends ContextItemBase {
   type = ContextItemTypes.ACTIVE_TAB
 
-  cachedItemPrompts: Map<string, ChatPrompt[]>
   loadingUnsub: (() => void) | null = null
 
   currentTab: Writable<Tab | null>
@@ -32,8 +31,6 @@ export class ContextItemActiveTab extends ContextItemBase {
 
     this.item = writable(null)
     this.currentTab = writable(null)
-
-    this.cachedItemPrompts = new Map()
 
     this.label = derived([this.item], ([item]) => {
       if (item) {
@@ -132,25 +129,6 @@ export class ContextItemActiveTab extends ContextItemBase {
         this.item.set(newItem)
 
         const showChatSidebar = this.service.ai.showChatSidebarValue
-        const autoGeneratePrompts =
-          this.service.ai.config.settingsValue.automatic_chat_prompt_generation
-
-        const usingNotesSidebar =
-          this.service.ai.config.settingsValue.experimental_notes_chat_sidebar
-
-        // Only generate prompts if the sidebar is open and the context item is in the active note's context
-        const contextIsInActiveNote = this.service.checkIfItemInActiveNoteContext(this)
-
-        if (
-          showChatSidebar &&
-          autoGeneratePrompts &&
-          (!usingNotesSidebar || contextIsInActiveNote)
-        ) {
-          this.log.debug('Getting prompts for page tab', tab.id)
-          this.service.getPromptsForItem(newItem)
-        } else {
-          this.log.debug('Skipping auto prompt generation for page tab as it is disabled', tab.id)
-        }
 
         // Only track if the item is new and a completely different tab
         if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
@@ -248,26 +226,6 @@ export class ContextItemActiveTab extends ContextItemBase {
     } else {
       return []
     }
-  }
-
-  async getPrompts(fresh = false) {
-    const item = get(this.item)
-
-    this.log.debug('Getting prompts for item', item, fresh)
-    if (!item) {
-      return []
-    }
-
-    const storedPrompts = this.cachedItemPrompts.get(item.id)
-    if (storedPrompts && storedPrompts.length > 0 && !fresh) {
-      this.prompts.set(storedPrompts)
-      return storedPrompts
-    }
-
-    const generatedPrompts = await this.generatePrompts()
-    this.cachedItemPrompts.set(item.id, generatedPrompts)
-    this.prompts.set(generatedPrompts)
-    return generatedPrompts
   }
 
   onDestroy(): void {

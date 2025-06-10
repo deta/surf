@@ -219,7 +219,9 @@ export class ContextItemResource extends ContextItemBase {
 
         const resourceState = this.data.stateValue
         if (resourceState !== 'idle') {
-          this.log.debug('Resource is still extracting')
+          this.log.debug(
+            'Resource is still extracting, waiting for it to finish until generating prompts'
+          )
           this.generatingPrompts.set(false)
           // this.manager.generatingPrompts.set(false)
 
@@ -240,7 +242,11 @@ export class ContextItemResource extends ContextItemBase {
             })
 
             this.processingUnsubPrompt.set(unsubscribe)
+          } else {
+            this.log.debug('Resource is in error state, not generating prompts', resourceState)
+            resolve([])
           }
+
           return
         }
 
