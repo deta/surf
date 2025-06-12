@@ -389,25 +389,26 @@
   const loadNoteContents = async () => {
     try {
       loadingContents.set(true)
+
       const tags = ResourceManager.NonHiddenDefaultTags().concat([
         ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
       ])
-      const result = await resourceManager.listResourceIDsByTags(tags)
-      const notes = await Promise.all(
-        result.map(async (id) => {
-          const resource = await resourceManager.getResource(id)
-          if (resource) {
-            return {
+
+      const resources = await resourceManager.listResourcesByTags(tags)
+      const notes = resources
+        .sort((a, b) => {
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        })
+        .map(
+          (resource) =>
+            ({
               id: resource.id,
               type: 'resource',
               data: resource
-            } as RenderableItem
-          }
-          return null
-        })
-      )
-      const filteredNotes = notes.filter((item): item is RenderableItem => item !== null)
-      oasisRenderableItems.set(filteredNotes)
+            }) as RenderableItem
+        )
+
+      oasisRenderableItems.set(notes)
     } catch (error) {
       log.error('Error loading notes:', error)
     } finally {
