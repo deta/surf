@@ -45,7 +45,7 @@
     </div>
     {#key $scope}
       <button class="header-btn" on:click|stopPropagation={() => dispatch('ask')}>
-        <Icon name="face.animated" size="34px" />
+        <Icon name="face" size="28px" />
         <span>Ask</span>
       </button>
     {/key}

@@ -713,7 +713,7 @@
   >
     {#if !validRectSelection}
       <div class="instructions" class:edge={!fromTty} use:startingClass={{}}>
-        <Icon name="cursor-arrow-rays" size="1.25rem" />
+        <div class="icon"><Icon name="face.animated" size="0.5rem" /></div>
         Click and drag to use Vision
       </div>
     {/if}
@@ -1088,9 +1088,9 @@
       background: var(--background-dark-p3);
       color: var(--text);
       padding-block: 0.5rem;
-      padding-left: 0.5rem;
-      padding-right: 0.85rem;
-      font-size: 0.85rem;
+      padding-left: 1rem;
+      padding-right: 1.25rem;
+      font-size: 0.95rem;
       font-weight: 450;
       border-radius: 5rem;
       display: flex;
@@ -1105,6 +1105,10 @@
         --offsetY: 3px;
       }
       opacity: 1;
+
+      .icon {
+        margin-top: 1px;
+      }
     }
   }
 
@@ -1216,10 +1220,12 @@
         overflow: hidden;
         padding: 0.2em;
 
-        background: #fff;
+        background: light-dark(#fff, rgba(24, 24, 24, 1));
         border-radius: var(--radii);
-        border: 1px solid rgba(0, 0, 0, 0.15);
+        border: 1px solid currentColor;
+        border-color: light-dark(rgba(0, 0, 0, 0.125), rgba(255, 255, 255, 0.085));
 
+        color: light-dark(#222, #fff);
         font-weight: 450;
         letter-spacing: 0.13px;
 

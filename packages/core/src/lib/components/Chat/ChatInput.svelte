@@ -5,6 +5,8 @@
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher } from 'svelte'
   import ModelPicker from './ModelPicker.svelte'
+  import AppBarButton from '../Browser/AppBarButton.svelte'
+  import Tooltip from '../Atoms/Tooltip.svelte'
 
   const dispatch = createEventDispatcher<{
     submit: string
@@ -58,7 +60,7 @@
 </script>
 
 <div
-  class="chat-input-wrapper flex bg-sky-50 dark:bg-gray-700 border-blue-300 dark:border-gray-600 border-[1px] px-4 py-3 gap-2 shadow-lg items-center"
+  class="chat-input-wrapper flex px-4 py-3 gap-2 shadow-lg items-center"
   on:keydown={handleInputKeydown}
   on:keyup={handleInputKeyup}
   style:view-transition-name={viewTransitionName}
@@ -74,11 +76,21 @@
     />
   </div>
 
-  <div class="flex items-center gap-2 relative justify-end">
+  <div class="flex items-center gap-1 relative justify-end -mr-1">
     <ModelPicker />
 
-    <button
-      class="submit-button transform whitespace-nowrap active:scale-95 disabled:opacity-40 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-sky-300 dark:bg-gray-800 hover:bg-sky-200 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
+    <Tooltip side="top">
+      <AppBarButton style="opacity: 1;">
+        {#if loading && !$optToggled}
+          <Icon name="spinner" />
+        {:else}
+          <Icon name="cursor" />
+        {/if}
+      </AppBarButton>
+      <svelte:fragment slot="content">Send message ⏎</svelte:fragment>
+    </Tooltip>
+    <!--<button
+      class="submit-button transform whitespace-nowrap active:scale-95 disabled:opacity-40 appearance-none border-0 group margin-0 flex items-center px-2 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
       on:click={() => {
         selectedMode = 'active'
         handleChatSubmit()
@@ -90,19 +102,21 @@
       {#if loading && !$optToggled}
         <Icon name="spinner" />
       {:else}
-        <div class="rotate-90"><Icon name="arrow.left" /></div>
+        <Icon name="cursor" />
       {/if}
-    </button>
+    </button>-->
   </div>
 </div>
 
 <style lang="scss">
   .chat-input-wrapper {
     width: 100%;
-    background: #fff;
-    border: 1px solid #ddd;
+    background: light-dark(#fff, rgba(24, 24, 24, 1));
+    border: 1px solid currentColor;
+    border-color: light-dark(rgba(0, 0, 0, 0.125), rgba(255, 255, 255, 0.085));
+
     border-radius: 1em;
-    --text-color-dark: #222;
+    color: light-dark(#222, #fff);
   }
   .chat-input-wrapper .submit-button {
     :global(body.custom) & {
