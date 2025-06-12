@@ -10,6 +10,8 @@
   import NotesContextPickerDetails from './Atoms/NotesContextPickerDetails.svelte'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
   import NoteContextItemIcon from './NoteContextItemIcon.svelte'
+  import { requestUserScreenshot } from '../Core/ScreenPicker.svelte'
+  import NoteContextTabPicker from './Atoms/NoteContextTabPicker.svelte'
 
   export let contextManager: ContextManager
   export let pickerOpen: Writable<boolean> = writable(false)
@@ -22,6 +24,7 @@
   const resourceManager = useResourceManager()
 
   const tabs = tabsManager.tabs
+  const tabsPickerOpen = writable(false)
 
   // const { status, error } = chat
   const { items: contextItems, tabsInContext } = contextManager
@@ -31,6 +34,12 @@
   })
 
   const showContextItems = writable(false)
+
+  const contextPickerTabs = derived([tabs, tabsInContext], ([tabs, tabsInContext]) => {
+    return tabs
+      .filter((e) => !tabsInContext.find((i) => i.id === e.id))
+      .sort((a, b) => b.index - a.index)
+  })
 
   const handleRemoveContextItem = (e: CustomEvent<string>) => {
     const id = e.detail
@@ -83,53 +92,88 @@
     class:no-items={$visibleContextItems.length === 0}
     class:has-items={$visibleContextItems.length > 0}
   >
-    {#if !$pickerOpen}
-      <Tooltip side="top">
-        {#if $contextItems.length > 0}
-          <button
-            disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
-            popovertarget="chat-add-context-tabs"
-            class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-1 py-1 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
-            on:click={(e) => {
-              $pickerOpen = !$pickerOpen
+    {#if !$pickerOpen || $contextItems.length <= 0}
+      {#if $contextItems.length <= 0}
+        <Tooltip side="top">
+          <AppBarButton
+            on:click={async () => {
+              const blob = await requestUserScreenshot()
+              if (!blob) return
+
+              contextManager.addScreenshot(blob, {
+                trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+              })
             }}
           >
-            <div
-              class="bubbles"
-              class:active={$pickerOpen}
-              class:isEmpty={false}
-              use:hover={showContextItems}
-            >
-              {#each $contextItems.slice(0, 3) as item, i}
-                <div
-                  class="bubble"
-                  class:first={i === 0}
-                  style="z-index: {100 - i};--i: {i}; --even: {i % 2 === 0 ? 1 : -1};"
-                >
-                  {#if $contextItems.length > 3 && i === 0}
-                    {@const count = $contextItems.length - 3}
-                    <div class="bubble-count" class:small={count > 9}>
-                      +{count}
-                    </div>
-                  {:else}
-                    <div class="bubble-icon" data-type={item.type}>
-                      <NoteContextItemIcon {item} />
-                    </div>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          </button>
-        {:else}
-          <AppBarButton class="" on:click={() => ($pickerOpen = !$pickerOpen)}>
-            <Icon name="add" size="1rem" />
+            <Icon name="camera.plus" size="1rem" />
           </AppBarButton>
-        {/if}
-        <svelte:fragment slot="content">Modify Context</svelte:fragment>
-      </Tooltip>
+          <svelte:fragment slot="content">Add Screenshot</svelte:fragment>
+        </Tooltip>
+
+        <Tooltip side="top">
+          <NoteContextTabPicker
+            tabs={contextPickerTabs}
+            excludeActiveTab={false}
+            {contextManager}
+            pickerOpen={tabsPickerOpen}
+            on:close={() => {
+              $tabsPickerOpen = false
+            }}
+            on:rety={handleRetryContextItem}
+            on:select={handleOpenAsTab}
+            on:remove-item={handleRemoveContextItem}
+          />
+          <svelte:fragment slot="content">Add Context</svelte:fragment>
+        </Tooltip>
+      {:else}
+        <Tooltip side="top">
+          {#if $contextItems.length > 0}
+            <button
+              disabled={$tabs.filter((e) => !$tabsInContext.includes(e)).length <= 0}
+              popovertarget="chat-add-context-tabs"
+              class="open-tab-picker disabled:opacity-40 disabled:cursor-not-allowed transform whitespace-nowrap active:scale-95 appearance-none border-0 group margin-0 flex items-center px-1 py-1 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100 text-sm"
+              on:click={(e) => {
+                $pickerOpen = !$pickerOpen
+              }}
+            >
+              <div
+                class="bubbles"
+                class:active={$pickerOpen}
+                class:isEmpty={false}
+                use:hover={showContextItems}
+              >
+                {#each $contextItems.slice(0, 3) as item, i}
+                  <div
+                    class="bubble"
+                    class:first={i === 0}
+                    style="z-index: {100 - i};--i: {i}; --even: {i % 2 === 0 ? 1 : -1};"
+                  >
+                    {#if $contextItems.length > 3 && i === 0}
+                      {@const count = $contextItems.length - 3}
+                      <div class="bubble-count" class:small={count > 9}>
+                        +{count}
+                      </div>
+                    {:else}
+                      <div class="bubble-icon" data-type={item.type}>
+                        <NoteContextItemIcon {item} />
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            </button>
+          {:else}
+            <AppBarButton class="" on:click={() => ($pickerOpen = !$pickerOpen)}>
+              <Icon name="add" size="1rem" />
+            </AppBarButton>
+          {/if}
+          <svelte:fragment slot="content">Modify Context</svelte:fragment>
+        </Tooltip>
+      {/if}
     {:else}
       <NotesContextPickerDetails
         {contextManager}
+        {contextPickerTabs}
         on:close={() => ($pickerOpen = false)}
         {layout}
         {firstLine}

@@ -4,17 +4,19 @@
   import AppBarButton from '../../Browser/AppBarButton.svelte'
   import ContextBubbles from '../../Chat/ContextBubbles.svelte'
   import Tooltip from '../../Atoms/Tooltip.svelte'
-  import { derived, writable } from 'svelte/store'
+  import { writable, type Readable } from 'svelte/store'
   import { useTabsManager } from '../../../service/tabs'
   import { createEventDispatcher } from 'svelte'
   import NoteContextTabPicker from './NoteContextTabPicker.svelte'
   import { requestUserScreenshot } from '../../Core/ScreenPicker.svelte'
   import { PageChatUpdateContextEventTrigger } from '@horizon/types'
+  import { type Tab } from '@horizon/core/src/lib/types'
 
   export let contextManager = ContextManager
   export let layout: 'floaty' | 'bottom' = 'floaty'
   export let firstLine: boolean = false
   export let canClose: boolean = true
+  export let contextPickerTabs: Readable<Tab[]>
 
   const dispatch = createEventDispatcher<{
     close: void
@@ -26,12 +28,6 @@
   const tabsManager = useTabsManager()
   const tabs = tabsManager.tabs
   const tabsInContext = contextManager.tabsInContext
-
-  const contextPickerTabs = derived([tabs, tabsInContext], ([tabs, tabsInContext]) => {
-    return tabs
-      .filter((e) => !tabsInContext.find((i) => i.id === e.id))
-      .sort((a, b) => b.index - a.index)
-  })
 
   const pickerOpen = writable(false)
 </script>

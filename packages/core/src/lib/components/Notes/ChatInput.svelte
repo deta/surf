@@ -49,7 +49,7 @@
 
   const userConfigSettings = config.settings
   const activeTabId = tabsManager.activeTabId
-  const { generatingPrompts, generatedPrompts, tabsInContext } = contextManager
+  const { generatingPrompts, generatedPrompts, tabsInContext, items: contextItems } = contextManager
 
   const savedPromptsDialogOpen = writable(false)
   const contextManagementDialogOpen = writable(false)
@@ -64,6 +64,7 @@
   $: activeState = $isGeneratingAI ? 'bottom' : state
   $: if (activeState) savedPromptsDialogOpen.set(false)
   $: if (activeState) contextManagementDialogOpen.set(false)
+  $: isContextEmpty = $contextItems.filter((e) => e.visibleValue).length <= 0
 
   let focusInput: () => void
 
@@ -261,6 +262,18 @@
               {firstLine}
             />
           {:else}
+            {#if isContextEmpty && $userConfigSettings.enable_custom_prompts}
+              <NoteInputSavedPrompts
+                {contextManager}
+                promptSelectorOpen={savedPromptsDialogOpen}
+                direction={activeState === 'bottom' ? 'top' : 'right'}
+                on:run-prompt
+              >
+                <AppBarButton active={$savedPromptsDialogOpen}>
+                  <Icon name="chat.square.heart" size="1rem" />
+                </AppBarButton>
+              </NoteInputSavedPrompts>
+            {/if}
             <NoteContextBubbles
               {contextManager}
               pickerOpen={contextManagementDialogOpen}
