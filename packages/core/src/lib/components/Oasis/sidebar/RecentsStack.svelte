@@ -690,58 +690,58 @@
       opacity: 1 !important;
     }
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 40px !important;
-      right: -0.5rem;
-      width: 200px !important;
-      height: 100vh;
-      --color: #cce1f977;
-      background: linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--color), transparent 100%) 0%,
-        color-mix(in srgb, var(--color), transparent 65%) 80%
-      );
-      mask-image: linear-gradient(
-        to bottom,
-        color-mix(in srgb, var(--color), transparent 0%) 0%,
-        color-mix(in srgb, var(--color), transparent 0%) 15%,
-        color-mix(in srgb, var(--color), transparent 5%) 20%,
-        color-mix(in srgb, var(--color), transparent 15%) 25%,
-        color-mix(in srgb, var(--color), transparent 25%) 30%,
-        color-mix(in srgb, var(--color), transparent 40%) 35%,
-        color-mix(in srgb, var(--color), transparent 55%) 40%,
-        color-mix(in srgb, var(--color), transparent 70%) 45%,
-        color-mix(in srgb, var(--color), transparent 85%) 50%,
-        color-mix(in srgb, var(--color), transparent 100%) 55%
-      );
-      -webkit-mask-image: linear-gradient(
-        to bottom,
-        color-mix(in srgb, var(--color), transparent 0%) 0%,
-        color-mix(in srgb, var(--color), transparent 0%) 15%,
-        color-mix(in srgb, var(--color), transparent 5%) 20%,
-        color-mix(in srgb, var(--color), transparent 15%) 25%,
-        color-mix(in srgb, var(--color), transparent 25%) 30%,
-        color-mix(in srgb, var(--color), transparent 40%) 35%,
-        color-mix(in srgb, var(--color), transparent 55%) 40%,
-        color-mix(in srgb, var(--color), transparent 70%) 45%,
-        color-mix(in srgb, var(--color), transparent 85%) 50%,
-        color-mix(in srgb, var(--color), transparent 100%) 55%
-      );
-      -webkit-app-region: no-drag;
+    //&::before {
+    //  content: '';
+    //  position: absolute;
+    //  top: 40px !important;
+    //  right: -0.5rem;
+    //  width: 200px !important;
+    //  height: 100vh;
+    //  --color: #cce1f977;
+    //  background: linear-gradient(
+    //    90deg,
+    //    color-mix(in srgb, var(--color), transparent 100%) 0%,
+    //    color-mix(in srgb, var(--color), transparent 65%) 80%
+    //  );
+    //  mask-image: linear-gradient(
+    //    to bottom,
+    //    color-mix(in srgb, var(--color), transparent 0%) 0%,
+    //    color-mix(in srgb, var(--color), transparent 0%) 15%,
+    //    color-mix(in srgb, var(--color), transparent 5%) 20%,
+    //    color-mix(in srgb, var(--color), transparent 15%) 25%,
+    //    color-mix(in srgb, var(--color), transparent 25%) 30%,
+    //    color-mix(in srgb, var(--color), transparent 40%) 35%,
+    //    color-mix(in srgb, var(--color), transparent 55%) 40%,
+    //    color-mix(in srgb, var(--color), transparent 70%) 45%,
+    //    color-mix(in srgb, var(--color), transparent 85%) 50%,
+    //    color-mix(in srgb, var(--color), transparent 100%) 55%
+    //  );
+    //  -webkit-mask-image: linear-gradient(
+    //    to bottom,
+    //    color-mix(in srgb, var(--color), transparent 0%) 0%,
+    //    color-mix(in srgb, var(--color), transparent 0%) 15%,
+    //    color-mix(in srgb, var(--color), transparent 5%) 20%,
+    //    color-mix(in srgb, var(--color), transparent 15%) 25%,
+    //    color-mix(in srgb, var(--color), transparent 25%) 30%,
+    //    color-mix(in srgb, var(--color), transparent 40%) 35%,
+    //    color-mix(in srgb, var(--color), transparent 55%) 40%,
+    //    color-mix(in srgb, var(--color), transparent 70%) 45%,
+    //    color-mix(in srgb, var(--color), transparent 85%) 50%,
+    //    color-mix(in srgb, var(--color), transparent 100%) 55%
+    //  );
+    //  -webkit-app-region: no-drag;
 
-      :global(.custom) & {
-        --color: var(--base-color) !important;
-      }
-    }
-    &:not(.isMac)::before {
-      width: 300px !important;
-      position: relative;
-      transform: translateX(25%);
-      background: radial-gradient(circle at 50% 0%, #cce1f9bb 0%, transparent 70%);
-      mask-image: linear-gradient(90deg, #0000 0%, #000 50%, #0000 100%);
-    }
+    //  :global(.custom) & {
+    //    --color: var(--base-color) !important;
+    //  }
+    //}
+    //&::before {
+    //  width: 300px !important;
+    //  position: absolute;
+    //  transform: translateX(25%);
+    //  background: radial-gradient(circle at 50% 0%, #cce1f9bb 0%, transparent 70%);
+    //  mask-image: linear-gradient(90deg, #0000 0%, #000 50%, #0000 100%);
+    //}
 
     button {
       width: 113.82px;
