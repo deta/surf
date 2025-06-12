@@ -259,6 +259,7 @@
   // Caret indicator state
   let caretPosition: CaretPosition | null = null
   let showCaretPopover = false
+  let escapeFirstLineChat = false
 
   let focusInput: () => void
 
@@ -1515,6 +1516,9 @@
   const handleEditorKeyDown = (e: KeyboardEvent) => {
     // Only prevent propagation when the editor exists AND is focused
     if (editorElem) {
+      if (e.key === 'Escape') escapeFirstLineChat = true
+      if (e.key === 'Backspace' && $isEmpty) escapeFirstLineChat = false
+      if (e.key === 'Enter' && $isEmpty) escapeFirstLineChat = true
       // Prevent Option+Arrow or Command+Arrow keys from navigating the browser
       if (
         (e.altKey || e.metaKey) &&
@@ -2573,7 +2577,7 @@
         bind:editor={chatInputEditorElem}
         bind:focus={focusInput}
         state={$lastLineVisible ? 'floaty' : 'bottom'}
-        firstLine={$isFirstLine}
+        firstLine={$isFirstLine && !escapeFirstLineChat}
         disabled={showCaretPopover && editorFocused && !$isFirstLine}
         {mentionItemsFetcher}
         on:run-prompt={handleRunPrompt}
@@ -2599,12 +2603,14 @@
               bind:floatingMenuShown={$floatingMenuShown}
               bind:focused={editorFocused}
               bind:editorElement
-              placeholder={`Ask or start writing a note…`}
+              placeholder={escapeFirstLineChat
+                ? 'Start writing a note…'
+                : `Ask Surf or start writing a note (esc) …`}
               placeholderNewLine={$editorPlaceholder}
               citationComponent={CitationItem}
               surfletComponent={Surflet}
               resourceComponent={EmbeddedResource}
-              autocomplete
+              autocomplete={!($isFirstLine && escapeFirstLineChat)}
               floatingMenu
               readOnlyMentions={false}
               bubbleMenu={$showBubbleMenu &&

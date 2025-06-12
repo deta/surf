@@ -92,8 +92,8 @@
         border-color: light-dark(rgba(0, 0, 0, 0.085), rgba(255, 255, 255, 0.095));
         background: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.025));
         box-shadow:
-          rgba(50, 50, 93, 0.05) 0px 2px 5px -1px,
-          rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+          light-dark(rgba(50, 50, 93, 0.05), rgba(205, 205, 162, 0.02)) 0px 2px 5px -1px,
+          light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.05)) 0px 1px 2px -1px;
       }
     }
   }
@@ -122,10 +122,31 @@
     border-color: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.025));
     background: light-dark(rgba(0, 0, 0, 0.02), rgba(255, 255, 255, 0.04));
 
+    :global(body.dark) & {
+      border-color: rgba(255, 255, 255, 0.025);
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  :global(
+      .text-resource-wrapper:has(.note-chat-input.floaty.firstLine)
+        .editor:focus-within
+        p.active-line::after
+    ) {
     border-color: light-dark(rgba(0, 0, 0, 0.085), rgba(255, 255, 255, 0.095));
     background: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.025));
     box-shadow:
       rgba(50, 50, 93, 0.05) 0px 2px 5px -1px,
       rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+
+    // welp.. thanks webdev.. light-dark for some reason doesnt work here..
+    // always picks the light style even though app is in dark mode
+    :global(body.dark) & {
+      border-color: rgba(255, 255, 255, 0.095);
+      background: rgba(255, 255, 255, 0.025);
+      box-shadow:
+        rgba(205, 205, 162, 0.02) 0px 2px 5px -1px,
+        rgba(255, 255, 255, 0.05) 0px 1px 2px -1px;
+    }
   }
 </style>
