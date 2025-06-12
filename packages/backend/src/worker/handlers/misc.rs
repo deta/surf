@@ -1,7 +1,7 @@
 use crate::{
-    ai::ai::{
-        ChatResult, DocsSimilarity, YoutubeTranscript, YoutubeTranscriptMetadata,
-        YoutubeTranscriptPiece,
+    ai::{
+        ai::{ChatResult, DocsSimilarity},
+        youtube::YoutubeTranscript,
     },
     ai::llm::{
         client::client::Model,
@@ -20,6 +20,7 @@ use crate::{
 };
 use neon::prelude::*;
 use std::collections::HashSet;
+
 
 impl Worker {
     pub fn print(&mut self, content: String) -> BackendResult<String> {
@@ -449,37 +450,9 @@ impl Worker {
     }
 
     pub fn get_youtube_transcript(&self, video_url: String) -> BackendResult<YoutubeTranscript> {
-        let transcript_config = match self.language_setting.as_str() {
-            "en" => Some(ytranscript::TranscriptConfig {
-                lang: Some("en".to_string()),
-            }),
-            _ => None,
-        };
-
-        let transcripts = self
-            .async_runtime
-            .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
-                &video_url,
-                transcript_config,
-            ))
-            .map_err(|e| BackendError::GenericError(e.to_string()))?;
-        let mut all = String::new();
-        let mut transcript_pieces: Vec<YoutubeTranscriptPiece> = vec![];
-        for transcript in transcripts {
-            all.push_str(transcript.text.as_str());
-            transcript_pieces.push(YoutubeTranscriptPiece {
-                text: transcript.text,
-                start: transcript.offset as f32,
-                duration: transcript.duration as f32,
-            });
-        }
-        Ok(YoutubeTranscript {
-            transcript: all,
-            metadata: YoutubeTranscriptMetadata {
-                source: video_url,
-                transcript_pieces,
-            },
-        })
+        // use english as default language
+        let lang = Some("en");
+        crate::ai::youtube::fetch_transcript(&video_url, lang)
     }
 
     pub fn query_sffs_resources(

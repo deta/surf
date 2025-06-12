@@ -344,31 +344,22 @@ pub fn get_youtube_contents_metadatas(
     source_uri: &str,
     language: Option<String>,
 ) -> BackendResult<(Vec<String>, Vec<ResourceTextContentMetadata>)> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    let transcript_config = language.map(|language| ytranscript::TranscriptConfig {
-        lang: Some(language),
-    });
-    let transcripts = runtime
-        .block_on(ytranscript::YoutubeTranscript::fetch_transcript(
-            source_uri,
-            transcript_config,
-        ))
-        .map_err(|e| BackendError::GenericError(e.to_string()))?;
+    let transcript = crate::ai::youtube::fetch_transcript(source_uri, language.as_deref())?;
     let mut contents: Vec<String> = vec![];
     let mut metadatas: Vec<ResourceTextContentMetadata> = vec![];
     let mut prev_offset = 0.0;
     let mut transcript_chunk = String::new();
     // min 20 second chunks
-    for (i, transcript) in transcripts.iter().enumerate() {
-        transcript_chunk.push_str(&format!(" {}", transcript.text));
-        if transcript.offset - prev_offset > 20.0 || i == transcripts.len() - 1 {
+    for (i, piece) in transcript.metadata.transcript_pieces.iter().enumerate() {
+        transcript_chunk.push_str(&format!(" {}", piece.text));
+        if piece.start - prev_offset > 20.0 || i == transcript.metadata.transcript_pieces.len() - 1 {
             contents.push(ContentChunker::normalize(&transcript_chunk));
             metadatas.push(ResourceTextContentMetadata {
-                page: None,
                 timestamp: Some(prev_offset as f32),
                 url: Some(source_uri.to_string()),
+                page: None,
             });
-            prev_offset = transcript.offset;
+            prev_offset = piece.start;
             transcript_chunk = String::new();
         }
     }

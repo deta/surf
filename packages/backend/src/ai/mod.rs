@@ -1,7 +1,8 @@
 pub mod ai;
 pub mod embeddings;
-pub mod llm;
 pub mod vision;
+pub mod youtube;
+pub mod llm;
 
 mod local;
 mod prompts;
