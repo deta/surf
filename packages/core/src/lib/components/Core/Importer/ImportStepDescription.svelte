@@ -30,6 +30,13 @@
     try again.
   </p>
   <p>If the problem persists, contact us: <a href="mailto:hello@deta.surf">hello@deta.surf</a></p>
+{:else if currentStepIdx === 3}
+  <p>
+    Your imported data is now saved in Stuff, Surf's central place for anything you save from the
+    web.
+  </p>
+
+  <p>Open Stuff or use one of the shortcuts to explore your imported data:</p>
 {/if}
 
 <style>
@@ -38,7 +45,6 @@
     font-size: 1.25rem;
     line-height: 1.5;
     color: #666;
-    margin-bottom: 1rem;
     text-wrap: pretty;
   }
 </style>

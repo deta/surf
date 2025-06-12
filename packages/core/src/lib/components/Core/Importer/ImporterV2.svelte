@@ -14,15 +14,17 @@
     PRIMARY_BROWSRS,
     type BrowserTypeItem
   } from '@horizon/types'
-  import { useLogScope, wait } from '@horizon/utils'
+  import { isMac, useLogScope, wait } from '@horizon/utils'
   import { createEventDispatcher } from 'svelte'
   import ImportDataItem from './ImportDataItem.svelte'
+  import ImportInstructionsItem from './ImportInstructionsItem.svelte'
 
   export let currentStepIdx = 0
   export let canGoNext = false
   export let selectedBrowser: BrowserTypeItem | null = null
   export let importStatus: ImportStatus = 'idle'
   export let alternativeStyle = false
+  export let showUsageInstructions = false
 
   const log = useLogScope('Importer')
   const resourceManager = useResourceManager()
@@ -61,6 +63,10 @@
     bookmarks: 0
   }
 
+  const MAX_INDEX = 4
+
+  $: log.debug('Current step index:', currentStepIdx)
+
   $: importStatus = Object.values(importStatuses).every((status) => status === 'done')
     ? 'done'
     : Object.values(importStatuses).some((status) => status === 'error')
@@ -70,7 +76,8 @@
   $: canGoNext = !(
     (currentStepIdx === 0 && !selectedBrowser) ||
     (currentStepIdx === 1 && !selectedData.history && !selectedData.bookmarks) ||
-    (currentStepIdx === 2 && importStatus !== 'done' && importStatus !== 'error')
+    (currentStepIdx === 2 && importStatus !== 'done' && importStatus !== 'error') ||
+    (currentStepIdx === 2 && !showUsageInstructions)
   )
 
   let once = false
@@ -170,16 +177,20 @@
 
   export const nextStep = () => {
     log.debug('Next step:', currentStepIdx)
-    if (currentStepIdx < 2) {
+    if (currentStepIdx <= MAX_INDEX) {
       currentStepIdx += 1
     }
 
     if (currentStepIdx === 2) {
-      if (importStatus === 'done') {
-        dispatch('done')
-      } else {
+      if (importStatus !== 'done') {
         startImportingData()
+      } else if (!showUsageInstructions) {
+        dispatch('done')
       }
+    }
+
+    if (currentStepIdx === 4 && showUsageInstructions) {
+      dispatch('done')
     }
   }
 
@@ -257,18 +268,9 @@
           Pick a browser and in the next step decide what to import.
         </p> -->
       </div>
-    {:else if currentStepIdx === 1}
+    {:else if currentStepIdx === 1 || currentStepIdx === 2}
       <div class="step-wrapper">
         <div class="data-list">
-          <ImportDataItem
-            label="Browsing History"
-            icon="history"
-            status={importStatuses.history}
-            count={importDataCount.history}
-            bind:checked={selectedData.history}
-            disabled={!selectedBrowser?.supports.history}
-          />
-
           <ImportDataItem
             label="Bookmarks"
             icon="bookmark"
@@ -278,39 +280,36 @@
             disabled={!selectedBrowser?.supports.bookmarks}
           />
 
+          <ImportDataItem
+            label="Browsing History"
+            icon="history"
+            status={importStatuses.history}
+            count={importDataCount.history}
+            bind:checked={selectedData.history}
+            disabled={!selectedBrowser?.supports.history}
+          />
+
           <ImportDataItem label="Extensions" icon="puzzle" disabled />
         </div>
       </div>
-    {:else if currentStepIdx === 2}
+    {:else if currentStepIdx === 3}
       <div class="step-wrapper">
         <div class="data-list">
-          {#if selectedData.history}
-            <ImportDataItem
-              label="Browsing History"
-              icon="history"
-              status={importStatuses.history}
-              count={importDataCount.history}
-              bind:checked={selectedData.history}
-              disabled={!selectedBrowser?.supports.history}
-            />
-          {:else}
-            <ImportDataItem label="Browsing History" icon="history" status="done" disabled />
-          {/if}
-
           {#if selectedData.bookmarks}
-            <ImportDataItem
+            <ImportInstructionsItem
               label="Bookmarks"
               icon="bookmark"
-              status={importStatuses.bookmarks}
-              count={importDataCount.bookmarks}
-              bind:checked={selectedData.bookmarks}
-              disabled={!selectedBrowser?.supports.bookmarks}
+              shortcut={[isMac() ? 'cmd' : 'ctrl', 'O']}
             />
-          {:else}
-            <ImportDataItem label="Bookmarks" icon="bookmark" status="done" disabled />
           {/if}
 
-          <ImportDataItem label="Extensions" icon="puzzle" status="done" disabled />
+          {#if selectedData.history}
+            <ImportInstructionsItem
+              label="Browsing History"
+              icon="history"
+              shortcut={[isMac() ? 'cmd' : 'ctrl', 'Y']}
+            />
+          {/if}
         </div>
       </div>
     {/if}

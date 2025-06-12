@@ -17,6 +17,8 @@
   <h1>Ready to Go! 🎉</h1>
 {:else if currentStepIdx === 2 && importStatus === 'error'}
   <h1>Something went wrong!</h1>
+{:else if currentStepIdx === 3}
+  <h1>Next Steps</h1>
 {/if}
 
 <style>

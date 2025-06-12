@@ -6,10 +6,12 @@
   import type { BrowserTypeItem } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { TabImporter } from '@horizon/core/src/lib/types'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
 
   export let tab: TabImporter
 
   const tabsManager = useTabsManager()
+  const oasis = useOasis()
 
   let currentStepIdx: number = 0
   let canGoNext: boolean = false
@@ -17,9 +19,11 @@
   let importStatus: ImportStatus
   let importer: ImporterV2
 
-  const handleDone = () => {
-    console.log('Import done')
-    tabsManager.delete(tab.id)
+  const handleDone = async () => {
+    await tabsManager.delete(tab.id)
+
+    oasis.selectedSpace.set(oasis.defaultSpaceID)
+    tabsManager.showNewTabOverlay.set(2)
   }
 </script>
 
@@ -38,6 +42,7 @@
       bind:importStatus
       on:done={handleDone}
       alternativeStyle
+      showUsageInstructions
     />
 
     <div class="footer">
@@ -58,8 +63,10 @@
         <div class="browser-name">
           {#if importStatus === 'error'}
             Try Again
+          {:else if currentStepIdx === 3}
+            Open Stuff
           {:else if currentStepIdx === 2}
-            Finish
+            Next Steps
           {:else if currentStepIdx === 1}
             Import Data
           {:else if currentStepIdx === 0}
@@ -69,7 +76,7 @@
 
         {#if importStatus === 'error'}
           <Icon name="reload" />
-        {:else if currentStepIdx !== 2}
+        {:else if currentStepIdx < 2}
           <Icon name="arrow.right" />
         {/if}
       </button>
