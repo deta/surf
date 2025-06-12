@@ -110,6 +110,7 @@
   const userConfigSettings = config.settings
   const selectedModel = ai.selectedModel
 
+  const THRESHOLD = 18
   const state = writable<any>({
     isMouseInRect: false,
 
@@ -151,7 +152,7 @@
   $: chatStatus = $chatStatusStore ?? 'idle'
 
   $: responses = $activeChat?.responses ? $activeChat.responses : readable([])
-  $: if (($note || $responses.length > 0) && !$state.isChatExpanded) {
+  $: if (($note || $responses?.length > 0) && !$state.isChatExpanded) {
     document.startViewTransition(async () => {
       $state.isChatExpanded = true
       await tick()
@@ -221,6 +222,18 @@
     )
       return
     if ($state.isResizing || $state.isSelecting) return
+    if (
+      !isInsideRect(
+        { x: e.clientX, y: e.clientY },
+        {
+          x: $selectionRect.x + THRESHOLD,
+          y: $selectionRect.y + THRESHOLD,
+          width: $selectionRect.width - THRESHOLD * 2,
+          height: $selectionRect.height - THRESHOLD * 2
+        }
+      )
+    )
+      return
     e.preventDefault()
     e.stopPropagation()
 
@@ -250,11 +263,15 @@
   }
 
   function handleWindowMouseMove(e: MouseEvent) {
+    function reset() {
+      pickerEl.style.removeProperty('cursor')
+      backdropEl.style.removeProperty('cursor')
+    }
+
     if ($state.isLocked) {
       $state.resizeDirection = undefined
-      pickerEl.style.removeProperty('cursor')
+      reset()
     }
-    const THRESHOLD = 18
 
     if (
       isInsideRect(
@@ -272,7 +289,7 @@
       showAddPromptDialog
     ) {
       $state.resizeDirection = undefined
-      pickerEl.style.removeProperty('cursor')
+      reset()
       return
     }
 
@@ -320,9 +337,10 @@
     if (resizeEdge) {
       $state.resizeDirection = resizeEdge
       pickerEl.style.setProperty('cursor', `${DIRECTION_CURSORS[resizeEdge]}-resize`, 'important')
+      backdropEl.style.setProperty('cursor', `${DIRECTION_CURSORS[resizeEdge]}-resize`, 'important')
     } else {
       $state.resizeDirection = undefined
-      pickerEl.style.removeProperty('cursor')
+      reset()
     }
   }
 
@@ -335,7 +353,18 @@
       showAddPromptDialog
     )
       return
-    if (!hasParent(e.target, backdropEl)) return
+    if (
+      isInsideRect(
+        { x: e.clientX, y: e.clientY },
+        {
+          x: $selectionRect.x + THRESHOLD,
+          y: $selectionRect.y + THRESHOLD,
+          width: $selectionRect.width - THRESHOLD * 2,
+          height: $selectionRect.height - THRESHOLD * 2
+        }
+      )
+    )
+      return
     e.preventDefault()
     e.stopPropagation()
 
@@ -654,6 +683,19 @@
   on:mousemove={handleWindowMouseMove}
   on:keydown={handleKeyDown}
 />
+
+<!-- DEBUG
+<div
+  style="position: fixed; background: #000;color:#fff;top: 0; width:25ch;right: 0;padding:0.5rem;z-index: 999999999999999999999;"
+>
+  isMouseInRect: {$state.isMouseInRect}<br />
+  isLocked: {$state.isLocked}<br />
+  isCapturing: {$state.isCapturing}<br />
+  isSelecting: {$state.isSelecting}<br />
+  isResizing: {$state.isResizing}<br />
+  resizeDirection: {$state.resizeDirection}<br />
+  isMovingRect: {$state.isMovingRect}<br />
+</div>-->
 
 {#if !$state.isCapturing}
   <div
@@ -1067,6 +1109,7 @@
   }
 
   #screen-picker-frame {
+    pointer-events: none;
     box-sizing: content-box;
     position: absolute;
     z-index: 9993231322131232132131231231211240;
