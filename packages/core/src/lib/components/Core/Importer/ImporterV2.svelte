@@ -391,6 +391,7 @@
     }
 
     :global(.dark) & {
+      color: #e5e5e5;
       background-color: #2a2a2a;
     }
 
@@ -399,6 +400,7 @@
       outline: 3px solid rgba(255, 255, 255, 0.4);
 
       :global(.dark) & {
+        color: #e5e5e5;
         background-color: #3a3a3a;
       }
     }
@@ -427,6 +429,7 @@
     }
 
     :global(.dark) & {
+      color: #e5e5e5;
       background-color: #2a2a2a;
     }
 
@@ -434,6 +437,7 @@
       background-color: #edf2ff;
 
       :global(.dark) & {
+        color: #e5e5e5;
         background-color: #3a3a3a;
       }
     }

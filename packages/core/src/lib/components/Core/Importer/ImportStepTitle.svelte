@@ -21,7 +21,7 @@
   <h1>Next Steps</h1>
 {/if}
 
-<style>
+<style lang="scss">
   h1 {
     font-size: 2.5rem;
     line-height: 1.33;
@@ -34,5 +34,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+
+    :global(.dark) & {
+      color: #ffffff;
+    }
   }
 </style>

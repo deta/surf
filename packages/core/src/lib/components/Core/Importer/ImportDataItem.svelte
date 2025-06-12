@@ -51,6 +51,11 @@
     background-color: #f3f4f6;
     color: #000000;
 
+    :global(.dark) & {
+      color: #e5e5e5;
+      background-color: #2a2a2a;
+    }
+
     &.data-item--disabled {
       opacity: 0.5;
     }

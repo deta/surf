@@ -92,6 +92,11 @@
     display: flex;
     justify-content: center;
     background-color: white;
+
+    :global(.dark) & {
+      color: #e5e5e5;
+      background-color: #000000;
+    }
   }
 
   .content {

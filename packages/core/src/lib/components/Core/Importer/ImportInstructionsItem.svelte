@@ -44,5 +44,14 @@
     :global(.shortcut-container .key-wrapper:not(.active):not(.success) .key-cap) {
       --fill: #fff;
     }
+
+    :global(.dark) & {
+      color: #e5e5e5;
+      background-color: #383838;
+
+      :global(.shortcut-container) {
+        --squircle-fill: rgb(43 43 43);
+      }
+    }
   }
 </style>

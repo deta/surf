@@ -39,12 +39,16 @@
   <p>Open Stuff or use one of the shortcuts to explore your imported data:</p>
 {/if}
 
-<style>
+<style lang="scss">
   p {
     font-family: 'Inter', sans-serif;
     font-size: 1.25rem;
     line-height: 1.5;
     color: #666;
     text-wrap: pretty;
+
+    :global(.dark) & {
+      color: #ebebeb;
+    }
   }
 </style>
