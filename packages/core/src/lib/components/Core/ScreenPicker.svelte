@@ -218,7 +218,8 @@
       hasParent(e.target, toolboxEl) ||
       hasParent(e.target, chatboxEl) ||
       hasParent(e.target, appsEl) ||
-      showAddPromptDialog
+      showAddPromptDialog ||
+      (e.target instanceof Element && e.target.closest('[data-screen-picker-ignore]'))
     )
       return
     if ($state.isResizing || $state.isSelecting) return
@@ -286,7 +287,8 @@
       hasParent(e.target, toolboxEl) ||
       hasParent(e.target, chatboxEl) ||
       hasParent(e.target, appsEl) ||
-      showAddPromptDialog
+      showAddPromptDialog ||
+      e.target?.closest('[data-screen-picker-ignore]')
     ) {
       $state.resizeDirection = undefined
       reset()
@@ -350,7 +352,8 @@
       hasParent(e.target, toolboxEl) ||
       hasParent(e.target, chatboxEl) ||
       hasParent(e.target, appsEl) ||
-      showAddPromptDialog
+      showAddPromptDialog ||
+      (e.target instanceof Element && e.target.closest('[data-screen-picker-ignore]'))
     )
       return
     if (

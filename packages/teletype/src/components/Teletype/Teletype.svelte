@@ -56,6 +56,7 @@
   class:modal-large={$currentAction?.view === 'ModalLarge'}
   class:loading={$loading}
   on:click|self={handleClickOutside}
+  data-screen-picker-ignore
   role="none"
 >
   <div class="inner-wrapper">
