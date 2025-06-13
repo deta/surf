@@ -3185,7 +3185,7 @@
       } else {
         tabsManager.makeActive($activeTabId)
       }
-    } else {
+    } else if (activeTabs.length !== 0) {
       tabsManager.makeActive(activeTabs[activeTabs.length - 1].id)
     }
 
