@@ -5,6 +5,7 @@
     focusInput: boolean
     autoScroll: boolean
     showPrompt: boolean
+    clearContextOnMention?: boolean
     generationID?: string
   };
 </script>
@@ -964,6 +965,7 @@
       focusInput: opts?.focusInput ?? false,
       autoScroll: opts?.autoScroll ?? false,
       showPrompt: opts?.showPrompt ?? false,
+      clearContextOnMention: opts?.clearContextOnMention ?? false,
       generationID: opts?.generationID
     } as ChatSubmitOptions
 
@@ -989,7 +991,7 @@
 
     try {
       if (note) {
-        chat = await note.getChatWithMentions(mentions)
+        chat = await note.getChatWithMentions(mentions, options.clearContextOnMention)
       } else {
         chat = await createNewNoteChat(mentions)
       }

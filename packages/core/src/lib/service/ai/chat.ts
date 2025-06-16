@@ -258,7 +258,19 @@ export class AIChat {
     const modelTier = tier ?? ModelTiers.Premium
     const model = models.find((m) => m.tier === modelTier)
     if (!model) {
-      this.log.error('model not found for tier', modelTier)
+      const firstModel = models[0]
+      if (firstModel) {
+        this.log.debug(
+          'model not found for tier',
+          modelTier,
+          'using first model of the provider as fallback',
+          firstModel.id
+        )
+        this.selectedModelId.set(firstModel.id)
+        return firstModel
+      }
+
+      this.log.error('No model found for provider', provider, 'and tier', modelTier)
       return null
     }
 

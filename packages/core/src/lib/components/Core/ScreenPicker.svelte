@@ -50,7 +50,7 @@
     type App
   } from '@horizon/types'
   import { useTelemetry } from '../../service/telemetry'
-  import ChatInput from '../Chat/ChatInput.svelte'
+  import ChatInput, { type ChatInputSubmitEvent } from '../Chat/ChatInput.svelte'
   import { SelectDropdown, SelectDropdownItem, type SelectItem } from '../Atoms/SelectDropdown'
   import { quartOut } from 'svelte/easing'
   import CreateAiToolDialog from '../Chat/CreateAiToolDialog.svelte'
@@ -61,8 +61,11 @@
   import NoteTitle from '@horizon/core/src/lib/components/Chat/Notes/NoteTitle.svelte'
   import { SmartNote, useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { useOasis } from '@horizon/core/src/lib/service/oasis'
+  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import AppBarButton from '@horizon/core/src/lib/components/Browser/AppBarButton.svelte'
+  import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
 
   type Rect = { x: number; y: number; width: number; height: number }
   type Direction = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
@@ -103,6 +106,8 @@
   const tabsManager = useTabsManager()
   const ai = useAI()
   const smartNotes = useSmartNotes()
+  const resourceManager = useResourceManager()
+  const oasis = useOasis()
   const config = useConfig()
 
   $: customAiApps = ai?.customAIApps
@@ -169,6 +174,8 @@
         }) as SelectItem
     )
   })
+
+  const mentionItemsFetcher = createMentionsFetcher({ oasis, ai, resourceManager })
 
   // RAF STATE
   let raf: number | null = null
@@ -587,8 +594,12 @@
     }
   }
 
-  // Make handlePromptInputSubmit accessible to the module context
-  export async function handlePromptInputSubmit(input: string) {
+  // Make handleInputSubmit accessible to the module context
+  export async function handleInputSubmit(e: CustomEvent<ChatInputSubmitEvent>) {
+    const { query: input, mentions } = e.detail
+
+    log.debug('handleInputSubmit', { input, mentions })
+
     if (input.length < 1 || $state.isCapturing === true) {
       return
     }
@@ -611,9 +622,9 @@
 
       await chatComponent.createChatCompletion(
         input,
-        undefined,
+        mentions,
         PageChatMessageSentEventTrigger.InlineAI,
-        { showPrompt: true, focusInput: true }
+        { showPrompt: true, focusInput: true, clearContextOnMention: false }
       )
     } else {
       const contextManager = ai.createContextManager()
@@ -888,8 +899,9 @@
         {#if mode === 'standalone' && !$state.isChatExpanded}
           <ChatInput
             loading={chatStatus && chatStatus === 'running'}
-            on:submit={(e) => handlePromptInputSubmit(e.detail)}
+            on:submit={handleInputSubmit}
             viewTransitionName={`chat-${$activeChat?.id || $note?.id}-input`}
+            {mentionItemsFetcher}
           />
         {/if}
 

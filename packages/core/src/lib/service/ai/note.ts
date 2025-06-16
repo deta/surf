@@ -23,7 +23,12 @@ import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 import type { Telemetry } from '../telemetry'
 import { generateContentHash } from './helpers'
 import { MentionItemType, type MentionItem } from '@horizon/editor'
-import { MODEL_CLAUDE_MENTION, MODEL_GPT_MENTION, NOTE_MENTION } from '../../constants/chat'
+import {
+  MODEL_CLAUDE_MENTION,
+  MODEL_GPT_MENTION,
+  MODEL_GEMINI_MENTION,
+  NOTE_MENTION
+} from '../../constants/chat'
 import { tick } from 'svelte'
 import type { OasisService } from '../oasis'
 import { EventEmitterBase } from '../events'
@@ -244,13 +249,16 @@ export class SmartNote {
     }
   }
 
-  async getChatWithMentions(mentions?: MentionItem[]) {
+  async getChatWithMentions(mentions?: MentionItem[], clearContextOnMention = true) {
     const chatContextManager = this.contextManager.clone()
 
     if (mentions && mentions.length > 0) {
-      this.log.debug('Replacing context with mentions', mentions)
-
-      chatContextManager.clear()
+      if (clearContextOnMention) {
+        this.log.debug('Replacing context with mentions', mentions)
+        chatContextManager.clear()
+      } else {
+        this.log.debug('Adding mentions to context', mentions)
+      }
 
       const contextMentions = mentions.filter(
         (mention) => mention.type !== MentionItemType.MODEL && mention.id !== NOTE_MENTION.id
@@ -299,6 +307,8 @@ export class SmartNote {
         chat.selectProviderModel(Provider.Anthropic)
       } else if (modelMention.id === MODEL_GPT_MENTION.id) {
         chat.selectProviderModel(Provider.OpenAI)
+      } else if (modelMention.id === MODEL_GEMINI_MENTION.id) {
+        chat.selectProviderModel(Provider.Google)
       } else {
         const modelId = modelMention.id.replace('model-', '')
         chat.selectModel(modelId)

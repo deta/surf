@@ -1,3 +1,8 @@
+<script lang="ts" context="module">
+  // pretty-ignore
+  export type ChatInputSubmitEvent = { query: string; mentions: MentionItem[] }
+</script>
+
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <script lang="ts">
   import { Editor } from '@horizon/editor'
@@ -9,11 +14,12 @@
   import Tooltip from '../Atoms/Tooltip.svelte'
 
   const dispatch = createEventDispatcher<{
-    submit: string
+    submit: ChatInputSubmitEvent
   }>()
 
   export let loading: boolean = false
   export let viewTransitionName: string | undefined = undefined
+  export let mentionItemsFetcher: MentionItemsFetcher | undefined = undefined
 
   let editor: unknown
   let inputValue: string = ''
@@ -55,7 +61,8 @@
   }
 
   function handleChatSubmit() {
-    dispatch('submit', inputValue)
+    const mentions: MentionItem[] = editor.getMentions()
+    dispatch('submit', { query: inputValue, mentions })
   }
 </script>
 
@@ -72,6 +79,8 @@
       bind:focused={editorFocused}
       autofocus={true}
       placeholder={$chatBoxPlaceholder}
+      {mentionItemsFetcher}
+      parseMentions
       submitOnEnter
     />
   </div>
