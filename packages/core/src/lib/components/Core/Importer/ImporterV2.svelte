@@ -76,8 +76,7 @@
   $: canGoNext = !(
     (currentStepIdx === 0 && !selectedBrowser) ||
     (currentStepIdx === 1 && !selectedData.history && !selectedData.bookmarks) ||
-    (currentStepIdx === 2 && importStatus !== 'done' && importStatus !== 'error') ||
-    (currentStepIdx === 2 && !showUsageInstructions)
+    (currentStepIdx === 2 && importStatus !== 'done' && importStatus !== 'error')
   )
 
   let once = false
@@ -184,9 +183,11 @@
     if (currentStepIdx === 2) {
       if (importStatus !== 'done') {
         startImportingData()
-      } else if (!showUsageInstructions) {
-        dispatch('done')
       }
+    }
+
+    if (currentStepIdx === 3 && !showUsageInstructions) {
+      dispatch('done')
     }
 
     if (currentStepIdx === 4 && showUsageInstructions) {
