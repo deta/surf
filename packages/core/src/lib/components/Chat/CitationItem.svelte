@@ -354,8 +354,9 @@
 
     info = getInfo(citationID)
     log.debug('info', info)
-    if (!info) {
+    if (!info || (!info.renderID && !info.source)) {
       log.error('Citation item does not have info', citationID)
+      citationID = ''
       return
     }
 
@@ -475,8 +476,8 @@
           <div class="font-sans text-xs tracking-wide select-none">
             {#if general}
               {tooltipText}
-            {:else}
-              <span class="uppercase">#{renderID ?? citationID}</span>
+            {:else if renderID || citationID}
+              <span class="uppercase">#{renderID || citationID}</span>
             {/if}
           </div>
         {/if}
@@ -501,8 +502,8 @@
           <div class="font-sans text-xs tracking-wide select-none">
             {#if general}
               {tooltipText}
-            {:else}
-              <span class="uppercase">#{renderID ?? citationID}</span>
+            {:else if renderID || citationID}
+              <span class="uppercase">#{renderID || citationID}</span>
             {/if}
           </div>
         {/if}
@@ -554,8 +555,8 @@
             <div class="font-sans text-xs tracking-wide select-none">
               {#if general}
                 {tooltipText}
-              {:else}
-                <span class="uppercase">#{renderID ?? citationID}</span>
+              {:else if renderID || citationID}
+                <span class="uppercase">#{renderID || citationID}</span>
               {/if}
             </div>
           {/if}
@@ -580,8 +581,8 @@
             <div class="font-sans text-xs tracking-wide select-none">
               {#if general}
                 {tooltipText}
-              {:else}
-                <span class="uppercase">#{renderID ?? citationID}</span>
+              {:else if renderID || citationID}
+                <span class="uppercase">#{renderID || citationID}</span>
               {/if}
             </div>
           {/if}

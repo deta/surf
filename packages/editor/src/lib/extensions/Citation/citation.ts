@@ -84,7 +84,7 @@ export const Citation = Node.create<CitationOptions>({
     return ({ node }) => {
       const container = document.createElement('span')
       container.setAttribute('data-citation-id', node.attrs.id)
-      if (!this.options.component) {
+      if (!this.options.component || (!node.attrs.info.renderID && !node.attrs.source)) {
         return {
           dom: container
         }
