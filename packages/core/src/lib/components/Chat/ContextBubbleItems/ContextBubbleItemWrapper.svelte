@@ -146,7 +146,6 @@
   }
 
   .pill {
-    cursor: default;
     transition: transform 0.3s ease;
 
     padding: 0.35rem 0.85rem;

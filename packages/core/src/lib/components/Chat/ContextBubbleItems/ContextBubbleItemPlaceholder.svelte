@@ -76,7 +76,6 @@
   }
 
   .pill {
-    cursor: default;
     transition: transform 0.3s ease;
     border-radius: 11px 11px 11px 11px;
   }
