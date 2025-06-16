@@ -89,7 +89,7 @@
     <ModelPicker />
 
     <Tooltip side="top">
-      <AppBarButton style="opacity: 1;">
+      <AppBarButton style="opacity: 1;" on:click={handleChatSubmit}>
         {#if loading && !$optToggled}
           <Icon name="spinner" />
         {:else}
