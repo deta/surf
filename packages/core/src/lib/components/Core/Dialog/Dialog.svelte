@@ -144,6 +144,8 @@ again, as always and this doesnt actually happen. -->
 </dialog>
 
 <style lang="scss">
+  @use '@horizon/core/src/lib/styles/utils' as utils;
+
   :global(dialog.starting) {
     scale: 0.9 !important;
     opacity: 0 !important;
@@ -154,8 +156,17 @@ again, as always and this doesnt actually happen. -->
     }
   }
   dialog {
+    @include utils.light-dark-custom('background-fill-mix', #fbf5ef, #141619, #fbf5ef, #141619);
+    @include utils.light-dark-custom(
+      'fill',
+      #fbf5ef,
+      #141619,
+      color-mix(in srgb, var(--base-color), 55% var(--background-fill-mix))
+    );
+
     --dialog-background: light-dark(#fff, #111b2b);
-    --dialog-border: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.25));
+    --dialog-background: var(--fill);
+    --dialog-border: light-dark(rgb(72 86 103 / 15%), rgb(188 191 215 / 20%));
     --dialog-shadow: 0 3px 4px 0 rgba(50, 50, 93, 0.1), 0 2px 10px rgba(0, 0, 0, 0.1);
 
     width: 32ch;
@@ -164,8 +175,9 @@ again, as always and this doesnt actually happen. -->
     inset: 0;
 
     background: var(--dialog-background);
-    border-radius: 10px;
-    border: 0.5px solid var(--dialog-border);
+    border-radius: 1rem;
+    -electron-corner-smoothing: 100%;
+    border: 2px solid var(--dialog-border);
     box-shadow: var(--dialog-shadow);
 
     &:focus-within {
@@ -176,7 +188,7 @@ again, as always and this doesnt actually happen. -->
     transition-duration: 215ms;
     transition-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
 
-    padding: 0.7em 1em;
+    padding: 0.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.25ch;
@@ -194,7 +206,7 @@ again, as always and this doesnt actually happen. -->
       margin-top: 0.25em;
       padding-block: 0.75em;
 
-      color: var(--contrast-color, #210e1f);
+      color: utils.contrast-color(var(--fill));
       opacity: 0.75;
     }
     .details {
@@ -211,13 +223,13 @@ again, as always and this doesnt actually happen. -->
         letter-spacing: 0.03px;
         text-align: center;
         text-wrap: pretty;
-        color: var(--contrast-color, #210e1f);
+        color: utils.contrast-color(var(--fill));
       }
       > p {
         font-size: 0.9em;
         text-align: center;
         text-wrap: pretty;
-        color: var(--contrast-color, #210e1f);
+        color: utils.contrast-color(var(--fill));
         opacity: 0.75;
         max-width: 30ch;
         margin: 0 auto;
@@ -227,17 +239,17 @@ again, as always and this doesnt actually happen. -->
     form {
       display: flex;
       justify-content: space-between;
-      gap: 1ch;
+      gap: 0.5rem;
       margin-top: 0.75em;
-      margin-inline: -0.25em;
-      margin-bottom: 0.1em;
 
       button {
         --background: light-dark(var(--black-05), var(--white-26));
         flex: 1;
         background: var(--background);
         border: 1px solid transparent;
-        border-radius: 5px;
+        border-radius: calc(1rem - 0.5rem); // 1em;
+        -electron-corner-smoothing: 100%;
+
         min-height: 3.5ch;
         font-weight: 500;
         letter-spacing: 0.03px;
@@ -260,6 +272,7 @@ again, as always and this doesnt actually happen. -->
           background: color-mix(in srgb, var(--background) 90%, black 10%);
         }
       }
+
       .submit {
         --background: #2497e9;
         color: white;

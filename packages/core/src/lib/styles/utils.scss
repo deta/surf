@@ -31,15 +31,13 @@
   }
 }
 
-@mixin squircle(
-  $fill: transparent,
+@mixin squircle($fill: transparent,
   $smooth: 0.33,
   $radius: 0px,
   $radius-top-left: null,
   $radius-top-right: null,
   $radius-bottom-left: null,
-  $radius-bottom-right: null
-) {
+  $radius-bottom-right: null) {
   border-radius: 0 !important;
 
   background: paint(squircle);
@@ -68,13 +66,11 @@
   }
 }
 
-@mixin squricle-radii(
-  $radius: 0px,
+@mixin squricle-radii($radius: 0px,
   $top-left: null,
   $top-right: null,
   $bottom-left: null,
-  $bottom-right: null
-) {
+  $bottom-right: null) {
   @if not $top-left {
     --squircle-radius-top-left: #{$radius};
   }
@@ -120,4 +116,14 @@
 @mixin font-smoothing {
   -webkit-font-smoothing: subpixel-antialiased;
   text-rendering: optimizeLegibility;
+}
+
+@property --contrast-color-channel {
+  syntax: '*';
+  inherits: false;
+  initial-value: clamp(0, (((r * 0.299) + (g * 0.587) + (b * 0.114)) - 128) * -1000, 255);
+}
+
+@function contrast-color($source-color) {
+  @return #{rgb(from $source-color var(--contrast-color-channel) var(--contrast-color-channel) var(--contrast-color-channel))};
 }
