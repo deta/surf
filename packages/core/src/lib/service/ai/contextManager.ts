@@ -41,6 +41,7 @@ import { ContextItemWikipedia } from './context/wikipedia'
 import {
   ACTIVE_CONTEXT_MENTION,
   ACTIVE_TAB_MENTION,
+  BROWSER_HISTORY_MENTION,
   EVERYTHING_MENTION,
   INBOX_MENTION,
   NO_CONTEXT_MENTION,
@@ -48,6 +49,7 @@ import {
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
 import { MentionItemType, type MentionItem } from '@horizon/editor'
+import { ContextItemBrowsingHistory } from './context/history'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -602,6 +604,19 @@ export class ContextManager {
     return this.addContextItem(item, opts)
   }
 
+  async addBrowsingHistoryContext(opts?: AddContextItemOptions) {
+    const existingItem = this.itemsValue.find(
+      (item) => item.type === ContextItemTypes.BROWSING_HISTORY
+    )
+    if (existingItem) {
+      this.log.debug('BrowsingHistory context already in context')
+      return
+    }
+
+    const item = new ContextItemBrowsingHistory(this.service)
+    return this.addContextItem(item, opts)
+  }
+
   addMentionItem(item: MentionItem, opts?: AddContextItemOptions) {
     const itemId = item.id
     const activeSpaceContextItem = this.getActiveSpaceContextItem()
@@ -631,6 +646,8 @@ export class ContextManager {
       return this.addActiveTab(opts)
     } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
       return this.addWikipediaContext(opts)
+    } else if (itemId === BROWSER_HISTORY_MENTION.id) {
+      return this.addBrowsingHistoryContext(opts)
     } else if (item.type === MentionItemType.RESOURCE) {
       return this.addResource(item.id, opts)
     } else {

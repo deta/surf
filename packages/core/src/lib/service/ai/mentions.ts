@@ -10,6 +10,7 @@ import type { AIService } from './ai'
 import { Provider } from '@horizon/types/src/ai.types'
 import type { OasisService } from '../oasis'
 import {
+  BROWSER_HISTORY_MENTION,
   BUILT_IN_MENTIONS_BASE,
   INBOX_MENTION,
   NOTE_MENTION,
@@ -96,7 +97,8 @@ export const createMentionsFetcher = (
       ...BUILT_IN_MENTIONS_BASE,
       ...conditionalArrayItem(!userSettings.save_to_active_context, INBOX_MENTION),
       ...conditionalArrayItem(!!notResourceId, NOTE_MENTION),
-      ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION)
+      ...conditionalArrayItem(userSettings.experimental_chat_web_search, WIKIPEDIA_SEARCH_MENTION),
+      BROWSER_HISTORY_MENTION
     ]
 
     let modelMentions: MentionItem[] = []

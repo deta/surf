@@ -16,7 +16,8 @@ export enum ContextItemTypes {
   ACTIVE_SPACE = 'active-context',
   INBOX = 'inbox',
   EVERYTHING = 'everything',
-  WIKIPEDIA = 'wikipedia'
+  WIKIPEDIA = 'wikipedia',
+  BROWSING_HISTORY = 'browsing-history'
 }
 
 export enum ContextItemIconTypes {

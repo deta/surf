@@ -122,7 +122,9 @@ export const getUserConfig = (path?: string) => {
       experimental_notes_chat_input: false,
       experimental_chat_web_search: true,
       experimental_note_inline_rewrite: false,
-      auto_note_similarity_search: false
+      auto_note_similarity_search: false,
+      tab_bar_visible: true,
+      enable_custom_prompts: true
     }
     setUserConfig(storedConfig as UserConfig)
   }

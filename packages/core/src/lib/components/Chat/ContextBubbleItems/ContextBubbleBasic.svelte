@@ -15,6 +15,8 @@
 
   $: if (item.type === ContextItemTypes.WIKIPEDIA) {
     additionalLabel = 'Wikipedia Search'
+  } else if (item.type === ContextItemTypes.BROWSING_HISTORY) {
+    additionalLabel = 'Browsing History'
   }
 </script>
 

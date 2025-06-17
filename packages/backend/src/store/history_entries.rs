@@ -224,39 +224,72 @@ impl Database {
         search_string: &str,
         since: Option<f64>,
     ) -> BackendResult<Vec<HistoryEntry>> {
-        let mut query = "
-            SELECT id, entry_type, url, title, search_query, created_at, updated_at, COUNT(url) as url_count
-            FROM history_entries
-            WHERE (url LIKE ?1 OR title LIKE ?1)".to_string();
+        let search_string = search_string.trim().to_lowercase();
 
-        if let Some(_since) = since {
-            query.push_str(" AND created_at >= datetime(?2, 'unixepoch')");
-        }
+        let search_terms: Vec<String> = search_string
+            .split_whitespace()
+            .filter(|term| term.len() > 1)
+            .map(|term| {
+                let chars: Vec<char> = term.chars().collect();
+                let stem_length =
+                    std::cmp::min(chars.len(), std::cmp::max(3, chars.len().saturating_sub(2)));
 
-        query.push_str(
-            "
-            GROUP BY url
-            ORDER BY
-                CASE
-                    WHEN instr(substr(url, instr(url, '://') + 3), ?1) > 0 THEN 1
-                    WHEN title LIKE ?1 THEN 2
-                    WHEN url LIKE ?1 THEN 3
-                    ELSE 4
-                END,
-                url_count DESC,
-                created_at DESC
-            LIMIT 25",
-        );
+                let stem: String = chars.into_iter().take(stem_length).collect();
+                format!("%{}%", stem)
+            })
+            .collect();
 
-        let mut stmt = self.conn.prepare(&query)?;
+        if search_terms.is_empty() {
+            let mut base_query = "
+                SELECT id, entry_type, url, title, search_query, created_at, updated_at, COUNT(url) as url_count
+                FROM history_entries
+                WHERE (url LIKE ?1 OR title LIKE ?1)".to_string();
 
-        let search_pattern = format!("%{}%", search_string);
+            if let Some(_) = since {
+                base_query.push_str(" AND created_at >= datetime(?2, 'unixepoch')");
+            }
 
-        let items: Box<dyn Iterator<Item = rusqlite::Result<HistoryEntry>>> =
-            if let Some(mut since) = since {
-                since /= 1000.0;
-                Box::new(
-                    stmt.query_map(rusqlite::params![search_pattern, since], |row| {
+            base_query.push_str(
+                "
+                GROUP BY url
+                ORDER BY
+                    CASE
+                        WHEN instr(substr(url, instr(url, '://') + 3), ?1) > 0 THEN 1
+                        WHEN title LIKE ?1 THEN 2
+                        WHEN url LIKE ?1 THEN 3
+                        ELSE 4
+                    END,
+                    url_count DESC,
+                    created_at DESC
+                LIMIT 25",
+            );
+
+            let mut stmt = self.conn.prepare(&base_query)?;
+
+            let search_pattern = format!("%{}%", search_string);
+
+            let items: Box<dyn Iterator<Item = rusqlite::Result<HistoryEntry>>> =
+                if let Some(mut since_val) = since {
+                    since_val /= 1000.0;
+                    Box::new(stmt.query_map(
+                        rusqlite::params![search_pattern, since_val],
+                        |row| {
+                            Ok(HistoryEntry {
+                                id: row.get(0)?,
+                                entry_type: HistoryEntryType::from_str(
+                                    row.get::<_, String>(1)?.as_str(),
+                                )
+                                .unwrap(),
+                                url: row.get(2)?,
+                                title: row.get(3)?,
+                                search_query: row.get(4)?,
+                                created_at: row.get(5)?,
+                                updated_at: row.get(6)?,
+                            })
+                        },
+                    )?)
+                } else {
+                    Box::new(stmt.query_map(rusqlite::params![search_pattern], |row| {
                         Ok(HistoryEntry {
                             id: row.get(0)?,
                             entry_type: HistoryEntryType::from_str(
@@ -269,27 +302,98 @@ impl Database {
                             created_at: row.get(5)?,
                             updated_at: row.get(6)?,
                         })
-                    })?,
-                )
-            } else {
-                Box::new(stmt.query_map(rusqlite::params![search_pattern], |row| {
-                    Ok(HistoryEntry {
-                        id: row.get(0)?,
-                        entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
-                            .unwrap(),
-                        url: row.get(2)?,
-                        title: row.get(3)?,
-                        search_query: row.get(4)?,
-                        created_at: row.get(5)?,
-                        updated_at: row.get(6)?,
-                    })
-                })?)
-            };
+                    })?)
+                };
 
-        let mut results = Vec::new();
-        for item in items {
-            results.push(item?);
+            let mut results = Vec::new();
+            for item in items {
+                results.push(item?);
+            }
+            return Ok(results);
         }
+
+        let mut base_query = "
+            SELECT id, entry_type, url, title, search_query, created_at, updated_at, COUNT(url) as url_count, 
+            CASE 
+                WHEN title IS NOT NULL THEN length(title) 
+                ELSE 9999
+            END as title_length
+            FROM history_entries
+            WHERE ".to_string();
+
+        base_query.push_str("(url LIKE ?1");
+        base_query.push_str(" OR (");
+
+        for (i, _) in search_terms.iter().enumerate() {
+            if i > 0 {
+                base_query.push_str(" AND ");
+            }
+            base_query.push_str(&format!("lower(title) LIKE ?{}", i + 2));
+        }
+
+        base_query.push_str("))");
+
+        let timestamp_param_index = search_terms.len() + 2;
+
+        if let Some(_) = since {
+            base_query.push_str(&format!(
+                " AND created_at >= datetime(?{}, 'unixepoch')",
+                timestamp_param_index
+            ));
+        }
+
+        base_query.push_str(
+            "
+            GROUP BY url
+            ORDER BY
+                CASE
+                    -- Exact match in title is highest priority
+                    WHEN lower(title) LIKE ?1 THEN 1
+                    -- URLs containing exact search substring come next
+                    WHEN url LIKE ?1 THEN 2
+                    -- Then fuzzy matches, prioritizing shorter titles (likely more relevant)
+                    ELSE 3
+                END,
+                title_length ASC,
+                url_count DESC,
+                created_at DESC
+            LIMIT 25",
+        );
+
+        let mut stmt = self.conn.prepare(&base_query)?;
+
+        let search_pattern = format!("%{}%", search_string);
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(search_pattern)];
+
+        for term in &search_terms {
+            params.push(Box::new(term.clone()));
+        }
+
+        if let Some(mut since_val) = since {
+            since_val /= 1000.0;
+            params.push(Box::new(since_val));
+        }
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let rows = stmt.query(param_refs.as_slice())?;
+        let mut results = Vec::new();
+
+        let mut mapped_rows = rows.mapped(|row| {
+            Ok(HistoryEntry {
+                id: row.get(0)?,
+                entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str()).unwrap(),
+                url: row.get(2)?,
+                title: row.get(3)?,
+                search_query: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        });
+
+        while let Some(row_result) = mapped_rows.next() {
+            results.push(row_result?);
+        }
+
         Ok(results)
     }
 

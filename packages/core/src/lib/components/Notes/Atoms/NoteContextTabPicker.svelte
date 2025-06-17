@@ -53,7 +53,8 @@
     EVERYTHING_MENTION,
     INBOX_MENTION,
     ACTIVE_TAB_MENTION,
-    WIKIPEDIA_SEARCH_MENTION
+    WIKIPEDIA_SEARCH_MENTION,
+    BROWSER_HISTORY_MENTION
   } from '@horizon/core/src/lib/constants/chat'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import { SelectDropdown } from '../../Atoms/SelectDropdown'
@@ -123,6 +124,12 @@
     label: WIKIPEDIA_SEARCH_MENTION.suggestionLabel,
     value: WIKIPEDIA_SEARCH_MENTION.id,
     searchOnly: true
+  } as TabItem
+
+  const browserHistoryContextItem = {
+    ...BROWSER_HISTORY_MENTION,
+    label: BROWSER_HISTORY_MENTION.suggestionLabel,
+    value: BROWSER_HISTORY_MENTION.id
   } as TabItem
 
   function tabToTabItem(tab: Tab) {
@@ -200,7 +207,11 @@
       activeContextItem,
       ...conditionalArrayItem(!userConfigSettings.save_to_active_context, inboxContextItem),
       everythingContextItem,
-      ...conditionalArrayItem(userConfigSettings.experimental_chat_web_search, wikipediaContextItem)
+      ...conditionalArrayItem(
+        userConfigSettings.experimental_chat_web_search,
+        wikipediaContextItem
+      ),
+      browserHistoryContextItem
     ]
   })
 
@@ -392,6 +403,12 @@
         contextManager.addWikipediaContext({
           trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
         })
+      } else if (type === ContextItemTypes.BROWSING_HISTORY) {
+        contextManager.addBrowsingHistoryContext({
+          trigger: PageChatUpdateContextEventTrigger.ChatAddContextMenu
+        })
+      } else {
+        log.error('unknown type', type)
       }
 
       const inpEl = ref?.querySelector('input') as HTMLInputElement

@@ -15,6 +15,7 @@ export { markdown as INLINE_TRANSFORM } from './prompts/inline-transform.md'
 export { markdown as WIKIPEDIA_TITLE_EXTRACTOR_PROMPT } from './prompts/wikipedia-title-extractor.md'
 export { markdown as CHAT_TITLE_GENERATOR_PROMPT } from './prompts/chat-title-generator.md'
 export { markdown as FILENAME_CLEANUP_PROMPT } from './prompts/filename-cleanup.md'
+export { markdown as BROWSER_HISTORY_QUERY_PROMPT } from './prompts/browser-history-query.md'
 
 export const SIMPLE_SUMMARIZER_PROMPT = `You are a summarizer, summarize the text given to you. Only respond with the summarization.`
 export const LEGACY_PAGE_CITATION_SUMMARY_PROMPT = LEGACY_PAGE_CITATIONS
