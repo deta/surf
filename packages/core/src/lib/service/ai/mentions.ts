@@ -1,9 +1,8 @@
-import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
+import { ResourceTagsBuiltInKeys } from '@horizon/types'
 import {
   conditionalArrayItem,
   getFileKind,
   getFileType,
-  truncate,
   truncateURL,
   useLogScope
 } from '@horizon/utils'
@@ -17,8 +16,9 @@ import {
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
 import { MentionItemType, type MentionItem } from '@horizon/editor'
-import { ResourceManager } from '../resources'
+import { type ResourceManager } from '../resources'
 import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export const createResourcesMentionsFetcher = (
   resourceManager: ResourceManager,
@@ -33,12 +33,7 @@ export const createResourcesMentionsFetcher = (
     if (query.length > 0) {
       const result = await resourceManager.searchResources(
         query,
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
-        ],
+        [...SearchResourceTags.NonHiddenDefaultTags({ excludeAnnotations: false })],
         {
           semanticEnabled: userSettings.use_semantic_search
         }

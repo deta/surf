@@ -1,9 +1,10 @@
 import { BROWSER_TYPE_DATA, ResourceTagDataStateValue, type BrowserType } from '@horizon/types'
 import { useLogScope } from '@horizon/utils'
 
-import { ResourceTag, type Resource, type ResourceManager } from './resources'
+import { type Resource, type ResourceManager } from './resources'
 import type { OasisService } from './oasis'
 import { SpaceEntryOrigin } from '../types'
+import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 export class Importer {
   log: ReturnType<typeof useLogScope>

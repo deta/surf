@@ -1,6 +1,5 @@
-import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
+import { ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
-import { QuotaDepletedError } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { generateID, useLogScope } from '@horizon/utils'
 import {
@@ -14,23 +13,16 @@ import {
   type AIChatMessageParsed,
   type AIChatMessageRole,
   type AIChatMessageSource,
-  type TabPage,
-  type TabResource
+  type TabPage
 } from '../../types'
 import { ChatMode, ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
-import {
-  convertChatOutputToNoteContent,
-  handleQuotaDepletedError,
-  parseAIError,
-  parseChatResponseSources
-} from './helpers'
+import { parseAIError, parseChatResponseSources } from './helpers'
 import type { Telemetry } from '../telemetry'
 import {
   PageChatMessageSentEventError,
   PageChatMessageSentEventTrigger,
   ResourceTagDataStateValue,
   ResourceTagsBuiltInKeys,
-  ResourceTypes,
   type PageChatMessageSentData
 } from '@horizon/types'
 import type { AIService } from './ai'

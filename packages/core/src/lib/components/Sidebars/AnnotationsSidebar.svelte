@@ -2,7 +2,6 @@
   import { Icon } from '@horizon/icons'
   import { mimeTypeToCodeLanguage, useLogScope } from '@horizon/utils'
   import {
-    ResourceManager,
     useResourceManager,
     type Resource,
     type ResourceAnnotation
@@ -21,6 +20,7 @@
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import type { TabPage } from '@horizon/core/src/lib/types'
   import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'
+  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   export let tab: TabPage
   export let resourceId: string | null = null
@@ -81,7 +81,7 @@
       }
 
       const resources = await resourceManager.getResourcesFromSourceHostname(url, [
-        ResourceManager.SearchTagSavedWithAction('generated')
+        SearchResourceTags.SavedWithAction('generated')
       ])
 
       appResources = resources.sort(

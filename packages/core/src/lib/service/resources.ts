@@ -32,7 +32,6 @@ import {
   type SpaceEntry,
   type Space,
   type SpaceData,
-  type SpaceSource,
   SpaceEntryOrigin,
   type SFFSRawResource,
   type SpaceEntrySearchOptions
@@ -43,7 +42,6 @@ import {
   EventContext,
   ResourceProcessingStateType,
   ResourceTagDataStateValue,
-  TelemetryEventTypes,
   WEB_RESOURCE_TYPES,
   type DetectedResource,
   type EventBusMessage,
@@ -51,114 +49,15 @@ import {
   type ResourceDataAnnotation,
   type ResourceDataHistoryEntry,
   type ResourceState,
-  type ResourceStateCombined,
-  type ResourceTagsBuiltIn
+  type ResourceStateCombined
 } from '@horizon/types'
-import type TypedEmitter from 'typed-emitter'
 import { getContext, onDestroy, setContext, tick } from 'svelte'
-import EventEmitter from 'events'
 import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@horizon/web-parser'
 import type { ConfigService } from './config'
 import type { AIService } from './ai/ai'
 import { EventEmitterBase } from './events'
-
-/*
- TODO:
- - move over other card data to SFFSResource
- - handle errors
- - use the relevant enum, and do not hard code the values
-*/
-
-export class ResourceTag {
-  static download() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'download' }
-  }
-
-  static screenshot() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'screenshot' }
-  }
-
-  static dragBrowser() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/browser' }
-  }
-
-  static dragLocal() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'drag/local' }
-  }
-
-  static paste() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'paste' }
-  }
-
-  static import() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'import' }
-  }
-
-  static generated() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'generated' }
-  }
-
-  static chat() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'chat' }
-  }
-
-  static rightClickSave() {
-    return { name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION, value: 'page-right-click' }
-  }
-
-  static canonicalURL(url: string) {
-    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url }
-  }
-
-  static silent(value: boolean = true) {
-    return { name: ResourceTagsBuiltInKeys.SILENT, value: `${value}` }
-  }
-
-  static annotates(resourceID: string) {
-    return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceID }
-  }
-
-  static hashtag(tag: string) {
-    return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag }
-  }
-
-  static spaceSource(value: SpaceSource['type']) {
-    return { name: ResourceTagsBuiltInKeys.SPACE_SOURCE, value: value }
-  }
-
-  static viewedByUser(value: boolean) {
-    return { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: `${value}` }
-  }
-
-  static hideInEverything(value: boolean = true) {
-    return { name: ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING, value: `${value}` }
-  }
-
-  static sourcePublishedAt(value: string) {
-    return { name: ResourceTagsBuiltInKeys.SOURCE_PUBLISHED_AT, value: value }
-  }
-
-  static createdForChat(value: boolean = true) {
-    return { name: ResourceTagsBuiltInKeys.CREATED_FOR_CHAT, value: `${value}` }
-  }
-
-  static contentHash(value: string) {
-    return { name: ResourceTagsBuiltInKeys.CONTENT_HASH, value: value }
-  }
-
-  static previewImageResource(previewId: string) {
-    return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: previewId }
-  }
-
-  static linkedChat(value: string) {
-    return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: value }
-  }
-
-  static dataState(value: ResourceTagDataStateValue) {
-    return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: value }
-  }
-}
+import { ResourceTag, SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export const getPrimaryResourceType = (type: string) => {
   if (type.startsWith(ResourceTypes.DOCUMENT)) {
@@ -675,16 +574,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
   }
 
-  static NonHiddenDefaultTags(): SFFSResourceTag[] {
-    return [
-      ResourceManager.SearchTagDeleted(false),
-      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-      ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-      ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-      ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-    ]
-  }
-
   async createDummyResource(
     type: string,
     data: Blob,
@@ -912,8 +801,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
   async getResourceAnnotations() {
     const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
-      ResourceManager.SearchTagDeleted(false)
+      SearchResourceTags.ResourceType(ResourceTypes.ANNOTATION),
+      SearchResourceTags.Deleted(false)
     ])
 
     return resources as ResourceAnnotation[]
@@ -932,16 +821,16 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     }
 
     const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagCanonicalURL(canonicalURL),
-      ResourceManager.SearchTagDeleted(false),
+      SearchResourceTags.CanonicalURL(canonicalURL),
+      SearchResourceTags.Deleted(false),
       ...(tags ?? [])
     ])
 
     // if the canonical URL is different, we should also search for the original URL
     if (canonicalURL !== url) {
       const additionalResources = await this.listResourcesByTags([
-        ResourceManager.SearchTagCanonicalURL(url),
-        ResourceManager.SearchTagDeleted(false),
+        SearchResourceTags.CanonicalURL(url),
+        SearchResourceTags.Deleted(false),
         ...(tags ?? [])
       ])
 
@@ -958,8 +847,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     const prefixedHostname = `${protocol}://${hostname}`
 
     const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagCanonicalURL(prefixedHostname, 'prefix'),
-      ResourceManager.SearchTagDeleted(false),
+      SearchResourceTags.CanonicalURL(prefixedHostname, 'prefix'),
+      SearchResourceTags.Deleted(false),
       ...(tags ?? [])
     ])
 
@@ -968,9 +857,9 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
   async getAnnotationsForResource(id: string) {
     const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION),
-      ResourceManager.SearchTagAnnotates(id),
-      ResourceManager.SearchTagDeleted(false)
+      SearchResourceTags.ResourceType(ResourceTypes.ANNOTATION),
+      SearchResourceTags.Annotates(id),
+      SearchResourceTags.Deleted(false)
     ])
 
     return resources as ResourceAnnotation[]
@@ -1485,10 +1374,10 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
     this.log.debug('Looking for existing code resource', type, codeHash)
     const resources = await this.listResourcesByTags([
-      ResourceManager.SearchTagDeleted(false),
-      ResourceManager.SearchTagResourceType(type),
-      ResourceManager.SearchTagContentHash(codeHash),
-      ResourceManager.SearchTagSavedWithAction('generated')
+      SearchResourceTags.Deleted(false),
+      SearchResourceTags.ResourceType(type),
+      SearchResourceTags.ContentHash(codeHash),
+      SearchResourceTags.SavedWithAction('generated')
     ])
 
     if (resources.length) {
@@ -1511,44 +1400,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     const rawResources = await this.sffs.searchChatResourcesAI(query, model, opts)
     const resources = rawResources.map((r) => this.findOrCreateResourceObject(r))
     return resources
-  }
-
-  static SearchTagResourceType(
-    type: ResourceTypes | string,
-    op: SFFSResourceTag['op'] = 'eq'
-  ): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.TYPE, value: type, op: op }
-  }
-
-  static SearchTagSavedWithAction(
-    action: ResourceTagsBuiltIn['savedWithAction'],
-    prefix = false
-  ): SFFSResourceTag {
-    return {
-      name: ResourceTagsBuiltInKeys.SAVED_WITH_ACTION,
-      value: action,
-      op: prefix ? 'prefix' : 'eq'
-    }
-  }
-
-  static SearchTagDeleted(value = true): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.DELETED, value: `${value}`, op: 'eq' }
-  }
-
-  static SearchTagHorizon(horizonId: string): SFFSResourceTag {
-    return { name: 'horizonId', value: horizonId, op: 'eq' }
-  }
-
-  static SearchTagHostname(hostname: string): SFFSResourceTag {
-    return { name: 'horizonId', value: hostname, op: 'suffix' }
-  }
-
-  static SearchTagHashtag(tag: string): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.HASHTAG, value: tag, op: 'eq' }
-  }
-
-  static SearchTagLinkedChat(chatId: string): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.LINKED_CHAT, value: chatId, op: 'eq' }
   }
 
   async createSpace(name: SpaceData) {
@@ -1607,9 +1458,9 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     const results = await this.searchResources(
       opts.search_query,
       [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+        SearchResourceTags.Deleted(false),
+        SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.SILENT)
       ],
       {
         spaceId: space_id,
@@ -1798,53 +1649,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
       throw e
     }
-  }
-
-  static SearchTagCanonicalURL(url: string, op: SFFSResourceTag['op'] = 'eq'): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.CANONICAL_URL, value: url, op }
-  }
-
-  static SearchTagAnnotates(resourceId: string): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.ANNOTATES, value: resourceId, op: 'eq' }
-  }
-
-  static SearchTagSpaceSource(
-    value: SpaceSource['type'],
-    op: SFFSResourceTag['op'] = 'eq'
-  ): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.SPACE_SOURCE, value: value, op: op }
-  }
-
-  static SearchTagNotExists(name: string): SFFSResourceTag {
-    return { name: name, value: '', op: 'notexists' }
-  }
-
-  static SearchTagViewedByUser(value: boolean): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.VIEWED_BY_USER, value: `${value}`, op: 'eq' }
-  }
-
-  static SearchTagSilent(value: boolean = true): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.SILENT, value: `${value}`, op: 'eq' }
-  }
-
-  static SearchTagHideInEverything(value: boolean = true): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING, value: `${value}`, op: 'eq' }
-  }
-
-  static SearchTagCreatedForChat(value: boolean = true): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.CREATED_FOR_CHAT, value: `${value}`, op: 'eq' }
-  }
-
-  static SearchTagContentHash(hash: string): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.CONTENT_HASH, value: hash, op: 'eq' }
-  }
-
-  static SearchTagPreviewImageResource(id: string): SFFSResourceTag {
-    return { name: ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE, value: id, op: 'eq' }
-  }
-
-  static SearchTagDataState(state: ResourceTagDataStateValue) {
-    return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: state, op: 'eq' }
   }
 
   static provide(telemetry: Telemetry, config: ConfigService) {

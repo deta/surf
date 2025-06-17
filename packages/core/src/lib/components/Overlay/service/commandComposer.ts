@@ -16,6 +16,7 @@ import { TeletypeActionGroup, type TeletypeStaticAction } from './teletypeAction
 import type { OasisService, OasisSpace } from '../../../service/oasis'
 import type { ConfigService } from '../../../service/config'
 import type { CMDMenuItem } from '../types'
+import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 import {
   searchActionToTeletypeItem,
@@ -30,8 +31,8 @@ import {
   staticActionToTeletypeItem
 } from './translations'
 
-import { Resource, ResourceJSON, ResourceManager } from '../../../service/resources'
-import { ResourceTagsBuiltInKeys, ResourceTypes, SearchOasisEventTrigger } from '@horizon/types'
+import { Resource, ResourceJSON } from '../../../service/resources'
+import { SearchOasisEventTrigger } from '@horizon/types'
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
 import { type HistoryEntry, type Tab, type TabPage } from '../../../types'
 import Fuse from 'fuse.js'
@@ -175,10 +176,8 @@ export class CommandComposer {
     await this.resourceManager.searchResources(
       value,
       [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-        ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x))
+        ...SearchResourceTags.NonHiddenDefaultTags(),
+        ...hashtags.map((x) => SearchResourceTags.Hashtag(x))
       ],
       {
         semanticEnabled: get(this.userConfigSettings).use_semantic_search
@@ -264,12 +263,7 @@ export class CommandComposer {
         try {
           const data = await this.resourceManager.searchResources(
             query,
-            [
-              ResourceManager.SearchTagDeleted(false),
-              ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-              ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-              ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
-            ],
+            [...SearchResourceTags.NonHiddenDefaultTags()],
             {
               includeAnnotations: false,
               semanticEnabled: get(this.userConfigSettings).use_semantic_search,

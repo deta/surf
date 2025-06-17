@@ -1,11 +1,11 @@
 import { writable } from 'svelte/store'
 
-import { type TabPage, ResourceTypes, ResourceTagsBuiltInKeys } from '../../../types'
+import { type TabPage } from '../../../types'
 
 import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'
 import { ContextItemTypes } from './types'
-import { ResourceManager } from '../../resources'
+import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export class ContextItemInbox extends ContextItemBase {
   type = ContextItemTypes.INBOX
@@ -27,13 +27,7 @@ export class ContextItemInbox extends ContextItemBase {
     const scopedTabResourceIds = preparedResources.filter(Boolean).map((resource) => resource!.id)
 
     const resourceIds = await this.service.resourceManager.listResourceIDsByTags(
-      [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-        ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-        ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
-      ],
+      [...SearchResourceTags.NonHiddenDefaultTags()],
       true
     )
 

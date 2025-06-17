@@ -22,9 +22,10 @@ import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
 import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 import { ModelTiers } from '@horizon/types/src/ai.types'
-import { ResourceManager, ResourceTag } from '../resources'
+import { ResourceManager } from '../resources'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
 import type { TabsManager } from '../tabs'
+import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 const log = useLogScope('AI')
 

@@ -2,12 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { HistoryEntriesManager } from '@horizon/core/src/lib/service/history'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
-  import {
-    Resource,
-    ResourceAnnotation,
-    ResourceTag,
-    useResourceManager
-  } from '../../service/resources'
+  import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import {
     CreateAnnotationEventTrigger,
     CreateTabEventTrigger,
@@ -42,6 +37,7 @@
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
+  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let resource: Resource
   export let active: boolean = true

@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from '../config'
-import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
+import { ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
 
 import {
@@ -11,13 +11,7 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import {
-  appendURLPath,
-  getFormattedDate,
-  isDev,
-  useLocalStorageStore,
-  useLogScope
-} from '@horizon/utils'
+import { appendURLPath, isDev, useLocalStorageStore, useLogScope } from '@horizon/utils'
 import {
   FILENAME_CLEANUP_PROMPT,
   PAGE_PROMPTS_GENERATOR_PROMPT,
@@ -30,7 +24,7 @@ import {
   OPEN_AI_PATH_SUFFIX,
   type Model
 } from '@horizon/types/src/ai.types'
-import { convertChatOutputToNoteContent, handleQuotaDepletedError, parseAIError } from './helpers'
+import { handleQuotaDepletedError, parseAIError } from './helpers'
 import type { TabsManager } from '../tabs'
 import type { Telemetry } from '../telemetry'
 import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
@@ -39,12 +33,9 @@ import {
   EventContext,
   GeneratePromptsEventTrigger,
   PromptType,
-  ResourceTypes,
   SummarizeEventContentSource
 } from '@horizon/types'
-import { SmartNoteManager, type SmartNote } from './note'
-
-import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
+import { SmartNoteManager } from './note'
 import type { OasisService } from '../oasis'
 
 export class AIService {

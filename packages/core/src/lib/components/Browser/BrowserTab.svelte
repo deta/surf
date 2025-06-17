@@ -72,12 +72,7 @@
   } from '@horizon/types'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import type { WebviewEvents, WebviewNavigationEvent } from '../Webview/Webview.svelte'
-  import {
-    Resource,
-    ResourceAnnotation,
-    ResourceTag,
-    useResourceManager
-  } from '../../service/resources'
+  import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
@@ -89,6 +84,7 @@
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
+  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let tab: TabPage
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>

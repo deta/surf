@@ -1,7 +1,7 @@
 import { derived, writable } from 'svelte/store'
 import type { TabPage } from '../types/browser.types'
 import { SpaceEntryOrigin } from '../types'
-import { ResourceManager, ResourceTag } from './resources'
+import { ResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import type { OasisService, useOasis } from './oasis'
 import { onboardingSpace } from '../constants/examples'
@@ -9,6 +9,7 @@ import { useLogScope } from '@horizon/utils'
 import type { TabsManager } from './tabs'
 import { ONBOARDING_NOTES, type OnboardingNote } from '../constants/notes'
 import { ONBOARDING_CODEGEN } from '../constants/codegen'
+import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 const log = useLogScope('DemoItems')
 

@@ -12,9 +12,10 @@
   import { useLogScope } from '@horizon/utils'
   import { tick } from 'svelte'
   import ResourceType from '../Resources/ResourceType.svelte'
-  import { ResourceTag, type ResourceManager } from '../../service/resources'
+  import { type ResourceManager } from '../../service/resources'
   import type { BatchFetcher } from '@horizon/web-parser/src/importers/batcher'
   import { Icon } from '@horizon/icons'
+  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let resourceManager: ResourceManager
 

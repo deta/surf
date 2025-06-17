@@ -39,7 +39,6 @@
 
   import {
     Resource,
-    ResourceTag,
     createResourceManager,
     initResourceDebugger,
     toggleResourceDebugger
@@ -183,7 +182,6 @@
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
   import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
-  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
     migrateHomeContext,
     needsBrowsingContextSelection,
@@ -192,6 +190,7 @@
   } from '@horizon/core/src/lib/service/migration'
   import BrowsingContextSelector from './Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
   import { BuiltInSpaceId } from '../constants/spaces'
+  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -1524,8 +1523,8 @@
       const matchingResources = await resourceManager.getResourcesFromSourceURL(
         source.metadata.url,
         [
-          ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne'),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
+          SearchResourceTags.ResourceType(ResourceTypes.ANNOTATION, 'ne'),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne')
         ]
       )
 

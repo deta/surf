@@ -31,7 +31,6 @@
     SaveToOasisEventTrigger
   } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { ResourceTag } from '@horizon/core/src/lib/service/resources'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'
   import {
@@ -41,7 +40,6 @@
   } from '@horizon/core/src/lib/types'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
-  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import type {
     DragTypes,
     ResourceTagsBuiltIn,
@@ -51,6 +49,7 @@
   } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let resource: Resource | undefined = undefined
   export let tab: TabResource | undefined = undefined
@@ -734,10 +733,10 @@
       const type = codeLanguageToMimeType(language)
 
       const resources = await resourceManager.listResourcesByTags([
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(type),
-        ResourceManager.SearchTagContentHash(hash),
-        ResourceManager.SearchTagSavedWithAction('generated')
+        SearchResourceTags.Deleted(false),
+        SearchResourceTags.ResourceType(type),
+        SearchResourceTags.ContentHash(hash),
+        SearchResourceTags.SavedWithAction('generated')
       ])
 
       log.debug('Found resources by hash', resources)

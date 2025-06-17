@@ -2,7 +2,7 @@
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useOasis } from '../../../service/oasis'
-  import { ResourceManager, type ResourceObject } from '../../../service/resources'
+  import { type ResourceObject } from '../../../service/resources'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '@horizon/types'
   import { derived, get, writable } from 'svelte/store'
   import { isMac, useDebounce } from '@horizon/utils'
@@ -13,6 +13,7 @@
   import { fly } from 'svelte/transition'
   import { useConfig } from '../../../service/config'
   import Tooltip from '@horizon/core/src/lib/components/Atoms/Tooltip.svelte'
+  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   export let wasMouseInside = writable(false)
   export let canHover = false
@@ -73,10 +74,10 @@
     if (initialLoad) {
       resources = await resourceManager.listResourcesByTags(
         [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT)
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
+          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.SILENT)
         ],
         { includeAnnotations: false }
       )

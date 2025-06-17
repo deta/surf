@@ -31,9 +31,7 @@
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
     Resource,
-    ResourceManager,
     ResourcePost,
-    ResourceTag,
     type ResourceObject,
     type ResourceSearchResultItem,
     type SpaceSearchResultItem
@@ -113,6 +111,7 @@
   import SpaceFilterViewButtons from './SpaceFilterViewButtons.svelte'
   import OasisSpaceEmpty from './OasisSpaceEmpty.svelte'
   import { BuiltInSpaceId, isBuiltInSpaceId } from '../../constants/spaces'
+  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let spaceId: string
   export let active: boolean = false
@@ -390,8 +389,8 @@
     try {
       loadingContents.set(true)
 
-      const tags = ResourceManager.NonHiddenDefaultTags().concat([
-        ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+      const tags = SearchResourceTags.NonHiddenDefaultTags().concat([
+        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
       ])
 
       const resources = await resourceManager.listResourcesByTags(tags)
@@ -583,7 +582,7 @@
 
       oasisRenderableItems.set([])
       const items = await resourceManager.listAllResourcesAndSpaces(
-        ResourceManager.NonHiddenDefaultTags()
+        SearchResourceTags.NonHiddenDefaultTags()
       )
       if (items) {
         const renderableItems = await Promise.all(
@@ -617,7 +616,7 @@
   }
 
   const getInboxItems = async () => {
-    return await resourceManager.listResourcesByTags(ResourceManager.NonHiddenDefaultTags(), {
+    return await resourceManager.listResourcesByTags(SearchResourceTags.NonHiddenDefaultTags(), {
       excludeWithinSpaces: true
     })
   }
@@ -848,9 +847,9 @@
 
       const canonicalURL = item.link
       const existingResourceIds = await resourceManager.listResourceIDsByTags([
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagCanonicalURL(canonicalURL),
-        ResourceManager.SearchTagSpaceSource('rss')
+        SearchResourceTags.Deleted(false),
+        SearchResourceTags.CanonicalURL(canonicalURL),
+        SearchResourceTags.SpaceSource('rss')
       ])
 
       log.debug('Existing resources:', existingResourceIds)
@@ -1146,12 +1145,12 @@
       const result = await resourceManager.searchResources(
         value,
         [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ...hashtags.map((x) => ResourceManager.SearchTagHashtag(x)),
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
           ...conditionalArrayItem(isNotesSpace, [
-            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
           ])
         ],
         {
@@ -1440,8 +1439,8 @@
     const toast = toasts.loading('Deleting auto-saved resources…')
 
     const resources = await resourceManager.listResourceIDsByTags([
-      ResourceManager.SearchTagSilent(),
-      ResourceManager.SearchTagDeleted(false)
+      SearchResourceTags.Silent(),
+      SearchResourceTags.Deleted(false)
     ])
 
     log.debug('Deleting auto-saved resources:', resources)

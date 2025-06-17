@@ -1,34 +1,32 @@
 import { ResourceTypes, type SFFSResourceTag } from '@horizon/types'
-import { ResourceManager } from '../service/resources'
+import { SearchResourceTags } from '../utils/tags'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
 
 export const filterSpaceResourcesTags = (op: SFFSResourceTag['op']) => [
-  ResourceManager.SearchTagResourceType('application/vnd.space.', op)
+  SearchResourceTags.ResourceType('application/vnd.space.', op)
 ]
 
 export const filterDocumentTags = (op: SFFSResourceTag['op']) => [
-  ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT, op),
-  ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
+  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT, op),
+  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
 ]
 
 export const filterMediaTags = (op: SFFSResourceTag['op']) => [
-  ResourceManager.SearchTagResourceType('image/', op),
-  ResourceManager.SearchTagResourceType('video/', op),
-  ResourceManager.SearchTagResourceType('audio/', op)
+  SearchResourceTags.ResourceType('image/', op),
+  SearchResourceTags.ResourceType('video/', op),
+  SearchResourceTags.ResourceType('audio/', op)
 ]
 
 export const filterApplicationFileTags = (op: SFFSResourceTag['op']) => [
-  ResourceManager.SearchTagResourceType('application/', op)
+  SearchResourceTags.ResourceType('application/', op)
 ]
 
 export const filterOtherFileTags = (op: SFFSResourceTag['op']) => [
-  ResourceManager.SearchTagResourceType('text/', op),
-  ResourceManager.SearchTagResourceType('font/', op)
+  SearchResourceTags.ResourceType('text/', op),
+  SearchResourceTags.ResourceType('font/', op)
 ]
 
-export const filterGeneratedArtifactsTags = () => [
-  ResourceManager.SearchTagSavedWithAction('generated')
-]
+export const filterGeneratedArtifactsTags = () => [SearchResourceTags.SavedWithAction('generated')]
 
 export const RESOURCE_FILTERS: FilterItem[] = [
   {
@@ -48,7 +46,7 @@ export const RESOURCE_FILTERS: FilterItem[] = [
   {
     id: 'notes',
     label: 'Notes',
-    tags: [ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]
+    tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]
   },
   // {
   //   id: 'documents',
@@ -75,7 +73,8 @@ export const RESOURCE_FILTERS: FilterItem[] = [
 export const CONTEXT_FILTERS: FilterItem[] = [
   {
     id: 'contexts',
-    label: 'Contexts'
+    label: 'Contexts',
+    tags: []
   }
 ]
 

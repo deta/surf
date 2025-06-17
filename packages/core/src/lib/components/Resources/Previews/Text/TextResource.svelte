@@ -28,9 +28,8 @@
   } from '@horizon/editor'
   import '@horizon/editor/src/editor.scss'
 
-  import { Resource, ResourceTag, useResourceManager } from '../../../../service/resources'
+  import { Resource, useResourceManager } from '../../../../service/resources'
   import {
-    conditionalArrayItem,
     generateID,
     getFileKind,
     getFileType,
@@ -147,6 +146,7 @@
   import { EditorAIGeneration, NoteEditor } from '@horizon/core/src/lib/service/editor'
   import ChatInput from '../../../Notes/ChatInput.svelte'
   import NoteTitle from '../../../Notes/Atoms/NoteTitle.svelte'
+  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -1709,12 +1709,7 @@
     if (query.length > 0) {
       const result = await resourceManager.searchResources(
         query,
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
-        ],
+        [...SearchResourceTags.NonHiddenDefaultTags({ excludeAnnotations: false })],
         {
           semanticEnabled: $userSettings.use_semantic_search
         }

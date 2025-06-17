@@ -3,12 +3,12 @@
   import Button from '../../Atoms/Button.svelte'
   import { writable } from 'svelte/store'
   import type { ResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { ResourceTag } from '../../../service/resources'
   import { extractAndCreateWebResource } from '../../../service/mediaImporter'
   import { fly } from 'svelte/transition'
   import { quintOut } from 'svelte/easing'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { createEventDispatcher } from 'svelte'
+  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   interface OnboardingTab {
     title: string

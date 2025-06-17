@@ -11,11 +11,9 @@ import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './
 import {
   PageChatUpdateContextEventAction,
   PageChatUpdateContextEventTrigger,
-  PageChatUpdateContextItemType,
-  ResourceTagsBuiltInKeys,
-  ResourceTypes
+  PageChatUpdateContextItemType
 } from '@horizon/types'
-import { ResourceManager } from '../../resources'
+import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export type ActiveSpaceContextInclude = 'everything' | 'tabs' | 'resources'
 
@@ -156,13 +154,7 @@ export class ContextItemActiveSpaceContext extends ContextItemBase {
 
       if (this.include === 'everything' || this.include === 'resources') {
         const resourceIds = await this.service.resourceManager.listResourceIDsByTags(
-          [
-            ResourceManager.SearchTagDeleted(false),
-            ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-            ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
-          ],
+          [...SearchResourceTags.NonHiddenDefaultTags()],
           true
         )
         contentResources.push(...resourceIds)

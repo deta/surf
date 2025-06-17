@@ -38,7 +38,7 @@
   } from '../../types/browser.types'
   import { DragTypeNames, SpaceEntryOrigin, type DragTypes } from '../../types'
 
-  import { Resource, ResourceTag, useResourceManager } from '../../service/resources'
+  import { Resource, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
@@ -66,6 +66,7 @@
   import ModelPicker from './ModelPicker.svelte'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
   import NoteContextBubbles from '@horizon/core/src/lib/components/Notes/NoteContextBubbles.svelte'
+  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let chat: AIChat
   export let inputValue = ''

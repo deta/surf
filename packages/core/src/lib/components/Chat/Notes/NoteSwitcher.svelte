@@ -20,10 +20,10 @@
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { EventContext } from '@horizon/types'
+  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   export let selectedChatId: Writable<string> = writable('')
   export let open: Writable<boolean> = writable(false)
@@ -113,8 +113,8 @@
       searching.set(true)
 
       const results = await resourceManager.searchResources($searchValue, [
-        ResourceManager.SearchTagDeleted(false),
-        ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+        SearchResourceTags.Deleted(false),
+        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
       ])
 
       const resources = results.resources.map((r) => r.resource) as ResourceNote[]

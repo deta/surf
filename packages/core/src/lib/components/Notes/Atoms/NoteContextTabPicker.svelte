@@ -36,7 +36,7 @@
     useLogScope
   } from '@horizon/utils'
   import { OasisSpace, useOasis } from '../../../service/oasis'
-  import { ResourceManager, useResourceManager } from '@horizon/core/src/lib/service/resources'
+  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
   import { DynamicIcon, Icon } from '@horizon/icons'
@@ -59,6 +59,7 @@
   import { SelectDropdown } from '../../Atoms/SelectDropdown'
   import AppBarButton from '../../Browser/AppBarButton.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
+  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager
@@ -413,12 +414,7 @@
 
       const result = await resourceManager.searchResources(
         value,
-        [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING)
-        ],
+        [...SearchResourceTags.NonHiddenDefaultTags()],
         {
           semanticEnabled: $userConfigSettings.use_semantic_search
         }

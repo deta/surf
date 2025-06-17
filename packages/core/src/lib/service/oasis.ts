@@ -17,7 +17,6 @@ import {
   ChangeContextEventTrigger,
   CreateSpaceEventFrom,
   DeleteResourceEventTrigger,
-  ResourceTagsBuiltInKeys,
   ResourceTypes
 } from '@horizon/types'
 
@@ -33,7 +32,7 @@ import {
   type MoveResourceRequest
 } from '../types'
 
-import { ResourceManager, ResourceNote, type Resource } from './resources'
+import { type ResourceManager, ResourceNote, type Resource } from './resources'
 import type { Telemetry } from './telemetry'
 import type { TabsManager } from './tabs'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
@@ -49,6 +48,7 @@ import { ClipboardService } from './clipboard'
 import { checkBrowsingContextSelectionNeeded, migrateSpaceBrowsingContext } from './migration'
 import { BuiltInSpaces, BuiltInSpaceId } from '../constants/spaces'
 import { EventEmitterBase } from './events'
+import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void
@@ -1060,18 +1060,11 @@ export class OasisService extends EventEmitterBase<OasisEvents> {
       this.log.debug('loading everything', selectedFilterType, { excludeAnnotations })
       const resources = await this.resourceManager.listResourcesByTags(
         [
-          ResourceManager.SearchTagDeleted(false),
-          ResourceManager.SearchTagResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
-          ResourceManager.SearchTagNotExists(ResourceTagsBuiltInKeys.SILENT),
+          ...SearchResourceTags.NonHiddenDefaultTags({ excludeAnnotations: excludeAnnotations }),
           ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
           ...conditionalArrayItem(
-            excludeAnnotations,
-            ResourceManager.SearchTagResourceType(ResourceTypes.ANNOTATION, 'ne')
-          ),
-          ...conditionalArrayItem(
             get(this.selectedSpace) === 'notes',
-            ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
           )
         ],
         { includeAnnotations: true, excludeWithinSpaces: get(this.selectedSpace) === 'inbox' }

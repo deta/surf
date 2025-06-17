@@ -3,13 +3,14 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { useOasis } from '../../service/oasis'
   import { useTabsManager } from '../../service/tabs'
-  import { useResourceManager, ResourceManager } from '../../service/resources'
+  import { useResourceManager } from '../../service/resources'
   import { ResourceTypes } from '@horizon/types'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { selectedItemIds } from '../Oasis/utils/select'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useLogScope } from '@horizon/utils'
+  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   const dispatch = createEventDispatcher()
   const log = useLogScope('NotesView')
@@ -52,7 +53,7 @@
 
         // Get all notes that aren't in any space using the excludeWithinSpaces option
         const filteredResources = (await resourceManager.listResourcesByTags(
-          [ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)],
+          [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)],
           { excludeWithinSpaces: true }
         )) as ResourceNote[]
 

@@ -5,7 +5,7 @@ import {
   useLogScope
 } from '@horizon/utils'
 
-import { ResourceManager, ResourceNote, ResourceTag } from '../resources'
+import { type ResourceManager, ResourceNote } from '../resources'
 import type { AIChat, AIService } from './ai'
 import type { ContextManager } from './contextManager'
 import {
@@ -19,7 +19,6 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 import type { TabsManager } from '../tabs'
 import { CHAT_TITLE_GENERATOR_PROMPT } from '../../constants/prompts'
 import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
-import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 import type { Telemetry } from '../telemetry'
 import { generateContentHash } from './helpers'
 import { MentionItemType, type MentionItem } from '@horizon/editor'
@@ -32,6 +31,7 @@ import {
 import { tick } from 'svelte'
 import type { OasisService } from '../oasis'
 import { EventEmitterBase } from '../events'
+import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 export type SmartNotesEvents = {
   'open-sidebar': (id: string) => void
@@ -460,8 +460,8 @@ export class SmartNoteManager extends EventEmitterBase<SmartNotesEvents> {
 
   async loadNotes() {
     const resources = await this.resourceManager.listResourcesByTags([
-      ResourceManager.SearchTagDeleted(false),
-      ResourceManager.SearchTagResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+      SearchResourceTags.Deleted(false),
+      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
     ])
 
     this.log.debug('Fetched note resources', resources)

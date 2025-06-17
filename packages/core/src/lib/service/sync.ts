@@ -4,10 +4,12 @@ import PQueue from 'p-queue'
 import { useLocalStorageStore, useLogScope } from '@horizon/utils'
 import { ResourceTypes } from '@horizon/types'
 
-import { ResourceTag, type ResourceManager } from './resources'
+import { type ResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import { Toast, useToasts } from './toast'
 import { useConfig } from './config'
+
+import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 // If the sync gets called within that time it won't sync again
 const MAX_SYNC_INTERVAL = 1000 * 60 * 1 // 1 minute
