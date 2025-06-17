@@ -615,6 +615,17 @@ pub enum HistoryEntryType {
     ImportWaterfox,
     ImportSafari,
     ImportZen,
+    Unknown,
+}
+
+impl FromSql for HistoryEntryType {
+    fn column_result(value: rusqlite::types::ValueRef) -> rusqlite::types::FromSqlResult<Self> {
+        let s = String::column_result(value)?;
+        match HistoryEntryType::from_str(&s) {
+            Ok(entry_type) => Ok(entry_type),
+            Err(_) => Ok(HistoryEntryType::Unknown), // default to Unknown if parsing fails
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -23,15 +23,18 @@ impl Database {
         Ok(())
     }
 
-    pub fn create_history_entries_batch(&mut self, entries: &[HistoryEntry]) -> BackendResult<Vec<HistoryEntry>> {
+    pub fn create_history_entries_batch(
+        &mut self,
+        entries: &[HistoryEntry],
+    ) -> BackendResult<Vec<HistoryEntry>> {
         let tx = self.conn.transaction()?;
-        
+
         // let mut existing_urls = {
         //     // Build a comma-separated list of URLs to check
         //     let urls_to_check: Vec<_> = entries.iter()
         //         .filter_map(|entry| entry.url.as_ref())
         //         .collect();
-            
+
         //     if urls_to_check.is_empty() {
         //         std::collections::HashSet::new()
         //     } else {
@@ -40,31 +43,31 @@ impl Database {
         //             .map(|i| format!("?{}", i))
         //             .collect::<Vec<_>>()
         //             .join(",");
-                
+
         //         let query = format!(
         //             "SELECT DISTINCT url FROM history_entries WHERE url IN ({})",
         //             placeholders
         //         );
-                
+
         //         let mut stmt = tx.prepare(&query)?;
         //         let mut urls = std::collections::HashSet::new();
-                
+
         //         let rows = stmt.query_map(rusqlite::params_from_iter(urls_to_check), |row| {
         //             row.get::<_, String>(0)
         //         })?;
-                
+
         //         for url in rows {
         //             urls.insert(url?);
         //         }
-                
+
         //         urls
         //     }
         // };
-        
+
         let query = "
             INSERT INTO history_entries (id, entry_type, url, title, search_query, created_at, updated_at)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
-            
+
         let mut inserted_entries = Vec::new();
         for entry in entries {
             // // Skip if URL already exists
@@ -72,11 +75,11 @@ impl Database {
             //     if existing_urls.contains(url) {
             //         continue;
             //     }
-                
+
             //     // Add to existing_urls set to prevent duplicates within the batch
             //     existing_urls.insert(url.clone());
             // }
-            
+
             tx.execute(
                 query,
                 rusqlite::params![
@@ -92,7 +95,7 @@ impl Database {
 
             inserted_entries.push(entry.clone());
         }
-        
+
         tx.commit()?;
         Ok(inserted_entries)
     }
@@ -106,9 +109,7 @@ impl Database {
             .query_row(query, [id], |row| {
                 Ok(HistoryEntry {
                     id: row.get(0)?,
-                    // TODO: handle this better
-                    entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
-                        .unwrap(),
+                    entry_type: row.get(1)?,
                     url: row.get(2)?,
                     title: row.get(3)?,
                     search_query: row.get(4)?,
@@ -182,9 +183,7 @@ impl Database {
                 |row| {
                     Ok(HistoryEntry {
                         id: row.get(0)?,
-                        // TODO: handle this better
-                        entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
-                            .unwrap(),
+                        entry_type: row.get(1)?,
                         url: row.get(2)?,
                         title: row.get(3)?,
                         search_query: row.get(4)?,
@@ -205,9 +204,7 @@ impl Database {
             |row| {
                 Ok(HistoryEntry {
                     id: row.get(0)?,
-                    // TODO: handle this better
-                    entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str())
-                        .unwrap(),
+                    entry_type: row.get(1)?,
                     url: row.get(2)?,
                     title: row.get(3)?,
                     search_query: row.get(4)?,
@@ -306,8 +303,7 @@ impl Database {
         let history_entry_iter = stmt.query_map([], |row| {
             Ok(HistoryEntry {
                 id: row.get(0)?,
-                // TODO: handle this better
-                entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str()).unwrap(),
+                entry_type: row.get(1)?,
                 url: row.get(2)?,
                 title: row.get(3)?,
                 search_query: row.get(4)?,
