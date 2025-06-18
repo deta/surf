@@ -369,5 +369,5 @@ window.launchTimeline = (timelineName: string, stepIndex?: number) => {
 }
 
 window.resetOnboarding = () => {
-  ConfigService.self.updateSettings({ has_seen_hero_screen: false })
+  ConfigService.self.updateSettings({ has_seen_hero_screen: false, skipped_hero_screen: false })
 }

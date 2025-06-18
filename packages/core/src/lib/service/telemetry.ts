@@ -81,6 +81,8 @@ interface UserProperties {
   default_browser?: boolean
   extensions_enabled?: boolean
   notes_sidebar_enabled?: boolean
+
+  onboarding?: 'none' | 'completed' | 'skipped'
 }
 
 // TODO: how much does telemetry hurt performance?
@@ -218,7 +220,13 @@ export class Telemetry {
         userSettings?.tabs_orientation ?? this.userConfig?.settings.tabs_orientation,
       default_browser: this.userConfig?.defaultBrowser,
       extensions_enabled: userSettings?.extensions ?? false,
-      notes_sidebar_enabled: userSettings?.experimental_notes_chat_sidebar ?? false
+      notes_sidebar_enabled: userSettings?.experimental_notes_chat_sidebar ?? false,
+
+      onboarding: userSettings?.skipped_hero_screen
+        ? 'skipped'
+        : userSettings?.has_seen_hero_screen
+          ? 'completed'
+          : 'none'
     }
 
     if (!this.isActive()) {

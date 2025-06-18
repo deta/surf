@@ -94,6 +94,7 @@ export const getUserConfig = (path?: string) => {
       adblockerEnabled: true,
       historySwipeGesture: false,
       has_seen_hero_screen: false,
+      skipped_hero_screen: false,
       annotations_sidebar: false,
       cleanup_filenames: false,
       save_to_active_context: true,
@@ -203,6 +204,10 @@ export const getUserConfig = (path?: string) => {
   }
   if (storedConfig.settings.has_seen_hero_screen === undefined) {
     storedConfig.settings.has_seen_hero_screen = false
+    changedConfig = true
+  }
+  if (storedConfig.settings.skipped_hero_screen === undefined) {
+    storedConfig.settings.skipped_hero_screen = false
     changedConfig = true
   }
 

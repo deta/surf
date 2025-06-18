@@ -22,6 +22,7 @@ export type UserSettings = {
   adblockerEnabled: boolean
   historySwipeGesture: boolean
   has_seen_hero_screen: boolean
+  skipped_hero_screen: boolean
 
   // Experiments
   annotations_sidebar: boolean

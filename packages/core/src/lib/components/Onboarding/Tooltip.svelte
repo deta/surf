@@ -405,7 +405,7 @@
 
   const handleReloadWelcomePage = () => {
     // This marks the onboarding as completed
-    config.updateSettings({ has_seen_hero_screen: true })
+    config.updateSettings({ has_seen_hero_screen: true, skipped_hero_screen: false })
 
     dispatch('reload-welcome-page')
   }
@@ -646,7 +646,7 @@
 
   const handleReturnToWelcomePage = (params: Record<string, any> = {}) => {
     // This marks the onboarding as completed
-    config.updateSettings({ has_seen_hero_screen: true })
+    config.updateSettings({ has_seen_hero_screen: true, skipped_hero_screen: false })
 
     // Find existing onboarding tab
     const existingOnboardingTab = tabsManager.tabsValue.find((tab) => tab.type === 'onboarding')
@@ -852,7 +852,7 @@
   }
 
   const handleExitOnboarding = () => {
-    config.updateSettings({ has_seen_hero_screen: true })
+    config.updateSettings({ has_seen_hero_screen: true, skipped_hero_screen: true })
 
     dispatch('toggle-sidebar', true)
     endTimeline()
@@ -944,7 +944,7 @@
       <button
         class="debug-reset-button"
         on:click={() => {
-          config.updateSettings({ has_seen_hero_screen: false })
+          config.updateSettings({ has_seen_hero_screen: false, skipped_hero_screen: false })
           console.log('Hero screen setting reset - will show on next app launch')
         }}
       >
