@@ -1661,12 +1661,10 @@
     log.debug('Slash command', item)
 
     if (item.id === 'autocomplete') {
-      // Prevent starting a new generation if one is already running
       if (checkIfAlreadyRunning('slash autocomplete')) return
 
       editorElem.triggerAutocomplete()
     } else if (item.id === 'suggestions') {
-      // Prevent starting a new generation if one is already running
       if (checkIfAlreadyRunning('slash suggestions')) return
 
       generatePrompts()
@@ -1694,11 +1692,29 @@
   const slashItemsFetcher: SlashItemsFetcher = async ({ query }) => {
     log.debug('fetching slash items', query)
 
-    if (!query) {
-      return BUILT_IN_SLASH_COMMANDS
+    let displayAutocomplete = false
+    {
+      const { state } = editorElem.getEditor()
+      const { selection } = state
+      const { $from } = selection
+
+      const node = $from.node()
+      if (node && node.isTextblock) {
+        displayAutocomplete = node.textContent.replaceAll('/', '').length > 0
+      }
     }
 
-    const filteredActions = BUILT_IN_SLASH_COMMANDS.filter(
+    if (!query) {
+      return BUILT_IN_SLASH_COMMANDS.filter((e) => {
+        if (e.id !== 'autocomplete') return true
+        else return displayAutocomplete
+      })
+    }
+
+    const filteredActions = BUILT_IN_SLASH_COMMANDS.filter((e) => {
+      if (e.id !== 'autocomplete') return true
+      else return displayAutocomplete
+    }).filter(
       (item) =>
         item.title.toLowerCase().includes(query.toLowerCase()) ||
         item.keywords.some((keyword) => keyword.includes(query.toLowerCase()))

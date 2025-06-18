@@ -305,7 +305,11 @@
         {/if}-->
         <Tooltip side="left">
           <AppBarButton class="-mr-1.5" on:click={handleSubmit} muted={false}>
-            <Icon name={$isGeneratingAI ? 'spinner' : 'cursor'} size="1.15rem" />
+            {#if $isGeneratingAI}
+              <Icon name="spinner" size="1.15rem" />
+            {:else}
+              <Icon name="cursor" fill="#FF6426" size="1.15rem" />
+            {/if}
           </AppBarButton>
           <svelte:fragment slot="content"
             >{$isGeneratingAI ? 'Stop completion' : `Send Message`}

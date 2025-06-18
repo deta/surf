@@ -154,7 +154,7 @@
         aria-hidden="true"
       >
         <div class="cursor-container">
-          <div class="cursor"><Icon name="cursor" size={position.height} /></div>
+          <div class="cursor"><Icon name="cursor" fill="#FF6426" size={position.height} /></div>
 
           <div bind:this={pillElement} class="pill" class:visible={isHovering}>
             <span>Ask Surf {isMac() ? '⌘' : 'ctrl'} ↵</span>

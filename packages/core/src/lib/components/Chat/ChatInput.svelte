@@ -93,7 +93,7 @@
         {#if loading && !$optToggled}
           <Icon name="spinner" />
         {:else}
-          <Icon name="cursor" />
+          <Icon name="cursor" fill="#FF6426" />
         {/if}
       </AppBarButton>
       <svelte:fragment slot="content">Send message ⏎</svelte:fragment>
@@ -111,7 +111,7 @@
       {#if loading && !$optToggled}
         <Icon name="spinner" />
       {:else}
-        <Icon name="cursor" />
+        <Icon name="cursor" fill="#FF6426" />
       {/if}
     </button>-->
   </div>

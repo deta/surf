@@ -3,11 +3,11 @@ import type { SlashMenuItem } from './types'
 export const BUILT_IN_SLASH_COMMANDS = [
   {
     id: 'autocomplete',
-    icon: 'edit',
-    title: 'Continue writing...',
+    icon: 'cursor',
+    title: 'Ask Surf...',
     section: 'Smart Note',
-    keywords: ['ai', 'surf', '@', 'smart'],
-    tagline: `${import.meta.env.PLATFORM === 'darwin' ? '⌥' : 'alt'} + ↵`
+    keywords: ['ai', 'surf', '@', 'smart', 'ask'],
+    tagline: `${import.meta.env.PLATFORM === 'darwin' ? '⌘' : 'ctrl'} + ↵`
   },
   {
     id: 'suggestions',

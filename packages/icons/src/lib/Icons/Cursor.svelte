@@ -1,7 +1,7 @@
 <svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 24 21"
-  fill="#FF6426"
+  fill="currentColor"
   {...$$restProps}
   style="display: flex; align-items: center; justify-content: center; margin: 0 auto;"
 >
