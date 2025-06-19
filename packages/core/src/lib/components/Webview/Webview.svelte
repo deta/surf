@@ -589,7 +589,7 @@
   bind:this={webview}
   {src}
   {partition}
-  webpreferences="autoplayPolicy=document-user-activation-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true"
+  webpreferences="autoplayPolicy=document-user-activation-required,defaultFontSize=16,contextIsolation=true,nodeIntegration=false,sandbox=true,webSecurity=true,scrollBounce=true"
   allowpopups
   use:HTMLDragZone.action={{
     accepts: (drag) => {
