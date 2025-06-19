@@ -105,7 +105,7 @@
   })
 </script>
 
-<div class="fullscreen" bind:this={heroElement} out:fade={{ duration: 1800 }}>
+<div class="fullscreen drag" bind:this={heroElement} out:fade={{ duration: 1800 }}>
   {#if visible}
     <div class="text-container" in:fade={{ duration: 1000 }}>
       <h1 in:fly={{ y: 500, duration: 3800, delay: 500 }}>

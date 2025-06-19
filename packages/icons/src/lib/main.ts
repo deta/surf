@@ -93,6 +93,7 @@ import Language from './Icons/Language.svelte'
 import Circle from './Icons/Circle.svelte'
 import CircleDot from './Icons/CircleDot.svelte'
 import CircleCheck from './Icons/CircleCheck.svelte'
+import CircleCheckFilled from './Icons/CircleCheckFilled.svelte'
 import MessageForward from './Icons/MessageForward.svelte'
 import Grammar from './Icons/Grammar.svelte'
 import CursorArrowRays from './Icons/CursorArrowRays.svelte'
@@ -232,6 +233,7 @@ export const icons = {
   circle: Circle,
   'circle-dot': CircleDot,
   'circle.check': CircleCheck,
+  'circle.check.fill': CircleCheckFilled,
   'message-forward': MessageForward,
   grammar: Grammar,
   'cursor-arrow-rays': CursorArrowRays,
@@ -410,5 +412,6 @@ export {
   Opera,
   Vivaldi,
   ZenBrowser,
-  TorBrowser
+  TorBrowser,
+  CircleCheckFilled
 }

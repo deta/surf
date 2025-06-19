@@ -3787,11 +3787,13 @@
     }
   }
 
-  const handleOpenInlineNoteInSidebar = async (e: CustomEvent<{ note: SmartNote }>) => {
+  const handleOpenInlineNoteInSidebar = async (
+    e: CustomEvent<{ note: SmartNote; force: boolean }>
+  ) => {
     const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
     log.debug('existing chat', $activeSidebarChat, messagesLength)
 
-    if (messagesLength > 0) {
+    if (messagesLength > 0 && !e.detail.force) {
       const { closeType: confirmed } = await openDialog({
         title: 'Move Chat',
         message:
@@ -3822,11 +3824,13 @@
     await openChatSidebar(false)
   }
 
-  const handleOpenInlineChatInSidebar = async (e: CustomEvent<{ chat: AIChat }>) => {
+  const handleOpenInlineChatInSidebar = async (
+    e: CustomEvent<{ chat: AIChat; force: boolean }>
+  ) => {
     const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
     log.debug('existing chat', $activeSidebarChat, messagesLength)
 
-    if (messagesLength > 0) {
+    if (messagesLength > 0 && !e.detail.force) {
       const { closeType: confirmed } = await openDialog({
         title: 'Move Chat',
         message:
@@ -5620,9 +5624,8 @@
   /* Base styling for the tooltip target */
   :global(.tooltip-target[data-tooltip-target]) {
     position: relative;
-    background: rgb(255 140 126);
+    background: rgba(255 140 126 / 0.2);
     border-color: rgb(255 106 91);
-    color: white;
     border-radius: 16px;
     isolation: isolate; /* Create a new stacking context */
   }

@@ -27,7 +27,7 @@
   import {
     useOnboardingService,
     OnboardingLoadingState,
-    visionViewState
+    onboardingTabViewState
   } from '@horizon/core/src/lib/service/onboarding'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
@@ -151,6 +151,18 @@
   let wasGeneratingAI = false
   let previousStepIndex: number | null = null
 
+  // Track if we're using smart positioning
+  let usingSmartPositioning = false
+  let smartPositionStyle = ''
+
+  // Positioning strategy interface
+  interface PositionStrategy {
+    useReferenceElements: boolean
+    referenceElements?: string[]
+    fallbackToAnchor: boolean
+    fallbackToStandard: boolean
+  }
+
   // Function to update body classes based on current step
   function updateBodyClasses(step: any | null, isActive: boolean) {
     // Remove any existing onboarding classes
@@ -232,81 +244,237 @@
     wasGeneratingAI = $isGeneratingAI
   }
 
-  // Track if we're using alternative positioning due to collision
-  let usingAlternativePosition = false
-
-  // Check for collisions with safe area elements
-  function checkSafeAreaCollision(step: any, tooltipElement: HTMLElement): boolean {
-    // If no safe area defined or tooltip element not available, return false (no collision)
-    if (!step.safeArea || !tooltipElement) return false
-
-    // Get tooltip bounding box
-    const tooltipRect = tooltipElement.getBoundingClientRect()
-
-    // Check each safe area element for collision
-    for (const safeAreaSelector of step.safeArea) {
-      const safeAreaElements = document.querySelectorAll(
-        `[data-tooltip-safearea="${safeAreaSelector}"]`
-      )
-
-      for (const safeAreaElement of safeAreaElements) {
-        const safeAreaRect = safeAreaElement.getBoundingClientRect()
-
-        // Check for intersection between tooltip and safe area
-        if (
-          tooltipRect.left < safeAreaRect.right &&
-          tooltipRect.right > safeAreaRect.left &&
-          tooltipRect.top < safeAreaRect.bottom &&
-          tooltipRect.bottom > safeAreaRect.top
-        ) {
-          // Collision detected
-          return true
-        }
-      }
-    }
-
-    // No collision detected
-    return false
-  }
-
-  // Function to update positioning after DOM update
-  function updatePositioningAfterRender() {
+  // Single, clear positioning function
+  function updateTooltipPosition() {
     if (!$currentStep || !tooltip) return
 
-    // Check for collision with safe area
-    if ($currentStep.safeArea && $currentStep.alternativePosition) {
-      // First check with primary position
-      usingAlternativePosition = false
-      tooltip.setAttribute('style', getPositioningStyle($currentStep))
+    const strategy = determinePositionStrategy($currentStep)
 
-      // After a brief delay to allow positioning to apply
-      setTimeout(() => {
-        const hasCollision = checkSafeAreaCollision($currentStep, tooltip)
-
-        if (hasCollision && $currentStep.alternativePosition) {
-          // Use alternative position
-          usingAlternativePosition = true
-          tooltip.setAttribute('style', getPositioningStyle($currentStep))
-        }
-      }, 10)
+    if (strategy.useReferenceElements) {
+      applyReferenceBasedPositioning(strategy.referenceElements!)
+    } else if (strategy.fallbackToAnchor && $currentStep.domAnchor) {
+      applyAnchorBasedPositioning()
+    } else {
+      applyStandardPositioning()
     }
+  }
+
+  function determinePositionStrategy(step: any): PositionStrategy {
+    return {
+      useReferenceElements: !!(step.referenceElements?.length || step.safeArea?.length), // backward compatibility
+      referenceElements: step.referenceElements || step.safeArea, // backward compatibility
+      fallbackToAnchor: !!step.domAnchor,
+      fallbackToStandard: true
+    }
+  }
+
+  function applyReferenceBasedPositioning(referenceSelectors: string[]) {
+    const referenceElement = findFirstReferenceElement(referenceSelectors)
+
+    if (!referenceElement) {
+      applyAnchorBasedPositioning()
+      return
+    }
+
+    // Get initial dimensions
+    tooltip.setAttribute('style', buildStandardPositionStyle($currentStep))
+
+    // Calculate smart position after DOM update
+    setTimeout(() => {
+      const position = calculateOptimalPosition(tooltip, referenceElement)
+
+      smartPositionStyle = buildPositionStyle({
+        left: position.left,
+        top: position.top,
+        transform: position.transform,
+        zIndex: $currentStep.zIndex || 123456
+      })
+
+      usingSmartPositioning = true
+      tooltip.setAttribute('style', smartPositionStyle)
+    }, 10)
+  }
+
+  function applyAnchorBasedPositioning() {
+    usingSmartPositioning = false
+    tooltip.setAttribute('style', buildAnchorPositionStyle($currentStep))
+  }
+
+  function applyStandardPositioning() {
+    usingSmartPositioning = false
+    tooltip.setAttribute('style', buildStandardPositionStyle($currentStep))
+  }
+
+  function findFirstReferenceElement(selectors: string[]): Element | null {
+    for (const selector of selectors) {
+      // Support both new and legacy attribute names
+      const newElements = document.querySelectorAll(`[data-tooltip-reference="${selector}"]`)
+      const legacyElements = document.querySelectorAll(`[data-tooltip-safearea="${selector}"]`)
+
+      if (newElements.length > 0) {
+        return newElements[0]
+      } else if (legacyElements.length > 0) {
+        return legacyElements[0]
+      }
+    }
+    return null
+  }
+
+  function calculateOptimalPosition(tooltipEl: HTMLElement, referenceEl: Element) {
+    const tooltipRect = tooltipEl.getBoundingClientRect()
+    const refRect = referenceEl.getBoundingClientRect()
+    const viewport = { width: window.innerWidth, height: window.innerHeight }
+
+    const candidatePositions = generatePositionCandidates(tooltipRect, refRect)
+    const scoredPositions = scorePositions(candidatePositions, viewport, tooltipRect)
+    const bestPosition = scoredPositions[0]
+
+    return clampToViewport(bestPosition, tooltipRect, viewport)
+  }
+
+  function generatePositionCandidates(tooltipRect: DOMRect, refRect: DOMRect) {
+    const spacing = 12
+
+    return [
+      // Primary positions
+      {
+        name: 'right',
+        left: refRect.right + spacing,
+        top: refRect.top + (refRect.height - tooltipRect.height) / 2
+      },
+      {
+        name: 'left',
+        left: refRect.left - tooltipRect.width - spacing,
+        top: refRect.top + (refRect.height - tooltipRect.height) / 2
+      },
+      {
+        name: 'bottom',
+        left: refRect.left + (refRect.width - tooltipRect.width) / 2,
+        top: refRect.bottom + spacing
+      },
+      {
+        name: 'top',
+        left: refRect.left + (refRect.width - tooltipRect.width) / 2,
+        top: refRect.top - tooltipRect.height - spacing
+      },
+
+      // Corner positions (lower priority)
+      {
+        name: 'top-right',
+        left: refRect.right + spacing,
+        top: refRect.top - tooltipRect.height - spacing
+      },
+      {
+        name: 'top-left',
+        left: refRect.left - tooltipRect.width - spacing,
+        top: refRect.top - tooltipRect.height - spacing
+      },
+      { name: 'bottom-right', left: refRect.right + spacing, top: refRect.bottom + spacing },
+      {
+        name: 'bottom-left',
+        left: refRect.left - tooltipRect.width - spacing,
+        top: refRect.bottom + spacing
+      }
+    ]
+  }
+
+  function scorePositions(
+    positions: any[],
+    viewport: { width: number; height: number },
+    tooltipRect: DOMRect
+  ) {
+    return positions
+      .map((pos) => ({
+        ...pos,
+        score: calculatePositionScore(pos, viewport, tooltipRect)
+      }))
+      .sort((a, b) => b.score - a.score)
+  }
+
+  function calculatePositionScore(
+    pos: any,
+    viewport: { width: number; height: number },
+    tooltipRect: DOMRect
+  ) {
+    const margin = 20
+    let score = 0
+
+    // Heavily favor positions that stay in viewport
+    const inViewport =
+      pos.left >= margin &&
+      pos.top >= margin &&
+      pos.left + tooltipRect.width <= viewport.width - margin &&
+      pos.top + tooltipRect.height <= viewport.height - margin
+
+    if (inViewport) score += 100
+
+    // Prefer primary directions over corners
+    if (['right', 'left', 'bottom', 'top'].includes(pos.name)) score += 20
+
+    // Penalize off-screen positioning
+    if (pos.left < margin) score -= (margin - pos.left) * 3
+    if (pos.top < margin) score -= (margin - pos.top) * 3
+    if (pos.left + tooltipRect.width > viewport.width - margin)
+      score -= (pos.left + tooltipRect.width - (viewport.width - margin)) * 3
+    if (pos.top + tooltipRect.height > viewport.height - margin)
+      score -= (pos.top + tooltipRect.height - (viewport.height - margin)) * 3
+
+    return score
+  }
+
+  function clampToViewport(
+    position: any,
+    tooltipRect: DOMRect,
+    viewport: { width: number; height: number }
+  ) {
+    const margin = 20
+
+    return {
+      left: Math.max(margin, Math.min(position.left, viewport.width - tooltipRect.width - margin)),
+      top: Math.max(margin, Math.min(position.top, viewport.height - tooltipRect.height - margin)),
+      transform: ''
+    }
+  }
+
+  function buildPositionStyle(coords: {
+    left: number
+    top: number
+    transform: string
+    zIndex: number
+  }) {
+    return `
+      position: absolute;
+      left: ${coords.left}px;
+      top: ${coords.top}px;
+      ${coords.transform ? `transform: ${coords.transform};` : ''}
+      z-index: ${coords.zIndex};
+      display: ${$currentStep?.domRoot === rootID ? 'block' : 'none'};
+      max-width: var(--tooltip-max-width);
+      max-height: var(--tooltip-max-height);
+      overflow: auto;
+    `
+  }
+
+  function buildAnchorPositionStyle(step: any) {
+    return getPositioningStyle(step)
+  }
+
+  function buildStandardPositionStyle(step: any) {
+    return getPositioningStyle(step)
   }
 
   // Update positioning when step changes
   $: if ($currentStep) {
     // Use setTimeout to ensure DOM is updated
-    setTimeout(updatePositioningAfterRender, 50)
+    setTimeout(updateTooltipPosition, 50)
   }
 
   // Get positioning CSS based on the step configuration
   $: positioningStyle = $currentStep ? getPositioningStyle($currentStep) : ''
 
   function getPositioningStyle(step: any) {
-    // Determine which position to use (primary or alternative)
-    const position =
-      usingAlternativePosition && step.alternativePosition
-        ? step.alternativePosition
-        : step.position
+    // Use primary position only - dynamic positioning handles collisions
+    const position = step.position
 
     if (step.domAnchor) {
       // Use CSS anchor positioning with viewport boundary constraints
@@ -566,8 +734,11 @@
 
     const url = params.url
     const question = params.question
+    const active = params.active
 
-    onboardingService.openURLAndChat(url, question)
+    onboardingService.openURLAndChat(url, question, active)
+
+    onboardingTabViewState.set('chat-with-tab')
   }
 
   const handleInsertQuestion = (params: Record<string, any> = {}) => {
@@ -581,7 +752,7 @@
   }
 
   const handleHideVision = () => {
-    visionViewState.set('empty')
+    onboardingTabViewState.set('empty')
     dispatch('hide-vision')
   }
 
@@ -702,16 +873,19 @@
       detail: {
         id: matchingSpace?.id,
         label: mention,
-        type: MentionItemType.CONTEXT, // Use the proper enum value
+        type: MentionItemType.CONTEXT,
         icon: 'sparkles',
         query: query,
-        // Add additional properties that context items typically have
         aliases: ['onboarding', 'tutorial', 'help'],
         suggestionLabel: mention
       },
       bubbles: true,
       composed: true
     })
+
+    if (onboardingService.aiService?.contextManager) {
+      onboardingService.aiService.contextManager.clear(PageChatUpdateContextEventTrigger.Onboarding)
+    }
 
     try {
       document.dispatchEvent(mentionEvent)
@@ -977,7 +1151,7 @@
   </div>
 {/if}
 
-{#if $currentStep}
+{#if $currentStep && $activeOnboardingTabId && $currentActiveTabId === $activeOnboardingTabId}
   {#if !$currentStep.invisible}
     <div
       bind:this={tooltip}
@@ -1240,7 +1414,7 @@
 
   .return-to-onboarding {
     position: fixed;
-    top: 4rem;
+    bottom: 4rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 999999;

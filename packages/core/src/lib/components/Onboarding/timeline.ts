@@ -27,7 +27,7 @@ Object.values(scripts).forEach((script) => {
 })
 
 // Store for the active timeline
-const activeTimeline = writable<OnboardingFeature | null>(null)
+export const activeTimeline = writable<OnboardingFeature | null>(null)
 
 export const hasActiveTimeline = derived(
   activeTimeline,

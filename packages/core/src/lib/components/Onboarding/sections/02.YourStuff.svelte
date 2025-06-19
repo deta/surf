@@ -9,11 +9,11 @@
   const dispatch = createEventDispatcher<{
     tryStuff: void
     launchTimeline: OnboardingFeature
+    'open-stuff': void
   }>()
 
   const handleTryStuff = () => {
-    dispatch('launchTimeline', OnboardingFeature.StuffOnboarding)
-    dispatch('tryStuff')
+    dispatch('open-stuff')
   }
 
   $: shortcutKeys = [isMac() ? 'cmd' : 'ctrl', 'shift', 'O']

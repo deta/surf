@@ -525,7 +525,7 @@ export class ContextManager {
   async addTabs(tabs: string[], trigger?: PageChatUpdateContextEventTrigger) {
     const currentContextLength = this.itemsValue.length
 
-    await Promise.all(
+    const addedItems = await Promise.all(
       tabs.map((tabId) => {
         return this.addTab(tabId)
       })
@@ -541,7 +541,7 @@ export class ContextManager {
       )
     }
 
-    return
+    return addedItems.length > 0 ? addedItems[0] : undefined
   }
 
   async addScreenshot(screenshot: Blob, opts?: AddContextItemOptions) {

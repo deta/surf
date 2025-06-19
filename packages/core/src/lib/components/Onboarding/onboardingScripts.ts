@@ -93,8 +93,8 @@ export interface TooltipStep {
     /** Optional Y-axis offset in pixels */
     offsetY?: number
   }
-  /** Optional array of DOM selectors with data-tooltip-safearea attributes to avoid collisions */
-  safeArea?: string[]
+  /** Optional array of DOM selectors with data-tooltip-reference attributes to avoid collisions */
+  referenceElements?: string[]
   /** Alternative positioning to use when tooltip collides with safe area elements */
   alternativePosition?: {
     /** Vertical alignment (top/bottom/center) */
@@ -700,6 +700,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
       headline: 'Open in Sidebar',
       content: '',
       domTarget: 'open-in-sidebar-button',
+      domAnchor: 'open-in-sidebar-button',
       domRoot: 'body',
       position: {
         vertical: 'top',
@@ -707,13 +708,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
         offsetX: 20,
         offsetY: 20
       },
-      safeArea: ['message-box'],
-      alternativePosition: {
-        vertical: 'top',
-        horizontal: 'left',
-        offsetX: 20,
-        offsetY: 20
-      },
+      referenceElements: ['message-box'],
       nextButtonLabel: 'Jump to Next Step',
       completionEvent: {
         eventId: CompletionEventID.OpenVisionNoteInSidebar,
@@ -767,6 +762,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
         {
           action: OnboardingAction.OpenURL,
           params: {
+            active: false,
             url: 'https://productidentity.co/p/surf-the-browser',
             question: 'What is the role of AI in Surf?'
           }
@@ -779,21 +775,17 @@ export const appOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#notes.onboarding.6',
       headline: 'Article Analysis',
+      invisible: true,
       content: 'Surf is preparing the article for the chat, this usually just takes a few seconds.',
       domTarget: '',
       domRoot: 'body',
-      domAnchor: 'sidebar-right',
+      domAnchor: '',
       position: {
         vertical: 'bottom',
-        horizontal: 'left',
-        offsetX: -440,
-        offsetY: -440
+        horizontal: 'center',
+        offsetX: 0,
+        offsetY: -40
       },
-      initialActions: [
-        {
-          action: OnboardingAction.TrackOnboardingTab
-        }
-      ],
       completionEvent: {
         eventId: CompletionEventID.ArticleAddedToContext,
         message: ''
@@ -805,8 +797,9 @@ export const appOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#app.onboarding.sendmessage',
       headline: 'Send Message',
-      content: 'Hit ↵ or click the submit button to send your question',
-      domTarget: '',
+      content: 'Hit ↵ or click the submit button to send your question.',
+      domTarget: 'chat-input',
+      invisible: true,
       domAnchor: 'sidebar-right',
       domRoot: 'body',
       position: {
@@ -828,11 +821,13 @@ export const appOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#app.onboarding.generateanswer',
       headline: 'Generating Answer',
+      invisible: true,
       content:
         'Surf is now using the article as context to answer your question. Watch the response come in...',
       domTarget: '',
       domAnchor: 'sidebar-right',
       domRoot: 'body',
+      minimized: true,
       position: {
         vertical: 'top',
         horizontal: 'left',
@@ -852,84 +847,46 @@ export const appOnboardingTimeline: OnboardingTimeline = {
       domTarget: 'chat-citation',
       domAnchor: 'sidebar-right',
       domRoot: 'body',
+      actions: [{ action: OnboardingAction.OpenNoteAsTab }],
       position: {
-        vertical: 'top',
+        vertical: 'bottom',
         horizontal: 'left',
         offsetX: -440,
         offsetY: 650
       },
       mediaID: 'citations',
       mediaType: 'image',
-      nextButtonLabel: 'Next',
+      nextButtonLabel: 'Open Note as Tab',
       zIndex: 1000
     },
     // {
-    //   target: '#notes.onboarding.10',
-    //   headline: 'Create a Surflet',
-    //   content:
-    //     "Surflets are AI-generated mini-apps that can help you accomplish specific tasks or visualize information. Let's create one now to see how they work. Note: Surflets work best with the latest Claude Sonnet AI models.",
-    //   domTarget: 'chat-input',
-    //   domRoot: 'body',
+    //   target: '#app.onboarding.open-note-as-tab',
+    //   headline: 'Open as Tab',
+    //   content: '',
+    //   domTarget: 'open-note-as-tab',
     //   domAnchor: 'sidebar-right',
+    //   domRoot: 'body',
     //   position: {
     //     vertical: 'top',
     //     horizontal: 'left',
     //     offsetX: -440,
-    //     offsetY: 100
+    //     offsetY: 650
     //   },
-    //   nextButtonLabel: 'Create Surflet',
-    //   prevButtonLabel: 'Back',
-    //   actions: [{ action: OnboardingAction.CreateSurflet }],
-    //   mediaID: 'create.surflet',
-    //   mediaType: 'image',
+    //   actions: [{ action: OnboardingAction.OpenNoteAsTab }],
+    //   completionEvent: {
+    //     eventId: CompletionEventID.OpenNoteAsTab,
+    //     message: '↗ Click “Open as Tab” (inside the dot menu) to launch your note as a tab.'
+    //   },
+    //   actionCanSkipCompletionEvent: true,
+    //   nextButtonLabel: 'Open the Note as a Tab',
     //   zIndex: 1000
     // },
-    // {
-    //   target: '#notes.onboarding.11',
-    //   headline: 'Generating Surflet',
-    //   content:
-    //     'Your Surflet is being generated right now! Surf is analyzing your content and creating a custom mini-app to help you understand it better. This may take a moment.',
-    //   domTarget: 'chat-input',
-    //   domRoot: 'body',
-    //   domAnchor: 'sidebar-right',
-    //   position: {
-    //     vertical: 'top',
-    //     horizontal: 'left',
-    //     offsetX: -440,
-    //     offsetY: 100
-    //   },
-    //   nextButtonLabel: 'Continue',
-    //   prevButtonLabel: 'Back',
-    //   zIndex: 1000
-    // },
-    {
-      target: '#app.onboarding.open-note-as-tab',
-      headline: 'Open as Tab',
-      content: '',
-      domTarget: 'open-note-as-tab',
-      domAnchor: 'sidebar-right',
-      domRoot: 'body',
-      position: {
-        vertical: 'top',
-        horizontal: 'left',
-        offsetX: -440,
-        offsetY: 650
-      },
-      actions: [{ action: OnboardingAction.OpenNoteAsTab }],
-      completionEvent: {
-        eventId: CompletionEventID.OpenNoteAsTab,
-        message: '↗ Click “Open as Tab” (inside the dot menu) to launch your note as a tab.'
-      },
-      actionCanSkipCompletionEvent: true,
-      nextButtonLabel: 'Open the Note as a Tab',
-      zIndex: 1000
-    },
     {
       target: '#notes.onboarding.11',
       headline: 'How does it work?',
       content:
         'You can type @ to mention tabs, saved stuff, or your entire Surf to use them as the context you are chatting with. We prepared a question about a context that we created earlier for you. Just continue.',
-      domTarget: 'chat-input',
+      domTarget: '',
       domRoot: 'body',
       position: {
         vertical: 'top',
@@ -957,7 +914,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
       target: '#notes.onboarding.11',
       headline: 'Get Insights From Your Context',
       content: '',
-      domTarget: 'chat-input',
+      domTarget: 'send-chat-message',
       domRoot: 'body',
       position: {
         vertical: 'top',
@@ -1036,7 +993,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
       headline: 'Congratulations!',
       content:
         'You’ve finished the tour. We opened a Surf Playground tab for you to explore what else you can do with Surf.',
-      domTarget: 'chat-input',
+      domTarget: '',
       domRoot: 'body',
       position: {
         vertical: 'bottom',

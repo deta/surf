@@ -227,14 +227,196 @@
 
   // Set up synchronization between local and global state
   onMount(() => {
-    // Subscribe to global state and update local state
-    const unsubscribeGlobal = globalIsGeneratingAI.subscribe((isGenerating) => {
-      isGeneratingAI.set(isGenerating)
-    })
+    // @ts-ignore
+    window.wikipediaAPI = wikipediaAPI
 
+    // Add event listener for onboarding mention
+    document.addEventListener(
+      'insert-onboarding-mention',
+      handleInsertOnboardingMention as EventListener
+    )
+
+    // Setup async operations separately from onMount's return
+    const setupAsync = async () => {
+      // Subscribe to global state and update local state
+      const unsubscribeGlobal = globalIsGeneratingAI.subscribe((isGenerating) => {
+        isGeneratingAI.set(isGenerating)
+      })
+
+      // Add event listener for UseAsDefaultBrowser extension
+      document.addEventListener(
+        'insert-use-as-default-browser',
+        handleInsertUseAsDefaultBrowser as EventListener
+      )
+
+      // Add event listener for onboarding footer with links
+      document.addEventListener(
+        'insert-onboarding-footer',
+        handleInsertOnboardingFooter as EventListener
+      )
+
+      // Add event listener for button insertion
+      document.addEventListener('insert-button-to-note', handleInsertButtonToNote as EventListener)
+
+      if (showOnboarding) {
+        initialLoad = false
+        title = $onboardingNote?.title ?? 'Onboarding'
+        content.set($onboardingNote?.html ?? '')
+
+        let currentIdx = $onboardingIndex
+
+        unsubscribeContent = onboardingNote.subscribe((note) => {
+          title = note.title
+          content.set(note.html)
+          dispatch('change-onboarding-note', note)
+
+          hideInfoPopover()
+
+          if (note.id === 'basics') {
+            showBasicsPopover()
+          } else if (note.id === 'similarity') {
+            showSimilarityPopover()
+          }
+
+          const newIdx = $onboardingIndex
+          if (newIdx !== currentIdx) {
+            autofocus = true
+            showPrompts.set(false)
+            telemetry.trackNoteOnboardingChangeStep(newIdx, currentIdx)
+            currentIdx = newIdx
+          }
+        })
+
+        contentHash.set(generateContentHash($content))
+        contextManager = ai.createContextManager()
+        contextManager.clear()
+
+        // await generatePrompts()
+
+        selectedContext.set('everything')
+        return
+      } else if (showCodegenOnboarding) {
+        initialLoad = false
+        title = $onboardingNote?.title ?? 'Onboarding'
+        content.set($onboardingNote?.html ?? '')
+
+        contentHash.set(generateContentHash($content))
+        contextManager = ai.createContextManager()
+        contextManager.clear()
+        selectedContext.set('everything')
+        return
+      }
+
+      if (!note) {
+        note = await smartNotes.getNote(resourceId)
+        if (!note) {
+          log.error('Note not found', resourceId)
+          return
+        }
+      }
+
+      const value = note.resource.parsedData
+      unsubscribeValue = value.subscribe((value) => {
+        if (value) {
+          content.set(value)
+
+          if (!editorFocused) {
+            editorElem?.setContent(value)
+          }
+        }
+      })
+
+      await note.loadContent()
+
+      initialLoad = false
+
+      unsubscribeContent = content.subscribe((value) => {
+        debouncedSaveContent(value ?? '')
+
+        if (editorElem) {
+          isEmpty.set(editorElem.isEmptyy())
+        }
+      })
+
+      title = note.titleValue ?? 'Untitled'
+      unsubscribeTitle = note.title.subscribe((value) => {
+        if (value) {
+          title = value
+        }
+      })
+
+      log.debug('text resource', resource, title, $content)
+
+      contentHash.set(generateContentHash($content))
+
+      if (!contextManager) {
+        contextManager = note.contextManager
+      }
+
+      await wait(500)
+
+      // Add event listeners for surflet events
+      const handleCreateSurfletEvent = (e: CustomEvent) => {
+        log.debug('Received create-surflet event', e.detail)
+        handleCreateSurflet(e.detail?.code)
+      }
+
+      const handleUpdateSurfletEvent = (e: CustomEvent) => {
+        log.debug('Received update-surflet event', e.detail)
+        updateSurfletContent(e.detail?.code)
+      }
+
+      const handleOpenStuffEvent = () => {
+        log.debug('Received onboarding-open-stuff event')
+        tabsManager.showNewTabOverlay.set(2)
+      }
+
+      if (editorElem) {
+        isEmpty.set(editorElem.isEmptyy())
+      }
+
+      if (editorElement) {
+        editorElement.addEventListener('scroll', handleScroll)
+      }
+
+      document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
+      document.addEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
+      document.addEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
+
+      return () => {
+        document.removeEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
+        document.removeEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
+        document.removeEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
+      }
+    }
+
+    // Start the async setup without waiting for it
+    setupAsync()
+
+    // Return the cleanup function directly (not in a Promise)
     return () => {
-      // Clean up subscription when component is destroyed
-      unsubscribeGlobal()
+      document.removeEventListener(
+        'insert-onboarding-mention',
+        handleInsertOnboardingMention as EventListener
+      )
+
+      // Remove the UseAsDefaultBrowser event listener
+      document.removeEventListener(
+        'insert-use-as-default-browser',
+        handleInsertUseAsDefaultBrowser as EventListener
+      )
+
+      // Remove the onboarding footer event listener
+      document.removeEventListener(
+        'insert-onboarding-footer',
+        handleInsertOnboardingFooter as EventListener
+      )
+
+      // Remove the button insertion event listener
+      document.removeEventListener(
+        'insert-button-to-note',
+        handleInsertButtonToNote as EventListener
+      )
     }
   })
 
@@ -2358,163 +2540,6 @@
       toasts.error('Failed to insert resource links')
     }
   }
-
-  onMount(async () => {
-    // @ts-ignore
-    window.wikipediaAPI = wikipediaAPI
-
-    // Add event listener for onboarding mention
-    document.addEventListener(
-      'insert-onboarding-mention',
-      handleInsertOnboardingMention as EventListener
-    )
-
-    // Add event listener for UseAsDefaultBrowser extension
-    document.addEventListener(
-      'insert-use-as-default-browser',
-      handleInsertUseAsDefaultBrowser as EventListener
-    )
-
-    // Add event listener for onboarding footer with links
-    document.addEventListener(
-      'insert-onboarding-footer',
-      handleInsertOnboardingFooter as EventListener
-    )
-
-    // Add event listener for button insertion
-    document.addEventListener('insert-button-to-note', handleInsertButtonToNote as EventListener)
-
-    if (showOnboarding) {
-      initialLoad = false
-      title = $onboardingNote?.title ?? 'Onboarding'
-      content.set($onboardingNote?.html ?? '')
-
-      let currentIdx = $onboardingIndex
-
-      unsubscribeContent = onboardingNote.subscribe((note) => {
-        title = note.title
-        content.set(note.html)
-        dispatch('change-onboarding-note', note)
-
-        hideInfoPopover()
-
-        if (note.id === 'basics') {
-          showBasicsPopover()
-        } else if (note.id === 'similarity') {
-          showSimilarityPopover()
-        }
-
-        const newIdx = $onboardingIndex
-        if (newIdx !== currentIdx) {
-          autofocus = true
-          showPrompts.set(false)
-          telemetry.trackNoteOnboardingChangeStep(newIdx, currentIdx)
-          currentIdx = newIdx
-        }
-      })
-
-      contentHash.set(generateContentHash($content))
-      contextManager = ai.createContextManager()
-      contextManager.clear()
-
-      // await generatePrompts()
-
-      selectedContext.set('everything')
-      return
-    } else if (showCodegenOnboarding) {
-      initialLoad = false
-      title = $onboardingNote?.title ?? 'Onboarding'
-      content.set($onboardingNote?.html ?? '')
-
-      contentHash.set(generateContentHash($content))
-      contextManager = ai.createContextManager()
-      contextManager.clear()
-      selectedContext.set('everything')
-      return
-    }
-
-    if (!note) {
-      note = await smartNotes.getNote(resourceId)
-      if (!note) {
-        log.error('Note not found', resourceId)
-        return
-      }
-    }
-
-    const value = note.resource.parsedData
-    unsubscribeValue = value.subscribe((value) => {
-      if (value) {
-        content.set(value)
-
-        if (!editorFocused) {
-          editorElem?.setContent(value)
-        }
-      }
-    })
-
-    await note.loadContent()
-
-    initialLoad = false
-
-    unsubscribeContent = content.subscribe((value) => {
-      debouncedSaveContent(value ?? '')
-
-      if (editorElem) {
-        isEmpty.set(editorElem.isEmptyy())
-      }
-    })
-
-    title = note.titleValue ?? 'Untitled'
-    unsubscribeTitle = note.title.subscribe((value) => {
-      if (value) {
-        title = value
-      }
-    })
-
-    log.debug('text resource', resource, title, $content)
-
-    contentHash.set(generateContentHash($content))
-
-    if (!contextManager) {
-      contextManager = note.contextManager
-    }
-
-    await wait(500)
-
-    // Add event listeners for surflet events
-    const handleCreateSurfletEvent = (e: CustomEvent) => {
-      log.debug('Received create-surflet event', e.detail)
-      handleCreateSurflet(e.detail?.code)
-    }
-
-    const handleUpdateSurfletEvent = (e: CustomEvent) => {
-      log.debug('Received update-surflet event', e.detail)
-      updateSurfletContent(e.detail?.code)
-    }
-
-    const handleOpenStuffEvent = () => {
-      log.debug('Received onboarding-open-stuff event')
-      tabsManager.showNewTabOverlay.set(2)
-    }
-
-    if (editorElem) {
-      isEmpty.set(editorElem.isEmptyy())
-    }
-
-    if (editorElement) {
-      editorElement.addEventListener('scroll', handleScroll)
-    }
-
-    document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
-    document.addEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
-    document.addEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
-
-    return () => {
-      document.removeEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
-      document.removeEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
-      document.removeEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
-    }
-  })
 
   onDestroy(() => {
     if (resource) {
