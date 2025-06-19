@@ -941,7 +941,7 @@ export class AIChat {
         ;(resolveGenerationPromise as any)()
       }
     } catch (e) {
-      this.log.error('Error doing magic', typeof e, e)
+      this.log.error('Error sending chat message', typeof e, e)
 
       const parsedError = parseAIError(e)
 

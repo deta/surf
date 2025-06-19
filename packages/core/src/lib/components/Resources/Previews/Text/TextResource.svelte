@@ -1282,15 +1282,21 @@
         log.error('Error generating AI output', response.error)
         if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
           toasts.error(response.error.message)
+        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+          toasts.error('Too many requests, please try again later')
+        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
+          toasts.error(
+            'No relevant context found. Please add more resources or try a different query.'
+          )
         } else {
-          toasts.error('Failed to generate AI output')
+          toasts.error('Something went wrong generating the AI output. Please try again.')
         }
 
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
       } else if (!response.output) {
         log.error('No output found')
-        toasts.error('Failed to generate AI output')
+        toasts.error('Something went wrong generating the AI output. Please try again.')
 
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
@@ -1312,7 +1318,7 @@
       }
     } catch (err) {
       log.error('Error generating AI output', err)
-      toasts.error('Failed to generate AI output')
+      toasts.error('Something went wrong generating the AI output. Please try again.')
 
       // const loading = getLastNode('loading')
       // if (loading) {
@@ -1457,8 +1463,14 @@
 
         if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
           toasts.error(response.error.message)
+        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+          toasts.error('Too many requests, please try again later')
+        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
+          toasts.error(
+            'No relevant context found. Please add more resources or try a different query.'
+          )
         } else {
-          toasts.error('Failed to generate AI output')
+          toasts.error('Something went wrong generating the AI output. Please try again.')
         }
 
         return

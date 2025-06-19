@@ -496,7 +496,7 @@ export class AIService {
       }
 
       const parsedError = parseAIError(e)
-      this.log.error('Error creating chat completion', parsedError)
+      this.log.error('Parsed chat completion error', parsedError)
 
       return {
         output: null,
