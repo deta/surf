@@ -12,8 +12,11 @@ import type {
   SettingsWindowTab,
   Announcement,
   UserStats,
-  ImportedBrowserHistoryItem,
-  BrowserType
+  BrowserType,
+  WebContentsViewCreateOptions,
+  WebContentsViewActionType,
+  WebContentsViewActionPayloads,
+  WebContentsViewAction
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -94,6 +97,19 @@ export interface BrowserExtension {
 export interface ListExtensions extends IPCEvent {
   payload: void
   output: BrowserExtension[]
+}
+
+export interface WebContentsViewCreateEvent extends IPCEvent {
+  payload: WebContentsViewCreateOptions
+  output: string | null // Returns the ID of the created view or null if it failed
+}
+
+export interface WebContentsViewActionEvent extends IPCEvent {
+  payload: {
+    viewId: string
+    action: WebContentsViewAction
+  }
+  output: boolean // Returns the ID of the created view or null if it failed
 }
 
 export interface StartDrag {
@@ -252,7 +268,13 @@ const IPC_EVENTS = ipcService.registerEvents({
   getAnnouncements: ipcService.addEventWithReturn<GetAnnouncements>('get-announcements'),
   getExtensionsEnabled:
     ipcService.addEventWithReturn<GetExtensionsEnabled>('get-extensions-enabled'),
-  listExtensions: ipcService.addEventWithReturn<ListExtensions>('list-extensions')
+  listExtensions: ipcService.addEventWithReturn<ListExtensions>('list-extensions'),
+
+  // WebContentsView events
+  webContentsViewCreate:
+    ipcService.addEventWithReturn<WebContentsViewCreateEvent>('webcontentsview-create'),
+  webContentsViewAction:
+    ipcService.addEventWithReturn<WebContentsViewActionEvent>('webcontentsview-action')
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

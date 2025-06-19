@@ -106,7 +106,8 @@
     ChangeContextEventTrigger,
     PageChatUpdateContextItemType,
     PromptType,
-    ResourceTagDataStateValue
+    ResourceTagDataStateValue,
+    WebContentsViewActionType
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -277,6 +278,7 @@
   desktopManager.attachColorService(colorService)
 
   const globalMiniBrowser = miniBrowserService.globalBrowser
+  const globalMiniBrowserIsOpen = globalMiniBrowser.isOpen
   const userConfigSettings = config.settings
   const tabsDB = storage.tabs
   const spaces = oasis.spaces
@@ -374,7 +376,7 @@
     if ($showNewTabOverlay !== 0) return false
     if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
 
-    return $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
+    return $activeTab?.type === 'page' // && $activeTab?.currentHistoryIndex > 0
   })()
 
   $: canGoForward = (() => {
@@ -382,8 +384,8 @@
     if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
 
     return (
-      $activeTab?.type === 'page' &&
-      $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
+      $activeTab?.type === 'page'
+      // && $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
     )
   })()
 
@@ -403,6 +405,20 @@
       const hasOnboardingTab = $tabs.some((tab) => tab.type === 'onboarding')
       onboardingTabOpened.set(hasOnboardingTab)
     }
+  }
+
+  $: log.debug('globalMiniBrowserIsOpen', $globalMiniBrowserIsOpen, $activeTabMiniBrowserIsOpen)
+
+  $: if ($showNewTabOverlay !== 0) {
+    window.api.webContentsViewAction('', {
+      type: WebContentsViewActionType.HIDE_ALL,
+      payload: {}
+    })
+  } else {
+    window.api.webContentsViewAction('', {
+      type: WebContentsViewActionType.SHOW_ACTIVE,
+      payload: {}
+    })
   }
 
   const openResourceDetailsModal = async (

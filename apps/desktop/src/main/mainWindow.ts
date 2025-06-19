@@ -21,6 +21,7 @@ import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
 import { handleCrxRequest } from './crxHandler'
 import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
+import { attachWCViewManager } from './viewManager'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -322,6 +323,11 @@ export function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  const viewManager = attachWCViewManager(mainWindow)
+  viewManager.on('create', (view) => {
+    setupWindowWebContentsHandlers(view.wcv.webContents)
+  })
 }
 
 export function getMainWindow(): BrowserWindow | undefined {

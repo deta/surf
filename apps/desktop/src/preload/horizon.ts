@@ -31,7 +31,9 @@ import {
   SettingsWindowTab,
   UserStats,
   ImportedBrowserHistoryItem,
-  BrowserType
+  BrowserType,
+  WebContentsViewCreateOptions,
+  WebContentsViewAction
 } from '@horizon/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
@@ -778,6 +780,14 @@ const api = {
 
   updateSpacesList: async (data: SpaceBasicData[]) => {
     IPC_EVENTS_RENDERER.updateSpacesList.send(data)
+  },
+
+  createWebContentsView: (opts: WebContentsViewCreateOptions) => {
+    return IPC_EVENTS_RENDERER.webContentsViewCreate.invoke(opts)
+  },
+
+  webContentsViewAction: (viewId: string, action: WebContentsViewAction) => {
+    return IPC_EVENTS_RENDERER.webContentsViewAction.invoke({ viewId, action })
   },
 
   ...eventHandlers

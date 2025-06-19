@@ -75,7 +75,9 @@ export class IPCService {
           const mainProcess = !isRenderer()
           if (mainProcess) {
             ipcMain.handle(name, handler)
-            return
+            return (() => {
+              ipcMain.removeHandler(name)
+            }) as IPCListenerUnsubscribe
           } else {
             throw new Error('Cannot handle events in renderer process')
           }

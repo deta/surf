@@ -163,7 +163,7 @@
     EXPORTED WEBVIEW UTILITY FUNCTIONS
   */
   export const focus = () => webview?.focus()
-  export const reload = () => webview?.reload()
+  export const reload = () => webviewComponent?.reload()
   export const forceReload = () => {
     error.set(null)
     webview?.reloadIgnoringCache()

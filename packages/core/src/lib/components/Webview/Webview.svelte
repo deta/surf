@@ -55,6 +55,8 @@
   } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
   import type { NewWindowRequest } from '../../service/ipc/events'
+  import { WebContentsViewActionType } from '@horizon/types'
+  import { useTabsManager } from '../../service/tabs'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -79,6 +81,7 @@
   export const didFinishLoad = writable(false)
 
   const resourceManager = useResourceManager()
+  const tabsManager = useTabsManager()
 
   const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -89,6 +92,10 @@
   let programmaticNavigation = false
   let lastReceivedFavicons: string[] = []
   let unsubscribeTheme: () => void
+  let webContentsWrapper: HTMLDivElement | null = null
+  let viewId: string | null = null
+
+  $: cleanID = id.replace('webview-', '')
 
   const debouncedHistoryChange = useDebounce((stack: string[], index: number) => {
     dispatch('history-change', { stack, index })
@@ -399,37 +406,53 @@
     }
   }
 
-  export const goBackInHistory = () => {
-    currentHistoryIndex.update((n) => {
-      if (n > 0) {
-        n--
-        programmaticNavigation = true
-        const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-        if (historyEntry) {
-          navigate(historyEntry.url as string)
-        }
-        return n
-      }
-      return n
+  export const reload = () => {
+    window.api.webContentsViewAction(cleanID, {
+      type: WebContentsViewActionType.RELOAD,
+      payload: {}
     })
   }
 
-  export const goForwardInHistory = () => {
-    currentHistoryIndex.update((n) => {
-      const stack = $historyStackIds
-      if (n < stack.length - 1) {
-        n++
-        programmaticNavigation = true
-        const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-        if (historyEntry) {
-          navigate(historyEntry.url as string)
-        }
-
-        return n
-      }
-
-      return n
+  export const goBackInHistory = () => {
+    window.api.webContentsViewAction(cleanID, {
+      type: WebContentsViewActionType.GO_BACK,
+      payload: {}
     })
+
+    // currentHistoryIndex.update((n) => {
+    //   if (n > 0) {
+    //     n--
+    //     programmaticNavigation = true
+    //     const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
+    //     if (historyEntry) {
+    //       navigate(historyEntry.url as string)
+    //     }
+    //     return n
+    //   }
+    //   return n
+    // })
+  }
+
+  export const goForwardInHistory = () => {
+    window.api.webContentsViewAction(cleanID, {
+      type: WebContentsViewActionType.GO_FORWARD,
+      payload: {}
+    })
+    // currentHistoryIndex.update((n) => {
+    //   const stack = $historyStackIds
+    //   if (n < stack.length - 1) {
+    //     n++
+    //     programmaticNavigation = true
+    //     const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
+    //     if (historyEntry) {
+    //       navigate(historyEntry.url as string)
+    //     }
+
+    //     return n
+    //   }
+
+    //   return n
+    // })
   }
 
   export const goToBeginningOfHistory = (fallback?: string) => {
@@ -450,7 +473,95 @@
   /*
     INITIALIZATION
   */
-  onMount(() => {
+
+  let unsub = []
+  onMount(async () => {
+    if (!webContentsWrapper) {
+      log.error('WebContents wrapper element is not defined')
+      return
+    }
+
+    const bounds = webContentsWrapper.getBoundingClientRect()
+
+    log.debug('Creating web contents view with bounds', bounds, src, cleanID)
+    viewId = await window.api.createWebContentsView({
+      id: cleanID,
+      url: src,
+      partition: partition,
+      bounds: {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height
+      }
+    })
+
+    if (!viewId) {
+      log.error('Failed to create web contents view')
+      return
+    }
+
+    log.debug('Created web contents view with ID', viewId)
+
+    // setup resize observer to resize the webview when the wrapper changes size
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!webContentsWrapper) return
+      const bounds = webContentsWrapper.getBoundingClientRect()
+      log.debug('Resizing web contents view to', bounds)
+      window.api.webContentsViewAction(viewId, {
+        type: WebContentsViewActionType.SET_BOUNDS,
+        payload: {
+          bounds: {
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height
+          }
+        }
+      })
+    })
+
+    resizeObserver.observe(webContentsWrapper)
+
+    unsub.push(() => {
+      log.debug('Unsubscribing from resize observer')
+      resizeObserver.disconnect()
+    })
+
+    const activeTabId = tabsManager.activeTabId
+
+    let prevId = tabsManager.activeTabIdValue
+    const unsubTab = activeTabId.subscribe((tabId) => {
+      if (tabId !== cleanID) {
+        if (prevId === cleanID) {
+          log.debug('Deactivating web contents view', cleanID)
+          window.api.webContentsViewAction(viewId, {
+            type: WebContentsViewActionType.HIDE,
+            payload: {}
+          })
+
+          prevId = tabId
+        }
+
+        return
+      }
+
+      window.api.webContentsViewAction(viewId, {
+        type: WebContentsViewActionType.ACTIVATE,
+        payload: {}
+      })
+
+      prevId = tabId
+    })
+
+    unsub.push(() => {
+      log.debug('Unsubscribing from active tab ID')
+      unsubTab()
+    })
+
+    if (!webview) {
+      return
+    }
     /*
       Handle IPC event coming from the webview preload script (apps/desktop/src/preload/webview.ts)
     */
@@ -578,13 +689,22 @@
   })
 
   onDestroy(() => {
+    if (unsub) {
+      unsub.forEach((fn) => fn())
+    }
+
+    window.api.webContentsViewAction(cleanID, {
+      type: WebContentsViewActionType.DESTROY,
+      payload: {}
+    })
+
     if (newWindowHandlerRegistered && $webContentsId !== null) {
       window.api.unregisterNewWindowHandler($webContentsId)
     }
   })
 </script>
 
-<webview
+<!-- <webview
   id={`webview-${id}`}
   bind:this={webview}
   {src}
@@ -611,7 +731,13 @@
   on:Drop={handleDrop}
   on:DragLeave={handleDragLeave}
   {...$$restProps}
-/>
+/> -->
+
+<div
+  id="webcontentsview-container"
+  bind:this={webContentsWrapper}
+  style="width: 100%; height: 100%; background: white;"
+></div>
 
 <style lang="scss">
   webview {
