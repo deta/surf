@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
-  import { onMount } from 'svelte'
+  import { isMac } from '@horizon/editor/src/lib/utilities'
   import Button from '../Button/Button.svelte'
   import stuff from '@horizon/core/public/assets/onboarding/your-stuff-teaser.png'
 
@@ -29,10 +28,7 @@
         <span class="message">Surf has storage, called Stuff, try it out</span>
       </div>
       <div class="button-wrapper">
-        <Button
-          text={`Open Stuff (${import.meta.env.VITE_IS_MAC === 'true' ? '⌘' : 'Ctrl'} + O)`}
-          onClick={handleOpenStuff}
-        />
+        <Button text={`Open Stuff (${isMac() ? '⌘' : 'Ctrl'} + O)`} onClick={handleOpenStuff} />
       </div>
     </div>
   </div>
