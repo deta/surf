@@ -239,10 +239,26 @@
   }
 
   const handleNavigate: TeletypeActionHandler<{ url: string }> = (payload) => {
-    const validUrl = parseStringIntoBrowserLocation(payload.url)
+    const currentInputValue = get(teletype?.inputValue)
+    log.debug('handleNavigate', payload.url, currentInputValue)
+
+    if (payload.url !== currentInputValue) {
+      log.warn('current input value is different from passed URL', currentInputValue, payload.url)
+    }
+
+    const currentValidUrl = parseStringIntoBrowserLocation(currentInputValue)
+    const payloadValidUrl = parseStringIntoBrowserLocation(payload.url)
+
+    const validUrl = currentValidUrl || payloadValidUrl
     if (!validUrl) {
       log.error('Invalid URL:', payload.url)
       return
+    }
+
+    if (currentValidUrl) {
+      log.debug('Using current valid URL:', currentValidUrl)
+    } else {
+      log.debug('Using payload valid URL:', payloadValidUrl)
     }
 
     dispatch('open-url', validUrl)
