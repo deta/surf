@@ -703,9 +703,9 @@
     }
   }
 
-  const openRightSidebarTab = async (id: RightSidebarTab) => {
+  const openRightSidebarTab = async (id: RightSidebarTab, disableTelemetry = false) => {
     if ($rightSidebarTab === id) {
-      telemetry.trackOpenRightSidebar(id)
+      if (!disable_telemetry) telemetry.trackOpenRightSidebar(id)
     } else {
       rightSidebarTab.set(id)
     }
@@ -4009,7 +4009,7 @@
 {#if $showHeroScreen}
   <HeroScreen
     on:dismiss={async () => {
-      await openRightSidebarTab('chat')
+      await openRightSidebarTab('chat', true)
       await tick()
       showHeroScreen.set(false)
     }}
