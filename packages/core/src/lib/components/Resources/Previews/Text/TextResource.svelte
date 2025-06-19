@@ -2642,6 +2642,7 @@
       {#key `${showOnboarding}-${$onboardingNote.id}`}
         <div
           class="notes-editor-wrapper"
+          class:autocompleting={$autocompleting}
           bind:this={editorWrapperElem}
           on:keydown={handleEditorKeyDown}
         >
