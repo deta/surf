@@ -705,7 +705,7 @@
 
   const openRightSidebarTab = async (id: RightSidebarTab, disableTelemetry = false) => {
     if ($rightSidebarTab === id) {
-      if (!disable_telemetry) telemetry.trackOpenRightSidebar(id)
+      if (!disableTelemetry) telemetry.trackOpenRightSidebar(id)
     } else {
       rightSidebarTab.set(id)
     }
