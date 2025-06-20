@@ -1029,6 +1029,8 @@
     config.updateSettings({ has_seen_hero_screen: true, skipped_hero_screen: true })
 
     dispatch('toggle-sidebar', true)
+    dispatch('reload-welcome-page')
+
     endTimeline()
     // HACK: We  unmute all the tabs after onboarding
     for (let [_, browserTab] of Object.entries(tabsManager.browserTabsValue)) {

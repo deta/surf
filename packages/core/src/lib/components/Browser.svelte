@@ -3311,7 +3311,10 @@
       }
     }
 
-    openWelcomeTab(false)
+    // TODO: renable when the welcome page is fixed
+    //openWelcomeTab(false)
+    // END TODO
+
     // HACK: We  unmute all the tabs after onboarding
     for (let [_, browserTab] of Object.entries(tabsManager.browserTabsValue)) {
       browserTab.setMute(false)
@@ -3319,8 +3322,6 @@
   }
 
   const openWelcomeTab = async (active = true) => {
-    return true
-    /* TODO: renable when no bugs on welcome page
     const onboardingTab = $tabs.find(
       (tab) =>
         tab.type === 'onboarding' && tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
@@ -3337,7 +3338,6 @@
       new Set([{ id: $tabs.find((t) => t.type === 'onboarding')?.id ?? '', userSelected: true }])
     )
     onboardingTabVisible.set(true)
-    */
   }
 
   const openImporterTab = async () => {
