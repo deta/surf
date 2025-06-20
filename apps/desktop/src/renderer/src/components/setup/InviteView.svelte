@@ -71,7 +71,7 @@
       error = ''
 
       if (isDev) {
-        dispatch('viewChange', 'disclaimer')
+        dispatch('viewChange', 'persona')
         return
       }
 
@@ -90,7 +90,7 @@
           return
         }
       }
-      dispatch('viewChange', 'disclaimer')
+      dispatch('viewChange', 'persona')
     } catch (e) {
       console.error(e)
       error = `Sorry, we encountered an error: ${e}`

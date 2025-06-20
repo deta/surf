@@ -3319,6 +3319,8 @@
   }
 
   const openWelcomeTab = async (active = true) => {
+    return true
+    /* TODO: renable when no bugs on welcome page
     const onboardingTab = $tabs.find(
       (tab) =>
         tab.type === 'onboarding' && tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
@@ -3335,6 +3337,7 @@
       new Set([{ id: $tabs.find((t) => t.type === 'onboarding')?.id ?? '', userSelected: true }])
     )
     onboardingTabVisible.set(true)
+    */
   }
 
   const openImporterTab = async () => {

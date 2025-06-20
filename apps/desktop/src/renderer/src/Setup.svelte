@@ -18,7 +18,6 @@
   import ContextView from './components/setup/ContextView.svelte'
   import ImportView from './components/setup/ImportView.svelte'
   import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
-  import DisclaimerView from './components/setup/DisclaimerView.svelte'
   import AnalyticsView from './components/setup/AnalyticsView.svelte'
 
   let telemetryAPIKey = ''
@@ -55,7 +54,6 @@
     | 'language'
     | 'prefs'
     | 'done'
-    // not used
     | 'disclaimer'
     | 'app_preferences'
 
@@ -236,10 +234,7 @@
         on:back={handleBack}
       />
     {:else if view === 'disclaimer'}
-      <!-- <DisclaimerView on:viewChange={handleViewChange} /> -->
       <AnalyticsView on:viewChange={handleViewChange} />
-      <!--{:else if view === 'app_preferences'}
-      <AppPreferencesSetup on:viewChange={handleViewChange} on:back={handleBack} /> -->
     {:else if view === 'done'}
       <DoneView on:start={handleStart} />
     {/if}

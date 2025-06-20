@@ -28,7 +28,7 @@
       }
     }
 
-    dispatch('viewChange', 'persona')
+    dispatch('viewChange', 'done')
   }
 
   onMount(() => {
@@ -48,7 +48,7 @@
       <h1 in:fly={{ x: 35, duration: 500, delay: 250 }}>Help us improve Surf</h1>
 
       <p in:fly={{ x: 35, duration: 500, delay: 300 }}>
-        While Surf is in alpha we collect some anonymized telemetry on how you use Surf to improve
+        While Surf is in alpha we collect some anonymized telemetry on how you use Surf, to improve
         the product.
       </p>
 
@@ -78,7 +78,7 @@
           </div>
 
           <div class="data-label">
-            You can link telemetry data to my email and contact me for feedback (optional)
+            You can link telemetry data to my email and contact me for feedback.
           </div>
         </div>
 
