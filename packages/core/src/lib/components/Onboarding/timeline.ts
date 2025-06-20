@@ -57,7 +57,7 @@ export const activeStep = derived([activeTimeline, timelines], ([$activeTimeline
       removeTooltipTargetClass()
 
       if (currentStep.domTarget) {
-        console.log('data-tooltip-target changed to', currentStep.domTarget)
+        console.debug('data-tooltip-target changed to', currentStep.domTarget)
         currentDomTarget = currentStep.domTarget
         addTooltipTargetClass(currentStep.domTarget)
       } else {
@@ -97,7 +97,7 @@ function setupCompletionEventListener(step: TooltipStep | null) {
       message = step.completionEvent.message
     }
 
-    console.log(`Setting up completion event listener for: ${eventId}`)
+    console.debug(`Setting up completion event listener for: ${eventId}`)
 
     // Set the pending completion event flag to true
     hasPendingCompletionEvent.set(true)
@@ -107,12 +107,12 @@ function setupCompletionEventListener(step: TooltipStep | null) {
 
     // Create the event handler
     const handler = (event: Event) => {
-      console.log(`Completion event received: ${eventId}`)
+      console.debug(`Completion event received: ${eventId}`)
 
       // Get the current timeline and step BEFORE changing any state
       const active = get(activeTimeline)
       if (!active || !get(timelines)[active]) {
-        console.log('No active timeline when completion event was received')
+        console.debug('No active timeline when completion event was received')
         return
       }
 
@@ -131,7 +131,7 @@ function setupCompletionEventListener(step: TooltipStep | null) {
 
       // If this event doesn't match the current step's expected event, ignore it
       if (currentStepEventId !== eventId) {
-        console.log(
+        console.debug(
           `Ignoring completion event ${eventId} - doesn't match current step's event ${currentStepEventId}`
         )
         return
@@ -149,10 +149,13 @@ function setupCompletionEventListener(step: TooltipStep | null) {
         currentStep.actions.length > 0 &&
         !currentStep.actionCanSkipCompletionEvent
       ) {
-        console.log(`Executing actions for current step on completion event:`, currentStep.actions)
+        console.debug(
+          `Executing actions for current step on completion event:`,
+          currentStep.actions
+        )
         executeActions(currentStep.actions)
       } else if (currentStep.actionCanSkipCompletionEvent) {
-        console.log(
+        console.debug(
           'Skipping action execution on completion event because actionCanSkipCompletionEvent is true'
         )
       }
@@ -211,7 +214,7 @@ function addTooltipTargetClass(domTarget: string) {
     // Query for elements with the current domTarget
     const targetElements = document.querySelectorAll(`[data-tooltip-target="${domTarget}"]`)
 
-    console.log('data-tooltip-target', targetElements, domTarget)
+    console.debug('data-tooltip-target', targetElements, domTarget)
 
     // Store the new target elements and add the tooltip-target class
     previousTargetElements = Array.from(targetElements)
@@ -358,7 +361,7 @@ declare global {
 
 // Attach the function to the window object
 window.launchTimeline = (timelineName: string, stepIndex?: number) => {
-  console.log(
+  console.debug(
     `Launching timeline: ${timelineName}${stepIndex !== undefined ? ` at step ${stepIndex}` : ''}, available timelines: ${Object.values(
       OnboardingFeature
     )

@@ -515,6 +515,8 @@
     const hasActiveTimeline = get(activeTimeline) !== null
 
     if (hasActiveTimeline) {
+      // is onboarding
+      $note?.updateTitle('Surf Onboarding Note')
       dispatch('open-note-in-sidebar', {
         note: $note,
         force: true
