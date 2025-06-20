@@ -70,6 +70,11 @@
       loading = true
       error = ''
 
+      if (isDev) {
+        dispatch('viewChange', 'disclaimer')
+        return
+      }
+
       const res = await window.api.activateAppUsingKey(sanitize(inviteCode), true)
       if (!res.ok) {
         error = 'Sorry, the verification code is invalid.'
@@ -85,7 +90,7 @@
           return
         }
       }
-      dispatch('viewChange', 'persona')
+      dispatch('viewChange', 'disclaimer')
     } catch (e) {
       console.error(e)
       error = `Sorry, we encountered an error: ${e}`

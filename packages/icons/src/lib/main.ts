@@ -133,6 +133,8 @@ import Opera from './Icons/Opera.svelte'
 import Vivaldi from './Icons/Vivaldi.svelte'
 import ZenBrowser from './Icons/ZenBrowser.svelte'
 import TorBrowser from './Icons/TorBrowser.svelte'
+import ChartBar from './Icons/ChartBar.svelte'
+import ChartBarOff from './Icons/ChartBarOff.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -273,7 +275,9 @@ export const icons = {
   'browser.opera': Opera,
   'browser.vivaldi': Vivaldi,
   'browser.zen': ZenBrowser,
-  'browser.tor': TorBrowser
+  'browser.tor': TorBrowser,
+  'chart-bar': ChartBar,
+  'chart-bar.off': ChartBarOff
 }
 
 export type Icons = keyof typeof icons
@@ -413,5 +417,7 @@ export {
   Vivaldi,
   ZenBrowser,
   TorBrowser,
+  ChartBar,
+  ChartBarOff,
   CircleCheckFilled
 }

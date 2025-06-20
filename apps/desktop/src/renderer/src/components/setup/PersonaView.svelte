@@ -32,9 +32,9 @@
     dispatch('viewChange', 'import')
   }
 
-  const handleBack = () => {
-    dispatch('back')
-  }
+  // const handleBack = () => {
+  //   dispatch('back')
+  // }
 
   onMount(() => {
     showContent = true

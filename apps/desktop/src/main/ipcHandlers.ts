@@ -260,12 +260,6 @@ function setupIpcHandlers(backendRootPath: string) {
     await handleDragStart(sender, resourceId, filePath, fileType)
   })
 
-  IPC_EVENTS_MAIN.storeAPIKey.on(async (event, key) => {
-    if (!validateIPCSender(event)) return
-
-    updateUserConfig({ api_key: key })
-  })
-
   IPC_EVENTS_MAIN.updateUserConfigSettings.on(async (event, settings) => {
     if (!validateIPCSender(event)) return
 
@@ -273,6 +267,12 @@ function setupIpcHandlers(backendRootPath: string) {
 
     // notify other windows of the change
     ipcSenders.userConfigSettingsChange(updatedSettings)
+  })
+
+  IPC_EVENTS_MAIN.updateUserConfig.on(async (event, config) => {
+    if (!validateIPCSender(event)) return
+
+    updateUserConfig(config)
   })
 
   IPC_EVENTS_MAIN.updateUserStats.on(async (event, stats) => {
