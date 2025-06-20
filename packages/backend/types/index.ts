@@ -69,11 +69,10 @@ export interface QueryResourcesOptions {
 }
 
 export interface CreateAppOptions {
-  prompt: string
-  chat_id: string
+  query: string
   model: Model
   custom_key?: string
-  contexts?: string[]
+  inline_images?: string[]
 }
 
 export type QuotaUsageType =

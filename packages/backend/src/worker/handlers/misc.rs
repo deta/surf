@@ -1,11 +1,11 @@
 use crate::{
-    ai::{
-        ai::{ChatResult, DocsSimilarity},
-        youtube::YoutubeTranscript,
-    },
     ai::llm::{
         client::client::Model,
         models::{Message, MessageContent, Quota},
+    },
+    ai::{
+        ai::{ChatResult, DocsSimilarity},
+        youtube::YoutubeTranscript,
     },
     api::message::{MiscMessage, ProcessorMessage, TunnelOneshot},
     store::{
@@ -20,7 +20,6 @@ use crate::{
 };
 use neon::prelude::*;
 use std::collections::HashSet;
-
 
 impl Worker {
     pub fn print(&mut self, content: String) -> BackendResult<String> {
@@ -97,45 +96,35 @@ impl Worker {
         self.ai.get_docs_similarity(query, docs, threshold)
     }
 
-    // TODO: store history
-    pub fn create_app(
+    pub fn create_app_query(
         &mut self,
-        prompt: String,
+        mut chunk_callback: Root<JsFunction>,
+        done_callback: Root<JsFunction>,
+        query: String,
         model: &Model,
         custom_key: Option<&str>,
-        session_id: String,
-        contexts: Option<Vec<String>>,
-    ) -> BackendResult<String> {
-        let user_message = AIChatSessionMessage {
-            ai_session_id: session_id.clone(),
-            role: "user".to_owned(),
-            content: prompt.clone(),
-            truncatable: false,
-            created_at: chrono::Utc::now(),
-            msg_type: "text".to_owned(),
-            is_context: false,
-            sources: None,
+        inline_images: Option<Vec<String>>,
+    ) -> BackendResult<()> {
+        // frontend sends a query with a trailing <p></p> for some reason
+        let query = match query.strip_suffix("<p></p>") {
+            Some(q) => q.to_string(),
+            None => query,
         };
-        let result = self
+
+        let mut stream = self
             .ai
-            .create_app(prompt, model, custom_key, session_id.clone(), contexts)?;
-        let mut tx = self.db.begin()?;
-        Database::create_ai_session_message_tx(&mut tx, &user_message)?;
-        Database::create_ai_session_message_tx(
-            &mut tx,
-            &AIChatSessionMessage {
-                ai_session_id: session_id.clone(),
-                role: "assistant".to_owned(),
-                truncatable: false,
-                is_context: false,
-                msg_type: "text".to_owned(),
-                content: result.clone(),
-                created_at: chrono::Utc::now(),
-                sources: None,
-            },
-        )?;
-        tx.commit()?;
-        Ok(result)
+            .create_app(query, model, custom_key, inline_images)?;
+
+        for chunk in stream.by_ref() {
+            match chunk {
+                Ok(data) => {
+                    chunk_callback = self.send_callback(chunk_callback, data)?;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+        self.send_done_callback(done_callback)?;
+        Ok(())
     }
 
     pub fn create_chat_completion(
@@ -394,7 +383,20 @@ impl Worker {
                 let f = callback.into_inner(&mut cx);
                 let this = cx.undefined();
                 let args = vec![cx.string(data).upcast::<JsValue>()];
-                f.call(&mut cx, this, args).unwrap();
+                f.call(&mut cx, this, args)?;
+                Ok(f.root(&mut cx))
+            })
+            .join()
+            .map_err(|err| BackendError::GenericError(err.to_string()))
+    }
+
+    fn send_done_callback(&self, callback: Root<JsFunction>) -> BackendResult<Root<JsFunction>> {
+        self.channel
+            .send(|mut cx| {
+                let f = callback.into_inner(&mut cx);
+                let this = cx.undefined();
+                let args = vec![];
+                f.call(&mut cx, this, args)?;
                 Ok(f.root(&mut cx))
             })
             .join()
@@ -574,24 +576,25 @@ impl Worker {
             None => query,
         };
 
-        // If no resource_ids provided, no filtering needed 
+        // If no resource_ids provided, no filtering needed
         let mut ids = resource_ids.unwrap_or_default();
-        
+
         // Only check clustering if we have resource IDs
         let mut should_cluster = false;
         if !ids.is_empty() {
             let send_cluster_query = self.should_send_cluster_query(&ids)?;
-            
+
             if send_cluster_query {
                 let composite_resources = self.db.list_resources_metadata_by_ids(&ids)?;
                 let should_cluster_result = self.ai.should_cluster(
                     &query,
                     &model,
                     custom_key,
-                    self.ai.llm_metadata_messages_from_sources(&composite_resources),
+                    self.ai
+                        .llm_metadata_messages_from_sources(&composite_resources),
                 )?;
                 should_cluster = should_cluster_result.embeddings_search_needed;
-                
+
                 // Narrow down the search space if LLM pre-determines it
                 if let Some(search_space) = should_cluster_result.relevant_context_ids {
                     if !search_space.is_empty() {
@@ -600,7 +603,8 @@ impl Worker {
                         for str_index in search_space {
                             match str_index.parse::<usize>() {
                                 Ok(i) => {
-                                    pruned_resources_ids.push(composite_resources[i].resource.id.clone());
+                                    pruned_resources_ids
+                                        .push(composite_resources[i].resource.id.clone());
                                 }
                                 Err(_) => continue,
                             };
@@ -622,7 +626,7 @@ impl Worker {
                     &query,
                     &Some(ids.clone()),
                     false,
-                    Some(number_documents as i64)
+                    Some(number_documents as i64),
                 )?;
 
                 for result in db_results.items {
@@ -641,7 +645,11 @@ impl Worker {
                 &self.db,
                 query,
                 number_documents as usize,
-                if ids.is_empty() { None } else { Some(ids.clone()) },
+                if ids.is_empty() {
+                    None
+                } else {
+                    Some(ids.clone())
+                },
                 false,
                 Some(0.5),
             )?;
@@ -771,15 +779,22 @@ pub fn handle_misc_message(
             );
             send_worker_response(&mut worker.channel, oneshot, result)
         }
-        MiscMessage::CreateApp {
-            prompt,
+        MiscMessage::CreateAppQuery {
+            query,
             model,
             custom_key,
-            session_id,
-            contexts,
+            chunk_callback,
+            done_callback,
+            inline_images,
         } => {
-            let result =
-                worker.create_app(prompt, &model, custom_key.as_deref(), session_id, contexts);
+            let result = worker.create_app_query(
+                chunk_callback,
+                done_callback,
+                query,
+                &model,
+                custom_key.as_deref(),
+                inline_images,
+            );
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::QuerySFFSResources(

@@ -53,8 +53,7 @@
   import {
     generateContentHash,
     mapCitationsToText,
-    parseChatOutputToHtml,
-    parseChatOutputToSurfletCode
+    parseChatOutputToHtml
   } from '@horizon/core/src/lib/service/ai/helpers'
   import {
     startAIGeneration,
@@ -98,7 +97,7 @@
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
   import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
-  import { ChatMode, Provider } from '@horizon/types/src/ai.types'
+  import { Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
@@ -1211,7 +1210,6 @@
 
       // TODO: chatMode is already also figured out in `createChatCompletion` API
       // we need to refactor this to avoid double calls
-      const chatMode = await chat.getChatModeForNoteAndTab(query, editor.getText(), null)
       const renderFunction = useThrottle(async (message: AIChatMessageParsed) => {
         if (!createdLoading) {
           createdLoading = true
@@ -1231,10 +1229,7 @@
         await tick()
 
         //log.debug('chat message', message)
-        const outputContent =
-          chatMode === ChatMode.AppCreation
-            ? await parseChatOutputToSurfletCode(message)
-            : await parseChatOutputToHtml(message)
+        const outputContent = await parseChatOutputToHtml(message)
 
         if (aiGeneration && outputContent) {
           aiGeneration.updateOutput(outputContent)
@@ -1301,10 +1296,7 @@
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
       } else {
-        const content =
-          chatMode === ChatMode.AppCreation
-            ? await parseChatOutputToSurfletCode(response.output)
-            : await parseChatOutputToHtml(response.output)
+        const content = await parseChatOutputToHtml(response.output)
 
         log.debug('inserted output', content)
 

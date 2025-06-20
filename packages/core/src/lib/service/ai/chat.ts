@@ -756,6 +756,7 @@ export class AIChat {
         usedInlineScreenshot
       })
 
+      // TODO: this is not robust enough check for surflets in context
       const hasSurfletInContext = contextItems.some((item) => {
         const isResourceType = item.type === ContextItemTypes.RESOURCE
         if (isResourceType) {
@@ -764,6 +765,7 @@ export class AIChat {
         }
         return false
       })
+      // END TODO
 
       this.log.debug('hasSurfletInContext', hasSurfletInContext)
 

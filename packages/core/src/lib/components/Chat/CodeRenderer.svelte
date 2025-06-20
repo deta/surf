@@ -1133,23 +1133,23 @@
           <div class="preview-group flex items-center rounded-md overflow-hidden">
             <button
               class="no-custom px-3 py-1 text-sm"
-              on:click|stopPropagation={() => showCodeView()}
-              class:active={!showPreview}
-            >
-              Code
-            </button>
-            <button
-              class="no-custom px-3 py-1 text-sm"
               on:click|stopPropagation={() => showPreviewView()}
               class:active={showPreview}
             >
               <div class="flex items-center gap-2">
                 {#if isHTML}
-                  Preview
+                  App
                 {:else}
                   Output
                 {/if}
               </div>
+            </button>
+            <button
+              class="no-custom px-3 py-1 text-sm"
+              on:click|stopPropagation={() => showCodeView()}
+              class:active={!showPreview}
+            >
+              Code
             </button>
           </div>
         {/if}
