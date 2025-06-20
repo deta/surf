@@ -117,11 +117,14 @@
   }
 
   $: if (userSelectedView !== 'preview' && ($codeContent || $resource) && !collapsed) {
-    scheduleHighlight()
+    // TODO: redo highlighting when performance is solved
+    //scheduleHighlight()
     if (!$doneGenerating) {
       scrollCodeToBottom()
     } else {
-      makeCodeEditable()
+      highlightCode()
+      // TODO: reenable editability when we suppor it
+      //makeCodeEditable()
     }
   }
 
@@ -226,6 +229,8 @@
 
   const debouncedHighlightCode = useDebounce(highlightCode, 100)
 
+  // TODO: use this function later when we have a performant way to
+  // deal with code highlighting
   const scheduleHighlight = () => {
     if (highlightScheduled) return
     highlightScheduled = true
@@ -786,7 +791,9 @@
       class="h-full overflow-auto code-wrapper"
       style="color: white;"
       on:input={handleCodeInput}
-      on:click|stopPropagation><slot>{$codeContent}</slot></pre>
+      on:click|stopPropagation>
+      <slot>{$codeContent}</slot>
+    </pre>
   </div>
 
   {#if shouldShowPreview && !collapsed && expandable}
