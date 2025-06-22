@@ -2,7 +2,6 @@
   import { fade, slide } from 'svelte/transition'
   import Fuse from 'fuse.js'
   import { derived } from 'svelte/store'
-  import logo from '../../assets/deta.svg'
   import { focus } from 'focus-svelte'
 
   import type { Action, ActionPanelOption } from './types'
