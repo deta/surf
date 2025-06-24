@@ -37,7 +37,7 @@
 
   const handleOpenSettings = () => {
     // @ts-ignore - window.api is injected
-    window.api.openSettings()
+    window.api.openSettings('extensions')
   }
 </script>
 
@@ -68,19 +68,20 @@
             with Surf.
           </p>
 
-          <button class="install-button" on:click={handleOpenExtenionStore}>
-            Open Web Store
-          </button>
+          <button class="action-button" on:click={handleOpenExtenionStore}> Open Web Store </button>
         </div>
       </div>
     {:else}
       <div class="installed-extensions">
-        <browser-action-list partition="persist:horizon"></browser-action-list>
+        <div class="extensions-container">
+          <browser-action-list partition="persist:horizon" alignment="bottom right"
+          ></browser-action-list>
+        </div>
         <div class="button-group">
-          <button class="install-button" on:click={handleOpenExtenionStore}>
-            Open Extension Store
+          <button class="action-button" on:click={handleOpenExtenionStore}>
+            <Icon name="add" /> Add Extension
           </button>
-          <button class="settings-button" on:click={handleOpenSettings}>
+          <button class="action-button" on:click={handleOpenSettings}>
             <Icon name="settings" />
           </button>
         </div>
@@ -98,37 +99,73 @@
       #d2e2ff 100%
     );
     color: #586884;
+    width: 200px;
+    overflow: hidden;
+
+    &:has(.empty-state) {
+      width: 280px;
+    }
   }
 
   .installed-extensions {
     display: flex;
     flex-direction: column;
-    padding: 0.5rem;
-    gap: 0.5rem;
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .extensions-container {
+    min-height: 2rem;
+    width: 100%;
+    overflow: hidden;
+
+    :global(browser-action-list) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: hidden;
+      max-height: none;
+      width: 100%;
+
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    :global(browser-action-list > *) {
+      flex-shrink: 0;
+      margin: 0;
+    }
   }
 
   .button-group {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.25rem;
     align-items: center;
+    justify-content: center;
+    margin-top: 0.25rem;
+    width: 100%;
   }
 
-  .settings-button {
+  .action-button {
     background: rgba(255, 255, 255, 0.4);
     border-radius: 0.5rem;
-    padding: 0.25rem;
+    padding: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    &:hover {
-      background: rgba(255, 255, 255, 0.8);
-    }
-  }
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    gap: 0.25rem;
+    flex: 0 0 auto;
+    min-width: 40px;
 
-  .install-button {
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 0.5rem;
-    padding: 0.25rem 0.75rem;
     &:hover {
       background: rgba(255, 255, 255, 0.8);
     }
@@ -138,8 +175,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-width: 28ch;
-    padding: 1rem 1.25rem 0.5rem 1.25rem;
+    padding: 1rem 1.5rem 1rem 1.5rem;
 
     .description {
       display: flex;

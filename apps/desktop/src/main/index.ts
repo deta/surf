@@ -92,26 +92,6 @@ const registerProtocols = () => {
         corsEnabled: true,
         stream: true
       }
-    },
-    {
-      scheme: 'crx',
-      privileges: {
-        standard: true,
-        supportFetchAPI: true,
-        secure: true,
-        corsEnabled: true,
-        stream: true
-      }
-    },
-    {
-      scheme: 'chrome-extension',
-      privileges: {
-        standard: true,
-        supportFetchAPI: true,
-        secure: true,
-        corsEnabled: true,
-        stream: true
-      }
     }
   ])
 }
@@ -300,13 +280,16 @@ const initializeApp = async () => {
 
     const webviewsSession = session.fromPartition('persist:horizon')
     const extensionsManager = ExtensionsManager.getInstance()
-    await extensionsManager.initialize(
-      mainWindow,
-      webviewsSession,
-      'vertical',
-      new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
-      handleOpenUrl
-    )
+    try {
+      await extensionsManager.initialize(
+        mainWindow,
+        webviewsSession,
+        new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
+        handleOpenUrl
+      )
+    } catch (error) {
+      log.error('Error initializing extensions:', error)
+    }
   }
 }
 
