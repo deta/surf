@@ -32,9 +32,9 @@
     dispatch('viewChange', 'import')
   }
 
-  const handleBack = () => {
-    dispatch('back')
-  }
+  // const handleBack = () => {
+  //   dispatch('back')
+  // }
 
   onMount(() => {
     showContent = true
@@ -69,7 +69,7 @@
         {/if}
         <div in:fade={{ duration: 300 }}>
           <Button on:click={handlePersonaSubmit} disabled={selectedPersonas.length === 0}
-            >Show Surf's Features</Button
+            >Continue</Button
           >
         </div>
       {/if}

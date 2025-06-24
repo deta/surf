@@ -308,8 +308,9 @@
     {#if !section || section === 'your-stuff'}
       <section id="your-stuff">
         <YourStuffSection
-          on:tryStuff={handleTryStuff}
-          on:launchTimeline={({ detail }) => dispatch('launchTimeline', detail)}
+          on:open-stuff={() => {
+            dispatch('openStuff')
+          }}
         />
       </section>
     {/if}

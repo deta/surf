@@ -20,10 +20,13 @@
 <div class="wrapper">
   <div class="content" in:fly={{ y: 200, duration: 1000, easing: quintOut }}>
     <div in:blur={{ amount: 5, duration: 1000 }}>
-      <h1 class="title">Early Access Program</h1>
+      <h1 class="title">Surf Alpha</h1>
 
       <div class="details">
-        <p class="info text-md">While Surf is in early access, we want to make two things clear:</p>
+        <p class="info text-md">
+          Surf is still in its alpha phase and we are actively designing and building the product.
+          How you can help:
+        </p>
       </div>
 
       <div class="tracking">
@@ -32,14 +35,27 @@
             <h2>Analytics</h2>
           </div>
           <p>
-            Surf collects some <b>anonymous</b> analytics which include interactions with certain app
+            Surf collects some minimal analytics which include interactions with certain app
             features. We do not track the URLs you visit nor the contents of the data you store.
           </p>
           <a href={ANALYTICS_URL} target="_blank" class="learn-more" rel="noopener noreferrer"
             >Learn more</a
           >
         </Box>
+
         <Box>
+          <div class="icon-heading">
+            <h2>Feedback</h2>
+          </div>
+          <p>
+            We would love to hear your feedback on how you use Surf. You can share your thoughts,
+            suggestions, or report issues through our feedback form or in our Discord community.
+          </p>
+          <a href={ANALYTICS_URL} target="_blank" class="learn-more" rel="noopener noreferrer"
+            >Feedback Form</a
+          >
+        </Box>
+        <!-- <Box>
           <div class="icon-heading">
             <h2>Security</h2>
           </div>
@@ -51,10 +67,9 @@
           <a href={SECURITY_URL} target="_blank" class="learn-more" rel="noopener noreferrer"
             >Learn more</a
           >
-        </Box>
-      </div>
+        </Box> -->
 
-      <Box>
+        <!-- <Box>
         <div
           class="icon-heading"
           style="display: flex; flex-direction: column; align-items: center;"
@@ -95,7 +110,9 @@
             Read our <a href={PRIVACY_URL} target="_blank">Privacy Policy</a> for more info.
           </p>
         </div>
-      </Box>
+      </Box> -->
+      </div>
+
       <div class="actions">
         <Button on:click={handleAcceptAIFeatures}>I understand</Button>
       </div>
@@ -108,30 +125,44 @@
     display: flex;
     justify-content: center;
     width: 100%;
-    padding: 4rem;
+
     background-color: #f8f9fa;
+    padding: 2rem;
+    border-right: 1px solid #ccc;
+    text-align: left;
+    border-left: 0.5px solid rgba(0, 0, 0, 0.09);
+    border-left: 0.5px solid color(display-p3 0 0 0 / 0.09);
+    transition: width 0.3s ease;
+
+    background: linear-gradient(180deg, #39a1fb 0%, #b4dcff 100%);
+    background: linear-gradient(
+      180deg,
+      color(display-p3 0.3445 0.6242 0.9564) 0%,
+      color(display-p3 0.7368 0.8571 1) 100%
+    );
   }
 
   .content {
-    max-width: 600px;
+    max-width: 800px;
     padding: 2rem;
-    border-radius: 1rem;
+    border-radius: 15px;
     border: 0.194px solid rgba(0, 0, 0, 0.13);
     border: 0.194px solid color(display-p3 0 0 0 / 0.13);
     box-shadow:
       0px 20px 25px -5px rgba(0, 0, 0, 0.1),
       0px 10px 10px -5px rgba(0, 0, 0, 0.04);
     transition: box-shadow 1s ease-out;
+    background: #ffffff;
   }
 
-  .content:hover {
-    box-shadow:
-      0px 2.633px 0.745px 0px #001c38,
-      0px 1.689px 0.646px 0px rgba(0, 28, 56, 0.01),
-      0px 0.944px 0.547px 0px rgba(0, 28, 56, 0.05),
-      0px 0.397px 0.397px 0px rgba(0, 28, 56, 0.09),
-      0px 0.099px 0.248px 0px rgba(0, 28, 56, 0.1);
-  }
+  // .content:hover {
+  //   box-shadow:
+  //     0px 2.633px 0.745px 0px #001c38,
+  //     0px 1.689px 0.646px 0px rgba(0, 28, 56, 0.01),
+  //     0px 0.944px 0.547px 0px rgba(0, 28, 56, 0.05),
+  //     0px 0.397px 0.397px 0px rgba(0, 28, 56, 0.09),
+  //     0px 0.099px 0.248px 0px rgba(0, 28, 56, 0.1);
+  // }
 
   .title {
     font-family: 'Gambarino-Display', sans-serif;
@@ -172,7 +203,6 @@
   }
 
   .details {
-    max-width: 35ch;
     margin: 0 auto;
     margin-bottom: 1rem;
 

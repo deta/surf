@@ -53,8 +53,7 @@
   import {
     generateContentHash,
     mapCitationsToText,
-    parseChatOutputToHtml,
-    parseChatOutputToSurfletCode
+    parseChatOutputToHtml
   } from '@horizon/core/src/lib/service/ai/helpers'
   import {
     startAIGeneration,
@@ -98,7 +97,7 @@
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
   import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
-  import { ChatMode, Provider } from '@horizon/types/src/ai.types'
+  import { Provider } from '@horizon/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
@@ -227,14 +226,196 @@
 
   // Set up synchronization between local and global state
   onMount(() => {
-    // Subscribe to global state and update local state
-    const unsubscribeGlobal = globalIsGeneratingAI.subscribe((isGenerating) => {
-      isGeneratingAI.set(isGenerating)
-    })
+    // @ts-ignore
+    window.wikipediaAPI = wikipediaAPI
 
+    // Add event listener for onboarding mention
+    document.addEventListener(
+      'insert-onboarding-mention',
+      handleInsertOnboardingMention as EventListener
+    )
+
+    // Setup async operations separately from onMount's return
+    const setupAsync = async () => {
+      // Subscribe to global state and update local state
+      const unsubscribeGlobal = globalIsGeneratingAI.subscribe((isGenerating) => {
+        isGeneratingAI.set(isGenerating)
+      })
+
+      // Add event listener for UseAsDefaultBrowser extension
+      document.addEventListener(
+        'insert-use-as-default-browser',
+        handleInsertUseAsDefaultBrowser as EventListener
+      )
+
+      // Add event listener for onboarding footer with links
+      document.addEventListener(
+        'insert-onboarding-footer',
+        handleInsertOnboardingFooter as EventListener
+      )
+
+      // Add event listener for button insertion
+      document.addEventListener('insert-button-to-note', handleInsertButtonToNote as EventListener)
+
+      if (showOnboarding) {
+        initialLoad = false
+        title = $onboardingNote?.title ?? 'Onboarding'
+        content.set($onboardingNote?.html ?? '')
+
+        let currentIdx = $onboardingIndex
+
+        unsubscribeContent = onboardingNote.subscribe((note) => {
+          title = note.title
+          content.set(note.html)
+          dispatch('change-onboarding-note', note)
+
+          hideInfoPopover()
+
+          if (note.id === 'basics') {
+            showBasicsPopover()
+          } else if (note.id === 'similarity') {
+            showSimilarityPopover()
+          }
+
+          const newIdx = $onboardingIndex
+          if (newIdx !== currentIdx) {
+            autofocus = true
+            showPrompts.set(false)
+            telemetry.trackNoteOnboardingChangeStep(newIdx, currentIdx)
+            currentIdx = newIdx
+          }
+        })
+
+        contentHash.set(generateContentHash($content))
+        contextManager = ai.createContextManager()
+        contextManager.clear()
+
+        // await generatePrompts()
+
+        selectedContext.set('everything')
+        return
+      } else if (showCodegenOnboarding) {
+        initialLoad = false
+        title = $onboardingNote?.title ?? 'Onboarding'
+        content.set($onboardingNote?.html ?? '')
+
+        contentHash.set(generateContentHash($content))
+        contextManager = ai.createContextManager()
+        contextManager.clear()
+        selectedContext.set('everything')
+        return
+      }
+
+      if (!note) {
+        note = await smartNotes.getNote(resourceId)
+        if (!note) {
+          log.error('Note not found', resourceId)
+          return
+        }
+      }
+
+      const value = note.resource.parsedData
+      unsubscribeValue = value.subscribe((value) => {
+        if (value) {
+          content.set(value)
+
+          if (!editorFocused) {
+            editorElem?.setContent(value)
+          }
+        }
+      })
+
+      await note.loadContent()
+
+      initialLoad = false
+
+      unsubscribeContent = content.subscribe((value) => {
+        debouncedSaveContent(value ?? '')
+
+        if (editorElem) {
+          isEmpty.set(editorElem.isEmptyy())
+        }
+      })
+
+      title = note.titleValue ?? 'Untitled'
+      unsubscribeTitle = note.title.subscribe((value) => {
+        if (value) {
+          title = value
+        }
+      })
+
+      log.debug('text resource', resource, title, $content)
+
+      contentHash.set(generateContentHash($content))
+
+      if (!contextManager) {
+        contextManager = note.contextManager
+      }
+
+      await wait(500)
+
+      // Add event listeners for surflet events
+      const handleCreateSurfletEvent = (e: CustomEvent) => {
+        log.debug('Received create-surflet event', e.detail)
+        handleCreateSurflet(e.detail?.code)
+      }
+
+      const handleUpdateSurfletEvent = (e: CustomEvent) => {
+        log.debug('Received update-surflet event', e.detail)
+        updateSurfletContent(e.detail?.code)
+      }
+
+      const handleOpenStuffEvent = () => {
+        log.debug('Received onboarding-open-stuff event')
+        tabsManager.showNewTabOverlay.set(2)
+      }
+
+      if (editorElem) {
+        isEmpty.set(editorElem.isEmptyy())
+      }
+
+      if (editorElement) {
+        editorElement.addEventListener('scroll', handleScroll)
+      }
+
+      document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
+      document.addEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
+      document.addEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
+
+      return () => {
+        document.removeEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
+        document.removeEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
+        document.removeEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
+      }
+    }
+
+    // Start the async setup without waiting for it
+    setupAsync()
+
+    // Return the cleanup function directly (not in a Promise)
     return () => {
-      // Clean up subscription when component is destroyed
-      unsubscribeGlobal()
+      document.removeEventListener(
+        'insert-onboarding-mention',
+        handleInsertOnboardingMention as EventListener
+      )
+
+      // Remove the UseAsDefaultBrowser event listener
+      document.removeEventListener(
+        'insert-use-as-default-browser',
+        handleInsertUseAsDefaultBrowser as EventListener
+      )
+
+      // Remove the onboarding footer event listener
+      document.removeEventListener(
+        'insert-onboarding-footer',
+        handleInsertOnboardingFooter as EventListener
+      )
+
+      // Remove the button insertion event listener
+      document.removeEventListener(
+        'insert-button-to-note',
+        handleInsertButtonToNote as EventListener
+      )
     }
   })
 
@@ -1029,7 +1210,6 @@
 
       // TODO: chatMode is already also figured out in `createChatCompletion` API
       // we need to refactor this to avoid double calls
-      const chatMode = await chat.getChatModeForNoteAndTab(query, editor.getText(), null)
       const renderFunction = useThrottle(async (message: AIChatMessageParsed) => {
         if (!createdLoading) {
           createdLoading = true
@@ -1049,10 +1229,7 @@
         await tick()
 
         //log.debug('chat message', message)
-        const outputContent =
-          chatMode === ChatMode.AppCreation
-            ? await parseChatOutputToSurfletCode(message)
-            : await parseChatOutputToHtml(message)
+        const outputContent = await parseChatOutputToHtml(message)
 
         if (aiGeneration && outputContent) {
           aiGeneration.updateOutput(outputContent)
@@ -1100,23 +1277,26 @@
         log.error('Error generating AI output', response.error)
         if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
           toasts.error(response.error.message)
+        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+          toasts.error('Too many requests, please try again later')
+        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
+          toasts.error(
+            'No relevant context found. Please add more resources or try a different query.'
+          )
         } else {
-          toasts.error('Failed to generate AI output')
+          toasts.error('Something went wrong generating the AI output. Please try again.')
         }
 
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
       } else if (!response.output) {
         log.error('No output found')
-        toasts.error('Failed to generate AI output')
+        toasts.error('Something went wrong generating the AI output. Please try again.')
 
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
       } else {
-        const content =
-          chatMode === ChatMode.AppCreation
-            ? await parseChatOutputToSurfletCode(response.output)
-            : await parseChatOutputToHtml(response.output)
+        const content = await parseChatOutputToHtml(response.output)
 
         log.debug('inserted output', content)
 
@@ -1130,7 +1310,7 @@
       }
     } catch (err) {
       log.error('Error generating AI output', err)
-      toasts.error('Failed to generate AI output')
+      toasts.error('Something went wrong generating the AI output. Please try again.')
 
       // const loading = getLastNode('loading')
       // if (loading) {
@@ -1275,8 +1455,14 @@
 
         if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
           toasts.error(response.error.message)
+        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+          toasts.error('Too many requests, please try again later')
+        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
+          toasts.error(
+            'No relevant context found. Please add more resources or try a different query.'
+          )
         } else {
-          toasts.error('Failed to generate AI output')
+          toasts.error('Something went wrong generating the AI output. Please try again.')
         }
 
         return
@@ -2359,163 +2545,6 @@
     }
   }
 
-  onMount(async () => {
-    // @ts-ignore
-    window.wikipediaAPI = wikipediaAPI
-
-    // Add event listener for onboarding mention
-    document.addEventListener(
-      'insert-onboarding-mention',
-      handleInsertOnboardingMention as EventListener
-    )
-
-    // Add event listener for UseAsDefaultBrowser extension
-    document.addEventListener(
-      'insert-use-as-default-browser',
-      handleInsertUseAsDefaultBrowser as EventListener
-    )
-
-    // Add event listener for onboarding footer with links
-    document.addEventListener(
-      'insert-onboarding-footer',
-      handleInsertOnboardingFooter as EventListener
-    )
-
-    // Add event listener for button insertion
-    document.addEventListener('insert-button-to-note', handleInsertButtonToNote as EventListener)
-
-    if (showOnboarding) {
-      initialLoad = false
-      title = $onboardingNote?.title ?? 'Onboarding'
-      content.set($onboardingNote?.html ?? '')
-
-      let currentIdx = $onboardingIndex
-
-      unsubscribeContent = onboardingNote.subscribe((note) => {
-        title = note.title
-        content.set(note.html)
-        dispatch('change-onboarding-note', note)
-
-        hideInfoPopover()
-
-        if (note.id === 'basics') {
-          showBasicsPopover()
-        } else if (note.id === 'similarity') {
-          showSimilarityPopover()
-        }
-
-        const newIdx = $onboardingIndex
-        if (newIdx !== currentIdx) {
-          autofocus = true
-          showPrompts.set(false)
-          telemetry.trackNoteOnboardingChangeStep(newIdx, currentIdx)
-          currentIdx = newIdx
-        }
-      })
-
-      contentHash.set(generateContentHash($content))
-      contextManager = ai.createContextManager()
-      contextManager.clear()
-
-      // await generatePrompts()
-
-      selectedContext.set('everything')
-      return
-    } else if (showCodegenOnboarding) {
-      initialLoad = false
-      title = $onboardingNote?.title ?? 'Onboarding'
-      content.set($onboardingNote?.html ?? '')
-
-      contentHash.set(generateContentHash($content))
-      contextManager = ai.createContextManager()
-      contextManager.clear()
-      selectedContext.set('everything')
-      return
-    }
-
-    if (!note) {
-      note = await smartNotes.getNote(resourceId)
-      if (!note) {
-        log.error('Note not found', resourceId)
-        return
-      }
-    }
-
-    const value = note.resource.parsedData
-    unsubscribeValue = value.subscribe((value) => {
-      if (value) {
-        content.set(value)
-
-        if (!editorFocused) {
-          editorElem?.setContent(value)
-        }
-      }
-    })
-
-    await note.loadContent()
-
-    initialLoad = false
-
-    unsubscribeContent = content.subscribe((value) => {
-      debouncedSaveContent(value ?? '')
-
-      if (editorElem) {
-        isEmpty.set(editorElem.isEmptyy())
-      }
-    })
-
-    title = note.titleValue ?? 'Untitled'
-    unsubscribeTitle = note.title.subscribe((value) => {
-      if (value) {
-        title = value
-      }
-    })
-
-    log.debug('text resource', resource, title, $content)
-
-    contentHash.set(generateContentHash($content))
-
-    if (!contextManager) {
-      contextManager = note.contextManager
-    }
-
-    await wait(500)
-
-    // Add event listeners for surflet events
-    const handleCreateSurfletEvent = (e: CustomEvent) => {
-      log.debug('Received create-surflet event', e.detail)
-      handleCreateSurflet(e.detail?.code)
-    }
-
-    const handleUpdateSurfletEvent = (e: CustomEvent) => {
-      log.debug('Received update-surflet event', e.detail)
-      updateSurfletContent(e.detail?.code)
-    }
-
-    const handleOpenStuffEvent = () => {
-      log.debug('Received onboarding-open-stuff event')
-      tabsManager.showNewTabOverlay.set(2)
-    }
-
-    if (editorElem) {
-      isEmpty.set(editorElem.isEmptyy())
-    }
-
-    if (editorElement) {
-      editorElement.addEventListener('scroll', handleScroll)
-    }
-
-    document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
-    document.addEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
-    document.addEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
-
-    return () => {
-      document.removeEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
-      document.removeEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
-      document.removeEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
-    }
-  })
-
   onDestroy(() => {
     if (resource) {
       resource.releaseData()
@@ -2605,6 +2634,7 @@
       {#key `${showOnboarding}-${$onboardingNote.id}`}
         <div
           class="notes-editor-wrapper"
+          class:autocompleting={$autocompleting}
           bind:this={editorWrapperElem}
           on:keydown={handleEditorKeyDown}
         >

@@ -1101,10 +1101,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     }
   }
 
-  async changeScope(
-    scopeId: string | null,
-    trigger: ChangeContextEventTrigger = ChangeContextEventTrigger.ContextSwitcher
-  ) {
+  async changeScope(scopeId: string | null, trigger?: ChangeContextEventTrigger) {
     const currentActiveScope = this.activeScopeIdValue
     this.log.debug('changing active scope from', currentActiveScope, 'to', scopeId)
 
@@ -1200,11 +1197,12 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     }
 
     this.log.debug('changed active scope', scopeId)
-    this.telemetry.trackContextSwitch(
-      trigger,
-      getBrowserContextScopeType(currentActiveScope),
-      getBrowserContextScopeType(scopeId)
-    )
+    if (trigger !== undefined)
+      this.telemetry.trackContextSwitch(
+        trigger,
+        getBrowserContextScopeType(currentActiveScope),
+        getBrowserContextScopeType(scopeId)
+      )
   }
 
   async scopeTab(tabId: string, scopeId: string | null, closeOverlay?: boolean) {

@@ -334,6 +334,7 @@
       class="left-peeking-area {leftPeakAreaClasses}"
       on:mouseenter={() => handleMouseEnter('left')}
       style="z-index: 550;"
+      data-tooltip-disable
     />
   {/if}
   <main style={mainStyle} class={mainClasses}>

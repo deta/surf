@@ -116,14 +116,14 @@ fn js_query_sffs_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_create_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
     #[derive(Serialize, Deserialize, Debug)]
     struct CreateAppOptions {
-        pub prompt: String,
-        pub chat_id: String,
+        pub query: String,
         pub model: Model,
         pub custom_key: Option<String>,
-        pub contexts: Option<Vec<String>>,
+        pub inline_images: Option<Vec<String>>,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
     let json_opt = cx.argument::<JsString>(1)?.value(&mut cx);
     let mut opts: CreateAppOptions = match serde_json::from_str(&json_opt) {
         Ok(opts) => opts,
@@ -131,14 +131,18 @@ fn js_create_app(mut cx: FunctionContext) -> JsResult<JsPromise> {
     };
     opts.custom_key = opts.custom_key.filter(|k| !k.is_empty());
 
+    let chunk_callback = cx.argument::<JsFunction>(2)?.root(&mut cx);
+    let done_callback = cx.argument::<JsFunction>(3)?.root(&mut cx);
+
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::MiscMessage(MiscMessage::CreateApp {
-            prompt: opts.prompt,
+        WorkerMessage::MiscMessage(MiscMessage::CreateAppQuery {
+            chunk_callback,
+            done_callback,
+            query: opts.query,
             model: opts.model,
             custom_key: opts.custom_key,
-            session_id: opts.chat_id,
-            contexts: opts.contexts,
+            inline_images: opts.inline_images,
         }),
         deferred,
     );

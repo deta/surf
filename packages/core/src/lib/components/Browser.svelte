@@ -719,9 +719,9 @@
     }
   }
 
-  const openRightSidebarTab = async (id: RightSidebarTab) => {
+  const openRightSidebarTab = async (id: RightSidebarTab, disableTelemetry = false) => {
     if ($rightSidebarTab === id) {
-      telemetry.trackOpenRightSidebar(id)
+      if (!disableTelemetry) telemetry.trackOpenRightSidebar(id)
     } else {
       rightSidebarTab.set(id)
     }
@@ -3327,7 +3327,10 @@
       }
     }
 
-    openWelcomeTab(false)
+    // TODO: renable when the welcome page is fixed
+    //openWelcomeTab(false)
+    // END TODO
+
     // HACK: We  unmute all the tabs after onboarding
     for (let [_, browserTab] of Object.entries(tabsManager.browserTabsValue)) {
       browserTab.setMute(false)
@@ -3803,11 +3806,13 @@
     }
   }
 
-  const handleOpenInlineNoteInSidebar = async (e: CustomEvent<{ note: SmartNote }>) => {
+  const handleOpenInlineNoteInSidebar = async (
+    e: CustomEvent<{ note: SmartNote; force: boolean }>
+  ) => {
     const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
     log.debug('existing chat', $activeSidebarChat, messagesLength)
 
-    if (messagesLength > 0) {
+    if (messagesLength > 0 && !e.detail.force) {
       const { closeType: confirmed } = await openDialog({
         title: 'Move Chat',
         message:
@@ -3838,11 +3843,13 @@
     await openChatSidebar(false)
   }
 
-  const handleOpenInlineChatInSidebar = async (e: CustomEvent<{ chat: AIChat }>) => {
+  const handleOpenInlineChatInSidebar = async (
+    e: CustomEvent<{ chat: AIChat; force: boolean }>
+  ) => {
     const messagesLength = ($activeSidebarChat?.responsesValue ?? []).length
     log.debug('existing chat', $activeSidebarChat, messagesLength)
 
-    if (messagesLength > 0) {
+    if (messagesLength > 0 && !e.detail.force) {
       const { closeType: confirmed } = await openDialog({
         title: 'Move Chat',
         message:
@@ -4025,7 +4032,7 @@
 {#if $showHeroScreen}
   <HeroScreen
     on:dismiss={async () => {
-      await openRightSidebarTab('chat')
+      await openRightSidebarTab('chat', true)
       await tick()
       showHeroScreen.set(false)
     }}
@@ -5636,9 +5643,8 @@
   /* Base styling for the tooltip target */
   :global(.tooltip-target[data-tooltip-target]) {
     position: relative;
-    background: rgb(255 140 126);
+    background: rgba(255 140 126 / 0.2);
     border-color: rgb(255 106 91);
-    color: white;
     border-radius: 16px;
     isolation: isolate; /* Create a new stacking context */
   }

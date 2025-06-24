@@ -686,7 +686,7 @@ const api = {
 
     const res = await api.activateAppUsingKey(key, acceptedTerms)
     if (res.ok && (res.data as AppActivationResponse)) {
-      IPC_EVENTS_RENDERER.storeAPIKey.send(res.data.api_key)
+      IPC_EVENTS_RENDERER.updateUserConfig.send({ api_key: res.data.api_key })
     }
     return res
   },

@@ -430,7 +430,6 @@
           style:--base-color={themeOverride?.colors?.base}
           style:--contrast-color={themeOverride?.colors?.contrast}
         >
-          <Tooltip rootID="stuff" on:close-stuff={closeOverlay} />
           {#key $selectedSpaceId}
             <OasisSpaceRenderer
               bind:this={oasisSpace}

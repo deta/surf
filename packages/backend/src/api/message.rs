@@ -196,12 +196,13 @@ pub enum MiscMessage {
         inline_images: Option<Vec<String>>,
         general: bool,
     },
-    CreateApp {
-        prompt: String,
+    CreateAppQuery {
+        chunk_callback: Root<JsFunction>,
+        done_callback: Root<JsFunction>,
+        query: String,
         model: Model,
         custom_key: Option<String>,
-        session_id: String,
-        contexts: Option<Vec<String>>,
+        inline_images: Option<Vec<String>>,
     },
     Print(String),
     CreateAIChatMessage(String, String),
@@ -236,7 +237,7 @@ pub enum MiscMessage {
         custom_key: Option<String>,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
-    }
+    },
 }
 
 #[derive(Debug, serde::Serialize)]

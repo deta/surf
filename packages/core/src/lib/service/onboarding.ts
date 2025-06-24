@@ -2,7 +2,7 @@ import { getContext, setContext } from 'svelte'
 import { useLogScope, wait } from '@horizon/utils'
 import { writable, get, derived, type Writable } from 'svelte/store'
 import type { TabsManager } from './tabs'
-import type { MagicSidebar } from '../components/Sidebars/MagicSidebar.svelte'
+import MagicSidebar from '../components/Sidebars/MagicSidebar.svelte'
 import type { AIService } from './ai/ai'
 import {
   startAIGeneration,
@@ -14,7 +14,7 @@ import { nextStep, activeStep, prevStep } from '../components/Onboarding/timelin
 import { CompletionEventID } from '../components/Onboarding/onboardingScripts'
 
 export const screenPickerSelectionActive = writable(false)
-export const visionViewState = writable<'default' | 'empty'>('default')
+export const onboardingTabViewState = writable<'default' | 'empty' | 'chat-with-tab'>('default')
 export const activeOnboardingTabId = writable<string | null>(null)
 
 const ONBOARDING_CONTEXT_KEY = 'onboarding'
@@ -210,29 +210,24 @@ export class OnboardingService {
    * @param url The URL to open
    * @param question Optional question to ask about the content
    */
-  async openURLAndChat(url: string, question?: string) {
+  async openURLAndChat(url: string, question?: string, active?: boolean) {
     this.log.debug('Opening URL and starting chat', url)
 
     // Set loading state for content loading
     this.setLoadingState(OnboardingLoadingState.LoadingContent, 'Loading content...', url)
 
     try {
-      // Open the URL in a new tab and get the tab ID
-      const tabResult = await this.tabsManager.addPageTab(url, { active: true })
+      const tabResult = await this.tabsManager.addPageTab(url, { active: active })
 
       if (tabResult) {
         const tabId = tabResult.id
         this.log.debug('Created new tab with ID', tabId)
 
-        // Explicitly activate the tab to ensure it's selected
-        this.tabsManager.activateTab(tabId)
-        this.log.debug('Explicitly activated tab', tabId)
-
         // Wait for the content to load
         await this.waitForContentLoad(tabId)
 
-        // Explicitly add the active tab to the context
-        this.log.debug('Explicitly adding active tab to context')
+        // Explicitly add the specific tab to the context (not necessarily the active tab)
+        this.log.debug('Explicitly adding tab to context', tabId)
         this.setLoadingState(
           OnboardingLoadingState.LoadingContent,
           'Adding tab to context...',
@@ -240,7 +235,7 @@ export class OnboardingService {
         )
 
         // Wait for the tab to be added to the context
-        await this.addActiveTabToContext()
+        await this.addTabToContext(tabId)
 
         // Give a small delay to ensure everything is ready
         await wait(500)
@@ -293,40 +288,28 @@ export class OnboardingService {
           tabId
         )
 
-        // Wait for active tab to be available (try up to 10 times with 200ms intervals)
-        let activeTab = this.tabsManager.activeTabValue
-        let attempts = 0
-        const maxAttempts = 10
-
-        while (!activeTab && attempts < maxAttempts) {
-          this.log.debug(
-            `Waiting for active tab to be available (attempt ${attempts + 1}/${maxAttempts})`
-          )
-          await wait(200)
-          activeTab = this.tabsManager.activeTabValue
-          attempts++
-        }
+        let activeTab = tabId
 
         if (!activeTab) {
-          this.log.error(`No active tab found after ${maxAttempts} attempts`)
+          this.log.error(`No active tab found`)
           this.setLoadingState(OnboardingLoadingState.Idle, 'Failed to find active tab')
-          setTimeout(resolve, 2000) // Fallback to timeout
+          setTimeout(resolve, 2000)
           return
         }
 
         // Wait for the browser tab to be available
-        let browserTab = this.tabsManager.browserTabsValue[activeTab.id]
+        let browserTab = this.tabsManager.browserTabsValue[activeTab]
         if (!browserTab) {
           this.log.debug(
             'Browser tab not immediately available, waiting for it to initialize...',
-            activeTab.id
+            activeTab
           )
 
           // Update loading state
           this.setLoadingState(
             OnboardingLoadingState.LoadingContent,
             'Waiting for browser tab to initialize...',
-            activeTab.id
+            activeTab
           )
 
           // Try to get the browser tab for up to 5 attempts with 300ms intervals
@@ -335,26 +318,26 @@ export class OnboardingService {
 
           while (!browserTab && attempts < maxAttempts) {
             await wait(300)
-            browserTab = this.tabsManager.browserTabsValue[activeTab.id]
+            browserTab = this.tabsManager.browserTabsValue[activeTab]
             attempts++
             this.log.debug(`Waiting for browser tab (attempt ${attempts}/${maxAttempts})`)
           }
 
           if (!browserTab) {
-            this.log.error(`Browser tab not found after ${maxAttempts} attempts`, activeTab.id)
+            this.log.error(`Browser tab not found after ${maxAttempts} attempts`, activeTab)
             this.setLoadingState(OnboardingLoadingState.Idle, 'Failed to find browser tab')
             setTimeout(resolve, 2000) // Fallback to timeout
             return
           }
 
-          this.log.debug('Browser tab found after waiting', activeTab.id)
+          this.log.debug('Browser tab found after waiting', activeTab)
         }
 
         this.log.debug('Waiting for app detection to complete')
         this.setLoadingState(
           OnboardingLoadingState.LoadingContent,
           'Detecting content type...',
-          activeTab.id
+          activeTab
         )
 
         // Wait for app detection to complete with a timeout
@@ -366,7 +349,7 @@ export class OnboardingService {
           this.setLoadingState(
             OnboardingLoadingState.LoadingContent,
             'Parsing page content...',
-            activeTab.id
+            activeTab
           )
           // Give a small additional delay for any final processing
           setTimeout(() => {
@@ -379,7 +362,7 @@ export class OnboardingService {
           this.setLoadingState(
             OnboardingLoadingState.LoadingContent,
             'Content loaded (timeout)',
-            activeTab.id
+            activeTab
           )
           // If app detection times out, we still proceed but with a slightly longer delay
           setTimeout(() => {
@@ -398,12 +381,13 @@ export class OnboardingService {
   }
 
   /**
-   * Add the active tab to the context manager and wait for the resource to be fully prepared
+   * Add a specific tab to the context manager and wait for the resource to be fully prepared
+   * @param tabId The ID of the tab to add to the context
    * @private
    */
-  private async addActiveTabToContext(): Promise<void> {
+  private async addTabToContext(tabId: string): Promise<void> {
     if (!this.aiService) {
-      this.log.error('AIService not registered, cannot add active tab to context')
+      this.log.error('AIService not registered, cannot add tab to context')
       return
     }
 
@@ -414,47 +398,42 @@ export class OnboardingService {
         return
       }
 
-      // Verify that there is an active tab before proceeding
-      let activeTab = this.tabsManager.activeTabValue
-      if (!activeTab) {
-        this.log.warn('No active tab found when trying to add to context, waiting...')
-
-        // Wait for active tab to be available (try up to 10 times with 200ms intervals)
-        let attempts = 0
-        const maxAttempts = 10
-
-        while (!activeTab && attempts < maxAttempts) {
-          await new Promise((r) => setTimeout(r, 400))
-          activeTab = this.tabsManager.activeTabValue
-          attempts++
-          this.log.debug(`Waiting for active tab (attempt ${attempts}/${maxAttempts})`)
-        }
-
-        if (!activeTab) {
-          this.log.error(`No active tab found after ${maxAttempts} attempts, cannot add to context`)
-          return
-        }
+      // Get the specific tab by ID
+      const tab = this.tabsManager.get(tabId)
+      if (!tab) {
+        this.log.error(`Tab with ID ${tabId} not found when trying to add to context`)
+        return
       }
 
-      this.log.debug('Adding active tab to context before submitting message')
+      this.log.debug(`Adding tab ${tabId} to context before submitting message`)
 
-      // Add the active tab to the context
-      const activeTabItem = await contextManager.addActiveTab()
+      // Temporarily make this tab active to use the existing context system
+      const previousActiveTabId = this.tabsManager.activeTabIdValue
+
+      // Add the now-active tab to the context
+      const activeTabItem = await contextManager.addTabs([tabId])
+
+      await wait(1000)
 
       if (!activeTabItem) {
-        this.log.error('Failed to add active tab to context, item not created')
+        this.log.error('Failed to add tab to context, item not created')
+
+        // Restore the previous active tab if needed
+        if (previousActiveTabId && previousActiveTabId !== tabId) {
+          await this.tabsManager.makeActive(previousActiveTabId)
+        }
         return
       }
 
       // Wait for the active tab item to finish loading and prepare the resource
       if (activeTabItem.loadingValue) {
-        this.log.debug('Waiting for active tab item to finish loading')
+        this.log.debug('Waiting for tab item to finish loading')
 
         // Create a promise that resolves when loading is complete
         await new Promise<void>((resolve) => {
           const unsubscribe = activeTabItem.loading.subscribe((loading) => {
             if (!loading) {
-              this.log.debug('Active tab item finished loading')
+              this.log.debug('Tab item finished loading')
               unsubscribe()
               resolve()
             }
@@ -487,9 +466,14 @@ export class OnboardingService {
 
       // Ensure the context is persisted
       contextManager.persistItems()
-      this.log.debug('Active tab added to context successfully')
+      this.log.debug('Tab added to context successfully')
+
+      // Restore the previous active tab if needed
+      if (previousActiveTabId && previousActiveTabId !== tabId) {
+        await this.tabsManager.makeActive(previousActiveTabId)
+      }
     } catch (error) {
-      this.log.error('Failed to add active tab to context:', error)
+      this.log.error('Failed to add tab to context:', error)
       throw error
     }
   }

@@ -52,7 +52,6 @@
     <SurfletRenderer
       {resource}
       {isEditable}
-      showPreview={!hidePreview}
       expandable={!hidePreview}
       collapsable
       initialCollapsed={preview ? true : expanded ? false : 'auto'}

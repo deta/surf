@@ -11,7 +11,13 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { appendURLPath, isDev, useLocalStorageStore, useLogScope } from '@horizon/utils'
+import {
+  appendURLPath,
+  generateHash,
+  isDev,
+  useLocalStorageStore,
+  useLogScope
+} from '@horizon/utils'
 import {
   FILENAME_CLEANUP_PROMPT,
   PAGE_PROMPTS_GENERATOR_PROMPT,
@@ -37,6 +43,15 @@ import {
 } from '@horizon/types'
 import { SmartNoteManager } from './note'
 import type { OasisService } from '../oasis'
+
+export interface AppCreationResult {
+  appId: string
+  hasBufferedData: boolean
+}
+
+export interface StreamingAppResponse {
+  subscribe: (chunkCallback: (chunk: string) => void, doneCallback: () => void) => () => void // returns unsubscribe function
+}
 
 export class AIService {
   static self: AIService
@@ -65,6 +80,18 @@ export class AIService {
   activeContextManager: Readable<ContextManager>
 
   customAIApps: Writable<App[]> = writable([])
+
+  private activeAppStreams = new Map<
+    string,
+    {
+      buffer: string
+      isComplete: boolean
+      subscribers: Set<{
+        chunkCallback: (chunk: string) => void
+        doneCallback: () => void
+      }>
+    }
+  >()
 
   constructor(
     resourceManager: ResourceManager,
@@ -417,6 +444,7 @@ export class AIService {
        */
       quotaErrorRetry?: boolean
       filterOutReasoning?: boolean
+      inlineImages?: string[]
     }
   ): Promise<ChatCompletionResponse> {
     const defaultOpts = {
@@ -445,6 +473,20 @@ export class AIService {
         userPrompt.forEach((prompt) => {
           messages.push({ role: 'user', content: [{ type: 'text', text: prompt }] })
         })
+      }
+
+      if (opts?.inlineImages) {
+        for (let i = 0; i < opts.inlineImages.length; i++) {
+          messages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: opts.inlineImages[i] }
+              }
+            ]
+          })
+        }
       }
 
       this.log.debug('creating chat completion', model, options, messages)
@@ -496,7 +538,7 @@ export class AIService {
       }
 
       const parsedError = parseAIError(e)
-      this.log.error('Error creating chat completion', parsedError)
+      this.log.error('Parsed chat completion error', parsedError)
 
       return {
         output: null,
@@ -595,23 +637,158 @@ export class AIService {
     }
   }
 
+  async getAppId(query: string): Promise<string> {
+    return generateHash(query)
+  }
+
   async createApp(
-    chatId: string,
-    prompt: string,
+    query: string,
     opts?: {
       tier?: ModelTiers
-      contexts?: string[]
     }
-  ): Promise<string | null> {
+  ): Promise<AppCreationResult | null> {
     const model = this.getMatchingBackendModel(opts?.tier ?? ModelTiers.Premium)
     const customKey = this.customKeyValue
 
-    this.log.debug('creating ai app', chatId, model, opts, prompt)
+    // TODO: this is a temporary fix to prevent remounts from causing multiple streams
+    // we should find a better way to handle this
+    const appId = await this.getAppId(query)
 
-    return this.sffs.createAIApp(chatId, prompt, model, {
-      customKey,
-      contexts: opts?.contexts
-    })
+    this.log.debug('creating ai app with id:', appId, model, opts, query)
+
+    const contextManager = get(this.activeContextManager)
+    const inlineImages = await contextManager.getInlineImages()
+
+    this.log.debug('number of inline images for app creation:', inlineImages.length)
+
+    try {
+      this.activeAppStreams.set(appId, {
+        buffer: '',
+        isComplete: false,
+        subscribers: new Set()
+      })
+      this.startAppStreaming(appId, query, model, { customKey, inlineImages })
+      return {
+        appId,
+        hasBufferedData: false
+      }
+    } catch (error) {
+      this.log.error('Failed to create app:', error)
+      this.activeAppStreams.delete(appId)
+      return null
+    }
+  }
+
+  subscribeToAppStream(appId: string): StreamingAppResponse | null {
+    const streamData = this.activeAppStreams.get(appId)
+    if (!streamData) {
+      this.log.error('App stream not found:', appId)
+      return null
+    }
+
+    return {
+      subscribe: (chunkCallback: (chunk: string) => void, doneCallback: () => void) => {
+        const subscriber = { chunkCallback, doneCallback }
+        streamData.subscribers.add(subscriber)
+
+        if (streamData.buffer) {
+          chunkCallback(streamData.buffer)
+        }
+
+        if (streamData.isComplete) {
+          doneCallback()
+        }
+        return () => {
+          streamData.subscribers.delete(subscriber)
+          if (streamData.subscribers.size === 0 && streamData.isComplete) {
+            this.activeAppStreams.delete(appId)
+          }
+        }
+      }
+    }
+  }
+
+  private async startAppStreaming(
+    appId: string,
+    query: string,
+    model: ModelBackend,
+    options: { customKey?: string; inlineImages?: string[] }
+  ) {
+    const streamData = this.activeAppStreams.get(appId)
+    if (!streamData) {
+      return
+    }
+
+    try {
+      await this.sffs.createAIApp(
+        query,
+        model,
+        // chunk callback
+        // store main content in buffer and notify subscribers
+        (chunk: string) => {
+          streamData.buffer += chunk
+          streamData.subscribers.forEach((subscriber) => {
+            subscriber.chunkCallback(chunk)
+          })
+        },
+        // done callback
+        // mark stream as complete and notify subscribers
+        () => {
+          streamData.isComplete = true
+          streamData.subscribers.forEach((subscriber) => {
+            subscriber.doneCallback()
+          })
+          if (streamData.subscribers.size === 0) {
+            this.activeAppStreams.delete(appId)
+          }
+        },
+        options
+      )
+    } catch (error) {
+      this.log.error('Error streaming app:', error)
+      // TODO: have an error callback
+      streamData.subscribers.forEach((subscriber) => {
+        subscriber.doneCallback()
+      })
+
+      this.activeAppStreams.delete(appId)
+    }
+  }
+
+  getAppStreamStatus(appId: string): {
+    exists: boolean
+    isComplete: boolean
+    hasBuffer: boolean
+    bufferLength: number
+  } | null {
+    const streamData = this.activeAppStreams.get(appId)
+    if (!streamData) {
+      return null
+    }
+
+    return {
+      exists: true,
+      isComplete: streamData.isComplete,
+      hasBuffer: streamData.buffer.length > 0,
+      bufferLength: streamData.buffer.length
+    }
+  }
+
+  getAppBuffer(appId: string): string | null {
+    const streamData = this.activeAppStreams.get(appId)
+    return streamData?.buffer ?? null
+  }
+
+  cleanupAppStream(appId: string): void {
+    this.activeAppStreams.delete(appId)
+  }
+
+  cleanupCompletedAppStreams(): void {
+    for (const [appId, streamData] of this.activeAppStreams.entries()) {
+      if (streamData.isComplete && streamData.subscribers.size === 0) {
+        this.activeAppStreams.delete(appId)
+      }
+    }
   }
 
   refreshCustomAiApps() {

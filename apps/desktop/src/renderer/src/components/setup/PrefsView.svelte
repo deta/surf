@@ -4,8 +4,6 @@
   import LeftPanel from './LeftPanel.svelte'
   import RightPanel from './RightPanel.svelte'
   import { Icon } from '@horizon/icons'
-  import contentStructure from './config'
-  import { type Role } from './config'
   import { fade, fly } from 'svelte/transition'
   import LayoutPicker from '../LayoutPicker.svelte'
 
@@ -24,7 +22,7 @@
 
   const handleAcceptPrefs = () => {
     dispatch('orientationChange', tabsOrientation)
-    dispatch('viewChange', 'done')
+    dispatch('viewChange', 'disclaimer')
   }
 
   const handleBack = () => {

@@ -1,3 +1,4 @@
+import { isMac } from '@horizon/editor/src/lib/utilities'
 import type { SlashMenuItem } from './types'
 
 export const BUILT_IN_SLASH_COMMANDS = [
@@ -7,7 +8,7 @@ export const BUILT_IN_SLASH_COMMANDS = [
     title: 'Ask Surf...',
     section: 'Smart Note',
     keywords: ['ai', 'surf', '@', 'smart', 'ask'],
-    tagline: `${import.meta.env.PLATFORM === 'darwin' ? '⌘' : 'ctrl'} + ↵`
+    tagline: `${isMac() ? '⌘' : 'ctrl'} + ↵`
   },
   {
     id: 'suggestions',

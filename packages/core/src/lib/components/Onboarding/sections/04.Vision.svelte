@@ -2,11 +2,21 @@
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
+  import { Icon } from '@horizon/icons'
   import { isMac } from '@horizon/utils'
-  import { screenPickerSelectionActive, visionViewState } from '../../../service/onboarding'
-  import { fade } from 'svelte/transition'
+  import { get, derived } from 'svelte/store'
+  import {
+    screenPickerSelectionActive,
+    onboardingTabViewState,
+    useOnboardingService,
+    OnboardingLoadingState
+  } from '../../../service/onboarding'
+  import { fade, fly } from 'svelte/transition'
+  import { flip } from 'svelte/animate'
 
   import example from '../../../../../public/assets/onboarding/vision/example.png'
+  import article from '../../../../../public/assets/onboarding/chat/article.png'
+
   const dispatch = createEventDispatcher<{
     tryVision: void
   }>()
@@ -15,13 +25,24 @@
     dispatch('tryVision')
   }
 
+  const onboardingService = useOnboardingService()
+
+  // Derived store for loading state
+  const loadingState = derived(onboardingService.loadingState, ($loadingState) => $loadingState)
+
+  // Derived store to check if any loading is happening
+  const isLoading = derived(
+    loadingState,
+    ($loadingState) => $loadingState.state !== OnboardingLoadingState.Idle
+  )
+
   $: shortcutKeys = [isMac() ? 'cmd' : 'ctrl', 'T']
 </script>
 
 <section
   class="min-h-screen flex flex-col items-center justify-center relative z-10 p-4 pb-8 md:!p-[6rem] md:!pb-[12rem] lg:!p-32 lg:!pb-[20rem]"
 >
-  {#if $visionViewState === 'default'}
+  {#if $onboardingTabViewState === 'default'}
     <div
       class="select-this-card flex flex-col gap-8 w-full items-center justify-center"
       transition:fade={{ duration: 400 }}
@@ -100,11 +121,55 @@
         or use <ShortcutVisualizer shortcut={shortcutKeys} size="medium" interactive={true} /> to activate.
       </p>
     </div>
+  {:else if $onboardingTabViewState === 'chat-with-tab'}
+    <div class="flex flex-col items-center gap-6 max-w-5xl mt-12 px-4">
+      <img src={article} alt="Article" />
+      <div class="content-container relative h-[120px] w-full overflow-hidden">
+        {#key $isLoading}
+          {#if $isLoading}
+            <!-- Loading indicator -->
+            <div
+              class="loading-indicator absolute inset-0 flex flex-col items-center justify-center"
+              in:fly={{ y: 20, duration: 300, delay: 150 }}
+              out:fly={{ y: -20, duration: 300 }}
+            >
+              <Icon name="spinner" color="white" spin />
+              <p
+                class="text-center text-lg md:!text-xl text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+              >
+                {$loadingState.message || 'Loading...'}
+              </p>
+            </div>
+          {:else}
+            <div
+              class="success-message absolute inset-0 flex flex-col items-center justify-center"
+              in:fly={{ y: 20, duration: 300, delay: 150 }}
+              out:fly={{ y: -20, duration: 300 }}
+            >
+              <p
+                class="flex items-center gap-2 flex-col text-center max-w-xl mx-auto text-lg md:!text-xl text-white text-pretty [text-shadow:0_1px_2px_rgba(0,0,0,0.1)]"
+              >
+                <Icon name="circle.check.fill" size="2rem" color="white" />
+                Surf opened a tab in the background that we now can chat with. We also inserted a question
+                about the article. Hit send to continue.
+              </p>
+            </div>
+          {/if}
+        {/key}
+      </div>
+    </div>
   {/if}
 </section>
 
 <style lang="scss">
   .hint {
     z-index: 2147483647;
+  }
+
+  .loading-indicator {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
   }
 </style>

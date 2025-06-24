@@ -13,9 +13,8 @@ use crate::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
 
 use super::prompts::{
-    chat_prompt, command_prompt, create_app_prompt, general_chat_prompt, note_chat_prompt,
-    note_general_chat_prompt, should_narrow_search_prompt, should_narrow_search_prompt_simple,
-    sql_query_generator_prompt,
+    chat_prompt, create_app_prompt, general_chat_prompt, note_prompt, should_narrow_search_prompt,
+    should_narrow_search_prompt_simple, sql_query_generator_prompt,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -445,10 +444,7 @@ impl AI {
         // system message
         let current_time = human_readable_current_time();
         let system_message_prompt = match note_resource_id {
-            Some(_) => match general {
-                true => note_general_chat_prompt(&current_time),
-                false => note_chat_prompt(&current_time),
-            },
+            Some(_) => note_prompt(&current_time),
             None => match general {
                 true => general_chat_prompt(&current_time),
                 false => chat_prompt(&current_time),
@@ -515,46 +511,22 @@ impl AI {
 
     pub fn create_app(
         &self,
-        prompt: String,
+        query: String,
         model: &Model,
         custom_key: Option<&str>,
-        _session_id: String,
-        contexts: Option<Vec<String>>,
-    ) -> BackendResult<String> {
-        // TODO: support multiple contexts
-        let mut ctx = String::new();
-        if let Some(contexts) = contexts {
-            if contexts.len() > 1 {
-                return Err(BackendError::GenericError(
-                    "Only one context is supported".to_string(),
-                ));
-            }
-            ctx = contexts[0].clone();
-        }
-
-        let system_message = match prompt.to_lowercase().starts_with("app:") {
-            true => create_app_prompt(),
-            false => command_prompt(),
-        };
-
-        let messages = vec![
-            Message::new_system(&system_message),
-            Message::new_context(&ContextMessage {
-                id: "1".to_string(),
-                content_type: "webpage".to_string(),
-                content: Some(ctx),
-                created_at: None,
-                page: None,
-                title: None,
-                source_url: None,
-                author: None,
-                description: None,
-            })?,
-            Message::new_user(&prompt),
+        inline_images: Option<Vec<String>>,
+    ) -> BackendResult<ChatCompletionStream> {
+        let mut messages = vec![
+            Message::new_system(&create_app_prompt(&human_readable_current_time())),
+            Message::new_user(&query),
         ];
-
+        if let Some(inline_images) = inline_images {
+            for image in inline_images {
+                messages.push(Message::new_image(&image));
+            }
+        }
         self.client
-            .create_chat_completion(messages, model, custom_key, None)
+            .create_streaming_chat_completion(messages, model, custom_key, None)
     }
 
     pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {

@@ -1022,40 +1022,28 @@ export class SFFS {
   }
 
   async createAIApp(
-    chatId: string,
-    prompt: string,
+    query: string,
     model: Model,
+    chunkCallback: (chunk: string) => void,
+    doneCallback: () => void,
     opts?: {
       customKey?: string
-      contexts?: string[]
+      inlineImages?: string[]
     }
   ): Promise<string | null> {
-    this.log.debug(
-      'creating ai app',
-      'chat_id:',
-      chatId,
-      'prompt:',
-      prompt,
-      'model:',
-      model,
-      'custom_key:',
-      !!opts?.customKey,
-      'contexts:',
-      opts?.contexts
-    )
-
     const data: CreateAppOptions = {
-      prompt,
-      chat_id: chatId,
+      query,
       model,
       custom_key: opts?.customKey,
-      contexts: opts?.contexts
+      inline_images: opts?.inlineImages
     }
 
     const raw = await this.withErrorHandling(
       this.backend,
       this.backend.js__ai_create_app,
-      JSON.stringify(data)
+      JSON.stringify(data),
+      chunkCallback,
+      doneCallback
     )
     return String(raw)
   }

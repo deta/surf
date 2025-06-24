@@ -87,7 +87,7 @@ export const navigateActionToTeletypeItem = (searchValue: string) => {
     icon: 'world',
     execute: TeletypeAction.NavigateURL,
     section: 'Navigate',
-    selectPriority: ActionSelectPriority.HIGH,
+    selectPriority: ActionSelectPriority.HIGHEST,
     displayPriority: ActionDisplayPriority.HIGH,
     actionText: 'Open as Tab',
     actionPanel: [

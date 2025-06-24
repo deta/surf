@@ -13,7 +13,9 @@
     try {
       // @ts-ignore - window.api is injected
       const extensionList = await window.api.listExtensions()
-      extensions.set(extensionList)
+      if (extensionList) {
+        extensions.set(extensionList)
+      }
     } catch (error) {
       extensions.set([])
     }

@@ -1,5 +1,3 @@
-// import teaser018smartnotes from '../../../../public/assets/features/018.teaser.png'
-// import teaser020apps from '../../../../public/assets/features/020.createapps.png'
 import teaser048noteschat from '../../../../public/assets/features/048.noteschat.png'
 import { useLocalStorageStore } from '@horizon/utils'
 import { openDialog } from '../Core/Dialog/Dialog.svelte'

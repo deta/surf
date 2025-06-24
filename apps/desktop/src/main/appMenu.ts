@@ -340,10 +340,12 @@ class AppMenu {
           label: 'Open Changelog',
           click: () => ipcSenders.openChangelog()
         },
+        /* TODO: renable when welcome page is ready and no bug
         {
           label: 'Open Welcome Page',
           click: () => ipcSenders.openWelcomePage()
         },
+        */
         { type: 'separator' },
         {
           label: 'Give Feedback',

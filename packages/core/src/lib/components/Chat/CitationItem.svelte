@@ -714,4 +714,20 @@
       }
     }
   }
+
+  :global(.notes-editor-wrapper.autocompleting citation) {
+    pointer-events: none;
+    opacity: 0.75;
+  }
+
+  :global(.notes-editor-wrapper.autocompleting span[data-citation-id]) {
+    cursor: not-allowed;
+    user-select: none;
+
+    // disable the selection highlight
+    &::after {
+      content: '';
+      background: none;
+    }
+  }
 </style>

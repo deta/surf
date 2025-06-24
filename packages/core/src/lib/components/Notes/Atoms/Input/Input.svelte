@@ -32,6 +32,7 @@
   class:active
   class:hide
   class:disabled
+  data-tooltip-target="chat-input"
   on:keydown={(e) => {
     if (e.key === 'Escape') {
       editor?.clear()

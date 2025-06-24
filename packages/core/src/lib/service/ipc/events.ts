@@ -190,10 +190,10 @@ const IPC_EVENTS = ipcService.registerEvents({
   downloadRequest: ipcService.addEvent<DownloadRequestMessage>('download-request'),
   downloadUpdated: ipcService.addEvent<DownloadUpdatedMessage>('download-updated'),
   downloadDone: ipcService.addEvent<DownloadDoneMessage>('download-done'),
-  storeAPIKey: ipcService.addEvent<string>('store-api-key'),
   updateUserConfigSettings: ipcService.addEvent<Partial<UserSettings>>(
     'store-user-config-settings'
   ),
+  updateUserConfig: ipcService.addEvent<Partial<UserConfig>>('store-user-config'),
   updateUserStats: ipcService.addEvent<Partial<UserStats>>('store-user-stats'),
   userConfigSettingsChange: ipcService.addEvent<UserSettings>('user-config-settings-change'),
   userStatsChange: ipcService.addEvent<UserStats>('user-config-stats-change'),

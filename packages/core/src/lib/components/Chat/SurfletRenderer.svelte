@@ -1,10 +1,7 @@
 <script lang="ts">
   import { Icon, IconConfirmation } from '@horizon/icons'
   import {
-    codeLanguageToMimeType,
-    conditionalArrayItem,
     copyToClipboard,
-    generateHash,
     generateID,
     isModKeyPressed,
     parseUrlIntoCanonical,
@@ -18,28 +15,17 @@
 
   import { dataUrltoBlob } from '@horizon/core/src/lib/utils/screenshot'
 
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
+  import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte'
   import type { WebviewTag } from 'electron'
   import { all, createLowlight } from 'lowlight'
   import { toHtml } from 'hast-util-to-html'
-  import { writable } from 'svelte/store'
+  import { writable, readable, type Readable } from 'svelte/store'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import {
-    AddResourceToSpaceEventTrigger,
-    EventContext,
-    ResourceTagsBuiltInKeys,
-    SaveToOasisEventTrigger
-  } from '@horizon/types'
+  import { ResourceTagsBuiltInKeys } from '@horizon/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'
-  import {
-    DragTypeNames,
-    SpaceEntryOrigin,
-    type BookmarkTabState
-  } from '@horizon/core/src/lib/types'
-  import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { DragTypeNames, type BookmarkTabState } from '@horizon/core/src/lib/types'
   import type {
     DragTypes,
     ResourceTagsBuiltIn,
@@ -49,13 +35,15 @@
   } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
-  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
-  export let resource: Resource | undefined = undefined
+  export let doneGenerating: Readable<boolean> = readable(true)
+  export let resource: Readable<Resource | undefined> = readable(undefined)
+  export let codeContent: Readable<string> = readable('')
+  export let title: Readable<string> = readable('App')
   export let tab: TabResource | undefined = undefined
-  export let showPreview: boolean = false
+
   export let initialCollapsed: boolean | 'auto' = 'auto'
-  export let codeContent: string = ''
   export let fullSize = false
   export let collapsable = true
   export let saveable = true
@@ -67,30 +55,33 @@
   export let initialHeight: string = '400px'
   export let expandable = true
   export let hideHeader = false
-  export let isEditable = true
 
   let language = 'html'
   let isResizing = false
+  let highlightScheduled = false
   let startY = 0
   let startHeight = 0
+  let localTitle = $title
 
   const log = useLogScope('SurfletRenderer')
   const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
-  const oasis = useOasis()
-  const toasts = useToasts()
 
-  const dispatch = createEventDispatcher<{ 'link-removed': void }>()
+  const dispatch = createEventDispatcher<{
+    'link-removed': void
+    'set-preview-image': string
+    'set-surflet-name': string
+    'save-surflet': {
+      spaceId?: string
+    }
+  }>()
 
-  const generatedName = writable('')
-  const customName = writable('')
   const appIsLoading = writable(false)
   const saveState = writable<BookmarkTabState>('idle')
 
   const id = generateID()
 
   let copyIcon: IconConfirmation
-  let copyOutputIcon: IconConfirmation
 
   let preElem: HTMLPreElement
   let appContainer: HTMLDivElement
@@ -99,50 +90,47 @@
   let containerHeight = initialHeight
   let webview: WebviewTag | null = null
 
-  let observer: MutationObserver | null = null
-
-  let isHTMLComplete: boolean = false
-  let jsOutput: string = ''
-  let manualGeneratingState = false
-  let showHiddenPreview = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
+  let userSelectedView: 'code' | 'preview' | null = null
 
-  $: generationStatus = getGenerationStatus(codeContent, 'html')
-  $: stillGenerating = (!resource && !codeContent && !isHTMLComplete) || manualGeneratingState
+  $: localTitle = $title
 
   $: silentResource =
-    resource && (resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+    $resource && ($resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
 
-  $: if ((showPreview || showHiddenPreview) && !collapsed && !stillGenerating && expandable) {
+  $: shouldShowPreview =
+    $doneGenerating &&
+    $resource &&
+    userSelectedView !== 'code' &&
+    (userSelectedView === 'preview' || userSelectedView === null)
+
+  $: if (shouldShowPreview && expandable && !collapsed) {
     renderHTMLPreview()
-  } else if (!collapsed && resource) {
-    highlightCode()
   }
 
-  $: log.debug('CodeRenderer', {
-    resource,
-    codeContent,
-    language,
-    showPreview,
-    stillGenerating,
-    collapsed
-  })
-
-  $: if (tab && tab.title !== $customName) {
-    customName.set(tab.title)
+  $: if (tab && tab.title !== localTitle) {
+    dispatch('set-surflet-name', localTitle)
   }
 
-  $: if (resource && !silentResource && $saveState === 'idle') {
+  $: if ($resource && !silentResource && $saveState === 'idle') {
     saveState.set('saved')
   }
 
-  $: if (stillGenerating) {
-    collapsed = true
+  $: if (userSelectedView !== 'preview' && ($codeContent || $resource) && !collapsed) {
+    // TODO: redo highlighting when performance is solved
+    //scheduleHighlight()
+    if (!$doneGenerating) {
+      scrollCodeToBottom()
+    } else {
+      highlightCode()
+      // TODO: reenable editability when we suppor it
+      //makeCodeEditable()
+    }
   }
 
   // Load saved height from resource tag
-  $: if (resource?.tags) {
-    const prefs = getUserViewPreferences(resource.tags)
+  $: if ($resource?.tags) {
+    const prefs = getUserViewPreferences($resource.tags)
     if (prefs?.blockHeight) {
       containerHeight = prefs.blockHeight
     }
@@ -154,164 +142,16 @@
 
   $: updateResourceViewPrefs(containerHeight, collapsed)
 
-  // funny messages for the user
-  const scriptingMessages = [
-    'Writing the logic…',
-    'Wiring things up…',
-    'Adding interactivity…',
-    'Creating the brain…',
-    'Making it smart…',
-    'Adding some magic…'
-  ]
-
-  const stylingMessages = [
-    'Styling the artifact…',
-    'Making it pretty…',
-    'Designing the look…',
-    'Creating the visuals…',
-    'Painting the pixels…',
-    'Adding some flair…'
-  ]
-
-  const templatingMessages = [
-    'Creating the UI…',
-    'Building the layout…',
-    'Designing the structure…',
-    'Placing the elements…'
-  ]
-
-  const preparingMessages = [
-    'Preparing the environment…',
-    'Setting up the workspace…',
-    'Getting things ready…',
-    'Starting the magic…',
-    'Planning the creation…'
-  ]
-
-  const getGenerationStatus = (raw: string, language: string) => {
-    if (language !== 'html') return 'complete'
-
-    log.debug('code', { raw })
-    const code = raw.trim()
-    if (code === '') return 'empty'
-
-    const hasStartTag = (tag: string) => code.includes(`<${tag}>`)
-    const hasEndTag = (tag: string) => code.includes(`</${tag}>`)
-
-    if (code.endsWith('</html>')) return 'complete'
-    if (hasStartTag('script') && !hasEndTag('script')) return 'scripting'
-    if (hasEndTag('script') && hasEndTag('style')) return 'templating'
-    if (hasEndTag('style') && !hasStartTag('script')) return 'templating'
-    if (hasStartTag('style') && !hasEndTag('style')) return 'styling'
-
-    return 'incomplete'
-  }
-
-  const getRandomStatusMessage = (status: string) => {
-    if (status === 'scripting') {
-      return scriptingMessages[Math.floor(Math.random() * scriptingMessages.length)]
-    } else if (status === 'styling') {
-      return stylingMessages[Math.floor(Math.random() * stylingMessages.length)]
-    } else if (status === 'templating') {
-      return templatingMessages[Math.floor(Math.random() * templatingMessages.length)]
-    } else {
-      return preparingMessages[Math.floor(Math.random() * preparingMessages.length)]
-    }
-  }
-
-  const hasHTMLOpening = (raw: string) => {
-    const code = raw.trim().toLowerCase()
-
-    // check if it starts with the html doctype or an html tag
-    // we also check the other way around because the code might still be generating
-    return (
-      code.startsWith('<!doctype html>') ||
-      '<!doctype html>'.startsWith(code) ||
-      '<html '.startsWith(code)
-    )
-  }
-
-  const showCodeView = () => {
-    showHiddenPreview = false
-    showPreview = false
-    collapsed = false
-  }
-
-  const showPreviewView = (hidden = false) => {
-    if (hidden) {
-      showHiddenPreview = true
-    } else {
-      showPreview = true
-    }
-
-    if (stillGenerating) {
-      collapsed = true
-      return
-    }
-    renderHTMLPreview()
-  }
-
-  const getResourceCode = async () => {
-    try {
-      if (!resource) return null
-
-      $customName = resource?.metadata?.name || ''
-
-      const blob = await resource.getData()
-      if (!blob) return null
-
-      const text = await blob.text()
-
-      return text || null
-    } catch (error: any) {
-      log.error('Error getting resource code', error)
-      return null
-    }
-  }
-
-  const getInlineCode = () => {
-    return codeContent
-  }
-
-  const getCode = async () => {
-    let content: string | null = null
-    if (resource) {
-      if (codeContent) return codeContent
-      content = await getResourceCode()
-      makeCodeEditable()
-    } else {
-      content = getInlineCode()
-    }
-
-    if (content) {
-      // parse title from HTML
-      const titleMatch = content.match(/<title>(.*?)<\/title>/)
-      if (titleMatch) {
-        $generatedName = titleMatch[1]
-      } else {
-        // parse first h1 as fallback
-        const h1Match = content.match(/<h1>(.*?)<\/h1>/)
-        if (h1Match) {
-          $generatedName = h1Match[1]
-        }
-      }
-    }
-    return content
-  }
-
   const getUserViewPreferences = (tags: SFFSResourceTag[]) => {
     try {
       const prefsTag = tags.find((t) => t.name === ResourceTagsBuiltInKeys.USER_VIEW_PREFS)
-      log.debug('User preferences tag', prefsTag)
       if (prefsTag) {
         const prefs = optimisticParseJSON<
           ResourceTagsBuiltIn[ResourceTagsBuiltInKeys.USER_VIEW_PREFS]
         >(prefsTag.value)
         if (!prefs) return null
-
         return prefs
       }
-
       return null
     } catch (e) {
       log.error('Failed to parse user preferences:', e)
@@ -319,28 +159,90 @@
     }
   }
 
-  const isEndOfOutput = (code: string) => {
-    return code.trim().endsWith('</html>')
+  const showCodeView = () => {
+    userSelectedView = 'code'
+    collapsed = false
+  }
+
+  const showPreviewView = (hidden = false) => {
+    if (hidden) {
+    } else {
+      userSelectedView = 'preview'
+    }
+
+    if (!$doneGenerating) {
+      collapsed = true
+      return
+    }
+    renderHTMLPreview()
   }
 
   const lowlight = createLowlight(all)
+
+  const scrollCodeToBottom = () => {
+    if (!preElem) return
+
+    requestAnimationFrame(() => {
+      preElem.scrollTop = preElem.scrollHeight
+    })
+  }
+
   const highlightCode = () => {
-    log.debug('highlightCode', { language, codeContent, preElem })
-    if (!preElem || !codeContent || !language) return
+    if (!preElem || !language) return
 
     try {
-      const tree = lowlight.highlight(language, codeContent)
+      const tree = lowlight.highlight(language, $codeContent)
       const code = document.createElement('code')
       code.className = `hljs language-${language}`
-      code.setAttribute('contenteditable', 'true')
       code.setAttribute('spellcheck', 'false')
       code.setAttribute('tabindex', '0')
       code.innerHTML = toHtml(tree)
+
+      const selection = window.getSelection()
+      const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+      const hadSelection = !!range
+
       preElem.innerHTML = ''
       preElem.appendChild(code)
+
+      if (hadSelection && range) {
+        try {
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+        } catch (e) {
+          // selection failed ignore error
+          log.warn('Failed to restore selection after highlighting code:', e)
+        }
+      }
+
+      const isNearBottom = preElem.scrollTop >= preElem.scrollHeight - preElem.clientHeight - 50
+      if (!$doneGenerating || isNearBottom) {
+        scrollCodeToBottom()
+      }
     } catch (error) {
-      preElem.textContent = codeContent
+      preElem.textContent = $codeContent
+      if (!$doneGenerating) {
+        scrollCodeToBottom()
+      }
     }
+  }
+
+  const debouncedHighlightCode = useDebounce(highlightCode, 100)
+
+  // TODO: use this function later when we have a performant way to
+  // deal with code highlighting
+  const scheduleHighlight = () => {
+    if (highlightScheduled) return
+    highlightScheduled = true
+
+    requestAnimationFrame(() => {
+      if ($doneGenerating) {
+        highlightCode()
+      } else {
+        debouncedHighlightCode()
+      }
+      highlightScheduled = false
+    })
   }
 
   const makeCodeEditable = () => {
@@ -353,37 +255,26 @@
   }
 
   const handleCopyCode = async () => {
-    const code = await getCode()
-    copyToClipboard(code)
+    copyToClipboard($codeContent)
     copyIcon.showConfirmation()
   }
 
-  const handleCopyOutput = () => {
-    copyToClipboard(jsOutput)
-    copyOutputIcon.showConfirmation()
-  }
-
   const changeResourceName = useDebounce(async (name: string) => {
-    if (!resource) return
-    await resourceManager.updateResourceMetadata(resource.id, { name })
-    tabsManager.updateResourceTabs(resource.id, { title: name })
-  }, 300)
+    dispatch('set-surflet-name', name)
+  }, 500)
 
   const captureWebviewScreenshot = async (): Promise<string | null> => {
-    const originalShowPreview = showPreview
+    const originalShowPreview = shouldShowPreview
     const originalCollapsed = collapsed
 
     if (!originalShowPreview) {
       showPreviewView(true)
-      // when in code mode switch to preview mode to capture the screenshot
-      // await tick isn't enough here
       await new Promise((resolve) => setTimeout(resolve, 1000))
       await tick()
     }
 
     return new Promise((resolve) => {
       if (!appContainer) {
-        log.debug('No app container to capture')
         resolve(null)
         return
       }
@@ -397,7 +288,6 @@
               whiteThreshold: 250,
               alphaThreshold: 0
             })
-
             const screenshotData = croppedImage.toDataURL()
             resolve(screenshotData)
           } else {
@@ -416,23 +306,20 @@
   }
 
   const updateResourceViewPrefs = useDebounce(async (height: string, collapsed: boolean) => {
-    if (!resource?.id) return
+    if (!$resource?.id) return
     try {
-      const prefs = getUserViewPreferences(resource.tags ?? [])
-
-      log.debug('Updating resource view preferences', { height, collapsed }, prefs)
+      const prefs = getUserViewPreferences($resource.tags ?? [])
 
       if (prefs) {
         if (resizable) {
           prefs.blockHeight = height
         }
-
         if (collapsable) {
           prefs.blockCollapsed = collapsed
         }
 
         await resourceManager.updateResourceTag(
-          resource.id,
+          $resource.id,
           ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
           JSON.stringify(prefs)
         )
@@ -443,7 +330,7 @@
         } as UserViewPrefsTagValue
 
         await resourceManager.createResourceTag(
-          resource.id,
+          $resource.id,
           ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
           JSON.stringify(newPrefs)
         )
@@ -453,142 +340,47 @@
     }
   }, 500)
 
-  const saveScreenshot = async (imageData: string): Promise<string> => {
-    const blob = dataUrltoBlob(imageData)
-
-    const imageResource = await resourceManager.createResource(
-      'image/png',
-      blob,
-      {
-        name: `Screenshot ${getFormattedDate(Date.now())}`
-      },
-      [ResourceTag.screenshot(), ResourceTag.silent()]
-    )
-
-    return imageResource.id
-  }
-
-  const saveAppAsResource = async (spaceId?: string, silent = false) => {
+  const saveScreenshot = async () => {
     try {
-      if (!silent) {
-        saveState.set('in_progress')
-      }
-
-      const tab = tabsManager?.activeTabValue
-      const rawUrl = tab?.type === 'page' ? tab.currentLocation || tab.initialLocation : undefined
-      const url = (rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined) || undefined
-
-      const code = await getCode()
-      if (!code) {
-        log.debug('No code to save')
-        if (!silent) {
-          saveState.set('idle')
-        }
+      const imageData = await captureWebviewScreenshot()
+      if (!imageData) {
+        log.error('failed to capture webview screenshot')
         return
       }
-
-      let previewImageId: string = ''
-      try {
-        const screenshotData = await captureWebviewScreenshot()
-        if (screenshotData) {
-          previewImageId = await saveScreenshot(screenshotData)
-        }
-      } catch (error) {
-        log.error('Error capturing screenshot:', error)
-      }
-
-      if (!resource) {
-        log.debug('Saving app', language, url, { code })
-
-        resource = await resourceManager.createCodeResource(
-          {
-            code,
-            name: $generatedName || language,
-            language,
-            url: url
-          },
-          undefined,
-          [
-            ...conditionalArrayItem(silent, ResourceTag.silent()),
-            ...conditionalArrayItem(
-              previewImageId !== '',
-              ResourceTag.previewImageResource(previewImageId)
-            )
-          ]
-        )
-
-        await oasis.telemetry.trackSaveToOasis(
-          resource.type,
-          SaveToOasisEventTrigger.Click,
-          !!spaceId,
-          EventContext.Chat
-        )
-      } else if (!silent) {
-        await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
-
-        const previewImageTag = resource.tags?.find(
-          (tag) => tag.name === ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE
-        )
-
-        if (!previewImageTag && previewImageId) {
-          await resourceManager.createResourceTag(
-            resource.id,
-            ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE,
-            previewImageId
-          )
-        } else if (previewImageTag && previewImageId) {
-          await resourceManager.updateResourceTag(
-            resource.id,
-            ResourceTagsBuiltInKeys.PREVIEW_IMAGE_RESOURCE,
-            previewImageId
-          )
-        }
-      }
-
-      log.debug('Saved app', resource)
-
-      if (!resource) {
-        if (!silent) {
-          saveState.set('error')
-        }
+      const blob = dataUrltoBlob(imageData)
+      const imageResource = await resourceManager.createResource(
+        'image/png',
+        blob,
+        {
+          name: `Screenshot ${getFormattedDate(Date.now())}`
+        },
+        [ResourceTag.screenshot(), ResourceTag.silent()]
+      )
+      if (!imageResource) {
+        log.error('Failed to create image resource from screenshot')
         return
       }
-
-      if (spaceId) {
-        await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-        await oasis.telemetry.trackAddResourceToSpace(
-          resource.type,
-          AddResourceToSpaceEventTrigger.Chat
-        )
-      }
-
-      if (!silent) {
-        saveState.set('saved')
-        toasts.success(spaceId ? 'Saved to Context!' : 'Saved to Stuff!')
-      }
-
-      return resource
-    } catch (error: any) {
-      log.error('Error saving app', error)
-
-      if (!silent) {
-        saveState.set('error')
-      }
+      dispatch('set-preview-image', imageResource.id)
+    } catch (error) {
+      log.error('Failed to save screenshot:', error)
     }
   }
 
+  const saveSurfletAsNonSilent = async (spaceId?: string) => {
+    dispatch('save-surflet', { spaceId })
+    saveState.set('saved')
+    await saveScreenshot()
+  }
+
   const handleOpenAsTab = async (e: MouseEvent) => {
-    if (resource) {
-      tabsManager.openResourceAsTab(resource, {
+    if (!$resource) {
+      log.warn('No resource available to open as tab')
+      return
+    }
+    if ($resource) {
+      tabsManager.openResourceAsTab($resource, {
         active: !isModKeyPressed(e)
       })
-    } else {
-      resource = await saveAppAsResource(undefined, true)
-      if (resource) {
-        tabsManager.openResourceAsTab(resource, {
-          active: !isModKeyPressed(e)
-        })
-      }
     }
   }
 
@@ -597,11 +389,11 @@
     const rawUrl = tab?.type === 'page' ? tab.currentLocation || tab.initialLocation : undefined
     const url = (rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined) || undefined
 
-    if (!url || !resource) return
+    if (!url || !$resource) return
 
     const confirmed = await openDialog({
       title: 'Remove Link with Current Page',
-      message: `Are you sure you want to remove the link between "${$customName}" and the currently open page?`,
+      message: `Are you sure you want to remove the link between "${localTitle}" and the currently open page?`,
       actions: [
         { title: 'Cancel', type: 'reset' },
         { title: 'Remove Link', type: 'submit', kind: 'danger' }
@@ -609,20 +401,18 @@
     })
 
     if (!confirmed) {
-      log.debug('Unlink canceled')
       return
     }
 
-    const matchingTags = (resource.tags ?? []).filter(
+    const matchingTags = ($resource.tags ?? []).filter(
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL && tag.value === url
     )
 
     if (matchingTags.length === 0) return
 
-    log.debug('Deleting resource tags to unlink it', resource, matchingTags)
     for await (const tag of matchingTags) {
       if (tag.id) {
-        await resourceManager.deleteResourceTagByID(resource.id, tag.id)
+        await resourceManager.deleteResourceTagByID($resource.id, tag.id)
       }
     }
 
@@ -632,17 +422,16 @@
   const renderHTMLPreview = async () => {
     await tick()
     if (!appContainer) {
-      log.debug('Not HTML or no app container')
+      log.warn('No app container available to render HTML preview')
       return
     }
-
-    const code = await getCode()
-    if (!code) {
-      log.debug('No code')
-      return
+    if (!$resource) {
+      log.warn('No resource available to render HTML preview, checking code content')
+      if (!$codeContent) {
+        log.warn('No code content or resource available to render HTML preview')
+        return
+      }
     }
-
-    log.debug('Rendering HTML preview', language, { code })
 
     appContainer.innerHTML = ''
 
@@ -656,46 +445,31 @@
     webview.style.height = '100%'
     webview.style.border = 'none'
 
-    webview.addEventListener('page-title-updated', (e) => {
-      $generatedName = e.title
-    })
-
     webview.addEventListener('did-start-loading', () => appIsLoading.set(true))
     webview.addEventListener('did-stop-loading', () => appIsLoading.set(false))
 
     appContainer.appendChild(webview)
 
     // @ts-ignore
-    webview.src = resource
-      ? `surflet://${resource?.id}.app.local`
-      : `data:text/html;charset=utf-8,${encodeURIComponent(code)}`
+    webview.src = $resource
+      ? `surflet://${$resource?.id}.app.local`
+      : `data:text/html;charset=utf-8,${encodeURIComponent($codeContent)}`
+
+    log.debug('webview src', webview.src)
   }
 
   export const reloadApp = async () => {
-    if (showPreview || showHiddenPreview) {
-      if (resource) {
-        const code = await getResourceCode()
-        if (code) {
-          codeContent = code
-        }
-      }
-
+    if (shouldShowPreview) {
       renderHTMLPreview()
     }
   }
 
   const handleInputChange = (event: Event) => {
     const target = event.target as HTMLInputElement
-
-    if (target.value === $customName) return
-
+    if (target.value === $title) return
     if (target.value === '') {
-      customName.set('')
-      changeResourceName($generatedName)
       return
     }
-
-    customName.set(target.value)
     changeResourceName(target.value)
   }
 
@@ -703,66 +477,6 @@
     if (event.key === 'Enter') {
       inputElem.blur()
     }
-  }
-
-  const handleInputBlur = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    const value = target.value
-    log.debug('Input blur', { value, customName: $customName, generatedName: $generatedName })
-    if (value === '') {
-      customName.set($generatedName)
-      inputElem.value = $generatedName
-    }
-  }
-
-  const handleEndOfOutput = async () => {
-    log.debug('End of output')
-    isHTMLComplete = true
-    showPreview = true
-
-    if (!initialCollapsed) {
-      collapsed = false
-    }
-
-    let createSilentResource = true
-    if (!resource) {
-      const code = await getCode()
-      if (!code) return
-
-      const hash = await generateHash(code)
-      const type = codeLanguageToMimeType(language)
-
-      const resources = await resourceManager.listResourcesByTags([
-        SearchResourceTags.Deleted(false),
-        SearchResourceTags.ResourceType(type),
-        SearchResourceTags.ContentHash(hash),
-        SearchResourceTags.SavedWithAction('generated')
-      ])
-
-      log.debug('Found resources by hash', resources)
-
-      if (resources.length > 0) {
-        resource = resources[0]
-
-        if (resource.metadata?.name) {
-          customName.set(resource.metadata.name)
-        }
-
-        const isSilent = (resource.tags ?? []).some(
-          (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
-        )
-        if (!isSilent) {
-          saveState.set('saved')
-        }
-        createSilentResource = false
-      }
-    }
-    // always save the resource as a silent resource after output is done
-    if (createSilentResource) {
-      resource = await saveAppAsResource(undefined, true)
-    }
-    await tick()
-    makeCodeEditable()
   }
 
   const handleResizeStart = (e: MouseEvent) => {
@@ -773,7 +487,6 @@
     const container = codeBlockELem?.querySelector('.code-container') as HTMLElement
     startHeight = container?.offsetHeight || parseInt(containerHeight)
 
-    // Capture events on window to prevent losing track during fast movements
     window.addEventListener('mousemove', handleResizeMove, { capture: true })
     window.addEventListener('mouseup', handleResizeEnd, { capture: true })
     window.addEventListener('mouseleave', handleResizeEnd, { capture: true })
@@ -807,39 +520,11 @@
     window.removeEventListener('mouseleave', handleResizeEnd, { capture: true })
   }
 
-  const handleContentStream = useDebounce(async () => {
-    const code = await getCode()
-    if (!code || code.trim() === '') return
-
-    if (!isHTMLComplete) {
-      isHTMLComplete = isEndOfOutput(code)
-      if (isHTMLComplete) {
-        log.debug('HTML is complete, switching to preview')
-        observer?.disconnect()
-        observer = null
-        handleEndOfOutput()
-      } else if (!hasHTMLOpening(code)) {
-        log.debug('code is not an html app, switching to code view')
-        if (showPreview) {
-          showCodeView()
-        }
-
-        makeCodeEditable()
-      }
-    } else {
-      makeCodeEditable()
-    }
-
-    codeContent = code
-  }, 15)
-
   const updateResourceContent = useDebounce(async (value: string) => {
-    if (!resource) return
+    if (!$resource) return
 
-    log.debug('Updating resource content', { value })
-
-    const blob = new Blob([value], { type: resource.type })
-    await resource.updateData(blob, true)
+    const blob = new Blob([value], { type: $resource.type })
+    await $resource.updateData(blob, true)
   })
 
   const handleCodeInput = (e: Event) => {
@@ -848,24 +533,24 @@
 
     if (!code) return
 
-    codeContent = code
+    $codeContent = code
 
-    if (resource) {
+    if ($resource) {
       updateResourceContent(code)
     }
   }
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
-    if (!resource) {
-      // unless we create a resource for every code block we have to dynamically create one when the drag is started
-      resource = await saveAppAsResource(undefined, true)
+    if (!$resource) {
+      log.warn('No resource available for drag start')
+      return
     }
 
     if (resource) {
       const item = drag.item!
-      drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
-      item.data.setData(DragTypeNames.SURF_RESOURCE, resource)
-      item.data.setData(DragTypeNames.SURF_RESOURCE_ID, resource.id)
+      drag.dataTransfer?.setData(DragTypeNames.SURF_RESOURCE_ID, $resource.id)
+      item.data.setData(DragTypeNames.SURF_RESOURCE, $resource)
+      item.data.setData(DragTypeNames.SURF_RESOURCE_ID, $resource.id)
       drag.continue()
     } else {
       drag.abort()
@@ -880,47 +565,23 @@
       }
       parent = parent.parentElement
     }
-
     return null
   }
 
   const checkIfShouldBeExpanded = () => {
-    // walk up the tree from codeBlockElem until you find the chat response wrapper with an id that starts with chat-responses-
     const wrapper = findResponsesWrapper()
-
-    log.debug('wrapper', wrapper)
     if (!wrapper) return false
 
-    // get all the code blocks in the wrapper
     const codeBlocks = wrapper?.querySelectorAll('code-block')
-    log.debug('codeBlocks', codeBlocks)
     if (!codeBlocks) return false
 
-    // check what index this code block is in the list of code blocks
     const index = Array.from(codeBlocks).indexOf(codeBlockELem)
-
-    // if we are the last code block, we should be expanded
     return index === codeBlocks.length - 1
   }
 
   onMount(async () => {
-    observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          handleContentStream()
-        }
-      })
-    })
-
-    observer.observe(preElem, { childList: true, subtree: true })
-
-    const code = await getCode()
-    if (code) {
-      codeContent = code
-    }
-
     if (collapsable) {
-      const prefs = getUserViewPreferences(resource?.tags ?? [])
+      const prefs = getUserViewPreferences($resource?.tags ?? [])
       if (prefs?.blockCollapsed !== undefined && initialCollapsed !== true) {
         initialCollapsed = prefs.blockCollapsed
       } else if (initialCollapsed === 'auto') {
@@ -930,34 +591,33 @@
     }
 
     if (
-      resource &&
-      !(resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+      $resource &&
+      !($resource.tags ?? []).some((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
     ) {
       saveState.set('saved')
     }
 
-    log.debug('CodeRenderer mounted', { showPreview, code, resource, initialCollapsed })
-
-    if (code) {
-      if (isEndOfOutput(code)) {
-        handleEndOfOutput()
-
-        if (showPreview) {
-          renderHTMLPreview()
-        }
-      } else if (initialCollapsed) {
-        collapsed = true
-      } else if (!hasHTMLOpening(code)) {
-        showCodeView()
-        makeCodeEditable()
-      }
+    // Set initial view state based on generation status
+    if ($doneGenerating) {
+      collapsed = false
+      userSelectedView = 'preview'
+      renderHTMLPreview()
+      highlightCode()
+      makeCodeEditable()
     }
+
+    collapsed = initialCollapsed === true
   })
 
   onDestroy(() => {
-    if (observer) {
-      observer.disconnect()
+    if (webview) {
+      webview.removeEventListener('did-start-loading', () => {})
+      webview.removeEventListener('did-stop-loading', () => {})
+      webview = null
     }
+    window.removeEventListener('mousemove', handleResizeMove, { capture: true })
+    window.removeEventListener('mouseup', handleResizeEnd, { capture: true })
+    window.removeEventListener('mouseleave', handleResizeEnd, { capture: true })
   })
 </script>
 
@@ -966,9 +626,9 @@
   id="code-block-{id}"
   class:isResizing
   data-resizable={resizable}
-  data-resource={resource ? resource.id : undefined}
+  data-resource={$resource ? $resource.id : undefined}
   data-language={language}
-  data-name={$customName || $generatedName}
+  data-name={localTitle}
   class="relative bg-gray-900 flex flex-col overflow-hidden w-full {fullSize
     ? ''
     : 'rounded-xl'} {fullSize || resizable || collapsed ? '' : 'h-full max-h-[750px]'} {fullSize
@@ -988,67 +648,73 @@
             class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
             on:click|stopPropagation={() => (collapsed = !collapsed)}
           >
-            {#if stillGenerating}
-              <Icon name="spinner" />
-            {:else}
+            <div use:tooltip={{ text: collapsed ? 'Expand' : 'Collapse', position: 'right' }}>
               <Icon
                 name="chevron.right"
                 className="{!collapsed && expandable
                   ? 'rotate-90'
                   : ''} transition-transform duration-75"
               />
-            {/if}
+            </div>
           </button>
         {/if}
 
-        <div class="w-full">
-          {#if stillGenerating && !manualGeneratingState}
-            <div class=" flex-shrink-0">
-              {getRandomStatusMessage(generationStatus)}
-            </div>
-          {:else}
-            <input
-              bind:this={inputElem}
-              on:input={handleInputChange}
-              on:keydown={handleInputKeydown}
-              on:blur={handleInputBlur}
-              on:click|stopPropagation
-              disabled={!isEditable}
-              value={$customName || $generatedName || language}
-              placeholder="Name"
-              class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
-            />
-          {/if}
+        <div class="w-full" contenteditable="true">
+          <!--TODO: disabled should use doneGenerating but currently true as it's broken for some tiptap reason -->
+          <input
+            bind:this={inputElem}
+            bind:value={localTitle}
+            on:input={handleInputChange}
+            on:keydown={handleInputKeydown}
+            on:click|stopPropagation
+            disabled={true}
+            placeholder="Name"
+            class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100 cursor-text"
+          />
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        {#if (!collapsed || stillGenerating) && expandable}
+        {#if !collapsed && $doneGenerating && expandable}
           <div class="preview-group flex items-center rounded-md overflow-hidden">
             <button
               class="no-custom px-3 py-1 text-sm"
-              on:click|stopPropagation={() => showCodeView()}
-              class:active={!showPreview}
+              on:click|stopPropagation={() => showPreviewView()}
+              class:active={shouldShowPreview}
             >
-              Code
+              <div class="flex items-center gap-2">App</div>
             </button>
             <button
               class="no-custom px-3 py-1 text-sm"
-              on:click|stopPropagation={() => showPreviewView()}
-              class:active={showPreview}
+              on:click|stopPropagation={() => showCodeView()}
+              class:active={!shouldShowPreview}
             >
-              <div class="flex items-center gap-2">Surflet</div>
+              <div class="flex items-center gap-2">Code</div>
             </button>
           </div>
         {/if}
+        {#if !$doneGenerating}
+          <div class="flex items-center gap-1">
+            <!-- TODO: support cancelling here -->
+            <div
+              class="p-1 opacity-60"
+              use:tooltip={{
+                text: 'Generating an app...',
+                position: 'left'
+              }}
+            >
+              <Icon name="spinner" />
+            </div>
+          </div>
+        {/if}
 
-        {#if !stillGenerating && expandable}
+        {#if $doneGenerating && expandable}
           {#if collapsed}
             <div class="flex items-center gap-1">
               <div class="p-1 opacity-60">
-                <Icon name="world" />
+                <Icon name="code" />
               </div>
-              {#if showUnLink && resource}
+              {#if showUnLink && $resource}
                 <button
                   on:click|stopPropagation={handleUnLink}
                   use:tooltip={{ text: 'Unlink from page', position: 'left' }}
@@ -1060,24 +726,24 @@
             </div>
           {:else}
             <div class="flex items-center gap-2">
-              {#if !stillGenerating && saveable}
+              {#if $doneGenerating && saveable}
                 <SaveToStuffButton
                   state={saveState}
-                  {resource}
+                  resource={$resource}
                   side="left"
                   className="flex items-center  p-1 rounded-md  transition-colors"
-                  on:save={(e) => saveAppAsResource(e.detail, false)}
+                  on:save={async (e) => await saveSurfletAsNonSilent(e.detail)}
                 />
               {/if}
 
-              {#if showPreview}
+              {#if shouldShowPreview}
                 <button
                   use:tooltip={{ text: 'Reload', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
                   on:click|stopPropagation={() => reloadApp()}
                 >
                   <div class="flex items-center gap-1">
-                    {#if $appIsLoading || stillGenerating}
+                    {#if $appIsLoading || !$doneGenerating}
                       <Icon name="spinner" size="16px" />
                     {:else}
                       <Icon name="reload" size="16px" />
@@ -1094,7 +760,7 @@
                 </button>
               {/if}
 
-              {#if !stillGenerating}
+              {#if $doneGenerating}
                 <button
                   use:tooltip={{ text: 'Open as Tab', position: 'left' }}
                   class="flex items-center p-1 rounded-md transition-colors"
@@ -1111,7 +777,9 @@
   {/if}
 
   <div
-    class="code-container w-full flex-grow overflow-hidden {showPreview || collapsed || !expandable
+    class="code-container w-full flex-grow overflow-hidden {shouldShowPreview ||
+    collapsed ||
+    !expandable
       ? 'hidden'
       : ''} {!fullSize && !collapsed && !resizable ? 'h-[750px]' : ''}"
     style={resizable && !fullSize && !collapsed
@@ -1123,15 +791,17 @@
       class="h-full overflow-auto code-wrapper"
       style="color: white;"
       on:input={handleCodeInput}
-      on:click|stopPropagation><slot>{codeContent}</slot></pre>
+      on:click|stopPropagation>
+      <slot>{$codeContent}</slot>
+    </pre>
   </div>
 
-  {#if (showPreview || showHiddenPreview) && !collapsed && expandable}
+  {#if shouldShowPreview && !collapsed && expandable}
     <div
       bind:this={appContainer}
       class="bg-white w-full flex-grow overflow-auto {fullSize || resizable || collapsed
         ? ''
-        : 'h-[750px]'} {showHiddenPreview ? 'opacity-0' : ''}"
+        : 'h-[750px]'}"
       style={resizable && !fullSize && !collapsed ? `height: ${containerHeight};` : ''}
     />
   {/if}

@@ -2,6 +2,7 @@
   import ScreenPicker from './ScreenPicker.svelte'
   import { OnboardingAction } from '../Onboarding/onboardingScripts'
   import { screenPickerSelectionActive } from '../../service/onboarding'
+  import { activeTimeline } from '../Onboarding/timeline'
 
   // Standalone is self contained, where as-input ask user to define area  and capture it for some
   // other action
@@ -93,7 +94,7 @@
   const dispatch = createEventDispatcher<{
     close: Blob | null // Task implementor of this component to close it (blob: screenshot, false: cancelled / issue)
     'open-chat-in-sidebar': { chat: AIChat }
-    'open-note-in-sidebar': { note: SmartNote }
+    'open-note-in-sidebar': { note: SmartNote; force: boolean }
     'save-screenshot': {
       rect: { x: number; y: number; width: number; height: number }
     }
@@ -510,6 +511,19 @@
 
   async function handleExpandChat() {
     dispatch('close', null)
+
+    const hasActiveTimeline = get(activeTimeline) !== null
+
+    if (hasActiveTimeline) {
+      // is onboarding
+      $note?.updateTitle('Surf Onboarding Note')
+      dispatch('open-note-in-sidebar', {
+        note: $note,
+        force: true
+      })
+      return
+    }
+
     if ($userConfigSettings.experimental_notes_chat_sidebar) {
       if (!$note) return
 
@@ -790,7 +804,7 @@
       >
         <ul>
           <li>
-            <ul class="buttonGroup">
+            <ul class="buttonGroup" data-tooltip-disable>
               {#if mode === 'standalone'}
                 <!--<li>
                   <button on:click={handleSaveScreenshot}
@@ -953,7 +967,7 @@
             <div
               class="messageBox"
               class:expanded={$state.isChatExpanded}
-              data-tooltip-safearea="message-box"
+              data-tooltip-reference="message-box"
               style="view-transition-name: screen-picker-chat;"
             >
               <header>
@@ -1131,7 +1145,7 @@
     pointer-events: none;
     box-sizing: content-box;
     position: absolute;
-    z-index: 9993231322131232132131231231211240;
+    z-index: 2147483642;
 
     top: var(--rect-y);
     left: var(--rect-x);
@@ -1152,7 +1166,7 @@
 
   #screen-picker {
     position: absolute;
-    z-index: 9993231322131232132131231231211240;
+    z-index: 2147483642;
 
     top: var(--rect-y);
     left: var(--rect-x);

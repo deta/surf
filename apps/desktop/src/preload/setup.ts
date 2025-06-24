@@ -6,6 +6,7 @@ import http from 'http'
 
 import EventEmitter from 'events'
 import * as crypto from 'crypto'
+import { v4 as uuidv4 } from 'uuid'
 import {
   promises as fsp,
   createReadStream,
@@ -14,7 +15,7 @@ import {
   WriteStream,
   mkdirSync
 } from 'fs'
-import { AppActivationResponse, createAPI } from '@horizon/api'
+import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@horizon/api'
 import { type UserSettings } from '@horizon/types'
 
 import { getUserConfig } from '../main/config'
@@ -116,23 +117,74 @@ const api = {
   },
 
   activateAppUsingKey: async (key: string, acceptedTerms: boolean) => {
-    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+    const api = createAPI(API_BASE)
 
     const res = await api.activateAppUsingKey(key, acceptedTerms)
     if (res.ok && (res.data as AppActivationResponse)) {
-      IPC_EVENTS_RENDERER.storeAPIKey.send(res.data.api_key)
+      // Use the API key to fetch full user data and store it
+      const authedAPI = createAuthenticatedAPI(API_BASE, res.data.api_key)
+      const user = await authedAPI.getUserData()
+      if (!user) {
+        console.error('Failed to fetch user data after activation')
+        return res
+      }
+
+      let anon_id = userConfig.anon_id
+      if (user.anon_telemetry) {
+        if (!anon_id) {
+          anon_id = uuidv4()
+        }
+      }
+
+      userConfig.api_key = res.data.api_key
+      userConfig.user_id = user.id
+      userConfig.anon_id = anon_id
+      userConfig.anon_telemetry = user.anon_telemetry
+      userConfig.email = user.email
+
+      IPC_EVENTS_RENDERER.updateUserConfig.send({
+        api_key: userConfig.api_key,
+        user_id: userConfig.user_id,
+        anon_id: userConfig.anon_id,
+        anon_telemetry: userConfig.anon_telemetry,
+        email: userConfig.email
+      })
     }
+
     return res
   },
 
   resendInviteCode: async (email: string) => {
-    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+    const api = createAPI(API_BASE)
     return await api.resendInviteCode(email)
   },
 
   signup: async (email: string) => {
-    const api = createAPI(import.meta.env.P_VITE_API_BASE)
+    const api = createAPI(API_BASE)
     return await api.signup(email)
+  },
+
+  deanonymizeUser: async () => {
+    // Figure out what id to use
+    let userId = userConfig.anon_id ?? userConfig.user_id
+    if (userId === undefined) {
+      console.error('Could not get valid user id... something is misconfigured!')
+      return false
+    }
+
+    const apiKey = userConfig.api_key
+    if (!apiKey) {
+      console.error('No API key found, cannot deanonymize user.')
+      return false
+    }
+
+    const api = createAuthenticatedAPI(API_BASE, apiKey)
+    await api.setUserTelemetryId(userId)
+
+    userConfig.anon_telemetry = false
+    IPC_EVENTS_RENDERER.updateUserConfig.send({ anon_telemetry: userConfig.anon_telemetry })
+
+    return true
   },
 
   updateSpacesList: async (data: SpaceBasicData[]) => {
