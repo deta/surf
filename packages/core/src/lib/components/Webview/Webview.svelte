@@ -484,7 +484,7 @@
     const bounds = webContentsWrapper.getBoundingClientRect()
 
     log.debug('Creating web contents view with bounds', bounds, src, cleanID)
-    viewId = await window.api.createWebContentsView({
+    const result = await window.api.createWebContentsView({
       id: cleanID,
       url: src,
       partition: partition,
@@ -496,12 +496,25 @@
       }
     })
 
-    if (!viewId) {
+    if (!result || !result.viewId) {
       log.error('Failed to create web contents view')
       return
     }
 
+    const { viewId, webContentsId: wcId } = result
+
     log.debug('Created web contents view with ID', viewId)
+
+    webviewReady.set(true)
+    $webContentsId = wcId
+
+    if (!newWindowHandlerRegistered) {
+      window.api.registerNewWindowHandler($webContentsId, (details) => {
+        dispatch('new-window', details)
+      })
+
+      newWindowHandlerRegistered = true
+    }
 
     // setup resize observer to resize the webview when the wrapper changes size
     const resizeObserver = new ResizeObserver((entries) => {

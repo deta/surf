@@ -101,7 +101,7 @@ export interface ListExtensions extends IPCEvent {
 
 export interface WebContentsViewCreateEvent extends IPCEvent {
   payload: WebContentsViewCreateOptions
-  output: string | null // Returns the ID of the created view or null if it failed
+  output: { viewId: string; webContentsId: number } | null // Returns the ID of the created view or null if it failed
 }
 
 export interface WebContentsViewActionEvent extends IPCEvent {

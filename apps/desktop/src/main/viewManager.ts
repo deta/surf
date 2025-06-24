@@ -1,9 +1,10 @@
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import type { WebContentsViewCreateOptions } from '@horizon/types'
-import { BrowserWindow, WebContentsView } from 'electron'
+import { BrowserWindow, webContents, WebContentsView } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@horizon/core/src/lib/service/ipc/ipc'
 import { EventEmitterBase } from '@horizon/core/src/lib/service/events'
+import path from 'path'
 
 export class WCView {
   id: string
@@ -12,10 +13,15 @@ export class WCView {
   constructor(opts: WebContentsViewCreateOptions) {
     const view = new WebContentsView({
       webPreferences: {
-        partition: opts.partition || undefined,
+        partition: 'persist:horizon', // opts.partition || undefined,
         nodeIntegration: false,
         contextIsolation: true,
-        sandbox: true
+        sandbox: true,
+        webSecurity: true,
+        scrollBounce: true,
+        defaultFontSize: 16,
+        autoplayPolicy: 'document-user-activation-required',
+        preload: path.resolve(__dirname, '../preload/webview.js')
       }
     })
 
@@ -286,7 +292,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           console.log('[main] webcontentsview-create: IPC event received', data)
           const view = await this.createView(data)
           if (view) {
-            return view.id
+            return { viewId: view.id, webContentsId: view.wcv.webContents.id }
           } else {
             return null
           }
