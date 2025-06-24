@@ -733,19 +733,12 @@ export const ipcSenders = {
     // }
 
     // notify all windows
-
     const windows = [getMainWindow(), getSettingsWindow()]
-
     windows.forEach((window) => {
       if (!window || window.isDestroyed()) return
 
       IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
     })
-
-    const extensionsManager = ExtensionsManager.getInstance()
-    if (!settings.extensions) {
-      extensionsManager.removeAllExtensions()
-    }
   },
 
   userStatsChange(stats: UserStats) {

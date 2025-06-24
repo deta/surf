@@ -88,7 +88,6 @@ export class ExtensionsManager {
     this.extensionMode = extensionMode
 
     const getPopupMode = () => {
-      console.log('getPopupMode', this.extensionMode)
       return this.extensionMode
     }
 
@@ -109,8 +108,6 @@ export class ExtensionsManager {
       },
       getPopupMode: getPopupMode
     })
-    // TODO: can we not get this from the extensions instance?
-    this.extensionsPath = app.getPath('userData') + '/Extensions'
 
     await installChromeWebStore({
       session: extensionsSession,
