@@ -1,5 +1,5 @@
 import { AuthenticatedAPI } from '@horizon/api'
-import { app, dialog, webContents, BrowserWindow, Session, WebContents } from 'electron'
+import { dialog, webContents, BrowserWindow, Session, WebContents } from 'electron'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { installChromeWebStore } from 'electron-chrome-web-store'
 import { formatPermissionsForUser } from './extensionsPermissions'
@@ -12,7 +12,6 @@ export class ExtensionsManager {
   private mainWindow: BrowserWindow | null = null
   private extensionsSession: Session | null = null
   private activeWebContents: WebContents | null = null
-  private extensionMode: 'horizontal' | 'vertical' = 'vertical'
   private constructor() {}
   private api: AuthenticatedAPI | null = null
 
@@ -25,14 +24,6 @@ export class ExtensionsManager {
 
   private isChromeExtensionUrl(url: string): boolean {
     return url.startsWith('chrome-extension://')
-  }
-
-  public setExtensionMode(mode: 'horizontal' | 'vertical') {
-    this.extensionMode = mode
-  }
-
-  public getExtensionMode(): 'horizontal' | 'vertical' {
-    return this.extensionMode
   }
 
   private createExtensionWindow(url: string): BrowserWindow {
@@ -78,19 +69,12 @@ export class ExtensionsManager {
   public async initialize(
     mainWindow: BrowserWindow,
     extensionsSession: Session,
-    extensionMode: 'horizontal' | 'vertical',
     api: AuthenticatedAPI,
     handleOpenUrl: (url: string) => void
   ) {
     this.mainWindow = mainWindow
     this.extensionsSession = extensionsSession
     this.api = api
-    this.extensionMode = extensionMode
-
-    const getPopupMode = () => {
-      return this.extensionMode
-    }
-
     this.extensions = new ElectronChromeExtensions({
       license: 'Patron-License-2020-11-19',
       session: extensionsSession,
@@ -105,8 +89,7 @@ export class ExtensionsManager {
           }
         }
         return [mainWindow.webContents, mainWindow]
-      },
-      getPopupMode: getPopupMode
+      }
     })
 
     await installChromeWebStore({
@@ -213,7 +196,7 @@ export class ExtensionsManager {
     if (!this.extensionsSession) {
       return
     }
-    const extensions = this.extensionsSession.getAllExtensions()
+    const extensions = this.extensionsSession.extensions.getAllExtensions()
     for (const extension of extensions) {
       this.removeExtension(extension.id)
     }
@@ -224,12 +207,12 @@ export class ExtensionsManager {
       return
     }
     try {
-      const extension = this.extensionsSession.getExtension(extensionId)
+      const extension = this.extensionsSession.extensions.getExtension(extensionId)
       if (!extension) {
         return
       }
 
-      this.extensionsSession.removeExtension(extensionId)
+      this.extensionsSession.extensions.removeExtension(extensionId)
 
       fs.rmSync(extension.path, { recursive: true })
 
@@ -258,7 +241,7 @@ export class ExtensionsManager {
     if (!this.extensionsSession) {
       return
     }
-    const extensions = this.extensionsSession.getAllExtensions()
+    const extensions = this.extensionsSession.extensions.getAllExtensions()
     return extensions
   }
 }

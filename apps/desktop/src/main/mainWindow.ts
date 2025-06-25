@@ -17,10 +17,10 @@ import {
 } from './utils'
 
 import { getWebRequestManager } from './webRequestManager'
-import electronDragClick from 'electron-drag-click'
+// import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
-import { handleCrxRequest } from './crxHandler'
 import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
+import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager } from './viewManager'
 
 let mainWindow: BrowserWindow | undefined
@@ -263,15 +263,11 @@ export function createWindow() {
     callback({ cancel: false })
   })
 
-  let crxProtocolHandler = async (request: GlobalRequest): Promise<GlobalResponse> => {
-    return await handleCrxRequest(webviewSession, request.url)
-  }
-
   try {
     webviewSession.protocol.handle('surf', surfProtocolHandler)
     webviewSession.protocol.handle('surflet', surfletProtocolHandler)
-    mainWindowSession.protocol.handle('crx', crxProtocolHandler)
     mainWindowSession.protocol.handle('surf', surfProtocolHandler)
+    ElectronChromeExtensions.handleCRXProtocol(mainWindowSession)
   } catch (e) {
     log.error('possibly failed to register surf protocol: ', e)
   }
