@@ -37,7 +37,8 @@
 
   const handleOpenSettings = () => {
     // @ts-ignore - window.api is injected
-    window.api.openSettings('extensions')
+    // NOTE: DO NOT PASS IN A tab ARGUMENT, IT DOES NOT WORK IN A BUILD AS OF YET
+    window.api.openSettings()
   }
 </script>
 
