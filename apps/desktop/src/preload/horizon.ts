@@ -33,7 +33,8 @@ import {
   ImportedBrowserHistoryItem,
   BrowserType,
   WebContentsViewCreateOptions,
-  WebContentsViewAction
+  WebContentsViewAction,
+  WebContentsViewEvent
 } from '@horizon/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
@@ -517,6 +518,16 @@ const eventHandlers = {
     return IPC_EVENTS_RENDERER.saveLink.on((_, { url, spaceId }) => {
       try {
         callback(url, spaceId)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onWebContentsViewEvent: (callback: (event: WebContentsViewEvent) => void) => {
+    return IPC_EVENTS_RENDERER.webContentsViewEvent.on((_, event) => {
+      try {
+        callback(event)
       } catch (error) {
         // noop
       }

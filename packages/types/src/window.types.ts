@@ -45,14 +45,29 @@ export type WebContentsViewActionTyped<T extends WebContentsViewActionType> = {
   payload: WebContentsViewActionPayloads[T]
 }
 
-export type WebContentsViewAction =
-  | WebContentsViewActionTyped<WebContentsViewActionType.ACTIVATE>
-  | WebContentsViewActionTyped<WebContentsViewActionType.DESTROY>
-  | WebContentsViewActionTyped<WebContentsViewActionType.HIDE>
-  | WebContentsViewActionTyped<WebContentsViewActionType.RELOAD>
-  | WebContentsViewActionTyped<WebContentsViewActionType.GO_FORWARD>
-  | WebContentsViewActionTyped<WebContentsViewActionType.GO_BACK>
-  | WebContentsViewActionTyped<WebContentsViewActionType.SET_BOUNDS>
-  | WebContentsViewActionTyped<WebContentsViewActionType.LOAD_URL>
-  | WebContentsViewActionTyped<WebContentsViewActionType.HIDE_ALL>
-  | WebContentsViewActionTyped<WebContentsViewActionType.SHOW_ACTIVE>
+export type WebContentsViewAction = {
+  [K in WebContentsViewActionType]: WebContentsViewActionTyped<K>
+}[WebContentsViewActionType]
+
+export enum WebContentsViewEventType {
+  DID_FINISH_LOAD = 'did-finish-load',
+  DID_FAIL_LOAD = 'did-fail-load'
+}
+
+export interface WebContentsViewEventPayloads {
+  [WebContentsViewEventType.DID_FINISH_LOAD]: void
+  [WebContentsViewEventType.DID_FAIL_LOAD]: {
+    errorCode: number
+    errorDescription: string
+    validatedURL: string
+  }
+}
+
+export type WebContentsViewEventTyped<T extends WebContentsViewEventType> = {
+  type: T
+  payload: WebContentsViewEventPayloads[T]
+}
+
+export type WebContentsViewEvent = {
+  [K in WebContentsViewEventType]: WebContentsViewEventTyped<K>
+}[WebContentsViewEventType]

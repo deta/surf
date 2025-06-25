@@ -16,7 +16,8 @@ import type {
   WebContentsViewCreateOptions,
   WebContentsViewActionType,
   WebContentsViewActionPayloads,
-  WebContentsViewAction
+  WebContentsViewAction,
+  WebContentsViewEvent
 } from '@horizon/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
@@ -248,6 +249,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   extensionModeChange: ipcService.addEvent<ExtensionModeChange>('extension-mode-change'),
   removeExtension: ipcService.addEvent<string>('remove-extension'),
   setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
+  webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

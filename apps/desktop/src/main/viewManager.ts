@@ -1,5 +1,5 @@
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
-import type { WebContentsViewCreateOptions } from '@horizon/types'
+import { WebContentsViewEventType, type WebContentsViewCreateOptions } from '@horizon/types'
 import { app, BrowserWindow, WebContentsView } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@horizon/core/src/lib/service/ipc/ipc'
@@ -149,6 +149,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       this.window.contentView.addChildView(view.wcv)
       console.log('[main] webcontentsview-create: added view to window with id', view.id)
+
+      this.attachViewIPCEvents(view)
 
       this.emit('create', view)
 
@@ -345,6 +347,21 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.views.forEach((view) => {
       this.destroyView(view)
     })
+  }
+
+  attachViewIPCEvents(view: WCView) {
+    const callback = () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.DID_FINISH_LOAD,
+        payload: undefined
+      })
+    }
+
+    view.wcv.webContents.addListener('did-finish-load', callback)
+
+    return () => {
+      view.wcv.webContents.removeListener('did-finish-load', callback)
+    }
   }
 
   attachIPCEvents() {

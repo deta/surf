@@ -508,6 +508,10 @@
     webviewReady.set(true)
     $webContentsId = wcId
 
+    window.preloadEvents.onWebContentsViewEvent((event) => {
+      log.debug('WebContentsView event received', event.type, event.payload)
+    })
+
     if (!newWindowHandlerRegistered) {
       window.api.registerNewWindowHandler($webContentsId, (details) => {
         dispatch('new-window', details)
