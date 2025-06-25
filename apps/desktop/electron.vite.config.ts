@@ -100,7 +100,8 @@ export default defineConfig({
           webview: resolve(__dirname, 'src/preload/webview.ts'),
           updates: resolve(__dirname, 'src/preload/updates.ts'),
           announcements: resolve(__dirname, 'src/preload/announcements.ts'),
-          setup: resolve(__dirname, 'src/preload/setup.ts')
+          setup: resolve(__dirname, 'src/preload/setup.ts'),
+          overlay: resolve(__dirname, 'src/preload/overlay.ts')
         },
         plugins: [
           ...(!disableAllObfuscation
@@ -146,7 +147,8 @@ export default defineConfig({
           settings: resolve(__dirname, 'src/renderer/settings.html'),
           updates: resolve(__dirname, 'src/renderer/updates.html'),
           pdf: resolve(__dirname, 'src/renderer/pdf.html'),
-          announcements: resolve(__dirname, 'src/renderer/announcements.html')
+          announcements: resolve(__dirname, 'src/renderer/announcements.html'),
+          overlay: resolve(__dirname, 'src/renderer/overlay.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         plugins: [

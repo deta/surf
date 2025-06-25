@@ -4,9 +4,14 @@ export type SettingsWindowTab = 'general' | 'ai' | 'appearance' | 'advanced' | '
 
 export type WebContentsViewCreateOptions = {
   id?: string
-  partition: string
+  partition?: string
   url?: string
+  overlayId?: string
+  sandbox?: boolean
+  transparent?: boolean
   bounds?: Rectangle
+  preload?: string
+  additionalArguments?: string[]
 }
 
 export enum WebContentsViewActionType {

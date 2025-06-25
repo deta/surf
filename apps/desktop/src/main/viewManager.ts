@@ -1,10 +1,12 @@
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import type { WebContentsViewCreateOptions } from '@horizon/types'
-import { BrowserWindow, webContents, WebContentsView } from 'electron'
+import { app, BrowserWindow, WebContentsView } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@horizon/core/src/lib/service/ipc/ipc'
 import { EventEmitterBase } from '@horizon/core/src/lib/service/events'
-import path from 'path'
+import path, { join } from 'path'
+import { is } from '@electron-toolkit/utils'
+import { isDev } from '@horizon/utils/src/system'
 
 export class WCView {
   id: string
@@ -13,15 +15,17 @@ export class WCView {
   constructor(opts: WebContentsViewCreateOptions) {
     const view = new WebContentsView({
       webPreferences: {
-        partition: 'persist:horizon', // opts.partition || undefined,
+        partition: opts.partition || undefined,
         nodeIntegration: false,
         contextIsolation: true,
-        sandbox: true,
+        sandbox: opts.sandbox ?? true,
         webSecurity: true,
         scrollBounce: true,
         defaultFontSize: 16,
         autoplayPolicy: 'document-user-activation-required',
-        preload: path.resolve(__dirname, '../preload/webview.js')
+        preload: opts.preload || path.resolve(__dirname, '../preload/webview.js'),
+        additionalArguments: opts.additionalArguments || [],
+        transparent: opts.transparent
       }
     })
 
@@ -39,16 +43,6 @@ export class WCView {
     }
 
     console.log('[main] webcontentsview-create: view created successfully with id', this.id)
-
-    if (opts.url) {
-      console.log(
-        '[main] webcontentsview-create: loading URL',
-        opts.url,
-        'for view with id',
-        this.id
-      )
-      this.loadURL(opts.url)
-    }
   }
 
   setBounds(bounds: Electron.Rectangle) {
@@ -68,6 +62,14 @@ export class WCView {
       console.error(`[main] Failed to load URL for WebContentsView ${this.id}:`, error)
       // Fallback to about:blank if loading fails
       await this.wcv.webContents.loadURL('about:blank')
+    }
+  }
+
+  async loadOverlay() {
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      this.wcv.webContents.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/overlay.html`)
+    } else {
+      this.wcv.webContents.loadFile(join(__dirname, '../renderer/overlay.html'))
     }
   }
 
@@ -136,7 +138,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     try {
       console.log('[main] webcontentsview-create: creating new view with options', opts)
 
-      const view = new WCView(opts)
+      const view = new WCView({
+        ...opts,
+        sandbox: true
+      })
 
       console.log('[main] webcontentsview-create: registering id', view.id)
       this.views.set(view.id, view)
@@ -147,11 +152,71 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       this.emit('create', view)
 
+      if (opts.url) {
+        console.log(
+          '[main] webcontentsview-create: loading URL',
+          opts.url,
+          'for view with id',
+          view.id
+        )
+        view.loadURL(opts.url)
+      }
+
       return view
     } catch (e) {
       console.error('[main] webcontentsview-create: error creating view', e)
       return null
     }
+  }
+
+  async createOverlayView(opts: WebContentsViewCreateOptions) {
+    const additionalArgs = [
+      `--userDataPath=${app.getPath('userData')}`,
+      `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+      `--overlayId=${opts.overlayId || 'default'}`,
+      ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
+      ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS ? ['--disable-tab-switching-shortcuts'] : [])
+    ]
+
+    console.log('createOverlayView: all additional args', additionalArgs)
+
+    const view = new WCView({
+      partition: 'persist:surf-app-session',
+      preload: path.resolve(__dirname, '../preload/overlay.js'),
+      additionalArguments: additionalArgs,
+      sandbox: false,
+      transparent: true,
+      ...opts
+    })
+
+    view.wcv.setBorderRadius(18)
+
+    console.log('[main] webcontentsview-create: registering id', view.id)
+    this.views.set(view.id, view)
+    this.activeViewId = view.id
+
+    this.window.contentView.addChildView(view.wcv)
+    console.log('[main] webcontentsview-create: added view to window with id', view.id)
+
+    this.emit('create', view)
+
+    if (opts.overlayId) {
+      console.log(
+        '[main] webcontentsview-create: loading overlay for view with id',
+        view.id,
+        'and overlayId',
+        opts.overlayId
+      )
+
+      view.loadOverlay()
+    }
+
+    view.wcv.webContents.on('blur', () => {
+      console.log('[main] webcontentsview-blur: view with id', view.id, 'lost focus, hiding it')
+      this.hideView(view.id)
+    })
+
+    return view
   }
 
   setViewBounds(id: string, bounds: Electron.Rectangle) {
@@ -290,7 +355,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           if (!validateIPCSender(event)) return null
 
           console.log('[main] webcontentsview-create: IPC event received', data)
-          const view = await this.createView(data)
+          const view = await (data.overlayId ? this.createOverlayView(data) : this.createView(data))
           if (view) {
             return { viewId: view.id, webContentsId: view.wcv.webContents.id }
           } else {

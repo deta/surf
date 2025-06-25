@@ -27,7 +27,7 @@ let mainWindow: BrowserWindow | undefined
 
 const log = useLogScope('MainWindow')
 
-electronDragClick()
+// electronDragClick()
 
 export function createWindow() {
   if (!isAppSetup) {
