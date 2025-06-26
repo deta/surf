@@ -1,0 +1,121 @@
+diff --git a/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js b/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js
+index 5dcb5fb..67d3be4 100644
+--- a/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js
++++ b/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js
+@@ -80,7 +80,7 @@
+         receive(message);
+       };
+       import_electron2.ipcRenderer.on(`crx-native-msg-${connectionId}`, onMessage);
+-      import_electron2.ipcRenderer.once(`crx-native-msg-${connectNative}-disconnect`, () => {
++      import_electron2.ipcRenderer.once(`crx-native-msg-${connectionId}-disconnect`, () => {
+         import_electron2.ipcRenderer.off(`crx-native-msg-${connectionId}`, onMessage);
+         disconnect();
+       });
+diff --git a/node_modules/electron-chrome-extensions/dist/cjs/index.js b/node_modules/electron-chrome-extensions/dist/cjs/index.js
+index 077c122..58cd3b8 100644
+--- a/node_modules/electron-chrome-extensions/dist/cjs/index.js
++++ b/node_modules/electron-chrome-extensions/dist/cjs/index.js
+@@ -244,12 +244,14 @@ var _PopupView = class _PopupView {
+   updatePosition() {
+     if (!this.browserWindow || !this.parent) return;
+     const winBounds = this.parent.getBounds();
++    const winContentBounds = this.parent.getContentBounds();
++    const nativeTitlebarHeight = winBounds.height - winContentBounds.height;
+     const viewBounds = this.browserWindow.getBounds();
+     let x = winBounds.x + this.anchorRect.x + this.anchorRect.width - viewBounds.width;
+-    let y = winBounds.y + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
++    let y = winBounds.y + nativeTitlebarHeight + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
+     if (this.alignment?.includes("right")) x = winBounds.x + this.anchorRect.x;
+     if (this.alignment?.includes("top"))
+-      y = winBounds.y - viewBounds.height + this.anchorRect.y - _PopupView.POSITION_PADDING;
++      y = winBounds.y + nativeTitlebarHeight - viewBounds.height + this.anchorRect.y - _PopupView.POSITION_PADDING;
+     x = Math.floor(x);
+     y = Math.floor(y);
+     d(`updatePosition`, { x, y });
+@@ -1547,7 +1549,11 @@ var ContextMenusAPI = class {
+           opts.submenu.forEach((item) => submenu.append(buildFromTemplate(item)));
+           opts.submenu = submenu;
+         }
+-        return new import_electron5.MenuItem(opts);
++        return new import_electron5.MenuItem({
++          ...opts,
++          // Force submenu type when submenu items are present
++          type: opts.type === "normal" && opts.submenu ? "submenu" : opts.type
++        });
+       };
+       for (const item of menuItemTemplates) {
+         if (item.props.parentId) continue;
+@@ -1644,7 +1650,10 @@ var ContextMenusAPI = class {
+         );
+         menuItemOptions = [...menuItemOptions, groupMenuItemOptions, ...children];
+       } else if (extensionMenuItemOptions.length > 0) {
+-        const children = extensionMenuItemOptions.map((opt) => ({ ...opt, showIcon: true }));
++        const children = extensionMenuItemOptions.map((opt) => ({
++          ...opt,
++          showIcon: !opt.props.parentId
++        }));
+         menuItemOptions = [...menuItemOptions, ...children];
+       }
+     }
+@@ -1840,7 +1849,6 @@ var NativeMessagingHost = class {
+     this.ready = this.launch(application, extensionId);
+   }
+   destroy() {
+-    if (!this.connected) return;
+     this.connected = false;
+     if (this.process) {
+       this.process.kill();
+diff --git a/node_modules/electron-chrome-extensions/dist/esm/index.mjs b/node_modules/electron-chrome-extensions/dist/esm/index.mjs
+index 9bc0046..7ddfe05 100644
+--- a/node_modules/electron-chrome-extensions/dist/esm/index.mjs
++++ b/node_modules/electron-chrome-extensions/dist/esm/index.mjs
+@@ -207,12 +207,14 @@ var _PopupView = class _PopupView {
+   updatePosition() {
+     if (!this.browserWindow || !this.parent) return;
+     const winBounds = this.parent.getBounds();
++    const winContentBounds = this.parent.getContentBounds();
++    const nativeTitlebarHeight = winBounds.height - winContentBounds.height;
+     const viewBounds = this.browserWindow.getBounds();
+     let x = winBounds.x + this.anchorRect.x + this.anchorRect.width - viewBounds.width;
+-    let y = winBounds.y + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
++    let y = winBounds.y + nativeTitlebarHeight + this.anchorRect.y + this.anchorRect.height + _PopupView.POSITION_PADDING;
+     if (this.alignment?.includes("right")) x = winBounds.x + this.anchorRect.x;
+     if (this.alignment?.includes("top"))
+-      y = winBounds.y - viewBounds.height + this.anchorRect.y - _PopupView.POSITION_PADDING;
++      y = winBounds.y + nativeTitlebarHeight - viewBounds.height + this.anchorRect.y - _PopupView.POSITION_PADDING;
+     x = Math.floor(x);
+     y = Math.floor(y);
+     d(`updatePosition`, { x, y });
+@@ -1510,7 +1512,11 @@ var ContextMenusAPI = class {
+           opts.submenu.forEach((item) => submenu.append(buildFromTemplate(item)));
+           opts.submenu = submenu;
+         }
+-        return new MenuItem2(opts);
++        return new MenuItem2({
++          ...opts,
++          // Force submenu type when submenu items are present
++          type: opts.type === "normal" && opts.submenu ? "submenu" : opts.type
++        });
+       };
+       for (const item of menuItemTemplates) {
+         if (item.props.parentId) continue;
+@@ -1607,7 +1613,10 @@ var ContextMenusAPI = class {
+         );
+         menuItemOptions = [...menuItemOptions, groupMenuItemOptions, ...children];
+       } else if (extensionMenuItemOptions.length > 0) {
+-        const children = extensionMenuItemOptions.map((opt) => ({ ...opt, showIcon: true }));
++        const children = extensionMenuItemOptions.map((opt) => ({
++          ...opt,
++          showIcon: !opt.props.parentId
++        }));
+         menuItemOptions = [...menuItemOptions, ...children];
+       }
+     }
+@@ -1803,7 +1812,6 @@ var NativeMessagingHost = class {
+     this.ready = this.launch(application, extensionId);
+   }
+   destroy() {
+-    if (!this.connected) return;
+     this.connected = false;
+     if (this.process) {
+       this.process.kill();
