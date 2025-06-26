@@ -47,6 +47,7 @@
   export let historyEntriesManager: HistoryEntriesManager
   export let url: Writable<string> | undefined = undefined
   export let historyStackIds = writable<string[]>([])
+  export let navigationHistory = writable<Electron.NavigationEntry[]>([])
   export let currentHistoryIndex = writable(-1)
   export let acceptsDrags: boolean = false
   export let isLoading = writable(false)
@@ -57,8 +58,9 @@
     ($currentHistoryIndex) => $currentHistoryIndex > 0
   )
   export const canGoForward = derived(
-    [currentHistoryIndex, historyStackIds],
-    ([$currentHistoryIndex, $historyStackIds]) => $currentHistoryIndex < $historyStackIds.length - 1
+    [currentHistoryIndex, historyStackIds, navigationHistory],
+    ([$currentHistoryIndex, $historyStackIds, $navigationHistory]) =>
+      $currentHistoryIndex < $navigationHistory.length - 1
   )
   export const error = writable<WebviewError | null>(null)
 
@@ -464,6 +466,7 @@
     {partition}
     {historyEntriesManager}
     {historyStackIds}
+    {navigationHistory}
     {currentHistoryIndex}
     {isLoading}
     {error}

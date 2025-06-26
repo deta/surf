@@ -71,7 +71,11 @@
     type WebViewSendEvents
   } from '@horizon/types'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
-  import type { WebviewEvents, WebviewNavigationEvent } from '../Webview/Webview.svelte'
+  import type {
+    WebviewEvents,
+    WebviewHistoryChangeEvent,
+    WebviewNavigationEvent
+  } from '../Webview/Webview.svelte'
   import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
   import { useToasts } from '../../service/toast'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
@@ -154,6 +158,7 @@
   let app: DetectedWebApp | null = null
 
   const historyStackIds = writable<string[]>(tab.historyStackIds)
+  const navigationHistory = writable<Electron.NavigationEntry[]>(tab.navigationHistory)
   const currentHistoryIndex = writable(tab.currentHistoryIndex)
   const appDetectionRunning = writable(false)
 
@@ -223,10 +228,11 @@
     // dispatch('update-tab', { icon: e.detail })
   }
 
-  const handleHistoryChange = (e: CustomEvent<{ stack: string[]; index: number }>) => {
+  const handleHistoryChange = (e: CustomEvent<WebviewHistoryChangeEvent>) => {
     // log.debug('history changed for', $url, e.detail.index, e.detail.stack)
 
     const changes = {
+      navigationHistory: e.detail.entries,
       historyStackIds: e.detail.stack,
       currentHistoryIndex: e.detail.index
     }
@@ -1327,6 +1333,7 @@
   onMount(() => {
     if (!webview) return
 
+    navigationHistory.set(tab.navigationHistory ?? [])
     historyStackIds.set(tab.historyStackIds)
     currentHistoryIndex.set(tab.currentHistoryIndex)
   })
@@ -1344,6 +1351,7 @@
   {historyEntriesManager}
   {url}
   {historyStackIds}
+  {navigationHistory}
   {currentHistoryIndex}
   {isLoading}
   {webContentsId}

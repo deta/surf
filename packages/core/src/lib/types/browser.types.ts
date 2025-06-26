@@ -40,6 +40,7 @@ export interface TabPage extends BaseTab {
   currentLocation?: string
   historyStackIds: string[]
   currentHistoryIndex: number
+  navigationHistory?: Electron.NavigationEntry[]
   resourceBookmark?: string | null
   resourceBookmarkedManually?: boolean
   chatResourceBookmark?: string | null

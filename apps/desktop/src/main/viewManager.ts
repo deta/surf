@@ -171,6 +171,13 @@ export class WCView {
     this.wcv.webContents.send(channel, ...args)
   }
 
+  getNavigationHistory() {
+    const entries = this.wcv.webContents.navigationHistory.getAllEntries()
+    const index = this.wcv.webContents.navigationHistory.getActiveIndex()
+
+    return { entries, index }
+  }
+
   attachEventListener(
     event: WebContentsViewEventTypeNames,
     callback: (...args: any[]) => void
@@ -254,7 +261,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       this.emit('create', view)
 
-      if (opts.url) {
+      if (opts.url && (opts.navigationHistory ?? []).length === 0) {
         console.log(
           '[main] webcontentsview-create: loading URL',
           opts.url,
@@ -740,6 +747,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             return true
           } else if (type === WebContentsViewActionType.IS_CURRENTLY_AUDIBLE) {
             return view.isCurrentlyAudible()
+          } else if (type === WebContentsViewActionType.GET_NAVIGATION_HISTORY) {
+            return view.getNavigationHistory()
           }
 
           return false

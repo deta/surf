@@ -42,7 +42,8 @@ export enum WebContentsViewActionType {
   STOP_FIND_IN_PAGE = 'stop-find-in-page',
   EXECUTE_JAVASCRIPT = 'execute-javascript',
   DOWNLOAD_URL = 'download-url',
-  IS_CURRENTLY_AUDIBLE = 'is-currently-audible'
+  IS_CURRENTLY_AUDIBLE = 'is-currently-audible',
+  GET_NAVIGATION_HISTORY = 'get-navigation-history'
 }
 
 export interface WebContentsViewActionPayloads {
@@ -68,6 +69,7 @@ export interface WebContentsViewActionPayloads {
   [WebContentsViewActionType.EXECUTE_JAVASCRIPT]: { code: string; userGesture?: boolean }
   [WebContentsViewActionType.DOWNLOAD_URL]: { url: string; options?: Electron.DownloadURLOptions }
   [WebContentsViewActionType.IS_CURRENTLY_AUDIBLE]: undefined
+  [WebContentsViewActionType.GET_NAVIGATION_HISTORY]: undefined
 }
 
 export interface WebContentsViewActionOutputs {
@@ -91,6 +93,10 @@ export interface WebContentsViewActionOutputs {
   [WebContentsViewActionType.EXECUTE_JAVASCRIPT]: any
   [WebContentsViewActionType.DOWNLOAD_URL]: boolean
   [WebContentsViewActionType.IS_CURRENTLY_AUDIBLE]: boolean
+  [WebContentsViewActionType.GET_NAVIGATION_HISTORY]: {
+    entries: NavigationEntry[]
+    index: number
+  }
 }
 
 export type WebContentsViewAction = {

@@ -52,6 +52,7 @@
   export let partition: string
   export let historyEntriesManager: HistoryEntriesManager
   export let historyStackIds: Writable<string[]>
+  export let navigationHistory: Writable<Electron.NavigationEntry[]>
   export let currentHistoryIndex: Writable<number>
   export let isReady = writable(false)
   export let webContentsId = writable<number | null>(null)
@@ -93,52 +94,51 @@
   export const goBackInHistory = () => {
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_BACK)
 
-    currentHistoryIndex.update((n) => {
-      if (n > 0) {
-        n--
-        // programmaticNavigation = true
-        // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-        // if (historyEntry) {
-        //   navigate(historyEntry.url as string)
-        // }
-        return n
-      }
-      return n
-    })
+    // currentHistoryIndex.update((n) => {
+    //   if (n > 0) {
+    //     n--
+    //     // programmaticNavigation = true
+    //     // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
+    //     // if (historyEntry) {
+    //     //   navigate(historyEntry.url as string)
+    //     // }
+    //     return n
+    //   }
+    //   return n
+    // })
   }
 
   export const goForwardInHistory = () => {
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_FORWARD)
-    currentHistoryIndex.update((n) => {
-      const stack = $historyStackIds
-      if (n < stack.length - 1) {
-        n++
-        // programmaticNavigation = true
-        // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-        // if (historyEntry) {
-        //   navigate(historyEntry.url as string)
-        // }
+    // currentHistoryIndex.update((n) => {
+    //   const stack = $historyStackIds
+    //   if (n < stack.length - 1) {
+    //     n++
+    //     // programmaticNavigation = true
+    //     // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
+    //     // if (historyEntry) {
+    //     //   navigate(historyEntry.url as string)
+    //     // }
 
-        return n
-      }
+    //     return n
+    //   }
 
-      return n
-    })
+    //   return n
+    // })
   }
 
   export const goToBeginningOfHistory = (fallback?: string) => {
-    currentHistoryIndex.update((n) => {
-      n = 0
-      // programmaticNavigation = true
-      const historyEntry = historyEntriesManager.getEntry($historyStackIds[0])
-      if (historyEntry) {
-        navigate(historyEntry.url as string)
-      } else if (fallback) {
-        navigate(fallback)
-      }
-
-      return n
-    })
+    // currentHistoryIndex.update((n) => {
+    //   n = 0
+    //   // programmaticNavigation = true
+    //   const historyEntry = historyEntriesManager.getEntry($historyStackIds[0])
+    //   if (historyEntry) {
+    //     navigate(historyEntry.url as string)
+    //   } else if (fallback) {
+    //     navigate(fallback)
+    //   }
+    //   return n
+    // })
   }
 
   export const insertText = (text: string) => {
@@ -226,6 +226,14 @@
     return isAudible
   }
 
+  export const getNavigationHistory = async () => {
+    const history = await window.api.webContentsViewAction(
+      cleanID,
+      WebContentsViewActionType.GET_NAVIGATION_HISTORY
+    )
+    return history
+  }
+
   export const addEventListener = <T extends WebContentsViewEventType>(
     type: T,
     callback: WebContentsViewEventListenerCallback<T>
@@ -275,36 +283,6 @@
 
     log.debug('Initializing web contents view with ID', cleanID, 'and source', src)
 
-    let allEntriesMap = historyEntriesManager.entriesValue
-    log.debug('Current history entries map', allEntriesMap)
-    if (allEntriesMap.size === 0) {
-      log.warn('No history entries found, waiting for entries to be loaded')
-      await historyEntriesManager.init()
-      await tick()
-      allEntriesMap = historyEntriesManager.entriesValue
-    }
-
-    const historyEntries = $historyStackIds
-      .map((id) => allEntriesMap.get(id))
-      .filter((entry) => entry !== undefined)
-
-    log.debug(
-      'History entries for web contents view',
-      historyEntries,
-      $historyStackIds,
-      $currentHistoryIndex
-    )
-
-    const navigationHistory = historyEntries
-      .filter((entry) => entry.url)
-      .map(
-        (entry) =>
-          ({
-            url: entry.url!,
-            title: entry.title || ''
-          }) satisfies Electron.NavigationEntry
-      )
-
     const bounds = webContentsWrapper.getBoundingClientRect()
 
     log.debug('Creating web contents view with bounds', bounds, src, cleanID)
@@ -314,12 +292,12 @@
         id: cleanID,
         url: src,
         partition: partition,
-        ...(navigationHistory.length > 0
+        ...($navigationHistory.length > 0
           ? {
-              navigationHistory: navigationHistory,
+              navigationHistory: $navigationHistory,
               navigationHistoryIndex: Math.max(
                 0,
-                Math.min($currentHistoryIndex, navigationHistory.length - 1)
+                Math.min($currentHistoryIndex, $navigationHistory.length - 1)
               )
             }
           : {}),

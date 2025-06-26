@@ -376,7 +376,7 @@
     if ($showNewTabOverlay !== 0) return false
     if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
 
-    return $activeTab?.type === 'page' // && $activeTab?.currentHistoryIndex > 0
+    return $activeTab?.type === 'page' && $activeTab?.currentHistoryIndex > 0
   })()
 
   $: canGoForward = (() => {
@@ -384,8 +384,8 @@
     if (activeTabMiniBrowserIsOpen !== undefined && $activeTabMiniBrowserIsOpen) return false
 
     return (
-      $activeTab?.type === 'page'
-      // && $activeTab?.currentHistoryIndex < $activeTab.historyStackIds.length - 1
+      $activeTab?.type === 'page' &&
+      $activeTab?.currentHistoryIndex < ($activeTab.navigationHistory ?? []).length - 1
     )
   })()
 

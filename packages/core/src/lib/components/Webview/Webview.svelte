@@ -1,6 +1,10 @@
 <script lang="ts" context="module">
   export type WebviewNavigationEvent = { url: string; oldUrl: string }
-  export type WebviewHistoryChangeEvent = { stack: string[]; index: number }
+  export type WebviewHistoryChangeEvent = {
+    entries: Electron.NavigationEntry[]
+    stack: string[]
+    index: number
+  }
 
   export type WebviewEvents = {
     'webview-page-event': {
@@ -61,6 +65,7 @@
   export let historyEntriesManager: HistoryEntriesManager
   export let webContents: WebContents
   export let historyStackIds: Writable<string[]>
+  export let navigationHistory: Writable<Electron.NavigationEntry[]>
   export let currentHistoryIndex: Writable<number>
   export let isLoading: Writable<boolean>
   export let error: Writable<WebviewError | null>
@@ -91,14 +96,17 @@
 
   $: cleanID = id.replace('webview-', '')
 
-  const debouncedHistoryChange = useDebounce((stack: string[], index: number) => {
-    dispatch('history-change', { stack, index })
-  }, 100)
+  const debouncedHistoryChange = useDebounce(
+    (entries: Electron.NavigationEntry[], stack: string[], index: number) => {
+      dispatch('history-change', { entries, stack, index })
+    },
+    100
+  )
 
   const currentHistoryEntry = derived(
-    [historyStackIds, currentHistoryIndex],
-    ([historyStackIds, currentHistoryIndex]) => {
-      debouncedHistoryChange(historyStackIds, currentHistoryIndex)
+    [historyStackIds, currentHistoryIndex, navigationHistory],
+    ([historyStackIds, currentHistoryIndex, navigationHistory]) => {
+      debouncedHistoryChange(navigationHistory, historyStackIds, currentHistoryIndex)
       return historyEntriesManager.getEntry(historyStackIds[currentHistoryIndex])
     }
   )
@@ -106,6 +114,13 @@
   const updateUrl = (newUrl: string) => {
     url.set(newUrl)
     dispatch('url-change', newUrl)
+  }
+
+  const persistNavigationHistory = async () => {
+    const result = await webContents.getNavigationHistory()
+
+    navigationHistory.set(result.entries)
+    currentHistoryIndex.set(result.index)
   }
 
   const addHistoryEntry = useDebounce(async (newUrl: string) => {
@@ -137,7 +152,7 @@
         return [...stack, entry.id]
       })
 
-      currentHistoryIndex.update((n) => n + 1)
+      // currentHistoryIndex.update((n) => n + 1)
       dispatch('navigation', { url: newUrl, oldUrl: oldUrl || src })
     } catch (error) {
       log.error('Failed to add history entry', error)
@@ -164,6 +179,7 @@
       return
     }
 
+    persistNavigationHistory()
     addHistoryEntry(newUrl)
   }
 
@@ -533,6 +549,7 @@
   {partition}
   {historyEntriesManager}
   {historyStackIds}
+  {navigationHistory}
   {currentHistoryIndex}
   {isLoading}
   {error}
