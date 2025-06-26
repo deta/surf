@@ -155,6 +155,7 @@
         log.error('URL parsing error:', err)
       }
     }
+
     updateUrl(newUrl)
 
     if (programmaticNavigation) {
@@ -401,7 +402,7 @@
     e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.DID_NAVIGATE]>
   ) => {
     const newUrl = e.detail.url
-    // log.debug('did navigate', e.url)
+    log.debug('did navigate', e.url)
 
     if ($url === newUrl) {
       return

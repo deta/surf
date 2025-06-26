@@ -1,4 +1,9 @@
-import type { Rectangle, Result, WebContentsWillNavigateEventParams } from 'electron'
+import type {
+  NavigationEntry,
+  Rectangle,
+  Result,
+  WebContentsWillNavigateEventParams
+} from 'electron'
 
 export type SettingsWindowTab = 'general' | 'ai' | 'appearance' | 'advanced' | 'extensions'
 
@@ -12,6 +17,8 @@ export type WebContentsViewCreateOptions = {
   bounds?: Rectangle
   preload?: string
   additionalArguments?: string[]
+  navigationHistory?: NavigationEntry[]
+  navigationHistoryIndex?: number
 }
 
 // --- WebContentsView Actions ---

@@ -50,6 +50,19 @@ export class WCView {
       this.wcv.setBounds(opts.bounds)
     }
 
+    if (opts.navigationHistory) {
+      console.log(
+        '[main] webcontentsview-create: setting navigation history for view with id',
+        this.id,
+        'to',
+        opts.navigationHistory
+      )
+      this.wcv.webContents.navigationHistory.restore({
+        index: opts.navigationHistoryIndex,
+        entries: opts.navigationHistory
+      })
+    }
+
     console.log('[main] webcontentsview-create: view created successfully with id', this.id)
   }
 

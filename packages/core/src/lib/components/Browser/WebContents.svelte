@@ -22,7 +22,7 @@
 
 <script lang="ts">
   import { writable, type Writable } from 'svelte/store'
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useConfig } from '../../service/config'
   import {
     WebContentsViewEventType,
@@ -37,7 +37,7 @@
   } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope, wait } from '@horizon/utils'
   import { useResourceManager } from '../../service/resources'
   import type { NewWindowRequest } from '../../service/ipc/events'
   import { WebContentsViewActionType } from '@horizon/types'
@@ -93,43 +93,43 @@
   export const goBackInHistory = () => {
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_BACK)
 
-    // currentHistoryIndex.update((n) => {
-    //   if (n > 0) {
-    //     n--
-    //     programmaticNavigation = true
-    //     const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-    //     if (historyEntry) {
-    //       navigate(historyEntry.url as string)
-    //     }
-    //     return n
-    //   }
-    //   return n
-    // })
+    currentHistoryIndex.update((n) => {
+      if (n > 0) {
+        n--
+        // programmaticNavigation = true
+        // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
+        // if (historyEntry) {
+        //   navigate(historyEntry.url as string)
+        // }
+        return n
+      }
+      return n
+    })
   }
 
   export const goForwardInHistory = () => {
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_FORWARD)
-    // currentHistoryIndex.update((n) => {
-    //   const stack = $historyStackIds
-    //   if (n < stack.length - 1) {
-    //     n++
-    //     programmaticNavigation = true
-    //     const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-    //     if (historyEntry) {
-    //       navigate(historyEntry.url as string)
-    //     }
+    currentHistoryIndex.update((n) => {
+      const stack = $historyStackIds
+      if (n < stack.length - 1) {
+        n++
+        // programmaticNavigation = true
+        // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
+        // if (historyEntry) {
+        //   navigate(historyEntry.url as string)
+        // }
 
-    //     return n
-    //   }
+        return n
+      }
 
-    //   return n
-    // })
+      return n
+    })
   }
 
   export const goToBeginningOfHistory = (fallback?: string) => {
     currentHistoryIndex.update((n) => {
       n = 0
-      programmaticNavigation = true
+      // programmaticNavigation = true
       const historyEntry = historyEntriesManager.getEntry($historyStackIds[0])
       if (historyEntry) {
         navigate(historyEntry.url as string)
@@ -273,6 +273,38 @@
       return
     }
 
+    log.debug('Initializing web contents view with ID', cleanID, 'and source', src)
+
+    let allEntriesMap = historyEntriesManager.entriesValue
+    log.debug('Current history entries map', allEntriesMap)
+    if (allEntriesMap.size === 0) {
+      log.warn('No history entries found, waiting for entries to be loaded')
+      await historyEntriesManager.init()
+      await tick()
+      allEntriesMap = historyEntriesManager.entriesValue
+    }
+
+    const historyEntries = $historyStackIds
+      .map((id) => allEntriesMap.get(id))
+      .filter((entry) => entry !== undefined)
+
+    log.debug(
+      'History entries for web contents view',
+      historyEntries,
+      $historyStackIds,
+      $currentHistoryIndex
+    )
+
+    const navigationHistory = historyEntries
+      .filter((entry) => entry.url)
+      .map(
+        (entry) =>
+          ({
+            url: entry.url!,
+            title: entry.title || ''
+          }) satisfies Electron.NavigationEntry
+      )
+
     const bounds = webContentsWrapper.getBoundingClientRect()
 
     log.debug('Creating web contents view with bounds', bounds, src, cleanID)
@@ -282,6 +314,15 @@
         id: cleanID,
         url: src,
         partition: partition,
+        ...(navigationHistory.length > 0
+          ? {
+              navigationHistory: navigationHistory,
+              navigationHistoryIndex: Math.max(
+                0,
+                Math.min($currentHistoryIndex, navigationHistory.length - 1)
+              )
+            }
+          : {}),
         bounds: {
           x: bounds.x,
           y: bounds.y,
