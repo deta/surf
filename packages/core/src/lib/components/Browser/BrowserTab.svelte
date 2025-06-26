@@ -158,7 +158,7 @@
   let app: DetectedWebApp | null = null
 
   const historyStackIds = writable<string[]>(tab.historyStackIds)
-  const navigationHistory = writable<Electron.NavigationEntry[]>(tab.navigationHistory)
+  const navigationHistory = writable<Electron.NavigationEntry[]>(tab.navigationHistory ?? [])
   const currentHistoryIndex = writable(tab.currentHistoryIndex)
   const appDetectionRunning = writable(false)
 
