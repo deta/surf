@@ -312,7 +312,7 @@ export function createWindow() {
   //   getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
   // })
 
-  setupWindowWebContentsHandlers(mainWindow.webContents)
+  setupMainWindowWebContentsHandlers(mainWindow.webContents)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -322,7 +322,7 @@ export function createWindow() {
 
   const viewManager = attachWCViewManager(mainWindow)
   viewManager.on('create', (view) => {
-    setupWindowWebContentsHandlers(view.wcv.webContents)
+    setupWebContentsViewWebContentsHandlers(view.wcv.webContents)
   })
 }
 
@@ -330,7 +330,7 @@ export function getMainWindow(): BrowserWindow | undefined {
   return mainWindow
 }
 
-function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
+function setupMainWindowWebContentsHandlers(contents: Electron.WebContents) {
   // Prevent direct navigation in the main window by handling the `will-navigate`
   // event and the `setWindowOpenHandler`. The main window should only host the SPA
   // Surf frontend and not navigate away from it. Any requested navigations should
@@ -417,5 +417,58 @@ function setupWindowWebContentsHandlers(contents: Electron.WebContents) {
     })
 
     attachContextMenu(contents)
+  })
+}
+
+function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents) {
+  contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
+    // If there is a frame name or features provided we assume the request
+    // is part of a auth flow and we create a new isolated window for it
+    const shouldCreateWindow =
+      details.disposition === 'new-window' && (details.frameName !== '' || details.features !== '')
+
+    if (shouldCreateWindow) {
+      // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
+      // created window here. The creation of it is controlled from the renderer. Because
+      // of this, Surf won't play well with websites that for some reason utilizes more
+      // than one window. In the future, Each new window we create should receive its own
+      // instance of Surf.
+      return {
+        action: 'allow',
+        createWindow: undefined,
+        outlivesOpener: false,
+        overrideBrowserWindowOptions: {
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+            webSecurity: true
+          }
+        }
+      }
+    }
+
+    const mainWindow = getMainWindow()
+    if (mainWindow) {
+      IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+        url: details.url,
+        disposition: details.disposition,
+        webContentsId: contents.id
+      })
+    }
+
+    return { action: 'deny' }
+  })
+
+  attachContextMenu(contents)
+
+  contents.on('will-attach-webview', (_event, webPreferences, _params) => {
+    webPreferences.webSecurity = !isDev
+    webPreferences.sandbox = true
+    webPreferences.nodeIntegration = false
+    webPreferences.contextIsolation = true
+    webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
+    webPreferences.spellcheck = isMac()
+    webPreferences.additionalArguments = [`--pdf-viewer-entry-point=${PDFViewerEntryPoint}`]
   })
 }

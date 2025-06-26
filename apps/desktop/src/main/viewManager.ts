@@ -1,5 +1,12 @@
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
-import { WebContentsViewEventType, type WebContentsViewCreateOptions } from '@horizon/types'
+import {
+  WebContentsViewActionType,
+  WebContentsViewEventPayloads,
+  WebContentsViewEventType,
+  WebContentsViewEventTypeNames,
+  WebContentsViewManagerActionType,
+  type WebContentsViewCreateOptions
+} from '@horizon/types'
 import { app, BrowserWindow, WebContentsView } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@horizon/core/src/lib/service/ipc/ipc'
@@ -11,6 +18,7 @@ import { isDev } from '@horizon/utils/src/system'
 export class WCView {
   id: string
   wcv: WebContentsView
+  eventListeners: Array<() => void> = []
 
   constructor(opts: WebContentsViewCreateOptions) {
     const view = new WebContentsView({
@@ -101,6 +109,78 @@ export class WCView {
       console.warn(`[main] WebContentsView ${this.id} cannot go forward`)
     }
   }
+
+  insertText(text: string) {
+    this.wcv.webContents.insertText(text)
+  }
+
+  getBounds(): Electron.Rectangle {
+    return this.wcv.getBounds()
+  }
+
+  focus() {
+    this.wcv.webContents.focus()
+  }
+
+  setAudioMuted(muted: boolean) {
+    this.wcv.webContents.setAudioMuted(muted)
+  }
+
+  setZoomFactor(factor: number) {
+    this.wcv.webContents.setZoomFactor(factor)
+  }
+
+  openDevTools(mode: Electron.OpenDevToolsOptions['mode'] = 'detach') {
+    this.wcv.webContents.openDevTools({ mode })
+  }
+
+  findInPage(text: string, options: Electron.FindInPageOptions) {
+    return this.wcv.webContents.findInPage(text, options)
+  }
+
+  stopFindInPage(action: 'clearSelection' | 'keepSelection' | 'activateSelection') {
+    this.wcv.webContents.stopFindInPage(action)
+  }
+
+  executeJavascript(code: string, userGesture = false) {
+    return this.wcv.webContents.executeJavaScript(code, userGesture)
+  }
+
+  downloadURL(url: string, options?: Electron.DownloadURLOptions) {
+    this.wcv.webContents.downloadURL(url, options)
+  }
+
+  isCurrentlyAudible() {
+    return this.wcv.webContents.isCurrentlyAudible()
+  }
+
+  send(channel: string, args: any[]) {
+    this.wcv.webContents.send(channel, ...args)
+  }
+
+  attachEventListener(
+    event: WebContentsViewEventTypeNames,
+    callback: (...args: any[]) => void
+  ): () => void {
+    this.wcv.webContents.addListener(event as any, callback)
+
+    const unsub = () => {
+      this.wcv.webContents.removeListener(event as any, callback)
+      const index = this.eventListeners.indexOf(unsub)
+      if (index > -1) {
+        this.eventListeners.splice(index, 1)
+      }
+    }
+
+    this.eventListeners.push(unsub)
+
+    return unsub
+  }
+
+  onDestroy() {
+    console.log('[main] webcontentsview-destroy: destroying view with id', this.id)
+    this.eventListeners.forEach((unsub) => unsub())
+  }
 }
 
 export type WCViewManagerEvents = {
@@ -129,6 +209,13 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.window.webContents.on('destroyed', () => {
       console.log('[main] webcontentsview-destroy: web contents destroyed, cleaning up')
       this.cleanup()
+    })
+
+    this.window.webContents.on('did-navigate', () => {
+      console.log(
+        '[main] webcontentsview-destroy: web contents finished load, removing left over views'
+      )
+      this.destoryAllViews()
     })
 
     this.attachIPCEvents()
@@ -330,6 +417,9 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   destroyView(view: WCView) {
     try {
       console.log('[main] webcontentsview-destroy: destroying view with id', view.id)
+
+      view.onDestroy()
+
       this.window.contentView.removeChildView(view.wcv)
       console.log('[main] Removed WebContentsView from window for id:', view.id)
 
@@ -347,39 +437,221 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.views.forEach((view) => {
       this.destroyView(view)
     })
+
+    const remainingViews = this.window.contentView.children
+    if (remainingViews.length > 0) {
+      console.warn(
+        '[main] webcontentsview-destroy: some views were not removed, remaining:',
+        remainingViews.length
+      )
+      remainingViews.forEach((remainingView) => {
+        this.window.contentView.removeChildView(remainingView)
+      })
+    }
   }
 
   attachViewIPCEvents(view: WCView) {
-    const callback = () => {
+    // TODO: find way to automatically forward all events from WebContentsView to IPC without manually attaching each one
+
+    view.attachEventListener('did-start-loading', () => {
       IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
-        type: WebContentsViewEventType.DID_FINISH_LOAD,
+        type: WebContentsViewEventType.DID_START_LOADING,
+        viewId: view.id,
         payload: undefined
       })
-    }
+    })
 
-    view.wcv.webContents.addListener('did-finish-load', callback)
+    view.attachEventListener('did-stop-loading', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.DID_STOP_LOADING,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
 
-    return () => {
-      view.wcv.webContents.removeListener('did-finish-load', callback)
-    }
+    view.attachEventListener('did-finish-load', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.DID_FINISH_LOAD,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener('did-fail-load', (_e, ...args) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.DID_FAIL_LOAD,
+        viewId: view.id,
+        payload: {
+          errorCode: args[0],
+          errorDescription: args[1],
+          validatedURL: args[2],
+          isMainFrame: args[3],
+          frameProcessId: args[4],
+          frameRoutingId: args[5]
+        }
+      })
+    })
+
+    view.attachEventListener('dom-ready', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.DOM_READY,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener(
+      'will-navigate',
+      (details, url, isInPlace, isMainFrame, frameProcessId, frameRoutingId) => {
+        IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+          type: WebContentsViewEventType.WILL_NAVIGATE,
+          viewId: view.id,
+          payload: {
+            details,
+            url,
+            isInPlace,
+            isMainFrame,
+            frameProcessId,
+            frameRoutingId
+          }
+        })
+      }
+    )
+
+    view.attachEventListener('did-navigate', (_e, url, httpResponseCode, httpStatusText) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.DID_NAVIGATE,
+        viewId: view.id,
+        payload: {
+          url,
+          httpResponseCode,
+          httpStatusText
+        }
+      })
+    })
+
+    view.attachEventListener(
+      'did-navigate-in-page',
+      (_e, url, isMainFrame, frameProcessId, frameRoutingId) => {
+        IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+          type: WebContentsViewEventType.DID_NAVIGATE_IN_PAGE,
+          viewId: view.id,
+          payload: {
+            url,
+            isMainFrame,
+            frameProcessId,
+            frameRoutingId
+          }
+        })
+      }
+    )
+
+    view.attachEventListener('update-target-url', (_e, url) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.UPDATE_TARGET_URL,
+        viewId: view.id,
+        payload: { url }
+      })
+    })
+
+    view.attachEventListener('page-title-updated', (_e, title, explicitSet) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.PAGE_TITLE_UPDATED,
+        viewId: view.id,
+        payload: { title, explicitSet }
+      })
+    })
+
+    view.attachEventListener('page-favicon-updated', (_e, favicons) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.PAGE_FAVICON_UPDATED,
+        viewId: view.id,
+        payload: { favicons }
+      })
+    })
+
+    view.attachEventListener('media-started-playing', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.MEDIA_STARTED_PLAYING,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener('media-paused', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.MEDIA_PAUSED,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener('focus', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.FOCUS,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener('blur', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.BLUR,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener('found-in-page', (_e, result) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.FOUND_IN_PAGE,
+        viewId: view.id,
+        payload: { result }
+      })
+    })
+
+    view.attachEventListener('ipc-message', (_e, channel, ...args) => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.IPC_MESSAGE,
+        viewId: view.id,
+        payload: { channel, args }
+      })
+    })
   }
 
   attachIPCEvents() {
     console.log('[main] webcontentsview-attachIPCEvents: attaching IPC event listeners')
     this.ipcEventListeners = [
-      IPC_EVENTS_MAIN.webContentsViewCreate.handle(async (event, data) => {
+      IPC_EVENTS_MAIN.webContentsViewManagerAction.handle(async (event, { type, payload }) => {
         try {
           if (!validateIPCSender(event)) return null
 
-          console.log('[main] webcontentsview-create: IPC event received', data)
-          const view = await (data.overlayId ? this.createOverlayView(data) : this.createView(data))
-          if (view) {
-            return { viewId: view.id, webContentsId: view.wcv.webContents.id }
+          console.log('[main] webcontentsview-manager-action: IPC event received', type, payload)
+
+          if (type === WebContentsViewManagerActionType.CREATE) {
+            const view = await (payload.overlayId
+              ? this.createOverlayView(payload)
+              : this.createView(payload))
+            if (view) {
+              return { viewId: view.id, webContentsId: view.wcv.webContents.id }
+            } else {
+              return null
+            }
+          } else if (type === WebContentsViewManagerActionType.HIDE_ALL) {
+            console.log('[main] webcontentsview-hideAll: IPC event received, hiding all views')
+            this.hideAllViews()
+            return true
+          } else if (type === WebContentsViewManagerActionType.SHOW_ACTIVE) {
+            console.log(
+              '[main] webcontentsview-showActive: IPC event received, showing active view'
+            )
+            this.showActiveView()
+            return true
           } else {
             return null
           }
         } catch (error) {
-          console.error('[main] webcontentsview-create: error handling IPC event', error)
+          console.error('[main] webcontentsview-manager-action: error handling IPC event', error)
           return null
         }
       }),
@@ -390,65 +662,71 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
           const { type, payload } = action
 
-          console.log('[main] webcontentsview-activate: IPC event received', viewId, type, payload)
-
-          if (type === 'hide-all') {
-            console.log('[main] webcontentsview-hideAll: hiding all views')
-            this.hideAllViews()
-            return true
-          } else if (type === 'show-active') {
-            console.log('[main] webcontentsview-showActive: showing active view')
-            this.showActiveView()
-            return true
-          }
-
+          console.log('[main] webcontentsview-action: IPC event received', viewId, type, payload)
           const view = this.views.get(viewId)
           if (!view) {
             console.warn('[main] webcontentsview-activate: no view found with id', viewId)
             return true
           }
 
-          if (type === 'activate') {
-            console.log('[main] webcontentsview-activate: activating view with id', viewId)
+          if (type === WebContentsViewActionType.ACTIVATE) {
             return this.bringViewToFront(view.id)
-          } else if (type === 'reload') {
-            console.log('[main] webcontentsview-reload: reloading view with id', viewId)
+          } else if (type === WebContentsViewActionType.RELOAD) {
             view.reload()
             return true
-          } else if (type === 'go-forward') {
-            console.log('[main] webcontentsview-go-forward: going forward in view with id', viewId)
+          } else if (type === WebContentsViewActionType.GO_FORWARD) {
             view.goForward()
             return true
-          } else if (type === 'go-back') {
-            console.log('[main] webcontentsview-go-back: going back in view with id', viewId)
+          } else if (type === WebContentsViewActionType.GO_BACK) {
             view.goBack()
             return true
-          } else if (type === 'destroy') {
-            console.log('[main] webcontentsview-close: closing view with id', viewId)
+          } else if (type === WebContentsViewActionType.DESTROY) {
             this.destroyView(view)
             return true
-          } else if (type === 'set-bounds') {
-            console.log(
-              '[main] webcontentsview-setBounds: setting bounds for view with id',
-              viewId,
-              'to',
-              payload.bounds
-            )
-            view.setBounds(payload.bounds)
+          } else if (type === WebContentsViewActionType.SET_BOUNDS) {
+            view.setBounds(payload)
             return true
-          } else if (type === 'load-url') {
-            console.log(
-              '[main] webcontentsview-loadURL: loading URL',
-              payload.url,
-              'for view with id',
-              viewId
-            )
+          } else if (type === WebContentsViewActionType.LOAD_URL) {
             await view.loadURL(payload.url)
             return true
-          } else if (type === 'hide') {
-            console.log('[main] webcontentsview-hide: hiding view with id', viewId)
+          } else if (type === WebContentsViewActionType.HIDE) {
             this.hideView(viewId)
             return true
+          } else if (type === WebContentsViewActionType.INSERT_TEXT) {
+            view.insertText(payload.text)
+            return true
+          } else if (type === WebContentsViewActionType.GET_URL) {
+            return view.wcv.webContents.getURL()
+          } else if (type === WebContentsViewActionType.FOCUS) {
+            const success = this.bringViewToFront(view.id)
+            if (success) {
+              view.focus()
+            }
+            return success
+          } else if (type === WebContentsViewActionType.SET_AUDIO_MUTED) {
+            view.setAudioMuted(payload)
+            return true
+          } else if (type === WebContentsViewActionType.SET_ZOOM_FACTOR) {
+            view.setZoomFactor(payload)
+            return true
+          } else if (type === WebContentsViewActionType.OPEN_DEV_TOOLS) {
+            view.openDevTools(payload.mode)
+            return true
+          } else if (type === WebContentsViewActionType.SEND) {
+            view.send(payload.channel, payload.args || [])
+            return true
+          } else if (type === WebContentsViewActionType.FIND_IN_PAGE) {
+            return view.findInPage(payload.text, payload.options || {})
+          } else if (type === WebContentsViewActionType.STOP_FIND_IN_PAGE) {
+            view.stopFindInPage(payload.action)
+            return true
+          } else if (type === WebContentsViewActionType.EXECUTE_JAVASCRIPT) {
+            return await view.executeJavascript(payload.code, payload.userGesture)
+          } else if (type === WebContentsViewActionType.DOWNLOAD_URL) {
+            view.downloadURL(payload.url, payload.options)
+            return true
+          } else if (type === WebContentsViewActionType.IS_CURRENTLY_AUDIBLE) {
+            return view.isCurrentlyAudible()
           }
 
           return false

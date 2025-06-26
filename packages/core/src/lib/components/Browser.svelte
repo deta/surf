@@ -107,7 +107,7 @@
     PageChatUpdateContextItemType,
     PromptType,
     ResourceTagDataStateValue,
-    WebContentsViewActionType
+    WebContentsViewManagerActionType
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -410,15 +410,9 @@
   $: log.debug('globalMiniBrowserIsOpen', $globalMiniBrowserIsOpen, $activeTabMiniBrowserIsOpen)
 
   $: if ($showNewTabOverlay !== 0) {
-    window.api.webContentsViewAction('', {
-      type: WebContentsViewActionType.HIDE_ALL,
-      payload: {}
-    })
+    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
   } else {
-    window.api.webContentsViewAction('', {
-      type: WebContentsViewActionType.SHOW_ACTIVE,
-      payload: {}
-    })
+    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
   }
 
   const openResourceDetailsModal = async (

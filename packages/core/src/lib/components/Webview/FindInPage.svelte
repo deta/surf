@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import type { WebviewTag } from 'electron'
+  import { onDestroy, onMount } from 'svelte'
   import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
+  import type { WebContentsViewEvents, WebContentsViewEventType } from '@horizon/types'
+  import type WebContents from '@horizon/core/src/lib/components/Browser/WebContents.svelte'
 
-  export let webview: WebviewTag
+  export let webContents: WebContents
   export let value = ''
   export let show = false
   export let getSelection: () => Promise<string>
@@ -41,13 +42,13 @@
       return
     }
 
-    requestId = webview.findInPage(value)
+    requestId = webContents.findInPage(value)
   }
 
   export const findNext = () => {
     if (!value) return
     log.debug('find next')
-    requestId = webview.findInPage(value, {
+    requestId = webContents.findInPage(value, {
       forward: true,
       findNext: true,
       matchCase: false
@@ -57,7 +58,7 @@
   export const findPrevious = () => {
     if (!value) return
     log.debug('find previous')
-    requestId = webview.findInPage(value, {
+    requestId = webContents.findInPage(value, {
       forward: false,
       findNext: true,
       matchCase: false
@@ -75,13 +76,15 @@
       value = ''
       matches = 0
       activeMatchOrdinal = 0
-      webview?.stopFindInPage('clearSelection')
+      webContents?.stopFindInPage('clearSelection')
     } catch (_) {}
   }
 
   export const isOpen = () => show
 
-  export const handleFindResult = (event: Electron.FoundInPageEvent) => {
+  export const handleFindResult = (
+    event: WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]
+  ) => {
     const result = event.result
     log.debug('result', result)
 
@@ -126,13 +129,9 @@
     }
   }
 
-  onMount(() => {
-    webview?.addEventListener('found-in-page', handleFindResult)
-
-    return () => {
-      webview?.removeEventListener('found-in-page', handleFindResult)
-      stopFind()
-    }
+  onDestroy(() => {
+    log.debug('onDestroy')
+    stopFind()
   })
 </script>
 

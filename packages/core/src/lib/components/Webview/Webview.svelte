@@ -25,7 +25,13 @@
   import { derived, writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import { useConfig } from '../../service/config'
-  import { ResourceTypes, WebViewEventSendNames, type WebViewSendEvents } from '@horizon/types'
+  import {
+    WebContentsViewEventType,
+    WebViewEventSendNames,
+    type WebContentsViewEvents,
+    type WebContentsViewEventTyped,
+    type WebViewSendEvents
+  } from '@horizon/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
   import {
@@ -38,25 +44,13 @@
     processFavicons,
     getHostname
   } from '@horizon/utils'
-  import { DragTypeNames, type HistoryEntry } from '../../types'
-  import {
-    useResourceManager,
-    type ResourceAnnotation,
-    type ResourceLink,
-    type ResourceObject
-  } from '../../service/resources'
-  import type { TabPage } from '../../types/browser.types'
-  import {
-    Dragcula,
-    DragOperation,
-    DragZone,
-    HTMLDragZone,
-    type DragculaDragEvent
-  } from '@horizon/dragcula'
+  import { type HistoryEntry } from '../../types'
+  import { useResourceManager } from '../../service/resources'
+  import { Dragcula, DragOperation, DragZone, HTMLDragZone } from '@horizon/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
   import type { NewWindowRequest } from '../../service/ipc/events'
-  import { WebContentsViewActionType } from '@horizon/types'
   import { useTabsManager } from '../../service/tabs'
+  import WebContents from '@horizon/core/src/lib/components/Browser/WebContents.svelte'
 
   const config = useConfig()
   const userConfig = config.settings
@@ -65,7 +59,7 @@
   export let src: string
   export let partition: string
   export let historyEntriesManager: HistoryEntriesManager
-  export let webview: WebviewTag
+  export let webContents: WebContents
   export let historyStackIds: Writable<string[]>
   export let currentHistoryIndex: Writable<number>
   export let isLoading: Writable<boolean>
@@ -172,14 +166,19 @@
     addHistoryEntry(newUrl)
   }
 
-  const handleIpcMessage = (event: Electron.IpcMessageEvent) => {
+  const handleIpcMessage = (
+    e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.IPC_MESSAGE]>
+  ) => {
+    const event = e.detail
+    if (event.channel !== 'webview-page-event') return
+
     const eventType = event.args[0] as keyof WebViewSendEvents
     const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents]
 
     // inserting text we can handle directly
     if (eventType === WebViewEventSendNames.InsertText) {
       log.debug('Inserting text into webview', eventData)
-      webview.insertText(eventData as WebViewSendEvents[WebViewEventSendNames.InsertText])
+      webContents.insertText(eventData as WebViewSendEvents[WebViewEventSendNames.InsertText])
       return
     }
 
@@ -187,7 +186,7 @@
     if ([WebViewEventSendNames.MouseMove, WebViewEventSendNames.MouseUp].includes(eventType)) {
       let data = eventData as MouseEvent
       // We need to transform from webview relative to parent window relative
-      const webviewBounds = webview.getBoundingClientRect()
+      const webviewBounds = webContents.getBoundingClientRect()
       let evtName = ''
       switch (eventType) {
         case WebViewEventSendNames.MouseMove:
@@ -197,10 +196,11 @@
           evtName = 'mouseup'
           break
       }
+
       window.dispatchEvent(
         new MouseEvent(evtName, {
-          clientX: data.clientX + webviewBounds.left,
-          clientY: data.clientY + webviewBounds.top,
+          clientX: data.clientX + (webviewBounds?.left ?? 0),
+          clientY: data.clientY + (webviewBounds?.top ?? 0),
           screenX: data.screenX,
           screenY: data.screenY,
           altKey: data.altKey,
@@ -234,7 +234,7 @@
         fromElement: null,
         relatedTarget: null
       })
-      webview.dispatchEvent(e)
+      webContentsWrapper?.dispatchEvent(e)
     } else if (eventType === WebViewEventSendNames.DragLeave) {
       const drag = Dragcula.get().activeDrag
       if (!drag)
@@ -246,7 +246,7 @@
         // @ts-ignore It actually exists...
         fromElement: null
       })
-      webview.dispatchEvent(e)
+      webContentsWrapper?.dispatchEvent(e)
     } else if (eventType === WebViewEventSendNames.Drop) {
       // FIX: This is never dispatched inside webviw
       const drag = Dragcula.get().activeDrag
@@ -258,20 +258,20 @@
       const e = new DragEvent('drop', {
         dataTransfer: drag?.dataTransfer ?? new DataTransfer()
       })
-      webview.dispatchEvent(e)
+      webContentsWrapper?.dispatchEvent(e)
       const endevent = new DragEvent('dragend', {
         dataTransfer: drag?.dataTransfer ?? new DataTransfer(),
         bubbles: true
       })
-      webview.dispatchEvent(endevent)
+      webContentsWrapper?.dispatchEvent(endevent)
     } else if (
       eventType === WebViewEventSendNames.Drag ||
       eventType === WebViewEventSendNames.DragOver
     ) {
       let data = eventData as DragEvent
-      const webviewBounds = webview.getBoundingClientRect()
-      data.clientX += webviewBounds.left
-      data.clientY += webviewBounds.top
+      const webviewBounds = webContents.getBoundingClientRect()
+      data.clientX += webviewBounds?.left ?? 0
+      data.clientY += webviewBounds?.top ?? 0
       const e = new DragEvent('drag', {
         dataTransfer: data.dataTransfer,
         clientX: data.clientX,
@@ -292,7 +292,9 @@
         Dragcula.get().activeDrag = DragOperation.new({
           id: `__webview_drag_${generateID()}`,
           from: undefined,
-          to: DragZone.ZONES.values().find((x) => (x as HTMLDragZone).element === webview),
+          to: DragZone.ZONES.values().find(
+            (x) => (x as HTMLDragZone).element === webContentsWrapper
+          ),
           dataTransfer: data.dataTransfer ?? new DataTransfer(),
           item: undefined
         })
@@ -302,7 +304,7 @@
         Dragcula.get().callHandlers('dragstart', activeDrag)
       }
 
-      webview.dispatchEvent(e)
+      webContentsWrapper?.dispatchEvent(e)
     }
 
     // check if valid event and if so pass it up
@@ -313,7 +315,58 @@
     }
   }
 
-  const handlePageTitleChange = (newTitle: string) => {
+  const handleDOMReady = () => {
+    webviewReady.set(true)
+
+    if (!newWindowHandlerRegistered && $webContentsId) {
+      window.api.registerNewWindowHandler($webContentsId, (details) => {
+        dispatch('new-window', details)
+      })
+
+      newWindowHandlerRegistered = true
+    }
+  }
+
+  const handleDidStartLoading = () => {
+    isLoading.set(true)
+    error.set(null)
+  }
+
+  const handleDidStopLoading = () => isLoading.set(false)
+  const handleDidFailLoading = (
+    e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.DID_FAIL_LOAD]>
+  ) => {
+    const event = e.detail
+    if (!event.isMainFrame) {
+      return
+    }
+
+    log.debug('Failed to load', event.errorCode, event.errorDescription, event.validatedURL)
+
+    // Ignore errors that are not related to the webview itself or don't need an error page to be shown
+    if (shouldIgnoreWebviewErrorCode(event.errorCode)) {
+      log.debug('Ignoring error code', event.errorCode)
+      return
+    }
+
+    error.set({
+      code: event.errorCode,
+      description: event.errorDescription,
+      url: event.validatedURL
+    })
+  }
+
+  const handleDidFinishLoad = async () => {
+    dispatch('did-finish-load')
+    didFinishLoad.set(true)
+    const url = await webContents.getURL()
+    handleNavigation(url)
+  }
+
+  const handlePageTitleUpdated = (
+    e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.PAGE_TITLE_UPDATED]>
+  ) => {
+    const newTitle = e.detail.title
     title.set(newTitle)
     dispatch('title-change', newTitle)
 
@@ -322,10 +375,59 @@
     }
   }
 
-  const handleFaviconChange = useDebounce((newFaviconURL: string) => {
+  const handlePageFaviconUpdated = async (
+    e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.PAGE_FAVICON_UPDATED]>
+  ) => {
+    // Store the favicons for later theme changes
+    lastReceivedFavicons = e.detail.favicons
+
+    // Get the current URL's domain for caching
+    const currentUrl = await webContents.getURL()
+    const domain = getHostname(currentUrl) || ''
+
+    if (!domain) {
+      log.warn('Failed to parse URL for favicon domain', currentUrl)
+    }
+
+    // Use the favicon utility to get the best favicon
+    const isDarkMode = $userConfig.app_style === 'dark'
+    const bestFavicon = processFavicons(lastReceivedFavicons, domain, isDarkMode)
+
+    // Update the favicon
+    handleFaviconChange(bestFavicon)
+  }
+
+  const handleDidNavigate = (
+    e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.DID_NAVIGATE]>
+  ) => {
+    const newUrl = e.detail.url
+    // log.debug('did navigate', e.url)
+
+    if ($url === newUrl) {
+      return
+    }
+
+    handleNavigation(newUrl)
+  }
+
+  const handleDidNavigateInPage = (
+    e: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.DID_NAVIGATE_IN_PAGE]>
+  ) => {
+    const event = e.detail
+    if (!event.isMainFrame) return
+
+    if ($url === event.url) {
+      return
+    }
+
+    handleNavigation(event.url)
+  }
+
+  const handleFaviconChange = useDebounce(async (newFaviconURL: string) => {
     // NOTE: This is an expensive operation invoking main thread! Make sure it is debounced
-    if (webview?.getURL()) {
-      if (isPDFViewerURL(webview?.getURL(), window.api.PDFViewerEntryPoint)) return
+    const url = await webContents.getURL()
+    if (url) {
+      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return
     }
 
     if ($faviconURL === newFaviconURL) {
@@ -336,10 +438,10 @@
     dispatch('favicon-change', newFaviconURL)
   }, 250)
 
-  const updateFaviconForTheme = () => {
-    if (lastReceivedFavicons.length === 0 || !webview) return
+  const updateFaviconForTheme = async () => {
+    if (lastReceivedFavicons.length === 0 || !webContents) return
 
-    const currentUrl = webview.getURL()
+    const currentUrl = await webContents.getURL()
     const domain = getHostname(currentUrl) || ''
 
     if (!domain) {
@@ -352,8 +454,6 @@
   }
 
   onMount(() => {
-    if (!webview) return
-
     unsubscribeTheme = userConfig.subscribe(
       useDebounce(() => {
         updateFaviconForTheme()
@@ -367,354 +467,22 @@
     }
   })
 
-  const handleDragEnter = async (drag: DragculaDragEvent) => {
-    const resourceId = drag.item?.data.getData(DragTypeNames.SURF_RESOURCE_ID)
-    webview.focus()
-    drag.continue()
-
-    if (!resourceId) return
-    const resource = await resourceManager.getResource(resourceId)
-    if (!resource) return
-    const token = await window.api.createToken(resource.id)
-
-    webview?.send(
-      'set-drag-metadata',
-      JSON.stringify({ token, resource: resource.getTransferableObject() })
-    )
-  }
-
-  const handleDragOver = (drag: DragculaDragEvent) => {
-    drag.continue()
-  }
-  const handleDrop = async (drag: DragculaDragEvent) => {
-    drag.continue()
-  }
-  const handleDragLeave = (drag: DragculaDragEvent) => {
-    webview.blur()
-    drag.continue()
-  }
-
-  /*
-    EXPORTED WEBVIEW UTILITY FUNCTIONS
-  */
-  export const navigate = async (targetUrl: string) => {
-    try {
-      log.debug('Navigating to', targetUrl)
-      await webview?.loadURL(targetUrl)
-    } catch (error) {
-      log.error('Error navigating', error)
-    }
-  }
-
-  export const reload = () => {
-    window.api.webContentsViewAction(cleanID, {
-      type: WebContentsViewActionType.RELOAD,
-      payload: {}
-    })
-  }
-
-  export const goBackInHistory = () => {
-    window.api.webContentsViewAction(cleanID, {
-      type: WebContentsViewActionType.GO_BACK,
-      payload: {}
-    })
-
-    // currentHistoryIndex.update((n) => {
-    //   if (n > 0) {
-    //     n--
-    //     programmaticNavigation = true
-    //     const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-    //     if (historyEntry) {
-    //       navigate(historyEntry.url as string)
-    //     }
-    //     return n
-    //   }
-    //   return n
-    // })
-  }
-
-  export const goForwardInHistory = () => {
-    window.api.webContentsViewAction(cleanID, {
-      type: WebContentsViewActionType.GO_FORWARD,
-      payload: {}
-    })
-    // currentHistoryIndex.update((n) => {
-    //   const stack = $historyStackIds
-    //   if (n < stack.length - 1) {
-    //     n++
-    //     programmaticNavigation = true
-    //     const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-    //     if (historyEntry) {
-    //       navigate(historyEntry.url as string)
-    //     }
-
-    //     return n
-    //   }
-
-    //   return n
-    // })
-  }
-
-  export const goToBeginningOfHistory = (fallback?: string) => {
-    currentHistoryIndex.update((n) => {
-      n = 0
-      programmaticNavigation = true
-      const historyEntry = historyEntriesManager.getEntry($historyStackIds[0])
-      if (historyEntry) {
-        navigate(historyEntry.url as string)
-      } else if (fallback) {
-        navigate(fallback)
-      }
-
-      return n
-    })
-  }
-
   /*
     INITIALIZATION
   */
 
   let unsub = []
   onMount(async () => {
-    if (!webContentsWrapper) {
-      log.error('WebContents wrapper element is not defined')
-      return
-    }
-
-    const bounds = webContentsWrapper.getBoundingClientRect()
-
-    log.debug('Creating web contents view with bounds', bounds, src, cleanID)
-    const result = await window.api.createWebContentsView({
-      id: cleanID,
-      url: src,
-      partition: partition,
-      bounds: {
-        x: bounds.x,
-        y: bounds.y,
-        width: bounds.width,
-        height: bounds.height
-      }
-    })
-
-    if (!result || !result.viewId) {
-      log.error('Failed to create web contents view')
-      return
-    }
-
-    const { viewId, webContentsId: wcId } = result
-
-    log.debug('Created web contents view with ID', viewId)
-
-    webviewReady.set(true)
-    $webContentsId = wcId
-
-    window.preloadEvents.onWebContentsViewEvent((event) => {
-      log.debug('WebContentsView event received', event.type, event.payload)
-    })
-
-    if (!newWindowHandlerRegistered) {
+    if (!newWindowHandlerRegistered && $webContentsId) {
       window.api.registerNewWindowHandler($webContentsId, (details) => {
         dispatch('new-window', details)
       })
 
       newWindowHandlerRegistered = true
     }
-
-    // setup resize observer to resize the webview when the wrapper changes size
-    const resizeObserver = new ResizeObserver((entries) => {
-      if (!webContentsWrapper) return
-      const bounds = webContentsWrapper.getBoundingClientRect()
-      log.debug('Resizing web contents view to', bounds)
-      window.api.webContentsViewAction(viewId, {
-        type: WebContentsViewActionType.SET_BOUNDS,
-        payload: {
-          bounds: {
-            x: bounds.x,
-            y: bounds.y,
-            width: bounds.width,
-            height: bounds.height
-          }
-        }
-      })
-    })
-
-    resizeObserver.observe(webContentsWrapper)
-
-    unsub.push(() => {
-      log.debug('Unsubscribing from resize observer')
-      resizeObserver.disconnect()
-    })
-
-    const activeTabId = tabsManager.activeTabId
-
-    let prevId = tabsManager.activeTabIdValue
-    const unsubTab = activeTabId.subscribe((tabId) => {
-      if (tabId !== cleanID) {
-        if (prevId === cleanID) {
-          log.debug('Deactivating web contents view', cleanID)
-          window.api.webContentsViewAction(viewId, {
-            type: WebContentsViewActionType.HIDE,
-            payload: {}
-          })
-
-          prevId = tabId
-        }
-
-        return
-      }
-
-      window.api.webContentsViewAction(viewId, {
-        type: WebContentsViewActionType.ACTIVATE,
-        payload: {}
-      })
-
-      prevId = tabId
-    })
-
-    unsub.push(() => {
-      log.debug('Unsubscribing from active tab ID')
-      unsubTab()
-    })
-
-    if (!webview) {
-      return
-    }
-    /*
-      Handle IPC event coming from the webview preload script (apps/desktop/src/preload/webview.ts)
-    */
-    webview.addEventListener('ipc-message', (event) => {
-      if (event.channel !== 'webview-page-event') return
-      handleIpcMessage(event)
-    })
-
-    /*
-      Register a window handler to handle creating new tabs from the webview
-    */
-    webview.addEventListener('dom-ready', (_) => {
-      webviewReady.set(true)
-      $webContentsId = webview.getWebContentsId()
-
-      if (!newWindowHandlerRegistered) {
-        window.api.registerNewWindowHandler($webContentsId, (details) => {
-          dispatch('new-window', details)
-        })
-
-        newWindowHandlerRegistered = true
-      }
-    })
-
-    /*
-      Handle loading events
-    */
-    webview.addEventListener('did-start-loading', () => {
-      isLoading.set(true)
-      error.set(null)
-    })
-    webview.addEventListener('did-stop-loading', () => isLoading.set(false))
-    webview.addEventListener('did-fail-load', (e: Electron.DidFailLoadEvent) => {
-      if (!e.isMainFrame) {
-        return
-      }
-
-      log.debug('Failed to load', e.errorCode, e.errorDescription, e.validatedURL)
-
-      // Ignore errors that are not related to the webview itself or don't need an error page to be shown
-      if (shouldIgnoreWebviewErrorCode(e.errorCode)) {
-        log.debug('Ignoring error code', e.errorCode)
-        return
-      }
-
-      error.set({ code: e.errorCode, description: e.errorDescription, url: e.validatedURL })
-    })
-    webview.addEventListener('did-finish-load', () => {
-      dispatch('did-finish-load')
-      didFinishLoad.set(true)
-      handleNavigation(webview.getURL())
-    })
-
-    /*
-      Handle media playback events
-    */
-    webview.addEventListener('media-started-playing', () =>
-      dispatch('media-playback-changed', true)
-    )
-    webview.addEventListener('media-paused', () => dispatch('media-playback-changed', false))
-
-    /*
-      Handle page metadata events
-    */
-    webview.addEventListener('page-title-updated', (e: Electron.PageTitleUpdatedEvent) => {
-      handlePageTitleChange(e.title)
-    })
-
-    webview.addEventListener('page-favicon-updated', (event: Electron.PageFaviconUpdatedEvent) => {
-      // Store the favicons for later theme changes
-      lastReceivedFavicons = event.favicons
-
-      // Get the current URL's domain for caching
-      const currentUrl = webview.getURL()
-      const domain = getHostname(currentUrl) || ''
-
-      if (!domain) {
-        log.warn('Failed to parse URL for favicon domain', currentUrl)
-      }
-
-      // Use the favicon utility to get the best favicon
-      const isDarkMode = $userConfig.app_style === 'dark'
-      const bestFavicon = processFavicons(event.favicons, domain, isDarkMode)
-
-      // Update the favicon
-      handleFaviconChange(bestFavicon)
-    })
-
-    webview.addEventListener('update-target-url', (e: Electron.UpdateTargetUrlEvent) => {
-      dispatch('update-target-url', e.url)
-    })
-
-    /*
-      Handle additional functionalities of the page
-    */
-    webview.addEventListener('found-in-page', (e: Electron.FoundInPageEvent) => {
-      dispatch('found-in-page', e)
-    })
-
-    /*
-      Handle navigation events
-    */
-    webview.addEventListener('did-navigate', (e: Electron.DidNavigateEvent) => {
-      // log.debug('did navigate', e.url)
-
-      if ($url === e.url) {
-        // log.debug('Ignoring did-navigate event for same URL')
-        return
-      }
-
-      handleNavigation(e.url)
-    })
-
-    webview.addEventListener('did-navigate-in-page', (e: Electron.DidNavigateInPageEvent) => {
-      // log.debug('did navigate in page', e.url)
-      if (!e.isMainFrame) return
-
-      if ($url === e.url) {
-        // log.debug('Ignoring did-navigate-in-page event for same URL')
-        return
-      }
-
-      handleNavigation(e.url)
-    })
   })
 
   onDestroy(() => {
-    if (unsub) {
-      unsub.forEach((fn) => fn())
-    }
-
-    window.api.webContentsViewAction(cleanID, {
-      type: WebContentsViewActionType.DESTROY,
-      payload: {}
-    })
-
     if (newWindowHandlerRegistered && $webContentsId !== null) {
       window.api.unregisterNewWindowHandler($webContentsId)
     }
@@ -750,17 +518,45 @@
   {...$$restProps}
 /> -->
 
-<div
+<!-- <div
   id="webcontentsview-container"
   bind:this={webContentsWrapper}
   style="width: 100%; height: 100%; background: white;"
-></div>
+></div> -->
+
+<WebContents
+  bind:this={webContents}
+  bind:webContentsWrapper
+  {id}
+  {src}
+  {partition}
+  {historyEntriesManager}
+  {historyStackIds}
+  {currentHistoryIndex}
+  {isLoading}
+  {error}
+  {url}
+  {webviewReady}
+  {acceptsDrags}
+  {webContentsId}
+  on:dom-ready={handleDOMReady}
+  on:did-start-loading={handleDidStartLoading}
+  on:did-stop-loading={handleDidStopLoading}
+  on:did-fail-load={handleDidFailLoading}
+  on:did-finish-load={handleDidFinishLoad}
+  on:page-title-updated={handlePageTitleUpdated}
+  on:page-favicon-updated={handlePageFaviconUpdated}
+  on:update-target-url={(e) => dispatch('update-target-url', e.detail.url)}
+  on:did-navigate={handleDidNavigate}
+  on:did-navigate-in-page={handleDidNavigateInPage}
+  on:media-started-playing={() => dispatch('media-playback-changed', true)}
+  on:media-paused={() => dispatch('media-playback-changed', false)}
+  on:ipc-message={handleIpcMessage}
+  on:found-in-page
+  on:blur
+  on:focus
+  on:will-navigate
+/>
 
 <style lang="scss">
-  webview {
-    user-select: none;
-    width: 100%;
-    height: 100%;
-    background: white;
-  }
 </style>

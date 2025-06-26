@@ -30,11 +30,16 @@ import {
   type DownloadPathResponseMessage,
   SettingsWindowTab,
   UserStats,
-  ImportedBrowserHistoryItem,
   BrowserType,
-  WebContentsViewCreateOptions,
   WebContentsViewAction,
-  WebContentsViewEvent
+  WebContentsViewEvent,
+  WebContentsViewManagerActionType,
+  WebContentsViewManagerActionPayloads,
+  WebContentsViewActionPayloads,
+  WebContentsViewActionType,
+  WebContentsViewManagerAction,
+  WebContentsViewManagerActionOutputs,
+  WebContentsViewActionOutputs
 } from '@horizon/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
@@ -793,12 +798,29 @@ const api = {
     IPC_EVENTS_RENDERER.updateSpacesList.send(data)
   },
 
-  createWebContentsView: (opts: WebContentsViewCreateOptions) => {
-    return IPC_EVENTS_RENDERER.webContentsViewCreate.invoke(opts)
+  webContentsViewManagerAction: <T extends WebContentsViewManagerActionType>(
+    type: T,
+    ...args: WebContentsViewManagerActionPayloads[T] extends undefined
+      ? []
+      : [payload: WebContentsViewManagerActionPayloads[T]]
+  ) => {
+    const action = { type, payload: args[0] } as WebContentsViewManagerAction
+    return IPC_EVENTS_RENDERER.webContentsViewManagerAction.invoke(action) as Promise<
+      WebContentsViewManagerActionOutputs[T]
+    >
   },
 
-  webContentsViewAction: (viewId: string, action: WebContentsViewAction) => {
-    return IPC_EVENTS_RENDERER.webContentsViewAction.invoke({ viewId, action })
+  webContentsViewAction: <T extends WebContentsViewActionType>(
+    viewId: string,
+    type: T,
+    ...args: WebContentsViewActionPayloads[T] extends undefined
+      ? []
+      : [payload: WebContentsViewActionPayloads[T]]
+  ) => {
+    const action = { type, payload: args[0] } as WebContentsViewAction
+    return IPC_EVENTS_RENDERER.webContentsViewAction.invoke({ viewId, action } as any) as Promise<
+      WebContentsViewActionOutputs[T]
+    >
   },
 
   ...eventHandlers

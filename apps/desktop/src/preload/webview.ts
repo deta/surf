@@ -69,7 +69,10 @@ function pdfViewerCheck(): PDFInfo | { isPDFPage: false } {
 
   const params = new URLSearchParams(url.search)
   const path = params.get('path')
-  if (!path) throw new Error('Missing path param')
+  if (!path) {
+    console.error('No path found in URL parameters for PDF viewer', url)
+    return { isPDFPage: false as const }
+  }
 
   return {
     path: new URL(decodeURIComponent(path)),
@@ -1305,7 +1308,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   // Ignore mouse related passthrough to avoid spam
   if (![WebViewEventSendNames.MouseMove, WebViewEventSendNames.DragOver].includes(name))
     console.debug('Sending page event', name, data)
-  ipcRenderer.sendToHost('webview-page-event', name, data)
+  ipcRenderer.send('webview-page-event', name, data)
 }
 
 ipcRenderer.on('webview-event', (_event, payload) => {

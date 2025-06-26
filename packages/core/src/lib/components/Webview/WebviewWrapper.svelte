@@ -16,9 +16,11 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import {
+    WebContentsViewEventType,
     WebViewEventReceiveNames,
     WebViewEventSendNames,
     WebViewGestureRequiredEventNames,
+    type WebContentsViewEvents,
     type WebViewEventWheel,
     type WebViewReceiveEvents,
     type WebViewSendEvents
@@ -37,6 +39,7 @@
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
   import { Dragcula } from '@horizon/dragcula'
+  import WebContents from '@horizon/core/src/lib/components/Browser/WebContents.svelte'
 
   export let id: string | undefined
   export let src: string
@@ -66,8 +69,7 @@
   const showZoomPreview = writable<boolean>(false)
   const webviewReady = writable<boolean>(false)
 
-  let webview: WebviewTag
-  let webviewComponent: Webview
+  let webContents: WebContents
   let findInPageComp: FindInPage
   let hoverTargetUrl: string
   let zoomTimer: number
@@ -155,46 +157,50 @@
     dispatch('webview-page-event', { type, data })
   }
 
-  const handleWebviewFoundInPage = (event: CustomEvent<Electron.FoundInPageEvent>) => {
+  const handleWebviewFoundInPage = (
+    event: CustomEvent<WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]>
+  ) => {
     findInPageComp.handleFindResult(event.detail)
   }
 
   /*
     EXPORTED WEBVIEW UTILITY FUNCTIONS
   */
-  export const focus = () => webview?.focus()
-  export const reload = () => webviewComponent?.reload()
+  export const focus = () => webContents?.focus()
+  export const reload = () => webContents?.reload()
   export const forceReload = () => {
     error.set(null)
-    webview?.reloadIgnoringCache()
+    webContents?.reload(true)
   }
-  export const getURL = () => webview.getURL()
-  export const setMute = (isMuted: boolean) => webview?.setAudioMuted(isMuted)
-  export const setZoomLevel = (n: number) => webview?.setZoomFactor(n)
-  export const openDevTools = () => webview?.openDevTools()
+  export const getURL = () => webContents.getURL()
+  export const setMute = (isMuted: boolean) => webContents?.setAudioMuted(isMuted)
+  export const setZoomLevel = (n: number) => webContents?.setZoomFactor(n)
+  export const openDevTools = () => webContents?.openDevTools()
   export const findInPage = (text: string, opts?: Electron.FindInPageOptions) =>
-    webview?.findInPage(text, opts)
-  export const stopFindInPage = (action: 'clearSelection' | 'keepSelection') =>
-    webview?.stopFindInPage(action)
+    webContents?.findInPage(text, opts)
+  export const stopFindInPage = (
+    action: 'clearSelection' | 'keepSelection' | 'activateSelection'
+  ) => webContents?.stopFindInPage(action)
   export const executeJavaScript = (code: string, userGesture = false) =>
-    webview?.executeJavaScript(code, userGesture)
+    webContents?.executeJavaScript(code, userGesture)
   export const downloadURL = (url: string, options?: Electron.DownloadURLOptions) =>
-    webview.downloadURL(url, options)
+    webContents.downloadURL(url, options)
   export const capturePage = async (rect?: Electron.Rectangle) => {
-    const data = await webview?.capturePage(rect)
+    // TODO implement a way to capture the page
+    return ''
+    const data = await webContents?.capturePage(rect)
 
     // reduce the size of the image
     const resized = data.resize({ width: 1200 })
 
     return resized?.toDataURL()
   }
-  export const goBack = () => webviewComponent.goBackInHistory()
-  export const goForward = () => webviewComponent.goForwardInHistory()
-  export const goToBeginning = (fallback?: string) =>
-    webviewComponent.goToBeginningOfHistory(fallback)
+  export const goBack = () => webContents.goBackInHistory()
+  export const goForward = () => webContents.goForwardInHistory()
+  export const goToBeginning = (fallback?: string) => webContents.goToBeginningOfHistory(fallback)
 
   export const zoomIn = () => {
-    if (webview) {
+    if (webContents) {
       zoomLevel.update((z) => {
         const newZoomLevel = z + 0.05
         setZoomLevel(newZoomLevel)
@@ -204,7 +210,7 @@
   }
 
   export const zoomOut = () => {
-    if (webview) {
+    if (webContents) {
       zoomLevel.update((z) => {
         const newZoomLevel = z - 0.05
         setZoomLevel(newZoomLevel)
@@ -214,7 +220,7 @@
   }
 
   export const resetZoom = () => {
-    if (webview) {
+    if (webContents) {
       zoomLevel.set(1)
       setZoomLevel(1)
     }
@@ -222,13 +228,13 @@
 
   // Needs to be timed out to get accurate value
   export const isCurrentlyAudible = (): Promise<boolean> => {
-    return new Promise((res, _) => setTimeout(() => res(webview.isCurrentlyAudible()), 500))
+    return new Promise((res, _) => setTimeout(() => res(webContents.isCurrentlyAudible()), 500))
   }
 
   export const requestEnterPip = () => {
     // If we have to use this more, this should be it's own util function,
     // generating these strings!
-    webview.executeJavaScript(
+    webContents.executeJavaScript(
       `window.dispatchEvent(new CustomEvent('${WebViewGestureRequiredEventNames.RequestEnterPIP}'));`,
       true
     )
@@ -258,13 +264,13 @@
     name: T,
     data?: WebViewReceiveEvents[T]
   ) => {
-    webview?.send('webview-event', { type: name, data })
+    webContents?.send('webview-event', { type: name, data })
   }
 
   export const navigate = async (targetUrl: string) => {
     try {
       log.debug('Navigating to', targetUrl)
-      await webview?.loadURL(targetUrl)
+      await webContents?.navigate(targetUrl)
     } catch (error) {
       log.error('Error navigating', error)
     }
@@ -275,21 +281,20 @@
   */
   export const getSelection = () => {
     return new Promise<string>((resolve) => {
-      const listener = (event) => {
-        if (event.channel !== 'webview-page-event') return
-
-        const eventType = event.args[0] as WebViewEventSendNames
-        const eventData = event.args[1] as WebViewSendEvents[WebViewEventSendNames]
+      const listener = (args: any[]) => {
+        const eventType = args[0] as WebViewEventSendNames
+        const eventData = args[1] as WebViewSendEvents[WebViewEventSendNames]
 
         if (eventType === WebViewEventSendNames.Selection) {
-          event.preventDefault()
-          event.stopPropagation()
-          webview.removeEventListener('ipc-message', listener)
+          webContents.removePageEventListener(listener)
           resolve(eventData as WebViewSendEvents[WebViewEventSendNames.Selection])
         }
+
+        // prevent the event from being dispatched
+        return true
       }
 
-      webview.addEventListener('ipc-message', listener)
+      webContents.addPageEventListener(listener)
       sendEvent(WebViewEventReceiveNames.GetSelection)
     })
   }
@@ -303,22 +308,19 @@
       let timeout: ReturnType<typeof setTimeout> | null = null
       let pageLoadTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-      const handleEvent = (event: Electron.IpcMessageEvent) => {
-        if (event.channel !== 'webview-page-event') return
-
-        const eventType = event.args[0] as WebViewEventSendNames
-        const eventData = event.args[1] as WebViewSendEvents[WebViewEventSendNames]
+      const handleEvent = (args: any[]) => {
+        const eventType = args[0] as WebViewEventSendNames
+        const eventData = args[1] as WebViewSendEvents[WebViewEventSendNames]
 
         if (eventType === WebViewEventSendNames.DetectedResource) {
-          event.preventDefault()
-          event.stopPropagation()
-
           if (timeout) {
             clearTimeout(timeout)
           }
 
-          webview.removeEventListener('ipc-message', handleEvent)
+          webContents.addPageEventListener(handleEvent)
           resolve(eventData as WebViewSendEvents[WebViewEventSendNames.DetectedResource])
+
+          return true // prevent the event from being dispatched
         }
       }
 
@@ -334,26 +336,32 @@
 
       timeout = setTimeout(() => {
         log.debug('Resource detection timed out')
-        webview.removeEventListener('ipc-message', handleEvent)
-        webview.removeEventListener('did-finish-load', handleDidFinishLoad)
-        webview.removeEventListener('dom-ready', handleDidFinishLoad)
+        webContents.removePageEventListener(handleEvent)
+        webContents.removeEventListener(
+          WebContentsViewEventType.DID_FINISH_LOAD,
+          handleDidFinishLoad
+        )
+        webContents.removeEventListener(WebContentsViewEventType.DOM_READY, handleDidFinishLoad)
         resolve(null)
       }, totalTimeout)
 
-      webview.addEventListener('ipc-message', handleEvent)
+      webContents.addPageEventListener(handleEvent)
 
       if (!$webviewReady) {
         log.debug('waiting for webview to be ready before detecting resource')
-        webview.addEventListener('dom-ready', handleDidFinishLoad)
+        webContents.addEventListener(WebContentsViewEventType.DOM_READY, handleDidFinishLoad)
       } else if ($isLoading) {
         log.debug('waiting for webview to finish loading before detecting resource')
-        webview.addEventListener('did-finish-load', handleDidFinishLoad)
+        webContents.addEventListener(WebContentsViewEventType.DID_FINISH_LOAD, handleDidFinishLoad)
 
         // If loading takes too long, detect resource immediately
         pageLoadTimeoutId = setTimeout(() => {
           if ($isLoading) {
             log.debug('webview is still loading, detecting resource immediately')
-            webview.removeEventListener('did-finish-load', handleDidFinishLoad)
+            webContents.removeEventListener(
+              WebContentsViewEventType.DID_FINISH_LOAD,
+              handleDidFinishLoad
+            )
             handleDidFinishLoad()
           }
         }, pageLoadTimeout)
@@ -369,31 +377,28 @@
     return new Promise<DetectedResource | null>((resolve) => {
       let timeout: any
 
-      const handleEvent = (event: Electron.IpcMessageEvent) => {
-        if (event.channel !== 'webview-page-event') return
-
-        const eventType = event.args[0] as string
-        const eventData = event.args[1]
+      const handleEvent = (args: any[]) => {
+        const eventType = args[0] as string
+        const eventData = args[1]
 
         if (eventType === WebViewEventSendNames.ActionOutput && eventData.id === id) {
-          event.preventDefault()
-          event.stopPropagation()
-
           if (timeout) {
             clearTimeout(timeout)
           }
 
-          webview.removeEventListener('ipc-message', handleEvent)
+          webContents.removePageEventListener(handleEvent)
           resolve(eventData.output)
+
+          return true // prevent the event from being dispatched
         }
       }
 
       timeout = setTimeout(() => {
-        webview.removeEventListener('ipc-message', handleEvent)
+        webContents.removePageEventListener(handleEvent)
         resolve(null)
       }, timeoutNum)
 
-      webview.addEventListener('ipc-message', handleEvent)
+      webContents.addPageEventListener(handleEvent)
       //webview.send('webview-event', { type: 'run-action', id, inputs })
       sendEvent(WebViewEventReceiveNames.RunAction, { id, inputs })
     })
@@ -427,7 +432,7 @@
   })
 </script>
 
-{#if webview && $isLoading === true}
+{#if webContents && $isLoading === true}
   <div
     transition:blur={{ amount: 4, delay: 0.25 }}
     class="absolute top-2 flex w-full justify-center z-[1001] pointer-events-none"
@@ -447,8 +452,8 @@
     />
   {/if}
 
-  {#if webview}
-    <FindInPage bind:this={findInPageComp} {webview} {getSelection} />
+  {#if webContents}
+    <FindInPage bind:this={findInPageComp} {webContents} {getSelection} />
     <ZoomPreview {zoomLevel} {showZoomPreview} />
     <HoverLinkPreview show={!!hoverTargetUrl} url={hoverTargetUrl} />
   {/if}
@@ -467,8 +472,7 @@
     {acceptsDrags}
     {webContentsId}
     {...$$restProps}
-    bind:webview
-    bind:this={webviewComponent}
+    bind:webContents
     on:webview-page-event={handleWebviewPageEvent}
     on:update-target-url={(e) => (hoverTargetUrl = e.detail)}
     on:new-window
