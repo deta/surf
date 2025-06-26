@@ -568,7 +568,9 @@
           drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
           drag.item?.data.hasData(DragTypeNames.SURF_SPACE) ||
           drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-          drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+          drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+          drag.item?.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY) ||
+          drag.item?.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY_ID)
         ) {
           // Cancel if tab dragged is a space itself
           if (drag.item?.data.getData(DragTypeNames.SURF_TAB)?.type === 'space') {

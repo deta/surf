@@ -22,7 +22,7 @@
     type ContextViewType
   } from '@horizon/types'
 
-  import { SpaceEntryOrigin } from '../../../types'
+  import { RenderableItemType, SpaceEntryOrigin } from '../../../types'
   import { Resource } from '../../../service/resources'
   import OasisResourceLoader from '../../Oasis/OasisResourceLoader.svelte'
   import { Icon, type Icons } from '@horizon/icons'
@@ -45,6 +45,7 @@
   export let viewType: ContextViewType | undefined = ContextViewTypes.Grid
   export let viewDensity: ContextViewDensity | undefined = ContextViewDensities.Compact
   export let status: undefined | { icon: Icons | undefined; message: string } = undefined
+  export let loading: boolean = false
 
   const dispatch = createEventDispatcher()
 
@@ -61,14 +62,22 @@
     idOrResource: Resource | string | { id: string } | { resource: Resource }
   ): ResourceRenderableItem | undefined {
     if (typeof idOrResource === 'string') {
-      return { id: idOrResource, data: null, type: 'resource' }
+      return { id: idOrResource, data: null, type: RenderableItemType.Resource }
     } else if (idOrResource instanceof Resource) {
-      return { id: idOrResource.id, data: idOrResource, type: 'resource' }
+      return { id: idOrResource.id, data: idOrResource, type: RenderableItemType.Resource }
     } else if (typeof idOrResource === 'object') {
       if ('resource' in idOrResource && idOrResource.resource !== undefined) {
-        return { id: idOrResource.resource.id, data: idOrResource.resource, type: 'resource' }
+        return {
+          id: idOrResource.resource.id,
+          data: idOrResource.resource,
+          type: RenderableItemType.Resource
+        }
       } else if ('id' in idOrResource) {
-        const result: ResourceRenderableItem = { id: idOrResource.id, data: null, type: 'resource' }
+        const result: ResourceRenderableItem = {
+          id: idOrResource.id,
+          data: null,
+          type: RenderableItemType.Resource
+        }
         if ('createdAt' in idOrResource) {
           result.createdAt = idOrResource.createdAt as string
         }
@@ -229,6 +238,17 @@
           <span class="max-w-lg">{status.message}</span>
         </div>
       </div>
+    {:else if loading}
+      <div class="w-full h-full flex items-center justify-center">
+        <div
+          class="h-min flex flex-col gap-4 items-center justify-center text-center text-lg font-medium text-gray-500"
+        >
+          <Icon name="spinner" size="1.3em" class="mb-2" />
+          {#if $searchValue}
+            <span class="max-w-lg">Searching for "{$searchValue}"…</span>
+          {/if}
+        </div>
+      </div>
     {:else if $renderableItems.length === 0 && $searchValue && $searchValue.length > 0}
       <div class="w-full h-full flex items-center justify-center">
         <div
@@ -279,6 +299,8 @@
               on:force-reload
               on:pin
               on:unpin
+              on:delete-history-entry
+              on:open-page-mini-browser
             />
           </MasonryView>
         {:else if viewType === 'grid'}

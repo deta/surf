@@ -8,5 +8,8 @@ export enum DragTypeNames {
 
   SURF_SPACE = 'vnd/surf/space',
 
-  DESKTOP_ITEM = 'vnd/surf/desktop_item'
+  DESKTOP_ITEM = 'vnd/surf/desktop_item',
+
+  SURF_HISTORY_ENTRY = 'vnd/surf/history_entry',
+  SURF_HISTORY_ENTRY_ID = 'application/vnd.space.dragcula.historyEntryId'
 }

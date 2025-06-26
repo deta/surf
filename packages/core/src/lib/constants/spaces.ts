@@ -5,14 +5,15 @@ export enum BuiltInSpaceId {
   Inbox = 'inbox',
   Notes = 'notes',
   AllSpaces = 'all-contexts',
-  PinnedSpaces = 'pinned-spaces'
+  PinnedSpaces = 'pinned-spaces',
+  BrowsingHistory = 'browsing-history'
 }
 
 export const BuiltInSpaceEverything = {
   id: BuiltInSpaceId.Everything,
   deleted: 0,
   name: {
-    folderName: 'Everything',
+    folderName: 'Library',
     description: "Everything you've collected in one place",
     icon: 'save',
     showInSidebar: true,
@@ -93,12 +94,32 @@ export const BuiltInSpacesPinnedSpaces = {
   updated_at: ''
 }
 
+export const BuiltInSpaceBrowsingHistory = {
+  id: BuiltInSpaceId.BrowsingHistory,
+  deleted: 0,
+  name: {
+    folderName: 'History',
+    description: 'Your browsing history across all contexts',
+    icon: 'history',
+    showInSidebar: true,
+    liveModeEnabled: false,
+    viewType: 'masonry',
+    viewDensity: 'cozy',
+    nestingData: {
+      hasChildren: true
+    }
+  } as SpaceData,
+  created_at: '',
+  updated_at: ''
+}
+
 export const BuiltInSpaces = [
   // BuiltInSpacesPinnedSpaces,
   BuiltInSpaceInbox,
   BuiltInSpaceEverything,
   BuiltInSpaceAllSpaces,
-  BuiltInSpaceNotes
+  BuiltInSpaceNotes,
+  BuiltInSpaceBrowsingHistory
 ]
 
 export const isBuiltInSpaceId = (id: string) => {

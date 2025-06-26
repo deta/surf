@@ -19,6 +19,7 @@
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { openDialog } from '../../Core/Dialog/Dialog.svelte'
   import type { SpaceSource } from '@horizon/core/src/lib/types/spaces.types'
+  import { BuiltInSpaceId } from '@horizon/core/src/lib/constants/spaces'
 
   export let space: OasisSpace | null
   const config = useConfig()
@@ -47,6 +48,8 @@
   let expandedDangerZone = false
   let copySourceIcon: IconConfirmation
   let selectedTab: 'general' | 'smart' | 'sources' = 'smart'
+
+  $: isBrowsingHistorySpace = space.id === BuiltInSpaceId.BrowsingHistory
 
   const handleNameBlur = async () => {
     if (!space) return
@@ -200,11 +203,12 @@
           <SpaceIcon folder={space} size="lg" />
         </div>
 
-        <div use:tooltip={{ text: 'Click to edit' }}>
+        <div use:tooltip={{ text: 'Click to edit', disabled: isBrowsingHistorySpace }}>
           <input
             bind:value={$spaceData.folderName}
             on:blur={handleNameBlur}
             on:keydown|stopPropagation
+            disabled={isBrowsingHistorySpace}
             class="folder-input"
             spellcheck="false"
           />
@@ -213,206 +217,229 @@
     </div>
 
     <div class="content-wrapper">
-      <div class="tabs">
-        <button
-          class="tab"
-          class:active={selectedTab === 'smart'}
-          on:click={() => (selectedTab = 'smart')}
-        >
-          <Icon name="sparkles" />
-          Smart Filter
-        </button>
+      {#if isBrowsingHistorySpace}
+        <div class="setting">
+          <div class="danger-zone">
+            <div class="actions">
+              <div class="action">
+                <div class="action-row">
+                  <h3>Clear Browsing History</h3>
+                  <p>
+                    Clear your entire browsing history. This action is permanent and cannot be
+                    reversed.
+                  </p>
+                </div>
 
-        {#if $userConfigSettings.live_spaces}
-          <button
-            class="tab"
-            class:active={selectedTab === 'sources'}
-            on:click={() => (selectedTab = 'sources')}
-          >
-            <Icon name="rss" />
-            Subscriptions
-          </button>
-        {/if}
-
-        <button
-          class="tab"
-          class:active={selectedTab === 'general'}
-          on:click={() => (selectedTab = 'general')}
-        >
-          <Icon name="settings" />
-          Context Settings
-        </button>
-      </div>
-
-      <div class="content">
-        {#if selectedTab === 'sources'}
-          <div class="sources">
-            <div class="info">
-              <p>
-                Subscriptions automatically bring content into your context from your favorite
-                external sources. Provide a RSS feed and Surf will fetch the latest content.
-              </p>
-
-              <div>
-                <Switch
-                  label="Auto-refresh"
-                  color="#ff4eed"
-                  bind:checked={isLiveModeOn}
-                  on:update={handleLiveModeUpdate}
-                />
-                <p>Automatically refresh the contents of this context on load.</p>
+                <button on:click={handleClearSpace}>
+                  <Icon name="trash" />
+                  Clear History
+                </button>
               </div>
             </div>
-
-            {#if $spaceData.sources}
-              {#each $spaceData.sources as source}
-                <div class="source">
-                  <div class="title">
-                    <img
-                      class="favicon"
-                      src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
-                      alt={`favicon`}
-                    />
-
-                    <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
-                  </div>
-                  <div class="meta">
-                    <p>
-                      Last fetched: {source.last_fetched_at
-                        ? getHumanDistanceToNow(source.last_fetched_at)
-                        : 'never'}
-                    </p>
-
-                    <div class="meta-actions">
-                      <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
-                        <IconConfirmation bind:this={copySourceIcon} name="copy" />
-                      </button>
-
-                      <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
-                        <Icon name="trash" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              {/each}
-            {/if}
-
-            {#if showAddSource}
-              <div class="add-source">
-                <input
-                  placeholder="RSS feed URL"
-                  autofocus
-                  spellcheck="false"
-                  bind:value={sourceValue}
-                  on:blur={handleAddSourceBlur}
-                />
-
-                <button on:click={handleAddSource} class="icon">
-                  <Icon name="add" />
-                </button>
-              </div>
-            {:else}
-              <div class="add-source">
-                <button on:click={() => (showAddSource = true)} class="add-source">
-                  <Icon name="add" />
-                  Add Source
-                </button>
-              </div>
-            {/if}
           </div>
-        {:else if selectedTab === 'smart'}
-          <div class="smart-filter">
-            <p>
-              Based on the provided description Surf will find links, articles and even files that
-              are relevant to the context and add them when you view the context.
-            </p>
+        </div>
+      {:else}
+        <div class="tabs">
+          <button
+            class="tab"
+            class:active={selectedTab === 'smart'}
+            on:click={() => (selectedTab = 'smart')}
+          >
+            <Icon name="sparkles" />
+            Smart Filter
+          </button>
 
-            <input
-              placeholder="e.g. articles about electric cars that I saved last week"
-              bind:value={smartFilterQuery}
-              on:blur={handleSmartQueryBlur}
-              on:keydown={handleKeyDown}
-            />
+          {#if $userConfigSettings.live_spaces}
+            <button
+              class="tab"
+              class:active={selectedTab === 'sources'}
+              on:click={() => (selectedTab = 'sources')}
+            >
+              <Icon name="rss" />
+              Subscriptions
+            </button>
+          {/if}
 
-            {#if smartFilterQuery}
-              <div>
-                <Switch
-                  label="Auto-refresh"
-                  color="#ff4eed"
-                  bind:checked={isLiveModeOn}
-                  on:update={handleLiveModeUpdate}
-                />
-                <p>Automatically refresh the contents of this context on load.</p>
-              </div>
-            {/if}
-          </div>
-        {:else}
-          <div class="setting">
-            <div class="danger-zone">
-              <div class="danger-title">
-                <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
-                <div
-                  class="expand-toggle"
-                  on:click={() => (expandedDangerZone = !expandedDangerZone)}
-                  role="button"
-                >
-                  {#if expandedDangerZone}
-                    <Icon name="chevron.down" />
-                  {:else}
-                    <Icon name="chevron.right" />
-                  {/if}
-                  <h2>Danger Zone</h2>
+          <button
+            class="tab"
+            class:active={selectedTab === 'general'}
+            on:click={() => (selectedTab = 'general')}
+          >
+            <Icon name="settings" />
+            Context Settings
+          </button>
+        </div>
+
+        <div class="content">
+          {#if selectedTab === 'sources'}
+            <div class="sources">
+              <div class="info">
+                <p>
+                  Subscriptions automatically bring content into your context from your favorite
+                  external sources. Provide a RSS feed and Surf will fetch the latest content.
+                </p>
+
+                <div>
+                  <Switch
+                    label="Auto-refresh"
+                    color="#ff4eed"
+                    bind:checked={isLiveModeOn}
+                    on:update={handleLiveModeUpdate}
+                  />
+                  <p>Automatically refresh the contents of this context on load.</p>
                 </div>
-
-                {#if expandedDangerZone}
-                  <p>These actions cannot be undone.</p>
-                {/if}
               </div>
 
-              {#if expandedDangerZone}
-                <div class="actions">
-                  <!-- <button
-                    on:click={handleClearSpace}
-                    use:tooltip={'Clear all resources from this Space.'}
-                  >
-                    <Icon name="close" />
-                    Clear resources from Space
-                  </button> -->
+              {#if $spaceData.sources}
+                {#each $spaceData.sources as source}
+                  <div class="source">
+                    <div class="title">
+                      <img
+                        class="favicon"
+                        src={`https://www.google.com/s2/favicons?domain=${source.url}&sz=48`}
+                        alt={`favicon`}
+                      />
 
-                  <div class="action">
-                    <div class="action-row">
-                      <h3>Clear Context</h3>
-                      <p>Remove all resources from this Context.</p>
+                      <h3 use:tooltip={source.url}>{getSourceName(source)}</h3>
                     </div>
+                    <div class="meta">
+                      <p>
+                        Last fetched: {source.last_fetched_at
+                          ? getHumanDistanceToNow(source.last_fetched_at)
+                          : 'never'}
+                      </p>
 
-                    <button on:click={handleClearSpace}>
-                      <Icon name="close" />
-                      Clear Context
-                    </button>
-                  </div>
+                      <div class="meta-actions">
+                        <button on:click={() => copySource(source)} use:tooltip={'Copy Source URL'}>
+                          <IconConfirmation bind:this={copySourceIcon} name="copy" />
+                        </button>
 
-                  <div class="action">
-                    <div class="action-row">
-                      <h3>Delete Context</h3>
-                      <!-- <p>Deletes the Space and optionally its resources.</p> -->
-
-                      <label>
-                        <input bind:checked={shoulDeleteAllResources} type="checkbox" />
-                        Permanently delete all resources as well
-                      </label>
+                        <button on:click={() => removeSource(source)} use:tooltip={'Remove Source'}>
+                          <Icon name="trash" />
+                        </button>
+                      </div>
                     </div>
-
-                    <button on:click={handleDeleteSpace}>
-                      <Icon name="trash" />
-                      Delete Context
-                    </button>
                   </div>
+                {/each}
+              {/if}
+
+              {#if showAddSource}
+                <div class="add-source">
+                  <input
+                    placeholder="RSS feed URL"
+                    autofocus
+                    spellcheck="false"
+                    bind:value={sourceValue}
+                    on:blur={handleAddSourceBlur}
+                  />
+
+                  <button on:click={handleAddSource} class="icon">
+                    <Icon name="add" />
+                  </button>
+                </div>
+              {:else}
+                <div class="add-source">
+                  <button on:click={() => (showAddSource = true)} class="add-source">
+                    <Icon name="add" />
+                    Add Source
+                  </button>
                 </div>
               {/if}
             </div>
-          </div>
-        {/if}
-      </div>
+          {:else if selectedTab === 'smart'}
+            <div class="smart-filter">
+              <p>
+                Based on the provided description Surf will find links, articles and even files that
+                are relevant to the context and add them when you view the context.
+              </p>
+
+              <input
+                placeholder="e.g. articles about electric cars that I saved last week"
+                bind:value={smartFilterQuery}
+                on:blur={handleSmartQueryBlur}
+                on:keydown={handleKeyDown}
+              />
+
+              {#if smartFilterQuery}
+                <div>
+                  <Switch
+                    label="Auto-refresh"
+                    color="#ff4eed"
+                    bind:checked={isLiveModeOn}
+                    on:update={handleLiveModeUpdate}
+                  />
+                  <p>Automatically refresh the contents of this context on load.</p>
+                </div>
+              {/if}
+            </div>
+          {:else}
+            <div class="setting">
+              <div class="danger-zone">
+                <div class="danger-title">
+                  <!-- svelte-ignore a11y-click-events-have-key-events a11y-interactive-supports-focus -->
+                  <div
+                    class="expand-toggle"
+                    on:click={() => (expandedDangerZone = !expandedDangerZone)}
+                    role="button"
+                  >
+                    {#if expandedDangerZone}
+                      <Icon name="chevron.down" />
+                    {:else}
+                      <Icon name="chevron.right" />
+                    {/if}
+                    <h2>Danger Zone</h2>
+                  </div>
+
+                  {#if expandedDangerZone}
+                    <p>These actions cannot be undone.</p>
+                  {/if}
+                </div>
+
+                {#if expandedDangerZone}
+                  <div class="actions">
+                    <!-- <button
+                      on:click={handleClearSpace}
+                      use:tooltip={'Clear all resources from this Space.'}
+                    >
+                      <Icon name="close" />
+                      Clear resources from Space
+                    </button> -->
+
+                    <div class="action">
+                      <div class="action-row">
+                        <h3>Clear Context</h3>
+                        <p>Remove all resources from this Context.</p>
+                      </div>
+
+                      <button on:click={handleClearSpace}>
+                        <Icon name="close" />
+                        Clear Context
+                      </button>
+                    </div>
+
+                    <div class="action">
+                      <div class="action-row">
+                        <h3>Delete Context</h3>
+                        <!-- <p>Deletes the Space and optionally its resources.</p> -->
+
+                        <label>
+                          <input bind:checked={shoulDeleteAllResources} type="checkbox" />
+                          Permanently delete all resources as well
+                        </label>
+                      </div>
+
+                      <button on:click={handleDeleteSpace}>
+                        <Icon name="trash" />
+                        Delete Context
+                      </button>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </div>
   {:else if loading}
     <div class="loading-wrapper">

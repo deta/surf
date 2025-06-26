@@ -39,6 +39,7 @@
   import OasisResourcesView from './ResourceViews/OasisResourcesView.svelte'
   import {
     DragTypeNames,
+    RenderableItemType,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     SpaceEntryOrigin,
@@ -62,6 +63,7 @@
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import type {
     ChatWithSpaceEvent,
+    HistoryEntry,
     RenderableItem,
     SpaceEntrySortBy,
     SpaceRenderableItem
@@ -110,7 +112,8 @@
   import DesktopPreview from '../Chat/DesktopPreview.svelte'
   import SpaceFilterViewButtons from './SpaceFilterViewButtons.svelte'
   import OasisSpaceEmpty from './OasisSpaceEmpty.svelte'
-  import { BuiltInSpaceId, isBuiltInSpaceId } from '../../constants/spaces'
+  import { BuiltInSpaceId, BuiltInSpaces, isBuiltInSpaceId } from '../../constants/spaces'
+  import { savePageToContext } from '@horizon/core/src/lib/service/saving'
   import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
   export let spaceId: string
@@ -123,6 +126,7 @@
   $: isNotesSpace = spaceId === BuiltInSpaceId.Notes
   $: isInboxSpace = spaceId === BuiltInSpaceId.Inbox
   $: isPinnedContextsSpace = spaceId === BuiltInSpaceId.PinnedSpaces
+  $: isBrowsingHistorySpace = spaceId === BuiltInSpaceId.BrowsingHistory
   $: isSpaceView = !isBuiltInSpaceId(spaceId)
 
   const log = useLogScope('OasisSpace')
@@ -207,6 +211,16 @@
       log.error('failed to set selected space with id', spaceId, 'space not found')
       return
     }
+
+    const matchingBuiltInSpace = BuiltInSpaces.find((space) => space.id === spaceId)
+    if (matchingBuiltInSpace) {
+      sp.updateData({
+        folderName: matchingBuiltInSpace.name.folderName,
+        description: matchingBuiltInSpace.name.description,
+        icon: matchingBuiltInSpace.name.icon
+      })
+    }
+
     oasis.addToNavigationHistory(spaceId)
     oasis.selectedSpace.set(spaceId)
     space.set(sp)
@@ -373,13 +387,71 @@
       oasisRenderableItems.set(
         userSpaces.map((space) => ({
           id: space.id,
-          type: 'space',
+          type: RenderableItemType.Space,
           data: space
         }))
       )
     } catch (error) {
       log.error('Error loading all contexts:', error)
       toasts.error('Failed to load contexts')
+    } finally {
+      loadingContents.set(false)
+    }
+  }
+
+  const loadBrowsingHistory = async (value?: string) => {
+    try {
+      loadingContents.set(true)
+
+      let entries: HistoryEntry[] = []
+
+      if (value) {
+        log.debug('Searching history for:', value)
+        oasisRenderableItems.set([])
+        entries = await resourceManager.searchHistoryEntriesByUrlAndTitle(value.trim())
+      } else {
+        log.debug('No search value provided, fetching all history entries...')
+        const fetchedEntries = await resourceManager.getHistoryEntries(5000)
+
+        entries = fetchedEntries
+          .filter(
+            (entry) =>
+              entry.url && (entry.type === 'navigation' || entry.type?.startsWith('import'))
+          )
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      }
+
+      // remove duplicates based on URL and same day
+      const uniqueEntriesMap = new Map<string, HistoryEntry>()
+      entries.forEach((entry) => {
+        const dateKey = new Date(entry.createdAt).toISOString().split('T')[0]
+        const key = `${entry.url}-${dateKey}`
+        if (!uniqueEntriesMap.has(key)) {
+          uniqueEntriesMap.set(key, entry)
+        }
+      })
+
+      // Build a Map from id to timestamp to preserve original order
+      const orderMap = new Map(entries.map((entry, index) => [entry.id, index]))
+      const filteredEntries = Array.from(uniqueEntriesMap.values()).sort(
+        (a, b) => orderMap.get(a.id)! - orderMap.get(b.id)!
+      )
+
+      log.debug('history entries:', filteredEntries)
+
+      oasisRenderableItems.set([])
+      oasisRenderableItems.set(
+        filteredEntries
+          .filter((entry) => entry.url)
+          .map((entry) => ({
+            id: entry.id,
+            type: RenderableItemType.HistoryEntry,
+            data: entry
+          }))
+      )
+    } catch (error) {
+      log.error('Error loading browsing history:', error)
+      toasts.error('Failed to load browsing history')
     } finally {
       loadingContents.set(false)
     }
@@ -483,23 +555,23 @@
     if (isEverythingSpace) {
       await loadEverything()
       return
-    }
-    if (isAllContextsSpace) {
+    } else if (isAllContextsSpace) {
       await loadAllContexts(false)
       return
-    }
-    if (isPinnedContextsSpace) {
+    } else if (isPinnedContextsSpace) {
       await loadAllContexts(true)
       return
-    }
-    if (isNotesSpace) {
+    } else if (isNotesSpace) {
       await loadNoteContents()
       return
-    }
-    if (isInboxSpace) {
+    } else if (isInboxSpace) {
       await loadInbox()
       return
+    } else if (isBrowsingHistorySpace) {
+      await loadBrowsingHistory()
+      return
     }
+
     loadingContents.set(true)
 
     const fetchedSpace = await oasis.getSpace(id)
@@ -636,7 +708,7 @@
             }
             return {
               id: item.id,
-              type: 'resource',
+              type: RenderableItemType.Resource,
               data: item
             } as RenderableItem
           })
@@ -1113,6 +1185,8 @@
           await loadEverything()
         } else if (isInboxSpace) {
           await loadInbox()
+        } else if (isBrowsingHistorySpace) {
+          await loadBrowsingHistory()
         }
         return
       }
@@ -1134,6 +1208,10 @@
       }
       if (isPinnedContextsSpace) {
         loadFilteredContexts(value, true)
+        return
+      }
+      if (isBrowsingHistorySpace) {
+        await loadBrowsingHistory(value)
         return
       }
 
@@ -1369,6 +1447,40 @@
       return
     }
 
+    if (
+      drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY) ||
+      drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY_ID)
+    ) {
+      try {
+        dispatch('handled-drop')
+
+        let historyEntry: HistoryEntry | null = null
+        if (drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY)) {
+          historyEntry = drag.item!.data.getData(DragTypeNames.SURF_HISTORY_ENTRY)
+        } else if (drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY_ID)) {
+          const historyEntryId = drag.item!.data.getData(DragTypeNames.SURF_HISTORY_ENTRY_ID)
+          historyEntry = await resourceManager.sffs.getHistoryEntry(historyEntryId)
+        }
+
+        if (historyEntry === null || !historyEntry.url) {
+          log.warn('Dropped history entry but entry is null! Aborting drop!')
+          drag.abort()
+          return
+        }
+
+        await savePageToContext({ url: historyEntry.url, title: historyEntry.title }, spaceId, {
+          oasis,
+          resourceManager,
+          toasts
+        })
+      } catch (error) {
+        log.error('Error handling history entry drop:', error)
+        drag.abort()
+      }
+
+      return
+    }
+
     // Handle other types of drops (files, resources, etc.)
     const toast = toasts.loading(`Copying to context...`)
 
@@ -1453,31 +1565,62 @@
   }
 
   const handleClearSpace = async () => {
-    if (!$space) {
-      log.error('No space found')
-      return
+    let toast: Toast | null = null
+
+    try {
+      if (!$space) {
+        log.error('No space found')
+        return
+      }
+
+      const { closeType: confirmed } = await openDialog({
+        icon: 'trash',
+        title: isBrowsingHistorySpace ? 'Clear History' : 'Clear Context',
+        message: isBrowsingHistorySpace
+          ? 'Are you sre you want to clear your entire browsing history?'
+          : 'Are you sure you want to clear all resources from this space?',
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'Clear', type: 'submit', kind: 'danger' }
+        ]
+      })
+
+      if (!confirmed) {
+        return
+      }
+
+      showSettingsModal.set(false)
+
+      if (isBrowsingHistorySpace) {
+        toast = toasts.loading('Clearing history...')
+        log.debug('Clearing history...')
+
+        await resourceManager.deleteAllHistoryEntries()
+        toast.success('History cleared!')
+        await loadSpaceContents($space.id, true)
+        return
+      }
+
+      toast = toasts.loading('Clearing context...')
+
+      const resources = await oasis.getSpaceContents($space.id)
+      await oasis.removeResourcesFromSpace(
+        $space.id,
+        resources.map((x) => x.id),
+        false
+      )
+
+      toast.success('Context cleared!')
+
+      await loadSpaceContents($space.id, true)
+    } catch (error) {
+      log.error('Error clearing space:', error)
+      if (toast) {
+        toast.error('Failed to clear context')
+      } else {
+        toasts.error('Failed to clear context')
+      }
     }
-
-    const { closeType: confirmed } = await openDialog({
-      message: 'Are you sure you want to clear all resources from this space?'
-    })
-
-    if (!confirmed) {
-      return
-    }
-
-    showSettingsModal.set(false)
-
-    const resources = await oasis.getSpaceContents($space.id)
-    await oasis.removeResourcesFromSpace(
-      $space.id,
-      resources.map((x) => x.id),
-      false
-    )
-
-    toasts.success('Context cleared!')
-
-    await loadSpaceContents($space.id, true)
   }
 
   export const handleDeleteSpace = async (
@@ -1543,14 +1686,6 @@
   const openResourceDetailsModal = (resourceId: string) => {
     scopedMiniBrowser.openResource(resourceId, {
       from: OpenInMiniBrowserEventFrom.Oasis
-    })
-  }
-
-  const handleItemOpenAndChat = (e: CustomEvent<{ resource: Resource }>) => {
-    const { resource } = e.detail
-    dispatch('chat-with-resource', {
-      resourceId: resource.id,
-      trigger: EventContext.Space
     })
   }
 
@@ -1908,6 +2043,33 @@
     }
   }
 
+  const handleDeleteHistoryEntry = async (e: CustomEvent<string>) => {
+    try {
+      const entryId = e.detail
+      log.debug('Deleting history entry:', entryId)
+      const { closeType: confirmed } = await openDialog({
+        title: `Remove History Entry`,
+        message: `This entry will be removed from your browsing history permanently.`,
+        actions: [
+          { title: 'Cancel', type: 'reset' },
+          { title: 'Remove', type: 'submit', kind: 'danger' }
+        ]
+      })
+
+      if (!confirmed) {
+        return
+      }
+
+      await resourceManager.deleteHistoryEntry(entryId)
+      toasts.success('History entry deleted!')
+
+      oasisRenderableItems.update((items) => items.filter((item) => item.id !== entryId))
+    } catch (error) {
+      log.error('Error deleting history entry:', error)
+      toasts.error('Failed to delete history entry: ' + (error as Error).message)
+    }
+  }
+
   onDestroy(
     oasis.on('reload-space', (id: string) => {
       if (id !== spaceId) return
@@ -1974,7 +2136,7 @@
                   position: 'bottom',
                   text:
                     $searchValue.length > 0
-                      ? 'Ask Surf AI about the items in this context'
+                      ? `Ask Surf AI about the items in this context`
                       : `Ask Surf AI about the items in this context (${isMac() ? '⌘' : 'ctrl'}+↵)`
                 }}
                 class="chat-with-space pointer-all"
@@ -1990,7 +2152,7 @@
           <svelte:fragment slot="right-dynamic">
             <!-- TODO: fix sorting for spaces -->
             <SpaceFilterViewButtons
-              hideFilterSettings={isNotesSpace || isAllContextsSpace}
+              hideFilterSettings={isNotesSpace || isAllContextsSpace || isBrowsingHistorySpace}
               hideSortingSettings={true}
               showContextsFilter={$spaceData?.nestingData?.hasChildren || isEverythingSpace}
               filter={$selectedFilterType?.id ?? null}
@@ -2037,7 +2199,7 @@
             <SpaceIcon folder={$space} interactive={!$space.isBuiltInSpace} size="xl" />
           </svelte:fragment>
           <svelte:fragment slot="headline-content">
-            {#if !$space.isBuiltInSpace}
+            {#if !$space.isBuiltInSpace || isBrowsingHistorySpace}
               <button
                 class="edit-button"
                 on:click={() => ($showSettingsModal = !$showSettingsModal)}
@@ -2054,7 +2216,7 @@
             />
           </svelte:fragment>
           <svelte:fragment slot="header-content">
-            {#if $showSettingsModal && !$space.isBuiltInSpace}
+            {#if $showSettingsModal && (!$space.isBuiltInSpace || isBrowsingHistorySpace)}
               <div
                 class="settings-modal-wrapper"
                 transition:fly={{ y: 10, duration: 160 }}
@@ -2127,7 +2289,9 @@
               drag.isNative ||
               drag.item?.data.hasData(DragTypeNames.SURF_TAB) ||
               drag.item?.data.hasData(DragTypeNames.SURF_RESOURCE) ||
-              drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
+              drag.item?.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE) ||
+              drag.item?.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY) ||
+              drag.item?.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY_ID)
             ) {
               return true
             }
@@ -2142,10 +2306,11 @@
               isInSpace={isSpaceView}
               viewType={$spaceData?.viewType}
               viewDensity={$spaceData?.viewDensity}
+              loading={$loadingContents}
               fadeIn
               on:click={handleItemClick}
               on:open={handleItemOpen}
-              on:open-and-chat={handleItemOpenAndChat}
+              on:open-and-chat
               on:open-in-sidebar={handleOpenInSidebar}
               on:navigate-context={navigateToSubSpace}
               on:remove={handleResourceRemove}
@@ -2164,6 +2329,8 @@
               on:force-reload={handleReload}
               on:pin={handlePin}
               on:unpin={handleUnpin}
+              on:delete-history-entry={handleDeleteHistoryEntry}
+              on:open-page-mini-browser={handleOpenPageMiniBrowser}
             />
             {#if $loadingContents}
               <div class="floating-loading">

@@ -5,6 +5,10 @@ import { ResourceJSON, ResourceManager, type Resource } from './resources'
 import { getResourcePreview } from '../utils/resourcePreview'
 import type { OasisService } from './oasis'
 import { EventEmitterBase } from './events'
+import type { Toast, Toasts } from './toast'
+import { extractAndCreateWebResource } from './mediaImporter'
+import { SpaceEntryOrigin } from '../types'
+import { ResourceTag } from '../utils/tags'
 
 export type SaveItemMetadata = {
   url: string
@@ -182,5 +186,66 @@ export class SavingItem extends EventEmitterBase<SavingItemEvents> {
     if (this.timeout) {
       clearTimeout(this.timeout)
     }
+  }
+}
+
+export const savePageToContext = async (
+  data: { url: string; title?: string },
+  spaceId: string,
+  services: { oasis: OasisService; resourceManager: ResourceManager; toasts: Toasts }
+) => {
+  const { oasis, resourceManager, toasts } = services
+
+  const log = useLogScope('savePageToContext')
+
+  let toast: Toast | undefined = undefined
+
+  try {
+    const space = await oasis.getSpace(spaceId)
+    if (!space) {
+      throw new Error(`Space with ID ${spaceId} not found`)
+    }
+
+    toast = toasts.loading('Saving Page…')
+
+    log.debug('Preparing resource from page', data.url)
+    const { resource } = await extractAndCreateWebResource(
+      resourceManager,
+      data.url,
+      { name: data.title, sourceURI: data.url },
+      [ResourceTag.silent(), ResourceTag.createdForChat()]
+    )
+
+    log.debug('Created resource', resource)
+    if (!resource) {
+      throw new Error('Resource creation failed')
+    }
+
+    toast.update({ message: `Adding to ${space.dataValue.folderName}…` })
+
+    await oasis.addResourcesToSpace(space.id, [resource.id], SpaceEntryOrigin.ManuallyAdded)
+
+    toast.success(`Added to ${space.dataValue.folderName}`, {
+      action: {
+        label: 'View',
+        handler: () => {
+          oasis.openResourceDetailsSidebar(resource.id, {
+            select: true,
+            selectedSpace: space.id
+          })
+        }
+      }
+    })
+  } catch (error) {
+    log.error('Error preparing resource for chat:', error)
+
+    const msg = `Failed to add "${data.url}" to "${spaceId}"`
+    if (toast) {
+      toast.error(msg)
+    } else {
+      toasts.error(msg)
+    }
+
+    throw error
   }
 }

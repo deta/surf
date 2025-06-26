@@ -72,7 +72,8 @@
     ChatWithSpaceEvent,
     TabInvites,
     JumpToWebviewTimestampEvent,
-    HighlightWebviewTextEvent
+    HighlightWebviewTextEvent,
+    OpenAndChatEvent
   } from '../types/browser.types'
   import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../constants/searchEngines'
   import { HorizonDatabase } from '../service/storage'
@@ -121,7 +122,6 @@
   import ToastsProvider from './Toast/ToastsProvider.svelte'
   import { provideToasts, type Toast } from '../service/toast'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
-  import BrowserHistory from './Browser/BrowserHistory.svelte'
   import { Dragcula, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import { provideConfig } from '../service/config'
@@ -178,10 +178,11 @@
     CHEAT_SHEET_URL,
     SHORTCUTS_PAGE_URL
   } from '@horizon/core/src/lib/utils/env'
-  import type { SavingItem } from '@horizon/core/src/lib/service/saving'
+  import { savePageToContext, type SavingItem } from '@horizon/core/src/lib/service/saving'
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
-  import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
+  import type { AIChatMessageSource, HistoryEntry } from '@horizon/core/src/lib/types'
+  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
     migrateHomeContext,
     needsBrowsingContextSelection,
@@ -595,30 +596,6 @@
     }
   }, 200)
 
-  const createHistoryTab = useDebounce(async (opts?: CreateTabOptions) => {
-    log.debug('Creating new history tab')
-
-    // check if there already exists a history tab, if yes we just change to it
-    const historyTab = $tabs.find(
-      (tab) =>
-        tab.type === 'history' && tab.scopeId === (tabsManager.activeScopeIdValue ?? undefined)
-    )
-
-    if (historyTab) {
-      tabsManager.makeActive(historyTab.id)
-      return
-    }
-
-    await tabsManager.create<TabHistory>(
-      {
-        title: 'History',
-        icon: '',
-        type: 'history'
-      },
-      { active: true }
-    )
-  }, 200)
-
   $: savedTabsOrientation = $userConfigSettings.tabs_orientation
   $: horizontalTabs = savedTabsOrientation === 'horizontal'
 
@@ -870,7 +847,7 @@
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       handleRename()
     } else if (isModKeyAndKeyPressed(e, 'y')) {
-      handleCreateHistoryTab()
+      openBrowsingHistory()
     } else if (
       isModKeyAndEventCodeIs(e, 'Plus') ||
       isModKeyAndEventCodeIs(e, 'Equal') ||
@@ -1943,9 +1920,9 @@
     toasts.success('Context added to your Tabs!')
   }
 
-  const handleCreateHistoryTab = () => {
-    setShowNewTabOverlay(0)
-    createHistoryTab()
+  const openBrowsingHistory = () => {
+    oasis.selectedSpace.set(BuiltInSpaceId.BrowsingHistory)
+    setShowNewTabOverlay(2)
   }
 
   const handleOpenCreateSpaceMenu = async () => {
@@ -2207,10 +2184,33 @@
     }
   }
 
-  const handleOpenAndChat = async (e: CustomEvent<string | string[]>) => {
-    const resourceIds = Array.isArray(e.detail) ? e.detail : [e.detail]
+  const handleOpenAndChat = async (e: CustomEvent<OpenAndChatEvent>) => {
+    const data = Array.isArray(e.detail) ? e.detail : [e.detail]
+    const resourceIds = data
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item
+        }
 
-    log.debug('create chat with resources', resourceIds)
+        if (typeof item === 'object' && item.type === 'resource') {
+          return item.id
+        }
+
+        return null
+      })
+      .filter((id) => id !== null) as string[]
+
+    const tabIds = data
+      .map((item) => {
+        if (typeof item === 'object' && item.type === 'tab') {
+          return item.id
+        }
+
+        return null
+      })
+      .filter((id) => id !== null) as string[]
+
+    log.debug('create chat with data', { resourceIds, tabIds })
 
     let hasContent = false
 
@@ -2249,30 +2249,33 @@
       }
     }
 
+    await openChatSidebar(false)
+
+    if (clearExistingChat) {
+      $chatContext.clear()
+      await magicSidebar.clearExistingChat()
+    }
+
     if (resourceIds.length > 0) {
-      await openChatSidebar(false)
-
-      if (clearExistingChat) {
-        $chatContext.clear()
-        await magicSidebar.clearExistingChat()
-      }
-
       for (const id of resourceIds) {
         $chatContext.addResource(id)
       }
-
-      await tick()
-
-      telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.Add,
-        $chatContext.itemsValue.length,
-        resourceIds.length,
-        PageChatUpdateContextItemType.PageTab
-      )
-    } else {
-      log.error('No valid resources found or failed to open as tabs', resourceIds)
-      toasts.error('Failed to open resources')
     }
+
+    if (tabIds.length > 0) {
+      for (const id of tabIds) {
+        $chatContext.addTab(id)
+      }
+    }
+
+    await tick()
+
+    telemetry.trackPageChatContextUpdate(
+      PageChatUpdateContextEventAction.Add,
+      $chatContext.itemsValue.length,
+      resourceIds.length,
+      PageChatUpdateContextItemType.PageTab
+    )
   }
 
   const handleOpenTabs = async (e: CustomEvent<string | string[]>) => {
@@ -2307,60 +2310,90 @@
   }
 
   const handleOpenSpaceAndChat = async (e: CustomEvent<ChatWithSpaceEvent>) => {
-    let { spaceId, text = '' } = e.detail
+    try {
+      let { spaceId, text = '' } = e.detail
 
-    log.debug('create chat with space', spaceId, text)
+      log.debug('create chat with space', spaceId, text)
 
-    if (spaceId === null) {
-      log.warn('Cannot chat with space id null!')
-      return
-    }
-
-    const space = await oasis.getSpace(spaceId)
-
-    if (!space) {
-      log.error('Context not found', spaceId)
-      toasts.error('Context not found')
-      return
-    }
-
-    let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
-    if (tab) {
-      log.debug('Found existing space tab', tab.id)
-      tabsManager.makeActive(tab.id)
-      await $chatContext.onlyUseTabInContext(tab.id)
-    } else {
-      // When the user drops the onboarding space into the chat we start the onboarding
-      const ONBOARDING_SPACE_NAME = onboardingSpace.name
-      const isOnboarding = space.dataValue.folderName === ONBOARDING_SPACE_NAME
-
-      log.debug('Adding space to chat context', space, isOnboarding)
-      const spaceContextItem = await $chatContext.addSpace(space, {
-        trigger: isOnboarding
-          ? PageChatUpdateContextEventTrigger.Onboarding
-          : PageChatUpdateContextEventTrigger.Onboarding
-      })
-
-      $chatContext.removeAllExcept(spaceContextItem.id)
-
-      if (isOnboarding && !text) {
-        text = onboardingSpace.query
+      if (spaceId === null) {
+        log.warn('Cannot chat with space id null!')
+        return
       }
-    }
 
-    await tick()
+      if (spaceId === BuiltInSpaceId.BrowsingHistory) {
+        const historyContextItem = await $chatContext.addBrowsingHistoryContext({
+          trigger: PageChatUpdateContextEventTrigger.StuffContext
+        })
 
-    openRightSidebarTab('chat')
+        $chatContext.removeAllExcept(historyContextItem.id)
 
-    // Wait for the chat to be ready
-    await wait(500)
+        await tick()
 
-    if (magicSidebar) {
-      log.debug('Inserting query into chat', text)
-      magicSidebar.startChatWithQuery(text)
-    } else {
-      log.error('Magic sidebar not found')
-      toasts.error('Failed to start chat with space')
+        openRightSidebarTab('chat')
+
+        // Wait for the chat to be ready
+        await wait(500)
+
+        if (magicSidebar) {
+          log.debug('Inserting query into chat', text)
+          magicSidebar.startChatWithQuery(text)
+        } else {
+          log.error('Magic sidebar not found')
+          toasts.error('Failed to start chat with space')
+        }
+
+        return
+      }
+
+      const space = await oasis.getSpace(spaceId)
+
+      if (!space) {
+        log.error('Context not found', spaceId)
+        toasts.error('Context not found')
+        return
+      }
+
+      let tab = $tabs.find((tab) => tab.type === 'space' && tab.spaceId === spaceId)
+      if (tab) {
+        log.debug('Found existing space tab', tab.id)
+        tabsManager.makeActive(tab.id)
+        await $chatContext.onlyUseTabInContext(tab.id)
+      } else {
+        // When the user drops the onboarding space into the chat we start the onboarding
+        const ONBOARDING_SPACE_NAME = onboardingSpace.name
+        const isOnboarding = space.dataValue.folderName === ONBOARDING_SPACE_NAME
+
+        log.debug('Adding space to chat context', space, isOnboarding)
+        const spaceContextItem = await $chatContext.addSpace(space, {
+          trigger: isOnboarding
+            ? PageChatUpdateContextEventTrigger.Onboarding
+            : PageChatUpdateContextEventTrigger.StuffContext
+        })
+
+        $chatContext.removeAllExcept(spaceContextItem.id)
+
+        if (isOnboarding && !text) {
+          text = onboardingSpace.query
+        }
+      }
+
+      await tick()
+
+      openRightSidebarTab('chat')
+
+      // Wait for the chat to be ready
+      await wait(500)
+
+      if (magicSidebar) {
+        log.debug('Inserting query into chat', text)
+        magicSidebar.startChatWithQuery(text)
+      } else {
+        log.error('Magic sidebar not found')
+        toasts.error('Failed to start chat with context')
+      }
+    } catch (error) {
+      log.error('Failed to open space and chat', error)
+      toasts.error('Failed to start chat with context')
     }
   }
 
@@ -2761,8 +2794,7 @@
     })
 
     horizonPreloadEvents.onOpenHistory(() => {
-      setShowNewTabOverlay(0)
-      createHistoryTab()
+      openBrowsingHistory()
     })
 
     horizonPreloadEvents.onToggleRightSidebar(() => {
@@ -3649,11 +3681,7 @@
 
     const saveToSpace = spaceId !== BuiltInSpaceId.Everything
 
-    const toast = toasts.loading(
-      !saveToSpace
-        ? 'Saving to Your Stuff...'
-        : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Context...`
-    )
+    let toast: Toast | null = null
 
     try {
       log.debug('dropping onto sidebar tab', drag)
@@ -3661,6 +3689,12 @@
       if (drag.item !== null && drag.item !== undefined) drag.item.dropEffect = 'copy'
 
       if (drag.isNative) {
+        toast = toasts.loading(
+          !saveToSpace
+            ? 'Saving to Your Stuff...'
+            : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Context...`
+        )
+
         const parsed = await processDrop(drag.event!)
         log.debug('Parsed', parsed)
 
@@ -3684,6 +3718,12 @@
         drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE) ||
         drag.item!.data.hasData(DragTypeNames.ASYNC_SURF_RESOURCE)
       ) {
+        toast = toasts.loading(
+          !saveToSpace
+            ? 'Saving to Your Stuff...'
+            : `${drag.effect === 'move' ? 'Moving' : 'Copying'} to Context...`
+        )
+
         let resource: Resource | null = null
         if (drag.item!.data.hasData(DragTypeNames.SURF_RESOURCE)) {
           resource = drag.item!.data.getData(DragTypeNames.SURF_RESOURCE)
@@ -3726,11 +3766,39 @@
           await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
           toast.success(`Resources Saved!`)
         }
+      } else if (
+        drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY) ||
+        drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY_ID)
+      ) {
+        let historyEntry: HistoryEntry | null = null
+        if (drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY)) {
+          historyEntry = drag.item!.data.getData(DragTypeNames.SURF_HISTORY_ENTRY)
+        } else if (drag.item!.data.hasData(DragTypeNames.SURF_HISTORY_ENTRY_ID)) {
+          const historyEntryId = drag.item!.data.getData(DragTypeNames.SURF_HISTORY_ENTRY_ID)
+          historyEntry = await resourceManager.sffs.getHistoryEntry(historyEntryId)
+        }
+
+        if (historyEntry === null || !historyEntry.url) {
+          log.warn('Dropped history entry but entry is null! Aborting drop!')
+          drag.abort()
+          return
+        }
+
+        await savePageToContext({ url: historyEntry.url, title: historyEntry.title }, spaceId, {
+          oasis,
+          resourceManager,
+          toasts
+        })
+      } else {
+        log.warn('Unknown drag item type', drag.item)
       }
+
       drag.continue()
     } catch (error) {
       log.error('Failed to drop on space tab', error)
-      toast.error('Failed to save resources')
+      if (toast) {
+        toast.error('Failed to save resources')
+      }
     }
   }
 
@@ -4144,7 +4212,7 @@
       on:activate-tab={(e) => makeTabActive(e.detail, ActivateTabEventTrigger.CommandMenu)}
       on:toggle-bookmark={() =>
         handleBookmark($activeTabId, false, SaveToOasisEventTrigger.CommandMenu)}
-      on:show-history-tab={handleCreateHistoryTab}
+      on:show-history-tab={openBrowsingHistory}
       on:create-new-space={handleOpenCreateSpaceMenu}
       on:open-chat-with-tab={handleOpenTabChat}
       on:open-space-and-chat={handleOpenSpaceAndChat}
@@ -5026,8 +5094,6 @@
                     on:seekToTimestamp={handleSeekToTimestamp}
                     on:highlightWebviewText={highlightWebviewText}
                   />
-                {:else if tab.type === 'history'}
-                  <BrowserHistory active={$activeTabId === tab.id} />
                 {:else if tab.type === 'resource'}
                   <ResourceTab
                     {tab}

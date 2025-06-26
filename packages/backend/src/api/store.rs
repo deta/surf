@@ -46,6 +46,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_update_history_entry", js_update_history_entry)?;
     cx.export_function("js__store_remove_history_entry", js_remove_history_entry)?;
     cx.export_function(
+        "js__store_remove_all_history_entries",
+        js_remove_all_history_entries,
+    )?;
+    cx.export_function(
         "js__store_get_all_history_entries",
         js_get_all_history_entries,
     )?;
@@ -650,12 +654,27 @@ fn js_remove_history_entry(mut cx: FunctionContext) -> JsResult<JsPromise> {
     Ok(promise)
 }
 
+fn js_remove_all_history_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::HistoryMessage(HistoryMessage::RemoveAllHistoryEntries),
+        deferred,
+    );
+    Ok(promise)
+}
+
 fn js_get_all_history_entries(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let limit = cx.argument_opt(1).and_then(|arg| {
+        arg.downcast::<JsNumber, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_number| js_number.value(&mut cx) as usize)
+    });
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::HistoryMessage(HistoryMessage::GetAllHistoryEntries),
+        WorkerMessage::HistoryMessage(HistoryMessage::GetAllHistoryEntries(limit)),
         deferred,
     );
 

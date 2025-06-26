@@ -397,12 +397,21 @@ impl Database {
         Ok(results)
     }
 
-    pub fn get_all_history_entries(&self) -> BackendResult<Vec<HistoryEntry>> {
-        let mut stmt = self.conn.prepare(
-            "
-            SELECT id, entry_type, url, title, search_query, created_at, updated_at
-            FROM history_entries",
-        )?;
+    pub fn get_all_history_entries(
+        &self,
+        limit: Option<usize>,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        let mut query = String::from(
+            "SELECT id, entry_type, url, title, search_query, created_at, updated_at
+            FROM history_entries
+            ORDER BY created_at DESC",
+        );
+
+        if let Some(limit_val) = limit {
+            query.push_str(&format!(" LIMIT {}", limit_val));
+        }
+
+        let mut stmt = self.conn.prepare(&query)?;
 
         let history_entry_iter = stmt.query_map([], |row| {
             Ok(HistoryEntry {
@@ -457,5 +466,11 @@ impl Database {
             results.push(entry?);
         }
         Ok(results)
+    }
+
+    pub fn remove_all_history_entries(&self) -> BackendResult<()> {
+        let query = "DELETE FROM history_entries";
+        self.conn.execute(query, [])?;
+        Ok(())
     }
 }

@@ -86,6 +86,21 @@ export const isDateToday = (timestamp: number | string) => {
   return isToday(ms)
 }
 
+export const getHumanFormattedDate = (timestamp: number | string) => {
+  const ms = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp
+
+  // if the date is within the last 12 hours, return relative time
+  if (diffToNow(ms) > -12 * 60 * 60 * 1000 && diffToNow(ms) < 0) {
+    return getHumanDistanceToNow(ms)
+  }
+
+  if (isDateToday(ms)) {
+    return getFormattedTime(ms, false)
+  } else {
+    return getFormattedDate(ms)
+  }
+}
+
 export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const writableAutoReset = <T>(defaultValue: T, delay = 500) => {

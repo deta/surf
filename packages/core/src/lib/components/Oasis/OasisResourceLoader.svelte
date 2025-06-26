@@ -8,8 +8,10 @@
   import Folder from './Folder.svelte'
   import { OasisSpace } from '../../service/oasis'
   import { writable } from 'svelte/store'
+  import BrowserHistoryEntry from '@horizon/core/src/lib/components/Browser/BrowserHistoryEntry.svelte'
+  import type { HistoryEntry } from '@horizon/core/src/lib/types'
 
-  export let resourceOrId: string | Resource | OasisSpace
+  export let resourceOrId: string | Resource | OasisSpace | HistoryEntry
   export let selected: boolean = false
   export let isInSpace: boolean = false
   export let resourcesBlacklistable: boolean = false
@@ -29,6 +31,14 @@
       'id' in resourceOrId &&
       'data' in resourceOrId &&
       resourceOrId.data?.folderName)
+
+  $: isHistoryEntry =
+    typeof resourceOrId === 'object' &&
+    resourceOrId !== null &&
+    'id' in resourceOrId &&
+    'url' in resourceOrId &&
+    'title' in resourceOrId &&
+    'searchQuery' in resourceOrId
 
   const log = useLogScope('OasisResourceLoader')
   const resourceManager = useResourceManager()
@@ -77,7 +87,7 @@
 <div
   class="wrapper"
   class:full-height={viewMode === 'responsive'}
-  class:loaded={resource || isFolder}
+  class:loaded={resource || isFolder || isHistoryEntry}
 >
   {#if isFolder}
     <Folder
@@ -109,6 +119,14 @@
       on:batch-remove
       on:pin
       on:unpin
+    />
+  {:else if isHistoryEntry}
+    <BrowserHistoryEntry
+      entry={resourceOrId}
+      full={mode === 'full'}
+      on:delete-history-entry
+      on:open-and-chat
+      on:open-page-mini-browser
     />
   {:else if resource}
     <!-- Render ResourcePreview for regular resources -->

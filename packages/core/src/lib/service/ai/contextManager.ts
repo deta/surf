@@ -553,7 +553,7 @@ export class ContextManager {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_TAB)
     if (existingItem) {
       this.log.debug('Active tab already in context')
-      return
+      return existingItem
     }
 
     const item = new ContextItemActiveTab(this.service)
@@ -564,7 +564,7 @@ export class ContextManager {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_SPACE)
     if (existingItem) {
       this.log.debug('Active space context already in context')
-      return
+      return existingItem
     }
 
     const item = new ContextItemActiveSpaceContext(this.service, include)
@@ -575,7 +575,7 @@ export class ContextManager {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.INBOX)
     if (existingItem) {
       this.log.debug('Inbox context already in context')
-      return
+      return existingItem
     }
 
     const item = new ContextItemInbox(this.service)
@@ -586,7 +586,7 @@ export class ContextManager {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.EVERYTHING)
     if (existingItem) {
       this.log.debug('Everything context already in context')
-      return
+      return existingItem
     }
 
     const item = new ContextItemEverything(this.service)
@@ -597,7 +597,7 @@ export class ContextManager {
     const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.WIKIPEDIA)
     if (existingItem) {
       this.log.debug('Wikipedia context already in context')
-      return
+      return existingItem
     }
 
     const item = new ContextItemWikipedia(this.service)

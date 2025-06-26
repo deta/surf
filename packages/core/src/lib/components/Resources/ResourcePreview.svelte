@@ -10,7 +10,8 @@
     SpaceEntryOrigin,
     type DragTypes,
     DragTypeNames,
-    BROWSER_CONTEXT_KEY
+    BROWSER_CONTEXT_KEY,
+    type OpenAndChatEvent
   } from '../../types'
 
   import { writable, get, derived } from 'svelte/store'
@@ -91,7 +92,7 @@
     remove: { ids: string; deleteFromStuff: boolean }
     load: string
     open: string
-    'open-and-chat': string
+    'open-and-chat': OpenAndChatEvent
     'open-in-sidebar': string
     'created-tab': void
     'whitelist-resource': string

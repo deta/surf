@@ -768,9 +768,9 @@ export class SFFS {
     return this.convertRawHistoryEntryToHistoryEntry(entry)
   }
 
-  async getHistoryEntries(): Promise<HistoryEntry[]> {
+  async getHistoryEntries(limit?: number): Promise<HistoryEntry[]> {
     this.log.debug('getting all history entries')
-    const rawEntries = await this.backend.js__store_get_all_history_entries()
+    const rawEntries = await this.backend.js__store_get_all_history_entries(limit)
     const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
     if (!entries) {
       return []
@@ -789,6 +789,11 @@ export class SFFS {
   async deleteHistoryEntry(id: string): Promise<void> {
     this.log.debug('deleting history entry', id)
     await this.backend.js__store_remove_history_entry(id)
+  }
+
+  async deleteAllHistoryEntries(): Promise<void> {
+    this.log.debug('deleting all history entries')
+    await this.backend.js__store_remove_all_history_entries()
   }
 
   async importBrowserHistory(type: BrowserType) {
@@ -819,26 +824,41 @@ export class SFFS {
     since?: Date
   ): Promise<HistoryEntry[]> {
     this.log.debug('searching history entries by hostname prefix', prefix)
-    const raw = await this.backend.js__store_search_history_entries_by_hostname_prefix(
+    const rawEntries = await this.backend.js__store_search_history_entries_by_hostname_prefix(
       prefix,
       since
     )
-    const parsed = this.parseData<HistoryEntry[]>(raw)
-    return parsed ?? []
+    const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawHistoryEntryToHistoryEntry(e))
   }
 
   async searchHistoryEntriesByHostname(url: string): Promise<HistoryEntry[]> {
     this.log.debug('searching history entries by hostname prefix', url)
-    const raw = await this.backend.js__store_search_history_entries_by_hostname(url)
-    const parsed = this.parseData<HistoryEntry[]>(raw)
-    return parsed ?? []
+    const rawEntries = await this.backend.js__store_search_history_entries_by_hostname(url)
+    const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawHistoryEntryToHistoryEntry(e))
   }
 
   async searchHistoryEntriesByUrlAndTitle(query: string, since?: Date): Promise<HistoryEntry[]> {
     this.log.debug('searching history entries by url and title for', query)
-    const raw = await this.backend.js__store_search_history_entries_by_url_and_title(query, since)
-    const parsed = this.parseData<HistoryEntry[]>(raw)
-    return parsed ?? []
+    const rawEntries = await this.backend.js__store_search_history_entries_by_url_and_title(
+      query,
+      since
+    )
+    const entries = this.parseData<SFFSRawHistoryEntry[]>(rawEntries)
+    if (!entries) {
+      return []
+    }
+
+    return entries.map((e) => this.convertRawHistoryEntryToHistoryEntry(e))
   }
 
   async createAIChat(title?: string, system_prompt?: string): Promise<string | null> {
