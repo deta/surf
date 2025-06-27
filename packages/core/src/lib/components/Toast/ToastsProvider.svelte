@@ -44,17 +44,18 @@
   .toasts-wrapper {
     position: fixed;
     z-index: 1000000000;
-    top: 0;
-    left: 0;
+    top: 2rem;
+    left: 0.5rem;
     right: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
 
     transition: top 245ms ease-in-out;
 
     :global(body:has(.app-contents.horizontalTabs):not(:has(.stuff-backdrop))) & {
-      top: 2.5em !important;
+      top: -0.5rem;
+      left: 6rem !important;
     }
   }
 </style>
