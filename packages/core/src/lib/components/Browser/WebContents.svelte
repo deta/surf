@@ -262,6 +262,7 @@
         id: cleanID,
         url: src,
         partition: partition,
+        activate: active,
         ...($navigationHistory.length > 0
           ? {
               navigationHistory: $navigationHistory,

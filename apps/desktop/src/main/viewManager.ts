@@ -250,9 +250,12 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       console.log('[main] webcontentsview-create: registering id', view.id)
       this.views.set(view.id, view)
-      this.activeViewId = view.id
 
-      this.window.contentView.addChildView(view.wcv)
+      if (opts.activate) {
+        this.activeViewId = view.id
+        this.window.contentView.addChildView(view.wcv)
+      }
+
       console.log('[main] webcontentsview-create: added view to window with id', view.id)
 
       this.attachViewIPCEvents(view)
