@@ -382,6 +382,21 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
   }
 
+  activateView(id: string) {
+    console.log('[main] webcontentsview-activate: activating view with id', id)
+
+    const view = this.views.get(id)
+    if (!view) {
+      console.warn('[main] webcontentsview-activate: no view found with id', id)
+      return false
+    }
+
+    const success = this.bringViewToFront(view.id)
+
+    view.focus()
+    return success
+  }
+
   showActiveView() {
     console.log(
       '[main] webcontentsview-showActiveView: showing active view with id',
@@ -402,7 +417,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       return
     }
 
-    this.bringViewToFront(view.id)
+    this.activateView(view.id)
     console.log('[main] webcontentsview-showActiveView: view with id', view.id, 'brought to front')
   }
 
@@ -432,6 +447,9 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         console.warn('[main] Could not hide WebContentsView', e)
       }
     })
+
+    // focus the main window after hiding all views
+    this.window.webContents.focus()
   }
 
   destroyView(view: WCView) {
@@ -690,7 +708,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           }
 
           if (type === WebContentsViewActionType.ACTIVATE) {
-            return this.bringViewToFront(view.id)
+            return this.activateView(view.id)
           } else if (type === WebContentsViewActionType.RELOAD) {
             view.reload()
             return true
@@ -718,11 +736,12 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           } else if (type === WebContentsViewActionType.GET_URL) {
             return view.wcv.webContents.getURL()
           } else if (type === WebContentsViewActionType.FOCUS) {
-            const success = this.bringViewToFront(view.id)
-            if (success) {
-              view.focus()
+            if (this.activeViewId !== view.id) {
+              this.bringViewToFront(view.id)
             }
-            return success
+
+            view.focus()
+            return true
           } else if (type === WebContentsViewActionType.SET_AUDIO_MUTED) {
             view.setAudioMuted(payload)
             return true
