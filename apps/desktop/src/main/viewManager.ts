@@ -81,8 +81,6 @@ export class WCView {
       await this.wcv.webContents.loadURL(url)
     } catch (error) {
       console.error(`[main] Failed to load URL for WebContentsView ${this.id}:`, error)
-      // Fallback to about:blank if loading fails
-      await this.wcv.webContents.loadURL('about:blank')
     }
   }
 
