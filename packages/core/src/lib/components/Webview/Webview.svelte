@@ -62,6 +62,7 @@
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
   export let partition: string
+  export let active: boolean = true
   export let historyEntriesManager: HistoryEntriesManager
   export let webContents: WebContents
   export let historyStackIds: Writable<string[]>
@@ -547,8 +548,6 @@
   {id}
   {src}
   {partition}
-  {historyEntriesManager}
-  {historyStackIds}
   {navigationHistory}
   {currentHistoryIndex}
   {isLoading}
@@ -557,6 +556,7 @@
   {webviewReady}
   {acceptsDrags}
   {webContentsId}
+  {active}
   on:dom-ready={handleDOMReady}
   on:did-start-loading={handleDidStartLoading}
   on:did-stop-loading={handleDidStopLoading}

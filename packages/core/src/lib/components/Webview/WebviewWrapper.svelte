@@ -44,6 +44,7 @@
   export let id: string | undefined
   export let src: string
   export let partition: string
+  export let active: boolean = true
   export let historyEntriesManager: HistoryEntriesManager
   export let url: Writable<string> | undefined = undefined
   export let historyStackIds = writable<string[]>([])
@@ -199,7 +200,6 @@
   }
   export const goBack = () => webContents.goBackInHistory()
   export const goForward = () => webContents.goForwardInHistory()
-  export const goToBeginning = (fallback?: string) => webContents.goToBeginningOfHistory(fallback)
 
   export const zoomIn = () => {
     if (webContents) {
@@ -474,6 +474,7 @@
     {webviewReady}
     {acceptsDrags}
     {webContentsId}
+    {active}
     {...$$restProps}
     bind:webContents
     on:webview-page-event={handleWebviewPageEvent}

@@ -1355,6 +1355,7 @@
   {currentHistoryIndex}
   {isLoading}
   {webContentsId}
+  {active}
   acceptsDrags={active}
   bind:this={webview}
   on:webview-page-event={handleWebviewPageEvent}

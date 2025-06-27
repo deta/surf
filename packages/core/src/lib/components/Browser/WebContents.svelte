@@ -50,8 +50,7 @@
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
   export let partition: string
-  export let historyEntriesManager: HistoryEntriesManager
-  export let historyStackIds: Writable<string[]>
+  export let active: boolean = true
   export let navigationHistory: Writable<Electron.NavigationEntry[]>
   export let currentHistoryIndex: Writable<number>
   export let isReady = writable(false)
@@ -70,6 +69,7 @@
 
   let currentBounds: DOMRect | null = null
   let eventListeners: Array<WebContentsViewEventListener> = []
+  let isActivated = active
 
   $: cleanID = id.replace('webview-', '')
 
@@ -93,52 +93,10 @@
 
   export const goBackInHistory = () => {
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_BACK)
-
-    // currentHistoryIndex.update((n) => {
-    //   if (n > 0) {
-    //     n--
-    //     // programmaticNavigation = true
-    //     // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-    //     // if (historyEntry) {
-    //     //   navigate(historyEntry.url as string)
-    //     // }
-    //     return n
-    //   }
-    //   return n
-    // })
   }
 
   export const goForwardInHistory = () => {
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_FORWARD)
-    // currentHistoryIndex.update((n) => {
-    //   const stack = $historyStackIds
-    //   if (n < stack.length - 1) {
-    //     n++
-    //     // programmaticNavigation = true
-    //     // const historyEntry = historyEntriesManager.getEntry($historyStackIds[n])
-    //     // if (historyEntry) {
-    //     //   navigate(historyEntry.url as string)
-    //     // }
-
-    //     return n
-    //   }
-
-    //   return n
-    // })
-  }
-
-  export const goToBeginningOfHistory = (fallback?: string) => {
-    // currentHistoryIndex.update((n) => {
-    //   n = 0
-    //   // programmaticNavigation = true
-    //   const historyEntry = historyEntriesManager.getEntry($historyStackIds[0])
-    //   if (historyEntry) {
-    //     navigate(historyEntry.url as string)
-    //   } else if (fallback) {
-    //     navigate(fallback)
-    //   }
-    //   return n
-    // })
   }
 
   export const insertText = (text: string) => {
@@ -270,6 +228,18 @@
     })
   }
 
+  $: if ($webContentsId && cleanID) {
+    if (active && !isActivated) {
+      log.debug('Activating web contents view', cleanID)
+      window.api.webContentsViewAction(cleanID, WebContentsViewActionType.ACTIVATE)
+      isActivated = true
+    } else if (!active && isActivated) {
+      log.debug('Deactivating web contents view', cleanID)
+      window.api.webContentsViewAction(cleanID, WebContentsViewActionType.HIDE)
+      isActivated = false
+    }
+  }
+
   /*
     INITIALIZATION
   */
@@ -372,28 +342,28 @@
 
     const activeTabId = tabsManager.activeTabId
 
-    let prevId = tabsManager.activeTabIdValue
-    const unsubTab = activeTabId.subscribe((tabId) => {
-      if (tabId !== cleanID) {
-        if (prevId === cleanID) {
-          log.debug('Deactivating web contents view', cleanID)
-          window.api.webContentsViewAction(viewId, WebContentsViewActionType.HIDE)
+    // let prevId = tabsManager.activeTabIdValue
+    // const unsubTab = activeTabId.subscribe((tabId) => {
+    //   if (tabId !== cleanID) {
+    //     if (prevId === cleanID) {
+    //       log.debug('Deactivating web contents view', cleanID)
+    //       window.api.webContentsViewAction(viewId, WebContentsViewActionType.HIDE)
 
-          prevId = tabId
-        }
+    //       prevId = tabId
+    //     }
 
-        return
-      }
+    //     return
+    //   }
 
-      window.api.webContentsViewAction(viewId, WebContentsViewActionType.ACTIVATE)
+    //   window.api.webContentsViewAction(viewId, WebContentsViewActionType.ACTIVATE)
 
-      prevId = tabId
-    })
+    //   prevId = tabId
+    // })
 
-    unsub.push(() => {
-      log.debug('Unsubscribing from active tab ID')
-      unsubTab()
-    })
+    // unsub.push(() => {
+    //   log.debug('Unsubscribing from active tab ID')
+    //   unsubTab()
+    // })
   })
 
   onDestroy(() => {
