@@ -1647,7 +1647,7 @@
 
     let toast
     if (!abortSpaceCreation) {
-      toast = toasts.loading('Deleting space…')
+      toast = toasts.loading('Deleting context…')
     }
 
     showSettingsModal.set(false)
@@ -1666,6 +1666,10 @@
 
       if ($spaceData?.folderName !== '.tempspace')
         telemetry.trackDeleteSpace(DeleteSpaceEventTrigger.SpaceSettings)
+
+      if (!abortSpaceCreation) {
+        toast?.success('Context deleted!')
+      }
 
       return true
     } catch (error) {
