@@ -46,9 +46,13 @@
       event.stopImmediatePropagation()
       event.preventDefault()
       dispatch('close')
-    } else {
-      dispatch('search', value)
     }
+  }
+
+  const handleInput = (e: InputEvent) => {
+    const target = e.target as HTMLInputElement
+    value = target.value
+    dispatch('search', value)
   }
 
   onMount(() => {
@@ -105,6 +109,7 @@
     {placeholder}
     class="flex bg-transparent outline-none disabled:cursor-not-allowed disabled:opacity-50"
     on:keydown={handleKeyDown}
+    on:input={handleInput}
     use:tooltip={{
       position: 'top',
       text: 'Search',

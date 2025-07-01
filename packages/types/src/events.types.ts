@@ -374,7 +374,8 @@ export enum PageChatUpdateContextEventTrigger {
   Onboarding = 'onboarding',
   ContextSwitch = 'context_switch',
   ActiveTabChanged = 'active_tab_changed',
-  EditorMention = 'editor_mention'
+  EditorMention = 'editor_mention',
+  StuffContext = 'stuff_context'
 }
 
 export enum PageChatUpdateContextItemType {

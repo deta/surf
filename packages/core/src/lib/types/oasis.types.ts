@@ -1,9 +1,16 @@
 import { Resource } from '../service/resources'
 import { OasisSpace } from '../service/oasis'
+import type { HistoryEntry } from './history.types'
+
+export enum RenderableItemType {
+  Resource = 'resource',
+  Space = 'space',
+  HistoryEntry = 'history_entry'
+}
 
 export interface BaseRenderableItem {
   id: string
-  type: 'resource' | 'space'
+  type: RenderableItemType
   updatedAt?: string
   createdAt?: string
   resource_added_to_space?: string
@@ -11,14 +18,23 @@ export interface BaseRenderableItem {
 
 export interface ResourceRenderableItem extends BaseRenderableItem {
   id: string
-  type: 'resource'
+  type: RenderableItemType.Resource
   data: Resource | null
 }
 
 export interface SpaceRenderableItem extends BaseRenderableItem {
   id: string
-  type: 'space'
+  type: RenderableItemType.Space
   data: OasisSpace
 }
 
-export type RenderableItem = ResourceRenderableItem | SpaceRenderableItem
+export interface HistoryEntryRenderableItem extends BaseRenderableItem {
+  id: string
+  type: RenderableItemType.HistoryEntry
+  data: HistoryEntry
+}
+
+export type RenderableItem =
+  | ResourceRenderableItem
+  | SpaceRenderableItem
+  | HistoryEntryRenderableItem

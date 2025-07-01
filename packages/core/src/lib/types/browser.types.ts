@@ -267,4 +267,7 @@ export type JumpToWebviewTimestampEvent = {
   source?: AIChatMessageSource
 }
 
+export type OpenAndChatEventObject = { type: 'resource' | 'tab'; id: string }
+export type OpenAndChatEvent = string | string[] | OpenAndChatEventObject | OpenAndChatEventObject[]
+
 export const BROWSER_CONTEXT_KEY = 'browser-utils'

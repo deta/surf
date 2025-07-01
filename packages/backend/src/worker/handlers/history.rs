@@ -1,21 +1,23 @@
+use rusqlite::{Connection, OpenFlags};
 use std::collections::HashSet;
+use std::env;
 use std::fs;
 use std::path::Path;
-use std::env;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use rusqlite::{Connection, OpenFlags};
 
 use crate::{
     api::message::{HistoryMessage, TunnelOneshot},
     store::models::{HistoryEntry, HistoryEntryType},
     worker::worker::{send_worker_response, Worker},
-    BackendResult, BackendError,
+    BackendError, BackendResult,
 };
 
-mod browser_config;
 mod browser_bookmarks;
-use browser_config::{get_history_file_path, get_bookmarks_file_path, BrowserFamily, get_browser_config};
+mod browser_config;
 use browser_bookmarks::BookmarkFolder;
+use browser_config::{
+    get_bookmarks_file_path, get_browser_config, get_history_file_path, BrowserFamily,
+};
 
 impl Worker {
     pub fn create_history_entry(&mut self, entry: HistoryEntry) -> BackendResult<HistoryEntry> {
@@ -35,8 +37,15 @@ impl Worker {
         self.db.remove_history_entry(&id)
     }
 
-    pub fn get_all_history_entries(&mut self) -> BackendResult<Vec<HistoryEntry>> {
-        self.db.get_all_history_entries()
+    pub fn get_all_history_entries(
+        &mut self,
+        limit: Option<usize>,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        self.db.get_all_history_entries(limit)
+    }
+
+    pub fn remove_all_history_entries(&mut self) -> BackendResult<()> {
+        self.db.remove_all_history_entries()
     }
 
     pub fn search_history_by_hostname_prefix(
@@ -84,12 +93,17 @@ impl Worker {
         self.db.search_history_by_url_and_title(&prefix, since)
     }
 
-    pub fn import_browser_history(&mut self, browser_type: &str, limit: usize) -> BackendResult<Vec<HistoryEntry>> {
+    pub fn import_browser_history(
+        &mut self,
+        browser_type: &str,
+        limit: usize,
+    ) -> BackendResult<Vec<HistoryEntry>> {
         const BATCH_SIZE: usize = 1000;
-        
-        let browser_config = get_browser_config(browser_type)
-            .ok_or_else(|| BackendError::GenericError(format!("Unsupported browser type: {}", browser_type)))?;
-        
+
+        let browser_config = get_browser_config(browser_type).ok_or_else(|| {
+            BackendError::GenericError(format!("Unsupported browser type: {}", browser_type))
+        })?;
+
         // Get the history file path for the specified browser
         let history_path = get_history_file_path(browser_type)?;
 
@@ -112,7 +126,7 @@ impl Worker {
                             3. Try running: chmod 644 '{}'", history_path.display())
                         ));
                     }
-                },
+                }
                 Err(e) => {
                     return Err(BackendError::GenericError(
                         format!("Could not check Safari history database permissions: {}\n\
@@ -128,7 +142,7 @@ impl Worker {
                 .arg("Safari")
                 .output()
                 .ok();
-            
+
             if let Some(output) = output {
                 if !output.stdout.is_empty() {
                     return Err(BackendError::GenericError(
@@ -141,17 +155,24 @@ impl Worker {
         // Copy history file and read entries
         let temp_dir = env::temp_dir();
         let temp_history_path = temp_dir.join(format!("{}_history_temp", browser_type));
-        
+
         if let Err(e) = fs::copy(&history_path, &temp_history_path) {
-            return Err(BackendError::GenericError(
-                format!("Error copying {} history file. Browser may be running: {}", browser_type, e)
-            ));
+            return Err(BackendError::GenericError(format!(
+                "Error copying {} history file. Browser may be running: {}",
+                browser_type, e
+            )));
         }
 
         let entries = match browser_config.family {
-            BrowserFamily::Chromium => self.read_chromium_history_from_file(&temp_history_path, limit)?,
-            BrowserFamily::Firefox => self.read_firefox_history_from_file(&temp_history_path, limit)?,
-            BrowserFamily::Safari => self.read_safari_history_from_file(&temp_history_path, limit)?,
+            BrowserFamily::Chromium => {
+                self.read_chromium_history_from_file(&temp_history_path, limit)?
+            }
+            BrowserFamily::Firefox => {
+                self.read_firefox_history_from_file(&temp_history_path, limit)?
+            }
+            BrowserFamily::Safari => {
+                self.read_safari_history_from_file(&temp_history_path, limit)?
+            }
         };
 
         // Clean up the temporary file
@@ -175,7 +196,12 @@ impl Worker {
             "waterfox" => HistoryEntryType::ImportWaterfox,
             "safari" => HistoryEntryType::ImportSafari,
             "zen" => HistoryEntryType::ImportZen,
-            _ => return Err(BackendError::GenericError(format!("Unsupported browser type: {}", browser_type))),
+            _ => {
+                return Err(BackendError::GenericError(format!(
+                    "Unsupported browser type: {}",
+                    browser_type
+                )))
+            }
         };
 
         for entry in &mut history_entries {
@@ -183,7 +209,7 @@ impl Worker {
         }
 
         let mut successful_entries = Vec::new();
-        
+
         // Process entries in batches
         for chunk in history_entries.chunks(BATCH_SIZE) {
             match self.db.create_history_entries_batch(chunk) {
@@ -194,11 +220,15 @@ impl Worker {
                 }
             }
         }
-        
+
         Ok(successful_entries)
     }
 
-    fn read_safari_history_from_file(&mut self, history_path: &Path, limit: usize) -> BackendResult<Vec<HistoryEntry>> {
+    fn read_safari_history_from_file(
+        &mut self,
+        history_path: &Path,
+        limit: usize,
+    ) -> BackendResult<Vec<HistoryEntry>> {
         // Try to connect to Safari's History.db file directly
         let conn = match Connection::open_with_flags(
             history_path,
@@ -208,8 +238,8 @@ impl Worker {
             Err(e) => {
                 let error_msg = e.to_string();
                 if error_msg.contains("unable to open database file") {
-                    return Err(BackendError::GenericError(
-                        format!("Could not access Safari history database. To fix this:\n\
+                    return Err(BackendError::GenericError(format!(
+                        "Could not access Safari history database. To fix this:\n\
                         1. Quit Safari completely (Safari > Quit Safari)\n\
                         2. Open System Settings\n\
                         3. Go to Privacy & Security\n\
@@ -218,16 +248,17 @@ impl Worker {
                         6. Select and add Surf\n\
                         7. Try importing again\n\
                         \n\
-                        Note: Safari must be completely closed during the import.")
-                    ));
+                        Note: Safari must be completely closed during the import."
+                    )));
                 } else {
-                    return Err(BackendError::GenericError(
-                        format!("Could not access Safari history database: {}", e)
-                    ));
+                    return Err(BackendError::GenericError(format!(
+                        "Could not access Safari history database: {}",
+                        e
+                    )));
                 }
             }
         };
-        
+
         let mut stmt = conn.prepare(
             "SELECT 
                 history_items.url,
@@ -238,25 +269,25 @@ impl Worker {
             LEFT JOIN history_visits ON history_items.id = history_visits.history_item
             GROUP BY history_items.id
             ORDER BY last_visit_time DESC
-            LIMIT ?"
+            LIMIT ?",
         )?;
-        
+
         let mut history_entries = Vec::new();
         let current_time = SystemTime::now();
-        
+
         let safari_history = stmt.query_map([limit as i64], |row| {
             let url: String = row.get(0)?;
             let title: Option<String> = row.get(1)?;
             let _visit_count: i32 = row.get(2)?;
             let visit_time: i64 = row.get(3)?;
-            
+
             Ok((url, title, visit_time))
         })?;
-        
+
         for entry_result in safari_history {
             let (url, title, visit_time) = entry_result?;
             let created_at = UNIX_EPOCH + Duration::from_secs(visit_time.max(0) as u64);
-            
+
             let entry = HistoryEntry {
                 id: uuid::Uuid::new_v4().to_string(),
                 entry_type: HistoryEntryType::ImportSafari,
@@ -266,19 +297,20 @@ impl Worker {
                 created_at: created_at.into(),
                 updated_at: current_time.into(),
             };
-            
+
             history_entries.push(entry);
         }
-        
+
         Ok(history_entries)
     }
-    
-    fn read_chromium_history_from_file(&mut self, history_path: &Path, limit: usize) -> BackendResult<Vec<HistoryEntry>> {
-        let conn = Connection::open_with_flags(
-            history_path,
-            OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )?;
-        
+
+    fn read_chromium_history_from_file(
+        &mut self,
+        history_path: &Path,
+        limit: usize,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        let conn = Connection::open_with_flags(history_path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+
         let mut stmt = conn.prepare(
             "SELECT 
                 urls.url, 
@@ -290,30 +322,30 @@ impl Worker {
             LEFT JOIN visits ON urls.id = visits.url
             GROUP BY urls.id
             ORDER BY visit_time DESC
-            LIMIT ?"
+            LIMIT ?",
         )?;
-        
+
         let mut history_entries = Vec::new();
         let current_time = SystemTime::now();
-        
+
         let chrome_history = stmt.query_map([limit as i64], |row| {
             let url: String = row.get(0)?;
             let title: String = row.get(1)?;
             let _visit_count: i32 = row.get(2)?;
             let visit_time: i64 = row.get(4)?;
-            
+
             // Chrome stores time as microseconds since Jan 1, 1601 UTC
             // Convert to milliseconds since epoch (Jan 1, 1970)
             let chrome_epoch = 11644473600000; // Difference in milliseconds between 1601 and 1970
             let visit_time_ms = (visit_time / 1000) as i64 - chrome_epoch;
-            
+
             Ok((url, title, visit_time_ms))
         })?;
-        
+
         for entry_result in chrome_history {
             let (url, title, visit_time_ms) = entry_result?;
             let created_at = UNIX_EPOCH + Duration::from_millis(visit_time_ms.max(0) as u64);
-            
+
             let entry = HistoryEntry {
                 id: uuid::Uuid::new_v4().to_string(),
                 entry_type: HistoryEntryType::ImportChrome, // This will be overwritten in import_browser_history
@@ -323,19 +355,20 @@ impl Worker {
                 created_at: created_at.into(),
                 updated_at: current_time.into(),
             };
-            
+
             history_entries.push(entry);
         }
-        
+
         Ok(history_entries)
     }
-    
-    fn read_firefox_history_from_file(&mut self, history_path: &Path, limit: usize) -> BackendResult<Vec<HistoryEntry>> {
-        let conn = Connection::open_with_flags(
-            history_path,
-            OpenFlags::SQLITE_OPEN_READ_ONLY,
-        )?;
-        
+
+    fn read_firefox_history_from_file(
+        &mut self,
+        history_path: &Path,
+        limit: usize,
+    ) -> BackendResult<Vec<HistoryEntry>> {
+        let conn = Connection::open_with_flags(history_path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+
         let mut stmt = conn.prepare(
             "SELECT 
                 moz_places.url,
@@ -347,28 +380,28 @@ impl Worker {
             WHERE moz_places.url NOT LIKE 'place:%'
             GROUP BY moz_places.id
             ORDER BY last_visit_date DESC
-            LIMIT ?"
+            LIMIT ?",
         )?;
-        
+
         let mut history_entries = Vec::new();
         let current_time = SystemTime::now();
-        
+
         let firefox_history = stmt.query_map([limit as i64], |row| {
             let url: String = row.get(0)?;
             let title: Option<String> = row.get(1)?;
             let _visit_count: i32 = row.get(2)?;
             let visit_time: i64 = row.get(3)?;
-            
+
             // Firefox stores time as microseconds since Unix epoch (1970)
             let visit_time_ms = visit_time / 1000;
-            
+
             Ok((url, title, visit_time_ms))
         })?;
-        
+
         for entry_result in firefox_history {
             let (url, title, visit_time_ms) = entry_result?;
             let created_at = UNIX_EPOCH + Duration::from_millis(visit_time_ms.max(0) as u64);
-            
+
             let entry = HistoryEntry {
                 id: uuid::Uuid::new_v4().to_string(),
                 entry_type: HistoryEntryType::ImportFirefox, // This will be overwritten in import_browser_history
@@ -378,30 +411,31 @@ impl Worker {
                 created_at: created_at.into(),
                 updated_at: current_time.into(),
             };
-            
+
             history_entries.push(entry);
         }
-        
+
         Ok(history_entries)
     }
 
-    pub fn import_browser_bookmarks(&mut self, browser_type: &str, _limit: usize) -> BackendResult<Vec<BookmarkFolder>> {        
-        let browser_config = get_browser_config(browser_type)
-            .ok_or_else(|| BackendError::GenericError(format!("Unsupported browser type: {}", browser_type)))?;
-        
+    pub fn import_browser_bookmarks(
+        &mut self,
+        browser_type: &str,
+        _limit: usize,
+    ) -> BackendResult<Vec<BookmarkFolder>> {
+        let browser_config = get_browser_config(browser_type).ok_or_else(|| {
+            BackendError::GenericError(format!("Unsupported browser type: {}", browser_type))
+        })?;
+
         // Get the bookmarks file path for the specified browser
         let bookmarks_path = get_bookmarks_file_path(browser_type)?;
 
         match browser_config.family {
-            BrowserFamily::Chromium => {
-                browser_bookmarks::parse_chrome_bookmarks(&bookmarks_path)
-            },
+            BrowserFamily::Chromium => browser_bookmarks::parse_chrome_bookmarks(&bookmarks_path),
             BrowserFamily::Firefox => {
                 browser_bookmarks::parse_firefox_bookmarks(&bookmarks_path, browser_type)
-            },
-            BrowserFamily::Safari => {
-                browser_bookmarks::parse_safari_bookmarks(&bookmarks_path)
             }
+            BrowserFamily::Safari => browser_bookmarks::parse_safari_bookmarks(&bookmarks_path),
         }
     }
 }
@@ -417,8 +451,8 @@ pub fn handle_history_message(
             let result = worker.create_history_entry(entry);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        HistoryMessage::GetAllHistoryEntries => {
-            let result = worker.get_all_history_entries();
+        HistoryMessage::GetAllHistoryEntries(limit) => {
+            let result = worker.get_all_history_entries(limit);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         HistoryMessage::GetHistoryEntry(id) => {
@@ -453,6 +487,10 @@ pub fn handle_history_message(
         HistoryMessage::ImportBrowserBookmarks(browser_type) => {
             let limit = 1_000_000; // Import up to 1m entries
             let result = worker.import_browser_bookmarks(&browser_type, limit);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        HistoryMessage::RemoveAllHistoryEntries => {
+            let result = worker.remove_all_history_entries();
             send_worker_response(&mut worker.channel, oneshot, result);
         }
     }

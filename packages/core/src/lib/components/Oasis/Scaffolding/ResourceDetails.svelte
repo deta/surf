@@ -36,7 +36,7 @@
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
-  import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
+  import { SpaceEntryOrigin, type OpenAndChatEvent } from '@horizon/core/src/lib/types'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
@@ -51,7 +51,7 @@
   const dispatch = createEventDispatcher<{
     open: string
     close: void
-    'open-and-chat': string
+    'open-and-chat': OpenAndChatEvent
     remove: { ids: string; deleteFromStuff: boolean }
   }>()
 

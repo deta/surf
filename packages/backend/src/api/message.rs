@@ -39,7 +39,7 @@ pub enum WorkerMessage {
 #[derive(Debug)]
 pub enum HistoryMessage {
     CreateHistoryEntry(HistoryEntry),
-    GetAllHistoryEntries,
+    GetAllHistoryEntries(Option<usize>),
     GetHistoryEntry(String),
     RemoveHistoryEntry(String),
     UpdateHistoryEntry(HistoryEntry),
@@ -48,6 +48,7 @@ pub enum HistoryMessage {
     SearchHistoryEntriesByUrlAndTitle(String, Option<f64>),
     ImportBrowserHistory(String),
     ImportBrowserBookmarks(String),
+    RemoveAllHistoryEntries,
 }
 
 #[derive(Debug)]

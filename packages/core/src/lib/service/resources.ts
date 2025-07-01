@@ -910,8 +910,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     return resource
   }
 
-  async getHistoryEntries() {
-    return this.sffs.getHistoryEntries()
+  async getHistoryEntries(limit?: number) {
+    return this.sffs.getHistoryEntries(limit)
   }
 
   async findHistoryEntriesByHostname(url: string) {
@@ -1019,6 +1019,10 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
   async deleteHistoryEntry(id: string) {
     await this.sffs.deleteHistoryEntry(id)
+  }
+
+  async deleteAllHistoryEntries() {
+    await this.sffs.deleteAllHistoryEntries()
   }
 
   // returns only a list of hostnames
