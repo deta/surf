@@ -364,8 +364,12 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     })
 
     this.log.debug('Created tab', newTab)
-    this.activatedTabs.update((tabs) => [...tabs, newTab.id])
     this.tabs.update((tabs) => [...tabs, newTab])
+
+    // Only activate tabs that are opened in our current scope
+    if (opts?.scopeId === this.activeScopeIdValue) {
+      this.activatedTabs.update((tabs) => [...tabs, newTab.id])
+    }
 
     if (active) {
       // remove the selection from the currently active tab if it was not selected manually by the user
