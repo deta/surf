@@ -411,9 +411,9 @@
   $: log.debug('globalMiniBrowserIsOpen', $globalMiniBrowserIsOpen, $activeTabMiniBrowserIsOpen)
 
   $: if ($showNewTabOverlay !== 0) {
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
+    tabsManager.hideViews()
   } else {
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
+    tabsManager.showViews()
   }
 
   const openResourceDetailsModal = async (

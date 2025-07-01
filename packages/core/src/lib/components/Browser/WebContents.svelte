@@ -71,6 +71,7 @@
   let currentBounds: DOMRect | null = null
   let eventListeners: Array<WebContentsViewEventListener> = []
   let isActivated = active
+  let backgroundImage: string | null = null
 
   $: cleanID = id.replace('webview-', '')
 
@@ -229,15 +230,38 @@
     })
   }
 
+  export const refreshBackgroundImage = async () => {
+    const dataURL = await window.api.webContentsViewAction(
+      cleanID,
+      WebContentsViewActionType.CAPTURE_PAGE,
+      {}
+    )
+    if (dataURL) {
+      log.debug('Setting background image for web contents view', cleanID)
+      backgroundImage = `url(${dataURL})`
+    } else {
+      log.warn('No data URL returned for captured page')
+    }
+  }
+
+  export const show = async () => {
+    log.debug('Showing web contents view', cleanID)
+    await window.api.webContentsViewAction(cleanID, WebContentsViewActionType.ACTIVATE)
+  }
+
+  export const hide = async () => {
+    log.debug('Hiding web contents view', cleanID)
+    await refreshBackgroundImage()
+    await window.api.webContentsViewAction(cleanID, WebContentsViewActionType.HIDE)
+  }
+
   $: if ($webContentsId && cleanID) {
     if (active && !isActivated) {
-      log.debug('Activating web contents view', cleanID)
-      window.api.webContentsViewAction(cleanID, WebContentsViewActionType.ACTIVATE)
       isActivated = true
+      show()
     } else if (!active && isActivated) {
-      log.debug('Deactivating web contents view', cleanID)
-      window.api.webContentsViewAction(cleanID, WebContentsViewActionType.HIDE)
       isActivated = false
+      hide()
     }
   }
 
@@ -343,8 +367,13 @@
       resizeObserver.disconnect()
     })
 
-    const activeTabId = tabsManager.activeTabId
+    tabsManager.on('hide-views', () => {
+      if (tabsManager.activeTabIdValue === cleanID || (isOverlay && active)) {
+        refreshBackgroundImage()
+      }
+    })
 
+    // const activeTabId = tabsManager.activeTabId
     // let prevId = tabsManager.activeTabIdValue
     // const unsubTab = activeTabId.subscribe((tabId) => {
     //   if (tabId !== cleanID) {
@@ -414,9 +443,19 @@
 
 <div
   id="webcontentsview-container"
+  class="webcontentsview-container"
   bind:this={webContentsWrapper}
-  style="width: 100%; height: 100%; background: white;"
+  style="--background-image: {backgroundImage};"
 ></div>
 
 <style lang="scss">
+  .webcontentsview-container {
+    width: 100%;
+    height: 100%;
+    background: var(--background-image, white);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(2px);
+  }
 </style>

@@ -45,7 +45,8 @@ export enum WebContentsViewActionType {
   EXECUTE_JAVASCRIPT = 'execute-javascript',
   DOWNLOAD_URL = 'download-url',
   IS_CURRENTLY_AUDIBLE = 'is-currently-audible',
-  GET_NAVIGATION_HISTORY = 'get-navigation-history'
+  GET_NAVIGATION_HISTORY = 'get-navigation-history',
+  CAPTURE_PAGE = 'capture-page'
 }
 
 export interface WebContentsViewActionPayloads {
@@ -72,6 +73,7 @@ export interface WebContentsViewActionPayloads {
   [WebContentsViewActionType.DOWNLOAD_URL]: { url: string; options?: Electron.DownloadURLOptions }
   [WebContentsViewActionType.IS_CURRENTLY_AUDIBLE]: undefined
   [WebContentsViewActionType.GET_NAVIGATION_HISTORY]: undefined
+  [WebContentsViewActionType.CAPTURE_PAGE]: { rect?: Electron.Rectangle } | undefined
 }
 
 export interface WebContentsViewActionOutputs {
@@ -95,6 +97,7 @@ export interface WebContentsViewActionOutputs {
   [WebContentsViewActionType.EXECUTE_JAVASCRIPT]: any
   [WebContentsViewActionType.DOWNLOAD_URL]: boolean
   [WebContentsViewActionType.IS_CURRENTLY_AUDIBLE]: boolean
+  [WebContentsViewActionType.CAPTURE_PAGE]: string // base64 encoded image data
   [WebContentsViewActionType.GET_NAVIGATION_HISTORY]: {
     entries: NavigationEntry[]
     index: number

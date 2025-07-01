@@ -7,7 +7,7 @@
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
   import { Icon } from '@horizon/icons'
-  import { WebContentsViewManagerActionType } from '@horizon/types'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null
@@ -26,6 +26,7 @@
   export let loading = false
 
   const dispatch = createEventDispatcher<{ select: string }>()
+  const tabsManager = useTabsManager()
 
   const inputFocused = writable(false)
 
@@ -43,12 +44,12 @@
     return $items.filter((item) => item.label.toLowerCase().includes($searchValue.toLowerCase()))
   })
 
-  const handleOpen = () => {
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
+  const handleOpen = async () => {
+    tabsManager.hideViews()
   }
 
   const handleClose = () => {
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
+    tabsManager.showViews()
   }
 
   const handleKeyDown = (e: CustomEventHandler<KeyboardEvent, HTMLDivElement>) => {

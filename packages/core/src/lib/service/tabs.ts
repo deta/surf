@@ -48,6 +48,7 @@ import { ContextItemResource } from './ai/context'
 import type { ConfigService } from './config'
 import type { BookmarkPageOpts } from '../components/Browser/BrowserTab.svelte'
 import { EventEmitterBase } from './events'
+import { WebContentsViewManagerActionType } from '@horizon/types'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -56,6 +57,8 @@ export type TabEvents = {
   selected: (tab: Tab) => void
   'url-changed': (tab: Tab, newUrl: string) => void
   'changed-active-scope': (scopeId: string | null) => void
+  'show-views': () => void
+  'hide-views': () => void
 }
 
 export type TabScopeObject = { tabId: string; scopeId: string | null }
@@ -304,6 +307,10 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
 
   get spaceTabCountsValue() {
     return get(this.spaceTabCounts)
+  }
+
+  get activeBrowserTabValue() {
+    return get(this.activeBrowserTab)
   }
 
   private addToActiveTabsHistory(tabId: string) {
@@ -1636,6 +1643,19 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     const resource = await browserTab.bookmarkPage(options)
 
     return { resource: resource, isNew: true }
+  }
+
+  async showViews() {
+    this.emit('show-views')
+    await window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
+  }
+
+  async hideViews() {
+    this.emit('hide-views')
+
+    // give the views some time to handle the event
+    await wait(15)
+    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
   }
 
   export() {

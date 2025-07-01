@@ -126,6 +126,9 @@
 
   const isMediaPlaying = writable(false)
 
+  let app: DetectedWebApp | null = null
+  let webContents: WebContents
+
   export const goBack = () => webview.goBack()
   export const goForward = () => webview.goForward()
   export const focus = () => webview.focus()
@@ -154,8 +157,7 @@
   export const requestExitPip = () => webview?.requestExitPip()
   export const setMute = (v: boolean) => webview?.setMute(v)
   export const isUsingPictureInPicture = () => webview?.isUsingPictureInPicture()
-
-  let app: DetectedWebApp | null = null
+  export const getWebContents = () => webContents
 
   const historyStackIds = writable<string[]>(tab.historyStackIds)
   const navigationHistory = writable<Electron.NavigationEntry[]>(tab.navigationHistory ?? [])
@@ -1359,6 +1361,7 @@
   isOverlay={insideMiniBrowser}
   acceptsDrags={active}
   bind:this={webview}
+  bind:webContents
   on:webview-page-event={handleWebviewPageEvent}
   on:url-change={handleUrlChange}
   on:title-change={handleWebviewTitleChange}

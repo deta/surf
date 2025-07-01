@@ -177,6 +177,22 @@ export class WCView {
     return { entries, index }
   }
 
+  async capturePage(rect?: Electron.Rectangle) {
+    const nativeImage = await this.wcv.webContents.capturePage(rect)
+    if (nativeImage.isEmpty()) {
+      console.warn(`[main] WebContentsView ${this.id} screenshot capture failed: empty image`)
+      return null
+    }
+
+    const resizedImage = nativeImage.resize({
+      width: Math.floor(nativeImage.getSize().width / 2),
+      height: Math.floor(nativeImage.getSize().height / 2),
+      quality: 'good'
+    })
+
+    return resizedImage.toDataURL()
+  }
+
   attachEventListener(
     event: WebContentsViewEventTypeNames,
     callback: (...args: any[]) => void
@@ -792,6 +808,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             return view.isCurrentlyAudible()
           } else if (type === WebContentsViewActionType.GET_NAVIGATION_HISTORY) {
             return view.getNavigationHistory()
+          } else if (type === WebContentsViewActionType.CAPTURE_PAGE) {
+            return await view.capturePage(payload?.rect)
           }
 
           return false

@@ -54,6 +54,7 @@
   export let isLoading = writable(false)
   export let webContentsId: Writable<number | null> | undefined = undefined
   export let isOverlay = false
+  export let webContents: WebContents
 
   export const canGoBack = derived(
     currentHistoryIndex,
@@ -73,7 +74,6 @@
   const showZoomPreview = writable<boolean>(false)
   const webviewReady = writable<boolean>(false)
 
-  let webContents: WebContents
   let findInPageComp: FindInPage
   let hoverTargetUrl: string
   let zoomTimer: number
