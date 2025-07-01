@@ -199,6 +199,8 @@ export class WCView {
   onDestroy() {
     console.log('[main] webcontentsview-destroy: destroying view with id', this.id)
     this.eventListeners.forEach((unsub) => unsub())
+    this.wcv.webContents.removeAllListeners()
+    this.wcv.webContents.close()
   }
 }
 
