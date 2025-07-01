@@ -927,6 +927,22 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 
+  // Make sure videos and audios are not autoplaying
+  for (const el of document.querySelectorAll<HTMLAudioElement | HTMLVideoElement>('audio, video')) {
+    el.autoplay = false
+
+    // once the video is loaded and starts playing, pause it again
+    el.addEventListener(
+      'playing',
+      () => {
+        if (!el.paused) {
+          el.pause()
+        }
+      },
+      { once: true }
+    )
+  }
+
   // runAppDetection()
 })
 
