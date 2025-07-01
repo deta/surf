@@ -19,6 +19,8 @@ pub enum BackendError {
     JsonError(#[from] serde_json::Error),
     #[error("LLM Error: {r#type}: {message}")]
     LLMClientError { r#type: String, message: String },
+    #[error("LLM Bad Request error")]
+    LLMClientErrorBadRequest,
     #[error("LLM Too Many Requests error")]
     LLMClientErrorTooManyRequests,
     // TODO: fix this monstrosity

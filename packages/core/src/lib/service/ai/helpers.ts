@@ -20,7 +20,7 @@ import {
 import { WebParser } from '@horizon/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
-import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
+import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 import { ModelTiers } from '@horizon/types/src/ai.types'
 import { ResourceManager } from '../resources'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
@@ -343,10 +343,12 @@ export const parseAIError = (e: any) => {
     const res = handleQuotaDepletedError(e)
     error = res.error
     content = res.content
+  } else if (e instanceof BadRequestError) {
+    error = PageChatMessageSentEventError.BadRequest
+    content = 'The query failed our content policy checks. Please try again with a different query.'
   } else {
     content = 'Failed to generate response.'
   }
-
   if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
     content = 'The content is too long to process. Please try a more specific question.'
   }
