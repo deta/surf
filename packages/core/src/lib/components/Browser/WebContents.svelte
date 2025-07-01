@@ -56,6 +56,7 @@
   export let isReady = writable(false)
   export let webContentsId = writable<number | null>(null)
   export let webContentsWrapper: HTMLDivElement | null = null
+  export let isOverlay = false
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -263,6 +264,7 @@
         url: src,
         partition: partition,
         activate: active,
+        isOverlay,
         ...($navigationHistory.length > 0
           ? {
               navigationHistory: $navigationHistory,
@@ -368,11 +370,15 @@
   })
 
   onDestroy(() => {
-    log.debug('Destroying web contents view', cleanID)
+    log.debug('Destroying web contents view', cleanID, isOverlay)
     window.api.webContentsViewAction(cleanID, WebContentsViewActionType.DESTROY)
 
     if (unsub) {
       unsub.forEach((fn) => fn())
+    }
+
+    if (isOverlay && tabsManager.showNewTabOverlayValue === 0) {
+      window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
     }
   })
 </script>

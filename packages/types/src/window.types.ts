@@ -17,6 +17,7 @@ export type WebContentsViewCreateOptions = {
   bounds?: Rectangle
   preload?: string
   activate?: boolean
+  isOverlay?: boolean
   additionalArguments?: string[]
   navigationHistory?: NavigationEntry[]
   navigationHistoryIndex?: number

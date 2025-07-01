@@ -1356,6 +1356,7 @@
   {isLoading}
   {webContentsId}
   {active}
+  isOverlay={insideMiniBrowser}
   acceptsDrags={active}
   bind:this={webview}
   on:webview-page-event={handleWebviewPageEvent}

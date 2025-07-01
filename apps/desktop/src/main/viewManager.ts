@@ -210,6 +210,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   window: BrowserWindow
   views: Map<string, WCView>
   activeViewId: string | null = null
+  activeOverlayViewId: string | null = null
 
   ipcEventListeners: IPCListenerUnsubscribe[] = []
 
@@ -241,7 +242,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
   async createView(opts: WebContentsViewCreateOptions) {
     try {
-      console.log('[main] webcontentsview-create: creating new view with options', opts)
+      const { navigationHistory, ...logOptions } = opts
+      console.log('[main] webcontentsview-create: creating new view with options', logOptions)
 
       const view = new WCView({
         ...opts,
@@ -252,7 +254,14 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       this.views.set(view.id, view)
 
       if (opts.activate) {
-        this.activeViewId = view.id
+        if (opts.isOverlay) {
+          this.activeOverlayViewId = view.id
+
+          this.hideAllViews()
+        } else {
+          this.activeViewId = view.id
+        }
+
         this.window.contentView.addChildView(view.wcv)
       }
 
