@@ -270,6 +270,7 @@ const initializeApp = async () => {
     if (webContents && isHealthy)
       IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(webContents, isHealthy)
 
+    silentCheckForUpdates()
     setInterval(silentCheckForUpdates, 1000 * 60 * 30) // 30 minutes
   })
 
