@@ -7,6 +7,7 @@
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
   import { Icon } from '@horizon/icons'
+  import { WebContentsViewManagerActionType } from '@horizon/types'
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null
@@ -41,6 +42,14 @@
 
     return $items.filter((item) => item.label.toLowerCase().includes($searchValue.toLowerCase()))
   })
+
+  const handleOpen = () => {
+    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
+  }
+
+  const handleClose = () => {
+    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
+  }
 
   const handleKeyDown = (e: CustomEventHandler<KeyboardEvent, HTMLDivElement>) => {
     if ($inputFocused) return
@@ -78,6 +87,13 @@
       open.set(false)
       $searchValue = ''
     }, 150)
+  }
+
+  const handleContentMouseLeave = (_e: MouseEvent) => {
+    if (closeOnMouseLeave) {
+      handleClose()
+      handleMouseLeave(_e)
+    }
   }
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -123,6 +139,12 @@
 
   $: checkOverflow($filterdItems)
 
+  $: if ($open) {
+    handleOpen()
+  } else {
+    handleClose()
+  }
+
   onMount(() => {
     handleScrollCheck()
   })
@@ -161,7 +183,7 @@
         class="w-full max-h-[400px] overflow-auto flex flex-col"
         style:height={keepHeightWhileSearching && $searchValue ? listElemHeight + 'px' : 'auto'}
         on:mouseenter={(e) => closeOnMouseLeave && handleMouseEnter(e)}
-        on:mouseleave={(e) => closeOnMouseLeave && handleMouseLeave(e)}
+        on:mouseleave={(e) => closeOnMouseLeave && handleContentMouseLeave(e)}
       >
         {#if search !== 'disabled'}
           <div class="flex-shrink-0 p-1 pb-1 z-10 relative" class:bottom-shadow={overflowTop}>

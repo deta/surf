@@ -1,7 +1,6 @@
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 import {
   WebContentsViewActionType,
-  WebContentsViewEventPayloads,
   WebContentsViewEventType,
   WebContentsViewEventTypeNames,
   WebContentsViewManagerActionType,
@@ -17,6 +16,7 @@ import { isDev } from '@horizon/utils/src/system'
 
 export class WCView {
   id: string
+  isOverlay: boolean
   wcv: WebContentsView
   eventListeners: Array<() => void> = []
 
@@ -39,6 +39,7 @@ export class WCView {
 
     this.wcv = view
     this.id = opts.id || view.webContents.id + ''
+    this.isOverlay = opts.isOverlay ?? false
 
     if (opts.bounds) {
       console.log(
@@ -312,7 +313,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     console.log('[main] webcontentsview-create: registering id', view.id)
     this.views.set(view.id, view)
-    this.activeViewId = view.id
+    this.activeOverlayViewId = view.id
 
     this.window.contentView.addChildView(view.wcv)
     console.log('[main] webcontentsview-create: added view to window with id', view.id)
@@ -383,7 +384,11 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       this.window.contentView.addChildView(view.wcv)
       console.log('[main] Activated WebContentsView, brought to top for id:', view.id)
 
-      this.activeViewId = view.id
+      if (view.isOverlay) {
+        this.activeOverlayViewId = view.id
+      } else {
+        this.activeViewId = view.id
+      }
 
       return true
     } catch (e) {
@@ -408,22 +413,17 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   showActiveView() {
-    console.log(
-      '[main] webcontentsview-showActiveView: showing active view with id',
-      this.activeViewId
-    )
+    const activeViewId = this.activeOverlayViewId || this.activeViewId
+    console.log('[main] webcontentsview-showActiveView: showing active view with id', activeViewId)
 
-    if (!this.activeViewId) {
+    if (!activeViewId) {
       console.warn('[main] webcontentsview-showActiveView: no active view to show')
       return
     }
 
-    const view = this.views.get(this.activeViewId)
+    const view = this.views.get(activeViewId)
     if (!view) {
-      console.warn(
-        '[main] webcontentsview-showActiveView: no view found with id',
-        this.activeViewId
-      )
+      console.warn('[main] webcontentsview-showActiveView: no view found with id', activeViewId)
       return
     }
 
@@ -467,6 +467,16 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       console.log('[main] webcontentsview-destroy: destroying view with id', view.id)
 
       view.onDestroy()
+
+      if (this.activeViewId === view.id) {
+        console.log('[main] webcontentsview-destroy: clearing active view id', view.id)
+        this.activeViewId = null
+      }
+
+      if (this.activeOverlayViewId === view.id) {
+        console.log('[main] webcontentsview-destroy: clearing active overlay view id', view.id)
+        this.activeOverlayViewId = null
+      }
 
       this.window.contentView.removeChildView(view.wcv)
       console.log('[main] Removed WebContentsView from window for id:', view.id)
@@ -746,7 +756,9 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           } else if (type === WebContentsViewActionType.GET_URL) {
             return view.wcv.webContents.getURL()
           } else if (type === WebContentsViewActionType.FOCUS) {
-            if (this.activeViewId !== view.id) {
+            if (view.isOverlay && this.activeOverlayViewId !== view.id) {
+              this.bringViewToFront(view.id)
+            } else if (this.activeViewId !== view.id) {
               this.bringViewToFront(view.id)
             }
 
