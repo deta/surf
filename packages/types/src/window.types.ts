@@ -73,7 +73,9 @@ export interface WebContentsViewActionPayloads {
   [WebContentsViewActionType.DOWNLOAD_URL]: { url: string; options?: Electron.DownloadURLOptions }
   [WebContentsViewActionType.IS_CURRENTLY_AUDIBLE]: undefined
   [WebContentsViewActionType.GET_NAVIGATION_HISTORY]: undefined
-  [WebContentsViewActionType.CAPTURE_PAGE]: { rect?: Electron.Rectangle } | undefined
+  [WebContentsViewActionType.CAPTURE_PAGE]:
+    | { rect?: Electron.Rectangle; quality?: 'low' | 'medium' | 'high' }
+    | undefined
 }
 
 export interface WebContentsViewActionOutputs {

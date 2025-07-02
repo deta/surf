@@ -703,6 +703,12 @@
       document.dispatchEvent(new CustomEvent(CompletionEventID.UseVision, { bubbles: true }))
     }
   })
+
+  $: if (validRectSelection) {
+    document.body.classList.add('screen-picker-active')
+  } else {
+    document.body.classList.remove('screen-picker-active')
+  }
 </script>
 
 <svelte:window
@@ -737,6 +743,7 @@
     style:--rect-w={$_selectionRect.width + 'px'}
     style:--rect-h={$_selectionRect.height + 'px'}
     class:blurred={!fromTty || $_selectionRect.width + $_selectionRect.height > 2}
+    class:screen-picker-active={validRectSelection}
   >
     {#if !validRectSelection}
       <div class="instructions" class:edge={!fromTty} use:startingClass={{}}>

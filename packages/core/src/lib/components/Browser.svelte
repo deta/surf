@@ -5384,9 +5384,9 @@
       border-top-right-radius: var(--corner-radii) !important;
     }
 
-    :global(body:has(.verticalTabs)) & {
-      border-radius: var(--corner-radii) !important;
-    }
+    // :global(body:has(.verticalTabs)) & {
+    //   border-radius: var(--corner-radii) !important;
+    // }
 
     :global(webview) {
       height: 100%;

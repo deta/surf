@@ -177,18 +177,32 @@ export class WCView {
     return { entries, index }
   }
 
-  async capturePage(rect?: Electron.Rectangle) {
+  async capturePage(rect?: Electron.Rectangle, quality: 'low' | 'medium' | 'high' = 'low') {
     const nativeImage = await this.wcv.webContents.capturePage(rect)
     if (nativeImage.isEmpty()) {
       console.warn(`[main] WebContentsView ${this.id} screenshot capture failed: empty image`)
       return null
     }
 
-    const resizedImage = nativeImage.resize({
-      width: Math.floor(nativeImage.getSize().width / 2),
-      height: Math.floor(nativeImage.getSize().height / 2),
-      quality: 'good'
-    })
+    let opts = {
+      quality: 'best'
+    } as Electron.ResizeOptions
+
+    if (quality === 'medium') {
+      opts = {
+        width: Math.floor(nativeImage.getSize().width / 1.5),
+        height: Math.floor(nativeImage.getSize().height / 1.5),
+        quality: 'better'
+      }
+    } else if (quality === 'low') {
+      opts = {
+        width: Math.floor(nativeImage.getSize().width / 3),
+        height: Math.floor(nativeImage.getSize().height / 3),
+        quality: 'good'
+      }
+    }
+
+    const resizedImage = nativeImage.resize(opts)
 
     return resizedImage.toDataURL()
   }
@@ -809,7 +823,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           } else if (type === WebContentsViewActionType.GET_NAVIGATION_HISTORY) {
             return view.getNavigationHistory()
           } else if (type === WebContentsViewActionType.CAPTURE_PAGE) {
-            return await view.capturePage(payload?.rect)
+            return await view.capturePage(payload?.rect, payload?.quality)
           }
 
           return false

@@ -1686,7 +1686,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     if (emitEvent) {
       this.emit('hide-views')
       // give the views some time to handle the event
-      await wait(15)
+      await wait(10)
     }
 
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)

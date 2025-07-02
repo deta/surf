@@ -57,6 +57,7 @@
   export let webContentsId = writable<number | null>(null)
   export let webContentsWrapper: HTMLDivElement | null = null
   export let isOverlay = false
+  export let isLoading: Writable<boolean>
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -72,6 +73,7 @@
   let eventListeners: Array<WebContentsViewEventListener> = []
   let isActivated = active
   let backgroundImage: string | null = null
+  let backgroundImageQuality: 'low' | 'medium' | 'high' = 'low'
 
   $: cleanID = id.replace('webview-', '')
 
@@ -230,17 +232,16 @@
     })
   }
 
-  export const refreshBackgroundImage = async () => {
+  export const refreshBackgroundImage = async (quality: 'low' | 'medium' | 'high' = 'low') => {
     const dataURL = await window.api.webContentsViewAction(
       cleanID,
       WebContentsViewActionType.CAPTURE_PAGE,
-      {}
+      { quality }
     )
+
     if (dataURL) {
-      log.debug('Setting background image for web contents view', cleanID)
       backgroundImage = `url(${dataURL})`
-    } else {
-      log.warn('No data URL returned for captured page')
+      backgroundImageQuality = quality
     }
   }
 
@@ -277,6 +278,7 @@
     }
 
     log.debug('Initializing web contents view with ID', cleanID, 'and source', src)
+    isLoading.set(true)
 
     const bounds = webContentsWrapper.getBoundingClientRect()
 
@@ -367,9 +369,13 @@
       resizeObserver.disconnect()
     })
 
-    const unsubHideViews = tabsManager.on('hide-views', () => {
+    const unsubHideViews = tabsManager.on('hide-views', async () => {
       if (tabsManager.activeTabIdValue === cleanID || (isOverlay && active)) {
-        refreshBackgroundImage()
+        await refreshBackgroundImage('low')
+
+        if (tabsManager.showNewTabOverlayValue === 1) {
+          await refreshBackgroundImage('high')
+        }
       }
     })
 
@@ -445,9 +451,9 @@
 
 <div
   id="webcontentsview-container"
-  class="webcontentsview-container"
+  class="webcontentsview-container quality-{backgroundImageQuality}"
   bind:this={webContentsWrapper}
-  style="--background-image: {backgroundImage};"
+  style="--background-image: {backgroundImage || 'white'};"
 ></div>
 
 <style lang="scss">
@@ -458,6 +464,15 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    filter: blur(2px);
+    filter: blur(0);
+    transition: filter 0.2s ease-in-out;
+
+    &:not(:active) {
+      filter: blur(2px);
+    }
+  }
+
+  :global(.screen-picker-active .webcontentsview-container) {
+    filter: none !important;
   }
 </style>
