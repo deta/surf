@@ -188,9 +188,14 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     this.offloadTabsTimeouts = new Map()
 
     this.shouldHideViews = derived(
-      [this.viewStates, this.desktopManager.activeDesktopVisible],
-      ([$viewStates, $activeDesktopVisible]) => {
-        return $viewStates.popupOpen || $viewStates.miniBrowserOpen || $activeDesktopVisible
+      [this.showNewTabOverlay, this.viewStates, this.desktopManager.activeDesktopVisible],
+      ([$showNewTabOverlay, $viewStates, $activeDesktopVisible]) => {
+        return (
+          $showNewTabOverlay !== 0 ||
+          $viewStates.popupOpen ||
+          $viewStates.miniBrowserOpen ||
+          $activeDesktopVisible
+        )
       }
     )
 
