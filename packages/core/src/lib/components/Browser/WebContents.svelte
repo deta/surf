@@ -367,11 +367,13 @@
       resizeObserver.disconnect()
     })
 
-    tabsManager.on('hide-views', () => {
+    const unsubHideViews = tabsManager.on('hide-views', () => {
       if (tabsManager.activeTabIdValue === cleanID || (isOverlay && active)) {
         refreshBackgroundImage()
       }
     })
+
+    unsub.push(unsubHideViews)
 
     // const activeTabId = tabsManager.activeTabId
     // let prevId = tabsManager.activeTabIdValue

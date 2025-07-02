@@ -410,8 +410,8 @@
 
   $: log.debug('globalMiniBrowserIsOpen', $globalMiniBrowserIsOpen, $activeTabMiniBrowserIsOpen)
 
-  $: if ($showNewTabOverlay !== 0) {
-    tabsManager.hideViews()
+  $: if ($showNewTabOverlay !== 0 || $desktopVisible) {
+    tabsManager.hideViews($showNewTabOverlay !== 0)
   } else {
     tabsManager.showViews()
   }
