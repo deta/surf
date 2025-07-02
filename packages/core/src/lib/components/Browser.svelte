@@ -5378,11 +5378,11 @@
       opacity: 100%;
     }
 
-    --corner-radii: 0.75rem;
-    :global(body:has(.horizontalTabs)) & {
-      border-top-left-radius: var(--corner-radii) !important;
-      border-top-right-radius: var(--corner-radii) !important;
-    }
+    // --corner-radii: 0.75rem;
+    // :global(body:has(.horizontalTabs)) & {
+    //   border-top-left-radius: var(--corner-radii) !important;
+    //   border-top-right-radius: var(--corner-radii) !important;
+    // }
 
     // :global(body:has(.verticalTabs)) & {
     //   border-radius: var(--corner-radii) !important;
