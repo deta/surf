@@ -37,7 +37,7 @@
   let listElemHeight = 0
   let closeTimeout: ReturnType<typeof setTimeout>
   let openTimeout: ReturnType<typeof setTimeout>
-  let oldOpen = $open
+  let oldOpen: boolean | null = null
 
   const filterdItems = derived([items, searchValue], ([$items, $searchValue]) => {
     if (search === 'manual' || search === 'disabled' || !$searchValue) return $items
