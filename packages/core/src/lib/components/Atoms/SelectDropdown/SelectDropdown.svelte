@@ -45,11 +45,11 @@
   })
 
   const handleOpen = async () => {
-    tabsManager.hideViews()
+    tabsManager.changeViewState({ popupOpen: true })
   }
 
   const handleClose = () => {
-    tabsManager.showViews()
+    tabsManager.changeViewState({ popupOpen: false })
   }
 
   const handleKeyDown = (e: CustomEventHandler<KeyboardEvent, HTMLDivElement>) => {

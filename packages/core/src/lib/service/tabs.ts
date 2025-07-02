@@ -97,6 +97,11 @@ class ClosedTabs {
   }
 }
 
+export type TabsViewStates = {
+  popupOpen: boolean
+  miniBrowserOpen: boolean
+}
+
 export class TabsManager extends EventEmitterBase<TabEvents> {
   private log: ReturnType<typeof useLogScope>
   private db: HorizonStore<Tab>
@@ -121,6 +126,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   activeScopeId: Writable<string | null>
   scopedActiveTabs: Writable<TabScopeObject[]>
   lastUsedScopes: Writable<string[]>
+  viewStates: Writable<TabsViewStates>
 
   offloadTabsTimeouts: Map<string, ReturnType<typeof setTimeout>>
 
@@ -131,6 +137,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
   spaceTabCounts: Readable<Record<string, number>>
+  shouldHideViews: Readable<boolean>
 
   static self: TabsManager
 
@@ -173,7 +180,19 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
       errors: []
     })
 
+    this.viewStates = writable({
+      popupOpen: false,
+      miniBrowserOpen: false
+    })
+
     this.offloadTabsTimeouts = new Map()
+
+    this.shouldHideViews = derived(
+      [this.viewStates, this.desktopManager.activeDesktopVisible],
+      ([$viewStates, $activeDesktopVisible]) => {
+        return $viewStates.popupOpen || $viewStates.miniBrowserOpen || $activeDesktopVisible
+      }
+    )
 
     this.activeTab = derived([this.tabs, this.activeTabId], ([tabs, activeTabId]) => {
       return tabs.find((tab) => tab.id === activeTabId)
@@ -1643,6 +1662,14 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     const resource = await browserTab.bookmarkPage(options)
 
     return { resource: resource, isNew: true }
+  }
+
+  async changeViewState(changes: Partial<TabsViewStates>) {
+    this.viewStates.update((state) => {
+      const newState = { ...state, ...changes }
+      this.log.debug('Changing view state', newState)
+      return newState
+    })
   }
 
   async showViews() {

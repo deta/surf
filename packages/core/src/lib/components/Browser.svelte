@@ -285,6 +285,7 @@
   const spaces = oasis.spaces
   const sortedSpaces = oasis.sortedSpacesListFlat
   const selectedSpace = oasis.selectedSpace
+  const shouldHideViews = tabsManager.shouldHideViews
 
   let showLeftSidebar = $userConfigSettings.tab_bar_visible ?? true
 
@@ -410,8 +411,8 @@
 
   $: log.debug('globalMiniBrowserIsOpen', $globalMiniBrowserIsOpen, $activeTabMiniBrowserIsOpen)
 
-  $: if ($showNewTabOverlay !== 0 || $desktopVisible) {
-    tabsManager.hideViews($showNewTabOverlay !== 0)
+  $: if ($shouldHideViews) {
+    tabsManager.hideViews(!$desktopVisible)
   } else {
     tabsManager.showViews()
   }
