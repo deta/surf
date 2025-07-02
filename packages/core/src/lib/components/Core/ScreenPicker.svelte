@@ -295,8 +295,7 @@
       hasParent(e.target, toolboxEl) ||
       hasParent(e.target, chatboxEl) ||
       hasParent(e.target, appsEl) ||
-      showAddPromptDialog ||
-      e.target?.closest('[data-screen-picker-ignore]')
+      showAddPromptDialog
     ) {
       $state.resizeDirection = undefined
       reset()
