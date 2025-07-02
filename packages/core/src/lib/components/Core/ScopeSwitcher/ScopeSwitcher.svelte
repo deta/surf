@@ -38,13 +38,13 @@
   const activeScopeId = tabsManager.activeScopeId
   const lastUsedScopes = tabsManager.lastUsedScopes
   const desktopVisible = desktopManager.activeDesktopVisible
+  const showBrowsingContextSelector = tabsManager.showBrowsingContextSelector
 
   const focused = writable(false)
   const editName = writable(false)
   const searchValue = writable('')
   const titleHovered = writable(false)
   const forceShowTitle = writable(false)
-  const showBrowsingContextSelector = writable(false)
   const dropdownOpen = writable(false)
 
   let inputElem: HTMLInputElement

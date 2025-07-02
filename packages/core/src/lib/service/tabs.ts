@@ -98,6 +98,7 @@ class ClosedTabs {
 }
 
 export type TabsViewStates = {
+  extensionPopupOpen: boolean
   popupOpen: boolean
   miniBrowserOpen: boolean
 }
@@ -126,6 +127,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   activeScopeId: Writable<string | null>
   scopedActiveTabs: Writable<TabScopeObject[]>
   lastUsedScopes: Writable<string[]>
+  showBrowsingContextSelector: Writable<boolean>
   viewStates: Writable<TabsViewStates>
 
   offloadTabsTimeouts: Map<string, ReturnType<typeof setTimeout>>
@@ -179,8 +181,9 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
       responses: [],
       errors: []
     })
-
+    this.showBrowsingContextSelector = writable(false)
     this.viewStates = writable({
+      extensionPopupOpen: false,
       popupOpen: false,
       miniBrowserOpen: false
     })
@@ -188,13 +191,20 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     this.offloadTabsTimeouts = new Map()
 
     this.shouldHideViews = derived(
-      [this.showNewTabOverlay, this.viewStates, this.desktopManager.activeDesktopVisible],
-      ([$showNewTabOverlay, $viewStates, $activeDesktopVisible]) => {
+      [
+        this.showNewTabOverlay,
+        this.viewStates,
+        this.desktopManager.activeDesktopVisible,
+        this.showBrowsingContextSelector
+      ],
+      ([$showNewTabOverlay, $viewStates, $activeDesktopVisible, $showBrowsingContextSelector]) => {
         return (
           $showNewTabOverlay !== 0 ||
           $viewStates.popupOpen ||
+          $viewStates.extensionPopupOpen ||
           $viewStates.miniBrowserOpen ||
-          $activeDesktopVisible
+          $activeDesktopVisible ||
+          $showBrowsingContextSelector
         )
       }
     )

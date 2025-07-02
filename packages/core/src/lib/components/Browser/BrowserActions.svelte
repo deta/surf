@@ -187,7 +187,7 @@
       </Tooltip.Content>
     </Tooltip.Root>
     {#if horizontalTabs}
-      <ExtensionBrowserActions on:open-extension-store />
+      <ExtensionBrowserActions horizontalTabs on:open-extension-store />
     {/if}
   </div>
 </div>

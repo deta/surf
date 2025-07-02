@@ -5,9 +5,23 @@
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable, derived } from 'svelte/store'
   import AppBarButton from './AppBarButton.svelte'
+  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 
+  export let horizontalTabs: boolean = false
+
+  const tabsManager = useTabsManager()
+
+  const popoverOpened = writable(false)
   const extensions = writable<any[]>([])
   const hasNoExtensionsEnabled = derived(extensions, ($extensions) => $extensions.length === 0)
+
+  $: if (horizontalTabs) {
+    if ($popoverOpened) {
+      tabsManager.changeViewState({ extensionPopupOpen: true })
+    } else {
+      tabsManager.changeViewState({ extensionPopupOpen: false })
+    }
+  }
 
   async function updateExtensionState() {
     try {
@@ -43,6 +57,7 @@
 </script>
 
 <CustomPopover
+  {popoverOpened}
   disableHover={false}
   toggleOnClick={true}
   position="bottom"
