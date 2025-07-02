@@ -37,6 +37,7 @@
   let listElemHeight = 0
   let closeTimeout: ReturnType<typeof setTimeout>
   let openTimeout: ReturnType<typeof setTimeout>
+  let oldOpen = $open
 
   const filterdItems = derived([items, searchValue], ([$items, $searchValue]) => {
     if (search === 'manual' || search === 'disabled' || !$searchValue) return $items
@@ -91,7 +92,7 @@
   }
 
   const handleContentMouseLeave = (_e: MouseEvent) => {
-    if (closeOnMouseLeave) {
+    if (closeOnMouseLeave && $open) {
       handleClose()
       handleMouseLeave(_e)
     }
@@ -140,10 +141,13 @@
 
   $: checkOverflow($filterdItems)
 
-  $: if ($open) {
-    handleOpen()
-  } else {
-    handleClose()
+  $: if (oldOpen !== $open) {
+    oldOpen = $open
+    if ($open) {
+      handleOpen()
+    } else {
+      handleClose()
+    }
   }
 
   onMount(() => {
