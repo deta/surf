@@ -180,11 +180,14 @@
   import ContextMenuItems from './ContextMenuItems.svelte'
   import log from '@horizon/utils/src/log'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   export let targetX: number
   export let targetY: number
   export let targetEl: HTMLElement | null
   export let items: CtxItem[] = []
+
+  const viewManager = useTabsViewManager()
 
   let ref: HTMLDialogElement | null = null
   onMount(async () => {
@@ -213,6 +216,25 @@
       const edgeOffset = window.innerHeight - targetY
       targetY = window.innerHeight - height - edgeOffset
     }
+
+    // check if the context menu would overlap with the active webcontents view
+    // and if so notify the view manager that the right click menu is open
+    const activeWebview = document.querySelector(
+      '.browser-window.active .webcontentsview-container'
+    )
+    if (activeWebview) {
+      const rect = activeWebview.getBoundingClientRect()
+      if (
+        targetX < rect.right &&
+        targetX + width > rect.left &&
+        targetY < rect.bottom &&
+        targetY + height > rect.top
+      ) {
+        viewManager.changeOverlayState({
+          rightClickMenuOpen: true
+        })
+      }
+    }
   })
   onDestroy(() => {
     if (ref) {
@@ -221,6 +243,10 @@
     if (targetEl) {
       targetEl.removeAttribute('data-context-menu-anchor')
     }
+
+    viewManager.changeOverlayState({
+      rightClickMenuOpen: false
+    })
   })
 </script>
 
