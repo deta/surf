@@ -19,7 +19,6 @@ export type PermissionCache = {
   [sessionId: string]: PermissionDecision
 }
 
-const BROWSER_CONFIG_NAME = 'browser.json'
 const USER_CONFIG_NAME = 'user.json'
 const USER_STATS_NAME = 'user_stats.json'
 const PERMISSION_CONFIG_NAME = 'permissions.json'
@@ -76,6 +75,7 @@ export const getUserConfig = (path?: string) => {
   if (!storedConfig.user_id) {
     storedConfig.user_id = uuidv4()
     storedConfig.defaultBrowser = false
+    storedConfig.show_changelog = false
     setUserConfig(storedConfig as UserConfig)
   }
 
