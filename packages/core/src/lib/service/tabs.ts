@@ -386,7 +386,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     this.tabs.update((tabs) => [...tabs, newTab])
 
     // Only activate tabs that are opened in our current scope
-    if (opts?.scopeId === this.activeScopeIdValue) {
+    if (newTab?.scopeId === this.activeScopeIdValue) {
       this.activatedTabs.update((tabs) => [...tabs, newTab.id])
     }
 
