@@ -347,6 +347,10 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     return get(this.activeBrowserTab)
   }
 
+  get viewStatesValue() {
+    return get(this.viewStates)
+  }
+
   private addToActiveTabsHistory(tabId: string) {
     this.activeTabsHistory.update((history) => {
       if (history[history.length - 1] !== tabId) {
@@ -1682,7 +1686,6 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   async changeViewState(changes: Partial<TabsViewStates>) {
     this.viewStates.update((state) => {
       const newState = { ...state, ...changes }
-      this.log.debug('Changing view state', newState)
       return newState
     })
   }
