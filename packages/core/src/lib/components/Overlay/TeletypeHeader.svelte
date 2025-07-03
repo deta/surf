@@ -6,6 +6,7 @@
   import { useTabsManager } from '../../service/tabs'
   import { tooltip, isMac } from '@horizon/utils'
 
+  export let editMode: boolean = false
   export let showActionsPanel: Writable<boolean>
 
   const dispatch = createEventDispatcher<{
@@ -23,32 +24,60 @@
 
 <div class="tty-header-wrapper">
   <div class="header-actions">
-    <div class="leading">
+    {#if editMode}
+      <div class="leading">
+        <button
+          class="header-btn"
+          on:click|stopPropagation={() => dispatch('copy-tab-url')}
+          use:tooltip={{
+            text: `${isMac() ? '⌘' : 'Ctrl'} + Shift + C`,
+            position: 'top'
+          }}
+        >
+          <Icon name="copy" size="20px" />
+          <span>Copy URL</span>
+        </button>
+      </div>
+
       <button
         class="header-btn"
-        on:click|stopPropagation={() => dispatch('create-note')}
+        on:click|stopPropagation={() => dispatch('ask')}
         use:tooltip={{
-          text: `${isMac() ? '⌘' : 'Ctrl'} + N`,
+          text: `${isMac() ? '⌘' : 'Ctrl'} + E`,
           position: 'top'
         }}
       >
-        <div class="create-note">
-          <span>Surf Note</span>
-          <Icon name="plus.boxed" />
-        </div>
+        <span>Ask Tab</span>
+        <Icon name="face" size="26px" />
       </button>
-      {#if !$showActionsPanel}
-        <button class="chevron-wrpper" on:click={() => dispatch('create')}>
-          <Icon name="chevron.down" />
+    {:else}
+      <div class="leading">
+        <button
+          class="header-btn"
+          on:click|stopPropagation={() => dispatch('create-note')}
+          use:tooltip={{
+            text: `${isMac() ? '⌘' : 'Ctrl'} + N`,
+            position: 'top'
+          }}
+        >
+          <div class="create-note">
+            <Icon name="plus.boxed" size="27px" />
+            <span>Surf Note</span>
+          </div>
         </button>
-      {/if}
-    </div>
-    {#key $scope}
-      <button class="header-btn" on:click|stopPropagation={() => dispatch('ask')}>
-        <Icon name="face" size="28px" />
-        <span>Ask</span>
-      </button>
-    {/key}
+        {#if !$showActionsPanel}
+          <button class="chevron-wrpper" on:click={() => dispatch('create')}>
+            <Icon name="chevron.down" />
+          </button>
+        {/if}
+      </div>
+      {#key $scope}
+        <button class="header-btn" on:click|stopPropagation={() => dispatch('ask')}>
+          <span>Ask</span>
+          <Icon name="face" size="26px" />
+        </button>
+      {/key}
+    {/if}
   </div>
 </div>
 
@@ -89,14 +118,15 @@
 
     .header-btn {
       display: flex;
-      padding: 0.5rem 0.75rem;
+      padding: 0.25rem 0.5rem;
       justify-content: space-between;
       align-items: center;
-      font-size: 1.125rem;
-      gap: 0.25rem;
+      font-size: 1rem;
+      gap: 0.5rem;
       border-radius: 11px;
       line-height: 1;
       color: var(--text);
+      height: 100%;
 
       .create-note {
         display: flex;

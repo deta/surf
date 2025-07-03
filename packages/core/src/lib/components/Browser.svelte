@@ -192,12 +192,15 @@
   import BrowsingContextSelector from './Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
   import { BuiltInSpaceId } from '../constants/spaces'
   import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import type { TeletypeSystem } from '@deta/teletype/src'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
   let showRightSidebar = false
   let annotationsSidebar: AnnotationsSidebar
   let magicSidebar: any
+  let teletypeEntry: TeletypeEntry
+  let teletype: TeletypeSystem
 
   // Register the MagicSidebar with the onboarding service when it's initialized
   $: if (magicSidebar && onboardingService) {
@@ -339,6 +342,8 @@
 
   // on windows and linux the custom window actions are shown in the tab bar
   const showCustomWindowActions = !isMac()
+
+  $: teletypeEditMode = teletype?.editMode
 
   $: desktopColorScheme = $activeDesktopColorScheme
   $: {
@@ -495,10 +500,9 @@
   }
 
   let blockBlurHandler = false
-  const handleBlur = () => {
-    if (blockBlurHandler) {
-      return
-    }
+  const handleBlur = (providedUrl?: string) => {
+    if (typeof providedUrl !== 'string') providedUrl = undefined
+    if (blockBlurHandler) return
 
     blockBlurHandler = true
     setTimeout(() => {
@@ -507,7 +511,7 @@
 
     addressBarFocus.set(false)
 
-    let addressVal = activeTabComponent && get(activeTabComponent?.inputUrl)
+    let addressVal = providedUrl || (activeTabComponent && get(activeTabComponent?.inputUrl))
     log.debug('Address bar blur', addressVal)
 
     if (!addressVal) {
@@ -542,7 +546,7 @@
 
   const handleFocus = () => {
     addressBarFocus.set(true)
-    activeTabComponent?.editAddress()
+    hanldeEdit()
   }
 
   const getActiveMiniBrowser = () => {
@@ -844,6 +848,8 @@
       debouncedCycleActiveTab(e.shiftKey)
     } else if (isModKeyAndKeyPressed(e, 'l') && !e.shiftKey) {
       handleEdit()
+    } else if (isModKeyAndKeyPressed(e, 't') && !e.shiftKey) {
+      teletypeEntry.setEditMode(false)
     } else if (isModKeyAndKeyPressed(e, 'j')) {
       handleRename()
     } else if (isModKeyAndKeyPressed(e, 'y')) {
@@ -3473,9 +3479,21 @@
 
   const handleEdit = async () => {
     await tick()
-    setShowNewTabOverlay(0)
-    activeTabComponent?.editAddress()
-    handleFocus()
+    if ($showNewTabOverlay === 1) {
+      setShowNewTabOverlay(0)
+      return
+    } else {
+      setShowNewTabOverlay(1)
+    }
+
+    await tick()
+
+    const location = $activeTabLocation
+    if (location) {
+      teletypeEntry.openInEditMode(location)
+      await tick()
+      teletypeEntry.selectAllInputText()
+    }
   }
 
   const handleRename = async () => {
@@ -4156,7 +4174,7 @@
   rootID="body"
 />
 
-{#if $showScreenshotPicker === true || $showNewTabOverlay === 1}
+{#if $showScreenshotPicker === true || ($showNewTabOverlay === 1 && !$teletypeEditMode)}
   <ScreenPicker
     mode="standalone"
     fromTty={$showNewTabOverlay === 1}
@@ -4178,18 +4196,30 @@
 />
 
 {#if $showNewTabOverlay == 1}
-  <div class="teletype-motion fixed bottom-0 left-0 right-0 z-[5001] h-[1px]">
+  <div
+    class={$teletypeEditMode
+      ? ''
+      : 'teletype-motion fixed bottom-0 left-0 right-0 z-[5001] h-[1px]'}
+  >
     <TeletypeEntry
+      bind:this={teletypeEntry}
+      bind:teletype
       open={$showNewTabOverlay == 1}
       on:close={() => {
         showNewTabOverlay.set(0)
       }}
       on:ask={handleCreateChatWithQuery}
       on:open-url={(e) => {
-        tabsManager.addPageTab(e.detail, {
-          active: true,
-          trigger: CreateTabEventTrigger.AddressBar
-        })
+        const { editMode, url } = e.detail
+        if (editMode) {
+          handleBlur(url)
+          teletypeEntry.setEditMode(false)
+        } else {
+          tabsManager.addPageTab(url, {
+            active: true,
+            trigger: CreateTabEventTrigger.AddressBar
+          })
+        }
       }}
       on:open-url-in-minibrowser={openURLDetailsModal}
       on:open-resource-in-minibrowser={(e) =>
@@ -4234,6 +4264,7 @@
         showNewTabOverlay.set(0)
         openScreenshotPicker()
       }}
+      on:copy-tab-url={handleCopyLocation}
     />
   </div>
 {/if}
@@ -4447,7 +4478,7 @@
                   {:else}
                     {#each $pinnedTabs as tab, index (tab.id + index)}
                       <TabItem
-                        removeHighlight={$showNewTabOverlay !== 0}
+                        removeHighlight={$showNewTabOverlay !== 0 && !$teletypeEditMode}
                         {tab}
                         {horizontalTabs}
                         {activeTabId}
@@ -4570,7 +4601,7 @@
                     <!-- check if this tab is active -->
                     {#if $activeTabId === tab.id}
                       <TabItem
-                        removeHighlight={$showNewTabOverlay !== 0}
+                        removeHighlight={$showNewTabOverlay !== 0 && !$teletypeEditMode}
                         showClose
                         tabSize={Math.min(300, Math.max(24, tabSize)) +
                           0.5 * Math.min(tabSize, 200)}
@@ -4673,7 +4704,7 @@
                     <!-- check if this tab is active -->
                     {#if $activeTabId === tab.id}
                       <TabItem
-                        removeHighlight={$showNewTabOverlay !== 0}
+                        removeHighlight={$showNewTabOverlay !== 0 && !$teletypeEditMode}
                         showClose
                         horizontalTabs={false}
                         {tab}
@@ -4762,7 +4793,7 @@
                       class="new-tab-button transform select-none no-drag active:scale-95 space-x-2 {horizontalTabs
                         ? 'w-fit rounded-xl p-2'
                         : 'w-full rounded-2xl px-4 py-2.5'} appearance-none select-none outline-none border-0 margin-0 group flex items-center"
-                      class:active={$showNewTabOverlay === 1}
+                      class:active={$showNewTabOverlay === 1 && !$teletypeEditMode}
                       on:click|preventDefault={() => tabsManager.showNewTab()}
                     >
                       <Icon name="add" />
@@ -4787,7 +4818,7 @@
                     ? 'w-fit rounded-xl p-2'
                     : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
                   on:click|preventDefault={() => tabsManager.showNewTab()}
-                  class:active={$showNewTabOverlay === 1}
+                  class:active={$showNewTabOverlay === 1 && !$teletypeEditMode}
                   class:opacity-100={$showEndMask || horizontalTabs}
                   class:opacity-0={!$showEndMask}
                   class:pointer-events-auto={$showEndMask || horizontalTabs}
@@ -4823,7 +4854,7 @@
                             ? 'w-fit rounded-xl p-2'
                             : 'w-full rounded-2xl px-4 py-3'} appearance-none border-0 margin-0 group flex items-center"
                           on:click|preventDefault={() => tabsManager.showNewTab()}
-                          class:active={$showNewTabOverlay === 1}
+                          class:active={$showNewTabOverlay === 1 && !$teletypeEditMode}
                           class:opacity-100={$showEndMask || horizontalTabs}
                           class:opacity-0={!$showEndMask}
                           class:pointer-events-auto={$showEndMask || horizontalTabs}

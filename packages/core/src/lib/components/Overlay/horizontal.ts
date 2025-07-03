@@ -66,6 +66,8 @@ const createDefaultAction = (result: TeletypeStaticAction): HandlerAction => {
     keywords: result.keywords || [],
     selectPriority: result.selectPriority || ActionSelectPriority.NORMAL,
     displayPriority: result.displayPriority || ActionDisplayPriority.LOW,
+    actionIcon: result.actionIcon,
+    actionText: result.actionText,
     actionPanel: result.actionPanel,
     handler: async () => {
       try {

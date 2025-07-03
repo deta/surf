@@ -78,31 +78,35 @@ export const searchActionToTeletypeItem = (searchQuery: string) => ({
   handler: createExecutioner(TeletypeAction.NavigateGeneralSearch, { query: searchQuery })
 })
 
-export const navigateActionToTeletypeItem = (searchValue: string) => {
+export const navigateActionToTeletypeItem = (searchValue: string, isEditMode = false) => {
   const url = parseStringIntoBrowserLocation(searchValue)
 
   return {
     id: 'navigate',
-    name: `Navigate to ${searchValue}`,
+    name: `${searchValue}`,
     icon: 'world',
     execute: TeletypeAction.NavigateURL,
     section: 'Navigate',
     selectPriority: ActionSelectPriority.HIGHEST,
     displayPriority: ActionDisplayPriority.HIGH,
-    actionText: 'Open as Tab',
-    actionPanel: [
-      createSecondaryAction({
-        id: 'open-url-in-mini-browser',
-        name: 'Open in Mini-Browser',
-        handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
-      }),
-      {
-        id: `copy-url`,
-        name: 'Copy URL',
-        icon: 'copy',
-        handler: createExecutioner(TeletypeAction.CopyURL, { url })
-      }
-    ],
+    ...(isEditMode
+      ? {}
+      : {
+          actionText: 'Open as Tab',
+          actionPanel: [
+            createSecondaryAction({
+              id: 'open-url-in-mini-browser',
+              name: 'Open in Mini-Browser',
+              handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+            }),
+            {
+              id: `copy-url`,
+              name: 'Copy URL',
+              icon: 'copy',
+              handler: createExecutioner(TeletypeAction.CopyURL, { url })
+            }
+          ]
+        }),
     handler: createExecutioner(TeletypeAction.NavigateURL, { url })
   }
 }

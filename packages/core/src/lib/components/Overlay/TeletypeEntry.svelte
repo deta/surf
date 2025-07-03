@@ -2,7 +2,7 @@
   // prettier-ignore
   export type TeletypeEntryEvents = {
     'ask': string | undefined
-    'open-url': string
+    'open-url': { editMode: boolean, url: string }
     'open-url-in-minibrowser': string
     'open-resource-in-minibrowser': string
     'open-space': any
@@ -66,6 +66,7 @@
   import { type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
   export let open: boolean
+  export let teletype: TeletypeSystem
 
   const log = useLogScope('TeletypeEntry')
   const config = useConfig()
@@ -79,7 +80,6 @@
 
   const selectedSpace = oasis.selectedSpace
 
-  let teletype: TeletypeSystem
   let unsubscribe: () => void
 
   const showWhatsNew = showFeatureModal
@@ -112,10 +112,30 @@
     }
   ]
 
+  $: editMode = teletype?.editMode
+  $: actions = teletype?.actions
+
   $: if (open) {
     teletype?.open()
   } else {
     teletype?.close()
+  }
+
+  export const setEditMode = (flag: boolean) => {
+    teletype?.setEditMode(flag)
+  }
+
+  export const openInEditMode = (text: string) => {
+    log.debug('Opening Teletype in edit mode with text:', text)
+    teletype?.openWithText(text)
+    teletype?.setEditMode(true)
+  }
+
+  export const selectAllInputText = () => {
+    const inputElement = document.getElementById('teletype-input-default')
+    if (inputElement instanceof HTMLInputElement || inputElement instanceof HTMLTextAreaElement) {
+      inputElement.select()
+    }
   }
 
   const handleInput = (e: CustomEvent) => {
@@ -126,8 +146,10 @@
   const handleShowActionPanel = (event: CustomEvent<boolean>) => {
     showActionsPanel.set(event.detail)
   }
+
   const handleSearch = async (value: string) => {
     log.debug('Search:', value)
+    const editMode = get(teletype?.editMode) || false
     const askActions = get(commandComposer.askActions)
     const stuffActions = get(commandComposer.stuffActions)
     const createActions = get(commandComposer.createActionsTeletype)
@@ -165,14 +187,21 @@
         const dynamicActions = await createActionsFromResults(searchResults, resourceManager, oasis)
         await tick()
 
-        teletype.setActions([
-          ...stuffActions,
-          ...updatedStaticActions,
-          ...dynamicActions,
-          ...askActions
-        ])
+        let availableActions
+        if (editMode) {
+          availableActions = [...updatedStaticActions, ...dynamicActions]
+        } else {
+          availableActions = [
+            ...stuffActions,
+            ...updatedStaticActions,
+            ...dynamicActions,
+            ...askActions
+          ]
+        }
+
+        teletype.setActions(availableActions)
       } else {
-        teletype.setActions(updatedStaticActions)
+        teletype.setActions(editMode ? [] : updatedStaticActions)
       }
     } finally {
       teletype.setLoading(false)
@@ -191,17 +220,18 @@
 
   // Event handlers for each action type
   const handleGeneralSearch: TeletypeActionHandler<{ query: string }> = (payload) => {
+    const editMode = get(teletype?.editMode) || false
     const isValidURL =
       optimisticCheckIfURLOrIPorFile(payload.query) || optimisticCheckIfUrl(payload.query)
     if (isValidURL) {
-      dispatch('open-url', prependProtocol(payload.query))
+      dispatch('open-url', { editMode, url: prependProtocol(payload.query) })
     } else {
       const engine =
         SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
         SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
       if (!engine) throw new Error('No search engine / default engine found, config error?')
       log.debug('engine', engine)
-      dispatch('open-url', engine.getUrl(encodeURIComponent(payload.query)))
+      dispatch('open-url', { editMode, url: engine.getUrl(encodeURIComponent(payload.query)) })
     }
   }
 
@@ -254,6 +284,7 @@
       log.error('Invalid URL:', payload.url)
       return
     }
+    const editMode = get(teletype?.editMode) || false
 
     if (currentValidUrl) {
       log.debug('Using current valid URL:', currentValidUrl)
@@ -261,7 +292,10 @@
       log.debug('Using payload valid URL:', payloadValidUrl)
     }
 
-    dispatch('open-url', validUrl)
+    dispatch('open-url', {
+      editMode,
+      url: validUrl
+    })
   }
 
   const handleOpenURLInMiniBrowser: TeletypeActionHandler<{ url: string }> = (payload) => {
@@ -281,12 +315,13 @@
   }
 
   const handleOpenSuggestionAsTab: TeletypeActionHandler<{ suggestion: string }> = (payload) => {
+    const editMode = get(teletype?.editMode) || false
     const engine =
       SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
       SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
     if (!engine) throw new Error('No search engine / default engine found, config error?')
 
-    dispatch('open-url', engine.getUrl(encodeURIComponent(payload.suggestion)))
+    dispatch('open-url', { editMode, url: engine.getUrl(encodeURIComponent(payload.suggestion)) })
   }
 
   const handleCopySuggestion: TeletypeActionHandler<{ suggestion: string }> = async (payload) => {
@@ -320,11 +355,13 @@
   }
 
   const handleHistory: TeletypeActionHandler<{ entry: HistoryEntry }> = (payload) => {
-    dispatch('open-url', payload.entry.url ?? '')
+    const editMode = get(teletype?.editMode) || false
+    dispatch('open-url', { editMode, url: payload.entry.url ?? '' })
   }
 
   const handleSuggestionHostname: TeletypeActionHandler<{ entry: HistoryEntry }> = (payload) => {
-    dispatch('open-url', payload.entry.url ?? '')
+    const editMode = get(teletype?.editMode) || false
+    dispatch('open-url', { editMode, url: payload.entry.url ?? '' })
   }
 
   const handleResource: TeletypeActionHandler<{ resource: Resource }> = async (payload) => {
@@ -405,12 +442,13 @@
 
   const handleCreate: TeletypeActionHandler<{ id: string; url: string }> = (payload) => {
     const validUrl = parseStringIntoBrowserLocation(payload.url)
+    const editMode = get(teletype?.editMode) || false
     if (!validUrl) {
       log.error('Invalid URL:', payload.url)
       return
     }
 
-    dispatch('open-url', validUrl)
+    dispatch('open-url', { editMode, url: validUrl })
   }
 
   const handleRemoveHostnameSuggestion = async (payload: { entry: HistoryEntry }) => {
@@ -443,6 +481,10 @@
   }
 
   onMount(() => {
+    if (teletype) {
+      commandComposer.attachTeletype(teletype)
+    }
+
     const handlers = {
       [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
       [TeletypeAction.NavigateURL]: handleNavigate,
@@ -538,17 +580,21 @@
   <Teletype on:close on:input={handleInput} on:actions-rendered={handleShowActionPanel}>
     <div slot="header" class="custom-header">
       <TeletypeHeader
+        editMode={$editMode}
         on:ask={handleAsk}
         on:create={handleShowCreate}
         on:open-chat-with-tab
         on:open-space-and-chat
         on:openScreenshot
         on:create-note
+        on:copy-tab-url
         {showActionsPanel}
       />
     </div>
     <div slot="sidecar-right" class="tty-sidecar-right">
-      <DesktopPreview willReveal={true} desktopId={$selectedSpace} />
+      {#if !$editMode}
+        <DesktopPreview willReveal={true} desktopId={$selectedSpace} />
+      {/if}
     </div>
   </Teletype>
 </TeletypeProvider>
@@ -705,5 +751,11 @@
 
   :global(body.onboarding .teletype-motion .inner-wrapper) {
     bottom: -100% !important;
+  }
+
+  .edit-header {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0.5rem 0.1rem 1rem;
   }
 </style>

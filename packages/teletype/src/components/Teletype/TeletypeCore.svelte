@@ -31,6 +31,7 @@
   const animations = teletype.animations
   const showHelper = teletype.options?.showHelper
   const showActionPanel = teletype.showActionPanel
+  const editMode = teletype.editMode
 
   let showModalOverlay = false
   let modalContent: Action | null = null
@@ -439,7 +440,11 @@
     <div class="footer" on:click={() => !isModal && openTeletype()} tabindex={-1} role="none">
       <!-- svelte-ignore a11y-missing-attribute -->
       <div class="icon-wrapper">
-        <Icon name="search" size="24" color="--(text)" />
+        {#if $editMode}
+          <Icon name="edit" size="20" color="--(text)" />
+        {:else}
+          <Icon name="search" size="24" color="--(text)" />
+        {/if}
       </div>
       {#if isModal}
         <p>{$currentAction.footerText || 'Teletype'}</p>

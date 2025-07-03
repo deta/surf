@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, tick } from 'svelte'
 import { type Writable, writable, get } from 'svelte/store'
 
 import type {
@@ -34,6 +34,7 @@ class TeletypeCore {
   currentAction: Writable<Action>
   selectedAction: Writable<Action>
   inputValue: Writable<string>
+  editMode: Writable<boolean> = writable(false)
 
   constructor(opts?: Options, defaultActions?: Action[]) {
     const defaultOpts = {
@@ -70,6 +71,15 @@ class TeletypeCore {
     this.currentAction = writable(null)
     this.selectedAction = writable(null)
     this.inputValue = writable(null)
+    this.editMode = writable(false)
+  }
+
+  get editModeValue() {
+    return get(this.editMode)
+  }
+
+  get prefillInputValue() {
+    return get(this.prefillInput)
   }
 
   flattenActions(actions: Action[]) {
@@ -108,13 +118,21 @@ class TeletypeCore {
     this.isLoading.set(flag)
   }
 
+  setEditMode(flag: boolean) {
+    this.editMode.set(flag)
+  }
+
   open() {
     this.isOpen.set(true)
   }
 
-  openWithText(text: string) {
+  async openWithText(text: string) {
     this.prefillInput.set(text)
-    this.isOpen.set(true)
+    this.inputValue.set(text)
+
+    if (!get(this.isOpen)) {
+      this.isOpen.set(true)
+    }
   }
 
   showConfirmationPrompt(confirmation: Confirmation) {
@@ -254,6 +272,7 @@ class TeletypeCore {
     this.currentAction.set(null)
     this.selectedAction.set(null)
     this.isOpen.set(false)
+    this.prefillInput.set('')
   }
 
   toggle() {
