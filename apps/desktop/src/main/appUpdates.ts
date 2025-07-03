@@ -7,6 +7,7 @@ import { createAnnouncementsWindow } from './announcementsWindow'
 
 import type { Announcement } from '@horizon/types'
 import { AnnouncementsManager } from './announcements'
+import { updateUserConfig } from './config'
 
 let isSilent = false
 
@@ -121,6 +122,13 @@ function configureUpdaterEvents(updater: Updater) {
   })
 
   updater.on('update-downloaded', async () => {
+    try {
+      updateUserConfig({
+        show_changelog: true
+      })
+    } catch (e) {
+      console.warn('Error updating user config to show changelog after update:', e)
+    }
     closeUpdatesWindow()
     updater.quitAndInstall(false)
   })

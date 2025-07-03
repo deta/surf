@@ -272,6 +272,11 @@ const initializeApp = async () => {
 
     silentCheckForUpdates()
     setInterval(silentCheckForUpdates, 1000 * 60 * 30) // 30 minutes
+
+    if (userConfig.show_changelog) {
+      ipcSenders.openChangelog()
+      updateUserConfig({ show_changelog: false })
+    }
   })
 
   const mainWindow = getMainWindow()

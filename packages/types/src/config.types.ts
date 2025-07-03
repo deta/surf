@@ -10,6 +10,7 @@ export type UserConfig = {
   initialized_tabs: boolean
   settings: UserSettings
   activation_timestamp?: number
+  show_changelog: boolean
 }
 
 export type UserSettings = {
