@@ -194,6 +194,7 @@
   import { BuiltInSpaceId } from '../constants/spaces'
   import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
   import type { TeletypeSystem } from '@deta/teletype/src'
+  import { createViewManager } from '@horizon/core/src/lib/service/viewManager'
 
   let activeTabComponent: TabItem | null = null
   const addressBarFocus = writable(false)
@@ -267,6 +268,7 @@
   const onboardingService = provideOnboardingService(tabsManager)
 
   const aiService = provideAI(resourceManager, tabsManager, oasis, config, smartNotes)
+  const viewManager = createViewManager(tabsManager)
 
   onboardingService.attachAIService(aiService)
   smartNotes.attachAIService(aiService)
@@ -288,7 +290,7 @@
   const spaces = oasis.spaces
   const sortedSpaces = oasis.sortedSpacesListFlat
   const selectedSpace = oasis.selectedSpace
-  const shouldHideViews = tabsManager.shouldHideViews
+  const shouldHideViews = viewManager.shouldHideViews
 
   let showLeftSidebar = $userConfigSettings.tab_bar_visible ?? true
 
@@ -417,9 +419,9 @@
   $: log.debug('globalMiniBrowserIsOpen', $globalMiniBrowserIsOpen, $activeTabMiniBrowserIsOpen)
 
   $: if ($shouldHideViews) {
-    tabsManager.hideViews(!$desktopVisible)
+    viewManager.hideViews(!$desktopVisible)
   } else {
-    tabsManager.showViews()
+    viewManager.showViews()
   }
 
   const openResourceDetailsModal = async (

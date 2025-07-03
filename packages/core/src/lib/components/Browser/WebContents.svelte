@@ -22,30 +22,20 @@
 
 <script lang="ts">
   import { writable, type Writable } from 'svelte/store'
-  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
-  import { useConfig } from '../../service/config'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import {
     WebContentsViewEventType,
-    WebContentsViewManagerActionType,
     WebViewEventSendNames,
-    type WebContentsViewActionPayloads,
     type WebContentsViewEventListener,
     type WebContentsViewEventListenerCallback,
-    type WebContentsViewEventPayloads,
     type WebContentsViewEvents,
     type WebViewSendEvents
   } from '@horizon/types'
 
-  import type { HistoryEntriesManager } from '../../service/history'
-  import { useLogScope, wait } from '@horizon/utils'
-  import { useResourceManager } from '../../service/resources'
+  import { useLogScope } from '@horizon/utils'
   import type { NewWindowRequest } from '../../service/ipc/events'
-  import { WebContentsViewActionType } from '@horizon/types'
   import { useTabsManager } from '../../service/tabs'
-  import Tab from '@horizon/core/src/lib/components/Core/Tab.svelte'
-
-  const config = useConfig()
-  const userConfig = config.settings
+  import type { WebContentsView } from '@horizon/core/src/lib/service/viewManager'
 
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
@@ -56,14 +46,15 @@
   export let isReady = writable(false)
   export let webContentsId = writable<number | null>(null)
   export let webContentsWrapper: HTMLDivElement | null = null
-  export let isOverlay = false
+  export let webContentsView: WebContentsView | null = null
+  export let parentViewID: string | undefined = undefined
+  export let isOverlay: boolean = false
   export let isLoading: Writable<boolean>
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
   export const didFinishLoad = writable(false)
 
-  const resourceManager = useResourceManager()
   const tabsManager = useTabsManager()
 
   const log = useLogScope('WebContents')
@@ -72,10 +63,11 @@
   let currentBounds: DOMRect | null = null
   let eventListeners: Array<WebContentsViewEventListener> = []
   let isActivated = active
-  let backgroundImage: string | null = null
-  let backgroundImageQuality: 'low' | 'medium' | 'high' = 'low'
 
   $: cleanID = id.replace('webview-', '')
+
+  // why svelte, whyyyy?!
+  $: webContentsScreenshot = webContentsView !== null ? webContentsView?.screenshot : writable(null)
 
   /*
     EXPORTED WEBVIEW UTILITY FUNCTIONS
@@ -83,28 +75,26 @@
   export const navigate = async (targetUrl: string) => {
     try {
       log.debug('Navigating to', targetUrl)
-      window.api.webContentsViewAction(cleanID, WebContentsViewActionType.LOAD_URL, {
-        url: targetUrl
-      })
+      await webContentsView?.loadURL(targetUrl)
     } catch (error) {
       log.error('Error navigating', error)
     }
   }
 
   export const reload = (ignoreCache = false) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.RELOAD, { ignoreCache })
+    webContentsView?.reload(ignoreCache)
   }
 
   export const goBackInHistory = () => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_BACK)
+    webContentsView?.goBack()
   }
 
   export const goForwardInHistory = () => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GO_FORWARD)
+    webContentsView?.goForward()
   }
 
   export const insertText = (text: string) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.INSERT_TEXT, { text })
+    webContentsView?.insertText(text)
   }
 
   export const getBoundingClientRect = (): DOMRect | null => {
@@ -122,78 +112,56 @@
   }
 
   export const getURL = async () => {
-    const url = await window.api.webContentsViewAction(cleanID, WebContentsViewActionType.GET_URL)
-    return url
+    return webContentsView?.getURL()
   }
 
   export const focus = () => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.FOCUS)
+    webContentsView?.focus()
   }
 
   export const setAudioMuted = (muted: boolean) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.SET_AUDIO_MUTED, muted)
+    webContentsView?.setAudioMuted(muted)
   }
 
   export const setZoomFactor = (factor: number) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.SET_ZOOM_FACTOR, factor)
+    webContentsView?.setZoomFactor(factor)
   }
 
-  export const openDevTools = (
-    mode: WebContentsViewActionPayloads[WebContentsViewActionType.OPEN_DEV_TOOLS]['mode'] = 'right'
-  ) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.OPEN_DEV_TOOLS, { mode })
+  export const openDevTools = (mode: 'right' | 'bottom' | 'detach' = 'right') => {
+    webContentsView?.openDevTools(mode)
   }
 
   export const send = (channel: string, ...args: any[]) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.SEND, { channel, args })
+    webContentsView?.send(channel, ...args)
   }
 
   export const findInPage = (
     text: string,
     options?: { forward?: boolean; matchCase?: boolean; findNext?: boolean }
   ) => {
-    return window.api.webContentsViewAction(cleanID, WebContentsViewActionType.FIND_IN_PAGE, {
-      text,
-      options
-    })
+    return webContentsView?.findInPage(text, options)
   }
 
   export const stopFindInPage = (
     action: 'clearSelection' | 'keepSelection' | 'activateSelection'
   ) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.STOP_FIND_IN_PAGE, {
-      action
-    })
+    webContentsView?.stopFindInPage(action)
   }
 
   export const executeJavaScript = async (code: string, userGesture = false) => {
-    return window.api.webContentsViewAction(cleanID, WebContentsViewActionType.EXECUTE_JAVASCRIPT, {
-      code,
-      userGesture
-    })
+    return webContentsView?.executeJavaScript(code, userGesture)
   }
 
   export const downloadURL = async (url: string, options?: Electron.DownloadURLOptions) => {
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.DOWNLOAD_URL, {
-      url,
-      options
-    })
+    await webContentsView?.downloadURL(url, options)
   }
 
   export const isCurrentlyAudible = async () => {
-    const isAudible = await window.api.webContentsViewAction(
-      cleanID,
-      WebContentsViewActionType.IS_CURRENTLY_AUDIBLE
-    )
-    return isAudible
+    return webContentsView?.isCurrentlyAudible()
   }
 
   export const getNavigationHistory = async () => {
-    const history = await window.api.webContentsViewAction(
-      cleanID,
-      WebContentsViewActionType.GET_NAVIGATION_HISTORY
-    )
-    return history
+    return webContentsView?.getNavigationHistory()
   }
 
   export const addEventListener = <T extends WebContentsViewEventType>(
@@ -232,40 +200,6 @@
     })
   }
 
-  export const refreshBackgroundImage = async (quality: 'low' | 'medium' | 'high' = 'low') => {
-    const dataURL = await window.api.webContentsViewAction(
-      cleanID,
-      WebContentsViewActionType.CAPTURE_PAGE,
-      { quality }
-    )
-
-    if (dataURL) {
-      backgroundImage = `url(${dataURL})`
-      backgroundImageQuality = quality
-    }
-  }
-
-  export const show = async () => {
-    log.debug('Showing web contents view', cleanID)
-    await window.api.webContentsViewAction(cleanID, WebContentsViewActionType.ACTIVATE)
-  }
-
-  export const hide = async () => {
-    log.debug('Hiding web contents view', cleanID)
-    await refreshBackgroundImage()
-    await window.api.webContentsViewAction(cleanID, WebContentsViewActionType.HIDE)
-  }
-
-  $: if ($webContentsId && cleanID) {
-    if (active && !isActivated) {
-      isActivated = true
-      show()
-    } else if (!active && isActivated) {
-      isActivated = false
-      hide()
-    }
-  }
-
   /*
     INITIALIZATION
   */
@@ -283,43 +217,39 @@
     const bounds = webContentsWrapper.getBoundingClientRect()
 
     log.debug('Creating web contents view with bounds', bounds, src, cleanID)
-    const result = await window.api.webContentsViewManagerAction(
-      WebContentsViewManagerActionType.CREATE,
-      {
-        id: cleanID,
-        url: src,
-        partition: partition,
-        activate: active,
-        isOverlay,
-        ...($navigationHistory.length > 0
-          ? {
-              navigationHistory: $navigationHistory,
-              navigationHistoryIndex: Math.max(
-                0,
-                Math.min($currentHistoryIndex, $navigationHistory.length - 1)
-              )
-            }
-          : {}),
-        bounds: {
-          x: bounds.x,
-          y: bounds.y,
-          width: bounds.width,
-          height: bounds.height
-        }
+    webContentsView = await tabsManager.viewManager.create({
+      id: cleanID,
+      url: src,
+      partition: partition,
+      activate: active,
+      isOverlay: isOverlay,
+      parentViewID: parentViewID,
+      ...($navigationHistory.length > 0
+        ? {
+            navigationHistory: $navigationHistory,
+            navigationHistoryIndex: Math.max(
+              0,
+              Math.min($currentHistoryIndex, $navigationHistory.length - 1)
+            )
+          }
+        : {}),
+      bounds: {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height
       }
-    )
+    })
 
-    if (!result || !result.viewId) {
+    if (!webContentsView) {
       log.error('Failed to create web contents view')
       return
     }
 
-    const { viewId, webContentsId: wcId } = result
-
-    log.debug('Created web contents view with ID', viewId)
+    log.debug('Created web contents view with ID', webContentsView)
 
     isReady.set(true)
-    $webContentsId = wcId
+    $webContentsId = webContentsView.webContentsId
 
     const unsubWebContentsEvents = window.preloadEvents.onWebContentsViewEvent((event) => {
       // only handle events for our own view
@@ -354,7 +284,7 @@
       if (!webContentsWrapper) return
       currentBounds = webContentsWrapper.getBoundingClientRect()
       log.debug('Resizing web contents view to', currentBounds)
-      window.api.webContentsViewAction(viewId, WebContentsViewActionType.SET_BOUNDS, {
+      webContentsView?.bounds.set({
         x: currentBounds.x,
         y: currentBounds.y,
         width: currentBounds.width,
@@ -368,54 +298,14 @@
       log.debug('Unsubscribing from resize observer')
       resizeObserver.disconnect()
     })
-
-    const unsubHideViews = tabsManager.on('hide-views', async () => {
-      if (tabsManager.activeTabIdValue === cleanID || (isOverlay && active)) {
-        await refreshBackgroundImage('low')
-
-        if (tabsManager.showNewTabOverlayValue === 1) {
-          await refreshBackgroundImage('high')
-        }
-      }
-    })
-
-    unsub.push(unsubHideViews)
-
-    // const activeTabId = tabsManager.activeTabId
-    // let prevId = tabsManager.activeTabIdValue
-    // const unsubTab = activeTabId.subscribe((tabId) => {
-    //   if (tabId !== cleanID) {
-    //     if (prevId === cleanID) {
-    //       log.debug('Deactivating web contents view', cleanID)
-    //       window.api.webContentsViewAction(viewId, WebContentsViewActionType.HIDE)
-
-    //       prevId = tabId
-    //     }
-
-    //     return
-    //   }
-
-    //   window.api.webContentsViewAction(viewId, WebContentsViewActionType.ACTIVATE)
-
-    //   prevId = tabId
-    // })
-
-    // unsub.push(() => {
-    //   log.debug('Unsubscribing from active tab ID')
-    //   unsubTab()
-    // })
   })
 
   onDestroy(() => {
-    log.debug('Destroying web contents view', cleanID, isOverlay)
-    window.api.webContentsViewAction(cleanID, WebContentsViewActionType.DESTROY)
+    log.debug('Destroying web contents view', cleanID, { isOverlay, parentViewID })
+    tabsManager.viewManager.destroy(cleanID)
 
     if (unsub) {
       unsub.forEach((fn) => fn())
-    }
-
-    if (isOverlay && tabsManager.showNewTabOverlayValue === 0) {
-      window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
     }
   })
 </script>
@@ -451,9 +341,11 @@
 
 <div
   id="webcontentsview-container"
-  class="webcontentsview-container quality-{backgroundImageQuality}"
+  class="webcontentsview-container quality-{$webContentsScreenshot?.quality || 'none'}"
   bind:this={webContentsWrapper}
-  style="--background-image: {backgroundImage || 'white'};"
+  style="--background-image: {$webContentsScreenshot?.image
+    ? `url(${$webContentsScreenshot?.image})`
+    : 'white'};"
 ></div>
 
 <style lang="scss">
@@ -466,6 +358,7 @@
     background-repeat: no-repeat;
     filter: blur(0);
     transition: filter 0.2s ease-in-out;
+    overflow: hidden;
 
     &:not(:active) {
       filter: blur(2px);

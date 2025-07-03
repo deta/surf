@@ -444,8 +444,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     return success
   }
 
-  showActiveView() {
-    const activeViewId = this.activeOverlayViewId || this.activeViewId
+  showActiveView(id?: string) {
+    const activeViewId = id || this.activeViewId
     console.log('[main] webcontentsview-showActiveView: showing active view with id', activeViewId)
 
     if (!activeViewId) {
@@ -455,12 +455,26 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     const view = this.views.get(activeViewId)
     if (!view) {
-      console.warn('[main] webcontentsview-showActiveView: no view found with id', activeViewId)
-      return
+      console.warn('[main] webcontentsview-activate: no view found with id', id)
+      return false
     }
 
-    this.activateView(view.id)
-    console.log('[main] webcontentsview-showActiveView: view with id', view.id, 'brought to front')
+    if (!this.activeOverlayViewId || view.isOverlay) {
+      console.log('[main] webcontentsview-activate: activating view with id', activeViewId)
+      return this.activateView(activeViewId)
+    }
+
+    const overlayView = this.views.get(this.activeOverlayViewId)
+    if (!overlayView) {
+      console.warn('[main] webcontentsview-activate: no active overlay view found')
+      return false
+    }
+
+    console.log(
+      '[main] webcontentsview-activate: activating overlay view with id',
+      this.activeOverlayViewId
+    )
+    return this.activateView(activeViewId)
   }
 
   hideView(id: string) {
@@ -735,7 +749,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             console.log(
               '[main] webcontentsview-showActive: IPC event received, showing active view'
             )
-            this.showActiveView()
+            this.showActiveView(payload?.id)
             return true
           } else {
             return null

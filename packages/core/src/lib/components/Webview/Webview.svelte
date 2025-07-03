@@ -74,7 +74,8 @@
   export let webviewReady = writable(false)
   export let acceptsDrags: boolean = false
   export let webContentsId = writable<number | null>(null)
-  export let isOverlay = false
+  export let parentViewID: string | undefined = undefined
+  export let isOverlay: boolean = false
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
@@ -558,6 +559,7 @@
   {acceptsDrags}
   {webContentsId}
   {active}
+  {parentViewID}
   {isOverlay}
   on:dom-ready={handleDOMReady}
   on:did-start-loading={handleDidStartLoading}

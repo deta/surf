@@ -51,6 +51,7 @@ export const MINI_BROWSER_CONTEXT_KEY = 'miniBrowser'
 
 export class MiniBrowser {
   key: string
+  parentID?: string
   isOpen: Writable<boolean>
   selected: Writable<MiniBrowserSelected | null> = writable(null)
 
@@ -58,12 +59,13 @@ export class MiniBrowser {
   private resourceManager: ResourceManager
   private telemetry: Telemetry
 
-  constructor(key: string, resourceManager: ResourceManager) {
+  constructor(key: string, resourceManager: ResourceManager, parentID?: string) {
     this.log = useLogScope('MiniBrowser')
     this.resourceManager = resourceManager
     this.telemetry = resourceManager.telemetry
 
     this.key = key
+    this.parentID = parentID
     this.isOpen = writable(false)
     this.selected = writable(null)
   }
@@ -198,8 +200,12 @@ export class MiniBrowser {
     this.isOpen.set(false)
   }
 
-  static provide(resourceManager: ResourceManager, key = MINI_BROWSER_CONTEXT_KEY) {
-    const miniBrowserService = new MiniBrowser(key, resourceManager)
+  static provide(
+    resourceManager: ResourceManager,
+    key = MINI_BROWSER_CONTEXT_KEY,
+    parentID?: string
+  ) {
+    const miniBrowserService = new MiniBrowser(key, resourceManager, parentID)
 
     setContext(key, miniBrowserService)
 
@@ -248,11 +254,11 @@ export class MiniBrowserService {
     })
   }
 
-  createScopedBrowser(scope: string, skipProviding = false) {
+  createScopedBrowser(scope: string, skipProviding = false, parentID?: string) {
     const key = `${MINI_BROWSER_CONTEXT_KEY}-${scope}`
     const miniBrowser = skipProviding
-      ? new MiniBrowser(key, this.resourceManager)
-      : MiniBrowser.provide(this.resourceManager, key)
+      ? new MiniBrowser(key, this.resourceManager, parentID)
+      : MiniBrowser.provide(this.resourceManager, key, parentID)
 
     this.scopedBrowsers.update((browsers) => {
       browsers[key] = miniBrowser

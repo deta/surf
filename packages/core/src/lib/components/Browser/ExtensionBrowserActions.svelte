@@ -5,11 +5,11 @@
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable, derived } from 'svelte/store'
   import AppBarButton from './AppBarButton.svelte'
-  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   export let horizontalTabs: boolean = false
 
-  const tabsManager = useTabsManager()
+  const tabsViewManager = useTabsViewManager()
 
   const popoverOpened = writable(false)
   const extensions = writable<any[]>([])
@@ -17,9 +17,9 @@
 
   $: if (horizontalTabs) {
     if ($popoverOpened) {
-      tabsManager.changeViewState({ extensionPopupOpen: true })
+      tabsViewManager.changeOverlayState({ extensionPopupOpen: true })
     } else {
-      tabsManager.changeViewState({ extensionPopupOpen: false })
+      tabsViewManager.changeOverlayState({ extensionPopupOpen: false })
     }
   }
 

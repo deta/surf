@@ -107,6 +107,7 @@
 
   export let url = writable<string>(initialSrc)
   export let webContentsId = writable<number | null>(null)
+  export let parentViewID: string | undefined = undefined
 
   const log = useLogScope('BrowserTab')
 
@@ -118,7 +119,11 @@
   const oasis = useOasis()
   const ai = useAI()
   const miniBrowserService = useMiniBrowserService()
-  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(`tab-${tab.id}`)
+  const scopedMiniBrowser = miniBrowserService.createScopedBrowser(
+    `tab-${tab.id}`,
+    undefined,
+    tab.id
+  )
 
   const activeTabId = tabs.activeTabId
   const showNewTabOverlay = tabs.showNewTabOverlay
@@ -1358,6 +1363,7 @@
   {isLoading}
   {webContentsId}
   {active}
+  {parentViewID}
   isOverlay={insideMiniBrowser}
   acceptsDrags={active}
   bind:this={webview}

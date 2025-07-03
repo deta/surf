@@ -18,6 +18,7 @@ export type WebContentsViewCreateOptions = {
   preload?: string
   activate?: boolean
   isOverlay?: boolean
+  parentViewID?: string
   additionalArguments?: string[]
   navigationHistory?: NavigationEntry[]
   navigationHistoryIndex?: number
@@ -130,7 +131,7 @@ export enum WebContentsViewManagerActionType {
 export interface WebContentsViewManagerActionPayloads {
   [WebContentsViewManagerActionType.CREATE]: WebContentsViewCreateOptions
   [WebContentsViewManagerActionType.HIDE_ALL]: undefined
-  [WebContentsViewManagerActionType.SHOW_ACTIVE]: undefined
+  [WebContentsViewManagerActionType.SHOW_ACTIVE]?: { id?: string } | undefined
 }
 
 export interface WebContentsViewManagerActionOutputs {

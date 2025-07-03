@@ -49,6 +49,7 @@
         {isGlobal}
         resource={$selected.resource}
         selection={$selected.selection}
+        parentID={service.parentID}
         {active}
         on:close={handleClose}
         on:open-mini-browser={handleOpenMiniBrowserFromWebview}

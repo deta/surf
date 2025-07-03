@@ -55,6 +55,7 @@
   export let browserTab: BrowserTab
   export let selected: MiniBrowserSelected
   export let isGlobal: boolean = false
+  export let parentID: string | undefined = undefined
 
   let webview: WebviewWrapper
   let codeRenderer: CodeRenderer
@@ -599,6 +600,7 @@
           active
           insideMiniBrowser
           disableMiniBrowser
+          parentViewID={parentID}
           bind:this={browserTab}
           bind:tab
           on:navigation={handleNavigation}
@@ -741,6 +743,6 @@
     border-top-right-radius: 0;
     border-top-left-radius: 0;
     overflow: hidden;
-    background: black;
+    background: white;
   }
 </style>

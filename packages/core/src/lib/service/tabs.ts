@@ -49,6 +49,7 @@ import type { ConfigService } from './config'
 import type { BookmarkPageOpts } from '../components/Browser/BrowserTab.svelte'
 import { EventEmitterBase } from './events'
 import { WebContentsViewManagerActionType } from '@horizon/types'
+import { WebContentsViewManager } from './viewManager'
 
 export type TabEvents = {
   created: (tab: Tab, active: boolean) => void
@@ -57,8 +58,6 @@ export type TabEvents = {
   selected: (tab: Tab) => void
   'url-changed': (tab: Tab, newUrl: string) => void
   'changed-active-scope': (scopeId: string | null) => void
-  'show-views': () => void
-  'hide-views': () => void
 }
 
 export type TabScopeObject = { tabId: string; scopeId: string | null }
@@ -113,6 +112,7 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   oasis: OasisService
   historyEntriesManager: HistoryEntriesManager
   desktopManager: DesktopManager
+  viewManager!: WebContentsViewManager
   ai!: AIService
 
   tabs: Writable<Tab[]>
@@ -128,7 +128,6 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   scopedActiveTabs: Writable<TabScopeObject[]>
   lastUsedScopes: Writable<string[]>
   showBrowsingContextSelector: Writable<boolean>
-  viewStates: Writable<TabsViewStates>
 
   offloadTabsTimeouts: Map<string, ReturnType<typeof setTimeout>>
 
@@ -139,7 +138,6 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   pinnedTabs: Readable<Tab[]>
   unpinnedTabs: Readable<Tab[]>
   spaceTabCounts: Readable<Record<string, number>>
-  shouldHideViews: Readable<boolean>
 
   static self: TabsManager
 
@@ -182,32 +180,8 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
       errors: []
     })
     this.showBrowsingContextSelector = writable(false)
-    this.viewStates = writable({
-      extensionPopupOpen: false,
-      popupOpen: false,
-      miniBrowserOpen: false
-    })
 
     this.offloadTabsTimeouts = new Map()
-
-    this.shouldHideViews = derived(
-      [
-        this.showNewTabOverlay,
-        this.viewStates,
-        this.desktopManager.activeDesktopVisible,
-        this.showBrowsingContextSelector
-      ],
-      ([$showNewTabOverlay, $viewStates, $activeDesktopVisible, $showBrowsingContextSelector]) => {
-        return (
-          $showNewTabOverlay !== 0 ||
-          $viewStates.popupOpen ||
-          $viewStates.extensionPopupOpen ||
-          $viewStates.miniBrowserOpen ||
-          $activeDesktopVisible ||
-          $showBrowsingContextSelector
-        )
-      }
-    )
 
     this.activeTab = derived([this.tabs, this.activeTabId], ([tabs, activeTabId]) => {
       return tabs.find((tab) => tab.id === activeTabId)
@@ -283,6 +257,10 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     this.ai = ai
   }
 
+  attachViewManager(viewManager: WebContentsViewManager) {
+    this.viewManager = viewManager
+  }
+
   get tabsValue() {
     return get(this.tabs)
   }
@@ -345,10 +323,6 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
 
   get activeBrowserTabValue() {
     return get(this.activeBrowserTab)
-  }
-
-  get viewStatesValue() {
-    return get(this.viewStates)
   }
 
   private addToActiveTabsHistory(tabId: string) {
@@ -592,6 +566,18 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
 
   activateTab(tabId: string) {
     this.log.debug('Activating tab', tabId)
+
+    const tab = this.tabsValue.find((tab) => tab.id === tabId)
+    if (!tab) {
+      this.log.error('Tab not found', tabId)
+      return
+    }
+
+    if (tab.type === 'page') {
+      this.viewManager.activate(tab.id)
+    } else {
+      this.viewManager.hideViews()
+    }
 
     if (get(this.activatedTabs).includes(tabId)) {
       this.log.debug('Tab already activated', tabId)
@@ -1683,28 +1669,6 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     return { resource: resource, isNew: true }
   }
 
-  async changeViewState(changes: Partial<TabsViewStates>) {
-    this.viewStates.update((state) => {
-      const newState = { ...state, ...changes }
-      return newState
-    })
-  }
-
-  async showViews() {
-    this.emit('show-views')
-    await window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.SHOW_ACTIVE)
-  }
-
-  async hideViews(emitEvent = true) {
-    if (emitEvent) {
-      this.emit('hide-views')
-      // give the views some time to handle the event
-      await wait(10)
-    }
-
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
-  }
-
   export() {
     const data = JSON.stringify(this.tabsValue)
     return data
@@ -1745,7 +1709,12 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
     if (!TabsManager.self) return getContext<TabsManager>(TABS_CONTEXT_KEY)
     return TabsManager.self
   }
+
+  static useViewManager() {
+    return TabsManager.use().viewManager
+  }
 }
 
 export const createTabsManager = TabsManager.provide
 export const useTabsManager = TabsManager.use
+export const useTabsViewManager = TabsManager.useViewManager

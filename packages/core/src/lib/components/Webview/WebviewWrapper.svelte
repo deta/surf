@@ -53,8 +53,9 @@
   export let acceptsDrags: boolean = false
   export let isLoading = writable(false)
   export let webContentsId: Writable<number | null> | undefined = undefined
-  export let isOverlay = false
   export let webContents: WebContents
+  export let parentViewID: string | undefined = undefined
+  export let isOverlay: boolean = false
 
   export const canGoBack = derived(
     currentHistoryIndex,
@@ -476,6 +477,7 @@
     {acceptsDrags}
     {webContentsId}
     {active}
+    {parentViewID}
     {isOverlay}
     {...$$restProps}
     bind:webContents

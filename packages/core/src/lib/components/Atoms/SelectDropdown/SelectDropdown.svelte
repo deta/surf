@@ -7,7 +7,7 @@
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
   import { Icon } from '@horizon/icons'
-  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null
@@ -26,7 +26,7 @@
   export let loading = false
 
   const dispatch = createEventDispatcher<{ select: string }>()
-  const tabsManager = useTabsManager()
+  const tabsViewManager = useTabsViewManager()
 
   const inputFocused = writable(false)
 
@@ -46,14 +46,14 @@
   })
 
   const handleOpen = async () => {
-    if (!tabsManager.viewStatesValue.popupOpen) {
-      tabsManager.changeViewState({ popupOpen: true })
+    if (!tabsViewManager.overlayStateValue.selectPopupOpen) {
+      tabsViewManager.changeOverlayState({ selectPopupOpen: true })
     }
   }
 
   const handleClose = () => {
-    if (tabsManager.viewStatesValue.popupOpen) {
-      tabsManager.changeViewState({ popupOpen: false })
+    if (tabsViewManager.overlayStateValue.selectPopupOpen) {
+      tabsViewManager.changeOverlayState({ selectPopupOpen: false })
     }
   }
 
