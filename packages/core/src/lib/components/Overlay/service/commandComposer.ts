@@ -37,6 +37,7 @@ import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/search
 import { type HistoryEntry, type Tab, type TabPage } from '../../../types'
 import Fuse from 'fuse.js'
 import type { TabsManager } from '../../../service/tabs'
+import type { TeletypeSystem } from '@deta/teletype/src'
 
 export class CommandComposer {
   private log = useLogScope('CommandComposer')
@@ -47,6 +48,7 @@ export class CommandComposer {
 
   // Store declarations
   private searchValue = writable('')
+  private teletype = writable<TeletypeSystem | null>(null)
   private oasisSearchResults = writable<Resource[]>([])
   private searchEngineSuggestionResults = writable<string[]>([])
   private historyEntriesResults = writable<HistoryEntry[]>([])
@@ -96,9 +98,14 @@ export class CommandComposer {
     })
   }
 
+  public attachTeletype(teletype: TeletypeSystem) {
+    this.teletype.set(teletype)
+  }
+
   public readonly defaultActionsTeletype = derived(
     [
       this.searchValue,
+      this.teletype,
       this.oasisSearchResults,
       this.searchEngineSuggestionResults,
       this.historyEntriesResults,
@@ -109,6 +116,7 @@ export class CommandComposer {
     ],
     ([
       searchValue,
+      teletype,
       oasisSearchResults,
       searchEngineSuggestionResults,
       historyEntriesResults,
@@ -117,9 +125,44 @@ export class CommandComposer {
       spaceSearchResults,
       filteredBrowserCommands
     ]) => {
+      this.log.debug('Default actions teletype:', teletype, teletype?.editModeValue)
+      const isEditMode = teletype ? teletype.editModeValue : false
+
+      if (isEditMode) {
+        const isOriginalURL = searchValue === teletype?.prefillInputValue
+
+        return [
+          ...(isOriginalURL
+            ? []
+            : [
+                optimisticCheckIfUrl(searchValue)
+                  ? navigateActionToTeletypeItem(searchValue, true)
+                  : searchActionToTeletypeItem(searchValue)
+              ]),
+          ...tabEntriesResults.map((tab) => tabToTeletypeItem(tab as TabPage)),
+          ...hostnameHistoryEntriesResults.map((entry) =>
+            hostnameHistoryEntryToTeletypeItem(entry)
+          ),
+          ...searchEngineSuggestionResults.map((suggestion) =>
+            searchEngineSuggestionToTeletypeItem(suggestion)
+          ),
+
+          // TODO:  this doesn't do anything? uncecessary load? they dont seem to get used / rendered
+          ...oasisSearchResults.map((resource) => resourceToTeletypeItem(resource)),
+          ...historyEntriesResults.map((entry) =>
+            historyEntryToTeletypeItem(entry, get(this.historyEntriesResults))
+          )
+        ].map((item) => ({
+          ...item,
+          // when editing we don't want to show any other actions
+          actionText: 'Change Tab URL',
+          actionPanel: undefined
+        }))
+      }
+
       const result = [
         optimisticCheckIfUrl(searchValue)
-          ? navigateActionToTeletypeItem(searchValue)
+          ? navigateActionToTeletypeItem(searchValue, isEditMode)
           : searchActionToTeletypeItem(searchValue),
         ...filteredBrowserCommands.map((command) => browserCommandToTeletypeItem(command)),
         ...tabEntriesResults.map((tab) => tabToTeletypeItem(tab as TabPage)),

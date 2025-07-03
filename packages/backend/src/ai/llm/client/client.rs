@@ -711,6 +711,10 @@ impl LLMClient {
                 if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
                     return Err(BackendError::LLMClientErrorTooManyRequests);
                 }
+                // TODO: are there other cases of bad request
+                if status == reqwest::StatusCode::BAD_REQUEST {
+                    return Err(BackendError::LLMClientErrorBadRequest);
+                }
                 if status.is_client_error() {
                     let error_text = response.text()?;
                     model.provider().parse_potential_error(&error_text)?;

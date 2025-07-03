@@ -404,6 +404,7 @@ export enum MultiSelectResourceEventAction {
 }
 
 export enum PageChatMessageSentEventError {
+  BadRequest = 'bad_request',
   RAGEmptyContext = 'rag_empty_context',
   QuotaExceeded = 'quota_exceeded',
   QuotaExceededStandard = 'quota_exceeded_standard',

@@ -190,3 +190,8 @@ pub struct QuotasDepletedResponse {
     pub detail: String,
     pub quotas: Vec<Quota>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BadRequestResponse {
+    pub detail: String,
+}

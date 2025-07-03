@@ -119,6 +119,17 @@ export class TooManyRequestsError extends Error {
   }
 }
 
+export class BadRequestError extends Error {
+  constructor() {
+    super('Bad request')
+    this.name = 'BadRequestError'
+    // Maintains proper stack trace for where error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, BadRequestError)
+    }
+  }
+}
+
 export interface App {
   id: string
   app_type: string

@@ -54,7 +54,7 @@ import type {
   Message,
   CreateChatCompletionOptions
 } from '@horizon/backend/types'
-import { QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
+import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 
 export type HorizonToCreate = Optional<
   HorizonData,
@@ -966,6 +966,9 @@ export class SFFS {
       const message =
         typeof error === 'string' ? error : error instanceof Error ? error.message : undefined
       if (message) {
+        if (message.includes('LLM Bad Request error')) {
+          throw new BadRequestError()
+        }
         if (message.includes('LLM Quota Depleted error')) {
           const jsonStr = message.substring(message.indexOf('{'))
 

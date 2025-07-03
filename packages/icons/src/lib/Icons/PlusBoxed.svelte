@@ -1,4 +1,4 @@
-<svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg" {...$$restProps}>
   <g filter="url(#filter0_dii_7250_262)">
     <path
       fill-rule="evenodd"

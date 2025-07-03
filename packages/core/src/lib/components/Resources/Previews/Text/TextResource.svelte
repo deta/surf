@@ -1279,6 +1279,10 @@
           toasts.error(response.error.message)
         } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
           toasts.error('Too many requests, please try again later')
+        } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
+          toasts.error(
+            'Sorry your query did not pass our content policy, please try again with a different query.'
+          )
         } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
           toasts.error(
             'No relevant context found. Please add more resources or try a different query.'
@@ -1460,6 +1464,10 @@
         } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
           toasts.error(
             'No relevant context found. Please add more resources or try a different query.'
+          )
+        } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
+          toasts.error(
+            'Sorry your query did not pass our content policy, please try again with a different query.'
           )
         } else {
           toasts.error('Something went wrong generating the AI output. Please try again.')

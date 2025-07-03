@@ -126,7 +126,6 @@
   let insecureWarningTimeout: ReturnType<typeof setTimeout>
 
   let isDragging = false
-  let isEditing = false
   let isHovered = false
   let popoverVisible = false
   let showInsecureWarningText = false
@@ -175,7 +174,7 @@
     }
   }
 
-  $: if (tab.type === 'page' && !isEditing && !isRenamingTab) {
+  $: if (tab.type === 'page' && !isRenamingTab) {
     if (hostname) {
       $inputUrl = isInsecureUrl ? `http://${hostname}` : hostname
     } else {
@@ -188,15 +187,6 @@
 
   $: resourceSpaceIds.set($resourceSpaceIdsStore ?? [])
 
-  export const editAddress = async () => {
-    isEditing = true
-    await tick()
-
-    addressInputEl?.focus()
-    // Set cursor to end of input
-    addressInputEl?.setSelectionRange(addressInputEl.value.length, addressInputEl.value.length)
-  }
-
   export const renameTab = async () => {
     if (tab.type !== 'page' || tab.pinned) return
     isRenamingTab = true
@@ -208,25 +198,6 @@
 
   export const blur = () => {
     addressInputEl?.blur()
-  }
-
-  const handleInputBlur = () => {
-    if (isRenamingTab) return // Don't affect rename state when URL input loses focus
-    isEditing = false
-  }
-
-  const handleInputFocus = () => {
-    if (isRenamingTab) return // Don't switch to URL editing if we're renaming
-    isEditing = true
-    if (url) {
-      $inputUrl = url
-    }
-
-    // Use setTimeout to ensure this runs after the input value has been updated
-    setTimeout(() => {
-      addressInputEl.setSelectionRange(0, addressInputEl.value.length)
-      addressInputEl.scrollLeft = addressInputEl.scrollWidth
-    }, 0)
   }
 
   const handleInputKeydown = (event: KeyboardEvent) => {
@@ -424,7 +395,6 @@
 
   const handleDragStart = async (drag: DragculaDragEvent<DragTypes>) => {
     isDragging = true
-    isEditing = false
     hovered = false
     blur()
 
@@ -659,7 +629,6 @@
       tabsManager.update(tab.id, { customTitle: editableTitle })
     }
     isRenamingTab = false
-    isEditing = false
     isHovered = false
   }
 
@@ -943,39 +912,18 @@
             setTimeout(() => titleInputEl?.select(), 0)
           }}
         />
-      {:else if (tab.type === 'page' || tab.type === 'empty') && isActive && enableEditing && isEditing && !isRenamingTab}
-        <input
-          bind:this={addressInputEl}
-          bind:value={$inputUrl}
-          draggable
-          type="text"
-          placeholder="Enter URL or search query"
-          class={`w-full h-full bg-transparent focus:outline-none group-active:select-none
-          ${
-            !isEditing && !isMagicActive
-              ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60]'
-              : ''
-          }`}
-          on:dragstart|preventDefault|stopPropagation
-          on:focus={handleInputFocus}
-          on:blur={handleInputBlur}
-          on:keydown={handleInputKeydown}
-        />
       {:else}
         <div
           role="none"
-          on:mousedown={() => {
-            if (tab.type === 'page' && !isRenamingTab) {
-              isEditing = true
-              tick().then(() => {
-                setTimeout(() => {
-                  addressInputEl?.focus()
-                }, 175)
-              })
+          on:click={(e) => {
+            if (tab.type === 'page' && !isRenamingTab && isActive) {
+              e.stopPropagation()
+              e.preventDefault()
+              dispatch('edit')
             }
           }}
           class={hovered && isActive && tab.type === 'page' && !isRenamingTab
-            ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60] cursor-text'
+            ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-sky-900 to-sky-900 via-sky-500 dark:from-sky-100 dark:to-sky-100 dark:via-sky-300 bg-[length:250%_100%] z-[60]'
             : `whitespace-nowrap overflow-hidden truncate max-w-full ${isMagicActive && isInChatContext ? 'animate-text-shimmer bg-clip-text text-transparent bg-gradient-to-r from-violet-900 to-blue-900 via-rose-300 dark:from-violet-100 dark:to-blue-100 dark:via-rose-300 bg-[length:250%_100%]' : ''}`}
         >
           {#if hovered && isActive && tab.type === 'page' && !isRenamingTab && !inStuffBar}
@@ -989,7 +937,7 @@
       {/if}
     </div>
 
-    {#if showButtons && !isEditing && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > HIDE_SAVE_BUTTON_BELOW) || !horizontalTabs) && !showExcludeOthersButton}
+    {#if showButtons && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > HIDE_SAVE_BUTTON_BELOW) || !horizontalTabs) && !showExcludeOthersButton}
       <div class="items-center flex justify-end flex-row gap-3 right-0">
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
@@ -1122,7 +1070,7 @@
     {/if}
 
     {#if isInsecureUrl && isActive}
-      <InsecurePageWarningIndicator showText={showInsecureWarningText && !isEditing} />
+      <InsecurePageWarningIndicator showText={showInsecureWarningText} />
     {/if}
   {/if}
 </div>
