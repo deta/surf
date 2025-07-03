@@ -127,9 +127,11 @@
 
   let isDragging = false
   let isHovered = false
+  let hasBeenHovered = false
   let popoverVisible = false
   let showInsecureWarningText = false
   let isContextMenuOpen = false
+  let delayedPopoverOpened = false
 
   // TODO: CAN WE NUKE THIS SHIT?
   let space: OasisSpace | null = null
@@ -186,6 +188,17 @@
   $: hovered = isHovered && !isContextMenuOpen
 
   $: resourceSpaceIds.set($resourceSpaceIdsStore ?? [])
+
+  $: popoverOpened = $liveSpacePopoverOpened || $saveToSpacePopoverOpened
+
+  // we do this so give the popover time to close before hiding it with CSS
+  $: if (popoverOpened) {
+    delayedPopoverOpened = true
+  } else {
+    setTimeout(() => {
+      delayedPopoverOpened = false
+    }, 100)
+  }
 
   export const renameTab = async () => {
     if (tab.type !== 'page' || tab.pinned) return
@@ -747,6 +760,7 @@
   }
 
   onMount(() => {
+    console.log('Tab mounted:', tab.id)
     if (tab.type === 'space') {
       fetchSpace(tab.spaceId)
     } else if (tab.type === 'page') {
@@ -764,7 +778,7 @@
 <div
   draggable={true}
   id="tab-{tab.id}"
-  class={$tabStyles}
+  class="{$tabStyles} group/tab-item"
   class:pinned
   class:active={isActive}
   class:hovered
@@ -809,11 +823,24 @@
   on:mousedown={handleMouseDown}
   on:mouseenter={() => {
     isHovered = true
+    hasBeenHovered = true
     dispatch('mouseenter', tab.id)
   }}
   on:mouseleave={() => {
-    if (!popoverVisible) isHovered = false
-    dispatch('mouseleave', tab.id)
+    try {
+      if (!popoverVisible) {
+        isHovered = false
+
+        setTimeout(() => {
+          if (!isHovered) {
+            hasBeenHovered = false
+          }
+        }, 10000)
+      }
+      dispatch('mouseleave', tab.id)
+    } catch (error) {
+      log.error('Error in mouseleave handler:', error)
+    }
   }}
   use:contextMenu={{
     canOpen:
@@ -937,8 +964,14 @@
       {/if}
     </div>
 
-    {#if showButtons && (hovered || $liveSpacePopoverOpened || $saveToSpacePopoverOpened) && (isActive || (tabSize && tabSize > HIDE_SAVE_BUTTON_BELOW) || !horizontalTabs) && !showExcludeOthersButton}
-      <div class="items-center flex justify-end flex-row gap-3 right-0">
+    {#if showButtons && (hovered || hasBeenHovered || popoverOpened) && (isActive || (tabSize && tabSize > HIDE_SAVE_BUTTON_BELOW) || !horizontalTabs) && !showExcludeOthersButton}
+      <div
+        class="items-center justify-end flex-row gap-3 right-0 hidden {hovered ||
+        popoverOpened ||
+        delayedPopoverOpened
+          ? '!flex'
+          : ''}"
+      >
         {#if tab.type === 'page' && isActive && showLiveSpaceButton}
           <CustomPopover position="right" popoverOpened={liveSpacePopoverOpened}>
             <button
