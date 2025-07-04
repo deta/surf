@@ -1325,6 +1325,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   if (![WebViewEventSendNames.MouseMove, WebViewEventSendNames.DragOver].includes(name))
     console.debug('Sending page event', name, data)
   ipcRenderer.send('webview-page-event', name, data)
+  ipcRenderer.sendToHost('webview-page-event', name, data)
 }
 
 ipcRenderer.on('webview-event', (_event, payload) => {
