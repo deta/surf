@@ -183,7 +183,9 @@ export class WebContentsView {
     await this.takeViewScreenshot('low')
 
     if (this.manager.tabsManager.showNewTabOverlayValue === 1) {
-      this.takeViewScreenshot('high')
+      this.takeViewScreenshot('high').then(() => {
+        // no-op
+      })
     }
   }
 
@@ -446,10 +448,8 @@ export class WebContentsViewManager extends EventEmitterBase<ViewManagerEvents> 
       const activeView = this.getActiveView()
       if (activeView) {
         await activeView.refreshScreenshot()
+        await wait(15)
       }
-      // this.emit('hide-views')
-      // // give the views some time to handle the event
-      // await wait(10)
     }
 
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)

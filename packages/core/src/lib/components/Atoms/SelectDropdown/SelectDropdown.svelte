@@ -121,12 +121,11 @@
     closeTimeout = setTimeout(() => {
       open.set(false)
       $searchValue = ''
-    }, 150)
+    }, 100)
   }
 
   const handleContentMouseLeave = (_e: MouseEvent) => {
     if (closeOnMouseLeave && $open) {
-      handleClose()
       handleMouseLeave(_e)
     }
   }
