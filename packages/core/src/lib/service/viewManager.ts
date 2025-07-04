@@ -448,7 +448,6 @@ export class WebContentsViewManager extends EventEmitterBase<ViewManagerEvents> 
       const activeView = this.getActiveView()
       if (activeView) {
         await activeView.refreshScreenshot()
-        await wait(15)
       }
     }
 
