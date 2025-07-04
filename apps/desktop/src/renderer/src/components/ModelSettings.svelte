@@ -401,6 +401,7 @@
             side="bottom"
             closeOnMouseLeave={false}
             keepHeightWhileSearching
+            skipViewManager
             on:select={handleSelectedModelChange}
           >
             <button

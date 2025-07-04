@@ -3,11 +3,12 @@
   import { derived, writable, type Readable } from 'svelte/store'
   import { DropdownMenu, type CustomEventHandler } from 'bits-ui'
 
-  import { flyAndScaleDirectional, focus } from '@horizon/utils'
+  import { flyAndScaleDirectional, focus, wait } from '@horizon/utils'
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
   import { Icon } from '@horizon/icons'
   import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
+  import type { WebContentsViewManager } from '@horizon/core/src/lib/service/viewManager'
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null
@@ -24,14 +25,16 @@
   export let side: 'top' | 'right' | 'bottom' | 'left' | undefined = undefined
   export let disabled: boolean = false
   export let loading = false
+  export let skipViewManager = false
 
   const dispatch = createEventDispatcher<{ select: string }>()
-  const tabsViewManager = useTabsViewManager()
 
   const inputFocused = writable(false)
 
+  let tabsViewManager: WebContentsViewManager
   let listElem: HTMLDivElement
   let inputElem: HTMLInputElement
+  let contentElem: HTMLDivElement
   let overflowBottom = false
   let overflowTop = false
   let listElemHeight = 0
@@ -46,14 +49,40 @@
   })
 
   const handleOpen = async () => {
-    if (!tabsViewManager.overlayStateValue.selectPopupOpen) {
-      tabsViewManager.changeOverlayState({ selectPopupOpen: true })
+    await wait(5)
+
+    // check if the menu would overlap with the active webcontents view
+    // and if so notify the view manager that the menu is open
+    const activeWebview = document.querySelector(
+      '.browser-window.active .webcontentsview-container'
+    )
+    if (activeWebview && contentElem) {
+      const viewRect = activeWebview.getBoundingClientRect()
+      const menuRect = contentElem.getBoundingClientRect()
+
+      // Check if any part of the menu overlaps with the view
+      const isOverlapping = !(
+        (
+          Math.round(menuRect.left) >= Math.round(viewRect.right) || // Menu is completely to the right
+          Math.round(menuRect.right) <= Math.round(viewRect.left) || // Menu is completely to the left
+          Math.round(menuRect.top) >= Math.round(viewRect.bottom) || // Menu is completely below
+          Math.round(menuRect.bottom) <= Math.round(viewRect.top)
+        ) // Menu is completely above
+      )
+
+      if (isOverlapping && !tabsViewManager?.overlayStateValue.selectPopupOpen) {
+        tabsViewManager?.changeOverlayState({ selectPopupOpen: true })
+      }
+    } else {
+      console.warn(
+        'No active webview found or contentElem is not set. Cannot check for overlap with select dropdown.'
+      )
     }
   }
 
   const handleClose = () => {
-    if (tabsViewManager.overlayStateValue.selectPopupOpen) {
-      tabsViewManager.changeOverlayState({ selectPopupOpen: false })
+    if (tabsViewManager?.overlayStateValue.selectPopupOpen) {
+      tabsViewManager?.changeOverlayState({ selectPopupOpen: false })
     }
   }
 
@@ -155,7 +184,15 @@
   }
 
   onMount(() => {
-    handleScrollCheck()
+    try {
+      if (!skipViewManager) {
+        tabsViewManager = useTabsViewManager()
+      }
+
+      handleScrollCheck()
+    } catch (error) {
+      // no-op
+    }
   })
 </script>
 
@@ -188,6 +225,7 @@
     >
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
+        bind:this={contentElem}
         bind:clientHeight={listElemHeight}
         class="w-full max-h-[400px] overflow-auto flex flex-col"
         style:height={keepHeightWhileSearching && $searchValue ? listElemHeight + 'px' : 'auto'}
