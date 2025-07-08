@@ -186,7 +186,9 @@ export enum WebContentsViewEventType {
 
   // Focus and Blur Events
   FOCUS = 'focus',
-  BLUR = 'blur'
+  BLUR = 'blur',
+  ENTER_HTML_FULL_SCREEN = 'enter-html-full-screen',
+  LEAVE_HTML_FULL_SCREEN = 'leave-html-full-screen'
 }
 
 // values of the enum WebContentsViewEventType e.g. did-start-loading

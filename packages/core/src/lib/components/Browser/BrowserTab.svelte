@@ -1377,4 +1377,5 @@
   on:new-window={handleWebviewNewWindow}
   on:navigation
   on:media-playback-changed={handleWebviewMediaPlaybackChanged}
+  on:html-full-screen-changed
 />

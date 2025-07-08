@@ -721,6 +721,22 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         payload: { channel, args }
       })
     })
+
+    view.attachEventListener('enter-html-full-screen', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.ENTER_HTML_FULL_SCREEN,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
+
+    view.attachEventListener('leave-html-full-screen', () => {
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.LEAVE_HTML_FULL_SCREEN,
+        viewId: view.id,
+        payload: undefined
+      })
+    })
   }
 
   attachIPCEvents() {

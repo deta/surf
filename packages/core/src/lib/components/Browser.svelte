@@ -2498,6 +2498,16 @@
     })
   }
 
+  const handleHtmlFullScreenChanged = (e: CustomEvent<boolean>) => {
+    const isFullScreen = e.detail
+
+    if (isFullScreen) {
+      changeLeftSidebarState(false)
+    } else {
+      changeLeftSidebarState(true)
+    }
+  }
+
   let maxWidth = window.innerWidth
 
   let tabSize = 0
@@ -5123,6 +5133,7 @@
                     on:add-to-chat={(e) => handleAddToChat(e)}
                     on:seekToTimestamp={handleSeekToTimestamp}
                     on:highlightWebviewText={highlightWebviewText}
+                    on:html-full-screen-changed={handleHtmlFullScreenChanged}
                   />
                 {:else if tab.type === 'importer'}
                   <TabImporter {tab} />

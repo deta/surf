@@ -21,6 +21,7 @@
     'favicon-change': string
     'history-change': WebviewHistoryChangeEvent
     'media-playback-changed': boolean
+    'html-full-screen-changed': boolean
   }
 </script>
 
@@ -573,6 +574,8 @@
   on:did-navigate-in-page={handleDidNavigateInPage}
   on:media-started-playing={() => dispatch('media-playback-changed', true)}
   on:media-paused={() => dispatch('media-playback-changed', false)}
+  on:enter-html-full-screen={() => dispatch('html-full-screen-changed', true)}
+  on:leave-html-full-screen={() => dispatch('html-full-screen-changed', false)}
   on:ipc-message={handleIpcMessage}
   on:found-in-page
   on:blur

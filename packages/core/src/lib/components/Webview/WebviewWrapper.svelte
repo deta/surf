@@ -492,6 +492,7 @@
     on:favicon-change
     on:history-change
     on:media-playback-changed
+    on:html-full-screen-changed
   />
 
   {#if $error}
