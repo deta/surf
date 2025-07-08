@@ -26,10 +26,13 @@
   const dispatch = createEventDispatcher<{
     click: MouseEvent
     show: void
+    close: void
   }>()
 
   $: if ($popoverOpened) {
     dispatch('show')
+  } else {
+    dispatch('close')
   }
 
   const handleMouseEnter = () => {

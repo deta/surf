@@ -15,13 +15,7 @@
   const extensions = writable<any[]>([])
   const hasNoExtensionsEnabled = derived(extensions, ($extensions) => $extensions.length === 0)
 
-  $: if (horizontalTabs) {
-    if ($popoverOpened) {
-      tabsViewManager.changeOverlayState({ extensionPopupOpen: true })
-    } else {
-      tabsViewManager.changeOverlayState({ extensionPopupOpen: false })
-    }
-  }
+  let windowBlurred = false
 
   async function updateExtensionState() {
     try {
@@ -54,6 +48,39 @@
     // NOTE: DO NOT PASS IN A tab ARGUMENT, IT DOES NOT WORK IN A BUILD AS OF YET
     window.api.openSettings()
   }
+
+  const handleBlur = () => {
+    windowBlurred = true
+  }
+
+  const handleFocus = () => {
+    windowBlurred = false
+
+    // When the window is focused we know that the extension popover is closed and we can notify the view manager
+    tabsViewManager.changeOverlayState({ extensionPopupOpen: false })
+
+    window.removeEventListener('blur', handleBlur)
+    window.removeEventListener('focus', handleFocus)
+  }
+
+  const handleShowPopover = () => {
+    updateExtensionState()
+
+    // Since the extension popover overlays the tabs in horizontal mode, we need to notify the view manager
+    if (horizontalTabs) {
+      tabsViewManager.changeOverlayState({ extensionPopupOpen: true })
+
+      window.addEventListener('blur', handleBlur)
+      window.addEventListener('focus', handleFocus)
+    }
+  }
+
+  const handleClosePopover = () => {
+    // If the window is blurred, we do not notify the view manager as that means an extension popup is open
+    if (!windowBlurred) {
+      tabsViewManager.changeOverlayState({ extensionPopupOpen: false })
+    }
+  }
 </script>
 
 <CustomPopover
@@ -62,7 +89,8 @@
   toggleOnClick={true}
   position="bottom"
   sideOffset={3}
-  on:show={updateExtensionState}
+  on:show={handleShowPopover}
+  on:close={handleClosePopover}
 >
   <div slot="trigger">
     <AppBarButton class="group">
