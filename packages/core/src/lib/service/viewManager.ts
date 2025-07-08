@@ -201,6 +201,7 @@ export type OverlayState = {
   extensionPopupOpen: boolean
   selectPopupOpen: boolean
   rightClickMenuOpen: boolean
+  dialogOpen: boolean
 }
 
 export type ViewManagerEvents = {
@@ -231,7 +232,8 @@ export class WebContentsViewManager extends EventEmitterBase<ViewManagerEvents> 
     this.overlayState = writable({
       extensionPopupOpen: false,
       selectPopupOpen: false,
-      rightClickMenuOpen: false
+      rightClickMenuOpen: false,
+      dialogOpen: false
     })
 
     this.activeViewId = writable(null)
@@ -265,6 +267,7 @@ export class WebContentsViewManager extends EventEmitterBase<ViewManagerEvents> 
           $overlayState.selectPopupOpen ||
           $overlayState.extensionPopupOpen ||
           $overlayState.rightClickMenuOpen ||
+          $overlayState.dialogOpen ||
           $activeDesktopVisible ||
           $showBrowsingContextSelector
         )

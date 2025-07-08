@@ -70,9 +70,10 @@
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import TeletypeIconRenderer from '../../Overlay/TeletypeIconRenderer.svelte'
   import { OasisService } from '../../../service/oasis'
+  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   export let icon: string | undefined
   export let title: string | undefined
@@ -80,6 +81,7 @@
   export let actions: DialogButton[]
   export let oasis: OasisService
 
+  const viewManager = useTabsViewManager()
   const dispatch = createEventDispatcher<{
     close: CloseEventData
   }>()
@@ -88,6 +90,16 @@
 
   onMount(() => {
     dialogEl.showModal()
+
+    viewManager.changeOverlayState({
+      dialogOpen: true
+    })
+  })
+
+  onDestroy(() => {
+    viewManager.changeOverlayState({
+      dialogOpen: false
+    })
   })
 
   function handleCancel(e: Event) {
