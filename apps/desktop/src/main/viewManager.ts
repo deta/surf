@@ -6,13 +6,14 @@ import {
   WebContentsViewManagerActionType,
   type WebContentsViewCreateOptions
 } from '@horizon/types'
-import { app, BrowserWindow, WebContentsView } from 'electron'
+import { app, BrowserWindow, WebContentsView, session } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@horizon/core/src/lib/service/ipc/ipc'
 import { EventEmitterBase } from '@horizon/core/src/lib/service/events'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { isDev } from '@horizon/utils/src/system'
+import { PDFViewerEntryPoint } from './utils'
 
 export class WCView {
   id: string
@@ -21,13 +22,15 @@ export class WCView {
   eventListeners: Array<() => void> = []
 
   constructor(opts: WebContentsViewCreateOptions) {
+    const wcvSession = session.fromPartition('persist:horizon')
     const view = new WebContentsView({
       webPreferences: {
-        partition: opts.partition || undefined,
+        // partition: opts.partition || undefined,
+        session: wcvSession,
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: opts.sandbox ?? true,
-        webSecurity: true,
+        webSecurity: !isDev,
         scrollBounce: true,
         defaultFontSize: 16,
         autoplayPolicy: 'document-user-activation-required',
@@ -280,6 +283,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       const view = new WCView({
         ...opts,
+        additionalArguments: [
+          ...(opts.additionalArguments || []),
+          `--pdf-viewer-entry-point=${PDFViewerEntryPoint}`
+        ],
         sandbox: true
       })
 
