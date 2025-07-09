@@ -247,6 +247,8 @@ export interface WebContentsViewEventPayloads {
     channel: string
     args: any[]
   }
+  [WebContentsViewEventType.ENTER_HTML_FULL_SCREEN]: undefined
+  [WebContentsViewEventType.LEAVE_HTML_FULL_SCREEN]: undefined
 }
 
 export type WebContentsViewEventTyped<T extends WebContentsViewEventType> = {

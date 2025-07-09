@@ -18,6 +18,7 @@ import { PDFViewerEntryPoint } from './utils'
 export class WCView {
   id: string
   isOverlay: boolean
+  attached: boolean
   wcv: WebContentsView
   eventListeners: Array<() => void> = []
 
@@ -43,6 +44,7 @@ export class WCView {
     this.wcv = view
     this.id = opts.id || view.webContents.id + ''
     this.isOverlay = opts.isOverlay ?? false
+    this.attached = false
 
     if (opts.bounds) {
       console.log(
@@ -181,6 +183,11 @@ export class WCView {
   }
 
   async capturePage(rect?: Electron.Rectangle, quality: 'low' | 'medium' | 'high' = 'low') {
+    if (!this.wcv || !this.wcv.webContents || this.wcv.webContents.isDestroyed()) {
+      console.warn(`[main] WebContentsView ${this.id} screenshot capture failed: no web contents`)
+      return null
+    }
+
     const nativeImage = await this.wcv.webContents.capturePage(rect)
     if (nativeImage.isEmpty()) {
       console.warn(`[main] WebContentsView ${this.id} screenshot capture failed: empty image`)
@@ -302,7 +309,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           this.activeViewId = view.id
         }
 
-        this.window.contentView.addChildView(view.wcv)
+        this.addChildView(view)
       }
 
       console.log('[main] webcontentsview-create: added view to window with id', view.id)
@@ -354,7 +361,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.views.set(view.id, view)
     this.activeOverlayViewId = view.id
 
-    this.window.contentView.addChildView(view.wcv)
+    this.addChildView(view)
     console.log('[main] webcontentsview-create: added view to window with id', view.id)
 
     this.emit('create', view)
@@ -405,6 +412,16 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     await view.loadURL(url)
   }
 
+  addChildView(view: WCView) {
+    this.window.contentView.addChildView(view.wcv)
+    view.attached = true
+  }
+
+  removeChildView(view: WCView) {
+    this.window.contentView.removeChildView(view.wcv)
+    view.attached = false
+  }
+
   bringViewToFront(id: string) {
     try {
       console.log('[main] webcontentsview-bringToFront: bringing view with id', id, 'to front')
@@ -416,11 +433,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       }
 
       // Remove and re-add to bring to front
-      if (this.window.contentView.removeChildView) {
-        this.window.contentView.removeChildView(view.wcv)
-      }
-
-      this.window.contentView.addChildView(view.wcv)
+      this.removeChildView(view)
+      this.addChildView(view)
       console.log('[main] Activated WebContentsView, brought to top for id:', view.id)
 
       if (view.isOverlay) {
@@ -493,7 +507,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
 
     try {
-      this.window.contentView.removeChildView(view.wcv)
+      this.removeChildView(view)
       console.log('[main] webcontentsview-hide: view with id', id, 'hidden successfully')
     } catch (e) {
       console.warn('[main] Could not hide WebContentsView', e)
@@ -505,7 +519,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.views.forEach((view) => {
       try {
         console.log('[main] webcontentsview-hideAllViews: hiding view with id', view.id)
-        this.window.contentView.removeChildView(view.wcv)
+        this.removeChildView(view)
       } catch (e) {
         console.warn('[main] Could not hide WebContentsView', e)
       }
@@ -753,7 +767,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         try {
           if (!validateIPCSender(event)) return null
 
-          console.log('[main] webcontentsview-manager-action: IPC event received', type, payload)
+          console.log('[main] webcontentsview-manager-action: IPC event received', type)
 
           if (type === WebContentsViewManagerActionType.CREATE) {
             const view = await (payload.overlayId
@@ -860,7 +874,19 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           } else if (type === WebContentsViewActionType.GET_NAVIGATION_HISTORY) {
             return view.getNavigationHistory()
           } else if (type === WebContentsViewActionType.CAPTURE_PAGE) {
-            return await view.capturePage(payload?.rect, payload?.quality)
+            let hideAgain = false
+            if (!view.attached) {
+              this.addChildView(view)
+              hideAgain = true
+            }
+
+            const image = await view.capturePage(payload?.rect, payload?.quality)
+
+            if (hideAgain) {
+              this.removeChildView(view)
+            }
+
+            return image
           }
 
           return false

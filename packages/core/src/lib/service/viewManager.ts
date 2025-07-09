@@ -23,6 +23,7 @@ export class WebContentsView {
   parentViewID: string | undefined
   bounds: Writable<Electron.Rectangle | null>
   screenshot: Writable<{ image: string; quality: 'low' | 'medium' | 'high' } | null>
+  backgroundColor: Writable<string | null>
 
   unsubs: Fn[] = []
 
@@ -41,6 +42,7 @@ export class WebContentsView {
     this.parentViewID = opts.parentViewID
     this.bounds = writable(opts.bounds || null)
     this.screenshot = writable(null)
+    this.backgroundColor = writable(null)
 
     this.unsubs.push(
       this.bounds.subscribe((bounds) => {
@@ -57,6 +59,10 @@ export class WebContentsView {
 
   get screenshotValue() {
     return get(this.screenshot)
+  }
+
+  get backgroundColorValue() {
+    return get(this.backgroundColor)
   }
 
   async action<T extends WebContentsViewActionType>(
@@ -165,6 +171,26 @@ export class WebContentsView {
 
   async hide() {
     await this.action(WebContentsViewActionType.HIDE)
+  }
+
+  async refreshBackgroundColor() {
+    try {
+      // first grab the background color of the view by executing JavaScript in the view
+      const backgroundColor = await this.executeJavaScript(
+        `document.body ? getComputedStyle(document.body).backgroundColor : 'rgba(255, 255, 255, 1)'`
+      )
+
+      if (backgroundColor) {
+        this.log.debug(`Setting background color`, backgroundColor)
+        this.backgroundColor.set(backgroundColor)
+      } else {
+        this.log.warn(`Failed to get background color`)
+        this.backgroundColor.set(null)
+      }
+    } catch (error) {
+      this.log.error('Error while refreshing background color:', error)
+      this.backgroundColor.set(null)
+    }
   }
 
   async takeViewScreenshot(quality: 'low' | 'medium' | 'high' = 'low') {
@@ -385,10 +411,6 @@ export class WebContentsViewManager extends EventEmitterBase<ViewManagerEvents> 
     this.activeViewId.set(view.id)
 
     this.emit('activated', view)
-
-    if (view.screenshotValue) {
-      view.screenshot.set(null)
-    }
 
     return true
   }

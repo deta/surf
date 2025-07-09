@@ -67,6 +67,8 @@
   $: cleanID = id.replace('webview-', '')
 
   // why svelte, whyyyy?!
+  $: webContentsBackgroundColor =
+    webContentsView !== null ? webContentsView?.backgroundColor : writable(null)
   $: webContentsScreenshot = webContentsView !== null ? webContentsView?.screenshot : writable(null)
 
   /*
@@ -259,6 +261,10 @@
 
       let skipDispatch = false
 
+      if (event.type === WebContentsViewEventType.DID_FINISH_LOAD) {
+        webContentsView.refreshBackgroundColor()
+      }
+
       const matchingListeners = eventListeners.filter((listener) => listener.type === event.type)
       if (matchingListeners.length > 0) {
         log.debug('Found matching listeners for event', event.type, matchingListeners.length)
@@ -345,7 +351,9 @@
   bind:this={webContentsWrapper}
   style="--background-image: {$webContentsScreenshot?.image
     ? `url(${$webContentsScreenshot?.image})`
-    : 'white'};"
+    : $webContentsBackgroundColor
+      ? $webContentsBackgroundColor
+      : 'white'};"
 ></div>
 
 <style lang="scss">
