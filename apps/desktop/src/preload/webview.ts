@@ -1007,49 +1007,6 @@ window.addEventListener('wheel', (event: WheelEvent) => {
   })
 })
 
-window.addEventListener(
-  'mousemove',
-  (event: MouseEvent) => {
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    // TODO: Fix missing types
-    sendPageEvent(WebViewEventSendNames.MouseMove, {
-      ...event,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pageX: event.pageX,
-      pageY: event.pageY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey
-    })
-  },
-  { passive: true, capture: true }
-)
-
-window.addEventListener(
-  'mouseup',
-  (event: MouseEvent) => {
-    // NOTE: Cant pass event instance directly, spread copy also fails so need to manually copy!
-    // TODO: Fix missing types
-    sendPageEvent(WebViewEventSendNames.MouseUp, {
-      ...event,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      screenX: event.screenX,
-      screenY: event.screenY,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey,
-      button: event.button
-    })
-  },
-  { passive: true, capture: true }
-)
-
 const createDragEventCopy = (e: DragEvent) => ({
   ...e, // this exists to make TypeScript happy
   clientX: e.clientX,
@@ -1321,9 +1278,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
   name: T,
   data?: WebViewSendEvents[T]
 ): void {
-  // Ignore mouse related passthrough to avoid spam
-  if (![WebViewEventSendNames.MouseMove, WebViewEventSendNames.DragOver].includes(name))
-    console.debug('Sending page event', name, data)
+  console.debug('Sending page event', name, data)
   ipcRenderer.send('webview-page-event', name, data)
   ipcRenderer.sendToHost('webview-page-event', name, data)
 }

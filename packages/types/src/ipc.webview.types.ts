@@ -27,9 +27,7 @@ export enum WebViewEventReceiveNames {
 
 export enum WebViewEventSendNames {
   Wheel = 'wheel',
-  // NOTE: Using prefix for mouse events, not to confuse with app window events!
-  MouseMove = 'passthrough_mousemove',
-  MouseUp = 'passthrough_mouseup',
+  // NOTE: Using prefix for drag events, not to confuse with app window events!
   DragEnter = 'passthrough_dragenter',
   DragOver = 'passthrough_dragover',
   DragLeave = 'passthrough_dragleave',
@@ -183,8 +181,6 @@ export type WebViewReceiveEvents = {
 
 export type WebViewSendEvents = {
   [WebViewEventSendNames.Wheel]: WebViewEventWheel
-  [WebViewEventSendNames.MouseMove]: MouseEvent
-  [WebViewEventSendNames.MouseUp]: MouseEvent
   [WebViewEventSendNames.Drag]: DragEvent
   [WebViewEventSendNames.DragEnter]: DragEvent
   [WebViewEventSendNames.DragOver]: DragEvent

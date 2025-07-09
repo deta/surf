@@ -203,37 +203,6 @@
       return
     }
 
-    // Handle passtrough events as we need to handle them differently
-    if ([WebViewEventSendNames.MouseMove, WebViewEventSendNames.MouseUp].includes(eventType)) {
-      let data = eventData as MouseEvent
-      // We need to transform from webview relative to parent window relative
-      const webviewBounds = webContents.getBoundingClientRect()
-      let evtName = ''
-      switch (eventType) {
-        case WebViewEventSendNames.MouseMove:
-          evtName = 'mousemove'
-          break
-        case WebViewEventSendNames.MouseUp:
-          evtName = 'mouseup'
-          break
-      }
-
-      window.dispatchEvent(
-        new MouseEvent(evtName, {
-          clientX: data.clientX + (webviewBounds?.left ?? 0),
-          clientY: data.clientY + (webviewBounds?.top ?? 0),
-          screenX: data.screenX,
-          screenY: data.screenY,
-          altKey: data.altKey,
-          ctrlKey: data.ctrlKey,
-          metaKey: data.metaKey,
-          shiftKey: data.shiftKey,
-          button: data.button
-        })
-      )
-      return
-    }
-
     // This re-dispatches the drag events from inside the webview onto the webview element itself
     // so, that dnd gets handled correctly
     if (eventType === WebViewEventSendNames.DragEnter) {
