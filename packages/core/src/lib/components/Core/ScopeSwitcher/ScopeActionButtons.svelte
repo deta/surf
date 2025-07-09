@@ -1,19 +1,61 @@
 <script lang="ts">
+  import { onDestroy, onMount } from 'svelte'
   import { Icon } from '@horizon/icons'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import DesktopPreview from '../../Chat/DesktopPreview.svelte'
+  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   export let onShowDesktop: () => void
   export let onOpenInOasis: () => void
 
   const desktopManager = useDesktopManager()
-  const desktopVisible = desktopManager.activeDesktopVisible
   const oasis = useOasis()
+  const viewManager = useTabsViewManager()
+
+  const desktopVisible = desktopManager.activeDesktopVisible
   const selectedSpace = oasis.selectedSpace
+
+  let contentElem: HTMLUListElement
+
+  onMount(() => {
+    // check if the menu would overlap with the active webcontents view
+    // and if so notify the view manager that the menu is open
+    const activeWebview = document.querySelector(
+      '.browser-window.active .webcontentsview-container'
+    )
+    if (activeWebview && contentElem) {
+      const viewRect = activeWebview.getBoundingClientRect()
+      const menuRect = contentElem.getBoundingClientRect()
+
+      // Check if any part of the menu overlaps with the view
+      const isOverlapping = !(
+        (
+          Math.round(menuRect.left) >= Math.round(viewRect.right) || // Menu is completely to the right
+          Math.round(menuRect.right) <= Math.round(viewRect.left) || // Menu is completely to the left
+          Math.round(menuRect.top) >= Math.round(viewRect.bottom) || // Menu is completely below
+          Math.round(menuRect.bottom) <= Math.round(viewRect.top)
+        ) // Menu is completely above
+      )
+
+      if (isOverlapping && !viewManager?.overlayStateValue.selectPopupOpen) {
+        viewManager.changeOverlayState({ selectPopupOpen: true })
+      }
+    } else {
+      console.warn(
+        'No active webview found or contentElem is not set. Cannot check for overlap with select dropdown.'
+      )
+    }
+  })
+
+  onDestroy(() => {
+    viewManager.changeOverlayState({
+      selectPopupOpen: false
+    })
+  })
 </script>
 
-<ul class="hover-buttons">
+<ul class="hover-buttons" bind:this={contentElem}>
   {#if !$desktopVisible}
     <div class="desktop-preview-wrapper" on:click|stopPropagation={onShowDesktop}>
       <DesktopPreview willReveal={false} desktopId={$selectedSpace} />
