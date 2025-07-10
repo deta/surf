@@ -24,6 +24,7 @@ export type UserSettings = {
   historySwipeGesture: boolean
   has_seen_hero_screen: boolean
   skipped_hero_screen: boolean
+  disable_bookmark_shortcut: boolean
 
   // Experiments
   annotations_sidebar: boolean

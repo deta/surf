@@ -111,6 +111,7 @@ export const getUserConfig = (path?: string) => {
       turntable_favicons: true,
       auto_toggle_pip: false,
       show_resource_contexts: true,
+      disable_bookmark_shortcut: false,
 
       /// Deprecated
       homescreen_link_cmdt: false,
@@ -237,6 +238,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings?.tab_bar_visible === undefined) {
     storedConfig.settings.tab_bar_visible = true
+    changedConfig = true
+  }
+
+  if (storedConfig.settings?.disable_bookmark_shortcut === undefined) {
+    storedConfig.settings.disable_bookmark_shortcut = false
     changedConfig = true
   }
 
