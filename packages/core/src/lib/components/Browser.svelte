@@ -827,7 +827,7 @@
     } else if (isModKeyAndKeyPressed(e, 'e')) {
       if ($showNewTabOverlay !== 0) setShowNewTabOverlay(0)
       toggleRightSidebarTab('chat')
-    } else if (isModKeyAndKeyPressed(e, 'd')) {
+    } else if (isModKeyAndKeyPressed(e, 'd') && !$userConfigSettings.disable_bookmark_shortcut) {
       handleBookmark($activeTabId, false, SaveToOasisEventTrigger.Shortcut)
     } else if (isModKeyAndShiftKeyAndKeyPressed(e, 'h')) {
       desktopManager.setVisible(!$desktopVisible, { trigger: OpenHomescreenEventTrigger.Shortcut })
