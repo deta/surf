@@ -65,18 +65,15 @@
             <span>Surf Note</span>
           </div>
         </button>
-        {#if !$showActionsPanel}
-          <button class="chevron-wrpper" on:click={() => dispatch('create')}>
-            <Icon name="chevron.down" />
-          </button>
-        {/if}
       </div>
+      <!--
       {#key $scope}
         <button class="header-btn" on:click|stopPropagation={() => dispatch('ask')}>
           <span>Ask</span>
           <Icon name="face" size="26px" />
         </button>
       {/key}
+      -->
     {/if}
   </div>
 </div>

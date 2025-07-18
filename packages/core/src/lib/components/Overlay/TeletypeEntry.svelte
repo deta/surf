@@ -459,16 +459,6 @@
     }
   }
 
-  const handleShowCreate = async () => {
-    if (teletype) {
-      teletype.executeAction('create')
-      teletype.open()
-      await tick()
-      const inputElem = document.getElementById(`teletype-input-default`)
-      inputElem?.focus()
-    }
-  }
-
   const handleTeletypeClose = () => {
     if (teletype) {
       tabsManager.showNewTabOverlay.set(0)
@@ -590,7 +580,6 @@
       <TeletypeHeader
         editMode={$editMode}
         on:ask={handleAsk}
-        on:create={handleShowCreate}
         on:open-chat-with-tab
         on:open-space-and-chat
         on:openScreenshot
@@ -599,6 +588,7 @@
         {showActionsPanel}
       />
     </div>
+    <!--
     <div slot="sidecar-right" class="tty-sidecar-right">
       {#if !$editMode}
         {#await import('../Chat/DesktopPreview.svelte') then DesktopPreview}
@@ -610,6 +600,7 @@
         {/await}
       {/if}
     </div>
+    -->
   </Teletype>
 </TeletypeProvider>
 

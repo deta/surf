@@ -59,6 +59,7 @@ export const searchActionToTeletypeItem = (searchQuery: string) => ({
   section: 'Search',
   selectPriority: ActionSelectPriority.HIGH,
   displayPriority: ActionDisplayPriority.HIGH,
+  /*
   actionText: 'Open as Tab',
   actionPanel: [
     createSecondaryAction({
@@ -75,6 +76,7 @@ export const searchActionToTeletypeItem = (searchQuery: string) => ({
       handler: createExecutioner(TeletypeAction.CopyGeneralSearch, { query: searchQuery })
     }
   ],
+  */
   handler: createExecutioner(TeletypeAction.NavigateGeneralSearch, { query: searchQuery })
 })
 
@@ -92,20 +94,22 @@ export const navigateActionToTeletypeItem = (searchValue: string, isEditMode = f
     ...(isEditMode
       ? {}
       : {
-          actionText: 'Open as Tab',
-          actionPanel: [
-            createSecondaryAction({
-              id: 'open-url-in-mini-browser',
-              name: 'Open in Mini-Browser',
-              handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
-            }),
-            {
-              id: `copy-url`,
-              name: 'Copy URL',
-              icon: 'copy',
-              handler: createExecutioner(TeletypeAction.CopyURL, { url })
-            }
-          ]
+          /*
+        actionText: 'Open as Tab',
+        actionPanel: [
+          createSecondaryAction({
+            id: 'open-url-in-mini-browser',
+            name: 'Open in Mini-Browser',
+            handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+          }),
+          {
+            id: `copy-url`,
+            name: 'Copy URL',
+            icon: 'copy',
+            handler: createExecutioner(TeletypeAction.CopyURL, { url })
+          }
+        ]
+        */
         }),
     handler: createExecutioner(TeletypeAction.NavigateURL, { url })
   }
@@ -118,6 +122,7 @@ export const searchEngineSuggestionToTeletypeItem = (suggestion: string) => ({
   execute: TeletypeAction.NavigateSuggestion,
   displayPriority: ActionDisplayPriority.HIGH,
   section: 'Suggestion',
+  /*
   actionText: 'Open as Tab',
   actionPanel: [
     createSecondaryAction({
@@ -132,6 +137,7 @@ export const searchEngineSuggestionToTeletypeItem = (suggestion: string) => ({
       handler: createExecutioner(TeletypeAction.CopySuggestion, { suggestion })
     }
   ],
+  */
   handler: createExecutioner(TeletypeAction.NavigateSuggestion, { suggestion })
 })
 
@@ -150,6 +156,7 @@ export const historyEntryToTeletypeItem = (
     imageIcon: '',
     execute: TeletypeAction.NavigateHistoryElement,
     section: 'History',
+    /*
     actionText: 'Open as Tab',
     actionPanel: [
       createSecondaryAction({
@@ -164,6 +171,7 @@ export const historyEntryToTeletypeItem = (
         handler: createExecutioner(TeletypeAction.CopyURL, { url })
       }
     ],
+    */
     handler: createExecutioner(TeletypeAction.NavigateHistoryElement, { entry })
   }
 }
@@ -178,6 +186,7 @@ export const hostnameHistoryEntryToTeletypeItem = (entry: HistoryEntry) => {
     section: 'Hostname',
     selectPriority: ActionSelectPriority.HIGHEST,
     displayPriority: ActionDisplayPriority.HIGH,
+    /*
     actionText: 'Open as Tab',
     actionPanel: [
       createSecondaryAction({
@@ -198,6 +207,7 @@ export const hostnameHistoryEntryToTeletypeItem = (entry: HistoryEntry) => {
         handler: createExecutioner(TeletypeAction.RemoveHostnameSuggestion, { entry })
       }
     ],
+    */
     handler: createExecutioner(TeletypeAction.NavigateSuggestionHostname, { entry })
   }
 }
@@ -222,6 +232,7 @@ export const resourceToTeletypeItem = (resource: Resource) => {
     execute: TeletypeAction.OpenResource,
     group: TeletypeActionGroup.Resources,
     section: 'Resource',
+    /*
     actionText: 'Open as Tab',
     actionPanel: [
       createSecondaryAction({
@@ -236,6 +247,7 @@ export const resourceToTeletypeItem = (resource: Resource) => {
         handler: createExecutioner(TeletypeAction.CopyURL, { url })
       }
     ],
+    */
     handler: createExecutioner(TeletypeAction.OpenResource, { resource })
   }
 }
@@ -250,7 +262,8 @@ export const tabToTeletypeItem = (tab: TabPage) => {
     section: 'Open Tabs',
     selectPriority: ActionSelectPriority.NORMAL,
     displayPriority: ActionDisplayPriority.NORMAL,
-    keywords: ['tab', tab.title, generateRootDomain(tab.currentLocation ?? '')],
+    keywords: ['tab', tab.title, generateRootDomain(tab.currentLocation ?? '')]
+    /*
     actionText: 'Open Tab',
     actionPanel: conditionalArrayItem(tab.type === 'page', [
       createSecondaryAction({
@@ -266,6 +279,7 @@ export const tabToTeletypeItem = (tab: TabPage) => {
       }
     ]),
     handler: createExecutioner(TeletypeAction.OpenTab, { tab })
+    */
   }
 }
 
