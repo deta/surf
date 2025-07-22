@@ -46,7 +46,8 @@ export enum ResourceTagsBuiltInKeys {
   PREVIEW_IMAGE_RESOURCE = 'previewImageResource', // resource id of the custom preview image set by the user
   USER_VIEW_PREFS = 'userViewPreferences',
   LINKED_CHAT = 'linkedChat', // resource is linked to a chat
-  DATA_STATE = 'dataState' // state of the resource data (e.g. 'partial', 'complete')
+  DATA_STATE = 'dataState', // state of the resource data (e.g. 'partial', 'complete')
+  SURFLET_PROTOCOL_VERSION = 'surfletProtocolVersion' // version of the surflet protocol used to save the resource
 }
 
 export interface ResourceTagsBuiltIn {

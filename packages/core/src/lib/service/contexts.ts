@@ -1,6 +1,6 @@
 import { generateID, isDev, useLocalStorageStore, useLogScope } from '@horizon/utils'
 import type { OasisService, OasisSpace } from './oasis'
-import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
+import { derived, get, type Readable, type Writable } from 'svelte/store'
 
 export type ContextLinkRaw = {
   id: string

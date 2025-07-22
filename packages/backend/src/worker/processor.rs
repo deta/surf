@@ -352,7 +352,8 @@ pub fn get_youtube_contents_metadatas(
     // min 20 second chunks
     for (i, piece) in transcript.metadata.transcript_pieces.iter().enumerate() {
         transcript_chunk.push_str(&format!(" {}", piece.text));
-        if piece.start - prev_offset > 20.0 || i == transcript.metadata.transcript_pieces.len() - 1 {
+        if piece.start - prev_offset > 20.0 || i == transcript.metadata.transcript_pieces.len() - 1
+        {
             contents.push(ContentChunker::normalize(&transcript_chunk));
             metadatas.push(ResourceTextContentMetadata {
                 timestamp: Some(prev_offset as f32),
@@ -378,7 +379,7 @@ fn process_resource_data(
     match resource_text_content_type {
         ResourceTextContentType::Note => Ok(Some((
             resource_text_content_type,
-            normalize_html_data(resource_data),
+            resource_data.to_string(),
         ))),
 
         ResourceTextContentType::Image => {
@@ -486,6 +487,7 @@ fn process_resource_data(
     }
 }
 
+#[allow(dead_code)]
 fn normalize_html_data(data: &str) -> String {
     let mut output = String::new();
     let mut in_tag = false;

@@ -9,7 +9,7 @@ import rehypeStringify from 'rehype-stringify'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import rehypeKatex from 'rehype-katex'
-import { remarkParseSurflets, rehypeProcessSurflets } from './surflets'
+import { remarkParseCustomComponents, rehypeProcessCustomComponents } from './markdown-plugins'
 
 export const htmlToMarkdown = async (html: string) => {
   const content = await unified()
@@ -25,7 +25,7 @@ export const htmlToMarkdown = async (html: string) => {
 export const markdownToHtml = async (markdown: string) => {
   const content = await unified()
     .use(remarkParse)
-    .use(remarkParseSurflets)
+    .use(remarkParseCustomComponents)
     .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
@@ -40,18 +40,20 @@ export const markdownToHtml = async (markdown: string) => {
         div: [...(defaultSchema.attributes?.div ?? []), ['className', 'math', 'math-display']],
         span: [['className', 'math', 'math-inline']],
         // Allow all data attributes on surflet tags
-        surflet: ['data*']
+        surflet: ['data*'],
+        websearch: ['data*']
       },
       tagNames: [
         ...(defaultSchema.tagNames ?? []),
         // allow custom citation tags so we can render them
         'citation',
         'think',
-        'surflet'
+        'surflet',
+        'websearch'
       ]
     })
     .use(rehypeKatex)
-    .use(rehypeProcessSurflets)
+    .use(rehypeProcessCustomComponents)
     .use(rehypeStringify)
     .process(markdown)
 

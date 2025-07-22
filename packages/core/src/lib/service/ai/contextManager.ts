@@ -50,6 +50,9 @@ import {
 } from '../../constants/chat'
 import { MentionItemType, type MentionItem } from '@horizon/editor'
 import { ContextItemBrowsingHistory } from './context/history'
+import type { Add } from '@horizon/icons'
+import type { SearchResultLink } from '@horizon/web-parser'
+import { ContextItemWebSearch } from './context/web'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -334,7 +337,6 @@ export class ContextManager {
     }
 
     const currentContextLength = this.itemsValue.length
-
     const existingItem = this.itemsValue.find((i) => i.id === item.id)
     if (existingItem) {
       this.log.debug('Item already in context', item.id)
@@ -614,6 +616,14 @@ export class ContextManager {
     }
 
     const item = new ContextItemBrowsingHistory(this.service)
+    return this.addContextItem(item, opts)
+  }
+
+  async addWebSearchContext(resultLinks: SearchResultLink[], opts?: AddContextItemOptions) {
+    // TODO: we need to this because the result links are currently coupled to the web search instance
+    // new websearch addition might have different links
+    this.removeContextItem('web_search')
+    const item = new ContextItemWebSearch(this.service, resultLinks)
     return this.addContextItem(item, opts)
   }
 

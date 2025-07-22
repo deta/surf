@@ -270,11 +270,16 @@ export const surfProtocolHandler = async (req: GlobalRequest) => {
 
 export const surfletProtocolHandler = async (req: GlobalRequest) => {
   try {
+    const cspPolicy =
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://picsum.photos https://via.placeholder.com https://images.unsplash.com; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+
     const url = new URL(req.url)
     if (!url.hostname.endsWith('.app.local')) {
       return new Response('Invalid Surflet protocol URL', { status: 400 })
     }
-    const id = url.hostname.replace('.app.local', '')
+    const isV2Protocol = url.hostname.endsWith('.v2.app.local')
+    const suffix = isV2Protocol ? '.v2.app.local' : '.app.local'
+    const id = url.hostname.replace(suffix, '')
     const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
     const path = join(base, id)
 
@@ -286,10 +291,16 @@ export const surfletProtocolHandler = async (req: GlobalRequest) => {
       return new Response('Not Found', { status: 404 })
     }
     const code = await res.text()
+    let headers = {
+      'Content-Type': 'text/html'
+    }
+    // NOTE: only add CSP header for v2 protocol
+    // this is to not break existing surflets that do not expect CSP
+    if (isV2Protocol) {
+      headers['Content-Security-Policy'] = cspPolicy
+    }
     return new Response(code, {
-      headers: {
-        'Content-Type': 'text/html'
-      }
+      headers: headers
     })
   } catch (err) {
     log.error('surflet protocol error:', err, req.url)

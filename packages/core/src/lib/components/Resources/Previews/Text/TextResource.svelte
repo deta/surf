@@ -133,6 +133,7 @@
   import CaretPopover from './CaretPopover.svelte'
   import type { CaretPosition } from '@horizon/editor/src/lib/extensions/CaretIndicator'
   import Surflet from '@horizon/core/src/lib/components/Chat/Notes/Surflet.svelte'
+  import WebSearch from '@horizon/core/src/lib/components/Chat/Notes/WebSearch.svelte'
   import { openContextMenu } from '../../../Core/ContextMenu.svelte'
   import { createResourcesFromMediaItems, processPaste } from '../../../../service/mediaImporter'
   import { predefinedSurfletCode } from '../../../Onboarding/predefinedSurflets'
@@ -1139,7 +1140,8 @@
     query: string,
     mentions?: MentionItem[],
     trigger: PageChatMessageSentEventTrigger = PageChatMessageSentEventTrigger.NoteAutocompletion,
-    opts?: Partial<ChatSubmitOptions>
+    opts?: Partial<ChatSubmitOptions>,
+    loadingMessage?: string
   ) => {
     const options = {
       focusEnd: opts?.focusEnd ?? false,
@@ -1201,7 +1203,8 @@
         id: options.generationID,
         textQuery: textQuery,
         autoScroll: options.autoScroll,
-        showPrompt: options.showPrompt
+        showPrompt: options.showPrompt,
+        loadingMessage: loadingMessage
       })
 
       if (options.focusInput) {
@@ -1814,6 +1817,49 @@
       selection?.addRange(range)
     }
   }
+
+  const handleWebSearchCompleted = async (e: CustomEvent) => {
+    log.debug('Handling web search completed', e.detail)
+    if (!contextManager) {
+      log.error('No context manager found for web search completion handle')
+      return
+    }
+
+    // TODO: we should wait on this to finish instead of outright ignoring it?
+    if ($isGeneratingAI) {
+      log.debug('Ignoring web search completion - AI generation already in progress')
+      return
+    }
+
+    try {
+      const { results, query } = e.detail
+      const mentions = editorElem.getMentions()
+
+      const webSearchQuery =
+        'Please complete my original query now that I have the web search results. The results are part of the context documents. My original query:' +
+        query
+
+      // TODO: indicate to the AI that the results are from web search
+      await contextManager.addWebSearchContext(results)
+
+      await generateAndInsertAIOutput(
+        webSearchQuery,
+        mentions,
+        PageChatMessageSentEventTrigger.NoteWebSearch,
+        undefined,
+        'Processing the results to answer your question...'
+      )
+
+      // TODO: decide whether we should remove or keep the web search context after processing
+      // TODO: also use an enum for the context id
+      contextManager.removeContextItem('web_search')
+    } catch (e) {
+      log.error('Error handling web search completed', e)
+      toasts.error('Failed to handle web search results')
+    }
+  }
+
+  const debouncedHandleWebSearchCompleted = useDebounce(handleWebSearchCompleted, 200)
 
   const handleNoteButtonClick = async (e: CustomEvent<string>) => {
     try {
@@ -2660,6 +2706,7 @@
               placeholderNewLine={$editorPlaceholder}
               citationComponent={CitationItem}
               surfletComponent={Surflet}
+              webSearchComponent={WebSearch}
               resourceComponent={EmbeddedResource}
               autocomplete={!($isFirstLine && escapeFirstLineChat)}
               floatingMenu
@@ -2700,6 +2747,7 @@
               on:floaty-input-state-update={handleFloatyInputStateUpdate}
               on:last-line-visbility-changed={handleLastLineVisibilityChanged}
               on:is-first-line-changed={handleIsFirstLineChanged}
+              on:web-search-completed={debouncedHandleWebSearchCompleted}
               {autofocus}
             >
               <div slot="floating-menu">
