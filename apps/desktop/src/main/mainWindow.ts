@@ -35,10 +35,6 @@ export function createWindow() {
     return
   }
 
-  const userDataPath = app.getPath('userData')
-  const backendRootPath = join(userDataPath, 'sffs_backend')
-  const imageResourceCachePath = join(backendRootPath, 'resources/previews')
-
   const winState = new WindowState(
     {
       saveImmediately: is.dev

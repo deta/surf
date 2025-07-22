@@ -13,6 +13,11 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
 
+  import {
+    startAIGeneration,
+    endAIGeneration
+  } from '@horizon/core/src/lib/service/ai/generationState'
+
   // NOTE: created by tiptap but not needed
   export const node: any = undefined
   export const editor: any = undefined
@@ -55,6 +60,16 @@
   let isProcessingAI: boolean = false
   let streamUnsubscribe: (() => void) | null = null
 
+  // TODO: should the endAIgeneration not also be scoped to the source?
+  const setAIProcessingState = (processing: boolean) => {
+    isProcessingAI = processing
+    if (processing) {
+      startAIGeneration('surflet')
+    } else {
+      endAIGeneration()
+    }
+  }
+
   const setError = (
     type: ErrorType,
     message: string,
@@ -63,7 +78,7 @@
   ) => {
     log.error(`${type}: ${message}`)
     error.set({ type, message, userMessage, canRetry })
-    isProcessingAI = false
+    setAIProcessingState(false)
   }
 
   const clearError = () => {
@@ -178,7 +193,8 @@
             url: url
           },
           undefined,
-          [ResourceTag.silent()]
+          // TODO: get surflet protocol version from somewhere else?
+          [ResourceTag.silent(), ResourceTag.surfletProtocolVersion('v2')]
         )
         if (!res) {
           throw new Error('Failed to create resource - no response from server')
@@ -312,7 +328,7 @@
         true
       )
     } finally {
-      isProcessingAI = false
+      setAIProcessingState(false)
     }
   }
 
@@ -335,7 +351,7 @@
     if (status.isComplete) {
       log.debug('Stream already complete')
       doneGenerating.set(true)
-      isProcessingAI = false
+      setAIProcessingState(false)
       return
     }
     const stream = aiService.subscribeToAppStream(appId)
@@ -344,7 +360,7 @@
       return
     }
 
-    isProcessingAI = true
+    setAIProcessingState(true)
     streamUnsubscribe = stream.subscribe(
       (chunk) => {
         // for existing streams, we already have the buffer, so only process new chunks
@@ -361,7 +377,7 @@
   const createNewStream = async (): Promise<string | null> => {
     log.debug('Creating new stream for prompt:', prompt)
     clearError()
-    isProcessingAI = true
+    setAIProcessingState(true)
     try {
       const result = await aiService.createApp(prompt)
       if (!result) {

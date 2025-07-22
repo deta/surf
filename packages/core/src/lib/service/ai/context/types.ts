@@ -17,6 +17,7 @@ export enum ContextItemTypes {
   INBOX = 'inbox',
   EVERYTHING = 'everything',
   WIKIPEDIA = 'wikipedia',
+  WEB_SEARCH = 'web-search',
   BROWSING_HISTORY = 'browsing-history'
 }
 
@@ -73,5 +74,5 @@ export type ContextItem =
   | ContextItemActiveTab
   | ContextItemActiveSpaceContext
   | ContextItemPageTab
-  | ContextItemInbox
   | ContextItemEverything
+  | ContextItemInbox

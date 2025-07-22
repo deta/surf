@@ -223,8 +223,8 @@ export class WebViewExtractor {
     })
   }
 
-  executeJavaScript(code: string, userGesture?: boolean) {
-    return this.webview?.executeJavaScript(code, userGesture)
+  async executeJavaScript<T>(code: string, userGesture?: boolean) {
+    return this.webview?.executeJavaScript(code, userGesture) as Promise<T>
   }
 }
 

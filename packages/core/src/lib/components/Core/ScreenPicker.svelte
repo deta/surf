@@ -823,17 +823,23 @@
                   >
                 </li>-->
                 <li>
-                  <button on:click={handleSaveScreenshot}><Icon name="save" size="16px" /> </button>
+                  <button on:click={handleSaveScreenshot}
+                    >Save<Icon name="save" size="16px" />
+                  </button>
                 </li>
                 <li>
-                  <button on:click={handleCopyScreenshot}><Icon name="copy" size="16px" /> </button>
+                  <button on:click={handleCopyScreenshot}
+                    >Copy<Icon name="copy" size="16px" />
+                  </button>
                 </li>
 
+                <!--
                 <li>
                   <button on:click={handleUseInChat}
                     ><Icon name="chat" size="16px" /> Use in Chat</button
                   >
                 </li>
+                -->
                 {#if !$state.isChatExpanded}
                   <li>
                     <SelectDropdown

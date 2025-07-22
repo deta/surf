@@ -72,6 +72,15 @@ export const BROWSER_HISTORY_MENTION = {
   type: MentionItemType.BUILT_IN
 } as MentionItem
 
+export const WEB_SEARCH_MENTION = {
+  id: ContextItemTypes.WEB_SEARCH,
+  label: 'Web Search',
+  suggestionLabel: 'Web Search',
+  aliases: ['web', 'web search'],
+  icon: 'icon;;world',
+  type: MentionItemType.BUILT_IN
+} as MentionItem
+
 export const MODEL_CLAUDE_MENTION = {
   id: 'model-anthropic',
   label: 'Claude',

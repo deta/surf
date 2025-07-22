@@ -24,15 +24,16 @@
 
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte'
-  import { get, writable, derived } from 'svelte/store'
+  import { get, writable } from 'svelte/store'
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
   import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
+
+  /* NOTE: These imports are for the "Whats New" feature, which is currently commented out.
   import NewFeatureDialog from '../Onboarding/Dialog/NewFeatureDialog.svelte'
   import FloatyButton from '../Atoms/FloatyButton.svelte'
   import { Icon } from '@horizon/icons'
   import { versions, completedFeatures, showFeatureModal } from '../Onboarding/featured'
-
-  import DesktopPreview from '../Chat/DesktopPreview.svelte'
+  */
 
   import {
     copyToClipboard,
@@ -81,18 +82,19 @@
   const selectedSpace = oasis.selectedSpace
 
   let unsubscribe: () => void
+  let unsubscribeInputValue: () => void
 
-  const showWhatsNew = showFeatureModal
-  const inputValue = writable('')
   const showActionsPanel = writable(false)
 
+  /*
+  const showWhatsNew = showFeatureModal
   const hasUntriedFeatures = derived(completedFeatures, ($completedFeatures) =>
     versions.some((v) => !$completedFeatures.includes(v.featureID))
   )
+  */
 
   const searchEngine = writable($userConfigSettings.search_engine)
 
-  // Static actions that are always available
   const staticActions: (HandlerAction | ParentAction)[] = [
     {
       id: 'create',
@@ -112,8 +114,18 @@
     }
   ]
 
+  // pre-compute search engine URLs for faster lookups
+  const searchEngineMap = SEARCH_ENGINES.reduce(
+    (acc, engine) => {
+      acc[engine.key] = engine
+      return acc
+    },
+    {} as Record<string, any>
+  )
+
+  const defaultEngine = searchEngineMap[DEFAULT_SEARCH_ENGINE]
+
   $: editMode = teletype?.editMode
-  $: actions = teletype?.actions
 
   $: if (open) {
     teletype?.open()
@@ -136,11 +148,6 @@
     if (inputElement instanceof HTMLInputElement || inputElement instanceof HTMLTextAreaElement) {
       inputElement.select()
     }
-  }
-
-  const handleInput = (e: CustomEvent) => {
-    const input = e.detail
-    inputValue.set(input)
   }
 
   const handleShowActionPanel = (event: CustomEvent<boolean>) => {
@@ -179,44 +186,44 @@
       action.id === 'create' ? { ...action, childActions: createChildActions } : action
     )
 
-    teletype.setLoading(true)
-    try {
-      if (value) {
-        commandComposer.updateSearchValue(value)
-        const searchResults = get(commandComposer.defaultActionsTeletype)
-        const dynamicActions = await createActionsFromResults(searchResults, resourceManager, oasis)
-        await tick()
+    // batch DOM updates using requestAnimationFrame
+    requestAnimationFrame(async () => {
+      teletype.setLoading(true)
 
-        let availableActions
-        if (editMode) {
-          availableActions = [...updatedStaticActions, ...dynamicActions]
+      try {
+        if (value) {
+          commandComposer.updateSearchValue(value)
+          const searchResults = get(commandComposer.defaultActionsTeletype)
+          const dynamicActions = await createActionsFromResults(
+            searchResults,
+            resourceManager,
+            oasis
+          )
+          await tick()
+
+          let availableActions
+          if (editMode) {
+            availableActions = [...updatedStaticActions, ...dynamicActions]
+          } else {
+            availableActions = [
+              ...stuffActions,
+              ...updatedStaticActions,
+              ...dynamicActions,
+              ...askActions
+            ]
+          }
+
+          teletype.setActions(availableActions)
         } else {
-          availableActions = [
-            ...stuffActions,
-            ...updatedStaticActions,
-            ...dynamicActions,
-            ...askActions
-          ]
+          teletype.setActions(editMode ? [] : updatedStaticActions)
         }
-
-        teletype.setActions(availableActions)
-      } else {
-        teletype.setActions(editMode ? [] : updatedStaticActions)
+      } finally {
+        teletype.setLoading(false)
       }
-    } finally {
-      teletype.setLoading(false)
-    }
+    })
   }
 
-  const searchDebounce = useCancelableDebounce(handleSearch, 100)
-
-  $: {
-    if (teletype?.inputValue) {
-      teletype.inputValue.subscribe((value: string) => {
-        searchDebounce.execute(value)
-      })
-    }
-  }
+  const searchDebounce = useCancelableDebounce(handleSearch, 25)
 
   // Event handlers for each action type
   const handleGeneralSearch: TeletypeActionHandler<{ query: string }> = (payload) => {
@@ -226,9 +233,7 @@
     if (isValidURL) {
       dispatch('open-url', { editMode, url: prependProtocol(payload.query) })
     } else {
-      const engine =
-        SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
-        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      const engine = searchEngineMap[$searchEngine] ?? defaultEngine
       if (!engine) throw new Error('No search engine / default engine found, config error?')
       log.debug('engine', engine)
       dispatch('open-url', { editMode, url: engine.getUrl(encodeURIComponent(payload.query)) })
@@ -243,9 +248,7 @@
     if (isValidURL) {
       dispatch('open-url-in-minibrowser', prependProtocol(payload.query))
     } else {
-      const engine =
-        SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
-        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      const engine = searchEngineMap[$searchEngine] ?? defaultEngine
       if (!engine) throw new Error('No search engine / default engine found, config error?')
       log.debug('engine', engine)
       dispatch('open-url-in-minibrowser', engine.getUrl(encodeURIComponent(payload.query)))
@@ -259,9 +262,7 @@
       copyToClipboard(prependProtocol(payload.query))
       toasts.success('Copied URL to clipboard!')
     } else {
-      const engine =
-        SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
-        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+      const engine = searchEngineMap[$searchEngine] ?? defaultEngine
       if (!engine) throw new Error('No search engine / default engine found, config error?')
       copyToClipboard(engine.getUrl(encodeURIComponent(payload.query)))
       toasts.success('Copied URL to clipboard!')
@@ -269,7 +270,7 @@
   }
 
   const handleNavigate: TeletypeActionHandler<{ url: string }> = (payload) => {
-    const currentInputValue = get(teletype?.inputValue)
+    const currentInputValue = get(teletype?.inputValue) || ''
     log.debug('handleNavigate', payload.url, currentInputValue)
 
     if (payload.url !== currentInputValue) {
@@ -316,18 +317,14 @@
 
   const handleOpenSuggestionAsTab: TeletypeActionHandler<{ suggestion: string }> = (payload) => {
     const editMode = get(teletype?.editMode) || false
-    const engine =
-      SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
-      SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+    const engine = searchEngineMap[$searchEngine] ?? defaultEngine
     if (!engine) throw new Error('No search engine / default engine found, config error?')
 
     dispatch('open-url', { editMode, url: engine.getUrl(encodeURIComponent(payload.suggestion)) })
   }
 
   const handleCopySuggestion: TeletypeActionHandler<{ suggestion: string }> = async (payload) => {
-    const engine =
-      SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
-      SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+    const engine = searchEngineMap[$searchEngine] ?? defaultEngine
     if (!engine) throw new Error('No search engine / default engine found, config error?')
 
     copyToClipboard(engine.getUrl(encodeURIComponent(payload.suggestion)))
@@ -337,9 +334,7 @@
   const handleOpenSuggestionInMiniBrowser: TeletypeActionHandler<{ suggestion: string }> = (
     payload
   ) => {
-    const engine =
-      SEARCH_ENGINES.find((e) => e.key === $searchEngine) ??
-      SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+    const engine = searchEngineMap[$searchEngine] ?? defaultEngine
     if (!engine) throw new Error('No search engine / default engine found, config error?')
 
     dispatch('open-url-in-minibrowser', engine.getUrl(encodeURIComponent(payload.suggestion)))
@@ -421,7 +416,7 @@
 
   const handleBrowserCommand: TeletypeActionHandler<{ command: string }> = (payload) => {
     if (payload.command === 'create-chat') {
-      dispatch('create-chat', get(teletype?.inputValue))
+      dispatch('create-chat', get(teletype?.inputValue) || '')
     } else {
       // TODO: properly type the browser commands
       dispatch(payload.command as keyof TeletypeEntryEvents)
@@ -429,7 +424,7 @@
   }
 
   const handleAsk: TeletypeActionHandler<{}> = () => {
-    dispatch('ask', get(teletype?.inputValue))
+    dispatch('ask', get(teletype?.inputValue) || '')
   }
 
   const handleCreateSpace: TeletypeActionHandler<{}> = () => {
@@ -464,20 +459,45 @@
     }
   }
 
-  const handleShowCreate = async () => {
-    if (teletype) {
-      teletype.executeAction('create')
-      teletype.open()
-      await tick()
-      const inputElem = document.getElementById(`teletype-input-default`)
-      inputElem?.focus()
-    }
-  }
-
   const handleTeletypeClose = () => {
     if (teletype) {
       tabsManager.showNewTabOverlay.set(0)
     }
+  }
+
+  const actionHandlers = {
+    [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
+    [TeletypeAction.NavigateURL]: handleNavigate,
+    [TeletypeAction.OpenURLInMiniBrowser]: handleOpenURLInMiniBrowser,
+    [TeletypeAction.OpenGeneralSearchInMiniBrowser]: handleOpenGeneralSearchInMiniBrowser,
+    [TeletypeAction.OpenSuggestionInMiniBrowser]: handleOpenSuggestionInMiniBrowser,
+    [TeletypeAction.OpenResourceInMiniBrowser]: handleOpenResourceInMiniBrowser,
+    [TeletypeAction.NavigateSuggestion]: handleOpenSuggestionAsTab,
+    [TeletypeAction.NavigateHistoryElement]: handleHistory,
+    [TeletypeAction.NavigateSuggestionHostname]: handleSuggestionHostname,
+    [TeletypeAction.OpenResource]: handleResource,
+    [TeletypeAction.OpenTab]: handleTab,
+    [TeletypeAction.OpenSpaceInStuff]: handleOpenSpaceInStuff,
+    [TeletypeAction.OpenSpaceAsContext]: handleOpenSpaceAsContext,
+    [TeletypeAction.OpenSpaceAsTab]: handleOpenSpaceAsTab,
+    [TeletypeAction.OpenStuff]: handleOpenStuff,
+    [TeletypeAction.CopyURL]: handleCopyURL,
+    [TeletypeAction.CopySuggestion]: handleCopySuggestion,
+    [TeletypeAction.CopyGeneralSearch]: handleCopyGeneralSearch,
+    [TeletypeAction.ExecuteBrowserCommand]: handleBrowserCommand,
+    [TeletypeAction.Create]: handleCreate,
+    [TeletypeAction.Ask]: handleAsk,
+    [TeletypeAction.RemoveHostnameSuggestion]: handleRemoveHostnameSuggestion,
+    [TeletypeAction.CreateSpace]: handleCreateSpace,
+    [TeletypeAction.Reload]: () => dispatch('reload'),
+    [TeletypeAction.CloseTab]: () => dispatch('close-active-tab'),
+    [TeletypeAction.ToggleBookmark]: () => dispatch('toggle-bookmark'),
+    [TeletypeAction.ToggleSidebar]: () => dispatch('toggle-sidebar'),
+    [TeletypeAction.ShowHistoryTab]: () => dispatch('show-history-tab'),
+    [TeletypeAction.ZoomIn]: () => dispatch('zoom-in'),
+    [TeletypeAction.ZoomOut]: () => dispatch('zoom-out'),
+    [TeletypeAction.ResetZoom]: () => dispatch('reset-zoom'),
+    [TeletypeAction.CreateNote]: () => dispatch('create-note')
   }
 
   onMount(() => {
@@ -485,39 +505,14 @@
       commandComposer.attachTeletype(teletype)
     }
 
-    const handlers = {
-      [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
-      [TeletypeAction.NavigateURL]: handleNavigate,
-      [TeletypeAction.OpenURLInMiniBrowser]: handleOpenURLInMiniBrowser,
-      [TeletypeAction.OpenGeneralSearchInMiniBrowser]: handleOpenGeneralSearchInMiniBrowser,
-      [TeletypeAction.OpenSuggestionInMiniBrowser]: handleOpenSuggestionInMiniBrowser,
-      [TeletypeAction.OpenResourceInMiniBrowser]: handleOpenResourceInMiniBrowser,
-      [TeletypeAction.NavigateSuggestion]: handleOpenSuggestionAsTab,
-      [TeletypeAction.NavigateHistoryElement]: handleHistory,
-      [TeletypeAction.NavigateSuggestionHostname]: handleSuggestionHostname,
-      [TeletypeAction.OpenResource]: handleResource,
-      [TeletypeAction.OpenTab]: handleTab,
-      [TeletypeAction.OpenSpaceInStuff]: handleOpenSpaceInStuff,
-      [TeletypeAction.OpenSpaceAsContext]: handleOpenSpaceAsContext,
-      [TeletypeAction.OpenSpaceAsTab]: handleOpenSpaceAsTab,
-      [TeletypeAction.OpenStuff]: handleOpenStuff,
-      [TeletypeAction.CopyURL]: handleCopyURL,
-      [TeletypeAction.CopySuggestion]: handleCopySuggestion,
-      [TeletypeAction.CopyGeneralSearch]: handleCopyGeneralSearch,
-      [TeletypeAction.ExecuteBrowserCommand]: handleBrowserCommand,
-      [TeletypeAction.Create]: handleCreate,
-      [TeletypeAction.Ask]: handleAsk,
-      [TeletypeAction.RemoveHostnameSuggestion]: handleRemoveHostnameSuggestion,
-      [TeletypeAction.CreateSpace]: handleCreateSpace,
-      [TeletypeAction.Reload]: () => dispatch('reload'),
-      [TeletypeAction.CloseTab]: () => dispatch('close-active-tab'),
-      [TeletypeAction.ToggleBookmark]: () => dispatch('toggle-bookmark'),
-      [TeletypeAction.ToggleSidebar]: () => dispatch('toggle-sidebar'),
-      [TeletypeAction.ShowHistoryTab]: () => dispatch('show-history-tab'),
-      [TeletypeAction.ZoomIn]: () => dispatch('zoom-in'),
-      [TeletypeAction.ZoomOut]: () => dispatch('zoom-out'),
-      [TeletypeAction.ResetZoom]: () => dispatch('reset-zoom'),
-      [TeletypeAction.CreateNote]: () => dispatch('create-note')
+    if (teletype?.inputValue) {
+      unsubscribeInputValue = teletype.inputValue.subscribe((value) => {
+        if (value) {
+          searchDebounce.execute(value)
+        } else {
+          searchDebounce.cancel()
+        }
+      })
     }
 
     unsubscribe = teletypeActionStore.subscribe(async (event: TeletypeActionEvent | null) => {
@@ -527,13 +522,13 @@
         log.error('Action failed:', event.error)
         return
       }
-      const handler = handlers[event.execute as keyof typeof handlers]
-      const searchValue = get(teletype?.inputValue)
+
+      const handler = actionHandlers[event.execute as keyof typeof actionHandlers]
 
       if (handler) {
         const returnValue = (await handler(
           event.payload,
-          searchValue
+          get(teletype?.inputValue) || ''
         )) as TeletypeActionHandlerReturnValue
         if (returnValue?.preventClose) {
           return
@@ -556,7 +551,10 @@
     if (unsubscribe) {
       unsubscribe()
     }
-    // Clean up debounce function
+    if (unsubscribeInputValue) {
+      log.debug('Unsubscribing from input value changes')
+      unsubscribeInputValue()
+    }
     if (searchDebounce) {
       searchDebounce.cancel()
     }
@@ -577,12 +575,11 @@
     nestedSearch: true
   }}
 >
-  <Teletype on:close on:input={handleInput} on:actions-rendered={handleShowActionPanel}>
+  <Teletype on:close on:actions-rendered={handleShowActionPanel}>
     <div slot="header" class="custom-header">
       <TeletypeHeader
         editMode={$editMode}
         on:ask={handleAsk}
-        on:create={handleShowCreate}
         on:open-chat-with-tab
         on:open-space-and-chat
         on:openScreenshot
@@ -591,15 +588,24 @@
         {showActionsPanel}
       />
     </div>
+    <!--
     <div slot="sidecar-right" class="tty-sidecar-right">
       {#if !$editMode}
-        <DesktopPreview willReveal={true} desktopId={$selectedSpace} />
+        {#await import('../Chat/DesktopPreview.svelte') then DesktopPreview}
+          <svelte:component
+            this={DesktopPreview.default}
+            willReveal={true}
+            desktopId={$selectedSpace}
+          />
+        {/await}
       {/if}
     </div>
+    -->
   </Teletype>
 </TeletypeProvider>
 
-{#if $hasUntriedFeatures && $inputValue == '' && !$showActionsPanel}
+<!--
+{#if $hasUntriedFeatures && (get(teletype?.inputValue) || '') === '' && !$showActionsPanel}
   {#if $showWhatsNew}
     <NewFeatureDialog
       on:dismiss={() => {
@@ -634,6 +640,7 @@
     </div>
   {/if}
 {/if}
+-->
 
 <div class="teletype-close-wrapper" on:click={handleTeletypeClose}></div>
 

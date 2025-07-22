@@ -36,6 +36,7 @@
   export let submitOnEnter: boolean = false
   export let citationComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let surfletComponent: ComponentType<SvelteComponent> | undefined = undefined
+  export let webSearchComponent: ComponentType<SvelteComponent> | undefined = undefined
   export let autocomplete: boolean = false
   export let floatingMenu: boolean = false
   export let floatingMenuShown: boolean = false
@@ -92,6 +93,7 @@
     'caret-position-update': any
     'last-line-visbility-changed': boolean
     'is-first-line-changed': boolean
+    'web-search-completed': any
   }>()
 
   export const getEditor = () => {
@@ -297,6 +299,11 @@
     dispatch('citation-click', e.detail)
   }
 
+  // TODO: type this properly
+  const onWebSearchCompleted = (results: any, query: any) => {
+    dispatch('web-search-completed', { results, query })
+  }
+
   const handleCaretPositionUpdate = (position: any) => {
     // Forward the position to any listeners via the provided callback
     if (onCaretPositionUpdate) {
@@ -339,6 +346,8 @@
     onFirstLineStateChanged: handleFirstLineChanged,
     onLastLineVisibilityChanged: handleLastLineVisibilityChanged,
     surfletComponent: surfletComponent,
+    webSearchComponent: webSearchComponent,
+    onWebSearchCompleted: onWebSearchCompleted,
     onLinkClick: onLinkClick
   })
 

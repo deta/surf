@@ -50,6 +50,7 @@ import { conditionalArrayItem } from '@horizon/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
 import { Citation } from './extensions/Citation/citation'
 import { Surflet } from './extensions/Surflet/surflet'
+import { WebSearch } from './extensions/WebSearch/websearch'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Link from './extensions/Link'
 import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
@@ -83,6 +84,8 @@ export type ExtensionOptions = {
   onFirstLineStateChanged?: (isFirstLine: boolean) => void
   onLastLineVisibilityChanged?: (visible: boolean) => void
   surfletComponent?: ComponentType<SvelteComponent>
+  webSearchComponent?: ComponentType<SvelteComponent>
+  onWebSearchCompleted?: (event: CustomEvent<any>) => void
   onLinkClick?: LinkClickHandler
 }
 
@@ -231,6 +234,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     !!opts?.surfletComponent,
     Surflet.configure({
       component: opts?.surfletComponent
+    })
+  ),
+  ...conditionalArrayItem(
+    !!opts?.webSearchComponent,
+    WebSearch.configure({
+      component: opts?.webSearchComponent,
+      onWebSearchCompleted: opts?.onWebSearchCompleted
     })
   ),
   ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),

@@ -426,11 +426,8 @@
       return
     }
     if (!$resource) {
-      log.warn('No resource available to render HTML preview, checking code content')
-      if (!$codeContent) {
-        log.warn('No code content or resource available to render HTML preview')
-        return
-      }
+      log.warn('No resource available to render HTML preview, returning')
+      return
     }
 
     appContainer.innerHTML = ''
@@ -450,12 +447,12 @@
 
     appContainer.appendChild(webview)
 
+    const protocolVersion = $resource?.tags?.find(
+      (tag) => tag.name === ResourceTagsBuiltInKeys.SURFLET_PROTOCOL_VERSION
+    )?.value
+    const suffix = protocolVersion ? `${protocolVersion}.app.local` : 'app.local'
     // @ts-ignore
-    webview.src = $resource
-      ? `surflet://${$resource?.id}.app.local`
-      : `data:text/html;charset=utf-8,${encodeURIComponent($codeContent)}`
-
-    log.debug('webview src', webview.src)
+    webview.src = `surflet://${$resource?.id}.${suffix}`
   }
 
   export const reloadApp = async () => {

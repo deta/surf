@@ -16,6 +16,7 @@ export type AIGenerationOptions = {
   textQuery: string
   autoScroll?: boolean
   showPrompt?: boolean
+  loadingMessage?: string
 }
 
 export class EditorAIGeneration {
@@ -49,7 +50,7 @@ export class EditorAIGeneration {
     this.log = useLogScope('EditorAIGeneration')
   }
 
-  createNode() {
+  createNode(loadingMsg?: string) {
     this.log.debug('Creating AI generation node', this.id, this.textQuery)
 
     const tr = this.editor.view.state.tr
@@ -66,7 +67,7 @@ export class EditorAIGeneration {
     // Create the loading node
     const loadingNode = schema.nodes.loading.create({
       id: this.id,
-      text: getPrepPhrase()
+      text: loadingMsg ? loadingMsg : getPrepPhrase()
     })
 
     this.log.debug('Loading node created', loadingNode)
@@ -307,7 +308,7 @@ export class NoteEditor {
   createAIGeneration(pos: number, opts: AIGenerationOptions) {
     this.log.debug('Creating AI generation', pos, opts)
     const generation = new EditorAIGeneration(this, pos, opts)
-    generation.createNode()
+    generation.createNode(opts.loadingMessage)
     return generation
   }
 
