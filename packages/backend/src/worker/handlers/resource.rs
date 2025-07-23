@@ -518,46 +518,6 @@ impl Worker {
     }
 
     #[instrument(level = "trace", skip(self, content))]
-    pub fn upsert_resource_text_content(
-        &mut self,
-        resource_id: String,
-        content: String,
-        content_type: ResourceTextContentType,
-        metadata: ResourceTextContentMetadata,
-    ) -> BackendResult<()> {
-        let chunks = self.ai.chunker.chunk(&content);
-        let old_keys = self
-            .db
-            .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, &resource_id)?;
-
-        let mut tx = self.db.begin()?;
-
-        let metadatas = std::iter::repeat(metadata.clone())
-            .take(chunks.len())
-            .collect::<Vec<_>>();
-
-        let content_ids = Database::upsert_resource_text_content(
-            &mut tx,
-            &resource_id,
-            &content_type,
-            &chunks,
-            &metadatas,
-        )?;
-        tx.commit()?;
-
-        if content_type.should_store_embeddings() {
-            self.upsert_embeddings(
-                resource_id.clone(),
-                EmbeddingType::TextContent,
-                old_keys,
-                content_ids,
-                chunks,
-            )?;
-        }
-        Ok(())
-    }
-
-    #[instrument(level = "trace", skip(self, content))]
     pub fn batch_upsert_resource_text_content(
         &mut self,
         resource_id: String,
@@ -595,6 +555,17 @@ impl Worker {
             &chunks,
             &metadatas,
         )?;
+
+        // NOTE: for Note content type for performance reasons we do not generate the embeddings
+        // right away as updates are too frequent but instead do it lazily only when we need it
+        // we thefore add a tag to the resource indicating that the resource needs post processing
+        if content_type == ResourceTextContentType::Note {
+            let generate_embeddings_tag = ResourceTag::new_generate_lazy_embeddings(&resource_id);
+            Database::create_resource_tag_tx(&mut tx, &generate_embeddings_tag)?;
+            tx.commit()?;
+            return Ok(());
+        }
+
         tx.commit()?;
 
         // TODO: no embeddings for image tags and captions for now
@@ -825,16 +796,6 @@ pub fn handle_resource_message(
         }
         ResourceMessage::PostProcessJob(id) => {
             let result = worker.post_processing_job(id);
-            send_worker_response(&mut worker.channel, oneshot, result);
-        }
-        ResourceMessage::UpsertResourceTextContent {
-            resource_id,
-            content,
-            content_type,
-            metadata,
-        } => {
-            let result =
-                worker.upsert_resource_text_content(resource_id, content, content_type, metadata);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::BatchUpsertResourceTextContent {

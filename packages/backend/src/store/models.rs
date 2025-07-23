@@ -180,6 +180,7 @@ pub enum InternalResourceTagNames {
     Deleted,
     Hostname,
     HorizonId,
+    GenerateLazyEmbeddings,
 }
 
 impl InternalResourceTagNames {
@@ -189,6 +190,7 @@ impl InternalResourceTagNames {
             InternalResourceTagNames::Deleted => "deleted",
             InternalResourceTagNames::Hostname => "hostname",
             InternalResourceTagNames::HorizonId => "horizonId",
+            InternalResourceTagNames::GenerateLazyEmbeddings => "generateLazyEmbeddings",
         }
     }
 }
@@ -202,6 +204,7 @@ impl FromStr for InternalResourceTagNames {
             "deleted" => Ok(InternalResourceTagNames::Deleted),
             "hostname" => Ok(InternalResourceTagNames::Hostname),
             "horizonId" => Ok(InternalResourceTagNames::HorizonId),
+            "generateLazyEmbeddings" => Ok(InternalResourceTagNames::GenerateLazyEmbeddings),
             _ => Err(()),
         }
     }
@@ -214,6 +217,9 @@ impl ToString for InternalResourceTagNames {
             InternalResourceTagNames::Deleted => "deleted".to_string(),
             InternalResourceTagNames::Hostname => "hostname".to_string(),
             InternalResourceTagNames::HorizonId => "horizonId".to_string(),
+            InternalResourceTagNames::GenerateLazyEmbeddings => {
+                "generateLazyEmbeddings".to_string()
+            }
         }
     }
 }
@@ -353,6 +359,15 @@ impl ResourceTag {
             resource_id: resource_id.to_string(),
             tag_name: InternalResourceTagNames::Type.to_string(),
             tag_value: resource_type.to_string(),
+        }
+    }
+
+    pub fn new_generate_lazy_embeddings(resource_id: &str) -> ResourceTag {
+        ResourceTag {
+            id: random_uuid(),
+            resource_id: resource_id.to_string(),
+            tag_name: InternalResourceTagNames::GenerateLazyEmbeddings.to_string(),
+            tag_value: "true".to_string(),
         }
     }
 }

@@ -1,5 +1,4 @@
 pub mod handlers;
-pub mod migrator;
 pub mod processor;
 pub mod tunnel;
 pub mod worker;

@@ -79,6 +79,29 @@ impl Database {
         Ok(contents)
     }
 
+    pub fn list_resource_text_content_rowids_and_content_by_resource_id(
+        &self,
+        id: &str,
+    ) -> BackendResult<(Vec<i64>, Vec<String>)> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT rowid, content FROM resource_text_content WHERE resource_id = ?1")?;
+        let rows = stmt.query_map(rusqlite::params![id], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+        })?;
+
+        let mut rowids = Vec::new();
+        let mut contents = Vec::new();
+
+        for row_result in rows {
+            let (rowid, content) = row_result?;
+            rowids.push(rowid);
+            contents.push(content);
+        }
+
+        Ok((rowids, contents))
+    }
+
     pub fn create_resource_text_content_tx(
         tx: &mut rusqlite::Transaction,
         resource_text_content: &ResourceTextContent,

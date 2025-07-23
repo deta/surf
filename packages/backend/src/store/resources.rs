@@ -33,6 +33,14 @@ impl Database {
         Ok(())
     }
 
+    pub fn touch_resource(&self, resource_id: &str) -> BackendResult<()> {
+        self.conn.execute(
+            "UPDATE resources SET updated_at = datetime('now') WHERE id = ?1",
+            rusqlite::params![resource_id],
+        )?;
+        Ok(())
+    }
+
     pub fn touch_resource_tx(
         tx: &mut rusqlite::Transaction,
         resource_id: &str,

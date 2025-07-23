@@ -1,10 +1,10 @@
 use crate::{
-    ai::llm::{
-        client::client::Model,
-        models::{Message, MessageContent, Quota},
-    },
     ai::{
         ai::{ChatResult, DocsSimilarity},
+        llm::{
+            client::client::Model,
+            models::{Message, MessageContent, Quota},
+        },
         youtube::YoutubeTranscript,
     },
     api::message::{MiscMessage, ProcessorMessage, TunnelOneshot},
@@ -12,7 +12,8 @@ use crate::{
         db::Database,
         models::{
             random_uuid, AIChatSession, AIChatSessionHistory, AIChatSessionMessage,
-            AIChatSessionMessageSource, CompositeResource, ResourceTextContent,
+            AIChatSessionMessageSource, CompositeResource, EmbeddingType, InternalResourceTagNames,
+            ResourceTextContent,
         },
     },
     worker::worker::{send_worker_response, Worker},
@@ -309,6 +310,8 @@ impl Worker {
             }
         }
 
+        self.handle_lazy_embeddings(&resource_ids)?;
+
         let (assistant_message, chat_result) = self.process_chat_stream(
             callback,
             query,
@@ -326,6 +329,67 @@ impl Worker {
         if let Some(session_id) = session_id {
             self.save_messages(session_id, assistant_message, chat_result)?;
         }
+        Ok(())
+    }
+
+    fn upsert_lazy_embedding(&mut self, resource_id: &str) -> BackendResult<()> {
+        let old_keys = self
+            .db
+            .list_embedding_ids_by_type_resource_id(EmbeddingType::TextContent, resource_id)?;
+
+        let (content_ids, chunks) = self
+            .db
+            .list_resource_text_content_rowids_and_content_by_resource_id(resource_id)?;
+
+        self.upsert_embeddings(
+            resource_id.to_string(),
+            EmbeddingType::TextContent,
+            old_keys,
+            content_ids,
+            chunks,
+        )?;
+
+        Ok(())
+    }
+
+    // TODO: refactor for all the matches
+    fn handle_lazy_embeddings(&mut self, resource_ids: &[String]) -> BackendResult<()> {
+        resource_ids.iter().for_each(|id| {
+            match self.db.get_resource_tag_by_name(
+                id,
+                InternalResourceTagNames::GenerateLazyEmbeddings.as_str(),
+            ) {
+                Ok(Some(_)) => match self.upsert_lazy_embedding(id) {
+                    Ok(_) => {
+                        if let Err(err) = self.db.remove_resource_tag_by_tag_name(
+                            id,
+                            InternalResourceTagNames::GenerateLazyEmbeddings.as_str(),
+                        ) {
+                            eprintln!(
+                                "Error removing lazy embeddings tag for resource {}: {}",
+                                id, err
+                            );
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!(
+                            "Error processing lazy embeddings for resource {}: {}",
+                            id, err
+                        );
+                    }
+                },
+                Ok(None) => {
+                    return;
+                }
+                Err(err) => {
+                    eprintln!(
+                        "Error checking lazy embeddings tag for resource {}: {}",
+                        id, err
+                    );
+                    return;
+                }
+            }
+        });
         Ok(())
     }
 
@@ -836,11 +900,7 @@ pub fn handle_misc_message(
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::RunMigration => {
-            let result = worker.migrate_data("sffs.sqlite");
-            if result.is_err() {
-                eprintln!("Failed to run migration: {:?}", result);
-            }
-            send_worker_response(&mut worker.channel, oneshot, result)
+            // TODO: implement migration handling
         }
         MiscMessage::SendEventBusMessage(message) => worker.send_event_bus_message(message),
         MiscMessage::GetQuotas => {
