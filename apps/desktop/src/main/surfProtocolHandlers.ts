@@ -271,7 +271,7 @@ export const surfProtocolHandler = async (req: GlobalRequest) => {
 export const surfletProtocolHandler = async (req: GlobalRequest) => {
   try {
     const cspPolicy =
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://picsum.photos https://via.placeholder.com https://images.unsplash.com; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://picsum.photos https://via.placeholder.com https://images.unsplash.com; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
 
     const url = new URL(req.url)
     if (!url.hostname.endsWith('.app.local')) {

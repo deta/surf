@@ -41,12 +41,14 @@
           label: 'Open in Sidebar',
           icon: 'sidebar.right'
         },
+        /*
         ...conditionalArrayItem(showOnboarding, {
           id: 'info',
           label: 'How to Use',
           icon: 'info',
           topSeparator: true
         }),
+        */
         ...conditionalArrayItem($debugMode, {
           id: 'copy-id',
           label: 'Copy Resource ID',

@@ -51,7 +51,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.17.0
+          node-version: 22.17.1
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1

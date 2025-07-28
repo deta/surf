@@ -127,12 +127,6 @@ pub enum ResourceMessage {
     },
     UpdateResource(Resource),
     UpdateResourceMetadata(ResourceMetadata),
-    UpsertResourceTextContent {
-        resource_id: String,
-        content: String,
-        content_type: ResourceTextContentType,
-        metadata: ResourceTextContentMetadata,
-    },
     BatchUpsertResourceTextContent {
         resource_id: String,
         content_type: ResourceTextContentType,

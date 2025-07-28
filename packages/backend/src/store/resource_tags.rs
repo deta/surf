@@ -1,6 +1,7 @@
 use super::db::Database;
 use super::models::*;
 use crate::{BackendError, BackendResult};
+use rusqlite::OptionalExtension;
 use std::collections::HashMap;
 
 pub fn list_resource_ids_by_tags_query(
@@ -90,6 +91,20 @@ impl Database {
         Ok(result)
     }
 
+    pub fn get_resource_tag_by_name(
+        &self,
+        reesource_id: &str,
+        tag_name: &str,
+    ) -> BackendResult<Option<String>> {
+        let query = "SELECT tag_value FROM resource_tags WHERE resource_id = ?1 AND tag_name = ?2";
+        self.conn
+            .query_row(query, rusqlite::params![reesource_id, tag_name], |row| {
+                Ok(row.get(0)?)
+            })
+            .optional()
+            .map_err(|e| e.into())
+    }
+
     pub fn create_resource_tag_tx(
         tx: &mut rusqlite::Transaction,
         resource_tag: &ResourceTag,
@@ -150,6 +165,19 @@ impl Database {
 
         Self::touch_resource_tx(tx, &resource_id)?;
 
+        Ok(())
+    }
+
+    pub fn remove_resource_tag_by_tag_name(
+        &self,
+        resource_id: &str,
+        tag_name: &str,
+    ) -> BackendResult<()> {
+        self.conn.execute(
+            "DELETE FROM resource_tags WHERE resource_id = ?1 AND tag_name = ?2",
+            rusqlite::params![resource_id, tag_name],
+        )?;
+        self.touch_resource(resource_id)?;
         Ok(())
     }
 

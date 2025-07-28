@@ -355,30 +355,75 @@
   </div>
 {/if}
 
-<style>
+<style lang="scss">
+  :global(body) {
+    --websearch-bg: #fff;
+    --websearch-border: #e1e5e9;
+    --websearch-shadow: rgba(0, 0, 0, 0.06);
+    --websearch-shadow-hover: rgba(0, 0, 0, 0.1);
+    --websearch-header-bg: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    --websearch-header-bg-hover: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    --websearch-text-primary: #1e293b;
+    --websearch-text-secondary: #64748b;
+    --websearch-text-muted: #94a3b8;
+    --websearch-accent: #60a5fa;
+    --websearch-accent-hover: #3b82f6;
+    --websearch-result-bg: #f8fafc;
+    --websearch-result-bg-hover: #f1f5f9;
+    --websearch-result-border: #e1e5e9;
+    --websearch-accent-bg: rgba(59, 130, 246, 0.1);
+    --websearch-error-bg: #fef2f2;
+    --websearch-error-border: #fecaca;
+    --websearch-error-text: #dc2626;
+    --websearch-error-text-light: #7f1d1d;
+    --websearch-button-bg: #ffffff;
+  }
+  :global(body.dark) {
+    --websearch-bg: #1e293b;
+    --websearch-border: #334155;
+    --websearch-shadow: rgba(0, 0, 0, 0.3);
+    --websearch-shadow-hover: rgba(0, 0, 0, 0.4);
+    --websearch-header-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --websearch-header-bg-hover: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    --websearch-text-primary: #f1f5f9;
+    --websearch-text-secondary: #cbd5e1;
+    --websearch-text-muted: #94a3b8;
+    --websearch-accent: #60a5fa;
+    --websearch-accent-hover: #3b82f6;
+    --websearch-result-bg: #0f172a;
+    --websearch-result-bg-hover: #1e293b;
+    --websearch-result-border: #334155;
+    --websearch-accent-bg: rgba(96, 165, 250, 0.15);
+    --websearch-error-bg: #431a1a;
+    --websearch-error-border: #7f1d1d;
+    --websearch-error-text: #fca5a5;
+    --websearch-error-text-light: #f87171;
+    --websearch-button-bg: #334155;
+  }
+
   .websearch-container {
-    border: 1px solid #e1e5e9;
+    border: 1px solid var(--websearch-border);
     border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: var(--websearch-bg);
+    box-shadow: 0 2px 8px var(--websearch-shadow);
     overflow: hidden;
     transition: all 0.2s ease;
   }
 
   .websearch-container:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px var(--websearch-shadow-hover);
   }
 
   .websearch-header {
     padding: 0.875rem 1rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-bottom: 1px solid #e1e5e9;
+    background: var(--websearch-header-bg);
+    border-bottom: 1px solid var(--websearch-border);
     cursor: pointer;
     transition: background-color 0.2s ease;
   }
 
   .websearch-header:hover {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    background: var(--websearch-header-bg-hover);
   }
 
   .websearch-title-section {
@@ -393,7 +438,7 @@
   }
 
   .websearch-icon {
-    color: #3b82f6;
+    color: var(--websearch-accent) !important;
     display: flex;
     align-items: center;
   }
@@ -402,7 +447,7 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--websearch-text-primary) !important;
     flex: 1;
   }
 
@@ -416,23 +461,23 @@
   .websearch-status-text {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #64748b;
+    color: var(--websearch-text-secondary) !important;
     transition: color 0.2s ease;
   }
 
   .websearch-status-text.searching {
-    color: #3b82f6;
+    color: var(--websearch-accent) !important;
   }
 
   .websearch-status-text.error {
-    color: #ef4444;
+    color: var(--websearch-error-text) !important;
   }
 
   .websearch-loading-spinner-small {
     width: 16px;
     height: 16px;
-    border: 2px solid #f1f5f9;
-    border-top: 2px solid #3b82f6;
+    border: 2px solid var(--websearch-border);
+    border-top: 2px solid var(--websearch-accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -442,14 +487,14 @@
     border: none;
     cursor: pointer;
     padding: 0.25rem;
-    color: #64748b;
+    color: var(--websearch-text-secondary) !important;
     transition: all 0.2s ease;
     border-radius: 6px;
   }
 
   .websearch-collapse-button:hover {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+    background: var(--websearch-accent-bg);
+    color: var(--websearch-accent) !important;
   }
 
   .websearch-collapse-button.rotated {
@@ -464,14 +509,14 @@
   }
 
   .websearch-query-label {
-    color: #64748b;
+    color: var(--websearch-text-secondary) !important;
     font-weight: 500;
   }
 
   .websearch-query-text {
-    color: #1e293b;
+    color: var(--websearch-text-primary) !important;
     font-weight: 500;
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--websearch-accent-bg);
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
   }
@@ -500,7 +545,7 @@
   }
 
   .websearch-loading p {
-    color: #64748b;
+    color: var(--websearch-text-secondary) !important;
     margin: 0;
     font-size: 0.875rem;
   }
@@ -509,8 +554,8 @@
     width: 32px;
     height: 32px;
     margin-bottom: 0.75rem;
-    border: 3px solid #f1f5f9;
-    border-top: 3px solid #3b82f6;
+    border: 3px solid var(--websearch-border);
+    border-top: 3px solid var(--websearch-accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -536,7 +581,7 @@
     margin: 0;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--websearch-text-primary) !important;
   }
 
   .websearch-results-list {
@@ -550,22 +595,22 @@
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: #f8fafc;
-    border: 1px solid #e1e5e9;
+    background: var(--websearch-result-bg);
+    border: 1px solid var(--websearch-result-border);
     border-radius: 8px;
     transition: all 0.2s ease;
   }
 
   .websearch-result-item:hover {
-    background: #f1f5f9;
-    border-color: #3b82f6;
+    background: var(--websearch-result-bg-hover);
+    border-color: var(--websearch-accent);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px var(--websearch-shadow);
   }
 
   .websearch-result-number {
-    background: #3b82f6;
-    color: white;
+    background: var(--websearch-accent);
+    color: white !important;
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -591,7 +636,7 @@
   }
 
   .websearch-result-title a {
-    color: #3b82f6;
+    color: var(--websearch-accent) !important;
     text-decoration: none;
   }
 
@@ -602,7 +647,7 @@
   .websearch-result-url {
     margin: 0;
     font-size: 0.75rem;
-    color: #64748b;
+    color: var(--websearch-text-secondary) !important;
     word-break: break-all;
   }
 
@@ -611,9 +656,9 @@
   }
 
   .websearch-visit-button {
-    background: #ffffff;
-    color: #3b82f6;
-    border: 1px solid #3b82f6;
+    background: var(--websearch-button-bg);
+    color: var(--websearch-accent) !important;
+    border: 1px solid var(--websearch-accent);
     padding: 0.375rem 0.625rem;
     border-radius: 6px;
     cursor: pointer;
@@ -626,18 +671,18 @@
   }
 
   .websearch-visit-button:hover {
-    background: #3b82f6;
-    color: white;
+    background: var(--websearch-accent);
+    color: white !important;
   }
 
   .websearch-no-results {
     padding: 2rem 1.5rem;
     text-align: center;
-    color: #64748b;
+    color: var(--websearch-text-secondary) !important;
   }
 
   .websearch-no-results-icon {
-    color: #94a3b8;
+    color: var(--websearch-text-muted) !important;
     margin-bottom: 0.75rem;
     opacity: 0.6;
   }
@@ -653,8 +698,8 @@
     justify-content: center;
     min-height: 150px;
     padding: 1.5rem;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: var(--websearch-error-bg);
+    border: 1px solid var(--websearch-error-border);
     border-radius: 12px;
   }
 
@@ -664,29 +709,29 @@
   }
 
   .websearch-error-icon {
-    color: #ef4444;
+    color: var(--websearch-error-text) !important;
     margin-bottom: 0.75rem;
     display: flex;
     justify-content: center;
   }
 
   .websearch-error-title {
-    color: #dc2626;
+    color: var(--websearch-error-text) !important;
     margin: 0 0 0.375rem 0;
     font-size: 1rem;
     font-weight: 600;
   }
 
   .websearch-error-message {
-    color: #7f1d1d;
+    color: var(--websearch-error-text-light) !important;
     margin: 0 0 1rem 0;
     line-height: 1.5;
     font-size: 0.875rem;
   }
 
   .websearch-retry-button {
-    background: #3b82f6;
-    color: white;
+    background: var(--websearch-accent);
+    color: white !important;
     border: none;
     padding: 0.625rem 1.25rem;
     border-radius: 6px;
@@ -700,7 +745,7 @@
   }
 
   .websearch-retry-button:hover {
-    background: #2563eb;
+    background: var(--websearch-accent-hover);
     transform: translateY(-1px);
   }
 </style>
