@@ -95,21 +95,21 @@ export const navigateActionToTeletypeItem = (searchValue: string, isEditMode = f
       ? {}
       : {
           /*
-        actionText: 'Open as Tab',
-        actionPanel: [
-          createSecondaryAction({
-            id: 'open-url-in-mini-browser',
-            name: 'Open in Mini-Browser',
-            handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
-          }),
-          {
-            id: `copy-url`,
-            name: 'Copy URL',
-            icon: 'copy',
-            handler: createExecutioner(TeletypeAction.CopyURL, { url })
-          }
-        ]
-        */
+      actionText: 'Open as Tab',
+      actionPanel: [
+        createSecondaryAction({
+          id: 'open-url-in-mini-browser',
+          name: 'Open in Mini-Browser',
+          handler: createExecutioner(TeletypeAction.OpenURLInMiniBrowser, { url })
+        }),
+        {
+          id: `copy-url`,
+          name: 'Copy URL',
+          icon: 'copy',
+          handler: createExecutioner(TeletypeAction.CopyURL, { url })
+        }
+      ]
+      */
         }),
     handler: createExecutioner(TeletypeAction.NavigateURL, { url })
   }

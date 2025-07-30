@@ -1,8 +1,6 @@
 <script lang="ts" context="module">
   import ScreenPicker from './ScreenPicker.svelte'
-  import { OnboardingAction } from '../Onboarding/onboardingScripts'
   import { screenPickerSelectionActive } from '../../service/onboarding'
-  import { activeTimeline } from '../Onboarding/timeline'
 
   // Standalone is self contained, where as-input ask user to define area  and capture it for some
   // other action
@@ -40,8 +38,6 @@
   import { AIChat, useAI, type ChatPrompt } from '../../service/ai/ai'
   import { Icon } from '@horizon/icons'
   import { hasParent, startingClass } from '../../utils/dom'
-  import Chat from '../Chat/Chat.svelte'
-  import ChatOld from '../Chat/ChatOld.svelte'
   import { captureScreenshot } from '../../utils/screenshot'
   import { CompletionEventID } from '../Onboarding/onboardingScripts'
   import {
@@ -58,15 +54,12 @@
   import { fade } from 'svelte/transition'
   import { contextMenu } from './ContextMenu.svelte'
   import { openDialog } from './Dialog/Dialog.svelte'
-  import ChatTitle from '@horizon/core/src/lib/components/Chat/ChatTitle.svelte'
-  import NoteTitle from '@horizon/core/src/lib/components/Chat/Notes/NoteTitle.svelte'
-  import { SmartNote, useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
-  import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
+  import { SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  import AppBarButton from '@horizon/core/src/lib/components/Browser/AppBarButton.svelte'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
+  import FloatyNote from './FloatyNote.svelte'
 
   type Rect = { x: number; y: number; width: number; height: number }
   type Direction = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
@@ -87,9 +80,9 @@
     icon: 'add'
   } as SelectItem
 
+  // TODO: impl as-input
   export let mode: ScreenPickerMode = 'standalone'
   export let fromTty: boolean = false
-  // TODO: impl as-input
 
   const dispatch = createEventDispatcher<{
     close: Blob | null // Task implementor of this component to close it (blob: screenshot, false: cancelled / issue)
@@ -104,9 +97,7 @@
   const log = useLogScope('ScreenPicker')
   const toasts = useToasts()
   const telemetry = useTelemetry()
-  const tabsManager = useTabsManager()
   const ai = useAI()
-  const smartNotes = useSmartNotes()
   const resourceManager = useResourceManager()
   const oasis = useOasis()
   const config = useConfig()
@@ -128,6 +119,7 @@
     isMovingRect: false,
     isChatExpanded: false,
     chatLocation: 'left',
+    noteOnlyMode: false,
 
     insetTools: false
   })
@@ -145,12 +137,11 @@
   let chatboxEl: HTMLElement
   let appsEl: HTMLElement
   let addPromptEl: HTMLElement | undefined
-  let chatComponent: Chat | ChatOld
+  let chatComponent: FloatyNote
 
   let showAddPromptDialog = false
 
   const appModalContent = writable<App | null>(null)
-  const note = writable<SmartNote | null>(null)
   const activeChat = writable<AIChat | null>(null)
   const promptSelectorOpen = writable(false)
 
@@ -158,7 +149,7 @@
   $: chatStatus = $chatStatusStore ?? 'idle'
 
   $: responses = $activeChat?.responses ? $activeChat.responses : readable([])
-  $: if (($note || $responses?.length > 0) && !$state.isChatExpanded) {
+  $: if ($responses?.length > 0 && !$state.isChatExpanded) {
     document.startViewTransition(async () => {
       $state.isChatExpanded = true
       await tick()
@@ -188,7 +179,7 @@
   })
 
   // Reactive State
-  $: validRectSelection = $selectionRect.width * $selectionRect.height >= 900
+  $: validRectSelection = $selectionRect.width * $selectionRect.height >= 900 || $state.noteOnlyMode
 
   // Set the global state when component is mounted/unmounted
   onMount(() => {
@@ -355,7 +346,7 @@
   }
 
   function handleWindowMouseDown(e: MouseEvent) {
-    if ($state.isLocked) return
+    if ($state.isLocked || $state.isChatExpanded) return
     if (
       hasParent(e.target, toolboxEl) ||
       hasParent(e.target, chatboxEl) ||
@@ -503,50 +494,8 @@
   }
 
   // Chatting Utils
-
   function handleClose() {
     // TODO: @maxi abort chat completion, if running (not possible rn?)
-    dispatch('close', null)
-  }
-
-  async function handleExpandChat() {
-    dispatch('close', null)
-
-    const hasActiveTimeline = get(activeTimeline) !== null
-
-    if (hasActiveTimeline) {
-      // is onboarding
-      $note?.updateTitle('Surf Onboarding Note')
-      dispatch('open-note-in-sidebar', {
-        note: $note,
-        force: true
-      })
-      return
-    }
-
-    if ($userConfigSettings.experimental_notes_chat_sidebar) {
-      if (!$note) return
-
-      dispatch('open-note-in-sidebar', {
-        note: $note
-      })
-    } else {
-      if (!$activeChat) return
-
-      dispatch('open-chat-in-sidebar', {
-        chat: $activeChat
-      })
-    }
-
-    document.dispatchEvent(
-      new CustomEvent(CompletionEventID.OpenVisionNoteInSidebar, { bubbles: true })
-    )
-  }
-
-  function handleOpenAsTab() {
-    if (!$note) return
-
-    tabsManager.openResourcFromContextAsPageTab($note.id)
     dispatch('close', null)
   }
 
@@ -591,21 +540,30 @@
     }
   }
 
-  async function handleUseInChat() {
-    $state.isCapturing = true
+  // TODO: not have this proxy :(
+  export async function createFloatyNote(
+    query: string,
+    trigger: PageChatMessageSentEventTrigger,
+    addActiveTab?: boolean
+  ) {
+    $state.isChatExpanded = true
+    $state.noteOnlyMode = true
+    $state.chatLocation = 'center'
+
     await tick()
-    await new Promise((r) => setTimeout(r, 100))
+    await wait(500)
 
-    try {
-      const blob = await captureScreenshot($selectionRect)
-      dispatch('use-screenshot-in-chat', blob)
-      dispatch('close', blob)
-    } catch (e) {
-      log.error('Failed to create screenshot for chat:', e)
-      toasts.error('Failed to create screenshot for chat')
-
-      dispatch('close', null)
+    if (!chatComponent) {
+      log.error('Chat component not available')
+      return
     }
+
+    await chatComponent.createChatCompletion(query, undefined, trigger, {
+      showPrompt: true,
+      focusInput: true,
+      clearContextOnMention: false,
+      addActiveTab: addActiveTab
+    })
   }
 
   // Make handleInputSubmit accessible to the module context
@@ -629,16 +587,14 @@
     $state.isCapturing = false
 
     if ($userConfigSettings.experimental_notes_chat_sidebar) {
-      $note = await smartNotes.createNote('')
-      $note.contextManager.addScreenshot(blob)
-
+      // TODO: why do we need to wait here?
+      $state.isChatExpanded = true
       await wait(500)
-
       await chatComponent.createChatCompletion(
         input,
         mentions,
         PageChatMessageSentEventTrigger.InlineAI,
-        { showPrompt: true, focusInput: true, clearContextOnMention: false }
+        { showPrompt: true, focusInput: true, clearContextOnMention: false, screenshot: blob }
       )
     } else {
       const contextManager = ai.createContextManager()
@@ -668,16 +624,14 @@
     $state.isCapturing = false
 
     if ($userConfigSettings.experimental_notes_chat_sidebar) {
-      $note = await smartNotes.createNote('')
-      $note.contextManager.addScreenshot(blob)
-
-      await wait(800)
-
+      // TODO: why do we need to wait here?
+      $state.isChatExpanded = true
+      await wait(500)
       await chatComponent.createChatCompletion(
         prompt.prompt,
         undefined,
         PageChatMessageSentEventTrigger.InlineAI,
-        { showPrompt: true, focusInput: true }
+        { showPrompt: true, focusInput: true, screenshot: blob }
       )
     } else {
       const contextManager = ai.createContextManager()
@@ -729,7 +683,7 @@
   <div
     bind:this={backdropEl}
     id="screen-picker-backdrop"
-    class="no-drag"
+    class="no-drag blurred"
     data-tooltip-anchor="screen-picker"
     class:disabled={$state.isLocked}
     style="view-transition-name: screen-picker-backdrop;"
@@ -737,7 +691,6 @@
     style:--rect-y={$_selectionRect.y + 'px'}
     style:--rect-w={$_selectionRect.width + 'px'}
     style:--rect-h={$_selectionRect.height + 'px'}
-    class:blurred={!fromTty || $_selectionRect.width + $_selectionRect.height > 2}
   >
     {#if !validRectSelection}
       <div class="instructions" class:edge={!fromTty} use:startingClass={{}}>
@@ -802,11 +755,12 @@
         class:insetTools={$state.insetTools}
         bind:this={toolboxEl}
       >
-        <ul>
-          <li>
-            <ul class="buttonGroup" data-tooltip-disable>
-              {#if mode === 'standalone'}
-                <!--<li>
+        {#if !$state.noteOnlyMode}
+          <ul>
+            <li>
+              <ul class="buttonGroup" data-tooltip-disable>
+                {#if mode === 'standalone'}
+                  <!--<li>
                   <button on:click={handleSaveScreenshot}
                     ><Icon name="save" size="16px" /> Save</button
                   >
@@ -816,111 +770,111 @@
                     ><Icon name="copy" size="16px" /> Copy</button
                   >
                 </li>-->
-                <li>
-                  <button on:click={handleSaveScreenshot}
-                    >Save<Icon name="save" size="16px" />
-                  </button>
-                </li>
-                <li>
-                  <button on:click={handleCopyScreenshot}
-                    >Copy<Icon name="copy" size="16px" />
-                  </button>
-                </li>
+                  <li>
+                    <button on:click={handleSaveScreenshot}
+                      >Save<Icon name="save" size="16px" />
+                    </button>
+                  </li>
+                  <li>
+                    <button on:click={handleCopyScreenshot}
+                      >Copy<Icon name="copy" size="16px" />
+                    </button>
+                  </li>
 
-                <!--
+                  <!--
                 <li>
                   <button on:click={handleUseInChat}
                     ><Icon name="chat" size="16px" /> Use in Chat</button
                   >
                 </li>
                 -->
-                {#if !$state.isChatExpanded}
-                  <li>
-                    <SelectDropdown
-                      items={promptItems}
-                      search="disabled"
-                      selected={null}
-                      footerItem={addPromptItem}
-                      open={promptSelectorOpen}
-                      side="right"
-                      closeOnMouseLeave={false}
-                      keepHeightWhileSearching
-                      on:select={(e) => {
-                        if (e.detail === addPromptItem.id) {
-                          showAddPromptDialog = true
-                          return
-                        }
-                        const app = get(ai.customAIApps).find((app) => app.id === e.detail)
-                        if (!app) return
-                        handleRunPrompt({
-                          label: app.name ?? '',
-                          prompt: (app.content || app.name) ?? ''
-                        })
-                      }}
-                    >
-                      <button class:active={$promptSelectorOpen}
-                        ><Icon name="sparkles" /> Prompts</button
-                      >
-
-                      <div
-                        slot="item"
-                        class="w-full"
-                        let:item
-                        use:contextMenu={{
-                          canOpen: item?.data,
-                          items: [
-                            {
-                              type: 'action',
-                              text: 'Edit',
-                              icon: 'edit',
-                              action: () => {
-                                if (!item) return
-                                const app = $customAiApps.find((app) => app.id === item.id)
-                                if (!app) return
-                                appModalContent.set(app)
-                                showAddPromptDialog = true
-                              }
-                            },
-                            {
-                              type: 'action',
-                              kind: 'danger',
-                              text: 'Delete',
-                              icon: 'trash',
-                              action: async () => {
-                                if (!item) return
-                                const { closeType: confirmed } = await openDialog({
-                                  message: `Are you sure you want to delete the prompt "${item.label}"?`
-                                })
-                                if (confirmed) ai.deleteCustomAiApp(item.id)
-                                promptSelectorOpen.set(true)
-                              }
-                            }
-                          ]
+                  {#if !$state.isChatExpanded}
+                    <li>
+                      <SelectDropdown
+                        items={promptItems}
+                        search="disabled"
+                        selected={null}
+                        footerItem={addPromptItem}
+                        open={promptSelectorOpen}
+                        side="right"
+                        closeOnMouseLeave={false}
+                        keepHeightWhileSearching
+                        on:select={(e) => {
+                          if (e.detail === addPromptItem.id) {
+                            showAddPromptDialog = true
+                            return
+                          }
+                          const app = get(ai.customAIApps).find((app) => app.id === e.detail)
+                          if (!app) return
+                          handleRunPrompt({
+                            label: app.name ?? '',
+                            prompt: (app.content || app.name) ?? ''
+                          })
                         }}
                       >
-                        <SelectDropdownItem {item} />
-                      </div>
-                    </SelectDropdown>
+                        <button class:active={$promptSelectorOpen}
+                          ><Icon name="sparkles" /> Prompts</button
+                        >
+
+                        <div
+                          slot="item"
+                          class="w-full"
+                          let:item
+                          use:contextMenu={{
+                            canOpen: item?.data,
+                            items: [
+                              {
+                                type: 'action',
+                                text: 'Edit',
+                                icon: 'edit',
+                                action: () => {
+                                  if (!item) return
+                                  const app = $customAiApps.find((app) => app.id === item.id)
+                                  if (!app) return
+                                  appModalContent.set(app)
+                                  showAddPromptDialog = true
+                                }
+                              },
+                              {
+                                type: 'action',
+                                kind: 'danger',
+                                text: 'Delete',
+                                icon: 'trash',
+                                action: async () => {
+                                  if (!item) return
+                                  const { closeType: confirmed } = await openDialog({
+                                    message: `Are you sure you want to delete the prompt "${item.label}"?`
+                                  })
+                                  if (confirmed) ai.deleteCustomAiApp(item.id)
+                                  promptSelectorOpen.set(true)
+                                }
+                              }
+                            ]
+                          }}
+                        >
+                          <SelectDropdownItem {item} />
+                        </div>
+                      </SelectDropdown>
+                    </li>
+                  {/if}
+                {:else if mode === 'as-input'}
+                  <li>
+                    <button on:click={handleAcceptAsInput}
+                      ><Icon name="check" size="16px" /> Accept</button
+                    >
+                  </li>
+                  <li>
+                    <button on:click={handleClose}><Icon name="close" size="16px" /> Cancel</button>
                   </li>
                 {/if}
-              {:else if mode === 'as-input'}
-                <li>
-                  <button on:click={handleAcceptAsInput}
-                    ><Icon name="check" size="16px" /> Accept</button
-                  >
-                </li>
-                <li>
-                  <button on:click={handleClose}><Icon name="close" size="16px" /> Cancel</button>
-                </li>
-              {/if}
-            </ul>
-          </li>
-        </ul>
+              </ul>
+            </li>
+          </ul>
+        {/if}
         {#if mode === 'standalone' && !$state.isChatExpanded}
           <ChatInput
             loading={chatStatus && chatStatus === 'running'}
             on:submit={handleInputSubmit}
-            viewTransitionName={`chat-${$activeChat?.id || $note?.id}-input`}
             {mentionItemsFetcher}
           />
         {/if}
@@ -935,114 +889,14 @@
           </div>
         {/if}
       </div>
-      {#if mode === 'standalone' && ($note || $activeChat)}
-        <!--{#if !$state.isChatExpanded}
-          <div bind:this={appsEl} class="apps-wrapper flex flex-wrap gap-2 justify-center">
-            <button
-              on:click={() => (showAllApps = !showAllApps)}
-              class="flex-shrink-0 max-w-64 flex items-center justify-center gap-2 px-2 py-1 w-fit rounded-xl transition-colors text-sky-800 bg-neutral-50 border-neutral-300 hover:bg-neutral-100 border-[1px] select-none overflow-hidden"
-            >
-              <!--<button
-              class="text-sky-800 dark:text-gray-100 hover:bg-sky-300/60 p-[0.15em] rounded-md -ml-1"
-              on:click|stopPropagation={() => (showCreateToolModal = true)}
-            >
-              <Icon name="add" />
-            </button>--
-
-              <div class="text-sky-800 w-full truncate font-medium">Show All Apps</div>
-            </button>
-            {#each $aiApps.slice(0, showAllApps ? Number.POSITIVE_INFINITY : 3) as app (app.id)}
-              <PromptItem
-                on:click={() =>
-                  handleRunPrompt({
-                    prompt: (app.content || app.name) ?? '',
-                    label: app.name ?? ''
-                  })}
-                label={app.icon ? undefined : (app.name ?? '')}
-                icon={app.icon}
-              />
-            {/each}
-          </div>
-        {/if}-->
-        {#if $state.isChatExpanded}
-          <div
-            bind:this={chatboxEl}
-            class="chatWrapper location-{$state.chatLocation}"
-            class:expanded={$state.isChatExpanded}
-          >
-            <div
-              class="messageBox"
-              class:expanded={$state.isChatExpanded}
-              data-tooltip-reference="message-box"
-              style="view-transition-name: screen-picker-chat;"
-            >
-              <header>
-                <div class="messageBoxHeaderLeft">
-                  <AppBarButton on:click={handleClose} data-tooltip-disable>
-                    <Icon name="close" size="1rem" />
-                  </AppBarButton>
-
-                  {#if $userConfigSettings.experimental_notes_chat_sidebar}
-                    {#if $note}
-                      <NoteTitle note={$note} fallback="Vision Chat" small />
-                    {/if}
-                  {:else if $activeChat}
-                    <ChatTitle chat={$activeChat} fallback="Vision Chat" small />
-                  {/if}
-                </div>
-
-                <div class="messageBoxHeaderRight">
-                  {#if $userConfigSettings.experimental_notes_chat_sidebar}
-                    <AppBarButton on:click={handleOpenAsTab} data-tooltip-disable>
-                      <Icon name="arrow.diagonal" size="1rem" />
-                    </AppBarButton>
-                  {/if}
-
-                  <AppBarButton
-                    on:click={handleExpandChat}
-                    data-tooltip-target="open-in-sidebar-button"
-                    data-tooltip-action={OnboardingAction.OpenNoteInSidebar}
-                  >
-                    <Icon name="sidebar.right" size="1rem" />
-                  </AppBarButton>
-                </div>
-              </header>
-
-              {#if $userConfigSettings.experimental_notes_chat_sidebar}
-                {#if $note}
-                  <Chat
-                    bind:this={chatComponent}
-                    note={$note}
-                    inputOnly={!$state.isChatExpanded}
-                    on:clear-chat={() => {}}
-                    on:clear-errors={() => {}}
-                    on:close-chat
-                    on:open-context-item
-                    on:process-context-item
-                    on:highlightWebviewText
-                    on:seekToTimestamp
-                  />
-                {/if}
-              {:else if $activeChat}
-                <ChatOld
-                  bind:this={chatComponent}
-                  chat={$activeChat}
-                  contextItemErrors={[]}
-                  preparingTabs={false}
-                  inputOnly={!$state.isChatExpanded}
-                  showContextBar={false}
-                  on:clear-chat={() => {}}
-                  on:clear-errors={() => {}}
-                  on:close-chat
-                  on:open-context-item
-                  on:process-context-item
-                  on:highlightWebviewText
-                  on:seekToTimestamp
-                />
-              {/if}
-            </div>
-          </div>
-        {/if}
+      {#if mode === 'standalone' && $state.isChatExpanded}
+        <FloatyNote
+          bind:this={chatComponent}
+          isChatExpanded={$state.isChatExpanded}
+          chatLocation={$state.chatLocation}
+          on:close
+          on:open-note-in-sidebar
+        />
       {/if}
     {/if}
   </div>
