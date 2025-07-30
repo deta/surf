@@ -964,8 +964,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#notes.onboarding.11',
       headline: 'Congratulations!',
-      content:
-        'You’ve finished the tour. We opened a Surf Playground tab for you to explore what else you can do with Surf.',
+      content: 'You’ve finished the tour.',
       domTarget: 'chat-input',
       domRoot: 'body',
       position: {
@@ -991,8 +990,7 @@ export const appOnboardingTimeline: OnboardingTimeline = {
     {
       target: '#notes.onboarding.11',
       headline: 'Congratulations!',
-      content:
-        'You’ve finished the tour. We opened a Surf Playground tab for you to explore what else you can do with Surf.',
+      content: 'You’ve finished the tour.',
       domTarget: '',
       domRoot: 'body',
       position: {
