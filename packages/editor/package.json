@@ -69,7 +69,7 @@
     "@tiptap/extension-code-block-lowlight": "^2.11.2",
     "@tiptap/extension-text-style": "^2.8.0",
     "hast-util-to-html": "^9.0.4",
-    "linkifyjs": "^4.2.0",
+    "linkifyjs": "^4.3.2",
     "lowlight": "^3.3.0"
   }
 }
