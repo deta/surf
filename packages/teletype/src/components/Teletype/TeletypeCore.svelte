@@ -769,7 +769,7 @@
         font-size: 0.95rem;
         line-height: 0.925rem;
         height: 24px;
-        width: 26px;
+        min-width: 26px;
         text-align: center;
         padding: 6px 6px 7px 6px;
         border-radius: 5px;
