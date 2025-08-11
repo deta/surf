@@ -5,17 +5,20 @@ import {
 } from '@deta/teletype/src/components/Teletype/types'
 
 export const staticActions: TeletypeStaticAction[] = [
+  /*
   {
     id: 'ask',
     execute: TeletypeAction.Ask,
     group: TeletypeActionGroup.ChatCommands,
-    displayPriority: ActionDisplayPriority.LOW,
-    name: 'Ask this Page',
+    selectPriority: ActionSelectPriority.LOW,
+    displayPriority: ActionDisplayPriority.HIGH,
+    name: `Ask (${isMac ? '⌘' : 'Ctrl'} + ⏎)`,
     section: 'Chat',
     ignoreFuse: true,
     shortcut: '⌘N',
     icon: 'face'
   },
+  */
   {
     id: 'open.stuff',
     execute: TeletypeAction.OpenStuff,

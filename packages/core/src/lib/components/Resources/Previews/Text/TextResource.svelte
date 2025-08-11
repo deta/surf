@@ -7,6 +7,8 @@
     showPrompt: boolean
     clearContextOnMention?: boolean
     generationID?: string
+    screenshot?: Blob  
+    addActiveTab?: boolean
   };
 </script>
 

@@ -37,6 +37,7 @@
 
   import {
     copyToClipboard,
+    isMac,
     parseStringIntoBrowserLocation,
     useCancelableDebounce,
     useLogScope
@@ -78,6 +79,7 @@
   const dispatch = createEventDispatcher<TeletypeEntryEvents>()
   const commandComposer = useCommandComposer(oasis, config, tabsManager)
   const userConfigSettings = config.settings
+  const localIsMac = isMac() // store the result of isMac() to avoid multiple calls
 
   const selectedSpace = oasis.selectedSpace
 
@@ -465,6 +467,22 @@
     }
   }
 
+  const handleCustomKeydown = (e: KeyboardEvent) => {
+    if (!open) return
+
+    const isModKey = localIsMac ? e.metaKey : e.ctrlKey
+    if (isModKey && e.key === 'Enter') {
+      e.preventDefault()
+      const inputValue = get(teletype?.inputValue) || ''
+      if (!inputValue) {
+        return
+      }
+      teletype?.close()
+      dispatch('ask', inputValue)
+      return
+    }
+  }
+
   const actionHandlers = {
     [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
     [TeletypeAction.NavigateURL]: handleNavigate,
@@ -561,6 +579,8 @@
   })
 </script>
 
+<svelte:window on:keydown|capture={handleCustomKeydown} />
+
 <TeletypeProvider
   bind:teletype
   actions={staticActions}
@@ -575,7 +595,7 @@
     nestedSearch: true
   }}
 >
-  <Teletype on:close on:actions-rendered={handleShowActionPanel}>
+  <Teletype on:ask={handleAsk} on:close on:actions-rendered={handleShowActionPanel}>
     <div slot="header" class="custom-header">
       <TeletypeHeader
         editMode={$editMode}

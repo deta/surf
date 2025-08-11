@@ -64,7 +64,6 @@
     Tab,
     TabPage,
     TabSpace,
-    TabHistory,
     CreateTabOptions,
     ControlWindow,
     TabResource,
@@ -108,7 +107,8 @@
     PageChatUpdateContextItemType,
     PromptType,
     ResourceTagDataStateValue,
-    WebContentsViewManagerActionType
+    WebContentsViewManagerActionType,
+    PageChatMessageSentEventTrigger
   } from '@horizon/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
@@ -172,6 +172,7 @@
   import { floatyButtons } from './Atoms/floatyButtons'
   import FloatyButton from './Atoms/FloatyButton.svelte'
   import ScreenPicker from './Core/ScreenPicker.svelte'
+  import FloatyNote from './Core/FloatyNote.svelte'
   import RightSidebar from '@horizon/core/src/lib/components/Core/RightSidebar.svelte'
   import { extractAndCreateWebResource } from '@horizon/core/src/lib/service/mediaImporter'
   import {
@@ -183,7 +184,6 @@
   import { provideSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import AppBarButton from './Browser/AppBarButton.svelte'
   import type { AIChatMessageSource, HistoryEntry } from '@horizon/core/src/lib/types'
-  import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import {
     migrateHomeContext,
     needsBrowsingContextSelection,
@@ -203,6 +203,7 @@
   let magicSidebar: any
   let teletypeEntry: TeletypeEntry
   let teletype: TeletypeSystem
+  let screenPicker: ScreenPicker
 
   // Register the MagicSidebar with the onboarding service when it's initialized
   $: if (magicSidebar && onboardingService) {
@@ -2203,6 +2204,28 @@
     }
   }
 
+  const handleCreateFloatyNoteWithQuery = async (e: CustomEvent<string | undefined>) => {
+    const query = e.detail
+    if (!query) {
+      log.warn('No query provided for floaty note creation')
+      return
+    }
+
+    log.debug('create floaty note with query', query)
+
+    showScreenshotPicker.set(true)
+    await wait(500)
+
+    if (!screenPicker) {
+      log.error('failed to init screen picker')
+      toasts.error(
+        'Unexpected error occurred while answering your question: floaty note not available'
+      )
+      return
+    }
+    await screenPicker.createFloatyNote(query, PageChatMessageSentEventTrigger.TeletypeAsk, true)
+  }
+
   const handleOpenAndChat = async (e: CustomEvent<OpenAndChatEvent>) => {
     const data = Array.isArray(e.detail) ? e.detail : [e.detail]
     const resourceIds = data
@@ -4199,6 +4222,7 @@
 
 {#if $showScreenshotPicker === true || ($showNewTabOverlay === 1 && !$teletypeEditMode)}
   <ScreenPicker
+    bind:this={screenPicker}
     mode="standalone"
     fromTty={$showNewTabOverlay === 1}
     on:save-screenshot={handleSaveScreenshot}
@@ -4231,7 +4255,7 @@
       on:close={() => {
         showNewTabOverlay.set(0)
       }}
-      on:ask={handleCreateChatWithQuery}
+      on:ask={handleCreateFloatyNoteWithQuery}
       on:open-url={(e) => {
         const { editMode, url } = e.detail
         if (editMode) {

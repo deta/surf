@@ -12,6 +12,7 @@
   import ActionPanel from './ActionPanel.svelte'
   import Lazy from './Lazy.svelte'
   import { onMount, tick, createEventDispatcher } from 'svelte'
+  import { isMac } from '@horizon/utils'
 
   const dispatch = createEventDispatcher()
 
@@ -32,6 +33,8 @@
   const showHelper = teletype.options?.showHelper
   const showActionPanel = teletype.showActionPanel
   const editMode = teletype.editMode
+
+  const localIsMac = isMac()
 
   let showModalOverlay = false
   let modalContent: Action | null = null
@@ -270,6 +273,13 @@
     dispatch('input', inputElem.value)
   }
 
+  const handleAskClick = (e: MouseEvent) => {
+    e.stopPropagation()
+    if ($selectedAction?.id === 'search' && $inputValue) {
+      dispatch('ask', $inputValue)
+    }
+  }
+
   const handleHelperClick = () => {
     teletype.showAction('teletype-helper')
   }
@@ -495,6 +505,23 @@
               {$showActionPanel ? 'Select' : $selectedAction.actionText || 'Open'}
               <div class="shortcut">⏎</div>
             </div>
+
+            {#if $selectedAction.id === 'search'}
+              <div class="separator"></div>
+              <div
+                role="button"
+                on:click|stopPropagation={handleAskClick}
+                on:keydown={handleInputKey}
+                class="selected-option"
+                tabindex="0"
+              >
+                Ask
+                <div class="shortcut">
+                  {localIsMac ? '⌘' : 'Ctrl'}
+                </div>
+                <div class="shortcut">⏎</div>
+              </div>
+            {/if}
 
             {#if $selectedAction.actionPanel}
               <div class="separator"></div>
@@ -742,7 +769,7 @@
         font-size: 0.95rem;
         line-height: 0.925rem;
         height: 24px;
-        width: 26px;
+        min-width: 26px;
         text-align: center;
         padding: 6px 6px 7px 6px;
         border-radius: 5px;

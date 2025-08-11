@@ -61,7 +61,7 @@
 >
   <div class="inner-wrapper">
     <Notifications {teletype} />
-    <TeletypeCore on:input on:actions-rendered>
+    <TeletypeCore on:input on:actions-rendered on:ask>
       <slot name="header" slot="header" />
     </TeletypeCore>
 
