@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 import { session, ipcMain, app, shell } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
@@ -6,7 +6,7 @@ import fs, { promises as fsp } from 'fs'
 import path from 'path'
 import mime from 'mime-types'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
-import type { DownloadPathResponseMessage, SFFSResource } from '@horizon/types'
+import type { DownloadPathResponseMessage, SFFSResource } from '@deta/types'
 import { isPathSafe, checkFileExists } from './utils'
 
 const log = useLogScope('Download Manager')

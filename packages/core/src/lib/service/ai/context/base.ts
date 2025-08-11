@@ -1,5 +1,5 @@
 import { type Writable, type Readable, writable, get, derived } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 
 import { blobToSmallImageUrl } from '../../../utils/screenshot'
 import type { ChatPrompt } from '../chat'

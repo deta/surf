@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { isMac } from '@horizon/utils'
+import { isMac } from '@deta/utils'
 
 let AnnouncementsWindow: BrowserWindow | undefined
 

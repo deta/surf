@@ -1,9 +1,4 @@
-import {
-  conditionalArrayItem,
-  useDebounce,
-  useLocalStorageStore,
-  useLogScope
-} from '@horizon/utils'
+import { conditionalArrayItem, useDebounce, useLocalStorageStore, useLogScope } from '@deta/utils'
 
 import { type ResourceManager, ResourceNote } from '../resources'
 import type { AIChat, AIService } from './ai'
@@ -14,14 +9,14 @@ import {
   PageChatUpdateContextEventTrigger,
   ResourceTagsBuiltInKeys,
   ResourceTypes
-} from '@horizon/types'
+} from '@deta/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import type { TabsManager } from '../tabs'
 import { CHAT_TITLE_GENERATOR_PROMPT } from '../../constants/prompts'
-import { ModelTiers, Provider } from '@horizon/types/src/ai.types'
+import { ModelTiers, Provider } from '@deta/types/src/ai.types'
 import type { Telemetry } from '../telemetry'
 import { generateContentHash } from './helpers'
-import { MentionItemType, type MentionItem } from '@horizon/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import {
   MODEL_CLAUDE_MENTION,
   MODEL_GPT_MENTION,

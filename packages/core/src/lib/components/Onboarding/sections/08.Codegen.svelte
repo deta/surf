@@ -2,7 +2,7 @@
   import { Icon } from '@horizon/icons'
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
-  import { isMac } from '@horizon/utils'
+  import { isMac } from '@deta/utils'
   import ShortcutVisualizer from '../../Utils/Keyboard/ShortcutVisualizer.svelte'
 
   let copyText = 'Build an interactive double pendulum simulation with trails.'

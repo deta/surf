@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-  import { isMac, wait } from '@horizon/utils'
+  import { isMac, wait } from '@deta/utils'
   import { writable } from 'svelte/store'
   import { OnboardingFeature } from '../Onboarding/onboardingScripts'
   import { get } from 'svelte/store'
@@ -43,7 +43,7 @@
   import Codegen from '../Onboarding/sections/08.Codegen.svelte'
   import NewNotes from '../Onboarding/sections/09.NewNotes.svelte'
   import Done from '../Onboarding/sections/00.Done.svelte'
-  import { OpenHomescreenEventTrigger } from '@horizon/types'
+  import { OpenHomescreenEventTrigger } from '@deta/types'
   import { MAIN_ONBOARDING_VIDEO_URL } from '@horizon/core/src/lib/utils/env'
 
   const dispatch = createEventDispatcher<OnboardingEvents>()

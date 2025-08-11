@@ -31,7 +31,7 @@
    */
   import { onMount } from 'svelte'
 
-  import { dist, isInsideRect, useLogScope, wait } from '@horizon/utils'
+  import { dist, isInsideRect, useLogScope, wait } from '@deta/utils'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import { derived, get, readable, writable } from 'svelte/store'
   import { useToasts } from '../../service/toast'
@@ -40,12 +40,7 @@
   import { hasParent, startingClass } from '../../utils/dom'
   import { captureScreenshot } from '../../utils/screenshot'
   import { CompletionEventID } from '../Onboarding/onboardingScripts'
-  import {
-    EventContext,
-    PageChatMessageSentEventTrigger,
-    PromptType,
-    type App
-  } from '@horizon/types'
+  import { EventContext, PageChatMessageSentEventTrigger, PromptType, type App } from '@deta/types'
   import { useTelemetry } from '../../service/telemetry'
   import ChatInput, { type ChatInputSubmitEvent } from '../Chat/ChatInput.svelte'
   import { SelectDropdown, SelectDropdownItem, type SelectItem } from '../Atoms/SelectDropdown'

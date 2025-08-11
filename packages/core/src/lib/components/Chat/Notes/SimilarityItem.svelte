@@ -11,7 +11,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
 
   import { Icon } from '@horizon/icons'
-  import { tooltip, useLogScope } from '@horizon/utils'
+  import { tooltip, useLogScope } from '@deta/utils'
 
   import PreviewSource from '@horizon/core/src/lib/components/Resources/Previews/PreviewSource.svelte'
   import { useResourceManager, type Resource } from '@horizon/core/src/lib/service/resources'
@@ -29,7 +29,7 @@
     EventContext,
     OpenInMiniBrowserEventFrom,
     SummarizeEventContentSource
-  } from '@horizon/types'
+  } from '@deta/types'
 
   export let source: AIChatMessageSource
   export let summarize: boolean = false

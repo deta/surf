@@ -24,12 +24,12 @@
     type WebViewEventWheel,
     type WebViewReceiveEvents,
     type WebViewSendEvents
-  } from '@horizon/types'
+  } from '@deta/types'
   import { createHistorySwipeRecognizer, SWIPE_THRESHOLD } from '../../utils/historySwipeRecognizer'
   import type { HistoryEntriesManager } from '../../service/history'
-  import { isModKeyAndKeyPressed, useLogScope } from '@horizon/utils'
+  import { isModKeyAndKeyPressed, useLogScope } from '@deta/utils'
   import type { DetectedResource } from '../../types'
-  import type { WebServiceActionInputs } from '@horizon/web-parser'
+  import type { WebServiceActionInputs } from '@deta/web-parser'
   import Webview, { type WebviewEvents } from './Webview.svelte'
   import FindInPage from './FindInPage.svelte'
   import HistorySwipeOverlay from './HistorySwipeOverlay.svelte'

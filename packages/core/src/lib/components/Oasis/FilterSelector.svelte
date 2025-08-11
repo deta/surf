@@ -9,7 +9,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { derived, writable } from 'svelte/store'
-  import { type SFFSResourceTag } from '@horizon/types'
+  import { type SFFSResourceTag } from '@deta/types'
   import { Icon } from '@horizon/icons'
   import { RESOURCE_FILTERS } from '../../constants/resourceFilters'
 

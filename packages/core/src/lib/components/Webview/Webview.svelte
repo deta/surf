@@ -36,7 +36,7 @@
     type WebContentsViewEvents,
     type WebContentsViewEventTyped,
     type WebViewSendEvents
-  } from '@horizon/types'
+  } from '@deta/types'
 
   import type { HistoryEntriesManager } from '../../service/history'
   import {
@@ -48,7 +48,7 @@
     isPDFViewerURL,
     processFavicons,
     getHostname
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { type HistoryEntry } from '../../types'
   import { useResourceManager } from '../../service/resources'
   import { Dragcula, DragOperation, DragZone, HTMLDragZone } from '@horizon/dragcula'

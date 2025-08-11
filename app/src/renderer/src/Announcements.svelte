@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import appIcon from './assets/icon_512.png'
-  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
-  import type { Announcement } from '@horizon/types'
-  import { getFormattedDate } from '@horizon/utils'
+  import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
+  import type { Announcement } from '@deta/types'
+  import { getFormattedDate } from '@deta/utils'
   import { Icon } from '@horizon/icons'
 
   let announcements: Announcement[] = []

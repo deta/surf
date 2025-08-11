@@ -12,7 +12,7 @@ import {
   codeLanguageToMimeType,
   conditionalArrayItem,
   getNormalizedHostname
-} from '@horizon/utils'
+} from '@deta/utils'
 import { SFFS } from './sffs'
 import {
   type AiSFFSQueryResponse,
@@ -50,10 +50,10 @@ import {
   type ResourceDataHistoryEntry,
   type ResourceState,
   type ResourceStateCombined
-} from '@horizon/types'
+} from '@deta/types'
 import { getContext, onDestroy, setContext, tick } from 'svelte'
 import type { Model } from '@horizon/backend/types'
-import { WebParser } from '@horizon/web-parser'
+import { WebParser } from '@deta/web-parser'
 import type { ConfigService } from './config'
 import type { AIService } from './ai/ai'
 import { EventEmitterBase } from './events'

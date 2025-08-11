@@ -1,4 +1,4 @@
-import { ResourceTypes } from '@horizon/types'
+import { ResourceTypes } from '@deta/types'
 import { WebService } from './types'
 
 export const SERVICES: WebService[] = [

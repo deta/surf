@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import Create from './Create.svelte'
-  import { SERVICES } from '@horizon/web-parser'
+  import { SERVICES } from '@deta/web-parser'
 
   const dispatch = createEventDispatcher<{ 'open-and-create-resource': string }>()
 

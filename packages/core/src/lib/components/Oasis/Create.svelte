@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SERVICES } from '@horizon/web-parser'
+  import { SERVICES } from '@deta/web-parser'
   import paper from '../../../../public/assets/paper.png'
   import { getServiceIcon } from '../../utils/services'
 

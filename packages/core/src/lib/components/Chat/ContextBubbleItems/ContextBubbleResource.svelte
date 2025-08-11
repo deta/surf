@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { getFileKind } from '@horizon/utils'
+  import { getFileKind } from '@deta/utils'
 
   import FileIcon from '../../Resources/Previews/File/FileIcon.svelte'
   import ContextBubbleItemWrapper from './ContextBubbleItemWrapper.svelte'

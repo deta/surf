@@ -17,7 +17,7 @@ import {
   WriteStream,
   mkdirSync
 } from 'fs'
-import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@horizon/api'
+import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/api'
 import {
   type EditablePrompt,
   type UserSettings,
@@ -40,7 +40,7 @@ import {
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs
-} from '@horizon/types'
+} from '@deta/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
 import {

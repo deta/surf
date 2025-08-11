@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isModKeyPressed } from '@horizon/utils'
+  import { isModKeyPressed } from '@deta/utils'
   import { type MentionItem, MentionItemType } from '../../types'
   import type { MentionAction } from './mention'
   import { DynamicIcon } from '@horizon/icons'

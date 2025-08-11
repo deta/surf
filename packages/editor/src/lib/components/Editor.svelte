@@ -10,7 +10,7 @@
 
   import { createEditor, Editor, EditorContent, FloatingMenu } from 'svelte-tiptap'
   import { Extension, generateHTML, generateJSON, generateText } from '@tiptap/core'
-  import { useAnimationFrameThrottle } from '@horizon/utils'
+  import { useAnimationFrameThrottle } from '@deta/utils'
 
   import { createEditorExtensions } from '../editor'
   import type { EditorAutocompleteEvent, LinkItemsFetcher, MentionItem } from '../types'
@@ -18,7 +18,7 @@
   import type { MentionAction, MentionNodeAttrs } from '../extensions/Mention'
   import BubbleMenu from './BubbleMenu.svelte'
   import { TextSelection } from '@tiptap/pm/state'
-  import { DragTypeNames } from '@horizon/types'
+  import { DragTypeNames } from '@deta/types'
   import type { SlashCommandPayload } from '../extensions/Slash/index'
   import type { SlashItemsFetcher } from '../extensions/Slash/suggestion'
   import type { MentionItemsFetcher } from '../extensions/Mention/suggestion'

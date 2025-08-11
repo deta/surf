@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { isModKeyPressed, useLogScope, parseStringIntoBrowserLocation } from '@horizon/utils'
+  import { isModKeyPressed, useLogScope, parseStringIntoBrowserLocation } from '@deta/utils'
   import { createEventDispatcher } from 'svelte'
 
   import type { HistoryEntry, Optional } from '@horizon/core/src/lib/types'

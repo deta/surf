@@ -1,7 +1,7 @@
 import { get, writable, type Writable } from 'svelte/store'
 import type { OasisService } from './oasis'
 import type { TabsManager } from './tabs'
-import { useLocalStorage, useLogScope } from '@horizon/utils'
+import { useLocalStorage, useLogScope } from '@deta/utils'
 import type { DesktopManager } from './desktop'
 import type { OasisSpace } from './oasis'
 

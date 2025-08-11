@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   import ResourcePreview from '../Resources/ResourcePreview.svelte'

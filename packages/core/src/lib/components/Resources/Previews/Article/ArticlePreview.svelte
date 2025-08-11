@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import type { ResourceArticle } from '../../../../service/resources'
   import type { ResourceDataArticle } from '../../../../types'
   import LoadingBox from '../../../Atoms/LoadingBox.svelte'

@@ -10,7 +10,7 @@
     useDebounce,
     getHumanDistanceToNow,
     copyToClipboard
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { OasisSpace, useOasis } from '../../../service/oasis'
   import Switch from '../../Atoms/Switch.svelte'
   import { useToasts } from '../../../service/toast'

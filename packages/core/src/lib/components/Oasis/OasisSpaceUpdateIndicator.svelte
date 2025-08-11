@@ -3,7 +3,7 @@
   import { writable, type Writable } from 'svelte/store'
 
   import { Icon } from '@horizon/icons'
-  import { hover, tooltip, useLogScope } from '@horizon/utils'
+  import { hover, tooltip, useLogScope } from '@deta/utils'
 
   import { ResourceTagsBuiltInKeys } from '@horizon/core/src/lib/types'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'

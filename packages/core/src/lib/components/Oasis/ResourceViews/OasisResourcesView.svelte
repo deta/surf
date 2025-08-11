@@ -2,7 +2,7 @@
   import { derived, type Readable, writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import MasonryView from '../ResourceViews/MasonryView.svelte'
   import {
     selectedItemIds,
@@ -20,7 +20,7 @@
     MultiSelectResourceEventAction,
     type ContextViewDensity,
     type ContextViewType
-  } from '@horizon/types'
+  } from '@deta/types'
 
   import { RenderableItemType, SpaceEntryOrigin } from '../../../types'
   import { Resource } from '../../../service/resources'

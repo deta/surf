@@ -1,6 +1,7 @@
 <script lang="ts">
   import { TeletypeProvider, Teletype, type Action } from '@deta/teletype/src'
   import { DynamicIcon } from '@horizon/icons'
+  import { Button, Link } from '@deta/ui'
 
   // import { Browser } from '@horizon/core'
   // import '../../app.css'
@@ -11,9 +12,10 @@
   // import './assets/fonts/SNPro-Variable.ttf'
   // import './assets/fonts/SNPro-Variable.woff2'
   // import './assets/fonts/SNPro-Variable.woff'
-  import '../../output.css'
+  import '@deta/ui/src/output.css'
+  import '@deta/ui/src/app.css'
   // import '../../../../../packages/core/src/output.css'
-  // import { isMac, isWindows } from '@horizon/utils'
+  // import { isMac, isWindows } from '@deta/utils'
 
   let count = $state(0)
 
@@ -48,7 +50,9 @@
     <h1>Surf Greenfield</h1>
 
     <p>Svelte 5, Vite 7, electron-vite 4, Electron 37</p>
-    <button {onclick}>Clicks {count}</button>
+    <Button {onclick}>Clicks {count}</Button>
+
+    <Link url="https://deta.surf">What is Surf?</Link>
   </div>
   ^
   <TeletypeProvider
@@ -135,6 +139,9 @@
     --orange: #fa870c;
     --border-width: 0.5px;
     --border-color: #58688460;
+    --color-brand: #b7065c;
+    --color-brand-muted: #b7065cba;
+    --color-brand-dark: #ff4fa4;
 
     --border-radius: 18px;
   }

@@ -1,12 +1,12 @@
-import { ResourceTagsBuiltInKeys } from '@horizon/types'
+import { ResourceTagsBuiltInKeys } from '@deta/types'
 import {
   ResourceTypes,
   type ResourceTagDataStateValue,
   type ResourceTagsBuiltIn,
   type SFFSResourceTag
-} from '@horizon/types'
+} from '@deta/types'
 import type { SpaceSource } from '../types/spaces.types'
-import { conditionalArrayItem } from '@horizon/utils'
+import { conditionalArrayItem } from '@deta/utils'
 
 /**
  * A utility class for creating standardized resource tags to use when creating or managing resources.

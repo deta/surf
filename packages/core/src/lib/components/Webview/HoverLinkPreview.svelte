@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fly } from 'svelte/transition'
-  import { truncateURL } from '@horizon/utils'
+  import { truncateURL } from '@deta/utils'
 
   export let show: boolean
   export let url: string

@@ -48,7 +48,7 @@
     isModKeyPressed,
     conditionalArrayItem,
     generateID
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '../../service/toast'
@@ -56,7 +56,7 @@
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,
     UpdateSpaceSettingsEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
 
   import { useTelemetry } from '../../service/telemetry'
   import { contextMenu } from '../Core/ContextMenu.svelte'

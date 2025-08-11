@@ -3,7 +3,7 @@
   import ImportStepTitle from './Importer/ImportStepTitle.svelte'
   import ImportStepDescription from './Importer/ImportStepDescription.svelte'
   import { Icon } from '@horizon/icons'
-  import type { BrowserTypeItem } from '@horizon/types'
+  import type { BrowserTypeItem } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { TabImporter } from '@horizon/core/src/lib/types'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'

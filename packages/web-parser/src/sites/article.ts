@@ -1,10 +1,10 @@
-import { ResourceTypes, ResourceDataArticle } from '@horizon/types'
+import { ResourceTypes, ResourceDataArticle } from '@deta/types'
 import { Readability, isProbablyReaderable } from '@mozilla/readability'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'
 import { generateNameFromURL, sanitizeHTML } from '../utils'
-import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
 import { DOMExtractor } from '../extractors/dom'
 
 export type RawArticleData = {

@@ -5,7 +5,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <script lang="ts">
-  import { Editor } from '@horizon/editor'
+  import { Editor } from '@deta/editor'
   import { writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher } from 'svelte'

@@ -1,15 +1,11 @@
 <script lang="ts">
   import { type Resource, useResourceManager } from '../../service/resources'
-  import { parseStringIntoUrl, tooltip } from '@horizon/utils'
+  import { parseStringIntoUrl, tooltip } from '@deta/utils'
   import { formatDistanceToNow, parseISO } from 'date-fns'
   import autosize from 'svelte-autosize'
 
   import Link from '../Atoms/Link.svelte'
-  import {
-    CreateTabEventTrigger,
-    ResourceTagsBuiltInKeys,
-    type SFFSResourceTag
-  } from '@horizon/types'
+  import { CreateTabEventTrigger, ResourceTagsBuiltInKeys, type SFFSResourceTag } from '@deta/types'
   import { Icon } from '@horizon/icons'
   import { useToasts } from '../../service/toast'
   import { createEventDispatcher } from 'svelte'

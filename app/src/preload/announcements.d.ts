@@ -1,4 +1,4 @@
-import type { Announcement } from '@horizon/types'
+import type { Announcement } from '@deta/types'
 
 export interface AnnouncementsAPI {
   getAnnouncements: () => Announcement[]

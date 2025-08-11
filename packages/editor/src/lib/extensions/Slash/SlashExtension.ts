@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core'
-import Suggestion from '@horizon/editor/src/lib/utilities/Suggestion'
+import Suggestion from '@deta/editor/src/lib/utilities/Suggestion'
 
 export default Extension.create({
   name: 'slash',

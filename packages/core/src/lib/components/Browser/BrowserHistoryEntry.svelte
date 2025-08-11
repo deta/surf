@@ -11,8 +11,8 @@
     parseStringIntoUrl,
     tooltip,
     useLogScope
-  } from '@horizon/utils'
-  import { CreateTabEventTrigger, DragTypeNames } from '@horizon/types'
+  } from '@deta/utils'
+  import { CreateTabEventTrigger, DragTypeNames } from '@deta/types'
   import { type DragTypes, type HistoryEntry, type OpenAndChatEvent } from '../../types'
   import { useTabsManager } from '../../service/tabs'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'

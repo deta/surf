@@ -3,7 +3,7 @@
   import { derived, writable } from 'svelte/store'
   import { fade } from 'svelte/transition'
 
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
 
   import type { App } from '@horizon/backend/types'
 
@@ -15,7 +15,7 @@
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { contextMenu } from '../Core/ContextMenu.svelte'
   import { quartOut } from 'svelte/easing'
-  import { type MentionItem } from '@horizon/editor'
+  import { type MentionItem } from '@deta/editor'
   import CreateAiToolDialog from '../Chat/CreateAiToolDialog.svelte'
   import Tooltip from '../Atoms/Tooltip.svelte'
 

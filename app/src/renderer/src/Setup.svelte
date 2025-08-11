@@ -10,7 +10,7 @@
   import ExplainerChat from './components/setup/ExplainerChat.svelte'
   import DoneView from './components/setup/DoneView.svelte'
 
-  import type { UserSettings } from '@horizon/types'
+  import type { UserSettings } from '@deta/types'
   import { provideConfig } from '@horizon/core/src/lib/service/config'
   import { createResourceManager } from '@horizon/core/src/lib/service/resources'
   import { provideOasis } from '@horizon/core/src/lib/service/oasis'

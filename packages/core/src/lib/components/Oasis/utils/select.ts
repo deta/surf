@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 import type { ClipboardService } from '../../../service/clipboard'
 
 const log = useLogScope('Multi Select')

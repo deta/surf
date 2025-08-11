@@ -27,8 +27,8 @@
     type EditorSimilaritiesSearchEvent,
     type MentionItem,
     type Range
-  } from '@horizon/editor'
-  import '@horizon/editor/src/editor.scss'
+  } from '@deta/editor'
+  import '@deta/editor/src/editor.scss'
 
   import { Resource, useResourceManager } from '../../../../service/resources'
   import {
@@ -46,7 +46,7 @@
     useThrottle,
     wait,
     htmlToMarkdown
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import CitationItem, {
     type CitationClickData,
     type CitationInfo
@@ -80,7 +80,7 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     WEB_RESOURCE_TYPES
-  } from '@horizon/types'
+  } from '@deta/types'
   import {
     DragTypeNames,
     SpaceEntryOrigin,
@@ -98,8 +98,8 @@
   } from '@horizon/core/src/lib/constants/prompts'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import FloatingMenu from '@horizon/core/src/lib/components/Chat/Notes/FloatingMenu.svelte'
-  import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
-  import { Provider } from '@horizon/types/src/ai.types'
+  import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
+  import { Provider } from '@deta/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
   import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
@@ -111,10 +111,10 @@
   import { launchTimeline } from '../../../Onboarding/timeline'
   import { CompletionEventID, OnboardingFeature } from '../../../Onboarding/onboardingScripts'
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
-  import { createWikipediaAPI } from '@horizon/web-parser'
+  import { createWikipediaAPI } from '@deta/web-parser'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
-  import { updateCaretPopoverVisibility } from '@horizon/editor/src/lib/extensions/CaretIndicator/utils'
+  import { updateCaretPopoverVisibility } from '@deta/editor/src/lib/extensions/CaretIndicator/utils'
   import {
     MODEL_CLAUDE_MENTION,
     MODEL_GPT_MENTION,
@@ -127,13 +127,13 @@
   import type {
     SlashCommandPayload,
     SlashMenuItem
-  } from '@horizon/editor/src/lib/extensions/Slash/index'
-  import type { SlashItemsFetcher } from '@horizon/editor/src/lib/extensions/Slash/suggestion'
-  import { BUILT_IN_SLASH_COMMANDS } from '@horizon/editor/src/lib/extensions/Slash/actions'
+  } from '@deta/editor/src/lib/extensions/Slash/index'
+  import type { SlashItemsFetcher } from '@deta/editor/src/lib/extensions/Slash/suggestion'
+  import { BUILT_IN_SLASH_COMMANDS } from '@deta/editor/src/lib/extensions/Slash/actions'
   import { ResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useSmartNotes, type SmartNote } from '@horizon/core/src/lib/service/ai/note'
   import CaretPopover from './CaretPopover.svelte'
-  import type { CaretPosition } from '@horizon/editor/src/lib/extensions/CaretIndicator'
+  import type { CaretPosition } from '@deta/editor/src/lib/extensions/CaretIndicator'
   import Surflet from '@horizon/core/src/lib/components/Chat/Notes/Surflet.svelte'
   import WebSearch from '@horizon/core/src/lib/components/Chat/Notes/WebSearch.svelte'
   import { openContextMenu } from '../../../Core/ContextMenu.svelte'
@@ -143,7 +143,7 @@
     createMentionsFetcher,
     createResourcesMentionsFetcher
   } from '@horizon/core/src/lib/service/ai/mentions'
-  import type { LinkClickHandler } from '@horizon/editor/src/lib/extensions/Link/helpers/clickHandler'
+  import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
   import NoteSettingsMenu from '@horizon/core/src/lib/components/Chat/Notes/NoteSettingsMenu.svelte'
   import { EditorAIGeneration, NoteEditor } from '@horizon/core/src/lib/service/editor'
   import ChatInput from '../../../Notes/ChatInput.svelte'

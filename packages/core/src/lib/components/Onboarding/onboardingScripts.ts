@@ -1,4 +1,4 @@
-import { isMac } from '@horizon/utils'
+import { isMac } from '@deta/utils'
 
 export enum OnboardingAction {
   SendChatMessage = 'send-chat-message',

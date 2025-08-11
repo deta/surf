@@ -8,7 +8,7 @@ import {
   ResourceDataTable,
   ResourceDataTableColumn,
   ResourceTypes
-} from '@horizon/types'
+} from '@deta/types'
 export { SERVICES } from './services'
 
 import {

@@ -1,8 +1,8 @@
 import { get, type Writable } from 'svelte/store'
 import PQueue from 'p-queue'
 
-import { useLocalStorageStore, useLogScope } from '@horizon/utils'
-import { ResourceTypes } from '@horizon/types'
+import { useLocalStorageStore, useLogScope } from '@deta/utils'
+import { ResourceTypes } from '@deta/types'
 
 import { type ResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'

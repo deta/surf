@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Toast } from '../../service/toast'
   import { Icon } from '@horizon/icons'
-  import { hover, tooltip } from '@horizon/utils'
+  import { hover, tooltip } from '@deta/utils'
   import { createEventDispatcher } from 'svelte'
   import { scale } from 'svelte/transition'
 

@@ -5,7 +5,7 @@ import type { ContextService } from '../contextManager'
 import { ContextItemTypes } from './types'
 import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 import { extractAndCreateWebResource } from '../../mediaImporter'
-import type { SearchResultLink } from '@horizon/web-parser'
+import type { SearchResultLink } from '@deta/web-parser'
 
 export class ContextItemWebSearch extends ContextItemBase {
   type = ContextItemTypes.WEB_SEARCH

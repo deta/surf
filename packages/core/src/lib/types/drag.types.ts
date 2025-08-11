@@ -1,6 +1,6 @@
 import type { Writable } from 'svelte/store'
 
-import { type DragTypeNames } from '@horizon/types'
+import { type DragTypeNames } from '@deta/types'
 
 import type { HistoryEntry, Tab } from '.'
 import type { Resource } from '../service/resources'
@@ -22,4 +22,4 @@ export interface DragTypes extends Record<DragTypeNames, unknown> {
   [DragTypeNames.SURF_HISTORY_ENTRY_ID]: string
 }
 
-export { DragTypeNames } from '@horizon/types'
+export { DragTypeNames } from '@deta/types'

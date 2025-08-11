@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import type { ResourceAnnotation } from '../../../../service/resources'
   import type {
     AnnotationCommentData,

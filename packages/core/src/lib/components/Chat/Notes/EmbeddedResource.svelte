@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  import { ResourceTagsBuiltInKeys, WEB_RESOURCE_TYPES } from '@horizon/types'
-  import { mimeTypeToCodeLanguage, useLogScope } from '@horizon/utils'
+  import { ResourceTagsBuiltInKeys, WEB_RESOURCE_TYPES } from '@deta/types'
+  import { mimeTypeToCodeLanguage, useLogScope } from '@deta/utils'
   import { Icon } from '@horizon/icons'
 
   import { useResourceManager, type Resource } from '@horizon/core/src/lib/service/resources'

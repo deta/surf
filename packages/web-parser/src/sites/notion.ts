@@ -1,9 +1,9 @@
-import { ResourceTypes, type ResourceDataDocument } from '@horizon/types'
+import { ResourceTypes, type ResourceDataDocument } from '@deta/types'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import { SERVICES } from '../services'
 
-import { parseStringIntoUrl, parseTextIntoISOString, wait } from '@horizon/utils'
+import { parseStringIntoUrl, parseTextIntoISOString, wait } from '@deta/utils'
 import { minifyHTML, sanitizeHTML } from '../utils'
 
 export const NotionRegexPatterns = {

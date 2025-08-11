@@ -1,11 +1,11 @@
-import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
+import { ResourceTypes, type ResourceDataPost } from '@deta/types'
 
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { SERVICES } from '../services'
 import { WebParser } from '..'
 import { sanitizeHTML } from '../utils'
-import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
 
 export const TwitterRegexPatterns = {
   // example: /@detahq/status/1441160730730736640

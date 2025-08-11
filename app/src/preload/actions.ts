@@ -1,4 +1,4 @@
-import type { HorizonAction } from '@horizon/types'
+import type { HorizonAction } from '@deta/types'
 
 const actionInputsToParameters: (inputs: HorizonAction['inputs']) => {} = (inputs) => {
   return {

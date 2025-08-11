@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { derived, writable, type Writable } from 'svelte/store'
 
-  import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@horizon/utils'
+  import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@deta/utils'
   import { Icon } from '@horizon/icons'
 
   import {
@@ -22,7 +22,7 @@
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { EventContext } from '@horizon/types'
+  import { EventContext } from '@deta/types'
   import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   export let selectedChatId: Writable<string> = writable('')

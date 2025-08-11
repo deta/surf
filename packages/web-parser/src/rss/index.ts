@@ -1,5 +1,5 @@
-import { ResourceDataPost } from '@horizon/types'
-import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { ResourceDataPost } from '@deta/types'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
 import Parser from 'rss-parser'
 import { sanitizeHTML } from '../utils'
 

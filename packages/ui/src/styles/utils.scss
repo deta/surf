@@ -1,0 +1,129 @@
+@use './motion';
+
+// Needed as we cannot use light-dark inside css variables used by houdini worklets :'((
+@mixin light-dark-custom($propertyName, $light, $dark, $custom-light: null, $custom-dark: null) {
+  /* @media (prefers-color-scheme: light) {
+    --#{$propertyName}: #{$light};
+  }*/
+
+  :global(body:not(.dark):not(.custom)) & {
+    --#{$propertyName}: #{$light};
+  }
+
+  /*@media (prefers-color-scheme: dark) {
+    --#{$propertyName}: #{$dark};
+  }*/
+
+  :global(body.dark:not(.custom)) & {
+    --#{$propertyName}: #{$dark};
+  }
+
+  :global(body:not(.dark).custom) & {
+    --#{$propertyName}: #{$custom-light};
+  }
+
+  :global(body.dark.custom) & {
+    @if not $custom-dark {
+      --#{$propertyName}: #{$custom-light};
+    } @else {
+      --#{$propertyName}: #{$custom-dark};
+    }
+  }
+}
+
+@mixin squircle($fill: transparent,
+  $smooth: 0.33,
+  $radius: 0px,
+  $radius-top-left: null,
+  $radius-top-right: null,
+  $radius-bottom-left: null,
+  $radius-bottom-right: null) {
+  border-radius: 0 !important;
+
+  background: paint(squircle);
+  --squircle-smooth: #{$smooth};
+  --squircle-fill: #{$fill};
+
+  --squircle-radius-top-left: #{$radius};
+  --squircle-radius-top-right: #{$radius};
+  --squircle-radius-bottom-left: #{$radius};
+  --squircle-radius-bottom-right: #{$radius};
+
+  @if $radius-top-left {
+    --squircle-radius-top-left: #{$radius-top-left};
+  }
+
+  @if $radius-top-right {
+    --squircle-radius-top-right: #{$radius-top-right};
+  }
+
+  @if $radius-bottom-left {
+    --squircle-radius-bottom-left: #{$radius-bottom-left};
+  }
+
+  @if $radius-bottom-right {
+    --squircle-radius-bottom-right: #{$radius-bottom-right};
+  }
+}
+
+@mixin squricle-radii($radius: 0px,
+  $top-left: null,
+  $top-right: null,
+  $bottom-left: null,
+  $bottom-right: null) {
+  @if not $top-left {
+    --squircle-radius-top-left: #{$radius};
+  }
+
+  @if not $top-right {
+    --squircle-radius-top-right: #{$radius};
+  }
+
+  @if not $bottom-left {
+    --squircle-radius-bottom-left: #{$radius};
+  }
+
+  @if not $bottom-right {
+    --squircle-radius-bottom-right: #{$radius};
+  }
+
+  @if $top-left {
+    --squircle-radius-top-left: #{$top-left};
+  }
+
+  @if $top-right {
+    --squircle-radius-top-right: #{$top-right};
+  }
+
+  @if $bottom-left {
+    --squircle-radius-bottom-left: #{$bottom-left};
+  }
+
+  @if $bottom-right {
+    --squircle-radius-bottom-right: #{$bottom-right};
+  }
+}
+
+@mixin material-frosted {
+  backdrop-filter: blur(12px);
+
+  background: light-dark(var(--mixed-bg), var(--mixed-bg-dark));
+
+  // TODO: (maxu): Figure out a way to still allow ading custom transition props when using this mixin
+  transition: background motion.$color-transition;
+}
+
+@mixin font-smoothing {
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@property --contrast-color-channel {
+  syntax: '*';
+  inherits: false;
+  initial-value: clamp(0, (((r * 0.299) + (g * 0.587) + (b * 0.114)) - 128) * -1000, 255);
+}
+
+@function contrast-color($source-color) {
+  @return #{rgb(from $source-color var(--contrast-color-channel) var(--contrast-color-channel) var(--contrast-color-channel))};
+}

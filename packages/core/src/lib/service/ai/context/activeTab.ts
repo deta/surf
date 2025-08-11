@@ -4,7 +4,7 @@ import {
   PageChatUpdateContextEventAction,
   PageChatUpdateContextEventTrigger,
   PageChatUpdateContextItemType
-} from '@horizon/types'
+} from '@deta/types'
 
 import type { Tab } from '../../../types'
 
@@ -14,7 +14,7 @@ import { ContextItemResource } from './resource'
 import { ContextItemSpace } from './space'
 import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './types'
 import type { ChatPrompt } from '../chat'
-import { useDebounce, wait } from '@horizon/utils'
+import { useDebounce, wait } from '@deta/utils'
 
 export class ContextItemActiveTab extends ContextItemBase {
   type = ContextItemTypes.ACTIVE_TAB

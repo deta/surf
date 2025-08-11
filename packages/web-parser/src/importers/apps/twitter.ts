@@ -17,12 +17,12 @@ SAMPLE LINK:
 }
 */
 
-import { ResourceDataLink, ResourceDataPost, ResourceTypes } from '@horizon/types'
+import { ResourceDataLink, ResourceDataPost, ResourceTypes } from '@deta/types'
 import { BatchFetcher } from '../batcher'
 import { AppImporter } from './index'
 import { DetectedResource } from '../../types'
 import { WebParser, WebViewExtractor } from '../..'
-import { wait } from '@horizon/utils'
+import { wait } from '@deta/utils'
 
 export type TwitterAuthData = {
   uid: string

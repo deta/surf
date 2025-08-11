@@ -9,7 +9,7 @@
   import { createEventDispatcher } from 'svelte'
   import NoteContextTabPicker from './NoteContextTabPicker.svelte'
   import { requestUserScreenshot } from '../../Core/ScreenPicker.svelte'
-  import { PageChatUpdateContextEventTrigger } from '@horizon/types'
+  import { PageChatUpdateContextEventTrigger } from '@deta/types'
   import { type Tab } from '@horizon/core/src/lib/types'
 
   export let contextManager = ContextManager

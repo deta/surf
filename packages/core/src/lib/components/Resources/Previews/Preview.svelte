@@ -38,14 +38,14 @@
    * Any section can be hidden by setting its props to undefined.
    * NOTE: The content section is a bit more involved, as it can also show up, if e.g. annotations exist.
    */
-  import { getFileKind, mimeTypeToCodeLanguage, truncate } from '@horizon/utils'
+  import { getFileKind, mimeTypeToCodeLanguage, truncate } from '@deta/utils'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { Icon, type Icons } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
-  import ReadOnlyRichText from '@horizon/editor/src/lib/components/ReadOnlyRichText.svelte'
-  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
-  import { ResourceTypes, WEB_RESOURCE_TYPES } from '@horizon/types'
+  import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
+  import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
+  import { ResourceTypes, WEB_RESOURCE_TYPES } from '@deta/types'
   import FilePreview from './File/FilePreview.svelte'
   import { createEventDispatcher } from 'svelte'
   import TextResource from './Text/TextResource.svelte'

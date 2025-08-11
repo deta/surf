@@ -1,5 +1,5 @@
 {
-  "name": "@horizon/utils",
+  "name": "@deta/utils",
   "private": true,
   "version": "0.0.0",
   "svelte": "src/index.ts",
@@ -13,8 +13,8 @@
     "build:types": "tsc --emitDeclarationOnly"
   },
   "devDependencies": {
+    "@deta/types": "*",
     "@horizon/eslint-config": "*",
-    "@horizon/types": "*",
     "@horizon/typescript-config": "*",
     "@types/uuid": "^10.0.0",
     "date-fns": "^3.2.0",
@@ -29,5 +29,8 @@
     "unified": "^11.0.5",
     "uuid": "^9.0.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "events": "^3.3.0",
+    "typed-emitter": "^2.1.0"
+  }
 }

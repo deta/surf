@@ -21,12 +21,12 @@
     ContextViewTypes,
     type ContextViewDensity,
     type ContextViewType
-  } from '@horizon/types'
+  } from '@deta/types'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import { RESOURCE_FILTERS, CONTEXT_FILTERS, ALL_FILTERS } from '../../constants/resourceFilters'
-  import { tooltip } from '@horizon/utils'
+  import { tooltip } from '@deta/utils'
   import type { FilterItem } from './FilterSelector.svelte'
 
   export let viewType: ContextViewType | undefined

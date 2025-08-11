@@ -1,13 +1,13 @@
-import { ResourceTagsBuiltInKeys } from '@horizon/types'
+import { ResourceTagsBuiltInKeys } from '@deta/types'
 import {
   conditionalArrayItem,
   getFileKind,
   getFileType,
   truncateURL,
   useLogScope
-} from '@horizon/utils'
+} from '@deta/utils'
 import type { AIService } from './ai'
-import { Provider } from '@horizon/types/src/ai.types'
+import { Provider } from '@deta/types/src/ai.types'
 import type { OasisService } from '../oasis'
 import {
   BROWSER_HISTORY_MENTION,
@@ -16,9 +16,9 @@ import {
   NOTE_MENTION,
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
-import { MentionItemType, type MentionItem } from '@horizon/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import { type ResourceManager } from '../resources'
-import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
 import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export const createResourcesMentionsFetcher = (

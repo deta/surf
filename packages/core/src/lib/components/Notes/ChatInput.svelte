@@ -10,9 +10,9 @@
   import PromptPills, { type PromptPillItem } from './Atoms/PromptPills.svelte'
   import type { ContextManager } from '../../service/ai/contextManager'
   import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'
-  import { conditionalArrayItem, isMac, useLogScope } from '@horizon/utils'
+  import { conditionalArrayItem, isMac, useLogScope } from '@deta/utils'
   import { createEventDispatcher, tick } from 'svelte'
-  import type { Editor, MentionItem } from '@horizon/editor'
+  import type { Editor, MentionItem } from '@deta/editor'
   import type { ChatPrompt } from '../../service/ai/ai'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
@@ -21,7 +21,7 @@
   import { isGeneratingAI } from '@horizon/core/src/lib/service/ai/generationState'
   import { startingClass } from '../../utils/dom'
   import Tooltip from '../Atoms/Tooltip.svelte'
-  import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+  import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
 
   const log = useLogScope('ChatInput')
   const dispatch = createEventDispatcher<{

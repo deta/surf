@@ -2,7 +2,7 @@
   import { Icon } from '@horizon/icons'
   import FileIcon from './File/FileIcon.svelte'
   import type { Source } from './Preview.svelte'
-  import { getFileKind } from '@horizon/utils'
+  import { getFileKind } from '@deta/utils'
   import Image from '../../Atoms/Image.svelte'
 
   export let type: string

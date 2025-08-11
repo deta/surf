@@ -1,7 +1,7 @@
 import type { WebviewTag } from 'electron'
 import { DetectedResource, DetectedWebApp, WebServiceActionInputs } from '../types'
-import { WebViewEventReceiveNames, WebViewEventSendNames } from '@horizon/types'
-import { shouldIgnoreWebviewErrorCode } from '@horizon/utils'
+import { WebViewEventReceiveNames, WebViewEventSendNames } from '@deta/types'
+import { shouldIgnoreWebviewErrorCode } from '@deta/utils'
 
 const DEFAULT_EXTRACTION_TIMEOUT = 10000
 const DEFAULT_INITIALIZING_TIMEOUT = 7000

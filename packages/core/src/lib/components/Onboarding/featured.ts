@@ -1,5 +1,5 @@
 import teaser048noteschat from '../../../../public/assets/features/048.noteschat.png'
-import { useLocalStorageStore } from '@horizon/utils'
+import { useLocalStorageStore } from '@deta/utils'
 import { openDialog } from '../Core/Dialog/Dialog.svelte'
 
 export interface VersionContent {

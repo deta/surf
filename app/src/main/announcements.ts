@@ -1,5 +1,5 @@
 import { getAnnouncementsState, setAnnouncementsState } from './config'
-import type { Announcement } from '@horizon/types'
+import type { Announcement } from '@deta/types'
 
 interface SeenAnnouncement {
   id: string

@@ -10,7 +10,7 @@
  */
 
 import { writable, derived, get } from 'svelte/store'
-import { useLogScope, useDebounce, normalizeURL, optimisticCheckIfUrl } from '@horizon/utils'
+import { useLogScope, useDebounce, normalizeURL, optimisticCheckIfUrl } from '@deta/utils'
 import { staticActions } from './staticActions'
 import { TeletypeActionGroup, type TeletypeStaticAction } from './teletypeActions'
 import type { OasisService, OasisSpace } from '../../../service/oasis'
@@ -32,7 +32,7 @@ import {
 } from './translations'
 
 import { Resource, ResourceJSON } from '../../../service/resources'
-import { SearchOasisEventTrigger } from '@horizon/types'
+import { SearchOasisEventTrigger } from '@deta/types'
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../../constants/searchEngines'
 import { type HistoryEntry, type Tab, type TabPage } from '../../../types'
 import Fuse from 'fuse.js'

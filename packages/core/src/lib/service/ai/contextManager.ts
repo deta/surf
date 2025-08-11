@@ -8,13 +8,13 @@ import {
   useLocalStorage,
   useLogScope,
   wait
-} from '@horizon/utils'
+} from '@deta/utils'
 
 import {
   PageChatUpdateContextEventAction,
   PageChatUpdateContextItemType,
   type PageChatUpdateContextEventTrigger
-} from '@horizon/types'
+} from '@deta/types'
 import { ResourceTagsBuiltInKeys, type Tab, type TabPage, type TabSpace } from '../../types'
 
 import type { OasisSpace } from '../oasis'
@@ -48,10 +48,10 @@ import {
   TABS_MENTION,
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
-import { MentionItemType, type MentionItem } from '@horizon/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import { ContextItemBrowsingHistory } from './context/history'
 import type { Add } from '@horizon/icons'
-import type { SearchResultLink } from '@horizon/web-parser'
+import type { SearchResultLink } from '@deta/web-parser'
 import { ContextItemWebSearch } from './context/web'
 
 export type AddContextItemOptions = {

@@ -10,12 +10,12 @@
     type CtxItem,
     type CtxMenuProps
   } from '../../Core/ContextMenu.svelte'
-  import { conditionalArrayItem } from '@horizon/utils'
+  import { conditionalArrayItem } from '@deta/utils'
   import {
     ContextItemResource,
     type ContextItem
   } from '@horizon/core/src/lib/service/ai/contextManager'
-  import { ResourceTypes } from '@horizon/types'
+  import { ResourceTypes } from '@deta/types'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let item: ContextItem

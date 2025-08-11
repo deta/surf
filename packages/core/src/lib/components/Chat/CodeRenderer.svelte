@@ -15,7 +15,7 @@
     getFormattedDate,
     cropImageToContent,
     optimisticParseJSON
-  } from '@horizon/utils'
+  } from '@deta/utils'
 
   import { dataUrltoBlob } from '@horizon/core/src/lib/utils/screenshot'
 
@@ -30,7 +30,7 @@
     EventContext,
     ResourceTagsBuiltInKeys,
     SaveToOasisEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'
@@ -49,7 +49,7 @@
     UserViewPrefsTagValue
   } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
-  import { createWebviewExtractor } from '@horizon/web-parser'
+  import { createWebviewExtractor } from '@deta/web-parser'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
   import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 

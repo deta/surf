@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { mimeTypeToCodeLanguage, useLogScope } from '@horizon/utils'
+  import { mimeTypeToCodeLanguage, useLogScope } from '@deta/utils'
   import {
     useResourceManager,
     type Resource,
@@ -11,9 +11,9 @@
     DeleteAnnotationEventTrigger,
     type AnnotationCommentData,
     type ResourceDataAnnotation
-  } from '@horizon/types'
+  } from '@deta/types'
   import { createEventDispatcher, onMount } from 'svelte'
-  import { Editor, getEditorContentText } from '@horizon/editor'
+  import { Editor, getEditorContentText } from '@deta/editor'
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'

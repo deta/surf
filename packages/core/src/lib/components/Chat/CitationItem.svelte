@@ -22,7 +22,7 @@
     useLogScope,
     normalizeURL,
     hover
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import {
     CITATION_HANDLER_CONTEXT,
     type CitationHandlerContext

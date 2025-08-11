@@ -1,9 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope, generateRootDomain } from '@horizon/utils'
+  import { useLogScope, generateRootDomain } from '@deta/utils'
   import type { ResourceLink } from '../../../../service/resources'
-  import type { ResourceDataLink } from '@horizon/types'
+  import type { ResourceDataLink } from '@deta/types'
 
   import Link from '../../../Atoms/Link.svelte'
   import LoadingBox from '../../../Atoms/LoadingBox.svelte'

@@ -1,4 +1,4 @@
-import { generateID, isDev, useLocalStorageStore, useLogScope } from '@horizon/utils'
+import { generateID, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
 import type { OasisService, OasisSpace } from './oasis'
 import { derived, get, type Readable, type Writable } from 'svelte/store'
 

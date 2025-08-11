@@ -3,7 +3,7 @@ import type {
   DetectedWebApp,
   EventContext,
   PageChatUpdateContextEventTrigger
-} from '@horizon/types'
+} from '@deta/types'
 import type { Resource, ResourceHistoryEntry } from '../service/resources'
 import type { OasisSpace } from '../service/oasis'
 import type { ContextItem } from '../service/ai/context'

@@ -9,7 +9,7 @@
   import { onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
 
-  import { useLogScope, isMac } from '@horizon/utils'
+  import { useLogScope, isMac } from '@deta/utils'
   import { Icon } from '@horizon/icons'
 
   import Chat from '@horizon/core/src/lib/components/Chat/Chat.svelte'
@@ -26,7 +26,7 @@
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  import { EventContext } from '@horizon/types'
+  import { EventContext } from '@deta/types'
 
   const log = useLogScope('MagicSidebar')
   const resourceManager = useResourceManager()

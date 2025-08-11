@@ -1,4 +1,4 @@
-import { generateID } from '@horizon/utils'
+import { generateID } from '@deta/utils'
 import { type Writable, writable } from 'svelte/store'
 
 import { blobToDataUrl } from '../../../utils/screenshot'

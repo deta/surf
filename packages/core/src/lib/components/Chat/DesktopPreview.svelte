@@ -5,7 +5,7 @@
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { quadOut } from 'svelte/easing'
   import { fly } from 'svelte/transition'
-  import { ChangeContextEventTrigger, OpenHomescreenEventTrigger } from '@horizon/types'
+  import { ChangeContextEventTrigger, OpenHomescreenEventTrigger } from '@deta/types'
 
   export let desktopId: string // NOTE: This is the same as the space id for now to get the corresponding desktop
   export let willReveal = false

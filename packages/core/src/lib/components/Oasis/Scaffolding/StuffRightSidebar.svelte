@@ -1,6 +1,6 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
-  import { useLocalStorageStore } from '@horizon/utils'
+  import { useLocalStorageStore } from '@deta/utils'
 
   const isResizing = writable(false)
   const stuffWidth = useLocalStorageStore<number>('stuff_sidebar_width', 500)

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isMac } from '@horizon/editor/src/lib/utilities'
+  import { isMac } from '@deta/editor/src/lib/utilities'
   import Button from '../Button/Button.svelte'
   import stuff from '@horizon/core/public/assets/onboarding/your-stuff-teaser.png'
 

@@ -9,7 +9,7 @@ import ImageSmartNotes from '../../../../public/assets/onboarding/notes/smart-no
 import ImageSuggestions from '../../../../public/assets/onboarding/notes/suggestions.png?url'
 import ImageRewrite from '../../../../public/assets/onboarding/notes/rewrite.png?url'
 import ImageAutocomplete from '../../../../public/assets/onboarding/notes/autocomplete.png?url'
-import { isMac } from '@horizon/utils'
+import { isMac } from '@deta/utils'
 
 export type OnboardingNote = {
   id: string

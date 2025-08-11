@@ -1,4 +1,4 @@
-import { ResourceTypes, ResourceDataTable, ResourceDataTableColumn } from '@horizon/types'
+import { ResourceTypes, ResourceDataTable, ResourceDataTableColumn } from '@deta/types'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { WebAppExtractorActions } from '../extractors'
 import { SERVICES } from '../services'

@@ -21,10 +21,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { useLogScope, useDebounce } from '@horizon/utils'
+  import { useLogScope, useDebounce } from '@deta/utils'
   import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import { CreateSpaceEventFrom } from '@horizon/types'
+  import { CreateSpaceEventFrom } from '@deta/types'
   import { writable, type Writable } from 'svelte/store'
   import { createEventDispatcher, tick } from 'svelte'
   import { fly, scale } from 'svelte/transition'

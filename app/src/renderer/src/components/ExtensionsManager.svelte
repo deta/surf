@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
 
   import { Icon } from '@horizon/icons'
-  import { wait } from '@horizon/utils'
+  import { wait } from '@deta/utils'
 
   import type { BrowserExtension } from '@horizon/core/src/lib/service/ipc/events'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'

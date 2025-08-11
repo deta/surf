@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PreviewMetadata } from '@horizon/core/src/lib/utils/resourcePreview'
-  import { getFileKind } from '@horizon/utils'
+  import { getFileKind } from '@deta/utils'
 
   import { Icon } from '@horizon/icons'
   import Image from '../../Atoms/Image.svelte'

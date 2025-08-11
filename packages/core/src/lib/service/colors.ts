@@ -1,8 +1,8 @@
 import ColorThief from '../utils/colors/colorthief.mjs'
 import { get, type Readable, type Writable, writable } from 'svelte/store'
-import { useLogScope, type ScopedLogger } from '@horizon/utils'
+import { useLogScope, type ScopedLogger } from '@deta/utils'
 import type { ConfigService } from './config'
-import type { UserSettings } from '@horizon/types'
+import type { UserSettings } from '@deta/types'
 import { getContext, setContext } from 'svelte'
 
 import vendorBackgroundLight from '../../../public/assets/vendorBackgroundLight.webp'

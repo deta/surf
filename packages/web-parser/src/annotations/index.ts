@@ -3,7 +3,7 @@ import {
   AnnotationType,
   WebviewAnnotationEventNames,
   WebviewAnnotationEvents
-} from '@horizon/types'
+} from '@deta/types'
 
 import { getXPath } from './xpath'
 

@@ -10,13 +10,13 @@
     SelectDropdown,
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import {
     contextMenu,
     type CtxItem
   } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { ChangeContextEventTrigger, CreateSpaceEventFrom } from '@horizon/types'
+  import { ChangeContextEventTrigger, CreateSpaceEventFrom } from '@deta/types'
   import CustomPopover from '@horizon/core/src/lib/components/Atoms/CustomPopover.svelte'
 
   export let space: OasisSpace

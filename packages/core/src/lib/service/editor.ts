@@ -2,10 +2,10 @@ import { findChildren } from '@tiptap/core'
 import type { Attrs, Node } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
 
-import { conditionalArrayItem, generateID, useLogScope, wait } from '@horizon/utils'
+import { conditionalArrayItem, generateID, useLogScope, wait } from '@deta/utils'
 
-import type { Editor as EditorComp } from '@horizon/editor'
-import { type Editor } from '@horizon/editor/src/lib/editor'
+import type { Editor as EditorComp } from '@deta/editor'
+import { type Editor } from '@deta/editor/src/lib/editor'
 
 import { getPrepPhrase, getWritingPhrase } from './ai/helpers'
 

@@ -1,9 +1,9 @@
-import { ResourceTypes, ResourceDataChatMessage, ResourceDataChatThread } from '@horizon/types'
+import { ResourceTypes, ResourceDataChatMessage, ResourceDataChatThread } from '@deta/types'
 
 import { WebAppExtractor } from '../extractors'
 import type { DetectedResource, DetectedWebApp, WebService } from '../types'
 import { DOMExtractor } from '../extractors/dom'
-import { parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
 import { sanitizeHTML } from '../utils'
 
 export type SlackMessageData = {

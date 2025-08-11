@@ -1,9 +1,9 @@
-import { ResourceTypes, type ResourceDataPost } from '@horizon/types'
+import { ResourceTypes, type ResourceDataPost } from '@deta/types'
 import type { DetectedWebApp, WebService } from '../types'
 
 import { APIExtractor, WebAppExtractor } from '../extractors'
 import { sanitizeHTML } from '../utils'
-import { parseStringIntoUrl } from '@horizon/utils'
+import { parseStringIntoUrl } from '@deta/utils'
 
 export const RedditRegexPatterns = {
   subreddit: /^\/r\/[a-zA-Z0-9_-]+\/?$/,

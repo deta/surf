@@ -2,8 +2,8 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
-import { isMac } from '@horizon/utils'
-import { SettingsWindowTab } from '@horizon/types/src/window.types'
+import { isMac } from '@deta/utils'
+import { SettingsWindowTab } from '@deta/types/src/window.types'
 import { SettingsWindowEntrypoint } from './utils'
 
 let settingsWindow: BrowserWindow | undefined

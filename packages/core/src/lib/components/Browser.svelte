@@ -12,7 +12,7 @@
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed
-  } from '@horizon/utils/src/keyboard'
+  } from '@deta/utils/src/keyboard'
   import { createTelemetry } from '../service/telemetry'
   import {
     useDebounce,
@@ -29,7 +29,7 @@
     parseStringIntoUrl,
     parseSurfProtocolURL,
     flyAndScale
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import {
     createResourcesFromFiles,
     createResourcesFromMediaItems,
@@ -109,7 +109,7 @@
     ResourceTagDataStateValue,
     WebContentsViewManagerActionType,
     PageChatMessageSentEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import { OnboardingFeature } from './Onboarding/onboardingScripts'
   import { scrollToTextCode } from '../constants/inline'
   import { onboardingSpace } from '../constants/examples'

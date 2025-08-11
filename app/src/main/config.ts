@@ -2,8 +2,8 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import { type UserConfig, type UserStats } from '@horizon/types'
-import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@horizon/types/src/ai.types'
+import { type UserConfig, type UserStats } from '@deta/types'
+import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@deta/types/src/ai.types'
 
 export type Config = {
   [key: string]: any

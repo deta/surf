@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ResourceTypes, type ResourceDataLink, type ResourceDataPost } from '@horizon/types'
+  import { ResourceTypes, type ResourceDataLink, type ResourceDataPost } from '@deta/types'
   import {
     LinkImporter,
     TwitterImporter,
@@ -7,13 +7,13 @@
     WebParser,
     YoutubePlaylistImporter,
     type DetectedResource
-  } from '@horizon/web-parser'
+  } from '@deta/web-parser'
   import { writable } from 'svelte/store'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import { tick } from 'svelte'
   import ResourceType from '../Resources/ResourceType.svelte'
   import { type ResourceManager } from '../../service/resources'
-  import type { BatchFetcher } from '@horizon/web-parser/src/importers/batcher'
+  import type { BatchFetcher } from '@deta/web-parser/src/importers/batcher'
   import { Icon } from '@horizon/icons'
   import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 

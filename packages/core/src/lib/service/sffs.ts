@@ -1,4 +1,4 @@
-import { isDev, useLogScope, type ScopedLogger } from '@horizon/utils'
+import { isDev, useLogScope, type ScopedLogger } from '@deta/utils'
 import type {
   AiSFFSQueryResponse,
   HistoryEntry,
@@ -36,12 +36,7 @@ import type {
   AIDocsSimilarity,
   YoutubeTranscript
 } from '../types/browser.types'
-import type {
-  BookmarkFolder,
-  BrowserType,
-  EventBusMessage,
-  SFFSResourceOrSpace
-} from '@horizon/types'
+import type { BookmarkFolder, BrowserType, EventBusMessage, SFFSResourceOrSpace } from '@deta/types'
 import type {
   App,
   Model,

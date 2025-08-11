@@ -1,5 +1,5 @@
-import { BROWSER_TYPE_DATA, ResourceTagDataStateValue, type BrowserType } from '@horizon/types'
-import { useLogScope } from '@horizon/utils'
+import { BROWSER_TYPE_DATA, ResourceTagDataStateValue, type BrowserType } from '@deta/types'
+import { useLogScope } from '@deta/utils'
 
 import { type Resource, type ResourceManager } from './resources'
 import type { OasisService } from './oasis'

@@ -10,10 +10,10 @@
   import { CompletionEventID } from '../Onboarding/onboardingScripts'
   import { OnboardingAction } from '../Onboarding/onboardingScripts'
   import Chat from '../Chat/Chat.svelte'
-  import { type MentionItem } from '@horizon/editor'
-  import { PageChatMessageSentEventTrigger } from '@horizon/types'
+  import { type MentionItem } from '@deta/editor'
+  import { PageChatMessageSentEventTrigger } from '@deta/types'
   import { type ChatSubmitOptions } from '@horizon/core/src/lib/components/Resources/Previews/Text/TextResource.svelte'
-  import { wait } from '@horizon/utils'
+  import { wait } from '@deta/utils'
 
   let chatComponent: Chat
 

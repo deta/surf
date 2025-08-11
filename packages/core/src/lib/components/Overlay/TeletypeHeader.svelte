@@ -4,7 +4,7 @@
   import { Icon } from '@horizon/icons'
 
   import { useTabsManager } from '../../service/tabs'
-  import { tooltip, isMac } from '@horizon/utils'
+  import { tooltip, isMac } from '@deta/utils'
 
   export let editMode: boolean = false
   export let showActionsPanel: Writable<boolean>

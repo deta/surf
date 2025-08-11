@@ -3,7 +3,7 @@
     WebContentsViewEvents,
     WebContentsViewEventType,
     WebContentsViewEventTyped
-  } from '@horizon/types'
+  } from '@deta/types'
   import WebContents from './WebContents.svelte'
 
   const handleDidFinishLoad = (

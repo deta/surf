@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BrowserTypeItem } from '@horizon/types'
+  import type { BrowserTypeItem } from '@deta/types'
   import type { ImportStatus } from './ImporterV2.svelte'
 
   export let currentStepIdx: number = 0

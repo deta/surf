@@ -4,9 +4,9 @@
   import { Tooltip } from 'bits-ui'
 
   import { DynamicIcon, Icon } from '@horizon/icons'
-  import { flyAndScale, getFileType, getHostname, tooltip, useLogScope } from '@horizon/utils'
-  import type { ResourceStateCombined } from '@horizon/types'
-  import { Editor } from '@horizon/editor'
+  import { flyAndScale, getFileType, getHostname, tooltip, useLogScope } from '@deta/utils'
+  import type { ResourceStateCombined } from '@deta/types'
+  import { Editor } from '@deta/editor'
 
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'

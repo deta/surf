@@ -1,12 +1,9 @@
 <script lang="ts">
-  import { useLogScope, wait } from '@horizon/utils'
+  import { useLogScope, wait } from '@deta/utils'
   import { DragculaDragEvent, HTMLDragZone } from '@horizon/dragcula'
-  import { type MentionItem } from '@horizon/editor'
+  import { type MentionItem } from '@deta/editor'
 
-  import {
-    PageChatMessageSentEventTrigger,
-    PageChatUpdateContextEventTrigger
-  } from '@horizon/types'
+  import { PageChatMessageSentEventTrigger, PageChatUpdateContextEventTrigger } from '@deta/types'
 
   import { DragTypeNames, type DragTypes } from '../../types'
 

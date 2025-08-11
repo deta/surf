@@ -3,7 +3,7 @@ import { isPathSafe } from './utils'
 import path, { join } from 'path'
 import { stat, mkdir } from 'fs/promises'
 import { Worker } from 'worker_threads'
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 import { createSetupWindow, getSetupWindow } from './setupWindow'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
 

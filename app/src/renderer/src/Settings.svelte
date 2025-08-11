@@ -5,24 +5,19 @@
 
   import appIcon from './assets/icon_512.png'
 
-  import { isMac, useDebounce } from '@horizon/utils'
+  import { isMac, useDebounce } from '@deta/utils'
   import {
     type EditablePrompt,
     type SettingsWindowTab,
     type UserConfig,
     type UserSettings
-  } from '@horizon/types'
+  } from '@deta/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import LayoutPicker from './components/LayoutPicker.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
   import AppStylePicker from './components/AppStylePicker.svelte'
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
-  import {
-    BUILT_IN_MODELS,
-    DEFAULT_AI_MODEL,
-    Provider,
-    type Model
-  } from '@horizon/types/src/ai.types'
+  import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, Provider, type Model } from '@deta/types/src/ai.types'
   import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'

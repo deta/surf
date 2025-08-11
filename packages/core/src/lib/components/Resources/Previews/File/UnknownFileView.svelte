@@ -7,7 +7,7 @@
     getFileType,
     isMac,
     toHumanFileSize
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import FileIcon from './FileIcon.svelte'
   import { createEventDispatcher, onMount } from 'svelte'
 

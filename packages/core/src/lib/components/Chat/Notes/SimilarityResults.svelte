@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { readable, writable } from 'svelte/store'
   import { Icon } from '@horizon/icons'
-  import { tooltip } from '@horizon/utils'
+  import { tooltip } from '@deta/utils'
 
   import type { AIChatMessageSource } from '@horizon/core/src/lib/types'
   import SimilarityItem from './SimilarityItem.svelte'

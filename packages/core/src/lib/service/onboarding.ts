@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte'
-import { useLogScope, wait } from '@horizon/utils'
+import { useLogScope, wait } from '@deta/utils'
 import { writable, get, derived, type Writable } from 'svelte/store'
 import type { TabsManager } from './tabs'
 import MagicSidebar from '../components/Sidebars/MagicSidebar.svelte'

@@ -17,7 +17,7 @@ SAMPLE LINK:
 }
 */
 
-import { ResourceDataLink, ResourceTypes } from '@horizon/types'
+import { ResourceDataLink, ResourceTypes } from '@deta/types'
 import { BatchFetcher } from '../batcher'
 import { AppImporter } from './index'
 import { DetectedResource } from '../../types'

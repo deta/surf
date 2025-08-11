@@ -1,4 +1,4 @@
-import { ResourceTypes, ResourceDataLink } from '@horizon/types'
+import { ResourceTypes, ResourceDataLink } from '@deta/types'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'
 import type { DetectedWebApp } from '../types'

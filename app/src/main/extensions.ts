@@ -1,10 +1,10 @@
-import { AuthenticatedAPI } from '@horizon/api'
+import { AuthenticatedAPI } from '@deta/api'
 import { dialog, webContents, BrowserWindow, Session, WebContents } from 'electron'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { installChromeWebStore } from 'electron-chrome-web-store'
 import { formatPermissionsForUser } from './extensionsPermissions'
 import fs from 'fs'
-import { isDev } from '@horizon/utils'
+import { isDev } from '@deta/utils'
 
 export class ExtensionsManager {
   private static instance: ExtensionsManager | null = null

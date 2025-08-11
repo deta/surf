@@ -30,9 +30,9 @@
     type WebContentsViewEventListenerCallback,
     type WebContentsViewEvents,
     type WebViewSendEvents
-  } from '@horizon/types'
+  } from '@deta/types'
 
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import type { NewWindowRequest } from '../../service/ipc/events'
   import { useTabsManager } from '../../service/tabs'
   import type { WebContentsView } from '@horizon/core/src/lib/service/viewManager'

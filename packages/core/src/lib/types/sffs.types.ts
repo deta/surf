@@ -1,4 +1,4 @@
-import type { ResourceProcessingState } from '@horizon/types'
+import type { ResourceProcessingState } from '@deta/types'
 import type { AIChatMessageRole, AIChatMessageSource, Optional, SpaceEntry } from '.'
 
 export type SFFSSearchResultEngineRaw = 'Keyword' | 'Proximity' | 'Semantic'

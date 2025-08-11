@@ -1,4 +1,4 @@
-import { ResourceDataLink, ResourceTypes } from '@horizon/types'
+import { ResourceDataLink, ResourceTypes } from '@deta/types'
 import { DetectedResource, WebParser } from '..'
 import { WebCrateImporter } from './apps/webcrate'
 import { AppImporter } from './apps'

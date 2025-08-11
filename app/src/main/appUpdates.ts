@@ -1,11 +1,11 @@
 import { dialog } from 'electron'
-import { isMac, isWindows } from '@horizon/utils'
+import { isMac, isWindows } from '@deta/utils'
 import { MacUpdater, AppImageUpdater, NsisUpdater } from 'electron-updater'
 
 import { createUpdatesWindow, closeUpdatesWindow, sendUpdateProgressStatus } from './updatesWindow'
 import { createAnnouncementsWindow } from './announcementsWindow'
 
-import type { Announcement } from '@horizon/types'
+import type { Announcement } from '@deta/types'
 import { AnnouncementsManager } from './announcements'
 import { updateUserConfig } from './config'
 

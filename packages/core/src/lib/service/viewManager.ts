@@ -5,11 +5,11 @@ import {
   type WebContentsViewActionOutputs,
   type WebContentsViewActionPayloads,
   type WebContentsViewCreateOptions
-} from '@horizon/types'
+} from '@deta/types'
 import type { TabsManager } from './tabs'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { EventEmitterBase } from './events'
-import { wait, useLogScope } from '@horizon/utils'
+import { wait, useLogScope } from '@deta/utils'
 
 type Fn = () => void
 

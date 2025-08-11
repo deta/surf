@@ -49,15 +49,15 @@ import {
   SummarizeEventContentSource,
   NoteCreateCitationEventTrigger,
   type PageChatMessageSentData
-} from '@horizon/types'
+} from '@deta/types'
 
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 import type { Tab } from '../types/browser.types'
 import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'
-import type { MentionAction } from '@horizon/editor/src/lib/extensions/Mention'
+import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
 import { DragTypeNames } from '../types'
 
 export type TelemetryConfig = {

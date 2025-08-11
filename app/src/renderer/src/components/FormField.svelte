@@ -1,7 +1,7 @@
 <script lang="ts">
   import Switch from '@horizon/core/src/lib/components/Atoms/Switch.svelte'
   import { Icon } from '@horizon/icons'
-  import { tooltip, useDebounce } from '@horizon/utils'
+  import { tooltip, useDebounce } from '@deta/utils'
   import { createEventDispatcher } from 'svelte'
 
   export let label: string

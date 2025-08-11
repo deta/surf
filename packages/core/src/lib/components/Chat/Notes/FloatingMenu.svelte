@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
 
-  import { horizontalScroll } from '@horizon/utils'
+  import { horizontalScroll } from '@deta/utils'
 
   import type { ChatPrompt } from '@horizon/core/src/lib/service/ai/chat'
   import PromptItem from '../PromptItem.svelte'

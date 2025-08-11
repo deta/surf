@@ -1,4 +1,4 @@
-import { makeAbsoluteURL } from '@horizon/utils'
+import { makeAbsoluteURL } from '@deta/utils'
 import type { DetectedResource, DetectedWebApp, WebService, WebServiceAction } from '../types'
 
 export abstract class WebAppExtractor {

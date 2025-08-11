@@ -47,8 +47,8 @@
     parseUrlIntoCanonical,
     useTimeout,
     compareURLs
-  } from '@horizon/utils'
-  import { WebParser, type DetectedResource, type DetectedWebApp } from '@horizon/web-parser'
+  } from '@deta/utils'
+  import { WebParser, type DetectedResource, type DetectedWebApp } from '@deta/web-parser'
   import {
     CreateAnnotationEventTrigger,
     CreateTabEventTrigger,
@@ -69,7 +69,7 @@
     type WebViewEventKeyDown,
     type WebViewReceiveEvents,
     type WebViewSendEvents
-  } from '@horizon/types'
+  } from '@deta/types'
   import WebviewWrapper, { type WebviewWrapperEvents } from '../Webview/WebviewWrapper.svelte'
   import type {
     WebviewEvents,

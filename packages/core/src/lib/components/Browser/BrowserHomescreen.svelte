@@ -15,10 +15,10 @@
   import browserBackground from '../../../../public/assets/foggy-placeholder.png'
   import AddressToolbar, { type ActionEvent } from '../Atoms/Toolbar/AddressToolbar.svelte'
   import type { TabSpace } from '../../types/browser.types'
-  import { parseStringIntoBrowserLocation, parseStringIntoUrl, useLogScope } from '@horizon/utils'
+  import { parseStringIntoBrowserLocation, parseStringIntoUrl, useLogScope } from '@deta/utils'
   import OasisResourceModalWrapper from '../Oasis/OasisResourceModalWrapper.svelte'
   import { useResourceManager } from '../../service/resources'
-  import { OpenResourceEventFrom } from '@horizon/types'
+  import { OpenResourceEventFrom } from '@deta/types'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let historyEntriesManager: HistoryEntriesManager

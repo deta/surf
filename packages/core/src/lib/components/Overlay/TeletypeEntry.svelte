@@ -26,7 +26,7 @@
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte'
   import { get, writable } from 'svelte/store'
   import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
-  import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@horizon/types'
+  import { ChangeContextEventTrigger, CreateTabEventTrigger } from '@deta/types'
 
   /* NOTE: These imports are for the "Whats New" feature, which is currently commented out.
   import NewFeatureDialog from '../Onboarding/Dialog/NewFeatureDialog.svelte'
@@ -41,7 +41,7 @@
     parseStringIntoBrowserLocation,
     useCancelableDebounce,
     useLogScope
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { type HandlerAction, type ParentAction } from '@deta/teletype/src'
   import { useCommandComposer } from '../Overlay/service/commandComposer'
   import { OasisSpace, useOasis } from '../../service/oasis'
@@ -59,7 +59,7 @@
     optimisticCheckIfURLOrIPorFile,
     optimisticCheckIfUrl,
     prependProtocol
-  } from '@horizon/utils'
+  } from '@deta/utils'
 
   import { createActionsFromResults } from './horizontal'
   import TeletypeHeader from './TeletypeHeader.svelte'

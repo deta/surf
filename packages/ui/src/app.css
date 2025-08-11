@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .drag {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+    /* @apply !bg-red-500; */
+  }
+
+  .select-none {
+    user-select: none;
+  }
+
+  .select-text {
+    user-select: text;
+  }
+
+  a,
+  button {
+    cursor: default;
+    user-select: none;
+  }
+}
+
+/*::-webkit-scrollbar {
+  width: 7px;
+  background-color: lime;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(130, 130, 130);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}*/
+
+.os__windows {
+
+  /* We only style the scrollbars on windows, as doing this on OSX results in the scrollbars being 
+   * forced shown always.
+   */
+  ::-webkit-scrollbar {
+    width: 6px;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  /* Dark scrollbar handle that turns brighter on hover */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+}
+
+.dark .os__windows {
+  ::-webkit-scrollbar {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Dark scrollbar handle that turns brighter on hover */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* HACK: Svelte4 is weird not supporting @starting-style.
+ * For this reason they need to live here for now.
+ */
+
+
+@starting-style {
+  .context-header {
+    .headline-container {
+      opacity: 0 !important;
+      translate: 0 2px !important;
+    }
+
+    .description {
+      opacity: 0 !important;
+      translate: 0 1px !important;
+    }
+
+    .preview-section {
+      opacity: 0 !important;
+      translate: 0 3px !important;
+    }
+
+  }
+}

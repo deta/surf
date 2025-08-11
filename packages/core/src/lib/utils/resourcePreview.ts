@@ -11,14 +11,14 @@ import {
   type ResourceDataDocument,
   type ResourceDataLink,
   type ResourceDataPost
-} from '@horizon/types'
+} from '@deta/types'
 import {
   conditionalArrayItem,
   getFileType,
   getHostname,
   parseStringIntoUrl,
   useLogScope
-} from '@horizon/utils'
+} from '@deta/utils'
 import { get } from 'svelte/store'
 
 const log = useLogScope('ResourcePreviewUtil')

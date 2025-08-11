@@ -1,10 +1,10 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { generateID, useDebounce, useLogScope, optimisticParseJSON } from '@horizon/utils'
+  import { generateID, useDebounce, useLogScope, optimisticParseJSON } from '@deta/utils'
 
   import { createEventDispatcher, onMount } from 'svelte'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { ResourceTagsBuiltInKeys } from '@horizon/types'
+  import { ResourceTagsBuiltInKeys } from '@deta/types'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import { DragTypeNames } from '@horizon/core/src/lib/types'
   import type {

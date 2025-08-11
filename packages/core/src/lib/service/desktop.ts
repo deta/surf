@@ -14,7 +14,7 @@ import {
   ResourceTypes,
   SaveToOasisEventTrigger,
   UpdateHomescreenEventAction
-} from '@horizon/types'
+} from '@deta/types'
 import type { ConfigService } from './config'
 import type { OasisService, OasisSpace } from './oasis'
 import type { TabsManager } from './tabs'
@@ -24,7 +24,7 @@ import type { DragculaDragEvent, Vec2 } from '../../../../dragcula/dist'
 import { DragTypeNames, SpaceEntryOrigin, type DragTypes, type Tab } from '../types'
 import { getResourceFromDrag } from '../utils/draganddrop'
 import { createResourcesFromMediaItems, processDrop } from './mediaImporter'
-import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@horizon/utils'
+import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@deta/utils'
 import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
 import { ColorService, type ColorRGB, type CustomColorData } from './colors'

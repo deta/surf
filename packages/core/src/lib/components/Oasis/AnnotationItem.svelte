@@ -7,7 +7,7 @@
     useClipboard,
     truncate,
     useDebounce
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import type { ResourceAnnotation } from '../../service/resources'
   import type {
     AnnotationCommentData,
@@ -15,10 +15,10 @@
     ResourceDataAnnotation
   } from '../../types'
   import { Icon } from '@horizon/icons'
-  import type { WebViewEventAnnotation } from '@horizon/types'
+  import type { WebViewEventAnnotation } from '@deta/types'
   import { tooltip } from '@svelte-plugins/tooltips'
-  import { Editor, getEditorContentText } from '@horizon/editor'
-  import '@horizon/editor/src/editor.scss'
+  import { Editor, getEditorContentText } from '@deta/editor'
+  import '@deta/editor/src/editor.scss'
   import { useToasts } from '../../service/toast'
   import { slide } from 'svelte/transition'
 

@@ -1,4 +1,4 @@
-import { MentionItemType, type MentionItem } from '@horizon/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import { ContextItemTypes } from '../service/ai/context/types'
 
 export const NO_CONTEXT_MENTION = {

@@ -1,5 +1,5 @@
 {
-  "name": "@horizon/web-parser",
+  "name": "@deta/web-parser",
   "private": true,
   "version": "0.0.0",
   "svelte": "src/index.ts",
@@ -10,9 +10,9 @@
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
-    "@horizon/types": "*",
+    "@deta/types": "*",
     "@horizon/typescript-config": "*",
-    "@horizon/utils": "*",
+    "@deta/utils": "*",
     "@types/dompurify": "^3.0.5",
     "@types/html-minifier-terser": "^7.0.2",
     "dompurify": "^3.2.4",

@@ -4,12 +4,12 @@
   import { useOasis } from '../../service/oasis'
   import { useTabsManager } from '../../service/tabs'
   import { useResourceManager } from '../../service/resources'
-  import { ResourceTypes } from '@horizon/types'
+  import { ResourceTypes } from '@deta/types'
   import OasisResourcesView from '../Oasis/ResourceViews/OasisResourcesView.svelte'
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { selectedItemIds } from '../Oasis/utils/select'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
   const dispatch = createEventDispatcher()

@@ -1,4 +1,4 @@
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 
 /** Right now, its just used for the "mail" notifications on the stack. But ideally other notifications
  * can also be ran through this. */

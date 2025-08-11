@@ -5,7 +5,7 @@ import {
   type DetectedResource,
   type WebViewEventSendNames,
   type WebViewSendEvents
-} from '@horizon/types'
+} from '@deta/types'
 import type {
   ChatMessageContentItem,
   AIChatMessageSource,
@@ -16,12 +16,12 @@ import {
   markdownToHtml,
   parseUrlIntoCanonical,
   useLogScope
-} from '@horizon/utils'
-import { WebParser } from '@horizon/web-parser'
+} from '@deta/utils'
+import { WebParser } from '@deta/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
 import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
-import { ModelTiers } from '@horizon/types/src/ai.types'
+import { ModelTiers } from '@deta/types/src/ai.types'
 import { ResourceManager } from '../resources'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
 import type { TabsManager } from '../tabs'

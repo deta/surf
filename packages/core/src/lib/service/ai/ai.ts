@@ -11,13 +11,7 @@ import {
   type Quota
 } from '@horizon/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import {
-  appendURLPath,
-  generateHash,
-  isDev,
-  useLocalStorageStore,
-  useLogScope
-} from '@horizon/utils'
+import { appendURLPath, generateHash, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
 import {
   FILENAME_CLEANUP_PROMPT,
   PAGE_PROMPTS_GENERATOR_PROMPT,
@@ -29,7 +23,7 @@ import {
   ModelTiers,
   OPEN_AI_PATH_SUFFIX,
   type Model
-} from '@horizon/types/src/ai.types'
+} from '@deta/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError } from './helpers'
 import type { TabsManager } from '../tabs'
 import type { Telemetry } from '../telemetry'
@@ -40,7 +34,7 @@ import {
   GeneratePromptsEventTrigger,
   PromptType,
   SummarizeEventContentSource
-} from '@horizon/types'
+} from '@deta/types'
 import { SmartNoteManager } from './note'
 import type { OasisService } from '../oasis'
 

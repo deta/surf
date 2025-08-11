@@ -12,7 +12,7 @@ import {
   PageChatUpdateContextEventAction,
   PageChatUpdateContextEventTrigger,
   PageChatUpdateContextItemType
-} from '@horizon/types'
+} from '@deta/types'
 import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export type ActiveSpaceContextInclude = 'everything' | 'tabs' | 'resources'

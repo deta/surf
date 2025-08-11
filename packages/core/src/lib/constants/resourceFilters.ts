@@ -1,4 +1,4 @@
-import { ResourceTypes, type SFFSResourceTag } from '@horizon/types'
+import { ResourceTypes, type SFFSResourceTag } from '@deta/types'
 import { SearchResourceTags } from '../utils/tags'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
 

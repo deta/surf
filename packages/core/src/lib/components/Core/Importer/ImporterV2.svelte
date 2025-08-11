@@ -13,8 +13,8 @@
     BrowserType,
     PRIMARY_BROWSRS,
     type BrowserTypeItem
-  } from '@horizon/types'
-  import { isMac, useLogScope, wait } from '@horizon/utils'
+  } from '@deta/types'
+  import { isMac, useLogScope, wait } from '@deta/utils'
   import { createEventDispatcher } from 'svelte'
   import ImportDataItem from './ImportDataItem.svelte'
   import ImportInstructionsItem from './ImportInstructionsItem.svelte'

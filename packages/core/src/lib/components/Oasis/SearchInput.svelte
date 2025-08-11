@@ -1,10 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
 
-  import { isMac, isModKeyPressed } from '@horizon/utils'
+  import { isMac, isModKeyPressed } from '@deta/utils'
   import { Icon } from '@horizon/icons'
   import { writable } from 'svelte/store'
-  import { tooltip } from '@horizon/utils'
+  import { tooltip } from '@deta/utils'
 
   export let value: string = ''
   export let loading = false

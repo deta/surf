@@ -7,7 +7,7 @@
     useLogScope,
     getHostname,
     getFileKind
-  } from '@horizon/utils'
+  } from '@deta/utils'
 
   import { onMount, tick } from 'svelte'
   import type { WebviewTag } from 'electron'
@@ -17,7 +17,7 @@
     AddResourceToSpaceEventTrigger,
     OpenInMiniBrowserEventFrom,
     ResourceTagsBuiltInKeys
-  } from '@horizon/types'
+  } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'

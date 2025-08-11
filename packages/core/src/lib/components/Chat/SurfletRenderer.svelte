@@ -11,7 +11,7 @@
     getFormattedDate,
     cropImageToContent,
     optimisticParseJSON
-  } from '@horizon/utils'
+  } from '@deta/utils'
 
   import { dataUrltoBlob } from '@horizon/core/src/lib/utils/screenshot'
 
@@ -21,7 +21,7 @@
   import { toHtml } from 'hast-util-to-html'
   import { writable, readable, type Readable } from 'svelte/store'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { ResourceTagsBuiltInKeys } from '@horizon/types'
+  import { ResourceTagsBuiltInKeys } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'

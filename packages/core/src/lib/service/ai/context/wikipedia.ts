@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store'
 
-import { createWikipediaAPI, WikipediaAPI } from '@horizon/web-parser'
-import { optimisticParseJSON } from '@horizon/utils'
-import { ModelTiers } from '@horizon/types/src/ai.types'
+import { createWikipediaAPI, WikipediaAPI } from '@deta/web-parser'
+import { optimisticParseJSON } from '@deta/utils'
+import { ModelTiers } from '@deta/types/src/ai.types'
 
 import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'

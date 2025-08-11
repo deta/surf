@@ -1,4 +1,4 @@
-export type { DetectedWebApp, DetectedResource } from '@horizon/types'
+export type { DetectedWebApp, DetectedResource } from '@deta/types'
 
 export type WebServiceActionInput = {
   type: string

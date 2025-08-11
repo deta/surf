@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, createEventDispatcher } from 'svelte'
   import { Icon } from '@horizon/icons'
-  import { isMac } from '@horizon/utils'
+  import { isMac } from '@deta/utils'
 
   const dispatch = createEventDispatcher()
 

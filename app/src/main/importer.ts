@@ -1,7 +1,7 @@
 import { dialog } from 'electron'
 
-import { useLogScope } from '@horizon/utils'
-import { BrowserType } from '@horizon/types'
+import { useLogScope } from '@deta/utils'
+import { BrowserType } from '@deta/types'
 
 import { ipcSenders } from './ipcHandlers'
 

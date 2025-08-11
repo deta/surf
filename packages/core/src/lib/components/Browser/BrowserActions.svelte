@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@horizon/icons'
-  import { flyAndScale } from '@horizon/utils'
+  import { flyAndScale } from '@deta/utils'
   import { Tooltip } from 'bits-ui'
   import { createEventDispatcher } from 'svelte'
   import ExtensionBrowserActions from './ExtensionBrowserActions.svelte'

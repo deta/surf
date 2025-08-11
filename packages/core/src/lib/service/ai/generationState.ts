@@ -1,5 +1,5 @@
 import { writable, get, derived } from 'svelte/store'
-import { useLogScope } from '@horizon/utils'
+import { useLogScope } from '@deta/utils'
 
 // Define the AI generation state interface
 export interface AIGenerationState {

@@ -1,5 +1,5 @@
 {
-  "name": "@horizon/api",
+  "name": "@deta/api",
   "private": true,
   "version": "0.0.0",
   "svelte": "src/index.ts",
@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
-    "@horizon/types": "*",
+    "@deta/types": "*",
     "@horizon/typescript-config": "*",
     "typescript": "^5.2.2"
   }

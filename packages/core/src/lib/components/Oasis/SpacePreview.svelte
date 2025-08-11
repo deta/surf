@@ -5,7 +5,7 @@
   import { cubicOut } from 'svelte/easing'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { Resource } from '../../service/resources'
-  import { useThrottle } from '@horizon/utils'
+  import { useThrottle } from '@deta/utils'
 
   type Origin = 'smartcontext' | 'oasis'
 

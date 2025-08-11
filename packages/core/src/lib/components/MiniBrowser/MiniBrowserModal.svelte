@@ -10,14 +10,14 @@
     type WebViewEventKeyDown,
     ResourceTypes,
     CreateTabEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import {
     useLogScope,
     isModKeyAndKeyPressed,
     getFileKind,
     tooltip,
     checkIfYoutubeUrl
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
   import { useToasts, type ToastItem } from '@horizon/core/src/lib/service/toast'

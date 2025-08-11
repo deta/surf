@@ -12,7 +12,7 @@
   import ActionPanel from './ActionPanel.svelte'
   import Lazy from './Lazy.svelte'
   import { onMount, tick, createEventDispatcher } from 'svelte'
-  import { isMac } from '@horizon/utils'
+  import { isMac } from '@deta/utils'
 
   const dispatch = createEventDispatcher()
 

@@ -1,7 +1,7 @@
 import { Editor, mergeAttributes, Node, type Range } from '@tiptap/core'
 import { type DOMOutputSpec, Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { PluginKey } from '@tiptap/pm/state'
-import Suggestion, { type SuggestionOptions } from '@horizon/editor/src/lib/utilities/Suggestion'
+import Suggestion, { type SuggestionOptions } from '@deta/editor/src/lib/utilities/Suggestion'
 
 import MentionComp from './Mention.svelte'
 import type { MentionItem } from '../../types'

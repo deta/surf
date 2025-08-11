@@ -1,6 +1,6 @@
 import { Readability } from '@mozilla/readability'
 import { WebMetadata } from '../types'
-import { makeAbsoluteURL, parseStringIntoUrl, parseTextIntoISOString } from '@horizon/utils'
+import { makeAbsoluteURL, parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
 import { sanitizeHTML } from '../utils'
 
 export class MetadataExtractor {

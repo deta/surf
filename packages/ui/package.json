@@ -1,0 +1,57 @@
+{
+  "name": "@deta/ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./src/index.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "dev": "vite && yarn run dev:tailwind",
+    "dev:tailwind": "yarn run tailwindcss -i ./src/app.css -o ./src/output.css --watch --minify",
+    "build": "vite build",
+    "build:tailwind": "yarn run tailwindcss -i ./src/app.css -o ./src/output.css --minify",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@horizon/icons": "*",
+    "@deta/types": "*",
+    "@horizon/typescript-config": "*",
+    "@deta/utils": "*",
+    "@svelte-plugins/tooltips": "^3.0.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0.1",
+    "@tailwindcss/typography": "^0.5.15",
+    "@tsconfig/svelte": "^5.0.2",
+    "date-fns": "^3.2.0",
+    "emoji-picker-element": "^1.23.0",
+    "emoji-picker-element-data": "^1",
+    "perfect-freehand": "^1.2.2",
+    "postcss": "^8.4.38",
+    "sass": "^1.70.0",
+    "svelte": "^4.2.19",
+    "svelte-autosize": "^1.1.0",
+    "svelte-check": "^3.6.2",
+    "svelte-motion": "^0.12.2",
+    "tailwindcss": "^3.4.4",
+    "tslib": "^2.6.2",
+    "typed-emitter": "^2.1.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.14",
+    "vite-plugin-markdown": "^2.2.0"
+  },
+  "dependencies": {
+    "@amplitude/analytics-browser": "^2.4.0",
+    "bits-ui": "^0.21.12",
+    "clsx": "^2.1.1",
+    "lodash": "^4.17.21",
+    "tailwind-merge": "^2.4.0",
+    "tailwind-variants": "^0.2.1"
+  }
+}

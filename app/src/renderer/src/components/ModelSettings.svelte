@@ -21,7 +21,7 @@
     Provider,
     ProviderLabels,
     type Model
-  } from '@horizon/types/src/ai.types'
+  } from '@deta/types/src/ai.types'
   import {
     SelectDropdown,
     SelectDropdownItem,
@@ -29,7 +29,7 @@
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import { Icon } from '@horizon/icons'
   import Exandable from './Exandable.svelte'
-  import { appendURLPath, generateID } from '@horizon/utils'
+  import { appendURLPath, generateID } from '@deta/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import FormField from './FormField.svelte'
   import { contextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'

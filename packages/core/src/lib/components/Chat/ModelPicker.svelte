@@ -2,7 +2,7 @@
   import { derived, writable } from 'svelte/store'
 
   import { Icon } from '@horizon/icons'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
 
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import {
@@ -11,7 +11,7 @@
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import DynamicIcon from '@horizon/icons/src/lib/DynamicIcon.svelte'
   import AppBarButton from '../Browser/AppBarButton.svelte'
-  import { Provider } from '@horizon/types/src/ai.types'
+  import { Provider } from '@deta/types/src/ai.types'
 
   const ai = useAI()
   const log = useLogScope('ModelPicker')

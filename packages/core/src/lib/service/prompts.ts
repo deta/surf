@@ -1,5 +1,5 @@
 import { INLINE_PROMPTS, PAGE_PROMPTS } from '../constants/prompts'
-import type { EditablePrompt } from '@horizon/types'
+import type { EditablePrompt } from '@deta/types'
 import { HorizonDatabase } from './storage'
 
 export enum PromptIDs {

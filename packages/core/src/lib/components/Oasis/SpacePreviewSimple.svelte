@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DynamicIcon } from '@horizon/icons'
-  import { tooltip } from '@horizon/utils'
+  import { tooltip } from '@deta/utils'
 
   export let icon: string = 'grid'
   export let isLink: boolean = false

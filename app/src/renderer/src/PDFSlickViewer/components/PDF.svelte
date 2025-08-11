@@ -4,8 +4,8 @@
   import Thumbsbar from './Thumbsbar/Thumbsbar.svelte'
   import Toolbar from './Toolbar/Toolbar.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../store'
-  import { WebViewEventReceiveNames, type WebViewReceiveEvents } from '@horizon/types'
-  import { isDev, parsePDFViewerParams } from '@horizon/utils'
+  import { WebViewEventReceiveNames, type WebViewReceiveEvents } from '@deta/types'
+  import { isDev, parsePDFViewerParams } from '@deta/utils'
 
   let debugInfo = {
     anchorWord: '',

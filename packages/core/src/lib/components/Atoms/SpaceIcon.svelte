@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import { Icon } from '@horizon/icons'
   import ColorIcon from './ColorIcon.svelte'
   import IconSelector from '../Oasis/IconSelector.svelte'

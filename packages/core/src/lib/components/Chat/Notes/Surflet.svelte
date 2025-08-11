@@ -3,11 +3,11 @@
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SurfletRenderer from '../SurfletRenderer.svelte'
   import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
-  import { AddResourceToSpaceEventTrigger, ResourceTagsBuiltInKeys } from '@horizon/types'
+  import { AddResourceToSpaceEventTrigger, ResourceTagsBuiltInKeys } from '@deta/types'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { useLogScope, parseUrlIntoCanonical } from '@horizon/utils'
+  import { useLogScope, parseUrlIntoCanonical } from '@deta/utils'
   import { useAI } from '../../../service/ai/ai'
   import { writable, type Writable } from 'svelte/store'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'

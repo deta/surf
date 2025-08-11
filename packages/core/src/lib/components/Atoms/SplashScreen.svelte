@@ -5,7 +5,7 @@
   import frame2 from '../../../../public/assets/boot/charC_hairmotion2.png'
   import frame3 from '../../../../public/assets/boot/charC_hairmotion3.png'
   import frame4 from '../../../../public/assets/boot/charC_hairmotion4.png'
-  import { isDev } from '@horizon/utils'
+  import { isDev } from '@deta/utils'
 
   export let show = false
 

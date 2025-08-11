@@ -1,4 +1,4 @@
-import { AuthenticatedAPI } from '@horizon/api'
+import { AuthenticatedAPI } from '@deta/api'
 import { getUserConfig, updateUserConfig } from './config'
 import { fetch } from 'cross-fetch'
 import { v4 as uuidv4 } from 'uuid'

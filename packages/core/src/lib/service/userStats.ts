@@ -1,5 +1,5 @@
-import { CreateTabEventTrigger, type UserStats } from '@horizon/types'
-import { isDev, useLogScope } from '@horizon/utils'
+import { CreateTabEventTrigger, type UserStats } from '@deta/types'
+import { isDev, useLogScope } from '@deta/utils'
 // NOTE: Lsp shits itself for reasons, this works tho:
 import { CONTENTS, showNotification } from '../components/Core/Notifier/Notification.svelte'
 import { DesktopManager } from './desktop'

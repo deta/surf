@@ -13,8 +13,8 @@
 
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
-  import type { RightSidebarTab } from '@horizon/types'
-  import { useLogScope } from '@horizon/utils'
+  import type { RightSidebarTab } from '@deta/types'
+  import { useLogScope } from '@deta/utils'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   import { CompletionEventID } from '../Onboarding/onboardingScripts'

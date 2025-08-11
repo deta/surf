@@ -3,9 +3,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { getContext, setContext } from 'svelte'
 
-import type { Metadata } from '@horizon/types'
+import type { Metadata } from '@deta/types'
 
-import { useLogScope, APIError, NetworkError } from '@horizon/utils'
+import { useLogScope, APIError, NetworkError } from '@deta/utils'
 
 const HEADER_SPACE_CLIENT_KEY = 'X-Space-Client'
 

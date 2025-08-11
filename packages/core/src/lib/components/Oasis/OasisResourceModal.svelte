@@ -15,7 +15,7 @@
     type ResourceDataAnnotation,
     type WebViewEventAnnotation,
     type WebViewSendEvents
-  } from '@horizon/types'
+  } from '@deta/types'
   import {
     useLogScope,
     isModKeyAndKeyPressed,
@@ -25,7 +25,7 @@
     parseStringIntoUrl,
     getFileKind,
     tooltip
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
   import { useToasts } from '../../service/toast'

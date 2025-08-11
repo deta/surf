@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { OasisSpace, useOasis } from '../../../service/oasis'
@@ -9,7 +9,7 @@
   import { contextMenu } from '../../Core/ContextMenu.svelte'
   import { DesktopService, useDesktopManager } from '../../../service/desktop'
   import type { GridRect } from '../../../types/desktop.types'
-  import { ChangeContextEventTrigger, OpenInMiniBrowserEventFrom } from '@horizon/types'
+  import { ChangeContextEventTrigger, OpenInMiniBrowserEventFrom } from '@deta/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { clamp } from '../../../../../../dragcula/dist/utils/internal'
   import { openDialog } from '../../Core/Dialog/Dialog.svelte'

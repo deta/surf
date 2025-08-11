@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Tooltip } from 'bits-ui'
-  import { flyAndScale, useLogScope } from '@horizon/utils'
+  import { flyAndScale, useLogScope } from '@deta/utils'
   import icon from '../../../../public/assets/icon_512x512.webp'
   import { onDestroy, onMount } from 'svelte'
   import { signature } from '../../utils/perfect-freehand'

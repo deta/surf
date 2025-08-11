@@ -17,12 +17,12 @@
 
 <script lang="ts">
   import { createEventDispatcher, setContext } from 'svelte'
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
 
   import type { AIChatMessageSource } from '../../types/browser.types'
   import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
   import CodeRenderer from './CodeRenderer.svelte'
-  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
+  import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
   import { writable, type Writable } from 'svelte/store'
   import {
     mapCitationsToText,

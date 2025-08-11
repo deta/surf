@@ -34,13 +34,13 @@
     truncateURL,
     useDebounce,
     useLogScope
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { OasisSpace, useOasis } from '../../../service/oasis'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
   import { DynamicIcon, Icon } from '@horizon/icons'
-  import { PageChatUpdateContextEventTrigger } from '@horizon/types'
+  import { PageChatUpdateContextEventTrigger } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import {
     type ContextItem,

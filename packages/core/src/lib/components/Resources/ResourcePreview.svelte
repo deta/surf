@@ -15,7 +15,7 @@
   } from '../../types'
 
   import { writable, get, derived } from 'svelte/store'
-  import { CreateTabEventTrigger, OpenResourceEventFrom, WEB_RESOURCE_TYPES } from '@horizon/types'
+  import { CreateTabEventTrigger, OpenResourceEventFrom, WEB_RESOURCE_TYPES } from '@deta/types'
   import {
     useLogScope,
     isModKeyPressed,
@@ -27,7 +27,7 @@
     conditionalArrayItem,
     tooltip,
     parseUrlIntoCanonical
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { PAGE_TABS_RESOURCE_TYPES, useTabsManager } from '../../service/tabs'
   import { contextMenu, type CtxItem } from '../Core/ContextMenu.svelte'
   import { useOasis, type OasisSpace } from '../../service/oasis'

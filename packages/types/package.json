@@ -1,5 +1,5 @@
 {
-  "name": "@horizon/types",
+  "name": "@deta/types",
   "private": true,
   "version": "0.0.0",
   "svelte": "src/index.ts",

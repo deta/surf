@@ -1,7 +1,7 @@
 <script lang="ts">
-  import '@horizon/editor/src/editor.scss'
+  import '@deta/editor/src/editor.scss'
 
-  import { getEditorContentText } from '@horizon/editor'
+  import { getEditorContentText } from '@deta/editor'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
   import type { ResourceNote } from '../../../../service/resources'
   import LoadingBox from '../../../Atoms/LoadingBox.svelte'

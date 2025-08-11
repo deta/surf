@@ -25,7 +25,7 @@
     tooltip,
     isMac,
     conditionalArrayItem
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { DynamicIcon, Icon } from '@horizon/icons'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
@@ -57,8 +57,8 @@
   } from '../../service/mediaImporter'
 
   import { Toast, useToasts } from '../../service/toast'
-  import { RSSParser, type RSSItem } from '@horizon/web-parser/src/rss/index'
-  import type { ResourceContent } from '@horizon/web-parser'
+  import { RSSParser, type RSSItem } from '@deta/web-parser/src/rss/index'
+  import type { ResourceContent } from '@deta/web-parser'
   import { DragculaDragEvent } from '@horizon/dragcula'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import type {
@@ -80,10 +80,10 @@
     ChangeContextEventTrigger,
     MultiSelectResourceEventAction,
     OpenSpaceEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import PQueue from 'p-queue'
   import { useConfig } from '../../service/config'
-  import { sanitizeHTML } from '@horizon/web-parser/src/utils'
+  import { sanitizeHTML } from '@deta/web-parser/src/utils'
   import { useTabsManager } from '../../service/tabs'
 
   import CreateNewSpace, { type CreateNewSpaceEvents } from './CreateNewSpace.svelte'

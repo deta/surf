@@ -1,4 +1,4 @@
-import { isMac } from '@horizon/editor/src/lib/utilities'
+import { isMac } from '@deta/editor/src/lib/utilities'
 import type { SlashMenuItem } from './types'
 
 export const BUILT_IN_SLASH_COMMANDS = [

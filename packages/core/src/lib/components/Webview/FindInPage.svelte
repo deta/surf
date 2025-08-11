@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
-  import { useLogScope, isModKeyAndKeyPressed } from '@horizon/utils'
-  import type { WebContentsViewEvents, WebContentsViewEventType } from '@horizon/types'
+  import { useLogScope, isModKeyAndKeyPressed } from '@deta/utils'
+  import type { WebContentsViewEvents, WebContentsViewEventType } from '@deta/types'
   import type WebContents from '@horizon/core/src/lib/components/Browser/WebContents.svelte'
 
   export let webContents: WebContents

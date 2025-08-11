@@ -1,6 +1,6 @@
 import { get, writable, type Writable } from 'svelte/store'
 import type { Optional } from '../types'
-import { useLogScope, generateID, isDev } from '@horizon/utils'
+import { useLogScope, generateID, isDev } from '@deta/utils'
 import { getContext, setContext } from 'svelte'
 import { EventEmitterBase } from './events'
 

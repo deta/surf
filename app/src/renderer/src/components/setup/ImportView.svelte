@@ -12,7 +12,7 @@
   import ImportStepTitle from '@horizon/core/src/lib/components/Core/Importer/ImportStepTitle.svelte'
   import ImportStepDescription from '@horizon/core/src/lib/components/Core/Importer/ImportStepDescription.svelte'
 
-  import type { BrowserTypeItem } from '@horizon/types'
+  import type { BrowserTypeItem } from '@deta/types'
 
   import appIcon from '../../assets/icon_512.png'
 

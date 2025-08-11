@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { derived, writable, type Writable } from 'svelte/store'
 
-  import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@horizon/utils'
+  import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@deta/utils'
   import { Icon } from '@horizon/icons'
 
   import type { AIChat } from '@horizon/core/src/lib/service/ai/chat'

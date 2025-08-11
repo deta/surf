@@ -10,7 +10,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { writable } from 'svelte/store'
 
-  import { useLogScope } from '@horizon/utils'
+  import { useLogScope } from '@deta/utils'
   import { colorPairs, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   import CustomPopover from '../Atoms/CustomPopover.svelte'

@@ -7,9 +7,9 @@
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
   import CopyButton from './CopyButton.svelte'
-  import Editor from '@horizon/editor/src/lib/components/Editor.svelte'
-  import { useDebounce } from '@horizon/utils'
-  import { getEditorContentText } from '@horizon/editor'
+  import Editor from '@deta/editor/src/lib/components/Editor.svelte'
+  import { useDebounce } from '@deta/utils'
+  import { getEditorContentText } from '@deta/editor'
   import { slide } from 'svelte/transition'
 
   export let text = ''

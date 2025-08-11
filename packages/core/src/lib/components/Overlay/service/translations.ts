@@ -12,8 +12,8 @@ import {
   normalizeURL,
   parseStringIntoBrowserLocation,
   conditionalArrayItem
-} from '@horizon/utils'
-import { ResourceTagsBuiltInKeys } from '@horizon/types'
+} from '@deta/utils'
+import { ResourceTagsBuiltInKeys } from '@deta/types'
 import { Resource, ResourceJSON } from '../../../service/resources'
 import {
   ActionDisplayPriority,
@@ -29,7 +29,7 @@ import {
 } from './teletypeActions'
 import type { OasisSpace } from '../../../service/oasis'
 
-import { generateRootDomain } from '@horizon/utils'
+import { generateRootDomain } from '@deta/utils'
 
 // pls don't sue me for the name, just fit so well
 export const createExecutioner = (action: TeletypeAction, payload: any) => {

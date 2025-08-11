@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Quota } from '@horizon/backend/types'
   import UsageBar from './UsageBar.svelte'
-  import { getFormattedDate, getFormattedTime, tooltip } from '@horizon/utils'
+  import { getFormattedDate, getFormattedTime, tooltip } from '@deta/utils'
 
   export let label: string
   export let quota: Quota

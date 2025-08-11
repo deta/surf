@@ -14,16 +14,16 @@
     useDebounce,
     useLogScope,
     wait
-  } from '@horizon/utils'
-  import { Editor } from '@horizon/editor'
+  } from '@deta/utils'
+  import { Editor } from '@deta/editor'
   import { DynamicIcon, Icon, IconConfirmation } from '@horizon/icons'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     WEB_RESOURCE_TYPES,
     type ResourceTagsBuiltIn
-  } from '@horizon/types'
-  import { WebParser } from '@horizon/web-parser'
+  } from '@deta/types'
+  import { WebParser } from '@deta/web-parser'
 
   import { ResourceJSON, type ResourceObject } from '@horizon/core/src/lib/service/resources'
   import ResourcePreview from '@horizon/core/src/lib/components/Resources/ResourcePreview.svelte'

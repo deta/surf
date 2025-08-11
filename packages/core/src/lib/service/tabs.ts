@@ -6,7 +6,7 @@ import {
   useLocalStorageStore,
   useLogScope,
   wait
-} from '@horizon/utils'
+} from '@deta/utils'
 import {
   ActivateTabEventTrigger,
   BrowserContextScope,
@@ -19,7 +19,7 @@ import {
   SelectTabEventAction,
   type DeleteTabEventTrigger,
   type UserSettings
-} from '@horizon/types'
+} from '@deta/types'
 
 import type {
   CreateTabOptions,
@@ -48,7 +48,7 @@ import { ContextItemResource } from './ai/context'
 import type { ConfigService } from './config'
 import type { BookmarkPageOpts } from '../components/Browser/BrowserTab.svelte'
 import { EventEmitterBase } from './events'
-import { WebContentsViewManagerActionType } from '@horizon/types'
+import { WebContentsViewManagerActionType } from '@deta/types'
 import { WebContentsViewManager } from './viewManager'
 
 export type TabEvents = {

@@ -1,5 +1,5 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { generateID, useLogScope } from '@horizon/utils'
+import { generateID, useLogScope } from '@deta/utils'
 
 import { ResourceJSON, ResourceManager, type Resource } from './resources'
 import { getResourcePreview } from '../utils/resourcePreview'

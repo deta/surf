@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTypes, type TabResource } from '../../types'
-  import { mimeTypeToCodeLanguage, useDebounce } from '@horizon/utils'
+  import { mimeTypeToCodeLanguage, useDebounce } from '@deta/utils'
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import TextResource from '../Resources/Previews/Text/TextResource.svelte'
   import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'

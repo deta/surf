@@ -1,7 +1,7 @@
 <script lang="ts">
   import { derived, get, writable } from 'svelte/store'
 
-  import { useLogScope, wait, flyAndScale } from '@horizon/utils'
+  import { useLogScope, wait, flyAndScale } from '@deta/utils'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { createEventDispatcher } from 'svelte'
   import { Resource } from '@horizon/core/src/lib/service/resources'
@@ -16,7 +16,7 @@
     AddResourceToSpaceEventTrigger,
     CreateTabEventTrigger,
     SaveToOasisEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import TabItem from '../Core/Tab.svelte'
 

@@ -1,4 +1,4 @@
-import { isWindows } from '@horizon/utils'
+import { isWindows } from '@deta/utils'
 import { spawn, type ChildProcess, execSync } from 'child_process'
 
 import EventEmitter from 'events'

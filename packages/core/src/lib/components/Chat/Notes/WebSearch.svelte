@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
-  import { useLogScope } from '@horizon/utils'
-  import { DuckDuckGoAPI } from '@horizon/web-parser'
+  import { useLogScope } from '@deta/utils'
+  import { DuckDuckGoAPI } from '@deta/web-parser'
 
   // NOTE: created by tiptap but not needed
   export const node: any = undefined

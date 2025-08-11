@@ -10,7 +10,7 @@
     parseStringIntoUrl,
     tooltip,
     useDebounce
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import type {
     EditorRewriteEvent,
     EditorSimilaritiesSearchEvent,

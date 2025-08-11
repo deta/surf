@@ -12,11 +12,11 @@
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
-    "@horizon/trackpad#build": {
+    "@deta/trackpad#build": {
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
-    "@horizon/trackpad#dev": {
+    "@deta/trackpad#dev": {
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
@@ -74,7 +74,7 @@
       "outputs": [".dist/**"],
       "outputLogs": "new-only"
     },
-    "@horizon/types#build": {
+    "@deta/types#build": {
       "outputs": [".build/**"],
       "outputLogs": "new-only"
     },
@@ -93,7 +93,7 @@
     },
     "build:app:backend": {
       "dependsOn": [
-        "@horizon/trackpad#build",
+        "@deta/trackpad#build",
         "@horizon/backend#build",
         "@horizon/backend-server#build"
       ],
@@ -113,7 +113,7 @@
     "desktop#dev": {
       "dependsOn": [
         "@horizon/dragcula#build",
-        "@horizon/trackpad#dev",
+        "@deta/trackpad#dev",
         "@horizon/backend#dev",
         "@horizon/backend-server#dev"
       ],
@@ -122,7 +122,7 @@
     "dev": {
       "dependsOn": [
         "@horizon/dragcula#build",
-        "@horizon/trackpad#dev",
+        "@deta/trackpad#dev",
         "@horizon/backend#dev",
         "@horizon/backend-server#build"
       ],

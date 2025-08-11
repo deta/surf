@@ -12,11 +12,11 @@
     parseUrlIntoCanonical,
     codeLanguageToMimeType,
     isMac
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { Icon } from '@horizon/icons'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
-  import { Editor, getEditorContentText, MentionItemType } from '@horizon/editor'
-  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
+  import { Editor, getEditorContentText, MentionItemType } from '@deta/editor'
+  import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
 
   import {
     EventContext,
@@ -27,7 +27,7 @@
     PromptType,
     ResourceTypes,
     SaveToOasisEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import type { App } from '@horizon/backend/types'
 
   import type {
@@ -62,7 +62,7 @@
   } from '@horizon/core/src/lib/service/ai/helpers'
   import type { CitationInfo } from '@horizon/core/src/lib/components/Chat/CitationItem.svelte'
   import { MODEL_CLAUDE_MENTION, MODEL_GPT_MENTION } from '@horizon/core/src/lib/constants/chat'
-  import { Provider } from '@horizon/types/src/ai.types'
+  import { Provider } from '@deta/types/src/ai.types'
   import ModelPicker from './ModelPicker.svelte'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
   import NoteContextBubbles from '@horizon/core/src/lib/components/Notes/NoteContextBubbles.svelte'

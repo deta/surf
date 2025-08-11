@@ -1,4 +1,4 @@
-import { WebParser, type WebMetadata, type DetectedWebApp } from '@horizon/web-parser'
+import { WebParser, type WebMetadata, type DetectedWebApp } from '@deta/web-parser'
 
 // Optional: Include any other dependencies that `parseMetadata` needs
 

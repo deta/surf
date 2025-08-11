@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Readable } from 'svelte/store'
-  import type { ContextViewDensity } from '@horizon/types'
+  import type { ContextViewDensity } from '@deta/types'
   import type { RenderableItem } from '../../../types'
 
   export let items: Readable<RenderableItem[]>

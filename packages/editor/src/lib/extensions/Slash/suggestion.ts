@@ -1,7 +1,7 @@
 import Slash from './Slash.svelte'
 import tippy from 'tippy.js'
 import { BUILT_IN_SLASH_COMMANDS } from './actions'
-import type { SuggestionOptions } from '@horizon/editor/src/lib/utilities/Suggestion'
+import type { SuggestionOptions } from '@deta/editor/src/lib/utilities/Suggestion'
 import type { SlashMenuItem, SlashCommandPayload } from './types'
 
 export default {

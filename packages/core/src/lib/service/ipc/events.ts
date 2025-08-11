@@ -25,7 +25,7 @@ import type {
   WebContentsViewManagerActionPayloads,
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent
-} from '@horizon/types'
+} from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import type { ControlWindow } from '../../types'
 

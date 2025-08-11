@@ -2,10 +2,10 @@
   import { onMount, onDestroy } from 'svelte'
   import { createEventDispatcher } from 'svelte'
   import { get } from 'svelte/store'
-  import { wait } from '@horizon/utils'
+  import { wait } from '@deta/utils'
   import { startingClass } from '../../utils/dom'
   import { activeOnboardingTabId } from '../../service/onboarding'
-  import { isMac, useLogScope } from '@horizon/utils'
+  import { isMac, useLogScope } from '@deta/utils'
   import {
     nextStep,
     prevStep,
@@ -18,7 +18,7 @@
   } from './timeline'
   import { OnboardingAction, CompletionEventID } from './onboardingScripts'
   import type { OnboardingActionType } from './onboardingScripts'
-  import { PageChatUpdateContextEventTrigger } from '@horizon/types'
+  import { PageChatUpdateContextEventTrigger } from '@deta/types'
   import {
     startAIGeneration,
     endAIGeneration,
@@ -36,7 +36,7 @@
   import { derived } from 'svelte/store'
   import { timelines } from './timeline'
   import { fade } from 'svelte/transition'
-  import { MentionItemType } from '@horizon/editor'
+  import { MentionItemType } from '@deta/editor'
   import stuffOnboarding01 from '../../../../public/assets/onboarding/stuff.onboarding.01.webp'
   import stuffOnboardingSelect from '../../../../public/assets/onboarding/stuff.onboarding.select.mp4'
   import stuffOnboardingSpaces from '../../../../public/assets/onboarding/stuff.onboarding.spaces.mp4'

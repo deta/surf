@@ -5,14 +5,14 @@ import {
   WebContentsViewEventTypeNames,
   WebContentsViewManagerActionType,
   type WebContentsViewCreateOptions
-} from '@horizon/types'
+} from '@deta/types'
 import { app, BrowserWindow, WebContentsView, session } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@horizon/core/src/lib/service/ipc/ipc'
 import { EventEmitterBase } from '@horizon/core/src/lib/service/events'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { isDev } from '@horizon/utils/src/system'
+import { isDev } from '@deta/utils/src/system'
 import { PDFViewerEntryPoint } from './utils'
 
 export class WCView {

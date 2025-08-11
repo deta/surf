@@ -11,14 +11,14 @@ import {
   useLogScope,
   wait,
   useLocalStorageStore
-} from '@horizon/utils'
+} from '@deta/utils'
 
 import {
   ChangeContextEventTrigger,
   CreateSpaceEventFrom,
   DeleteResourceEventTrigger,
   ResourceTypes
-} from '@horizon/types'
+} from '@deta/types'
 
 import {
   SpaceEntryOrigin,

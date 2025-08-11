@@ -1,7 +1,7 @@
 <script lang="ts">
   import Switch from '@horizon/core/src/lib/components/Atoms/Switch.svelte'
   import SettingsOption from './SettingsOption.svelte'
-  import type { UserSettings } from '@horizon/types'
+  import type { UserSettings } from '@deta/types'
   import Exandable from './Exandable.svelte'
   import { Icon } from '@horizon/icons'
   import { createEventDispatcher } from 'svelte'

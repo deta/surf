@@ -5,7 +5,7 @@
     getFileKind,
     getHostname,
     checkIfSecureURL
-  } from '@horizon/utils'
+  } from '@deta/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { Icon } from '@horizon/icons'
   import Image from '../Atoms/Image.svelte'
@@ -28,7 +28,7 @@
     OpenInMiniBrowserEventFrom,
     PageChatUpdateContextEventTrigger,
     SaveToOasisEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import InsecurePageWarningIndicator from '../Atoms/InsecurePageWarningIndicator.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import {

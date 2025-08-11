@@ -9,7 +9,7 @@
     ResourceTypes,
     UpdateHomescreenEventAction,
     WEB_RESOURCE_TYPES
-  } from '@horizon/types'
+  } from '@deta/types'
   import { useTelemetry } from '../../../service/telemetry'
   import { useTabsManager } from '../../../service/tabs'
   import { useDesktopManager, type DesktopService } from '../../../service/desktop'

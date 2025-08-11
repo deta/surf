@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import type { Resource } from '../../../../service/resources'
-  import { getFileType } from '@horizon/utils'
+  import { getFileType } from '@deta/utils'
 
   export let resource: Resource
   export let blob: Blob

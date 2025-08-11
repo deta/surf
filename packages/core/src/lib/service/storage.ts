@@ -1,9 +1,9 @@
 import Dexie from 'dexie'
 
-import { generateID } from '@horizon/utils'
+import { generateID } from '@deta/utils'
 import type { Optional } from '../types'
 import type { Tab } from '../types/browser.types'
-import type { EditablePrompt } from '@horizon/types'
+import type { EditablePrompt } from '@deta/types'
 import type { HomescreenData } from '../components/Oasis/homescreen/homescreen'
 import type { DesktopData } from '../types/desktop.types'
 

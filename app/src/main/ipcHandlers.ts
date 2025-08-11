@@ -1,4 +1,4 @@
-import { isMac, useLogScope } from '@horizon/utils'
+import { isMac, useLogScope } from '@deta/utils'
 import { app, session } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
@@ -19,7 +19,7 @@ import {
   SFFSResource,
   UserSettings,
   UserStats
-} from '@horizon/types'
+} from '@deta/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { checkForUpdates, getAnnouncements } from './appUpdates'
 import { getAnnouncementsWindow } from './announcementsWindow'

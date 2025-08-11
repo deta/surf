@@ -1,4 +1,4 @@
-import type { ContextViewDensity, ContextViewType } from '@horizon/types'
+import type { ContextViewDensity, ContextViewType } from '@deta/types'
 import type { SpaceEntrySortBy } from './sffs.types'
 import type { Icons } from '@horizon/icons'
 

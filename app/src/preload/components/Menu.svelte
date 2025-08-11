@@ -5,14 +5,14 @@
   import { derived, writable } from 'svelte/store'
 
   import { Icon, IconConfirmation } from '@horizon/icons'
-  import type { WebViewEventTransform } from '@horizon/types'
+  import type { WebViewEventTransform } from '@deta/types'
 
   import AiPrompts from './AIPrompts.svelte'
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'
-  import { Editor, getEditorContentText } from '@horizon/editor'
-  import '@horizon/editor/src/editor.scss'
-  import MarkdownRenderer from '@horizon/editor/src/lib/components/MarkdownRenderer.svelte'
+  import { Editor, getEditorContentText } from '@deta/editor'
+  import '@deta/editor/src/editor.scss'
+  import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
   import { onMount } from 'svelte'
 
   export let text = ''

@@ -13,9 +13,9 @@
   import { Icon, type Icons } from '@horizon/icons'
   import { selectedFolder } from '../../stores/oasis'
   import { DragTypeNames } from '@horizon/core/src/lib/types'
-  import { useLogScope, hover } from '@horizon/utils'
+  import { useLogScope, hover } from '@deta/utils'
   import { HTMLDragZone, DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
-  import type { Timer } from '@horizon/types'
+  import type { Timer } from '@deta/types'
 
   export let id: string
   export let name: string

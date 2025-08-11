@@ -1,7 +1,7 @@
 <script lang="ts">
   import { derived, writable, type Readable } from 'svelte/store'
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { isModKeyPressed, useLogScope, wait } from '@horizon/utils'
+  import { isModKeyPressed, useLogScope, wait } from '@deta/utils'
   import { sortSpacesByLastUsed } from '@horizon/core/src/lib/service/contexts'
   import { Icon } from '@horizon/icons'
   import {
@@ -14,7 +14,7 @@
     ChangeContextEventTrigger,
     CreateSpaceEventFrom,
     OpenHomescreenEventTrigger
-  } from '@horizon/types'
+  } from '@deta/types'
   import { useToasts } from '@horizon/core/src/lib/service/toast'
   import { configureBrowsingContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { tick } from 'svelte'

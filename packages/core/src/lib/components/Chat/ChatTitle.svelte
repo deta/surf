@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDebounce } from '@horizon/utils'
+  import { useDebounce } from '@deta/utils'
   import type { AIChat } from '@horizon/core/src/lib/service/ai/chat'
 
   export let chat: AIChat

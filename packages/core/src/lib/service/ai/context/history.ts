@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store'
 
-import { optimisticParseJSON } from '@horizon/utils'
-import { ModelTiers } from '@horizon/types/src/ai.types'
+import { optimisticParseJSON } from '@deta/utils'
+import { ModelTiers } from '@deta/types/src/ai.types'
 
 import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'

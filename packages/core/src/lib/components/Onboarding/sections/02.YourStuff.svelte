@@ -4,7 +4,7 @@
   import stuffOnboarding01 from '../../../../../public/assets/onboarding/stuff.onboarding.teaser.webp'
   import { OnboardingFeature } from '../../Onboarding/onboardingScripts'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
-  import { isMac } from '@horizon/utils'
+  import { isMac } from '@deta/utils'
 
   const dispatch = createEventDispatcher<{
     tryStuff: void

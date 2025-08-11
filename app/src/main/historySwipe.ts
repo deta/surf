@@ -1,6 +1,6 @@
-import trackpad from '@horizon/trackpad'
+import trackpad from '@deta/trackpad'
 import { getMainWindow } from './mainWindow'
-import log from '@horizon/utils/src/log'
+import log from '@deta/utils/src/log'
 import { getUserConfig, updateUserConfigSettings } from './config'
 import { changeMenuItemLabel } from './appMenu'
 import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'

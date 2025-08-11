@@ -2,8 +2,8 @@
   import { createEventDispatcher } from 'svelte'
 
   import { Icon } from '@horizon/icons'
-  import { tooltip } from '@horizon/utils'
-  import type { WebViewEventTransform } from '@horizon/types'
+  import { tooltip } from '@deta/utils'
+  import type { WebViewEventTransform } from '@deta/types'
 
   const dispatch = createEventDispatcher<{ click: WebViewEventTransform['type'] }>()
 

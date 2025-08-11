@@ -1,7 +1,7 @@
 import { ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { generateID, useLogScope } from '@horizon/utils'
+import { generateID, useLogScope } from '@deta/utils'
 import {
   CHAT_TITLE_GENERATOR_PROMPT,
   CLASSIFY_CHAT_MODE,
@@ -15,7 +15,7 @@ import {
   type AIChatMessageSource,
   type TabPage
 } from '../../types'
-import { ChatMode, ModelTiers, Provider, type Model } from '@horizon/types/src/ai.types'
+import { ChatMode, ModelTiers, Provider, type Model } from '@deta/types/src/ai.types'
 import { parseAIError, parseChatResponseSources } from './helpers'
 import type { Telemetry } from '../telemetry'
 import {
@@ -24,7 +24,7 @@ import {
   ResourceTagDataStateValue,
   ResourceTagsBuiltInKeys,
   type PageChatMessageSentData
-} from '@horizon/types'
+} from '@deta/types'
 import type { AIService } from './ai'
 import {
   ContextItemActiveTab,

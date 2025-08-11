@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Editor } from '@horizon/editor'
-  import type { MentionItemsFetcher } from '@horizon/editor/src/lib/extensions/Mention/suggestion'
+  import { Editor } from '@deta/editor'
+  import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
   import { createEventDispatcher } from 'svelte'
   import { writable, type Readable, type Writable } from 'svelte/store'
 

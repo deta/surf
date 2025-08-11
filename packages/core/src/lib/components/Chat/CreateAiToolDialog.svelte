@@ -8,8 +8,8 @@
   import { fly } from 'svelte/transition'
   import { createEventDispatcher, onMount } from 'svelte'
   import type { App } from '@horizon/backend/types'
-  import { Editor } from '@horizon/editor'
-  import { wait } from '@horizon/utils'
+  import { Editor } from '@deta/editor'
+  import { wait } from '@deta/utils'
 
   export let el: HTMLElement | undefined
   export let show = false
