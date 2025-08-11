@@ -1,8 +1,7 @@
 const { spawn } = require('child_process')
 const { join } = require('path')
 
-const binDir =
-  process.env.RESOURCES_BIN_DIR || join(__dirname, '../../../apps/desktop/resources/bin')
+const binDir = process.env.RESOURCES_BIN_DIR || join(__dirname, '../../../app/resources/bin')
 const sourceBin = 'backend-server'
 
 const isDev = process.argv.includes('--dev')

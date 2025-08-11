@@ -15,6 +15,6 @@
     "checkJs": true,
     "isolatedModules": true,
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js", "src/**/*.svelte", "../../apps/desktop/src/preload/*.d.ts", "../types/src/downloadManager.types.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js", "src/**/*.svelte", "../../app/src/preload/*.d.ts", "../types/src/downloadManager.types.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

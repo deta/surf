@@ -219,7 +219,7 @@
       return
     }
 
-    resetActionList()
+    if (resetActionList) resetActionList()
     inputElem?.focus()
     inputValue.set('')
   }

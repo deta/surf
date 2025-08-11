@@ -125,15 +125,15 @@ jobs:
           prerelease: true
           tag_name: v${{ env.APP_VERSION }}
           files: |
-            apps/desktop/dist/*.exe
-            apps/desktop/dist/*.zip
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.AppImage
-            apps/desktop/dist/*.snap
-            apps/desktop/dist/*.deb
-            apps/desktop/dist/*.rpm
-            apps/desktop/dist/*.tar.gz
-            apps/desktop/dist/*.yml
-            apps/desktop/dist/*.blockmap
+            app/dist/*.exe
+            app/dist/*.zip
+            app/dist/*.dmg
+            app/dist/*.AppImage
+            app/dist/*.snap
+            app/dist/*.deb
+            app/dist/*.rpm
+            app/dist/*.tar.gz
+            app/dist/*.yml
+            app/dist/*.blockmap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

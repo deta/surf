@@ -6,8 +6,9 @@ import './assets/fonts/Gambarino-Regular.woff2'
 import '../../output.css'
 import '../../../../../packages/core/src/output.css'
 import Announcements from './Announcements.svelte'
+import { mount } from 'svelte'
 
-const app = new Announcements({
+const app = mount(Announcements, {
   target: document.getElementById('app')
 })
 

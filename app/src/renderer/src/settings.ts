@@ -6,7 +6,8 @@ import './assets/fonts/Gambarino-Regular.woff2'
 import '../../output.css'
 import '../../../../../packages/core/src/output.css'
 import '../../../../../packages/core/src/lib/components/index.scss'
-import Setup from './Setup.svelte'
+import Settings from './Settings.svelte'
+import { mount } from 'svelte'
 
 /*
 import * as Sentry from '@sentry/electron/renderer'
@@ -25,7 +26,7 @@ if (sentryDSN) {
 }
 */
 
-const app = new Setup({
+const app = mount(Settings, {
   target: document.getElementById('app')
 })
 

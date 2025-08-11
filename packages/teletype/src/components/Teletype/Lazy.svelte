@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, SvelteComponent } from 'svelte'
+  import { onMount, type SvelteComponent } from 'svelte'
 
   export let component: () => Promise<typeof SvelteComponent>
 

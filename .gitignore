@@ -30,7 +30,7 @@ dist
 build
 target
 # required build files for the electron app
-!apps/desktop/build
+!app/build
 
 
 # Debug
@@ -43,6 +43,6 @@ yarn-error.log*
 *.pem
 
 database.sqlite
-/apps/desktop/external-deps
+/app/external-deps
 __pycache__
 .fastembed_cache

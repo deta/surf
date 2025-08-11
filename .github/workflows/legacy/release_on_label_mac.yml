@@ -53,9 +53,9 @@ jobs:
         run: |
           echo "installing horizon & external deps"
           yarn workspace desktop install --frozen-lockfile
-          ls -la apps/desktop/external-deps/libtorch
-          ls -la apps/desktop/external-deps/libtorch/lib
-          ls -la apps/desktop/external-deps/libtorch/include
+          ls -la app/external-deps/libtorch
+          ls -la app/external-deps/libtorch/lib
+          ls -la app/external-deps/libtorch/include
           echo "installing cmdk"
           yarn workspace @horizon/cmdk-sv install
           yarn workspace @horizon/cmdk-sv build
@@ -86,8 +86,8 @@ jobs:
         with:
           name: build-${{ matrix.architecture }}
           path: |
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.blockmap
+            app/dist/*.dmg
+            app/dist/*.blockmap
 
   create-release:
     if: ${{ github.event.label.name == 'mac-build' }}

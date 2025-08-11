@@ -11,7 +11,7 @@ on:
       - 'turbo.json'
       - 'yarn.lock'
       - 'packages/**'
-      - 'apps/desktop/src/**'
+      - 'app/src/**'
       - '!packages/trackpad/**'
       - '!packages/backend/**'
       - '!packages/backend-server/**'

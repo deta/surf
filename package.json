@@ -35,12 +35,12 @@
     "turbo": "2.4.4"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.19.0"
   },
   "packageManager": "yarn@1.22.22",
   "workspaces": {
     "packages": [
-      "apps/*",
+      "app",
       "packages/*"
     ],
     "nohoist": [

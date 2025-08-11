@@ -6,7 +6,7 @@ const config: Config = {
   content: [
     './src/**/*.{html,js,svelte,ts}',
     '../editor/src/**/*.{html,js,svelte,ts}',
-    '../../apps/desktop/src/renderer/**/*.{html,js,svelte,ts}'
+    '../../app/src/renderer/**/*.{html,js,svelte,ts}'
   ],
   plugins: [
     require('@tailwindcss/typography'),

@@ -7,6 +7,7 @@ import '../../output.css'
 import '../../../../../packages/core/src/output.css'
 import '../../../../../packages/core/src/lib/components/index.scss'
 import Overlay from './Overlay.svelte'
+import { mount } from 'svelte'
 
 /*
 import * as Sentry from '@sentry/electron/renderer'
@@ -25,7 +26,7 @@ if (sentryDSN) {
 }
 */
 
-const app = new Overlay({
+const app = mount(Overlay, {
   target: document.getElementById('app')
 })
 

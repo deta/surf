@@ -7,7 +7,6 @@ if (process.platform === 'darwin') {
     __dirname,
     '..',
     '..',
-    '..',
     'node_modules',
     'electron',
     'dist',

@@ -86,8 +86,8 @@ jobs:
         with:
           name: build-${{ matrix.architecture }}
           path: |
-            apps/desktop/dist/*.dmg
-            apps/desktop/dist/*.blockmap
+            app/dist/*.dmg
+            app/dist/*.blockmap
 
   create-release:
     needs: [build]
