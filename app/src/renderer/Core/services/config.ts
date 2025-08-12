@@ -13,6 +13,7 @@ export class ConfigService {
   constructor() {
     this.log = useLogScope('Config')
 
+    // @ts-ignore
     const loaded = window.api.getUserConfigSettings()
     if (!loaded) {
       new Error('User config not found')
@@ -21,6 +22,7 @@ export class ConfigService {
     this.log.debug('loaded user config settings', loaded)
     this.settings = writable<UserSettings>(loaded)
 
+    // @ts-ignore
     window.api.onUserConfigSettingsChange((settings) => {
       this.log.debug('user config settings change', settings)
       this.settings.set(settings)
@@ -45,6 +47,7 @@ export class ConfigService {
 
     this.settings.set(updatedSettings)
 
+    // @ts-ignore
     await window.api.updateUserConfigSettings(updatedSettings)
   }
 

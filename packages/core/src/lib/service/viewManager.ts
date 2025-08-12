@@ -8,8 +8,7 @@ import {
 } from '@deta/types'
 import type { TabsManager } from './tabs'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { EventEmitterBase } from './events'
-import { wait, useLogScope } from '@deta/utils'
+import { wait, useLogScope, EventEmitterBase } from '@deta/utils'
 
 type Fn = () => void
 

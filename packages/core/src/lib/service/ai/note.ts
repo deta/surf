@@ -25,7 +25,7 @@ import {
 } from '../../constants/chat'
 import { tick } from 'svelte'
 import type { OasisService } from '../oasis'
-import { EventEmitterBase } from '../events'
+import { EventEmitterBase } from '@deta/utils'
 import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 export type SmartNotesEvents = {

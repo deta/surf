@@ -1,11 +1,10 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { generateID, useLogScope } from '@deta/utils'
+import { generateID, useLogScope, EventEmitterBase } from '@deta/utils'
 
 import { ResourceJSON, ResourceManager, type Resource } from './resources'
 import { getResourcePreview } from '../utils/resourcePreview'
 import type { OasisService } from './oasis'
-import { EventEmitterBase } from './events'
-import type { Toast, Toasts } from './toast'
+import type { Toast, Toasts } from '@deta/ui'
 import { extractAndCreateWebResource } from './mediaImporter'
 import { SpaceEntryOrigin } from '../types'
 import { ResourceTag } from '../utils/tags'

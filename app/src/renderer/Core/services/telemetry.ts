@@ -48,17 +48,19 @@ import {
   MentionEventType,
   SummarizeEventContentSource,
   NoteCreateCitationEventTrigger,
-  type PageChatMessageSentData
+  type PageChatMessageSentData,
+  DragTypeNames
 } from '@deta/types'
 
 import { useLogScope } from '@deta/utils'
-import type { Tab } from '../types/browser.types'
 import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'
 import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
-import { DragTypeNames } from '../types'
+
+// TODO: get rid of the legacy core package import
+import { Tab } from '@horizon/core/src/lib/types'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -115,6 +117,7 @@ export class Telemetry {
     if (userConfig) {
       this.userConfig = userConfig
     } else {
+      // @ts-ignore
       this.userConfig = await window.api.getUserConfig()
     }
 
@@ -129,6 +132,7 @@ export class Telemetry {
     }
 
     this.personas = this.userConfig.settings.personas || []
+    // @ts-ignore
     this.appInfo = await window.api.getAppInfo()
     const initOptions = {
       // TODO: default tracking will be deprecated by the ampltiude SDK
@@ -170,10 +174,12 @@ export class Telemetry {
     amplitude.init(this.apiKey, userID, initOptions)
     amplitude.setOptOut(!this.active)
 
+    // @ts-ignore
     window.api.onTrackEvent((eventName, properties) => {
       this.log.debug('Received track event from main process', eventName, properties)
       this.trackEvent(eventName, properties)
     })
+    // @ts-ignore
     window.api.onUserConfigSettingsChange((settings) => {
       if (!this.userConfig) return
       this.userConfig.settings = settings
@@ -219,7 +225,7 @@ export class Telemetry {
       tabs_orientation:
         userSettings?.tabs_orientation ?? this.userConfig?.settings.tabs_orientation,
       default_browser: this.userConfig?.defaultBrowser,
-      extensions_enabled: userSettings?.extensions ?? false,
+      extensions_enabled: true, // userSettings?.extensions ?? false,
       notes_sidebar_enabled: userSettings?.experimental_notes_chat_sidebar ?? false,
 
       onboarding: userSettings?.skipped_hero_screen

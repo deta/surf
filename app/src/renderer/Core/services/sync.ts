@@ -6,7 +6,7 @@ import { ResourceTypes } from '@deta/types'
 
 import { type ResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
-import { Toast, useToasts } from './toast'
+import { Toast, useToasts } from '@deta/ui'
 import { useConfig } from './config'
 
 import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
@@ -67,6 +67,7 @@ export class SyncService {
       throw new Error('Sync service not configured')
     }
 
+    // @ts-ignore
     const json = await window.api.fetchJSON(`${config.baseUrl}${path}`, {
       ...options,
       headers: {

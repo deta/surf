@@ -1,5 +1,9 @@
 import { isDev, useLogScope, type ScopedLogger } from '@deta/utils'
 import type {
+  BookmarkFolder,
+  BrowserType,
+  EventBusMessage,
+  SFFSResourceOrSpace,
   AiSFFSQueryResponse,
   HistoryEntry,
   HistoryEntryType,
@@ -26,17 +30,14 @@ import type {
   AIChatMessageRaw,
   AIChatRaw,
   SpaceEntrySearchOptions,
-  SFFSRawBookmarkFolder
-} from '../types'
-
-import type {
+  SFFSRawBookmarkFolder,
   AIChatData,
   AIChatMessage,
   AIChatMessageSource,
   AIDocsSimilarity,
   YoutubeTranscript
-} from '../types/browser.types'
-import type { BookmarkFolder, BrowserType, EventBusMessage, SFFSResourceOrSpace } from '@deta/types'
+} from '@deta/types'
+
 import type {
   App,
   Model,

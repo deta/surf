@@ -47,8 +47,7 @@ import type { AIService } from './ai/ai'
 import { ContextItemResource } from './ai/context'
 import type { ConfigService } from './config'
 import type { BookmarkPageOpts } from '../components/Browser/BrowserTab.svelte'
-import { EventEmitterBase } from './events'
-import { WebContentsViewManagerActionType } from '@deta/types'
+import { EventEmitterBase } from '@deta/utils'
 import { WebContentsViewManager } from './viewManager'
 
 export type TabEvents = {

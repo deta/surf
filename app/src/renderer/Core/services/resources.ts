@@ -35,8 +35,8 @@ import {
   SpaceEntryOrigin,
   type SFFSRawResource,
   type SpaceEntrySearchOptions
-} from '../types'
-import type { Telemetry } from './telemetry'
+} from '@deta/types'
+// import type { Telemetry } from './telemetry'
 import {
   EventBusMessageType,
   EventContext,
@@ -55,9 +55,10 @@ import { getContext, onDestroy, setContext, tick } from 'svelte'
 import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@deta/web-parser'
 import type { ConfigService } from './config'
-import type { AIService } from './ai/ai'
-import { EventEmitterBase } from './events'
+import { EventEmitterBase } from '@deta/utils'
 import { ResourceTag, SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+
+type Telemetry = any
 
 export const getPrimaryResourceType = (type: string) => {
   if (type.startsWith(ResourceTypes.DOCUMENT)) {
@@ -472,7 +473,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   sffs: SFFS
   telemetry: Telemetry
   config: ConfigService
-  ai!: AIService
+  // ai!: AIService
 
   static self: ResourceManager
 
@@ -498,9 +499,9 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     })
   }
 
-  attachAIService(ai: AIService) {
-    this.ai = ai
-  }
+  // attachAIService(ai: AIService) {
+  //   this.ai = ai
+  // }
 
   private createResourceObject(data: SFFSResource): ResourceObject {
     if (data.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
@@ -652,22 +653,22 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     }
 
     // We only want to cleanup traditional file types, not web resources or PDFs (which are already handled in BrowserTab)
-    const typeSupportsCleanup =
-      !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) &&
-      type !== ResourceTypes.PDF &&
-      type !== ResourceTypes.DOCUMENT_SPACE_NOTE
-    if (typeSupportsCleanup && this.config.settingsValue.cleanup_filenames) {
-      const filename = metadata?.name
-      if (filename) {
-        const context = canonicalUrlTag?.value || metadata?.sourceURI || ''
-        this.log.debug('cleaning up filename', filename, context)
-        const completion = await this.ai.cleanupTitle(filename, context)
-        if (!completion.error && completion.output) {
-          this.log.debug('cleaned up filename', filename, completion.output)
-          parsedMetadata.name = completion.output
-        }
-      }
-    }
+    // const typeSupportsCleanup =
+    //   !WEB_RESOURCE_TYPES.some((x) => type.startsWith(x)) &&
+    //   type !== ResourceTypes.PDF &&
+    //   type !== ResourceTypes.DOCUMENT_SPACE_NOTE
+    // if (typeSupportsCleanup && this.config.settingsValue.cleanup_filenames) {
+    //   const filename = metadata?.name
+    //   if (filename) {
+    //     const context = canonicalUrlTag?.value || metadata?.sourceURI || ''
+    //     this.log.debug('cleaning up filename', filename, context)
+    //     const completion = await this.ai.cleanupTitle(filename, context)
+    //     if (!completion.error && completion.output) {
+    //       this.log.debug('cleaned up filename', filename, completion.output)
+    //       parsedMetadata.name = completion.output
+    //     }
+    //   }
+    // }
 
     const sffsItem = await this.sffs.createResource(type, parsedMetadata, tags)
     const resource = this.createResourceObject(sffsItem)
@@ -1264,7 +1265,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     const blobData = JSON.stringify(data)
     const blob = new Blob([blobData], { type: ResourceTypes.LINK })
 
-    const additionalTags = []
+    const additionalTags: SFFSResourceTag[] = []
 
     const sourcePublishedAt = data.date_published
     if (sourcePublishedAt) {

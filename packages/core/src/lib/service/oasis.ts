@@ -47,7 +47,7 @@ import type { SmartNoteManager } from './ai/note'
 import { ClipboardService } from './clipboard'
 import { checkBrowsingContextSelectionNeeded, migrateSpaceBrowsingContext } from './migration'
 import { BuiltInSpaces, BuiltInSpaceId } from '../constants/spaces'
-import { EventEmitterBase } from './events'
+import { EventEmitterBase } from '@deta/utils'
 import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
 
 export type OasisEvents = {

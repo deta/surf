@@ -1,10 +1,6 @@
 import { CreateTabEventTrigger, type UserStats } from '@deta/types'
 import { isDev, useLogScope } from '@deta/utils'
-// NOTE: Lsp shits itself for reasons, this works tho:
-import { CONTENTS, showNotification } from '../components/Core/Notifier/Notification.svelte'
-import { DesktopManager } from './desktop'
-import { get } from 'svelte/store'
-import { useTabsManager } from './tabs'
+import { NOTIFICATION_CONTENTS, showNotification } from '@deta/ui'
 
 export class UserStatsService {
   static get log(): ReturnType<typeof useLogScope> {
@@ -12,6 +8,7 @@ export class UserStatsService {
   }
 
   static async getUserStats(): Promise<UserStats | null> {
+    // @ts-ignore
     const stats = await window.api.getUserStats()
     return stats
   }
@@ -21,6 +18,7 @@ export class UserStatsService {
   static isShowingNotification = false
 
   static storeUserStats(stats: UserStats) {
+    // @ts-ignore
     window.api.updateUserStats(stats)
   }
 
@@ -172,6 +170,7 @@ export class UserStatsService {
   }
 
   private static async checkDefaultBrowserPrompt() {
+    // @ts-ignore
     if (await window.api.isDefaultBrowser()) return
     if (
       !isDev &&
@@ -215,8 +214,8 @@ export class UserStatsService {
     UserStatsService.setSetDefaultBrowserLastShownDiff()
 
     const { closeType, submitValue } = await showNotification({
-      title: CONTENTS.default_browser.title,
-      message: CONTENTS.default_browser.body,
+      title: NOTIFICATION_CONTENTS.default_browser.title,
+      message: NOTIFICATION_CONTENTS.default_browser.body,
       actions: [
         { type: 'submit', title: 'Set As Default' },
         isFirstNotification
@@ -227,6 +226,7 @@ export class UserStatsService {
     UserStatsService.isShowingNotification = false
 
     if (closeType === true) {
+      // @ts-ignore
       window.api.useAsDefaultBrowser() // TODO: allow tracking event & from where it was called
     } else if (closeType === false && submitValue === 'not_now') {
       // noop
@@ -286,25 +286,25 @@ export class UserStatsService {
       if (show && lastShownDiff < 1000 * 60 * 60 * 3) show = false
     }
 
-    if (!DesktopManager.self) {
-      this.log.warn('DesktopManager doesnt not exist! This shouldnt happen!')
-      return
-    }
+    // if (!DesktopManager.self) {
+    //   this.log.warn('DesktopManager doesnt not exist! This shouldnt happen!')
+    //   return
+    // }
 
-    const desktopsData = await DesktopManager.self.getAllDesktopsData()
-    const customDesktopsN = desktopsData
-      .map((desktop) => {
-        if (desktop?.background_image !== undefined) {
-          const bgData = desktop.background_image
-          if (bgData?.resourceId !== undefined && bgData?.resourceId !== null) {
-            return desktop
-          }
-        }
-        return undefined
-      })
-      .filter((e) => e !== undefined).length
+    // const desktopsData = await DesktopManager.self.getAllDesktopsData()
+    // const customDesktopsN = desktopsData
+    //   .map((desktop) => {
+    //     if (desktop?.background_image !== undefined) {
+    //       const bgData = desktop.background_image
+    //       if (bgData?.resourceId !== undefined && bgData?.resourceId !== null) {
+    //         return desktop
+    //       }
+    //     }
+    //     return undefined
+    //   })
+    //   .filter((e) => e !== undefined).length
 
-    if (customDesktopsN < 1) return
+    // if (customDesktopsN < 1) return
 
     //   use the product 3 days in a row
     const maxStreak = await UserStatsService.getNDaysInARowSession()
@@ -316,8 +316,8 @@ export class UserStatsService {
     UserStatsService.setBookCallPromptLastShownDiff()
 
     const { closeType, submitValue } = await showNotification({
-      title: CONTENTS.book_call.title,
-      message: CONTENTS.book_call.body,
+      title: NOTIFICATION_CONTENTS.book_call.title,
+      message: NOTIFICATION_CONTENTS.book_call.body,
       actions: [
         { type: 'submit', title: 'Schedule a call' },
         isFirstNotification
@@ -328,18 +328,18 @@ export class UserStatsService {
     UserStatsService.isShowingNotification = false
 
     if (closeType === true) {
-      const tabs = useTabsManager()
-      if (!tabs) {
-        this.log.error('Tabs manager not found! This shouldnt happen!')
-        return
-      }
-      tabs.addPageTab('https://deta.surf/meet', {
-        active: true,
-        index: 0,
-        placeAtEnd: false,
+      // const tabs = useTabsManager()
+      // if (!tabs) {
+      //   this.log.error('Tabs manager not found! This shouldnt happen!')
+      //   return
+      // }
+      // tabs.addPageTab('https://deta.surf/meet', {
+      //   active: true,
+      //   index: 0,
+      //   placeAtEnd: false,
 
-        trigger: CreateTabEventTrigger.System
-      })
+      //   trigger: CreateTabEventTrigger.System
+      // })
       UserStatsService.setDontShowBookCallPrompt(true)
     } else if (closeType === false && submitValue === 'not_now') {
       // noop

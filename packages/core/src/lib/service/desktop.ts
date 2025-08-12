@@ -18,7 +18,7 @@ import {
 import type { ConfigService } from './config'
 import type { OasisService, OasisSpace } from './oasis'
 import type { TabsManager } from './tabs'
-import type { Toasts } from './toast'
+import type { Toasts } from '@deta/ui'
 import { type Resource, type ResourceManager } from './resources'
 import type { DragculaDragEvent, Vec2 } from '../../../../dragcula/dist'
 import { DragTypeNames, SpaceEntryOrigin, type DragTypes, type Tab } from '../types'
@@ -28,7 +28,7 @@ import { useLocalStorageStore, useLogScope, wait, type ScopedLogger } from '@det
 import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
 import { ColorService, type ColorRGB, type CustomColorData } from './colors'
-import { EventEmitterBase } from './events'
+import { EventEmitterBase } from '@deta/utils'
 import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 const DEFAULT_CARD_SIZES: Record<ResourceTypes, { x: number; y: number }> = {

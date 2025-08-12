@@ -29,6 +29,76 @@ export enum ChatMode {
   AppCreation = 3
 }
 
+export type AIChatData = {
+  id: string
+  title: string
+  messages: AIChatMessage[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type AIDocsSimilarity = {
+  index: number
+  similarity: number
+}
+
+export type AIChatMessageRole = 'user' | 'system' | 'assistant'
+
+export type AIChatMessage = {
+  id: string // generated in the frontend
+  ai_session_id: string
+  role: AIChatMessageRole
+  status: 'success' | 'pending' | 'error'
+  query: string
+  content: string
+  sources?: AIChatMessageSource[]
+}
+
+export type AIChatMessageParsed = {
+  id: string
+  role: AIChatMessageRole
+  query: string
+  content: string
+  contentItems?: ChatMessageContentItem[]
+  sources?: AIChatMessageSource[]
+  usedPageScreenshot?: boolean
+  usedInlineScreenshot?: boolean
+  status?: 'success' | 'pending' | 'error' | 'cancelled'
+}
+
+export type AIChatMessageSource = {
+  id: string
+  all_chunk_ids: string[]
+  render_id: string
+  resource_id: string
+  content: string
+  uid?: string
+  metadata?: {
+    timestamp?: number
+    url?: string
+    page?: number
+  }
+}
+
+export type ChatMessageContentItem = {
+  type: 'text' | 'citation'
+  content: string
+}
+
+export type YoutubeTranscriptPiece = {
+  text: string
+  start: number
+  duration: number
+}
+
+export type YoutubeTranscript = {
+  transcript: string
+  metadata: {
+    source: string
+    transcript_pieces: YoutubeTranscriptPiece[]
+  }
+}
+
 export namespace ChatMode {
   export function isValid(value: number): value is ChatMode {
     return Object.values(ChatMode).includes(value)

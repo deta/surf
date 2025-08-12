@@ -1,6 +1,5 @@
 import { useLogScope, checkIfUrl, parseStringIntoUrl } from '@deta/utils'
-import { ResourceTagsBuiltInKeys } from '@deta/types'
-import { type SFFSResourceMetadata, type SFFSResourceTag } from '../types'
+import { ResourceTagsBuiltInKeys, SFFSResourceMetadata, SFFSResourceTag } from '@deta/types'
 import { Resource, type ResourceManager } from './resources'
 import { WebParser } from '@deta/web-parser'
 import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
@@ -43,7 +42,8 @@ const processHTMLData = async (data: string) => {
       try {
         let dataUrl = img.src.startsWith('data:')
           ? img.src
-          : await window.api.fetchAsDataURL(img.src)
+          : // @ts-ignore
+            await window.api.fetchAsDataURL(img.src)
 
         // Convert data URL to Blob
         const [metadata, base64Data] = dataUrl.split(',')
@@ -233,7 +233,7 @@ export const parseDataTransferData = async (dataTransfer: DataTransfer) => {
                 metadata: {
                   name: file.name,
                   alt: '',
-                  sourceURI: file.path
+                  sourceURI: (file as any).path
                 }
               }) as MediaParserResult
           )
@@ -294,7 +294,7 @@ export const processFile = async (file: File) => {
       metadata: {
         name: file.name,
         alt: '',
-        sourceURI: file.path
+        sourceURI: (file as any).path
       }
     } as MediaParserResult
   } else {
@@ -304,7 +304,7 @@ export const processFile = async (file: File) => {
       metadata: {
         name: file.name,
         alt: '',
-        sourceURI: file.path
+        sourceURI: (file as any).path
       }
     } as MediaParserResult
   }
@@ -391,7 +391,7 @@ export const processPaste = async (e: ClipboardEvent) => {
           metadata: {
             name: file?.name,
             alt: '',
-            sourceURI: file?.path
+            sourceURI: (file as any)?.path
           }
         })
       }
@@ -423,7 +423,7 @@ export const processPaste = async (e: ClipboardEvent) => {
           metadata: {
             name: file.name,
             alt: '',
-            sourceURI: file.path
+            sourceURI: (file as any).path
           }
         })
         num++
@@ -506,7 +506,7 @@ export const extractAndCreateWebResource = async (
 ) => {
   log.debug('Extracting resource from', url)
 
-  const additionalTags = []
+  const additionalTags: SFFSResourceTag[] = []
 
   const existingCanoncialUrlTag = tags?.find(
     (t) => t.name === ResourceTagsBuiltInKeys.CANONICAL_URL

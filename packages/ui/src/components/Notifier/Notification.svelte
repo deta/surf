@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
   import Notification from './Notification.svelte'
 
-  export const CONTENTS: Record<string, { title: string; body: string }> = {
+  export const NOTIFICATION_CONTENTS: Record<string, { title: string; body: string }> = {
     default_browser: {
       title: '🏄‍♂️ Having fun Surfing?',
       body: `If you like Surf, try setting it as your
