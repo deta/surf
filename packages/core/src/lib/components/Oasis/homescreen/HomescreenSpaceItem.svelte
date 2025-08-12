@@ -4,7 +4,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import LazyScroll from '../../Utils/LazyScroll.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
-  import { useToasts } from '../../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { contextMenu, type CtxItem } from '../../Core/ContextMenu.svelte'
   import { SpaceEntryOrigin, type RenderableItem } from '../../../types'
   import OasisResourcesView from '../ResourceViews/OasisResourcesView.svelte'

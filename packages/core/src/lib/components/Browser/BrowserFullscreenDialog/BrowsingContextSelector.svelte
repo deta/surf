@@ -3,7 +3,7 @@
   import { type Readable } from 'svelte/store'
   import { useLogScope } from '@deta/utils'
   import type { OasisSpace } from '../../../service/oasis'
-  import { useToasts } from '../../../service/toast'
+  import { useToasts } from '@deta/ui'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import { useConfig } from '../../../service/config'
 

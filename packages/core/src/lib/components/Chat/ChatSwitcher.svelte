@@ -17,7 +17,7 @@
     type CtxItem
   } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import type { AIChatData } from '@horizon/core/src/lib/types'
 
   export let selectedChatId: Writable<string> = writable('')

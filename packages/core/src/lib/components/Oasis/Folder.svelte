@@ -51,7 +51,7 @@
   } from '@deta/utils'
   import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
   import { OasisSpace, useOasis } from '../../service/oasis'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import {
     DeleteSpaceEventTrigger,
     RefreshSpaceEventTrigger,

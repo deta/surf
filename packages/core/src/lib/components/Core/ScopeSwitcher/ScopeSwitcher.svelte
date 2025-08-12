@@ -15,7 +15,7 @@
     CreateSpaceEventFrom,
     OpenHomescreenEventTrigger
   } from '@deta/types'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { configureBrowsingContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { tick } from 'svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'

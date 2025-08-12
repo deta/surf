@@ -8,7 +8,7 @@
   import { DragTypeNames, type DragTypes } from '../../types'
 
   import { type Resource } from '../../service/resources'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
 
   import TextResource, {
     type ChatSubmitOptions

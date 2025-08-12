@@ -13,7 +13,7 @@
   } from '@deta/utils'
   import { OasisSpace, useOasis } from '../../../service/oasis'
   import Switch from '../../Atoms/Switch.svelte'
-  import { useToasts } from '../../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { useConfig } from '../../../service/config'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'

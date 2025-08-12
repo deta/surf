@@ -14,7 +14,7 @@
   } from '@deta/types'
   import { createEventDispatcher, onMount } from 'svelte'
   import { Editor, getEditorContentText } from '@deta/editor'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'

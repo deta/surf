@@ -64,7 +64,7 @@
   import { createActionsFromResults } from './horizontal'
   import TeletypeHeader from './TeletypeHeader.svelte'
   import TeletypeIconRenderer from './TeletypeIconRenderer.svelte'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { type HistoryEntry, type Tab } from '@horizon/core/src/lib/types'
 
   export let open: boolean

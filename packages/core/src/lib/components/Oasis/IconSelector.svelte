@@ -16,7 +16,7 @@
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import EmojiPicker from '../Atoms/EmojiPicker.svelte'
   import { blobToSmallImageUrl } from '../../utils/screenshot'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import type { SpaceData } from '@horizon/core/src/lib/types'
 
   export let space: OasisSpace

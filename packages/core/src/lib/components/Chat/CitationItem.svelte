@@ -38,7 +38,7 @@
   import ResourceHoverPreview from './ResourceHoverPreview.svelte'
   import { ResourceJSON, type Resource } from '@horizon/core/src/lib/service/resources'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import ResourceSmallImagePreview from '../Resources/ResourceSmallImagePreview.svelte'

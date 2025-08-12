@@ -19,7 +19,7 @@
   import { tooltip } from '@svelte-plugins/tooltips'
   import { Editor, getEditorContentText } from '@deta/editor'
   import '@deta/editor/src/editor.scss'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { slide } from 'svelte/transition'
 
   export let resource: ResourceAnnotation

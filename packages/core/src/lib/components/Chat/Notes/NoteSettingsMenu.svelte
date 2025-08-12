@@ -8,7 +8,7 @@
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { debugMode } from '@horizon/core/src/lib/stores/debug'
   import { ResourceTypes, type TabResource } from '@horizon/core/src/lib/types'
   import { Icon } from '@horizon/icons'

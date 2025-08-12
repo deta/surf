@@ -38,7 +38,7 @@
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { SpaceEntryOrigin, type OpenAndChatEvent } from '@horizon/core/src/lib/types'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
 
   export let resource: ResourceObject

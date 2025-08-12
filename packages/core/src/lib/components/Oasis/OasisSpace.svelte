@@ -56,7 +56,7 @@
     processPaste
   } from '../../service/mediaImporter'
 
-  import { Toast, useToasts } from '../../service/toast'
+  import { Toast, useToasts } from '@deta/ui'
   import { RSSParser, type RSSItem } from '@deta/web-parser/src/rss/index'
   import type { ResourceContent } from '@deta/web-parser'
   import { DragculaDragEvent } from '@horizon/dragcula'

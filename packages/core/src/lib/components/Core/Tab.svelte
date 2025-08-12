@@ -36,7 +36,7 @@
     useScopedMiniBrowserAsStore
   } from '@horizon/core/src/lib/service/miniBrowser'
   import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { newContext } from '@horizon/core/src/lib/constants/browsingContext'
   import { SelectDropdown, type SelectItem } from '../Atoms/SelectDropdown/index'
   import { useDesktopManager } from '../../service/desktop'

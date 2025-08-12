@@ -77,7 +77,7 @@
     WebviewNavigationEvent
   } from '../Webview/Webview.svelte'
   import { Resource, ResourceAnnotation, useResourceManager } from '../../service/resources'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { inlineTextReplaceCode, inlineTextReplaceStylingCode } from '../../constants/inline'
   import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
   import { useConfig } from '../../service/config'

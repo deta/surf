@@ -101,7 +101,7 @@
   import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
   import { Provider } from '@deta/types/src/ai.types'
   import SimilarityResults from '@horizon/core/src/lib/components/Chat/Notes/SimilarityResults.svelte'
-  import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
+  import { Toast, useToasts } from '@deta/ui'
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
   import type { InsertSourceEvent } from '@horizon/core/src/lib/components/Chat/Notes/SimilarityItem.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'

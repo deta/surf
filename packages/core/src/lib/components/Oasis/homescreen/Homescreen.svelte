@@ -10,7 +10,7 @@
   import { DesktopService, useDesktopManager } from '../../../service/desktop'
   import type { GridRect } from '../../../types/desktop.types'
   import { ChangeContextEventTrigger, OpenInMiniBrowserEventFrom } from '@deta/types'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { clamp } from '../../../../../../dragcula/dist/utils/internal'
   import { openDialog } from '../../Core/Dialog/Dialog.svelte'
 

@@ -23,7 +23,7 @@
   import SaveToStuffButton from '@horizon/core/src/lib/components/Oasis/SaveToStuffButton.svelte'
   import { SpaceEntryOrigin, type BookmarkTabState } from '@horizon/core/src/lib/types'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import type { TabResource } from '@horizon/core/src/lib/types'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import CollapsableBlock from './CollapsableBlock.svelte'

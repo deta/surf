@@ -20,7 +20,7 @@
     contextMenu,
     type CtxItem
   } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
-  import { Toast, useToasts } from '@horizon/core/src/lib/service/toast'
+  import { type Toast, useToasts } from '@deta/ui'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { derived } from 'svelte/store'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'

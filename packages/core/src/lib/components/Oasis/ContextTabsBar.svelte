@@ -7,7 +7,7 @@
   import { Resource } from '@horizon/core/src/lib/service/resources'
   import { DragTypeNames, SpaceEntryOrigin, type DragTypes } from '@horizon/core/src/lib/types'
 
-  import { useToasts, type ToastItem } from '@horizon/core/src/lib/service/toast'
+  import { useToasts, type ToastItem } from '@deta/ui'
   import { fade } from 'svelte/transition'
   import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
   import type { BookmarkTabState, Tab } from '@horizon/core/src/lib/types/browser.types'

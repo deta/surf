@@ -10,7 +10,7 @@
 
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 
   import {

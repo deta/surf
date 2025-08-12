@@ -28,7 +28,7 @@
   } from '@deta/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
   import { useTabsManager } from '../../service/tabs'
   import Image from '../Atoms/Image.svelte'

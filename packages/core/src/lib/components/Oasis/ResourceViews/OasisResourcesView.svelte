@@ -12,7 +12,7 @@
   } from '../utils/select'
   import { contextMenu, type CtxItem } from '../../Core/ContextMenu.svelte'
   import { useOasis } from '../../../service/oasis'
-  import { useToasts } from '../../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { useTelemetry } from '../../../service/telemetry'
   import {
     ContextViewDensities,

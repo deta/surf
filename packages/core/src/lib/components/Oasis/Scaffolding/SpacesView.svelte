@@ -23,7 +23,7 @@
   import { Icon } from '@horizon/icons'
   import { OasisSpace, pickRandomColorPair, useOasis } from '../../../service/oasis'
 
-  import { useToasts } from '../../../service/toast'
+  import { useToasts } from '@deta/ui'
   import {
     DragTypeNames,
     SpaceEntryOrigin,

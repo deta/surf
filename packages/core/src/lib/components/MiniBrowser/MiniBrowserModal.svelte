@@ -20,7 +20,7 @@
   } from '@deta/utils'
   import { Icon, IconConfirmation } from '@horizon/icons'
 
-  import { useToasts, type ToastItem } from '@horizon/core/src/lib/service/toast'
+  import { useToasts, type ToastItem } from '@deta/ui'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import Image from '../Atoms/Image.svelte'
   import { derived, writable } from 'svelte/store'

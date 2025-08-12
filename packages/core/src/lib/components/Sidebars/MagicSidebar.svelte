@@ -21,7 +21,7 @@
   import chatRemove from '../../../../public/assets/demo/chatremove.gif'
 
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'

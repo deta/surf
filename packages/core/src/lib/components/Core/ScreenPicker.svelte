@@ -34,7 +34,7 @@
   import { dist, isInsideRect, useLogScope, wait } from '@deta/utils'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import { derived, get, readable, writable } from 'svelte/store'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { AIChat, useAI, type ChatPrompt } from '../../service/ai/ai'
   import { Icon } from '@horizon/icons'
   import { hasParent, startingClass } from '../../utils/dom'

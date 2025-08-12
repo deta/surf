@@ -7,7 +7,7 @@
   import Link from '../Atoms/Link.svelte'
   import { CreateTabEventTrigger, ResourceTagsBuiltInKeys, type SFFSResourceTag } from '@deta/types'
   import { Icon } from '@horizon/icons'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { createEventDispatcher } from 'svelte'
   import { useTabsManager } from '../../service/tabs'
 

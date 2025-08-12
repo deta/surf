@@ -35,7 +35,7 @@
   import Preview from './Previews/Preview.svelte'
   import { slide } from 'svelte/transition'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import {
     selectedItemIds,
     addSelectionById

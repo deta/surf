@@ -117,11 +117,11 @@
   import { provideOasis, colorPairs, OasisSpace } from '../service/oasis'
   import OasisSpaceRenderer from './Oasis/OasisSpace.svelte'
 
+  import { ToastsProvider, provideToasts } from '@deta/ui'
+
   import HeroScreen from './Onboarding/HeroScreen.svelte'
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
   import RootSidebar from './Sidebars/RootSidebar.svelte'
-  import ToastsProvider from './Toast/ToastsProvider.svelte'
-  import { provideToasts, type Toast } from '../service/toast'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
   import { Dragcula, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'

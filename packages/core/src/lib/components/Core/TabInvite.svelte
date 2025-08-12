@@ -6,7 +6,7 @@
   import { signature } from '../../utils/perfect-freehand'
   import { Icon } from '@horizon/icons'
   import { writable } from 'svelte/store'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
 
   let layers: {
     path: string

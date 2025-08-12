@@ -39,7 +39,7 @@
   import { DragTypeNames, SpaceEntryOrigin, type DragTypes } from '../../types'
 
   import { Resource, useResourceManager } from '../../service/resources'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { useConfig } from '../../service/config'
   import { useTabsManager } from '../../service/tabs'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'

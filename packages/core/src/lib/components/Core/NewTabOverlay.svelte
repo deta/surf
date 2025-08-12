@@ -3,7 +3,7 @@
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useLogScope, useLocalStorageStore } from '@deta/utils'
   import { OasisSpace, useOasis } from '../../service/oasis'
-  import { useToasts } from '../../service/toast'
+  import { useToasts } from '@deta/ui'
   import { useConfig } from '../../service/config'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import type { OverlayEvents } from '../Overlay/types'

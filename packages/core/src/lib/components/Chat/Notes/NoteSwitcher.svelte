@@ -15,7 +15,7 @@
     type CtxItem
   } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
-  import { useToasts } from '@horizon/core/src/lib/service/toast'
+  import { useToasts } from '@deta/ui'
   import { ResourceTypes } from '@horizon/core/src/lib/types'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
