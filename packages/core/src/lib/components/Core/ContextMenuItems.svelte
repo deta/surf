@@ -425,7 +425,7 @@
       //animation: clip 0.1s forwards;
     }
     */
-    :global(&.hidden) {
+    &.hidden {
       display: none;
     }
 

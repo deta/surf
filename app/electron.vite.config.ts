@@ -142,13 +142,13 @@ export default defineConfig({
       sourcemap: true,
       rollupOptions: {
         input: {
-          main: resolve(__dirname, 'src/renderer/index.html'),
-          setup: resolve(__dirname, 'src/renderer/setup.html'),
-          settings: resolve(__dirname, 'src/renderer/settings.html'),
-          updates: resolve(__dirname, 'src/renderer/updates.html'),
-          pdf: resolve(__dirname, 'src/renderer/pdf.html'),
-          announcements: resolve(__dirname, 'src/renderer/announcements.html'),
-          overlay: resolve(__dirname, 'src/renderer/overlay.html')
+          main: resolve(__dirname, 'src/renderer/Core/core.html'),
+          setup: resolve(__dirname, 'src/renderer/Setup/setup.html'),
+          settings: resolve(__dirname, 'src/renderer/Settings/settings.html'),
+          updates: resolve(__dirname, 'src/renderer/Updates/updates.html'),
+          pdf: resolve(__dirname, 'src/renderer/PDF/pdf.html'),
+          announcements: resolve(__dirname, 'src/renderer/Announcements/announcements.html'),
+          overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         plugins: [

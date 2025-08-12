@@ -74,7 +74,9 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
   const tabParam = tab ? `?tab=${tab}` : ''
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    settingsWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/settings.html${tabParam}`)
+    settingsWindow.loadURL(
+      `${process.env['ELECTRON_RENDERER_URL']}/Settings/settings.html${tabParam}`
+    )
   } else {
     settingsWindow.loadFile(join(settingsEntryPoint, 'settings.html') + tabParam)
   }

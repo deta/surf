@@ -4,7 +4,7 @@
     createEventDispatcher,
     onMount,
     onDestroy,
-    SvelteComponent,
+    type SvelteComponent,
     type ComponentType
   } from 'svelte'
 

@@ -75,9 +75,9 @@ export function createSetupWindow(options?: { presetInviteCode?: string; presetE
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    setupWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/setup.html`)
+    setupWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/Setup/setup.html`)
   } else {
-    setupWindow.loadFile(join(__dirname, '../renderer/setup.html'))
+    setupWindow.loadFile(join(__dirname, '../renderer/Setup/setup.html'))
   }
 }
 
