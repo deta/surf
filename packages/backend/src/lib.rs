@@ -17,6 +17,8 @@ pub enum BackendError {
     ReqwestError(#[from] reqwest::Error),
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
+    #[error("Key-value store error: {0}")]
+    KeyValueStoreError(#[from] crate::store::kv::KeyValueStoreError),
     #[error("LLM Error: {r#type}: {message}")]
     LLMClientError { r#type: String, message: String },
     #[error("LLM Bad Request error")]

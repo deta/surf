@@ -4,7 +4,7 @@ use crate::{
     api::message::{
         AIMessage, EventBusMessage, ProcessorMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
     },
-    store::{db::Database, models::current_time},
+    store::{db::Database, kv::KeyValueStore, models::current_time},
     BackendError, BackendResult,
 };
 
@@ -16,6 +16,7 @@ use std::{path::Path, sync::Arc};
 
 pub struct Worker {
     pub db: Database,
+    pub kv: KeyValueStore,
     pub ai: AI,
     pub channel: Channel,
     pub event_bus_rx: Arc<Root<JsFunction>>,
@@ -51,6 +52,11 @@ impl Worker {
             .as_os_str()
             .to_string_lossy()
             .to_string();
+        let kv_db_path = Path::new(&backend_root_path)
+            .join("kv-0-01.sqlite")
+            .as_os_str()
+            .to_string_lossy()
+            .to_string();
         let resources_path = Path::new(&backend_root_path)
             .join("resources")
             .as_os_str()
@@ -64,6 +70,7 @@ impl Worker {
 
         Self {
             db: Database::new(&db_path, run_migrations).unwrap(),
+            kv: KeyValueStore::new(&kv_db_path).unwrap(),
             ai: AI::new(api_base, api_key, local_ai_socket_path).unwrap(),
             channel,
             event_bus_rx,
@@ -149,7 +156,45 @@ pub fn worker_thread_entry_point(
             WorkerMessage::SpaceMessage(message) => {
                 handle_space_message(&mut worker, oneshot, message)
             }
+            WorkerMessage::KVStoreMessage(message) => {
+                handle_kv_store_message(&mut worker, oneshot, message)
+            }
             WorkerMessage::AppMessage(message) => handle_app_message(&mut worker, oneshot, message),
+        }
+    }
+}
+
+// TODO: consolidate these two functions
+pub fn send_serialized_worker_response(
+    channel: &mut Channel,
+    oneshot: Option<TunnelOneshot>,
+    result: BackendResult<String>,
+) {
+    let oneshot = match oneshot {
+        Some(oneshot) => oneshot,
+        None => return,
+    };
+
+    match oneshot {
+        TunnelOneshot::Rust(tx) => {
+            let _ = tx
+                .send(result)
+                .map_err(|e| eprintln!("oneshot receiver is dropped: {e}"));
+        }
+        TunnelOneshot::Javascript(deferred) => {
+            channel.send(move |mut cx| {
+                match result {
+                    Ok(resp) => {
+                        let resp = cx.string(&resp);
+                        deferred.resolve(&mut cx, resp);
+                    }
+                    Err(err) => {
+                        let err = cx.string(err.to_string());
+                        deferred.reject(&mut cx, err);
+                    }
+                }
+                Ok(())
+            });
         }
     }
 }

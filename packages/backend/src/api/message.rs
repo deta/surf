@@ -34,6 +34,7 @@ pub enum WorkerMessage {
     ResourceTagMessage(ResourceTagMessage),
     SpaceMessage(SpaceMessage),
     AppMessage(AppMessage),
+    KVStoreMessage(KVStoreMessage),
 }
 
 #[derive(Debug)]
@@ -256,4 +257,14 @@ pub enum AppMessage {
     DeleteAppMessage(String),
     ListAppsMessage,
     UpdateAppContentMessage(String, String),
+}
+
+#[derive(Debug, serde::Serialize)]
+pub enum KVStoreMessage {
+    CreateTable(String),
+    List(String),
+    Get(String, String),
+    Delete(String, String),
+    Put(String, String, String),
+    Update(String, String, String),
 }
