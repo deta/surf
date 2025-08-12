@@ -16,7 +16,7 @@
     "build:desktop:lin:x64": "yarn turbo run desktop#build:lin:x64",
     "build:desktop:lin:arm": "yarn turbo run desktop#build:lin:arm",
     "build:desktop:win:x64": "yarn turbo run desktop#build:win:x64",
-    "build:backend": "yarn turbo run @horizon/backend#build",
+    "build:backend": "yarn turbo run @deta/backend#build",
     "build:tela": "yarn workspace @horizon/tela build",
     "build:dragcula": "yarn workspace @horizon/dragcula build",
     "lint": "turbo lint",

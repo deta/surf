@@ -7,7 +7,7 @@
   import { quartOut } from 'svelte/easing'
   import { fly } from 'svelte/transition'
   import { createEventDispatcher, onMount } from 'svelte'
-  import type { App } from '@horizon/backend/types'
+  import type { App } from '@deta/backend/types'
   import { Editor } from '@deta/editor'
   import { wait } from '@deta/utils'
 

@@ -18,7 +18,7 @@ import {
 import { WebParser } from '@deta/web-parser'
 import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
-import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
+import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@deta/backend/types'
 import { ModelTiers } from '@deta/types/src/ai.types'
 import { ResourceManager } from '@deta/services'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'

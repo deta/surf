@@ -9,7 +9,7 @@ import {
   type Message,
   type Model as ModelBackend,
   type Quota
-} from '@horizon/backend/types'
+} from '@deta/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { appendURLPath, generateHash, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
 import {

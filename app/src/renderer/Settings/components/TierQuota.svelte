@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-  import type { Quota } from '@horizon/backend/types'
+  import type { Quota } from '@deta/backend/types'
 
   // prettier-ignore
   export type ParsedQuota = {

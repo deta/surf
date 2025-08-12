@@ -29,6 +29,7 @@
     "@horizon/typescript-config": "*",
     "@deta/utils": "*",
     "@deta/web-parser": "*",
+    "@deta/ui": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@svelte-plugins/tooltips": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",
@@ -63,7 +64,7 @@
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.4.0",
-    "bits-ui": "^0.21.12",
+    "bits-ui": "0.21.12",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
     "dexie": "^3.2.4",

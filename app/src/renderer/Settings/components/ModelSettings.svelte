@@ -35,7 +35,7 @@
   import { contextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import type { CtxItem } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import { SFFS } from '@deta/services'
-  import type { Quota } from '@horizon/backend/types'
+  import type { Quota } from '@deta/backend/types'
   import TierQuota from '../components/TierQuota.svelte'
   import QuotaItem from '../components/Quota.svelte'
   import QuotaWrapper from '../components/QuotaWrapper.svelte'

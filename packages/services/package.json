@@ -17,7 +17,7 @@
     "svelte": "^4.2.19",
     "@deta/utils": "*",
     "@deta/web-parser": "*",
-    "@horizon/backend": "*",
+    "@deta/backend": "*",
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
     "typescript": "^5.2.2"

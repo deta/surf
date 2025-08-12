@@ -52,7 +52,7 @@ import {
   type ResourceStateCombined
 } from '@deta/types'
 import { getContext, onDestroy, setContext, tick } from 'svelte'
-import type { Model } from '@horizon/backend/types'
+import type { Model } from '@deta/backend/types'
 import { WebParser } from '@deta/web-parser'
 import type { ConfigService } from './config'
 import { EventEmitterBase, ResourceTag, SearchResourceTags } from '@deta/utils'

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Quota } from '@horizon/backend/types'
+  import type { Quota } from '@deta/backend/types'
   import UsageBar from './UsageBar.svelte'
   import { getFormattedDate, getFormattedTime, tooltip } from '@deta/utils'
 

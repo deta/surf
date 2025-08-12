@@ -28,7 +28,7 @@
     ResourceTypes,
     SaveToOasisEventTrigger
   } from '@deta/types'
-  import type { App } from '@horizon/backend/types'
+  import type { App } from '@deta/backend/types'
 
   import type {
     AIChatMessageParsed,

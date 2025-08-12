@@ -955,7 +955,7 @@ export class ResourceHandle {
 }
 
 const sffs = (() => {
-  const sffs = require('@horizon/backend')
+  const sffs = require('@deta/backend')
 
   let handle = null
   let server: http.Server | null = null

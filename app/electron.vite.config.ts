@@ -78,7 +78,7 @@ export default defineConfig({
     envPrefix: 'P_VITE_',
     plugins: [
       svelte(svelteOptions),
-      externalizeDepsPlugin({ exclude: ['@horizon/backend'] }),
+      externalizeDepsPlugin({ exclude: ['@deta/backend'] }),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webview.js'),
         injectCode: (cssCode, _options) => {
@@ -135,7 +135,7 @@ export default defineConfig({
       */
       Markdown({ mode: [Mode.MARKDOWN, Mode.HTML] }),
       svelte(svelteOptions),
-      createLicensePlugin('renderer'),
+      // createLicensePlugin('renderer'),
       createConcatLicensesPlugin()
     ],
     build: {

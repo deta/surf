@@ -4,11 +4,11 @@
   "globalEnv": ["*"],
   "ui": "tui",
   "tasks": {
-    "@horizon/backend#build": {
+    "@deta/backend#build": {
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
-    "@horizon/backend#dev": {
+    "@deta/backend#dev": {
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
@@ -20,10 +20,10 @@
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
     },
-    "@horizon/backend-server#build": {
+    "@deta/backend-server#build": {
       "outputs": ["backend-server"]
     },
-    "@horizon/backend-server#dev": {
+    "@deta/backend-server#dev": {
       "outputs": ["backend-server"]
     },
     "desktop#build": {
@@ -92,11 +92,7 @@
       "outputs": [".dist/**", ".out/**"]
     },
     "build:app:backend": {
-      "dependsOn": [
-        "@deta/trackpad#build",
-        "@horizon/backend#build",
-        "@horizon/backend-server#build"
-      ],
+      "dependsOn": ["@deta/trackpad#build", "@deta/backend#build", "@deta/backend-server#build"],
       "outputs": [".dist/**", ".out/**"]
     },
     "build:app": {
@@ -114,8 +110,8 @@
       "dependsOn": [
         "@horizon/dragcula#build",
         "@deta/trackpad#dev",
-        "@horizon/backend#dev",
-        "@horizon/backend-server#dev"
+        "@deta/backend#dev",
+        "@deta/backend-server#dev"
       ],
       "outputs": [".dist/**", ".out/**"]
     },
@@ -123,8 +119,8 @@
       "dependsOn": [
         "@horizon/dragcula#build",
         "@deta/trackpad#dev",
-        "@horizon/backend#dev",
-        "@horizon/backend-server#build"
+        "@deta/backend#dev",
+        "@deta/backend-server#build"
       ],
       "cache": false,
       "persistent": true

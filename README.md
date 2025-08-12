@@ -37,8 +37,8 @@ This monorepo includes the following packages/apps:
 
 - `desktop`: a Electron app
 - `web`: a svelte app (just a placeholder for now)
-- `@horizon/backend`: a Rust backend that's compiled to a Node.js module
-- `@horizon/backend-server`: a Rust backend that's compiled to a standalone server, responsible for compute intensive AI tasks (embeddings)
+- `@deta/backend`: a Rust backend that's compiled to a Node.js module
+- `@deta/backend-server`: a Rust backend that's compiled to a standalone server, responsible for compute intensive AI tasks (embeddings)
 - `@horizon/core`: Horizon specific components and logic shared by both `desktop` and `web` applications
 - `@deta/types`: a general Svelte component library shared by both `desktop` and `web` applications
 - `@horizon/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)

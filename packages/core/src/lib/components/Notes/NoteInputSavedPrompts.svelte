@@ -5,7 +5,7 @@
 
   import { useLogScope } from '@deta/utils'
 
-  import type { App } from '@horizon/backend/types'
+  import type { App } from '@deta/backend/types'
 
   import { useConfig } from '../../service/config'
   import { useAI, type ChatPrompt } from '@horizon/core/src/lib/service/ai/ai'

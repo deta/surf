@@ -49,8 +49,8 @@ import type {
   QuotasResponse,
   Message,
   CreateChatCompletionOptions
-} from '@horizon/backend/types'
-import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
+} from '@deta/backend/types'
+import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@deta/backend/types'
 
 export type HorizonToCreate = Optional<
   HorizonData,
