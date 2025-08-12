@@ -42,7 +42,17 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
     let api_key = cx.argument::<JsString>(3)?.value(&mut cx);
     let local_ai_mode = cx.argument::<JsBoolean>(4)?.value(&mut cx);
     let language_setting = cx.argument::<JsString>(5)?.value(&mut cx);
-    let event_bus_rx_callback = cx.argument::<JsFunction>(6)?.root(&mut cx);
+    let num_worker_threads = cx.argument_opt(6).and_then(|arg| {
+        arg.downcast::<JsNumber, _>(&mut cx)
+            .ok()
+            .map(|n| n.value(&mut cx) as usize)
+    });
+    let num_processor_threads = cx.argument_opt(7).and_then(|arg| {
+        arg.downcast::<JsNumber, _>(&mut cx)
+            .ok()
+            .map(|n| n.value(&mut cx) as usize)
+    });
+    let event_bus_rx_callback = cx.argument::<JsFunction>(8)?.root(&mut cx);
 
     match std::fs::create_dir_all(&backend_root_path) {
         Ok(_) => {}
@@ -61,6 +71,8 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
         api_key,
         local_ai_mode,
         language_setting,
+        num_worker_threads,
+        num_processor_threads,
     };
     let tunnel = tunnel::WorkerTunnel::new(&mut cx, config, event_bus_rx_callback);
 

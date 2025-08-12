@@ -4,7 +4,7 @@ use strum::Display;
 
 use crate::BackendResult;
 
-use super::db::enable_wal_mode;
+use super::db::setup_connection_settings;
 
 #[derive(thiserror::Error, Debug, Display)]
 pub enum KeyValueStoreError {
@@ -28,8 +28,7 @@ pub struct KeyValueStore {
 impl KeyValueStore {
     pub fn new(db_path: &str) -> BackendResult<Self> {
         let conn = Connection::open(db_path)?;
-        conn.busy_timeout(std::time::Duration::from_secs(60))?;
-        enable_wal_mode(&conn)?;
+        setup_connection_settings(&conn)?;
         Ok(KeyValueStore { conn })
     }
 
