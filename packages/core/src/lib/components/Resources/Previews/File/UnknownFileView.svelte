@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import type { Resource } from '../../../../service/resources'
   import {
     generateRandomPastelColor,

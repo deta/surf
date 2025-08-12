@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher } from 'svelte'
   import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable, derived } from 'svelte/store'

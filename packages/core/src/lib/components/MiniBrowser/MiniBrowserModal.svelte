@@ -18,7 +18,7 @@
     tooltip,
     checkIfYoutubeUrl
   } from '@deta/utils'
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
 
   import { useToasts, type ToastItem } from '@deta/ui'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'

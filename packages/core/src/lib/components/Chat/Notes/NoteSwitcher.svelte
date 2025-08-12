@@ -3,7 +3,7 @@
   import { derived, writable, type Writable } from 'svelte/store'
 
   import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import {
     SelectDropdown,
@@ -23,7 +23,7 @@
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { EventContext } from '@deta/types'
-  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+  import { SearchResourceTags } from '@deta/utils/src/tags'
 
   export let selectedChatId: Writable<string> = writable('')
   export let open: Writable<boolean> = writable(false)

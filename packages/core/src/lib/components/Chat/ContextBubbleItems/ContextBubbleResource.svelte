@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { getFileKind } from '@deta/utils'
 
   import FileIcon from '../../Resources/Previews/File/FileIcon.svelte'

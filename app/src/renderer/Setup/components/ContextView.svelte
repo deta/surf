@@ -3,11 +3,11 @@
   import Button from './Button.svelte'
   import LeftPanel from './LeftPanel.svelte'
   import RightPanel from './RightPanel.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { fade, fly } from 'svelte/transition'
   import { Persona } from './personas'
   import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
-  import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
+  // import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import type { SpaceIconChange } from '@horizon/core/src/lib/components/Oasis/IconSelector.svelte'
   import { useLogScope } from '@deta/utils'
   import DemoContexts from './DemoContexts.svelte'
@@ -17,12 +17,12 @@
 
   const dispatch = createEventDispatcher()
   const log = useLogScope('ContextView')
-  const oasis = useOasis()
+  // const oasis = useOasis()
 
   let showContent = false
   let showButton = false
 
-  let space: OasisSpace | undefined = undefined
+  let space: undefined = undefined
   let contextName = ''
   let contextEmoji = ''
   let contextColors: [string, string] = ['#76E0FF', '#4EC9FB']
@@ -31,29 +31,29 @@
   const handleContinue = async () => {
     log.debug('Creating context', { contextName, contextEmoji, contextColors, contextImage })
 
-    if (space.dataValue.default) {
-      await space.updateData({
-        folderName: contextName,
-        emoji: contextEmoji,
-        colors: contextColors,
-        imageIcon: contextImage,
-        useAsBrowsingContext: true
-      })
+    // if (space.dataValue.default) {
+    //   await space.updateData({
+    //     folderName: contextName,
+    //     emoji: contextEmoji,
+    //     colors: contextColors,
+    //     imageIcon: contextImage,
+    //     useAsBrowsingContext: true
+    //   })
 
-      log.debug('Updated default context', space)
-    } else {
-      const newContext = await oasis.createSpace({
-        folderName: contextName,
-        emoji: contextEmoji,
-        colors: contextColors,
-        imageIcon: contextImage,
-        default: true,
-        pinned: true,
-        useAsBrowsingContext: true
-      })
+    //   log.debug('Updated default context', space)
+    // } else {
+    //   const newContext = await oasis.createSpace({
+    //     folderName: contextName,
+    //     emoji: contextEmoji,
+    //     colors: contextColors,
+    //     imageIcon: contextImage,
+    //     default: true,
+    //     pinned: true,
+    //     useAsBrowsingContext: true
+    //   })
 
-      log.debug('Created new context', newContext)
-    }
+    //   log.debug('Created new context', newContext)
+    // }
 
     dispatch('viewChange', 'language')
   }
@@ -108,22 +108,22 @@
       contextEmoji = '🏠'
     }
 
-    const defaultSpace = get(oasis.spaces).find((s) => s.dataValue.default)
-    if (defaultSpace) {
-      log.debug('Found default space', defaultSpace)
-      space = defaultSpace
+    // const defaultSpace = get(oasis.spaces).find((s) => s.dataValue.default)
+    // if (defaultSpace) {
+    //   log.debug('Found default space', defaultSpace)
+    //   space = defaultSpace
 
-      const data = defaultSpace.dataValue
-      contextName = data.folderName
-      contextEmoji = data.emoji
-      contextColors = data.colors
-      contextImage = data.imageIcon
-    } else {
-      space = oasis.createFakeSpace({
-        folderName: contextName,
-        emoji: contextEmoji
-      })
-    }
+    //   const data = defaultSpace.dataValue
+    //   contextName = data.folderName
+    //   contextEmoji = data.emoji
+    //   contextColors = data.colors
+    //   contextImage = data.imageIcon
+    // } else {
+    //   space = oasis.createFakeSpace({
+    //     folderName: contextName,
+    //     emoji: contextEmoji
+    //   })
+    // }
 
     showContent = true
     setTimeout(() => {

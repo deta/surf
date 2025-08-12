@@ -5,7 +5,7 @@
     ContextItemIconTypes,
     type ContextItem
   } from '@horizon/core/src/lib/service/ai/contextManager'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   export let item: ContextItem
   export let additionalLabel: string | undefined = undefined

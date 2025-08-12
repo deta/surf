@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { ContextItemResource, ContextManager } from '../../service/ai/contextManager'
   import { derived, writable, type Writable } from 'svelte/store'
   import { hover, useLogScope } from '@deta/utils'

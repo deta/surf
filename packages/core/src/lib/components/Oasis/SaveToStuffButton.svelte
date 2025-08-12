@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { writable, derived } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import {
     SelectDropdown,

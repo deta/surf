@@ -6,7 +6,7 @@ import { mkdirSync } from 'fs'
 import { isDev, isMac, isWindows, useLogScope } from '@deta/utils'
 import { AuthenticatedAPI } from '@deta/api'
 import { TelemetryEventTypes } from '@deta/types'
-import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
 
 import { createWindow, getMainWindow } from './mainWindow'
 import { setAppMenu } from './appMenu'
@@ -183,6 +183,8 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
 }
 
 const initializeApp = async () => {
+  console.log('initilizing app', is.dev ? 'in development mode' : 'in production mode')
+
   isAppLaunched = true
   setInterval(cleanupTempFiles, 60 * 60 * 1000)
   electronApp.setAppUserModelId('ea.browser.deta.surf')
@@ -195,6 +197,8 @@ const initializeApp = async () => {
   setupIpc(backendRootPath)
 
   if (!is.dev) {
+    console.log('Checking if app is setup')
+
     if (!userConfig.api_key) {
       log.debug('No api key found, prompting user to enter invite token')
       createSetupWindow()
@@ -224,6 +228,7 @@ const initializeApp = async () => {
   }
 
   if (isDev) {
+    console.log('Running in development mode, setting app icon to dev icon')
     app.dock?.setIcon(join(app.getAppPath(), 'build/resources/dev/icon.png'))
   }
 
@@ -231,10 +236,11 @@ const initializeApp = async () => {
   await setupAdblocker()
   setAppMenu()
 
-  if (CONFIG.forceSetupWindow) {
-    createSetupWindow()
-    return
-  }
+  // if (CONFIG.forceSetupWindow) {
+  //   log.debug('Forcing setup window to open')
+  //   createSetupWindow()
+  //   return
+  // }
 
   createWindow()
 

@@ -6,7 +6,7 @@
   import { derived, writable, type Readable } from 'svelte/store'
   import Input from './Atoms/Input/Input.svelte'
   import AppBarButton from '../Browser/AppBarButton.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import PromptPills, { type PromptPillItem } from './Atoms/PromptPills.svelte'
   import type { ContextManager } from '../../service/ai/contextManager'
   import { BUILT_IN_PAGE_PROMPTS } from '../../constants/prompts'

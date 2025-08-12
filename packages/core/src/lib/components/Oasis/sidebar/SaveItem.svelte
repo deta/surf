@@ -3,7 +3,7 @@
   import { writable, derived } from 'svelte/store'
   import { Tooltip } from 'bits-ui'
 
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { flyAndScale, getFileType, getHostname, tooltip, useLogScope } from '@deta/utils'
   import type { ResourceStateCombined } from '@deta/types'
   import { Editor } from '@deta/editor'

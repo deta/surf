@@ -26,7 +26,7 @@
     getFileKind,
     tooltip
   } from '@deta/utils'
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
 
   import { useToasts } from '@deta/ui'
   import { handleInlineAI } from '@horizon/core/src/lib/service/ai/helpers'
@@ -37,7 +37,7 @@
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { ResourceTag } from '@deta/utils/src/tags'
 
   export let resource: Resource
   export let active: boolean = true

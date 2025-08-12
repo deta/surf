@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
 
   import { useContextService, type ContextLink } from '@horizon/core/src/lib/service/contexts'
   import { useOasis, type OasisSpace } from '@horizon/core/src/lib/service/oasis'

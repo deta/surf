@@ -7,7 +7,7 @@
 <script lang="ts">
   import { Editor } from '@deta/editor'
   import { writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher } from 'svelte'
   import ModelPicker from './ModelPicker.svelte'
   import AppBarButton from '../Browser/AppBarButton.svelte'

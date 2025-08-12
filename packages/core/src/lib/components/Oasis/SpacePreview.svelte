@@ -10,7 +10,7 @@
   type Origin = 'smartcontext' | 'oasis'
 
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
-  import { DynamicIcon } from '@horizon/icons'
+  import { DynamicIcon } from '@deta/icons'
 
   const oasis = useOasis()
 

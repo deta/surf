@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 </script>
 
 <div class="empty-wrapper">

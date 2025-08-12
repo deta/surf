@@ -6,14 +6,14 @@
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
   import { derived, get, writable } from 'svelte/store'
   import { isMac, useDebounce } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { DragTypeNames } from '../../../types'
   import ResourcePreview from '../../Resources/ResourcePreview.svelte'
   import SaveItem from './SaveItem.svelte'
   import { fly } from 'svelte/transition'
   import { useConfig } from '../../../service/config'
   import Tooltip from '@horizon/core/src/lib/components/Atoms/Tooltip.svelte'
-  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+  import { SearchResourceTags } from '@deta/utils/src/tags'
 
   export let wasMouseInside = writable(false)
   export let canHover = false

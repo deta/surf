@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { flyAndScale } from '@deta/utils'
   import { Tooltip } from 'bits-ui'
   import { createEventDispatcher } from 'svelte'

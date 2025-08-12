@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DynamicIcon } from '@horizon/icons'
+  import { DynamicIcon } from '@deta/icons'
   import { tooltip } from '@deta/utils'
 
   export let icon: string = 'grid'

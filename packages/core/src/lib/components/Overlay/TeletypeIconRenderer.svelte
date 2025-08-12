@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { OasisService, OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
 
   export let name: string
   export let size: string = '18px'

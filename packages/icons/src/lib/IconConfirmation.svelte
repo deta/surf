@@ -55,7 +55,7 @@
 To show the confirmation icon, call the `showConfirmation` function on the component:
 ```svelte
 <script lang="ts">
-  import { IconConfirmation } from '@horizon/icons'
+  import { IconConfirmation } from '@deta/icons'
   import { onMount } from 'svelte'
 
   let icon: IconConfirmation
@@ -70,7 +70,7 @@ As an alternative, you can set the `show` prop to `true` to show the confirmatio
 
 ```svelte
 <script lang="ts">
-  import { IconConfirmation } from '@horizon/icons'
+  import { IconConfirmation } from '@deta/icons'
 
   let showConfirmation = false
 </script>

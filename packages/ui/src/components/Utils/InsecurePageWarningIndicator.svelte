@@ -2,7 +2,7 @@
   import { writable, type Writable } from 'svelte/store'
   import { slide } from 'svelte/transition'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import CustomPopover from '../Popover/CustomPopover.svelte'
 
   export let showText: boolean = false

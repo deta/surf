@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
 
   import { useClipboard } from '@deta/utils'
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
   import Button from './Button.svelte'
 
   export let output = ''

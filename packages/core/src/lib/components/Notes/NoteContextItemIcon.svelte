@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ContextItemTypes, type ContextItem } from '@horizon/core/src/lib/service/ai/context'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import type { Readable } from 'svelte/store'
 
   export let item: ContextItem

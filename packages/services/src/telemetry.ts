@@ -49,7 +49,8 @@ import {
   SummarizeEventContentSource,
   NoteCreateCitationEventTrigger,
   type PageChatMessageSentData,
-  DragTypeNames
+  DragTypeNames,
+  MentionAction
 } from '@deta/types'
 
 import { useLogScope } from '@deta/utils'
@@ -57,10 +58,9 @@ import { getPrimaryResourceType } from './resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'
-import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
 
 // TODO: get rid of the legacy core package import
-import { Tab } from '@horizon/core/src/lib/types'
+// import { Tab } from '@horizon/core/src/lib/types'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -267,7 +267,7 @@ export class Telemetry {
   async trackCreateTab(
     trigger: CreateTabEventTrigger,
     foreground: boolean,
-    type: Tab['type'] = 'page',
+    type = 'page',
     scope: BrowserContextScope = BrowserContextScope.General
   ) {
     await this.trackEvent(TelemetryEventTypes.CreateTab, {
@@ -280,7 +280,7 @@ export class Telemetry {
 
   async trackActivateTab(
     trigger: ActivateTabEventTrigger,
-    type: Tab['type'],
+    type: string,
     scope: BrowserContextScope = BrowserContextScope.General
   ) {
     await this.trackEvent(TelemetryEventTypes.ActivateTab, {

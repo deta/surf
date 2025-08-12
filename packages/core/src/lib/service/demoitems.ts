@@ -9,7 +9,7 @@ import { useLogScope } from '@deta/utils'
 import type { TabsManager } from './tabs'
 import { ONBOARDING_NOTES, type OnboardingNote } from '../constants/notes'
 import { ONBOARDING_CODEGEN } from '../constants/codegen'
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+import { ResourceTag } from '@deta/utils/src/tags'
 
 const log = useLogScope('DemoItems')
 

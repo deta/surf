@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   // Props with default configuration
   export let config = {

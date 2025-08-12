@@ -3,7 +3,7 @@
   import { icons, type Icons } from './main'
 
   /**
-   * The name of the icon to display. The `name` prop must be one of the keys from the `Icons` enum in the `@horizon/icons` package.
+   * The name of the icon to display. The `name` prop must be one of the keys from the `Icons` enum in the `@deta/icons` package.
    */
   export let name: Icons
 
@@ -31,13 +31,13 @@
 </script>
 
 <!--
-@component Icon - A component that displays an icon from the `@horizon/icons` package.
+@component Icon - A component that displays an icon from the `@deta/icons` package.
 
-To use the `Icon` component, import it from the `@horizon/icons` package and pass the `name` prop to specify the icon to display:
+To use the `Icon` component, import it from the `@deta/icons` package and pass the `name` prop to specify the icon to display:
 
 ```svelte
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 </script>
 
 <Icon name="check" />

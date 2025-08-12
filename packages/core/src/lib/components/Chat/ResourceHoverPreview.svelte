@@ -2,7 +2,7 @@
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
   import { getFileType, truncate } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   export let resource: Resource | null = null
   export let loading: boolean = false

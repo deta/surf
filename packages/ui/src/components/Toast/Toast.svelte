@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Toast } from './toast'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { hover, tooltip } from '@deta/utils'
   import { createEventDispatcher } from 'svelte'
   import { scale } from 'svelte/transition'
@@ -63,7 +63,7 @@
 </article>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @use '@deta/ui/src/styles/utils' as utils;
 
   .toast {
     @include utils.light-dark-custom(

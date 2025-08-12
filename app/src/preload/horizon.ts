@@ -48,7 +48,7 @@ import {
   NewWindowRequest,
   OpenURL,
   SpaceBasicData
-} from '@horizon/core/src/lib/service/ipc/events'
+} from '@deta/services/src/ipc'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 
 enum ResourceProcessingStateType {

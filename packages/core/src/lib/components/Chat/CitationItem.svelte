@@ -28,7 +28,7 @@
     type CitationHandlerContext
   } from './ChatMessageMarkdown.svelte'
   import { DragTypeNames, ResourceTagsBuiltInKeys, type AIChatMessageSource } from '../../types'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import {
     CONTEXT_MENU_KEY,
     contextMenu,

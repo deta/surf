@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { hover, tooltip, useLogScope } from '@deta/utils'
 
   import { ResourceTagsBuiltInKeys } from '@horizon/core/src/lib/types'

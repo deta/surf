@@ -1,7 +1,8 @@
-import type { UserSettings } from '@deta/types'
-import { get, writable, type Writable } from 'svelte/store'
-import { useLogScope } from '@deta/utils'
 import { getContext, setContext } from 'svelte'
+import { get, writable, type Writable } from 'svelte/store'
+
+import { useLogScope } from '@deta/utils'
+import type { UserSettings } from '@deta/types'
 
 export class ConfigService {
   settings: Writable<UserSettings>

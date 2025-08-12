@@ -32,14 +32,14 @@ import {
   type MoveResourceRequest
 } from '../types'
 
-import { type ResourceManager, ResourceNote, type Resource } from './resources'
-import type { Telemetry } from './telemetry'
+import { type ResourceManager, ResourceNote, type Resource } from '@deta/services'
+import type { Telemetry } from '@deta/services'
 import type { TabsManager } from './tabs'
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
 import { blobToSmallImageUrl } from '../utils/screenshot'
-import type { ConfigService } from './config'
+import type { ConfigService } from '@deta/services'
 import { ALL_FILTERS } from '../constants/resourceFilters'
-import type { SpaceBasicData } from './ipc/events'
+import type { SpaceBasicData } from '@deta/services'
 import { createContextService, type ContextService } from './contexts'
 import { addSelectionById } from '../components/Oasis/utils/select'
 import { SavingItem, type SaveItemMetadata } from './saving'
@@ -47,8 +47,7 @@ import type { SmartNoteManager } from './ai/note'
 import { ClipboardService } from './clipboard'
 import { checkBrowsingContextSelectionNeeded, migrateSpaceBrowsingContext } from './migration'
 import { BuiltInSpaces, BuiltInSpaceId } from '../constants/spaces'
-import { EventEmitterBase } from '@deta/utils'
-import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+import { EventEmitterBase, SearchResourceTags } from '@deta/utils'
 
 export type OasisEvents = {
   created: (space: OasisSpace) => void

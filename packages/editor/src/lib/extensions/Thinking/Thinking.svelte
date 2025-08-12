@@ -1,6 +1,6 @@
 <script lang="ts">
   import { NodeViewWrapper } from 'svelte-tiptap'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   export let expanded = false
   export let selected = false

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { mimeTypeToCodeLanguage, useLogScope } from '@deta/utils'
   import {
     useResourceManager,
@@ -20,7 +20,7 @@
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import type { TabPage } from '@horizon/core/src/lib/types'
   import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'
-  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+  import { SearchResourceTags } from '@deta/utils/src/tags'
 
   export let tab: TabPage
   export let resourceId: string | null = null

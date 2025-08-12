@@ -1,4 +1,4 @@
-import type { Icons } from '@horizon/icons'
+import type { Icons } from '@deta/icons'
 
 export type SelectItem = {
   id: string

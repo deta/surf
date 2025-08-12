@@ -18,7 +18,7 @@ import {
 import { ResourceTagsBuiltInKeys, type Tab, type TabPage, type TabSpace } from '../../types'
 
 import type { OasisSpace } from '../oasis'
-import type { Resource, ResourceManager } from '../resources'
+import type { Resource, ResourceManager } from '@deta/services'
 import type { TabsManager } from '../tabs'
 import type { Telemetry } from '../telemetry'
 
@@ -50,7 +50,7 @@ import {
 } from '../../constants/chat'
 import { MentionItemType, type MentionItem } from '@deta/editor'
 import { ContextItemBrowsingHistory } from './context/history'
-import type { Add } from '@horizon/icons'
+import type { Add } from '@deta/icons'
 import type { SearchResultLink } from '@deta/web-parser'
 import { ContextItemWebSearch } from './context/web'
 

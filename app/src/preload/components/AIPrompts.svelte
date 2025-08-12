@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { tooltip } from '@deta/utils'
   import type { WebViewEventTransform } from '@deta/types'
 

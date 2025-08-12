@@ -3,7 +3,7 @@
   import { derived, writable, type Writable } from 'svelte/store'
 
   import { tooltip, getHumanDistanceToNow, useLogScope, useDebounce } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import type { AIChat } from '@horizon/core/src/lib/service/ai/chat'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'

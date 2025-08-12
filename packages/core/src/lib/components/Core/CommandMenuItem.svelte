@@ -26,9 +26,8 @@
 
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, DynamicIcon, type Icons } from '@deta/icons'
   import * as Command from '../Command'
-  import ColorIcon from '../Atoms/ColorIcon.svelte'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   export let item: CMDMenuItem
@@ -80,7 +79,7 @@
           <span class="text-lg">{$itemData?.emoji}</span>
         {:else if $itemData?.colors}
           <div class="color-icon-wrapper w-fit h-fit flex-shrink-0">
-            <ColorIcon colors={$itemData?.colors} />
+            <DynamicIcon name="colors;;{$itemData?.colors}" />
           </div>
         {/if}
       {:else}

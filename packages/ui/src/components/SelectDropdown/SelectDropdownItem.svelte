@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { DynamicIcon, Icon } from '@horizon/icons'
-  import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  import { DynamicIcon, Icon } from '@deta/icons'
+  // import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import type { SelectItem } from '.'
 
   export let item: SelectItem
 
-  $: space = item.data instanceof OasisSpace ? (item.data as OasisSpace) : undefined
+  $: space = typeof item.data.contents !== 'undefined' ? (item.data as any) : undefined
 
   const getAlternativeLabel = (item: SelectItem) => {
     if (!item.data?.type || item.data.type !== 'context-item') return undefined

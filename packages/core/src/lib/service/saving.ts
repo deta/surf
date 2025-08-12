@@ -1,13 +1,16 @@
 import { get, writable, type Writable } from 'svelte/store'
-import { generateID, useLogScope, EventEmitterBase } from '@deta/utils'
+import { generateID, useLogScope, EventEmitterBase, ResourceTag } from '@deta/utils'
 
-import { ResourceJSON, ResourceManager, type Resource } from './resources'
+import {
+  extractAndCreateWebResource,
+  ResourceJSON,
+  ResourceManager,
+  type Resource
+} from '@deta/services'
 import { getResourcePreview } from '../utils/resourcePreview'
 import type { OasisService } from './oasis'
 import type { Toast, Toasts } from '@deta/ui'
-import { extractAndCreateWebResource } from './mediaImporter'
 import { SpaceEntryOrigin } from '../types'
-import { ResourceTag } from '../utils/tags'
 
 export type SaveItemMetadata = {
   url: string

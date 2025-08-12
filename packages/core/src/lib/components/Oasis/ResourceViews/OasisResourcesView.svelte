@@ -25,7 +25,7 @@
   import { RenderableItemType, SpaceEntryOrigin } from '../../../types'
   import { Resource } from '../../../service/resources'
   import OasisResourceLoader from '../../Oasis/OasisResourceLoader.svelte'
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import GridView from './GridView.svelte'
   import type { ResourceRenderableItem, RenderableItem } from '../../../types'
   import { selection } from '@horizon/core/src/lib/components/Oasis/utils/select'

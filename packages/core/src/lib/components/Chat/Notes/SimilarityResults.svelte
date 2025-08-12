@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { readable, writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { tooltip } from '@deta/utils'
 
   import type { AIChatMessageSource } from '@horizon/core/src/lib/types'

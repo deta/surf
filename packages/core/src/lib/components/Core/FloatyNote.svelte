@@ -1,7 +1,7 @@
 <script lang="ts">
   import AppBarButton from '@horizon/core/src/lib/components/Browser/AppBarButton.svelte'
   import { createEventDispatcher, tick } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { get, writable } from 'svelte/store'
   import { SmartNote, useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import NoteTitle from '@horizon/core/src/lib/components/Chat/Notes/NoteTitle.svelte'

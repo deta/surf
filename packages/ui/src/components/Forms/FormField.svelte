@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Switch } from '@deta/ui'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { tooltip, useDebounce } from '@deta/utils'
 
   import { createEventDispatcher } from 'svelte'

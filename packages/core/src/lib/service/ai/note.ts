@@ -1,6 +1,6 @@
 import { conditionalArrayItem, useDebounce, useLocalStorageStore, useLogScope } from '@deta/utils'
 
-import { type ResourceManager, ResourceNote } from '../resources'
+import { type ResourceManager, ResourceNote } from '@deta/services'
 import type { AIChat, AIService } from './ai'
 import type { ContextManager } from './contextManager'
 import {
@@ -26,7 +26,7 @@ import {
 import { tick } from 'svelte'
 import type { OasisService } from '../oasis'
 import { EventEmitterBase } from '@deta/utils'
-import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
+import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
 
 export type SmartNotesEvents = {
   'open-sidebar': (id: string) => void

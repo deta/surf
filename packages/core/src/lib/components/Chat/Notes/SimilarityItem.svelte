@@ -10,7 +10,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { tooltip, useLogScope } from '@deta/utils'
 
   import PreviewSource from '@horizon/core/src/lib/components/Resources/Previews/PreviewSource.svelte'

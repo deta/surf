@@ -57,6 +57,7 @@
     "@deta/types": "*",
     "@deta/utils": "*",
     "@deta/ui": "*",
+    "@deta/services": "*",
     "@deta/web-parser": "*",
     "@rgossiaux/svelte-headlessui": "^2.0.0",
     "@svelte-plugins/tooltips": "^3.0.1",

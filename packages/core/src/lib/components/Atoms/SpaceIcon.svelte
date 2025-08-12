@@ -1,8 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { useLogScope } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
-  import ColorIcon from './ColorIcon.svelte'
+  import { Icon, DynamicIcon } from '@deta/icons'
   import IconSelector from '../Oasis/IconSelector.svelte'
   import { OasisSpace, pickRandomColorPair } from '../../service/oasis'
 
@@ -82,7 +81,11 @@
       {:else if $spaceData && $spaceData.imageIcon}
         <img src={$spaceData.imageIcon} alt="Space icon" class="image" class:round />
       {:else}
-        <ColorIcon colors={parsedColors} style="pointer-events: none;" size={colorIconSize} />
+        <DynamicIcon
+          name="colors;;{parsedColors}"
+          style="pointer-events: none;"
+          size={colorIconSize}
+        />
       {/if}
     </div>
   </IconSelector>
@@ -95,7 +98,11 @@
     {:else if $spaceData && $spaceData.imageIcon}
       <img src={$spaceData.imageIcon} alt="Space icon" class="image" class:round />
     {:else}
-      <ColorIcon colors={parsedColors} style="pointer-events: none;" size={colorIconSize} />
+      <DynamicIcon
+        name="colors;;{parsedColors}"
+        style="pointer-events: none;"
+        size={colorIconSize}
+      />
     {/if}
   </div>
 {/if}

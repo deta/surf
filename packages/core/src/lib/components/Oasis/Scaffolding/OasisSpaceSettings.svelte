@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
 
   import {
     useLogScope,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { onMount } from 'svelte'
   import Button from '../Button/Button.svelte'
   import { writable } from 'svelte/store'

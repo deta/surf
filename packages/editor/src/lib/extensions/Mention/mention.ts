@@ -5,8 +5,7 @@ import Suggestion, { type SuggestionOptions } from '@deta/editor/src/lib/utiliti
 
 import MentionComp from './Mention.svelte'
 import type { MentionItem } from '../../types'
-
-export type MentionAction = 'open' | 'new-tab' | 'new-background-tab' | 'overlay'
+import type { MentionAction } from '@deta/types'
 
 // See `addAttributes` below
 export interface MentionNodeAttrs {

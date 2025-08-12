@@ -4,7 +4,7 @@
   import { createEventDispatcher, tick } from 'svelte'
   import { derived, writable } from 'svelte/store'
 
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
   import type { WebViewEventTransform } from '@deta/types'
 
   import AiPrompts from './AIPrompts.svelte'

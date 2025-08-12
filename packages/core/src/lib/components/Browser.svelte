@@ -4,7 +4,7 @@
   import { writable, derived, get } from 'svelte/store'
 
   import { type WebviewWrapperEvents } from './Webview/WebviewWrapper.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import {
     isAltKeyAndKeysPressed,
@@ -192,7 +192,7 @@
   } from '@horizon/core/src/lib/service/migration'
   import BrowsingContextSelector from './Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
   import { BuiltInSpaceId } from '../constants/spaces'
-  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
   import type { TeletypeSystem } from '@deta/teletype/src'
   import { createViewManager } from '@horizon/core/src/lib/service/viewManager'
 

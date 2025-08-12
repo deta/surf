@@ -24,7 +24,7 @@
     "@horizon/dragcula": "*",
     "@deta/editor": "*",
     "@horizon/eslint-config": "*",
-    "@horizon/icons": "*",
+    "@deta/icons": "*",
     "@deta/types": "*",
     "@horizon/typescript-config": "*",
     "@deta/utils": "*",

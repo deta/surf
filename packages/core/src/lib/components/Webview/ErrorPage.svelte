@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher } from 'svelte'
 
   import { ERRORS, type WebviewError, type WebviewErrorParsed } from '../../constants/webviewErrors'

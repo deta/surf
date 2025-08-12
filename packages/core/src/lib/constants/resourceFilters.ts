@@ -1,5 +1,6 @@
 import { ResourceTypes, type SFFSResourceTag } from '@deta/types'
-import { SearchResourceTags } from '../utils/tags'
+import { SearchResourceTags } from '@deta/utils'
+
 import type { FilterItem } from '../components/Oasis/FilterSelector.svelte'
 
 export const filterSpaceResourcesTags = (op: SFFSResourceTag['op']) => [

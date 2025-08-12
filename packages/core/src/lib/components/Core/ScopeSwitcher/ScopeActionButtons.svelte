@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import DesktopPreview from '../../Chat/DesktopPreview.svelte'

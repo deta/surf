@@ -14,7 +14,6 @@ import { handleDragStart } from './drag'
 import {
   BrowserType,
   ElectronAppInfo,
-  ImportedBrowserHistoryItem,
   RightSidebarTab,
   SFFSResource,
   UserSettings,
@@ -27,11 +26,7 @@ import { useAsDefaultBrowser } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 import { setupHistorySwipeIpcSenders } from './historySwipe'
 
-import {
-  IPC_EVENTS_MAIN,
-  NewWindowRequest,
-  TrackEvent
-} from '@horizon/core/src/lib/service/ipc/events'
+import { IPC_EVENTS_MAIN, NewWindowRequest, TrackEvent } from '@deta/services/src/ipc/events'
 import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'

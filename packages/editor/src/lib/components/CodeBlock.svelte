@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
   import { copyToClipboard, formatCodeLanguage, tooltip, useLogScope, wait } from '@deta/utils'
   import { afterUpdate, onMount } from 'svelte'
   import type { WebviewTag } from 'electron'

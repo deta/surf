@@ -3,7 +3,7 @@
 
   import { ResourceTagsBuiltInKeys, WEB_RESOURCE_TYPES } from '@deta/types'
   import { mimeTypeToCodeLanguage, useLogScope } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import { useResourceManager, type Resource } from '@horizon/core/src/lib/service/resources'
   import OasisResourceLoader from '@horizon/core/src/lib/components/Oasis/OasisResourceLoader.svelte'

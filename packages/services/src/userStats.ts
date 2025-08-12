@@ -1,6 +1,6 @@
 import { CreateTabEventTrigger, type UserStats } from '@deta/types'
 import { isDev, useLogScope } from '@deta/utils'
-import { NOTIFICATION_CONTENTS, showNotification } from '@deta/ui'
+// import { NOTIFICATION_CONTENTS, showNotification } from '@deta/ui'
 
 export class UserStatsService {
   static get log(): ReturnType<typeof useLogScope> {
@@ -213,27 +213,27 @@ export class UserStatsService {
 
     UserStatsService.setSetDefaultBrowserLastShownDiff()
 
-    const { closeType, submitValue } = await showNotification({
-      title: NOTIFICATION_CONTENTS.default_browser.title,
-      message: NOTIFICATION_CONTENTS.default_browser.body,
-      actions: [
-        { type: 'submit', title: 'Set As Default' },
-        isFirstNotification
-          ? { type: 'reset', kind: 'muted', value: 'not_now', title: `Not Now` }
-          : { type: 'reset', kind: 'muted', value: 'never', title: `Don't ask again` }
-      ]
-    })
-    UserStatsService.isShowingNotification = false
+    // const { closeType, submitValue } = await showNotification({
+    //   title: NOTIFICATION_CONTENTS.default_browser.title,
+    //   message: NOTIFICATION_CONTENTS.default_browser.body,
+    //   actions: [
+    //     { type: 'submit', title: 'Set As Default' },
+    //     isFirstNotification
+    //       ? { type: 'reset', kind: 'muted', value: 'not_now', title: `Not Now` }
+    //       : { type: 'reset', kind: 'muted', value: 'never', title: `Don't ask again` }
+    //   ]
+    // })
+    // UserStatsService.isShowingNotification = false
 
-    if (closeType === true) {
-      // @ts-ignore
-      window.api.useAsDefaultBrowser() // TODO: allow tracking event & from where it was called
-    } else if (closeType === false && submitValue === 'not_now') {
-      // noop
-    } else if (closeType === false && submitValue === 'never') {
-      UserStatsService.setDontShowPromptSetDefaultBrowser(true)
-      // TODO: display info
-    }
+    // if (closeType === true) {
+    //   // @ts-ignore
+    //   window.api.useAsDefaultBrowser() // TODO: allow tracking event & from where it was called
+    // } else if (closeType === false && submitValue === 'not_now') {
+    //   // noop
+    // } else if (closeType === false && submitValue === 'never') {
+    //   UserStatsService.setDontShowPromptSetDefaultBrowser(true)
+    //   // TODO: display info
+    // }
   }
 
   static async getBookCallPromptLastShownDiff() {
@@ -315,37 +315,37 @@ export class UserStatsService {
 
     UserStatsService.setBookCallPromptLastShownDiff()
 
-    const { closeType, submitValue } = await showNotification({
-      title: NOTIFICATION_CONTENTS.book_call.title,
-      message: NOTIFICATION_CONTENTS.book_call.body,
-      actions: [
-        { type: 'submit', title: 'Schedule a call' },
-        isFirstNotification
-          ? { type: 'reset', kind: 'muted', value: 'not_now', title: `Not Now` }
-          : { type: 'reset', kind: 'muted', value: 'never', title: `Don't ask again` }
-      ]
-    })
-    UserStatsService.isShowingNotification = false
+    // const { closeType, submitValue } = await showNotification({
+    //   title: NOTIFICATION_CONTENTS.book_call.title,
+    //   message: NOTIFICATION_CONTENTS.book_call.body,
+    //   actions: [
+    //     { type: 'submit', title: 'Schedule a call' },
+    //     isFirstNotification
+    //       ? { type: 'reset', kind: 'muted', value: 'not_now', title: `Not Now` }
+    //       : { type: 'reset', kind: 'muted', value: 'never', title: `Don't ask again` }
+    //   ]
+    // })
+    // UserStatsService.isShowingNotification = false
 
-    if (closeType === true) {
-      // const tabs = useTabsManager()
-      // if (!tabs) {
-      //   this.log.error('Tabs manager not found! This shouldnt happen!')
-      //   return
-      // }
-      // tabs.addPageTab('https://deta.surf/meet', {
-      //   active: true,
-      //   index: 0,
-      //   placeAtEnd: false,
+    // if (closeType === true) {
+    //   // const tabs = useTabsManager()
+    //   // if (!tabs) {
+    //   //   this.log.error('Tabs manager not found! This shouldnt happen!')
+    //   //   return
+    //   // }
+    //   // tabs.addPageTab('https://deta.surf/meet', {
+    //   //   active: true,
+    //   //   index: 0,
+    //   //   placeAtEnd: false,
 
-      //   trigger: CreateTabEventTrigger.System
-      // })
-      UserStatsService.setDontShowBookCallPrompt(true)
-    } else if (closeType === false && submitValue === 'not_now') {
-      // noop
-    } else if (closeType === false && submitValue === 'never') {
-      UserStatsService.setDontShowBookCallPrompt(true)
-    }
+    //   //   trigger: CreateTabEventTrigger.System
+    //   // })
+    //   UserStatsService.setDontShowBookCallPrompt(true)
+    // } else if (closeType === false && submitValue === 'not_now') {
+    //   // noop
+    // } else if (closeType === false && submitValue === 'never') {
+    //   UserStatsService.setDontShowBookCallPrompt(true)
+    // }
   }
 
   static startCheckNotifyUserInterval() {

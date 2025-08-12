@@ -20,7 +20,7 @@
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { useLogScope, useDebounce } from '@deta/utils'
   import { useResourceManager } from '../../service/resources'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'

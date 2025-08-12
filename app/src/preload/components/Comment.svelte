@@ -2,7 +2,7 @@
   import './index.css'
 
   import { createEventDispatcher } from 'svelte'
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
 
   import Wrapper from './Wrapper.svelte'
   import Button from './Button.svelte'

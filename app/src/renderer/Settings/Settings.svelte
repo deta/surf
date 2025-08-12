@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from 'svelte'
   import { writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import appIcon from '../assets/icon_512.png'
 

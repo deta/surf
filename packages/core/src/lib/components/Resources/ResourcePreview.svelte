@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, getContext, onDestroy, onMount } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import { useResourceManager, type Resource } from '../../service/resources'
   import {

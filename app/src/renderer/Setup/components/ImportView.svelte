@@ -3,12 +3,12 @@
   import Button from './Button.svelte'
   import LeftPanel from './LeftPanel.svelte'
   import RightPanel from './RightPanel.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { fade, fly } from 'svelte/transition'
-  import ImporterV2, {
-    type ImporterStep,
-    type ImportStatus
-  } from '@horizon/core/src/lib/components/Core/Importer/ImporterV2.svelte'
+  // import ImporterV2, {
+  //   type ImporterStep,
+  //   type ImportStatus
+  // } from '@horizon/core/src/lib/components/Core/Importer/ImporterV2.svelte'
   import ImportStepTitle from '@horizon/core/src/lib/components/Core/Importer/ImportStepTitle.svelte'
   import ImportStepDescription from '@horizon/core/src/lib/components/Core/Importer/ImportStepDescription.svelte'
 
@@ -24,8 +24,8 @@
   let currentStepIdx: number = 0
   let canGoNext: boolean = false
   let selectedBrowser: BrowserTypeItem | null = null
-  let importStatus: ImportStatus
-  let importer: ImporterV2
+  // let importStatus: ImportStatus
+  // let importer: ImporterV2
 
   const handleContinue = async () => {
     dispatch('viewChange', 'contexts')
@@ -33,7 +33,7 @@
 
   const handleBack = () => {
     if (currentStepIdx > 0) {
-      importer.previousStep()
+      // importer.previousStep()
     } else {
       dispatch('back')
     }
@@ -52,17 +52,17 @@
     <button on:click={handleBack} class="back-button" aria-label="Go back">
       <Icon name="arrow.left" size="28" color="#3B82F6" />
     </button>
-    {#if showContent}
+    <!-- {#if showContent}
       <div in:fly={{ x: 35, duration: 500, delay: 150 }}>
         <ImportStepTitle {currentStepIdx} {selectedBrowser} {importStatus} />
       </div>
       <div in:fly={{ x: 35, duration: 500, delay: 300 }}>
         <ImportStepDescription {currentStepIdx} {selectedBrowser} {importStatus} initialImport />
       </div>
-    {/if}
+    {/if} -->
     <div class="actions bottom">
       {#if showButton}
-        <div in:fade={{ duration: 300 }}>
+        <!-- <div in:fade={{ duration: 300 }}>
           <Button on:click={() => importer.nextStep()} disabled={!canGoNext}>
             {#if importStatus === 'error'}
               Try Again
@@ -74,15 +74,18 @@
               Continue
             {/if}
           </Button>
+        </div> -->
+        <div in:fade={{ duration: 300 }}>
+          <Button on:click={() => handleContinue()} disabled={!canGoNext}>Continue</Button>
         </div>
 
-        <div in:fade={{ duration: 300 }}>
+        <!-- <div in:fade={{ duration: 300 }}>
           <button
             on:click={handleContinue}
             disabled={currentStepIdx === 2 && importStatus === 'done'}
             class="skip-button">Skip Import</button
           >
-        </div>
+        </div> -->
       {/if}
     </div>
   </div>
@@ -100,14 +103,14 @@
       </div>
     {/if}
 
-    <ImporterV2
+    <!-- <ImporterV2
       bind:this={importer}
       bind:currentStepIdx
       bind:canGoNext
       bind:selectedBrowser
       bind:importStatus
       on:done={handleContinue}
-    />
+    /> -->
   </div>
 </RightPanel>
 

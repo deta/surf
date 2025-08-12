@@ -6,8 +6,8 @@
 <script lang="ts">
   import { Importer } from '@horizon/core/src/lib/service/import'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { Icon } from '@horizon/icons'
+  import { useResourceManager } from '@deta/services'
+  import { Icon } from '@deta/icons'
   import {
     BROWSER_TYPE_DATA,
     BrowserType,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import type { ImportStatus } from './ImporterV2.svelte'
 
   export let label: string

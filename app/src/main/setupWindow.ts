@@ -24,7 +24,7 @@ export function createSetupWindow(options?: { presetInviteCode?: string; presetE
     additionalArgs.push(`--presetEmail=${options.presetEmail}`)
   }
 
-  console.log('createSetupWindow: all additional args', additionalArgs)
+  console.log('createSetupWindow called: all additional args', additionalArgs, 'options', options)
 
   setupWindow = new BrowserWindow({
     width: 1270,

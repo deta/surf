@@ -8,7 +8,7 @@
   import { useTeletype } from './index'
   import Breadcrumb from './Breadcrumb.svelte'
   import ActionList from './ActionList.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import ActionPanel from './ActionPanel.svelte'
   import Lazy from './Lazy.svelte'
   import { onMount, tick, createEventDispatcher } from 'svelte'

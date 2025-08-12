@@ -3,7 +3,7 @@ import { getMainWindow } from './mainWindow'
 import log from '@deta/utils/src/log'
 import { getUserConfig, updateUserConfigSettings } from './config'
 import { changeMenuItemLabel } from './appMenu'
-import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
 
 let historySwipeGestureEnabled = false
 

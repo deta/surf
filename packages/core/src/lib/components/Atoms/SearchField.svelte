@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { type Writable } from 'svelte/store'
   import { tick } from 'svelte'
 

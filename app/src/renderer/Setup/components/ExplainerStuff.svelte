@@ -4,7 +4,7 @@
   import LeftPanel from './LeftPanel.svelte'
   import RightPanel from './RightPanel.svelte'
   import DemoStuff from './DemoStuff.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import contentStructure from './config'
   import { type Role } from './config'
   import { fade, fly } from 'svelte/transition'

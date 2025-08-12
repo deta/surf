@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DynamicIcon } from '@horizon/icons'
+  import { DynamicIcon } from '@deta/icons'
   import { MentionItemType, type MentionItem } from '../../types'
 
   export let items: MentionItem[] = []

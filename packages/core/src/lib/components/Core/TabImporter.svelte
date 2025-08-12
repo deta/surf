@@ -2,7 +2,7 @@
   import ImporterV2, { type ImportStatus } from './Importer/ImporterV2.svelte'
   import ImportStepTitle from './Importer/ImportStepTitle.svelte'
   import ImportStepDescription from './Importer/ImportStepDescription.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import type { BrowserTypeItem } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import type { TabImporter } from '@horizon/core/src/lib/types'

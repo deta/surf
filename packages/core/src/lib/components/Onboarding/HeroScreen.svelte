@@ -3,7 +3,7 @@
 
   import { fade, fly, scale } from 'svelte/transition'
   import { launchTimeline } from './timeline'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { OnboardingFeature } from './onboardingScripts'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
 

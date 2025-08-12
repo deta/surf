@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { ContextManager } from '../../../service/ai/contextManager'
   import AppBarButton from '../../Browser/AppBarButton.svelte'
   import ContextBubbles from '../../Chat/ContextBubbles.svelte'

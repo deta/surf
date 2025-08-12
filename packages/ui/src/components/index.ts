@@ -1,5 +1,4 @@
 export * from './Buttons'
-export * from './Dialog'
 export * from './Effects'
 export * from './EmojiPicker'
 export * from './Examples'

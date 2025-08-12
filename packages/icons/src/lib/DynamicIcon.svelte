@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import ColorIcon from './ColorIcon.svelte'
   import FileIcon from './FileIcon.svelte'
   import type { IconImage, IconEmoji, IconColors, IconIcon, IconFile } from './types.ts'

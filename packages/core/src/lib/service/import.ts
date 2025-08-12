@@ -4,7 +4,7 @@ import { useLogScope } from '@deta/utils'
 import { type Resource, type ResourceManager } from './resources'
 import type { OasisService } from './oasis'
 import { SpaceEntryOrigin } from '../types'
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+import { ResourceTag } from '@deta/utils/src/tags'
 
 export class Importer {
   log: ReturnType<typeof useLogScope>

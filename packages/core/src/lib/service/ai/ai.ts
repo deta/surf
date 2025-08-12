@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from '../config'
-import { ResourceManager } from '../resources'
+import { ResourceManager } from '@deta/services'
 import type { SFFS } from '../sffs'
 
 import {

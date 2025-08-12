@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { conditionalArrayItem, isMac, tooltip } from '@deta/utils'
   import { floatyButtons } from '../../components/Atoms/floatyButtons'
   import FloatyButton from '../Atoms/FloatyButton.svelte'

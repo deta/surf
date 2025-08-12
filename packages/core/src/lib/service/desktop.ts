@@ -29,7 +29,7 @@ import { clamp } from '../../../../dragcula/dist/utils/internal'
 import type { MiniBrowser, MiniBrowserService } from './miniBrowser'
 import { ColorService, type ColorRGB, type CustomColorData } from './colors'
 import { EventEmitterBase } from '@deta/utils'
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+import { ResourceTag } from '@deta/utils/src/tags'
 
 const DEFAULT_CARD_SIZES: Record<ResourceTypes, { x: number; y: number }> = {
   [ResourceTypes.DOCUMENT_SPACE_NOTE]: { x: 5, y: 6 }

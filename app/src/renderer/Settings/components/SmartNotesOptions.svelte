@@ -2,7 +2,7 @@
   import { Switch } from '@deta/ui'
   import SettingsOption from './SettingsOption.svelte'
   import type { UserSettings } from '@deta/types'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher } from 'svelte'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
 

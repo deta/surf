@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, IconConfirmation } from '@horizon/icons'
+  import { Icon, IconConfirmation } from '@deta/icons'
   import {
     copyToClipboard,
     generateID,
@@ -35,7 +35,7 @@
   } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
-  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { ResourceTag } from '@deta/utils/src/tags'
 
   export let doneGenerating: Readable<boolean> = readable(true)
   export let resource: Readable<Resource | undefined> = readable(undefined)

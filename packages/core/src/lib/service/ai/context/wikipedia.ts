@@ -8,7 +8,7 @@ import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'
 import { ContextItemIconTypes, ContextItemTypes } from './types'
 import { WIKIPEDIA_TITLE_EXTRACTOR_PROMPT } from '../../../constants/prompts'
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+import { ResourceTag } from '@deta/utils/src/tags'
 
 export class ContextItemWikipedia extends ContextItemBase {
   type = ContextItemTypes.WIKIPEDIA

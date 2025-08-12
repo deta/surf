@@ -1,11 +1,11 @@
-import { ResourceTagsBuiltInKeys } from '@deta/types'
 import {
   ResourceTypes,
+  ResourceTagsBuiltInKeys,
+  SpaceSource,
   type ResourceTagDataStateValue,
   type ResourceTagsBuiltIn,
   type SFFSResourceTag
 } from '@deta/types'
-import type { SpaceSource } from '../types/spaces.types'
 import { conditionalArrayItem } from '@deta/utils'
 
 /**

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { slide } from 'svelte/transition'
 
   export let title: string | undefined = undefined

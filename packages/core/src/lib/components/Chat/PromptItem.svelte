@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DynamicIcon, type Icons } from '@horizon/icons'
+  import { DynamicIcon, type Icons } from '@deta/icons'
 
   export let label: string | undefined
   export let icon: Icons | undefined = undefined

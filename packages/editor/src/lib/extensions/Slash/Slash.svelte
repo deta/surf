@@ -2,7 +2,7 @@
 
 <script lang="ts">
   import type { Editor } from '@tiptap/core'
-  import { DynamicIcon } from '@horizon/icons'
+  import { DynamicIcon } from '@deta/icons'
   import type { SlashMenuItem, SlashCommandPayload } from './types'
 
   export let editor: Editor

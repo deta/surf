@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import DynamicIcon from '@horizon/icons/src/lib/DynamicIcon.svelte'
+  // import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  import DynamicIcon from '@deta/icons/src/lib/DynamicIcon.svelte'
 
-  export let space: OasisSpace
+  export let space: any
 
   const items = [
     {

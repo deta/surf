@@ -36,7 +36,7 @@
   import { derived, get, readable, writable } from 'svelte/store'
   import { useToasts } from '@deta/ui'
   import { AIChat, useAI, type ChatPrompt } from '../../service/ai/ai'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { hasParent, startingClass } from '../../utils/dom'
   import { captureScreenshot } from '../../utils/screenshot'
   import { CompletionEventID } from '../Onboarding/onboardingScripts'

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import type { FileKind } from 'human-filetypes'
 
   export let kind: FileKind | 'code'

@@ -2,7 +2,7 @@
   import { writable, type Readable } from 'svelte/store'
   import { BubbleMenu, type Editor } from 'svelte-tiptap'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher, tick } from 'svelte'
   import {
     isMac,

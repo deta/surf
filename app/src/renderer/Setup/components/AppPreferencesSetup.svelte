@@ -3,7 +3,7 @@
   import Button from './Button.svelte'
   import LeftPanel from './LeftPanel.svelte'
   import RightPanel from './RightPanel.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { fade, fly } from 'svelte/transition'
 
   const dispatch = createEventDispatcher()

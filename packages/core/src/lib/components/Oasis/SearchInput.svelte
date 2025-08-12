@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
 
   import { isMac, isModKeyPressed } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { writable } from 'svelte/store'
   import { tooltip } from '@deta/utils'
 

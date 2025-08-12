@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { generateID, useDebounce, useLogScope, optimisticParseJSON } from '@deta/utils'
 
   import { createEventDispatcher, onMount } from 'svelte'

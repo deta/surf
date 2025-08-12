@@ -17,7 +17,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount, tick } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { writable, derived, type Writable } from 'svelte/store'
   import { tooltip } from '@deta/utils'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'

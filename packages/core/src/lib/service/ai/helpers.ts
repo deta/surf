@@ -2,15 +2,13 @@ import {
   EventContext,
   PageChatMessageSentEventError,
   PromptType,
+  type ChatMessageContentItem,
+  type AIChatMessageSource,
+  type AIChatMessageParsed,
   type DetectedResource,
   type WebViewEventSendNames,
   type WebViewSendEvents
 } from '@deta/types'
-import type {
-  ChatMessageContentItem,
-  AIChatMessageSource,
-  AIChatMessageParsed
-} from '../../types/browser.types'
 import {
   codeLanguageToMimeType,
   markdownToHtml,
@@ -22,10 +20,10 @@ import { PromptIDs, getPrompt } from '../prompts'
 import type { AIService, ChatError } from './ai'
 import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@horizon/backend/types'
 import { ModelTiers } from '@deta/types/src/ai.types'
-import { ResourceManager } from '../resources'
+import { ResourceManager } from '@deta/services'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
 import type { TabsManager } from '../tabs'
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+import { ResourceTag } from '@deta/utils/src/tags'
 
 const log = useLogScope('AI')
 

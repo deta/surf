@@ -14,9 +14,8 @@
   import { colorPairs, type OasisSpace } from '@horizon/core/src/lib/service/oasis'
 
   import CustomPopover from '../Atoms/CustomPopover.svelte'
-  import EmojiPicker from '../Atoms/EmojiPicker.svelte'
   import { blobToSmallImageUrl } from '../../utils/screenshot'
-  import { useToasts } from '@deta/ui'
+  import { useToasts, EmojiPicker } from '@deta/ui'
   import type { SpaceData } from '@horizon/core/src/lib/types'
 
   export let space: OasisSpace

@@ -2,7 +2,7 @@
   import type { PreviewMetadata } from '@horizon/core/src/lib/utils/resourcePreview'
   import { getFileKind } from '@deta/utils'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
 

@@ -17,9 +17,9 @@ import {
   WIKIPEDIA_SEARCH_MENTION
 } from '../../constants/chat'
 import { MentionItemType, type MentionItem } from '@deta/editor'
-import { type ResourceManager } from '../resources'
+import { type ResourceManager } from '@deta/services'
 import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
-import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+import { SearchResourceTags } from '@deta/utils/src/tags'
 
 export const createResourcesMentionsFetcher = (
   resourceManager: ResourceManager,

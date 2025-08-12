@@ -53,7 +53,7 @@ main browser so it follows you around throughout your daily workflows.`
 </script>
 
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher, tick } from 'svelte'
   import type { CloseEventData, DialogButton } from '../Dialog/Dialog.svelte'
 
@@ -172,7 +172,7 @@ main browser so it follows you around throughout your daily workflows.`
 </div>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @use '@deta/ui/src/styles/utils' as utils;
 
   :global(::view-transition-image-pair(active-notifcation-mail)) {
     animation-duration: 123ms;

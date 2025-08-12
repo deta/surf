@@ -5,15 +5,14 @@
   import data from 'emoji-picker-element-data/en/emojibase/data.json?url'
 
   import { useLogScope, wait } from '@deta/utils'
-  import { useConfig } from '@horizon/core/src/lib/service/config'
+
+  export let theme: 'light' | 'dark' = 'light'
 
   let wrapper: HTMLDivElement
 
   const log = useLogScope('EmojiPicker')
   const config = useConfig()
   const dispatch = createEventDispatcher<{ select: string }>()
-
-  const userConfigSettings = config.settings
 
   const picker = new Picker({
     dataSource: data
@@ -38,7 +37,7 @@
     }
   }
 
-  $: if ($userConfigSettings.app_style === 'light') {
+  $: if (theme === 'light') {
     picker.classList.add('light')
     picker.classList.remove('dark')
   } else {

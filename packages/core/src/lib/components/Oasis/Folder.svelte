@@ -66,7 +66,7 @@
   import { onboardingSpace } from '../../constants/examples'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import ContextLinksSidebar from '@horizon/core/src/lib/components/Oasis/Scaffolding/ContextLinksSidebar.svelte'
   import { useContextService } from '@horizon/core/src/lib/service/contexts'
   import SpacePreviewSimple from './SpacePreviewSimple.svelte'

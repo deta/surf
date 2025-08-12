@@ -4,7 +4,7 @@
   import icon from '../../../../public/assets/icon_512x512.webp'
   import { onDestroy, onMount } from 'svelte'
   import { signature } from '../../utils/perfect-freehand'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { writable } from 'svelte/store'
   import { useToasts } from '@deta/ui'
 

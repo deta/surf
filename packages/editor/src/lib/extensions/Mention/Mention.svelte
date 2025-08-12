@@ -2,7 +2,7 @@
   import { isModKeyPressed } from '@deta/utils'
   import { type MentionItem, MentionItemType } from '../../types'
   import type { MentionAction } from './mention'
-  import { DynamicIcon } from '@horizon/icons'
+  import { DynamicIcon } from '@deta/icons'
 
   export let id: string
   export let label: string

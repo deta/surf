@@ -13,7 +13,7 @@
     codeLanguageToMimeType,
     isMac
   } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
   import { Editor, getEditorContentText, MentionItemType } from '@deta/editor'
   import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
@@ -66,7 +66,7 @@
   import ModelPicker from './ModelPicker.svelte'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
   import NoteContextBubbles from '@horizon/core/src/lib/components/Notes/NoteContextBubbles.svelte'
-  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { ResourceTag } from '@deta/utils/src/tags'
 
   export let chat: AIChat
   export let inputValue = ''

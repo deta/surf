@@ -8,7 +8,7 @@
   import type { Writable } from 'svelte/store'
   import { fly } from 'svelte/transition'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import SpacesView, { type CreateSpaceTabEvent } from '../Oasis/Scaffolding/SpacesView.svelte'
 
   import type { HistoryEntriesManager, SearchHistoryEntry } from '../../service/history'

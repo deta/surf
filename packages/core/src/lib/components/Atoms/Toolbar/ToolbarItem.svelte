@@ -3,7 +3,7 @@
   import { writable } from 'svelte/store'
   import { generateRootDomain } from '@deta/utils'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   export let active: boolean
   export let name: string

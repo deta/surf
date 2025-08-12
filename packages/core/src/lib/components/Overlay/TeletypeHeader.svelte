@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { type Writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import { useTabsManager } from '../../service/tabs'
   import { tooltip, isMac } from '@deta/utils'

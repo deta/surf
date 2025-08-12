@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { wait } from '@deta/utils'
 
   import type { BrowserExtension } from '@horizon/core/src/lib/service/ipc/events'

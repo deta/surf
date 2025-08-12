@@ -3,7 +3,7 @@
   import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import { isModKeyPressed, useLogScope, wait } from '@deta/utils'
   import { sortSpacesByLastUsed } from '@horizon/core/src/lib/service/contexts'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import {
     SelectDropdown,
     SelectDropdownItem,

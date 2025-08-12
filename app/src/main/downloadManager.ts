@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 import fs, { promises as fsp } from 'fs'
 import path from 'path'
 import mime from 'mime-types'
-import { IPC_EVENTS_MAIN } from '@horizon/core/src/lib/service/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
 import type { DownloadPathResponseMessage, SFFSResource } from '@deta/types'
 import { isPathSafe, checkFileExists } from './utils'
 

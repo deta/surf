@@ -1,15 +1,13 @@
 import { get, type Writable } from 'svelte/store'
 import PQueue from 'p-queue'
 
-import { useLocalStorageStore, useLogScope } from '@deta/utils'
+import { Toast, useToasts } from '@deta/ui'
+import { useLocalStorageStore, useLogScope, ResourceTag } from '@deta/utils'
 import { ResourceTypes } from '@deta/types'
 
 import { type ResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
-import { Toast, useToasts } from '@deta/ui'
 import { useConfig } from './config'
-
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
 
 // If the sync gets called within that time it won't sync again
 const MAX_SYNC_INTERVAL = 1000 * 60 * 1 // 1 minute

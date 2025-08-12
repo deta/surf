@@ -16,7 +16,7 @@
     wait
   } from '@deta/utils'
   import { Editor } from '@deta/editor'
-  import { DynamicIcon, Icon, IconConfirmation } from '@horizon/icons'
+  import { DynamicIcon, Icon, IconConfirmation } from '@deta/icons'
   import {
     ResourceTagsBuiltInKeys,
     ResourceTypes,

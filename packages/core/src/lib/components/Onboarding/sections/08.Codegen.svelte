@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import { isMac } from '@deta/utils'

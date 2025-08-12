@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
   import { onMount, tick, getContext, setContext } from 'svelte'
-  import ColorIcon from '../Atoms/ColorIcon.svelte'
   import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
   import { writable, get } from 'svelte/store'
@@ -325,7 +324,7 @@
             {#if typeof item.icon === 'string'}
               <Icon name={item.icon} size="1.2em" />
             {:else if Array.isArray(item.icon)}
-              <ColorIcon colors={item.icon} size="1.1em" />
+              <DynamicIcon name="colors;;{item.icon}" size="1.1em" />
             {:else if item.icon instanceof OasisSpace}
               <div class="space-icon">
                 <SpaceIcon folder={item.icon} interactive={false} size="sm" />
@@ -361,7 +360,7 @@
             {#if typeof item.icon === 'string'}
               <Icon name={item.icon} size="1.2em" />
             {:else if Array.isArray(item.icon)}
-              <ColorIcon colors={item.icon} size="1.1em" />
+              <DynamicIcon name="colors;;{item.icon}" size="1.1em" />
             {:else if item.icon instanceof OasisSpace}
               <div class="space-icon">
                 <SpaceIcon folder={item.icon} interactive={false} size="sm" />

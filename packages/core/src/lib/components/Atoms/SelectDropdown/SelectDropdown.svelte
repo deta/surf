@@ -6,7 +6,7 @@
   import { flyAndScaleDirectional, focus, wait } from '@deta/utils'
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
   import type { WebContentsViewManager } from '@horizon/core/src/lib/service/viewManager'
 

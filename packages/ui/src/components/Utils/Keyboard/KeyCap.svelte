@@ -51,7 +51,7 @@
 </div>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @use '@deta/ui/src/styles/utils' as utils;
   .key-wrapper {
     display: inline-flex;
     position: relative;

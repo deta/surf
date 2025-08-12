@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import ContextBubbleItemWrapper from './ContextBubbleItemWrapper.svelte'
   import { blobToDataUrl } from '../../../utils/screenshot'
   import type { ContextItemScreenshot } from '@horizon/core/src/lib/service/ai/contextManager'

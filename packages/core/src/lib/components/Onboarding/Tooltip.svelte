@@ -32,7 +32,7 @@
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { derived } from 'svelte/store'
   import { timelines } from './timeline'
   import { fade } from 'svelte/transition'

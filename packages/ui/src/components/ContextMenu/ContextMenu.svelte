@@ -23,7 +23,7 @@
     text: string
     tagText?: string
     tagIcon?: string
-    icon?: string | [string, string] | OasisSpace // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
+    icon?: string | [string, string] | any // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
     action: () => void
   }
   export interface CtxItemSubMenu extends CtxItemBase {
@@ -32,7 +32,7 @@
     disabled?: boolean
     search?: boolean
     text: string
-    icon?: string | [string, string] | OasisSpace // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
+    icon?: string | [string, string] | any // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
     items: CtxItem[]
   }
 
@@ -179,15 +179,15 @@
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
   import log from '@deta/utils/src/log'
-  import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
+  // import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
+  // import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   export let targetX: number
   export let targetY: number
   export let targetEl: HTMLElement | null
   export let items: CtxItem[] = []
 
-  const viewManager = useTabsViewManager()
+  // const viewManager = useTabsViewManager()
 
   let ref: HTMLDialogElement | null = null
   onMount(async () => {
@@ -219,22 +219,22 @@
 
     // check if the context menu would overlap with the active webcontents view
     // and if so notify the view manager that the right click menu is open
-    const activeWebview = document.querySelector(
-      '.browser-window.active .webcontentsview-container'
-    )
-    if (activeWebview) {
-      const rect = activeWebview.getBoundingClientRect()
-      if (
-        targetX < rect.right &&
-        targetX + width > rect.left &&
-        targetY < rect.bottom &&
-        targetY + height > rect.top
-      ) {
-        viewManager.changeOverlayState({
-          rightClickMenuOpen: true
-        })
-      }
-    }
+    // const activeWebview = document.querySelector(
+    //   '.browser-window.active .webcontentsview-container'
+    // )
+    // if (activeWebview) {
+    //   const rect = activeWebview.getBoundingClientRect()
+    //   if (
+    //     targetX < rect.right &&
+    //     targetX + width > rect.left &&
+    //     targetY < rect.bottom &&
+    //     targetY + height > rect.top
+    //   ) {
+    //     viewManager.changeOverlayState({
+    //       rightClickMenuOpen: true
+    //     })
+    //   }
+    // }
   })
   onDestroy(() => {
     if (ref) {
@@ -244,9 +244,9 @@
       targetEl.removeAttribute('data-context-menu-anchor')
     }
 
-    viewManager.changeOverlayState({
-      rightClickMenuOpen: false
-    })
+    // viewManager.changeOverlayState({
+    //   rightClickMenuOpen: false
+    // })
   })
 </script>
 

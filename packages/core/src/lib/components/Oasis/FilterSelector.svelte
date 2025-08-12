@@ -10,7 +10,7 @@
   import { createEventDispatcher } from 'svelte'
   import { derived, writable } from 'svelte/store'
   import { type SFFSResourceTag } from '@deta/types'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { RESOURCE_FILTERS } from '../../constants/resourceFilters'
 
   export let selected = writable<string | null>(null)

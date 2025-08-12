@@ -1,0 +1,25 @@
+{
+  "name": "@deta/services",
+  "private": true,
+  "version": "0.0.0",
+  "svelte": "src/index.ts",
+  "main": "src/index.ts",
+  "files": [
+    "build",
+    "src/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "@deta/types": "*",
+    "svelte": "^4.2.19",
+    "@deta/utils": "*",
+    "@deta/web-parser": "*",
+    "@horizon/backend": "*",
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "typescript": "^5.2.2"
+  }
+}

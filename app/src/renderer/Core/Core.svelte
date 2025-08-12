@@ -1,7 +1,12 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+
   import { TeletypeProvider, Teletype, type Action } from '@deta/teletype/src'
-  import { DynamicIcon } from '@horizon/icons'
-  import { Button, Link } from '@deta/ui'
+
+  import { DynamicIcon } from '@deta/icons'
+  import { Button, Link } from '@deta/ui/src'
+  import { useLogScope } from '@deta/utils'
+  import { provideConfig } from '@deta/services'
 
   // import { Browser } from '@horizon/core'
   // import '../../app.css'
@@ -12,10 +17,13 @@
   // import './assets/fonts/SNPro-Variable.ttf'
   // import './assets/fonts/SNPro-Variable.woff2'
   // import './assets/fonts/SNPro-Variable.woff'
-  import '@deta/ui/src/output.css'
-  import '@deta/ui/src/app.css'
+  // import '@deta/ui/src/output.css'
+  // import '@deta/ui/src/app.css'
   // import '../../../../../packages/core/src/output.css'
   // import { isMac, isWindows } from '@deta/utils'
+
+  const log = useLogScope('Core')
+  const config = provideConfig()
 
   let count = $state(0)
 
@@ -41,6 +49,14 @@
       }
     }
   ] satisfies Action[]
+
+  onMount(() => {
+    log.info('Core component mounted')
+
+    const settings = config.settingsValue
+
+    log.debug('User settings:', settings)
+  })
 </script>
 
 <div class="main">
@@ -54,7 +70,7 @@
 
     <Link url="https://deta.surf">What is Surf?</Link>
   </div>
-  ^
+
   <TeletypeProvider
     {actions}
     class="teletype-provider"

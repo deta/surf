@@ -1,5 +1,5 @@
-import type { Icons } from '@horizon/icons'
-import { ResourceJSON, ResourceNote, type Resource } from '../service/resources'
+import type { Icons } from '@deta/icons'
+import { ResourceJSON, ResourceNote, type Resource } from '@deta/services'
 import {
   ResourceTagsBuiltInKeys,
   ResourceTypes,

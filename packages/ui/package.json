@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "svelte": "./src/index.ts",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./src/index.ts",
   "types": "./src/index.ts",
   "files": [
     "dist",
@@ -21,7 +20,7 @@
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
-    "@horizon/icons": "*",
+    "@deta/icons": "*",
     "@deta/types": "*",
     "@horizon/typescript-config": "*",
     "@deta/utils": "*",

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import Button from '../../Atoms/Button.svelte'
   import { writable } from 'svelte/store'
   import type { ResourceManager } from '@horizon/core/src/lib/service/resources'
@@ -8,7 +8,7 @@
   import { quintOut } from 'svelte/easing'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { createEventDispatcher } from 'svelte'
-  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { ResourceTag } from '@deta/utils/src/tags'
 
   interface OnboardingTab {
     title: string

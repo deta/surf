@@ -10,7 +10,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { writable } from 'svelte/store'
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import { selectedFolder } from '../../stores/oasis'
   import { DragTypeNames } from '@horizon/core/src/lib/types'
   import { useLogScope, hover } from '@deta/utils'

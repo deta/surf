@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { Resource } from '@horizon/core/src/lib/service/resources'
   import { blobToSmallImageUrl } from '../../utils/screenshot'
 

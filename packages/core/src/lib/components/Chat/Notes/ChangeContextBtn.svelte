@@ -5,7 +5,7 @@
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { tooltip } from '@deta/utils'
   import {
     ACTIVE_CONTEXT_MENTION,

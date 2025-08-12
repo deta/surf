@@ -55,8 +55,7 @@ import { getContext, onDestroy, setContext, tick } from 'svelte'
 import type { Model } from '@horizon/backend/types'
 import { WebParser } from '@deta/web-parser'
 import type { ConfigService } from './config'
-import { EventEmitterBase } from '@deta/utils'
-import { ResourceTag, SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+import { EventEmitterBase, ResourceTag, SearchResourceTags } from '@deta/utils'
 
 type Telemetry = any
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
 
   export let label: string

@@ -1,4 +1,4 @@
-import { ResourceManager } from '../resources'
+import { ResourceManager } from '@deta/services'
 import type { SFFS } from '../sffs'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { generateID, useLogScope } from '@deta/utils'

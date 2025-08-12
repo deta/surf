@@ -29,12 +29,12 @@
     SelectDropdownItem,
     type SelectItem
   } from '@deta/ui'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { appendURLPath, generateID } from '@deta/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { contextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
   import type { CtxItem } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
-  import { SFFS } from '@horizon/core/src/lib/service/sffs'
+  import { SFFS } from '@deta/services'
   import type { Quota } from '@horizon/backend/types'
   import TierQuota from '../components/TierQuota.svelte'
   import QuotaItem from '../components/Quota.svelte'

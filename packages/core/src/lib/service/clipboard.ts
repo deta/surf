@@ -4,7 +4,7 @@ import type { OasisService } from './oasis'
 import { SpaceEntryOrigin } from '../types'
 import { selectedSpaceIds, selectedResourceIds } from '../components/Oasis/utils/select'
 import { isBuiltInSpaceId } from '../constants/spaces'
-import { useToasts, type Toasts } from './toast'
+import { useToasts, type Toasts } from '@deta/ui'
 
 const log = useLogScope('ClipboardService')
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import ContextBubbleItemWrapper from './ContextBubbleItemWrapper.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
   import type { ContextItemSpace } from '@horizon/core/src/lib/service/ai/contextManager'

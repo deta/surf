@@ -16,7 +16,7 @@ import { TeletypeActionGroup, type TeletypeStaticAction } from './teletypeAction
 import type { OasisService, OasisSpace } from '../../../service/oasis'
 import type { ConfigService } from '../../../service/config'
 import type { CMDMenuItem } from '../types'
-import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+import { SearchResourceTags } from '@deta/utils/src/tags'
 
 import {
   searchActionToTeletypeItem,

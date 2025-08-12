@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-  import type { Icons } from '@horizon/icons'
+  import type { Icons } from '@deta/icons'
 
   export interface PromptPillItem {
     label?: string

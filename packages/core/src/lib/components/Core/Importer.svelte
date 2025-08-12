@@ -14,8 +14,8 @@
   import ResourceType from '../Resources/ResourceType.svelte'
   import { type ResourceManager } from '../../service/resources'
   import type { BatchFetcher } from '@deta/web-parser/src/importers/batcher'
-  import { Icon } from '@horizon/icons'
-  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { Icon } from '@deta/icons'
+  import { ResourceTag } from '@deta/utils/src/tags'
 
   export let resourceManager: ResourceManager
 

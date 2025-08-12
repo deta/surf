@@ -1,7 +1,7 @@
 <script lang="ts">
   import { derived, writable } from 'svelte/store'
 
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { useLogScope } from '@deta/utils'
 
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
@@ -9,7 +9,7 @@
     SelectDropdown,
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
-  import DynamicIcon from '@horizon/icons/src/lib/DynamicIcon.svelte'
+  import DynamicIcon from '@deta/icons/src/lib/DynamicIcon.svelte'
   import AppBarButton from '../Browser/AppBarButton.svelte'
   import { Provider } from '@deta/types/src/ai.types'
 

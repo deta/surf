@@ -40,7 +40,7 @@
    */
   import { getFileKind, mimeTypeToCodeLanguage, truncate } from '@deta/utils'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import Image from '../../Atoms/Image.svelte'
   import FileIcon from './File/FileIcon.svelte'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'

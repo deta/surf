@@ -1,8 +1,8 @@
-import { useLogScope, checkIfUrl, parseStringIntoUrl } from '@deta/utils'
+import { useLogScope, checkIfUrl, parseStringIntoUrl, ResourceTag } from '@deta/utils'
 import { ResourceTagsBuiltInKeys, SFFSResourceMetadata, SFFSResourceTag } from '@deta/types'
-import { Resource, type ResourceManager } from './resources'
 import { WebParser } from '@deta/web-parser'
-import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+
+import { Resource, type ResourceManager } from './resources'
 
 const log = useLogScope('mediaImporter')
 

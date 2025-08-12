@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Switch } from '@deta/ui'
-  import { Icon, type Icons } from '@horizon/icons'
+  import { Icon, type Icons } from '@deta/icons'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { createEventDispatcher } from 'svelte'
 

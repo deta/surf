@@ -1,6 +1,7 @@
-import { Resource } from '../service/resources'
+import { Resource } from '@deta/services'
+import type { HistoryEntry } from '@deta/types'
+
 import { OasisSpace } from '../service/oasis'
-import type { HistoryEntry } from './history.types'
 
 export enum RenderableItemType {
   Resource = 'resource',

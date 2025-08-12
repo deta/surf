@@ -7,7 +7,7 @@
     checkIfSecureURL
   } from '@deta/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import Image from '../Atoms/Image.svelte'
   import { tooltip } from '@svelte-plugins/tooltips'
   import type { BookmarkTabState, Tab, TabSpace } from '../../types/browser.types'

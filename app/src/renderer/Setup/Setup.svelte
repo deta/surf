@@ -11,13 +11,11 @@
   import DoneView from './components/DoneView.svelte'
 
   import type { UserSettings } from '@deta/types'
-  import { provideConfig } from '@horizon/core/src/lib/service/config'
-  import { createResourceManager } from '@horizon/core/src/lib/service/resources'
-  import { provideOasis } from '@horizon/core/src/lib/service/oasis'
-  import { createTelemetry } from '@horizon/core/src/lib/service/telemetry'
+  // import { provideConfig, createResourceManager, createTelemetry } from '@deta/services'
+  // import { provideOasis } from '@horizon/core/src/lib/service/oasis'
   import ContextView from './components/ContextView.svelte'
   import ImportView from './components/ImportView.svelte'
-  import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
+  // import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import AnalyticsView from './components/AnalyticsView.svelte'
 
   let telemetryAPIKey = ''
@@ -31,17 +29,17 @@
     }
   }
 
-  const telemetry = createTelemetry({
-    apiKey: telemetryAPIKey,
-    active: telemetryActive,
-    trackHostnames: false,
-    proxyUrl: telemetryProxyUrl
-  })
+  // const telemetry = createTelemetry({
+  //   apiKey: telemetryAPIKey,
+  //   active: telemetryActive,
+  //   trackHostnames: false,
+  //   proxyUrl: telemetryProxyUrl
+  // })
 
-  const config = provideConfig()
-  const resourceManager = createResourceManager(telemetry, config)
-  const smartNotes = provideSmartNotes(resourceManager)
-  provideOasis(resourceManager, config, smartNotes)
+  // const config = provideConfig()
+  // const resourceManager = createResourceManager(telemetry, config)
+  // const smartNotes = provideSmartNotes(resourceManager)
+  // provideOasis(resourceManager, config, undefined)
 
   type ViewType =
     | 'email'

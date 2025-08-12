@@ -11,7 +11,7 @@
   import { useToasts } from '@deta/ui'
   import { debugMode } from '@horizon/core/src/lib/stores/debug'
   import { ResourceTypes, type TabResource } from '@horizon/core/src/lib/types'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { conditionalArrayItem, copyToClipboard, useLogScope } from '@deta/utils'
   import { derived, writable } from 'svelte/store'
   import AppBarButton from '../../Browser/AppBarButton.svelte'

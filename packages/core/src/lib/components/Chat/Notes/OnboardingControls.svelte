@@ -1,6 +1,6 @@
 <script lang="ts">
   import RollingNumber from '@horizon/core/src/lib/components/Atoms/RollingNumber.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { createEventDispatcher } from 'svelte'
   import { derived, type Readable } from 'svelte/store'
 

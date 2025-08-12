@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import SpaceIcon from '../SpaceIcon.svelte'
   import type { SelectItem } from '.'

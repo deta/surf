@@ -6,7 +6,7 @@
 
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   export let title: string
   export let tip: string

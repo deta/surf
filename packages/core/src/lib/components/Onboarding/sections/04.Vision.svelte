@@ -2,7 +2,7 @@
   import Button from '../../Atoms/Button.svelte'
   import { createEventDispatcher } from 'svelte'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { isMac } from '@deta/utils'
   import { get, derived } from 'svelte/store'
   import {

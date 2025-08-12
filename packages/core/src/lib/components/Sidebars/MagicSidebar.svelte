@@ -10,7 +10,7 @@
   import { writable } from 'svelte/store'
 
   import { useLogScope, isMac } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import Chat from '@horizon/core/src/lib/components/Chat/Chat.svelte'
   import ChatOld from '@horizon/core/src/lib/components/Chat/ChatOld.svelte'

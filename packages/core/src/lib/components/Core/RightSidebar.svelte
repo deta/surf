@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { type Writable } from 'svelte/store'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   import { useConfig } from '@horizon/core/src/lib/service/config'
 

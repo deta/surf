@@ -20,7 +20,7 @@
 
   import { tooltip, useLocalStorageStore, useLogScope } from '@deta/utils'
   import Folder, { type EditingStartEvent, type FolderEvents } from '..//Folder.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { OasisSpace, pickRandomColorPair, useOasis } from '../../../service/oasis'
 
   import { useToasts } from '@deta/ui'

@@ -13,21 +13,12 @@ import type {
   Announcement,
   UserStats,
   BrowserType,
-  WebContentsViewCreateOptions,
-  WebContentsViewActionType,
-  WebContentsViewActionPayloads,
-  WebContentsViewAction,
   WebContentsViewEvent,
-  WebContentsViewManagerAction,
-  WebContentsViewManagerActionOutputs,
-  WebContentsViewManagerActionType,
-  WebContentsViewActionTyped,
-  WebContentsViewManagerActionPayloads,
   WebContentsViewManagerActionEvent,
-  WebContentsViewActionEvent
+  WebContentsViewActionEvent,
+  ControlWindow
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
-import type { ControlWindow } from '../../types'
 
 export const ipcService = createIPCService()
 

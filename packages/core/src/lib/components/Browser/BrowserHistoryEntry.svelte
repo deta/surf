@@ -25,7 +25,7 @@
   import { derived } from 'svelte/store'
   import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
   import { savePageToContext } from '@horizon/core/src/lib/service/saving'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   export let entry: HistoryEntry
   export let full: boolean = false

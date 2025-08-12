@@ -39,7 +39,7 @@
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { PageChatUpdateContextEventTrigger } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import {
@@ -60,7 +60,7 @@
   import { SelectDropdown } from '../../Atoms/SelectDropdown'
   import AppBarButton from '../../Browser/AppBarButton.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
-  import { SearchResourceTags } from '@horizon/core/src/lib/utils/tags'
+  import { SearchResourceTags } from '@deta/utils/src/tags'
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager

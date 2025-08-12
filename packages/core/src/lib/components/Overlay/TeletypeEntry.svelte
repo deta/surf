@@ -31,7 +31,7 @@
   /* NOTE: These imports are for the "Whats New" feature, which is currently commented out.
   import NewFeatureDialog from '../Onboarding/Dialog/NewFeatureDialog.svelte'
   import FloatyButton from '../Atoms/FloatyButton.svelte'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import { versions, completedFeatures, showFeatureModal } from '../Onboarding/featured'
   */
 

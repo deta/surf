@@ -14,7 +14,7 @@
     AnnotationRangeData,
     ResourceDataAnnotation
   } from '../../types'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
   import type { WebViewEventAnnotation } from '@deta/types'
   import { tooltip } from '@svelte-plugins/tooltips'
   import { Editor, getEditorContentText } from '@deta/editor'

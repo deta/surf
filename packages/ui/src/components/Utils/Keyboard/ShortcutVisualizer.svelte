@@ -246,7 +246,7 @@
 </div>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @use '@deta/ui/src/styles/utils' as utils;
   .shortcut-container {
     display: inline-flex;
     align-items: center;

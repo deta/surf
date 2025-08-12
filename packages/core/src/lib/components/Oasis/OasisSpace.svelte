@@ -27,7 +27,7 @@
     conditionalArrayItem
   } from '@deta/utils'
   import { OasisSpace, useOasis } from '../../service/oasis'
-  import { DynamicIcon, Icon } from '@horizon/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { createEventDispatcher, onDestroy, tick } from 'svelte'
   import {
     Resource,
@@ -114,7 +114,7 @@
   import OasisSpaceEmpty from './OasisSpaceEmpty.svelte'
   import { BuiltInSpaceId, BuiltInSpaces, isBuiltInSpaceId } from '../../constants/spaces'
   import { savePageToContext } from '@horizon/core/src/lib/service/saving'
-  import { SearchResourceTags, ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
 
   export let spaceId: string
   export let active: boolean = false

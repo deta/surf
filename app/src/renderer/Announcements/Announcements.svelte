@@ -4,7 +4,7 @@
   import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
   import type { Announcement } from '@deta/types'
   import { getFormattedDate } from '@deta/utils'
-  import { Icon } from '@horizon/icons'
+  import { Icon } from '@deta/icons'
 
   let announcements: Announcement[] = []
 

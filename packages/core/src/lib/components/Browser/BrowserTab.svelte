@@ -88,7 +88,7 @@
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
   import type { SavingItem } from '@horizon/core/src/lib/service/saving'
-  import { ResourceTag } from '@horizon/core/src/lib/utils/tags'
+  import { ResourceTag } from '@deta/utils/src/tags'
 
   export let tab: TabPage
   export let downloadIntercepters: Writable<Map<string, (data: Download) => void>>
