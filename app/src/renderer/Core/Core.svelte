@@ -4,7 +4,7 @@
   import { TeletypeProvider, Teletype, type Action } from '@deta/teletype/src'
 
   import { DynamicIcon } from '@deta/icons'
-  import { Button, Link } from '@deta/ui/src'
+  import { Button, Link } from '@deta/ui'
   import { useLogScope } from '@deta/utils'
   import { provideConfig } from '@deta/services'
 

@@ -4,6 +4,24 @@
   "globalEnv": ["*"],
   "ui": "tui",
   "tasks": {
+    "@deta/utils#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/ui#build": {
+      "dependsOn": ["@deta/utils#build", "@deta/icons#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/icons#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/editor#build": {
+      "dependsOn": ["@deta/icons#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
     "@deta/backend#build": {
       "dependsOn": [],
       "outputs": [".dist/**", "index.node"]
@@ -88,7 +106,14 @@
       "outputLogs": "new-only"
     },
     "build:app:frontend": {
-      "dependsOn": ["@horizon/core#build:tailwind", "@horizon/dragcula#build"],
+      "dependsOn": [
+        "@horizon/core#build:tailwind",
+        "@horizon/dragcula#build",
+        "@deta/utils#build",
+        "@deta/ui#build",
+        "@deta/icons#build",
+        "@deta/editor#build"
+      ],
       "outputs": [".dist/**", ".out/**"]
     },
     "build:app:backend": {

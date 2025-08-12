@@ -1,7 +1,7 @@
-import { RightSidebarTab } from './browser.types'
-import { ContextViewDensity, ContextViewType } from './contexts.types'
-import { WebViewEventTransform } from './ipc.webview.types'
-import { AnnotationCommentData, AnnotationType } from './resources.types'
+import { type RightSidebarTab } from './browser.types'
+import { type ContextViewDensity, type ContextViewType } from './contexts.types'
+import { type WebViewEventTransform } from './ipc.webview.types'
+import { type AnnotationType } from './resources.types'
 
 export enum TelemetryEventTypes {
   // Tabs

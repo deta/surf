@@ -12,7 +12,7 @@ interface ButtonConfig {
 }
 
 interface FloatyButton {
-  instance: SvelteComponent
+  instance: SvelteComponent | null
   element: HTMLElement
   coords: Spring<{
     x: number

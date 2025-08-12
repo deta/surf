@@ -2,10 +2,21 @@
   "name": "@deta/utils",
   "private": true,
   "version": "0.0.0",
-  "svelte": "src/index.ts",
-  "main": "src/index.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./src/*": "./src/*",
+    "./dist/*": "./dist/*"
+  },
+  "sideEffects": false,
   "files": [
-    "build",
+    "dist",
     "src/"
   ],
   "scripts": {

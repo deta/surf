@@ -8,6 +8,7 @@
     "build": "turbo run desktop#build",
     "build:frontend": "turbo run desktop#build:frontend",
     "build:packages": "turbo build --filter=!desktop",
+    "build:libs": "turbo run @deta/utils#build @deta/ui#build @deta/icons#build @deta/editor#build --force",
     "build:desktop": "yarn workspace desktop build",
     "build:desktop:mwl": "yarn turbo run desktop#build:mwl",
     "build:desktop:mac": "yarn turbo run desktop#build:mac",

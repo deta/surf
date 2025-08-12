@@ -3,9 +3,14 @@
   "include": ["src/**/*.ts", "src/**/*.json"],
   "compilerOptions": {
     "target": "ESNext",
-    "composite": true,
-    "outDir": "./build/",
     "module": "ESNext",
-    "preserveValueImports": false
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationDir": "./dist",
+    "composite": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
   }
 }

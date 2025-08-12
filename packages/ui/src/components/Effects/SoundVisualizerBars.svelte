@@ -32,6 +32,7 @@
       transform: scaleY(1);
     }
   }
+
   svg {
     rect {
       transform-origin: center center;

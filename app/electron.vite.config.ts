@@ -103,6 +103,7 @@ export default defineConfig({
           setup: resolve(__dirname, 'src/preload/setup.ts'),
           overlay: resolve(__dirname, 'src/preload/overlay.ts')
         },
+        external: ['@deta/services/src/ipc'],
         plugins: [
           ...(!disableAllObfuscation
             ? [
@@ -112,7 +113,18 @@ export default defineConfig({
                 })
               ]
             : [])
-        ]
+        ],
+        treeshake: {
+          moduleSideEffects: false,
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false
+        },
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js',
+          chunkFileNames: '[name].js',
+          assetFileNames: '[name].[ext]'
+        }
       },
       minify: !disableAllObfuscation
     },
@@ -151,6 +163,15 @@ export default defineConfig({
           overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
+        preserveEntrySignatures: 'strict',
+        output: {
+          preserveModules: true
+        },
+        treeshake: {
+          moduleSideEffects: false,
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false
+        },
         plugins: [
           ...(!disableAllObfuscation
             ? [

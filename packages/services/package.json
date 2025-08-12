@@ -4,6 +4,20 @@
   "version": "0.0.0",
   "svelte": "src/index.ts",
   "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./src": "./src/index.ts",
+    "./src/*": "./src/*",
+    "./src/ipc": "./src/ipc/*",
+    "./dist": "./dist/index.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "files": [
     "build",
     "src/"

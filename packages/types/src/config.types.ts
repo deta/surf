@@ -1,4 +1,4 @@
-import { Model } from './ai.types'
+import type { Model } from './ai.types'
 
 export type UserConfig = {
   user_id?: string
@@ -77,7 +77,7 @@ export type UserSettings = {
   experimental_mode?: boolean
 }
 
-interface UserSession {
+export interface UserSession {
   startedAt: number
   endedAt?: number
   duration?: number

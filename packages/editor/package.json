@@ -5,8 +5,21 @@
   "type": "module",
   "svelte": "./src/lib/main.ts",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./src/lib/main.ts",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./src/lib/main.ts",
+      "import": "./dist/index.js"
+    },
+    "./src": "./src/index.ts",
+    "./src/*": "./src/*",
+    "./dist": "./dist/index.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "src/lib"

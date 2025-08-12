@@ -1,7 +1,7 @@
 import {
   ResourceTypes,
   ResourceTagsBuiltInKeys,
-  SpaceSource,
+  type SpaceSource,
   type ResourceTagDataStateValue,
   type ResourceTagsBuiltIn,
   type SFFSResourceTag

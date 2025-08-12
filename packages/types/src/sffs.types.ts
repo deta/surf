@@ -1,7 +1,7 @@
 import type { ResourceProcessingState } from '@deta/types'
-import { SpaceEntry } from './spaces.types'
-import { Optional } from './utils.types'
-import { AIChatMessageRole, AIChatMessageSource } from './ai.types'
+import { type SpaceEntry } from './spaces.types'
+import { type Optional } from './utils.types'
+import type { AIChatMessageRole, AIChatMessageSource } from './ai.types'
 
 export type SFFSSearchResultEngineRaw = 'Keyword' | 'Proximity' | 'Semantic'
 

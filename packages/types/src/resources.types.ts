@@ -1,4 +1,4 @@
-import { ResourceProcessingState } from './eventBus.types'
+import { type ResourceProcessingState } from './eventBus.types'
 import type {
   ResourceDataAnnotation,
   ResourceDataArticle,

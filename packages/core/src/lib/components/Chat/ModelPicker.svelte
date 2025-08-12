@@ -9,7 +9,7 @@
     SelectDropdown,
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
-  import DynamicIcon from '@deta/icons/src/lib/DynamicIcon.svelte'
+  import { DynamicIcon } from '@deta/icons'
   import AppBarButton from '../Browser/AppBarButton.svelte'
   import { Provider } from '@deta/types/src/ai.types'
 

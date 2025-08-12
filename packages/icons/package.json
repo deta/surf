@@ -5,15 +5,24 @@
   "type": "module",
   "svelte": "./src/lib/main.ts",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./src/lib/main.ts",
+  "module": "./dist/index.js",
+  "types": "./dist/lib/main.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/lib/main.d.ts",
+      "svelte": "./src/lib/main.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "src/lib"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && yarn build:types",
+    "build:types": "tsc --emitDeclarationOnly",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
