@@ -5,6 +5,7 @@
   import {
     WebContentsViewEventType,
     WebViewEventSendNames,
+    type Fn,
     type WebContentsViewEventListener,
     type WebContentsViewEventListenerCallback,
     type WebContentsViewEvents,
@@ -22,17 +23,12 @@
   const log = useLogScope('WebContents')
   const dispatch = createEventDispatcher<any>()
 
+  const webContentsBackgroundColor = writable<string | null>(null)
+  const webContentsScreenshot = writable(null)
+
   let webContentsWrapper: HTMLDivElement | null = null
   let webContentsView: WebContentsView | null = null
-
-  // why svelte, whyyyy?!
-  $: webContentsBackgroundColor =
-    webContentsView !== null ? webContentsView?.backgroundColor : writable(null)
-  $: webContentsScreenshot = webContentsView !== null ? webContentsView?.screenshot : writable(null)
-
-  /*
-    INITIALIZATION
-  */
+  let unsubs: Fn[] = []
 
   onMount(async () => {
     if (!webContentsWrapper) {
@@ -40,14 +36,28 @@
       return
     }
 
-    log.debug('Rendering web contents view', view.id)
-    const wcv = await view.render(webContentsWrapper)
+    log.debug('Mounting web contents view', view.id)
+    const wcv = await view.mount(webContentsWrapper)
     webContentsView = wcv
+
+    unsubs.push(
+      wcv.screenshot.subscribe((screenshot) => {
+        webContentsScreenshot.set(screenshot)
+      })
+    )
+
+    unsubs.push(
+      wcv.backgroundColor.subscribe((color) => {
+        webContentsBackgroundColor.set(color)
+      })
+    )
   })
 
   onDestroy(() => {
     log.debug('Destroying web contents view', view.id)
     view.destroy()
+
+    unsubs.forEach((unsub) => unsub())
   })
 </script>
 

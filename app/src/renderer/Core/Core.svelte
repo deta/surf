@@ -1,13 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
 
-  import { TeletypeProvider, Teletype, type Action } from '@deta/teletype/src'
-
-  import { DynamicIcon } from '@deta/icons'
   import { Button, Link } from '@deta/ui'
   import { useLogScope } from '@deta/utils'
   import { provideConfig, useViewManager } from '@deta/services'
+  import type { Fn } from '@deta/types'
 
+  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
 
   // import { Browser } from '@horizon/core'
@@ -29,10 +28,13 @@
   const viewManager = useViewManager()
 
   let count = $state(0)
+  let open = $state(false)
 
   function onclick() {
     count += 1
   }
+
+  let unsubs: Fn[] = []
 
   const actions = [
     {
@@ -53,16 +55,15 @@
     }
   ] satisfies Action[]
 
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === 't' && (event.ctrlKey || event.metaKey)) {
+      open = !open
+      event.preventDefault()
+    }
+  }
+
   const testView = viewManager.create({
     url: 'https://en.wikipedia.org'
-  })
-
-  testView.on('rendered', (webContentsView) => {
-    log.info('Test view rendered:', testView.id)
-
-    webContentsView.on('preload-event', (type, payload) => {
-      log.debug('WebView event received:', type, payload)
-    })
   })
 
   onMount(() => {
@@ -74,8 +75,29 @@
 
     // @ts-ignore
     window.testView = testView
+
+    unsubs.push(
+      testView.on('mounted', (webContentsView) => {
+        log.info('Test view mounted:', testView.id)
+
+        unsubs.push(
+          webContentsView.on('keydown', (event) => {
+            handleKeyDown(event)
+          }),
+          webContentsView.on('hover-target-url-changed', (url) => {
+            log.debug('Hover target URL changed:', url)
+          })
+        )
+      })
+    )
+  })
+
+  onDestroy(() => {
+    viewManager.onDestroy()
   })
 </script>
+
+<svelte:window onkeydown={handleKeyDown} />
 
 <div class="main">
   <!-- <Browser /> -->
@@ -93,16 +115,7 @@
     <WebContentsView view={testView} />
   </div>
 
-  <TeletypeProvider
-    {actions}
-    class="teletype-provider"
-    options={{
-      iconComponent: DynamicIcon,
-      placeholder: 'Search the web, enter URL or ask a question...'
-    }}
-  >
-    <Teletype />
-  </TeletypeProvider>
+  <TeletypeEntry bind:open />
 </div>
 
 <style lang="scss">

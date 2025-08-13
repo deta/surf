@@ -10,6 +10,7 @@ import {
   WebContentsViewEvents,
   WebContentsViewEventType,
   WebContentsViewManagerActionType,
+  WebViewEventSendNames,
   WebViewSendEvents,
   type Fn,
   type WebContentsViewAction,
@@ -43,6 +44,7 @@ export type WebContentsViewParsedEvents = {
   'focus-changed': (isFocused: boolean) => void
   'hover-target-url-changed': (url: string | null) => void
   'found-in-page': (result: WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]) => void
+  keydown: (event: WebViewSendEvents[WebViewEventSendNames.KeyDown]) => void
   'preload-event': <T extends keyof WebViewSendEvents>(
     type: T,
     payload: WebViewSendEvents[T]
@@ -375,6 +377,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
 
     const eventType = event.args[0] as keyof WebViewSendEvents
     const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents]
+
+    if (eventType === WebViewEventSendNames.KeyDown) {
+      this.emit('keydown', eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
+      return
+    }
 
     this.emit('preload-event', eventType, eventData)
   }
@@ -741,7 +748,6 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   async takeViewScreenshot(quality: 'low' | 'medium' | 'high' = 'low') {
     this.log.debug('Refreshing screenshot with quality:', quality)
     const dataURL = await this.capturePage(quality)
-
     if (dataURL) {
       this.screenshot.set({ image: dataURL, quality })
     } else {
@@ -778,14 +784,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
 }
 
 export type OverlayState = {
-  extensionPopupOpen: boolean
-  selectPopupOpen: boolean
-  rightClickMenuOpen: boolean
-  dialogOpen: boolean
+  teletypeOpen: boolean
 }
 
 export type ViewEvents = {
-  rendered: (webContentsView: WebContentsView) => void
+  mounted: (webContentsView: WebContentsView) => void
   destroyed: () => void
 }
 
@@ -838,10 +841,10 @@ export class View extends EventEmitterBase<ViewEvents> {
     return get(this.navigationHistory)
   }
 
-  async render(domElement: HTMLElement, options: WebContentsViewCreateOptions) {
-    this.log.debug('Rendering view with options:', options)
+  async mount(domElement: HTMLElement, options: WebContentsViewCreateOptions) {
+    this.log.debug('Mounting view with options:', options)
 
-    const webContentsView = await this.manager.renderWebContentsView(domElement, {
+    const webContentsView = await this.manager.mountWebContentsView(domElement, {
       id: this.id,
       partition: this.initialData.partition,
       url: this.urlValue,
@@ -874,8 +877,9 @@ export class View extends EventEmitterBase<ViewEvents> {
       })
     )
 
-    this.emit('rendered', webContentsView)
+    this.emit('mounted', webContentsView)
     this.log.debug('View rendered successfully:', this.id, webContentsView)
+    return webContentsView
   }
 
   destroy() {
@@ -919,6 +923,8 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
 
   views: Writable<View[]>
 
+  private unsubs: Fn[] = []
+
   static self: ViewManager
 
   constructor() {
@@ -928,10 +934,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
     this.config = useConfig()
 
     this.overlayState = writable({
-      extensionPopupOpen: false,
-      selectPopupOpen: false,
-      rightClickMenuOpen: false,
-      dialogOpen: false
+      teletypeOpen: false
     })
 
     this.activeViewId = writable(null)
@@ -949,13 +952,19 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
         */
 
     this.shouldHideViews = derived([this.overlayState], ([$overlayState]) => {
-      return (
-        $overlayState.selectPopupOpen ||
-        $overlayState.extensionPopupOpen ||
-        $overlayState.rightClickMenuOpen ||
-        $overlayState.dialogOpen
-      )
+      return $overlayState.teletypeOpen
     })
+
+    this.unsubs.push(
+      this.shouldHideViews.subscribe((shouldHide) => {
+        this.log.debug('shouldHideViews changed:', shouldHide)
+        if (shouldHide) {
+          this.hideViews()
+        } else {
+          this.showViews()
+        }
+      })
+    )
   }
 
   get viewsValue() {
@@ -1006,7 +1015,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
     return view
   }
 
-  async renderWebContentsView(domElement: HTMLElement, options: WebContentsViewCreateOptions) {
+  async mountWebContentsView(domElement: HTMLElement, options: WebContentsViewCreateOptions) {
     this.log.debug('Creating WebContentsView with options:', options)
 
     if (domElement && !options.bounds) {
@@ -1138,6 +1147,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
   async showViews() {
     this.emit('show-views')
 
+    const view = this.getActiveView()
+    if (view) {
+      this.activate(view.id)
+    }
+
     // const activeTab = this.tabsManager.activeTabValue
     // if (activeTab?.type === 'page') {
     //   const activeView = this.views.get(activeTab.id)
@@ -1166,6 +1180,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
       return this.webContentsViews.get(activeViewId) || null
     }
     return null
+  }
+
+  onDestroy() {
+    this.unsubs.forEach((unsub) => unsub())
   }
 
   static getInstance(): ViewManager {
