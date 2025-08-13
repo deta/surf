@@ -7,6 +7,7 @@ import replace from '@rollup/plugin-replace'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import obfuscator from 'rollup-plugin-obfuscator'
 import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
+import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const disableAllObfuscation = process.env.DISABLE_ALL_OBFUSCATION === 'true' || IS_DEV
@@ -89,9 +90,10 @@ export default defineConfig({
         'doc.documentElement.style': '{}'
       }),
       createLicensePlugin('preload'),
-      ...(!disableAllObfuscation
-        ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
-        : [])
+      esbuildConsolidatePreloads('out/preload')
+      // ...(!disableAllObfuscation
+      //   ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
+      //   : [])
     ],
     build: {
       rollupOptions: {
@@ -103,28 +105,17 @@ export default defineConfig({
           setup: resolve(__dirname, 'src/preload/setup.ts'),
           overlay: resolve(__dirname, 'src/preload/overlay.ts')
         },
-        external: ['@deta/services/src/ipc'],
-        plugins: [
-          ...(!disableAllObfuscation
-            ? [
-                obfuscator({
-                  global: true,
-                  options: {}
-                })
-              ]
-            : [])
-        ],
-        treeshake: {
-          moduleSideEffects: false,
-          propertyReadSideEffects: false,
-          tryCatchDeoptimization: false
-        },
-        output: {
-          format: 'cjs',
-          entryFileNames: '[name].js',
-          chunkFileNames: '[name].js',
-          assetFileNames: '[name].[ext]'
-        }
+        external: ['@deta/services/src/ipc']
+        // plugins: [
+        //   ...(!disableAllObfuscation
+        //     ? [
+        //         obfuscator({
+        //           global: true,
+        //           options: {}
+        //         })
+        //       ]
+        //     : [])
+        // ],
       },
       minify: !disableAllObfuscation
     },

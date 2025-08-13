@@ -12,7 +12,7 @@
     },
     "./src": "./src/index.ts",
     "./src/*": "./src/*",
-    "./src/ipc": "./src/ipc/*",
+    "./src/ipc": "./src/ipc/index.ts",
     "./dist": "./dist/index.js",
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
