@@ -3,29 +3,26 @@
 
   import { Button, Link } from '@deta/ui'
   import { useLogScope } from '@deta/utils'
-  import { provideConfig, useViewManager } from '@deta/services'
+  import {
+    provideConfig,
+    useViewManager,
+    createKeyboardManager,
+    createShortcutManager,
+    defaultShortcuts,
+    ShortcutActions,
+    ShortcutPriority
+  } from '@deta/services'
   import type { Fn } from '@deta/types'
 
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
 
-  // import { Browser } from '@horizon/core'
-  // import '../../app.css'
-  // import './assets/fonts/Bayshore.woff2'
-  // import './assets/fonts/Bayshore.woff'
-  // import './assets/fonts/Gambarino-Regular.woff'
-  // import './assets/fonts/Gambarino-Regular.woff2'
-  // import './assets/fonts/SNPro-Variable.ttf'
-  // import './assets/fonts/SNPro-Variable.woff2'
-  // import './assets/fonts/SNPro-Variable.woff'
-  // import '@deta/ui/src/output.css'
-  // import '@deta/ui/src/app.css'
-  // import '../../../../../packages/core/src/output.css'
-  // import { isMac, isWindows } from '@deta/utils'
-
   const log = useLogScope('Core')
   const config = provideConfig()
   const viewManager = useViewManager()
+
+  const keyboardManager = createKeyboardManager()
+  const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
 
   let count = $state(0)
   let open = $state(false)
@@ -42,7 +39,7 @@
       name: 'Action 1',
       icon: 'save',
       handler: () => {
-        console.log('Action 1 clicked')
+        log.debug('Action 1 clicked')
       }
     },
     {
@@ -50,24 +47,17 @@
       name: 'Action 2',
       icon: 'reload',
       handler: () => {
-        console.log('Action 2 clicked')
+        log.debug('Action 2 clicked')
       }
     }
   ] satisfies Action[]
-
-  function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 't' && (event.ctrlKey || event.metaKey)) {
-      open = !open
-      event.preventDefault()
-    }
-  }
 
   const testView = viewManager.create({
     url: 'https://en.wikipedia.org'
   })
 
   onMount(() => {
-    log.info('Core component mounted')
+    log.debug('Core component mounted')
 
     const settings = config.settingsValue
 
@@ -76,16 +66,28 @@
     // @ts-ignore
     window.testView = testView
 
+    shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
+      log.debug('Opening Teletype')
+      open = !open
+
+      // shortcutsManager.setCustomShortcut(ShortcutActions.NEW_TAB, open ? 'Escape' : 'Meta+T')
+
+      return true
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
+      log.debug('Closing Tab')
+
+      testView.destroy()
+
+      return true
+    })
+
     unsubs.push(
       testView.on('mounted', (webContentsView) => {
-        log.info('Test view mounted:', testView.id)
-
         unsubs.push(
           webContentsView.on('keydown', (event) => {
-            handleKeyDown(event)
-          }),
-          webContentsView.on('hover-target-url-changed', (url) => {
-            log.debug('Hover target URL changed:', url)
+            keyboardManager.handleKeyDown(event)
           })
         )
       })
@@ -97,7 +99,7 @@
   })
 </script>
 
-<svelte:window onkeydown={handleKeyDown} />
+<svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
 <div class="main">
   <!-- <Browser /> -->

@@ -1,10 +1,20 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+
   import { TeletypeProvider, Teletype, type Action, type TeletypeSystem } from '@deta/teletype/src'
 
+  import { useLogScope } from '@deta/utils'
   import { DynamicIcon } from '@deta/icons'
-  import { useViewManager } from '@deta/services'
+  import {
+    useViewManager,
+    useShortcutsManager,
+    ShortcutActions,
+    ShortcutPriority
+  } from '@deta/services'
 
+  const log = useLogScope('TeletypeEntry')
   const viewManager = useViewManager()
+  const shortcutsManager = useShortcutsManager<ShortcutActions>()
 
   let { open = $bindable() } = $props()
 
@@ -29,13 +39,26 @@
     }
   ] satisfies Action[]
 
+  let unregister: any
+
   $effect(() => {
     if (open) {
       teletype?.open()
       viewManager.changeOverlayState({ teletypeOpen: true })
+      unregister = shortcutsManager.registerHandler(ShortcutActions.CLOSE_TELETYPE, () => {
+        log.debug('Opening Teletype')
+
+        if (open) {
+          open = false
+          return true
+        }
+
+        return false
+      })
     } else {
       teletype?.close()
       viewManager.changeOverlayState({ teletypeOpen: false })
+      unregister?.()
     }
   })
 </script>
