@@ -56,7 +56,12 @@ export class WCView {
       this.wcv.setBounds(opts.bounds)
     }
 
-    if (opts.navigationHistory) {
+    if (
+      opts.navigationHistory &&
+      opts.navigationHistoryIndex &&
+      opts.navigationHistory.length > 0 &&
+      opts.navigationHistoryIndex >= 0
+    ) {
       console.log(
         '[main] webcontentsview-create: setting navigation history for view with id',
         this.id,

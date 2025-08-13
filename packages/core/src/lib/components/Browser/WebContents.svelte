@@ -33,29 +33,29 @@
   } from '@deta/types'
 
   import { useLogScope } from '@deta/utils'
-  import type { NewWindowRequest } from '../../service/ipc/events'
+  import type { NewWindowRequest } from '@deta/services/src/ipc'
   import { useTabsManager } from '../../service/tabs'
   import type { WebContentsView } from '@horizon/core/src/lib/service/viewManager'
 
   export let id: string = crypto.randomUUID().split('-').slice(0, 1).join('')
   export let src: string
-  export let partition: string
+  export let partition: string = 'persist:horizon'
   export let active: boolean = true
-  export let navigationHistory: Writable<Electron.NavigationEntry[]>
-  export let currentHistoryIndex: Writable<number>
+  export let navigationHistory: Writable<Electron.NavigationEntry[]> = writable([])
+  export let currentHistoryIndex: Writable<number> = writable(0)
   export let isReady = writable(false)
   export let webContentsId = writable<number | null>(null)
   export let webContentsWrapper: HTMLDivElement | null = null
   export let webContentsView: WebContentsView | null = null
   export let parentViewID: string | undefined = undefined
   export let isOverlay: boolean = false
-  export let isLoading: Writable<boolean>
+  export let isLoading: Writable<boolean> = writable(false)
 
   export const title = writable('')
   export const faviconURL = writable<string>('')
   export const didFinishLoad = writable(false)
 
-  const tabsManager = useTabsManager()
+  const viewManager = useViewManager()
 
   const log = useLogScope('WebContents')
   const dispatch = createEventDispatcher<WebContentsViewEvents>()
@@ -219,7 +219,7 @@
     const bounds = webContentsWrapper.getBoundingClientRect()
 
     log.debug('Creating web contents view with bounds', bounds, src, cleanID)
-    webContentsView = await tabsManager.viewManager.create({
+    webContentsView = await viewManager.create({
       id: cleanID,
       url: src,
       partition: partition,
@@ -308,7 +308,7 @@
 
   onDestroy(() => {
     log.debug('Destroying web contents view', cleanID, { isOverlay, parentViewID })
-    tabsManager.viewManager.destroy(cleanID)
+    viewManager.destroy(cleanID)
 
     if (unsub) {
       unsub.forEach((fn) => fn())

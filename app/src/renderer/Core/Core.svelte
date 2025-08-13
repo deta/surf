@@ -6,7 +6,9 @@
   import { DynamicIcon } from '@deta/icons'
   import { Button, Link } from '@deta/ui'
   import { useLogScope } from '@deta/utils'
-  import { provideConfig } from '@deta/services'
+  import { provideConfig, useViewManager } from '@deta/services'
+
+  import WebContentsView from './components/WebContentsView.svelte'
 
   // import { Browser } from '@horizon/core'
   // import '../../app.css'
@@ -24,6 +26,7 @@
 
   const log = useLogScope('Core')
   const config = provideConfig()
+  const viewManager = useViewManager()
 
   let count = $state(0)
 
@@ -50,25 +53,44 @@
     }
   ] satisfies Action[]
 
+  const testView = viewManager.create({
+    url: 'https://en.wikipedia.org'
+  })
+
+  testView.on('rendered', (webContentsView) => {
+    log.info('Test view rendered:', testView.id)
+
+    webContentsView.on('preload-event', (type, payload) => {
+      log.debug('WebView event received:', type, payload)
+    })
+  })
+
   onMount(() => {
     log.info('Core component mounted')
 
     const settings = config.settingsValue
 
     log.debug('User settings:', settings)
+
+    // @ts-ignore
+    window.testView = testView
   })
 </script>
 
 <div class="main">
   <!-- <Browser /> -->
 
-  <div class="content">
+  <!-- <div class="content">
     <h1>Surf Greenfield</h1>
 
     <p>Svelte 5, Vite 7, electron-vite 4, Electron 37</p>
     <Button {onclick}>Clicks {count}</Button>
 
     <Link url="https://deta.surf">What is Surf?</Link>
+  </div> -->
+
+  <div class="web-contents">
+    <WebContentsView view={testView} />
   </div>
 
   <TeletypeProvider
@@ -126,6 +148,12 @@
       color: white;
       cursor: pointer;
     }
+  }
+
+  .web-contents {
+    height: 100%;
+    width: 100%;
+    position: relative;
   }
 
   :global(:root) {

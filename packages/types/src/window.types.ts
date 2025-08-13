@@ -24,6 +24,14 @@ export type WebContentsViewCreateOptions = {
   navigationHistoryIndex?: number
 }
 
+export type WebContentsViewData = {
+  id: string
+  partition: string
+  url: string
+  navigationHistoryIndex: number
+  navigationHistory: Electron.NavigationEntry[]
+}
+
 // --- WebContentsView Actions ---
 export enum WebContentsViewActionType {
   ACTIVATE = 'activate',
