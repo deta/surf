@@ -80,6 +80,7 @@ export default defineConfig({
     plugins: [
       svelte(svelteOptions),
       externalizeDepsPlugin({ exclude: ['@deta/backend'] }),
+      esbuildConsolidatePreloads('out/preload'),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webview.js'),
         injectCode: (cssCode, _options) => {
@@ -89,8 +90,7 @@ export default defineConfig({
       replace({
         'doc.documentElement.style': '{}'
       }),
-      createLicensePlugin('preload'),
-      esbuildConsolidatePreloads('out/preload')
+      createLicensePlugin('preload')
       // ...(!disableAllObfuscation
       //   ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
       //   : [])
@@ -105,17 +105,17 @@ export default defineConfig({
           setup: resolve(__dirname, 'src/preload/setup.ts'),
           overlay: resolve(__dirname, 'src/preload/overlay.ts')
         },
-        external: ['@deta/services/src/ipc']
-        // plugins: [
-        //   ...(!disableAllObfuscation
-        //     ? [
-        //         obfuscator({
-        //           global: true,
-        //           options: {}
-        //         })
-        //       ]
-        //     : [])
-        // ],
+        external: ['@deta/services/src/ipc'],
+        plugins: [
+          ...(!disableAllObfuscation
+            ? [
+                obfuscator({
+                  global: true,
+                  options: {}
+                })
+              ]
+            : [])
+        ]
       },
       minify: !disableAllObfuscation
     },
