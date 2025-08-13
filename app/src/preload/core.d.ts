@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { API, PreloadEventHandlers } from './horizon'
+import type { API, PreloadEventHandlers } from './core'
 
 declare global {
   interface Window {

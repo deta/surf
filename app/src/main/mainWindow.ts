@@ -98,7 +98,7 @@ export function createWindow() {
     // ...(isLinux() ? { icon } : {}),
     trafficLightPosition: { x: 16, y: 17 },
     webPreferences: {
-      preload: join(__dirname, '../preload/horizon.js'),
+      preload: join(__dirname, '../preload/core.js'),
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
         `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
@@ -362,7 +362,7 @@ function setupMainWindowWebContentsHandlers(contents: Electron.WebContents) {
     webPreferences.sandbox = true
     webPreferences.nodeIntegration = false
     webPreferences.contextIsolation = true
-    webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
+    webPreferences.preload = path.resolve(__dirname, '../preload/webcontents.js')
     webPreferences.spellcheck = isMac()
     webPreferences.additionalArguments = [`--pdf-viewer-entry-point=${PDFViewerEntryPoint}`]
   })
@@ -463,7 +463,7 @@ function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents)
     webPreferences.sandbox = true
     webPreferences.nodeIntegration = false
     webPreferences.contextIsolation = true
-    webPreferences.preload = path.resolve(__dirname, '../preload/webview.js')
+    webPreferences.preload = path.resolve(__dirname, '../preload/webcontents.js')
     webPreferences.spellcheck = isMac()
     webPreferences.additionalArguments = [`--pdf-viewer-entry-point=${PDFViewerEntryPoint}`]
   })

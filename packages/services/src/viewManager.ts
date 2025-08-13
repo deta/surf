@@ -376,7 +376,6 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
     const eventType = event.args[0] as keyof WebViewSendEvents
     const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents]
 
-    this.log.debug('Received IPC page event', eventType, eventData)
     this.emit('preload-event', eventType, eventData)
   }
 

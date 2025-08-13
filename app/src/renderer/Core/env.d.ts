@@ -1,1 +1,1 @@
-/// <reference path="../../preload/horizon.d.ts" />
+/// <reference path="../../preload/core.d.ts" />

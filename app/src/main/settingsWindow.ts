@@ -31,7 +31,7 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
     titleBarStyle: isMac() ? 'hidden' : 'default',
     // ...(isLinux() ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/horizon.js'),
+      preload: join(__dirname, '../preload/core.js'),
       additionalArguments: [
         `--userDataPath=${app.getPath('userData')}`,
         `--settings-window-entry-point=${SettingsWindowEntrypoint}`

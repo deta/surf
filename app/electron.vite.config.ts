@@ -82,7 +82,7 @@ export default defineConfig({
       externalizeDepsPlugin({ exclude: ['@deta/backend'] }),
       esbuildConsolidatePreloads('out/preload'),
       cssInjectedByJsPlugin({
-        jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webview.js'),
+        jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webcontents.js'),
         injectCode: (cssCode, _options) => {
           return `window.addEventListener('DOMContentLoaded', () => { try{if(typeof document != 'undefined'){var elementStyle = document.createElement('style');elementStyle.id="webview-styles";elementStyle.appendChild(document.createTextNode(${cssCode}));document.head.appendChild(elementStyle);}}catch(e){console.error('vite-plugin-css-injected-by-js', e);} })`
         }
@@ -98,8 +98,8 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          horizon: resolve(__dirname, 'src/preload/horizon.ts'),
-          webview: resolve(__dirname, 'src/preload/webview.ts'),
+          core: resolve(__dirname, 'src/preload/core.ts'),
+          webcontents: resolve(__dirname, 'src/preload/webcontents.ts'),
           updates: resolve(__dirname, 'src/preload/updates.ts'),
           announcements: resolve(__dirname, 'src/preload/announcements.ts'),
           setup: resolve(__dirname, 'src/preload/setup.ts'),
