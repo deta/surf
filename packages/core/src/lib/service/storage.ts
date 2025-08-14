@@ -6,6 +6,7 @@ import type { Tab } from '../types/browser.types'
 import type { EditablePrompt } from '@deta/types'
 import type { HomescreenData } from '../components/Oasis/homescreen/homescreen'
 import type { DesktopData } from '../types/desktop.types'
+import { KVStore } from './kv'
 
 export interface LegacyResource {
   id: string
@@ -161,16 +162,19 @@ export class HorizonStore<T extends { id: string; createdAt: string; updatedAt: 
 
 export class HorizonDatabase extends Dexie {
   resources: HorizonStore<LegacyResource>
-  tabs: HorizonStore<Tab>
+  tabs: KVStore<Tab>
+  desktop: KVStore<DesktopData>
   // TODO: remove these unused stores
   chats: HorizonStore<any>
   chatMessages: HorizonStore<any>
   prompts: HorizonStore<EditablePrompt>
   homescreen: HorizonStore<HomescreenData>
-  desktop: HorizonStore<DesktopData>
 
   constructor() {
     super('HorizonDatabase')
+
+    this.tabs = new KVStore<Tab>('tabs')
+    this.desktop = new KVStore<DesktopData>('desktop')
 
     this.version(2).stores({
       userData: 'id, user_id',
@@ -338,11 +342,9 @@ export class HorizonDatabase extends Dexie {
       })
 
     this.resources = new HorizonStore<LegacyResource>(this.table('resources'))
-    this.tabs = new HorizonStore<Tab>(this.table('tabs'))
     this.chats = new HorizonStore<any>(this.table('chats'))
     this.chatMessages = new HorizonStore<any>(this.table('chatMessages'))
     this.prompts = new HorizonStore<EditablePrompt>(this.table('prompts'))
     this.homescreen = new HorizonStore<HomescreenData>(this.table('homescreen'))
-    this.desktop = new HorizonStore<DesktopData>(this.table('desktop'))
   }
 }

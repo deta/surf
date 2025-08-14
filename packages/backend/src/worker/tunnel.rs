@@ -73,6 +73,8 @@ pub struct TunnelConfig {
     pub api_key: String,
     pub local_ai_mode: bool,
     pub language_setting: String,
+    pub num_worker_threads: Option<usize>,
+    pub num_processor_threads: Option<usize>,
 }
 
 impl Finalize for WorkerTunnel {}
@@ -141,7 +143,8 @@ impl WorkerTunnel {
         let mut run_migrations: i32 = 1;
         let libuv_ch = neon::event::Channel::new(cx);
 
-        for n in 0..NUM_WORKER_THREADS {
+        let num_worker_threads = config.num_worker_threads.unwrap_or(NUM_WORKER_THREADS);
+        for n in 0..num_worker_threads {
             let config = config.clone();
             let worker_rx = worker_rx.clone();
             let tqueue_tx = tqueue_tx.clone();
@@ -185,8 +188,11 @@ impl WorkerTunnel {
 
     fn spawn_processor_threads(tunnel: &WorkerTunnel, config: &TunnelConfig) {
         let language = Some(config.language_setting.clone()).filter(|lang| lang == "en");
+        let num_processor_threads = config
+            .num_processor_threads
+            .unwrap_or(NUM_PROCESSOR_THREADS);
 
-        for n in 0..NUM_PROCESSOR_THREADS {
+        for n in 0..num_processor_threads {
             let tunnel = tunnel.clone();
             let config = config.clone();
             let language = language.clone();

@@ -3,6 +3,7 @@ pub mod apps;
 pub mod db;
 pub mod embedding_resources;
 pub mod history_entries;
+pub mod kv;
 pub mod models;
 pub mod post_processing_jobs;
 pub mod resource_content_hash;
