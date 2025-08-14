@@ -94,13 +94,9 @@ export class WCView {
   }
 
   recreateWCVWithDifferentWebPreferences(webPreferences: Electron.WebPreferences) {
-    console.log('[main] webcontentsview-recreate: re-creating WebContentsView', webPreferences)
-
     const currentBounds = this.wcv.getBounds()
     const currentNavigationHistory = this.wcv.webContents.navigationHistory.getAllEntries()
     const currentNavigationHistoryIndex = this.wcv.webContents.navigationHistory.getActiveIndex()
-
-    console.log('[main] webcontentsview-recreate:', currentNavigationHistory)
 
     this.eventListeners.forEach((unsub) => unsub())
     this.wcv.webContents.removeAllListeners()
@@ -125,23 +121,10 @@ export class WCView {
     })
 
     if (currentBounds) {
-      console.log(
-        '[main] webcontentsview-create: setting bounds for view with id',
-        this.id,
-        'to',
-        currentBounds
-      )
       this.wcv.setBounds(currentBounds)
     }
 
     if (currentNavigationHistory.length > 0 && currentNavigationHistoryIndex >= 0) {
-      console.log(
-        '[main] webcontentsview-create: setting navigation history for view with id',
-        this.id,
-        'to',
-        currentNavigationHistory
-      )
-
       this.wcv.webContents.navigationHistory.restore({
         index: currentNavigationHistoryIndex,
         entries: currentNavigationHistory
