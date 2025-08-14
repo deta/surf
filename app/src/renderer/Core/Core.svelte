@@ -29,7 +29,13 @@
 
   let unsubs: Fn[] = []
 
-  async function handleCreateNewTab() {
+  async function handleCreateNewTab(e: MouseEvent) {
+    if (e.metaKey || e.ctrlKey) {
+      log.debug('Creating new tab with meta/ctrl key pressed')
+      await tabsService.create('surf://resource/0553ee29-79cf-4ef8-8255-bc3223813cd3')
+      return
+    }
+
     await tabsService.create('https://google.com')
   }
 
@@ -79,8 +85,16 @@
     viewManager.onDestroy()
   })
 
+  $inspect(tabsService.tabs).with((...e) => {
+    log.debug('tabs changed:', e)
+  })
+
   $inspect(tabsService.activeTab).with((...e) => {
-    log.debug('Active tab changed:', e)
+    log.debug('active tab changed:', e)
+  })
+
+  $inspect(tabsService.activatedTabs).with((...e) => {
+    log.debug('activated tabs changed:', e)
   })
 </script>
 
@@ -104,13 +118,16 @@
     <button class="add-tab-btn" onclick={handleCreateNewTab}> New Tab </button>
   </div>
 
-  {#if tabsService.activeTab}
-    {#key tabsService.activeTab.id}
-      <div class="web-contents">
-        <WebContentsView view={tabsService.activeTab.view} />
-      </div>
-    {/key}
-  {/if}
+  <div class="web-contents">
+    {#each tabsService.tabs as tab, idx (tab.id)}
+      {#if tabsService.activatedTabs.includes(tab.id)}
+        <WebContentsView
+          view={tabsService.tabs[idx].view}
+          active={tabsService.activeTab?.id === tab.id}
+        />
+      {/if}
+    {/each}
+  </div>
 
   <TeletypeEntry bind:open />
 </div>

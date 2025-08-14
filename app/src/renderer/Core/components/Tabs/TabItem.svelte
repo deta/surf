@@ -17,6 +17,7 @@
 
   const title = tab.view.title
   const faviconURL = tab.view.faviconURL
+  const url = tab.view.url
 
   function handleClick() {
     tabsService.setActiveTab(tab.id)
@@ -35,7 +36,11 @@
         <span class="tab-title">Untitled</span>
     {/if} -->
 
-  <DynamicIcon name="image;;{$faviconURL}" />
+  {#if $url.startsWith('http://localhost')}
+    <DynamicIcon name="icon;;file-text-ai" />
+  {:else}
+    <DynamicIcon name="image;;{$faviconURL}" />
+  {/if}
 
   <span class="tab-title">{$title}</span>
 

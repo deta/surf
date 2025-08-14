@@ -355,7 +355,9 @@ const sffs = (() => {
     api_base: string,
     api_key: string,
     local_ai_mode: boolean = false,
-    language_setting: string
+    language_setting: string,
+    num_worker_threads: number = 12,
+    num_processor_threads: number = 12
   ) => {
     handle = sffs.js__backend_tunnel_init(
       root_path,
@@ -364,6 +366,8 @@ const sffs = (() => {
       api_key,
       local_ai_mode,
       language_setting,
+      num_worker_threads,
+      num_processor_threads,
       js__backend_event_bus_callback
     )
 

@@ -4,9 +4,10 @@
 
   import { type Fn } from '@deta/types'
 
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope, wait } from '@deta/utils'
   import { useViewManager, type WebContentsView, type WebContents } from '@deta/services'
 
+  export let active: boolean = true
   export let view: WebContentsView
 
   const viewManager = useViewManager()
@@ -28,6 +29,11 @@
     }
 
     log.debug('Mounting web contents view', view.id)
+
+    log.debug('WebContentsView bounds', webContentsWrapper.getBoundingClientRect())
+
+    await wait(200)
+
     const wcv = await view.mount(webContentsWrapper)
     webContentsView = wcv
 
@@ -42,6 +48,12 @@
         webContentsBackgroundColor.set(color)
       })
     )
+
+    log.debug('WebContentsView bounds', webContentsWrapper.getBoundingClientRect())
+
+    wait(2000).then(() => {
+      log.debug('WebContentsView bounds', webContentsWrapper.getBoundingClientRect())
+    })
   })
 
   onDestroy(() => {
@@ -55,6 +67,7 @@
 <div
   id="webcontentsview-container"
   class="webcontentsview-container quality-{$webContentsScreenshot?.quality || 'none'}"
+  class:active
   bind:this={webContentsWrapper}
   style="--background-image: {$webContentsScreenshot?.image
     ? `url(${$webContentsScreenshot?.image})`
@@ -65,6 +78,9 @@
 
 <style lang="scss">
   .webcontentsview-container {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     background: var(--background-image, white);

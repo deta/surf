@@ -1,4 +1,4 @@
-import { EventEmitterBase, getHostname, ScopedLogger, useLogScope } from '@deta/utils'
+import { EventEmitterBase, getHostname, isDev, ScopedLogger, useLogScope } from '@deta/utils'
 import { type BaseKVItem, KVStore, useKVTable } from './kv'
 import { Fn, WebContentsViewData } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from './viewManager.svelte'
@@ -99,6 +99,7 @@ export class TabsService extends EventEmitterBase<any> {
 
   tabs = $state<TabItem[]>([])
   activeTabId = $state<string | null>(null)
+  activatedTabs = $state<string[]>([])
 
   activeTab: TabItem | null
 
@@ -134,6 +135,11 @@ export class TabsService extends EventEmitterBase<any> {
 
     $inspect(this.tabs)
     $inspect(this.activeTab)
+
+    if (isDev) {
+      // @ts-ignore
+      window.tabs = this
+    }
   }
 
   private async init() {
@@ -142,7 +148,7 @@ export class TabsService extends EventEmitterBase<any> {
     this.tabs = initialTabs
 
     if (initialTabs.length > 0) {
-      this.activeTabId = initialTabs[initialTabs.length - 1].id
+      this.setActiveTab(initialTabs[initialTabs.length - 1].id)
     } else {
       this.activeTabId = null
     }
@@ -197,19 +203,19 @@ export class TabsService extends EventEmitterBase<any> {
 
     const view = await this.viewManager.create({ url })
 
-    this.log.debug('Creating new tab with view:', view)
+    this.log.debug('Creating new tab with view:', view, 'options:', options)
 
     const newIndex = (await this.getLastTabIndex()) + 1
     const hostname = getHostname(url) || 'unknown'
 
     const item = await this.kv.create({ title: hostname, view: view.dataValue, index: newIndex })
 
-    if (options.active) {
-      this.activeTabId = item.id
-    }
-
     const tab = new TabItem(this, view, item)
     this.tabs = [...this.tabs, tab]
+
+    if (options.active) {
+      this.setActiveTab(item.id)
+    }
 
     return tab
   }
@@ -267,13 +273,18 @@ export class TabsService extends EventEmitterBase<any> {
   async setActiveTab(id: string | null) {
     this.log.debug('Setting active tab to id:', id)
 
-    const tab = this.tabs.find((t) => t.id === id)
-    if (!tab) {
-      this.log.warn(`Tab with id "${id}" not found`)
-      return
-    }
-
     this.activeTabId = id
+
+    if (id) {
+      const tab = this.tabs.find((t) => t.id === id)
+      if (!tab) {
+        this.log.warn(`Tab with id "${id}" not found`)
+        return
+      }
+
+      this.activatedTabs = [...this.activatedTabs.filter((t) => t !== id), id]
+      this.viewManager.activate(tab.view.id)
+    }
   }
 
   static useTabs(): TabsService {

@@ -27,7 +27,8 @@ import {
   useDebounce,
   isPDFViewerURL,
   parseUrlIntoCanonical,
-  generateID
+  generateID,
+  isDev
 } from '@deta/utils'
 import { HistoryEntriesManager } from './history'
 import { ConfigService, useConfig } from './config'
@@ -856,7 +857,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   }
 
   async mount(domElement: HTMLElement, opts: Partial<WebContentsViewCreateOptions> = {}) {
-    this.log.debug('Mounting view with options:', opts)
+    this.log.debug('Mounting view with options:', opts, domElement)
 
     const options = {
       id: this.id,
@@ -878,6 +879,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
     }
 
+    this.log.debug('Creating WebContents with options:', options)
     const { webContentsId } = await window.api.webContentsViewManagerAction(
       WebContentsViewManagerActionType.CREATE,
       options
@@ -979,6 +981,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
         }
       })
     )
+
+    if (isDev) {
+      // @ts-ignore
+      window.viewManager = this
+    }
   }
 
   get viewsValue() {
