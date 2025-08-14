@@ -25,6 +25,8 @@ export class KeyboardManager {
   private matchesCombo(event: KeyboardEvent, combo: string): boolean {
     const { key, modifiers } = this.parseKeyCombo(combo)
 
+    console.log('Parsed key:', key, 'modifiers:', modifiers)
+
     const pressedKey = event.key.toLowerCase()
     const pressedModifiers = {
       meta: event.metaKey,
@@ -32,6 +34,8 @@ export class KeyboardManager {
       alt: event.altKey,
       shift: event.shiftKey
     }
+
+    console.log('Pressed key:', pressedKey, 'pressed modifiers:', pressedModifiers)
 
     // Check if the main key matches
     if (pressedKey !== key) return false
@@ -43,17 +47,33 @@ export class KeyboardManager {
 
     // Check that no extra modifiers are pressed
     const activeModifiers = Object.entries(pressedModifiers)
-      .filter(([_, pressed]) => pressed)
+      .filter(([mod, pressed]) => {
+        // On macOS, ignore ctrl when meta (cmd) is pressed
+        if (navigator.platform.includes('Mac') && mod === 'ctrl' && pressedModifiers.meta) {
+          return false
+        }
+        return pressed
+      })
       .map(([mod]) => mod)
 
     return activeModifiers.length === modifiers.length
   }
 
   handleKeyDown = (event: KeyboardEvent): void => {
+    console.log(
+      'KeyboardManager handling key down:',
+      event.key,
+      event.code,
+      event.metaKey,
+      event.ctrlKey,
+      event.altKey,
+      event.shiftKey
+    )
     // Sort shortcuts by priority (highest first)
     const sortedShortcuts = [...this.shortcuts].sort((a, b) => b.priority - a.priority)
 
     for (const shortcut of sortedShortcuts) {
+      console.log('Checking shortcut:', shortcut.combo)
       if (this.matchesCombo(event, shortcut.combo)) {
         const wasHandled = shortcut.handler()
         if (wasHandled) {

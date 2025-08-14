@@ -5,6 +5,7 @@
   import {
     provideConfig,
     useViewManager,
+    useTabs,
     createKeyboardManager,
     createShortcutManager,
     defaultShortcuts,
@@ -14,10 +15,12 @@
 
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
+  import TabsList from './components/Tabs/TabsList.svelte'
 
   const log = useLogScope('Core')
   const config = provideConfig()
   const viewManager = useViewManager()
+  const tabsService = useTabs()
 
   const keyboardManager = createKeyboardManager()
   const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
@@ -26,19 +29,23 @@
 
   let unsubs: Fn[] = []
 
-  const testView = viewManager.create({
-    url: 'https://en.wikipedia.org'
-  })
+  async function handleCreateNewTab() {
+    await tabsService.create('https://google.com')
+  }
 
-  onMount(() => {
+  onMount(async () => {
     log.debug('Core component mounted')
 
     const settings = config.settingsValue
 
     log.debug('User settings:', settings)
 
-    // @ts-ignore
-    window.testView = testView
+    await tabsService.ready
+
+    // const testTab = await tabsService.create('https://en.wikipedia.org')
+
+    // // @ts-ignore
+    // window.testView = testTab.view
 
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Opening Teletype')
@@ -52,24 +59,28 @@
     shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
       log.debug('Closing Tab')
 
-      testView.destroy()
+      tabsService.delete(tabsService.activeTab?.id)
 
       return true
     })
 
-    unsubs.push(
-      testView.on('mounted', (webContentsView) => {
-        unsubs.push(
-          webContentsView.on('keydown', (event) => {
-            keyboardManager.handleKeyDown(event as KeyboardEvent)
-          })
-        )
-      })
-    )
+    // unsubs.push(
+    //   testTab.view.on('mounted', (webContentsView) => {
+    //     unsubs.push(
+    //       webContentsView.on('keydown', (event) => {
+    //         keyboardManager.handleKeyDown(event as KeyboardEvent)
+    //       })
+    //     )
+    //   })
+    // )
   })
 
   onDestroy(() => {
     viewManager.onDestroy()
+  })
+
+  $inspect(tabsService.activeTab).with((...e) => {
+    log.debug('Active tab changed:', e)
   })
 </script>
 
@@ -87,9 +98,19 @@
     <Link url="https://deta.surf">What is Surf?</Link>
   </div> -->
 
-  <div class="web-contents">
-    <WebContentsView view={testView} />
+  <div class="tabs">
+    <TabsList />
+
+    <button class="add-tab-btn" onclick={handleCreateNewTab}> New Tab </button>
   </div>
+
+  {#if tabsService.activeTab}
+    {#key tabsService.activeTab.id}
+      <div class="web-contents">
+        <WebContentsView view={tabsService.activeTab.view} />
+      </div>
+    {/key}
+  {/if}
 
   <TeletypeEntry bind:open />
 </div>
@@ -136,6 +157,43 @@
       background-color: #007bff;
       color: white;
       cursor: pointer;
+    }
+  }
+
+  .tabs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px;
+    background-color: var(--background-accent);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .tab {
+    padding: 10px;
+    background-color: var(--background-accent);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: var(--primary-dark);
+      color: white;
+    }
+  }
+
+  .add-tab-btn {
+    height: fit-content;
+    padding: 10px 10px;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: var(--primary-dark);
     }
   }
 

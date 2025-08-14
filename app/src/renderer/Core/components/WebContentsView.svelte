@@ -1,22 +1,13 @@
 <script lang="ts">
-  import { writable, type Writable } from 'svelte/store'
+  import { writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import {
-    WebContentsViewEventType,
-    WebViewEventSendNames,
-    type Fn,
-    type WebContentsViewEventListener,
-    type WebContentsViewEventListenerCallback,
-    type WebContentsViewEvents,
-    type WebViewSendEvents
-  } from '@deta/types'
+  import { type Fn } from '@deta/types'
 
   import { useLogScope } from '@deta/utils'
-  import type { NewWindowRequest } from '@deta/services/src/ipc'
-  import { useViewManager, type View, type WebContentsView } from '@deta/services'
+  import { useViewManager, type WebContentsView, type WebContents } from '@deta/services'
 
-  export let view: View
+  export let view: WebContentsView
 
   const viewManager = useViewManager()
 
@@ -27,7 +18,7 @@
   const webContentsScreenshot = writable(null)
 
   let webContentsWrapper: HTMLDivElement | null = null
-  let webContentsView: WebContentsView | null = null
+  let webContentsView: WebContents | null = null
   let unsubs: Fn[] = []
 
   onMount(async () => {
@@ -41,13 +32,13 @@
     webContentsView = wcv
 
     unsubs.push(
-      wcv.screenshot.subscribe((screenshot) => {
+      view.screenshot.subscribe((screenshot) => {
         webContentsScreenshot.set(screenshot)
       })
     )
 
     unsubs.push(
-      wcv.backgroundColor.subscribe((color) => {
+      view.backgroundColor.subscribe((color) => {
         webContentsBackgroundColor.set(color)
       })
     )

@@ -11,7 +11,7 @@ export enum ShortcutActions {
 export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<ShortcutActions>> = {
   [ShortcutActions.CLOSE_TAB]: {
     action: ShortcutActions.CLOSE_TAB,
-    defaultCombo: 'Escape',
+    defaultCombo: 'Meta+W',
     description: 'Close the current tab',
     priority: ShortcutPriority.Low
   },

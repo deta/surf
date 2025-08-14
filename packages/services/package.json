@@ -28,12 +28,12 @@
   },
   "devDependencies": {
     "@deta/types": "*",
-    "svelte": "^4.2.19",
+    "svelte": "^5.0.0",
     "@deta/utils": "*",
     "@deta/web-parser": "*",
     "@deta/backend": "*",
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
-    "typescript": "^5.2.2"
+    "typescript": "^5.5.0"
   }
 }

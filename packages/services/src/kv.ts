@@ -1,11 +1,18 @@
-import { isDev, useLogScope, generateID, type ScopedLogger } from '@horizon/utils'
-import { optimisticParseJSON } from '@horizon/utils'
-import type { Optional } from '../types'
+import { isDev, useLogScope, generateID, optimisticParseJSON, type ScopedLogger } from '@deta/utils'
+import type { Optional } from '@deta/types'
 
-export class KVStore<T extends { id: string; createdAt: string; updatedAt: string }> {
+export type BaseKVItem = {
+  id: string
+  createdAt: string
+  updatedAt: string
+}
+
+export class KVStore<T extends BaseKVItem> {
   backend: any
   log: ScopedLogger
   tableName: string
+
+  ready: Promise<void>
 
   constructor(tableName: string) {
     this.log = useLogScope('KVStore')
@@ -29,7 +36,7 @@ export class KVStore<T extends { id: string; createdAt: string; updatedAt: strin
     }
 
     // Create the table if it doesn't exist yet
-    this.createTable()
+    this.ready = this.createTable()
   }
 
   private async createTable(): Promise<void> {
@@ -126,4 +133,10 @@ export class KVStore<T extends { id: string; createdAt: string; updatedAt: strin
       throw error
     }
   }
+
+  static useTable<T extends BaseKVItem>(tableName: string): KVStore<T> {
+    return new KVStore<T>(tableName)
+  }
 }
+
+export const useKVTable = KVStore.useTable

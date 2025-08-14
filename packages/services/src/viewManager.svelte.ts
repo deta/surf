@@ -31,6 +31,8 @@ import {
 } from '@deta/utils'
 import { HistoryEntriesManager } from './history'
 import { ConfigService, useConfig } from './config'
+import { KVStore, useKVTable } from './kv'
+import { KeyboardManager, useKeyboardManager } from './shortcuts'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -51,45 +53,18 @@ export type WebContentsViewParsedEvents = {
   ) => void
 }
 
-export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvents> {
+export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
   log: ReturnType<typeof useLogScope>
+  view: WebContentsView
   manager: ViewManager
   config: ConfigService
   historyEntriesManager: HistoryEntriesManager
+  keyboardManager: KeyboardManager
 
-  id: string
   webContentsId: number
-  isOverlay: boolean
-  parentViewID: string | undefined
   partition: string
   wrapperElement: HTMLElement | null = null
-
-  url: Writable<string>
   bounds: Writable<Electron.Rectangle | null>
-  screenshot: Writable<{ image: string; quality: 'low' | 'medium' | 'high' } | null>
-  backgroundColor: Writable<string | null>
-  title: Writable<string>
-  faviconURL: Writable<string>
-
-  historyStackIds: Writable<string[]>
-  historyStackIndex: Writable<number>
-  navigationHistory: Writable<Electron.NavigationEntry[] | null>
-  navigationHistoryIndex: Writable<number>
-
-  domReady: Writable<boolean> = writable(false)
-  didFinishLoad: Writable<boolean> = writable(false)
-  isLoading: Writable<boolean> = writable(false)
-  isAudioMuted: Writable<boolean> = writable(false)
-  isMediaPlaying: Writable<boolean> = writable(false)
-  isFullScreen: Writable<boolean> = writable(false)
-  isFocused: Writable<boolean> = writable(false)
-  error: Writable<WebContentsError | null> = writable(null)
-  hoverTargetURL: Writable<string | null> = writable(null)
-  foundInPageResult: Writable<
-    WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE] | null
-  > = writable(null)
-
-  currentHistoryEntry: Readable<HistoryEntry | undefined>
 
   private _eventListeners: Array<WebContentsViewEventListener> = []
   private _unsubs: Fn[] = []
@@ -98,100 +73,37 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   private _programmaticNavigation = false
 
   constructor(
-    manager: ViewManager,
-    id: string,
+    view: WebContentsView,
     webContentsId: number,
     opts: WebContentsViewCreateOptions,
     domElement?: HTMLElement
   ) {
     super()
 
-    this.log = useLogScope(`WebContentsView ${id}`)
-    this.manager = manager
-    this.config = manager.config
-    this.historyEntriesManager = new HistoryEntriesManager()
+    this.log = useLogScope(`WebContentsView ${view.id}`)
+    this.manager = view.manager
+    this.config = view.manager.config
+    this.historyEntriesManager = view.historyEntriesManager
+    this.keyboardManager = useKeyboardManager()
 
-    this.id = id
+    this.view = view
     this.webContentsId = webContentsId
-    this.isOverlay = opts.isOverlay ?? false
-    this.parentViewID = opts.parentViewID
-    this.partition = opts.partition || `persist:${id}`
+    this.partition = opts.partition || `persist:${view.id}`
     this.wrapperElement = domElement || null
-
-    this.url = writable(opts.url || '')
     this.bounds = writable(opts.bounds || null)
-    this.screenshot = writable(null)
-    this.backgroundColor = writable(null)
-    this.title = writable('')
-    this.faviconURL = writable('')
-
-    this.historyStackIds = writable([])
-    this.historyStackIndex = writable(-1)
-    this.navigationHistory = writable(opts.navigationHistory || null)
-    this.navigationHistoryIndex = writable(opts.navigationHistoryIndex ?? -1)
-
-    this.currentHistoryEntry = derived(
-      [this.historyStackIds, this.historyStackIndex, this.navigationHistory],
-      ([historyStackIds, currentHistoryIndex, navigationHistory]) => {
-        // debouncedHistoryChange(navigationHistory, historyStackIds, currentHistoryIndex)
-        return this.historyEntriesManager.getEntry(historyStackIds[currentHistoryIndex])
-      }
-    )
 
     this.attachListeners()
   }
 
+  get id() {
+    return this.view.id
+  }
   get boundsValue() {
     return get(this.bounds)
   }
-  get screenshotValue() {
-    return get(this.screenshot)
-  }
-  get backgroundColorValue() {
-    return get(this.backgroundColor)
-  }
-  get urlValue() {
-    return get(this.url)
-  }
-  get titleValue() {
-    return get(this.title)
-  }
-  get faviconURLValue() {
-    return get(this.faviconURL)
-  }
-  get isAudioMutedValue() {
-    return get(this.isAudioMuted)
-  }
-  get isLoadingValue() {
-    return get(this.isLoading)
-  }
-  get domReadyValue() {
-    return get(this.domReady)
-  }
-  get errorValue() {
-    return get(this.error)
-  }
-  get isMediaPlayingValue() {
-    return get(this.isMediaPlaying)
-  }
-  get isFullScreenValue() {
-    return get(this.isFullScreen)
-  }
-  get isFocusedValue() {
-    return get(this.isFocused)
-  }
-  get currentHistoryEntryValue() {
-    return get(this.currentHistoryEntry)
-  }
-  get navigationHistoryValue() {
-    return get(this.navigationHistory)
-  }
-  get navigationHistoryIndexValue() {
-    return get(this.navigationHistoryIndex)
-  }
 
   private handleDOMReady() {
-    this.domReady.set(true)
+    this.view.domReady.set(true)
 
     if (!this._newWindowHandlerRegistered && this.webContentsId) {
       window.api.registerNewWindowHandler(this.webContentsId, (details) => {
@@ -204,14 +116,14 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   }
 
   private handleDidStartLoading() {
-    this.isLoading.set(true)
-    this.error.set(null)
+    this.view.isLoading.set(true)
+    this.view.error.set(null)
 
     this.emit('loading-changed', true, null)
   }
 
   private handleDidStopLoading() {
-    this.isLoading.set(false)
+    this.view.isLoading.set(false)
     this.emit('loading-changed', false, null)
   }
 
@@ -236,14 +148,14 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
       url: event.validatedURL
     }
 
-    this.error.set(parsedError)
+    this.view.error.set(parsedError)
 
     this.emit('loading-changed', false, parsedError)
   }
 
   private async handleDidFinishLoad() {
     // dispatch('did-finish-load')
-    this.didFinishLoad.set(true)
+    this.view.didFinishLoad.set(true)
     const url = await this.getURL()
     // handleNavigation(url)
 
@@ -253,18 +165,20 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   private handlePageTitleUpdated(
     event: WebContentsViewEvents[WebContentsViewEventType.PAGE_TITLE_UPDATED]
   ) {
-    const oldTitle = this.titleValue
+    const oldTitle = this.view.titleValue
     if (oldTitle === event.title) {
       this.log.debug('Page title did not change, skipping update')
       return
     }
 
     const newTitle = event.title
-    this.title.set(newTitle)
+    this.view.title.set(newTitle)
     // dispatch('title-change', newTitle)
 
-    if (this.currentHistoryEntryValue) {
-      this.historyEntriesManager.updateEntry(this.currentHistoryEntryValue.id, { title: newTitle })
+    if (this.view.currentHistoryEntryValue) {
+      this.historyEntriesManager.updateEntry(this.view.currentHistoryEntryValue.id, {
+        title: newTitle
+      })
     }
 
     this.emit('page-title-updated', newTitle, oldTitle)
@@ -294,7 +208,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   private handleUpdateTargetURL(
     event: WebContentsViewEvents[WebContentsViewEventType.UPDATE_TARGET_URL]
   ) {
-    this.hoverTargetURL.set(event.url)
+    this.view.hoverTargetURL.set(event.url)
     this.emit('hover-target-url-changed', event.url)
   }
 
@@ -302,7 +216,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
     const newUrl = event.url
     this.log.debug('did navigate', newUrl)
 
-    if (this.urlValue === newUrl) {
+    if (this.view.urlValue === newUrl) {
       return
     }
 
@@ -314,7 +228,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   ) {
     if (!event.isMainFrame) return
 
-    if (this.urlValue === event.url) {
+    if (this.view.urlValue === event.url) {
       return
     }
 
@@ -322,7 +236,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   }
 
   private handleNavigation(newUrl: string) {
-    const oldUrl = this.urlValue
+    const oldUrl = this.view.urlValue
 
     if (isPDFViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
       try {
@@ -333,7 +247,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
       }
     }
 
-    this.url.set(newUrl)
+    this.view.url.set(newUrl)
 
     this.emit('navigated', newUrl, oldUrl, this._programmaticNavigation)
 
@@ -350,24 +264,30 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   private handleWebviewMediaPlaybackChanged(state: boolean) {
     this.isCurrentlyAudible().then((v) => {
       if (state && !v) return
-      this.isMediaPlaying.set(state)
+      this.view.isMediaPlaying.set(state)
       this.emit('media-playback-changed', state)
     })
   }
 
   private handleHtmlFullScreenChange(isFullScreen: boolean) {
-    this.isFullScreen.set(isFullScreen)
+    this.view.isFullScreen.set(isFullScreen)
     this.emit('fullscreen-changed', isFullScreen)
   }
 
   private handleFocusChange(isFocused: boolean) {
-    this.isFocused.set(isFocused)
+    this.view.isFocused.set(isFocused)
     this.emit('focus-changed', isFocused)
   }
 
   private handleFoundInPage(event: WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]) {
-    this.foundInPageResult.set(event)
+    this.view.foundInPageResult.set(event)
     this.emit('found-in-page', event)
+  }
+
+  private handleKeyDown(event: WebViewSendEvents[WebViewEventSendNames.KeyDown]) {
+    this.log.debug('Key down event in webview:', event)
+    this.keyboardManager.handleKeyDown(event as KeyboardEvent)
+    this.emit('keydown', event)
   }
 
   private handlePreloadIPCEvent(
@@ -379,7 +299,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
     const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents]
 
     if (eventType === WebViewEventSendNames.KeyDown) {
-      this.emit('keydown', eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
+      this.handleKeyDown(eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
       return
     }
 
@@ -389,7 +309,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   attachListeners() {
     const unsubWebContentsEvents = window.preloadEvents.onWebContentsViewEvent((event) => {
       // only handle events for our own view
-      if (event.viewId !== this.id) {
+      if (event.viewId !== this.view.id) {
         return
       }
 
@@ -552,8 +472,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   private async persistNavigationHistory() {
     const result = await this.getNavigationHistory()
 
-    this.navigationHistory.set(result.entries)
-    this.navigationHistoryIndex.set(result.index)
+    this.view.navigationHistory.set(result.entries)
+    this.view.navigationHistoryIndex.set(result.index)
   }
 
   private async saveBounds(bounds: Electron.Rectangle) {
@@ -567,7 +487,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
 
   addHistoryEntry = useDebounce(async (newUrl: string) => {
     try {
-      const oldUrl = this.currentHistoryEntryValue?.url
+      const oldUrl = this.view.currentHistoryEntryValue?.url
       const newCanonicalUrl = parseUrlIntoCanonical(newUrl) ?? newUrl
 
       if (oldUrl && parseUrlIntoCanonical(oldUrl) === newCanonicalUrl) {
@@ -580,11 +500,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
       const entry: HistoryEntry = await this.historyEntriesManager.addEntry({
         type: 'navigation',
         url: newUrl,
-        title: this.titleValue
+        title: this.view.titleValue
       } as HistoryEntry)
 
-      this.historyStackIds.update((stack) => {
-        const index = this.navigationHistoryIndexValue
+      this.view.historyStackIds.update((stack) => {
+        const index = this.view.navigationHistoryIndexValue
 
         // If we are not at the end of the stack, we need to truncate the stack
         if (index < stack.length - 1) {
@@ -609,12 +529,12 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
       if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return
     }
 
-    if (this.faviconURLValue === newFaviconURL) {
+    if (this.view.faviconURLValue === newFaviconURL) {
       return
     }
 
-    this.faviconURL.set(newFaviconURL)
-    this.emit('page-favicon-updated', newFaviconURL, this.faviconURLValue)
+    this.view.faviconURL.set(newFaviconURL)
+    this.emit('page-favicon-updated', newFaviconURL, this.view.faviconURLValue)
   }, 250)
 
   async action<T extends WebContentsViewActionType>(
@@ -624,7 +544,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
       : [payload: WebContentsViewActionPayloads[T]]
   ) {
     const action = { type, payload: args[0] } as WebContentsViewAction
-    return window.api.webContentsViewAction(this.id, action.type, action.payload) as Promise<
+    return window.api.webContentsViewAction(this.view.id, action.type, action.payload) as Promise<
       WebContentsViewActionOutputs[T]
     >
   }
@@ -718,7 +638,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
   }
 
   async activate() {
-    return this.manager.activate(this.id)
+    return this.manager.activate(this.view.id)
   }
 
   async hide() {
@@ -734,14 +654,14 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
 
       if (backgroundColor) {
         this.log.debug(`Setting background color`, backgroundColor)
-        this.backgroundColor.set(backgroundColor)
+        this.view.backgroundColor.set(backgroundColor)
       } else {
         this.log.warn(`Failed to get background color`)
-        this.backgroundColor.set(null)
+        this.view.backgroundColor.set(null)
       }
     } catch (error) {
       this.log.error('Error while refreshing background color:', error)
-      this.backgroundColor.set(null)
+      this.view.backgroundColor.set(null)
     }
   }
 
@@ -749,10 +669,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewParsedEvent
     this.log.debug('Refreshing screenshot with quality:', quality)
     const dataURL = await this.capturePage(quality)
     if (dataURL) {
-      this.screenshot.set({ image: dataURL, quality })
+      this.view.screenshot.set({ image: dataURL, quality })
     } else {
-      this.log.warn('Failed to capture screenshot for view:', this.id)
-      this.screenshot.set(null)
+      this.log.warn('Failed to capture screenshot for view:', this.view.id)
+      this.view.screenshot.set(null)
     }
   }
 
@@ -787,27 +707,49 @@ export type OverlayState = {
   teletypeOpen: boolean
 }
 
-export type ViewEvents = {
-  mounted: (webContentsView: WebContentsView) => void
+export type WebContentsViewEmitterEvents = {
+  mounted: (webContentsView: WebContents) => void
   destroyed: () => void
+  'data-changed': (data: WebContentsViewData) => void
 }
 
-export class View extends EventEmitterBase<ViewEvents> {
+export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEvents> {
   log: ReturnType<typeof useLogScope>
   manager: ViewManager
+  historyEntriesManager: HistoryEntriesManager
 
   id: string
-  webContents: WebContentsView | null = null
+  webContents = $state<WebContents | null>(null)
 
   private initialData: WebContentsViewData
 
-  private _url: Writable<string> = writable('')
-  private _navigationHistoryIndex: Writable<number> = writable(-1)
-  private _navigationHistory: Writable<Electron.NavigationEntry[] | null> = writable(null)
+  data: Readable<WebContentsViewData>
 
-  url: Readable<string>
-  navigationHistoryIndex: Readable<number>
-  navigationHistory: Readable<Electron.NavigationEntry[] | null>
+  url: Writable<string>
+  screenshot: Writable<{ image: string; quality: 'low' | 'medium' | 'high' } | null>
+  backgroundColor: Writable<string | null>
+  title: Writable<string>
+  faviconURL: Writable<string>
+
+  historyStackIds: Writable<string[]>
+  historyStackIndex: Writable<number>
+  navigationHistory: Writable<Electron.NavigationEntry[] | null>
+  navigationHistoryIndex: Writable<number>
+
+  domReady: Writable<boolean> = writable(false)
+  didFinishLoad: Writable<boolean> = writable(false)
+  isLoading: Writable<boolean> = writable(false)
+  isAudioMuted: Writable<boolean> = writable(false)
+  isMediaPlaying: Writable<boolean> = writable(false)
+  isFullScreen: Writable<boolean> = writable(false)
+  isFocused: Writable<boolean> = writable(false)
+  error: Writable<WebContentsError | null> = writable(null)
+  hoverTargetURL: Writable<string | null> = writable(null)
+  foundInPageResult: Writable<
+    WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE] | null
+  > = writable(null)
+
+  currentHistoryEntry: Readable<HistoryEntry | undefined>
 
   private unsubs: Fn[] = []
 
@@ -816,70 +758,140 @@ export class View extends EventEmitterBase<ViewEvents> {
 
     this.log = useLogScope(`View ${data.id}`)
     this.manager = manager
+    this.historyEntriesManager = new HistoryEntriesManager()
 
     this.id = data.id
     this.initialData = data
 
-    this.url = derived(this._url, ($urlStore) => $urlStore || this.initialData.url || '')
-    this.navigationHistoryIndex = derived(
-      this._navigationHistoryIndex,
-      ($indexStore) => $indexStore || this.initialData.navigationHistoryIndex || 0
+    this.url = writable(data.url || '')
+    this.title = writable(data.title || '')
+    this.screenshot = writable(null)
+    this.backgroundColor = writable(null)
+    this.faviconURL = writable(data.faviconUrl || '')
+
+    this.historyStackIds = writable([])
+    this.historyStackIndex = writable(-1)
+    this.navigationHistory = writable(data.navigationHistory || null)
+    this.navigationHistoryIndex = writable(data.navigationHistoryIndex ?? -1)
+
+    this.currentHistoryEntry = derived(
+      [this.historyStackIds, this.historyStackIndex, this.navigationHistory],
+      ([historyStackIds, currentHistoryIndex, navigationHistory]) => {
+        // debouncedHistoryChange(navigationHistory, historyStackIds, currentHistoryIndex)
+        return this.historyEntriesManager.getEntry(historyStackIds[currentHistoryIndex])
+      }
     )
-    this.navigationHistory = derived(
-      this._navigationHistory,
-      ($historyStore) => $historyStore || this.initialData.navigationHistory || null
+
+    this.data = derived(
+      [this.url, this.title, this.faviconURL, this.navigationHistoryIndex, this.navigationHistory],
+      ([$url, $title, $faviconURL, $navigationHistoryIndex, $navigationHistory]) => {
+        return {
+          id: this.id,
+          partition: this.initialData.partition,
+          url: $url,
+          title: $title,
+          faviconUrl: $faviconURL,
+          navigationHistoryIndex: $navigationHistoryIndex,
+          navigationHistory: $navigationHistory || []
+        } as WebContentsViewData
+      }
+    )
+
+    this.unsubs.push(
+      this.data.subscribe((data) => {
+        this.log.debug('Data changed:', data)
+        this.emit('data-changed', data)
+      })
     )
   }
 
+  get screenshotValue() {
+    return get(this.screenshot)
+  }
+  get backgroundColorValue() {
+    return get(this.backgroundColor)
+  }
   get urlValue() {
     return get(this.url)
   }
-  get navigationHistoryIndexValue() {
-    return get(this.navigationHistoryIndex)
+  get titleValue() {
+    return get(this.title)
+  }
+  get faviconURLValue() {
+    return get(this.faviconURL)
+  }
+  get isAudioMutedValue() {
+    return get(this.isAudioMuted)
+  }
+  get isLoadingValue() {
+    return get(this.isLoading)
+  }
+  get domReadyValue() {
+    return get(this.domReady)
+  }
+  get errorValue() {
+    return get(this.error)
+  }
+  get isMediaPlayingValue() {
+    return get(this.isMediaPlaying)
+  }
+  get isFullScreenValue() {
+    return get(this.isFullScreen)
+  }
+  get isFocusedValue() {
+    return get(this.isFocused)
+  }
+  get currentHistoryEntryValue() {
+    return get(this.currentHistoryEntry)
   }
   get navigationHistoryValue() {
     return get(this.navigationHistory)
   }
+  get navigationHistoryIndexValue() {
+    return get(this.navigationHistoryIndex)
+  }
 
-  async mount(domElement: HTMLElement, options: WebContentsViewCreateOptions) {
-    this.log.debug('Mounting view with options:', options)
+  get dataValue() {
+    return get(this.data)
+  }
 
-    const webContentsView = await this.manager.mountWebContentsView(domElement, {
+  async mount(domElement: HTMLElement, opts: Partial<WebContentsViewCreateOptions> = {}) {
+    this.log.debug('Mounting view with options:', opts)
+
+    const options = {
       id: this.id,
       partition: this.initialData.partition,
       url: this.urlValue,
       navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
       navigationHistory: this.navigationHistoryValue || [],
       activate: true,
-      ...options
-    })
+      ...opts
+    } as WebContentsViewCreateOptions
 
-    this.webContents = webContentsView
+    if (domElement && !options.bounds) {
+      const rect = domElement.getBoundingClientRect()
+      options.bounds = {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+      }
+    }
 
-    this._url.set(webContentsView.urlValue)
-    this.unsubs.push(
-      webContentsView.url.subscribe((url) => {
-        this._url.set(url)
-      })
+    const { webContentsId } = await window.api.webContentsViewManagerAction(
+      WebContentsViewManagerActionType.CREATE,
+      options
     )
 
-    this._navigationHistoryIndex.set(webContentsView.navigationHistoryIndexValue)
-    this.unsubs.push(
-      webContentsView.navigationHistoryIndex.subscribe((index) => {
-        this._navigationHistoryIndex.set(index)
-      })
-    )
+    const webContents = new WebContents(this, webContentsId, options, domElement)
+    this.webContents = webContents
 
-    this._navigationHistory.set(webContentsView.navigationHistoryValue)
-    this.unsubs.push(
-      webContentsView.navigationHistory.subscribe((history) => {
-        this._navigationHistory.set(history)
-      })
-    )
+    this.emit('mounted', webContents)
+    this.log.debug('View rendered successfully:', this.id, webContents)
 
-    this.emit('mounted', webContentsView)
-    this.log.debug('View rendered successfully:', this.id, webContentsView)
-    return webContentsView
+    this.manager.postMountedWebContents(this.id, webContents, options.activate)
+
+    return webContents
   }
 
   destroy() {
@@ -903,9 +915,9 @@ export class View extends EventEmitterBase<ViewEvents> {
 }
 
 export type ViewManagerEvents = {
-  created: (view: WebContentsView) => void
+  created: (view: WebContents) => void
   deleted: (viewId: string) => void
-  activated: (view: WebContentsView) => void
+  activated: (view: WebContents) => void
   'show-views': () => void
   'hide-views': () => void
 }
@@ -913,15 +925,16 @@ export type ViewManagerEvents = {
 export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
   log: ReturnType<typeof useLogScope>
   config: ConfigService
+  kv: KVStore<WebContentsViewData>
 
-  webContentsViews: Map<string, WebContentsView> = new Map()
+  webContentsViews: Map<string, WebContents> = new Map()
   viewOverlays: Map<string, string> = new Map() // Maps a view to its overlay view if it has one
   overlayState: Writable<OverlayState>
 
   activeViewId: Writable<string | null>
   shouldHideViews: Readable<boolean>
 
-  views: Writable<View[]>
+  views: Writable<WebContentsView[]>
 
   private unsubs: Fn[] = []
 
@@ -932,6 +945,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
 
     this.log = useLogScope('ViewManager')
     this.config = useConfig()
+    this.kv = useKVTable<WebContentsViewData>('views')
 
     this.overlayState = writable({
       teletypeOpen: false
@@ -968,7 +982,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
   }
 
   get viewsValue() {
-    const viewsArray: WebContentsView[] = []
+    const viewsArray: WebContents[] = []
     this.webContentsViews.forEach((view) => {
       viewsArray.push(view)
     })
@@ -1003,11 +1017,15 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
       id: data.id || generateID(),
       partition: data.partition || 'persist:horizon',
       url: data.url || 'about:blank',
+      title: data.title || '',
+      faviconUrl: data.faviconUrl || '',
       navigationHistoryIndex: -1,
-      navigationHistory: []
+      navigationHistory: [],
+      createdAt: data.createdAt || new Date().toISOString(),
+      updatedAt: data.updatedAt || new Date().toISOString()
     }
 
-    const view = new View(fullData, this)
+    const view = new WebContentsView(fullData, this)
     this.views.update((views) => [...views, view])
 
     this.log.debug('Creating WebContentsView with data:', view)
@@ -1015,47 +1033,19 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
     return view
   }
 
-  async mountWebContentsView(domElement: HTMLElement, options: WebContentsViewCreateOptions) {
-    this.log.debug('Creating WebContentsView with options:', options)
+  async postMountedWebContents(viewId: string, webContents: WebContents, activate = true) {
+    this.log.debug('Mounted WebContentsView:', viewId)
 
-    if (domElement && !options.bounds) {
-      const rect = domElement.getBoundingClientRect()
-      options.bounds = {
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height
-      }
+    this.webContentsViews.set(viewId, webContents)
+    this.emit('created', webContents)
+
+    this.log.debug(`created with ID: ${viewId}`, webContents)
+
+    if (activate) {
+      await this.activate(viewId)
     }
 
-    const { viewId, webContentsId } = await window.api.webContentsViewManagerAction(
-      WebContentsViewManagerActionType.CREATE,
-      options
-    )
-
-    const view = new WebContentsView(this, viewId, webContentsId, options, domElement)
-
-    this.webContentsViews.set(viewId, view)
-    this.emit('created', view)
-
-    this.log.debug(`created with ID: ${viewId}`, view)
-
-    if (options.parentViewID) {
-      const parentView = this.webContentsViews.get(options.parentViewID)
-      if (parentView) {
-        this.trackOverlayView(parentView.id, view.id)
-      } else {
-        this.log.warn(
-          `Parent view with ID ${options.parentViewID} does not exist. Cannot track overlay view.`
-        )
-      }
-    }
-
-    if (options.activate) {
-      await this.activate(view.id)
-    }
-
-    return view
+    return webContents
   }
 
   async activate(viewId: string) {
@@ -1067,18 +1057,18 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
 
     this.log.debug(`Activating WebContentsView with ID: ${viewId}`, view)
 
-    if (view.parentViewID) {
-      this.log.debug(`View with ID ${viewId} has a parent view ID: ${view.parentViewID}`)
-      const parentView = this.webContentsViews.get(view.parentViewID)
-      if (parentView) {
-        this.log.debug(`Refreshing parent view with ID: ${parentView.id}`, parentView)
-        await parentView.refreshScreenshot()
-      } else {
-        this.log.warn(
-          `Parent view with ID ${view.parentViewID} does not exist. Cannot refresh screenshot.`
-        )
-      }
-    }
+    // if (view.parentViewID) {
+    //   this.log.debug(`View with ID ${viewId} has a parent view ID: ${view.parentViewID}`)
+    //   const parentView = this.webContentsViews.get(view.parentViewID)
+    //   if (parentView) {
+    //     this.log.debug(`Refreshing parent view with ID: ${parentView.id}`, parentView)
+    //     await parentView.refreshScreenshot()
+    //   } else {
+    //     this.log.warn(
+    //       `Parent view with ID ${view.parentViewID} does not exist. Cannot refresh screenshot.`
+    //     )
+    //   }
+    // }
 
     await this.hideAll()
 
@@ -1132,10 +1122,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
     //   }
     // }
 
-    if (!!view.parentViewID) {
-      this.log.debug(`Removing overlay view for parentViewID: ${view.parentViewID}`, view.id)
-      this.viewOverlays.delete(view.parentViewID)
-    }
+    // if (!!view.parentViewID) {
+    //   this.log.debug(`Removing overlay view for parentViewID: ${view.parentViewID}`, view.id)
+    //   this.viewOverlays.delete(view.parentViewID)
+    // }
 
     return true
   }
@@ -1174,7 +1164,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
   }
 
-  getActiveView(): WebContentsView | null {
+  getActiveView(): WebContents | null {
     const activeViewId = this.activeViewIdValue
     if (activeViewId) {
       return this.webContentsViews.get(activeViewId) || null

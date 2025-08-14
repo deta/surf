@@ -28,8 +28,12 @@ export type WebContentsViewData = {
   id: string
   partition: string
   url: string
+  title: string
+  faviconUrl: string
   navigationHistoryIndex: number
   navigationHistory: Electron.NavigationEntry[]
+  createdAt: string
+  updatedAt: string
 }
 
 // --- WebContentsView Actions ---
