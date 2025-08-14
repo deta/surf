@@ -13,16 +13,22 @@ import { EventEmitterBase } from '@deta/utils'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { isDev } from '@deta/utils/src/system'
-import { PDFViewerEntryPoint } from './utils'
+import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 
 export class WCView {
+  manager: WCViewManager
+
   id: string
   isOverlay: boolean
   attached: boolean
+  opts: WebContentsViewCreateOptions
   wcv: WebContentsView
   eventListeners: Array<() => void> = []
 
-  constructor(opts: WebContentsViewCreateOptions) {
+  constructor(opts: WebContentsViewCreateOptions, manager: WCViewManager) {
+    this.manager = manager
+    this.opts = opts
+
     const wcvSession = session.fromPartition('persist:horizon')
     const view = new WebContentsView({
       webPreferences: {
@@ -87,8 +93,97 @@ export class WCView {
     this.wcv.setBounds(bounds)
   }
 
+  recreateWCVWithDifferentWebPreferences(webPreferences: Electron.WebPreferences) {
+    console.log('[main] webcontentsview-recreate: re-creating WebContentsView', webPreferences)
+
+    const currentBounds = this.wcv.getBounds()
+    const currentNavigationHistory = this.wcv.webContents.navigationHistory.getAllEntries()
+    const currentNavigationHistoryIndex = this.wcv.webContents.navigationHistory.getActiveIndex()
+
+    console.log('[main] webcontentsview-recreate:', currentNavigationHistory)
+
+    this.eventListeners.forEach((unsub) => unsub())
+    this.wcv.webContents.removeAllListeners()
+    this.wcv.webContents.close()
+
+    const wcvSession = session.fromPartition('persist:horizon')
+    this.wcv = new WebContentsView({
+      webPreferences: {
+        session: wcvSession,
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        webSecurity: !isDev,
+        scrollBounce: true,
+        defaultFontSize: 16,
+        autoplayPolicy: 'document-user-activation-required',
+        preload: this.opts.preload || path.resolve(__dirname, '../preload/webcontents.js'),
+        additionalArguments: this.opts.additionalArguments || [],
+        transparent: this.opts.transparent,
+        ...webPreferences
+      }
+    })
+
+    if (currentBounds) {
+      console.log(
+        '[main] webcontentsview-create: setting bounds for view with id',
+        this.id,
+        'to',
+        currentBounds
+      )
+      this.wcv.setBounds(currentBounds)
+    }
+
+    if (currentNavigationHistory.length > 0 && currentNavigationHistoryIndex >= 0) {
+      console.log(
+        '[main] webcontentsview-create: setting navigation history for view with id',
+        this.id,
+        'to',
+        currentNavigationHistory
+      )
+
+      this.wcv.webContents.navigationHistory.restore({
+        index: currentNavigationHistoryIndex,
+        entries: currentNavigationHistory
+      })
+    }
+
+    this.manager.recreatedWCV(this)
+  }
+
+  loadRightPreload(newUrl: string, oldUrl: string) {
+    const newIsSurfUrl = checkIfSurfProtocolUrl(newUrl)
+    const oldIsSurfUrl = checkIfSurfProtocolUrl(oldUrl)
+
+    console.log('[main] webcontentsview: check if we need to re-create WCV', newUrl, oldUrl)
+
+    // if we load a surf:// URL, we need to re-create the WebContentsView with a different preload
+    if (newIsSurfUrl && !oldIsSurfUrl) {
+      console.log(
+        '[main] webcontentsview: loading surf:// URL, re-creating WCV with resource view preload'
+      )
+      this.recreateWCVWithDifferentWebPreferences({
+        sandbox: false,
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.resolve(__dirname, '../preload/resource.js')
+      })
+    } else if (!newIsSurfUrl && oldIsSurfUrl) {
+      console.log(
+        '[main] webcontentsview: loading non-surf:// URL, re-creating WCV with webcontents preload'
+      )
+      this.recreateWCVWithDifferentWebPreferences({
+        preload: path.resolve(__dirname, '../preload/webcontents.js')
+      })
+    }
+  }
+
   async loadURL(url: string) {
     try {
+      const oldUrl = this.wcv.webContents.getURL()
+
+      this.loadRightPreload(url, oldUrl)
+
       await this.wcv.webContents.loadURL(url)
     } catch (error) {
       console.error(`[main] Failed to load URL for WebContentsView ${this.id}:`, error)
@@ -118,6 +213,13 @@ export class WCView {
 
   goBack() {
     if (this.canGoBack()) {
+      const newUrl = this.wcv.webContents.navigationHistory.getEntryAtIndex(
+        this.wcv.webContents.navigationHistory.getActiveIndex() - 1
+      )?.url
+      console.log('[main] WebContentsView', this.id, 'navigating back to URL', newUrl)
+
+      this.loadRightPreload(newUrl, this.wcv.webContents.getURL())
+
       this.wcv.webContents.navigationHistory.goBack()
     } else {
       console.warn(`[main] WebContentsView ${this.id} cannot go back`)
@@ -126,6 +228,13 @@ export class WCView {
 
   goForward() {
     if (this.canGoForward()) {
+      const newUrl = this.wcv.webContents.navigationHistory.getEntryAtIndex(
+        this.wcv.webContents.navigationHistory.getActiveIndex() + 1
+      )?.url
+      console.log('[main] WebContentsView', this.id, 'navigating forward to URL', newUrl)
+
+      this.loadRightPreload(newUrl, this.wcv.webContents.getURL())
+
       this.wcv.webContents.navigationHistory.goForward()
     } else {
       console.warn(`[main] WebContentsView ${this.id} cannot go forward`)
@@ -293,14 +402,23 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       const { navigationHistory, ...logOptions } = opts
       console.log('[main] webcontentsview-create: creating new view with options', logOptions)
 
-      const view = new WCView({
-        ...opts,
-        additionalArguments: [
-          ...(opts.additionalArguments || []),
-          `--pdf-viewer-entry-point=${PDFViewerEntryPoint}`
-        ],
-        sandbox: true
-      })
+      const view = new WCView(
+        {
+          ...opts,
+          additionalArguments: [
+            ...(opts.additionalArguments || []),
+            `--userDataPath=${app.getPath('userData')}`,
+            `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
+            `--pdf-viewer-entry-point=${PDFViewerEntryPoint}`,
+            ...(process.env.ENABLE_DEBUG_PROXY ? ['--enable-debug-proxy'] : []),
+            ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS
+              ? ['--disable-tab-switching-shortcuts']
+              : [])
+          ],
+          sandbox: true
+        },
+        this
+      )
 
       console.log('[main] webcontentsview-create: registering id', view.id)
       this.views.set(view.id, view)
@@ -351,14 +469,17 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     console.log('createOverlayView: all additional args', additionalArgs)
 
-    const view = new WCView({
-      partition: 'persist:surf-app-session',
-      preload: path.resolve(__dirname, '../preload/overlay.js'),
-      additionalArguments: additionalArgs,
-      sandbox: false,
-      transparent: true,
-      ...opts
-    })
+    const view = new WCView(
+      {
+        partition: 'persist:surf-app-session',
+        preload: path.resolve(__dirname, '../preload/overlay.js'),
+        additionalArguments: additionalArgs,
+        sandbox: false,
+        transparent: true,
+        ...opts
+      },
+      this
+    )
 
     view.wcv.setBorderRadius(18)
 
@@ -388,6 +509,16 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     })
 
     return view
+  }
+
+  recreatedWCV(view: WCView) {
+    console.log('[main] webcontentsview-recreated: view with id', view.id, 'was re-created')
+    this.views.set(view.id, view)
+
+    this.attachViewIPCEvents(view)
+    this.addChildView(view)
+
+    this.emit('create', view)
   }
 
   setViewBounds(id: string, bounds: Electron.Rectangle) {

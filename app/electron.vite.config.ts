@@ -103,7 +103,8 @@ export default defineConfig({
           updates: resolve(__dirname, 'src/preload/updates.ts'),
           announcements: resolve(__dirname, 'src/preload/announcements.ts'),
           setup: resolve(__dirname, 'src/preload/setup.ts'),
-          overlay: resolve(__dirname, 'src/preload/overlay.ts')
+          overlay: resolve(__dirname, 'src/preload/overlay.ts'),
+          resource: resolve(__dirname, 'src/preload/resource.ts')
         },
         external: ['@deta/services/src/ipc'],
         plugins: [
@@ -151,7 +152,8 @@ export default defineConfig({
           updates: resolve(__dirname, 'src/renderer/Updates/updates.html'),
           pdf: resolve(__dirname, 'src/renderer/PDF/pdf.html'),
           announcements: resolve(__dirname, 'src/renderer/Announcements/announcements.html'),
-          overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html')
+          overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html'),
+          resource: resolve(__dirname, 'src/renderer/Resource/resource.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         preserveEntrySignatures: 'strict',

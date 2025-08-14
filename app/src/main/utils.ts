@@ -128,11 +128,23 @@ export const SettingsWindowEntrypoint = (() => {
 
 export const PDFViewerEntryPoint = (() => {
   if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
-    return `${process.env.ELECTRON_RENDERER_URL}/pdf.html`
+    return `${process.env.ELECTRON_RENDERER_URL}/PDF/pdf.html`
   } else {
     return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'PDF', 'pdf.html')}`
   }
 })()
+
+export const ResourceViewerEntryPoint = (() => {
+  if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    return `${process.env.ELECTRON_RENDERER_URL}/Resource/resource.html`
+  } else {
+    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Resource', 'resource.html')}`
+  }
+})()
+
+export function checkIfSurfProtocolUrl(url: string): boolean {
+  return url.startsWith('surf://') || url.startsWith(ResourceViewerEntryPoint)
+}
 
 export async function checkFileExists(path: string) {
   try {

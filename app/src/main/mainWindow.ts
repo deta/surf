@@ -13,6 +13,7 @@ import {
   isAppSetup,
   normalizeElectronUserAgent,
   PDFViewerEntryPoint,
+  ResourceViewerEntryPoint,
   SettingsWindowEntrypoint
 } from './utils'
 
@@ -22,6 +23,7 @@ import { writeFile } from 'fs/promises'
 import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager } from './viewManager'
+import { ResourceViewerParams } from '@deta/utils/src/url'
 
 let mainWindow: BrowserWindow | undefined
 
@@ -213,11 +215,36 @@ export function createWindow() {
       details.webContents?.loadURL(`${PDFViewerEntryPoint}?${searchParams}`)
     }
 
+    const loadResourceViewer = (params: Partial<ResourceViewerParams>) => {
+      const searchParams = new URLSearchParams()
+      searchParams.set('path', params.path!)
+      if (params.resourceId) searchParams.set('resourceId', params.resourceId)
+
+      console.log('loading resource viewer with params:', searchParams.toString())
+
+      details.webContents?.loadURL(`${ResourceViewerEntryPoint}?${searchParams}`)
+    }
+
     const contentTypeHeader = getHeaderValue('content-type')
     const dispositionHeader = getHeaderValue('content-disposition')
     const isPDF = contentTypeHeader?.[0]?.includes('application/pdf') ?? false
     const isAttachment = dispositionHeader?.[0]?.toLowerCase().includes('attachment') ?? false
     const filename = getFilename(dispositionHeader?.[0])
+
+    const requestData = requestHeaderMap.pop(details.id)
+    const url = requestData?.url ?? details.url
+
+    if (url.startsWith('surf:')) {
+      callback({ cancel: true })
+      console.log('surf protocol request:', url)
+      if (isPDF) {
+        loadPDFViewer({ path: details.url, filename })
+      } else {
+        loadResourceViewer({ path: details.url, resourceId: url.split('/').pop() })
+      }
+
+      return
+    }
 
     if (isPDF && !isAttachment) {
       callback({ cancel: true })
@@ -225,11 +252,6 @@ export function createWindow() {
       const requestData = requestHeaderMap.pop(details.id)
       const tmpFile = join(app.getPath('temp'), crypto.randomUUID())
       const url = requestData?.url ?? details.url
-
-      if (url.startsWith('surf:')) {
-        loadPDFViewer({ path: details.url, filename })
-        return
-      }
 
       loadPDFViewer({ path: details.url, loading: true, filename })
 

@@ -363,6 +363,11 @@ export interface PDFViewerParams {
   filename?: string
 }
 
+export interface ResourceViewerParams {
+  path: string
+  resourceId?: string
+}
+
 export const parsePDFViewerParams = (url: string | URL): PDFViewerParams => {
   const searchParams =
     typeof url === 'string'
