@@ -30,8 +30,6 @@
 
     log.debug('Mounting web contents view', view.id)
 
-    log.debug('WebContentsView bounds', webContentsWrapper.getBoundingClientRect())
-
     await wait(200)
 
     const wcv = await view.mount(webContentsWrapper)
@@ -48,12 +46,6 @@
         webContentsBackgroundColor.set(color)
       })
     )
-
-    log.debug('WebContentsView bounds', webContentsWrapper.getBoundingClientRect())
-
-    wait(2000).then(() => {
-      log.debug('WebContentsView bounds', webContentsWrapper.getBoundingClientRect())
-    })
   })
 
   onDestroy(() => {
