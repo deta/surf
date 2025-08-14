@@ -16,7 +16,7 @@
   const viewManager = useViewManager()
   const shortcutsManager = useShortcutsManager<ShortcutActions>()
 
-  let { open = $bindable() } = $props()
+  let { open = $bindable() }: { open: boolean } = $props()
 
   let teletype: TeletypeSystem
 

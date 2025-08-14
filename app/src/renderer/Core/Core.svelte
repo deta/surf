@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
-  import { Button, Link } from '@deta/ui'
   import { useLogScope } from '@deta/utils'
   import {
     provideConfig,
@@ -9,8 +8,7 @@
     createKeyboardManager,
     createShortcutManager,
     defaultShortcuts,
-    ShortcutActions,
-    ShortcutPriority
+    ShortcutActions
   } from '@deta/services'
   import type { Fn } from '@deta/types'
 
@@ -24,33 +22,9 @@
   const keyboardManager = createKeyboardManager()
   const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
 
-  let count = $state(0)
   let open = $state(false)
 
-  function onclick() {
-    count += 1
-  }
-
   let unsubs: Fn[] = []
-
-  const actions = [
-    {
-      id: 'action1',
-      name: 'Action 1',
-      icon: 'save',
-      handler: () => {
-        log.debug('Action 1 clicked')
-      }
-    },
-    {
-      id: 'action2',
-      name: 'Action 2',
-      icon: 'reload',
-      handler: () => {
-        log.debug('Action 2 clicked')
-      }
-    }
-  ] satisfies Action[]
 
   const testView = viewManager.create({
     url: 'https://en.wikipedia.org'
@@ -87,7 +61,7 @@
       testView.on('mounted', (webContentsView) => {
         unsubs.push(
           webContentsView.on('keydown', (event) => {
-            keyboardManager.handleKeyDown(event)
+            keyboardManager.handleKeyDown(event as KeyboardEvent)
           })
         )
       })
