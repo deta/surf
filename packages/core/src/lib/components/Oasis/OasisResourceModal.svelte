@@ -37,7 +37,7 @@
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-  import { ResourceTag } from '@deta/utils/src/tags'
+  import { ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let resource: Resource
   export let active: boolean = true

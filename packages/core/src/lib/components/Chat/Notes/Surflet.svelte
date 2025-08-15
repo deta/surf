@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import type { Resource } from '@horizon/core/src/lib/service/resources'
   import SurfletRenderer from '../SurfletRenderer.svelte'
-  import { ResourceTag } from '@deta/utils/src/tags'
+  import { ResourceTag } from '@deta/utils/src/formatting/tags'
   import { AddResourceToSpaceEventTrigger, ResourceTagsBuiltInKeys } from '@deta/types'
   import { SpaceEntryOrigin } from '@horizon/core/src/lib/types'
 

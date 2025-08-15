@@ -66,7 +66,7 @@
   import ModelPicker from './ModelPicker.svelte'
   import { createMentionsFetcher } from '@horizon/core/src/lib/service/ai/mentions'
   import NoteContextBubbles from '@horizon/core/src/lib/components/Notes/NoteContextBubbles.svelte'
-  import { ResourceTag } from '@deta/utils/src/tags'
+  import { ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let chat: AIChat
   export let inputValue = ''

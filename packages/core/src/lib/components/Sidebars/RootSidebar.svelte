@@ -10,7 +10,7 @@
   import { selectedItemIds } from '../Oasis/utils/select'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import { useLogScope } from '@deta/utils'
-  import { SearchResourceTags } from '@deta/utils/src/tags'
+  import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
   const dispatch = createEventDispatcher()
   const log = useLogScope('NotesView')

@@ -2,7 +2,7 @@ import { get, writable, type Writable } from 'svelte/store'
 
 import Fuse, { type FuseResult } from 'fuse.js'
 import { SFFS } from './sffs'
-import { HistoryEntry } from '@deta/types'
+import { type HistoryEntry } from '@deta/types'
 
 export type SearchHistoryEntry = {
   site: string

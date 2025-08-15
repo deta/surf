@@ -50,7 +50,7 @@ import {
   NoteCreateCitationEventTrigger,
   type PageChatMessageSentData,
   DragTypeNames,
-  MentionAction
+  type MentionAction
 } from '@deta/types'
 
 import { useLogScope } from '@deta/utils'

@@ -35,7 +35,7 @@
   } from '@horizon/core/src/lib/types'
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
-  import { ResourceTag } from '@deta/utils/src/tags'
+  import { ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let doneGenerating: Readable<boolean> = readable(true)
   export let resource: Readable<Resource | undefined> = readable(undefined)

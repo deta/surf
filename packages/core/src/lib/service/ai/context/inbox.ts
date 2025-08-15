@@ -5,7 +5,7 @@ import { type TabPage } from '../../../types'
 import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'
 import { ContextItemTypes } from './types'
-import { SearchResourceTags } from '@deta/utils/src/tags'
+import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
 export class ContextItemInbox extends ContextItemBase {
   type = ContextItemTypes.INBOX

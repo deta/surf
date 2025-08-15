@@ -1,5 +1,9 @@
 import { useLogScope, checkIfUrl, parseStringIntoUrl, ResourceTag } from '@deta/utils'
-import { ResourceTagsBuiltInKeys, SFFSResourceMetadata, SFFSResourceTag } from '@deta/types'
+import {
+  ResourceTagsBuiltInKeys,
+  type SFFSResourceMetadata,
+  type SFFSResourceTag
+} from '@deta/types'
 import { WebParser } from '@deta/web-parser'
 
 import { Resource, type ResourceManager } from './resources'

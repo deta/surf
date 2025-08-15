@@ -148,7 +148,7 @@
   import { EditorAIGeneration, NoteEditor } from '@horizon/core/src/lib/service/editor'
   import ChatInput from '../../../Notes/ChatInput.svelte'
   import NoteTitle from '../../../Notes/Atoms/NoteTitle.svelte'
-  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
+  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let resourceId: string
   export let autofocus: boolean = true

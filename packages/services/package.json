@@ -26,6 +26,9 @@
     "build": "tsc",
     "build:types": "tsc --emitDeclarationOnly"
   },
+  "dependencies": {
+    "fuse.js": "^7.0.0"
+  },
   "devDependencies": {
     "@deta/types": "*",
     "svelte": "^5.0.0",

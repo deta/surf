@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store'
 
-import { SearchResourceTags } from '@deta/utils/src/tags'
+import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
 import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'

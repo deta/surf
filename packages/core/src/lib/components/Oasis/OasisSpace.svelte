@@ -114,7 +114,7 @@
   import OasisSpaceEmpty from './OasisSpaceEmpty.svelte'
   import { BuiltInSpaceId, BuiltInSpaces, isBuiltInSpaceId } from '../../constants/spaces'
   import { savePageToContext } from '@horizon/core/src/lib/service/saving'
-  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
+  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let spaceId: string
   export let active: boolean = false

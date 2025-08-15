@@ -51,7 +51,7 @@
   import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
   import { createWebviewExtractor } from '@deta/web-parser'
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
-  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
+  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let resource: Resource | undefined = undefined
   export let tab: TabResource | undefined = undefined

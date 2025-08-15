@@ -5,12 +5,7 @@
 
   import { useLogScope } from '@deta/utils'
   import { DynamicIcon } from '@deta/icons'
-  import {
-    useViewManager,
-    useShortcutsManager,
-    ShortcutActions,
-    ShortcutPriority
-  } from '@deta/services'
+  import { useViewManager, useShortcutsManager, ShortcutActions } from '@deta/services'
 
   const log = useLogScope('TeletypeEntry')
   const viewManager = useViewManager()

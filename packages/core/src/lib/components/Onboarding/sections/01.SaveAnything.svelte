@@ -8,7 +8,7 @@
   import { quintOut } from 'svelte/easing'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { createEventDispatcher } from 'svelte'
-  import { ResourceTag } from '@deta/utils/src/tags'
+  import { ResourceTag } from '@deta/utils/src/formatting/tags'
 
   interface OnboardingTab {
     title: string

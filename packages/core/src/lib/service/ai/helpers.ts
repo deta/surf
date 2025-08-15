@@ -23,7 +23,7 @@ import { ModelTiers } from '@deta/types/src/ai.types'
 import { ResourceManager } from '@deta/services'
 import type { CitationInfo } from '../../components/Chat/CitationItem.svelte'
 import type { TabsManager } from '../tabs'
-import { ResourceTag } from '@deta/utils/src/tags'
+import { ResourceTag } from '@deta/utils/src/formatting/tags'
 
 const log = useLogScope('AI')
 

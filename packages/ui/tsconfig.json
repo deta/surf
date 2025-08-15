@@ -1,5 +1,5 @@
 {
-  "extends": "@tsconfig/svelte/tsconfig.json",
+  "extends": ["@tsconfig/svelte/tsconfig.json", "@horizon/typescript-config/base.json"],
   "compilerOptions": {
     "target": "ESNext",
     "useDefineForClassFields": true,
@@ -13,7 +13,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js", "src/**/*.svelte"],
   "exclude": ["src/utils/houdini.js"],

@@ -6,7 +6,7 @@ import type { Tab } from '../types/browser.types'
 import type { EditablePrompt } from '@deta/types'
 import type { HomescreenData } from '../components/Oasis/homescreen/homescreen'
 import type { DesktopData } from '../types/desktop.types'
-import { KVStore } from './kv'
+import { KVStore } from '@deta/services'
 
 export interface LegacyResource {
   id: string

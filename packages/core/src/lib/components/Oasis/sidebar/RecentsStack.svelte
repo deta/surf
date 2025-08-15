@@ -13,7 +13,7 @@
   import { fly } from 'svelte/transition'
   import { useConfig } from '../../../service/config'
   import Tooltip from '@horizon/core/src/lib/components/Atoms/Tooltip.svelte'
-  import { SearchResourceTags } from '@deta/utils/src/tags'
+  import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
   export let wasMouseInside = writable(false)
   export let canHover = false

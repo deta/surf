@@ -26,7 +26,7 @@ import {
 import { tick } from 'svelte'
 import type { OasisService } from '../oasis'
 import { EventEmitterBase } from '@deta/utils'
-import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
+import { SearchResourceTags, ResourceTag } from '@deta/utils/src/formatting/tags'
 
 export type SmartNotesEvents = {
   'open-sidebar': (id: string) => void

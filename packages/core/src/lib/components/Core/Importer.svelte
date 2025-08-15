@@ -15,7 +15,7 @@
   import { type ResourceManager } from '../../service/resources'
   import type { BatchFetcher } from '@deta/web-parser/src/importers/batcher'
   import { Icon } from '@deta/icons'
-  import { ResourceTag } from '@deta/utils/src/tags'
+  import { ResourceTag } from '@deta/utils/src/formatting/tags'
 
   export let resourceManager: ResourceManager
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SEARCH_ENGINES } from '@horizon/core/src/lib/constants/searchEngines'
+  import { SEARCH_ENGINES } from '@deta/utils/src/browser/searchEngines'
   import { createEventDispatcher } from 'svelte'
 
   export let value: string = 'google'

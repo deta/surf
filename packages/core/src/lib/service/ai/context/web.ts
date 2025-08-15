@@ -3,7 +3,7 @@ import { writable } from 'svelte/store'
 import { ContextItemBase } from './base'
 import type { ContextService } from '../contextManager'
 import { ContextItemTypes } from './types'
-import { ResourceTag } from '@deta/utils/src/tags'
+import { ResourceTag } from '@deta/utils/src/formatting/tags'
 import { extractAndCreateWebResource } from '../../mediaImporter'
 import type { SearchResultLink } from '@deta/web-parser'
 

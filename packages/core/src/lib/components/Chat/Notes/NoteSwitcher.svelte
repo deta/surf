@@ -23,7 +23,7 @@
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { EventContext } from '@deta/types'
-  import { SearchResourceTags } from '@deta/utils/src/tags'
+  import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
   export let selectedChatId: Writable<string> = writable('')
   export let open: Writable<boolean> = writable(false)

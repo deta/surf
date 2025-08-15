@@ -1,17 +1,17 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
 import {
-  HistoryEntry,
-  WebContentsError,
+  type HistoryEntry,
+  type WebContentsError,
   WebContentsViewActionType,
-  WebContentsViewData,
-  WebContentsViewEventListener,
-  WebContentsViewEventListenerCallback,
-  WebContentsViewEvents,
+  type WebContentsViewData,
+  type WebContentsViewEventListener,
+  type WebContentsViewEventListenerCallback,
+  type WebContentsViewEvents,
   WebContentsViewEventType,
   WebContentsViewManagerActionType,
   WebViewEventSendNames,
-  WebViewSendEvents,
+  type WebViewSendEvents,
   type Fn,
   type WebContentsViewAction,
   type WebContentsViewActionOutputs,
@@ -33,7 +33,7 @@ import {
 import { HistoryEntriesManager } from './history'
 import { ConfigService, useConfig } from './config'
 import { KVStore, useKVTable } from './kv'
-import { KeyboardManager, useKeyboardManager } from './shortcuts'
+import { KeyboardManager, useKeyboardManager } from './shortcuts/index'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 

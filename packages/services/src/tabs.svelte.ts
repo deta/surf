@@ -1,8 +1,8 @@
-import { EventEmitterBase, getHostname, isDev, ScopedLogger, useLogScope } from '@deta/utils'
+import { EventEmitterBase, getHostname, isDev, type ScopedLogger, useLogScope } from '@deta/utils'
 import { type BaseKVItem, KVStore, useKVTable } from './kv'
-import { Fn, WebContentsViewData } from '@deta/types'
+import type { Fn, WebContentsViewData } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from './viewManager.svelte'
-import { derived, Readable, writable, Writable } from 'svelte/store'
+import { derived, type Readable } from 'svelte/store'
 
 export interface KVTabItem extends BaseKVItem {
   title: string

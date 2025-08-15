@@ -1,4 +1,4 @@
-import { ShortcutDefinition, ShortcutPriority } from './shortcutsManager'
+import { type ShortcutDefinition, ShortcutPriority } from './shortcutsManager'
 
 // Define all available shortcuts in the app
 export enum ShortcutActions {

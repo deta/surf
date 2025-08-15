@@ -60,7 +60,7 @@
   import { SelectDropdown } from '../../Atoms/SelectDropdown'
   import AppBarButton from '../../Browser/AppBarButton.svelte'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'
-  import { SearchResourceTags } from '@deta/utils/src/tags'
+  import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
   export let tabs: Readable<Tab[]>
   export let contextManager: ContextManager
