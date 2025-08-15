@@ -34,6 +34,8 @@
     "dompurify": "^3.2.4",
     "@horizon/eslint-config": "*",
     "@deta/icons": "*",
+    "@deta/utils": "*",
+    "@deta/types": "*",
     "@horizon/typescript-config": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@sveltejs/vite-plugin-svelte": "^3.0.1",

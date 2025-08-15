@@ -19,7 +19,7 @@
       "outputLogs": "new-only"
     },
     "@deta/editor#build": {
-      "dependsOn": ["@deta/icons#build"],
+      "dependsOn": ["@deta/icons#build", "@deta/utils#build", "@deta/types#build"],
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
