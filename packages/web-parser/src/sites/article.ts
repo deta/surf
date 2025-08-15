@@ -1,4 +1,4 @@
-import { ResourceTypes, ResourceDataArticle } from '@deta/types'
+import { ResourceTypes, type ResourceDataArticle } from '@deta/types'
 import { Readability, isProbablyReaderable } from '@mozilla/readability'
 
 import { MetadataExtractor, WebAppExtractor } from '../extractors'

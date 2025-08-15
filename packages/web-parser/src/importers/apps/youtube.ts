@@ -17,10 +17,10 @@ SAMPLE LINK:
 }
 */
 
-import { ResourceDataLink, ResourceDataPost, ResourceTypes } from '@deta/types'
+import { type ResourceDataPost, ResourceTypes } from '@deta/types'
 import { BatchFetcher } from '../batcher'
 import { AppImporter } from './index'
-import { DetectedResource } from '../../types'
+import { type DetectedResource } from '../../types'
 import { WebParser, WebViewExtractor } from '../..'
 import { wait } from '@deta/utils'
 

@@ -1,4 +1,4 @@
-import { ResourceTypes, ResourceDataTable } from '@deta/types'
+import { ResourceTypes, type ResourceDataTable } from '@deta/types'
 import type { DetectedWebApp, WebService, WebServiceActionInputs } from '../types'
 import { WebAppExtractorActions } from '../extractors'
 import { SERVICES } from '../services'

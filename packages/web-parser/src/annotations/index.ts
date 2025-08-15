@@ -1,9 +1,4 @@
-import {
-  AnnotationRangeData,
-  AnnotationType,
-  WebviewAnnotationEventNames,
-  WebviewAnnotationEvents
-} from '@deta/types'
+import { type AnnotationRangeData, type AnnotationType } from '@deta/types'
 
 import { getXPath } from './xpath'
 

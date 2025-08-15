@@ -196,7 +196,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
   }
 
   private async readDataAsBlob() {
-    const buffer = await this.sffs.readDataFile(this.id)
+    const buffer = (await this.sffs.readDataFile(this.id)) as any
 
     return new Blob([buffer], { type: this.type })
   }

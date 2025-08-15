@@ -16,7 +16,8 @@ import {
   type WebContentsViewAction,
   type WebContentsViewActionOutputs,
   type WebContentsViewActionPayloads,
-  type WebContentsViewCreateOptions
+  type WebContentsViewCreateOptions,
+  type WebContentsViewEvent
 } from '@deta/types'
 import {
   useLogScope,
@@ -34,6 +35,7 @@ import { HistoryEntriesManager } from './history'
 import { ConfigService, useConfig } from './config'
 import { KVStore, useKVTable } from './kv'
 import { KeyboardManager, useKeyboardManager } from './shortcuts/index'
+import type { NewWindowRequest } from './ipc/events'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -107,7 +109,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
     this.view.domReady.set(true)
 
     if (!this._newWindowHandlerRegistered && this.webContentsId) {
-      window.api.registerNewWindowHandler(this.webContentsId, (details) => {
+      window.api.registerNewWindowHandler(this.webContentsId, (details: NewWindowRequest) => {
         // TODO: Handle new window creation
         // dispatch('new-window', details)
       })
@@ -308,74 +310,76 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
   }
 
   attachListeners() {
-    const unsubWebContentsEvents = window.preloadEvents.onWebContentsViewEvent((event) => {
-      // only handle events for our own view
-      if (event.viewId !== this.view.id) {
-        return
-      }
+    const unsubWebContentsEvents = window.preloadEvents.onWebContentsViewEvent(
+      (event: WebContentsViewEvent) => {
+        // only handle events for our own view
+        if (event.viewId !== this.view.id) {
+          return
+        }
 
-      let skipDispatch = false
+        let skipDispatch = false
 
-      if (event.type === WebContentsViewEventType.DID_FINISH_LOAD) {
-        this.refreshBackgroundColor()
-      }
+        if (event.type === WebContentsViewEventType.DID_FINISH_LOAD) {
+          this.refreshBackgroundColor()
+        }
 
-      const matchingListeners = this._eventListeners.filter(
-        (listener) => listener.type === event.type
-      )
-      if (matchingListeners.length > 0) {
-        this.log.debug('Found matching listeners for event', event.type, matchingListeners.length)
-        matchingListeners.forEach((listener) => {
-          const result = listener.callback(event.payload as never) // TODO fix type casting
-          if (result === false) {
-            skipDispatch = true
-          }
-        })
-      }
+        const matchingListeners = this._eventListeners.filter(
+          (listener) => listener.type === event.type
+        )
+        if (matchingListeners.length > 0) {
+          this.log.debug('Found matching listeners for event', event.type, matchingListeners.length)
+          matchingListeners.forEach((listener) => {
+            const result = listener.callback(event.payload as never) // TODO fix type casting
+            if (result === false) {
+              skipDispatch = true
+            }
+          })
+        }
 
-      if (skipDispatch) {
-        this.log.debug('Skipping event dispatch for', event.type)
-        return
-      }
+        if (skipDispatch) {
+          this.log.debug('Skipping event dispatch for', event.type)
+          return
+        }
 
-      if (event.type === WebContentsViewEventType.DID_START_LOADING) {
-        this.handleDidStartLoading()
-      } else if (event.type === WebContentsViewEventType.DID_STOP_LOADING) {
-        this.handleDidStopLoading()
-      } else if (event.type === WebContentsViewEventType.DOM_READY) {
-        this.handleDOMReady()
-      } else if (event.type === WebContentsViewEventType.DID_FAIL_LOAD) {
-        this.handleDidFailLoading(event.payload)
-      } else if (event.type === WebContentsViewEventType.DID_FINISH_LOAD) {
-        this.handleDidFinishLoad()
-      } else if (event.type === WebContentsViewEventType.PAGE_TITLE_UPDATED) {
-        this.handlePageTitleUpdated(event.payload)
-      } else if (event.type === WebContentsViewEventType.PAGE_FAVICON_UPDATED) {
-        this.handlePageFaviconUpdated(event.payload)
-      } else if (event.type === WebContentsViewEventType.UPDATE_TARGET_URL) {
-        this.handleUpdateTargetURL(event.payload)
-      } else if (event.type === WebContentsViewEventType.DID_NAVIGATE) {
-        this.handleDidNavigate(event.payload)
-      } else if (event.type === WebContentsViewEventType.DID_NAVIGATE_IN_PAGE) {
-        this.handleDidNavigateInPage(event.payload)
-      } else if (event.type === WebContentsViewEventType.MEDIA_STARTED_PLAYING) {
-        this.handleWebviewMediaPlaybackChanged(true)
-      } else if (event.type === WebContentsViewEventType.MEDIA_PAUSED) {
-        this.handleWebviewMediaPlaybackChanged(false)
-      } else if (event.type === WebContentsViewEventType.ENTER_HTML_FULL_SCREEN) {
-        this.handleHtmlFullScreenChange(true)
-      } else if (event.type === WebContentsViewEventType.LEAVE_HTML_FULL_SCREEN) {
-        this.handleHtmlFullScreenChange(false)
-      } else if (event.type === WebContentsViewEventType.FOCUS) {
-        this.handleFocusChange(true)
-      } else if (event.type === WebContentsViewEventType.BLUR) {
-        this.handleFocusChange(false)
-      } else if (event.type === WebContentsViewEventType.FOUND_IN_PAGE) {
-        this.handleFoundInPage(event.payload)
-      } else if (event.type === WebContentsViewEventType.IPC_MESSAGE) {
-        this.handlePreloadIPCEvent(event.payload)
+        if (event.type === WebContentsViewEventType.DID_START_LOADING) {
+          this.handleDidStartLoading()
+        } else if (event.type === WebContentsViewEventType.DID_STOP_LOADING) {
+          this.handleDidStopLoading()
+        } else if (event.type === WebContentsViewEventType.DOM_READY) {
+          this.handleDOMReady()
+        } else if (event.type === WebContentsViewEventType.DID_FAIL_LOAD) {
+          this.handleDidFailLoading(event.payload)
+        } else if (event.type === WebContentsViewEventType.DID_FINISH_LOAD) {
+          this.handleDidFinishLoad()
+        } else if (event.type === WebContentsViewEventType.PAGE_TITLE_UPDATED) {
+          this.handlePageTitleUpdated(event.payload)
+        } else if (event.type === WebContentsViewEventType.PAGE_FAVICON_UPDATED) {
+          this.handlePageFaviconUpdated(event.payload)
+        } else if (event.type === WebContentsViewEventType.UPDATE_TARGET_URL) {
+          this.handleUpdateTargetURL(event.payload)
+        } else if (event.type === WebContentsViewEventType.DID_NAVIGATE) {
+          this.handleDidNavigate(event.payload)
+        } else if (event.type === WebContentsViewEventType.DID_NAVIGATE_IN_PAGE) {
+          this.handleDidNavigateInPage(event.payload)
+        } else if (event.type === WebContentsViewEventType.MEDIA_STARTED_PLAYING) {
+          this.handleWebviewMediaPlaybackChanged(true)
+        } else if (event.type === WebContentsViewEventType.MEDIA_PAUSED) {
+          this.handleWebviewMediaPlaybackChanged(false)
+        } else if (event.type === WebContentsViewEventType.ENTER_HTML_FULL_SCREEN) {
+          this.handleHtmlFullScreenChange(true)
+        } else if (event.type === WebContentsViewEventType.LEAVE_HTML_FULL_SCREEN) {
+          this.handleHtmlFullScreenChange(false)
+        } else if (event.type === WebContentsViewEventType.FOCUS) {
+          this.handleFocusChange(true)
+        } else if (event.type === WebContentsViewEventType.BLUR) {
+          this.handleFocusChange(false)
+        } else if (event.type === WebContentsViewEventType.FOUND_IN_PAGE) {
+          this.handleFoundInPage(event.payload)
+        } else if (event.type === WebContentsViewEventType.IPC_MESSAGE) {
+          this.handlePreloadIPCEvent(event.payload)
+        }
       }
-    })
+    )
 
     this._unsubs.push(unsubWebContentsEvents)
 

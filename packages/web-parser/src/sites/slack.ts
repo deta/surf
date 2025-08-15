@@ -1,4 +1,8 @@
-import { ResourceTypes, ResourceDataChatMessage, ResourceDataChatThread } from '@deta/types'
+import {
+  ResourceTypes,
+  type ResourceDataChatMessage,
+  type ResourceDataChatThread
+} from '@deta/types'
 
 import { WebAppExtractor } from '../extractors'
 import type { DetectedResource, DetectedWebApp, WebService } from '../types'

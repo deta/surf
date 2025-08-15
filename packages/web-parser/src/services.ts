@@ -1,5 +1,5 @@
 import { ResourceTypes } from '@deta/types'
-import { WebService } from './types'
+import type { WebService } from './types'
 
 export const SERVICES: WebService[] = [
   {

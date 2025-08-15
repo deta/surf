@@ -1,5 +1,5 @@
 import type { WebviewTag } from 'electron'
-import { DetectedResource, DetectedWebApp, WebServiceActionInputs } from '../types'
+import { type DetectedResource, type DetectedWebApp, type WebServiceActionInputs } from '../types'
 import { WebViewEventReceiveNames, WebViewEventSendNames } from '@deta/types'
 import { shouldIgnoreWebviewErrorCode } from '@deta/utils'
 

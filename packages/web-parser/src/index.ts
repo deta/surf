@@ -1,12 +1,12 @@
 import {
-  ResourceDataArticle,
-  ResourceDataChatMessage,
-  ResourceDataChatThread,
-  ResourceDataDocument,
-  ResourceDataLink,
-  ResourceDataPost,
-  ResourceDataTable,
-  ResourceDataTableColumn,
+  type ResourceDataArticle,
+  type ResourceDataChatMessage,
+  type ResourceDataChatThread,
+  type ResourceDataDocument,
+  type ResourceDataLink,
+  type ResourceDataPost,
+  type ResourceDataTable,
+  type ResourceDataTableColumn,
   ResourceTypes
 } from '@deta/types'
 export { SERVICES } from './services'
@@ -22,7 +22,7 @@ import {
   TypeformParser,
   GoogleSheetsParser
 } from './sites/index'
-import { DetectedResource, ResourceContent, WebServiceActionInputs } from './types'
+import { type DetectedResource, type ResourceContent, type WebServiceActionInputs } from './types'
 import { MetadataExtractor } from './extractors/metadata'
 import { WebViewExtractor } from './extractors/webview'
 import { WebAppExtractor } from './extractors/index'

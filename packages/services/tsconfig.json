@@ -1,6 +1,6 @@
 {
   "extends": "@horizon/typescript-config/base.json",
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js", "@deta/web-parser/src/vite-env.d.ts"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",

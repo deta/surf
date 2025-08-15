@@ -17,10 +17,10 @@ SAMPLE LINK:
 }
 */
 
-import { ResourceDataLink, ResourceDataPost, ResourceTypes } from '@deta/types'
+import { type ResourceDataPost, ResourceTypes } from '@deta/types'
 import { BatchFetcher } from '../batcher'
 import { AppImporter } from './index'
-import { DetectedResource } from '../../types'
+import { type DetectedResource } from '../../types'
 import { WebParser, WebViewExtractor } from '../..'
 import { wait } from '@deta/utils'
 
@@ -46,7 +46,7 @@ export class TwitterImporter extends AppImporter {
 
   async init() {
     // we need to start intercepting requests before initializing the webview
-    // @ts-expect-error
+    // @ts-ignore
     window.api
       // Dang. The partition here MUST not be the `persist:horizon` partition.
       .interceptRequestsHeaders(['https://x.com/i/api/*'], this.webviewExtractor.partition)

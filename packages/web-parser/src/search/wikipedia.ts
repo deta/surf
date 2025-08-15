@@ -38,13 +38,13 @@ export class WikipediaAPI {
   private async fetchJSON(url: string, init?: RequestInit) {
     if (
       typeof window !== 'undefined' &&
-      // @ts-expect-error
+      // @ts-ignore
       typeof window.api !== 'undefined' &&
-      // @ts-expect-error
+      // @ts-ignore
       typeof window.api.fetchJSON === 'function'
     ) {
       console.log('Using window.api')
-      // @ts-expect-error
+      // @ts-ignore
       return window.api.fetchJSON(url, init)
     } else {
       console.log('Using fetch API')

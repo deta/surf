@@ -1,6 +1,6 @@
 import { Readability } from '@mozilla/readability'
-import { WebMetadata } from '../types'
-import { makeAbsoluteURL, parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
+import { type WebMetadata } from '../types'
+import { parseStringIntoUrl, parseTextIntoISOString } from '@deta/utils'
 import { sanitizeHTML } from '../utils'
 
 export class MetadataExtractor {
@@ -108,7 +108,7 @@ export class MetadataExtractor {
 
   extractContentFromDocument(document: Document) {
     const documentClone = document.cloneNode(true) as Document
-    const parsed = new Readability(documentClone).parse()
+    const parsed = new Readability(documentClone).parse() as any
 
     if (!parsed) return null
 
@@ -132,13 +132,13 @@ export class MetadataExtractor {
     let html: string
     if (
       typeof window !== 'undefined' &&
-      // @ts-expect-error
+      // @ts-ignore
       typeof window.api !== 'undefined' &&
-      // @ts-expect-error
+      // @ts-ignore
       typeof window.api.fetchHTMLFromRemoteURL === 'function'
     ) {
       console.log('Using window.api')
-      // @ts-expect-error
+      // @ts-ignore
       html = await window.api.fetchHTMLFromRemoteURL(this.url.href)
     } else {
       console.log('Using fetch API')

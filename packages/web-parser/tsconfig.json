@@ -1,6 +1,6 @@
 {
   "extends": "@horizon/typescript-config/base.json",
-  "include": ["src/**/*.ts", "src/**/*.json"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.json"],
   "compilerOptions": {
     "composite": true,
     "outDir": "./build/",

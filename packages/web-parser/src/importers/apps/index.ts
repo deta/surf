@@ -1,5 +1,5 @@
 import { BatchFetcher } from '../batcher'
-import { DetectedResource } from '../../types'
+import { type DetectedResource } from '../../types'
 
 export abstract class AppImporter {
   abstract getBatchFetcher(size: number): BatchFetcher<DetectedResource>
@@ -7,13 +7,13 @@ export abstract class AppImporter {
   async fetchJSON(input: string | URL | Request, init?: RequestInit | undefined): Promise<any> {
     if (
       typeof window !== 'undefined' &&
-      // @ts-expect-error
+      // @ts-ignore
       typeof window.api !== 'undefined' &&
-      // @ts-expect-error
+      // @ts-ignore
       typeof window.api.fetchJSON === 'function'
     ) {
       console.log('Using window.api')
-      // @ts-expect-error
+      // @ts-ignore
       return window.api.fetchJSON(input, init)
     } else {
       console.log('Using fetch API')
