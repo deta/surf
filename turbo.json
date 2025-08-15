@@ -5,6 +5,7 @@
   "ui": "tui",
   "tasks": {
     "@deta/utils#build": {
+      "dependsOn": ["@deta/types#build"],
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
@@ -93,6 +94,7 @@
       "outputLogs": "new-only"
     },
     "@deta/types#build": {
+      "dependsOn": ["@deta/icons#build"],
       "outputs": [".build/**"],
       "outputLogs": "new-only"
     },
