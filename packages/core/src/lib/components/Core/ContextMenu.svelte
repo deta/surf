@@ -178,7 +178,7 @@
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
-  import log from '@deta/utils'
+  import { useLogScope } from '@deta/utils'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
@@ -188,6 +188,7 @@
   export let items: CtxItem[] = []
 
   const viewManager = useTabsViewManager()
+  const log = useLogScope('ContextMenu')
 
   let ref: HTMLDialogElement | null = null
   onMount(async () => {
