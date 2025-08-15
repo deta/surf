@@ -30,7 +30,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.17.1
+          node-version: 22.18.0
 
       - name: Cache node_modules
         uses: actions/cache@v3
