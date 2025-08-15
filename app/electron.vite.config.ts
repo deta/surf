@@ -6,7 +6,7 @@ import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 import replace from '@rollup/plugin-replace'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import obfuscator from 'rollup-plugin-obfuscator'
-import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
+// import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
@@ -43,7 +43,7 @@ export default defineConfig({
     envPrefix: 'M_VITE_',
     plugins: [
       externalizeDepsPlugin(),
-      createLicensePlugin('main'),
+      // createLicensePlugin('main'),
       ...(!disableAllObfuscation ? [bytecodePlugin({ removeBundleJS: true })] : [])
     ],
     build: {
@@ -89,8 +89,8 @@ export default defineConfig({
       }),
       replace({
         'doc.documentElement.style': '{}'
-      }),
-      createLicensePlugin('preload')
+      })
+      // createLicensePlugin('preload')
       // ...(!disableAllObfuscation
       //   ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
       //   : [])
@@ -138,9 +138,9 @@ export default defineConfig({
       }),
       */
       Markdown({ mode: [Mode.MARKDOWN, Mode.HTML] }),
-      svelte(svelteOptions),
+      svelte(svelteOptions)
       // createLicensePlugin('renderer'),
-      createConcatLicensesPlugin()
+      // createConcatLicensesPlugin()
     ],
     build: {
       sourcemap: true,
