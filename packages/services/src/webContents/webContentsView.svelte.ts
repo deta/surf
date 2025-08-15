@@ -27,36 +27,23 @@ import {
   processFavicons,
   useDebounce,
   isPDFViewerURL,
-  parseUrlIntoCanonical,
-  generateID,
-  isDev
+  parseUrlIntoCanonical
 } from '@deta/utils'
-import { HistoryEntriesManager } from './history'
-import { ConfigService, useConfig } from './config'
-import { KVStore, useKVTable } from './kv'
-import { KeyboardManager, useKeyboardManager } from './shortcuts/index'
-import type { NewWindowRequest } from './ipc/events'
+import { HistoryEntriesManager } from '../history'
+import { ConfigService } from '../config'
+import { KeyboardManager, useKeyboardManager } from '../shortcuts/index'
+import type { NewWindowRequest } from '../ipc/events'
+import type { ViewManager } from './viewManager.svelte'
+import {
+  WebContentsViewEmitterNames,
+  type WebContentsEmitterEvents,
+  type WebContentsViewEmitterEvents,
+  WebContentsEmitterNames
+} from './types'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
-export type WebContentsViewParsedEvents = {
-  'loading-changed': (isLoading: boolean, error: WebContentsError | null) => void
-  'page-title-updated': (newTitle: string, oldTitle: string) => void
-  'page-favicon-updated': (newFaviconUrl: string, oldFaviconUrl: string) => void
-  navigated: (newUrl: string, oldUrl: string, isProgrammatic: boolean) => void
-  'media-playback-changed': (isPlaying: boolean) => void
-  'fullscreen-changed': (isFullScreen: boolean) => void
-  'focus-changed': (isFocused: boolean) => void
-  'hover-target-url-changed': (url: string | null) => void
-  'found-in-page': (result: WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]) => void
-  keydown: (event: WebViewSendEvents[WebViewEventSendNames.KeyDown]) => void
-  'preload-event': <T extends keyof WebViewSendEvents>(
-    type: T,
-    payload: WebViewSendEvents[T]
-  ) => void
-}
-
-export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
+export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   log: ReturnType<typeof useLogScope>
   view: WebContentsView
   manager: ViewManager
@@ -122,12 +109,12 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
     this.view.isLoading.set(true)
     this.view.error.set(null)
 
-    this.emit('loading-changed', true, null)
+    this.emit(WebContentsEmitterNames.LOADING_CHANGED, true, null)
   }
 
   private handleDidStopLoading() {
     this.view.isLoading.set(false)
-    this.emit('loading-changed', false, null)
+    this.emit(WebContentsEmitterNames.LOADING_CHANGED, false, null)
   }
 
   private handleDidFailLoading(
@@ -153,7 +140,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
 
     this.view.error.set(parsedError)
 
-    this.emit('loading-changed', false, parsedError)
+    this.emit(WebContentsEmitterNames.LOADING_CHANGED, false, parsedError)
   }
 
   private async handleDidFinishLoad() {
@@ -162,7 +149,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
     const url = await this.getURL()
     // handleNavigation(url)
 
-    this.emit('loading-changed', false, null)
+    this.emit(WebContentsEmitterNames.LOADING_CHANGED, false, null)
   }
 
   private handlePageTitleUpdated(
@@ -184,7 +171,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
       })
     }
 
-    this.emit('page-title-updated', newTitle, oldTitle)
+    this.emit(WebContentsEmitterNames.PAGE_TITLE_UPDATED, newTitle, oldTitle)
   }
 
   private async handlePageFaviconUpdated(
@@ -212,7 +199,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
     event: WebContentsViewEvents[WebContentsViewEventType.UPDATE_TARGET_URL]
   ) {
     this.view.hoverTargetURL.set(event.url)
-    this.emit('hover-target-url-changed', event.url)
+    this.emit(WebContentsEmitterNames.HOVER_TARGET_URL_CHANGED, event.url)
   }
 
   private handleDidNavigate(event: WebContentsViewEvents[WebContentsViewEventType.DID_NAVIGATE]) {
@@ -252,7 +239,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
 
     this.view.url.set(newUrl)
 
-    this.emit('navigated', newUrl, oldUrl, this._programmaticNavigation)
+    this.emit(WebContentsEmitterNames.NAVIGATED, newUrl, oldUrl, this._programmaticNavigation)
 
     if (this._programmaticNavigation) {
       this.log.debug('Programmatic navigation, skipping history entry')
@@ -268,29 +255,29 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
     this.isCurrentlyAudible().then((v) => {
       if (state && !v) return
       this.view.isMediaPlaying.set(state)
-      this.emit('media-playback-changed', state)
+      this.emit(WebContentsEmitterNames.MEDIA_PLAYBACK_CHANGED, state)
     })
   }
 
   private handleHtmlFullScreenChange(isFullScreen: boolean) {
     this.view.isFullScreen.set(isFullScreen)
-    this.emit('fullscreen-changed', isFullScreen)
+    this.emit(WebContentsEmitterNames.FULLSCREEN_CHANGED, isFullScreen)
   }
 
   private handleFocusChange(isFocused: boolean) {
     this.view.isFocused.set(isFocused)
-    this.emit('focus-changed', isFocused)
+    this.emit(WebContentsEmitterNames.FOCUS_CHANGED, isFocused)
   }
 
   private handleFoundInPage(event: WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]) {
     this.view.foundInPageResult.set(event)
-    this.emit('found-in-page', event)
+    this.emit(WebContentsEmitterNames.FOUND_IN_PAGE, event)
   }
 
   private handleKeyDown(event: WebViewSendEvents[WebViewEventSendNames.KeyDown]) {
     this.log.debug('Key down event in webview:', event)
     this.keyboardManager.handleKeyDown(event as KeyboardEvent)
-    this.emit('keydown', event)
+    this.emit(WebContentsEmitterNames.KEYDOWN, event)
   }
 
   private handlePreloadIPCEvent(
@@ -306,7 +293,7 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
       return
     }
 
-    this.emit('preload-event', eventType, eventData)
+    this.emit(WebContentsEmitterNames.PRELOAD_EVENT, eventType, eventData)
   }
 
   attachListeners() {
@@ -539,7 +526,11 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
     }
 
     this.view.faviconURL.set(newFaviconURL)
-    this.emit('page-favicon-updated', newFaviconURL, this.view.faviconURLValue)
+    this.emit(
+      WebContentsEmitterNames.PAGE_FAVICON_UPDATED,
+      newFaviconURL,
+      this.view.faviconURLValue
+    )
   }, 250)
 
   async action<T extends WebContentsViewActionType>(
@@ -708,16 +699,18 @@ export class WebContents extends EventEmitterBase<WebContentsViewParsedEvents> {
   }
 }
 
-export type OverlayState = {
-  teletypeOpen: boolean
-}
-
-export type WebContentsViewEmitterEvents = {
-  mounted: (webContentsView: WebContents) => void
-  destroyed: () => void
-  'data-changed': (data: WebContentsViewData) => void
-}
-
+/**
+ * Represents a view that hosts web content in the application. This class manages the lifecycle
+ * and state of a web view, including its navigation history, visual state (screenshots),
+ * and interaction with the underlying Electron webContents.
+ *
+ * Each WebContentsView is responsible for:
+ * - Managing the web content's lifecycle (mount, unmount, destroy)
+ * - Tracking navigation history and state
+ * - Handling view-specific events (title changes, favicon updates, etc.)
+ * - Managing visual state (screenshots, background color)
+ * - Coordinating with the ViewManager for focus and activation
+ */
 export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEvents> {
   log: ReturnType<typeof useLogScope>
   manager: ViewManager
@@ -805,7 +798,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.unsubs.push(
       this.data.subscribe((data) => {
         this.log.debug('Data changed:', data)
-        this.emit('data-changed', data)
+        this.emit(WebContentsViewEmitterNames.DATA_CHANGED, data)
       })
     )
   }
@@ -860,6 +853,17 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     return get(this.data)
   }
 
+  /**
+   * Mounts the web contents view to a DOM element, creating the underlying Electron webContents.
+   * This method initializes the view with its initial URL and configuration, sets up event handlers,
+   * and coordinates with the ViewManager for activation.
+   *
+   * The mounting process:
+   * 1. Calculates view bounds from the DOM element
+   * 2. Creates Electron webContents with specified options
+   * 3. Sets up event handlers and IPC communication
+   * 4. Activates the view if specified
+   */
   async mount(domElement: HTMLElement, opts: Partial<WebContentsViewCreateOptions> = {}) {
     this.log.debug('Mounting view with options:', opts, domElement)
 
@@ -892,7 +896,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     const webContents = new WebContents(this, webContentsId, options, domElement)
     this.webContents = webContents
 
-    this.emit('mounted', webContents)
+    this.emit(WebContentsViewEmitterNames.MOUNTED, webContents)
     this.log.debug('View rendered successfully:', this.id, webContents)
 
     this.manager.postMountedWebContents(this.id, webContents, options.activate)
@@ -906,7 +910,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.onDestroy()
     this.manager.destroy(this.id)
 
-    this.emit('destroyed')
+    this.emit(WebContentsViewEmitterNames.DESTROYED)
   }
 
   onDestroy() {
@@ -918,284 +922,4 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.unsubs.forEach((unsub) => unsub())
     this.unsubs = []
   }
-}
-
-export type ViewManagerEvents = {
-  created: (view: WebContents) => void
-  deleted: (viewId: string) => void
-  activated: (view: WebContents) => void
-  'show-views': () => void
-  'hide-views': () => void
-}
-
-export class ViewManager extends EventEmitterBase<ViewManagerEvents> {
-  log: ReturnType<typeof useLogScope>
-  config: ConfigService
-  kv: KVStore<WebContentsViewData>
-
-  webContentsViews: Map<string, WebContents> = new Map()
-  viewOverlays: Map<string, string> = new Map() // Maps a view to its overlay view if it has one
-  overlayState: Writable<OverlayState>
-
-  activeViewId: Writable<string | null>
-  shouldHideViews: Readable<boolean>
-
-  views: Writable<WebContentsView[]>
-
-  private unsubs: Fn[] = []
-
-  static self: ViewManager
-
-  constructor() {
-    super()
-
-    this.log = useLogScope('ViewManager')
-    this.config = useConfig()
-    this.kv = useKVTable<WebContentsViewData>('views')
-
-    this.overlayState = writable({
-      teletypeOpen: false
-    })
-
-    this.activeViewId = writable(null)
-    this.views = writable([])
-
-    /*
-        derived([this.tabsManager.activeTab], ([$activeTab]) => {
-            if ($activeTab?.type === 'page') {
-                const view = this.views.get($activeTab.id);
-                return view ? view.id : null;
-            }
-
-            return null;
-        })
-        */
-
-    this.shouldHideViews = derived([this.overlayState], ([$overlayState]) => {
-      return $overlayState.teletypeOpen
-    })
-
-    this.unsubs.push(
-      this.shouldHideViews.subscribe((shouldHide) => {
-        this.log.debug('shouldHideViews changed:', shouldHide)
-        if (shouldHide) {
-          this.hideViews()
-        } else {
-          this.showViews()
-        }
-      })
-    )
-
-    if (isDev) {
-      // @ts-ignore
-      window.viewManager = this
-    }
-  }
-
-  get viewsValue() {
-    const viewsArray: WebContents[] = []
-    this.webContentsViews.forEach((view) => {
-      viewsArray.push(view)
-    })
-    return viewsArray
-  }
-
-  get shouldHideViewsValue() {
-    return get(this.shouldHideViews)
-  }
-
-  get overlayStateValue() {
-    return get(this.overlayState)
-  }
-
-  get activeViewIdValue() {
-    return get(this.activeViewId)
-  }
-
-  async changeOverlayState(changes: Partial<OverlayState>) {
-    this.overlayState.update((state) => {
-      const newState = { ...state, ...changes }
-      return newState
-    })
-  }
-
-  trackOverlayView(viewId: string, overlayViewId: string) {
-    this.viewOverlays.set(viewId, overlayViewId)
-  }
-
-  create(data: Partial<WebContentsViewData>) {
-    const fullData = {
-      id: data.id || generateID(),
-      partition: data.partition || 'persist:horizon',
-      url: data.url || 'about:blank',
-      title: data.title || '',
-      faviconUrl: data.faviconUrl || '',
-      navigationHistoryIndex: -1,
-      navigationHistory: [],
-      createdAt: data.createdAt || new Date().toISOString(),
-      updatedAt: data.updatedAt || new Date().toISOString()
-    }
-
-    const view = new WebContentsView(fullData, this)
-    this.views.update((views) => [...views, view])
-
-    this.log.debug('Creating WebContentsView with data:', view)
-
-    return view
-  }
-
-  async postMountedWebContents(viewId: string, webContents: WebContents, activate = true) {
-    this.log.debug('Mounted WebContentsView:', viewId)
-
-    this.webContentsViews.set(viewId, webContents)
-    this.emit('created', webContents)
-
-    this.log.debug(`created with ID: ${viewId}`, webContents)
-
-    if (activate) {
-      await this.activate(viewId)
-    }
-
-    return webContents
-  }
-
-  async activate(viewId: string) {
-    const view = this.webContentsViews.get(viewId)
-    if (!view) {
-      this.log.warn(`WebContentsView with ID ${viewId} does not exist.`)
-      return false
-    }
-
-    this.log.debug(`Activating WebContentsView with ID: ${viewId}`, view)
-
-    // if (view.parentViewID) {
-    //   this.log.debug(`View with ID ${viewId} has a parent view ID: ${view.parentViewID}`)
-    //   const parentView = this.webContentsViews.get(view.parentViewID)
-    //   if (parentView) {
-    //     this.log.debug(`Refreshing parent view with ID: ${parentView.id}`, parentView)
-    //     await parentView.refreshScreenshot()
-    //   } else {
-    //     this.log.warn(
-    //       `Parent view with ID ${view.parentViewID} does not exist. Cannot refresh screenshot.`
-    //     )
-    //   }
-    // }
-
-    await this.hideAll()
-
-    const overlayViewId = this.viewOverlays.get(view.id)
-    if (overlayViewId) {
-      this.log.debug(`Overlay view ID found for ${view.id}: ${overlayViewId}`, view)
-      // If this view is an overlay, we might want to handle the parent view's state
-      const overlayView = this.webContentsViews.get(overlayViewId)
-      if (overlayView) {
-        this.log.debug(`Activating overlay view with ID: ${overlayViewId}`, overlayView)
-        await this.activate(overlayView.id)
-        return true
-      } else {
-        this.log.warn(`Overaly view with ID ${overlayViewId} does not exist.`)
-        this.viewOverlays.delete(view.id) // Clean up if the overlay view does not exist
-      }
-    }
-
-    await view.action(WebContentsViewActionType.ACTIVATE)
-    this.activeViewId.set(view.id)
-
-    this.emit('activated', view)
-
-    return true
-  }
-
-  async destroy(viewId: string) {
-    const view = this.webContentsViews.get(viewId)
-    if (!view) {
-      this.log.warn(`WebContentsView with ID ${viewId} does not exist.`)
-      return false
-    }
-
-    this.log.debug(`Destroying WebContentsView with ID: ${viewId}`, view)
-
-    view.onDestroy()
-    this.webContentsViews.delete(viewId)
-    this.emit('deleted', viewId)
-
-    // if (viewId === this.activeViewIdValue && (!view.isOverlay || !this.shouldHideViewsValue)) {
-    //   const activeTab = this.tabsManager.activeTabValue
-    //   this.log.debug(`Active view with ID ${viewId} destroyed. Checking for new active view.`)
-    //   if (activeTab?.type === 'page' && activeTab.id !== viewId) {
-    //     const activeView = this.views.get(activeTab.id)
-    //     if (activeView) {
-    //       await this.activate(activeView.id)
-    //     } else {
-    //       // If no active view is found, reset the active view ID
-    //       this.activeViewId.set(null)
-    //     }
-    //   }
-    // }
-
-    // if (!!view.parentViewID) {
-    //   this.log.debug(`Removing overlay view for parentViewID: ${view.parentViewID}`, view.id)
-    //   this.viewOverlays.delete(view.parentViewID)
-    // }
-
-    return true
-  }
-
-  async hideAll() {
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
-  }
-
-  async showViews() {
-    this.emit('show-views')
-
-    const view = this.getActiveView()
-    if (view) {
-      this.activate(view.id)
-    }
-
-    // const activeTab = this.tabsManager.activeTabValue
-    // if (activeTab?.type === 'page') {
-    //   const activeView = this.views.get(activeTab.id)
-    //   if (activeView) {
-    //     this.activate(activeView.id)
-    //   } else {
-    //     this.log.warn(`Active view with ID ${activeTab.id} does not exist.`)
-    //   }
-    // }
-  }
-
-  async hideViews(emitEvent = true) {
-    if (emitEvent) {
-      const activeView = this.getActiveView()
-      if (activeView) {
-        await activeView.refreshScreenshot()
-      }
-    }
-
-    window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
-  }
-
-  getActiveView(): WebContents | null {
-    const activeViewId = this.activeViewIdValue
-    if (activeViewId) {
-      return this.webContentsViews.get(activeViewId) || null
-    }
-    return null
-  }
-
-  onDestroy() {
-    this.unsubs.forEach((unsub) => unsub())
-  }
-
-  static getInstance(): ViewManager {
-    if (!ViewManager.self) {
-      ViewManager.self = new ViewManager()
-    }
-
-    return ViewManager.self
-  }
-}
-
-export const useViewManager = (): ViewManager => {
-  return ViewManager.getInstance()
 }

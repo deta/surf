@@ -1,8 +1,9 @@
 import { EventEmitterBase, getHostname, isDev, type ScopedLogger, useLogScope } from '@deta/utils'
 import { type BaseKVItem, KVStore, useKVTable } from './kv'
 import type { Fn, WebContentsViewData } from '@deta/types'
-import { useViewManager, WebContentsView, ViewManager } from './viewManager.svelte'
+import { useViewManager, WebContentsView, ViewManager } from './webContents'
 import { derived, type Readable } from 'svelte/store'
+import { WebContentsViewEmitterNames } from './webContents/types'
 
 export interface KVTabItem extends BaseKVItem {
   title: string
@@ -14,7 +15,22 @@ export type CreateTabOptions = {
   active: boolean
 }
 
-export class TabItem extends EventEmitterBase<any> {
+export enum TabItemEmitterNames {
+  UPDATE = 'update',
+  DESTROY = 'destroy'
+}
+
+export type TabItemEmitterEvents = {
+  [TabItemEmitterNames.UPDATE]: (tab: TabItem) => void
+  [TabItemEmitterNames.DESTROY]: (tabId: string) => void
+}
+
+/**
+ * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView
+ * that displays the actual web content. TabItem manages the lifecycle and state of a browser tab,
+ * including its title, view data, and position in the tab strip.
+ */
+export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   manager: TabsService
   private log: ScopedLogger
 
@@ -41,7 +57,7 @@ export class TabItem extends EventEmitterBase<any> {
     this.title = derived(this.view.title, (title) => title)
 
     this.unsubs.push(
-      view.on('data-changed', (data) => {
+      view.on(WebContentsViewEmitterNames.DATA_CHANGED, (data) => {
         this.log.debug(`View data changed for tab ${this.id}:`, data)
         this.update({
           title: data.title,
@@ -76,7 +92,7 @@ export class TabItem extends EventEmitterBase<any> {
       view: this.view.dataValue
     })
 
-    this.emit('update', this)
+    this.emit(TabItemEmitterNames.UPDATE, this)
   }
 
   onDestroy() {
@@ -84,11 +100,34 @@ export class TabItem extends EventEmitterBase<any> {
 
     this.view.manager.destroy(this.view.id)
 
-    this.emit('destroy', this)
+    this.emit(TabItemEmitterNames.DESTROY, this.id)
   }
 }
 
-export class TabsService extends EventEmitterBase<any> {
+export enum TabsServiceEmitterNames {
+  CREATED = 'created',
+  DELETED = 'deleted',
+  ACTIVATED = 'activated'
+}
+
+export type TabsServiceEmitterEvents = {
+  [TabsServiceEmitterNames.CREATED]: (tab: TabItem) => void
+  [TabsServiceEmitterNames.DELETED]: (tabId: string) => void
+  [TabsServiceEmitterNames.ACTIVATED]: (tab: TabItem | null) => void
+}
+
+/**
+ * Central service for managing browser tabs. Handles tab creation, deletion, activation, and persistence.
+ * This service maintains the state of all tabs, manages their order, and coordinates with the ViewManager
+ * to handle the actual web content views associated with each tab.
+ *
+ * Features:
+ * - Tab lifecycle management (create, delete, update)
+ * - Tab state persistence using KV store
+ * - Tab activation and focus handling
+ * - History tracking for each tab
+ */
+export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   private log: ScopedLogger
   private viewManager: ViewManager
   private kv: KVStore<KVTabItem>
@@ -195,6 +234,17 @@ export class TabsService extends EventEmitterBase<any> {
     return tabs
   }
 
+  /**
+   * Creates a new browser tab with the specified URL.
+   * This method will:
+   * 1. Create a new WebContentsView for the URL
+   * 2. Generate a unique tab ID and index
+   * 3. Persist the tab data to storage
+   * 4. Activate the tab if specified in options
+   *
+   * @param url The URL to load in the new tab
+   * @param opts Options for tab creation, such as whether to activate it immediately
+   */
   async create(url: string, opts: Partial<CreateTabOptions> = {}): Promise<TabItem> {
     const options = {
       active: true,
@@ -216,6 +266,8 @@ export class TabsService extends EventEmitterBase<any> {
     if (options.active) {
       this.setActiveTab(item.id)
     }
+
+    this.emit(TabsServiceEmitterNames.CREATED, tab)
 
     return tab
   }
@@ -268,6 +320,8 @@ export class TabsService extends EventEmitterBase<any> {
     }
 
     await this.kv.delete(id)
+
+    this.emit(TabsServiceEmitterNames.DELETED, id)
   }
 
   async setActiveTab(id: string | null) {
@@ -285,6 +339,8 @@ export class TabsService extends EventEmitterBase<any> {
       this.activatedTabs = [...this.activatedTabs.filter((t) => t !== id), id]
       this.viewManager.activate(tab.view.id)
     }
+
+    this.emit(TabsServiceEmitterNames.ACTIVATED, this.activeTab)
   }
 
   static useTabs(): TabsService {
