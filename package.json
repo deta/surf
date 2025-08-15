@@ -36,7 +36,7 @@
     "turbo": "2.4.4"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.18.0"
   },
   "packageManager": "yarn@1.22.22",
   "workspaces": {
