@@ -1,6 +1,6 @@
 {
   "extends": "@horizon/typescript-config/base.json",
- "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -12,12 +12,6 @@
     "emitDeclarationOnly": false,
     "composite": true,
     "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "paths": {}
-  },
-  "references": [
-    { "path": "../types" },
-    { "path": "../utils" },
-    { "path": "../web-parser" }
-  ]
+    "isolatedModules": true
+  }
 }
