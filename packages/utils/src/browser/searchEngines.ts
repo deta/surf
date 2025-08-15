@@ -12,6 +12,7 @@ export const SEARCH_ENGINES: {
     shortcuts: ['gg', 'google'],
     getUrl: (query: string) => `https://google.com/search?q=${query}`,
     getCompletions: async (query: string) => {
+      // @ts-ignore
       const data = await window.api.fetchJSON(
         `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(
           query

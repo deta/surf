@@ -23,7 +23,7 @@ import { writeFile } from 'fs/promises'
 import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager } from './viewManager'
-import { ResourceViewerParams } from '@deta/utils/src/url'
+import { ResourceViewerParams } from '@deta/utils'
 
 let mainWindow: BrowserWindow | undefined
 

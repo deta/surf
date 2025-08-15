@@ -12,7 +12,7 @@
     isModKeyAndKeyPressed,
     isModKeyAndKeysPressed,
     isModKeyAndShiftKeyAndKeyPressed
-  } from '@deta/utils/src/keyboard'
+  } from '@deta/utils'
   import { createTelemetry } from '../service/telemetry'
   import {
     useDebounce,
@@ -192,7 +192,7 @@
   } from '@horizon/core/src/lib/service/migration'
   import BrowsingContextSelector from './Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
   import { BuiltInSpaceId } from '../constants/spaces'
-  import { SearchResourceTags, ResourceTag } from '@deta/utils/src/tags'
+  import { SearchResourceTags, ResourceTag } from '@deta/utils'
   import type { TeletypeSystem } from '@deta/teletype/src'
   import { createViewManager } from '@horizon/core/src/lib/service/viewManager'
 

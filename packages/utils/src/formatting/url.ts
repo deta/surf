@@ -1,5 +1,5 @@
 import { isIP } from 'is-ip'
-import { isWindows } from './system'
+import { isWindows } from '../system/system'
 
 export const prependProtocol = (url: string, secure = true) => {
   try {

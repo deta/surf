@@ -12,7 +12,7 @@ import { IPCListenerUnsubscribe } from '@deta/services/src/ipc'
 import { EventEmitterBase } from '@deta/utils'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { isDev } from '@deta/utils/src/system'
+import { isDev } from '@deta/utils'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 
 export class WCView {
