@@ -135,19 +135,23 @@
     },
     "desktop#dev": {
       "dependsOn": [
+        "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
-        "@deta/trackpad#dev",
-        "@deta/backend#dev",
-        "@deta/backend-server#dev"
+        "@deta/utils#build",
+        "@deta/ui#build",
+        "@deta/icons#build",
+        "@deta/editor#build"
       ],
       "outputs": [".dist/**", ".out/**"]
     },
     "dev": {
       "dependsOn": [
+        "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
-        "@deta/trackpad#dev",
-        "@deta/backend#dev",
-        "@deta/backend-server#build"
+        "@deta/utils#build",
+        "@deta/ui#build",
+        "@deta/icons#build",
+        "@deta/editor#build"
       ],
       "cache": false,
       "persistent": true
