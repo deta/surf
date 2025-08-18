@@ -64,6 +64,7 @@
     "@types/mime-types": "^2.1.4",
     "@types/node": "^18.17.5",
     "autoprefixer": "^10.4.19",
+    "bits-ui": "^2.9.3",
     "electron": "37.3.0",
     "electron-builder": "^24.13.3",
     "electron-context-menu": "^3.6.1",

@@ -9,7 +9,8 @@
     createKeyboardManager,
     createShortcutManager,
     defaultShortcuts,
-    ShortcutActions
+    ShortcutActions,
+    useOverlayManager
   } from '@deta/services'
   import type { Fn } from '@deta/types'
   import { Button } from '@deta/ui'
@@ -17,11 +18,15 @@
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
   import TabsList from './components/Tabs/TabsList.svelte'
+  import Overlay from './components/Overlays/Overlay.svelte'
+
+  import Test from './components/Overlays/Test.svelte'
 
   const log = useLogScope('Core')
   const config = provideConfig()
   const viewManager = useViewManager()
   const tabsService = useTabs()
+  const overlayManager = useOverlayManager()
 
   const keyboardManager = createKeyboardManager()
   const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
@@ -29,6 +34,7 @@
   let open = $state(false)
 
   let unsubs: Fn[] = []
+  let overlayWrapper: HTMLDivElement | null = null
 
   async function handleCreateNewTab(e: MouseEvent) {
     if (e.metaKey || e.ctrlKey) {
@@ -116,9 +122,13 @@
   <div class="tabs">
     <TabsList />
 
-    <Button>test</Button>
+    <!-- <Button onclick={handleClick}>Create Overlay</Button> -->
 
     <button class="add-tab-btn" onclick={handleCreateNewTab}> New Tab </button>
+
+    <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
+      <Test />
+    </Overlay>
   </div>
 
   <div class="web-contents">
@@ -221,6 +231,16 @@
     height: 100%;
     width: 100%;
     position: relative;
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1000;
   }
 
   :global(:root) {

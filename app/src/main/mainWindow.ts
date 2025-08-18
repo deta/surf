@@ -22,7 +22,7 @@ import { getWebRequestManager } from './webRequestManager'
 import { writeFile } from 'fs/promises'
 import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
-import { attachWCViewManager } from './viewManager'
+import { attachWCViewManager, WCViewManager } from './viewManager'
 import { ResourceViewerParams } from '@deta/utils'
 
 let mainWindow: BrowserWindow | undefined
@@ -330,25 +330,28 @@ export function createWindow() {
   //   getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
   // })
 
-  setupMainWindowWebContentsHandlers(mainWindow.webContents)
+  const viewManager = attachWCViewManager(mainWindow)
+  viewManager.on('create', (view) => {
+    setupWebContentsViewWebContentsHandlers(view.wcv.webContents)
+  })
+
+  setupMainWindowWebContentsHandlers(mainWindow.webContents, viewManager)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/Core/core.html`)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/Core/core.html'))
   }
-
-  const viewManager = attachWCViewManager(mainWindow)
-  viewManager.on('create', (view) => {
-    setupWebContentsViewWebContentsHandlers(view.wcv.webContents)
-  })
 }
 
 export function getMainWindow(): BrowserWindow | undefined {
   return mainWindow
 }
 
-function setupMainWindowWebContentsHandlers(contents: Electron.WebContents) {
+function setupMainWindowWebContentsHandlers(
+  contents: Electron.WebContents,
+  viewManager: WCViewManager
+) {
   // Prevent direct navigation in the main window by handling the `will-navigate`
   // event and the `setWindowOpenHandler`. The main window should only host the SPA
   // Surf frontend and not navigate away from it. Any requested navigations should
@@ -368,15 +371,36 @@ function setupMainWindowWebContentsHandlers(contents: Electron.WebContents) {
 
   contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
     const mainWindow = getMainWindow()
-    if (mainWindow) {
-      IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-        url: details.url,
-        disposition: details.disposition
-        // we are explicitly not sending the webContentsId here
-      })
+
+    if (!mainWindow) {
+      return { action: 'deny' }
     }
 
-    return { action: 'deny' }
+    return {
+      action: 'allow',
+      outlivesOpener: true,
+      createWindow: ({ webPreferences, ...constructorOptions }) => {
+        console.log('Window open handler called with details:', details, constructorOptions)
+
+        const componentId = details.features?.match(/componentId=([^;]+)/)?.[1]
+
+        // IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+        //   url: details.url,
+        //   disposition: details.disposition
+        //   // we are explicitly not sending the webContentsId here
+        // })
+
+        const view = viewManager.createOverlayView(
+          {
+            id: componentId,
+            overlayId: componentId
+          },
+          { ...constructorOptions, webPreferences }
+        )
+
+        return view.wcv.webContents
+      }
+    }
   })
 
   contents.on('will-attach-webview', (_event, webPreferences, _params) => {

@@ -25,12 +25,15 @@ export class WCView {
   wcv: WebContentsView
   eventListeners: Array<() => void> = []
 
-  constructor(opts: WebContentsViewCreateOptions, manager: WCViewManager) {
+  constructor(opts: WebContentsViewCreateOptions, manager: WCViewManager, extraOpts?: any) {
     this.manager = manager
     this.opts = opts
 
+    console.log('[main] webcontentsview-create: creating new WebContentsView with options', opts)
+
     const wcvSession = session.fromPartition('persist:horizon')
     const view = new WebContentsView({
+      ...extraOpts,
       webPreferences: {
         // partition: opts.partition || undefined,
         session: wcvSession,
@@ -101,6 +104,8 @@ export class WCView {
     this.eventListeners.forEach((unsub) => unsub())
     this.wcv.webContents.removeAllListeners()
     this.wcv.webContents.close()
+
+    console.log('[main] webcontentsview-recreate: re-creating WebContentsView with new preferences')
 
     const wcvSession = session.fromPartition('persist:horizon')
     this.wcv = new WebContentsView({
@@ -175,9 +180,13 @@ export class WCView {
 
   async loadOverlay() {
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      this.wcv.webContents.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/overlay.html`)
+      this.wcv.webContents.loadURL(
+        `${process.env['ELECTRON_RENDERER_URL']}/Overlay/overlay.html?overlayId=${this.opts.overlayId}`
+      )
     } else {
-      this.wcv.webContents.loadFile(join(__dirname, '../renderer/overlay.html'))
+      this.wcv.webContents.loadFile(
+        join(__dirname, `../renderer/Overlay/overlay.html?overlayId=${this.opts.overlayId}`)
+      )
     }
   }
 
@@ -434,6 +443,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         view.loadURL(opts.url)
       }
 
+      this.positionOverlays()
+
       return view
     } catch (e) {
       console.error('[main] webcontentsview-create: error creating view', e)
@@ -441,7 +452,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
   }
 
-  async createOverlayView(opts: WebContentsViewCreateOptions) {
+  createOverlayView(opts: WebContentsViewCreateOptions, extraOpts?: any) {
     const additionalArgs = [
       `--userDataPath=${app.getPath('userData')}`,
       `--appPath=${app.getAppPath()}${isDev ? '' : '.unpacked'}`,
@@ -450,7 +461,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS ? ['--disable-tab-switching-shortcuts'] : [])
     ]
 
-    console.log('createOverlayView: all additional args', additionalArgs)
+    console.log('createOverlayView with opts', opts, 'and args', additionalArgs)
 
     const view = new WCView(
       {
@@ -461,10 +472,11 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         transparent: true,
         ...opts
       },
-      this
+      this,
+      extraOpts
     )
 
-    view.wcv.setBorderRadius(18)
+    // view.wcv.setBorderRadius(18)
 
     console.log('[main] webcontentsview-create: registering id', view.id)
     this.views.set(view.id, view)
@@ -486,12 +498,30 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       view.loadOverlay()
     }
 
-    view.wcv.webContents.on('blur', () => {
-      console.log('[main] webcontentsview-blur: view with id', view.id, 'lost focus, hiding it')
-      this.hideView(view.id)
-    })
+    // view.wcv.webContents.on('blur', () => {
+    //   console.log('[main] webcontentsview-blur: view with id', view.id, 'lost focus, hiding it')
+    //   this.hideView(view.id)
+    // })
 
     return view
+  }
+
+  positionOverlays() {
+    if (!this.activeOverlayViewId) {
+      console.log('[main] webcontentsview-positionOverlays: no active overlay view to position')
+      return
+    }
+
+    const overlayView = this.views.get(this.activeOverlayViewId)
+    if (!overlayView) {
+      console.warn(
+        '[main] webcontentsview-positionOverlays: no overlay view found with id',
+        this.activeOverlayViewId
+      )
+      return
+    }
+
+    this.bringViewToFront(overlayView.id)
   }
 
   recreatedWCV(view: WCView) {
@@ -579,6 +609,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
 
     const success = this.bringViewToFront(view.id)
+
+    this.positionOverlays()
 
     view.focus()
     return success
@@ -950,7 +982,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             await view.loadURL(payload.url)
             return true
           } else if (type === WebContentsViewActionType.HIDE) {
-            this.hideView(viewId)
+            // this.hideView(viewId)
             return true
           } else if (type === WebContentsViewActionType.INSERT_TEXT) {
             view.insertText(payload.text)

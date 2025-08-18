@@ -35,8 +35,8 @@
     "rehype-remark": "^10.0.0",
     "remark-gfm": "^4.0.0",
     "remark-stringify": "^11.0.0",
-    "svelte": "^4.2.19",
-    "typescript": "^5.2.2",
+    "svelte": "^5.38.1",
+    "typescript": "^5.5.0",
     "unified": "^11.0.5",
     "uuid": "^9.0.1"
   },

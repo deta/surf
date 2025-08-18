@@ -75,7 +75,6 @@ function parseArguments() {
   return args
 }
 const args = parseArguments()
-const overlayId: string = args['overlayId'] || ''
 
 const eventHandlers = {
   onSetupVerificationCode: (callback: (code: string) => void) => {
@@ -125,7 +124,6 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
     contextBridge.exposeInMainWorld('preloadEvents', eventHandlers)
-    contextBridge.exposeInMainWorld('overlayId', overlayId)
   } catch (error) {
     console.error(error)
   }
@@ -138,8 +136,6 @@ if (process.contextIsolated) {
   window.preloadEvents = eventHandlers
   // @ts-ignore (define in dts)
   window.processArgs = parseArguments()
-  // @ts-ignore (define in dts)
-  window.overlayId = overlayId
 }
 
 export type API = typeof api

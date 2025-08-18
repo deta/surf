@@ -904,6 +904,38 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     return webContents
   }
 
+  async attachMounted(webContentsId: number, domElement?: HTMLElement) {
+    this.log.debug('Attaching mounted view:', this.id, webContentsId)
+
+    const options = {
+      id: this.id,
+      partition: this.initialData.partition,
+      url: this.urlValue,
+      navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
+      navigationHistory: this.navigationHistoryValue || []
+    } as WebContentsViewCreateOptions
+
+    const webContents = new WebContents(this, webContentsId, options, domElement)
+    this.webContents = webContents
+
+    if (domElement && !options.bounds) {
+      const rect = domElement.getBoundingClientRect()
+      options.bounds = {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+      }
+
+      webContents.setBounds(options.bounds)
+    }
+
+    this.emit(WebContentsViewEmitterNames.MOUNTED, webContents)
+    this.log.debug('View attached successfully:', this.id, webContents)
+
+    return webContents
+  }
+
   destroy() {
     this.log.debug('Destroying view:', this.id)
 
