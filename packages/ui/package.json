@@ -3,20 +3,24 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "svelte": "./src/index.ts",
+  "svelte": "./src/lib/index.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "svelte": "./src/index.ts",
+      "svelte": "./src/lib/index.ts",
       "import": "./dist/index.js"
     },
-    "./src": "./src/index.ts",
-    "./src/*": "./src/*",
-    "./legacy": "./src/components/legacy/index.ts",
-    "./legacy/*": "./src/components/legacy/*",
+    "./legacy": {
+      "types": "./dist/components/legacy/index.d.ts",
+      "svelte": "./src/lib/components/legacy/index.ts",
+      "import": "./dist/components/legacy/index.js"
+    },
+    "./src": "./src/lib/index.ts",
+    "./src/*": "./src/lib/*",
+    "./styles/*": "./src/lib/styles/*",
     "./dist": "./dist/index.js",
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
@@ -27,18 +31,21 @@
     "src"
   ],
   "scripts": {
-    "dev": "vite && yarn run dev:tailwind",
-    "dev:tailwind": "yarn run tailwindcss -i ./src/app.css -o ./src/output.css --watch --minify",
-    "build": "vite build && yarn build:types",
+    "dev": "vite dev",
+    "build": "svelte-kit sync && svelte-package",
     "build:types": "tsc --emitDeclarationOnly",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "package": "svelte-package",
+    "sync": "svelte-kit sync"
   },
   "devDependencies": {
     "@deta/types": "*",
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
     "@svelte-plugins/tooltips": "^3.0.0",
+    "@sveltejs/kit": "^2.31.1",
+    "@sveltejs/package": "^2.4.1",
     "@sveltejs/vite-plugin-svelte": "^6.1.2",
     "@tailwindcss/typography": "^0.5.15",
     "@tsconfig/svelte": "^5.0.4",
@@ -52,6 +59,7 @@
     "svelte-autosize": "^1.1.0",
     "svelte-check": "^4.0.0",
     "svelte-motion": "^0.12.2",
+    "svelte-preprocess": "^6.0.3",
     "tailwindcss": "^3.4.4",
     "tslib": "^2.6.2",
     "typed-emitter": "^2.1.0",
@@ -63,10 +71,10 @@
     "@amplitude/analytics-browser": "^2.4.0",
     "@deta/icons": "*",
     "@deta/utils": "*",
+    "bits-ui": "^2.9.3",
     "clsx": "^2.1.1",
     "lodash": "^4.17.21",
     "tailwind-merge": "^2.4.0",
-    "tailwind-variants": "^0.2.1",
-    "bits-ui": "^2.9.3"
+    "tailwind-variants": "^0.2.1"
   }
 }

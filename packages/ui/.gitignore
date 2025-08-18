@@ -25,3 +25,7 @@ dist-ssr
 
 # TailwindCSS
 .src/output.css
+
+# SvelteKit
+.svelte-kit
+.svelte-kit/*

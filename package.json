@@ -32,7 +32,7 @@
     "patch-package": "^8.0.0",
     "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.1.1",
-    "prettier-plugin-svelte": "^3.1.2",
+    "prettier-plugin-svelte": "^3.4.0",
     "turbo": "2.4.4"
   },
   "engines": {

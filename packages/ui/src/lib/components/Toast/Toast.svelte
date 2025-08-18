@@ -63,7 +63,7 @@
 </article>
 
 <style lang="scss">
-  @use '@deta/ui/src/styles/utils' as utils;
+  @use '@deta/ui/styles/utils' as utils;
 
   .toast {
     @include utils.light-dark-custom(

@@ -246,7 +246,7 @@
 </div>
 
 <style lang="scss">
-  @use '@deta/ui/src/styles/utils' as utils;
+  @use '@deta/ui/styles/utils' as utils;
   .shortcut-container {
     display: inline-flex;
     align-items: center;

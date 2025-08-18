@@ -172,7 +172,7 @@ main browser so it follows you around throughout your daily workflows.`
 </div>
 
 <style lang="scss">
-  @use '@deta/ui/src/styles/utils' as utils;
+  @use '@deta/ui/styles/utils' as utils;
 
   :global(::view-transition-image-pair(active-notifcation-mail)) {
     animation-duration: 123ms;

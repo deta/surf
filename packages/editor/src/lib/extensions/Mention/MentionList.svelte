@@ -98,10 +98,13 @@
                 i +
                 Object.values(sections).slice(0, Object.keys(sections).indexOf(type)).flat().length
             }}
-            bind:this={itemElements[
-              i +
-                Object.values(sections).slice(0, Object.keys(sections).indexOf(type)).flat().length
-            ]}
+            bind:this={
+              itemElements[
+                i +
+                  Object.values(sections).slice(0, Object.keys(sections).indexOf(type)).flat()
+                    .length
+              ]
+            }
           >
             {#if item.icon}
               <DynamicIcon name={item.icon} size="16px" />
