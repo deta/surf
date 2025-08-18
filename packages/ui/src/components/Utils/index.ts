@@ -1,5 +1,4 @@
 export { default as DateSinceNow } from './DateSinceNow.svelte'
-export { default as InsecurePageWarningIndicator } from './InsecurePageWarningIndicator.svelte'
 export { default as Lazy } from './Lazy.svelte'
 export { default as LazyComponent } from './LazyComponent.svelte'
 export { default as LazyScroll } from './LazyScroll.svelte'

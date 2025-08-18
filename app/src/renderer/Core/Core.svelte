@@ -12,6 +12,7 @@
     ShortcutActions
   } from '@deta/services'
   import type { Fn } from '@deta/types'
+  import { Button } from '@deta/ui'
 
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
@@ -114,6 +115,8 @@
 
   <div class="tabs">
     <TabsList />
+
+    <Button>test</Button>
 
     <button class="add-tab-btn" onclick={handleCreateNewTab}> New Tab </button>
   </div>

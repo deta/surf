@@ -1,6 +1,6 @@
 <script lang="ts">
-  import prefsVerticalVideo from '../../assets/vertical.tabs.mp4'
-  import prefsHorizontalVideo from '../../assets/horizontal.tabs.mp4'
+  import prefsVerticalVideo from '../../../assets/vertical.tabs.mp4'
+  import prefsHorizontalVideo from '../../../assets/horizontal.tabs.mp4'
   import { createEventDispatcher } from 'svelte'
 
   type Orientation = 'vertical' | 'horizontal'
