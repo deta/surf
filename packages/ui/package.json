@@ -18,8 +18,9 @@
       "svelte": "./src/lib/components/legacy/index.ts",
       "import": "./dist/components/legacy/index.js"
     },
-    "./src": "./src/lib/index.ts",
-    "./src/*": "./src/lib/*",
+    "./src/lib": "./src/lib/index.ts",
+    "./src/lib/*": "./src/lib/*",
+    "./src/*": "./src/*",
     "./styles/*": "./src/lib/styles/*",
     "./dist": "./dist/index.js",
     "./dist/*": "./dist/*",
