@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Switch } from '@deta/ui'
+  import { Switch } from '../Switch'
   import { Icon } from '@deta/icons'
   import { tooltip, useDebounce } from '@deta/utils'
 
