@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useTabs } from '@deta/services/src/tabs.svelte'
+  import { useTabs } from '@deta/services'
   import TabItem from './TabItem.svelte'
 
   const tabsService = useTabs()

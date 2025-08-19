@@ -32,7 +32,7 @@
 
     await wait(200)
 
-    const wcv = await view.mount(webContentsWrapper)
+    const wcv = await view.mount(webContentsWrapper, { activate: active })
     webContentsView = wcv
 
     unsubs.push(

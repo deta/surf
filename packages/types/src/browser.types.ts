@@ -16,6 +16,9 @@ export type PageHighlight = {
 export type DroppedTabLocation = { dropZoneID: 'pinned-tabs' | 'tabs'; index: number }
 export type DroppedTab = { from: DroppedTabLocation; to: DroppedTabLocation }
 
+/**
+ * @deprecated Use `CreateTabOptions` from @deta/services instead
+ */
 export type CreateTabOptions = {
   active?: boolean
   placeAtEnd?: boolean

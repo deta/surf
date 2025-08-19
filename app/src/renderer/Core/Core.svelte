@@ -13,7 +13,8 @@
     useOverlayManager
   } from '@deta/services'
   import type { Fn } from '@deta/types'
-  import { Button } from '@deta/ui'
+
+  import { handlePreloadEvents } from './handlers/preloadEvents'
 
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
@@ -50,46 +51,33 @@
     log.debug('Core component mounted')
 
     const settings = config.settingsValue
-
     log.debug('User settings:', settings)
 
     await tabsService.ready
 
-    // const testTab = await tabsService.create('https://en.wikipedia.org')
-
-    // // @ts-ignore
-    // window.testView = testTab.view
-
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Opening Teletype')
       open = !open
-
       // shortcutsManager.setCustomShortcut(ShortcutActions.NEW_TAB, open ? 'Escape' : 'Meta+T')
-
       return true
     })
 
-    shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
-      log.debug('Closing Tab')
+    // shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
+    //   log.debug('Closing Tab')
+    //   tabsService.delete(tabsService.activeTab?.id)
+    //   return true
+    // })
 
-      tabsService.delete(tabsService.activeTab?.id)
-
-      return true
-    })
-
-    // unsubs.push(
-    //   testTab.view.on('mounted', (webContentsView) => {
-    //     unsubs.push(
-    //       webContentsView.on('keydown', (event) => {
-    //         keyboardManager.handleKeyDown(event as KeyboardEvent)
-    //       })
-    //     )
-    //   })
-    // )
+    unsubs.push(
+      handlePreloadEvents()
+    )
   })
 
   onDestroy(() => {
+    log.debug('Core component destroyed')
+    unsubs.forEach((unsub) => unsub())
     viewManager.onDestroy()
+    tabsService.onDestroy()
   })
 
   $inspect(tabsService.tabs).with((...e) => {
@@ -126,9 +114,9 @@
 
     <button class="add-tab-btn" onclick={handleCreateNewTab}> New Tab </button>
 
-    <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
+    <!-- <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
       <Test />
-    </Overlay>
+    </Overlay> -->
   </div>
 
   <div class="web-contents">

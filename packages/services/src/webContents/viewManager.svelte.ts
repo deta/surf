@@ -11,6 +11,7 @@ import { ConfigService, useConfig } from '../config'
 import { KVStore, useKVTable } from '../kv'
 import { WebContentsView, type WebContents } from './webContentsView.svelte'
 import { ViewManagerEmitterNames, type ViewManagerEmitterEvents } from './types'
+import type { NewWindowRequest } from '../ipc/events'
 
 export type OverlayState = {
   teletypeOpen: boolean
@@ -112,6 +113,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   get activeViewIdValue() {
     return get(this.activeViewId)
+  }
+
+  handleNewWindowRequest(viewId: string, details: NewWindowRequest) {
+    this.log.debug('New window request received', viewId, details)
+    this.emit(ViewManagerEmitterNames.NEW_WINDOW_REQUEST, details)
   }
 
   async changeOverlayState(changes: Partial<OverlayState>) {

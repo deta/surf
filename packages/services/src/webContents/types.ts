@@ -7,6 +7,7 @@ import type {
   WebViewSendEvents
 } from '@deta/types'
 import type { WebContents } from './webContentsView.svelte'
+import type { NewWindowRequest } from '../ipc'
 
 export enum WebContentsViewEmitterNames {
   MOUNTED = 'mounted',
@@ -70,7 +71,8 @@ export enum ViewManagerEmitterNames {
   DELETED = 'deleted',
   ACTIVATED = 'activated',
   SHOW_VIEWS = 'show-views',
-  HIDE_VIEWS = 'hide-views'
+  HIDE_VIEWS = 'hide-views',
+  NEW_WINDOW_REQUEST = 'new-window-request'
 }
 
 export type ViewManagerEmitterEvents = {
@@ -79,4 +81,5 @@ export type ViewManagerEmitterEvents = {
   [ViewManagerEmitterNames.ACTIVATED]: (view: WebContents) => void
   [ViewManagerEmitterNames.SHOW_VIEWS]: () => void
   [ViewManagerEmitterNames.HIDE_VIEWS]: () => void
+  [ViewManagerEmitterNames.NEW_WINDOW_REQUEST]: (details: NewWindowRequest) => void
 }

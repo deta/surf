@@ -1,29 +1,11 @@
 import { EventEmitterBase, getHostname, isDev, type ScopedLogger, useLogScope } from '@deta/utils'
-import { type BaseKVItem, KVStore, useKVTable } from './kv'
-import type { Fn, WebContentsViewData } from '@deta/types'
-import { useViewManager, WebContentsView, ViewManager } from './webContents'
+import { KVStore, useKVTable } from '../kv'
+import type { Fn } from '@deta/types'
+import { useViewManager, WebContentsView, ViewManager } from '../webContents'
 import { derived, type Readable } from 'svelte/store'
-import { WebContentsViewEmitterNames } from './webContents/types'
-
-export interface KVTabItem extends BaseKVItem {
-  title: string
-  index: number
-  view: WebContentsViewData
-}
-
-export type CreateTabOptions = {
-  active: boolean
-}
-
-export enum TabItemEmitterNames {
-  UPDATE = 'update',
-  DESTROY = 'destroy'
-}
-
-export type TabItemEmitterEvents = {
-  [TabItemEmitterNames.UPDATE]: (tab: TabItem) => void
-  [TabItemEmitterNames.DESTROY]: (tabId: string) => void
-}
+import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../webContents/types'
+import type { NewWindowRequest } from '../ipc/events'
+import { type TabItemEmitterEvents, type KVTabItem, TabItemEmitterNames, type CreateTabOptions, TabsServiceEmitterNames, type TabsServiceEmitterEvents } from './tabs.types'
 
 /**
  * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView
@@ -104,18 +86,6 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   }
 }
 
-export enum TabsServiceEmitterNames {
-  CREATED = 'created',
-  DELETED = 'deleted',
-  ACTIVATED = 'activated'
-}
-
-export type TabsServiceEmitterEvents = {
-  [TabsServiceEmitterNames.CREATED]: (tab: TabItem) => void
-  [TabsServiceEmitterNames.DELETED]: (tabId: string) => void
-  [TabsServiceEmitterNames.ACTIVATED]: (tab: TabItem | null) => void
-}
-
 /**
  * Central service for managing browser tabs. Handles tab creation, deletion, activation, and persistence.
  * This service maintains the state of all tabs, manages their order, and coordinates with the ViewManager
@@ -133,6 +103,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   private kv: KVStore<KVTabItem>
 
   private _lastTabIndex = -1
+  private unsubs: Fn[] = []
 
   ready: Promise<void>
 
@@ -146,6 +117,14 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
   get tabsValue(): TabItem[] {
     return this.tabs
+  }
+
+  get activeTabIdValue(): string | null {
+    return this.activeTabId
+  }
+
+  get activeTabValue(): TabItem | null {
+    return this.activeTab
   }
 
   constructor() {
@@ -191,6 +170,18 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     } else {
       this.activeTabId = null
     }
+
+    this.unsubs.push(
+      this.viewManager.on(ViewManagerEmitterNames.NEW_WINDOW_REQUEST, (details) => {
+        this.handleNewWindowRequest(details)
+      })
+    )
+  }
+
+  private handleNewWindowRequest(details: NewWindowRequest) {
+    this.log.debug('New window request received', details)
+    const active = details.disposition !== 'background-tab'
+    this.create(details.url, { active, activate: true })
   }
 
   private async getLastTabIndex(): Promise<number> {
@@ -248,6 +239,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   async create(url: string, opts: Partial<CreateTabOptions> = {}): Promise<TabItem> {
     const options = {
       active: true,
+      activate: false,
       ...opts
     } as CreateTabOptions
 
@@ -265,6 +257,8 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     if (options.active) {
       this.setActiveTab(item.id)
+    } else if (options.activate) {
+      this.activatedTabs = [...this.activatedTabs, item.id]
     }
 
     this.emit(TabsServiceEmitterNames.CREATED, tab)
@@ -341,6 +335,11 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     this.emit(TabsServiceEmitterNames.ACTIVATED, this.activeTab)
+  }
+
+  onDestroy() {
+    this.log.debug('Destroying TabsService')
+    this.unsubs.forEach((unsub) => unsub())
   }
 
   static useTabs(): TabsService {

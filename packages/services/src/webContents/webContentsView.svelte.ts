@@ -27,7 +27,8 @@ import {
   processFavicons,
   useDebounce,
   isPDFViewerURL,
-  parseUrlIntoCanonical
+  parseUrlIntoCanonical,
+  copyToClipboard
 } from '@deta/utils'
 import { HistoryEntriesManager } from '../history'
 import { ConfigService } from '../config'
@@ -92,13 +93,17 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     return get(this.bounds)
   }
 
+  private handleNewWindowRequest(details: NewWindowRequest) {
+    this.log.debug('New window request received', this.view.id, details)
+    this.manager.handleNewWindowRequest(this.view.id, details)
+  }
+
   private handleDOMReady() {
     this.view.domReady.set(true)
 
     if (!this._newWindowHandlerRegistered && this.webContentsId) {
       window.api.registerNewWindowHandler(this.webContentsId, (details: NewWindowRequest) => {
-        // TODO: Handle new window creation
-        // dispatch('new-window', details)
+        this.handleNewWindowRequest(details)
       })
 
       this._newWindowHandlerRegistered = true
@@ -934,6 +939,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.log.debug('View attached successfully:', this.id, webContents)
 
     return webContents
+  }
+
+  copyURL() {
+    return copyToClipboard(this.urlValue)
   }
 
   destroy() {
