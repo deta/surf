@@ -19,7 +19,7 @@
   },
   "sideEffects": false,
   "files": [
-    "build",
+    "dist",
     "src/"
   ],
   "scripts": {

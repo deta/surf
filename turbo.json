@@ -9,6 +9,11 @@
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
+    "@deta/services#build": {
+      "dependsOn": ["@deta/types#build", "@deta/utils#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
     "@deta/ui#build": {
       "dependsOn": ["@deta/utils#build", "@deta/icons#build"],
       "outputs": ["dist/**"],
@@ -112,6 +117,7 @@
         "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
         "@deta/utils#build",
+        "@deta/services#build",
         "@deta/ui#build",
         "@deta/icons#build",
         "@deta/editor#build"
@@ -140,6 +146,7 @@
         "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
         "@deta/utils#build",
+        "@deta/services#build",
         "@deta/ui#build",
         "@deta/icons#build",
         "@deta/editor#build"
@@ -153,6 +160,7 @@
         "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
         "@deta/utils#build",
+        "@deta/services#build",
         "@deta/ui#build",
         "@deta/icons#build",
         "@deta/editor#build"
