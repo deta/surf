@@ -5,7 +5,7 @@
   import RightPanel from './RightPanel.svelte'
   import { Icon } from '@deta/icons'
   import { fade, fly } from 'svelte/transition'
-  import { LayoutPicker } from '@deta/ui'
+  import LayoutPicker from '../../components/LayoutPicker.svelte'
 
   const dispatch = createEventDispatcher()
 

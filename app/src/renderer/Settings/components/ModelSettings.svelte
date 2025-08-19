@@ -28,7 +28,7 @@
     SelectDropdown,
     SelectDropdownItem,
     type SelectItem
-  } from '@deta/ui'
+  } from '@deta/ui/dist/components/legacy'
   import { Icon } from '@deta/icons'
   import { appendURLPath, generateID } from '@deta/utils'
   import { createEventDispatcher, onMount, tick } from 'svelte'

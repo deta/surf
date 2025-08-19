@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Switch } from '@deta/ui'
+  import { Switch } from '@deta/ui/dist/components/legacy'
   import SettingsOption from './SettingsOption.svelte'
   import type { UserSettings } from '@deta/types'
   import { Icon } from '@deta/icons'

@@ -9,8 +9,8 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "NodeNext",
-		"module": "NodeNext",
+		"moduleResolution": "bundler",
+		"module": "esnext",
 		"verbatimModuleSyntax": true,
 		"noUncheckedIndexedAccess": true,
 		"erasableSyntaxOnly": true

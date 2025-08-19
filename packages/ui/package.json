@@ -14,9 +14,9 @@
       "import": "./dist/index.js"
     },
     "./legacy": {
-      "types": "./dist/components/legacy/index.d.ts",
-      "svelte": "./src/lib/components/legacy/index.ts",
-      "import": "./dist/components/legacy/index.js"
+      "types": "./dist/components/legacy.d.ts",
+      "svelte": "./src/lib/components/legacy.ts",
+      "import": "./dist/components/legacy.js"
     },
     "./src/lib": "./src/lib/index.ts",
     "./src/lib/*": "./src/lib/*",
