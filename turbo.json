@@ -135,6 +135,8 @@
     },
     "desktop#dev": {
       "dependsOn": [
+        "@deta/backend#build",
+        "@deta/backend-server#build",
         "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
         "@deta/utils#build",
@@ -146,6 +148,8 @@
     },
     "dev": {
       "dependsOn": [
+        "@deta/backend#build",
+        "@deta/backend-server#build",
         "@horizon/core#build:tailwind",
         "@horizon/dragcula#build",
         "@deta/utils#build",
