@@ -140,9 +140,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       faviconUrl: data.faviconUrl || '',
       navigationHistoryIndex: -1,
       navigationHistory: [],
+      permanentlyActive: data.permanentlyActive || false,
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString()
-    }
+    } satisfies WebContentsViewData
 
     const view = new WebContentsView(fullData, this)
     this.views.update((views) => [...views, view])

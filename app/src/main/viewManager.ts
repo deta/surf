@@ -425,6 +425,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         }
 
         this.addChildView(view)
+      } else if (opts.permanentlyActive) {
+        this.addChildView(view)
       }
 
       console.log('[main] webcontentsview-create: added view to window with id', view.id)
@@ -665,10 +667,22 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
   }
 
-  hideAllViews() {
-    console.log('[main] webcontentsview-hideAllViews: hiding all views')
+  hideAllViews(opts?: { hidePermanentlyActive?: boolean }) {
+    const options = {
+      hidePermanentlyActive: opts?.hidePermanentlyActive ?? false
+    }
+
+    console.log('[main] webcontentsview-hideAllViews: hiding all views with options', options)
     this.views.forEach((view) => {
       try {
+        if (view.opts.permanentlyActive && !options.hidePermanentlyActive) {
+          console.log(
+            '[main] webcontentsview-hideAllViews: skipping permanently active view with id',
+            view.id
+          )
+          return
+        }
+        
         console.log('[main] webcontentsview-hideAllViews: hiding view with id', view.id)
         this.removeChildView(view)
       } catch (e) {

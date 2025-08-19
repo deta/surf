@@ -22,6 +22,7 @@
   import Overlay from './components/Overlays/Overlay.svelte'
 
   import Test from './components/Overlays/Test.svelte'
+  import Split from './components/Layout/Split.svelte'
 
   const log = useLogScope('Core')
   const config = provideConfig()
@@ -36,6 +37,9 @@
 
   let unsubs: Fn[] = []
   let overlayWrapper: HTMLDivElement | null = null
+
+  // const view1 = viewManager.create({ url: 'https://google.com', permanentlyActive: true })
+  // const view2 = viewManager.create({ url: 'https://wikipedia.org', permanentlyActive: true })
 
   async function handleCreateNewTab(e: MouseEvent) {
     if (e.metaKey || e.ctrlKey) {
@@ -129,6 +133,22 @@
       {/if}
     {/each}
   </div>
+
+  <!-- <Split>
+    {#snippet left()}
+      <WebContentsView
+        view={view1}
+        active
+      />
+    {/snippet}
+
+    {#snippet right()}
+      <WebContentsView
+        view={view2}
+        active
+      />
+    {/snippet}
+  </Split> -->
 
   <TeletypeEntry bind:open />
 </div>

@@ -17,6 +17,7 @@ export type WebContentsViewCreateOptions = {
   bounds?: Rectangle
   preload?: string
   activate?: boolean
+  permanentlyActive?: boolean
   isOverlay?: boolean
   parentViewID?: string
   additionalArguments?: string[]
@@ -30,6 +31,7 @@ export type WebContentsViewData = {
   url: string
   title: string
   faviconUrl: string
+  permanentlyActive: boolean
   navigationHistoryIndex: number
   navigationHistory: Electron.NavigationEntry[]
   createdAt: string

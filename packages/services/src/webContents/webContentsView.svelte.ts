@@ -879,6 +879,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
       navigationHistory: this.navigationHistoryValue || [],
       activate: true,
+      permanentlyActive: this.initialData.permanentlyActive || false,
       ...opts
     } as WebContentsViewCreateOptions
 
