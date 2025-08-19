@@ -41,16 +41,6 @@
   // const view1 = viewManager.create({ url: 'https://google.com', permanentlyActive: true })
   // const view2 = viewManager.create({ url: 'https://wikipedia.org', permanentlyActive: true })
 
-  async function handleCreateNewTab(e: MouseEvent) {
-    if (e.metaKey || e.ctrlKey) {
-      log.debug('Creating new tab with meta/ctrl key pressed')
-      await tabsService.create('surf://resource/0553ee29-79cf-4ef8-8255-bc3223813cd3')
-      return
-    }
-
-    await tabsService.create('https://google.com')
-  }
-
   onMount(async () => {
     log.debug('Core component mounted')
 
@@ -72,9 +62,7 @@
     //   return true
     // })
 
-    unsubs.push(
-      handlePreloadEvents()
-    )
+    unsubs.push(handlePreloadEvents())
   })
 
   onDestroy(() => {
@@ -113,10 +101,7 @@
 
   <div class="tabs">
     <TabsList />
-
     <!-- <Button onclick={handleClick}>Create Overlay</Button> -->
-
-    <button class="add-tab-btn" onclick={handleCreateNewTab}> New Tab </button>
 
     <!-- <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
       <Test />
@@ -202,9 +187,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 5px;
-    background-color: var(--background-accent);
+    padding: 0 5px;
+    background: var(--app-background);
     border-bottom: 1px solid var(--border-color);
+    app-region: drag;
   }
 
   .tab {
@@ -217,21 +203,6 @@
     &:hover {
       background-color: var(--primary-dark);
       color: white;
-    }
-  }
-
-  .add-tab-btn {
-    height: fit-content;
-    padding: 10px 10px;
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-
-    &:hover {
-      background-color: var(--primary-dark);
     }
   }
 

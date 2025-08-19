@@ -5,7 +5,14 @@ import { useViewManager, WebContentsView, ViewManager } from '../webContents'
 import { derived, type Readable } from 'svelte/store'
 import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../webContents/types'
 import type { NewWindowRequest } from '../ipc/events'
-import { type TabItemEmitterEvents, type KVTabItem, TabItemEmitterNames, type CreateTabOptions, TabsServiceEmitterNames, type TabsServiceEmitterEvents } from './tabs.types'
+import {
+  type TabItemEmitterEvents,
+  type KVTabItem,
+  TabItemEmitterNames,
+  type CreateTabOptions,
+  TabsServiceEmitterNames,
+  type TabsServiceEmitterEvents
+} from './tabs.types'
 
 /**
  * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView

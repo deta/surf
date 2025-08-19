@@ -33,7 +33,8 @@
   ],
   "scripts": {
     "dev": "vite dev",
-    "build": "svelte-kit sync && svelte-package",
+    "tokens:build": "node ./scripts/build-tokens.mjs",
+    "build": "svelte-kit sync && node ./scripts/build-tokens.mjs && svelte-package",
     "build:types": "tsc --emitDeclarationOnly",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
@@ -66,7 +67,9 @@
     "typed-emitter": "^2.1.0",
     "typescript": "^5.5.0",
     "vite": "^7.1.2",
-    "vite-plugin-markdown": "^2.2.0"
+    "vite-plugin-markdown": "^2.2.0",
+    "style-dictionary": "^4.0.0",
+    "@tokens-studio/sd-transforms": "^2.0.1"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.4.0",

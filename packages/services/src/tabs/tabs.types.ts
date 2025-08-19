@@ -1,7 +1,7 @@
-import type { WebContentsViewData } from "@deta/types"
+import type { WebContentsViewData } from '@deta/types'
 
-import type { TabItem } from "./tabs.svelte"
-import type { BaseKVItem } from "../kv"
+import type { TabItem } from './tabs.svelte'
+import type { BaseKVItem } from '../kv'
 
 export interface KVTabItem extends BaseKVItem {
   title: string
@@ -10,17 +10,17 @@ export interface KVTabItem extends BaseKVItem {
 }
 
 export type CreateTabOptions = {
-    /**
-     * Whether the tab should be active upon creation.
-     * Defaults to `true`.
-     */
-    active: boolean
+  /**
+   * Whether the tab should be active upon creation.
+   * Defaults to `true`.
+   */
+  active: boolean
 
-    /**
-     * Whether the tab and linked view should be immediately loaded
-     * Defaults to `false`.
-     */
-    activate: boolean
+  /**
+   * Whether the tab and linked view should be immediately loaded
+   * Defaults to `false`.
+   */
+  activate: boolean
 }
 
 export enum TabItemEmitterNames {

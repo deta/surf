@@ -682,7 +682,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           )
           return
         }
-        
+
         console.log('[main] webcontentsview-hideAllViews: hiding view with id', view.id)
         this.removeChildView(view)
       } catch (e) {

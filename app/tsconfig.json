@@ -4,6 +4,9 @@
     "src/renderer/src/env.d.ts",
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.svelte",
+    "src/renderer/Core/**/*",
+    "src/renderer/Core/**/*.svelte",
+    "src/renderer/Core/app.d.ts",
     "src/preload/*.d.ts"
   ],
   "compilerOptions": {
