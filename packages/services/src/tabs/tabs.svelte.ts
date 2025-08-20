@@ -1,4 +1,4 @@
-import { EventEmitterBase, getHostname, isDev, type ScopedLogger, useLogScope } from '@deta/utils'
+import { EventEmitterBase, getHostname, isDev, type ScopedLogger, useDebounce, useLogScope } from '@deta/utils'
 import { KVStore, useKVTable } from '../kv'
 import type { Fn } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from '../webContents'
@@ -47,8 +47,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
 
     this.unsubs.push(
       view.on(WebContentsViewEmitterNames.DATA_CHANGED, (data) => {
-        this.log.debug(`View data changed for tab ${this.id}:`, data)
-        this.update({
+        this.debouncedUpdate({
           title: data.title,
           view: data
         })
@@ -73,6 +72,8 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
     this.createdAt = data.createdAt ? new Date(data.createdAt) : this.createdAt
     this.updatedAt = data.updatedAt ? new Date(data.updatedAt) : this.updatedAt
 
+    this.log.debug(`Updating tab ${this.id} with data:`, data)
+
     this.manager.update(this.id, {
       id: this.id,
       index: this.index,
@@ -83,6 +84,11 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
 
     this.emit(TabItemEmitterNames.UPDATE, this)
   }
+
+  debouncedUpdate = useDebounce((data: Partial<KVTabItem>) => {
+    this.log.debug(`Debounced update for tab ${this.id}:`, data)
+    this.update(data)
+  }, 200)
 
   onDestroy() {
     this.unsubs.forEach((unsub) => unsub())

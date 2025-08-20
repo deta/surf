@@ -138,9 +138,9 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       url: data.url || 'about:blank',
       title: data.title || '',
       faviconUrl: data.faviconUrl || '',
-      navigationHistoryIndex: -1,
-      navigationHistory: [],
-      permanentlyActive: data.permanentlyActive || false,
+      navigationHistoryIndex: data.navigationHistoryIndex ?? -1,
+      navigationHistory: data.navigationHistory ?? [],
+      permanentlyActive: data.permanentlyActive ?? false,
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString()
     } satisfies WebContentsViewData

@@ -79,16 +79,10 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    filter: blur(0);
-    transition: filter 0.2s ease-in-out;
     overflow: hidden;
-
-    &:not(:active) {
-      filter: blur(2px);
-    }
   }
 
-  :global(.screen-picker-active .webcontentsview-container) {
-    filter: none !important;
-  }
+  //:global(.screen-picker-active .webcontentsview-container) {
+  //  filter: none !important;
+  //}
 </style>

@@ -23,6 +23,7 @@
 
   import Test from './components/Overlays/Test.svelte'
   import Split from './components/Layout/Split.svelte'
+  import NavigationBar from './components/NavigationBar.svelte'
 
   const log = useLogScope('Core')
   const config = provideConfig()
@@ -107,6 +108,8 @@
       <Test />
     </Overlay> -->
   </div>
+
+  <NavigationBar />
 
   <div class="web-contents">
     {#each tabsService.tabs as tab, idx (tab.id)}

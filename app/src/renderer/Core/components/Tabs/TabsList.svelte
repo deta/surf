@@ -2,6 +2,7 @@
   import { useTabs } from '@deta/services'
   import TabItem from './TabItem.svelte'
   import { Icon } from '@deta/icons'
+  import { Button } from '@deta/ui'
 
   const tabsService = useTabs()
 
@@ -15,9 +16,9 @@
   {/each}
 
   <div class="add-tab-btn-container">
-    <button class="add-tab-btn" onclick={() => tabsService.create('https://google.com')}>
+    <Button onclick={() => tabsService.create('https://google.com')}>
       <Icon name="add" />
-    </button>
+    </Button>
   </div>
 </div>
 
@@ -30,20 +31,7 @@
     padding-top: 0.33rem;
     padding-bottom: 0.33rem;
   }
-
-  .add-tab-btn {
-    height: fit-content;
-    padding: 9px 14px;
-    height: 100%;
-    color: var(--on-app-background);
-    border: none;
-    border-radius: 11px;
-    transition: 80ms ease-in-out;
+  .add-tab-btn-container {
     app-region: no-drag;
-
-    &:hover {
-      transition: none;
-      background-color: var(--white-60);
-    }
   }
 </style>

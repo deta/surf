@@ -736,7 +736,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
   historyStackIds: Writable<string[]>
   historyStackIndex: Writable<number>
-  navigationHistory: Writable<Electron.NavigationEntry[] | null>
+  navigationHistory: Writable<Electron.NavigationEntry[]>
   navigationHistoryIndex: Writable<number>
 
   domReady: Writable<boolean> = writable(false)
@@ -774,7 +774,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
     this.historyStackIds = writable([])
     this.historyStackIndex = writable(-1)
-    this.navigationHistory = writable(data.navigationHistory || null)
+    this.navigationHistory = writable(data.navigationHistory ?? [])
     this.navigationHistoryIndex = writable(data.navigationHistoryIndex ?? -1)
 
     this.currentHistoryEntry = derived(
@@ -877,7 +877,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       partition: this.initialData.partition,
       url: this.urlValue,
       navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
-      navigationHistory: this.navigationHistoryValue || [],
+      navigationHistory: this.navigationHistoryValue ?? [],
       activate: true,
       permanentlyActive: this.initialData.permanentlyActive || false,
       ...opts
@@ -918,7 +918,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       partition: this.initialData.partition,
       url: this.urlValue,
       navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
-      navigationHistory: this.navigationHistoryValue || []
+      navigationHistory: this.navigationHistoryValue ?? []
     } as WebContentsViewCreateOptions
 
     const webContents = new WebContents(this, webContentsId, options, domElement)
