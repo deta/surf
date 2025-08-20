@@ -67,7 +67,7 @@ export class WCView {
 
     if (
       opts.navigationHistory &&
-      opts.navigationHistoryIndex &&
+      opts.navigationHistoryIndex !== undefined &&
       opts.navigationHistory.length > 0 &&
       opts.navigationHistoryIndex >= 0
     ) {
