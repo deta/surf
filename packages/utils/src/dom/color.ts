@@ -37,7 +37,7 @@ export const hexToHsl = (hex: string) => {
   let g = (bigint >> 8) & 255
   let b = bigint & 255
 
-  ;(r /= 255), (g /= 255), (b /= 255)
+  ;((r /= 255), (g /= 255), (b /= 255))
   let max = Math.max(r, g, b),
     min = Math.min(r, g, b)
   let h: number = 0

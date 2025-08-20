@@ -1,4 +1,11 @@
-import { EventEmitterBase, getHostname, isDev, type ScopedLogger, useDebounce, useLogScope } from '@deta/utils'
+import {
+  EventEmitterBase,
+  getHostname,
+  isDev,
+  type ScopedLogger,
+  useDebounce,
+  useLogScope
+} from '@deta/utils'
 import { KVStore, useKVTable } from '../kv'
 import type { Fn } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from '../webContents'

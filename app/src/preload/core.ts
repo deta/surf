@@ -6,9 +6,7 @@ import path from 'path'
 import mime from 'mime-types'
 import fetch from 'cross-fetch'
 
-import {
-  promises as fsp,
-} from 'fs'
+import { promises as fsp } from 'fs'
 import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/api'
 import {
   type EditablePrompt,

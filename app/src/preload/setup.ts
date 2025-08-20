@@ -3,9 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import {
-  mkdirSync
-} from 'fs'
+import { mkdirSync } from 'fs'
 
 import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/api'
 import { type UserSettings } from '@deta/types'

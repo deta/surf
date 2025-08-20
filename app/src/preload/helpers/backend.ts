@@ -53,11 +53,11 @@ const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
 const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
 
 export type SFFSOptions = {
-    num_worker_threads?: number
-    num_processor_threads?: number
+  num_worker_threads?: number
+  num_processor_threads?: number
 }
 
-export const initSFFS = ((opts?: SFFSOptions) => {
+export const initSFFS = (opts?: SFFSOptions) => {
   const num_worker_threads = opts?.num_worker_threads ?? 12
   const num_processor_threads = opts?.num_processor_threads ?? 12
 
@@ -292,7 +292,7 @@ export const initSFFS = ((opts?: SFFSOptions) => {
   }
 
   return init(BACKEND_ROOT_PATH, API_BASE || '', API_KEY || '', false, LANGUAGE_SETTING)
-})
+}
 
 export class ResourceHandle {
   private fd: fsp.FileHandle
@@ -426,11 +426,16 @@ export class ResourceHandle {
   }
 }
 
-export const initResources = ((sffs: ReturnType<typeof initSFFS>) => {
+export const initResources = (sffs: ReturnType<typeof initSFFS>) => {
   const resourceHandles = new Map<string, ResourceHandle>()
 
   async function openResource(resourceId: string, flags: string) {
-    const resourceHandle = await ResourceHandle.open(sffs, BACKEND_RESOURCES_PATH, resourceId, flags)
+    const resourceHandle = await ResourceHandle.open(
+      sffs,
+      BACKEND_RESOURCES_PATH,
+      resourceId,
+      flags
+    )
     resourceHandles.set(resourceId, resourceHandle)
 
     return resourceId
@@ -494,14 +499,14 @@ export const initResources = ((sffs: ReturnType<typeof initSFFS>) => {
     updateResourceHash,
     triggerPostProcessing
   }
-})
+}
 
-export const initBackend = ((opts?: SFFSOptions) => {
-    const sffs = initSFFS(opts)
-    const resources = initResources(sffs)
+export const initBackend = (opts?: SFFSOptions) => {
+  const sffs = initSFFS(opts)
+  const resources = initResources(sffs)
 
-    return {
-      sffs,
-      resources
-    }
-})
+  return {
+    sffs,
+    resources
+  }
+}

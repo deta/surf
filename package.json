@@ -21,7 +21,7 @@
     "build:tela": "yarn workspace @horizon/tela build",
     "build:dragcula": "yarn workspace @horizon/dragcula build",
     "lint": "turbo lint",
-    "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md,svelte}\"",
+    "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md}\"",
     "prepare": "husky",
     "postinstall": "patch-package"
   },
