@@ -15,6 +15,7 @@
     "strict": false,
     "allowJs": true,
     "checkJs": true,
+    "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "references": [{ "path": "./tsconfig.node.json" }]

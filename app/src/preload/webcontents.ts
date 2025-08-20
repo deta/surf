@@ -21,7 +21,7 @@ import {
 import { type ResourceArticle, type Resource } from '@deta/services/src/resources'
 import { isPDFViewerURL, normalizeURL } from '@deta/utils/src/formatting/url'
 import { htmlToMarkdown } from '@deta/utils/src/formatting/markdown'
-import { setupChromeWebStoreApi } from './chrome-web-store'
+import { setupChromeWebStoreApi } from './helpers/chrome-web-store'
 
 const PDFViewerEntryPoint =
   process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
