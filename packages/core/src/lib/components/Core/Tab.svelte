@@ -42,7 +42,7 @@
   import { useDesktopManager } from '../../service/desktop'
   import SoundVisualizerBars from '../Effects/SoundVisualizerBars.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
-  import { isGeneratedResource } from '../../utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
 
   export let tab: Tab
   export let activeTabId: Writable<string>

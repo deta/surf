@@ -14,7 +14,7 @@ import type { ChatPrompt } from '../chat'
 import { WebParser, type ResourceContent } from '@deta/web-parser'
 import { QuotaDepletedError } from '@deta/backend/types'
 import { handleQuotaDepletedError } from '../helpers'
-import { isGeneratedResource } from '../../../utils/resourcePreview'
+import { isGeneratedResource } from '@deta/services/resources'
 
 const RESOURCE_PROCESSING_TIMEOUT = 30000
 

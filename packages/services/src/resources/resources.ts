@@ -34,7 +34,8 @@ import {
   type SpaceData,
   SpaceEntryOrigin,
   type SFFSRawResource,
-  type SpaceEntrySearchOptions
+  type SpaceEntrySearchOptions,
+  type NotebookData
 } from '@deta/types'
 // import type { Telemetry } from './telemetry'
 import {
@@ -1406,8 +1407,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     return resources
   }
 
-  async createSpace(name: SpaceData) {
-    return await this.sffs.createSpace(name)
+  async createSpace(name: NotebookData) {
+    return await this.sffs.createSpace(name as unknown as SpaceData)
   }
 
   async getSpace(id: string) {
@@ -1420,8 +1421,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     return spaces // [inboxSpace, everythingSpace, ...spaces] as Space[]
   }
 
-  async updateSpace(spaceId: string, name: SpaceData) {
-    return await this.sffs.updateSpace(spaceId, name)
+  async updateSpace(spaceId: string, name: NotebookData) {
+    return await this.sffs.updateSpace(spaceId, name as unknown as SpaceData)
   }
 
   async deleteSpace(spaceId: string) {

@@ -49,7 +49,7 @@
     type ContentMode,
     type ViewMode,
     isGeneratedResource
-  } from '@horizon/core/src/lib/utils/resourcePreview'
+  } from '@deta/services/resources'
   import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
   import { debugMode } from '@horizon/core/src/lib/stores/debug'
 

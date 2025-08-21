@@ -40,7 +40,7 @@
   import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
-  import type { Origin } from '../../utils/resourcePreview'
+  import type { Origin } from '@deta/services/resources'
 
   export let resource: Resource
   export let tab: TabResource | undefined = undefined

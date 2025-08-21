@@ -6,7 +6,7 @@
   import FilePreview from '../Resources/Previews/File/FilePreview.svelte'
   import TextResource from '../Resources/Previews/Text/TextResource.svelte'
   import CodeRenderer from '@horizon/core/src/lib/components/Chat/CodeRenderer.svelte'
-  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
 
   export let tab: TabResource
 

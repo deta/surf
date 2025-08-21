@@ -55,7 +55,7 @@
     type ContentMode,
     type PreviewMetadata,
     type ViewMode
-  } from '@horizon/core/src/lib/utils/resourcePreview'
+  } from '@deta/services/resources'
   import type { ContentType, Annotation, Origin } from './Preview.svelte'
   import CodeRenderer from '../../Chat/CodeRenderer.svelte'
   import CollapsableResourceEmbed from '@horizon/core/src/lib/components/Chat/Notes/CollapsableResourceEmbed.svelte'

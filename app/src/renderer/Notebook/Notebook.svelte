@@ -4,7 +4,7 @@
   import { createResourceManager, type Resource } from '@deta/services/resources'
 
   const searchParams = new URLSearchParams(window.location.search)
-  const resourceId = searchParams.get('resourceId') || ''
+  const notebookId = searchParams.get('notebookId') || ''
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -26,29 +26,15 @@
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
 
-  let resource: Resource | null = null
-
   onMount(async () => {
-    console.log('Resource mounted with ID:', resourceId)
-
-    resource = await resourceManager.getResource(resourceId)
-    console.log('Loaded resource:', resource)
+    console.log('Notebook mounted with ID:', notebookId)
   })
 </script>
 
 <div class="wrapper">
-  <h1>Resource Component</h1>
+  <h1>Notebook Component</h1>
 
-  <p><strong>Resource ID:</strong> {resourceId}</p>
-
-  {#if resource}
-    <div>
-      <p><strong>Name:</strong> {resource.metadata.name}</p>
-      <p><strong>Description:</strong> {resource.type}</p>
-    </div>
-  {:else}
-    <p>Loading resource...</p>
-  {/if}
+  <p><strong>Notebook ID:</strong> {notebookId}</p>
 </div>
 
 <style lang="scss">

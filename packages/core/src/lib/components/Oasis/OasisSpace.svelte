@@ -92,7 +92,7 @@
   import ContextTabsBar from './ContextTabsBar.svelte'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
-  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
   import ContextLinks from './Scaffolding/ContextLinks.svelte'
   import LazyScroll from '../Utils/LazyScroll.svelte'
   import ContextHeader from './ContextHeader.svelte'

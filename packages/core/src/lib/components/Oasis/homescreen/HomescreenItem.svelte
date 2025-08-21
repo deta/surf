@@ -22,7 +22,7 @@
   import ResourcePreview from '../../Resources/ResourcePreview.svelte'
   import { contextMenu } from '../../Core/ContextMenu.svelte'
   import LazyComponent from '../../Atoms/LazyComponent.svelte'
-  import { isGeneratedResource } from '../../../utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
 
   export let desktop: DesktopService
   export let item: Writable<DesktopItemData>

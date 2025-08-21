@@ -153,7 +153,8 @@ export default defineConfig({
           pdf: resolve(__dirname, 'src/renderer/PDF/pdf.html'),
           announcements: resolve(__dirname, 'src/renderer/Announcements/announcements.html'),
           overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html'),
-          resource: resolve(__dirname, 'src/renderer/Resource/resource.html')
+          resource: resolve(__dirname, 'src/renderer/Resource/resource.html'),
+          notebook: resolve(__dirname, 'src/renderer/Notebook/notebook.html')
         },
         external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
         preserveEntrySignatures: 'strict',

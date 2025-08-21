@@ -113,7 +113,7 @@
   import type { OnboardingNote } from '@horizon/core/src/lib/constants/notes'
   import { createWikipediaAPI } from '@deta/web-parser'
   import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
-  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
   import { updateCaretPopoverVisibility } from '@deta/editor/src/lib/extensions/CaretIndicator/utils'
   import {
     MODEL_CLAUDE_MENTION,

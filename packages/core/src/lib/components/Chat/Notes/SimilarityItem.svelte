@@ -21,7 +21,7 @@
     HighlightWebviewTextEvent,
     JumpToWebviewTimestampEvent
   } from '@horizon/core/src/lib/types'
-  import { getResourcePreview, type PreviewData } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { getResourcePreview, type PreviewData } from '@deta/services/resources'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import {

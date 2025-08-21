@@ -1,29 +1,43 @@
 import type { FileKind } from 'human-filetypes/data'
 import type { Icons } from './main'
 
-export type IconImage = {
-  type: 'image'
-  data: string
-}
-
-export type IconEmoji = {
-  type: 'emoji'
-  data: string
+export enum IconTypes {
+  IMAGE = 'image',
+  ICON = 'icon',
+  ICON_FILE = 'icon-file',
+  FAVICON = 'favicon',
+  EMOJI = 'emoji',
+  COLORS = 'colors'
 }
 
 export type IconColors = {
-  type: 'colors'
-  data: [string, string]
+  type: IconTypes.COLORS
+  data: string[]
 }
 
 export type IconIcon = {
-  type: 'icon'
+  type: IconTypes.ICON
   data: Icons
 }
 
 export type IconFile = {
-  type: 'file'
+  type: IconTypes.ICON_FILE
   data: FileKind | 'code'
 }
 
-export type Icon = IconImage | IconEmoji | IconColors | IconIcon | IconFile
+export type IconImage = {
+  type: IconTypes.IMAGE
+  data: string
+}
+
+export type IconFavicon = {
+  type: IconTypes.FAVICON
+  data: string
+}
+
+export type IconEmoji = {
+  type: IconTypes.EMOJI
+  data: string
+}
+
+export type IconData = IconColors | IconIcon | IconImage | IconEmoji | IconFile | IconFavicon

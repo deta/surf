@@ -41,6 +41,12 @@
       "import": "./dist/resources/index.js",
       "default": "./dist/resources/index.js"
     },
+    "./notebooks": {
+      "types": "./dist/notebooks/index.d.ts",
+      "svelte": "./src/notebooks/index.ts",
+      "import": "./dist/notebooks/index.js",
+      "default": "./dist/notebooks/index.js"
+    },
     "./src": "./src/index.ts",
     "./src/*": "./src/*",
     "./src/ipc": "./src/ipc/index.ts",

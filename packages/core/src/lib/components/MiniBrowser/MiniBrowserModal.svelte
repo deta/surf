@@ -45,7 +45,7 @@
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
   import type { MiniBrowserSelection } from '@horizon/core/src/lib/service/miniBrowser'
   import CodeRenderer from '../Chat/CodeRenderer.svelte'
-  import { isGeneratedResource } from '../../utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
   import { useConfig } from '@horizon/core/src/lib/service/config'
 
   export let tab: TabPage

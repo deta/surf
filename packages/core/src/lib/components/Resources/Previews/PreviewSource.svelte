@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PreviewMetadata } from '@horizon/core/src/lib/utils/resourcePreview'
+  import type { PreviewMetadata } from '@deta/services/resources'
   import { getFileKind } from '@deta/utils'
 
   import { Icon } from '@deta/icons'

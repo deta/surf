@@ -39,7 +39,7 @@
   import { SpaceEntryOrigin, type OpenAndChatEvent } from '@horizon/core/src/lib/types'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { useToasts } from '@deta/ui'
-  import { isGeneratedResource } from '@horizon/core/src/lib/utils/resourcePreview'
+  import { isGeneratedResource } from '@deta/services/resources'
 
   export let resource: ResourceObject
 

@@ -3,7 +3,7 @@ import { generateID, useLogScope, EventEmitterBase, ResourceTag } from '@deta/ut
 
 import { ResourceJSON, ResourceManager, type Resource } from '@deta/services/resources'
 import { extractAndCreateWebResource } from '@deta/services'
-import { getResourcePreview } from '../utils/resourcePreview'
+import { getResourcePreview } from '@deta/services/resources'
 import type { OasisService } from './oasis'
 import type { Toast, Toasts } from '@deta/ui'
 import { SpaceEntryOrigin } from '../types'

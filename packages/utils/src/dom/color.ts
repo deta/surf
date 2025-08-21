@@ -37,7 +37,7 @@ export const hexToHsl = (hex: string) => {
   let g = (bigint >> 8) & 255
   let b = bigint & 255
 
-  ;((r /= 255), (g /= 255), (b /= 255))
+  ;(r /= 255), (g /= 255), (b /= 255)
   let max = Math.max(r, g, b),
     min = Math.min(r, g, b)
   let h: number = 0
@@ -103,4 +103,31 @@ export const hslToHex = (h: number, s: number, l: number) => {
   g = Math.round((g + m) * 255)
   b = Math.round((b + m) * 255)
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`
+}
+
+export const colorPairs: [string, string][] = [
+  ['#76E0FF', '#4EC9FB'],
+  ['#76FFB4', '#4FFBA0'],
+  ['#7FFF76', '#4FFA4C'],
+  ['#D8FF76', '#BAFB4E'],
+  ['#FFF776', '#FBE24E'],
+  ['#FFE076', '#FBC94E'],
+  ['#FFBA76', '#FB8E4E'],
+  ['#FF7676', '#FB4E4E'],
+  ['#FF76BA', '#FB4EC9'],
+  ['#D876FF', '#BA4EFB'],
+  ['#7676FF', '#4E4EFB'],
+  ['#76B4FF', '#4EA0FB'],
+  ['#76FFE0', '#4EFBC9'],
+  ['#76FFD8', '#4EFBBF'],
+  ['#76FFF7', '#4EFBE2'],
+  ['#76FFB4', '#4FFBA0'],
+  ['#76FF76', '#4FFB4E'],
+  ['#A4FF76', '#8EFB4E'],
+  ['#FFF776', '#FBE24E'],
+  ['#FFE076', '#FBC94E']
+]
+
+export const pickRandomColorPair = (): [string, string] => {
+  return colorPairs[Math.floor(Math.random() * colorPairs.length)]
 }

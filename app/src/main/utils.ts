@@ -142,8 +142,20 @@ export const ResourceViewerEntryPoint = (() => {
   }
 })()
 
+export const NotebookViewerEntryPoint = (() => {
+  if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    return `${process.env.ELECTRON_RENDERER_URL}/Notebook/notebook.html`
+  } else {
+    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Notebook', 'notebook.html')}`
+  }
+})()
+
 export function checkIfSurfProtocolUrl(url: string): boolean {
-  return url.startsWith('surf://') || url.startsWith(ResourceViewerEntryPoint)
+  return (
+    url.startsWith('surf://') ||
+    url.startsWith(ResourceViewerEntryPoint) ||
+    url.startsWith(NotebookViewerEntryPoint)
+  )
 }
 
 export async function checkFileExists(path: string) {

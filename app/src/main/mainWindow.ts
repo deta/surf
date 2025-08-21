@@ -7,7 +7,12 @@ import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
 import { useLogScope } from '@deta/utils/io'
 import { isDev, isMac } from '@deta/utils/system'
-import { isPDFViewerURL, PDFViewerParams, ResourceViewerParams } from '@deta/utils/formatting'
+import {
+  isPDFViewerURL,
+  PDFViewerParams,
+  ResourceViewerParams,
+  NotebookViewerParams
+} from '@deta/utils/formatting'
 
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { setupPermissionHandlers } from './permissionHandler'
@@ -15,6 +20,7 @@ import { applyCSPToSession } from './csp'
 import {
   isAppSetup,
   normalizeElectronUserAgent,
+  NotebookViewerEntryPoint,
   PDFViewerEntryPoint,
   ResourceViewerEntryPoint,
   SettingsWindowEntrypoint
@@ -227,6 +233,16 @@ export function createWindow() {
       details.webContents?.loadURL(`${ResourceViewerEntryPoint}?${searchParams}`)
     }
 
+    const loadNotebookViewer = (params: Partial<NotebookViewerParams>) => {
+      const searchParams = new URLSearchParams()
+      searchParams.set('path', params.path!)
+      if (params.notebookId) searchParams.set('notebookId', params.notebookId)
+
+      console.log('loading notebook viewer with params:', searchParams.toString())
+
+      details.webContents?.loadURL(`${NotebookViewerEntryPoint}?${searchParams}`)
+    }
+
     const contentTypeHeader = getHeaderValue('content-type')
     const dispositionHeader = getHeaderValue('content-disposition')
     const isPDF = contentTypeHeader?.[0]?.includes('application/pdf') ?? false
@@ -237,12 +253,22 @@ export function createWindow() {
     const url = requestData?.url ?? details.url
 
     if (url.startsWith('surf:')) {
-      callback({ cancel: true })
       console.log('surf protocol request:', url)
+
+      const isResource = url.startsWith('surf://resource/')
+      const isNotebook = url.startsWith('surf://notebook/')
+
       if (isPDF) {
+        callback({ cancel: true })
         loadPDFViewer({ path: details.url, filename })
-      } else {
+      } else if (isNotebook) {
+        callback({ cancel: true })
+        loadNotebookViewer({ path: details.url, notebookId: url.split('/').pop() })
+      } else if (isResource) {
+        callback({ cancel: true })
         loadResourceViewer({ path: details.url, resourceId: url.split('/').pop() })
+      } else {
+        callback({ cancel: false })
       }
 
       return

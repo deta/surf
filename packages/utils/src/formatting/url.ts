@@ -368,6 +368,11 @@ export interface ResourceViewerParams {
   resourceId?: string
 }
 
+export interface NotebookViewerParams {
+  path: string
+  notebookId?: string
+}
+
 export const parsePDFViewerParams = (url: string | URL): PDFViewerParams => {
   const searchParams =
     typeof url === 'string'

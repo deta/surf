@@ -4,7 +4,7 @@
   import { Resource, useResourceManager } from '@horizon/core/src/lib/service/resources'
 
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
-  import type { ContentMode, Origin, ViewMode } from '@horizon/core/src/lib/utils/resourcePreview'
+  import type { ContentMode, Origin, ViewMode } from '@deta/services/resources'
   import Folder from './Folder.svelte'
   import { OasisSpace } from '../../service/oasis'
   import { writable } from 'svelte/store'

@@ -394,6 +394,18 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       const { navigationHistory, ...logOptions } = opts
       console.log('[main] webcontentsview-create: creating new view with options', logOptions)
 
+      const currentEntry =
+        opts.navigationHistory &&
+        opts.navigationHistoryIndex !== undefined &&
+        opts.navigationHistory.length > 0 &&
+        opts.navigationHistoryIndex >= 0
+          ? opts.navigationHistory[opts.navigationHistoryIndex]
+          : null
+
+      const url = currentEntry?.url ?? opts.url
+
+      const newIsSurfUrl = url ? checkIfSurfProtocolUrl(url) : false
+
       const view = new WCView(
         {
           ...opts,
@@ -407,7 +419,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
               ? ['--disable-tab-switching-shortcuts']
               : [])
           ],
-          sandbox: true
+          sandbox: false,
+          preload: newIsSurfUrl
+            ? path.resolve(__dirname, '../preload/resource.js')
+            : path.resolve(__dirname, '../preload/webcontents.js')
         },
         this
       )
@@ -443,7 +458,15 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           view.id
         )
         view.loadURL(opts.url)
-      }
+      } /*else if (
+        opts.navigationHistory
+        && opts.navigationHistoryIndex !== undefined
+        && opts.navigationHistory.length > 0
+        && opts.navigationHistoryIndex >= 0
+      ) {
+        const currentEntry = opts.navigationHistory[opts.navigationHistoryIndex]
+        view.loadURL(currentEntry.url ?? opts.url)
+      }*/
 
       this.positionOverlays()
 
