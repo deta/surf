@@ -1,10 +1,27 @@
 <script lang="ts">
   import { Button } from "bits-ui";
+  import type { Snippet } from "svelte"
 
-  let { children, ...restProps } = $props();
+  type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
+
+  let { 
+    children, 
+    size = 'md',
+    square = false,
+    ...restProps 
+  }: {
+    children?: Snippet;
+    size?: ButtonSize;
+    square?: boolean;
+    class?: string;
+  } = $props();
+
+  const sizeClass = `button-${size}`;
+  const shapeClass = square ? 'button-square' : '';
 </script>
 
 <Button.Root
+  class={`${sizeClass} ${shapeClass} ${restProps.class ?? ''}`}
   {...restProps}
 >
   {@render children?.()}
@@ -20,7 +37,6 @@
 
   height: min-content;
   width: max-content;
-  padding: 0.5rem;
 
   border-radius: 12px;
   -electron-corner-smoothing: 60%;
@@ -29,7 +45,6 @@
   transition-duration: 125ms;
   transition-timing-function: ease-out;
 
-  font-size: 13px; // TODO: (styles): Use tokens
   font-weight: 400;
   text-box-trim: trim-both;
   letter-spacing: 0.02em;
@@ -37,12 +52,11 @@
   display: flex;
   align-items: center;
   justify-items: center;
-  gap: 0.25rem;
 
   outline: none;
   background: var(--bg);
   color: inherit;
-  
+
   &:hover,
   &.active {
     --bg: rgba(255,255,255,0.75);
@@ -71,5 +85,49 @@
   &:focus {
     outline: none;
   }
+}
+
+:global([data-button-root].button-xs.button-square) {
+  padding: 0.25rem ;
+}
+
+:global([data-button-root].button-sm.button-square) {
+  padding: 0.375rem ;
+}
+
+:global([data-button-root].button-md.button-square) {
+  padding: 0.5rem ;
+}
+
+:global([data-button-root].button-lg.button-square) {
+  padding: 0.75rem ;
+}
+
+:global([data-button-root].button-xs) {
+  padding: 0.125rem 0.25rem ;
+  font-size: 11px ;
+  gap: 0.125rem ;
+  border-radius: 9px;
+}
+
+:global([data-button-root].button-sm) {
+  padding: 0.25rem 0.375rem ;
+  font-size: 12px ;
+  gap: 0.1875rem ;
+  border-radius: 8px ;
+}
+
+:global([data-button-root].button-md) {
+  padding: 0.5rem 0.8rem;
+  font-size: 13px ;
+  gap: 0.25rem ;
+  border-radius: 12px ;
+}
+
+:global([data-button-root].button-lg) {
+  padding: 0.75rem 1rem ;
+  font-size: 14px ;
+  gap: 0.375rem ;
+  border-radius: 14px ;
 }
 </style>

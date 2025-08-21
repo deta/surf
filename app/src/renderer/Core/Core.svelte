@@ -18,7 +18,7 @@
 
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
-  import TabsList from './components/Tabs/TabsList.svelte'
+  import TabsList from './components/Tabs/TabsList/TabsList.svelte'
   import NavigationBar from './components/NavigationBar.svelte'
 
   const log = useLogScope('Core')
@@ -47,17 +47,18 @@
     await tabsService.ready
 
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
-      log.debug('Opening Teletype')
-      open = !open
-      // shortcutsManager.setCustomShortcut(ShortcutActions.NEW_TAB, open ? 'Escape' : 'Meta+T')
+      log.debug('Creating new tab (CMD+T)')
+      tabsService.create('https://google.com')
       return true
     })
 
-    // shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
-    //   log.debug('Closing Tab')
-    //   tabsService.delete(tabsService.activeTab?.id)
-    //   return true
-    // })
+    shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
+      log.debug('Closing current tab (CMD+W)')
+      if (tabsService.activeTab) {
+        tabsService.delete(tabsService.activeTab.id)
+      }
+      return true
+    })
 
     unsubs.push(handlePreloadEvents())
   })

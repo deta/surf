@@ -56,6 +56,7 @@ Mode 3: Application/Visualization Creation or Iteration
 - Apps may be referred as 'Surflet(s)' by the user or in the note
 
 - Examples:
+
   - "Create an app for...""
   - "Create a chart showing..."
   - "Build a dashboard for..."

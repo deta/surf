@@ -106,7 +106,7 @@ export function createWindow() {
     frame: isMac() ? false : true,
     titleBarStyle: 'hidden',
     // ...(isLinux() ? { icon } : {}),
-    trafficLightPosition: { x: 15, y: 15.5 },
+    trafficLightPosition: { x: 15, y: 13.5 },
     webPreferences: {
       preload: join(__dirname, '../preload/core.js'),
       additionalArguments: [
