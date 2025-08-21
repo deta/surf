@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { useTeletype } from './index'
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { slide, fade } from 'svelte/transition'

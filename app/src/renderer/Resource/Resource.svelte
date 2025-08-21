@@ -1,11 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import {
-    createTelemetry,
-    provideConfig,
-    createResourceManager,
-    type Resource
-  } from '@deta/services'
+  import { createTelemetry, provideConfig } from '@deta/services'
+
+  import { createResourceManager, type Resource } from '@deta/services/resources'
 
   const searchParams = new URLSearchParams(window.location.search)
   const resourceId = searchParams.get('resourceId') || ''

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isMac } from '@deta/utils'
+  import { isMac } from '@deta/utils/system'
   export let keySymbol: string
   export let size: 'small' | 'medium' | 'large' = 'medium'
   export let isModifier = false

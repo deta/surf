@@ -3,7 +3,7 @@
   import { createEventDispatcher } from 'svelte'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
   import { Icon } from '@deta/icons'
-  import { isMac } from '@deta/utils'
+  import { isMac } from '@deta/utils/system'
   import { get, derived } from 'svelte/store'
   import {
     screenPickerSelectionActive,

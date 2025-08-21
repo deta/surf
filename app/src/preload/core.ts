@@ -32,12 +32,7 @@ import {
   WebContentsViewActionOutputs
 } from '@deta/types'
 
-import {
-  IPC_EVENTS_RENDERER,
-  NewWindowRequest,
-  OpenURL,
-  SpaceBasicData
-} from '@deta/services/src/ipc'
+import { IPC_EVENTS_RENDERER, NewWindowRequest, OpenURL, SpaceBasicData } from '@deta/services/ipc'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 
 import { getUserConfig, getUserStats } from '../main/config'

@@ -3,9 +3,9 @@ import { isPathSafe } from './utils'
 import path, { join } from 'path'
 import { stat, mkdir } from 'fs/promises'
 import { Worker } from 'worker_threads'
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 import { createSetupWindow, getSetupWindow } from './setupWindow'
-import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 
 interface ImageProcessingParams {
   requestURL: string

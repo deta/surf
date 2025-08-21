@@ -4,7 +4,7 @@ import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { installChromeWebStore } from 'electron-chrome-web-store'
 import { formatPermissionsForUser } from './extensionsPermissions'
 import fs from 'fs'
-import { isDev } from '@deta/utils'
+import { isDev } from '@deta/utils/system'
 
 export class ExtensionsManager {
   private static instance: ExtensionsManager | null = null

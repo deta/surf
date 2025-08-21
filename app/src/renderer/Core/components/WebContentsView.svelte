@@ -1,25 +1,22 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
-  import { createEventDispatcher, onDestroy, onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
 
   import { type Fn } from '@deta/types'
 
-  import { useLogScope, wait } from '@deta/utils'
-  import { useViewManager, type WebContentsView, type WebContents } from '@deta/services'
+  import { useLogScope } from '@deta/utils/io'
+  import { wait } from '@deta/utils/data'
+  import { type WebContentsView } from '@deta/services/views'
 
   export let active: boolean = true
   export let view: WebContentsView
 
-  const viewManager = useViewManager()
-
   const log = useLogScope('WebContents')
-  const dispatch = createEventDispatcher<any>()
 
   const webContentsBackgroundColor = writable<string | null>(null)
   const webContentsScreenshot = writable(null)
 
   let webContentsWrapper: HTMLDivElement | null = null
-  let webContentsView: WebContents | null = null
   let unsubs: Fn[] = []
 
   onMount(async () => {
@@ -32,8 +29,7 @@
 
     await wait(200)
 
-    const wcv = await view.mount(webContentsWrapper, { activate: active })
-    webContentsView = wcv
+    await view.mount(webContentsWrapper, { activate: active })
 
     unsubs.push(
       view.screenshot.subscribe((screenshot) => {

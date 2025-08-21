@@ -8,7 +8,38 @@
     ".": {
       "types": "./dist/index.d.ts",
       "svelte": "./src/index.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ipc": {
+      "types": "./dist/ipc/index.d.ts",
+      "svelte": "./src/ipc/index.ts",
+      "import": "./dist/ipc/index.js",
+      "default": "./dist/ipc/index.js"
+    },
+    "./views": {
+      "types": "./dist/views/index.d.ts",
+      "svelte": "./src/views/index.ts",
+      "import": "./dist/views/index.js",
+      "default": "./dist/views/index.js"
+    },
+    "./tabs": {
+      "types": "./dist/tabs/index.d.ts",
+      "svelte": "./src/tabs/index.ts",
+      "import": "./dist/tabs/index.js",
+      "default": "./dist/tabs/index.js"
+    },
+    "./shortcuts": {
+      "types": "./dist/shortcuts/index.d.ts",
+      "svelte": "./src/shortcuts/index.ts",
+      "import": "./dist/shortcuts/index.js",
+      "default": "./dist/shortcuts/index.js"
+    },
+    "./resources": {
+      "types": "./dist/resources/index.d.ts",
+      "svelte": "./src/resources/index.ts",
+      "import": "./dist/resources/index.js",
+      "default": "./dist/resources/index.js"
     },
     "./src": "./src/index.ts",
     "./src/*": "./src/*",

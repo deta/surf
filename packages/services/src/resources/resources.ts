@@ -13,7 +13,7 @@ import {
   conditionalArrayItem,
   getNormalizedHostname
 } from '@deta/utils'
-import { SFFS } from './sffs'
+import { SFFS } from '../sffs'
 import {
   type AiSFFSQueryResponse,
   type SFFSResourceMetadata,
@@ -54,7 +54,7 @@ import {
 import { getContext, onDestroy, setContext, tick } from 'svelte'
 import type { Model } from '@deta/backend/types'
 import { WebParser } from '@deta/web-parser'
-import type { ConfigService } from './config'
+import type { ConfigService } from '../config'
 import { EventEmitterBase, ResourceTag, SearchResourceTags } from '@deta/utils'
 
 type Telemetry = any

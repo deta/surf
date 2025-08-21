@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { useDebounce } from '@deta/utils'
+  import { useDebounce } from '@deta/utils/system'
   import { onMount, createEventDispatcher, onDestroy, tick } from 'svelte'
 
   import './sidebars.scss'

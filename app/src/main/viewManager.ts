@@ -1,4 +1,4 @@
-import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import {
   WebContentsViewActionType,
   WebContentsViewEventType,
@@ -8,11 +8,11 @@ import {
 } from '@deta/types'
 import { app, BrowserWindow, WebContentsView, session } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
-import { IPCListenerUnsubscribe } from '@deta/services/src/ipc'
+import { IPCListenerUnsubscribe } from '@deta/services/ipc'
 import { EventEmitterBase } from '@deta/utils'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { isDev } from '@deta/utils'
+import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 
 export class WCView {

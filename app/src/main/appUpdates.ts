@@ -1,5 +1,5 @@
 import { dialog } from 'electron'
-import { isMac, isWindows } from '@deta/utils'
+import { isMac, isWindows } from '@deta/utils/system'
 import { MacUpdater, AppImageUpdater, NsisUpdater } from 'electron-updater'
 
 import { createUpdatesWindow, closeUpdatesWindow, sendUpdateProgressStatus } from './updatesWindow'

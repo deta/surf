@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store'
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 import type { OasisService } from './oasis'
 import { SpaceEntryOrigin } from '../types'
 import { selectedSpaceIds, selectedResourceIds } from '../components/Oasis/utils/select'

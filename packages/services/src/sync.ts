@@ -5,7 +5,7 @@ import { Toast, useToasts } from '@deta/ui'
 import { useLocalStorageStore, useLogScope, ResourceTag } from '@deta/utils'
 import { ResourceTypes } from '@deta/types'
 
-import { type ResourceManager } from './resources'
+import { type ResourceManager } from './resources/resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import { useConfig } from './config'
 

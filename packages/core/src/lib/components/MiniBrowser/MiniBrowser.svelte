@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import {
     MINI_BROWSER_SERVICE_CONTEXT_KEY,
     MiniBrowser

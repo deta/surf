@@ -6,7 +6,7 @@
 <script lang="ts">
   import { Importer } from '@horizon/core/src/lib/service/import'
   import { useOasis } from '@horizon/core/src/lib/service/oasis'
-  import { useResourceManager } from '@deta/services'
+  import { useResourceManager } from '@deta/services/resources'
   import { Icon } from '@deta/icons'
   import {
     BROWSER_TYPE_DATA,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
 
-  import { useClipboard } from '@deta/utils'
+  import { useClipboard } from '@deta/utils/browser'
   import { Icon, IconConfirmation } from '@deta/icons'
   import Button from './Button.svelte'
 

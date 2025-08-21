@@ -1,12 +1,8 @@
 import { get, writable, type Writable } from 'svelte/store'
 import { generateID, useLogScope, EventEmitterBase, ResourceTag } from '@deta/utils'
 
-import {
-  extractAndCreateWebResource,
-  ResourceJSON,
-  ResourceManager,
-  type Resource
-} from '@deta/services'
+import { ResourceJSON, ResourceManager, type Resource } from '@deta/services/resources'
+import { extractAndCreateWebResource } from '@deta/services'
 import { getResourcePreview } from '../utils/resourcePreview'
 import type { OasisService } from './oasis'
 import type { Toast, Toasts } from '@deta/ui'

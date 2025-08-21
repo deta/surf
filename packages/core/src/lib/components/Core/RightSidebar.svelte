@@ -14,7 +14,7 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import type { RightSidebarTab } from '@deta/types'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
 
   import { CompletionEventID } from '../Onboarding/onboardingScripts'

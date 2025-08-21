@@ -1,4 +1,4 @@
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 
 /** Right now, its just used for the "mail" notifications on the stack. But ideally other notifications
  * can also be ran through this. */

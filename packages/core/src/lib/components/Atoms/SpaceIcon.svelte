@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { Icon, DynamicIcon } from '@deta/icons'
   import IconSelector from '../Oasis/IconSelector.svelte'
   import { OasisSpace, pickRandomColorPair } from '../../service/oasis'

@@ -1,4 +1,4 @@
-import { isMac } from '@deta/utils'
+import { isMac } from '@deta/utils/system'
 
 export enum OnboardingAction {
   SendChatMessage = 'send-chat-message',

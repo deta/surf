@@ -10,7 +10,7 @@
     SelectDropdown,
     type SelectItem
   } from '@horizon/core/src/lib/components/Atoms/SelectDropdown'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import {
     contextMenu,
     type CtxItem

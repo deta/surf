@@ -53,8 +53,8 @@ import {
   type MentionAction
 } from '@deta/types'
 
-import { useLogScope } from '@deta/utils'
-import { getPrimaryResourceType } from './resources'
+import { useLogScope } from '@deta/utils/io'
+import { getPrimaryResourceType } from './resources/resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'

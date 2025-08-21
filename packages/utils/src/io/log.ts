@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { isDev } from './system'
+import { isDev } from '../system/system'
 
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 const levelMap = ['verbose', 'debug', 'info', 'warn', 'error']

@@ -18,9 +18,9 @@ import {
 } from '@deta/types'
 
 // import CommentIndicator from './components/CommentIndicator.svelte'
-import { type ResourceArticle, type Resource } from '@deta/services/src/resources'
-import { isPDFViewerURL, normalizeURL } from '@deta/utils/src/formatting/url'
-import { htmlToMarkdown } from '@deta/utils/src/formatting/markdown'
+import { type ResourceArticle, type Resource } from '@deta/services/resources'
+import { isPDFViewerURL, normalizeURL } from '@deta/utils/formatting'
+import { htmlToMarkdown } from '@deta/utils/formatting'
 import { setupChromeWebStoreApi } from './helpers/chrome-web-store'
 
 const PDFViewerEntryPoint =

@@ -12,7 +12,7 @@ import {
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs
 } from '@deta/types'
-import { IPC_EVENTS_RENDERER } from '@deta/services/src/ipc'
+import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 
 import { getUserConfig } from '../main/config'
 import { initBackend } from './helpers/backend'

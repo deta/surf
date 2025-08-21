@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useTabs } from '@deta/services'
+  import { useTabs } from '@deta/services/tabs'
   import TabItem from './TabItem.svelte'
   import { Icon } from '@deta/icons'
   import { Button } from '@deta/ui'

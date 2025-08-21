@@ -1,5 +1,5 @@
 import * as CodegenOnboardingNote0 from './00.onboarding.md'
-import { isMac } from '@deta/utils'
+import { isMac } from '@deta/utils/system'
 import ImageCodegen from '../../../../public/assets/onboarding/codegen/codegen.png?url'
 import ImageTable from '../../../../public/assets/onboarding/codegen/table.png?url'
 import ImageSave from '../../../../public/assets/onboarding/codegen/save.png?url'

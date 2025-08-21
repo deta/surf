@@ -32,8 +32,8 @@
     type WebViewSendEvents
   } from '@deta/types'
 
-  import { useLogScope } from '@deta/utils'
-  import type { NewWindowRequest } from '@deta/services/src/ipc'
+  import { useLogScope } from '@deta/utils/io'
+  import type { NewWindowRequest } from '@deta/services/ipc'
   import { useTabsManager } from '../../service/tabs'
   import type { WebContentsView } from '@horizon/core/src/lib/service/viewManager'
 

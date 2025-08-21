@@ -7,7 +7,7 @@ import { mkdirSync } from 'fs'
 
 import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/api'
 import { type UserSettings } from '@deta/types'
-import { IPC_EVENTS_RENDERER, SpaceBasicData } from '@deta/services/src/ipc'
+import { IPC_EVENTS_RENDERER, SpaceBasicData } from '@deta/services/ipc'
 
 import { getUserConfig } from '../main/config'
 import { initBackend } from './helpers/backend'

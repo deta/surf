@@ -8,9 +8,9 @@ import {
 } from '@deta/utils'
 import { KVStore, useKVTable } from '../kv'
 import type { Fn } from '@deta/types'
-import { useViewManager, WebContentsView, ViewManager } from '../webContents'
+import { useViewManager, WebContentsView, ViewManager } from '../views'
 import { derived, type Readable } from 'svelte/store'
-import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../webContents/types'
+import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../views/types'
 import type { NewWindowRequest } from '../ipc/events'
 import {
   type TabItemEmitterEvents,

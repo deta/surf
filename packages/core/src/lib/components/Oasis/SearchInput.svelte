@@ -4,7 +4,7 @@
   import { isMac, isModKeyPressed } from '@deta/utils'
   import { Icon } from '@deta/icons'
   import { writable } from 'svelte/store'
-  import { tooltip } from '@deta/utils'
+  import { tooltip } from '@deta/utils/dom'
 
   export let value: string = ''
   export let loading = false

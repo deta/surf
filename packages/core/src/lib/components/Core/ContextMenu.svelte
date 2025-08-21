@@ -178,7 +178,7 @@
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 

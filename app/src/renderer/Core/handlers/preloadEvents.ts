@@ -1,6 +1,6 @@
 import { type Fn } from '@deta/types'
-import { useLogScope } from '@deta/utils'
-import { useTabs } from '@deta/services'
+import { useLogScope } from '@deta/utils/io'
+import { useTabs } from '@deta/services/tabs'
 
 export function handlePreloadEvents() {
   const log = useLogScope('PreloadEvents')

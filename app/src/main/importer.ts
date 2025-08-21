@@ -1,6 +1,6 @@
 import { dialog } from 'electron'
 
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 import { BrowserType } from '@deta/types'
 
 import { ipcSenders } from './ipcHandlers'

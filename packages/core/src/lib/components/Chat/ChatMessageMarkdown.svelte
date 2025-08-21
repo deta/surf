@@ -17,7 +17,7 @@
 
 <script lang="ts">
   import { createEventDispatcher, setContext } from 'svelte'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
 
   import type { AIChatMessageSource } from '../../types/browser.types'
   import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'

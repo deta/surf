@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { OasisSpace, useOasis } from '../../../service/oasis'

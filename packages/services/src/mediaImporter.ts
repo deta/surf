@@ -6,7 +6,7 @@ import {
 } from '@deta/types'
 import { WebParser } from '@deta/web-parser'
 
-import { Resource, type ResourceManager } from './resources'
+import { Resource, type ResourceManager } from './resources/resources'
 
 const log = useLogScope('mediaImporter')
 

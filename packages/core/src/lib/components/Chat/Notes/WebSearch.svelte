@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { DuckDuckGoAPI } from '@deta/web-parser'
 
   // NOTE: created by tiptap but not needed

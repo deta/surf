@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, WebContents } from 'electron'
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 
 // TODO: better config
 interface CrashHandlerConfig {}

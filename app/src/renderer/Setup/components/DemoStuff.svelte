@@ -8,7 +8,7 @@
   import { cubicOut } from 'svelte/easing'
   import { createEventDispatcher } from 'svelte'
   import Button from './Button.svelte'
-  import { isMac } from '@deta/utils'
+  import { isMac } from '@deta/utils/system'
 
   export let running = false
 

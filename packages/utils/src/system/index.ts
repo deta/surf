@@ -1,5 +1,4 @@
 export * from './debounce'
 export * from './errors'
-export * from './log'
 export * from './performance'
 export * from './system'

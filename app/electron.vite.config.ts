@@ -106,7 +106,7 @@ export default defineConfig({
           overlay: resolve(__dirname, 'src/preload/overlay.ts'),
           resource: resolve(__dirname, 'src/preload/resource.ts')
         },
-        external: ['@deta/services/src/ipc'],
+        external: ['@deta/services/ipc'],
         plugins: [
           ...(!disableAllObfuscation
             ? [

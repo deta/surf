@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isMac } from '@deta/utils'
+  import { isMac } from '@deta/utils/system'
   import KeyCap from './KeyCap.svelte'
   import { onMount, onDestroy, createEventDispatcher } from 'svelte'
   type KeyType = string

@@ -4,7 +4,7 @@ import { derived, get, type Writable, writable } from 'svelte/store'
 
 import type { TabPage, TabResource } from '../../../types'
 import { blobToDataUrl } from '../../../utils/screenshot'
-import { ResourceJSON, type Resource } from '@deta/services'
+import { ResourceJSON, type Resource } from '@deta/services/resources'
 
 import type { ContextService } from '../contextManager'
 import { type ContextItemIcon, ContextItemIconTypes, ContextItemTypes } from './types'

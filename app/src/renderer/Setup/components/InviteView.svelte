@@ -3,7 +3,7 @@
   import type { Readable } from 'svelte/store'
   import icon from '../../assets/icon_512.png'
   import Button from './Button.svelte'
-  import { isDev } from '@deta/utils'
+  import { isDev } from '@deta/utils/system'
 
   const dispatch = createEventDispatcher()
 

@@ -9,7 +9,7 @@
     type DetectedResource
   } from '@deta/web-parser'
   import { writable } from 'svelte/store'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { tick } from 'svelte'
   import ResourceType from '../Resources/ResourceType.svelte'
   import { type ResourceManager } from '../../service/resources'

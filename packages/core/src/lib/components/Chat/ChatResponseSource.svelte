@@ -3,7 +3,7 @@
   import type { Resource, ResourceManager } from '../../service/resources'
   import type { AIChatMessageSource } from '../../types/browser.types'
   import ResourcePreview from '../Resources/ResourcePreview.svelte'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
 
   export let source: AIChatMessageSource
   export let resourceManager: ResourceManager

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { TabItem as TabItemClass, useTabs } from '@deta/services'
+  import { TabItem as TabItemClass, useTabs } from '@deta/services/tabs'
   import { DynamicIcon, Icon } from '@deta/icons'
 
   let { tab, active }: { tab: TabItemClass; active: boolean } = $props()

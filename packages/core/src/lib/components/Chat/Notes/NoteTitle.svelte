@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDebounce } from '@deta/utils'
+  import { useDebounce } from '@deta/utils/system'
   import type { SmartNote } from '@horizon/core/src/lib/service/ai/note'
 
   export let note: SmartNote

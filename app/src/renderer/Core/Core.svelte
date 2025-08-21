@@ -1,35 +1,31 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
+  import type { Fn } from '@deta/types'
+
+  import { provideConfig } from '@deta/services'
+  import { useViewManager /*useOverlayManager*/ } from '@deta/services/views'
+  import { useTabs } from '@deta/services/tabs'
   import {
-    provideConfig,
-    useViewManager,
-    useTabs,
     createKeyboardManager,
     createShortcutManager,
     defaultShortcuts,
-    ShortcutActions,
-    useOverlayManager
-  } from '@deta/services'
-  import type { Fn } from '@deta/types'
+    ShortcutActions
+  } from '@deta/services/shortcuts'
 
   import { handlePreloadEvents } from './handlers/preloadEvents'
 
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
   import TabsList from './components/Tabs/TabsList.svelte'
-  import Overlay from './components/Overlays/Overlay.svelte'
-
-  import Test from './components/Overlays/Test.svelte'
-  import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar.svelte'
 
   const log = useLogScope('Core')
   const config = provideConfig()
   const viewManager = useViewManager()
   const tabsService = useTabs()
-  const overlayManager = useOverlayManager()
+  // const overlayManager = useOverlayManager()
 
   const keyboardManager = createKeyboardManager()
   const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
@@ -37,7 +33,7 @@
   let open = $state(false)
 
   let unsubs: Fn[] = []
-  let overlayWrapper: HTMLDivElement | null = null
+  // let overlayWrapper: HTMLDivElement | null = null
 
   // const view1 = viewManager.create({ url: 'https://google.com', permanentlyActive: true })
   // const view2 = viewManager.create({ url: 'https://wikipedia.org', permanentlyActive: true })

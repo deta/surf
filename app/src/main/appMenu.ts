@@ -1,5 +1,6 @@
 import { app, Menu, shell } from 'electron'
-import { isMac, isWindows, isLinux, useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
+import { isMac, isWindows, isLinux } from '@deta/utils/system'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'

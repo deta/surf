@@ -3,7 +3,7 @@
   import { derived, writable } from 'svelte/store'
   import { fade } from 'svelte/transition'
 
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
 
   import type { App } from '@deta/backend/types'
 

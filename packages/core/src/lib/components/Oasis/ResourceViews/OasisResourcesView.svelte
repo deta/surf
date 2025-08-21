@@ -2,7 +2,7 @@
   import { derived, type Readable, writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import type { Writable } from 'svelte/store'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import MasonryView from '../ResourceViews/MasonryView.svelte'
   import {
     selectedItemIds,

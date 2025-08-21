@@ -2,7 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
-import { isMac } from '@deta/utils'
+import { isMac } from '@deta/utils/system'
 import { SettingsWindowTab } from '@deta/types/src/window.types'
 import { SettingsWindowEntrypoint } from './utils'
 

@@ -8,7 +8,7 @@
   import Button from './Button.svelte'
   import CopyButton from './CopyButton.svelte'
   import Editor from '@deta/editor/src/lib/components/Editor.svelte'
-  import { useDebounce } from '@deta/utils'
+  import { useDebounce } from '@deta/utils/system'
   import { getEditorContentText } from '@deta/editor'
   import { slide } from 'svelte/transition'
 

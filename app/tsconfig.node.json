@@ -3,6 +3,7 @@
   "include": ["electron.vite.config.*", "src/main/*", "src/preload/**/*", "plugins/**/*", "src/preload/helpers/chrome-web-store.ts"],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"]
+    "types": ["electron-vite/node"],
+    "moduleResolution": "bundler",
   }
 }

@@ -1,6 +1,6 @@
 import { BrowserWindow, app } from 'electron'
 
-import { useDebounce } from '@deta/utils'
+import { useDebounce } from '@deta/utils/system'
 import { getConfig, setConfig } from './config'
 
 export interface State {

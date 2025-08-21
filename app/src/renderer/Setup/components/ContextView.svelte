@@ -9,7 +9,7 @@
   import SpaceIcon from '@horizon/core/src/lib/components/Atoms/SpaceIcon.svelte'
   // import { OasisSpace, useOasis } from '@horizon/core/src/lib/service/oasis'
   import type { SpaceIconChange } from '@horizon/core/src/lib/components/Oasis/IconSelector.svelte'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import DemoContexts from './DemoContexts.svelte'
   import { get } from 'svelte/store'
 

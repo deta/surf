@@ -2,7 +2,7 @@ import { app, BrowserWindow, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
-import { isDev } from '@deta/utils'
+import { isDev } from '@deta/utils/system'
 
 let setupWindow: BrowserWindow | undefined
 

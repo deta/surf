@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-
   import { TeletypeProvider, Teletype, type Action, type TeletypeSystem } from '@deta/teletype/src'
 
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { DynamicIcon } from '@deta/icons'
-  import { useViewManager, useShortcutsManager, ShortcutActions } from '@deta/services'
+  import { useViewManager } from '@deta/services/views'
+  import { useShortcutsManager, ShortcutActions } from '@deta/services/shortcuts'
 
   const log = useLogScope('TeletypeEntry')
   const viewManager = useViewManager()

@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte'
 
   import { Icon } from '@deta/icons'
-  import { tooltip } from '@deta/utils'
+  import { tooltip } from '@deta/utils/dom'
   import type { WebViewEventTransform } from '@deta/types'
 
   const dispatch = createEventDispatcher<{ click: WebViewEventTransform['type'] }>()

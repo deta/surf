@@ -9,7 +9,7 @@
   import type { ResourceNote } from '@horizon/core/src/lib/service/resources'
   import { selectedItemIds } from '../Oasis/utils/select'
   import { useSmartNotes } from '@horizon/core/src/lib/service/ai/note'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import { SearchResourceTags } from '@deta/utils/src/formatting/tags'
 
   const dispatch = createEventDispatcher()

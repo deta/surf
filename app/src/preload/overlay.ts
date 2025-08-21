@@ -19,7 +19,7 @@ import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/
 import { type UserSettings } from '@deta/types'
 
 import { getUserConfig } from '../main/config'
-import { IPC_EVENTS_RENDERER, SpaceBasicData } from '@deta/services/src/ipc/events'
+import { IPC_EVENTS_RENDERER, SpaceBasicData } from '@deta/services/ipc'
 
 enum ResourceProcessingStateType {
   Pending = 'pending',

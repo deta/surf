@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
 
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import ImageView from './ImageView.svelte'
   import { Resource } from '../../../../service/resources'
   import UnknownFileView from './UnknownFileView.svelte'

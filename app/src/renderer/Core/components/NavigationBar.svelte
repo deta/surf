@@ -1,7 +1,7 @@
 <script>
   import { Icon } from '@deta/icons'
   import { Button } from '@deta/ui'
-  import { useTabs } from '@deta/services'
+  import { useTabs } from '@deta/services/tabs'
 
   const tabsService = useTabs()
   const activeTab = $derived(tabsService.activeTab)

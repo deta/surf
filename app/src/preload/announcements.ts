@@ -1,4 +1,4 @@
-import { IPC_EVENTS_RENDERER } from '@deta/services/src/ipc/events'
+import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 import { contextBridge, shell } from 'electron'
 
 contextBridge.exposeInMainWorld('announcementsAPI', {

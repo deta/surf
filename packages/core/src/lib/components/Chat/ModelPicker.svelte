@@ -2,7 +2,7 @@
   import { derived, writable } from 'svelte/store'
 
   import { Icon } from '@deta/icons'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
 
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import {

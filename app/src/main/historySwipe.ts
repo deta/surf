@@ -1,11 +1,13 @@
 import trackpad from '@deta/trackpad'
 import { getMainWindow } from './mainWindow'
-import log from '@deta/utils/src/system/log'
+import { useLogScope } from '@deta/utils/io'
 import { getUserConfig, updateUserConfigSettings } from './config'
 import { changeMenuItemLabel } from './appMenu'
-import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 
 let historySwipeGestureEnabled = false
+
+const log = useLogScope('historySwipe')
 
 export function getHistorySwipeGestureConfig() {
   return historySwipeGestureEnabled

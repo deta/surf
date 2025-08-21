@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Resource } from '../../../../service/resources'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
 
   export let resource: Resource
   export let blob: Blob

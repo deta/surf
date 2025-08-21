@@ -26,7 +26,7 @@
   import { writable } from 'svelte/store'
   import { createEventDispatcher } from 'svelte'
   import { RESOURCE_FILTERS, CONTEXT_FILTERS, ALL_FILTERS } from '../../constants/resourceFilters'
-  import { tooltip } from '@deta/utils'
+  import { tooltip } from '@deta/utils/dom'
   import type { FilterItem } from './FilterSelector.svelte'
 
   export let viewType: ContextViewType | undefined

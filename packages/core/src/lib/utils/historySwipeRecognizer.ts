@@ -1,4 +1,4 @@
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 import { get, writable, type Readable } from 'svelte/store'
 
 const log = useLogScope('History Swipe Recognizer')

@@ -3,7 +3,7 @@
   import { createEventDispatcher } from 'svelte'
   import { type Resource } from '@horizon/core/src/lib/service/resources'
   import { ShortcutVisualizer } from '../../Utils/Keyboard'
-  import { isMac } from '@deta/utils'
+  import { isMac } from '@deta/utils/system'
   import OasisResourceLoader from '@horizon/core/src/lib/components/Oasis/OasisResourceLoader.svelte'
   import background01 from '../../../../../public/assets/demo/backgrounds/01.webp'
   import background02 from '../../../../../public/assets/demo/backgrounds/02.webp'

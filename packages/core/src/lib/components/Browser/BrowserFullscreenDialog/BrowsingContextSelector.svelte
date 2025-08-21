@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { type Readable } from 'svelte/store'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import type { OasisSpace } from '../../../service/oasis'
   import { useToasts } from '@deta/ui'
   import SpaceIcon from '../../Atoms/SpaceIcon.svelte'

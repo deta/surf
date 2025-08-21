@@ -5,8 +5,11 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { isDev, isMac, isPDFViewerURL, PDFViewerParams, useLogScope } from '@deta/utils'
-import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
+import { useLogScope } from '@deta/utils/io'
+import { isDev, isMac } from '@deta/utils/system'
+import { isPDFViewerURL, PDFViewerParams, ResourceViewerParams } from '@deta/utils/formatting'
+
+import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { setupPermissionHandlers } from './permissionHandler'
 import { applyCSPToSession } from './csp'
 import {
@@ -23,7 +26,6 @@ import { writeFile } from 'fs/promises'
 import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager, WCViewManager } from './viewManager'
-import { ResourceViewerParams } from '@deta/utils'
 
 let mainWindow: BrowserWindow | undefined
 

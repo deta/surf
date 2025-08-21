@@ -2,7 +2,7 @@
   import Unknown from './UnknownFileView.svelte'
   import type { Resource } from '../../../../service/resources'
   import { onMount } from 'svelte'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
 
   export let resource: Resource
 

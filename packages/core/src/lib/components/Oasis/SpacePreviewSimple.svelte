@@ -1,6 +1,6 @@
 <script lang="ts">
   import { DynamicIcon } from '@deta/icons'
-  import { tooltip } from '@deta/utils'
+  import { tooltip } from '@deta/utils/dom'
 
   export let icon: string = 'grid'
   export let isLink: boolean = false

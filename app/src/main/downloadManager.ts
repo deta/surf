@@ -1,11 +1,11 @@
-import { useLogScope } from '@deta/utils'
+import { useLogScope } from '@deta/utils/io'
 import { session, ipcMain, app, shell } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
 import fs, { promises as fsp } from 'fs'
 import path from 'path'
 import mime from 'mime-types'
-import { IPC_EVENTS_MAIN } from '@deta/services/src/ipc/events'
+import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import type { DownloadPathResponseMessage, SFFSResource } from '@deta/types'
 import { isPathSafe, checkFileExists } from './utils'
 

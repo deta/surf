@@ -1,7 +1,7 @@
 <script lang="ts">
   import { writable } from 'svelte/store'
   import { useResourceManager, type Resource } from '../../service/resources'
-  import { useLogScope } from '@deta/utils'
+  import { useLogScope } from '@deta/utils/io'
   import OasisResourceModal from './OasisResourceModal.svelte'
 
   export let resourceId: string

@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { isMac } from '@deta/utils'
+import { isMac } from '@deta/utils/system'
 
 let updatesWindow: BrowserWindow | undefined
 
