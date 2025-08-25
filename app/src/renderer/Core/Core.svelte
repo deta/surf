@@ -60,6 +60,42 @@
       return true
     })
 
+    const tabSwitchActions = [
+      ShortcutActions.SWITCH_TO_TAB_1,
+      ShortcutActions.SWITCH_TO_TAB_2,
+      ShortcutActions.SWITCH_TO_TAB_3,
+      ShortcutActions.SWITCH_TO_TAB_4,
+      ShortcutActions.SWITCH_TO_TAB_5,
+      ShortcutActions.SWITCH_TO_TAB_6,
+      ShortcutActions.SWITCH_TO_TAB_7,
+      ShortcutActions.SWITCH_TO_TAB_8,
+      ShortcutActions.SWITCH_TO_TAB_9
+    ]
+
+    tabSwitchActions.forEach((action, index) => {
+      shortcutsManager.registerHandler(action, () => {
+        const tabIndex = index
+        const tabs = tabsService.tabs
+
+        if (tabs.length > tabIndex) {
+          const targetTab = tabs[tabIndex]
+          log.debug(`Switching to tab ${tabIndex + 1} (${targetTab.id})`)
+          tabsService.setActiveTab(targetTab.id)
+        }
+        return true
+      })
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.SWITCH_TO_LAST_TAB, () => {
+      const tabs = tabsService.tabs
+      if (tabs.length > 0) {
+        const lastTab = tabs.at(-1)
+        log.debug(`Switching to last tab (${lastTab.id})`)
+        tabsService.setActiveTab(lastTab.id)
+      }
+      return true
+    })
+
     unsubs.push(handlePreloadEvents())
   })
 
