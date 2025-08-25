@@ -40,7 +40,6 @@
 		"../tests/**/*.svelte"
 	],
 	"exclude": [
-		"src/lib/utils/houdini.js",
 		"../node_modules/**",
 		"../src/service-worker.js",
 		"../src/service-worker/**/*.js",
