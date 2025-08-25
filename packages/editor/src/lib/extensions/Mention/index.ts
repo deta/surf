@@ -1,5 +1,6 @@
-import { Mention } from './mention.js'
+import { Mention } from "./mention.js";
 
-export * from './mention.js'
+export * from "./mention.js";
+export * from "./suggestion.js";
 
-export default Mention
+export default Mention;

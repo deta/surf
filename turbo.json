@@ -15,7 +15,11 @@
       "outputLogs": "new-only"
     },
     "@deta/ui#build": {
-      "dependsOn": ["@deta/utils#build", "@deta/icons#build"],
+      "dependsOn": [
+        "@deta/utils#build",
+        "@deta/icons#build",
+        "@deta/services#build"
+      ],
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
@@ -24,7 +28,11 @@
       "outputLogs": "new-only"
     },
     "@deta/editor#build": {
-      "dependsOn": ["@deta/icons#build", "@deta/utils#build", "@deta/types#build"],
+      "dependsOn": [
+        "@deta/icons#build",
+        "@deta/utils#build",
+        "@deta/types#build"
+      ],
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
@@ -125,7 +133,11 @@
       "outputs": [".dist/**", ".out/**"]
     },
     "build:app:backend": {
-      "dependsOn": ["@deta/trackpad#build", "@deta/backend#build", "@deta/backend-server#build"],
+      "dependsOn": [
+        "@deta/trackpad#build",
+        "@deta/backend#build",
+        "@deta/backend-server#build"
+      ],
       "outputs": [".dist/**", ".out/**"]
     },
     "build:app": {

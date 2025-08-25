@@ -62,7 +62,7 @@
 </div>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  // @use '@deta/ui/styles/utils' as utils;
   .shadow-wrapper {
     filter: drop-shadow(0px 8px 10px rgba(6, 5, 53, 0.04))
       drop-shadow(0px 4px 6px rgba(6, 5, 53, 0.06)) drop-shadow(0px 2px 4px rgba(6, 5, 53, 0.07))
@@ -72,7 +72,7 @@
   .default-browser-container {
     display: flex;
     align-items: center;
-    @include utils.squircle($fill: rgb(230 231 247), $radius: 28px, $smooth: 0.33);
+    // @include utils.squircle($fill: rgb(230 231 247), $radius: 28px, $smooth: 0.33);
 
     --squircle-outline-color: rgba(6, 5, 53, 0.1);
     --squircle-outline-width: 1px;
@@ -82,9 +82,9 @@
     margin: 8px 0;
     scroll-margin: 50px;
 
-    :global(.dark) & {
-      @include utils.squircle($fill: rgba(58, 83, 255, 0.15), $radius: 16px, $smooth: 0.28);
-    }
+    // :global(.dark) & {
+    //   @include utils.squircle($fill: rgba(58, 83, 255, 0.15), $radius: 16px, $smooth: 0.28);
+    // }
   }
 
   .headline {
@@ -96,7 +96,7 @@
     line-height: 1.3;
     margin-bottom: 4px;
 
-    @include utils.font-smoothing;
+    // @include utils.font-smoothing;
 
     :global(.dark) & {
       color: #f9fafb;
@@ -111,7 +111,7 @@
     line-height: 1.4;
     padding-right: 4rem;
 
-    @include utils.font-smoothing;
+    // @include utils.font-smoothing;
 
     :global(.dark) & {
       color: #d1d5db;

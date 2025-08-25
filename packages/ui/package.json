@@ -75,6 +75,7 @@
     "@amplitude/analytics-browser": "^2.4.0",
     "@deta/icons": "*",
     "@deta/utils": "*",
+    "@deta/services": "*",
     "bits-ui": "^2.9.3",
     "clsx": "^2.1.1",
     "lodash": "^4.17.21",

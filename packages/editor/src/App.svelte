@@ -1,6 +1,6 @@
 <script lang="ts">
   import viteLogo from '/vite.svg'
-  import { Counter } from './lib/main'
+  import { Counter } from './lib'
 </script>
 
 <main>

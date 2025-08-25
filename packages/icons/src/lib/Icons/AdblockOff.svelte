@@ -22,6 +22,3 @@
     />
   </g>
 </svg>
-
-<style lang="scss">
-</style>

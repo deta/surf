@@ -1,7 +1,6 @@
 <script lang="ts">
   import { isMac } from '../../utilities'
   import Button from '../Button/Button.svelte'
-  import stuff from '@horizon/core/public/assets/onboarding/your-stuff-teaser.png'
 
   export let onClick: () => void = () => {}
 
@@ -20,7 +19,7 @@
 <div class="shadow-wrapper">
   <div class="open-stuff-container">
     <div class="image-container">
-      <img src={stuff} alt="Stuff" class="stuff-image" />
+      <!-- <img src={stuff} alt="Stuff" class="stuff-image" /> -->
     </div>
     <div class="flex flex-row w-full justify-between">
       <div class="span flex flex-col">
@@ -35,7 +34,7 @@
 </div>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  // @use '@deta/ui/styles/utils' as utils;
 
   .shadow-wrapper {
     filter: drop-shadow(0px 8px 10px rgba(6, 5, 53, 0.04))
@@ -48,7 +47,7 @@
     gap: 2rem;
     flex-direction: column;
     align-items: center;
-    @include utils.squircle($fill: rgb(255 255 255), $radius: 28px, $smooth: 0.33);
+    // @include utils.squircle($fill: rgb(255 255 255), $radius: 28px, $smooth: 0.33);
 
     --squircle-outline-color: rgba(6, 5, 53, 0.1);
     --squircle-outline-width: 1px;
@@ -57,9 +56,9 @@
     padding: 2rem;
     margin: 8px 0;
 
-    :global(.dark) & {
-      @include utils.squircle($fill: rgba(58, 83, 255, 0.15), $radius: 16px, $smooth: 0.28);
-    }
+    // :global(.dark) & {
+    //   @include utils.squircle($fill: rgba(58, 83, 255, 0.15), $radius: 16px, $smooth: 0.28);
+    // }
 
     .image-container {
       padding: 1rem;
@@ -87,7 +86,7 @@
     line-height: 1.3;
     margin-bottom: 4px;
 
-    @include utils.font-smoothing;
+    // @include utils.font-smoothing;
 
     :global(.dark) & {
       color: #f9fafb;
@@ -101,7 +100,7 @@
     color: #5c5f8d;
     line-height: 1.4;
 
-    @include utils.font-smoothing;
+    // @include utils.font-smoothing;
 
     :global(.dark) & {
       color: #d1d5db;

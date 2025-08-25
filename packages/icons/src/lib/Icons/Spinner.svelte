@@ -13,7 +13,7 @@
   />
 </svg>
 
-<style>
+<style lang="css">
   .spinner {
     animation: spin 1s linear infinite;
     /* Add any additional styles for the spinner here */

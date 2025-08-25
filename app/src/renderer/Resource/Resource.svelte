@@ -2,6 +2,9 @@
   import { onMount } from 'svelte'
   import { createTelemetry, provideConfig } from '@deta/services'
   import { createResourceManager, type Resource } from '@deta/services/resources'
+  import { ResourceTypes } from '@deta/types';
+
+  import { Note } from '@deta/ui'
 
   const searchParams = new URLSearchParams(window.location.search)
   const resourceId = searchParams.get('resourceId') || ''
@@ -26,7 +29,7 @@
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
 
-  let resource: Resource | null = null
+  let resource: Resource | null = $state(null)
 
   onMount(async () => {
     console.log('Resource mounted with ID:', resourceId)
@@ -42,10 +45,15 @@
   <p><strong>Resource ID:</strong> {resourceId}</p>
 
   {#if resource}
-    <div>
-      <p><strong>Name:</strong> {resource.metadata.name}</p>
-      <p><strong>Description:</strong> {resource.type}</p>
-    </div>
+    {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+      <p>Note resource</p>
+      <Note resource={resource} />
+    {:else}
+      <div>
+        <p><strong>Name:</strong> {resource.metadata.name}</p>
+        <p><strong>Description:</strong> {resource.type}</p>
+      </div>  
+    {/if}
   {:else}
     <p>Loading resource...</p>
   {/if}

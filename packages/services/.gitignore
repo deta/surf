@@ -26,3 +26,6 @@ dist-ssr
 # Typescript output
 build
 tsconfig.tsbuildinfo
+
+# Svelte
+.svelte-kit

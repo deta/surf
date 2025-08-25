@@ -1,39 +1,6 @@
-import { resolve } from 'path'
-import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { sveltekit } from "@sveltejs/kit/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [
-    svelte({
-      compilerOptions: {
-        dev: process.env.NODE_ENV !== 'production'
-      }
-    })
-  ],
-  build: {
-    lib: {
-      entry: resolve(__dirname, 'src/lib/main.ts'),
-      formats: ['es'],
-      fileName: 'index'
-    },
-    rollupOptions: {
-      external: [
-        'svelte',
-        'svelte/internal',
-        'svelte/store',
-        '@deta/icons',
-        '@tiptap/core',
-        '@tiptap/pm',
-        '@tiptap/starter-kit',
-        /^@tiptap-pro\//,
-        /^@tiptap\/extension-/
-      ]
-    },
-    target: 'esnext',
-    sourcemap: true,
-    minify: false,
-    modulePreload: {
-      polyfill: false
-    }
-  }
-})
+  plugins: [sveltekit()],
+});
