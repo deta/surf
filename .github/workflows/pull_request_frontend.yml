@@ -65,6 +65,7 @@ jobs:
           PRODUCT_NAME: 'Surf'
           M_VITE_PRODUCT_NAME: 'Surf'
           BUILD_RESOURCES_DIR: build/resources/dev
+          TURBO_SCM_BASE: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
 
           R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
