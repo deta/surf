@@ -47,7 +47,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "dev": "vite dev",
+    "dev": "svelte-package --watch",
     "build": "svelte-kit sync && svelte-package",
     "build:types": "tsc --emitDeclarationOnly",
     "preview": "vite preview",

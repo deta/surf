@@ -141,9 +141,9 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       return spaces.map((s) => (s.id === space.id ? space : s));
     });
 
-    tick().then(() => {
-      this.updateMainProcessNotebooksList();
-    });
+    // tick().then(() => {
+    //   this.updateMainProcessNotebooksList();
+    // });
   }
 
   async loadNotebooks() {
@@ -178,9 +178,9 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     this.notebooks.set(spaces);
 
-    tick().then(() => {
-      this.updateMainProcessNotebooksList();
-    });
+    // tick().then(() => {
+    //   this.updateMainProcessNotebooksList();
+    // });
 
     return result;
   }

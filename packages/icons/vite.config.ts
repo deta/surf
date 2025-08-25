@@ -1,10 +1,24 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import dts from 'vite-plugin-dts'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [
+    svelte(),
+    dts({
+      include: ['src/lib'],
+      tsconfigPath: './tsconfig.json',
+      beforeWriteFile: (filePath, content) => {
+        // Add Svelte component type for .svelte.d.ts files
+        if (filePath.endsWith('.svelte.d.ts')) {
+          content = content.replace('declare const _default', 'declare const _default: import("svelte").ComponentType');
+        }
+        return { filePath, content };
+      }
+    }),
+  ],
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points

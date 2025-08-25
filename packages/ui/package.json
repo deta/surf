@@ -32,7 +32,7 @@
     "src"
   ],
   "scripts": {
-    "dev": "vite dev",
+    "dev": "svelte-package --watch",
     "tokens:build": "node ./scripts/build-tokens.mjs",
     "build": "svelte-kit sync && node ./scripts/build-tokens.mjs && svelte-package",
     "build:types": "tsc --emitDeclarationOnly",

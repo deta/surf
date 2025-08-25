@@ -45,7 +45,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "build:types": "tsc --emitDeclarationOnly"
+    "build:types": "tsc --emitDeclarationOnly",
+    "dev": "tsc --watch"
   },
   "devDependencies": {
     "@deta/types": "*",

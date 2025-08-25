@@ -156,28 +156,32 @@
         "@deta/backend#build",
         "@deta/backend-server#build",
         "@horizon/core#build:tailwind",
-        "@horizon/dragcula#build",
-        "@deta/utils#build",
-        "@deta/services#build",
-        "@deta/ui#build",
-        "@deta/icons#build",
-        "@deta/editor#build"
+        "@horizon/dragcula#build"
       ],
-      "outputs": [".dist/**", ".out/**"]
+      "with": [
+        "@deta/utils#dev",
+        "@deta/services#dev",
+        "@deta/ui#dev",
+        "@deta/icons#dev",
+        "@deta/editor#dev"
+      ],
+      "outputs": [".dist/**", ".out/**"],
+      "persistent": true
     },
     "dev": {
       "dependsOn": [
         "@deta/backend#build",
         "@deta/backend-server#build",
         "@horizon/core#build:tailwind",
-        "@horizon/dragcula#build",
-        "@deta/utils#build",
-        "@deta/services#build",
-        "@deta/ui#build",
-        "@deta/icons#build",
-        "@deta/editor#build"
+        "@horizon/dragcula#build"
       ],
-      "cache": false,
+      "with": [
+        "@deta/utils#dev",
+        "@deta/services#dev",
+        "@deta/ui#dev",
+        "@deta/icons#dev",
+        "@deta/editor#dev"
+      ],
       "persistent": true
     }
   }
