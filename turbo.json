@@ -1,7 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
-  "globalEnv": ["*"],
+  "globalPassThroughEnv": ["*"],
   "ui": "tui",
   "tasks": {
     "@deta/utils#build": {
@@ -38,19 +38,19 @@
     },
     "@deta/backend#build": {
       "dependsOn": [],
-      "outputs": [".dist/**", "index.node"]
+      "outputs": ["index.node"]
     },
     "@deta/backend#dev": {
       "dependsOn": [],
-      "outputs": [".dist/**", "index.node"]
+      "outputs": ["index.node"]
     },
     "@deta/trackpad#build": {
       "dependsOn": [],
-      "outputs": [".dist/**", "index.node"]
+      "outputs": ["index.node"]
     },
     "@deta/trackpad#dev": {
       "dependsOn": [],
-      "outputs": [".dist/**", "index.node"]
+      "outputs": ["index.node"]
     },
     "@deta/backend-server#build": {
       "outputs": ["backend-server"]
@@ -59,56 +59,46 @@
       "outputs": ["backend-server"]
     },
     "desktop#build": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:frontend": {
-      "dependsOn": ["build:app:frontend"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app:frontend"]
     },
     "desktop#build:mwl": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:mac": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:mac:x64": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:mac:arm": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:lin:x64": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:lin:arm": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:win:x64": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "desktop#build:linux": {
-      "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "dependsOn": ["build:app"]
     },
     "@horizon/tela#build": {
-      "outputs": [".dist/**"],
+      "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
     "@horizon/dragcula#build": {
-      "outputs": [".dist/**"],
+      "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
     "@deta/types#build": {
       "dependsOn": ["@deta/icons#build"],
-      "outputs": [".build/**"],
+      "outputs": ["build/**"],
       "outputLogs": "new-only"
     },
     "@horizon/core#dev:tailwind": {
@@ -129,24 +119,22 @@
         "@deta/ui#build",
         "@deta/icons#build",
         "@deta/editor#build"
-      ],
-      "outputs": [".dist/**", ".out/**"]
+      ]
     },
     "build:app:backend": {
       "dependsOn": [
         "@deta/trackpad#build",
         "@deta/backend#build",
         "@deta/backend-server#build"
-      ],
-      "outputs": [".dist/**", ".out/**"]
+      ]
     },
     "build:app": {
       "dependsOn": ["build:app:frontend", "build:app:backend"],
-      "outputs": [".dist/**", ".out/**"]
+      "outputs": ["dist/**", "out/**"]
     },
     "build": {
       "dependsOn": ["build:app"],
-      "outputs": [".dist/**", ".out/**"]
+      "outputs": ["dist/**", "out/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -165,7 +153,6 @@
         "@deta/icons#dev",
         "@deta/editor#dev"
       ],
-      "outputs": [".dist/**", ".out/**"],
       "persistent": true
     },
     "dev": {
