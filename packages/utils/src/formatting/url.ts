@@ -469,9 +469,7 @@ export function isInternalRendererURL(url: string | URL): URL | null {
     // TODO: Improve prod path
     if (
       _url.protocol === 'file:' &&
-      _url.pathname.includes(
-        'Surf.app/Contents/Resources/app.asar/out/renderer/Notebook/notebook.html'
-      )
+      _url.pathname.includes('Contents/Resources/app.asar/out/renderer/Notebook/notebook.html')
     ) {
       const rendererURL = new URL(
         _url.searchParams.get('path') ??
