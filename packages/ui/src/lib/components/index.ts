@@ -1,4 +1,6 @@
 export * from './Toast'
+export * from './Editor'
+export * from './Effects'
 export * from './Utils'
 export * from './Buttons'
 export * from './EmojiPicker'

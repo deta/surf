@@ -4,7 +4,7 @@
 
   type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
-  let { 
+  let {
     children, 
     size = 'md',
     square = false,
@@ -57,9 +57,9 @@
   background: var(--bg);
   color: inherit;
 
-  &:hover,
+  &:hover:not(&:disabled),
   &.active {
-    --bg: rgba(255,255,255,0.75);
+    --bg: rgba(0,0,0,0.05);
   }
   
   &:disabled {
@@ -73,12 +73,12 @@
       opacity: 1;
     }
     &:active {
-      scale: 0.9;
+      scale: 0.95;
       opacity: 1;
-      --bg: linear-gradient(to top, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.77));
+      --bg: linear-gradient(to top, rgba(0,0,0, 0.1), rgba(0,0,0, 0.12));
     }
     &.active {
-      --bg: linear-gradient(to top, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.77));
+      --bg: linear-gradient(to top, rgba(0,0,0, 0.1), rgba(0,0,0, 0.12));
     }
   }
   

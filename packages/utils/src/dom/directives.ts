@@ -1,32 +1,49 @@
+import type { Fn } from '@deta/types'
+import type { Attachment } from 'svelte/attachments'
 import type { Writable } from 'svelte/store'
 
-/** Dispatch event on click outside of node */
-export function clickOutside(node: HTMLElement, onEventFunction: () => void) {
-  const handleClick = (event: MouseEvent) => {
-    const target = event.target as HTMLElement
-    // Ignore clicks on elements (children of elements) with data-ignore-click-outside attribute
-    if (
-      target.hasAttribute('data-ignore-click-outside') ||
-      target.closest('[data-ignore-click-outside]') !== null
-    ) {
-      return
+/**
+ * TODO: Needs to work with WebContentsViews as well -> Need some way of triggering when clicking
+ * inside another WCV outside where this is used in.
+ */
+export function clickOutside(callback: Fn): Attachment {
+  return (element: Element) => {
+    const handleClick = (e: MouseEvent) => {
+      if (!element?.contains(e.target as HTMLElement)) callback()
     }
 
-    if (node && !node.contains(target) && !event.defaultPrevented) {
-      node.dispatchEvent(new CustomEvent('click_outside', { detail: node }))
-
-      onEventFunction()
-    }
-  }
-
-  document.addEventListener('click', handleClick, true)
-
-  return {
-    destroy() {
-      document.removeEventListener('click', handleClick, true)
-    }
+    window.addEventListener('click', handleClick, { capture: true })
+    return () => window.removeEventListener('click', handleClick, { capture: true })
   }
 }
+
+/** Dispatch event on click outside of node */
+//export function clickOutside(node: HTMLElement, onEventFunction: () => void) {
+//  const handleClick = (event: MouseEvent) => {
+//    const target = event.target as HTMLElement
+//    // Ignore clicks on elements (children of elements) with data-ignore-click-outside attribute
+//    if (
+//      target.hasAttribute('data-ignore-click-outside') ||
+//      target.closest('[data-ignore-click-outside]') !== null
+//    ) {
+//      return
+//    }
+//
+//    if (node && !node.contains(target) && !event.defaultPrevented) {
+//      node.dispatchEvent(new CustomEvent('click_outside', { detail: node }))
+//
+//      onEventFunction()
+//    }
+//  }
+//
+//  document.addEventListener('click', handleClick, true)
+//
+//  return {
+//    destroy() {
+//      document.removeEventListener('click', handleClick, true)
+//    }
+//  }
+//}
 
 export type TooltipOptions = {
   text: string

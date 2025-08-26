@@ -13,11 +13,14 @@ export default defineConfig({
       beforeWriteFile: (filePath, content) => {
         // Add Svelte component type for .svelte.d.ts files
         if (filePath.endsWith('.svelte.d.ts')) {
-          content = content.replace('declare const _default', 'declare const _default: import("svelte").ComponentType');
+          content = content.replace(
+            'declare const _default',
+            'declare const _default: import("svelte").ComponentType'
+          )
         }
-        return { filePath, content };
+        return { filePath, content }
       }
-    }),
+    })
   ],
   build: {
     lib: {

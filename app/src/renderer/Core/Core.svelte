@@ -1,64 +1,75 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy } from "svelte";
 
-  import { useLogScope } from '@deta/utils/io'
-  import type { Fn } from '@deta/types'
+  import { useLogScope } from "@deta/utils/io";
+  import type { Fn } from "@deta/types";
 
-  import { provideConfig } from '@deta/services'
-  import { useViewManager /*useOverlayManager*/ } from '@deta/services/views'
-  import { useTabs } from '@deta/services/tabs'
+  import { provideConfig } from "@deta/services";
+  import { useViewManager /*useOverlayManager*/ } from "@deta/services/views";
+  import { useTabs } from "@deta/services/tabs";
   import {
     createKeyboardManager,
     createShortcutManager,
     defaultShortcuts,
-    ShortcutActions
-  } from '@deta/services/shortcuts'
+    ShortcutActions,
+  } from "@deta/services/shortcuts";
+  import { createNotebookManager } from "@deta/services/notebooks";
+  import { handlePreloadEvents } from "./handlers/preloadEvents";
 
-  import { handlePreloadEvents } from './handlers/preloadEvents'
+  import TeletypeEntry from "./components/Teletype/TeletypeEntry.svelte";
+  import WebContentsView from "./components/WebContentsView.svelte";
+  import TabsList from "./components/Tabs/TabsList/TabsList.svelte";
+  //import Overlay from './components/Overlays/Overlay.svelte'
 
-  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
-  import WebContentsView from './components/WebContentsView.svelte'
-  import TabsList from './components/Tabs/TabsList/TabsList.svelte'
-  import NavigationBar from './components/NavigationBar.svelte'
+  //import Test from './components/Overlays/Test.svelte'
+  //import Split from './components/Layout/Split.svelte'
+  import NavigationBar from "./components/NavigationBar/NavigationBar.svelte";
+  import { createResourceManager } from "@deta/services/resources";
 
-  const log = useLogScope('Core')
-  const config = provideConfig()
-  const viewManager = useViewManager()
-  const tabsService = useTabs()
+  const log = useLogScope("Core");
+  const config = provideConfig();
+  const viewManager = useViewManager();
+  const resourceManager = createResourceManager(null, config);
+  const tabsService = useTabs();
+  const notebookManager = createNotebookManager(resourceManager, config);
   // const overlayManager = useOverlayManager()
 
-  const keyboardManager = createKeyboardManager()
-  const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
+  const keyboardManager = createKeyboardManager();
+  const shortcutsManager = createShortcutManager<ShortcutActions>(
+    keyboardManager,
+    defaultShortcuts,
+  );
 
-  let open = $state(false)
+  const activeTabView = $derived(tabsService.activeTab?.view);
+  let open = $state(false);
 
-  let unsubs: Fn[] = []
+  let unsubs: Fn[] = [];
   // let overlayWrapper: HTMLDivElement | null = null
 
   // const view1 = viewManager.create({ url: 'https://google.com', permanentlyActive: true })
   // const view2 = viewManager.create({ url: 'https://wikipedia.org', permanentlyActive: true })
 
   onMount(async () => {
-    log.debug('Core component mounted')
+    log.debug("Core component mounted");
 
-    const settings = config.settingsValue
-    log.debug('User settings:', settings)
+    const settings = config.settingsValue;
+    log.debug("User settings:", settings);
 
-    await tabsService.ready
+    await tabsService.ready;
 
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
-      log.debug('Creating new tab (CMD+T)')
-      tabsService.create('https://google.com')
-      return true
-    })
+      log.debug("Creating new tab (CMD+T)");
+      tabsService.create("surf://notebook");
+      return true;
+    });
 
     shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
-      log.debug('Closing current tab (CMD+W)')
+      log.debug("Closing current tab (CMD+W)");
       if (tabsService.activeTab) {
-        tabsService.delete(tabsService.activeTab.id)
+        tabsService.delete(tabsService.activeTab.id);
       }
-      return true
-    })
+      return true;
+    });
 
     const tabSwitchActions = [
       ShortcutActions.SWITCH_TO_TAB_1,
@@ -69,54 +80,54 @@
       ShortcutActions.SWITCH_TO_TAB_6,
       ShortcutActions.SWITCH_TO_TAB_7,
       ShortcutActions.SWITCH_TO_TAB_8,
-      ShortcutActions.SWITCH_TO_TAB_9
-    ]
+      ShortcutActions.SWITCH_TO_TAB_9,
+    ];
 
     tabSwitchActions.forEach((action, index) => {
       shortcutsManager.registerHandler(action, () => {
-        const tabIndex = index
-        const tabs = tabsService.tabs
+        const tabIndex = index;
+        const tabs = tabsService.tabs;
 
         if (tabs.length > tabIndex) {
-          const targetTab = tabs[tabIndex]
-          log.debug(`Switching to tab ${tabIndex + 1} (${targetTab.id})`)
-          tabsService.setActiveTab(targetTab.id)
+          const targetTab = tabs[tabIndex];
+          log.debug(`Switching to tab ${tabIndex + 1} (${targetTab.id})`);
+          tabsService.setActiveTab(targetTab.id);
         }
-        return true
-      })
-    })
+        return true;
+      });
+    });
 
     shortcutsManager.registerHandler(ShortcutActions.SWITCH_TO_LAST_TAB, () => {
-      const tabs = tabsService.tabs
+      const tabs = tabsService.tabs;
       if (tabs.length > 0) {
-        const lastTab = tabs.at(-1)
-        log.debug(`Switching to last tab (${lastTab.id})`)
-        tabsService.setActiveTab(lastTab.id)
+        const lastTab = tabs.at(-1);
+        log.debug(`Switching to last tab (${lastTab.id})`);
+        tabsService.setActiveTab(lastTab.id);
       }
-      return true
-    })
+      return true;
+    });
 
-    unsubs.push(handlePreloadEvents())
-  })
+    unsubs.push(handlePreloadEvents());
+  });
 
   onDestroy(() => {
-    log.debug('Core component destroyed')
-    unsubs.forEach((unsub) => unsub())
-    viewManager.onDestroy()
-    tabsService.onDestroy()
-  })
+    log.debug("Core component destroyed");
+    unsubs.forEach((unsub) => unsub());
+    viewManager.onDestroy();
+    tabsService.onDestroy();
+  });
 
   $inspect(tabsService.tabs).with((...e) => {
-    log.debug('tabs changed:', e)
-  })
+    log.debug("tabs changed:", e);
+  });
 
   $inspect(tabsService.activeTab).with((...e) => {
-    log.debug('active tab changed:', e)
-  })
+    log.debug("active tab changed:", e);
+  });
 
   $inspect(tabsService.activatedTabs).with((...e) => {
-    log.debug('activated tabs changed:', e)
-  })
+    log.debug("activated tabs changed:", e);
+  });
 </script>
 
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
@@ -133,16 +144,20 @@
     <Link url="https://deta.surf">What is Surf?</Link>
   </div> -->
 
-  <div class="tabs">
-    <TabsList />
-    <!-- <Button onclick={handleClick}>Create Overlay</Button> -->
+  <div class="app-bar">
+    <div class="tabs">
+      <TabsList />
+      <!-- <Button onclick={handleClick}>Create Overlay</Button> -->
 
-    <!-- <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
+      <!-- <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
       <Test />
     </Overlay> -->
-  </div>
+    </div>
 
-  <NavigationBar />
+    {#if activeTabView}
+      <NavigationBar view={activeTabView} />
+    {/if}
+  </div>
 
   <div class="web-contents">
     {#each tabsService.tabs as tab, idx (tab.id)}
@@ -219,13 +234,16 @@
     }
   }
 
+  .app-bar {
+    background: var(--app-background);
+  }
+
   .tabs {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 0 5px;
-    background: var(--app-background);
-    border-bottom: 1px solid var(--border-color);
+    //border-bottom: 1px solid var(--border-color);
     app-region: drag;
   }
 

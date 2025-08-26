@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getAllContexts, mount, onMount, onDestroy, unmount } from "svelte";
-    import { useOverlayManager, type Overlay } from "@deta/services";
+    import { useOverlayManager, type Overlay } from "@deta/services/views";
     import type { Fn } from "@deta/types";
     import { copyStyles } from "@deta/utils/src/dom/copy-styles.svelte"
 

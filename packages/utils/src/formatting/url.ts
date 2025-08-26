@@ -1,5 +1,5 @@
 import { isIP } from 'is-ip'
-import { isWindows } from '../system/system'
+import { isWindows, isDev } from '../system/system'
 
 export const prependProtocol = (url: string, secure = true) => {
   try {
@@ -161,10 +161,10 @@ export const checkIfSpaceApp = (url: URL) => {
   )
 }
 
-export const checkIfLocalhost = (raw: string) => {
+export const checkIfLocalhost = (url: string | URL) => {
   try {
-    const url = new URL(prependProtocol(raw, false))
-    return url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+    const _url = url instanceof URL ? url : new URL(prependProtocol(url, false))
+    return _url.hostname === 'localhost' || _url.hostname === '127.0.0.1'
   } catch (error) {
     return false
   }
@@ -408,6 +408,7 @@ export const appendURLPath = (url: string, path: string) => {
 /**
  * Try to parse a surf protocol URL and return the resourceId
  * Surf protocol URL format: surf://resource/<id>
+ * @deprecated This is no longer valid with having other surf paths not only resource
  * @param rawUrl The URL to parse
  * @returns resourceId or null if the URL is not a surf protocol URL
  */
@@ -427,4 +428,62 @@ export const parseSurfProtocolURL = (rawUrl: URL | string) => {
   }
 
   return null
+}
+
+/**
+ * Returns whether a given URL if it is part of the internal "renderer" i.e:
+ *  in DEV: http://localhost:XXXX/...html
+ *  in PROD: file:///Users/max/Programming/Deta/surf/app/dist/mac-arm64/Surf.app/Contents/Resources/app.asar/out/renderer/Notebook/notebook.html?path=surf%3A%2F%2Fnotebook%2Fb75c4bc4-fbf9-46a0-ab35-2eca431f38e4&notebookId=b75c4bc4-fbf9-46a0-ab35-2eca431f38e4
+ *
+ */
+export function isInternalRendererURL(url: string | URL): URL | null {
+  try {
+    const _url = url instanceof URL ? url : new URL(url)
+    if (_url.protocol === 'surf:') return _url
+
+    if (
+      isDev &&
+      checkIfLocalhost(_url) &&
+      [
+        '/Notebook/notebook.html',
+        '/Resource/resource.html',
+        '/Overlay/overlay.html',
+        '/Announcements/announcements.html',
+        '/PDF/pdf.html',
+        '/Updates/updates.html',
+        '/Settings/settings.html',
+        '/Setup/setup.html',
+        '/Core/core.html'
+      ].includes(_url.pathname)
+    ) {
+      const rendererURL = new URL(
+        _url.searchParams.get('path') ??
+          (() => {
+            throw new Error('Invalid renderer path!')
+          })()
+      )
+
+      return rendererURL
+    }
+
+    // TODO: Improve prod path
+    if (
+      _url.protocol === 'file:' &&
+      _url.pathname.includes(
+        'Surf.app/Contents/Resources/app.asar/out/renderer/Notebook/notebook.html'
+      )
+    ) {
+      const rendererURL = new URL(
+        _url.searchParams.get('path') ??
+          (() => {
+            throw new Error('Invalid renderer path!')
+          })()
+      )
+
+      return rendererURL
+    }
+    return null
+  } catch {
+    return null
+  }
 }

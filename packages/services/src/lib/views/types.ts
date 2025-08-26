@@ -24,6 +24,8 @@ export type WebContentsViewEmitterEvents = {
 };
 
 export enum WebContentsEmitterNames {
+  DID_START_LOADING = "did-start-loading",
+  DID_STOP_LOADING = "did-stop-loading",
   LOADING_CHANGED = "loading-changed",
   PAGE_TITLE_UPDATED = "page-title-updated",
   PAGE_FAVICON_UPDATED = "page-favicon-updated",
@@ -38,6 +40,8 @@ export enum WebContentsEmitterNames {
 }
 
 export type WebContentsEmitterEvents = {
+  [WebContentsEmitterNames.DID_START_LOADING]: () => void;
+  [WebContentsEmitterNames.DID_STOP_LOADING]: () => void;
   [WebContentsEmitterNames.LOADING_CHANGED]: (
     isLoading: boolean,
     error: WebContentsError | null,

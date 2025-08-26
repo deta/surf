@@ -1,19 +1,13 @@
-import { tick } from "svelte";
-import {
-  derived,
-  get,
-  writable,
-  type Readable,
-  type Writable,
-} from "svelte/store";
+import { tick } from 'svelte'
+import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
 import {
   conditionalArrayItem,
   isDev,
   useLogScope,
   EventEmitterBase,
-  SearchResourceTags,
-} from "@deta/utils";
+  SearchResourceTags
+} from '@deta/utils'
 
 import {
   DeleteResourceEventTrigger,
@@ -22,95 +16,91 @@ import {
   type SpaceEntrySearchOptions,
   type NotebookData,
   type NotebookSpace,
-  type Space,
-} from "@deta/types";
+  type Space
+} from '@deta/types'
 
-import {
-  ResourceNote,
-  type ResourceManager,
-  type Resource,
-} from "@deta/services/resources";
-import { type Telemetry, type ConfigService } from "@deta/services";
-import type { SpaceBasicData } from "@deta/services/dist/ipc/events.js";
+import { ResourceNote, type ResourceManager, type Resource } from '@deta/services/resources'
+import { type Telemetry, type ConfigService } from '@deta/services'
+import type { SpaceBasicData } from '@deta/services/dist/ipc/events.js'
 
-import { Notebook } from "./notebook";
-import type { NotebookManagerEmitterEvents } from "./notebook.types";
+import { Notebook } from './notebook'
+import type { NotebookManagerEmitterEvents } from './notebook.types'
 
 export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEvents> {
-  notebooks: Writable<Notebook[]>;
-  selectedNotebook: Writable<string | null>;
+  notebooks: Writable<Notebook[]>
+  selectedNotebook: Writable<string | null>
 
-  everythingContents: Writable<Resource[]>;
-  loadingEverythingContents: Writable<boolean>;
-  sortedNotebooksList: Readable<Notebook[]>;
+  everythingContents: Writable<Resource[]>
+  loadingEverythingContents: Writable<boolean>
+  sortedNotebooksList: Readable<Notebook[]>
 
-  resourceManager: ResourceManager;
-  config: ConfigService;
-  telemetry: Telemetry;
-  log: ReturnType<typeof useLogScope>;
+  resourceManager: ResourceManager
+  config: ConfigService
+  telemetry: Telemetry
+  log: ReturnType<typeof useLogScope>
 
-  static self: NotebookManager;
+  static self: NotebookManager
 
   constructor(resourceManager: ResourceManager, config: ConfigService) {
-    super();
-    this.log = useLogScope("NotebookManager");
-    this.telemetry = resourceManager.telemetry;
-    this.resourceManager = resourceManager;
-    this.config = config;
+    super()
+    this.log = useLogScope('NotebookManager')
+    this.telemetry = resourceManager.telemetry
+    this.resourceManager = resourceManager
+    this.config = config
 
-    this.notebooks = writable<Notebook[]>([]);
-    this.selectedNotebook = writable<string | null>(null);
+    this.notebooks = writable<Notebook[]>([])
+    this.selectedNotebook = writable<string | null>(null)
 
-    this.everythingContents = writable([]);
-    this.loadingEverythingContents = writable(false);
+    this.everythingContents = writable([])
+    this.loadingEverythingContents = writable(false)
 
     this.sortedNotebooksList = derived(
       [this.notebooks, this.config.settings],
       ([$spaces, $userSettings]) => {
         const filteredSpaces = $spaces
-          .filter((space) => space.dataValue.name !== ".tempspace")
+          .filter((space) => space.dataValue.name !== '.tempspace')
           .sort((a, b) => {
-            return a.indexValue - b.indexValue;
-          });
+            return a.indexValue - b.indexValue
+          })
 
-        return filteredSpaces;
-      },
-    );
+        return filteredSpaces
+      }
+    )
 
-    this.init();
+    this.init()
 
     if (isDev) {
       // @ts-ignore
-      window.notebookManager = this;
+      window.notebookManager = this
     }
   }
 
   private async init() {
-    await this.loadNotebooks();
+    await this.loadNotebooks()
   }
 
   reloadNotebook(notebookId: string) {
-    this.emit("reload-notebook", notebookId);
+    this.emit('reload-notebook', notebookId)
   }
 
   private createNotebookObject(space: NotebookSpace) {
-    return new Notebook(space, this);
+    return new Notebook(space, this)
   }
 
   get notebooksValue() {
-    return get(this.notebooks);
+    return get(this.notebooks)
   }
 
   get selectedNotebookValue() {
-    return get(this.selectedNotebook);
+    return get(this.selectedNotebook)
   }
 
   get notebookSpacesValue() {
-    return get(this.notebooks).map((notebook) => notebook.spaceValue);
+    return get(this.notebooks).map((notebook) => notebook.spaceValue)
   }
 
   get sortedNotebooksListValue() {
-    return get(this.sortedNotebooksList);
+    return get(this.sortedNotebooksList)
   }
 
   updateMainProcessNotebooksList() {
@@ -120,26 +110,23 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
           id: space.id,
           name: space.dataValue.name,
           pinned: false,
-          linked: false,
-        }) as SpaceBasicData,
-    );
+          linked: false
+        }) as SpaceBasicData
+    )
 
     const filteredItems = items.filter(
-      (e) =>
-        e.id !== "all" &&
-        e.id !== "inbox" &&
-        e.name?.toLowerCase() !== ".tempspace",
-    );
+      (e) => e.id !== 'all' && e.id !== 'inbox' && e.name?.toLowerCase() !== '.tempspace'
+    )
 
-    this.log.debug("updating spaces list in main process", filteredItems);
-    window.api.updateSpacesList(filteredItems);
+    this.log.debug('updating spaces list in main process', filteredItems)
+    if (window.api.updateSpacesList) window.api.updateSpacesList(filteredItems)
   }
 
   triggerStoreUpdate(space: Notebook) {
     // trigger Svelte reactivity
     this.notebooks.update((spaces) => {
-      return spaces.map((s) => (s.id === space.id ? space : s));
-    });
+      return spaces.map((s) => (s.id === space.id ? space : s))
+    })
 
     // tick().then(() => {
     //   this.updateMainProcessNotebooksList();
@@ -147,15 +134,13 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   }
 
   async loadNotebooks() {
-    this.log.debug("fetching spaces");
-    let result = await this.resourceManager.listSpaces();
+    this.log.debug('fetching spaces')
+    let result = await this.resourceManager.listSpaces()
 
     // TODO: Felix — Continuation on felix/tempspace-removal: Remove all .tempspaces
-    const filteredResult = result.filter(
-      (space) => space.name.folderName !== ".tempspace",
-    );
-    result = filteredResult;
-    this.log.debug("fetched spaces:", result);
+    const filteredResult = result.filter((space) => space.name.folderName !== '.tempspace')
+    result = filteredResult
+    this.log.debug('fetched spaces:', result)
 
     const spaces = result
       // make sure each space has a index
@@ -164,32 +149,27 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
           ...space,
           name: {
             ...space.name,
-            index: space.name.index ?? idx,
-          },
-        };
+            index: space.name.index ?? idx
+          }
+        }
       })
       .sort((a, b) => (a.name.index ?? -1) - (b.name.index ?? -1))
       .map((space, idx) => ({ ...space, name: { ...space.name, index: idx } }))
-      .map((space) =>
-        this.createNotebookObject(space as unknown as NotebookSpace),
-      );
+      .map((space) => this.createNotebookObject(space as unknown as NotebookSpace))
 
-    this.log.debug("loaded spaces:", spaces);
+    this.log.debug('loaded spaces:', spaces)
 
-    this.notebooks.set(spaces);
+    this.notebooks.set(spaces)
 
     // tick().then(() => {
     //   this.updateMainProcessNotebooksList();
     // });
 
-    return result;
+    return result
   }
 
   async createNotebook(data: NotebookData, parentId?: string) {
-    this.log.debug(
-      "creating notebook",
-      parentId ? "as subfolder of " + parentId : "",
-    );
+    this.log.debug('creating notebook', parentId ? 'as subfolder of ' + parentId : '')
 
     const defaults = {
       showInSidebar: false,
@@ -197,134 +177,122 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       smartFilterQuery: null,
       sql_query: null,
       embedding_query: null,
-      sortBy: "resource_added_to_space",
+      sortBy: 'resource_added_to_space',
       builtIn: false,
       default: false,
       index: this.notebooksValue.length,
-      sources: [],
-    };
-
-    // Create a copy of the data to avoid modifying the original
-    let fullData = Object.assign({}, defaults, data);
-
-    let parentSpace: Notebook | undefined | null = null;
-    let parentData: NotebookData | null = null;
-
-    const result = await this.resourceManager.createSpace(fullData);
-    if (!result) {
-      this.log.error("failed to create space");
-      throw new Error("Failed to create space");
+      sources: []
     }
 
-    const space = this.createNotebookObject(result as unknown as NotebookSpace);
+    // Create a copy of the data to avoid modifying the original
+    let fullData = Object.assign({}, defaults, data)
 
-    this.log.debug("created space:", space);
+    let parentSpace: Notebook | undefined | null = null
+    let parentData: NotebookData | null = null
+
+    const result = await this.resourceManager.createSpace(fullData)
+    if (!result) {
+      this.log.error('failed to create space')
+      throw new Error('Failed to create space')
+    }
+
+    const space = this.createNotebookObject(result as unknown as NotebookSpace)
+
+    this.log.debug('created space:', space)
     this.notebooks.update((spaces) => {
-      return [...spaces, space];
-    });
+      return [...spaces, space]
+    })
 
     if (parentId && parentSpace && parentData) {
       await this.resourceManager.sffs.addSubspacesToSpace(
         parentId,
         [space.id],
-        SpaceEntryOrigin.ManuallyAdded,
-      );
+        SpaceEntryOrigin.ManuallyAdded
+      )
     }
-    await this.loadNotebooks();
-    this.emit("created", space);
-    return space;
+    await this.loadNotebooks()
+    this.emit('created', space)
+    return space
   }
 
   async getNotebook(notebookId: string, fresh = false) {
-    const storedSpace = get(this.notebooks).find(
-      (space) => space.id === notebookId,
-    );
+    const storedSpace = get(this.notebooks).find((space) => space.id === notebookId)
     if (storedSpace && !fresh) {
-      return storedSpace;
+      return storedSpace
     }
 
-    const result = await this.resourceManager.getSpace(notebookId);
+    const result = await this.resourceManager.getSpace(notebookId)
     if (!result) {
-      this.log.error("space not found:", notebookId);
-      return null;
+      this.log.error('space not found:', notebookId)
+      return null
     }
 
-    const space = this.createNotebookObject(result as unknown as NotebookSpace);
+    const space = this.createNotebookObject(result as unknown as NotebookSpace)
     this.notebooks.update((notebooks) => {
-      return notebooks.map((s) => (s.id === notebookId ? space : s));
-    });
+      return notebooks.map((s) => (s.id === notebookId ? space : s))
+    })
 
-    this.log.debug("got space:", space);
+    this.log.debug('got space:', space)
 
-    return space;
+    return space
   }
 
   async deleteNotebook(notebookId: string) {
-    this.log.debug("deleting notebook", notebookId);
+    this.log.debug('deleting notebook', notebookId)
 
     // Proceed with normal notebook deletion
-    await this.resourceManager.deleteSpace(notebookId);
+    await this.resourceManager.deleteSpace(notebookId)
 
-    this.log.debug("deleted notebook:", notebookId);
+    this.log.debug('deleted notebook:', notebookId)
 
-    const filtered = get(this.notebooks).filter(
-      (space) => space.id !== notebookId,
-    );
+    const filtered = get(this.notebooks).filter((space) => space.id !== notebookId)
 
-    await Promise.all(filtered.map((space, idx) => space.updateIndex(idx)));
+    await Promise.all(filtered.map((space, idx) => space.updateIndex(idx)))
 
-    this.notebooks.set(filtered);
+    this.notebooks.set(filtered)
 
-    if (
-      get(this.selectedNotebook) === notebookId &&
-      notebookId !== ".tempspace"
-    ) {
-      this.changeSelectedNotebook(null);
+    if (get(this.selectedNotebook) === notebookId && notebookId !== '.tempspace') {
+      this.changeSelectedNotebook(null)
     }
 
-    await this.loadNotebooks();
-    this.emit("deleted", notebookId);
+    await this.loadNotebooks()
+    this.emit('deleted', notebookId)
   }
 
   async updateNotebookData(id: string, updates: Partial<NotebookData>) {
-    this.log.debug("updating notebook", id, updates);
+    this.log.debug('updating notebook', id, updates)
 
-    const space = await this.getNotebook(id);
+    const space = await this.getNotebook(id)
     if (!space) {
-      this.log.error("space not found:", id);
-      throw new Error("Space not found");
+      this.log.error('space not found:', id)
+      throw new Error('Space not found')
     }
 
-    await space.updateData(updates);
-    this.log.debug("updated space:", space);
+    await space.updateData(updates)
+    this.log.debug('updated space:', space)
 
-    this.triggerStoreUpdate(space);
+    this.triggerStoreUpdate(space)
 
-    return space;
+    return space
   }
 
   async addResourcesToNotebook(
     notebookId: string,
     resourceIds: string[],
-    origin: SpaceEntryOrigin,
+    origin: SpaceEntryOrigin
   ) {
-    this.log.debug(
-      "adding resources to notebook",
-      notebookId,
-      resourceIds,
-      origin,
-    );
+    this.log.debug('adding resources to notebook', notebookId, resourceIds, origin)
 
-    const notebook = await this.getNotebook(notebookId);
+    const notebook = await this.getNotebook(notebookId)
     if (!notebook) {
-      this.log.error("notebook not found:", notebookId);
-      throw new Error("Notebook not found");
+      this.log.error('notebook not found:', notebookId)
+      throw new Error('Notebook not found')
     }
 
-    await notebook.addResources(resourceIds, origin);
-    this.log.debug("added resources to notebook");
-    this.triggerStoreUpdate(notebook);
-    return notebook;
+    await notebook.addResources(resourceIds, origin)
+    this.log.debug('added resources to notebook')
+    this.triggerStoreUpdate(notebook)
+    return notebook
   }
 
   /**
@@ -334,17 +302,14 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
    * @param includeFolderData Whether to include folder-specific data (child folders, path)
    * @returns The space contents or folder contents response
    */
-  async getNotebookContents(
-    notebookId: string,
-    opts?: SpaceEntrySearchOptions,
-  ) {
-    this.log.debug("getting notebook contents", notebookId);
-    const notebook = await this.getNotebook(notebookId);
+  async getNotebookContents(notebookId: string, opts?: SpaceEntrySearchOptions) {
+    this.log.debug('getting notebook contents', notebookId)
+    const notebook = await this.getNotebook(notebookId)
     if (!notebook) {
-      this.log.error("notebook not found:", notebookId);
-      throw new Error("Notebook not found");
+      this.log.error('notebook not found:', notebookId)
+      throw new Error('Notebook not found')
     }
-    return await notebook.fetchContents(opts);
+    return await notebook.fetchContents(opts)
   }
 
   /**
@@ -353,65 +318,58 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
    * @returns Array of ResourceNote objects from the space
    */
   async fetchNoteResourcesFromNotebook(notebookId: string) {
-    this.log.debug("Fetching note resources for notebook:", notebookId);
+    this.log.debug('Fetching note resources for notebook:', notebookId)
 
     // Get the notebook
-    const notebook = await this.getNotebook(notebookId);
+    const notebook = await this.getNotebook(notebookId)
     if (!notebook) {
-      this.log.error("Notebook not found:", notebookId);
-      return [];
+      this.log.error('Notebook not found:', notebookId)
+      return []
     }
 
     // Get notebook contents
-    const notebookContents = (await notebook.fetchContents()) ?? [];
+    const notebookContents = (await notebook.fetchContents()) ?? []
 
     // Extract IDs of note resources
     const noteIds = notebookContents
       .filter(
         (entry) =>
           entry.manually_added !== SpaceEntryOrigin.Blacklisted &&
-          entry.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE,
+          entry.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE
       )
-      .map((entry) => entry.entry_id);
+      .map((entry) => entry.entry_id)
 
     // Load all note resources in parallel
-    const resources = await Promise.all(
-      noteIds.map((id) => this.resourceManager.getResource(id)),
-    );
+    const resources = await Promise.all(noteIds.map((id) => this.resourceManager.getResource(id)))
 
     // Filter valid resources
-    const filteredResources = resources.filter(Boolean) as ResourceNote[];
+    const filteredResources = resources.filter(Boolean) as ResourceNote[]
 
-    return filteredResources;
+    return filteredResources
   }
 
   /** Deletes the provided resources from Oasis and gets rid of all references in any notebook */
   async deleteResourcesFromSurf(resourceIds: string | string[]) {
-    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds];
-    this.log.debug("removing resources", resourceIds);
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+    this.log.debug('removing resources', resourceIds)
 
     const resources = await Promise.all(
-      resourceIds.map((id) => this.resourceManager.getResource(id)),
-    );
-    const validResources = resources.filter(
-      (resource) => resource !== null,
-    ) as Resource[];
-    const validResourceIDs = validResources.map((resource) => resource.id);
+      resourceIds.map((id) => this.resourceManager.getResource(id))
+    )
+    const validResources = resources.filter((resource) => resource !== null) as Resource[]
+    const validResourceIDs = validResources.map((resource) => resource.id)
 
     if (validResourceIDs.length === 0) {
-      this.log.error("No valid resources found");
-      return false;
+      this.log.error('No valid resources found')
+      return false
     }
 
     const allReferences = await Promise.all(
       validResourceIDs.map((id) =>
-        this.resourceManager.getAllReferences(
-          id,
-          this.notebookSpacesValue as unknown as Space[],
-        ),
-      ),
-    );
-    this.log.debug("all references:", allReferences);
+        this.resourceManager.getAllReferences(id, this.notebookSpacesValue as unknown as Space[])
+      )
+    )
+    this.log.debug('all references:', allReferences)
 
     // turn the array of references into an array of spaces with the resources to remove
     const spacesWithReferences = allReferences
@@ -419,40 +377,35 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       .map((references) => {
         return {
           spaceId: references[0].folderId,
-          resourceIds: references.map((ref) => ref.resourceId),
-        };
+          resourceIds: references.map((ref) => ref.resourceId)
+        }
       })
       .filter((entry, index, self) => {
-        return self.findIndex((e) => e.spaceId === entry.spaceId) === index;
-      });
+        return self.findIndex((e) => e.spaceId === entry.spaceId) === index
+      })
 
-    this.log.debug(
-      "deleting resource references from spaces",
-      spacesWithReferences,
-    );
+    this.log.debug('deleting resource references from spaces', spacesWithReferences)
     await Promise.all(
       spacesWithReferences.map(async (entry) => {
-        const space = await this.getNotebook(entry.spaceId);
+        const space = await this.getNotebook(entry.spaceId)
         if (space) {
-          await space.removeResources(entry.resourceIds);
+          await space.removeResources(entry.resourceIds)
         }
-      }),
-    );
+      })
+    )
 
-    this.log.debug("deleting resources from oasis", validResourceIDs);
-    await this.resourceManager.deleteResources(validResourceIDs);
+    this.log.debug('deleting resources from oasis', validResourceIDs)
+    await this.resourceManager.deleteResources(validResourceIDs)
 
     // this.log.debug('removing resource bookmarks from tabs', validResourceIDs)
     // await Promise.all(validResourceIDs.map((id) => this.tabsManager.removeResourceBookmarks(id)))
 
-    this.log.debug("removing deleted smart notes", validResourceIDs);
+    this.log.debug('removing deleted smart notes', validResourceIDs)
 
-    this.log.debug("updating everything after resource deletion");
+    this.log.debug('updating everything after resource deletion')
     this.everythingContents.update((contents) => {
-      return contents.filter(
-        (resource) => !validResourceIDs.includes(resource.id),
-      );
-    });
+      return contents.filter((resource) => !validResourceIDs.includes(resource.id))
+    })
 
     await Promise.all(
       validResources.map((resource) =>
@@ -461,52 +414,44 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
           false,
           validResources.length > 1
             ? DeleteResourceEventTrigger.OasisMultiSelect
-            : DeleteResourceEventTrigger.OasisItem,
-        ),
-      ),
-    );
+            : DeleteResourceEventTrigger.OasisItem
+        )
+      )
+    )
 
-    this.log.debug("deleted resources:", resourceIds);
-    return resourceIds;
+    this.log.debug('deleted resources:', resourceIds)
+    return resourceIds
   }
 
   /** Removes the provided resources from the notebook */
-  async removeResourcesFromNotebook(
-    notebookId: string,
-    resourceIds: string | string[],
-  ) {
-    const notebook = await this.getNotebook(notebookId);
+  async removeResourcesFromNotebook(notebookId: string, resourceIds: string | string[]) {
+    const notebook = await this.getNotebook(notebookId)
     if (!notebook) {
-      this.log.error("notebook not found:", notebookId);
-      throw new Error("Notebook not found");
+      this.log.error('notebook not found:', notebookId)
+      throw new Error('Notebook not found')
     }
 
-    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds];
-    this.log.debug("removing resources", resourceIds);
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+    this.log.debug('removing resources', resourceIds)
 
     const resources = await Promise.all(
-      resourceIds.map((id) => this.resourceManager.getResource(id)),
-    );
+      resourceIds.map((id) => this.resourceManager.getResource(id))
+    )
 
-    const validResources = resources.filter(
-      (resource) => resource !== null,
-    ) as Resource[];
+    const validResources = resources.filter((resource) => resource !== null) as Resource[]
     if (validResources.length === 0) {
-      this.log.error("No valid resources found");
-      return false;
+      this.log.error('No valid resources found')
+      return false
     }
 
-    this.log.debug(
-      "removing resource entries from notebook...",
-      validResources,
-    );
+    this.log.debug('removing resource entries from notebook...', validResources)
 
     const removedResources = await notebook.removeResources(
-      validResources.map((resource) => resource.id),
-    );
-    this.log.debug("removed resource entries from notebook", removedResources);
+      validResources.map((resource) => resource.id)
+    )
+    this.log.debug('removed resource entries from notebook', removedResources)
 
-    this.triggerStoreUpdate(notebook);
+    this.triggerStoreUpdate(notebook)
 
     await Promise.all(
       validResources.map((resource) =>
@@ -515,153 +460,143 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
           true,
           validResources.length > 1
             ? DeleteResourceEventTrigger.OasisMultiSelect
-            : DeleteResourceEventTrigger.OasisItem,
-        ),
-      ),
-    );
+            : DeleteResourceEventTrigger.OasisItem
+        )
+      )
+    )
 
-    this.log.debug("resources removed from space:", resourceIds);
-    return removedResources;
+    this.log.debug('resources removed from space:', resourceIds)
+    return removedResources
   }
 
   /** Remove a resource from a specific notebook, or from Stuff entirely if no notebook is provided.
    * throws: Error in various failure cases.
    */
   async removeResources(resourceIds: string | string[], notebookId?: string) {
-    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds];
-    this.log.debug(
-      "removing resources from",
-      notebookId ?? "oasis",
-      resourceIds,
-    );
+    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+    this.log.debug('removing resources from', notebookId ?? 'oasis', resourceIds)
 
     if (!notebookId) {
-      return this.deleteResourcesFromSurf(resourceIds);
+      return this.deleteResourcesFromSurf(resourceIds)
     }
-    return this.removeResourcesFromNotebook(notebookId, resourceIds);
+    return this.removeResourcesFromNotebook(notebookId, resourceIds)
   }
 
   async loadEverything() {
     try {
       if (get(this.loadingEverythingContents)) {
-        this.log.debug("Already loading everything");
-        return;
+        this.log.debug('Already loading everything')
+        return
       }
 
-      this.loadingEverythingContents.set(true);
-      this.everythingContents.set([]);
-      await tick();
+      this.loadingEverythingContents.set(true)
+      this.everythingContents.set([])
+      await tick()
 
-      const excludeAnnotations = !get(this.config.settings)
-        .show_annotations_in_oasis;
+      const excludeAnnotations = !get(this.config.settings).show_annotations_in_oasis
       // const selectedFilterType = get(this.selectedFilterType)
 
-      this.log.debug("loading everything", { excludeAnnotations });
+      this.log.debug('loading everything', { excludeAnnotations })
       const resources = await this.resourceManager.listResourcesByTags(
         [
           ...SearchResourceTags.NonHiddenDefaultTags({
-            excludeAnnotations: excludeAnnotations,
+            excludeAnnotations: excludeAnnotations
           }),
           // ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
           ...conditionalArrayItem(
-            get(this.selectedNotebook) === "notes",
-            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
-          ),
+            get(this.selectedNotebook) === 'notes',
+            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          )
         ],
         {
           includeAnnotations: true,
-          excludeWithinSpaces: get(this.selectedNotebook) === "inbox",
-        },
-      );
+          excludeWithinSpaces: get(this.selectedNotebook) === 'inbox'
+        }
+      )
 
-      this.log.debug("Loaded everything:", resources);
-      this.everythingContents.set(resources);
+      this.log.debug('Loaded everything:', resources)
+      this.everythingContents.set(resources)
 
-      return resources;
+      return resources
     } catch (error) {
-      this.log.error("Failed to load everything:", error);
-      throw error;
+      this.log.error('Failed to load everything:', error)
+      throw error
     } finally {
-      this.loadingEverythingContents.set(false);
+      this.loadingEverythingContents.set(false)
     }
   }
 
   async changeSelectedNotebook(notebookId: string | null) {
-    this.selectedNotebook.set(notebookId);
+    this.selectedNotebook.set(notebookId)
     // this.selectedFilterTypeId.set(null)
   }
 
   async resetSelectedNotebook() {
-    this.changeSelectedNotebook(null);
+    this.changeSelectedNotebook(null)
   }
 
   async moveNotebookToIndex(notebookId: string, targetIndex: number) {
-    const notebook = await this.getNotebook(notebookId);
+    const notebook = await this.getNotebook(notebookId)
     if (!notebook) {
-      this.log.error("notebook not found:", notebookId);
-      throw new Error("Notebook not found");
+      this.log.error('notebook not found:', notebookId)
+      throw new Error('Notebook not found')
     }
 
-    const notebooks = get(this.notebooks);
-    const currentIndex = notebooks.findIndex((s) => s.id === notebookId);
+    const notebooks = get(this.notebooks)
+    const currentIndex = notebooks.findIndex((s) => s.id === notebookId)
 
     if (currentIndex === -1) {
-      throw new Error("Notebook not found in notebooks array");
+      throw new Error('Notebook not found in notebooks array')
     }
 
-    const clampedTargetIndex = Math.min(
-      Math.max(0, targetIndex),
-      notebooks.length - 1,
-    );
+    const clampedTargetIndex = Math.min(Math.max(0, targetIndex), notebooks.length - 1)
 
-    if (currentIndex === clampedTargetIndex) return;
+    if (currentIndex === clampedTargetIndex) return
 
     this.log.debug(
-      "moving notebook",
+      'moving notebook',
       notebookId,
-      "from index",
+      'from index',
       currentIndex,
-      "to index",
+      'to index',
       clampedTargetIndex,
-      targetIndex !== clampedTargetIndex ? `(clamped from ${targetIndex})` : "",
-    );
+      targetIndex !== clampedTargetIndex ? `(clamped from ${targetIndex})` : ''
+    )
 
-    const newNotebooks = [...notebooks];
-    const [movedNotebook] = newNotebooks.splice(currentIndex, 1);
-    newNotebooks.splice(clampedTargetIndex, 0, movedNotebook!);
+    const newNotebooks = [...notebooks]
+    const [movedNotebook] = newNotebooks.splice(currentIndex, 1)
+    newNotebooks.splice(clampedTargetIndex, 0, movedNotebook!)
 
     try {
       const updates = newNotebooks
         .map((notebook, index) => ({ notebook, index }))
-        .filter(({ notebook, index }) => notebook.indexValue !== index);
+        .filter(({ notebook, index }) => notebook.indexValue !== index)
 
-      await Promise.all(
-        updates.map(({ notebook, index }) => notebook.updateIndex(index)),
-      );
+      await Promise.all(updates.map(({ notebook, index }) => notebook.updateIndex(index)))
 
-      this.notebooks.set(newNotebooks);
+      this.notebooks.set(newNotebooks)
 
-      this.log.debug("moved notebook", notebookId, "to index", targetIndex);
+      this.log.debug('moved notebook', notebookId, 'to index', targetIndex)
     } catch (error) {
-      this.log.error("failed to move notebook:", error);
-      throw new Error("Failed to move notebook");
+      this.log.error('failed to move notebook:', error)
+      throw new Error('Failed to move notebook')
     }
   }
 
   static provide(resourceManager: ResourceManager, config: ConfigService) {
-    const service = new NotebookManager(resourceManager, config);
-    if (!NotebookManager.self) NotebookManager.self = service;
+    const service = new NotebookManager(resourceManager, config)
+    if (!NotebookManager.self) NotebookManager.self = service
 
-    return service;
+    return service
   }
 
   static use() {
     if (!NotebookManager.self) {
-      throw new Error("NotebookManager not initialized");
+      throw new Error('NotebookManager not initialized')
     }
-    return NotebookManager.self;
+    return NotebookManager.self
   }
 }
 
-export const useNotebookManager = NotebookManager.use;
-export const createNotebookManager = NotebookManager.provide;
+export const useNotebookManager = NotebookManager.use
+export const createNotebookManager = NotebookManager.provide

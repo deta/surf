@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          filter: "blob:none"
+          filter: 'blob:none'
           fetch-depth: 0
 
       - name: Set up Node.js

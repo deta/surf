@@ -58,7 +58,7 @@
 </script>
 
 {#if url && typeof url === 'string' && url.startsWith('http://localhost')}
-  <DynamicIcon name="icon;;file-text-ai" />
+  <DynamicIcon name="icon;;file-text-ai" size="1rem"/>
 {:else if loaded && !error && faviconURL}
   <img bind:this={imgElement} src={faviconURL} alt={title} draggable="false" />
 {:else}
