@@ -1,226 +1,217 @@
-import { CreateTabEventTrigger, type UserStats } from "@deta/types";
-import { isDev, useLogScope } from "@deta/utils";
+import { CreateTabEventTrigger, type UserStats } from '@deta/types'
+import { isDev, useLogScope } from '@deta/utils'
 // import { NOTIFICATION_CONTENTS, showNotification } from '@deta/ui'
 
 export class UserStatsService {
   static get log(): ReturnType<typeof useLogScope> {
-    return useLogScope("UserStats");
+    return useLogScope('UserStats')
   }
 
   static async getUserStats(): Promise<UserStats | null> {
     // @ts-ignore
-    const stats = await window.api.getUserStats();
-    return stats;
+    const stats = await window.api.getUserStats()
+    return stats
   }
 
-  static CHECK_NOTIFY_INTERVAL = isDev ? 1000 : 1000 * 60 * 1;
-  static checkUserNotifyRef: NodeJS.Timeout | null = null;
-  static isShowingNotification = false;
+  static CHECK_NOTIFY_INTERVAL = isDev ? 1000 : 1000 * 60 * 1
+  static checkUserNotifyRef: NodeJS.Timeout | null = null
+  static isShowingNotification = false
 
   static storeUserStats(stats: UserStats) {
     // @ts-ignore
-    window.api.updateUserStats(stats);
+    window.api.updateUserStats(stats)
   }
 
   static async startSession() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
     const session = {
       startedAt: Date.now(),
-      events: [],
-    };
-    stats.sessions = [...stats.sessions, session];
+      events: []
+    }
+    stats.sessions = [...stats.sessions, session]
 
-    UserStatsService.storeUserStats(stats);
+    UserStatsService.storeUserStats(stats)
   }
 
   static async endSession() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
-    const session = stats.sessions.at(-1);
-    if (!session) return;
-    session.endedAt = Date.now();
-    session.duration = session?.endedAt - session?.startedAt;
+    const session = stats.sessions.at(-1)
+    if (!session) return
+    session.endedAt = Date.now()
+    session.duration = session?.endedAt - session?.startedAt
 
-    UserStatsService.storeUserStats(stats);
+    UserStatsService.storeUserStats(stats)
   }
 
   static async getSessions() {
-    if (!window) return undefined;
-    return (await UserStatsService.getUserStats())?.sessions;
+    if (!window) return undefined
+    return (await UserStatsService.getUserStats())?.sessions
   }
   static async getTimeSinceSessionStarted() {
-    if (!window) return 0;
-    const sessions = await UserStatsService.getSessions();
-    if (!sessions) return 0;
-    const currSession = sessions.at(-1);
-    if (!currSession) return 0;
-    else return Date.now() - (currSession.startedAt ?? 0);
+    if (!window) return 0
+    const sessions = await UserStatsService.getSessions()
+    if (!sessions) return 0
+    const currSession = sessions.at(-1)
+    if (!currSession) return 0
+    else return Date.now() - (currSession.startedAt ?? 0)
   }
   static async getSessionsDurationSum() {
-    if (!window) return 0;
-    const sessions = await UserStatsService.getSessions();
-    if (!sessions) return 0;
-    let sum = 0;
+    if (!window) return 0
+    const sessions = await UserStatsService.getSessions()
+    if (!sessions) return 0
+    let sum = 0
     for (const session of sessions) {
-      sum += session?.duration ?? 0;
+      sum += session?.duration ?? 0
     }
-    return sum;
+    return sum
   }
 
   // Returns the max "streak" of having any session in a day.
   static async getNDaysInARowSession(): Promise<number> {
-    if (!window) return 0;
-    const sessions = await UserStatsService.getSessions();
-    if (!sessions || !sessions.length) return 0;
+    if (!window) return 0
+    const sessions = await UserStatsService.getSessions()
+    if (!sessions || !sessions.length) return 0
 
     // Sort sessions by startedAt to validate endedAt
-    const sortedSessions = [...sessions].sort(
-      (a, b) => a.startedAt - b.startedAt,
-    );
+    const sortedSessions = [...sessions].sort((a, b) => a.startedAt - b.startedAt)
 
     // Create a Map to store days with sessions
-    const daysWithSessions = new Map<string, boolean>();
+    const daysWithSessions = new Map<string, boolean>()
 
     sortedSessions.forEach((session, index) => {
       // Skip sessions with invalid endedAt (if there's a later session)
-      if (session.endedAt === undefined && index < sortedSessions.length - 1)
-        return;
+      if (session.endedAt === undefined && index < sortedSessions.length - 1) return
 
-      const startDate = new Date(session.startedAt);
-      const endDate = session.endedAt ? new Date(session.endedAt) : new Date();
+      const startDate = new Date(session.startedAt)
+      const endDate = session.endedAt ? new Date(session.endedAt) : new Date()
 
-      let currentDate = new Date(startDate);
-      currentDate.setHours(0, 0, 0, 0);
+      let currentDate = new Date(startDate)
+      currentDate.setHours(0, 0, 0, 0)
 
-      const endDateTime = new Date(endDate);
-      endDateTime.setHours(23, 59, 59, 999);
+      const endDateTime = new Date(endDate)
+      endDateTime.setHours(23, 59, 59, 999)
 
       // Add each day between start and end
       while (currentDate <= endDateTime) {
-        daysWithSessions.set(currentDate.toISOString().split("T")[0], true);
-        currentDate.setDate(currentDate.getDate() + 1);
+        daysWithSessions.set(currentDate.toISOString().split('T')[0], true)
+        currentDate.setDate(currentDate.getDate() + 1)
       }
-    });
+    })
 
     // Convert to sorted array of dates
-    const dates = [...daysWithSessions.keys()].sort();
+    const dates = [...daysWithSessions.keys()].sort()
 
-    let maxStreak = 1;
-    let currentStreak = 1;
+    let maxStreak = 1
+    let currentStreak = 1
 
     // Calculate streaks
     for (let i = 1; i < dates.length; i++) {
-      const prevDate = new Date(dates[i - 1]);
-      const currDate = new Date(dates[i]);
+      const prevDate = new Date(dates[i - 1])
+      const currDate = new Date(dates[i])
 
-      const dayDiff =
-        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+      const dayDiff = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
 
       if (dayDiff === 1) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
+        currentStreak++
+        maxStreak = Math.max(maxStreak, currentStreak)
       } else {
-        currentStreak = 1;
+        currentStreak = 1
       }
     }
 
-    return maxStreak;
+    return maxStreak
   }
 
   static async incStat(key: string) {
-    if (!window) return;
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    if (!window) return
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
     if (!Object.keys(stats).includes(key)) {
-      UserStatsService.log.error(`Tried to increment invalid key: ${key}!`);
-      return;
+      UserStatsService.log.error(`Tried to increment invalid key: ${key}!`)
+      return
     }
 
     // @ts-ignore - this is ok
-    stats[key] += 1;
+    stats[key] += 1
 
-    UserStatsService.storeUserStats(stats);
+    UserStatsService.storeUserStats(stats)
   }
 
   static async getSetDefaultBrowserLastShownDiff() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return 9999999999999;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return 9999999999999
 
-    return Math.abs(
-      Date.now() - stats.timestamp_last_prompt_set_default_browser,
-    );
+    return Math.abs(Date.now() - stats.timestamp_last_prompt_set_default_browser)
   }
   static async setSetDefaultBrowserLastShownDiff() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
-    stats.timestamp_last_prompt_set_default_browser = Date.now();
-    UserStatsService.storeUserStats(stats);
+    stats.timestamp_last_prompt_set_default_browser = Date.now()
+    UserStatsService.storeUserStats(stats)
   }
 
   static async getDontShowPromptSetDefaultBrowser() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
-    return stats.dont_show_prompt_set_default_browser;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
+    return stats.dont_show_prompt_set_default_browser
   }
   static async setDontShowPromptSetDefaultBrowser(v: boolean) {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
-    stats.dont_show_prompt_set_default_browser = v;
-    UserStatsService.storeUserStats(stats);
+    stats.dont_show_prompt_set_default_browser = v
+    UserStatsService.storeUserStats(stats)
   }
 
   private static async checkDefaultBrowserPrompt() {
     // @ts-ignore
-    if (await window.api.isDefaultBrowser()) return;
+    if (await window.api.isDefaultBrowser()) return
     if (
       !isDev &&
       ((await UserStatsService.getDontShowPromptSetDefaultBrowser()) ||
         (await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2)
     )
-      return;
+      return
 
-    const stats = await UserStatsService.getUserStats();
+    const stats = await UserStatsService.getUserStats()
     if (!stats) {
-      UserStatsService.log.warn("Could not get userStats!");
-      return;
+      UserStatsService.log.warn('Could not get userStats!')
+      return
     }
 
-    let show = false;
-    const isFirstNotification =
-      stats.timestamp_last_prompt_set_default_browser === 9999999999999;
-    const lastShownDiff =
-      await UserStatsService.getSetDefaultBrowserLastShownDiff();
+    let show = false
+    const isFirstNotification = stats.timestamp_last_prompt_set_default_browser === 9999999999999
+    const lastShownDiff = await UserStatsService.getSetDefaultBrowserLastShownDiff()
 
     // Total session time > 1h
-    const SUM_TIME =
-      ((await UserStatsService.getSessionsDurationSum()) ?? 0) / 1000 / 60;
+    const SUM_TIME = ((await UserStatsService.getSessionsDurationSum()) ?? 0) / 1000 / 60
     if (SUM_TIME > 60 * 5 || SUM_TIME > 60 * 3 || SUM_TIME > 60 * 1) {
-      if (lastShownDiff > 1000 * 60 * 60) show = true;
+      if (lastShownDiff > 1000 * 60 * 60) show = true
     }
 
     if (stats) {
-      if (stats.global_n_saves_to_oasis > 20) show = true;
-      else if (stats.global_n_contexts_created > 8) show = true;
-      else if (stats.global_n_chatted_with_space > 2) show = true;
-      else if (stats.global_n_chat_message_sent > 7) show = true;
-      else if (stats.global_n_use_inline_tools > 4) show = true;
-      else if (stats.global_n_saves_to_oasis > 20) show = true;
-      else if (stats.global_n_create_annotation > 4) show = true;
-      else if (stats.global_n_update_homescreen > 30) show = true;
+      if (stats.global_n_saves_to_oasis > 20) show = true
+      else if (stats.global_n_contexts_created > 8) show = true
+      else if (stats.global_n_chatted_with_space > 2) show = true
+      else if (stats.global_n_chat_message_sent > 7) show = true
+      else if (stats.global_n_use_inline_tools > 4) show = true
+      else if (stats.global_n_saves_to_oasis > 20) show = true
+      else if (stats.global_n_create_annotation > 4) show = true
+      else if (stats.global_n_update_homescreen > 30) show = true
 
-      if (show && lastShownDiff < 1000 * 60 * 60) show = false;
+      if (show && lastShownDiff < 1000 * 60 * 60) show = false
     }
 
-    if (!show || UserStatsService.isShowingNotification) return;
-    UserStatsService.isShowingNotification = true;
+    if (!show || UserStatsService.isShowingNotification) return
+    UserStatsService.isShowingNotification = true
 
-    UserStatsService.setSetDefaultBrowserLastShownDiff();
+    UserStatsService.setSetDefaultBrowserLastShownDiff()
 
     // const { closeType, submitValue } = await showNotification({
     //   title: NOTIFICATION_CONTENTS.default_browser.title,
@@ -246,29 +237,29 @@ export class UserStatsService {
   }
 
   static async getBookCallPromptLastShownDiff() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return 9999999999999;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return 9999999999999
 
-    return Math.abs(Date.now() - stats.timestamp_last_prompt_book_call);
+    return Math.abs(Date.now() - stats.timestamp_last_prompt_book_call)
   }
   static async setBookCallPromptLastShownDiff() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
-    stats.timestamp_last_prompt_book_call = Date.now();
-    UserStatsService.storeUserStats(stats);
+    stats.timestamp_last_prompt_book_call = Date.now()
+    UserStatsService.storeUserStats(stats)
   }
   static async getDontShowBookCallPrompt() {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
-    return stats.dont_show_prompt_book_call;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
+    return stats.dont_show_prompt_book_call
   }
   static async setDontShowBookCallPrompt(v: boolean) {
-    const stats = await UserStatsService.getUserStats();
-    if (!stats) return;
+    const stats = await UserStatsService.getUserStats()
+    if (!stats) return
 
-    stats.dont_show_prompt_book_call = v;
-    UserStatsService.storeUserStats(stats);
+    stats.dont_show_prompt_book_call = v
+    UserStatsService.storeUserStats(stats)
   }
 
   private static async checkUserCallPrompt() {
@@ -277,24 +268,22 @@ export class UserStatsService {
       ((await UserStatsService.getDontShowBookCallPrompt()) ||
         (await UserStatsService.getTimeSinceSessionStarted()) < 1000 * 60 * 2)
     )
-      return;
+      return
 
-    const stats = await UserStatsService.getUserStats();
+    const stats = await UserStatsService.getUserStats()
     if (!stats) {
-      UserStatsService.log.warn("Could not get userStats!");
-      return;
+      UserStatsService.log.warn('Could not get userStats!')
+      return
     }
 
-    let show = false;
-    const isFirstNotification =
-      stats.timestamp_last_prompt_book_call === 9999999999999;
-    const lastShownDiff =
-      await UserStatsService.getBookCallPromptLastShownDiff();
+    let show = false
+    const isFirstNotification = stats.timestamp_last_prompt_book_call === 9999999999999
+    const lastShownDiff = await UserStatsService.getBookCallPromptLastShownDiff()
 
     if (stats) {
-      if (stats.global_n_saves_to_oasis >= 20) show = true;
+      if (stats.global_n_saves_to_oasis >= 20) show = true
 
-      if (show && lastShownDiff < 1000 * 60 * 60 * 3) show = false;
+      if (show && lastShownDiff < 1000 * 60 * 60 * 3) show = false
     }
 
     // if (!DesktopManager.self) {
@@ -318,13 +307,13 @@ export class UserStatsService {
     // if (customDesktopsN < 1) return
 
     //   use the product 3 days in a row
-    const maxStreak = await UserStatsService.getNDaysInARowSession();
-    if (maxStreak < 3) return;
+    const maxStreak = await UserStatsService.getNDaysInARowSession()
+    if (maxStreak < 3) return
 
-    if (!show || UserStatsService.isShowingNotification) return;
-    UserStatsService.isShowingNotification = true;
+    if (!show || UserStatsService.isShowingNotification) return
+    UserStatsService.isShowingNotification = true
 
-    UserStatsService.setBookCallPromptLastShownDiff();
+    UserStatsService.setBookCallPromptLastShownDiff()
 
     // const { closeType, submitValue } = await showNotification({
     //   title: NOTIFICATION_CONTENTS.book_call.title,
@@ -361,14 +350,13 @@ export class UserStatsService {
 
   static startCheckNotifyUserInterval() {
     UserStatsService.checkUserNotifyRef = setInterval(() => {
-      UserStatsService.checkDefaultBrowserPrompt();
-      UserStatsService.checkUserCallPrompt();
-    }, UserStatsService.CHECK_NOTIFY_INTERVAL);
-    UserStatsService.checkUserCallPrompt();
+      UserStatsService.checkDefaultBrowserPrompt()
+      UserStatsService.checkUserCallPrompt()
+    }, UserStatsService.CHECK_NOTIFY_INTERVAL)
+    UserStatsService.checkUserCallPrompt()
   }
   static stopCheckNotifyUserInterval() {
-    if (UserStatsService.checkUserNotifyRef)
-      clearInterval(UserStatsService.checkUserNotifyRef);
+    if (UserStatsService.checkUserNotifyRef) clearInterval(UserStatsService.checkUserNotifyRef)
   }
 }
 

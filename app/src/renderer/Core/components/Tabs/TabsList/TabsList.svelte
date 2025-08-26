@@ -1,27 +1,27 @@
 <script lang="ts">
-  import { useTabs } from "@deta/services/tabs";
-  import TabItem from "../TabItem.svelte";
-  import { Icon } from "@deta/icons";
+  import { useTabs } from '@deta/services/tabs'
+  import TabItem from '../TabItem.svelte'
+  import { Icon } from '@deta/icons'
   import {
     calculateTabLayout,
     measureContainerWidth,
-    type LayoutCalculation,
-  } from "./tabsLayout.svelte";
-  import { onMount } from "svelte";
+    type LayoutCalculation
+  } from './tabsLayout.svelte'
+  import { onMount } from 'svelte'
 
-  import { useDebounce } from "@deta/utils";
-  import { Button } from "@deta/ui";
+  import { useDebounce } from '@deta/utils'
+  import { Button } from '@deta/ui'
 
-  const tabsService = useTabs();
+  const tabsService = useTabs()
 
-  let containerElement: HTMLDivElement;
-  let containerWidth = $state(0);
-  let layoutCalculation = $state<LayoutCalculation | null>(null);
-  let isResizing = $state(false);
+  let containerElement: HTMLDivElement
+  let containerWidth = $state(0)
+  let layoutCalculation = $state<LayoutCalculation | null>(null)
+  let isResizing = $state(false)
 
   const handleNewTab = () => {
-    tabsService.create("surf://notebook");
-  };
+    tabsService.create('surf://notebook')
+  }
 
   // Reactive calculation of layout
   $effect(() => {
@@ -29,39 +29,39 @@
       layoutCalculation = calculateTabLayout(
         tabsService.tabs,
         containerWidth,
-        tabsService.activeTabIdValue,
-      );
+        tabsService.activeTabIdValue
+      )
     }
-  });
+  })
 
   // Setup container width tracking
   onMount(() => {
     const updateWidth = () => {
-      if (!containerElement) return;
+      if (!containerElement) return
 
-      containerWidth = measureContainerWidth(containerElement);
-    };
+      containerWidth = measureContainerWidth(containerElement)
+    }
 
-    const debouncedUpdateWidth = useDebounce(updateWidth, 16);
+    const debouncedUpdateWidth = useDebounce(updateWidth, 16)
 
     const handleResize = () => {
-      isResizing = true;
-      updateWidth(); // Immediate update
+      isResizing = true
+      updateWidth() // Immediate update
       debouncedUpdateWidth().then(() => {
-        isResizing = false;
-      });
-    };
+        isResizing = false
+      })
+    }
 
     // Initial measurement
-    updateWidth();
+    updateWidth()
 
     // Listen to window resize
-    window.addEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize)
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  });
+      window.removeEventListener('resize', handleResize)
+    }
+  })
 </script>
 
 <div class="tabs-list" bind:this={containerElement}>
@@ -72,8 +72,7 @@
       width={layoutCalculation?.tabDimensions[index]?.width}
       collapsed={layoutCalculation?.tabDimensions[index]?.collapsed ?? false}
       squished={layoutCalculation?.tabDimensions[index]?.squished ?? false}
-      showCloseButton={layoutCalculation?.tabDimensions[index]
-        ?.showCloseButton ?? true}
+      showCloseButton={layoutCalculation?.tabDimensions[index]?.showCloseButton ?? true}
       {isResizing}
     />
   {/each}

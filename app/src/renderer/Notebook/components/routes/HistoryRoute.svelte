@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { Icon } from "@deta/icons";
-  import { useNotebookManager } from "@deta/services/notebooks";
-  import { Button, PageMention } from "@deta/ui";
-  import { onMount } from "svelte";
+  import { Icon } from '@deta/icons'
+  import { useNotebookManager } from '@deta/services/notebooks'
+  import { Button, PageMention } from '@deta/ui'
+  import { onMount } from 'svelte'
 
-  let editorEl = $state() as HTMLElement;
+  let editorEl = $state() as HTMLElement
 
-  const notebookManager = useNotebookManager();
+  const notebookManager = useNotebookManager()
 
   onMount(() => {
-    notebookManager.loadNotebooks();
-  });
+    notebookManager.loadNotebooks()
+  })
 </script>
 
 <svelte:head>
@@ -36,7 +36,7 @@
         </li>
       {/each}-->
       <li>
-        <PageMention text={`Pleacholder`} --delay={50 + 1 * 50 + "ms"} />
+        <PageMention text={`Pleacholder`} --delay={50 + 1 * 50 + 'ms'} />
       </li>
     </ul>
   </div>
@@ -54,7 +54,7 @@
       font-size: 28px;
       margin-inline: 0.5rem;
       margin-bottom: 5px;
-      font-family: "Gambarino";
+      font-family: 'Gambarino';
     }
   }
 

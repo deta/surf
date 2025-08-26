@@ -1,45 +1,43 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { useNotebookManager } from "@deta/services/notebooks";
-  import { useResourceManager, type Resource } from "@deta/services/resources";
-  import { writable } from "svelte/store";
-  import { type Notebook } from "@deta/services/notebook";
-  import { Button, PageMention } from "@deta/ui";
-  import { Icon } from "@deta/icons";
+  import { onMount } from 'svelte'
+  import { useNotebookManager } from '@deta/services/notebooks'
+  import { useResourceManager, type Resource } from '@deta/services/resources'
+  import { writable } from 'svelte/store'
+  import { type Notebook } from '@deta/services/notebook'
+  import { Button, PageMention } from '@deta/ui'
+  import { Icon } from '@deta/icons'
 
-  let { notebook }: { notebook: Notebook } = $props();
+  let { notebook }: { notebook: Notebook } = $props()
 
-  const notebookManager = useNotebookManager();
-  const resourceManager = useResourceManager();
+  const notebookManager = useNotebookManager()
+  const resourceManager = useResourceManager()
 
-  const contents = notebook.contents;
+  const contents = notebook.contents
   const contentsNotes = $derived(
-    $contents.filter(
-      (e) => e.resource_type === "application/vnd.space.document.space-note",
-    ),
-  );
+    $contents.filter((e) => e.resource_type === 'application/vnd.space.document.space-note')
+  )
 
   const handleCreateNote = async () => {
-    const note = await resourceManager.createResourceNote("kekw", {
-      name: "Untitled Note",
-    });
-    notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1);
-  };
+    const note = await resourceManager.createResourceNote('kekw', {
+      name: 'Untitled Note'
+    })
+    notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
+  }
 
   onMount(() => {
-    container.fetchContents();
-  });
+    container.fetchContents()
+  })
 </script>
 
 <svelte:head>
   <title
-    >{`${notebook.dataValue.emoji ? notebook.dataValue.emoji + " " : ""}${notebook.dataValue.folderName ?? notebook.dataValue.name}`}</title
+    >{`${notebook.dataValue.emoji ? notebook.dataValue.emoji + ' ' : ''}${notebook.dataValue.folderName ?? notebook.dataValue.name}`}</title
   >
 </svelte:head>
 
 <div class="content">
   <h1>
-    {`${notebook.dataValue.emoji ? notebook.dataValue.emoji + " " : ""}${notebook.dataValue.folderName ?? notebook.dataValue.name}`}
+    {`${notebook.dataValue.emoji ? notebook.dataValue.emoji + ' ' : ''}${notebook.dataValue.folderName ?? notebook.dataValue.name}`}
   </h1>
   <div class="tty"><div class="inner"></div></div>
 
@@ -59,10 +57,9 @@
           <PageMention
             resourceId={entry.entry_id}
             onclick={async () => {
-              await navigation.navigate(`surf://resource/${entry.entry_id}`)
-                .finished;
+              await navigation.navigate(`surf://resource/${entry.entry_id}`).finished
             }}
-            --delay={50 + i * 5 + "ms"}
+            --delay={50 + i * 5 + 'ms'}
           />
         </li>
       {/each}
@@ -83,7 +80,7 @@
       font-size: 28px;
       margin-inline: 0.5rem;
       margin-bottom: 5px;
-      font-family: "Gambarino";
+      font-family: 'Gambarino';
     }
 
     // TODO: ONLY PLACEHOLDER UI

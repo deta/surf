@@ -59,6 +59,12 @@
       "import": "./dist/constants/index.js",
       "default": "./dist/constants/index.js"
     },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "svelte": "./src/lib/helpers/index.ts",
+      "import": "./dist/helpers/index.js",
+      "default": "./dist/helpers/index.js"
+    },
     "./src": "./src/lib/index.ts",
     "./src/*": "./src/lib/*",
     "./src/ipc": "./src/lib/ipc/index.ts",

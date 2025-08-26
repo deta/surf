@@ -19,12 +19,14 @@ import {
   type Space
 } from '@deta/types'
 
-import { ResourceNote, type ResourceManager, type Resource } from '@deta/services/resources'
-import { type Telemetry, type ConfigService } from '@deta/services'
-import type { SpaceBasicData } from '@deta/services/dist/ipc/events.js'
+import { ResourceNote, type ResourceManager, type Resource } from '../resources'
+import { type ConfigService } from '../config'
+import { type Telemetry } from '../telemetry'
+import type { SpaceBasicData } from '../ipc/events'
 
 import { Notebook } from './notebook'
 import type { NotebookManagerEmitterEvents } from './notebook.types'
+import { IconTypes } from '@deta/icons'
 
 export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEvents> {
   notebooks: Writable<Notebook[]>
@@ -119,6 +121,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     )
 
     this.log.debug('updating spaces list in main process', filteredItems)
+    // @ts-ignore
     if (window.api.updateSpacesList) window.api.updateSpacesList(filteredItems)
   }
 
@@ -168,21 +171,18 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     return result
   }
 
-  async createNotebook(data: NotebookData, parentId?: string) {
-    this.log.debug('creating notebook', parentId ? 'as subfolder of ' + parentId : '')
+  async createNotebook(data: Partial<NotebookData>) {
+    this.log.debug('creating notebook', data)
 
     const defaults = {
-      showInSidebar: false,
-      liveModeEnabled: false,
-      smartFilterQuery: null,
-      sql_query: null,
-      embedding_query: null,
-      sortBy: 'resource_added_to_space',
-      builtIn: false,
-      default: false,
+      name: 'New Notebook',
+      description: '',
       index: this.notebooksValue.length,
-      sources: []
-    }
+      icon: {
+        type: IconTypes.ICON,
+        data: 'file-text-ai'
+      }
+    } satisfies NotebookData
 
     // Create a copy of the data to avoid modifying the original
     let fullData = Object.assign({}, defaults, data)
@@ -203,13 +203,6 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       return [...spaces, space]
     })
 
-    if (parentId && parentSpace && parentData) {
-      await this.resourceManager.sffs.addSubspacesToSpace(
-        parentId,
-        [space.id],
-        SpaceEntryOrigin.ManuallyAdded
-      )
-    }
     await this.loadNotebooks()
     this.emit('created', space)
     return space
@@ -235,6 +228,14 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     this.log.debug('got space:', space)
 
     return space
+  }
+
+  async getOrCreateNotebook(id: string, defaults: Partial<NotebookData> = {}) {
+    let notebook = await this.getNotebook(id)
+    if (!notebook) {
+      notebook = await this.createNotebook(defaults)
+    }
+    return notebook
   }
 
   async deleteNotebook(notebookId: string) {
@@ -376,7 +377,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       .filter((references) => references.length > 0)
       .map((references) => {
         return {
-          spaceId: references[0].folderId,
+          spaceId: references[0]?.folderId,
           resourceIds: references.map((ref) => ref.resourceId)
         }
       })
@@ -387,7 +388,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     this.log.debug('deleting resource references from spaces', spacesWithReferences)
     await Promise.all(
       spacesWithReferences.map(async (entry) => {
-        const space = await this.getNotebook(entry.spaceId)
+        const space = await this.getNotebook(entry.spaceId!)
         if (space) {
           await space.removeResources(entry.resourceIds)
         }

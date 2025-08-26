@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { Icon } from "@deta/icons";
-  import { useNotebookManager } from "@deta/services/notebooks";
-  import { Button, PageMention } from "@deta/ui";
-  import { onMount } from "svelte";
+  import { Icon } from '@deta/icons'
+  import { useNotebookManager } from '@deta/services/notebooks'
+  import { Button, PageMention } from '@deta/ui'
+  import { onMount } from 'svelte'
 
-  let editorEl = $state() as HTMLElement;
+  let editorEl = $state() as HTMLElement
 
-  const notebookManager = useNotebookManager();
-  const sortedNotebooksList = $derived(notebookManager.sortedNotebooksList);
+  const notebookManager = useNotebookManager()
+  const sortedNotebooksList = $derived(notebookManager.sortedNotebooksList)
 
   const handleCreateContainer = async () => {
     const notebook = await notebookManager.createNotebook({
-      name: "Untitled Notebook",
-    });
-    console.warn(notebook);
-  };
+      name: 'Untitled Notebook'
+    })
+    console.warn(notebook)
+  }
 
   onMount(() => {
-    notebookManager.loadNotebooks();
-  });
+    notebookManager.loadNotebooks()
+  })
 </script>
 
 <svelte:head>
@@ -33,9 +33,9 @@
       class="inner"
       contenteditable="true"
       onkeydown={(e) => {
-        if (e.key === "Enter") {
-          const value = editorEl.innerText;
-          e.preventDefault();
+        if (e.key === 'Enter') {
+          const value = editorEl.innerText
+          e.preventDefault()
           // TODO: Send IPC to main?
         }
       }}
@@ -56,12 +56,11 @@
       {#each $sortedNotebooksList.toReversed() as container, i (container.id)}
         <li>
           <PageMention
-            text={`${container.dataValue.emoji ? container.dataValue.emoji + " " : ""}${container.dataValue.folderName ?? container.dataValue.name}`}
+            text={`${container.dataValue.emoji ? container.dataValue.emoji + ' ' : ''}${container.dataValue.folderName ?? container.dataValue.name}`}
             onclick={async () => {
-              await navigation.navigate(`surf://notebook/${container.id}`)
-                .finished;
+              await navigation.navigate(`surf://notebook/${container.id}`).finished
             }}
-            --delay={50 + i * 50 + "ms"}
+            --delay={50 + i * 50 + 'ms'}
           />
         </li>
       {/each}
@@ -75,9 +74,9 @@
           text={`Drafts`}
           icon="file"
           onclick={async () => {
-            await navigation.navigate(`surf://notebook/drafts`).finished;
+            await navigation.navigate(`surf://notebook/drafts`).finished
           }}
-          --delay={10 + $sortedNotebooksList.length * 50 + 50 + 1 * 50 + "ms"}
+          --delay={10 + $sortedNotebooksList.length * 50 + 50 + 1 * 50 + 'ms'}
         />
       </li>
       <li>
@@ -85,9 +84,9 @@
           text={`History`}
           icon="history"
           onclick={async () => {
-            await navigation.navigate(`surf://notebook/history`).finished;
+            await navigation.navigate(`surf://notebook/history`).finished
           }}
-          --delay={10 + $sortedNotebooksList.length * 50 + 50 + 2 * 50 + "ms"}
+          --delay={10 + $sortedNotebooksList.length * 50 + 50 + 2 * 50 + 'ms'}
         />
       </li>
     </ul>
@@ -106,7 +105,7 @@
       font-size: 28px;
       margin-inline: 0.5rem;
       margin-bottom: 5px;
-      font-family: "Gambarino";
+      font-family: 'Gambarino';
     }
 
     // TODO: ONLY PLACEHOLDER UI

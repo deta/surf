@@ -1,32 +1,30 @@
 <script lang="ts">
-  import { Icon } from "@deta/icons";
-  import { Button } from "@deta/ui";
-  import BreadcrumbItems from "./BreadcrumbItems.svelte";
-  import SearchInput from "./SearchInput.svelte";
-  import { writable } from "svelte/store";
-  import LocationBar from "./LocationBar.svelte";
-  import WebContentsView from "../WebContentsView.svelte";
+  import { Icon } from '@deta/icons'
+  import { Button } from '@deta/ui'
+  import BreadcrumbItems from './BreadcrumbItems.svelte'
+  import SearchInput from './SearchInput.svelte'
+  import { writable } from 'svelte/store'
+  import LocationBar from './LocationBar.svelte'
+  import WebContentsView from '../WebContentsView.svelte'
 
-  let { view }: { view: WebContentsView } = $props();
+  let { view }: { view: WebContentsView } = $props()
 
-  const activeLocation = $derived(view.url ?? writable(""));
-  const navigationHistory = $derived(view.navigationHistory);
-  const navigationHistoryIndex = $derived(view.navigationHistoryIndex);
+  const activeLocation = $derived(view.url ?? writable(''))
+  const navigationHistory = $derived(view.navigationHistory)
+  const navigationHistoryIndex = $derived(view.navigationHistoryIndex)
 
-  const canGoBack = $derived($navigationHistoryIndex > 0);
-  const canGoForward = $derived(
-    $navigationHistoryIndex < $navigationHistory?.length - 1,
-  );
-  const canReload = true;
+  const canGoBack = $derived($navigationHistoryIndex > 0)
+  const canGoForward = $derived($navigationHistoryIndex < $navigationHistory?.length - 1)
+  const canReload = true
 
   function onGoBack() {
-    view.webContents.goBack();
+    view.webContents.goBack()
   }
   function onGoForward() {
-    view.webContents.goForward();
+    view.webContents.goForward()
   }
   function onReload(e: MouseEvent) {
-    view.webContents.reload(e.shiftKey);
+    view.webContents.reload(e.shiftKey)
   }
 </script>
 
@@ -50,7 +48,7 @@
   </div>
   <div class="group search">
     <!-- TODO: (maxu): Make better check -->
-    <SearchInput collapsed={!$activeLocation?.includes("notebook.html")} />
+    <SearchInput collapsed={!$activeLocation?.includes('notebook.html')} />
   </div>
 </nav>
 

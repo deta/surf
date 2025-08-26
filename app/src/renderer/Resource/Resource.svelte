@@ -1,25 +1,22 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { createTelemetry, provideConfig } from "@deta/services";
-  import {
-    createResourceManager,
-    type Resource,
-  } from "@deta/services/resources";
-  import { ResourceTypes } from "@deta/types";
+  import { onMount } from 'svelte'
+  import { createTelemetry, provideConfig } from '@deta/services'
+  import { createResourceManager, type Resource } from '@deta/services/resources'
+  import { ResourceTypes } from '@deta/types'
 
-  import { Note } from "@deta/ui";
+  import { Note } from '@deta/ui'
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const resourceId = searchParams.get("resourceId") || "";
+  const searchParams = new URLSearchParams(window.location.search)
+  const resourceId = searchParams.get('resourceId') || ''
 
-  let telemetryAPIKey = "";
-  let telemetryActive = false;
-  let telemetryProxyUrl: string | undefined = undefined;
+  let telemetryAPIKey = ''
+  let telemetryActive = false
+  let telemetryProxyUrl: string | undefined = undefined
   if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
-    telemetryActive = true;
-    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL;
+    telemetryActive = true
+    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
     if (!telemetryProxyUrl) {
-      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY;
+      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
     }
   }
 
@@ -27,19 +24,19 @@
     apiKey: telemetryAPIKey,
     active: telemetryActive,
     trackHostnames: false,
-    proxyUrl: telemetryProxyUrl,
-  });
-  const config = provideConfig();
-  const resourceManager = createResourceManager(telemetry, config);
+    proxyUrl: telemetryProxyUrl
+  })
+  const config = provideConfig()
+  const resourceManager = createResourceManager(telemetry, config)
 
-  let resource: Resource | null = $state(null);
+  let resource: Resource | null = $state(null)
 
   onMount(async () => {
-    console.log("Resource mounted with ID:", resourceId);
+    console.log('Resource mounted with ID:', resourceId)
 
-    resource = await resourceManager.getResource(resourceId);
-    console.log("Loaded resource:", resource);
-  });
+    resource = await resourceManager.getResource(resourceId)
+    console.log('Loaded resource:', resource)
+  })
 </script>
 
 <svelte:head>

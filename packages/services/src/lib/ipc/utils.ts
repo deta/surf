@@ -1,12 +1,12 @@
 export const isRenderer = () => {
   // running in a web browser
-  if (typeof process === "undefined") return true;
+  if (typeof process === 'undefined') return true
 
   // node-integration is disabled
-  if (!process) return true;
+  if (!process) return true
 
   // We're in node.js somehow
-  if (!process.type) return false;
+  if (!process.type) return false
 
-  return process.type === "renderer";
-};
+  return process.type === 'renderer'
+}

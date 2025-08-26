@@ -1,48 +1,33 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { createTelemetry, provideConfig } from "@deta/services";
-  import {
-    createResourceManager,
-    type Resource,
-  } from "@deta/services/resources";
-  import { createNotebookManager } from "@deta/services/notebooks";
-  import { type Notebook } from "@deta/services/notebook";
-  import IndexRoute from "./components/routes/IndexRoute.svelte";
-  import NotebookDetailRoute from "./components/routes/NotebookDetailRoute.svelte";
-  import DraftsRoute from "./components/routes/DraftsRoute.svelte";
-  import HistoryRoute from "./components/routes/HistoryRoute.svelte";
+  import { onMount } from 'svelte'
+  import { provideConfig } from '@deta/services'
+  import { createNotebookManager, type Notebook } from '@deta/services/notebooks'
+  import { setupTelemetry } from '@deta/services/helpers'
+  import { useLogScope } from '@deta/utils'
+  import { createResourceManager } from '@deta/services/resources'
+  import IndexRoute from './components/routes/IndexRoute.svelte'
+  import NotebookDetailRoute from './components/routes/NotebookDetailRoute.svelte'
+  import DraftsRoute from './components/routes/DraftsRoute.svelte'
+  import HistoryRoute from './components/routes/HistoryRoute.svelte'
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const notebookId = searchParams.get("notebookId") || null;
+  const searchParams = new URLSearchParams(window.location.search)
+  const notebookId = searchParams.get('notebookId') || null
 
-  let telemetryAPIKey = "";
-  let telemetryActive = false;
-  let telemetryProxyUrl: string | undefined = undefined;
-  if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
-    telemetryActive = true;
-    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL;
-    if (!telemetryProxyUrl) {
-      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY;
-    }
-  }
+  const log = useLogScope('NotebookRenderer')
+  const telemetry = setupTelemetry()
+  const config = provideConfig()
+  const resourceManager = createResourceManager(telemetry, config)
+  const notebookManager = createNotebookManager(resourceManager, config)
 
-  const telemetry = createTelemetry({
-    apiKey: telemetryAPIKey,
-    active: telemetryActive,
-    trackHostnames: false,
-    proxyUrl: telemetryProxyUrl,
-  });
-  const config = provideConfig();
-  const resourceManager = createResourceManager(telemetry, config);
-  const notebookManager = createNotebookManager(resourceManager, config);
-
-  let notebook: NotebookEntryOrigin = $state(null);
+  let notebook: Notebook = $state(null)
 
   onMount(async () => {
-    if (notebookId && !["drafts", "history"].includes(notebookId))
-      notebookManager.getNotebook(notebookId).then((e) => (notebook = e));
-    else notebook = notebookId;
-  });
+    if (notebookId && !['drafts', 'history'].includes(notebookId)) {
+      notebook = await notebookManager.getNotebook(notebookId)
+    } else {
+      notebook = notebookId
+    }
+  })
 
   // TODO: Load by pattern match array -> component directly
 </script>
@@ -50,9 +35,9 @@
 <div class="wrapper">
   {#if notebookId === null}
     <IndexRoute />
-  {:else if notebook === "drafts"}
+  {:else if notebook === 'drafts'}
     <DraftsRoute />
-  {:else if notebook === "history"}
+  {:else if notebook === 'history'}
     <HistoryRoute />
   {:else if notebook}
     <NotebookDetailRoute {notebook} />
@@ -75,9 +60,7 @@
     width: 100%;
     margin: 0;
     padding: 0;
-    background: var(
-      --page-gradient-color
-    ); // Gradient here to make scrolled page look nice
+    background: var(--page-gradient-color); // Gradient here to make scrolled page look nice
   }
 
   .wrapper {
@@ -90,7 +73,7 @@
     overflow: hidden;
 
     &::before {
-      content: "";
+      content: '';
       position: absolute;
       top: 0;
       left: 0;
@@ -98,14 +81,10 @@
       height: 4rem;
       z-index: 0;
       pointer-events: none;
-      background: linear-gradient(
-        to bottom,
-        var(--page-gradient-color),
-        transparent
-      );
+      background: linear-gradient(to bottom, var(--page-gradient-color), transparent);
     }
     &::after {
-      content: "";
+      content: '';
       position: fixed;
       bottom: 4.5rem;
       left: 0;
@@ -119,7 +98,7 @@
     h1 {
       font-size: 28px;
       margin-bottom: 5px;
-      font-family: "Gambarino";
+      font-family: 'Gambarino';
     }
   }
 </style>

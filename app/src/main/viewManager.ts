@@ -140,10 +140,15 @@ export class WCView {
   }
 
   loadRightPreload(newUrl: string, oldUrl: string) {
+    console.log('[main] webcontentsview: check if we need to re-create WCV', newUrl, oldUrl)
+
+    if (!oldUrl) {
+      console.log('[main] webcontentsview: no old URL to compare against')
+      return
+    }
+
     const newIsSurfUrl = checkIfSurfProtocolUrl(newUrl)
     const oldIsSurfUrl = checkIfSurfProtocolUrl(oldUrl)
-
-    console.log('[main] webcontentsview: check if we need to re-create WCV', newUrl, oldUrl)
 
     // if we load a surf:// URL, we need to re-create the WebContentsView with a different preload
     if (newIsSurfUrl && !oldIsSurfUrl) {
@@ -392,7 +397,6 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   async createView(opts: WebContentsViewCreateOptions) {
     try {
       const { navigationHistory, ...logOptions } = opts
-      console.log('[main] webcontentsview-create: creating new view with options', logOptions)
 
       const currentEntry =
         opts.navigationHistory &&
@@ -405,6 +409,11 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       const url = currentEntry?.url ?? opts.url
 
       const newIsSurfUrl = url ? checkIfSurfProtocolUrl(url) : false
+
+      console.log('[main] webcontentsview-create: creating new view with options', logOptions, {
+        url,
+        newIsSurfUrl
+      })
 
       const view = new WCView(
         {

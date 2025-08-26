@@ -1,2 +1,2 @@
-export * from "./resources";
-export * from "./resourcePreview";
+export * from './resources'
+export * from './resourcePreview'
