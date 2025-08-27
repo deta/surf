@@ -1,9 +1,10 @@
 <script lang="ts">
   import { clsx } from 'clsx'
-  import Splitter from './Splitter.svelte'
-  import ZoomSelector from './ZoomSelector.svelte'
   import { pdfSlickStore, isThumbsbarOpen } from '../../store'
-  import MoreActions from './MoreActions.svelte'
+  import { Button } from '@deta/ui'
+  import Splitter from './Splitter.svelte'
+  //import ZoomSelector from './ZoomSelector.svelte'
+  //import MoreActions from './MoreActions.svelte'
   import DocumentInfo from './DocumentInfo.svelte'
 
   let wantedPageNumber: number | string = 1
@@ -17,15 +18,12 @@
 </script>
 
 <div
-  class={`w-full h-9 flex items-center justify-between bg-slate-50 border-b border-b-slate-300 shadow-sm text-xs select-none sticky top-0 bg-opacity-100 backdrop-blur z-30`}
+  class={`toolbar-wrapper w-full h-9 px-0.5 flex items-center justify-between shadow-sm text-xs select-none sticky top-0 z-30`}
 >
   <div class="px-1 flex items-center space-x-1">
-    <button
-      class={`inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent`}
-      on:click={() => isThumbsbarOpen.set(!$isThumbsbarOpen)}
-    >
+    <Button size="md" square onclick={() => isThumbsbarOpen.set(!$isThumbsbarOpen)}>
       <iconify-icon
-        height={16}
+        height="1em"
         icon="codicon:layout-sidebar-left-off"
         class={clsx({
           hidden: !$isThumbsbarOpen
@@ -33,33 +31,34 @@
       />
 
       <iconify-icon
-        height={16}
+        height="1em"
         icon="codicon:layout-sidebar-left"
         class={clsx({
           hidden: $isThumbsbarOpen
         })}
       />
-    </button>
+    </Button>
 
     <Splitter />
-    <ZoomSelector />
-    <Splitter />
+    <!-----------------------<ZoomSelector />
+    <Splitter />-->
 
-    <button
+    <Button
+      size="md"
+      square
+      onclick={() => $pdfSlickStore?.pdfSlick?.viewer?.previousPage()}
       disabled={$pdfSlickStore?.pageNumber <= 1}
-      class="inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
-      on:click={() => $pdfSlickStore?.pdfSlick?.viewer?.previousPage()}
     >
-      <iconify-icon height={16} icon="codicon:chevron-up" />
-    </button>
-
-    <button
+      <iconify-icon height="1em" icon="codicon:chevron-up" />
+    </Button>
+    <Button
+      size="md"
+      square
+      onclick={() => $pdfSlickStore?.pdfSlick?.viewer?.nextPage()}
       disabled={!$pdfSlickStore?.pdfSlick || $pdfSlickStore?.pageNumber >= $pdfSlickStore?.numPages}
-      class="inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
-      on:click={() => $pdfSlickStore?.pdfSlick?.viewer?.nextPage()}
     >
-      <iconify-icon height={16} icon="codicon:chevron-down" />
-    </button>
+      <iconify-icon height="1em" icon="codicon:chevron-down" />
+    </Button>
 
     <div class="flex items-center text-center space-x-2">
       <form
@@ -80,6 +79,7 @@
           type="text"
           bind:value={wantedPageNumber}
           class="block w-12 text-right rounded-sm border border-slate-300 focus:shadow focus:border-blue-400 focus:ring-0 outline-none text-xs p-1 px-1.5 placeholder:text-gray-300 focus:placeholder:text-gray-400 placeholder:italic"
+          style="color: rgba(0,0,0,0.5);border-radius: 8px;"
           on:focus={(e) => {
             e.currentTarget.select()
           }}
@@ -111,15 +111,16 @@
         />
       </form>
 
-      <span> of {$pdfSlickStore?.numPages ?? ''}</span>
+      <span style="color: rgba(0,0,0,0.5);"> of {$pdfSlickStore?.numPages ?? ''}</span>
     </div>
   </div>
 
   <div class="px-1 space-x-1 flex items-center justify-end">
     <DocumentInfo />
-    <MoreActions />
+    <!--------<MoreActions />-->
   </div>
 </div>
+
 <!-- <div class="absolute -top-10 overflow-hidden w-0 h-0">
   <input
     id="openPdfFile"
@@ -137,3 +138,10 @@
     class="absolute -top-[10000px]"
   />
 </div> -->
+
+<style>
+  .toolbar-wrapper {
+    background: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  }
+</style>

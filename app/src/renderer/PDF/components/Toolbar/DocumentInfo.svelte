@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from '@deta/ui'
   import Portal from 'svelte-portal'
   import { clsx } from 'clsx'
   import Tooltip from '../../Tooltip.svelte'
@@ -16,17 +17,12 @@
   }
 </script>
 
-<button
-  class="inline-flex enabled:hover:bg-slate-200 enabled:hover:text-black text-slate-500 disabled:text-slate-300 p-1 rounded-sm transition-all group relative focus:border-blue-400 focus:ring-0 focus:shadow outline-none border border-transparent"
-  on:click={() => {
-    isOpen = true
-  }}
->
-  <iconify-icon height={16} icon="codicon:info" />
+<Button size="md" square onclick={() => (isOpen = true)}>
+  <iconify-icon height="1em" icon="codicon:info" />
   <Tooltip position="bottom" alignX="right">
     <p class="whitespace-nowrap">Document Properties</p>
   </Tooltip>
-</button>
+</Button>
 
 <Portal target="body">
   <div

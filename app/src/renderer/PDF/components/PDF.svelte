@@ -351,7 +351,11 @@
     <Thumbsbar bind:thumbsRef={thumbs} />
 
     <div class="flex-1 relative h-full" id="container">
-      <div id="viewerContainer" class="pdfSlickContainer absolute inset-0" bind:this={container}>
+      <div
+        id="viewerContainer"
+        class="pdfSlickContainer absolute inset-0 overflow-auto"
+        bind:this={container}
+      >
         <div id="viewer" class="pdfSlickViewer pdfViewer" />
       </div>
     </div>
