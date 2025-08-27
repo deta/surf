@@ -92,6 +92,7 @@
   });
 
   let inputEl = $state() as HTMLInputElement;
+  let inputValue: string = $derived(sanizizeLocationInput($viewLocation));
   let editingUrl = $state(false);
 
   // This animates the hostname everytime it changes
@@ -171,6 +172,19 @@
     );
     t_progress_title.set(0, { duration: 0 });
   }
+
+  function handleLocationInput(e: InputEvent) {
+    e.preventDefault();
+    inputValue = sanizizeLocationInput(e.target.value)
+  }
+
+  function sanizizeLocationInput(value: string): string {
+    if (isInternalRendererURL(value)) {
+      const url = isInternalRendererURL(value)
+      return url.toString().replace(/\/+$/, '')
+    }
+    return value
+  }
 </script>
 
 <Breadcrumb
@@ -185,7 +199,8 @@
     <input
       bind:this={inputEl}
       type="text"
-      value={$viewLocation}
+      value={inputValue}
+      oninput={handleLocationInput}
       onkeydown={(e) => {
         if (e.key === "Enter") {
           editingUrl = false;
