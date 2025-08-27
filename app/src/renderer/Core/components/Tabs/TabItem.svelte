@@ -1,5 +1,6 @@
 <script lang="ts">
   import { useTabs, TabItem } from '@deta/services/tabs'
+  import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
   import { Favicon, Button } from '@deta/ui'
   import { Icon } from '@deta/icons'
 
@@ -32,11 +33,23 @@
 
   function handleClose(event: MouseEvent) {
     event.stopPropagation()
+
+    const rect = document.getElementById(`tab-${tab.id}`)?.getBoundingClientRect()
+    if (rect) {
+      spawnBoxSmoke(rect, {
+        densityN: 30,
+        size: 13,
+        //velocityScale: 0.5,
+        cloudPointN: 7
+      })
+    }
+
     tabsService.delete(tab.id)
   }
 </script>
 
 <div
+  id="tab-{tab.id}"
   class="tab-item"
   class:active
   class:collapsed

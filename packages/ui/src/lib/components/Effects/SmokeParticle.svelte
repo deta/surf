@@ -125,7 +125,7 @@
       velocity.x = (velocity.x / vMag) * (props.velocityScale ?? 1)
       velocity.y = (velocity.y / vMag) * (props.velocityScale ?? 1)
 
-      let pop = new SmokeParticle({
+      let pop = mount(SmokeParticle, {
         target: document.body,
         props: {
           xOrigin: point.x,
@@ -135,7 +135,8 @@
           velocity,
           cloudPointN: props.cloudPointN ?? 5,
           duration: 1000
-        }
+        },
+        events: { destroy: () => unmount(pop) }
       })
     }
   }
@@ -164,7 +165,7 @@
       velocity.x = (velocity.x / vMag) * (props.velocityScale ?? 1)
       velocity.y = (velocity.y / vMag) * (props.velocityScale ?? 1)
 
-      let particle = new SmokeParticle({
+      let particle = mount(SmokeParticle, {
         target: document.body,
         props: {
           xOrigin: point.x,
@@ -174,17 +175,15 @@
           velocity,
           cloudPointN: props.cloudPointN ?? 5,
           duration: props.duration ?? 800
-        }
-      })
-      particle.$on('destroy', () => {
-        particle.$destroy()
+        },
+        events: { destroy: () => unmount(particle) }
       })
     }
   }
 </script>
 
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, mount, unmount } from 'svelte'
 
   export let xOrigin: number
   export let yOrigin: number
@@ -267,16 +266,19 @@
 
 <style>
   svg {
+    pointer-events: none;
     position: fixed;
+    transform: translateZ(0);
+    will-change: transform, opacity;
   }
 
   @keyframes -global-smokeVelocity {
     0% {
-      transform: translate(0, 0);
+      transform: translate3D(0, 0, 0);
       opacity: 1;
     }
     100% {
-      transform: translate(var(--finalXOffset), var(--finalYOffset));
+      transform: translate3D(var(--finalXOffset), var(--finalYOffset), 0);
       opacity: 0;
     }
   }
