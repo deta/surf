@@ -1,5 +1,6 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import ButtonComp from './Button.svelte'
+import { createClassComponent } from 'svelte/legacy'
 
 export interface ButtonOptions {
   /**
@@ -101,7 +102,8 @@ export const Button = Node.create<ButtonOptions>({
       const container = document.createElement('div')
       container.style.display = 'inline-block'
 
-      const component = new ButtonComp({
+      const component = createClassComponent({
+        component: ButtonComp,
         target: container,
         props: {
           text: node.attrs.text.text,

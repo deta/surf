@@ -17,30 +17,39 @@ import {
   type WebContentsViewActionOutputs,
   type WebContentsViewActionPayloads,
   type WebContentsViewCreateOptions,
-  type WebContentsViewEvent
-} from '@deta/types'
+  type WebContentsViewEvent,
+  type DetectedWebApp,
+  type DetectedResource,
+  ResourceTagsBuiltInKeys,
+  WebViewEventReceiveNames,
+  type ResourceDataLink,
+  ResourceTypes,
+  type WebViewReceiveEvents,
+  ResourceTagDataStateValue
+} from "@deta/types";
 import {
   useLogScope,
   EventEmitterBase,
   shouldIgnoreWebviewErrorCode,
-  getHostname,
   processFavicons,
   useDebounce,
   isPDFViewerURL,
-  parseUrlIntoCanonical,
   copyToClipboard
-} from '@deta/utils'
-import { HistoryEntriesManager } from '../history'
-import { ConfigService } from '../config'
-import { KeyboardManager, useKeyboardManager } from '../shortcuts/index'
-import type { NewWindowRequest } from '../ipc/events'
-import type { ViewManager } from './viewManager.svelte'
+} from "@deta/utils";
+import { compareURLs, getHostname, parseUrlIntoCanonical, ResourceTag } from '@deta/utils/formatting'
+import { HistoryEntriesManager } from "../history";
+import { ConfigService } from "../config";
+import { KeyboardManager, useKeyboardManager } from "../shortcuts/index";
+import type { NewWindowRequest } from "../ipc/events";
+import type { ViewManager } from "./viewManager.svelte";
 import {
   WebContentsViewEmitterNames,
   type WebContentsEmitterEvents,
   type WebContentsViewEmitterEvents,
-  WebContentsEmitterNames
-} from './types'
+  WebContentsEmitterNames,
+  type BookmarkPageOpts,
+} from "./types";
+import { Resource, ResourceManager } from "../resources";
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -62,6 +71,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   private _newWindowHandlerRegistered = false
   private _lastReceivedFavicons: string[] = []
   private _programmaticNavigation = false
+  private _updatingResourcePromises = new Map<string, Promise<Resource>>()
 
   constructor(
     view: WebContentsView,
@@ -102,9 +112,13 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.view.domReady.set(true)
 
     if (!this._newWindowHandlerRegistered && this.webContentsId) {
-      window.api.registerNewWindowHandler(this.webContentsId, (details: NewWindowRequest) => {
-        this.handleNewWindowRequest(details)
-      })
+      // @ts-ignore
+      window.api.registerNewWindowHandler(
+        this.webContentsId,
+        (details: NewWindowRequest) => {
+          this.handleNewWindowRequest(details);
+        },
+      );
 
       this._newWindowHandlerRegistered = true
     }
@@ -239,6 +253,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   private handleNavigation(newUrl: string) {
     const oldUrl = this.view.urlValue
 
+    // @ts-ignore
     if (isPDFViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
       try {
         const urlParams = new URLSearchParams(new URL(newUrl).search)
@@ -285,10 +300,21 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.emit(WebContentsEmitterNames.FOUND_IN_PAGE, event)
   }
 
-  private handleKeyDown(event: WebViewSendEvents[WebViewEventSendNames.KeyDown]) {
-    this.log.debug('Key down event in webview:', event)
-    this.keyboardManager.handleKeyDown(event as KeyboardEvent)
-    this.emit(WebContentsEmitterNames.KEYDOWN, event)
+  private handleKeyDown(
+    event: WebViewSendEvents[WebViewEventSendNames.KeyDown],
+  ) {
+    this.log.debug("Key down event in webview:", event);
+    this.keyboardManager.handleKeyDown(event as KeyboardEvent);
+    this.emit(WebContentsEmitterNames.KEYDOWN, event);
+  }
+
+  private handleDetectedApp(
+    detectedApp: WebViewSendEvents[WebViewEventSendNames.DetectedApp],
+  ) {
+    this.log.debug("Detected app event in webview:", detectedApp);
+    this.view.detectedApp.set(detectedApp);
+
+    this.debouncedDetectExistingResource()
   }
 
   private handlePreloadIPCEvent(
@@ -300,14 +326,21 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents]
 
     if (eventType === WebViewEventSendNames.KeyDown) {
-      this.handleKeyDown(eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
-      return
+      this.handleKeyDown(
+        eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown],
+      );
+      return;
+    } else if (eventType === WebViewEventSendNames.DetectedApp) {
+      this.handleDetectedApp(
+        eventData as WebViewSendEvents[WebViewEventSendNames.DetectedApp],
+      );
     }
 
     this.emit(WebContentsEmitterNames.PRELOAD_EVENT, eventType, eventData)
   }
 
   attachListeners() {
+    // @ts-ignore
     const unsubWebContentsEvents = window.preloadEvents.onWebContentsViewEvent(
       (event: WebContentsViewEvent) => {
         // only handle events for our own view
@@ -450,11 +483,34 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   }
 
   removePageEventListener(callback: (args: any[]) => boolean | void) {
-    return this.removeEventListener(WebContentsViewEventType.IPC_MESSAGE, (payload) => {
-      if (payload.channel === 'webview-page-event') {
-        callback(payload.args)
-      }
-    })
+    return this.removeEventListener(
+      WebContentsViewEventType.IPC_MESSAGE,
+      (payload) => {
+        if (payload.channel === "webview-page-event") {
+          callback(payload.args);
+        }
+      },
+    );
+  }
+
+  async waitForAppDetection(timeout: number) {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let unsubscribe = () => {};
+
+    return new Promise((resolve) => {
+      unsubscribe = this.view.detectedApp.subscribe((detectedApp) => {
+        if (detectedApp) {
+          clearTimeout(timeoutId);
+          unsubscribe();
+          resolve(detectedApp);
+        }
+      });
+
+      timeoutId = setTimeout(() => {
+        unsubscribe();
+        resolve(null);
+      }, timeout);
+    });
   }
 
   async updateFaviconForTheme() {
@@ -529,7 +585,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   updateFavicon = useDebounce(async (newFaviconURL: string) => {
     const url = await this.getURL()
     if (url) {
-      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return
+      // @ts-ignore
+      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return;
     }
 
     if (this.view.faviconURLValue === newFaviconURL) {
@@ -550,10 +607,13 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       ? []
       : [payload: WebContentsViewActionPayloads[T]]
   ) {
-    const action = { type, payload: args[0] } as WebContentsViewAction
-    return window.api.webContentsViewAction(this.view.id, action.type, action.payload) as Promise<
-      WebContentsViewActionOutputs[T]
-    >
+    const action = { type, payload: args[0] } as WebContentsViewAction;
+    // @ts-ignore
+    return window.api.webContentsViewAction(
+      this.view.id,
+      action.type,
+      action.payload,
+    ) as Promise<WebContentsViewActionOutputs[T]>;
   }
 
   getBoundingClientRect = (): DOMRect | null => {
@@ -611,6 +671,13 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
   async send(channel: string, ...args: any[]) {
     await this.action(WebContentsViewActionType.SEND, { channel, args })
+  }
+
+  async sendPageAction<T extends keyof WebViewReceiveEvents>(
+    name: T,
+    data?: WebViewReceiveEvents[T]
+  ) {
+    await this.action(WebContentsViewActionType.SEND, { channel: 'webview-event', args: [{ type: name, data }] })
   }
 
   async findInPage(
@@ -699,6 +766,244 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     //}
   }
 
+  detectResource(totalTimeout = 10000, pageLoadTimeout = 5000) {
+    return new Promise<DetectedResource | null>((resolve) => {
+      let timeout: ReturnType<typeof setTimeout> | null = null
+      let pageLoadTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+      const handleEvent = (args: any[]) => {
+        const eventType = args[0] as WebViewEventSendNames
+        const eventData = args[1] as WebViewSendEvents[WebViewEventSendNames]
+
+        if (eventType === WebViewEventSendNames.DetectedResource) {
+          if (timeout) {
+            clearTimeout(timeout)
+          }
+
+          this.addPageEventListener(handleEvent)
+          resolve(eventData as WebViewSendEvents[WebViewEventSendNames.DetectedResource])
+
+          return true // prevent the event from being dispatched
+        }
+      }
+
+      const handleDidFinishLoad = () => {
+        this.log.debug('webview finished loading, detecting resource')
+
+        if (pageLoadTimeoutId) {
+          clearTimeout(pageLoadTimeoutId)
+        }
+
+        this.sendPageAction(WebViewEventReceiveNames.GetResource)
+      }
+
+      timeout = setTimeout(() => {
+        this.log.debug('Resource detection timed out')
+        this.removePageEventListener(handleEvent)
+        this.removeEventListener(
+          WebContentsViewEventType.DID_FINISH_LOAD,
+          handleDidFinishLoad
+        )
+        this.removeEventListener(WebContentsViewEventType.DOM_READY, handleDidFinishLoad)
+        resolve(null)
+      }, totalTimeout)
+
+      this.addPageEventListener(handleEvent)
+
+      if (!this.view.domReadyValue) {
+        this.log.debug('waiting for webview to be ready before detecting resource')
+        this.addEventListener(WebContentsViewEventType.DOM_READY, handleDidFinishLoad)
+      } else if (this.view.isLoadingValue) {
+        this.log.debug('waiting for webview to finish loading before detecting resource')
+        this.addEventListener(WebContentsViewEventType.DID_FINISH_LOAD, handleDidFinishLoad)
+
+        // If loading takes too long, detect resource immediately
+        pageLoadTimeoutId = setTimeout(() => {
+          if (this.view.isLoadingValue) {
+            this.log.debug('webview is still loading, detecting resource immediately')
+            this.removeEventListener(
+              WebContentsViewEventType.DID_FINISH_LOAD,
+              handleDidFinishLoad
+            )
+            handleDidFinishLoad()
+          }
+        }, pageLoadTimeout)
+      } else {
+        this.log.debug('webview is ready, detecting resource immediately')
+        handleDidFinishLoad()
+      }
+    })
+  }
+
+  async refreshResourceWithPage(
+    resource: Resource
+  ): Promise<Resource> {
+    const url = this.view.urlValue
+
+    let updatingPromise = this._updatingResourcePromises.get(url)
+    if (updatingPromise !== undefined) {
+      this.log.debug('already updating resource, piggybacking on existing promise')
+      return new Promise(async (resolve, reject) => {
+        try {
+          const resource = await updatingPromise!
+          resolve(resource)
+        } catch (e) {
+          reject(null)
+        }
+      })
+    }
+
+    updatingPromise = new Promise(async (resolve, reject) => {
+      try {
+        if (this.view.detectedAppValue?.resourceType === 'application/pdf') {
+          resolve(resource)
+          return
+        }
+
+        resource.updateExtractionState('running')
+
+        // Run resource detection on a fresh webview to get the latest data
+        const detectedResource = await this.detectResource()
+
+        this.log.debug('extracted resource data', detectedResource)
+
+        if (detectedResource) {
+          this.log.debug('updating resource with fresh data', detectedResource.data)
+          await this.view.resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+          await this.view.resourceManager.updateResourceMetadata(resource.id, {
+            name: (detectedResource.data as any).title || '',
+            sourceURI: url
+          })
+        }
+
+        if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+          this.log.debug('updating resource data state to complete')
+          await this.view.resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.DATA_STATE,
+            ResourceTagDataStateValue.COMPLETE
+          )
+        }
+
+        resource.updateExtractionState('idle')
+
+        resolve(resource)
+      } catch (e) {
+        this.log.error('error refreshing resource', e)
+        resource.updateExtractionState('idle') // TODO: support error state
+        reject(null)
+      }
+    })
+
+    this._updatingResourcePromises.set(url, updatingPromise)
+    updatingPromise.then(() => {
+      this._updatingResourcePromises.delete(url)
+    })
+
+    return updatingPromise
+  }
+
+  debouncedDetectExistingResource = useDebounce(async () => {
+    await this.detectExistingResource()
+  }, 500)
+
+  async detectExistingResource() {
+    this.log.debug('detecting existing resource for', this.view.urlValue)
+
+    const matchingResources = await this.view.resourceManager.getResourcesFromSourceURL(this.view.urlValue)
+    let bookmarkedResource = matchingResources.find(
+      (resource) =>
+        resource.type !== ResourceTypes.ANNOTATION &&
+        resource.type !== ResourceTypes.HISTORY_ENTRY &&
+        !(resource.tags ?? []).some(
+          (tag) =>
+            tag.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION && tag.value === 'generated'
+        ) &&
+        !(
+          (resource.tags ?? []).find(
+            (tag) =>
+              tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING && tag.value === 'true'
+          ) &&
+          (resource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT && tag.value === 'true'
+          )
+        )
+    )
+
+    const detectedResourceType = this.view.detectedAppValue?.resourceType
+    this.log.debug('bookmarked resource found', bookmarkedResource)
+
+    if (bookmarkedResource) {
+      const isPartialResource =
+        (bookmarkedResource.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.DATA_STATE
+        )?.value === ResourceTagDataStateValue.PARTIAL
+
+      if (detectedResourceType === ResourceTypes.DOCUMENT_NOTION) {
+        this.log.debug('updating bookmarked resource with fresh content', bookmarkedResource.id)
+        await this.refreshResourceWithPage(bookmarkedResource)
+      } else if (isPartialResource) {
+        this.log.debug('updating partial resource with fresh content', bookmarkedResource.id)
+        await this.refreshResourceWithPage(bookmarkedResource)
+      }
+    } else {
+      // Note: we now let the context manager take care of creating resources when it needs them, keeping this around if we ever need it again.
+      // log.debug('creating new silent resource', url)
+      // bookmarkedResource = await createBookmarkResource(url, tab, {
+      //   silent: true,
+      //   createdForChat: true,
+      //   freshWebview: false
+      // })
+    }
+
+    // Check if the detected resource is different from the one we previously bookmarked
+    // If it is and it is silent, delete it as it is no longer needed
+    if (this.view.extractedResourceIdValue && this.view.extractedResourceIdValue !== bookmarkedResource?.id) {
+      const resource = await this.view.resourceManager.getResource(this.view.extractedResourceIdValue)
+      if (resource) {
+        const isSilent =
+          (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
+            ?.value === 'true'
+
+        // For PDFs we don't want to delete the resource as embedding it is expensive and we might need it later
+        if (isSilent && resource.type !== 'application/pdf') {
+          this.log.debug(
+            'deleting chat resource bookmark as the tab has been updated',
+            this.view.extractedResourceIdValue
+          )
+          await this.view.resourceManager.deleteResource(resource.id)
+        }
+      } else {
+        this.log.error('resource not found', this.view.extractedResourceIdValue)
+        this.view.extractedResourceId.set(null)
+      }
+    }
+
+    if (bookmarkedResource) {
+      const isSilent = (bookmarkedResource.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+      )
+
+      const isHideInEverything = (bookmarkedResource.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING
+      )
+
+      const isFromSpaceSource = (bookmarkedResource.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
+      )
+
+      const isFromLiveSpace = isHideInEverything && isFromSpaceSource
+      const manuallySaved = !isSilent && !isFromLiveSpace
+
+      this.view.extractedResourceId.set(bookmarkedResource.id)
+      this.view.resourceCreatedByUser.set(manuallySaved)
+    } else {
+      this.log.debug('no bookmarked resource found')
+      this.view.extractedResourceId.set(null)
+      this.view.resourceCreatedByUser.set(false)
+    }
+  }
+
   /**
    * Cleans up the view and its resources.
    * This method is called before the view gets fully destroyed.
@@ -711,7 +1016,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
     // Unregister the new window handler if it was registered
     if (this._newWindowHandlerRegistered) {
-      window.api.unregisterNewWindowHandler(this.webContentsId)
+      // @ts-ignore
+      window.api.unregisterNewWindowHandler(this.webContentsId);
     }
   }
 }
@@ -729,14 +1035,16 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
  * - Coordinating with the ViewManager for focus and activation
  */
 export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEvents> {
-  log: ReturnType<typeof useLogScope>
-  manager: ViewManager
-  historyEntriesManager: HistoryEntriesManager
+  log: ReturnType<typeof useLogScope>;
+  manager: ViewManager;
+  resourceManager: ResourceManager;
+  historyEntriesManager: HistoryEntriesManager;
 
   id: string
   webContents = $state<WebContents | null>(null)
 
-  private initialData: WebContentsViewData
+  private initialData: WebContentsViewData;
+  private bookmarkingPromises: Map<string, Promise<Resource>> = new Map();
 
   data: Readable<WebContentsViewData>
 
@@ -749,10 +1057,15 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   title: Writable<string>
   faviconURL: Writable<string>
 
-  historyStackIds: Writable<string[]>
-  historyStackIndex: Writable<number>
-  navigationHistory: Writable<Electron.NavigationEntry[]>
-  navigationHistoryIndex: Writable<number>
+  historyStackIds: Writable<string[]>;
+  historyStackIndex: Writable<number>;
+  navigationHistory: Writable<Electron.NavigationEntry[]>;
+  navigationHistoryIndex: Writable<number>;
+
+  resourceCreatedByUser: Writable<boolean> = writable(false);
+  extractedResourceId: Writable<string | null> = writable(null);
+  detectedApp: Writable<DetectedWebApp | null> = writable(null);
+  detectedResource: Writable<DetectedResource | null> = writable(null);
 
   domReady: Writable<boolean> = writable(false)
   didFinishLoad: Writable<boolean> = writable(false)
@@ -774,9 +1087,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   constructor(data: WebContentsViewData, manager: ViewManager) {
     super()
 
-    this.log = useLogScope(`View ${data.id}`)
-    this.manager = manager
-    this.historyEntriesManager = new HistoryEntriesManager()
+    this.log = useLogScope(`View ${data.id}`);
+    this.manager = manager;
+    this.resourceManager = manager.resourceManager
+    this.historyEntriesManager = new HistoryEntriesManager();
 
     this.id = data.id
     this.initialData = data
@@ -801,8 +1115,22 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     )
 
     this.data = derived(
-      [this.url, this.title, this.faviconURL, this.navigationHistoryIndex, this.navigationHistory],
-      ([$url, $title, $faviconURL, $navigationHistoryIndex, $navigationHistory]) => {
+      [
+        this.url,
+        this.title,
+        this.faviconURL,
+        this.navigationHistoryIndex,
+        this.navigationHistory,
+        this.extractedResourceId
+      ],
+      ([
+        $url,
+        $title,
+        $faviconURL,
+        $navigationHistoryIndex,
+        $navigationHistory,
+        $extractedResourceId
+      ]) => {
         return {
           id: this.id,
           partition: this.initialData.partition,
@@ -810,10 +1138,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
           title: $title,
           faviconUrl: $faviconURL,
           navigationHistoryIndex: $navigationHistoryIndex,
-          navigationHistory: $navigationHistory || []
-        } as WebContentsViewData
-      }
-    )
+          navigationHistory: $navigationHistory || [],
+          extractedResourceId: $extractedResourceId
+        } as WebContentsViewData;
+      },
+    );
 
     this.unsubs.push(
       this.data.subscribe((data) => {
@@ -866,9 +1195,20 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     return get(this.navigationHistory)
   }
   get navigationHistoryIndexValue() {
-    return get(this.navigationHistoryIndex)
+    return get(this.navigationHistoryIndex);
   }
-
+  get detectedAppValue() {
+    return get(this.detectedApp);
+  }
+  get detectedResourceValue() {
+    return get(this.detectedResource);
+  }
+  get extractedResourceIdValue() {
+    return get(this.extractedResourceId);
+  }
+  get resourceCreatedByUserValue() {
+    return get(this.resourceCreatedByUser);
+  }
   get dataValue() {
     return get(this.data)
   }
@@ -908,7 +1248,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
     }
 
-    this.log.debug('Creating WebContents with options:', options)
+    this.log.debug("Creating WebContents with options:", options);
+    // @ts-ignore
     const { webContentsId } = await window.api.webContentsViewManagerAction(
       WebContentsViewManagerActionType.CREATE,
       options
@@ -958,7 +1299,324 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   }
 
   copyURL() {
-    return copyToClipboard(this.urlValue)
+    return copyToClipboard(this.urlValue);
+  }
+
+  async createBookmarkResource(
+    url: string,
+    opts?: BookmarkPageOpts
+  ): Promise<Resource> {
+    this.log.debug('bookmarking', url, opts)
+
+    const defaultOpts: BookmarkPageOpts = {
+      silent: false,
+      createdForChat: false,
+      freshWebview: false
+    }
+
+    const { silent, createdForChat, freshWebview } = Object.assign({}, defaultOpts, opts)
+
+    let bookmarkingPromise = this.bookmarkingPromises.get(url)
+    if (bookmarkingPromise !== undefined) {
+      this.log.debug('already bookmarking page, piggybacking on existing promise')
+
+      /* 
+        Because a page might already be bookmarked when the page gets loaded we have to make sure
+        we are not bookmarking it twice if the user manually saves it quickly after the page loads
+        or hits the bookmark button multiple times.
+
+        Since the initial bookmarking call might create a silent resource we need to make sure that
+        we are updating the resource with the correct options if the user manually saves it.
+
+        This is a bit of a hacky solution but it works for now. 
+      */
+      return new Promise(async (resolve, reject) => {
+        try {
+          const resource = await bookmarkingPromise!
+
+          // make sure the previous promise was using the same options, if not overwrite it with the new ones
+          const hasSilentTag = (resource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+          )
+
+          if (hasSilentTag && !silent) {
+            await this.resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+          } else if (!hasSilentTag && silent) {
+            await this.resourceManager.updateResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.SILENT,
+              'true'
+            )
+          }
+
+          const hasCreatedForChatTag = (resource.tags ?? []).find(
+            (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+          )
+
+          if (hasCreatedForChatTag && !createdForChat) {
+            await this.resourceManager.deleteResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+            )
+          } else if (!hasCreatedForChatTag && createdForChat) {
+            await this.resourceManager.updateResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.CREATED_FOR_CHAT,
+              'true'
+            )
+          }
+
+          resolve(resource)
+        } catch (e) {
+          reject(null)
+        }
+      })
+    }
+
+    bookmarkingPromise = new Promise(async (resolve, reject) => {
+      if (!this.webContents) {
+        reject(null)
+        return
+      }
+      
+      const detectedResource = await this.webContents?.detectResource()
+      const resourceTags = [
+        ResourceTag.canonicalURL(url),
+        ResourceTag.viewedByUser(true),
+        ...(silent ? [ResourceTag.silent()] : []),
+        ...(createdForChat ? [ResourceTag.createdForChat()] : [])
+      ]
+
+      if (!detectedResource) {
+        const resource = await this.resourceManager.createResourceLink(
+          {
+            title: this.titleValue ?? '',
+            url: url
+          } as ResourceDataLink,
+          {
+            name: this.titleValue ?? '',
+            sourceURI: url,
+            alt: ''
+          },
+          resourceTags
+        )
+
+        resolve(resource)
+        return
+      }
+
+      const isPDFPage = detectedResource.type === ResourceTypes.PDF
+      let filename = null
+      try {
+        // if (isPDFPage) {
+        //   const resourceData = detectedResource.data as ResourceDataPDF
+        //   const url = resourceData.url
+        //   const pdfDownloadURL = resourceData?.downloadURL ?? url
+
+        //   this.log.debug('downloading PDF', pdfDownloadURL)
+        //   const downloadData = await new Promise<Download | null>((resolveDownload) => {
+        //     const timeout = setTimeout(() => {
+        //       downloadIntercepters.update((intercepters) => {
+        //         intercepters.delete(pdfDownloadURL)
+        //         return intercepters
+        //       })
+        //       resolveDownload(null)
+        //     }, 1000 * 60)
+
+        //     downloadIntercepters.update((intercepters) => {
+        //       intercepters.set(pdfDownloadURL, (data) => {
+        //         clearTimeout(timeout)
+        //         downloadIntercepters.update((intercepters) => {
+        //           intercepters.delete(pdfDownloadURL)
+        //           return intercepters
+        //         })
+        //         resolveDownload(data)
+        //       })
+        //       return intercepters
+        //     })
+
+        //     downloadURL(pdfDownloadURL)
+        //   })
+
+        //   log.debug('download data', downloadData, downloadData.resourceId)
+
+        //   if (downloadData && downloadData.resourceId) {
+        //     filename = downloadData.filename
+        //     const resource = (await resourceManager.getResource(downloadData.resourceId))!
+
+        //     if (url !== pdfDownloadURL) {
+        //       await resourceManager.updateResourceTag(
+        //         resource.id,
+        //         ResourceTagsBuiltInKeys.CANONICAL_URL,
+        //         url
+        //       )
+        //     }
+        //     const hasSilentTag = (resource.tags ?? []).find(
+        //       (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+        //     )
+        //     if (hasSilentTag && !silent)
+        //       await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+
+        //     const hasCreatedForChatTag = (resource.tags ?? []).find(
+        //       (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+        //     )
+        //     if (hasCreatedForChatTag && !createdForChat)
+        //       await resourceManager.deleteResourceTag(
+        //         resource.id,
+        //         ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+        //       )
+
+        //     if ($userConfigSettings.cleanup_filenames) {
+        //       const filename = tab.title || downloadData.filename
+        //       log.debug('cleaning up filename', filename, url)
+        //       const completion = await ai.cleanupTitle(filename, url)
+        //       if (!completion.error && completion.output) {
+        //         log.debug('cleaned up filename', filename, completion.output)
+        //         await resourceManager.updateResourceMetadata(resource.id, {
+        //           name: completion.output,
+        //           sourceURI: url !== pdfDownloadURL ? url : undefined
+        //         })
+        //       }
+        //     } else {
+        //       await resourceManager.updateResourceMetadata(resource.id, {
+        //         name: tab.title,
+        //         sourceURI: url !== pdfDownloadURL ? url : undefined
+        //       })
+        //     }
+
+        //     resolve(resource)
+        //     return
+        //   } else {
+        //     log.error('Failed to download PDF')
+        //     reject(null)
+        //     return
+        //   }
+        // }
+
+        const title = filename ?? (detectedResource.data as any)?.title ?? this.titleValue ?? ''
+        const resource = await this.resourceManager.createDetectedResource(
+          detectedResource,
+          {
+            name: title,
+            sourceURI: url,
+            alt: ''
+          },
+          resourceTags
+        )
+
+        resolve(resource)
+      } catch (error) {
+        this.log.error('Error creating bookmark resource:', error)
+        reject(null)
+      }
+    })
+
+    this.bookmarkingPromises.set(url, bookmarkingPromise)
+    bookmarkingPromise.then(() => {
+      this.bookmarkingPromises.delete(url)
+    })
+
+    return bookmarkingPromise
+  }
+
+  async bookmarkPage(opts?: BookmarkPageOpts) {
+    const defaultOpts: BookmarkPageOpts = {
+      silent: false,
+      createdForChat: false,
+      freshWebview: false
+    }
+
+    const { silent, createdForChat, freshWebview } = Object.assign({}, defaultOpts, opts)
+
+    const rawUrl = this.urlValue
+
+    let url = parseUrlIntoCanonical(rawUrl) ?? rawUrl
+
+    const surfResourceId = url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
+    if (surfResourceId) {
+      return await this.resourceManager.getResource(surfResourceId)
+    }
+
+    // strip &t from url suffix
+    let youtubeHostnames = [
+      'youtube.com',
+      'youtu.be',
+      'youtube.de',
+      'www.youtube.com',
+      'www.youtu.be',
+      'www.youtube.de'
+    ]
+    if (youtubeHostnames.includes(new URL(url).host)) {
+      url = url.replace(/&t.*/g, '')
+    }
+
+    if (this.extractedResourceIdValue) {
+      const fetchedResource = await this.resourceManager.getResource(this.extractedResourceIdValue)
+      if (fetchedResource) {
+        const isDeleted =
+          (fetchedResource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.DELETED)
+            ?.value === 'true'
+
+        const fetchedCanonical = (fetchedResource?.tags ?? []).find(
+          (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
+        )
+
+        if (!isDeleted && compareURLs(fetchedCanonical?.value || '', url)) {
+          this.log.debug('already bookmarked', url, fetchedResource.id)
+
+          if (!silent) {
+            await this.resourceManager.markResourceAsSavedByUser(fetchedResource.id)
+          }
+
+          // Make sure the resource is up to date with at least the latest title and sourceURI
+          // Updating the resource also makes sure that the resource is visible at the top of the Everything view
+          await this.resourceManager.updateResourceMetadata(fetchedResource.id, {
+            name: this.titleValue ?? '',
+            sourceURI: url
+          })
+
+
+          this.resourceCreatedByUser.set(true);
+          this.extractedResourceId.set(fetchedResource.id);
+          // dispatch('update-tab', {
+          //   resourceBookmark: fetchedResource.id,
+          //   resourceBookmarkedManually: tab.resourceBookmarkedManually
+          // })
+
+          // if (freshWebview) {
+          //   log.debug('updating resource with fresh data', fetchedResource.id)
+          //   refreshResourceWithPage(fetchedResource, url, true)
+          //     .then((resource) => {
+          //       log.debug('refreshed resource', resource)
+          //     })
+          //     .catch((e) => {
+          //       toasts.error('Failed to refresh resource')
+          //       fetchedResource.updateExtractionState('idle') // TODO: support error state
+          //     })
+          // }
+
+          return fetchedResource
+        }
+      }
+    }
+
+    this.log.debug('bookmarking', url)
+    const resource = await this.createBookmarkResource(url, {
+      silent,
+      createdForChat,
+      freshWebview
+    })
+
+    this.extractedResourceId.set(resource.id)
+    this.resourceCreatedByUser.set(!silent);
+
+    // dispatch('update-tab', {
+    //   resourceBookmark: resource.id,
+    //   chatResourceBookmark: resource.id,
+    //   resourceBookmarkedManually: tab.resourceBookmarkedManually
+    // })
+
+    return resource
   }
 
   destroy() {

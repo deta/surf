@@ -122,6 +122,8 @@ function runResourceDetection(): void {
     return
   }
 
+  console.log('Running resource detection for', result)
+
   if (result.isPDFPage) {
     sendPageEvent(WebViewEventSendNames.DetectedResource, {
       type: ResourceTypes.PDF,
@@ -306,7 +308,7 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 
-  // runAppDetection()
+  runAppDetection()
 })
 
 window.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -644,6 +646,7 @@ function sendPageEvent<T extends keyof WebViewSendEvents>(
 
 ipcRenderer.on('webview-event', (_event, payload) => {
   const { type, data } = payload
+  console.log('Received webview event', type, data)
   if (type === WebViewEventReceiveNames.GetSelection) {
     const selection = window.getSelection()
     const text = selection?.toString().trim()

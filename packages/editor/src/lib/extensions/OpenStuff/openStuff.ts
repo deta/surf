@@ -1,5 +1,6 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import OpenStuffComp from './OpenStuff.svelte'
+import { createClassComponent } from 'svelte/legacy'
 
 export interface OpenStuffOptions {
   /**
@@ -65,7 +66,8 @@ export const OpenStuff = Node.create<OpenStuffOptions>({
     return () => {
       const container = document.createElement('div')
 
-      const component = new OpenStuffComp({
+      const component = createClassComponent({
+        component: OpenStuffComp,
         target: container,
         props: {
           onClick: () => {

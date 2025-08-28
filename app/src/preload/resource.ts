@@ -10,7 +10,11 @@ import {
   WebContentsViewActionType,
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
-  WebContentsViewActionOutputs
+  WebContentsViewActionOutputs,
+  WebContentsViewContextManagerAction,
+  WebContentsViewContextManagerActionOutputs,
+  WebContentsViewContextManagerActionPayloads,
+  WebContentsViewContextManagerActionType
 } from '@deta/types'
 import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 
@@ -61,6 +65,10 @@ const api = {
     return IPC_EVENTS_RENDERER.getUserConfig.invoke()
   },
 
+  getUserStats: () => {
+    return IPC_EVENTS_RENDERER.getUserStats.invoke()
+  },
+
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })
   },
@@ -97,6 +105,18 @@ const api = {
     const action = { type, payload: args[0] } as WebContentsViewAction
     return IPC_EVENTS_RENDERER.webContentsViewAction.invoke({ viewId, action } as any) as Promise<
       WebContentsViewActionOutputs[T]
+    >
+  },
+
+  webContentsViewContextManagerAction: <T extends WebContentsViewContextManagerActionType>(
+    type: T,
+    ...args: WebContentsViewContextManagerActionPayloads[T] extends undefined
+      ? []
+      : [payload: WebContentsViewContextManagerActionPayloads[T]]
+  ) => {
+    const action = { type, payload: args[0] } as WebContentsViewContextManagerAction
+    return IPC_EVENTS_RENDERER.webContentsViewContextManagerAction.invoke(action) as Promise<
+      WebContentsViewContextManagerActionOutputs[T]
     >
   },
 

@@ -34,8 +34,14 @@ export type WebContentsViewData = {
   permanentlyActive: boolean
   navigationHistoryIndex: number
   navigationHistory: Electron.NavigationEntry[]
+  extractedResourceId: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type SearchResultLink = {
+    title: string;
+    url: string;
 }
 
 // --- WebContentsView Actions ---
@@ -291,3 +297,34 @@ export type WebContentsViewEventListenerTyped<T extends WebContentsViewEventType
 export type WebContentsViewEventListener = {
   [K in WebContentsViewEventType]: WebContentsViewEventListenerTyped<K>
 }[WebContentsViewEventType]
+
+
+// --- WebContentsViewContextManager Actions ---
+export enum WebContentsViewContextManagerActionType {
+  GET_ITEMS = 'get-items',
+  ADD_WEB_SEARCH_CONTEXT = 'add-web-search-context'
+}
+
+export interface WebContentsViewContextManagerActionPayloads {
+  [WebContentsViewContextManagerActionType.GET_ITEMS]: { prompt: string }
+  [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: { results: SearchResultLink[] }
+}
+
+export interface WebContentsViewContextManagerActionOutputs {
+  [WebContentsViewContextManagerActionType.GET_ITEMS]: { resources: string[]; inlineImages: string[]; } | null
+  [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: null
+}
+
+export type WebContentsViewContextManagerAction = {
+  [K in WebContentsViewContextManagerActionType]: WebContentsViewActionTyped<
+    K,
+    WebContentsViewContextManagerActionPayloads
+  >
+}[WebContentsViewContextManagerActionType]
+
+export type WebContentsViewContextManagerActionEvent = {
+  [K in WebContentsViewContextManagerActionType]: {
+    payload: WebContentsViewActionTyped<K, WebContentsViewContextManagerActionPayloads>
+    output: WebContentsViewContextManagerActionOutputs[K]
+  }
+}[WebContentsViewContextManagerActionType]

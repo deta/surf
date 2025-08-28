@@ -424,6 +424,21 @@ function setupIpcHandlers(backendRootPath: string) {
 
     updateCachedSpaces(data)
   })
+
+  IPC_EVENTS_MAIN.webContentsViewContextManagerAction.handle(async (event, action) => {
+    // The sender will be an arbitrary webContentsView, we'd need to extend our validation here.
+    // if (!validateIPCSender(event)) return null
+
+    log.debug('webContentsViewContextManagerAction ipcHandlers', action)
+
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return null
+    }
+
+    return await IPC_EVENTS_MAIN.webContentsViewContextManagerAction.requestFromRenderer(window.webContents, action)
+  })
 }
 
 export const ipcSenders = {

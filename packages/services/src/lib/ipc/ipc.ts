@@ -16,6 +16,12 @@ type HandleHandler<T extends IPCEvent> = (
 ) => T['output'] | null | Promise<T['output'] | null>
 
 export class IPCService {
+  private requestCounter = 0
+  private pendingRequests: Map<number, (response: any) => void> = new Map()
+  private handleRendererRequest: ((payload: any) => Promise<any> | any) = () => {
+    throw new Error('No handler registered for renderer request')
+  }
+
   addEvent<T>(name: string) {
     return {
       renderer: {
@@ -59,6 +65,26 @@ export class IPCService {
   }
 
   addEventWithReturn<T extends IPCEvent>(name: string) {
+    // Set up response handler for main-to-renderer requests
+    if (isRenderer()) {
+      const responseName = `${name}:response`
+      ipcRenderer.on(`${name}:request`, (event, { id, payload }) => {
+        if (!this.handleRendererRequest) {
+          event.sender.send(responseName, { id, error: 'No handler registered for renderer request' })
+          return
+        }
+
+        Promise.resolve()
+          .then(() => this.handleRendererRequest(payload))
+          .then(response => {
+            event.sender.send(responseName, { id, response })
+          })
+          .catch(error => {
+            event.sender.send(responseName, { id, error: error.message })
+          })
+      })
+    }
+
     return {
       renderer: {
         invoke: (payload: T['payload']) => {
@@ -68,6 +94,12 @@ export class IPCService {
           } else {
             return ipcRenderer.invoke(name, payload) as Promise<T['output'] | null>
           }
+        },
+        handle: (handler: (payload: T['payload']) => Promise<T['output']> | T['output']) => {
+          if (!isRenderer()) {
+            throw new Error('Cannot handle renderer requests in main process')
+          }
+          this.handleRendererRequest = handler
         }
       },
       main: {
@@ -81,6 +113,74 @@ export class IPCService {
           } else {
             throw new Error('Cannot handle events in renderer process')
           }
+        },
+        requestFromRenderer: (webContents: Electron.WebContents, payload: T['payload']): Promise<T['output']> => {
+          const mainProcess = !isRenderer()
+          if (!mainProcess) {
+            throw new Error('Cannot request from renderer in renderer process')
+          }
+
+          const requestId = ++this.requestCounter
+          const responseName = `${name}:response`
+
+          if (webContents.isDestroyed()) {
+            return Promise.reject(new Error('WebContents is already destroyed'))
+          }
+
+          return new Promise((resolve, reject) => {
+            let isCleanedUp = false
+            let timeoutId: NodeJS.Timeout | null = null
+
+            const cleanup = () => {
+              if (isCleanedUp) return
+              isCleanedUp = true
+
+              if (timeoutId) clearTimeout(timeoutId)
+              this.pendingRequests.delete(requestId)
+              ipcMain.removeListener(responseName, responseHandler)
+              webContents.removeListener('destroyed', handleDestroyed)
+            }
+
+            const handleError = (error: Error) => {
+              cleanup()
+              reject(error)
+            }
+
+            const responseHandler = (event: Electron.IpcMainEvent, response: { id: number; response?: any; error?: string }) => {
+              if (response.id !== requestId) return
+              
+              if (response.error) {
+                handleError(new Error(`Renderer Error: ${response.error}`))
+              } else {
+                cleanup()
+                resolve(response.response)
+              }
+            }
+
+            const handleDestroyed = () => {
+              handleError(new Error('Renderer was destroyed'))
+            }
+
+            // Set up timeout
+            timeoutId = setTimeout(() => {
+              handleError(new Error('Request to renderer timed out after 30 seconds'))
+            }, 30000) // 30 second timeout
+
+            try {
+              this.pendingRequests.set(requestId, resolve)
+              ipcMain.on(responseName, responseHandler)
+              webContents.once('destroyed', handleDestroyed)
+              
+              // Make sure webContents is still valid before sending
+              if (webContents.isDestroyed()) {
+                throw new Error('WebContents was destroyed')
+              }
+              
+              webContents.send(`${name}:request`, { id: requestId, payload })
+            } catch (err) {
+              handleError(err instanceof Error ? err : new Error('Failed to send request to renderer'))
+            }
+          })
         }
       }
     }

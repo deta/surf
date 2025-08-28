@@ -1,5 +1,6 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import UseAsDefaultBrowserComp from './UseAsDefaultBrowser.svelte'
+import { createClassComponent } from 'svelte/legacy'
 
 export interface UseAsDefaultBrowserOptions {
   /**
@@ -65,7 +66,8 @@ export const UseAsDefaultBrowser = Node.create<UseAsDefaultBrowserOptions>({
     return () => {
       const container = document.createElement('div')
 
-      const component = new UseAsDefaultBrowserComp({
+      const component = createClassComponent({
+        component: UseAsDefaultBrowserComp,
         target: container,
         props: {
           onClick: () => {

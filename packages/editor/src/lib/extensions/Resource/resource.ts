@@ -1,6 +1,7 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import ResourceComp from './Resource.svelte'
 import type { ComponentType, SvelteComponent } from 'svelte'
+import { createClassComponent } from 'svelte/legacy'
 
 export interface ResourceOptions {
   /**
@@ -108,7 +109,8 @@ export const Resource = Node.create<ResourceOptions>({
 
       console.log('resource node', node)
 
-      const component = new this.options.component({
+      const component = createClassComponent({
+        component: this.options.component,
         target: container,
         props: {
           id: node.attrs.id,

@@ -1,5 +1,6 @@
 import { Node, nodePasteRule } from '@tiptap/core'
 import type { ComponentType, SvelteComponent } from 'svelte'
+import { createClassComponent } from 'svelte/legacy'
 
 export interface CitationOptions {
   /**
@@ -90,7 +91,8 @@ export const Citation = Node.create<CitationOptions>({
         }
       }
 
-      const component = new this.options.component({
+      const component = createClassComponent({
+        component: this.options.component,
         target: container,
         props: {
           ...node.attrs

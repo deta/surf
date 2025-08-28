@@ -46,7 +46,8 @@ export class WCView {
         autoplayPolicy: 'document-user-activation-required',
         preload: opts.preload || path.resolve(__dirname, '../preload/webcontents.js'),
         additionalArguments: opts.additionalArguments || [],
-        transparent: opts.transparent
+        transparent: opts.transparent,
+        webviewTag: true
       }
     })
 

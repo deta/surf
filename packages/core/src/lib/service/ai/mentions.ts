@@ -78,20 +78,20 @@ export const createResourcesMentionsFetcher = (
 }
 
 export const createMentionsFetcher = (
-  services: { oasis: OasisService; ai: AIService; resourceManager: ResourceManager },
+  services: { ai: AIService; resourceManager: ResourceManager },
   notResourceId?: string
 ) => {
   const log = useLogScope('MentionsHelper')
-  const { oasis, ai, resourceManager } = services
+  const { ai, resourceManager } = services
 
   const resourceFetcher = createResourcesMentionsFetcher(resourceManager, notResourceId)
 
   const mentionItemsFetcher: MentionItemsFetcher = async ({ query }) => {
     log.debug('fetching mention items', query)
 
-    const spaces = oasis.spacesObjectsValue
+    // const spaces = oasis.spacesObjectsValue
     const models = ai.modelsValue
-    const userSettings = oasis.config.settingsValue
+    const userSettings = ai.config.settingsValue
 
     const builtInMentions = [
       ...BUILT_IN_MENTIONS_BASE,
@@ -121,21 +121,21 @@ export const createMentionsFetcher = (
       )
     }
 
-    const spaceItems = spaces
-      .sort((a, b) => {
-        return a.indexValue - b.indexValue
-      })
-      .map(
-        (space) =>
-          ({
-            id: space.id,
-            label: space.dataValue.folderName,
-            icon: space.getIconString(),
-            type: MentionItemType.CONTEXT
-          }) as MentionItem
-      )
+    // const spaceItems = spaces
+    //   .sort((a, b) => {
+    //     return a.indexValue - b.indexValue
+    //   })
+    //   .map(
+    //     (space) =>
+    //       ({
+    //         id: space.id,
+    //         label: space.dataValue.folderName,
+    //         icon: space.getIconString(),
+    //         type: MentionItemType.CONTEXT
+    //       }) as MentionItem
+    //   )
 
-    const items = [...builtInMentions, ...modelMentions, ...spaceItems]
+    const items = [...builtInMentions, ...modelMentions]
 
     if (!query) {
       return items

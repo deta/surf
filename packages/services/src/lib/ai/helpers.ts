@@ -7,17 +7,24 @@ import {
   type AIChatMessageParsed,
   type DetectedResource,
   type WebViewEventSendNames,
-  type WebViewSendEvents
-} from '@deta/types'
-import { codeLanguageToMimeType, markdownToHtml, useLogScope } from '@deta/utils'
-import { WebParser } from '@deta/web-parser'
-import { PromptIDs, getPrompt } from './prompts'
-import type { AIService } from './ai'
-import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@deta/backend/types'
-import { ModelTiers, type ChatError } from '@deta/types/src/ai.types'
-import { ResourceManager } from '@deta/services/resources'
-import type { CitationInfo } from '@deta/ui'
-import { ResourceTag } from '@deta/utils/formatting'
+  type WebViewSendEvents,
+} from "@deta/types";
+import {
+  codeLanguageToMimeType,
+  markdownToHtml,
+  useLogScope,
+} from "@deta/utils";
+import { WebParser } from "@deta/web-parser";
+import { PromptIDs, getPrompt } from "./prompts";
+import type { AIService } from "./aiClean";
+import {
+  BadRequestError,
+  QuotaDepletedError,
+  TooManyRequestsError,
+} from "@deta/backend/types";
+import { ModelTiers, type ChatError } from "@deta/types/src/ai.types";
+import { ResourceManager } from "@deta/services/resources";
+import { ResourceTag } from "@deta/utils/formatting";
 
 const log = useLogScope('AI')
 
@@ -527,7 +534,7 @@ export const convertChatOutputToNoteContent = async (
     const renderID = renderIDFromCitationID(id, sources)
     const source = sources?.find((source) => source.render_id === renderID)
 
-    return { id, source, renderID } as CitationInfo
+    return { id, source, renderID }
   }
 
   const citations = doc.querySelectorAll('citation')
@@ -591,7 +598,9 @@ export const convertChatOutputToNoteContent = async (
 
       log.debug('Created resource', resource)
 
-      replaceWithResource(codeBlock, resource.id, resource.type)
+      if (resource) {
+        replaceWithResource(codeBlock, resource.id, resource.type)
+      }
     } catch (e) {
       log.error('Error creating code resource', e)
     }

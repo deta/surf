@@ -6,6 +6,7 @@ import Suggestion, { type SuggestionOptions } from '../../utilities/Suggestion'
 import MentionComp from './Mention.svelte'
 import type { MentionItem } from '../../types'
 import type { MentionAction } from '@deta/types'
+import { createClassComponent } from 'svelte/legacy'
 
 // See `addAttributes` below
 export interface MentionNodeAttrs {
@@ -326,7 +327,8 @@ export const Mention = Node.create<MentionOptions>({
 
       console.log('mention node', node)
 
-      const component = new MentionComp({
+      const component = createClassComponent({
+        component: MentionComp,
         target: container,
         props: {
           id: node.attrs.id,

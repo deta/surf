@@ -80,10 +80,18 @@ export enum ViewManagerEmitterNames {
 }
 
 export type ViewManagerEmitterEvents = {
-  [ViewManagerEmitterNames.CREATED]: (view: WebContents) => void
-  [ViewManagerEmitterNames.DELETED]: (viewId: string) => void
-  [ViewManagerEmitterNames.ACTIVATED]: (view: WebContents) => void
-  [ViewManagerEmitterNames.SHOW_VIEWS]: () => void
-  [ViewManagerEmitterNames.HIDE_VIEWS]: () => void
-  [ViewManagerEmitterNames.NEW_WINDOW_REQUEST]: (details: NewWindowRequest) => void
+  [ViewManagerEmitterNames.CREATED]: (view: WebContents) => void;
+  [ViewManagerEmitterNames.DELETED]: (viewId: string) => void;
+  [ViewManagerEmitterNames.ACTIVATED]: (view: WebContents) => void;
+  [ViewManagerEmitterNames.SHOW_VIEWS]: () => void;
+  [ViewManagerEmitterNames.HIDE_VIEWS]: () => void;
+  [ViewManagerEmitterNames.NEW_WINDOW_REQUEST]: (
+    details: NewWindowRequest,
+  ) => void;
+};
+
+export type BookmarkPageOpts = {
+  freshWebview?: boolean
+  silent?: boolean
+  createdForChat?: boolean
 }

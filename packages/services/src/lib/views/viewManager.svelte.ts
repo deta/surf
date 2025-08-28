@@ -4,14 +4,18 @@ import {
   WebContentsViewActionType,
   type WebContentsViewData,
   WebContentsViewManagerActionType,
-  type Fn
-} from '@deta/types'
-import { useLogScope, EventEmitterBase, generateID, isDev } from '@deta/utils'
-import { ConfigService, useConfig } from '../config'
-import { KVStore, useKVTable } from '../kv'
-import { WebContentsView, type WebContents } from './webContentsView.svelte'
-import { ViewManagerEmitterNames, type ViewManagerEmitterEvents } from './types'
-import type { NewWindowRequest } from '../ipc/events'
+  type Fn,
+} from "@deta/types";
+import { useLogScope, EventEmitterBase, generateID, isDev } from "@deta/utils";
+import { ConfigService, useConfig } from "../config";
+import { KVStore, useKVTable } from "../kv";
+import { WebContentsView, type WebContents } from "./webContentsView.svelte";
+import {
+  ViewManagerEmitterNames,
+  type ViewManagerEmitterEvents,
+} from "./types";
+import type { NewWindowRequest } from "../ipc/events";
+import { ResourceManager, useResourceManager } from "../resources";
 
 export type OverlayState = {
   teletypeOpen: boolean
@@ -32,9 +36,10 @@ export type OverlayState = {
  * This service implements a singleton pattern and should be accessed via useViewManager().
  */
 export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
-  log: ReturnType<typeof useLogScope>
-  config: ConfigService
-  kv: KVStore<WebContentsViewData>
+  log: ReturnType<typeof useLogScope>;
+  config: ConfigService;
+  kv: KVStore<WebContentsViewData>;
+  resourceManager: ResourceManager
 
   webContentsViews: Map<string, WebContents> = new Map()
   viewOverlays: Map<string, string> = new Map() // Maps a view to its overlay view if it has one
@@ -49,12 +54,13 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   static self: ViewManager
 
-  constructor() {
+  constructor(resourceManager?: ResourceManager) {
     super()
 
-    this.log = useLogScope('ViewManager')
-    this.config = useConfig()
-    this.kv = useKVTable<WebContentsViewData>('views')
+    this.log = useLogScope("ViewManager");
+    this.config = useConfig();
+    this.kv = useKVTable<WebContentsViewData>("views");
+    this.resourceManager = resourceManager || useResourceManager()
 
     this.overlayState = writable({
       teletypeOpen: false
@@ -141,6 +147,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       navigationHistoryIndex: data.navigationHistoryIndex ?? -1,
       navigationHistory: data.navigationHistory ?? [],
       permanentlyActive: data.permanentlyActive ?? false,
+      extractedResourceId: data.extractedResourceId || null,
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString()
     } satisfies WebContentsViewData
@@ -262,6 +269,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   async hideAll() {
+    // @ts-ignore
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
   }
 
@@ -292,6 +300,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       }
     }
 
+    // @ts-ignore
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
   }
 
@@ -307,15 +316,15 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     this.unsubs.forEach((unsub) => unsub())
   }
 
-  static getInstance(): ViewManager {
+  static getInstance(resourceManager?: ResourceManager): ViewManager {
     if (!ViewManager.self) {
-      ViewManager.self = new ViewManager()
+      ViewManager.self = new ViewManager(resourceManager)
     }
 
     return ViewManager.self
   }
 }
 
-export const useViewManager = (): ViewManager => {
-  return ViewManager.getInstance()
+export const useViewManager = (resourceManager?: ResourceManager): ViewManager => {
+  return ViewManager.getInstance(resourceManager)
 }

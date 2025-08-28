@@ -2,32 +2,24 @@
   import { onMount } from 'svelte'
   import { createTelemetry, provideConfig } from '@deta/services'
   import { createResourceManager, type Resource } from '@deta/services/resources'
+  import { setupTelemetry } from '@deta/services/helpers'
+  import { useTabs } from '@deta/services/tabs'
+  import { provideAI } from '@deta/services/ai'
   import { ResourceTypes } from '@deta/types'
 
   import { Note } from '@deta/ui'
+  import TextResource from './components/TextResource.svelte'
 
   const searchParams = new URLSearchParams(window.location.search)
   const resourceId = searchParams.get('resourceId') || ''
 
-  let telemetryAPIKey = ''
-  let telemetryActive = false
-  let telemetryProxyUrl: string | undefined = undefined
-  if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
-    telemetryActive = true
-    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
-    if (!telemetryProxyUrl) {
-      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
-    }
-  }
-
-  const telemetry = createTelemetry({
-    apiKey: telemetryAPIKey,
-    active: telemetryActive,
-    trackHostnames: false,
-    proxyUrl: telemetryProxyUrl
-  })
+  const telemetry = setupTelemetry()
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
+  const tabs = useTabs()
+  const ai = provideAI(resourceManager, tabs, config, false)
+
+  const contextManager = ai.contextManager
 
   let resource: Resource | null = $state(null)
 
@@ -48,7 +40,8 @@
 <div class="wrapper">
   {#if resource}
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-      <Note {resource} />
+      <!-- <Note {resource} /> -->
+      <TextResource resourceId={resource.id} {resource} {contextManager} />
     {:else}
       <div>
         <p><strong>Name:</strong> {resource.metadata.name}</p>

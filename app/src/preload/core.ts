@@ -29,7 +29,9 @@ import {
   WebContentsViewActionType,
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
-  WebContentsViewActionOutputs
+  WebContentsViewActionOutputs,
+  WebContentsViewContextManagerActionEvent,
+  WebContentsViewContextManagerActionOutputs
 } from '@deta/types'
 
 import { IPC_EVENTS_RENDERER, NewWindowRequest, OpenURL, SpaceBasicData } from '@deta/services/ipc'
@@ -491,6 +493,29 @@ const eventHandlers = {
         callback(event)
       } catch (error) {
         // noop
+      }
+    })
+  },
+
+  webContentsViewManagerAction: <T extends WebContentsViewManagerActionType>(
+    type: T,
+    ...args: WebContentsViewManagerActionPayloads[T] extends undefined
+      ? []
+      : [payload: WebContentsViewManagerActionPayloads[T]]
+  ) => {
+    const action = { type, payload: args[0] } as WebContentsViewManagerAction
+    return IPC_EVENTS_RENDERER.webContentsViewManagerAction.invoke(action) as Promise<
+      WebContentsViewManagerActionOutputs[T]
+    >
+  },
+
+  onWebContentsViewContextManagerEvent: <T extends WebContentsViewManagerActionType>(callback: (event: WebContentsViewManagerActionPayloads[T]) => WebContentsViewManagerActionOutputs[T]) => {
+    return IPC_EVENTS_RENDERER.webContentsViewContextManagerAction.handle((payload) => {
+      console.log('webContentsViewContextManagerAction core preload', payload)
+      try {
+        return callback(payload)
+      } catch (error) {
+        return null
       }
     })
   }

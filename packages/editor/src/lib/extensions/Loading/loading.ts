@@ -1,4 +1,5 @@
 import { mergeAttributes, Node } from '@tiptap/core'
+import { createClassComponent } from 'svelte/legacy';
 import LoadingComp from './Loading.svelte'
 
 export interface LoadingOptions {
@@ -76,7 +77,8 @@ export const Loading = Node.create<LoadingOptions>({
 
       console.log('loading node', node)
 
-      const component = new LoadingComp({
+      const component = createClassComponent({
+        component: LoadingComp,
         target: container,
         props: {
           text: node.attrs.text

@@ -10,14 +10,16 @@ import {
   ShortcutActions
 } from '../shortcuts'
 import { setupTelemetry } from './telemetry'
+import { provideAI } from '../ai'
 
 export const initServices = () => {
   const telemetry = setupTelemetry()
   const config = provideConfig()
-  const viewManager = useViewManager()
-  const tabsService = useTabs()
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
+  const viewManager = useViewManager(resourceManager)
+  const tabsService = useTabs()
+  const ai = provideAI(resourceManager, tabsService, config, true)
 
   const keyboardManager = createKeyboardManager()
   const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
@@ -29,6 +31,7 @@ export const initServices = () => {
     tabsService,
     resourceManager,
     notebookManager,
+    ai,
     keyboardManager,
     shortcutsManager
   }

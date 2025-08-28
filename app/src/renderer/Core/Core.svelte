@@ -16,11 +16,14 @@
   //import Test from './components/Overlays/Test.svelte'
   //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
+  import { wait } from '@deta/utils';
 
   const log = useLogScope('Core')
 
-  const { config, viewManager, tabsService, keyboardManager, shortcutsManager } = initServices()
+  const { config, viewManager, tabsService, ai, keyboardManager, shortcutsManager } = initServices()
   // const overlayManager = useOverlayManager()
+
+  const contextManager = ai.contextManager
 
   const activeTabView = $derived(tabsService.activeTab?.view)
   let open = $state(false)
@@ -90,6 +93,12 @@
     })
 
     unsubs.push(handlePreloadEvents())
+
+    wait(2000).then(() => {
+      const tab = tabsService.tabsValue[0]
+      log.debug('Adding tab to context', tab.id)
+      contextManager.addTab(tab)
+    })
   })
 
   onDestroy(() => {

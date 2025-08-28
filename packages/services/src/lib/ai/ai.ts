@@ -1,16 +1,17 @@
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from '../config'
-import { ResourceManager } from '@deta/services/resources'
+import { ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
 
 import {
   QuotaDepletedError,
+  type App,
   type Message,
   type Model as ModelBackend,
   type Quota
 } from '@deta/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
-import { appendURLPath, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
+import { appendURLPath, generateHash, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
 import {
   FILENAME_CLEANUP_PROMPT,
   PAGE_PROMPTS_GENERATOR_PROMPT,
@@ -21,13 +22,20 @@ import {
   BUILT_IN_MODELS,
   ModelTiers,
   OPEN_AI_PATH_SUFFIX,
-  type ChatCompletionResponse,
-  type ChatPrompt,
   type Model
 } from '@deta/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError } from './helpers'
+import type { TabsService } from '../tabs'
 import type { Telemetry } from '../telemetry'
-import { EventContext, GeneratePromptsEventTrigger, SummarizeEventContentSource } from '@deta/types'
+import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
+import { type ContextItem, ContextManager, ContextService } from './contextManager'
+import {
+  EventContext,
+  GeneratePromptsEventTrigger,
+  PromptType,
+  SummarizeEventContentSource
+} from '@deta/types'
+import { ContextManagerWCV } from './contextManagerWCV'
 
 export interface AppCreationResult {
   appId: string
@@ -43,27 +51,57 @@ export class AIService {
 
   resourceManager: ResourceManager
   sffs: SFFS
+  tabsManager: TabsService
   config: ConfigService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
+  contextService: ContextService
+  fallbackContextManager: ContextManager | ContextManagerWCV
 
   showChatSidebar: Writable<boolean>
+  chats: Writable<AIChat[]>
   activeSidebarChatId: Writable<string>
+  activeSidebarChat: Writable<AIChat | null>
 
   selectedModelId: Readable<string>
   selectedModel: Readable<Model>
   models: Readable<Model[]>
   alwaysIncludeScreenshotInChat: Readable<boolean>
+  activeContextManager: Readable<ContextManager | ContextManagerWCV>
 
-  constructor(resourceManager: ResourceManager, config: ConfigService) {
+  customAIApps: Writable<App[]> = writable([])
+
+  private activeAppStreams = new Map<
+    string,
+    {
+      buffer: string
+      isComplete: boolean
+      subscribers: Set<{
+        chunkCallback: (chunk: string) => void
+        doneCallback: () => void
+      }>
+    }
+  >()
+
+  constructor(
+    resourceManager: ResourceManager,
+    tabsManager: TabsService,
+    config: ConfigService,
+    global = true
+  ) {
     this.resourceManager = resourceManager
     this.sffs = resourceManager.sffs
+    this.tabsManager = tabsManager
     this.config = config
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
+    this.contextService = ContextService.create(this, tabsManager, resourceManager)
+    this.fallbackContextManager = global ? this.contextService.createDefault() : this.contextService.createWCV()
 
     this.showChatSidebar = writable(false)
+    this.chats = writable([])
     this.activeSidebarChatId = useLocalStorageStore<string>('activeChatId', '')
+    this.activeSidebarChat = writable<AIChat | null>(null)
 
     this.selectedModelId = derived([this.config.settings], ([settings]) => {
       return settings.selected_model
@@ -95,10 +133,27 @@ export class AIService {
       return settings.always_include_screenshot_in_chat
     })
 
+    this.activeContextManager = derived(
+      [this.config.settings],
+      ([settings]) => {
+        // if (settings.experimental_notes_chat_sidebar && activeNote) {
+        //   return activeNote.contextManager
+        // }
+
+        return this.fallbackContextManager
+      }
+    )
+
+    this.refreshCustomAiApps()
+
     if (isDev) {
       // @ts-ignore
       window.aiService = this
     }
+  }
+
+  get contextManager() {
+    return get(this.activeContextManager)
   }
 
   get showChatSidebarValue() {
@@ -117,8 +172,21 @@ export class AIService {
     return get(this.models)
   }
 
+  get chatsValue() {
+    return get(this.chats)
+  }
+
+  get activeSidebarChatValue() {
+    return get(this.activeSidebarChat)
+  }
+
   get activeSidebarChatIdValue() {
     return get(this.activeSidebarChatId)
+  }
+
+  addMissingChats(chats: AIChat[]) {
+    const missingChats = chats.filter((chat) => !this.chatsValue.find((c) => c.id === chat.id))
+    this.chats.update((existingChats) => [...existingChats, ...missingChats])
   }
 
   modelToBackendModel(model: Model): ModelBackend {
@@ -187,6 +255,167 @@ export class AIService {
     return this.modelToBackendModel(model)
   }
 
+  createContextManager(key?: string) {
+    this.log.debug('creating context manager', key)
+    return this.contextService.create(undefined, key)
+  }
+
+  // cloneContextManager() {
+  //   return this.contextManager.clone()
+  // }
+
+  async createChat(opts?: {
+    title?: string
+    system_prompt?: string
+    contextManager?: ContextManager | ContextManagerWCV
+    automaticTitleGeneration?: boolean
+  }): Promise<AIChat | null> {
+    const { title, system_prompt, contextManager, automaticTitleGeneration } = Object.assign(
+      {
+        title: undefined,
+        system_prompt: undefined,
+        contextManager: this.contextManager,
+        automaticTitleGeneration: false
+      },
+      opts
+    )
+
+    this.log.debug(`creating ai chat "${title}" with system prompt: ${system_prompt}`)
+    const chatId = await this.sffs.createAIChat(title, system_prompt)
+
+    if (!chatId) {
+      this.log.error('failed to create ai chat')
+      return null
+    }
+
+    this.log.debug('created ai chat with id', chatId)
+
+    const createdChat = {
+      id: chatId,
+      title: title ?? '',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    const chat = new AIChat(
+      createdChat,
+      automaticTitleGeneration,
+      this,
+      contextManager ?? this.contextManager
+    )
+    this.chats.update((chats) => [...chats, chat])
+
+    return chat
+  }
+
+  async listChats(opts?: { withMessages?: boolean; limit?: number }) {
+    const options = Object.assign({ withMessages: false, limit: 15 }, opts)
+
+    const chats = await this.sffs.listAIChats(options.limit)
+    if (!options.withMessages) {
+      const fullChats = chats.map((chat) => new AIChat(chat, false, this, this.contextManager))
+      this.addMissingChats(fullChats)
+      return fullChats
+    }
+
+    const chatsWithMessages = await Promise.all(
+      chats.map(async (chat) => {
+        const fullChat = await this.getChat(chat.id)
+        return fullChat
+      })
+    )
+
+    const filtered = chatsWithMessages.filter((chat) => chat !== null) as AIChat[]
+    this.addMissingChats(filtered)
+
+    return filtered
+  }
+
+  async searchChats(query: string, opts?: { withMessages?: boolean; limit?: number }) {
+    const options = Object.assign({ withMessages: false, limit: 15 }, opts)
+
+    const chats = await this.sffs.searchAIChats(query, options.limit)
+    if (!options.withMessages) {
+      const fullChats = chats.map((chat) => new AIChat(chat, false, this, this.contextManager))
+      this.addMissingChats(fullChats)
+      return fullChats
+    }
+
+    const chatsWithMessages = await Promise.all(
+      chats.map(async (chat) => {
+        const fullChat = await this.getChat(chat.id)
+        return fullChat
+      })
+    )
+
+    const filtered = chatsWithMessages.filter((chat) => chat !== null) as AIChat[]
+    this.addMissingChats(filtered)
+
+    return filtered
+  }
+
+  async getChat(
+    id: string,
+    opts?: { contextManager?: ContextManager; fresh?: boolean }
+  ): Promise<AIChat | null> {
+    const defaultOpts = {
+      contextManager: this.contextManager,
+      fresh: true
+    }
+
+    const options = Object.assign(defaultOpts, opts) as typeof defaultOpts
+
+    this.log.debug('getting ai chat with id', id, options)
+
+    if (!options.fresh) {
+      const localChat = this.chatsValue.find((chat) => chat.id === id)
+      if (localChat) {
+        if (!localChat.messagesValue || localChat.messagesValue.length === 0) {
+          await localChat.getMessages()
+        }
+
+        return localChat
+      }
+    }
+
+    const chatData = await this.sffs.getAIChat(id)
+    if (!chatData) {
+      this.log.error('failed to get ai chat')
+      return null
+    }
+
+    this.log.debug('got ai chat', chatData)
+    const chat = new AIChat(chatData, false, this, options.contextManager)
+
+    this.addMissingChats([chat])
+
+    return chat
+  }
+
+  async renameChat(id: string, title: string): Promise<void> {
+    this.log.debug('renaming ai chat with id', id, 'to', title)
+    const chat = this.chatsValue.find((chat) => chat.id === id)
+    if (!chat) {
+      this.log.error('chat not found', id)
+      return
+    }
+
+    chat.title.set(title)
+    await this.sffs.updateAIChatTitle(id, title)
+
+    // force svelte reactivity to update
+    this.chats.update((chats) => {
+      return chats.map((c) => (c.id === id ? chat : c))
+    })
+  }
+
+  async deleteChat(id: string): Promise<void> {
+    this.log.debug('deleting ai chat with id', id)
+    await this.sffs.deleteAIChat(id)
+    this.chats.update((chats) => chats.filter((chat) => chat.id !== id))
+  }
+
   async createChatCompletion(
     userPrompt: string | string[],
     systemPrompt?: string,
@@ -218,23 +447,14 @@ export class AIService {
       let messages: Message[] = []
 
       if (systemPrompt) {
-        messages.push({
-          role: 'system',
-          content: [{ type: 'text', text: systemPrompt }]
-        })
+        messages.push({ role: 'system', content: [{ type: 'text', text: systemPrompt }] })
       }
 
       if (typeof userPrompt === 'string') {
-        messages.push({
-          role: 'user',
-          content: [{ type: 'text', text: userPrompt }]
-        })
+        messages.push({ role: 'user', content: [{ type: 'text', text: userPrompt }] })
       } else {
         userPrompt.forEach((prompt) => {
-          messages.push({
-            role: 'user',
-            content: [{ type: 'text', text: prompt }]
-          })
+          messages.push({ role: 'user', content: [{ type: 'text', text: prompt }] })
         })
       }
 
@@ -400,6 +620,188 @@ export class AIService {
     }
   }
 
+  async getAppId(query: string): Promise<string> {
+    return generateHash(query)
+  }
+
+  async createApp(
+    query: string,
+    opts?: {
+      tier?: ModelTiers
+    }
+  ): Promise<AppCreationResult | null> {
+    const model = this.getMatchingBackendModel(opts?.tier ?? ModelTiers.Premium)
+    const customKey = this.customKeyValue
+
+    // TODO: this is a temporary fix to prevent remounts from causing multiple streams
+    // we should find a better way to handle this
+    const appId = await this.getAppId(query)
+
+    this.log.debug('creating ai app with id:', appId, model, opts, query)
+
+    const contextManager = get(this.activeContextManager)
+    const inlineImages = await contextManager.getInlineImages()
+
+    this.log.debug('number of inline images for app creation:', inlineImages.length)
+
+    try {
+      this.activeAppStreams.set(appId, {
+        buffer: '',
+        isComplete: false,
+        subscribers: new Set()
+      })
+      this.startAppStreaming(appId, query, model, { customKey, inlineImages })
+      return {
+        appId,
+        hasBufferedData: false
+      }
+    } catch (error) {
+      this.log.error('Failed to create app:', error)
+      this.activeAppStreams.delete(appId)
+      return null
+    }
+  }
+
+  subscribeToAppStream(appId: string): StreamingAppResponse | null {
+    const streamData = this.activeAppStreams.get(appId)
+    if (!streamData) {
+      this.log.error('App stream not found:', appId)
+      return null
+    }
+
+    return {
+      subscribe: (chunkCallback: (chunk: string) => void, doneCallback: () => void) => {
+        const subscriber = { chunkCallback, doneCallback }
+        streamData.subscribers.add(subscriber)
+
+        if (streamData.buffer) {
+          chunkCallback(streamData.buffer)
+        }
+
+        if (streamData.isComplete) {
+          doneCallback()
+        }
+        return () => {
+          streamData.subscribers.delete(subscriber)
+          if (streamData.subscribers.size === 0 && streamData.isComplete) {
+            this.activeAppStreams.delete(appId)
+          }
+        }
+      }
+    }
+  }
+
+  private async startAppStreaming(
+    appId: string,
+    query: string,
+    model: ModelBackend,
+    options: { customKey?: string; inlineImages?: string[] }
+  ) {
+    const streamData = this.activeAppStreams.get(appId)
+    if (!streamData) {
+      return
+    }
+
+    try {
+      await this.sffs.createAIApp(
+        query,
+        model,
+        // chunk callback
+        // store main content in buffer and notify subscribers
+        (chunk: string) => {
+          streamData.buffer += chunk
+          streamData.subscribers.forEach((subscriber) => {
+            subscriber.chunkCallback(chunk)
+          })
+        },
+        // done callback
+        // mark stream as complete and notify subscribers
+        () => {
+          streamData.isComplete = true
+          streamData.subscribers.forEach((subscriber) => {
+            subscriber.doneCallback()
+          })
+          if (streamData.subscribers.size === 0) {
+            this.activeAppStreams.delete(appId)
+          }
+        },
+        options
+      )
+    } catch (error) {
+      this.log.error('Error streaming app:', error)
+      // TODO: have an error callback
+      streamData.subscribers.forEach((subscriber) => {
+        subscriber.doneCallback()
+      })
+
+      this.activeAppStreams.delete(appId)
+    }
+  }
+
+  getAppStreamStatus(appId: string): {
+    exists: boolean
+    isComplete: boolean
+    hasBuffer: boolean
+    bufferLength: number
+  } | null {
+    const streamData = this.activeAppStreams.get(appId)
+    if (!streamData) {
+      return null
+    }
+
+    return {
+      exists: true,
+      isComplete: streamData.isComplete,
+      hasBuffer: streamData.buffer.length > 0,
+      bufferLength: streamData.buffer.length
+    }
+  }
+
+  getAppBuffer(appId: string): string | null {
+    const streamData = this.activeAppStreams.get(appId)
+    return streamData?.buffer ?? null
+  }
+
+  cleanupAppStream(appId: string): void {
+    this.activeAppStreams.delete(appId)
+  }
+
+  cleanupCompletedAppStreams(): void {
+    for (const [appId, streamData] of this.activeAppStreams.entries()) {
+      if (streamData.isComplete && streamData.subscribers.size === 0) {
+        this.activeAppStreams.delete(appId)
+      }
+    }
+  }
+
+  refreshCustomAiApps() {
+    this.sffs.listAIApps().then((apps) => {
+      this.customAIApps.set(apps)
+    })
+  }
+
+  async storeCustomAiApp({ name, prompt, icon }: { name: string; prompt: string; icon?: string }) {
+    try {
+      await this.sffs.storeAIApp('inline-screenshot', prompt, name, icon)
+      this.refreshCustomAiApps()
+    } catch (error) {
+      this.log.error('Failed to save custom tool:', error)
+      return
+    }
+    this.telemetry.trackCreatePrompt(PromptType.Custom)
+  }
+
+  async deleteCustomAiApp(id: string) {
+    try {
+      await this.sffs.deleteAIApp(id)
+      this.refreshCustomAiApps()
+    } catch (error) {
+      this.log.error('Failed to delete custom tool:', error)
+      return
+    }
+    this.telemetry.trackDeletePrompt(PromptType.Custom)
+  }
+
   async summarizeText(
     text: string,
     opts?: {
@@ -442,8 +844,13 @@ export class AIService {
     return quotas
   }
 
-  static provide(resourceManager: ResourceManager, config: ConfigService) {
-    const service = new AIService(resourceManager, config)
+  static provide(
+    resourceManager: ResourceManager,
+    tabsManager: TabsService,
+    config: ConfigService,
+    global?: boolean
+  ) {
+    const service = new AIService(resourceManager, tabsManager, config, global)
 
     setContext('ai', service)
     if (!AIService.self) AIService.self = service
@@ -459,3 +866,5 @@ export class AIService {
 
 export const useAI = AIService.use
 export const provideAI = AIService.provide
+
+export * from './chat'

@@ -1,5 +1,6 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import type { ComponentType, SvelteComponent } from 'svelte'
+import { createClassComponent } from 'svelte/legacy'
 
 export interface SurfletOptions {
   HTMLAttributes: Record<string, any>
@@ -133,7 +134,8 @@ export const Surflet = Node.create<SurfletOptions>({
         }
       }
 
-      const component = new this.options.component({
+      const component = createClassComponent({
+        component: this.options.component,
         target: container,
         props: {
           updateAttributes,

@@ -59,7 +59,10 @@
     GeneratePromptsEventTrigger,
     MentionEventType,
     NoteCreateCitationEventTrigger,
+    PageChatMessageSentEventError,
     PageChatMessageSentEventTrigger,
+    PageChatUpdateContextEventAction,
+    PageChatUpdateContextEventTrigger,
     PromptType,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
@@ -71,7 +74,7 @@
     type HighlightWebviewTextEvent,
     type JumpToWebviewTimestampEvent
   } from '@deta/types'
-  import { useAI } from '@deta/services/ai'
+  import { provideAI } from '@deta/services/ai'
   import {
     SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
   } from '@deta/services/constants'
@@ -102,6 +105,7 @@
   } from '@deta/services/ai'
   import type { LinkClickHandler } from '@deta/editor/extensions/Link'
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
+  import { useTabs } from '@deta/services/tabs'
   import { SearchResourceTags, ResourceTag } from '@deta/utils/formatting'
 
   export let resource: ResourceNote
@@ -113,9 +117,10 @@
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
-  const ai = useAI()
   const toasts = useToasts()
   const config = useConfig()
+  const tabs = useTabs()
+  const ai = provideAI(resourceManager, tabs, config, false)
   const wikipediaAPI = createWikipediaAPI()
 
   const dispatch = createEventDispatcher<{
@@ -598,56 +603,52 @@
     }
   }
 
-//   const createNewNoteChat = async (mentions?: MentionItem[]) => {
-//     if (!contextManager) {
-//       log.error('No context manager found')
-//       return null
-//     }
-//     const chatContextManager = contextManager.clone()
-//     if (mentions && mentions.length > 0) {
-//       log.debug('Adding spaces to context', mentions)
-//       const contextMentions = mentions.filter((mention) => mention.type !== MentionItemType.MODEL)
-//       if (contextMentions.length > 0) {
-//         contextMentions.forEach((mention) => {
-//           chatContextManager.addMentionItem(mention)
-//         })
-//         ai.telemetry.trackPageChatContextUpdate(
-//           PageChatUpdateContextEventAction.Add,
-//           contextManager.itemsValue.length,
-//           mentions.length,
-//           undefined,
-//           PageChatUpdateContextEventTrigger.EditorMention
-//         )
-//       }
-//     } else if ($selectedContext) {
-//       log.debug('Adding selected context to context', $selectedContext)
-//       chatContextManager.addSpace($selectedContext)
-//     } else {
-//       log.debug('Adding active space to context', resourceId)
-//       chatContextManager.addActiveSpaceContext('resources')
-//     }
-//     const chat = await ai.createChat({ contextManager: chatContextManager })
-//     if (!chat) {
-//       log.error('Failed to create chat')
-//       return null
-//     }
-//     log.debug('Chat created', chat)
-//     const modelMention = (mentions ?? [])
-//       .reverse()
-//       .find((mention) => mention.type === MentionItemType.MODEL)
-//     log.debug('Model mention', modelMention)
-//     if (modelMention) {
-//       if (modelMention.id === MODEL_CLAUDE_MENTION.id) {
-//         chat.selectProviderModel(Provider.Anthropic)
-//       } else if (modelMention.id === MODEL_GPT_MENTION.id) {
-//         chat.selectProviderModel(Provider.OpenAI)
-//       } else {
-//         const modelId = modelMention.id.replace('model-', '')
-//         chat.selectModel(modelId)
-//       }
-//     }
-//     return chat
-//   }
+  const createNewNoteChat = async (mentions?: MentionItem[]) => {
+    const chatContextManager = ai.contextManager
+    if (mentions && mentions.length > 0) {
+      log.debug('Adding spaces to context', mentions)
+      const contextMentions = mentions.filter((mention) => mention.type !== MentionItemType.MODEL)
+      if (contextMentions.length > 0) {
+        contextMentions.forEach((mention) => {
+          chatContextManager.addMentionItem(mention)
+        })
+        ai.telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.Add,
+          chatContextManager.itemsValue.length,
+          mentions.length,
+          undefined,
+          PageChatUpdateContextEventTrigger.EditorMention
+        )
+      }
+    // } else if ($selectedContext) {
+    //   log.debug('Adding selected context to context', $selectedContext)
+    //   chatContextManager.addSpace($selectedContext)
+    } else {
+      log.debug('Adding active space to context', resource.id)
+      chatContextManager.addActiveSpaceContext('resources')
+    }
+    const chat = await ai.createChat({ contextManager: chatContextManager })
+    if (!chat) {
+      log.error('Failed to create chat')
+      return null
+    }
+    log.debug('Chat created', chat)
+    const modelMention = (mentions ?? [])
+      .reverse()
+      .find((mention) => mention.type === MentionItemType.MODEL)
+    log.debug('Model mention', modelMention)
+    // if (modelMention) {
+    //   if (modelMention.id === MODEL_CLAUDE_MENTION.id) {
+    //     chat.selectProviderModel(Provider.Anthropic)
+    //   } else if (modelMention.id === MODEL_GPT_MENTION.id) {
+    //     chat.selectProviderModel(Provider.OpenAI)
+    //   } else {
+    //     const modelId = modelMention.id.replace('model-', '')
+    //     chat.selectModel(modelId)
+    //   }
+    // }
+    return chat
+  }
 
   export const generateAndInsertAIOutput = async (
     query: string,
@@ -686,11 +687,7 @@
     let aiGeneration: EditorAIGeneration | null = null
 
     try {
-    //   if (note) {
-    //     chat = await note.getChatWithMentions(mentions, options.clearContextOnMention)
-    //   } else {
-    //     chat = await createNewNoteChat(mentions)
-    //   }
+      const chat = await createNewNoteChat(mentions)
 
       if (!query) {
         log.error('Failed to create chat')
@@ -767,18 +764,18 @@
         markdownQuery = query
       }
 
-      // const response = await ai.createChatCompletion(
-      //   markdownQuery,
-      //   {
-      //     trigger,
-      //     generationID: options.generationID,
-      //     onboarding: showOnboarding,
-      //     noteResourceId: useNoteResource ? resourceId : undefined
-      //   },
-      //   renderFunction
-      // )
+      const response = await chat.createChatCompletion(
+        markdownQuery,
+        {
+          trigger,
+          generationID: options.generationID,
+          onboarding: showOnboarding,
+          noteResourceId: useNoteResource ? resource.id : undefined
+        },
+        renderFunction
+      )
 
-      // log.debug('autocomplete response', response)
+      log.debug('autocomplete response', response)
 
       // Remove wikipedia context if it was added as we might have created temporary resource that we don't want to keep around
       // Ignoring above for now citations to the resources otherwise won't work
@@ -789,45 +786,45 @@
       //   chat.contextManager.removeContextItem(wikipediaContext.id)
       // }
 
-      // if (response.error) {
-      //   log.error('Error generating AI output', response.error)
-      //   if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
-      //     toasts.error(response.error.message)
-      //   } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
-      //     toasts.error('Too many requests, please try again later')
-      //   } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
-      //     toasts.error(
-      //       'Sorry your query did not pass our content policy, please try again with a different query.'
-      //     )
-      //   } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
-      //     toasts.error(
-      //       'No relevant context found. Please add more resources or try a different query.'
-      //     )
-      //   } else {
-      //     toasts.error('Something went wrong generating the AI output. Please try again.')
-      //   }
+      if (response.error) {
+        log.error('Error generating AI output', response.error)
+        if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
+          toasts.error(response.error.message)
+        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+          toasts.error('Too many requests, please try again later')
+        } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
+          toasts.error(
+            'Sorry your query did not pass our content policy, please try again with a different query.'
+          )
+        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
+          toasts.error(
+            'No relevant context found. Please add more resources or try a different query.'
+          )
+        } else {
+          toasts.error('Something went wrong generating the AI output. Please try again.')
+        }
 
-      //   aiGeneration.updateStatus('failed')
-      //   cleanupCompletion()
-      // } else if (!response.output) {
-      //   log.error('No output found')
-      //   toasts.error('Something went wrong generating the AI output. Please try again.')
+        aiGeneration.updateStatus('failed')
+        cleanupCompletion()
+      } else if (!response.output) {
+        log.error('No output found')
+        toasts.error('Something went wrong generating the AI output. Please try again.')
 
-      //   aiGeneration.updateStatus('failed')
-      //   cleanupCompletion()
-      // } else {
-      //   const content = await parseChatOutputToHtml(response.output)
+        aiGeneration.updateStatus('failed')
+        cleanupCompletion()
+      } else {
+        const content = await parseChatOutputToHtml(response.output)
 
-      //   log.debug('inserted output', content)
+        log.debug('inserted output', content)
 
-      //   await wait(200)
-      //   aiGeneration.updateStatus('completed')
+        await wait(200)
+        aiGeneration.updateStatus('completed')
 
-      //   // insert new line
-      //   // editor.commands.insertContentAt(range.to, '<br>', {
-      //   //   updateSelection: false
-      //   // })
-      // }
+        // insert new line
+        // editor.commands.insertContentAt(range.to, '<br>', {
+        //   updateSelection: false
+        // })
+      }
     } catch (err) {
       log.error('Error generating AI output', err)
       toasts.error('Something went wrong generating the AI output. Please try again.')
