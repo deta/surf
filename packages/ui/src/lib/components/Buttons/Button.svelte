@@ -21,8 +21,8 @@
 </script>
 
 <Button.Root
-  class={`${sizeClass} ${shapeClass} ${restProps.class ?? ''}`}
   {...restProps}
+  class={`${sizeClass} ${shapeClass} ${restProps.class ?? ''}`}
 >
   {@render children?.()}
 </Button.Root>

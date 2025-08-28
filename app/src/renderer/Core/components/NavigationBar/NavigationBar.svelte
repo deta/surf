@@ -7,6 +7,7 @@
   import LocationBar from './LocationBar.svelte'
   import WebContentsView from '../WebContentsView.svelte'
   import SaveState from './SaveState.svelte'
+  import { isInternalRendererURL } from '@deta/utils'
 
   let { view }: { view: WebContentsView } = $props()
 
@@ -46,7 +47,9 @@
   <div class="group breadcrumbs">
     <BreadcrumbItems {view} />
     <LocationBar {view} />
-    <SaveState {view} />
+    {#if !isInternalRendererURL($activeLocation)}
+      <SaveState {view} />
+    {/if}
   </div>
   <div class="group search">
     <!-- TODO: (maxu): Make better check -->
@@ -90,6 +93,7 @@
     }
 
     .breadcrumbs {
+      height: 100%;
       width: 100%;
       flex-shrink: 1;
     }

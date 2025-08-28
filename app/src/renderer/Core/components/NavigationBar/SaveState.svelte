@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
   import type { WebContentsView } from '@deta/services/views'
+  import { Button } from '@deta/ui'
   import { useLogScope } from '@deta/utils'
 
   let {
@@ -24,22 +25,12 @@
   }
 </script>
 
-<button onclick={onClick}>
+<Button size="md" onclick={onClick} style="padding-block: 6px;padding-inline: 8px;">
   {#if $isSaved}
-    <Icon name="bookmarkFilled" />
+    <Icon name="bookmarkFilled" size="1.085em" />
     Saved
   {:else}
-    <Icon name="bookmark" />
+    <Icon name="bookmark" size="1.085em" />
     Save
   {/if}
-</button>
-
-<style lang="scss">
-  button {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    background: none;
-    border: none;
-  }
-</style>
+</Button>
