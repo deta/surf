@@ -18,7 +18,7 @@ type HandleHandler<T extends IPCEvent> = (
 export class IPCService {
   private requestCounter = 0
   private pendingRequests: Map<number, (response: any) => void> = new Map()
-  private handleRendererRequest: ((payload: any) => Promise<any> | any) = () => {
+  private handleRendererRequest: (payload: any) => Promise<any> | any = () => {
     throw new Error('No handler registered for renderer request')
   }
 
@@ -70,16 +70,19 @@ export class IPCService {
       const responseName = `${name}:response`
       ipcRenderer.on(`${name}:request`, (event, { id, payload }) => {
         if (!this.handleRendererRequest) {
-          event.sender.send(responseName, { id, error: 'No handler registered for renderer request' })
+          event.sender.send(responseName, {
+            id,
+            error: 'No handler registered for renderer request'
+          })
           return
         }
 
         Promise.resolve()
           .then(() => this.handleRendererRequest(payload))
-          .then(response => {
+          .then((response) => {
             event.sender.send(responseName, { id, response })
           })
-          .catch(error => {
+          .catch((error) => {
             event.sender.send(responseName, { id, error: error.message })
           })
       })
@@ -114,7 +117,10 @@ export class IPCService {
             throw new Error('Cannot handle events in renderer process')
           }
         },
-        requestFromRenderer: (webContents: Electron.WebContents, payload: T['payload']): Promise<T['output']> => {
+        requestFromRenderer: (
+          webContents: Electron.WebContents,
+          payload: T['payload']
+        ): Promise<T['output']> => {
           const mainProcess = !isRenderer()
           if (!mainProcess) {
             throw new Error('Cannot request from renderer in renderer process')
@@ -146,9 +152,12 @@ export class IPCService {
               reject(error)
             }
 
-            const responseHandler = (event: Electron.IpcMainEvent, response: { id: number; response?: any; error?: string }) => {
+            const responseHandler = (
+              event: Electron.IpcMainEvent,
+              response: { id: number; response?: any; error?: string }
+            ) => {
               if (response.id !== requestId) return
-              
+
               if (response.error) {
                 handleError(new Error(`Renderer Error: ${response.error}`))
               } else {
@@ -170,15 +179,17 @@ export class IPCService {
               this.pendingRequests.set(requestId, resolve)
               ipcMain.on(responseName, responseHandler)
               webContents.once('destroyed', handleDestroyed)
-              
+
               // Make sure webContents is still valid before sending
               if (webContents.isDestroyed()) {
                 throw new Error('WebContents was destroyed')
               }
-              
+
               webContents.send(`${name}:request`, { id: requestId, payload })
             } catch (err) {
-              handleError(err instanceof Error ? err : new Error('Failed to send request to renderer'))
+              handleError(
+                err instanceof Error ? err : new Error('Failed to send request to renderer')
+              )
             }
           })
         }

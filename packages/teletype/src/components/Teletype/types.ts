@@ -1,5 +1,19 @@
 import type { SvelteComponent } from 'svelte'
 import type { TeletypeSystem } from '.'
+import type { TeletypeAction } from '@deta/services/teletype'
+
+/*
+  ToolEnhancementPayload allows tools to modify user queries before execution.
+*/
+export type ToolEnhancementPayload = {
+  executeQueryModifier?: (query: string) => string
+}
+
+export type ToolEnhancementHandler = () => ToolEnhancementPayload | null
+
+export type ToolEnhancement = {
+  toolId: string
+} & ToolEnhancementPayload
 
 export type HandlerReturn = {
   preventClose?: boolean
@@ -48,15 +62,15 @@ export type ActionPanelOptionBase = {
 }
 
 export type ActionPanelOptionHandler = ActionPanelOptionBase & {
+  type: 'handler'
   /** Handler which gets executed when the action is selected */
   handler: OptionHandler
-  action?: never
 }
 
 export type ActionPanelOptionAction = ActionPanelOptionBase & {
+  type: 'action'
   /** Action to show when the option is selected */
   action: Action
-  handler?: never
 }
 
 export type ActionPanelOption = ActionPanelOptionHandler | ActionPanelOptionAction
@@ -157,6 +171,9 @@ export type ActionBase = {
   actionText?: string
   actionPanel?: ActionPanelOption[] | (() => Promise<ActionPanelOption[]>)
 
+  /** Text to display in the send button (overrides action name) */
+  buttonText?: string
+
   payload?: any
 
   /** Hide the action descripton unless the action is selected */
@@ -166,9 +183,6 @@ export type ActionBase = {
   horizontalItems?: Action[]
   horizontalParentAction?: TeletypeAction
 
-  /** Option to opt out of fuse search**/
-  ignoreFuse?: boolean
-
   /* Hide the elements on initial state*/
   hiddenOnRoot?: boolean
 
@@ -177,6 +191,7 @@ export type ActionBase = {
 }
 
 export type HandlerAction = ActionBase & {
+  type: 'handler'
   /**
    * Handler which gets executed when the action is selected
    *
@@ -184,18 +199,10 @@ export type HandlerAction = ActionBase & {
    */
   handler: Handler
   requireInput?: boolean
-
-  inputHandler?: never
-  childActions?: never
-  lazyComponent?: never
-  component?: never
-  componentProps?: never
-  loadChildActions?: never
-  actionsResult?: never
-  showActionPanel?: never
 }
 
 export type ReactiveAction = ActionBase & {
+  type: 'reactive'
   /**
    * Handler which gets executed when the action is selected
    *
@@ -203,91 +210,47 @@ export type ReactiveAction = ActionBase & {
    */
   inputHandler: InputHandler
   actionsResult: Action[]
-
-  lazyComponent?: never
-  component?: never
-  componentProps?: never
-  loadChildActions?: never
-  showActionPanel?: never
-  requireInput?: never
 }
 
 export type InputAction = ActionBase & {
+  type: 'input'
   requireInput: boolean
-
-  lazyComponent?: never
-  component?: never
-  componentProps?: never
-  loadChildActions?: never
-  showActionPanel?: never
-  inputHandler?: never
-  actionsResult?: never
 }
 
 export type ComponentAction = ActionBase & {
+  type: 'component'
   /** Show a component when the action is selected */
   component: typeof SvelteComponent
   /** Props to pass to the component */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   componentProps?: { [key: string]: any }
   showActionPanel?: boolean
-
-  lazyComponent?: never
-  inputHandler?: never
-  handler?: never
-  childActions?: never
-  loadChildActions?: never
-  actionsResult?: never
-  requireInput?: never
 }
 
 export type LazyComponentAction = ActionBase & {
+  type: 'lazyComponent'
   /** Show a component when the action is selected */
   lazyComponent: () => Promise<typeof SvelteComponent>
   /** Props to pass to the component */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   componentProps?: { [key: string]: any }
   showActionPanel?: boolean
-
-  component?: never
-  inputHandler?: never
-  handler?: never
-  childActions?: never
-  loadChildActions?: never
-  actionsResult?: never
-  requireInput?: never
 }
 
 export type ParentAction = ActionBase & {
+  type: 'parent'
   /** Nested actions to show once the action is selected */
   childActions: Action[]
-
-  inputHandler?: never
-  handler?: never
-  lazyComponent?: never
-  component?: never
-  componentProps?: never
-  loadChildActions?: never
-  actionsResult?: never
-  showActionPanel?: never
-  requireInput?: never
 }
 
 export type LazyParentAction = ActionBase & {
+  type: 'lazyParent'
   /** Function that returns a list of child actions */
   loadChildActions: (
     teletype: TeletypeSystem,
     action: LazyParentAction
   ) => Action[] | Promise<Action[]>
   actionsResult: Action[]
-
-  inputHandler?: never
-  handler?: never
-  lazyComponent?: never
-  component?: never
-  componentProps?: never
-  showActionPanel?: never
-  requireInput?: never
 }
 
 export type Action =
@@ -297,6 +260,7 @@ export type Action =
   | ReactiveAction
   | ComponentAction
   | LazyComponentAction
+  | InputAction
 
 export type Options = {
   /**
@@ -354,6 +318,7 @@ export type Options = {
 }
 
 export type HorizontalAction = {
+  type: 'horizontal'
   /** The unique identifier for the action */
   id: string
 
@@ -384,17 +349,7 @@ export type HorizontalAction = {
   /** Internal */
   _index?: number
 
-  // Explicitly mark other Action properties as not allowed
-  handler?: never
-  component?: never
-  componentProps?: never
   view?: ActionView
-  lazyComponent?: never
-  inputHandler?: never
-  childActions?: never
-  loadChildActions?: never
-  requireInput?: never
-  actionsResult?: never
 }
 
 export type NotificationType = 'plain' | 'info' | 'success' | 'error'

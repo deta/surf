@@ -26,7 +26,7 @@ import {
   ResourceTypes,
   type WebViewReceiveEvents,
   ResourceTagDataStateValue
-} from "@deta/types";
+} from '@deta/types'
 import {
   useLogScope,
   EventEmitterBase,
@@ -35,21 +35,26 @@ import {
   useDebounce,
   isPDFViewerURL,
   copyToClipboard
-} from "@deta/utils";
-import { compareURLs, getHostname, parseUrlIntoCanonical, ResourceTag } from '@deta/utils/formatting'
-import { HistoryEntriesManager } from "../history";
-import { ConfigService } from "../config";
-import { KeyboardManager, useKeyboardManager } from "../shortcuts/index";
-import type { NewWindowRequest } from "../ipc/events";
-import type { ViewManager } from "./viewManager.svelte";
+} from '@deta/utils'
+import {
+  compareURLs,
+  getHostname,
+  parseUrlIntoCanonical,
+  ResourceTag
+} from '@deta/utils/formatting'
+import { HistoryEntriesManager } from '../history'
+import { ConfigService } from '../config'
+import { KeyboardManager, useKeyboardManager } from '../shortcuts/index'
+import type { NewWindowRequest } from '../ipc/events'
+import type { ViewManager } from './viewManager.svelte'
 import {
   WebContentsViewEmitterNames,
   type WebContentsEmitterEvents,
   type WebContentsViewEmitterEvents,
   WebContentsEmitterNames,
-  type BookmarkPageOpts,
-} from "./types";
-import { Resource, ResourceManager } from "../resources";
+  type BookmarkPageOpts
+} from './types'
+import { Resource, ResourceManager } from '../resources'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -113,12 +118,9 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
     if (!this._newWindowHandlerRegistered && this.webContentsId) {
       // @ts-ignore
-      window.api.registerNewWindowHandler(
-        this.webContentsId,
-        (details: NewWindowRequest) => {
-          this.handleNewWindowRequest(details);
-        },
-      );
+      window.api.registerNewWindowHandler(this.webContentsId, (details: NewWindowRequest) => {
+        this.handleNewWindowRequest(details)
+      })
 
       this._newWindowHandlerRegistered = true
     }
@@ -300,19 +302,15 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.emit(WebContentsEmitterNames.FOUND_IN_PAGE, event)
   }
 
-  private handleKeyDown(
-    event: WebViewSendEvents[WebViewEventSendNames.KeyDown],
-  ) {
-    this.log.debug("Key down event in webview:", event);
-    this.keyboardManager.handleKeyDown(event as KeyboardEvent);
-    this.emit(WebContentsEmitterNames.KEYDOWN, event);
+  private handleKeyDown(event: WebViewSendEvents[WebViewEventSendNames.KeyDown]) {
+    this.log.debug('Key down event in webview:', event)
+    this.keyboardManager.handleKeyDown(event as KeyboardEvent)
+    this.emit(WebContentsEmitterNames.KEYDOWN, event)
   }
 
-  private handleDetectedApp(
-    detectedApp: WebViewSendEvents[WebViewEventSendNames.DetectedApp],
-  ) {
-    this.log.debug("Detected app event in webview:", detectedApp);
-    this.view.detectedApp.set(detectedApp);
+  private handleDetectedApp(detectedApp: WebViewSendEvents[WebViewEventSendNames.DetectedApp]) {
+    this.log.debug('Detected app event in webview:', detectedApp)
+    this.view.detectedApp.set(detectedApp)
 
     this.debouncedDetectExistingResource()
   }
@@ -326,14 +324,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     const eventData = event.args[1] as WebViewSendEvents[keyof WebViewSendEvents]
 
     if (eventType === WebViewEventSendNames.KeyDown) {
-      this.handleKeyDown(
-        eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown],
-      );
-      return;
+      this.handleKeyDown(eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
+      return
     } else if (eventType === WebViewEventSendNames.DetectedApp) {
-      this.handleDetectedApp(
-        eventData as WebViewSendEvents[WebViewEventSendNames.DetectedApp],
-      );
+      this.handleDetectedApp(eventData as WebViewSendEvents[WebViewEventSendNames.DetectedApp])
     }
 
     this.emit(WebContentsEmitterNames.PRELOAD_EVENT, eventType, eventData)
@@ -483,34 +477,31 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   }
 
   removePageEventListener(callback: (args: any[]) => boolean | void) {
-    return this.removeEventListener(
-      WebContentsViewEventType.IPC_MESSAGE,
-      (payload) => {
-        if (payload.channel === "webview-page-event") {
-          callback(payload.args);
-        }
-      },
-    );
+    return this.removeEventListener(WebContentsViewEventType.IPC_MESSAGE, (payload) => {
+      if (payload.channel === 'webview-page-event') {
+        callback(payload.args)
+      }
+    })
   }
 
   async waitForAppDetection(timeout: number) {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    let unsubscribe = () => {};
+    let timeoutId: ReturnType<typeof setTimeout>
+    let unsubscribe = () => {}
 
     return new Promise((resolve) => {
       unsubscribe = this.view.detectedApp.subscribe((detectedApp) => {
         if (detectedApp) {
-          clearTimeout(timeoutId);
-          unsubscribe();
-          resolve(detectedApp);
+          clearTimeout(timeoutId)
+          unsubscribe()
+          resolve(detectedApp)
         }
-      });
+      })
 
       timeoutId = setTimeout(() => {
-        unsubscribe();
-        resolve(null);
-      }, timeout);
-    });
+        unsubscribe()
+        resolve(null)
+      }, timeout)
+    })
   }
 
   async updateFaviconForTheme() {
@@ -586,7 +577,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     const url = await this.getURL()
     if (url) {
       // @ts-ignore
-      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return;
+      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return
     }
 
     if (this.view.faviconURLValue === newFaviconURL) {
@@ -607,13 +598,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       ? []
       : [payload: WebContentsViewActionPayloads[T]]
   ) {
-    const action = { type, payload: args[0] } as WebContentsViewAction;
+    const action = { type, payload: args[0] } as WebContentsViewAction
     // @ts-ignore
-    return window.api.webContentsViewAction(
-      this.view.id,
-      action.type,
-      action.payload,
-    ) as Promise<WebContentsViewActionOutputs[T]>;
+    return window.api.webContentsViewAction(this.view.id, action.type, action.payload) as Promise<
+      WebContentsViewActionOutputs[T]
+    >
   }
 
   getBoundingClientRect = (): DOMRect | null => {
@@ -677,7 +666,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     name: T,
     data?: WebViewReceiveEvents[T]
   ) {
-    await this.action(WebContentsViewActionType.SEND, { channel: 'webview-event', args: [{ type: name, data }] })
+    await this.action(WebContentsViewActionType.SEND, {
+      channel: 'webview-event',
+      args: [{ type: name, data }]
+    })
   }
 
   async findInPage(
@@ -800,10 +792,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       timeout = setTimeout(() => {
         this.log.debug('Resource detection timed out')
         this.removePageEventListener(handleEvent)
-        this.removeEventListener(
-          WebContentsViewEventType.DID_FINISH_LOAD,
-          handleDidFinishLoad
-        )
+        this.removeEventListener(WebContentsViewEventType.DID_FINISH_LOAD, handleDidFinishLoad)
         this.removeEventListener(WebContentsViewEventType.DOM_READY, handleDidFinishLoad)
         resolve(null)
       }, totalTimeout)
@@ -821,10 +810,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         pageLoadTimeoutId = setTimeout(() => {
           if (this.view.isLoadingValue) {
             this.log.debug('webview is still loading, detecting resource immediately')
-            this.removeEventListener(
-              WebContentsViewEventType.DID_FINISH_LOAD,
-              handleDidFinishLoad
-            )
+            this.removeEventListener(WebContentsViewEventType.DID_FINISH_LOAD, handleDidFinishLoad)
             handleDidFinishLoad()
           }
         }, pageLoadTimeout)
@@ -835,9 +821,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     })
   }
 
-  async refreshResourceWithPage(
-    resource: Resource
-  ): Promise<Resource> {
+  async refreshResourceWithPage(resource: Resource): Promise<Resource> {
     const url = this.view.urlValue
 
     let updatingPromise = this._updatingResourcePromises.get(url)
@@ -869,7 +853,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
         if (detectedResource) {
           this.log.debug('updating resource with fresh data', detectedResource.data)
-          await this.view.resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+          await this.view.resourceManager.updateResourceParsedData(
+            resource.id,
+            detectedResource.data
+          )
           await this.view.resourceManager.updateResourceMetadata(resource.id, {
             name: (detectedResource.data as any).title || '',
             sourceURI: url
@@ -910,7 +897,9 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   async detectExistingResource() {
     this.log.debug('detecting existing resource for', this.view.urlValue)
 
-    const matchingResources = await this.view.resourceManager.getResourcesFromSourceURL(this.view.urlValue)
+    const matchingResources = await this.view.resourceManager.getResourcesFromSourceURL(
+      this.view.urlValue
+    )
     let bookmarkedResource = matchingResources.find(
       (resource) =>
         resource.type !== ResourceTypes.ANNOTATION &&
@@ -921,8 +910,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         ) &&
         !(
           (resource.tags ?? []).find(
-            (tag) =>
-              tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING && tag.value === 'true'
+            (tag) => tag.name === ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING && tag.value === 'true'
           ) &&
           (resource.tags ?? []).find(
             (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT && tag.value === 'true'
@@ -958,8 +946,13 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
     // Check if the detected resource is different from the one we previously bookmarked
     // If it is and it is silent, delete it as it is no longer needed
-    if (this.view.extractedResourceIdValue && this.view.extractedResourceIdValue !== bookmarkedResource?.id) {
-      const resource = await this.view.resourceManager.getResource(this.view.extractedResourceIdValue)
+    if (
+      this.view.extractedResourceIdValue &&
+      this.view.extractedResourceIdValue !== bookmarkedResource?.id
+    ) {
+      const resource = await this.view.resourceManager.getResource(
+        this.view.extractedResourceIdValue
+      )
       if (resource) {
         const isSilent =
           (resource.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.SILENT)
@@ -1017,7 +1010,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     // Unregister the new window handler if it was registered
     if (this._newWindowHandlerRegistered) {
       // @ts-ignore
-      window.api.unregisterNewWindowHandler(this.webContentsId);
+      window.api.unregisterNewWindowHandler(this.webContentsId)
     }
   }
 }
@@ -1035,16 +1028,16 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
  * - Coordinating with the ViewManager for focus and activation
  */
 export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEvents> {
-  log: ReturnType<typeof useLogScope>;
-  manager: ViewManager;
-  resourceManager: ResourceManager;
-  historyEntriesManager: HistoryEntriesManager;
+  log: ReturnType<typeof useLogScope>
+  manager: ViewManager
+  resourceManager: ResourceManager
+  historyEntriesManager: HistoryEntriesManager
 
   id: string
   webContents = $state<WebContents | null>(null)
 
-  private initialData: WebContentsViewData;
-  private bookmarkingPromises: Map<string, Promise<Resource>> = new Map();
+  private initialData: WebContentsViewData
+  private bookmarkingPromises: Map<string, Promise<Resource>> = new Map()
 
   data: Readable<WebContentsViewData>
 
@@ -1057,15 +1050,15 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   title: Writable<string>
   faviconURL: Writable<string>
 
-  historyStackIds: Writable<string[]>;
-  historyStackIndex: Writable<number>;
-  navigationHistory: Writable<Electron.NavigationEntry[]>;
-  navigationHistoryIndex: Writable<number>;
+  historyStackIds: Writable<string[]>
+  historyStackIndex: Writable<number>
+  navigationHistory: Writable<Electron.NavigationEntry[]>
+  navigationHistoryIndex: Writable<number>
 
-  resourceCreatedByUser: Writable<boolean> = writable(false);
-  extractedResourceId: Writable<string | null> = writable(null);
-  detectedApp: Writable<DetectedWebApp | null> = writable(null);
-  detectedResource: Writable<DetectedResource | null> = writable(null);
+  resourceCreatedByUser: Writable<boolean> = writable(false)
+  extractedResourceId: Writable<string | null> = writable(null)
+  detectedApp: Writable<DetectedWebApp | null> = writable(null)
+  detectedResource: Writable<DetectedResource | null> = writable(null)
 
   domReady: Writable<boolean> = writable(false)
   didFinishLoad: Writable<boolean> = writable(false)
@@ -1087,10 +1080,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   constructor(data: WebContentsViewData, manager: ViewManager) {
     super()
 
-    this.log = useLogScope(`View ${data.id}`);
-    this.manager = manager;
+    this.log = useLogScope(`View ${data.id}`)
+    this.manager = manager
     this.resourceManager = manager.resourceManager
-    this.historyEntriesManager = new HistoryEntriesManager();
+    this.historyEntriesManager = new HistoryEntriesManager()
 
     this.id = data.id
     this.initialData = data
@@ -1140,9 +1133,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
           navigationHistoryIndex: $navigationHistoryIndex,
           navigationHistory: $navigationHistory || [],
           extractedResourceId: $extractedResourceId
-        } as WebContentsViewData;
-      },
-    );
+        } as WebContentsViewData
+      }
+    )
 
     this.unsubs.push(
       this.data.subscribe((data) => {
@@ -1195,19 +1188,19 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     return get(this.navigationHistory)
   }
   get navigationHistoryIndexValue() {
-    return get(this.navigationHistoryIndex);
+    return get(this.navigationHistoryIndex)
   }
   get detectedAppValue() {
-    return get(this.detectedApp);
+    return get(this.detectedApp)
   }
   get detectedResourceValue() {
-    return get(this.detectedResource);
+    return get(this.detectedResource)
   }
   get extractedResourceIdValue() {
-    return get(this.extractedResourceId);
+    return get(this.extractedResourceId)
   }
   get resourceCreatedByUserValue() {
-    return get(this.resourceCreatedByUser);
+    return get(this.resourceCreatedByUser)
   }
   get dataValue() {
     return get(this.data)
@@ -1248,7 +1241,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
     }
 
-    this.log.debug("Creating WebContents with options:", options);
+    this.log.debug('Creating WebContents with options:', options)
     // @ts-ignore
     const { webContentsId } = await window.api.webContentsViewManagerAction(
       WebContentsViewManagerActionType.CREATE,
@@ -1299,13 +1292,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   }
 
   copyURL() {
-    return copyToClipboard(this.urlValue);
+    return copyToClipboard(this.urlValue)
   }
 
-  async createBookmarkResource(
-    url: string,
-    opts?: BookmarkPageOpts
-  ): Promise<Resource> {
+  async createBookmarkResource(url: string, opts?: BookmarkPageOpts): Promise<Resource> {
     this.log.debug('bookmarking', url, opts)
 
     const defaultOpts: BookmarkPageOpts = {
@@ -1340,7 +1330,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
           )
 
           if (hasSilentTag && !silent) {
-            await this.resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+            await this.resourceManager.deleteResourceTag(
+              resource.id,
+              ResourceTagsBuiltInKeys.SILENT
+            )
           } else if (!hasSilentTag && silent) {
             await this.resourceManager.updateResourceTag(
               resource.id,
@@ -1378,7 +1371,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
         reject(null)
         return
       }
-      
+
       const detectedResource = await this.webContents?.detectResource()
       const resourceTags = [
         ResourceTag.canonicalURL(url),
@@ -1575,9 +1568,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
             sourceURI: url
           })
 
-
-          this.resourceCreatedByUser.set(true);
-          this.extractedResourceId.set(fetchedResource.id);
+          this.resourceCreatedByUser.set(true)
+          this.extractedResourceId.set(fetchedResource.id)
           // dispatch('update-tab', {
           //   resourceBookmark: fetchedResource.id,
           //   resourceBookmarkedManually: tab.resourceBookmarkedManually
@@ -1608,7 +1600,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     })
 
     this.extractedResourceId.set(resource.id)
-    this.resourceCreatedByUser.set(!silent);
+    this.resourceCreatedByUser.set(!silent)
 
     // dispatch('update-tab', {
     //   resourceBookmark: resource.id,

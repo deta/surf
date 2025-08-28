@@ -10,7 +10,8 @@ export enum MentionItemType {
   CONTEXT = 'context',
   RESOURCE = 'resource',
   MODEL = 'model',
-  OTHER = 'other'
+  OTHER = 'other',
+  TAB = 'tab'
 }
 
 export type MentionItem<T = any> = {
@@ -19,6 +20,7 @@ export type MentionItem<T = any> = {
   suggestionLabel?: string
   aliases?: string[]
   icon?: string
+  faviconURL?: string
   data?: T
   type?: MentionItemType
   hideInRoot?: boolean

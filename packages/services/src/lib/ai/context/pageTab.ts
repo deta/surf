@@ -35,7 +35,10 @@ export class ContextItemPageTab extends ContextItemBase {
       }
 
       if (data) {
-        return { type: ContextItemIconTypes.IMAGE, data: data.view.faviconURLValue } as ContextItemIcon
+        return {
+          type: ContextItemIconTypes.IMAGE,
+          data: data.view.faviconURLValue
+        } as ContextItemIcon
       }
 
       return { type: ContextItemIconTypes.ICON, data: this.fallbackIcon } as ContextItemIcon

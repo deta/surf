@@ -1,9 +1,14 @@
 <script lang="ts">
   import { onMount, type SvelteComponent } from 'svelte'
 
-  export let component: () => Promise<typeof SvelteComponent>
+  let {
+    component,
+    ...restProps
+  }: {
+    component: () => Promise<typeof SvelteComponent>
+  } = $props()
 
-  let loadedComponent: typeof SvelteComponent | null = null
+  let loadedComponent: typeof SvelteComponent | null = $state(null)
 
   onMount(() => {
     component().then((module) => {
@@ -13,7 +18,7 @@
 </script>
 
 {#if loadedComponent}
-  <svelte:component this={loadedComponent} {...$$props} />
+  <svelte:component this={loadedComponent} {...restProps} />
 {:else}
   <slot />
 {/if}

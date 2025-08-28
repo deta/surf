@@ -1,14 +1,28 @@
 <script lang="ts">
   import { provideTeletype } from './index'
   import type { Action, Options } from './types'
+  import { useLogScope } from '@deta/utils'
 
-  export let actions: Action[] = []
-
-  export let options: Options = {}
+  let {
+    actions = [],
+    options = {}
+  }: {
+    actions?: Action[]
+    options?: Options
+  } = $props()
 
   const includedActions = []
+  const log = useLogScope('TeletypeProvider')
 
   export const teletype = provideTeletype(options, [...includedActions, ...actions])
+
+  // Update actions when the prop changes (Svelte 5 runes)
+  $effect(() => {
+    log.debug('Actions changed:', actions, 'length:', actions.length)
+    if (actions.length > 0) {
+      teletype.setActions([...includedActions, ...actions])
+    }
+  })
   const show = teletype.isShown
   const isOpen = teletype.isOpen
   const captureKeys = teletype.captureKeys

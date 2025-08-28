@@ -1,22 +1,33 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  export let placeholder = ''
-  export let value = ''
-  export let required = false
-  export let autoFocus = false
-  export let ref: HTMLInputElement = null
-  export let type = 'text'
+  let {
+    placeholder = '',
+    value = $bindable(''),
+    required = false,
+    autoFocus = false,
+    ref = $bindable(null),
+    type = 'text'
+  }: {
+    placeholder?: string
+    value?: string
+    required?: boolean
+    autoFocus?: boolean
+    ref?: HTMLInputElement | null
+    type?: string
+  } = $props()
 
   onMount(() => {
     if (autoFocus) {
-      ref.focus()
+      ref?.focus()
     }
   })
 
   let ModifiedType = type
   // can't set type via prop as type cannot be dynamic if input value uses two-way binding
-  $: if (ref) ref.type = ModifiedType
+  $effect(() => {
+    if (ref) ref.type = ModifiedType
+  })
 </script>
 
 <input

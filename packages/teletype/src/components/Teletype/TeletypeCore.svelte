@@ -1,6 +1,5 @@
 <script lang="ts">
   import { fade, slide } from 'svelte/transition'
-  import Fuse from 'fuse.js'
   import { derived } from 'svelte/store'
   import { focus } from 'focus-svelte'
 
@@ -10,13 +9,23 @@
   import ActionList from './ActionList.svelte'
   import { Icon } from '@deta/icons'
   import ActionPanel from './ActionPanel.svelte'
-  import Lazy from './Lazy.svelte'
+  import ToolsList from './ToolsList.svelte'
   import { onMount, tick, createEventDispatcher } from 'svelte'
   import { isMac } from '@deta/utils/system'
+  import { Editor } from '@deta/editor'
+  import type { MentionItem, UseMentionsResult } from '@deta/services'
+  import { MentionTypes } from '@deta/services'
+  import { Button } from '@deta/ui'
 
   const dispatch = createEventDispatcher()
 
-  export let key: string | undefined = undefined
+  let {
+    key,
+    mentionsService
+  }: {
+    key?: string | undefined
+    mentionsService: UseMentionsResult
+  } = $props()
 
   const teletype = useTeletype(key)
 
@@ -33,21 +42,23 @@
   const showHelper = teletype.options?.showHelper
   const showActionPanel = teletype.showActionPanel
   const editMode = teletype.editMode
+  const tools = teletype.tools
 
   const localIsMac = isMac()
 
   let showModalOverlay = false
+  let mentionItems: MentionItem[] = $state([])
   let modalContent: Action | null = null
 
-  $: isModal =
+  const isModal = $derived(
     $currentAction?.view === 'Modal' ||
-    $currentAction?.view === 'ModalLarge' ||
-    $currentAction?.view === 'ModalSmall'
+      $currentAction?.view === 'ModalLarge' ||
+      $currentAction?.view === 'ModalSmall'
+  )
 
-  $: dispatch('actions-rendered', $currentAction ? true : false)
-
-  let inputElem: HTMLInputElement
-  let filteredActions = $actions
+  let editorComponent: Editor
+  let hasMentions = $state(false)
+  let isInMentionMode = $state(false)
 
   // Focus the input field on open (used when capturing keys)
   const handleOpen = async () => {
@@ -58,12 +69,12 @@
 
     await tick()
 
-    inputElem?.focus()
+    editorComponent?.focus()
   }
 
   const handleClose = () => {
     inputValue.set('')
-    inputElem?.blur()
+    editorComponent?.blur()
     $showActionPanel = false
     showModalOverlay = false
     modalContent = null
@@ -76,117 +87,20 @@
     else handleClose()
   })
 
-  $: placeholder =
+  const placeholder = $derived(
     $currentAction && $currentAction.placeholder ? $currentAction.placeholder : $placeholderText
-
-  onMount(() => {
-    if ($open) {
-      inputElem?.focus()
-    }
-  })
-
-  const createFuse = (actions: Action[]) => {
-    return new Fuse(actions, {
-      threshold: 0.4,
-      minMatchCharLength: 2,
-      ignoreLocation: true,
-      findAllMatches: true,
-      distance: 100,
-      keys: [
-        {
-          name: 'keywords',
-          weight: 2
-        },
-        {
-          name: 'name',
-          weight: 1.5
-        },
-        {
-          name: 'section',
-          weight: 1
-        },
-        {
-          name: 'horizontalItems.name',
-          weight: 1
-        },
-        {
-          name: 'childName',
-          getFn: (action) => (action.nestedSearch ? action.name : ''),
-          weight: 1
-        },
-        ...(teletype.options?.nestedSearch
-          ? [
-              { name: 'childActions.name', weight: 1 },
-              { name: 'childActions.keywords', weight: 1.5 }
-            ]
-          : [])
-      ]
-    })
-  }
-
-  const filteredResult = derived(
-    [actions, inputValue, currentAction, open],
-    ([actions, inputValue, currentAction]) => {
-      let result = actions
-
-      // If local search is disabled, skip filtering actions
-      if (!teletype.options?.localSearch) {
-        return result
-      }
-
-      // If the current action is a ReactiveAction skip filtering and use its result
-      if (currentAction && currentAction.inputHandler) {
-        return currentAction.actionsResult || []
-      }
-
-      if (currentAction && currentAction.loadChildActions) {
-        if (!inputValue) {
-          return currentAction?.actionsResult
-        }
-
-        const fuse = createFuse(currentAction?.actionsResult)
-        return fuse.search(inputValue).map(({ refIndex }) => currentAction?.actionsResult[refIndex])
-      }
-
-      // If we're searching, filter the actions but respect ignoreFuse
-      if (inputValue) {
-        const fuse = createFuse(actions)
-        result = actions.filter(
-          (action) =>
-            action.ignoreFuse ||
-            fuse.search(inputValue).some((match) => match.refIndex === actions.indexOf(action))
-        )
-      }
-
-      const parentActionID = currentAction?.id || null
-
-      // Allow skipping the parent filter if we are searching root actions and nestedSearch is enabled
-      const skipParentFilter =
-        parentActionID === null && inputValue && teletype.options?.nestedSearch
-
-      result = result.filter((action) => {
-        // skip filter if we are searching and action is allowed to be shown in nested search
-        const parentAction = action.parent && actions.find((curr) => curr.id === action.parent)
-        const allowNestedSearch = action?.nestedSearch || parentAction?.nestedSearch
-        if (inputValue && allowNestedSearch && !currentAction?.requireInput) return true
-
-        if (skipParentFilter) return true
-
-        return action?.parent === parentActionID
-      })
-
-      // Filter out hidden actions
-      result = result.filter((val) => !val?.hidden && val.id !== '__fallback')
-
-      // Show "hidden" exact match actions
-      const exactMatch = actions.find((action) => action?.activationKey === inputValue)
-      if (exactMatch) {
-        result.push(exactMatch)
-      }
-
-      return result
-    }
   )
+
+  // Since providers handle filtering, we just pass through the actions
+  const filteredResult = derived([actions, currentAction], ([actions, currentAction]) => {
+    // If we have a current action with results, use those
+    if (currentAction && currentAction.actionsResult) {
+      return currentAction.actionsResult
+    }
+
+    // Otherwise, filter out hidden actions and fallback actions
+    return actions.filter((action) => !action?.hidden && action.id !== '__fallback')
+  })
 
   const closeTeletype = () => {
     teletype.close()
@@ -214,13 +128,13 @@
     await teletype.executeAction(action)
 
     if (action.requireInput) {
-      inputElem?.focus()
+      editorComponent?.focus()
       inputValue.set('')
       return
     }
 
     if (resetActionList) resetActionList()
-    inputElem?.focus()
+    editorComponent?.focus()
     inputValue.set('')
   }
 
@@ -234,7 +148,7 @@
   const handleBackClick = async () => {
     teletype.showParentAction()
     await tick()
-    inputElem?.focus()
+    editorComponent?.focus()
   }
 
   const handleInputKey = async (e: KeyboardEvent) => {
@@ -248,8 +162,8 @@
       }
     }
 
-    if (e.metaKey && filteredActions) {
-      const action = filteredActions.find((action) => action.shortcut === e.key)
+    if (e.metaKey && $filteredResult) {
+      const action = $filteredResult.find((action) => action.shortcut === e.key)
       if (!action) return
 
       e.preventDefault()
@@ -269,8 +183,22 @@
     }
   }
 
-  const handleKeyUp = (e: KeyboardEvent) => {
-    dispatch('input', inputElem.value)
+  const handleEditorUpdate = (content: string) => {
+    dispatch('input', content)
+
+    // Check if content contains mentions using the editor's mention detection
+    if (editorComponent) {
+      const mentions = editorComponent.getMentions()
+      hasMentions = mentions && mentions.length > 0
+    } else {
+      // Fallback to simple pattern matching
+      const mentionPattern = /@\w+/g
+      hasMentions = mentionPattern.test(content)
+    }
+
+    // Check if currently in mention selection mode (@ followed by text but not completed)
+    const mentionInProgressPattern = /@\w*$/
+    isInMentionMode = mentionInProgressPattern.test(content.trim())
   }
 
   const handleAskClick = (e: MouseEvent) => {
@@ -284,15 +212,25 @@
     teletype.showAction('teletype-helper')
   }
 
-  $: if ($showActionPanel) {
-    inputElem?.blur()
+  const handleSendClick = () => {
+    if ($selectedAction) {
+      callAction($selectedAction)
+    }
   }
+
+  $effect(() => {
+    if ($showActionPanel) {
+      editorComponent?.blur()
+    }
+  })
 
   const handleSelectedAction = (e: CustomEvent<Action>) => {
     selectedAction.set(e.detail)
   }
 
-  const handleActionOptionsKeyUp = (e: KeyboardEvent) => {
+  const handleActionOptionsKeyDown = (e: KeyboardEvent) => {
+    // Only handle shortcuts when an action is actually selected
+    if (!$selectedAction) return
     if ((e.metaKey || e.ctrlKey) && e.key === 'x') {
       $showActionPanel = !$showActionPanel
     } else if (e.key === 'Backspace') {
@@ -318,35 +256,63 @@
     }
   }
 
-  $: if ($selectedAction) {
+  onMount(() => {
     $showActionPanel = false
-    document.addEventListener('keydown', handleActionOptionsKeyUp)
-  } else {
-    document.removeEventListener('keydown', handleActionOptionsKeyUp)
-  }
+    const handler = (e: KeyboardEvent) => handleActionOptionsKeyDown(e)
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  })
 
-  $: if (
-    ($currentAction?.component || $currentAction?.lazyComponent) &&
-    $currentAction?.showActionPanel
-  ) {
-    selectedAction.set($currentAction)
-  }
+  const fallbackAction = $derived($actions.find((action) => action.id === '__fallback'))
 
-  $: fallbackAction = $actions.find((action) => action.id === '__fallback')
+  const isEmpty = $derived(
+    (!$filteredResult || !Array.isArray($filteredResult) || $filteredResult.length <= 0) &&
+      !$currentAction?.component &&
+      !$currentAction?.lazyComponent &&
+      !$loading &&
+      !$currentAction?.requireInput
+  )
 
-  $: isEmpty =
-    $filteredResult.length <= 0 &&
-    !$currentAction?.component &&
-    !$currentAction?.lazyComponent &&
-    !$loading &&
-    !$currentAction?.requireInput
-  $: if (isEmpty) {
-    if (fallbackAction) {
-      selectedAction.set(fallbackAction)
-    } else {
-      selectedAction.set(null)
+  $effect(() => {
+    dispatch('actions-rendered', $currentAction ? true : false)
+  })
+
+  $effect(() => {
+    return mentionsService.items.subscribe((items) => {
+      mentionItems = items || []
+      if (items?.length > 0) {
+        console.log(
+          'TeletypeCore - Mention items:',
+          items.map((i) => ({ id: i.id, type: i.type, name: i.name }))
+        )
+      }
+    })
+  })
+
+  $effect(() => {
+    if (isEmpty) {
+      if (fallbackAction) {
+        selectedAction.set(fallbackAction)
+      } else {
+        selectedAction.set(null)
+      }
     }
-  }
+  })
+
+  $effect(() => {
+    if (
+      ($currentAction?.component || $currentAction?.lazyComponent) &&
+      $currentAction?.showActionPanel
+    ) {
+      selectedAction.set($currentAction)
+    }
+  })
+
+  onMount(() => {
+    if ($open) {
+      editorComponent?.focus()
+    }
+  })
 </script>
 
 <div id="tty-{key || 'default'}" class="tty-core" class:open={$open} class:loading={$loading}>
@@ -355,8 +321,8 @@
       {#if !$currentAction.component && !$currentAction.lazyComponent}
         <div
           role="button"
-          on:click={handleBackClick}
-          on:keydown={handleInputKey}
+          onclick={handleBackClick}
+          onkeydown={handleInputKey}
           class="back-btn"
           tabindex="0"
         >
@@ -372,44 +338,167 @@
     </div>
   {/if}
   <div class="box" class:modal-content={isModal}>
-    <slot name="header" />
-    {#if $open}
-      {#if $currentAction?.titleText && !$loading}
-        <div class="title">{$currentAction.titleText}</div>
-      {/if}
+    <div class="box-inner">
+      <slot name="header" />
+      {#if $open}
+        {#if $currentAction?.titleText && !$loading}
+          <div class="title">{$currentAction.titleText}</div>
+        {/if}
 
-      {#if isModal && ($currentAction?.component || $currentAction?.lazyComponent)}
-        <div class="modal-component-wrapper" use:focus={$currentAction?.view === 'ModalLarge'}>
-          {#if $currentAction?.component}
-            <svelte:component
-              this={$currentAction.component}
-              action={$currentAction}
-              {teletype}
-              teletypeInputValue={inputValue}
-              {...$currentAction.componentProps}
-            />
-          {:else if $currentAction?.lazyComponent}
-            <Lazy
-              component={$currentAction.lazyComponent}
-              action={$currentAction}
-              {teletype}
-              teletypeInputValue={inputValue}
-              {...$currentAction.componentProps}
-            />
+        {#if isModal && ($currentAction?.component || $currentAction?.lazyComponent)}
+          <div class="modal-component-wrapper" use:focus={$currentAction?.view === 'ModalLarge'}>
+            {#if $currentAction?.component}
+              <svelte:component
+                this={$currentAction.component}
+                action={$currentAction}
+                {teletype}
+                teletypeInputValue={inputValue}
+                {...$currentAction.componentProps}
+              />
+            {:else if $currentAction?.lazyComponent}
+              <Lazy
+                component={$currentAction.lazyComponent}
+                action={$currentAction}
+                {teletype}
+                teletypeInputValue={inputValue}
+                {...$currentAction.componentProps}
+              />
+            {/if}
+          </div>
+        {:else}
+          <!-- Move content rendering after footer/input -->
+        {/if}
+      {/if}
+      <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+      <div class="footer" onclick={() => !isModal && openTeletype()} role="none">
+        <!-- svelte-ignore a11y-missing-attribute -->
+        <div class="icon-wrapper">
+          {#if $editMode}
+            <Icon name="edit" size="20" color="--(text)" />
+          {:else if $selectedAction?.icon}
+            <Icon name={$selectedAction.icon} size="18" color="--(text)" />
+          {:else}
+            <Icon name="search" size="18" color="--(text)" />
           {/if}
         </div>
-      {:else}
-        {#if $filteredResult && $filteredResult.length > 0}
+        {#if isModal}
+          <p>{$currentAction.footerText || 'Teletype'}</p>
+          <div
+            role="button"
+            class="close"
+            onclick={(e) => {
+              e.stopPropagation()
+              closeTeletype()
+            }}
+            onkeydown={handleInputKey}
+          >
+            Close
+          </div>
+        {:else}
+          {#if $currentAction?.footerText}
+            <p class="forced-footer">{$currentAction.footerText}</p>
+          {:else}
+            <Editor
+              bind:this={editorComponent}
+              bind:content={$inputValue}
+              {placeholder}
+              submitOnEnter={true}
+              autofocus={true}
+              parseMentions={true}
+              mentionItemsFetcher={async (queryParam) => {
+                // TipTap passes { query: string, editor: Editor } where query is text after @
+                const query = queryParam?.query || ''
+                // Set the query in the mentions service to trigger search
+                if (mentionsService) {
+                  mentionsService.setQuery(query)
+                }
+
+                const items = $state.snapshot(mentionItems)
+
+                // Transform service items to editor format
+                return items.map((item) => ({
+                  id: item.id,
+                  label: item.name, // name -> label
+                  icon: item.type === MentionTypes.TAB ? undefined : item.icon, // Don't use icon for tabs
+                  type: item.type,
+                  faviconURL: item.type === MentionTypes.TAB ? item.icon : undefined, // Use icon as faviconURL for tabs
+                  data: item.metadata
+                }))
+              }}
+              mentionConfig={{
+                preventReTrigger: false,
+                dismissOnSpace: false,
+                allowSpaces: true
+              }}
+              on:mention-click={(e) => {
+                // Handle mention clicks - find and execute the action
+                const mentionItem = e.detail.item
+                const action = $actions.find((a) => a.id === mentionItem.id)
+                if (action) {
+                  callAction(action)
+                }
+              }}
+              on:update={(e) => {
+                // Extract plain text from HTML content for filtering
+                const tempDiv = document.createElement('div')
+                tempDiv.innerHTML = e.detail
+                const plainText = tempDiv.textContent || tempDiv.innerText || ''
+                inputValue.set(plainText)
+                handleEditorUpdate(plainText)
+              }}
+              on:submit={() => {
+                if ($selectedAction) {
+                  callAction($selectedAction)
+                }
+              }}
+            />
+          {/if}
+
+          {#if $open && $selectedAction}
+            {#if $showActionPanel}
+              <ActionPanel
+                options={$selectedAction.actionPanel || []}
+                action={$selectedAction}
+                on:execute={handleActionOptionClick}
+                on:default={() => callAction($selectedAction)}
+              />
+            {/if}
+          {/if}
+
+          {#if $open && $selectedAction}
+            {#if $showActionPanel}
+              <ActionPanel
+                options={$selectedAction.actionPanel || []}
+                action={$selectedAction}
+                on:execute={handleActionOptionClick}
+                on:default={() => callAction($selectedAction)}
+              />
+            {/if}
+          {/if}
+        {/if}
+      </div>
+
+      <!-- Results section moved below input -->
+      <div class="tools-and-send-wrapper">
+        <ToolsList tools={$tools} {teletype} />
+
+        <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
+          <Button size="md" onclick={handleSendClick} class="send-button">
+            {$selectedAction?.buttonText || 'Send'}
+          </Button>
+        </div>
+      </div>
+      {#if $open && !isModal}
+        {#if $filteredResult && Array.isArray($filteredResult) && $filteredResult.length > 0 && $inputValue && $inputValue.length > 0 && !hasMentions && !isInMentionMode}
           <ActionList
             actions={$filteredResult}
             bind:resetActiveIndex={resetActionList}
             on:execute={handleActionClick}
             on:selected={handleSelectedAction}
             freeze={$showActionPanel}
-            value={inputValue}
           />
         {/if}
-        {#if $filteredResult.length <= 0}
+        {#if !$filteredResult || !Array.isArray($filteredResult) || $filteredResult.length <= 0}
           {#if $currentAction?.component}
             <div class="component-wrapper" use:focus={$currentAction?.view === 'ModalLarge'}>
               <svelte:component
@@ -436,7 +525,7 @@
                 fallbackAction?.loadingPlaceholder ||
                 'Loading actions...'}
             </div>
-          {:else if !$currentAction?.requireInput && $inputValue.length > 0 && $currentAction !== null}
+          {:else if !$currentAction?.requireInput && $inputValue && $inputValue.length > 0 && $currentAction !== null}
             <div transition:slide class="empty">
               {fallbackAction?.placeholder
                 ? fallbackAction.placeholder
@@ -445,116 +534,6 @@
           {/if}
         {/if}
       {/if}
-    {/if}
-    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-    <div class="footer" on:click={() => !isModal && openTeletype()} tabindex={-1} role="none">
-      <!-- svelte-ignore a11y-missing-attribute -->
-      <div class="icon-wrapper">
-        {#if $editMode}
-          <Icon name="edit" size="20" color="--(text)" />
-        {:else}
-          <Icon name="search" size="24" color="--(text)" />
-        {/if}
-      </div>
-      {#if isModal}
-        <p>{$currentAction.footerText || 'Teletype'}</p>
-        <div
-          role="button"
-          class="close"
-          on:click|stopPropagation={closeTeletype}
-          on:keydown={handleInputKey}
-          tabindex="0"
-        >
-          Close
-        </div>
-      {:else}
-        {#if $currentAction?.footerText}
-          <p class="forced-footer">{$currentAction.footerText}</p>
-        {:else}
-          <input
-            id="teletype-input-{key || 'default'}"
-            type="text"
-            autocomplete="off"
-            aria-label="Teletype"
-            bind:value={$inputValue}
-            bind:this={inputElem}
-            on:keydown={handleInputKey}
-            on:keyup={handleKeyUp}
-            on:paste={(e) => e.stopPropagation()}
-            {placeholder}
-          />
-        {/if}
-
-        {#if $open && $selectedAction}
-          {#if $showActionPanel}
-            <ActionPanel
-              options={$selectedAction.actionPanel || []}
-              action={$selectedAction}
-              on:execute={handleActionOptionClick}
-              on:default={() => callAction($selectedAction)}
-            />
-          {/if}
-          <div class="selected-actions">
-            <div
-              role="button"
-              on:click|stopPropagation={() => callAction($selectedAction)}
-              on:keydown={handleInputKey}
-              class="selected-option"
-              tabindex="0"
-            >
-              {$showActionPanel ? 'Select' : $selectedAction.actionText || 'Open'}
-              <div class="shortcut">⏎</div>
-            </div>
-
-            {#if $selectedAction.id === 'search'}
-              <div class="separator"></div>
-              <div
-                role="button"
-                on:click|stopPropagation={handleAskClick}
-                on:keydown={handleInputKey}
-                class="selected-option"
-                tabindex="0"
-              >
-                Ask
-                <div class="shortcut">
-                  {localIsMac ? '⌘' : 'Ctrl'}
-                </div>
-                <div class="shortcut">⏎</div>
-              </div>
-            {/if}
-
-            {#if $selectedAction.actionPanel}
-              <div class="separator"></div>
-              <div
-                role="button"
-                on:click|stopPropagation={() => ($showActionPanel = !$showActionPanel)}
-                on:keydown={handleInputKey}
-                class="selected-option"
-                class:active-option={$showActionPanel}
-                tabindex="0"
-              >
-                {$showActionPanel ? 'Close' : 'Actions'}
-                <div class="shortcut">
-                  {window.navigator.userAgent.toLowerCase().includes('mac') ? '⌘' : 'Ctrl'}
-                </div>
-                <div class="shortcut">X</div>
-              </div>
-            {/if}
-          </div>
-        {/if}
-
-        <!-- {#if showHelper && !$open}
-          <div
-            role="button"
-            on:click|stopPropagation={handleHelperClick}
-            on:keydown={handleInputKey}
-            class="helper"
-            tabindex="0"
-          >
-            <Icon name="face" />
-          </div>
-        {/if} -->
-      {/if}
     </div>
   </div>
 </div>
@@ -562,31 +541,25 @@
 <style lang="scss">
   .box {
     font-family: 'Inter';
-    max-height: min(calc(75vh - 6rem), 600px);
+    max-height: min(calc(75vh - 6rem), 225px);
     color: var(--text);
-    border: var(--border-width) solid var(--border-color);
     border-radius: var(--border-radius);
     display: flex;
     outline: 1px solid rgba(126, 168, 240, 0.05);
-    background: var(--background-dark);
-    background: var(--background-dark-p3);
+    // background: var(--background-dark);
+    // background: var(--background-dark-p3);
+    background: #fbfbff;
+    background: color(display-p3 0.9843 0.9843 1);
     flex-direction: column;
+    border: 0.5px solid rgba(0, 0, 0, 0.12);
+
     box-shadow:
       inset 0px 1px 1px -1px white,
       inset 0px -1px 1px -1px white,
       inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
-      0px 0px 89px 0px rgba(0, 0, 0, 0.18),
-      0px 4px 18px 0px rgba(0, 0, 0, 0.18),
-      0px 1px 1px 0px rgba(126, 168, 240, 0.3),
-      0px 4px 4px 0px rgba(126, 168, 240, 0.15);
-    box-shadow:
-      inset 0px 1px 4px -1px white,
-      inset 0px -1px 1p2 0 white,
-      inset 0px 30px 20px -20px color(display-p3 1 1 1 / 0.15),
-      0px 0px 89px 0px color(display-p3 0 0 0 / 0.18),
-      0px 4px 18px 0px color(display-p3 0 0 0 / 0.18),
-      0px 1px 1px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.3),
-      0px 4px 4px 0px color(display-p3 0.5294 0.6549 0.9176 / 0.15);
+      0px 0px 5px 0px rgba(201, 220, 248, 0.3),
+      0px 0.25px 1.125px 0.25px rgba(126, 168, 240, 0.4),
+      0px 4px 4px 0px rgba(126, 168, 240, 0.05);
     // overflow: auto;
 
     &.modal-content {
@@ -598,6 +571,21 @@
       display: flex;
       flex-direction: column;
     }
+  }
+
+  .box-inner {
+    border-radius: 13px;
+    margin: 0.5rem;
+    background: #ffffff;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+      0 0 0.47px 0 rgba(0, 0, 0, 0.18),
+      0 0.941px 2.823px 0 rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 0 0.47px 0 color(display-p3 0 0 0 / 0.18),
+      0 0.941px 2.823px 0 color(display-p3 0 0 0 / 0.1);
   }
 
   .component-wrapper {
@@ -664,7 +652,6 @@
   .modal-content {
     background: var(--background-dark);
     background: var(--background-dark-p3);
-    border: var(--border-width) solid var(--border-color);
     border-radius: var(--border-radius);
     width: 100%;
     max-width: 800px;
@@ -691,31 +678,22 @@
 
   .footer {
     margin: 0.55rem;
-    padding: 0.65rem 0.65rem;
+    padding: 0.15rem 0.65rem 0.65rem 0.65rem;
     display: flex;
+    align-items: start;
     border-radius: 11px;
-    align-items: center;
     position: relative;
     background: #fff;
-    box-shadow:
-      0px 13px 4px 0px #003764,
-      0px 8px 3px 0px rgba(0, 55, 100, 0.01),
-      0px 5px 3px 0px rgba(0, 55, 100, 0.03),
-      0px 2px 2px 0px rgba(0, 55, 100, 0.05),
-      0px 1px 1px 0px rgba(0, 55, 100, 0.06);
-    box-shadow:
-      0px 13px 4px 0px color(display-p3 0.0078 0.2118 0.3804 / 0),
-      0px 8px 3px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.01),
-      0px 5px 3px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.03),
-      0px 2px 2px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.05),
-      0px 1px 1px 0px color(display-p3 0.0078 0.2118 0.3804 / 0.06);
+    min-height: 125px;
 
-    //& img {
-    //  width: 24px;
-    //  margin-right: 0.25rem;
-    //}
+    // no focus outline
+    &:focus {
+      outline: none;
+    }
 
     & .icon-wrapper {
+      margin-left: 0.15rem;
+      margin-top: 0.55rem;
       margin-right: 0.2rem;
     }
 
@@ -725,12 +703,38 @@
       background: none;
       border: 0;
       outline: 0;
-      padding: 0.25rem;
+      padding: 0.075rem;
+      margin-left: 0.25rem;
       color: var(--text);
       font-size: 1.25rem;
       font-family: inherit;
       width: 100%;
       height: 100%;
+    }
+
+    & :global(.editor) {
+      flex: 1;
+      margin-left: 0.25rem;
+    }
+
+    & :global(.editor-wrapper) {
+      min-height: auto;
+      height: auto;
+    }
+
+    & :global(.ProseMirror) {
+      outline: none !important;
+      border: none !important;
+      padding: 0.075rem !important;
+      font-size: 1rem !important;
+      font-family: inherit !important;
+      color: var(--text) !important;
+      background: transparent !important;
+    }
+
+    & :global(.ProseMirror p) {
+      margin: 0 !important;
+      line-height: 1.85 !important;
     }
 
     .selected-actions {
@@ -746,7 +750,6 @@
         display: flex;
         align-items: center;
         gap: 0.25rem;
-
         transition: transform 0.3s ease;
       }
 
@@ -778,31 +781,19 @@
         align-items: center;
         justify-content: center;
       }
-    }
 
-    //& .helper {
-    //  margin-left: auto;
+      & p {
+        margin: 0;
+        margin-left: 0.25rem;
+        font-size: 1.25rem;
+        font-weight: 500;
+      }
 
-    //  opacity: 0.8;
-
-    //  :global(svg) {
-    //    width: 20px;
-    //    height: 20px;
-    //    color: var(--text-light);
-    //  }
-    //}
-
-    & p {
-      margin: 0;
-      margin-left: 0.25rem;
-      font-size: 1.25rem;
-      font-weight: 500;
-    }
-
-    & .close {
-      margin-left: auto;
-      font-size: 1.25rem;
-      color: var(--text-light);
+      & .close {
+        margin-left: auto;
+        font-size: 1.25rem;
+        color: var(--text-light);
+      }
     }
   }
 
@@ -836,5 +827,33 @@
     font-size: 1rem;
     color: var(--text-light);
     border-bottom: 4px solid var(--border-color);
+  }
+
+  .tools-and-send-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .send-button-wrapper {
+    flex-shrink: 0;
+  }
+
+  :global(.send-button[data-button-root]) {
+    background: #8c9dff;
+    color: #fff;
+    border-radius: 12px;
+    padding: 0.25rem 0.75rem calc(0.25rem - 1px) 0.75rem;
+    min-width: 4.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &:hover:not(&:disabled) {
+      background: #8c9dff;
+      color: #fff;
+    }
   }
 </style>

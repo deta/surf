@@ -4,18 +4,15 @@ import {
   WebContentsViewActionType,
   type WebContentsViewData,
   WebContentsViewManagerActionType,
-  type Fn,
-} from "@deta/types";
-import { useLogScope, EventEmitterBase, generateID, isDev } from "@deta/utils";
-import { ConfigService, useConfig } from "../config";
-import { KVStore, useKVTable } from "../kv";
-import { WebContentsView, type WebContents } from "./webContentsView.svelte";
-import {
-  ViewManagerEmitterNames,
-  type ViewManagerEmitterEvents,
-} from "./types";
-import type { NewWindowRequest } from "../ipc/events";
-import { ResourceManager, useResourceManager } from "../resources";
+  type Fn
+} from '@deta/types'
+import { useLogScope, EventEmitterBase, generateID, isDev } from '@deta/utils'
+import { ConfigService, useConfig } from '../config'
+import { KVStore, useKVTable } from '../kv'
+import { WebContentsView, type WebContents } from './webContentsView.svelte'
+import { ViewManagerEmitterNames, type ViewManagerEmitterEvents } from './types'
+import type { NewWindowRequest } from '../ipc/events'
+import { ResourceManager, useResourceManager } from '../resources'
 
 export type OverlayState = {
   teletypeOpen: boolean
@@ -36,9 +33,9 @@ export type OverlayState = {
  * This service implements a singleton pattern and should be accessed via useViewManager().
  */
 export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
-  log: ReturnType<typeof useLogScope>;
-  config: ConfigService;
-  kv: KVStore<WebContentsViewData>;
+  log: ReturnType<typeof useLogScope>
+  config: ConfigService
+  kv: KVStore<WebContentsViewData>
   resourceManager: ResourceManager
 
   webContentsViews: Map<string, WebContents> = new Map()
@@ -57,9 +54,9 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   constructor(resourceManager?: ResourceManager) {
     super()
 
-    this.log = useLogScope("ViewManager");
-    this.config = useConfig();
-    this.kv = useKVTable<WebContentsViewData>("views");
+    this.log = useLogScope('ViewManager')
+    this.config = useConfig()
+    this.kv = useKVTable<WebContentsViewData>('views')
     this.resourceManager = resourceManager || useResourceManager()
 
     this.overlayState = writable({

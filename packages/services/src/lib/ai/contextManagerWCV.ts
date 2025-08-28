@@ -1,8 +1,6 @@
 import { writable, type Writable } from 'svelte/store'
 
-import {
-  useLogScope,
-} from '@deta/utils'
+import { useLogScope } from '@deta/utils'
 
 import {
   PageChatUpdateContextItemType,
@@ -46,11 +44,7 @@ export class ContextManagerWCV {
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
-  constructor(
-    key: string,
-    ai: AIService,
-    resourceManager: ResourceManager
-  ) {
+  constructor(key: string, ai: AIService, resourceManager: ResourceManager) {
     this.key = key
     this.ai = ai
     this.resourceManager = resourceManager
@@ -71,8 +65,8 @@ export class ContextManagerWCV {
       return PageChatUpdateContextItemType.Space
     } else if (item instanceof ContextItemActiveTab) {
       return PageChatUpdateContextItemType.ActiveTab
-    // } else if (item instanceof ContextItemActiveSpaceContext) {
-    //   return PageChatUpdateContextItemType.ActiveSpace
+      // } else if (item instanceof ContextItemActiveSpaceContext) {
+      //   return PageChatUpdateContextItemType.ActiveSpace
     } else {
       return undefined
     }
@@ -108,7 +102,6 @@ export class ContextManagerWCV {
     //   this.log.error(`Resource not found: ${resourceOrId}`)
     //   throw new Error(`Resource not found: ${resourceOrId}`)
     // }
-
     // const item = new ContextItemResource(this.service, resource)
     // return this.addContextItem(item, opts)
   }
@@ -120,7 +113,6 @@ export class ContextManagerWCV {
     //   this.log.error(`Space not found: ${spaceOrId}`)
     //   throw new Error(`Space not found: ${spaceOrId}`)
     // }
-
     // const item = new ContextItemSpace(this.service, space)
     // return this.addContextItem(item, opts)
   }
@@ -131,21 +123,17 @@ export class ContextManagerWCV {
     //     typeof tabOrId === 'string'
     //       ? await this.tabsManager.tabsValue.find((tab) => tab.id === tabOrId)
     //       : tabOrId
-
     //   if (!tab) {
     //     throw new Error(`Tab not found: ${tabOrId}`)
     //   }
-
     //   const existingItem = this.getTabItem(tab.id)
     //   if (existingItem) {
     //     this.log.debug('Tab already in context', tab.id)
     //     return existingItem
     //   }
-
     //   this.log.debug('Adding tab to context', tab.id)
     //   const item = new ContextItemPageTab(this.service, tab)
     //   return this.addContextItem(item, opts)
-
     //   // if (tab.type === 'page') {
     //   //   this.log.debug('Adding tab to context', tab.id)
     //   //   const item = new ContextItemPageTab(this.service, tab)
@@ -155,7 +143,6 @@ export class ContextManagerWCV {
     //   // //   if (!space) {
     //   // //     throw new Error(`Space not found: ${tab.spaceId}`)
     //   // //   }
-
     //   // //   const item = new ContextItemSpace(this.service, space, tab as TabSpace)
     //   // //   return this.addContextItem(item, opts)
     //   // } else if (tab.type === 'resource') {
@@ -163,7 +150,6 @@ export class ContextManagerWCV {
     //   //   if (!resource) {
     //   //     throw new Error(`Resource not found: ${tab.resourceId}`)
     //   //   }
-
     //   //   const item = new ContextItemResource(this.service, resource, tab)
     //   //   return this.addContextItem(item, opts)
     //   // } else {
@@ -177,13 +163,11 @@ export class ContextManagerWCV {
 
   async addTabs(tabs: string[], trigger?: PageChatUpdateContextEventTrigger) {
     // const currentContextLength = this.itemsValue.length
-
     // const addedItems = await Promise.all(
     //   tabs.map((tabId) => {
     //     return this.addTab(tabId)
     //   })
     // )
-
     // if (trigger) {
     //   this.telemetry.trackPageChatContextUpdate(
     //     PageChatUpdateContextEventAction.MultiSelect,
@@ -193,7 +177,6 @@ export class ContextManagerWCV {
     //     trigger
     //   )
     // }
-
     // return addedItems.length > 0 ? addedItems[0] : undefined
   }
 
@@ -208,7 +191,6 @@ export class ContextManagerWCV {
     //   this.log.debug('Active tab already in context')
     //   return existingItem
     // }
-
     // const item = new ContextItemActiveTab(this.service)
     // return this.addContextItem(item, opts)
   }
@@ -223,7 +205,6 @@ export class ContextManagerWCV {
     //   this.log.debug('Inbox context already in context')
     //   return existingItem
     // }
-
     // const item = new ContextItemInbox(this.service)
     // return this.addContextItem(item, opts)
   }
@@ -234,7 +215,6 @@ export class ContextManagerWCV {
     //   this.log.debug('Everything context already in context')
     //   return existingItem
     // }
-
     // const item = new ContextItemEverything(this.service)
     // return this.addContextItem(item, opts)
   }
@@ -245,7 +225,6 @@ export class ContextManagerWCV {
     //   this.log.debug('Wikipedia context already in context')
     //   return existingItem
     // }
-
     // const item = new ContextItemWikipedia(this.service)
     // return this.addContextItem(item, opts)
   }
@@ -258,14 +237,16 @@ export class ContextManagerWCV {
     //   this.log.debug('BrowsingHistory context already in context')
     //   return
     // }
-
     // const item = new ContextItemBrowsingHistory(this.service)
     // return this.addContextItem(item, opts)
   }
 
   async addWebSearchContext(resultLinks: SearchResultLink[], opts?: AddContextItemOptions) {
     // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT, { results: resultLinks })
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT,
+      { results: resultLinks }
+    )
 
     this.log.debug('Got resource ids from main process', result)
   }
@@ -312,7 +293,6 @@ export class ContextManagerWCV {
     // if (item) {
     //   return item
     // }
-
     // // search within active tab and context item
     // const activeTab = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_TAB)
     // if (activeTab instanceof ContextItemActiveTab) {
@@ -321,7 +301,6 @@ export class ContextManagerWCV {
     //     return activeTabItem
     //   }
     // }
-
     // // const activeSpace = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_SPACE)
     // // if (activeSpace instanceof ContextItemActiveSpaceContext) {
     // //   const activeSpaceItem = get(activeSpace.item)
@@ -329,7 +308,6 @@ export class ContextManagerWCV {
     // //     return activeSpaceItem
     // //   }
     // // }
-
     // const pageTabs = this.itemsValue.filter((item) => item instanceof ContextItemPageTab)
     // if (pageTabs.length > 0) {
     //   const pageTab = pageTabs.find((item) => get(item.item)?.id === id)
@@ -337,21 +315,17 @@ export class ContextManagerWCV {
     //     return get(pageTab.item)
     //   }
     // }
-
     // return null
   }
 
   clear(trigger?: PageChatUpdateContextEventTrigger) {
     // const currentContextLength = this.itemsValue.length
-
     // this.updateItems(() => [])
     // this.persistItems()
-
     // // We only want to clear the tab selection if we are the global context manager
     // // if (this.key === DEFAULT_CONTEXT_MANAGER_KEY) {
     // //   this.tabsManager.clearTabSelection()
     // // }
-
     // if (trigger) {
     //   this.telemetry.trackPageChatContextUpdate(
     //     PageChatUpdateContextEventAction.Clear,
@@ -374,7 +348,10 @@ export class ContextManagerWCV {
     // return [...new Set(resourceIds.flat())] as string[]
 
     // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(WebContentsViewContextManagerActionType.GET_ITEMS, { prompt })
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.GET_ITEMS,
+      { prompt }
+    )
 
     this.log.debug('Got resource ids from main process', result)
 
@@ -391,7 +368,6 @@ export class ContextManagerWCV {
   async getPrompts(forceGenerate = false) {
     // try {
     //   this.generatingPrompts.set(true)
-
     //   this.log.debug('Getting chat prompts', this.itemsValue)
     //   const model = this.ai.selectedModelValue
     //   const supportsJsonFormat = model.supports_json_format
@@ -400,14 +376,12 @@ export class ContextManagerWCV {
     //     this.generatedPrompts.set([])
     //     return []
     //   }
-
     //   const activeTabItem = get(this.activeTabContextItem)
     //   if (!activeTabItem) {
     //     this.log.debug('No active tab item found, returning empty prompts')
     //     this.generatedPrompts.set([])
     //     return []
     //   }
-
     //   const item = activeTabItem.itemValue
     //   this.log.debug('Getting prompts for active tab item', item)
     //   if (!item) {
@@ -415,7 +389,6 @@ export class ContextManagerWCV {
     //     this.generatedPrompts.set([])
     //     return []
     //   }
-
     //   const cacheKey = item instanceof ContextItemResource ? item.data.id : item.id
     //   const storedPrompts = this.cachedItemPrompts.get(cacheKey)
     //   this.log.debug('Cached prompts for item', cacheKey, storedPrompts)
@@ -423,13 +396,10 @@ export class ContextManagerWCV {
     //     this.generatedPrompts.set(storedPrompts)
     //     return storedPrompts
     //   }
-
     //   const generatedPrompts = await item.generatePrompts()
     //   this.log.debug('Got chat prompts for contextItem', item, generatedPrompts)
-
     //   this.cachedItemPrompts.set(cacheKey, generatedPrompts)
     //   this.generatedPrompts.set(generatedPrompts)
-
     //   return generatedPrompts
     // } catch (err) {
     //   this.log.error('Error getting prompts for item', err)
@@ -445,4 +415,3 @@ export class ContextManagerWCV {
     // this.generatingPrompts.set(false)
   }
 }
-

@@ -4,6 +4,9 @@
   import ConfirmationPrompt from './ConfirmationPrompt.svelte'
   import Notifications from './Notifications.svelte'
   import { createEventDispatcher } from 'svelte'
+  import type { UseMentionsResult } from '@deta/services'
+
+  let { mentionsService }: { mentionsService?: UseMentionsResult } = $props()
 
   const teletype = useTeletype()
 
@@ -13,10 +16,11 @@
   const confirmationPrompt = teletype.confirmationPrompt
   const dispatch = createEventDispatcher()
 
-  $: isModal =
+  const isModal = $derived(
     $currentAction?.view === 'Modal' ||
-    $currentAction?.view === 'ModalLarge' ||
-    $currentAction?.view === 'ModalSmall'
+      $currentAction?.view === 'ModalLarge' ||
+      $currentAction?.view === 'ModalSmall'
+  )
 
   // prevent scrolling
   let scrollTop = null
@@ -34,11 +38,13 @@
     window.onscroll = function () {}
   }
 
-  $: if ($open === true && isModal) {
-    disableScroll()
-  } else {
-    enableScroll()
-  }
+  $effect(() => {
+    if ($open === true && isModal) {
+      disableScroll()
+    } else {
+      enableScroll()
+    }
+  })
 
   const handleClickOutside = () => {
     if ($currentAction?.forceSelection === true) return
@@ -49,24 +55,13 @@
   }
 </script>
 
-<div
-  class:outer-wrapper={$open}
-  class:modal={isModal}
-  class:modal-small={$currentAction?.view === 'ModalSmall'}
-  class:modal-large={$currentAction?.view === 'ModalLarge'}
-  class:loading={$loading}
-  on:click|self={handleClickOutside}
-  data-screen-picker-ignore
-  role="none"
->
-  <div class="inner-wrapper">
-    <Notifications {teletype} />
-    <TeletypeCore on:input on:actions-rendered on:ask>
-      <slot name="header" slot="header" />
-    </TeletypeCore>
+<div class="inner-wrapper">
+  <Notifications {teletype} />
+  <TeletypeCore on:input on:actions-rendered on:ask {mentionsService}>
+    <slot name="header" slot="header" />
+  </TeletypeCore>
 
-    <slot name="sidecar-right" />
-  </div>
+  <slot name="sidecar-right" />
 </div>
 
 {#if $confirmationPrompt}
@@ -74,30 +69,13 @@
 {/if}
 
 <style lang="scss">
-  .outer-wrapper {
-    position: fixed;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    z-index: 100;
-    pointer-events: none;
-    //margin-top: -100vh;
-  }
-
   .inner-wrapper {
     pointer-events: all;
     transition: transform 123ms ease-out;
-    position: fixed;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%) translateY(var(--offsetY, 0px));
+    position: relative;
+
     z-index: 100;
-    max-width: 600px;
-    width: 90%;
+    width: 100%;
   }
   :global(body:not(:has(.instructions)) .teletype-motion .inner-wrapper) {
     --offsetY: 200%;

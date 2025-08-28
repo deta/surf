@@ -383,9 +383,7 @@
     // const tab = tabsManager.activeTabValue
     // const rawUrl = tab?.type === 'page' ? tab.currentLocation || tab.initialLocation : undefined
     // const url = (rawUrl ? parseUrlIntoCanonical(rawUrl) : undefined) || undefined
-
     // if (!url || !$resource) return
-
     // const confirmed = await openDialog({
     //   title: 'Remove Link with Current Page',
     //   message: `Are you sure you want to remove the link between "${localTitle}" and the currently open page?`,
@@ -394,23 +392,18 @@
     //     { title: 'Remove Link', type: 'submit', kind: 'danger' }
     //   ]
     // })
-
     // if (!confirmed) {
     //   return
     // }
-
     // const matchingTags = ($resource.tags ?? []).filter(
     //   (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL && tag.value === url
     // )
-
     // if (matchingTags.length === 0) return
-
     // for await (const tag of matchingTags) {
     //   if (tag.id) {
     //     await resourceManager.deleteResourceTagByID($resource.id, tag.id)
     //   }
     // }
-
     // dispatch('link-removed')
   }
 
@@ -628,9 +621,7 @@
     : ''}"
 >
   {#if !hideHeader}
-    <header
-      class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
-    >
+    <header class="flex-shrink-0 flex items-center justify-between gap-3 p-2">
       <div class="flex items-center gap-1 w-full">
         {#if collapsable}
           <button

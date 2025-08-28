@@ -1,5 +1,5 @@
 import { mergeAttributes, Node } from '@tiptap/core'
-import { createClassComponent } from 'svelte/legacy';
+import { createClassComponent } from 'svelte/legacy'
 import LoadingComp from './Loading.svelte'
 
 export interface LoadingOptions {

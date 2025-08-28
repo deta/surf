@@ -2,20 +2,37 @@
   import { onDestroy } from 'svelte'
   import type { Notification } from './types'
   import type { TeletypeSystem } from '.'
+  import type { SvelteComponent } from 'svelte'
+  import type { Fn } from '@deta/types'
 
-  export let item
-  export let notification: Notification
-  export let teletype: TeletypeSystem
+  type NotificationComponentProps = {
+    notification: Notification
+    onRemove?: Fn
+    onHover?: Fn
+    onLeave?: Fn
+    onClick?: Fn
+  }
+  type NotificationComponent = typeof SvelteComponent<NotificationComponentProps>
+
+  let {
+    item,
+    notification,
+    teletype
+  }: {
+    item: NotificationComponent
+    notification: Notification
+    teletype: TeletypeSystem
+  } = $props()
 
   const { id, removeAfter, onClick } = notification
 
-  let startTime
-  let remaining
-  let timeout = null
+  let startTime: number
+  let remaining: number
+  let timeout: ReturnType<typeof setTimeout> | null = null
 
-  const removeNotificationHandler = () => teletype.removeNotification(id)
+  const removeNotificationHandler = () => teletype.removeNotification(id || '')
 
-  const createTimeout = (time) => {
+  const createTimeout = (time: number) => {
     timeout = setTimeout(removeNotificationHandler, time)
     startTime = Date.now()
   }
@@ -46,10 +63,11 @@
   onDestroy(() => {
     if (removeAfter && timeout) clearTimeout(timeout)
   })
+
+  const Item: NotificationComponent = item
 </script>
 
-<svelte:component
-  this={item}
+<Item
   {notification}
   {onHover}
   {onLeave}

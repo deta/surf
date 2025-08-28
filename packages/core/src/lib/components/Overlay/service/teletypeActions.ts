@@ -10,7 +10,6 @@ import {
 export enum TeletypeAction {
   Ask = 'ASK',
   NavigateGeneralSearch = 'GENERAL_SEARCH',
-  NavigateURL = 'NAVIGATE',
   NavigateSuggestion = 'SUGGESTION',
   NavigateHistoryElement = 'HISTORY',
   NavigateSuggestionHostname = 'SUGGESTION_HOSTNAME',
@@ -46,7 +45,6 @@ export enum TeletypeAction {
 export const TeletypeActionDisplayLabels = {
   [TeletypeAction.Ask]: 'Ask',
   [TeletypeAction.NavigateGeneralSearch]: 'General Search',
-  [TeletypeAction.NavigateURL]: 'Navigate',
   [TeletypeAction.NavigateSuggestion]: 'Suggestion',
   [TeletypeAction.NavigateHistoryElement]: 'History',
   [TeletypeAction.NavigateSuggestionHostname]: 'Suggestion Hostname',

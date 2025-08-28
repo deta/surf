@@ -109,47 +109,41 @@ export class ContextManager {
       return $items.filter((item) => item.scopes.includes(this.key)).map((item) => item.item)
     })
 
-    this.tabsInContext = derived(
-      [this.items],
-      ([$contextItems]) => {
-        return $contextItems
-          .filter(
-            (item) =>
-              item instanceof ContextItemPageTab ||
-              item instanceof ContextItemResource ||
-              item instanceof ContextItemSpace ||
-              item instanceof ContextItemActiveTab
-          )
-          .map((item) => {
-            if (item instanceof ContextItemResource || item instanceof ContextItemSpace) {
-              return item.sourceTab
-            } else if (item instanceof ContextItemActiveTab) {
-              // Since we can't directly subscribe to the activeTab store in the context item we rely on the store in the tabsManager
-              // if (item.currentTabValue?.id !== $activeTab?.id) {
-              //   return $activeTab
-              // }
-              return item.currentTabValue
-            } else if (item instanceof ContextItemPageTab) {
-              return item.dataValue
-            } else {
-              return null
-            }
-          })
-          .filter((tab) => !!tab)
-      }
-    )
-
-    this.spacesInContext = derived([this.items], ([$contextItems]) => {
+    this.tabsInContext = derived([this.items], ([$contextItems]) => {
       return $contextItems
         .filter(
           (item) =>
-            (item instanceof ContextItemSpace && !item.sourceTab)
+            item instanceof ContextItemPageTab ||
+            item instanceof ContextItemResource ||
+            item instanceof ContextItemSpace ||
+            item instanceof ContextItemActiveTab
         )
+        .map((item) => {
+          if (item instanceof ContextItemResource || item instanceof ContextItemSpace) {
+            return item.sourceTab
+          } else if (item instanceof ContextItemActiveTab) {
+            // Since we can't directly subscribe to the activeTab store in the context item we rely on the store in the tabsManager
+            // if (item.currentTabValue?.id !== $activeTab?.id) {
+            //   return $activeTab
+            // }
+            return item.currentTabValue
+          } else if (item instanceof ContextItemPageTab) {
+            return item.dataValue
+          } else {
+            return null
+          }
+        })
+        .filter((tab) => !!tab)
+    })
+
+    this.spacesInContext = derived([this.items], ([$contextItems]) => {
+      return $contextItems
+        .filter((item) => item instanceof ContextItemSpace && !item.sourceTab)
         .map((item) => {
           if (item instanceof ContextItemSpace) {
             return item.data
-          // } else if (item instanceof ContextItemActiveSpaceContext) {
-          //   return get(item.activeSpace)
+            // } else if (item instanceof ContextItemActiveSpaceContext) {
+            //   return get(item.activeSpace)
           } else {
             return null
           }
@@ -340,8 +334,8 @@ export class ContextManager {
       return PageChatUpdateContextItemType.Space
     } else if (item instanceof ContextItemActiveTab) {
       return PageChatUpdateContextItemType.ActiveTab
-    // } else if (item instanceof ContextItemActiveSpaceContext) {
-    //   return PageChatUpdateContextItemType.ActiveSpace
+      // } else if (item instanceof ContextItemActiveSpaceContext) {
+      //   return PageChatUpdateContextItemType.ActiveSpace
     } else {
       return undefined
     }
@@ -493,7 +487,6 @@ export class ContextManager {
     //   this.log.error(`Space not found: ${spaceOrId}`)
     //   throw new Error(`Space not found: ${spaceOrId}`)
     // }
-
     // const item = new ContextItemSpace(this.service, space)
     // return this.addContextItem(item, opts)
   }
@@ -652,22 +645,22 @@ export class ContextManager {
       return this.addEverythingContext(opts)
     } else if (itemId === INBOX_MENTION.id) {
       return this.addInboxContext(opts)
-    // } else if (itemId === TABS_MENTION.id) {
-    //   if (activeSpaceContextItem) {
-    //     activeSpaceContextItem.include =
-    //       activeSpaceContextItem.include === 'resources' ? 'everything' : 'tabs'
-    //     return activeSpaceContextItem
-    //   } else {
-    //     return this.addActiveSpaceContext('tabs', opts)
-    //   }
-    // } else if (itemId === ACTIVE_CONTEXT_MENTION.id) {
-    //   if (activeSpaceContextItem) {
-    //     activeSpaceContextItem.include =
-    //       activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
-    //     return activeSpaceContextItem
-    //   } else {
-    //     return this.addActiveSpaceContext('resources', opts)
-    //   }
+      // } else if (itemId === TABS_MENTION.id) {
+      //   if (activeSpaceContextItem) {
+      //     activeSpaceContextItem.include =
+      //       activeSpaceContextItem.include === 'resources' ? 'everything' : 'tabs'
+      //     return activeSpaceContextItem
+      //   } else {
+      //     return this.addActiveSpaceContext('tabs', opts)
+      //   }
+      // } else if (itemId === ACTIVE_CONTEXT_MENTION.id) {
+      //   if (activeSpaceContextItem) {
+      //     activeSpaceContextItem.include =
+      //       activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
+      //     return activeSpaceContextItem
+      //   } else {
+      //     return this.addActiveSpaceContext('resources', opts)
+      //   }
     } else if (itemId == ACTIVE_TAB_MENTION.id) {
       return this.addActiveTab(opts)
     } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
@@ -1031,10 +1024,7 @@ export class ContextService {
       return fetchedResource
     }
 
-    if (
-      parseUrlIntoCanonical(fetchedCanonical) !==
-      parseUrlIntoCanonical(tab.view.urlValue)
-    ) {
+    if (parseUrlIntoCanonical(fetchedCanonical) !== parseUrlIntoCanonical(tab.view.urlValue)) {
       this.log.debug(
         'Existing resource does not match current location',
         fetchedCanonical,

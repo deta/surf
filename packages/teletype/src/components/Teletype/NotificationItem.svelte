@@ -1,14 +1,23 @@
 <script lang="ts">
   import { fade, slide, fly } from 'svelte/transition'
+  import type { Fn } from '@deta/types'
   import type { Notification } from './types'
   import Icon from './Icon.svelte'
   import { bounceOut, elasticOut, expoOut, quadOut } from 'svelte/easing'
 
-  export let notification: Notification
-  export let onRemove = null
-  export let onHover = null
-  export let onLeave = null
-  export let onClick = null
+  let {
+    notification,
+    onRemove,
+    onHover,
+    onLeave,
+    onClick
+  }: {
+    notification: Notification
+    onRemove?: Fn
+    onHover?: Fn
+    onLeave?: Fn
+    onClick?: Fn
+  } = $props()
 
   let { text, icon, type, showDismiss, actionText, onClick: onClickHandler } = notification
 </script>

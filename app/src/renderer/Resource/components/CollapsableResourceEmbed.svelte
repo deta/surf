@@ -323,7 +323,7 @@
       hideProcessing
     />
   {:else} -->
-    <div bind:this={appContainer} class="w-full h-full" />
+  <div bind:this={appContainer} class="w-full h-full" />
   <!-- {/if} -->
 </CollapsableBlock>
 

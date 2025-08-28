@@ -54,7 +54,8 @@
     TeletypeActionHandler,
     TeletypeActionHandlerReturnValue
   } from './service/teletypeActions'
-  import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../../constants/searchEngines'
+  import { createMentionService } from '@deta/services/lib/mentions'
+  import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '@deta/utils/src/browser/searchEngines'
   import {
     optimisticCheckIfURLOrIPorFile,
     optimisticCheckIfUrl,
@@ -78,6 +79,9 @@
   const resourceManager = useResourceManager()
   const dispatch = createEventDispatcher<TeletypeEntryEvents>()
   const commandComposer = useCommandComposer(oasis, config, tabsManager)
+
+  // Create mentions service with tabs service
+  const mentionsService = createMentionService(tabsManager)
   const userConfigSettings = config.settings
   const localIsMac = isMac() // store the result of isMac() to avoid multiple calls
 
@@ -271,36 +275,6 @@
     }
   }
 
-  const handleNavigate: TeletypeActionHandler<{ url: string }> = (payload) => {
-    const currentInputValue = get(teletype?.inputValue) || ''
-    log.debug('handleNavigate', payload.url, currentInputValue)
-
-    if (payload.url !== currentInputValue) {
-      log.warn('current input value is different from passed URL', currentInputValue, payload.url)
-    }
-
-    const currentValidUrl = parseStringIntoBrowserLocation(currentInputValue)
-    const payloadValidUrl = parseStringIntoBrowserLocation(payload.url)
-
-    const validUrl = currentValidUrl || payloadValidUrl
-    if (!validUrl) {
-      log.error('Invalid URL:', payload.url)
-      return
-    }
-    const editMode = get(teletype?.editMode) || false
-
-    if (currentValidUrl) {
-      log.debug('Using current valid URL:', currentValidUrl)
-    } else {
-      log.debug('Using payload valid URL:', payloadValidUrl)
-    }
-
-    dispatch('open-url', {
-      editMode,
-      url: validUrl
-    })
-  }
-
   const handleOpenURLInMiniBrowser: TeletypeActionHandler<{ url: string }> = (payload) => {
     const validUrl = parseStringIntoBrowserLocation(payload.url)
     if (!validUrl) {
@@ -485,7 +459,6 @@
 
   const actionHandlers = {
     [TeletypeAction.NavigateGeneralSearch]: handleGeneralSearch,
-    [TeletypeAction.NavigateURL]: handleNavigate,
     [TeletypeAction.OpenURLInMiniBrowser]: handleOpenURLInMiniBrowser,
     [TeletypeAction.OpenGeneralSearchInMiniBrowser]: handleOpenGeneralSearchInMiniBrowser,
     [TeletypeAction.OpenSuggestionInMiniBrowser]: handleOpenSuggestionInMiniBrowser,
@@ -595,7 +568,12 @@
     nestedSearch: true
   }}
 >
-  <Teletype on:ask={handleAsk} on:close on:actions-rendered={handleShowActionPanel}>
+  <Teletype
+    {mentionsService}
+    on:ask={handleAsk}
+    on:close
+    on:actions-rendered={handleShowActionPanel}
+  >
     <div slot="header" class="custom-header">
       <TeletypeHeader
         editMode={$editMode}

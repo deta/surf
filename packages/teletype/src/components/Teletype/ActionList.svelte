@@ -8,15 +8,25 @@
   } from './types'
   import ActionItem from './Action.svelte'
 
-  import {
-    TeletypeActionDisplayLabels,
-    dispatchTeletypeEvent
-  } from '@horizon/core/src/lib/components/Overlay/service/teletypeActions'
   import { createEventDispatcher, onMount, tick, onDestroy } from 'svelte'
+  import { useLogScope } from '@deta/utils'
 
-  export let actions: Action[]
-  export let freeze = false
-  export let isOption = false
+  let {
+    actions,
+    freeze = false,
+    isOption = false
+  }: {
+    actions: Action[]
+    freeze?: boolean
+    isOption?: boolean
+  } = $props()
+
+  const log = useLogScope('ActionList')
+
+  $effect(() => {
+    log.debug('Received actions prop:', actions)
+    log.debug('Actions length:', actions?.length || 0)
+  })
 
   const dispatch = createEventDispatcher<{
     execute: Action
@@ -25,52 +35,63 @@
 
   // Group actions by section
   // Group and sort actions by section and display priority
-  $: sectionedActions = Object.entries(
-    actions.reduce(
-      (pre, cur) => {
-        if (!cur.section) cur.section = '_all'
-        if (!(cur.section in pre)) pre[cur.section] = []
-        if (!cur.horizontalParentAction) cur.horizontalParentAction = undefined
-        if (!cur.displayPriority) cur.displayPriority = ActionDisplayPriority.LOW
+  const sectionedActions = $derived(
+    Object.entries(
+      actions.reduce(
+        (pre, cur) => {
+          log.debug('Processing action:', cur)
+          if (!cur.section) cur.section = '_all'
+          if (!(cur.section in pre)) pre[cur.section] = []
+          if (!cur.horizontalParentAction) cur.horizontalParentAction = undefined
+          if (!cur.displayPriority) cur.displayPriority = ActionDisplayPriority.LOW
 
-        pre[cur.section].push(cur)
-        return pre
-      },
-      {} as { [key: string]: Action[] }
+          pre[cur.section].push(cur)
+          return pre
+        },
+        {} as { [key: string]: Action[] }
+      )
     )
+      .sort(([, actionsA], [, actionsB]) => {
+        const priorityA = Math.max(
+          ...actionsA.map((a) => a.displayPriority || ActionDisplayPriority.LOW)
+        )
+        const priorityB = Math.max(
+          ...actionsB.map((a) => a.displayPriority || ActionDisplayPriority.LOW)
+        )
+        return priorityB - priorityA
+      })
+      .reduce(
+        (acc, [section, actions]) => {
+          acc[section] = actions
+          return acc
+        },
+        {} as { [key: string]: Action[] }
+      )
   )
-    .sort(([, actionsA], [, actionsB]) => {
-      const priorityA = Math.max(
-        ...actionsA.map((a) => a.displayPriority || ActionDisplayPriority.LOW)
-      )
-      const priorityB = Math.max(
-        ...actionsB.map((a) => a.displayPriority || ActionDisplayPriority.LOW)
-      )
-      return priorityB - priorityA
-    })
-    .reduce(
-      (acc, [section, actions]) => {
-        acc[section] = actions
-        return acc
-      },
-      {} as { [key: string]: Action[] }
-    )
 
   // Flatten actions and add index
-  $: parsedActions = Object.values(sectionedActions)
-    .reduce((a, b) => a.concat(b), [])
-    .filter((action) => !action.hiddenOnRoot)
-    .map((item, _index) => ({ _index, ...item }) as Action)
+  const parsedActions = $derived(
+    Object.values(sectionedActions)
+      .reduce((a, b) => a.concat(b), [])
+      .filter((action) => !action.hiddenOnRoot)
+      .map((item, _index) => ({ _index, ...item }) as Action)
+  )
 
-  let activeActionIndex = 0
-  $: activeAction = parsedActions[activeActionIndex]
+  $effect(() => {
+    log.debug('sectionedActions:', sectionedActions)
+    log.debug('parsedActions:', parsedActions)
+    log.debug('parsedActions length:', parsedActions.length)
+  })
 
-  $: activeActionIndex =
-    parsedActions.findIndex(
-      (action) =>
-        action.selectPriority ===
-        Math.max(...parsedActions.map((a) => a.selectPriority || ActionSelectPriority.NORMAL))
-    ) ?? 0
+  let activeActionIndex = $state(0)
+  const activeAction = $derived(parsedActions[activeActionIndex])
+
+  $effect(() => {
+    // Always select the first item when actions are populated
+    if (parsedActions.length > 0) {
+      activeActionIndex = 0
+    }
+  })
 
   let listboxNode: HTMLElement
 
@@ -91,27 +112,27 @@
   }
 
   onMount(() => {
-    activeActionIndex =
-      parsedActions.findIndex(
-        (action) =>
-          action.selectPriority ===
-          Math.max(...parsedActions.map((a) => a.selectPriority || ActionSelectPriority.NORMAL))
-      ) ?? 0
     dispatch('selected', activeAction)
 
     // Add scroll handler to the parent container
-    window.addEventListener('wheel', handleScroll, { passive: false })
+    window.addEventListener('wheel', handleScroll, {
+      passive: false
+    })
   })
 
   onDestroy(() => {
     window.removeEventListener('wheel', handleScroll)
   })
 
-  $: if (activeAction) {
-    dispatch('selected', activeAction)
-  }
+  $effect(() => {
+    if (activeAction) {
+      dispatch('selected', activeAction)
+    }
+  })
 
-  export const resetActiveIndex = () => (activeActionIndex = 0)
+  export const resetActiveIndex = () => {
+    activeActionIndex = 0
+  }
 
   const executeAction = async (action: Action, e: MouseEvent | KeyboardEvent) => {
     let options: ActionPanelOption[] = []
@@ -227,14 +248,17 @@
             <button
               class="trailing"
               on:click={() => {
-                dispatchTeletypeEvent({
-                  execute: actions[0].horizontalParentAction,
-                  payload: actions[0].payload,
-                  success: true
-                })
+                // Execute the horizontal parent action directly
+                if (actions[0].horizontalParentAction?.handler) {
+                  actions[0].horizontalParentAction.handler(
+                    actions[0].horizontalParentAction,
+                    null,
+                    actions[0].payload
+                  )
+                }
               }}
             >
-              {TeletypeActionDisplayLabels[actions[0].horizontalParentAction]}
+              {actions[0].horizontalParentAction?.name || 'Action'}
             </button>
           {/if}
         </div>
@@ -272,7 +296,6 @@
   .menu {
     overflow-y: auto;
     outline: none;
-
     :global(.horizontal-list) {
       /* Make sure horizontal lists don't handle scroll events directly */
       pointer-events: auto;
@@ -280,7 +303,6 @@
     }
 
     &:not(.modal) {
-      border-bottom: var(--border-width) solid var(--border-color);
       padding-bottom: 0.335rem;
     }
 
@@ -301,7 +323,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 1rem;
+    font-size: 0.8rem;
     padding: 0.4rem 1.25rem;
     box-sizing: border-box;
     color: var(--text);

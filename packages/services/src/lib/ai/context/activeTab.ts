@@ -102,31 +102,31 @@ export class ContextItemActiveTab extends ContextItemBase {
       await tick()
 
       // if (tab.type === 'page') {
-        this.log.debug('Preparing page tab', tab)
-        const resource = await this.service.preparePageTab(tab)
-        if (!resource) {
-          this.log.error('Failed to prepare page tab', tab.id)
-          this.item.set(null)
-          return
-        }
+      this.log.debug('Preparing page tab', tab)
+      const resource = await this.service.preparePageTab(tab)
+      if (!resource) {
+        this.log.error('Failed to prepare page tab', tab.id)
+        this.item.set(null)
+        return
+      }
 
-        this.log.debug('Prepared page tab', tab.id, resource)
+      this.log.debug('Prepared page tab', tab.id, resource)
 
-        const newItem = new ContextItemResource(this.service, resource, tab)
-        this.item.set(newItem)
+      const newItem = new ContextItemResource(this.service, resource, tab)
+      this.item.set(newItem)
 
-        const showChatSidebar = this.service.ai.showChatSidebarValue
+      const showChatSidebar = this.service.ai.showChatSidebarValue
 
-        // Only track if the item is new and a completely different tab
-        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-          this.service.telemetry.trackPageChatContextUpdate(
-            PageChatUpdateContextEventAction.ActiveChanged,
-            0, // TODO: figure out how to get the correct count
-            0,
-            PageChatUpdateContextItemType.PageTab,
-            PageChatUpdateContextEventTrigger.ActiveTabChanged
-          )
-        }
+      // Only track if the item is new and a completely different tab
+      if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
+        this.service.telemetry.trackPageChatContextUpdate(
+          PageChatUpdateContextEventAction.ActiveChanged,
+          0, // TODO: figure out how to get the correct count
+          0,
+          PageChatUpdateContextItemType.PageTab,
+          PageChatUpdateContextEventTrigger.ActiveTabChanged
+        )
+      }
       // } else if (tab.type === 'space') {
       //   this.log.debug('Preparing space tab', tab)
       //   const space = await this.service.tabsManager.oasis.getSpace(tab.spaceId)

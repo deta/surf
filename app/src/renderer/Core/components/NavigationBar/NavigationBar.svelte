@@ -6,7 +6,7 @@
   import { writable } from 'svelte/store'
   import LocationBar from './LocationBar.svelte'
   import WebContentsView from '../WebContentsView.svelte'
-  import SaveState from './SaveState.svelte';
+  import SaveState from './SaveState.svelte'
 
   let { view }: { view: WebContentsView } = $props()
 

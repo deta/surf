@@ -2,8 +2,13 @@
   import type { Action } from './index'
   import Icon from './Icon.svelte'
 
-  export let text: string
-  export let icon: Action['icon'] | undefined
+  let {
+    text,
+    icon
+  }: {
+    text: string
+    icon?: Action['icon'] | undefined
+  } = $props()
 </script>
 
 <div class="breadcrumb">

@@ -509,7 +509,11 @@ const eventHandlers = {
     >
   },
 
-  onWebContentsViewContextManagerEvent: <T extends WebContentsViewManagerActionType>(callback: (event: WebContentsViewManagerActionPayloads[T]) => WebContentsViewManagerActionOutputs[T]) => {
+  onWebContentsViewContextManagerEvent: <T extends WebContentsViewManagerActionType>(
+    callback: (
+      event: WebContentsViewManagerActionPayloads[T]
+    ) => WebContentsViewManagerActionOutputs[T]
+  ) => {
     return IPC_EVENTS_RENDERER.webContentsViewContextManagerAction.handle((payload) => {
       console.log('webContentsViewContextManagerAction core preload', payload)
       try {

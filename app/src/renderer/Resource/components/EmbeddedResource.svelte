@@ -87,7 +87,7 @@
       maxHeight="800px"
       initialHeight="-1"
     />
-  <!-- {:else}
+    <!-- {:else}
     <OasisResourceLoader resourceOrId={resource} /> -->
   {/if}
 {:else if loading}

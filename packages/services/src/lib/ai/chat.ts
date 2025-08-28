@@ -550,10 +550,7 @@ export class AIChat {
   }
 
   async processContextItems(prompt: string) {
-    this.log.debug(
-      'Processing context items for chat',
-      prompt
-    )
+    this.log.debug('Processing context items for chat', prompt)
     const resourceIds = await this.contextManager.getResourceIds(prompt)
     const inlineImages = await this.contextManager.getInlineImages()
     const usedScreenshots = false // this.contextItemsValue.filter((item) => item.type === 'screenshot').length > 0

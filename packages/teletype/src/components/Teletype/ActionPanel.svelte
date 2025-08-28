@@ -3,13 +3,19 @@
   import ActionList from './ActionList.svelte'
   import type { Action, ActionPanelOption } from './types'
 
-  export let action: Action
-  export let options: ActionPanelOption[] | (() => Promise<ActionPanelOption[]>)
-  export let hideDefault = false
+  let {
+    action,
+    options,
+    hideDefault = false
+  }: {
+    action: Action
+    options: ActionPanelOption[] | (() => Promise<ActionPanelOption[]>)
+    hideDefault?: boolean
+  } = $props()
 
-  let computedOptions = []
+  let computedOptions = $state([])
 
-  $: parsedOptions = [
+  const parsedOptions = $derived([
     ...(!hideDefault
       ? [
           {
@@ -23,13 +29,15 @@
       : []),
     ...(typeof options !== 'function' ? options : []),
     ...computedOptions
-  ] as Action[]
+  ] as Action[])
 
-  $: if (typeof options === 'function') {
-    options().then((value) => {
-      computedOptions = value
-    })
-  }
+  $effect(() => {
+    if (typeof options === 'function') {
+      options().then((value) => {
+        computedOptions = value
+      })
+    }
+  })
 
   const dispatch = createEventDispatcher<{
     execute: ActionPanelOption
@@ -53,7 +61,6 @@
     top: -0.45rem;
     right: 0;
     border-radius: var(--border-radius);
-    border: var(--border-width) solid var(--border-color);
     outline: 1px solid rgba(126, 168, 240, 0.05);
     padding: 0.25rem;
     min-width: 340px;

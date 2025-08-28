@@ -2,9 +2,14 @@
   import { useTeletype } from './index'
   import type { Action } from './types'
 
-  export let icon: Action['icon'] | undefined = undefined
-  export let name: string | undefined = typeof icon === 'string' && icon
-  export let component: Action['icon'] = typeof icon !== 'string' && icon !== undefined && icon
+  let {
+    icon = undefined
+  }: {
+    icon?: Action['icon'] | undefined
+  } = $props()
+
+  const name = $derived(typeof icon === 'string' && icon)
+  const component = $derived(typeof icon !== 'string' && icon !== undefined && icon)
 
   const teletype = useTeletype()
   const iconComponent = teletype.iconComponent

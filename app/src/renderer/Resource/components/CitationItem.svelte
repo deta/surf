@@ -428,73 +428,73 @@
       {/if}
     </div>
   {:else}
-      <div class="inline-flex items-center justify-center gap-1 select-none">
-        {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
-          <img
-            src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
-            alt="YouTube icon"
-          />
-          {#if !hideText}
-            <div class="select-none">
-              {#if general}
-                {tooltipText}
-              {:else}
-                {formatTimestamp(source.metadata.timestamp)}
-              {/if}
-            </div>
-          {/if}
-        {:else if source?.metadata?.url}
-          {#if resource?.type.startsWith('image/')}
-            <ResourceSmallImagePreview {resource} />
-          {:else if canonicalUrl || isURL(source.metadata.url)}
-            <img
-              src="https://www.google.com/s2/favicons?domain={canonicalUrl ||
-                source.metadata.url}&sz=40"
-              alt="source icon"
-            />
-          {:else if resource?.type}
-            <DynamicIcon name="file;;{getFileKind(resource.type)}" width="1em" height="1em" />
-          {:else}
-            <Icon name="world" size="15px" />
-          {/if}
-
-          {#if !hideText}
-            <div class="font-sans text-xs tracking-wide select-none">
-              {#if general}
-                {tooltipText}
-              {:else if renderID || citationID}
-                <span class="uppercase">#{renderID || citationID}</span>
-              {/if}
-            </div>
-          {/if}
-        {:else if citationType === 'image'}
-          <div class="file-icon">
-            <DynamicIcon name="file;;image" />
-          </div>
-
-          {#if skipParsing}
-            <slot></slot>
-          {/if}
-        {:else}
-          {#if resource?.type}
-            {#if resource.type.startsWith('image/')}
-              <ResourceSmallImagePreview {resource} />
+    <div class="inline-flex items-center justify-center gap-1 select-none">
+      {#if source?.metadata?.timestamp !== undefined && source.metadata.timestamp !== null}
+        <img
+          src="https://www.google.com/s2/favicons?domain=https://youtube.com&sz=40"
+          alt="YouTube icon"
+        />
+        {#if !hideText}
+          <div class="select-none">
+            {#if general}
+              {tooltipText}
             {:else}
-              <DynamicIcon name="file;;{getFileKind(resource.type)}" width="1em" height="1em" />
+              {formatTimestamp(source.metadata.timestamp)}
             {/if}
-          {/if}
+          </div>
+        {/if}
+      {:else if source?.metadata?.url}
+        {#if resource?.type.startsWith('image/')}
+          <ResourceSmallImagePreview {resource} />
+        {:else if canonicalUrl || isURL(source.metadata.url)}
+          <img
+            src="https://www.google.com/s2/favicons?domain={canonicalUrl ||
+              source.metadata.url}&sz=40"
+            alt="source icon"
+          />
+        {:else if resource?.type}
+          <DynamicIcon name="file;;{getFileKind(resource.type)}" width="1em" height="1em" />
+        {:else}
+          <Icon name="world" size="15px" />
+        {/if}
 
-          {#if !hideText}
-            <div class="font-sans text-xs tracking-wide select-none">
-              {#if general}
-                {tooltipText}
-              {:else if renderID || citationID}
-                <span class="uppercase">#{renderID || citationID}</span>
-              {/if}
-            </div>
+        {#if !hideText}
+          <div class="font-sans text-xs tracking-wide select-none">
+            {#if general}
+              {tooltipText}
+            {:else if renderID || citationID}
+              <span class="uppercase">#{renderID || citationID}</span>
+            {/if}
+          </div>
+        {/if}
+      {:else if citationType === 'image'}
+        <div class="file-icon">
+          <DynamicIcon name="file;;image" />
+        </div>
+
+        {#if skipParsing}
+          <slot></slot>
+        {/if}
+      {:else}
+        {#if resource?.type}
+          {#if resource.type.startsWith('image/')}
+            <ResourceSmallImagePreview {resource} />
+          {:else}
+            <DynamicIcon name="file;;{getFileKind(resource.type)}" width="1em" height="1em" />
           {/if}
         {/if}
-      </div>
+
+        {#if !hideText}
+          <div class="font-sans text-xs tracking-wide select-none">
+            {#if general}
+              {tooltipText}
+            {:else if renderID || citationID}
+              <span class="uppercase">#{renderID || citationID}</span>
+            {/if}
+          </div>
+        {/if}
+      {/if}
+    </div>
   {/if}
 </citation>
 

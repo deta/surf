@@ -58,7 +58,10 @@
 </script>
 
 {#if url && typeof url === 'string' && url.startsWith('http://localhost')}
-  <DynamicIcon name="icon;;file-text-ai" size="1rem"/>
+  <!-- TODO: Replace this with proper notebook icon -->
+  <div class="favicon-fallback">
+    <Icon name="squircle" size="100%" fill="yellow" />
+  </div>
 {:else if loaded && !error && faviconURL}
   <img bind:this={imgElement} src={faviconURL} alt={title} draggable="false" />
 {:else}
@@ -69,6 +72,7 @@
 
 <style>
   img {
+    margin: 0;
     width: 16px;
     height: 16px;
     display: block;
@@ -77,6 +81,8 @@
   }
   
   .favicon-fallback {
+    min-width: 16px;
+    min-height: 16px;
     width: 16px;
     height: 16px;
     display: flex;

@@ -17,7 +17,6 @@
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@tsconfig/svelte": "^5.0.4",
     "focus-svelte": "^0.3.4",
-    "fuse.js": "^6.6.2",
     "sass": "^1.80.4",
     "sveld": "^0.17.2",
     "svelte": "^5.1.3",

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { DynamicIcon } from '@deta/icons'
-    import { useResourceManager } from '@deta/services/resources';
-    import type { Fn } from '@deta/types';
+  import { useResourceManager } from '@deta/services/resources';
+  import type { Fn } from '@deta/types';
   import { onMount, tick } from 'svelte'
 
   let {text, resourceId, icon, active, onclick, ...restProps}: {

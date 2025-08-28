@@ -437,7 +437,10 @@ function setupIpcHandlers(backendRootPath: string) {
       return null
     }
 
-    return await IPC_EVENTS_MAIN.webContentsViewContextManagerAction.requestFromRenderer(window.webContents, action)
+    return await IPC_EVENTS_MAIN.webContentsViewContextManagerAction.requestFromRenderer(
+      window.webContents,
+      action
+    )
   })
 }
 

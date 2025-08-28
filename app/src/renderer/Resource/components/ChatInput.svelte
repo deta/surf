@@ -67,22 +67,19 @@
 
   const usedPrompts = writable<PromptPillItem[]>([])
 
-  const showExamplePrompts = derived(
-    [userConfigSettings],
-    ([userConfigSettings]) => {
-      if (!userConfigSettings.automatic_chat_prompt_generation) {
-        return false
-      }
-
-      // const tab = tabsInContext.find((tab) => tab.id === activeTabId)
-
-      // if (!tab || tab.type !== 'page') {
-      //   return false
-      // }
-
-      return true
+  const showExamplePrompts = derived([userConfigSettings], ([userConfigSettings]) => {
+    if (!userConfigSettings.automatic_chat_prompt_generation) {
+      return false
     }
-  )
+
+    // const tab = tabsInContext.find((tab) => tab.id === activeTabId)
+
+    // if (!tab || tab.type !== 'page') {
+    //   return false
+    // }
+
+    return true
+  })
 
   const filteredExamplePrompts = derived(
     [generatedPrompts, responses],
@@ -298,13 +295,13 @@
         <!--{#if firstLine}
           <span class="submit-hint">{isMac() ? 'CMD' : 'Ctrl'} + ⮐</span>
         {/if}-->
-          <button class="-mr-1.5" on:click={handleSubmit} muted={false}>
-            {#if $isGeneratingAI}
-              <Icon name="spinner" size="1.15rem" />
-            {:else}
-              <Icon name="cursor" fill="#FF6426" size="1.15rem" />
-            {/if}
-          </button>
+        <button class="-mr-1.5" on:click={handleSubmit} muted={false}>
+          {#if $isGeneratingAI}
+            <Icon name="spinner" size="1.15rem" />
+          {:else}
+            <Icon name="cursor" fill="#FF6426" size="1.15rem" />
+          {/if}
+        </button>
       </div>
     {/if}
   </Input>

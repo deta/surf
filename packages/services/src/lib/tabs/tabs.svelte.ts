@@ -4,17 +4,14 @@ import {
   isDev,
   type ScopedLogger,
   useDebounce,
-  useLogScope,
-} from "@deta/utils";
-import { KVStore, useKVTable } from "../kv";
-import type { Fn } from "@deta/types";
-import { useViewManager, WebContentsView, ViewManager } from "../views";
-import { derived, get, writable, type Readable } from "svelte/store";
-import {
-  ViewManagerEmitterNames,
-  WebContentsViewEmitterNames,
-} from "../views/types";
-import type { NewWindowRequest } from "../ipc/events";
+  useLogScope
+} from '@deta/utils'
+import { KVStore, useKVTable } from '../kv'
+import type { Fn } from '@deta/types'
+import { useViewManager, WebContentsView, ViewManager } from '../views'
+import { derived, get, writable, type Readable } from 'svelte/store'
+import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../views/types'
+import type { NewWindowRequest } from '../ipc/events'
 import {
   type TabItemEmitterEvents,
   type KVTabItem,
@@ -66,7 +63,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   }
 
   get titleValue() {
-    return get(this.title);
+    return get(this.title)
   }
 
   get dataValue(): KVTabItem {
@@ -144,9 +141,9 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
    * Legacy store to make the contextManager work
    * @deprecated Use activeTab instead
    */
-  activeTabStore = writable<TabItem | null>(null);
+  activeTabStore = writable<TabItem | null>(null)
 
-  static self: TabsService;
+  static self: TabsService
 
   get tabsValue(): TabItem[] {
     return this.tabs
@@ -161,7 +158,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   }
 
   get activatedTabsValue(): string[] {
-    return this.activatedTabs;
+    return this.activatedTabs
   }
 
   constructor() {
@@ -174,22 +171,22 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     this.ready = this.kv.ready
 
     this.activeTab = $derived.by(() => {
-      const activeId = this.activeTabId;
+      const activeId = this.activeTabId
       if (!activeId) {
-        this.activeTabStore.set(null);
-        return null;
+        this.activeTabStore.set(null)
+        return null
       }
 
       const tab = this.tabs.find((t) => t.id === activeId)
       if (!tab) {
-        this.log.warn(`Active tab with id "${activeId}" not found`);
-        this.activeTabStore.set(null);
-        return null;
+        this.log.warn(`Active tab with id "${activeId}" not found`)
+        this.activeTabStore.set(null)
+        return null
       }
 
-      this.activeTabStore.set(tab);
-      return tab;
-    });
+      this.activeTabStore.set(tab)
+      return tab
+    })
 
     this.init()
 
@@ -365,8 +362,8 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   }
 
   activateTab(id: string) {
-    this.log.debug("Activating tab to id:", id);
-    this.activatedTabs = [...this.activatedTabs.filter((t) => t !== id), id];
+    this.log.debug('Activating tab to id:', id)
+    this.activatedTabs = [...this.activatedTabs.filter((t) => t !== id), id]
   }
 
   async setActiveTab(id: string | null) {
@@ -381,8 +378,8 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
         return
       }
 
-      this.activateTab(tab.id);
-      this.viewManager.activate(tab.view.id);
+      this.activateTab(tab.id)
+      this.viewManager.activate(tab.view.id)
     }
 
     this.emit(TabsServiceEmitterNames.ACTIVATED, this.activeTab)

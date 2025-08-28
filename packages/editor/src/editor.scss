@@ -134,14 +134,12 @@ body.custom .editor {
   span.suggestion {
     // background: var(--background-brand);
     color: var(--color-text);
-    border-radius: 0.4em;
+    border-radius: 0.6em;
     box-decoration-break: clone;
-    padding: 0.2em 0;
+    padding: 0.2em 0.5rem 0.25em 0.33rem;
   }
 
   span.suggestion[data-suggestion-placeholder] {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
     position: relative;
 
     &::after {
@@ -156,7 +154,7 @@ body.custom .editor {
       width: max-content;
       white-space: nowrap;
       pointer-events: none;
-      margin-left: 0;
+      margin-left: 2px;
       // background: var(--background-brand);
       color: var(--color-text-muted);
       border-radius: 0.4em;
@@ -166,19 +164,34 @@ body.custom .editor {
   }
 
   .mention {
+    top: 3.25px;
     display: inline-flex;
     align-items: center;
     gap: 0.25em;
-    background-color: var(--background-brand);
-    border-radius: 0.4em;
+    border-radius: 0.7em;
     box-decoration-break: clone;
-    color: var(--color-brand) !important;
-    padding: 0.2em 0.3em;
+    color: #586984;
     cursor: default;
-    line-height: 1.1;
+    line-height: 0;
+    font-size: 0.95rem;
     font-weight: 400;
+    padding: 0 0.25rem;
     position: relative;
-    top: 1px;
+    overflow: visible;
+    z-index: 1;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -3.5px;
+      left: 0;
+      right: 0;
+      bottom: -3px;
+      background: #EEF2FF;
+      z-index: -1;
+      border-radius: 6.5px;
+      padding: 3px 4px;
+    }
 
     &::after {
       content: '\200B';

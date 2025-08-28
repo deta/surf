@@ -537,9 +537,10 @@ export function Suggestion<I = any, TSelected = any>({
         return DecorationSet.create(state.doc, [
           Decoration.inline(range.from, range.to, {
             nodeName: decorationTag,
-            class: decorationClass,
+            class: `${decorationClass} suggestion-pill`,
             'data-decoration-id': decorationId,
-            'data-suggestion-placeholder': query ? undefined : placeholder
+            'data-suggestion-placeholder': query ? undefined : placeholder,
+            'data-query': query || ''
           })
         ])
       }

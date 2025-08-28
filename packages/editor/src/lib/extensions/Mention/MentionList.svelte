@@ -1,19 +1,28 @@
 <script lang="ts">
   import { DynamicIcon } from '@deta/icons'
+  import { Favicon } from '@deta/ui'
   import { MentionItemType, type MentionItem } from '../../types'
 
-  export let items: MentionItem[] = []
-  export let callback: (item: MentionItem) => void
-  export let minimal: boolean = false
-  export let hideSectionTitle: boolean = false
-  export let hideEmpty: boolean = false
+  let { 
+    items = [],
+    callback,
+    minimal = false,
+    hideSectionTitle = false,
+    hideEmpty = false
+  }: {
+    items?: MentionItem[]
+    callback: (item: MentionItem) => void
+    minimal?: boolean
+    hideSectionTitle?: boolean
+    hideEmpty?: boolean
+  } = $props()
 
-  let activeIdx = 0
+  let activeIdx = $state(0)
   let listContainer: HTMLDivElement
-  let itemElements: HTMLDivElement[] = []
-  let disableMouseover = false
+  let itemElements: HTMLDivElement[] = $state([])
+  let disableMouseover = $state(false)
 
-  $: sections = items.reduce(
+  const sections = $derived(items.reduce(
     (acc, item) => {
       const type = item.type ?? MentionItemType.OTHER
       if (!acc[type]) {
@@ -24,7 +33,7 @@
       return acc
     },
     {} as Record<MentionItemType, MentionItem[]>
-  )
+  ))
 
   export function onKeyDown(event: KeyboardEvent): boolean {
     const flatItems = Object.values(sections).flat()
@@ -106,7 +115,9 @@
               ]
             }
           >
-            {#if item.icon}
+            {#if item.type === MentionItemType.TAB && item.faviconURL}
+              <Favicon url={item.faviconURL} title={item.label} />
+            {:else if item.icon}
               <DynamicIcon name={item.icon} size="16px" />
             {/if}
 
@@ -141,8 +152,7 @@
       max-height: 400px;
       background: var(--ctx-background);
       padding: 0.25em;
-      padding-top: 0.5em;
-      border-radius: 9px;
+      border-radius: 12px;
       border: 0.5px solid var(--ctx-border);
       box-shadow: 0 2px 10px var(--ctx-shadow-color);
     }
@@ -164,11 +174,11 @@
 
   .item {
     padding: 0.25em 0.5em;
-    border-radius: 4px;
+    border-radius: 9px;
     display: flex;
     align-items: center;
     gap: 0.5em;
-    color: var(--ctx-item-text);
+    color: #5B6882;
   }
 
   .item-text {
@@ -178,8 +188,8 @@
   }
 
   .active {
-    background-color: var(--ctx-item-hover);
-    color: var(--ctx-item-text-hover);
+    background-color: #E5E9FF;
+    color: #5B6882;
   }
 
   .section {

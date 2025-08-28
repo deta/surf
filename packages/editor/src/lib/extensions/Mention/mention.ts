@@ -2,6 +2,7 @@ import { Editor, mergeAttributes, Node, type Range } from '@tiptap/core'
 import { type DOMOutputSpec, Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { PluginKey } from '@tiptap/pm/state'
 import Suggestion, { type SuggestionOptions } from '../../utilities/Suggestion'
+import { mount, unmount } from 'svelte'
 
 import MentionComp from './Mention.svelte'
 import type { MentionItem } from '../../types'
@@ -31,6 +32,11 @@ export interface MentionNodeAttrs {
    * item, if provided. Stored as a `data-icon` attribute.
    */
   icon?: string | null
+
+  /**
+   * The favicon URL for tab mentions, stored as a `data-favicon-url` attribute.
+   */
+  faviconURL?: string | null
 }
 
 export type MentionOptions<
@@ -132,7 +138,7 @@ export const Mention = Node.create<MentionOptions>({
         pluginKey: MentionPluginKey,
         preventReTrigger: true,
         dismissOnSpace: true,
-        placeholder: 'filter mentions…',
+        placeholder: 'Mention any Tab',
         command: ({ editor, range, props }) => {
           // increase range.to by one when the next node is of type "text"
           // and starts with a space character
@@ -153,7 +159,8 @@ export const Mention = Node.create<MentionOptions>({
                   id: props.id,
                   label: props.label,
                   mentionType: props.type,
-                  icon: props.icon
+                  icon: props.icon,
+                  faviconURL: props.faviconURL
                 }
               },
               {
@@ -261,6 +268,20 @@ export const Mention = Node.create<MentionOptions>({
             'data-icon': attributes.icon
           }
         }
+      },
+
+      faviconURL: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-favicon-url'),
+        renderHTML: (attributes) => {
+          if (!attributes.faviconURL) {
+            return {}
+          }
+
+          return {
+            'data-favicon-url': attributes.faviconURL
+          }
+        }
       }
     }
   },
@@ -327,8 +348,7 @@ export const Mention = Node.create<MentionOptions>({
 
       console.log('mention node', node)
 
-      const component = createClassComponent({
-        component: MentionComp,
+      const component = mount(MentionComp, {
         target: container,
         props: {
           id: node.attrs.id,
@@ -336,6 +356,7 @@ export const Mention = Node.create<MentionOptions>({
           char: this.options.suggestion.char,
           type: node.attrs.mentionType || node.attrs.type,
           icon: node.attrs.icon,
+          faviconURL: node.attrs.faviconURL,
           onClick: this.options.onClick,
           ...this.options.HTMLAttributes
         }
@@ -344,7 +365,7 @@ export const Mention = Node.create<MentionOptions>({
       return {
         dom: container,
         destroy: () => {
-          component.$destroy()
+          unmount(component)
         }
       }
     }

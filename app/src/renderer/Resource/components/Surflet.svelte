@@ -11,10 +11,7 @@
   import { useAI } from '@deta/services/ai'
   import { writable, type Writable } from 'svelte/store'
 
-  import {
-    startAIGeneration,
-    endAIGeneration
-  } from '@deta/services/ai'
+  import { startAIGeneration, endAIGeneration } from '@deta/services/ai'
 
   // NOTE: created by tiptap but not needed
   export const node: any = undefined

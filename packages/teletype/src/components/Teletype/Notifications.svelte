@@ -3,10 +3,28 @@
   import DefaultNotification from './NotificationItem.svelte'
 
   import { type TeletypeSystem, useTeletype } from './index'
+  import type { SvelteComponent } from 'svelte'
+  import type { Fn } from '@deta/types'
+  import type { Notification } from './types'
 
-  export let item = null
-  export let teletype: TeletypeSystem | undefined = undefined
-  export let key: string | undefined = undefined
+  type NotificationComponentProps = {
+    notification: Notification
+    onRemove?: Fn
+    onHover?: Fn
+    onLeave?: Fn
+    onClick?: Fn
+  }
+  type NotificationComponent = typeof SvelteComponent<NotificationComponentProps>
+
+  let {
+    item = null,
+    teletype,
+    key
+  }: {
+    item?: NotificationComponent | null
+    teletype?: TeletypeSystem
+    key?: string
+  } = $props()
 
   const tty = teletype || useTeletype(key)
   const notifications = tty.notifications

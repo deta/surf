@@ -3,9 +3,15 @@
   import { fade } from 'svelte/transition'
   import type { Action, ActionPanelOption } from './types'
 
-  export let items: Action[]
-  export let active = false
-  export let selectedIndex = 0
+  let {
+    items,
+    active = false,
+    selectedIndex = $bindable(0)
+  }: {
+    items: Action[]
+    active?: boolean
+    selectedIndex?: number
+  } = $props()
 
   let listElement: HTMLElement
   let hasLeftOverflow = false
@@ -59,13 +65,15 @@
     }
   })
 
-  $: if (listElement) {
-    const observer = new ResizeObserver(() => {
-      checkOverflow()
-    })
-    observer.observe(listElement)
-    return () => observer.disconnect()
-  }
+  $effect(() => {
+    if (listElement) {
+      const observer = new ResizeObserver(() => {
+        checkOverflow()
+      })
+      observer.observe(listElement)
+      return () => observer.disconnect()
+    }
+  })
 
   function handleKeydown(e: KeyboardEvent) {
     if (!active) return
@@ -88,11 +96,12 @@
     }
   }
 
-  $: if (active) {
-    window.addEventListener('keydown', handleKeydown)
-  } else {
-    window.removeEventListener('keydown', handleKeydown)
-  }
+  $effect(() => {
+    if (active) {
+      window.addEventListener('keydown', handleKeydown)
+      return () => window.removeEventListener('keydown', handleKeydown)
+    }
+  })
 </script>
 
 <div

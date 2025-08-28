@@ -46,15 +46,8 @@
     wait,
     htmlToMarkdown
   } from '@deta/utils'
-  import CitationItem, {
-    type CitationClickData,
-    type CitationInfo
-  } from './CitationItem.svelte'
-  import {
-    generateContentHash,
-    mapCitationsToText,
-    parseChatOutputToHtml
-  } from '@deta/services/ai'
+  import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
+  import { generateContentHash, mapCitationsToText, parseChatOutputToHtml } from '@deta/services/ai'
   import {
     startAIGeneration,
     endAIGeneration,
@@ -119,10 +112,7 @@
   import WebSearch from './WebSearch.svelte'
   import { createResourcesFromMediaItems, processPaste } from '@deta/services'
   import { predefinedSurfletCode } from './predefinedSurflets'
-  import {
-    createMentionsFetcher,
-    createResourcesMentionsFetcher
-  } from '@deta/services/ai'
+  import { createMentionsFetcher, createResourcesMentionsFetcher } from '@deta/services/ai'
   import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
   import ChatInput from './ChatInput.svelte'
@@ -371,18 +361,8 @@
   const emptyPlaceholder = 'Start typing or hit space for suggestions…'
 
   const editorPlaceholder = derived(
-    [
-      floatingMenuShown,
-      showPrompts,
-      generatingPrompts,
-      autocompleting
-    ],
-    ([
-      $floatingMenuShown,
-      $showPrompts,
-      $generatingPrompts,
-      $autocompleting,
-    ]) => {
+    [floatingMenuShown, showPrompts, generatingPrompts, autocompleting],
+    ([$floatingMenuShown, $showPrompts, $generatingPrompts, $autocompleting]) => {
       if ($autocompleting) {
         return ''
       }
@@ -676,65 +656,65 @@
           drag.continue()
           return
         }
-      // } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
-      //   const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
-      //   const tab = await tabsManager.get(tabId)
-      //   if (!tab) {
-      //     log.error('Tab not found', tabId)
-      //     drag.abort()
-      //     return
-      //   }
+        // } else if (drag.item!.data.hasData(DragTypeNames.SURF_TAB)) {
+        //   const tabId = drag.item!.data.getData(DragTypeNames.SURF_TAB).id
+        //   const tab = await tabsManager.get(tabId)
+        //   if (!tab) {
+        //     log.error('Tab not found', tabId)
+        //     drag.abort()
+        //     return
+        //   }
 
-      //   log.debug('dropped tab', tab)
+        //   log.debug('dropped tab', tab)
 
-      //   if (tab.type === 'page') {
-      //     if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
-      //       log.debug('Tab already bookmarked', tab.resourceBookmark)
-      //       const resource = await resourceManager.getResource(tab.resourceBookmark)
-      //       if (resource) {
-      //         processDropResource(
-      //           position,
-      //           resource,
-      //           isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
-      //           {
-      //             x: drag.event.clientX,
-      //             y: drag.event.clientY
-      //           }
-      //         )
-      //         drag.continue()
-      //         return
-      //       }
-      //     } else {
-      //       log.debug('Creating resource from tab', tab)
-      //       toast = toasts.loading('Processing Tab…')
-      //       const { resource } = await tabsManager.createResourceFromTab(tab, { silent: true })
-      //       if (resource) {
-      //         log.debug('Created resource from tab', resource)
-      //         processDropResource(
-      //           position,
-      //           resource,
-      //           isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
-      //           {
-      //             x: drag.event.clientX,
-      //             y: drag.event.clientY
-      //           }
-      //         )
-      //         toast.success(isBlock ? 'Tab Embedded!' : 'Tab Linked!')
-      //         drag.continue()
-      //         return
-      //       }
-      //     }
-      //   } else if (tab.type === 'space') {
-      //     const space = await oasis.getSpace(tab.spaceId)
-      //     if (space) {
-      //       processDropSpace(position, space)
-      //       drag.continue()
-      //       return
-      //     }
-      //   }
+        //   if (tab.type === 'page') {
+        //     if (tab.resourceBookmark && tab.resourceBookmarkedManually) {
+        //       log.debug('Tab already bookmarked', tab.resourceBookmark)
+        //       const resource = await resourceManager.getResource(tab.resourceBookmark)
+        //       if (resource) {
+        //         processDropResource(
+        //           position,
+        //           resource,
+        //           isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
+        //           {
+        //             x: drag.event.clientX,
+        //             y: drag.event.clientY
+        //           }
+        //         )
+        //         drag.continue()
+        //         return
+        //       }
+        //     } else {
+        //       log.debug('Creating resource from tab', tab)
+        //       toast = toasts.loading('Processing Tab…')
+        //       const { resource } = await tabsManager.createResourceFromTab(tab, { silent: true })
+        //       if (resource) {
+        //         log.debug('Created resource from tab', resource)
+        //         processDropResource(
+        //           position,
+        //           resource,
+        //           isEditorNodeEmptyAtPosition(editor, position) ? true : isBlock,
+        //           {
+        //             x: drag.event.clientX,
+        //             y: drag.event.clientY
+        //           }
+        //         )
+        //         toast.success(isBlock ? 'Tab Embedded!' : 'Tab Linked!')
+        //         drag.continue()
+        //         return
+        //       }
+        //     }
+        //   } else if (tab.type === 'space') {
+        //     const space = await oasis.getSpace(tab.spaceId)
+        //     if (space) {
+        //       processDropSpace(position, space)
+        //       drag.continue()
+        //       return
+        //     }
+        //   }
 
-      //   log.warn('Dropped tab but no resource found! Aborting drop!')
-      //   drag.abort()
+        //   log.warn('Dropped tab but no resource found! Aborting drop!')
+        //   drag.abort()
       } else if (drag.item!.data.hasData(DragTypeNames.SURF_SPACE)) {
         const space = drag.item!.data.getData(DragTypeNames.SURF_SPACE)
 
@@ -1518,7 +1498,6 @@
     // if (currentSelection.from === currentSelection.to) {
     //   closeSimilarities()
     // }
-
     // if (showOnboarding && $onboardingNote.id === 'similarity') {
     //   hideInfoPopover()
     // }
@@ -2394,81 +2373,80 @@
     {/if}
 
     {#if !initialLoad}
-        <div
-          class="notes-editor-wrapper"
-          class:autocompleting={$autocompleting}
-          bind:this={editorWrapperElem}
-          on:keydown={handleEditorKeyDown}
-        >
-          <div class="editor-container">
-            <Editor
-              bind:this={editorElem}
-              bind:focus={focusEditor}
-              bind:content={$content}
-              bind:floatingMenuShown={$floatingMenuShown}
-              bind:focused={editorFocused}
-              bind:editorElement
-              placeholder={escapeFirstLineChat
-                ? 'Start writing a note…'
-                : `Ask Surf or start writing a note (esc) …`}
-              placeholderNewLine={$editorPlaceholder}
-              citationComponent={CitationItem}
-              surfletComponent={Surflet}
-              webSearchComponent={WebSearch}
-              resourceComponent={EmbeddedResource}
-              autocomplete={!($isFirstLine && escapeFirstLineChat)}
-              floatingMenu
-              readOnlyMentions={false}
-              bubbleMenu={$showBubbleMenu &&
-                !minimal}
-              bubbleMenuLoading={$bubbleMenuLoading}
-              autoSimilaritySearch={$userSettings.auto_note_similarity_search &&
-                !minimal &&
-                similaritySearch}
-              enableRewrite={$userSettings.experimental_note_inline_rewrite}
-              resourceComponentPreview={minimal}
-              showDragHandle={!minimal}
-              showSlashMenu={!minimal}
-              showSimilaritySearch={!minimal && similaritySearch}
-              parseMentions
-              enableCaretIndicator={origin !== 'homescreen'}
-              onCaretPositionUpdate={handleCaretPositionUpdate}
-              onLinkClick={handleLinkClick}
-              {slashItemsFetcher}
-              {mentionItemsFetcher}
-              {linkItemsFetcher}
-              on:blur={hidePopover}
-              on:click
-              on:dragstart
-              on:citation-click={handleCitationClick}
-              on:autocomplete={handleAutocomplete}
-              on:suggestions={() => generatePrompts()}
-              on:mention-click={handleMentionClick}
-              on:mention-insert={handleMentionInsert}
-              on:rewrite={handleRewrite}
-              on:close-bubble-menu={handleCloseBubbleMenu}
-              on:open-bubble-menu={handleOpenBubbleMenu}
-              on:button-click={handleNoteButtonClick}
-              on:slash-command={handleSlashCommand}
-              on:floaty-input-state-update={handleFloatyInputStateUpdate}
-              on:last-line-visbility-changed={handleLastLineVisibilityChanged}
-              on:is-first-line-changed={handleIsFirstLineChanged}
-              on:web-search-completed={debouncedHandleWebSearchCompleted}
-              {autofocus}
-            >
-              <div slot="caret-popover">
-                <!-- CaretPopover positioned absolutely over the editor -->
-                {#if showCaretPopover && caretPosition && !$isFirstLine}
-                  <CaretPopover
-                    visible={showCaretPopover}
-                    position={caretPosition}
-                    on:autocomplete={handleCaretPopoverAutocomplete}
-                  />
-                {/if}
-              </div>
-            </Editor>
-          </div>
+      <div
+        class="notes-editor-wrapper"
+        class:autocompleting={$autocompleting}
+        bind:this={editorWrapperElem}
+        on:keydown={handleEditorKeyDown}
+      >
+        <div class="editor-container">
+          <Editor
+            bind:this={editorElem}
+            bind:focus={focusEditor}
+            bind:content={$content}
+            bind:floatingMenuShown={$floatingMenuShown}
+            bind:focused={editorFocused}
+            bind:editorElement
+            placeholder={escapeFirstLineChat
+              ? 'Start writing a note…'
+              : `Ask Surf or start writing a note (esc) …`}
+            placeholderNewLine={$editorPlaceholder}
+            citationComponent={CitationItem}
+            surfletComponent={Surflet}
+            webSearchComponent={WebSearch}
+            resourceComponent={EmbeddedResource}
+            autocomplete={!($isFirstLine && escapeFirstLineChat)}
+            floatingMenu
+            readOnlyMentions={false}
+            bubbleMenu={$showBubbleMenu && !minimal}
+            bubbleMenuLoading={$bubbleMenuLoading}
+            autoSimilaritySearch={$userSettings.auto_note_similarity_search &&
+              !minimal &&
+              similaritySearch}
+            enableRewrite={$userSettings.experimental_note_inline_rewrite}
+            resourceComponentPreview={minimal}
+            showDragHandle={!minimal}
+            showSlashMenu={!minimal}
+            showSimilaritySearch={!minimal && similaritySearch}
+            parseMentions
+            enableCaretIndicator={origin !== 'homescreen'}
+            onCaretPositionUpdate={handleCaretPositionUpdate}
+            onLinkClick={handleLinkClick}
+            {slashItemsFetcher}
+            {mentionItemsFetcher}
+            {linkItemsFetcher}
+            on:blur={hidePopover}
+            on:click
+            on:dragstart
+            on:citation-click={handleCitationClick}
+            on:autocomplete={handleAutocomplete}
+            on:suggestions={() => generatePrompts()}
+            on:mention-click={handleMentionClick}
+            on:mention-insert={handleMentionInsert}
+            on:rewrite={handleRewrite}
+            on:close-bubble-menu={handleCloseBubbleMenu}
+            on:open-bubble-menu={handleOpenBubbleMenu}
+            on:button-click={handleNoteButtonClick}
+            on:slash-command={handleSlashCommand}
+            on:floaty-input-state-update={handleFloatyInputStateUpdate}
+            on:last-line-visbility-changed={handleLastLineVisibilityChanged}
+            on:is-first-line-changed={handleIsFirstLineChanged}
+            on:web-search-completed={debouncedHandleWebSearchCompleted}
+            {autofocus}
+          >
+            <div slot="caret-popover">
+              <!-- CaretPopover positioned absolutely over the editor -->
+              {#if showCaretPopover && caretPosition && !$isFirstLine}
+                <CaretPopover
+                  visible={showCaretPopover}
+                  position={caretPosition}
+                  on:autocomplete={handleCaretPopoverAutocomplete}
+                />
+              {/if}
+            </div>
+          </Editor>
         </div>
+      </div>
     {/if}
   </div>
 

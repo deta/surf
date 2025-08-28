@@ -8,11 +8,17 @@
   import Icon from './Icon.svelte'
   import { TagStatus } from './types'
 
-  export let action: Action
-  export let active = false
-  export let isOption = false
-
-  export let horizontalItems: Action[] = action.horizontalItems || []
+  let {
+    action,
+    active = false,
+    isOption = false,
+    horizontalItems = action.horizontalItems || []
+  }: {
+    action: Action
+    active?: boolean
+    isOption?: boolean
+    horizontalItems?: Action[]
+  } = $props()
   let selectedItemIndex = 0
   let keydownHandler: ((e: KeyboardEvent) => void) | null = null
 
@@ -28,32 +34,42 @@
   let hasLeftOverflow = false
   let hasRightOverflow = false
 
-  $: parentAction = action.parent ? teletype.getActionByID(action.parent) : null
-  $: breadcrumb =
+  const parentAction = $derived(action.parent ? teletype.getActionByID(action.parent) : null)
+  const breadcrumb = $derived(
     action.searchBreadcrumb ||
-    action.breadcrumb ||
-    (parentAction && parentAction.breadcrumb) ||
-    (parentAction && parentAction.name)
+      action.breadcrumb ||
+      (parentAction && parentAction.breadcrumb) ||
+      (parentAction && parentAction.name)
+  )
 
-  $: selectedHorizontalItem =
+  const selectedHorizontalItem = $derived(
     horizontalItems.length > 0 ? (horizontalItems[selectedItemIndex] ?? null) : null
+  )
 
-  $: if (active && selectedHorizontalItem) {
-    teletype.selectedAction.set(selectedHorizontalItem)
-  }
+  $effect(() => {
+    if (active && selectedHorizontalItem) {
+      teletype.selectedAction.set(selectedHorizontalItem)
+    }
+  })
 
   const tagColors = {
     [TagStatus.DEFAULT]: {
       color: 'var(--text-light)',
       background: 'var(--background-accent)'
     },
-    [TagStatus.SUCCESS]: { color: '#107c43', background: '#a3e5c2' },
-    [TagStatus.WARNING]: { color: '#87580c', background: '#fddeab' },
+    [TagStatus.SUCCESS]: {
+      color: '#107c43',
+      background: '#a3e5c2'
+    },
+    [TagStatus.WARNING]: {
+      color: '#87580c',
+      background: '#fddeab'
+    },
     [TagStatus.ACTIVE]: { color: '#730b3c', background: '#e18cb2' },
     [TagStatus.FAILED]: { color: '#850f0f', background: '#f8adad' }
   }
 
-  $: tagStyle = tagColors[action.tagStatus || TagStatus.DEFAULT]
+  const tagStyle = $derived(tagColors[action.tagStatus || TagStatus.DEFAULT])
 
   export const click = () => {
     elem.click()
@@ -70,13 +86,15 @@
 
   // PERF: This probably creates many "unnecessary" observers / at least create them many times?
   // Can we simplify this, by just .observer / .disconnect if the list item changed?
-  $: if (listElement) {
-    observer = new ResizeObserver(() => {
-      checkOverflow()
-    })
-    observer.observe(listElement)
-    observer?.disconnect()
-  }
+  $effect(() => {
+    if (listElement) {
+      observer = new ResizeObserver(() => {
+        checkOverflow()
+      })
+      observer.observe(listElement)
+      return () => observer?.disconnect()
+    }
+  })
 
   type Events = {
     execute: Action
@@ -285,7 +303,9 @@
                 e.preventDefault()
                 handleClick(e, item)
               }}
-              in:slide={{ duration: 200 }}
+              in:slide={{
+                duration: 200
+              }}
             >
               <svelte:component
                 this={item.component}
@@ -302,7 +322,9 @@
                 e.preventDefault()
                 handleClick(e, item)
               }}
-              in:slide={{ duration: 200 }}
+              in:slide={{
+                duration: 200
+              }}
             >
               <svelte:component
                 this={item.component}
@@ -326,9 +348,13 @@
                   <Icon icon={item.icon} />
                 </div>
               {/if}
-              <div class="item-name">{item.name}</div>
+              <div class="item-name">
+                {item.name}
+              </div>
               {#if item.description}
-                <div class="item-description">{item.description}</div>
+                <div class="item-description">
+                  {item.description}
+                </div>
               {/if}
             </div>
           {/if}
@@ -408,11 +434,11 @@
 
 <style lang="scss">
   .action {
-    padding: 0.75rem 1.25rem;
+    padding: 0.66rem 1.125rem;
     margin: 0.25rem 0.5rem;
     box-sizing: border-box;
-    font-size: 1.125rem;
-    letter-spacing: 0.001em;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
     border-radius: 11px;
     display: flex;
     align-items: center;

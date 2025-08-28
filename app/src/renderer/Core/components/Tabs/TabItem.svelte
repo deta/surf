@@ -153,6 +153,9 @@
         left: 50%;
         width: 16px;
         height: 16px;
+        max-width: 16px;
+        max-height: 16px;
+        overflow: visible;
         transform: translateX(-50%);
         z-index: 2;
       }

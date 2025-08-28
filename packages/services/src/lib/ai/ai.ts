@@ -96,7 +96,9 @@ export class AIService {
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
     this.contextService = ContextService.create(this, tabsManager, resourceManager)
-    this.fallbackContextManager = global ? this.contextService.createDefault() : this.contextService.createWCV()
+    this.fallbackContextManager = global
+      ? this.contextService.createDefault()
+      : this.contextService.createWCV()
 
     this.showChatSidebar = writable(false)
     this.chats = writable([])
@@ -133,16 +135,13 @@ export class AIService {
       return settings.always_include_screenshot_in_chat
     })
 
-    this.activeContextManager = derived(
-      [this.config.settings],
-      ([settings]) => {
-        // if (settings.experimental_notes_chat_sidebar && activeNote) {
-        //   return activeNote.contextManager
-        // }
+    this.activeContextManager = derived([this.config.settings], ([settings]) => {
+      // if (settings.experimental_notes_chat_sidebar && activeNote) {
+      //   return activeNote.contextManager
+      // }
 
-        return this.fallbackContextManager
-      }
-    )
+      return this.fallbackContextManager
+    })
 
     this.refreshCustomAiApps()
 

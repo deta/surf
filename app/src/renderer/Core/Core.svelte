@@ -8,7 +8,6 @@
   import { initServices } from '@deta/services/helpers'
   import { handlePreloadEvents } from './handlers/preloadEvents'
 
-  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import WebContentsView from './components/WebContentsView.svelte'
   import TabsList from './components/Tabs/TabsList/TabsList.svelte'
   //import Overlay from './components/Overlays/Overlay.svelte'
@@ -16,11 +15,12 @@
   //import Test from './components/Overlays/Test.svelte'
   //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
-  import { wait } from '@deta/utils';
+  import { wait } from '@deta/utils'
 
   const log = useLogScope('Core')
 
   const { config, viewManager, tabsService, ai, keyboardManager, shortcutsManager } = initServices()
+
   // const overlayManager = useOverlayManager()
 
   const contextManager = ai.contextManager
@@ -176,8 +176,6 @@
       />
     {/snippet}
   </Split> -->
-
-  <TeletypeEntry bind:open />
 </div>
 
 <style lang="scss">
@@ -252,7 +250,7 @@
   }
 
   .web-contents {
-    height: 100%;
+    height: calc(100% - 86px);
     width: 100%;
     position: relative;
   }

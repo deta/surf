@@ -87,47 +87,47 @@
   }
 }
 
-:global([data-button-root].button-xs.button-square) {
-  padding: 0.25rem ;
+:global(.button-xs.button-square[data-button-root]) {
+  padding: 0.25rem;
 }
 
-:global([data-button-root].button-sm.button-square) {
-  padding: 0.375rem ;
+:global(.button-sm.button-square[data-button-root]) {
+  padding: 0.375rem;
 }
 
-:global([data-button-root].button-md.button-square) {
-  padding: 0.5rem ;
+:global(.button-md.button-square[data-button-root]) {
+  padding: 0.5rem;
 }
 
-:global([data-button-root].button-lg.button-square) {
-  padding: 0.75rem ;
+:global(.button-lg.button-square[data-button-root]) {
+  padding: 0.75rem;
 }
 
-:global([data-button-root].button-xs) {
-  padding: 0.125rem 0.25rem ;
-  font-size: 11px ;
-  gap: 0.125rem ;
+:global(.button-xs[data-button-root]) {
+  padding: 0.125rem 0.25rem;
+  font-size: 11px;
+  gap: 0.125rem;
   border-radius: 9px;
 }
 
-:global([data-button-root].button-sm) {
-  padding: 0.25rem 0.375rem ;
-  font-size: 12px ;
-  gap: 0.1875rem ;
-  border-radius: 8px ;
+:global(.button-sm[data-button-root]) {
+  padding: 0.25rem 0.375rem;
+  font-size: 12px;
+  gap: 0.1875rem;
+  border-radius: 8px;
 }
 
-:global([data-button-root].button-md) {
+:global(.button-md[data-button-root]) {
   padding: 0.5rem 0.8rem;
-  font-size: 13px ;
-  gap: 0.25rem ;
-  border-radius: 12px ;
+  font-size: 13px;
+  gap: 0.25rem;
+  border-radius: 12px;
 }
 
-:global([data-button-root].button-lg) {
-  padding: 0.75rem 1rem ;
-  font-size: 14px ;
-  gap: 0.375rem ;
-  border-radius: 14px ;
+:global(.button-lg[data-button-root]) {
+  padding: 0.75rem 1rem;
+  font-size: 14px;
+  gap: 0.375rem;
+  border-radius: 14px;
 }
 </style>

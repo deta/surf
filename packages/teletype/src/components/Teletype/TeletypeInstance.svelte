@@ -3,10 +3,17 @@
   import TeletypeCore from './TeletypeCore.svelte'
   import type { Action, Options } from './types'
 
-  export let key = 'default'
-  export let actions: Action[] = []
-  export let options: Options = {}
-  export let show = true
+  let {
+    key = 'default',
+    actions = [],
+    options = {},
+    show = true
+  }: {
+    key?: string
+    actions?: Action[]
+    options?: Options
+    show?: boolean
+  } = $props()
 
   export const teletype = provideTeletype({ open: true, ...options }, actions, key)
 </script>

@@ -3,6 +3,7 @@
   import { type MentionItem, MentionItemType } from '../../types'
   import type { MentionAction } from './mention'
   import { DynamicIcon } from '@deta/icons'
+  import { Favicon } from '@deta/ui'
 
   export let id: string
   export let label: string
@@ -10,6 +11,7 @@
   export let icon: string | undefined
   export let char: string | undefined
   export let onClick: ((item: MentionItem, action: MentionAction) => void) | undefined
+  export let faviconURL: string | undefined = undefined
 
   const dispatchClick = (action: MentionAction) => {
     if (onClick) {
@@ -39,12 +41,31 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <span {...$$restProps} on:click={handleClick}>
-  {#if icon}
+  {#if type === MentionItemType.TAB && faviconURL}
+    <Favicon url={faviconURL} title={label} />
+    <div class="label-wrapper">
+      {label}
+    </div>
+  {:else if icon}
     <DynamicIcon name={icon} size="14px" />
-    {label}
+    <div class="label-wrapper">
+      {label}
+    </div>
   {:else if char}
     {char + label}
   {:else}
     {label}
   {/if}
 </span>
+
+<style lang="scss">
+  .label-wrapper {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 20ch;
+    display: inline-block;
+    line-height: 1.2;
+    vertical-align: baseline;
+  }
+</style>

@@ -2,7 +2,7 @@
   import Input from './Input.svelte'
   import type { Confirmation } from './types'
 
-  export let confirmationPrompt: Confirmation
+  let { confirmationPrompt }: { confirmationPrompt: Confirmation } = $props()
 </script>
 
 <div

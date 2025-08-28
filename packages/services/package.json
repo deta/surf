@@ -47,6 +47,18 @@
       "import": "./dist/notebooks/index.js",
       "default": "./dist/notebooks/index.js"
     },
+    "./mentions": {
+      "types": "./dist/mentions/index.d.ts",
+      "svelte": "./src/lib/mentions/index.ts",
+      "import": "./dist/mentions/index.js",
+      "default": "./dist/mentions/index.js"
+    },
+    "./teletype": {
+      "types": "./dist/teletype/index.d.ts",
+      "svelte": "./src/lib/teletype/index.ts",
+      "import": "./dist/teletype/index.js",
+      "default": "./dist/teletype/index.js"
+    },
     "./ai": {
       "types": "./dist/ai/index.d.ts",
       "svelte": "./src/lib/ai/index.ts",

@@ -265,7 +265,9 @@ const IPC_EVENTS = ipcService.registerEvents({
   webContentsViewAction:
     ipcService.addEventWithReturn<WebContentsViewActionEvent>('webcontentsview-action'),
   webContentsViewContextManagerAction:
-    ipcService.addEventWithReturn<WebContentsViewContextManagerActionEvent>('webcontentsview-context-manager-action')
+    ipcService.addEventWithReturn<WebContentsViewContextManagerActionEvent>(
+      'webcontentsview-context-manager-action'
+    )
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

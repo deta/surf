@@ -7,24 +7,16 @@ import {
   type AIChatMessageParsed,
   type DetectedResource,
   type WebViewEventSendNames,
-  type WebViewSendEvents,
-} from "@deta/types";
-import {
-  codeLanguageToMimeType,
-  markdownToHtml,
-  useLogScope,
-} from "@deta/utils";
-import { WebParser } from "@deta/web-parser";
-import { PromptIDs, getPrompt } from "./prompts";
-import type { AIService } from "./aiClean";
-import {
-  BadRequestError,
-  QuotaDepletedError,
-  TooManyRequestsError,
-} from "@deta/backend/types";
-import { ModelTiers, type ChatError } from "@deta/types/src/ai.types";
-import { ResourceManager } from "@deta/services/resources";
-import { ResourceTag } from "@deta/utils/formatting";
+  type WebViewSendEvents
+} from '@deta/types'
+import { codeLanguageToMimeType, markdownToHtml, useLogScope } from '@deta/utils'
+import { WebParser } from '@deta/web-parser'
+import { PromptIDs, getPrompt } from './prompts'
+import type { AIService } from './aiClean'
+import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@deta/backend/types'
+import { ModelTiers, type ChatError } from '@deta/types/src/ai.types'
+import { ResourceManager } from '@deta/services/resources'
+import { ResourceTag } from '@deta/utils/formatting'
 
 const log = useLogScope('AI')
 

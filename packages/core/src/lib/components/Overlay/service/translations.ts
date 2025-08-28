@@ -87,7 +87,7 @@ export const navigateActionToTeletypeItem = (searchValue: string, isEditMode = f
     id: 'navigate',
     name: `${searchValue}`,
     icon: 'world',
-    execute: TeletypeAction.NavigateURL,
+    execute: TeletypeAction.NavigateGeneralSearch,
     section: 'Navigate',
     selectPriority: ActionSelectPriority.HIGHEST,
     displayPriority: ActionDisplayPriority.HIGH,
@@ -111,7 +111,7 @@ export const navigateActionToTeletypeItem = (searchValue: string, isEditMode = f
       ]
       */
         }),
-    handler: createExecutioner(TeletypeAction.NavigateURL, { url })
+    handler: createExecutioner(TeletypeAction.NavigateGeneralSearch, { query: searchValue })
   }
 }
 

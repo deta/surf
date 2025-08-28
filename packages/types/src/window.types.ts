@@ -40,8 +40,8 @@ export type WebContentsViewData = {
 }
 
 export type SearchResultLink = {
-    title: string;
-    url: string;
+  title: string
+  url: string
 }
 
 // --- WebContentsView Actions ---
@@ -298,7 +298,6 @@ export type WebContentsViewEventListener = {
   [K in WebContentsViewEventType]: WebContentsViewEventListenerTyped<K>
 }[WebContentsViewEventType]
 
-
 // --- WebContentsViewContextManager Actions ---
 export enum WebContentsViewContextManagerActionType {
   GET_ITEMS = 'get-items',
@@ -311,7 +310,10 @@ export interface WebContentsViewContextManagerActionPayloads {
 }
 
 export interface WebContentsViewContextManagerActionOutputs {
-  [WebContentsViewContextManagerActionType.GET_ITEMS]: { resources: string[]; inlineImages: string[]; } | null
+  [WebContentsViewContextManagerActionType.GET_ITEMS]: {
+    resources: string[]
+    inlineImages: string[]
+  } | null
   [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: null
 }
 
