@@ -25,8 +25,9 @@ import {
   type ResourceDataLink,
   ResourceTypes,
   type WebViewReceiveEvents,
-  ResourceTagDataStateValue
-} from '@deta/types'
+  ResourceTagDataStateValue,
+  type PageHighlightSelectionData
+} from "@deta/types";
 import {
   useLogScope,
   EventEmitterBase,
@@ -34,8 +35,10 @@ import {
   processFavicons,
   useDebounce,
   isPDFViewerURL,
-  copyToClipboard
+  copyToClipboard,
+  useTimeout,
 } from '@deta/utils'
+import { getTextElementsFromHtml } from '@deta/utils/dom'
 import {
   compareURLs,
   getHostname,
@@ -55,6 +58,7 @@ import {
   type BookmarkPageOpts
 } from './types'
 import { Resource, ResourceManager } from '../resources'
+import { WebParser } from '@deta/web-parser';
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -177,6 +181,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     // handleNavigation(url)
 
     this.emit(WebContentsEmitterNames.LOADING_CHANGED, false, null)
+
+    if (this.view.selectionHighlightValue) {
+      this.highlightSelection(this.view.selectionHighlightValue)
+    }
   }
 
   private handlePageTitleUpdated(
@@ -997,6 +1005,91 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     }
   }
 
+  async highlightSelection(
+    selectionData: PageHighlightSelectionData
+  ) {
+    const { source, text: answerText } = selectionData
+    const pdfPage = source?.metadata?.page ?? null
+
+    try {
+      this.log.debug('highlighting text', answerText, source)
+
+      const detectedResource = await this.detectResource()
+      if (!detectedResource) {
+        this.log.error('no resource detected')
+        return
+      }
+
+      if (detectedResource.type === ResourceTypes.PDF) {
+        if (pdfPage === null) {
+          this.log.error("page attribute isn't present")
+          return
+        }
+
+        let targetText = source.content
+        if (!targetText) {
+          this.log.debug('no source content, hydrating source', source.uid)
+          const fetchedSource = await this.view.resourceManager.sffs.getAIChatDataSource(selectionData.sourceUid)
+          if (fetchedSource) {
+            targetText = fetchedSource.content
+          } else {
+            this.log.debug('no source found for chat message, using answer text')
+            targetText = answerText ?? ''
+          }
+        }
+
+        this.log.debug('highlighting PDF page', pdfPage, targetText)
+        this.sendPageAction(WebViewEventReceiveNames.GoToPDFPage, {
+          page: pdfPage,
+          targetText: targetText
+        })
+        return
+      }
+
+      const content = WebParser.getResourceContent(detectedResource.type, detectedResource.data)
+      if (!content || !content.html) {
+        this.log.debug('no content found from web parser')
+        return
+      }
+
+      const textElements = getTextElementsFromHtml(content.html)
+      if (!textElements) {
+        this.log.debug('no text elements found')
+        return
+      }
+
+      this.log.debug('text elements length', textElements.length)
+
+      // will throw an error if the request takes longer than 20 seconds
+      const timedGetAIDocsSimilarity = useTimeout(() => {
+        return this.view.resourceManager.sffs.getAIDocsSimilarity(answerText ?? '', textElements, 0.5)
+      }, 20000)
+
+      const docsSimilarity = await timedGetAIDocsSimilarity()
+      if (!docsSimilarity || docsSimilarity.length === 0) {
+        this.log.debug('no docs similarity found')
+        return
+      }
+
+      this.log.debug('docs similarity', docsSimilarity)
+
+      docsSimilarity.sort((a, b) => a.similarity - b.similarity)
+      const texts: string[] = []
+      for (const docSimilarity of docsSimilarity) {
+        const doc = textElements[docSimilarity.index]
+        if (doc && doc.includes(' ')) {
+          texts.push(doc)
+        }
+      }
+
+      this.sendPageAction(WebViewEventReceiveNames.HighlightText, {
+        texts: texts
+      })
+    } catch (e) {
+      this.log.error('error highlighting text', e)
+    }
+  }
+
   /**
    * Cleans up the view and its resources.
    * This method is called before the view gets fully destroyed.
@@ -1055,10 +1148,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   navigationHistory: Writable<Electron.NavigationEntry[]>
   navigationHistoryIndex: Writable<number>
 
-  resourceCreatedByUser: Writable<boolean> = writable(false)
-  extractedResourceId: Writable<string | null> = writable(null)
-  detectedApp: Writable<DetectedWebApp | null> = writable(null)
-  detectedResource: Writable<DetectedResource | null> = writable(null)
+  resourceCreatedByUser: Writable<boolean> = writable(false);
+  extractedResourceId: Writable<string | null> = writable(null);
+  detectedApp: Writable<DetectedWebApp | null> = writable(null);
+  detectedResource: Writable<DetectedResource | null> = writable(null);
+  selectionHighlight: Writable<PageHighlightSelectionData | null> = writable(null);
 
   domReady: Writable<boolean> = writable(false)
   didFinishLoad: Writable<boolean> = writable(false)
@@ -1202,8 +1296,15 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   get resourceCreatedByUserValue() {
     return get(this.resourceCreatedByUser)
   }
+  get selectionHighlightValue() {
+    return get(this.selectionHighlight)
+  }
   get dataValue() {
     return get(this.data)
+  }
+
+  addSelectionHighlight(selection: PageHighlightSelectionData) {
+    this.selectionHighlight.set(selection)
   }
 
   /**

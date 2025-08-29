@@ -1,4 +1,4 @@
-import { type Fn } from '@deta/types'
+import { type CitationClickEvent, type Fn } from '@deta/types'
 import { useLogScope } from '@deta/utils/io'
 import { useTabs } from '@deta/services/tabs'
 
@@ -82,6 +82,11 @@ export function handlePreloadEvents() {
         activeTab.view.webContents.reload()
       }
     }
+  })
+
+  horizonPreloadEvents.onCitationClick((data: CitationClickEvent) => {
+    // TODO: handle highlighting
+    tabsManager.create(data.url, { active: true, ...(data.skipHighlight ? {} : { selectionHighlight: data.selection }) })
   })
 
   return () => {

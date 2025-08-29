@@ -17,7 +17,8 @@ import type {
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
   ControlWindow,
-  WebContentsViewContextManagerActionEvent
+  WebContentsViewContextManagerActionEvent,
+  CitationClickEvent
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 
@@ -236,6 +237,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   removeExtension: ipcService.addEvent<string>('remove-extension'),
   setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
   webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
+  citationClick: ipcService.addEvent<CitationClickEvent>('citation-click'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

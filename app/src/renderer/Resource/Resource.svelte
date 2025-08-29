@@ -5,7 +5,7 @@
   import { setupTelemetry } from '@deta/services/helpers'
   import { useTabs } from '@deta/services/tabs'
   import { provideAI } from '@deta/services/ai'
-  import { ResourceTypes } from '@deta/types'
+  import { ResourceTypes, type CitationClickEvent } from '@deta/types'
 
   import { Note } from '@deta/ui'
   import TextResource from './components/TextResource.svelte'
@@ -22,6 +22,11 @@
   const contextManager = ai.contextManager
 
   let resource: Resource | null = $state(null)
+
+  function handleCitationClick(data: CitationClickEvent) {
+    console.log('Citation clicked:', data)
+    window.api.citationClick(data)
+  }
 
   onMount(async () => {
     console.log('Resource mounted with ID:', resourceId)
@@ -41,7 +46,7 @@
   {#if resource}
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <!-- <Note {resource} /> -->
-      <TextResource resourceId={resource.id} {resource} {contextManager} />
+      <TextResource resourceId={resource.id} {resource} {contextManager} onCitationClick={handleCitationClick} />
     {:else}
       <div>
         <p><strong>Name:</strong> {resource.metadata.name}</p>

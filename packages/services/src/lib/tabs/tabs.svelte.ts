@@ -284,6 +284,10 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     const view = await this.viewManager.create({ url })
 
+    if (options.selectionHighlight) {
+      view.addSelectionHighlight(options.selectionHighlight)
+    }
+
     this.log.debug('Creating new tab with view:', view, 'options:', options)
 
     const newIndex = (await this.getLastTabIndex()) + 1

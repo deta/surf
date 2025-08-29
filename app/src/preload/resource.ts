@@ -14,7 +14,8 @@ import {
   WebContentsViewContextManagerAction,
   WebContentsViewContextManagerActionOutputs,
   WebContentsViewContextManagerActionPayloads,
-  WebContentsViewContextManagerActionType
+  WebContentsViewContextManagerActionType,
+  CitationClickEvent
 } from '@deta/types'
 import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 
@@ -81,6 +82,10 @@ const api = {
 
   openURL: (url: string, active: boolean, scopeId?: string) => {
     IPC_EVENTS_RENDERER.openURL.send({ url, active, scopeId })
+  },
+
+  citationClick: (data: CitationClickEvent) => {
+    IPC_EVENTS_RENDERER.citationClick.send(data)
   },
 
   webContentsViewManagerAction: <T extends WebContentsViewManagerActionType>(

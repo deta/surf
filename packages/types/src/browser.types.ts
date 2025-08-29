@@ -60,6 +60,21 @@ export type JumpToWebviewTimestampEvent = {
   source?: AIChatMessageSource
 }
 
+export type PageHighlightSelectionData = {
+  source: AIChatMessageSource,
+  sourceUid: string,
+  text?: string,
+  timestamp?: number
+}
+
+export type CitationClickEvent = {
+  resourceId?: string,
+  url?: string,
+  preview: boolean,
+  skipHighlight: boolean,
+  selection?: PageHighlightSelectionData
+}
+
 export type OpenAndChatEventObject = { type: 'resource' | 'tab'; id: string }
 export type OpenAndChatEvent = string | string[] | OpenAndChatEventObject | OpenAndChatEventObject[]
 

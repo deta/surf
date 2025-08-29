@@ -1619,11 +1619,6 @@
   resolved "https://registry.npmjs.org/@remusao/trie/-/trie-1.5.0.tgz"
   integrity sha512-UX+3utJKgwCsg6sUozjxd38gNMVRXrY4TNX9VvCdSrlZBS1nZjRPi98ON3QjRAdf6KCguJFyQARRsulTeqQiPg==
 
-"@rgossiaux/svelte-headlessui@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/@rgossiaux/svelte-headlessui/-/svelte-headlessui-2.0.0.tgz"
-  integrity sha512-ksh245HqMM8yqkzd/OyAK2FCHZYOSA3ldLIHab7C9S60FmifqT24JFVgi8tZpsDEMk3plbfQvfah93n5IEi8sg==
-
 "@rollup/plugin-node-resolve@^13.2.1":
   version "13.3.0"
   resolved "https://registry.npmjs.org/@rollup/plugin-node-resolve/-/plugin-node-resolve-13.3.0.tgz"

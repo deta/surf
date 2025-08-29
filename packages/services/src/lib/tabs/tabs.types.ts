@@ -1,4 +1,4 @@
-import type { WebContentsViewData } from '@deta/types'
+import type { PageHighlightSelectionData, WebContentsViewData } from '@deta/types'
 
 import type { TabItem } from './tabs.svelte'
 import type { BaseKVItem } from '../kv'
@@ -21,6 +21,11 @@ export type CreateTabOptions = {
    * Defaults to `false`.
    */
   activate: boolean
+
+  /**
+   * The initial selection highlight for the tab.
+   */
+  selectionHighlight?: PageHighlightSelectionData
 }
 
 export enum TabItemEmitterNames {

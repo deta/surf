@@ -73,8 +73,7 @@
     type AIChatMessageParsed,
     type AIChatMessageSource,
     type DragTypes,
-    type HighlightWebviewTextEvent,
-    type JumpToWebviewTimestampEvent
+    type CitationClickEvent
   } from '@deta/types'
   import { AIChat, useAI, type ChatPrompt } from '@deta/services/ai'
   import { type ContextManager } from '@deta/services/ai'
@@ -129,6 +128,7 @@
   export let contextManager: ContextManager | undefined = undefined
   export let resource: ResourceNote
   export let origin: string = ''
+  export let onCitationClick: (event: CitationClickEvent) => void
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
@@ -140,8 +140,6 @@
 
   const dispatch = createEventDispatcher<{
     'update-title': string
-    seekToTimestamp: JumpToWebviewTimestampEvent
-    highlightWebviewText: HighlightWebviewTextEvent
   }>()
 
   const userSettings = config.settings
@@ -808,60 +806,18 @@
     const resource = await resourceManager.getResource(source.resource_id)
     log.debug('Resource linked to citation', resource)
 
-    if (
-      (!resource ||
-        resource.type === ResourceTypes.PDF ||
-        resource.type === ResourceTypes.LINK ||
-        resource.type === ResourceTypes.ARTICLE ||
-        resource.type.startsWith(ResourceTypes.POST)) &&
-      !skipHighlight
-    ) {
-      if (source.metadata?.timestamp !== undefined && source.metadata?.timestamp !== null) {
-        const timestamp = source.metadata.timestamp
-        dispatch('seekToTimestamp', {
-          resourceId: resource?.id,
-          timestamp: timestamp,
-          sourceUid: source.uid,
-          source: source,
-          preview: preview ?? false,
-          context: EventContext.Note
-        })
-      } else {
-        // TODO: pass correct from and trigger telemetry properties
-        dispatch('highlightWebviewText', {
-          resourceId: resource?.id,
-          answerText: text,
-          sourceUid: source.uid,
-          source: source,
-          preview: preview ?? false,
-          context: EventContext.Note
-        })
+    onCitationClick?.({
+      resourceId: resource.id || source.resource_id,
+      url: source.metadata?.url,
+      preview: preview ?? false,
+      skipHighlight: skipHighlight,
+      selection: {
+        source,
+        sourceUid: source.uid,
+        text: text,
+        timestamp: source.metadata?.timestamp
       }
-    } else {
-      // if (preview) {
-      //   if (resource) {
-      //     globalMiniBrowser.openResource(resource.id, {
-      //       from: OpenInMiniBrowserEventFrom.Note
-      //     })
-      //   } else {
-      //     globalMiniBrowser.openWebpage(source.metadata?.url ?? '', {
-      //       from: OpenInMiniBrowserEventFrom.Note
-      //     })
-      //   }
-      // } else {
-      //   if (resource) {
-      //     tabsManager.openResourcFromContextAsPageTab(resource.id, {
-      //       active: true,
-      //       trigger: CreateTabEventTrigger.NoteCitation
-      //     })
-      //   } else {
-      //     tabsManager.addPageTab(source.metadata?.url ?? '', {
-      //       active: true,
-      //       trigger: CreateTabEventTrigger.NoteCitation
-      //     })
-      //   }
-      // }
-    }
+    })
   }
 
   const createNewNote = async (title?: string) => {
