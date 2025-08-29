@@ -84,7 +84,7 @@
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
-    "@horizon/dragcula#build": {
+    "@deta/dragcula#build": {
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
@@ -105,7 +105,7 @@
     "build:app:frontend": {
       "dependsOn": [
         "@horizon/core#build:tailwind",
-        "@horizon/dragcula#build",
+        "@deta/dragcula#build",
         "@deta/utils#build",
         "@deta/services#build",
         "@deta/ui#build",
@@ -132,7 +132,7 @@
         "@deta/backend#build",
         "@deta/backend-server#build",
         "@horizon/core#build:tailwind",
-        "@horizon/dragcula#build"
+        "@deta/dragcula#build"
       ],
       "with": [
         "@deta/utils#dev",
@@ -149,7 +149,7 @@
         "@deta/backend#build",
         "@deta/backend-server#build",
         "@horizon/core#build:tailwind",
-        "@horizon/dragcula#build"
+        "@deta/dragcula#build"
       ],
       "with": [
         "@deta/utils#dev",

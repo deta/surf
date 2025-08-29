@@ -38,7 +38,7 @@
   import { RefreshSpaceEventTrigger } from '@deta/types'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import BuiltInSpace from '../BuiltInSpace.svelte'
-  import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLAxisDragZone } from '@deta/dragcula'
   import { useAI } from '@horizon/core/src/lib/service/ai/ai'
   import { useConfig } from '@horizon/core/src/lib/service/config'
   import { BuiltInSpaces, BuiltInSpaceId } from '../../../constants/spaces'

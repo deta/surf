@@ -13,7 +13,7 @@
   import type { BookmarkTabState, Tab, TabSpace } from '../../types/browser.types'
   import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
   import SpaceIcon from '../Atoms/SpaceIcon.svelte'
-  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
+  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@deta/dragcula'
   import { Resource, useResourceManager } from '../../service/resources'
   import { ResourceTypes, type DragTypes, DragTypeNames } from '../../types'
   import ShortcutSaveItem from '../Shortcut/ShortcutSaveItem.svelte'

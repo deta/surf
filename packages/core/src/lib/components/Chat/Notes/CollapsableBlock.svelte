@@ -13,7 +13,7 @@
     SFFSResourceTag,
     UserViewPrefsTagValue
   } from '@horizon/core/src/lib/types'
-  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem } from '@deta/dragcula'
 
   // New
   export let as: string = 'collapsable-block'

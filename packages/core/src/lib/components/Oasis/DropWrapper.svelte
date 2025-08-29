@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { HTMLDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { HTMLDragZone, type DragculaDragEvent } from '@deta/dragcula'
   import { type DragTypes } from '../../types'
 
   export let dragOver: boolean = false

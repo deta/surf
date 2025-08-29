@@ -258,6 +258,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     const tabs = raw
+      .sort((a, b) => a.index - b.index)
       .map((item) => this.itemToTabItem(item))
       .filter((item) => item !== null) as TabItem[]
 
@@ -410,6 +411,44 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     this.emit(TabsServiceEmitterNames.ACTIVATED, this.activeTab)
+  }
+
+  /**
+   * Reorders a tab to a new position in the tab strip.
+   * Updates both the in-memory tabs array and persists the new order to storage.
+   *
+   * @param tabId The ID of the tab to reorder
+   * @param newIndex The target index position (0-based)
+   */
+  async reorderTab(tabId: string, newIndex: number) {
+    this.log.debug(`Reordering tab ${tabId} to index ${newIndex}`)
+
+    const currentIndex = this.tabs.findIndex((tab) => tab.id === tabId)
+    if (currentIndex === -1) {
+      this.log.warn(`Tab with id "${tabId}" not found for reordering`)
+      return
+    }
+
+    // Clamp newIndex to valid range
+    newIndex = Math.max(0, Math.min(newIndex, this.tabs.length - 1))
+
+    // Don't reorder if already in the correct position
+    if (currentIndex === newIndex) {
+      return
+    }
+
+    const newTabs = [...this.tabs]
+    const [movedTab] = newTabs.splice(currentIndex, 1)
+    newTabs.splice(newIndex, 0, movedTab)
+
+    this.tabs = newTabs
+
+    newTabs.forEach((tab, index) => {
+      tab.index = index
+    })
+
+    this.emit(TabsServiceEmitterNames.REORDERED, { tabId, oldIndex: currentIndex, newIndex })
+    this.log.debug(`Successfully reordered tab ${tabId} from ${currentIndex} to ${newIndex}`)
   }
 
   onDestroy() {

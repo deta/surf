@@ -37,7 +37,7 @@
     TabResource,
     UserViewPrefsTagValue
   } from '@horizon/core/src/lib/types'
-  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem } from '@deta/dragcula'
   import { useGlobalMiniBrowser } from '@horizon/core/src/lib/service/miniBrowser'
   import OasisResourceLoader from './OasisResourceLoader.svelte'
   import type { Origin } from '@deta/services/resources'

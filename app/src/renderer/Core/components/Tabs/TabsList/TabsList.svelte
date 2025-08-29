@@ -11,6 +11,8 @@
 
   import { useDebounce } from '@deta/utils'
   import { Button } from '@deta/ui'
+  import { HTMLAxisDragZone } from '@deta/dragcula'
+  import { createTabsDragAndDrop } from './dnd.svelte'
 
   const tabsService = useTabs()
 
@@ -18,6 +20,8 @@
   let containerWidth = $state(0)
   let layoutCalculation = $state<LayoutCalculation | null>(null)
   let isResizing = $state(false)
+
+  const dnd = createTabsDragAndDrop(tabsService)
 
   const handleNewTab = () => {
     tabsService.create('surf://notebook')
@@ -64,7 +68,16 @@
   })
 </script>
 
-<div class="tabs-list" bind:this={containerElement}>
+<div
+  class="tabs-list"
+  bind:this={containerElement}
+  axis="horizontal"
+  dragdeadzone="5"
+  use:HTMLAxisDragZone.action={{
+    accepts: dnd.acceptTabDrag
+  }}
+  onDrop={dnd.handleTabDrop}
+>
   {#each tabsService.tabs as tab, index (tab.id)}
     <TabItem
       tab={tabsService.tabs[index]}
@@ -93,10 +106,46 @@
     padding-top: 0.33rem;
     padding-bottom: 0.33rem;
     width: 100%;
+    position: relative;
   }
 
   .add-tab-btn-container {
     flex-shrink: 0;
     app-region: no-drag;
+  }
+
+  /* View Transitions for smooth tab reordering */
+  :global([data-tab-id]) {
+    view-transition-name: var(--tab-id);
+  }
+
+  /* Smooth transitions during reordering */
+  :global(::view-transition-old(tab)),
+  :global(::view-transition-new(tab)) {
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+
+  /* Crossfade animation for tab reordering */
+  :global(::view-transition-old(tab)) {
+    animation-name: slide-out;
+  }
+
+  :global(::view-transition-new(tab)) {
+    animation-name: slide-in;
+  }
+
+  @keyframes slide-out {
+    to {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
   }
 </style>

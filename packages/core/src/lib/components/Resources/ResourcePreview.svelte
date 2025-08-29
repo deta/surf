@@ -40,7 +40,7 @@
     selectedItemIds,
     addSelectionById
   } from '@horizon/core/src/lib/components/Oasis/utils/select'
-  import { DragculaDragEvent, HTMLDragItem } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem } from '@deta/dragcula'
   import { openDialog } from '../Core/Dialog/Dialog.svelte'
   import { useDesktopManager } from '../../service/desktop'
   import {

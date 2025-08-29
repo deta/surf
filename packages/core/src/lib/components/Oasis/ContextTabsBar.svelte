@@ -9,7 +9,7 @@
 
   import { useToasts, type ToastItem } from '@deta/ui'
   import { fade } from 'svelte/transition'
-  import { DragculaDragEvent, HTMLAxisDragZone } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLAxisDragZone } from '@deta/dragcula'
   import type { BookmarkTabState, Tab } from '@horizon/core/src/lib/types/browser.types'
   import {
     ActivateTabEventTrigger,

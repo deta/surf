@@ -18,7 +18,7 @@
   }
 
   function handleDrop(drag: DragculaDragEvent) {
-    const dropTab = drag.item.data.getData("tab") as ITab;
+    const dropTab = drag.item?.data.getData("tab") as ITab;
     console.warn("Dropping page onto space", dropTab.title, " >> ", tab.title);
   }
 </script>
@@ -34,7 +34,7 @@
   use:HTMLDragZone.action={{
     accepts: (drag) => {
       if (tab.type !== "space") return false;
-      const tabData = drag.item.data.getData("tab");
+      const tabData = drag.item?.data.getData("tab");
       if (tabData.type !== "page") return false;
       return true;
     }
@@ -60,6 +60,7 @@
     padding: 0.5rem 0.75rem;
 
     &.space {
+      /* Space-specific styles can be added here */
     }
 
     &:hover {

@@ -51,7 +51,7 @@
   } from '@deta/utils'
   import { type HistoryEntry } from '../../types'
   import { useResourceManager } from '../../service/resources'
-  import { Dragcula, DragOperation, DragZone, HTMLDragZone } from '@horizon/dragcula'
+  import { Dragcula, DragOperation, DragZone, HTMLDragZone } from '@deta/dragcula'
   import type { WebviewError } from '../../constants/webviewErrors'
   import type { NewWindowRequest } from '../../service/ipc/events'
   import { useTabsManager } from '../../service/tabs'

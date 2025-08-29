@@ -41,11 +41,17 @@ export type TabItemEmitterEvents = {
 export enum TabsServiceEmitterNames {
   CREATED = 'created',
   DELETED = 'deleted',
-  ACTIVATED = 'activated'
+  ACTIVATED = 'activated',
+  REORDERED = 'reordered'
 }
 
 export type TabsServiceEmitterEvents = {
   [TabsServiceEmitterNames.CREATED]: (tab: TabItem) => void
   [TabsServiceEmitterNames.DELETED]: (tabId: string) => void
   [TabsServiceEmitterNames.ACTIVATED]: (tab: TabItem | null) => void
+  [TabsServiceEmitterNames.REORDERED]: (data: {
+    tabId: string
+    oldIndex: number
+    newIndex: number
+  }) => void
 }

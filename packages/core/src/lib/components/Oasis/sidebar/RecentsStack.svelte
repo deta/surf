@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@deta/dragcula'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import { useOasis } from '../../../service/oasis'
   import { type ResourceObject } from '../../../service/resources'

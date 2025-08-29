@@ -27,6 +27,7 @@
     "@electron-toolkit/utils": "^2.0.0",
     "@ghostery/adblocker-electron": "2.1.1",
     "@deta/backend": "*",
+    "@deta/dragcula": "*",
     "@pdfslick/core": "^3.0.0",
     "@rollup/plugin-replace": "^5.0.7",
     "clsx": "^2.1.1",

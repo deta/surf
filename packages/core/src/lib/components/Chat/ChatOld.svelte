@@ -14,7 +14,7 @@
     isMac
   } from '@deta/utils'
   import { Icon } from '@deta/icons'
-  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@deta/dragcula'
   import { Editor, getEditorContentText, MentionItemType } from '@deta/editor'
   import MarkdownRenderer from '@deta/editor/src/lib/components/MarkdownRenderer.svelte'
 

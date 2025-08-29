@@ -42,7 +42,7 @@
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import FileIcon from '../Resources/Previews/File/FileIcon.svelte'
   import ResourceSmallImagePreview from '../Resources/ResourceSmallImagePreview.svelte'
-  import { Dragcula, HTMLDragItem } from '@horizon/dragcula'
+  import { Dragcula, HTMLDragItem } from '@deta/dragcula'
 
   export let className: string = ''
   export let id: string = ''

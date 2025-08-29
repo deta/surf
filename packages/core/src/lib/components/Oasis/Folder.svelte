@@ -49,7 +49,7 @@
     conditionalArrayItem,
     generateID
   } from '@deta/utils'
-  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@horizon/dragcula'
+  import { HTMLDragZone, HTMLDragItem, DragculaDragEvent } from '@deta/dragcula'
   import { OasisSpace, useOasis } from '../../service/oasis'
   import { useToasts } from '@deta/ui'
   import {

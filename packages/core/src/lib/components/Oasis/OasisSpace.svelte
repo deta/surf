@@ -59,7 +59,7 @@
   import { Toast, useToasts } from '@deta/ui'
   import { RSSParser, type RSSItem } from '@deta/web-parser/src/rss/index'
   import type { ResourceContent } from '@deta/web-parser'
-  import { DragculaDragEvent } from '@horizon/dragcula'
+  import { DragculaDragEvent } from '@deta/dragcula'
   import type { BrowserTabNewTabEvent } from '../Browser/BrowserTab.svelte'
   import type {
     ChatWithSpaceEvent,

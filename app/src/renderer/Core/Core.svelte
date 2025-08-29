@@ -292,4 +292,175 @@
 
     --border-radius: 18px;
   }
+
+  /// DRAG AND DROP
+  :global(::view-transition-group(*)) {
+    animation-duration: 170ms;
+    animation-timing-function: ease;
+  }
+
+  :global(*[data-drag-preview]) {
+    overflow: clip !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+
+    pointer-events: none !important;
+    user-select: none !important;
+
+    width: var(--drag-width, auto);
+    height: var(--drag-height, auto);
+    opacity: 90%;
+    box-shadow:
+      0px 2px 3px 2px rgba(0, 0, 0, 0.045),
+      0px 1px 4px 0px rgba(0, 0, 0, 0.145);
+
+    transform-origin: center center !important;
+    translate: var(--drag-offsetX, 0px) var(--drag-offsetY, 0px) 0px !important;
+    transform: translate(-50%, -50%) scale(var(--drag-scale, 1)) rotate(var(--drag-tilt, 0)) !important;
+    will-change: transform !important;
+
+    transition:
+      //translate 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+     // translate 175ms cubic-bezier(0, 1, 0.73, 1.13),
+      translate 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      width 175ms cubic-bezier(0.4, 0, 0.2, 1),
+      height 175ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+
+    // NOTE: Old ones kept for future tinkering
+    /*transform-origin: center center;
+    transform: translate(-50%, -50%) translate(var(--drag-offsetX, 0px), var(--drag-offsetY, 0px))
+      scale(var(--drag-scale, 1)) scale(var(--drag-scaleX, 1), var(--drag-scaleY, 1))
+      rotate(var(--drag-tilt, 0)) scale(var(--scale, 1)) !important;
+    transition:
+      transform 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      opacity 235ms cubic-bezier(0, 1.22, 0.73, 1.13),
+      border 135ms cubic-bezier(0, 1.22, 0.73, 1.13) !important;*/
+  }
+  :global(body[data-dragging]:has([data-drag-target^='webview'])) {
+    // NOTE: Only kinda works sometimes, still ahve to debug how/if we can reliably
+    // have custom cursors during native dndn.
+    //cursor: wait !important;
+  }
+
+  /* Necessary so that image & pdf view dont prevent dragging */
+  :global(body[data-dragging] webview:not([data-drag-zone])) {
+    pointer-events: none !important;
+  }
+
+  /* Necessary so that inputs dont go all janky wanky  */
+  :global(body[data-dragging] input:not([data-drag-zone])) {
+    pointer-events: none !important;
+  }
+
+  :global(.dragcula-drop-indicator) {
+    --color: #3765ee;
+    --dotColor: white;
+    --inset: 3%;
+    background: var(--color);
+    transition:
+      top 100ms cubic-bezier(0.2, 0, 0, 1),
+      left 100ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-vertical) {
+    left: var(--inset);
+    right: var(--inset);
+    height: 2px;
+    transform: translateY(-50%);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-horizontal) {
+    top: var(--inset);
+    bottom: var(--inset);
+    width: 2px;
+    transform: translateX(-50%);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both) {
+    left: 0;
+    top: 0;
+    width: 2px;
+    height: 3rem;
+    transform: translateY(-50%);
+  }
+
+  :global(.dragcula-drop-indicator.dragcula-axis-vertical::before) {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, calc(-50% + 1px));
+    width: 7px;
+    height: 7px;
+    border-radius: 5px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-vertical::after) {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -6px;
+    transform: translate(-50%, calc(-50% + 1px));
+    width: 7px;
+    height: 7px;
+    border-radius: 5px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-horizontal::before) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-horizontal::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both::before) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+
+  :global([data-drag-zone][axis='vertical']) {
+    // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
+    padding-top: 1px;
+    margin-top: -1px;
+  }
 </style>

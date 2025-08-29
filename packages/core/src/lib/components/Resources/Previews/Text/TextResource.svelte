@@ -105,7 +105,7 @@
   import { useTelemetry } from '@horizon/core/src/lib/service/telemetry'
   import type { InsertSourceEvent } from '@horizon/core/src/lib/components/Chat/Notes/SimilarityItem.svelte'
   import { useConfig } from '@horizon/core/src/lib/service/config'
-  import { DragculaDragEvent, HTMLDragZone } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragZone } from '@deta/dragcula'
   import { useOnboardingNote, useCodegenNote } from '@horizon/core/src/lib/service/demoitems'
   import OnboardingControls from '@horizon/core/src/lib/components/Chat/Notes/OnboardingControls.svelte'
   import { launchTimeline } from '../../../Onboarding/timeline'

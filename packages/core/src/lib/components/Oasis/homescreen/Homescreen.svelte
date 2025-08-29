@@ -3,7 +3,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { OasisSpace, useOasis } from '../../../service/oasis'
-  import { HTMLDragZone } from '@horizon/dragcula'
+  import { HTMLDragZone } from '@deta/dragcula'
   import HomescreenItem from './HomescreenItem.svelte'
   import MiniBrowser from '../../MiniBrowser/MiniBrowser.svelte'
   import { contextMenu } from '../../Core/ContextMenu.svelte'

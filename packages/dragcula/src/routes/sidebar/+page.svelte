@@ -33,7 +33,7 @@
         _tabs.findIndex((e) => e.id === dragTab.id),
         1
       );
-      _tabs.splice(drag.index ?? ß, 0, dragTab);
+      _tabs.splice(drag.index ?? 0, 0, dragTab);
       return _tabs;
     });
   }

@@ -1849,29 +1849,12 @@
   resolved "https://registry.npmjs.org/@sveltejs/acorn-typescript/-/acorn-typescript-1.0.5.tgz"
   integrity sha512-IwQk4yfwLdibDlrXVE04jTZYlLnwsTT2PIOQQGNLWfjavGifnk1JD1LcZjZaBTRcxZu2FfPfNLOE04DSu9lqtQ==
 
-"@sveltejs/adapter-auto@^3.0.0":
+"@sveltejs/adapter-auto@^3.3.1":
   version "3.3.1"
-  resolved "https://registry.npmjs.org/@sveltejs/adapter-auto/-/adapter-auto-3.3.1.tgz"
+  resolved "https://registry.yarnpkg.com/@sveltejs/adapter-auto/-/adapter-auto-3.3.1.tgz#57a3d9c402bea468f0899755758551e7e74deaae"
   integrity sha512-5Sc7WAxYdL6q9j/+D0jJKjGREGlfIevDyHSQ2eNETHcB1TKlQWHcAo8AS8H1QdjNvSXpvOwNjykDUHPEAyGgdQ==
   dependencies:
     import-meta-resolve "^4.1.0"
-
-"@sveltejs/kit@2.20.6":
-  version "2.20.6"
-  resolved "https://registry.npmjs.org/@sveltejs/kit/-/kit-2.20.6.tgz"
-  integrity sha512-ImUkSQ//Xf4N9r0HHAe5vRA7RyQ7U1Ue1YUT235Ig+IiIqbsixEulHTHrP5LtBiC8xOkJoPZQ1VZ/nWHNOaGGw==
-  dependencies:
-    "@types/cookie" "^0.6.0"
-    cookie "^0.6.0"
-    devalue "^5.1.0"
-    esm-env "^1.2.2"
-    import-meta-resolve "^4.1.0"
-    kleur "^4.1.5"
-    magic-string "^0.30.5"
-    mrmime "^2.0.0"
-    sade "^1.8.1"
-    set-cookie-parser "^2.6.0"
-    sirv "^3.0.0"
 
 "@sveltejs/kit@^2.31.1":
   version "2.31.1"
@@ -1892,16 +1875,6 @@
     set-cookie-parser "^2.6.0"
     sirv "^3.0.0"
 
-"@sveltejs/package@2.0.0":
-  version "2.0.0"
-  resolved "https://registry.npmjs.org/@sveltejs/package/-/package-2.0.0.tgz"
-  integrity sha512-sANz/dJibOHOe83hl8pFWUSypqefdYwPp6SUr0SmJxTNQFB5dDECEqwAwoy28DWCQFYl7DU+C1hKkTXyuKOdug==
-  dependencies:
-    chokidar "^3.5.3"
-    kleur "^4.1.5"
-    sade "^1.8.1"
-    svelte2tsx "~0.6.0"
-
 "@sveltejs/package@^2.4.1":
   version "2.4.1"
   resolved "https://registry.npmjs.org/@sveltejs/package/-/package-2.4.1.tgz"
@@ -1913,7 +1886,7 @@
     semver "^7.5.4"
     svelte2tsx "~0.7.33"
 
-"@sveltejs/vite-plugin-svelte-inspector@^2.0.0-next.0 || ^2.0.0", "@sveltejs/vite-plugin-svelte-inspector@^2.1.0":
+"@sveltejs/vite-plugin-svelte-inspector@^2.1.0":
   version "2.1.0"
   resolved "https://registry.npmjs.org/@sveltejs/vite-plugin-svelte-inspector/-/vite-plugin-svelte-inspector-2.1.0.tgz"
   integrity sha512-9QX28IymvBlSCqsCll5t0kQVxipsfhFFL+L2t3nTWfXnddYwxBuAEtTtlaVQpRz9c37BhJjltSeY4AJSC03SSg==
@@ -1933,19 +1906,6 @@
   integrity sha512-iwQ8Z4ET6ZFSt/gC+tVfcsSBHwsqc6RumSaiLUkAurW3BCpJam65cmHw0oOlDMTO0u+PZi9hilBRYN+LZNHTUQ==
   dependencies:
     debug "^4.4.1"
-
-"@sveltejs/vite-plugin-svelte@3.0.0":
-  version "3.0.0"
-  resolved "https://registry.npmjs.org/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-3.0.0.tgz"
-  integrity sha512-Th0nupxk8hl5Rcg9jm+1xWylwco4bSUAvutWxM4W4bjOAollpXLmrYqSSnYo9pPbZOO6ZGRm6sSqYa/v1d/Saw==
-  dependencies:
-    "@sveltejs/vite-plugin-svelte-inspector" "^2.0.0-next.0 || ^2.0.0"
-    debug "^4.3.4"
-    deepmerge "^4.3.1"
-    kleur "^4.1.5"
-    magic-string "^0.30.5"
-    svelte-hmr "^0.15.3"
-    vitefu "^0.2.5"
 
 "@sveltejs/vite-plugin-svelte@^3.0.1":
   version "3.1.2"
@@ -10425,11 +10385,6 @@ svelte-exmarkdown@^3.0.5:
     remark-rehype "^11.0.0"
     unified "^11.0.0"
 
-svelte-hmr@^0.15.3:
-  version "0.15.3"
-  resolved "https://registry.npmjs.org/svelte-hmr/-/svelte-hmr-0.15.3.tgz"
-  integrity sha512-41snaPswvSf8TJUhlkoJBekRrABDXDMdpNpT2tfHIv4JuhgvHqLMhEPGtaQn0BmbNSTkuz2Ed20DF2eHw0SmBQ==
-
 svelte-hmr@^0.16.0:
   version "0.16.0"
   resolved "https://registry.npmjs.org/svelte-hmr/-/svelte-hmr-0.16.0.tgz"
@@ -10493,14 +10448,6 @@ svelte-toolbelt@^0.9.3:
     runed "^0.29.0"
     style-to-object "^1.0.8"
 
-svelte2tsx@~0.6.0:
-  version "0.6.27"
-  resolved "https://registry.npmjs.org/svelte2tsx/-/svelte2tsx-0.6.27.tgz"
-  integrity sha512-E1uPW1o6VsbRz+nUk3fznZ2lSmCITAJoNu8AYefWSvIwE2pSB01i5sId4RMbWNzfcwCQl1DcgGShCPcldl4rvg==
-  dependencies:
-    dedent-js "^1.0.1"
-    pascal-case "^3.1.1"
-
 svelte2tsx@~0.7.33:
   version "0.7.42"
   resolved "https://registry.npmjs.org/svelte2tsx/-/svelte2tsx-0.7.42.tgz"
@@ -10509,7 +10456,12 @@ svelte2tsx@~0.7.33:
     dedent-js "^1.0.1"
     pascal-case "^3.1.1"
 
-svelte@4.2.19, svelte@^4.2.19:
+svelte@^3.47.0:
+  version "3.59.2"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.59.2.tgz#a137b28e025a181292b2ae2e3dca90bf8ec73aec"
+  integrity sha512-vzSyuGr3eEoAtT/A6bmajosJZIUWySzY2CzB3w2pgPvnkUjGqlDnsNnA0PMO+mMAhuyMul6C2uuZzY6ELSkzyA==
+
+svelte@^4.2.19:
   version "4.2.19"
   resolved "https://registry.npmjs.org/svelte/-/svelte-4.2.19.tgz"
   integrity sha512-IY1rnGr6izd10B0A8LqsBfmlT5OILVuZ7XsI0vdGPEvuonFV7NYEUK4dAkm9Zg2q0Um92kYjTpS1CAP3Nh/KWw==
@@ -10528,11 +10480,6 @@ svelte@4.2.19, svelte@^4.2.19:
     locate-character "^3.0.0"
     magic-string "^0.30.4"
     periscopic "^3.1.0"
-
-svelte@^3.47.0:
-  version "3.59.2"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.59.2.tgz#a137b28e025a181292b2ae2e3dca90bf8ec73aec"
-  integrity sha512-vzSyuGr3eEoAtT/A6bmajosJZIUWySzY2CzB3w2pgPvnkUjGqlDnsNnA0PMO+mMAhuyMul6C2uuZzY6ELSkzyA==
 
 svelte@^5.1.3:
   version "5.2.7"
@@ -11291,7 +11238,7 @@ vite-plugin-markdown@^2.2.0:
     htmlparser2 "^6.0.0"
     markdown-it "^12.0.0"
 
-vite@4.5.14, vite@^4.5.14:
+vite@^4.5.14:
   version "4.5.14"
   resolved "https://registry.npmjs.org/vite/-/vite-4.5.14.tgz"
   integrity sha512-+v57oAaoYNnO3hIu5Z/tJRZjq5aHM2zDve9YZ8HngVHbhk66RStobhb1sqPMIPEleV6cNKYK4eGrAbE9Ulbl2g==

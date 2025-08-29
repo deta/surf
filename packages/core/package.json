@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@deta/teletype": "*",
-    "@horizon/dragcula": "*",
+    "@deta/dragcula": "*",
     "@deta/editor": "*",
     "@horizon/eslint-config": "*",
     "@deta/icons": "*",

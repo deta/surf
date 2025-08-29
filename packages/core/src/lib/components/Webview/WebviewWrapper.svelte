@@ -38,7 +38,7 @@
   import ErrorPage from './ErrorPage.svelte'
   import type { WebviewError } from '../../constants/webviewErrors'
   import { blur } from 'svelte/transition'
-  import { Dragcula } from '@horizon/dragcula'
+  import { Dragcula } from '@deta/dragcula'
   import WebContents from '@horizon/core/src/lib/components/Browser/WebContents.svelte'
 
   export let id: string | undefined

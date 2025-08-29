@@ -7,7 +7,7 @@
   import { useConfig } from '../../service/config'
   import { useMiniBrowserService } from '@horizon/core/src/lib/service/miniBrowser'
   import type { OverlayEvents } from '../Overlay/types'
-  import { DragOperation, Dragcula, HTMLDragArea } from '@horizon/dragcula'
+  import { DragOperation, Dragcula, HTMLDragArea } from '@deta/dragcula'
   import { OpenInMiniBrowserEventFrom } from '@deta/types'
   import OasisSpaceRenderer from '../Oasis/OasisSpace.svelte'
   import SpacesView from '../Oasis/Scaffolding/SpacesView.svelte'

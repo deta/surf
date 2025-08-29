@@ -3,6 +3,8 @@
   import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
   import { Favicon, Button } from '@deta/ui'
   import { Icon } from '@deta/icons'
+  import { HTMLDragItem, DragData } from '@deta/dragcula'
+  import { DragTypeNames } from '@deta/types'
 
   let {
     tab,
@@ -46,10 +48,15 @@
 
     tabsService.delete(tab.id)
   }
+
+  function handleDragStart() {
+    tabsService.setActiveTab(tab.id)
+  }
 </script>
 
 <div
   id="tab-{tab.id}"
+  data-tab-id="tab-{tab.id}"
   class="tab-item"
   class:active
   class:collapsed
@@ -58,6 +65,17 @@
   style:--width={`${width ?? '0'}px`}
   onclick={handleClick}
   aria-hidden="true"
+  draggable="true"
+  use:HTMLDragItem.action={{
+    id: `tab-${tab.id}`,
+    data: (() => {
+      const dragData = new DragData()
+      dragData.setData(DragTypeNames.SURF_TAB, tab)
+      return dragData
+    })()
+  }}
+  ondragstart={handleDragStart}
+  ondragend={handleDragEnd}
 >
   <div class="tab-icon">
     <Favicon url={$url} title={$title} />
@@ -107,6 +125,12 @@
       transition:
         background-color 90ms ease-out,
         opacity 150ms ease-out;
+    }
+
+    &.dragging {
+      opacity: 0.5;
+      --drag-scale: 0.95;
+      z-index: 1000;
     }
 
     &.active {

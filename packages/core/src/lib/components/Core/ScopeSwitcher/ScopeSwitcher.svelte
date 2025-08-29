@@ -20,7 +20,7 @@
   import { tick } from 'svelte'
   import { useTabsManager } from '@horizon/core/src/lib/service/tabs'
   import { useDesktopManager } from '@horizon/core/src/lib/service/desktop'
-  import { HTMLDragArea } from '@horizon/dragcula'
+  import { HTMLDragArea } from '@deta/dragcula'
   import ScopeActionButtons from './ScopeActionButtons.svelte'
   import BrowsingContextSelector from '../../Browser/BrowserFullscreenDialog/BrowsingContextSelector.svelte'
   import { applyBrowsingContextSelection } from '@horizon/core/src/lib/service/migration'

@@ -1,6 +1,7 @@
 import type { ActionReturn } from "svelte/action";
 import { HTMLDragZone, type HTMLDragZoneAttributes, type HTMLDragZoneProps } from "./DragZone.js";
 import { HTMLDragItem, type DragOperation } from "./index.js";
+import { Dragcula } from "./Dragcula.js";
 
 export type Axis = "horizontal" | "vertical" | "both";
 
@@ -249,10 +250,39 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     return [undefined, undefined];
   }
 
+  /**
+   * Check if the drop indicator should be shown at the given index
+   */
+  protected shouldShowIndicatorAtIndex(index: number | undefined): boolean {
+    if (index === undefined) return false;
+
+    const activeDrag = Dragcula.get().activeDrag;
+    if (!activeDrag) return false;
+
+    // Temporarily modify index to test acceptance, then restore
+    const originalIndex = activeDrag.index;
+    activeDrag.index = index;
+
+    const isAccepted = this.acceptsCbk(activeDrag);
+
+    // Always restore original index
+    activeDrag.index = originalIndex;
+
+    return isAccepted;
+  }
+
   protected boundRafCbk = this.rafCbk.bind(this);
   protected rafCbk() {
     // Query DOM
     const [index, distance] = this.getIndexAtPoint(this.#mousePos.x, this.#mousePos.y);
+
+    // Check if the indicator should be shown based on accepts callback
+    const shouldShowIndicator = this.shouldShowIndicatorAtIndex(index);
+    if (!shouldShowIndicator) {
+      this.#indicatorVisible = false;
+      if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
+      return;
+    }
 
     if (index !== undefined && index !== this.#lastIndex) {
       if (this.#containerCache === null)

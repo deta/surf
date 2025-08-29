@@ -3,7 +3,7 @@
   import { DragTypeNames } from '../../../types'
   import { useOasis } from '../../../service/oasis'
   import { createEventDispatcher } from 'svelte'
-  import { HTMLDragItem } from '@horizon/dragcula'
+  import { HTMLDragItem } from '@deta/dragcula'
   import {
     CreateTabEventTrigger,
     ResourceTypes,

@@ -123,7 +123,7 @@
   import AnnotationsSidebar from './Sidebars/AnnotationsSidebar.svelte'
   import RootSidebar from './Sidebars/RootSidebar.svelte'
   import { PromptIDs, getPrompts, resetPrompt, updatePrompt } from '../service/prompts'
-  import { Dragcula, HTMLAxisDragZone, type DragculaDragEvent } from '@horizon/dragcula'
+  import { Dragcula, HTMLAxisDragZone, type DragculaDragEvent } from '@deta/dragcula'
   import NewTabOverlay from './Core/NewTabOverlay.svelte'
   import { provideConfig } from '../service/config'
   import { HistoryEntriesManager } from '../service/history'

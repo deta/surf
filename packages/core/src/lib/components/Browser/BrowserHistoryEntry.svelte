@@ -23,7 +23,7 @@
   import { type Toast, useToasts } from '@deta/ui'
   import { useResourceManager } from '@horizon/core/src/lib/service/resources'
   import { derived } from 'svelte/store'
-  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@horizon/dragcula'
+  import { DragculaDragEvent, HTMLDragItem, HTMLDragZone } from '@deta/dragcula'
   import { savePageToContext } from '@horizon/core/src/lib/service/saving'
   import { Icon } from '@deta/icons'
 
