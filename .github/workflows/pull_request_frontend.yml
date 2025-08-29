@@ -64,7 +64,7 @@ jobs:
         env:
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
-          DISABLE_ALL_OBFUSCATION: 'true'
+          DISABLE_ALL_OBFUSCATION: 'false'
 
           PRODUCT_NAME: 'Surf'
           M_VITE_PRODUCT_NAME: 'Surf'

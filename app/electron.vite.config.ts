@@ -10,7 +10,7 @@ import obfuscator from 'rollup-plugin-obfuscator'
 import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
-const disableAllObfuscation = process.env.DISABLE_ALL_OBFUSCATION === 'true' || IS_DEV
+const disableAllObfuscation = true // process.env.DISABLE_ALL_OBFUSCATION === 'true' || IS_DEV
 
 // TODO: actually fix the warnings in the code
 const silenceWarnings = IS_DEV || process.env.SILENCE_WARNINGS === 'true'
