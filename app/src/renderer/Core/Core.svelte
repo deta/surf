@@ -15,7 +15,9 @@
   //import Test from './components/Overlays/Test.svelte'
   //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
+  import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { wait } from '@deta/utils'
+  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte';
 
   const log = useLogScope('Core')
 
@@ -26,13 +28,15 @@
   const contextManager = ai.contextManager
 
   const activeTabView = $derived(tabsService.activeTab?.view)
-  let open = $state(false)
 
   let unsubs: Fn[] = []
+
   // let overlayWrapper: HTMLDivElement | null = null
 
   // const view1 = viewManager.create({ url: 'https://google.com', permanentlyActive: true })
   // const view2 = viewManager.create({ url: 'https://wikipedia.org', permanentlyActive: true })
+
+  let open = $state(false)
 
   onMount(async () => {
     log.debug('Core component mounted')
@@ -92,6 +96,11 @@
       return true
     })
 
+    shortcutsManager.registerHandler(ShortcutActions.TOGGLE_SIDEBAR, () => {
+      viewManager.setSidebarState({ open: !viewManager.sidebarViewOpen })
+      return true
+    })
+
     unsubs.push(handlePreloadEvents())
 
     wait(2000).then(() => {
@@ -124,16 +133,7 @@
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
 <div class="main">
-  <!-- <Browser /> -->
-
-  <!-- <div class="content">
-    <h1>Surf Greenfield</h1>
-
-    <p>Svelte 5, Vite 7, electron-vite 4, Electron 37</p>
-    <Button {onclick}>Clicks {count}</Button>
-
-    <Link url="https://deta.surf">What is Surf?</Link>
-  </div> -->
+  <TeletypeEntry bind:open />
 
   <div class="app-bar">
     <div class="tabs">
@@ -144,22 +144,27 @@
       <Test />
     </Overlay> -->
     </div>
-
-    {#if activeTabView}
-      <NavigationBar view={activeTabView} />
-    {/if}
   </div>
 
-  <div class="web-contents">
-    {#each tabsService.tabs as tab, idx (tab.id)}
-      {#if tabsService.activatedTabs.includes(tab.id)}
-        <WebContentsView
-          view={tabsService.tabs[idx].view}
-          active={tabsService.activeTab?.id === tab.id}
-        />
+  <main>
+    <div class="tab-view">
+      {#if activeTabView}
+        <NavigationBar view={activeTabView} />
       {/if}
-    {/each}
-  </div>
+      <div class="tab-contents">
+        {#each tabsService.tabs as tab, idx (tab.id)}
+          {#if tabsService.activatedTabs.includes(tab.id)}
+            <WebContentsView
+              view={tabsService.tabs[idx].view}
+              active={tabsService.activeTab?.id === tab.id}
+            />
+          {/if}
+        {/each}
+      </div>
+    </div>
+
+    <AppSidebar />
+  </main>
 
   <!-- <Split>
     {#snippet left()}
@@ -195,32 +200,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-  }
-
-  .content {
+    background: var(--app-background);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
-    height: 100%;
-    width: 100%;
-    background: rgb(237, 237, 237);
-
-    h1 {
-      font-size: 2rem;
-      color: var(--text);
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 4px;
-      background-color: #007bff;
-      color: white;
-      cursor: pointer;
-    }
   }
 
   .app-bar {
@@ -236,23 +218,25 @@
     app-region: drag;
   }
 
-  .tab {
-    padding: 10px;
-    background-color: var(--background-accent);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: background-color 0.3s;
-
-    &:hover {
-      background-color: var(--primary-dark);
-      color: white;
-    }
+  main {
+    height: 100%;
+    display: flex;
+    gap: 0rem;
   }
 
-  .web-contents {
-    height: calc(100% - 86px);
+  .tab-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+  .tab-contents {
+    height: 100%;
     width: 100%;
     position: relative;
+    margin-inline: 1px;
+    border-inline: 1px solid var(--border-color);
   }
 
   .overlay {

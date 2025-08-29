@@ -56,6 +56,7 @@
   outline: none;
   background: var(--bg);
   color: inherit;
+  opacity: 0.8;
 
   &:hover:not(&:disabled),
   &.active {

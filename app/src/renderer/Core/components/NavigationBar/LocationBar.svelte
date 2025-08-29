@@ -20,8 +20,10 @@
 
   let {
     view,
+    readonly = false,
   }: {
     view: WebContentsView;
+    readonly?: boolean
   } = $props();
 
   // TODO: This should be part of the WebContentsView itself returning a Readable<URL | null> directly
@@ -190,7 +192,9 @@
 <Breadcrumb
   active={editingUrl}
   class="location-bar"
+  disabled={readonly}
   onclick={() => {
+    if (readonly) return
     editingUrl = true;
     tick().then(() => inputEl?.focus());
   }}

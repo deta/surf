@@ -61,17 +61,17 @@ export type JumpToWebviewTimestampEvent = {
 }
 
 export type PageHighlightSelectionData = {
-  source: AIChatMessageSource,
-  sourceUid: string,
-  text?: string,
+  source: AIChatMessageSource
+  sourceUid: string
+  text?: string
   timestamp?: number
 }
 
 export type CitationClickEvent = {
-  resourceId?: string,
-  url?: string,
-  preview: boolean,
-  skipHighlight: boolean,
+  resourceId?: string
+  url?: string
+  preview: boolean
+  skipHighlight: boolean
   selection?: PageHighlightSelectionData
 }
 

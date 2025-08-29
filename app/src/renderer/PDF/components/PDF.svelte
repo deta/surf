@@ -44,7 +44,7 @@
 
   $: {
     if ($pdfSlickStore && $pdfSlickStore.pagesReady && !openedInitial) {
-      isThumbsbarOpen.set(true)
+      isThumbsbarOpen.set(false)
       openedInitial = true
     }
   }

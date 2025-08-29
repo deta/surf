@@ -4,6 +4,7 @@
 
   const {
     active,
+    disabled,
     muted,
     separator,
     onclick,
@@ -11,6 +12,7 @@
     ...restProps
   }: {
     active?: boolean;
+    disabled?: boolean;
     muted?: boolean;
     separator?: boolean;
     onclick?: Fn;
@@ -23,6 +25,7 @@
   class="breadcrumb {restProps['class'] ?? ''}"
   class:active
   class:muted
+  class:disabled
   class:separator
   {onclick}
 >
@@ -58,7 +61,7 @@
     cursor: default;
 
     background: transparent;
-    &:hover:not(.separator),
+    &:hover:not(.separator):not(.disabled),
     &.active {
       background: rgba(0, 0, 0, 0.04);
     }

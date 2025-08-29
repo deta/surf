@@ -14,7 +14,8 @@ export enum ShortcutActions {
   SWITCH_TO_TAB_7 = 'SWITCH_TO_TAB_7',
   SWITCH_TO_TAB_8 = 'SWITCH_TO_TAB_8',
   SWITCH_TO_TAB_9 = 'SWITCH_TO_TAB_9',
-  SWITCH_TO_LAST_TAB = 'SWITCH_TO_LAST_TAB'
+  SWITCH_TO_LAST_TAB = 'SWITCH_TO_LAST_TAB',
+  TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
 }
 
 // Default shortcut definitions
@@ -95,6 +96,12 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     action: ShortcutActions.SWITCH_TO_LAST_TAB,
     defaultCombo: 'Meta+0',
     description: 'Switch to last tab',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.TOGGLE_SIDEBAR]: {
+    action: ShortcutActions.TOGGLE_SIDEBAR,
+    defaultCombo: 'Meta+e',
+    description: 'Toggle Sidebar',
     priority: ShortcutPriority.Normal
   }
 } as const

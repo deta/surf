@@ -46,7 +46,12 @@
   {#if resource}
     {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
       <!-- <Note {resource} /> -->
-      <TextResource resourceId={resource.id} {resource} {contextManager} onCitationClick={handleCitationClick} />
+      <TextResource
+        resourceId={resource.id}
+        {resource}
+        {contextManager}
+        onCitationClick={handleCitationClick}
+      />
     {:else}
       <div>
         <p><strong>Name:</strong> {resource.metadata.name}</p>

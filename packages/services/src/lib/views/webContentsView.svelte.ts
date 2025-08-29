@@ -27,7 +27,7 @@ import {
   type WebViewReceiveEvents,
   ResourceTagDataStateValue,
   type PageHighlightSelectionData
-} from "@deta/types";
+} from '@deta/types'
 import {
   useLogScope,
   EventEmitterBase,
@@ -36,7 +36,7 @@ import {
   useDebounce,
   isPDFViewerURL,
   copyToClipboard,
-  useTimeout,
+  useTimeout
 } from '@deta/utils'
 import { getTextElementsFromHtml } from '@deta/utils/dom'
 import {
@@ -58,7 +58,7 @@ import {
   type BookmarkPageOpts
 } from './types'
 import { Resource, ResourceManager } from '../resources'
-import { WebParser } from '@deta/web-parser';
+import { WebParser } from '@deta/web-parser'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -1005,9 +1005,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     }
   }
 
-  async highlightSelection(
-    selectionData: PageHighlightSelectionData
-  ) {
+  async highlightSelection(selectionData: PageHighlightSelectionData) {
     const { source, text: answerText } = selectionData
     const pdfPage = source?.metadata?.page ?? null
 
@@ -1029,7 +1027,9 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         let targetText = source.content
         if (!targetText) {
           this.log.debug('no source content, hydrating source', source.uid)
-          const fetchedSource = await this.view.resourceManager.sffs.getAIChatDataSource(selectionData.sourceUid)
+          const fetchedSource = await this.view.resourceManager.sffs.getAIChatDataSource(
+            selectionData.sourceUid
+          )
           if (fetchedSource) {
             targetText = fetchedSource.content
           } else {
@@ -1062,7 +1062,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
       // will throw an error if the request takes longer than 20 seconds
       const timedGetAIDocsSimilarity = useTimeout(() => {
-        return this.view.resourceManager.sffs.getAIDocsSimilarity(answerText ?? '', textElements, 0.5)
+        return this.view.resourceManager.sffs.getAIDocsSimilarity(
+          answerText ?? '',
+          textElements,
+          0.5
+        )
       }, 20000)
 
       const docsSimilarity = await timedGetAIDocsSimilarity()
@@ -1148,11 +1152,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   navigationHistory: Writable<Electron.NavigationEntry[]>
   navigationHistoryIndex: Writable<number>
 
-  resourceCreatedByUser: Writable<boolean> = writable(false);
-  extractedResourceId: Writable<string | null> = writable(null);
-  detectedApp: Writable<DetectedWebApp | null> = writable(null);
-  detectedResource: Writable<DetectedResource | null> = writable(null);
-  selectionHighlight: Writable<PageHighlightSelectionData | null> = writable(null);
+  resourceCreatedByUser: Writable<boolean> = writable(false)
+  extractedResourceId: Writable<string | null> = writable(null)
+  detectedApp: Writable<DetectedWebApp | null> = writable(null)
+  detectedResource: Writable<DetectedResource | null> = writable(null)
+  selectionHighlight: Writable<PageHighlightSelectionData | null> = writable(null)
 
   domReady: Writable<boolean> = writable(false)
   didFinishLoad: Writable<boolean> = writable(false)
@@ -1224,6 +1228,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
           url: $url,
           title: $title,
           faviconUrl: $faviconURL,
+          permanentlyActive: this.initialData.permanentlyActive,
           navigationHistoryIndex: $navigationHistoryIndex,
           navigationHistory: $navigationHistory || [],
           extractedResourceId: $extractedResourceId

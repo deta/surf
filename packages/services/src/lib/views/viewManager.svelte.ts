@@ -45,6 +45,9 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   activeViewId: Writable<string | null>
   shouldHideViews: Readable<boolean>
 
+  sidebarViewOpen = $state(true)
+  activeSidebarView = $state() as WebContentsView | null
+
   views: Writable<WebContentsView[]>
 
   private unsubs: Fn[] = []
@@ -99,6 +102,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   get viewsValue() {
+    return get(this.views)
+  }
+
+  get webContentsViewsValue() {
     const viewsArray: WebContents[] = []
     this.webContentsViews.forEach((view) => {
       viewsArray.push(view)
@@ -184,7 +191,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
    * proper view hierarchy and prevent visual conflicts.
    */
   async activate(viewId: string) {
-    const view = this.webContentsViews.get(viewId)
+    const view = this.viewsValue.find((v) => v.id === viewId)
     if (!view) {
       this.log.warn(`WebContentsView with ID ${viewId} does not exist.`)
       return false
@@ -205,7 +212,14 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     //   }
     // }
 
-    await this.hideAll()
+    if (!view.webContents) {
+      this.log.warn(`WebContents for view with ID ${viewId} does not exist.`)
+      return false
+    }
+
+    if (!view.dataValue.permanentlyActive) {
+      await this.hideAll()
+    }
 
     const overlayViewId = this.viewOverlays.get(view.id)
     if (overlayViewId) {
@@ -222,10 +236,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       }
     }
 
-    await view.action(WebContentsViewActionType.ACTIVATE)
+    await view.webContents.action(WebContentsViewActionType.ACTIVATE)
     this.activeViewId.set(view.id)
 
-    this.emit(ViewManagerEmitterNames.ACTIVATED, view)
+    this.emit(ViewManagerEmitterNames.ACTIVATED, view.webContents)
 
     return true
   }
@@ -299,6 +313,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
     // @ts-ignore
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
+  }
+
+  setSidebarState({ open, view }: { open?: boolean; view?: WebContentsView }) {
+    if (open !== undefined) this.sidebarViewOpen = open
+    if (view !== undefined) this.activeSidebarView = view
   }
 
   getActiveView(): WebContents | null {

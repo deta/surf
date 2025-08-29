@@ -6,10 +6,23 @@
   import { writable } from 'svelte/store'
   import LocationBar from './LocationBar.svelte'
   import WebContentsView from '../WebContentsView.svelte'
+  import { type Snippet } from "svelte"
+  import NavigationBarGroup from './NavigationBarGroup.svelte'
   import SaveState from './SaveState.svelte'
   import { isInternalRendererURL } from '@deta/utils'
 
-  let { view }: { view: WebContentsView } = $props()
+  let {
+    view,
+
+    // Allow changing the view location url or not
+    readonlyLocation = false,
+
+    centeredBreadcrumbs = false,
+    hideNavigationControls = false,
+    hideSearch = false,
+
+    leftChildren, rightChildren
+  }: { view: WebContentsView; centeredBreadcrumbs?: boolean; readonlyLocation?: boolean; locationInputDisabled?: boolean, hideNavigationControls?: boolean, hideSearch?: boolean, leftChildren?: Snippet; rightChildren?: Snippet } = $props()
 
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
@@ -31,30 +44,39 @@
 </script>
 
 <nav>
-  <div class="group">
-    <div class="group slim">
-      <Button size="md" square onclick={onGoBack} disabled={!canGoBack}>
-        <Icon name="arrow.left" size="1.2em" />
+  {@render leftChildren?.()}
+
+  {#if !hideNavigationControls}
+    <NavigationBarGroup>
+      <NavigationBarGroup slim>
+        <Button size="md" square onclick={onGoBack} disabled={!canGoBack}>
+          <Icon name="arrow.left" size="1.2em" />
+        </Button>
+        <Button size="md" square onclick={onGoForward} disabled={!canGoForward}>
+          <Icon name="arrow.right" size="1.2em" />
+        </Button>
+      </NavigationBarGroup>
+      <Button size="md" square onclick={onReload} disabled={!canReload}>
+        <Icon name="reload" size="1.085em" />
       </Button>
-      <Button size="md" square onclick={onGoForward} disabled={!canGoForward}>
-        <Icon name="arrow.right" size="1.2em" />
-      </Button>
-    </div>
-    <Button size="md" square onclick={onReload} disabled={!canReload}>
-      <Icon name="reload" size="1.085em" />
-    </Button>
-  </div>
-  <div class="group breadcrumbs">
+    </NavigationBarGroup>
+  {/if}
+  <NavigationBarGroup fullWidth={!centeredBreadcrumbs}>
     <BreadcrumbItems {view} />
-    <LocationBar {view} />
+    <LocationBar {view} readonly={readonlyLocation}/>
     {#if !isInternalRendererURL($activeLocation)}
       <SaveState {view} />
     {/if}
-  </div>
-  <div class="group search">
-    <!-- TODO: (maxu): Make better check -->
-    <SearchInput collapsed={!$activeLocation?.includes('notebook.html')} />
-  </div>
+  </NavigationBarGroup>
+
+  {#if !hideSearch}
+    <NavigationBarGroup>
+        <!-- TODO: (maxu): Make better check -->
+        <SearchInput collapsed={!$activeLocation?.includes('notebook.html')} />
+    </NavigationBarGroup>
+  {/if}
+
+  {@render rightChildren?.()}
 </nav>
 
 <style lang="scss">
@@ -76,29 +98,6 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
-
-    .group {
-      display: flex;
-      align-items: center;
-
-      // Smol trick to make the back & forwards buttons visually more balanced
-      &.slim {
-        :global([data-button-root]:first-child) {
-          margin-right: -1.5px;
-        }
-        :global([data-button-root]:last-child) {
-          margin-left: -1.5px;
-        }
-      }
-    }
-
-    .breadcrumbs {
-      height: 100%;
-      width: 100%;
-      flex-shrink: 1;
-    }
-    .search {
-      flex: 1;
-    }
+    justify-content: space-between;
   }
 </style>

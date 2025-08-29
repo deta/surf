@@ -15,12 +15,15 @@ import {
   WebContentsViewContextManagerActionOutputs,
   WebContentsViewContextManagerActionPayloads,
   WebContentsViewContextManagerActionType,
-  CitationClickEvent
+  type WebViewSendEvents,
+  WebViewEventSendNames,
+  type CitationClickEvent
 } from '@deta/types'
 import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 
 import { getUserConfig } from '../main/config'
 import { initBackend } from './helpers/backend'
+import { ipcRenderer } from 'electron/renderer'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -160,3 +163,34 @@ if (process.contextIsolated) {
 
 export type API = typeof api
 export type PreloadEventHandlers = typeof eventHandlers
+
+function sendPageEvent<T extends keyof WebViewSendEvents>(
+  name: T,
+  data?: WebViewSendEvents[T]
+): void {
+  console.debug('Sending page event', name, data)
+  ipcRenderer.send('webview-page-event', name, data)
+  ipcRenderer.sendToHost('webview-page-event', name, data)
+}
+
+window.addEventListener('DOMContentLoaded', async (_) => {
+  window.addEventListener('keyup', (event: KeyboardEvent) => {
+    // Ignore synthetic events that are not user generated
+    if (!event.isTrusted) return
+    sendPageEvent(WebViewEventSendNames.KeyUp, { key: event.key })
+  })
+
+  window.addEventListener('keydown', async (event: KeyboardEvent) => {
+    // Ignore synthetic events that are not user generated
+    if (!event.isTrusted) return
+
+    sendPageEvent(WebViewEventSendNames.KeyDown, {
+      key: event.key,
+      code: event.code,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey
+    })
+  })
+})
