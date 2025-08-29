@@ -41,7 +41,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <span {...$$restProps} on:click={handleClick}>
-  {#if type === MentionItemType.TAB && faviconURL}
+  {#if faviconURL}
     <Favicon url={faviconURL} title={label} />
     <div class="label-wrapper">
       {label}

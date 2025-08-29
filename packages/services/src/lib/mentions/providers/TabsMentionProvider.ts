@@ -41,10 +41,10 @@ export class TabsMentionProvider implements MentionProvider {
 
       // Add default "All Tabs" action
       const allTabsItem: MentionItem = {
-        id: crypto.randomUUID(),
-        type: MentionTypes.TAB,
+        id: 'all_tabs',
+        type: MentionTypes.ALL_TABS,
         name: `All Tabs (${tabs.length})`,
-        icon: 'squircle',
+        icon: 'world',
         description: `All ${tabs.length} open tabs`,
         priority: 200,
         keywords: ['all', 'tabs', 'every', 'everything', 'surf'],
@@ -68,7 +68,7 @@ export class TabsMentionProvider implements MentionProvider {
             const favicon = tab.view.faviconURLValue || ''
 
             return {
-              id: crypto.randomUUID(),
+              id: tab.id,
               type: MentionTypes.TAB,
               name: title,
               icon: favicon,

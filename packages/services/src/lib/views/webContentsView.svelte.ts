@@ -273,7 +273,14 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       }
     }
 
+    if (this.view.urlValue === newUrl) {
+      this.log.debug('Navigation to same URL, skipping update')
+      this.emit(WebContentsEmitterNames.NAVIGATED, newUrl, oldUrl, this._programmaticNavigation)
+      return
+    }
+
     this.view.url.set(newUrl)
+    this.view.selectionHighlight.set(null)
 
     this.emit(WebContentsEmitterNames.NAVIGATED, newUrl, oldUrl, this._programmaticNavigation)
 
@@ -1310,6 +1317,13 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
   addSelectionHighlight(selection: PageHighlightSelectionData) {
     this.selectionHighlight.set(selection)
+  }
+
+  highlightSelection(selection: PageHighlightSelectionData) {
+    this.selectionHighlight.set(selection)
+    if (this.webContents) {
+      this.webContents.highlightSelection(selection)
+    }
   }
 
   /**

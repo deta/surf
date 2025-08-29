@@ -86,7 +86,7 @@ export function handlePreloadEvents() {
 
   horizonPreloadEvents.onCitationClick((data: CitationClickEvent) => {
     // TODO: handle highlighting
-    tabsManager.create(data.url, {
+    tabsManager.openOrCreate(data.url, {
       active: true,
       ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
     })

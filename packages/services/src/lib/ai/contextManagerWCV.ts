@@ -20,8 +20,17 @@ import {
   ContextItemSpace
 } from './context/index'
 import type { AIService, ChatPrompt } from './ai'
-import { type MentionItem } from '@deta/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import type { SearchResultLink } from '@deta/web-parser'
+import {
+  ACTIVE_TAB_MENTION,
+  BROWSER_HISTORY_MENTION,
+  EVERYTHING_MENTION,
+  INBOX_MENTION,
+  NO_CONTEXT_MENTION,
+  TABS_MENTION,
+  WIKIPEDIA_SEARCH_MENTION
+} from '../constants/chat'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -93,91 +102,45 @@ export class ContextManagerWCV {
     this.log.debug('Removing all context items except', idsArray)
   }
 
-  async addResource(resourceOrId: Resource | string, opts?: AddContextItemOptions) {
-    // const resource =
-    //   typeof resourceOrId === 'string'
-    //     ? await this.resourceManager.getResource(resourceOrId)
-    //     : resourceOrId
-    // if (!resource) {
-    //   this.log.error(`Resource not found: ${resourceOrId}`)
-    //   throw new Error(`Resource not found: ${resourceOrId}`)
-    // }
-    // const item = new ContextItemResource(this.service, resource)
-    // return this.addContextItem(item, opts)
+  async addResource(resourceId: string, opts?: AddContextItemOptions) {
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT,
+      { id: resourceId }
+    )
+
+    this.log.debug('Added resource context', result)
   }
 
-  async addSpace(spaceOrId: any | string, opts?: AddContextItemOptions) {
-    // const space =
-    //   typeof spaceOrId === 'string' ? await this.tabsManager.oasis.getSpace(spaceOrId) : spaceOrId
-    // if (!space) {
-    //   this.log.error(`Space not found: ${spaceOrId}`)
-    //   throw new Error(`Space not found: ${spaceOrId}`)
-    // }
-    // const item = new ContextItemSpace(this.service, space)
-    // return this.addContextItem(item, opts)
+  async addNotebook(notebookId: string, opts?: AddContextItemOptions) {
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT,
+      { id: notebookId }
+    )
+
+    this.log.debug('Added notebook context', result)
   }
 
-  async addTab(tabOrId: TabItem | string, opts?: AddContextItemOptions) {
-    // try {
-    //   const tab =
-    //     typeof tabOrId === 'string'
-    //       ? await this.tabsManager.tabsValue.find((tab) => tab.id === tabOrId)
-    //       : tabOrId
-    //   if (!tab) {
-    //     throw new Error(`Tab not found: ${tabOrId}`)
-    //   }
-    //   const existingItem = this.getTabItem(tab.id)
-    //   if (existingItem) {
-    //     this.log.debug('Tab already in context', tab.id)
-    //     return existingItem
-    //   }
-    //   this.log.debug('Adding tab to context', tab.id)
-    //   const item = new ContextItemPageTab(this.service, tab)
-    //   return this.addContextItem(item, opts)
-    //   // if (tab.type === 'page') {
-    //   //   this.log.debug('Adding tab to context', tab.id)
-    //   //   const item = new ContextItemPageTab(this.service, tab)
-    //   //   return this.addContextItem(item, opts)
-    //   // // } else if (tab.type === 'space') {
-    //   // //   const space = await this.tabsManager.oasis.getSpace(tab.spaceId)
-    //   // //   if (!space) {
-    //   // //     throw new Error(`Space not found: ${tab.spaceId}`)
-    //   // //   }
-    //   // //   const item = new ContextItemSpace(this.service, space, tab as TabSpace)
-    //   // //   return this.addContextItem(item, opts)
-    //   // } else if (tab.type === 'resource') {
-    //   //   const resource = await this.resourceManager.getResource(tab.resourceId)
-    //   //   if (!resource) {
-    //   //     throw new Error(`Resource not found: ${tab.resourceId}`)
-    //   //   }
-    //   //   const item = new ContextItemResource(this.service, resource, tab)
-    //   //   return this.addContextItem(item, opts)
-    //   // } else {
-    //   //   throw new Error(`Unsupported tab type: ${tab.type}`)
-    //   // }
-    // } catch (error) {
-    //   this.log.error('Failed to add tab to context', error)
-    //   throw error
-    // }
+  async addTab(tabId: string, opts?: AddContextItemOptions) {
+    this.log.debug('Adding tab context via webContentsViewContextManagerAction', tabId)
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT,
+      { id: tabId }
+    )
+
+    this.log.debug('Added tab context', result)
   }
 
-  async addTabs(tabs: string[], trigger?: PageChatUpdateContextEventTrigger) {
-    // const currentContextLength = this.itemsValue.length
-    // const addedItems = await Promise.all(
-    //   tabs.map((tabId) => {
-    //     return this.addTab(tabId)
-    //   })
-    // )
-    // if (trigger) {
-    //   this.telemetry.trackPageChatContextUpdate(
-    //     PageChatUpdateContextEventAction.MultiSelect,
-    //     currentContextLength + tabs.length,
-    //     tabs.length,
-    //     PageChatUpdateContextItemType.PageTab,
-    //     trigger
-    //   )
-    // }
-    // return addedItems.length > 0 ? addedItems[0] : undefined
+  async addTabs(trigger?: PageChatUpdateContextEventTrigger) {
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT,
+      undefined
+    )
+
+    this.log.debug('Added tabs context', result)
   }
 
   async addScreenshot(screenshot: Blob, opts?: AddContextItemOptions) {
@@ -248,44 +211,44 @@ export class ContextManagerWCV {
       { results: resultLinks }
     )
 
-    this.log.debug('Got resource ids from main process', result)
+    this.log.debug('Added web search context', result)
   }
 
   addMentionItem(item: MentionItem, opts?: AddContextItemOptions) {
-    // const itemId = item.id
-    // if (itemId === NO_CONTEXT_MENTION.id) {
-    //   this.clear()
-    // } else if (itemId === EVERYTHING_MENTION.id) {
-    //   return this.addEverythingContext(opts)
-    // } else if (itemId === INBOX_MENTION.id) {
-    //   return this.addInboxContext(opts)
-    // // } else if (itemId === TABS_MENTION.id) {
-    // //   if (activeSpaceContextItem) {
-    // //     activeSpaceContextItem.include =
-    // //       activeSpaceContextItem.include === 'resources' ? 'everything' : 'tabs'
-    // //     return activeSpaceContextItem
-    // //   } else {
-    // //     return this.addActiveSpaceContext('tabs', opts)
-    // //   }
-    // // } else if (itemId === ACTIVE_CONTEXT_MENTION.id) {
-    // //   if (activeSpaceContextItem) {
-    // //     activeSpaceContextItem.include =
-    // //       activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
-    // //     return activeSpaceContextItem
-    // //   } else {
-    // //     return this.addActiveSpaceContext('resources', opts)
-    // //   }
-    // } else if (itemId == ACTIVE_TAB_MENTION.id) {
-    //   return this.addActiveTab(opts)
-    // } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
-    //   return this.addWikipediaContext(opts)
-    // } else if (itemId === BROWSER_HISTORY_MENTION.id) {
-    //   return this.addBrowsingHistoryContext(opts)
-    // } else if (item.type === MentionItemType.RESOURCE) {
-    //   return this.addResource(item.id, opts)
-    // } else {
-    //   return this.addSpace(itemId, opts)
-    // }
+    const itemId = item.id
+    this.log.debug('Adding mention item to context', item)
+    if (itemId === NO_CONTEXT_MENTION.id) {
+      this.clear()
+      // } else if (itemId === EVERYTHING_MENTION.id) {
+      //   return this.addEverythingContext(opts)
+      // } else if (itemId === INBOX_MENTION.id) {
+      //   return this.addInboxContext(opts)
+      // } else if (itemId === ACTIVE_CONTEXT_MENTION.id) {
+      //   if (activeSpaceContextItem) {
+      //     activeSpaceContextItem.include =
+      //       activeSpaceContextItem.include === 'tabs' ? 'everything' : 'resources'
+      //     return activeSpaceContextItem
+      //   } else {
+      //     return this.addActiveSpaceContext('resources', opts)
+      //   }
+      // } else if (itemId == ACTIVE_TAB_MENTION.id) {
+      //   return this.addActiveTab(opts)
+      // } else if (itemId === WIKIPEDIA_SEARCH_MENTION.id) {
+      //   return this.addWikipediaContext(opts)
+      // } else if (itemId === BROWSER_HISTORY_MENTION.id) {
+      //   return this.addBrowsingHistoryContext(opts)
+    } else if (item.type === MentionItemType.TAB) {
+      return this.addTab(item.id, opts)
+    } else if (item.type === MentionItemType.RESOURCE) {
+      return this.addResource(item.id, opts)
+    } else if (item.type === MentionItemType.NOTEBOOK) {
+      return this.addNotebook(item.id, opts)
+    } else if (item.type === MentionItemType.ALL_TABS) {
+      return this.addTabs()
+    } else {
+      this.log.error('Unknown mention item type', item)
+      return null
+    }
   }
 
   getItem(id: string) {

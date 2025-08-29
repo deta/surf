@@ -141,7 +141,8 @@
         "@deta/icons#dev",
         "@deta/editor#dev"
       ],
-      "persistent": true
+      "persistent": true,
+      "cache": false
     },
     "dev": {
       "dependsOn": [
@@ -157,7 +158,8 @@
         "@deta/icons#dev",
         "@deta/editor#dev"
       ],
-      "persistent": true
+      "persistent": true,
+      "cache": false
     }
   }
 }

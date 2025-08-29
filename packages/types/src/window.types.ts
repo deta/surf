@@ -301,12 +301,20 @@ export type WebContentsViewEventListener = {
 // --- WebContentsViewContextManager Actions ---
 export enum WebContentsViewContextManagerActionType {
   GET_ITEMS = 'get-items',
-  ADD_WEB_SEARCH_CONTEXT = 'add-web-search-context'
+  ADD_TABS_CONTEXT = 'add-tabs-context',
+  ADD_WEB_SEARCH_CONTEXT = 'add-web-search-context',
+  ADD_TAB_CONTEXT = 'add-tab-context',
+  ADD_RESOURCE_CONTEXT = 'add-resource-context',
+  ADD_NOTEBOOK_CONTEXT = 'add-notebook-context'
 }
 
 export interface WebContentsViewContextManagerActionPayloads {
   [WebContentsViewContextManagerActionType.GET_ITEMS]: { prompt: string }
+  [WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT]: undefined
   [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: { results: SearchResultLink[] }
+  [WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT]: { id: string }
+  [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: { id: string }
+  [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: { id: string }
 }
 
 export interface WebContentsViewContextManagerActionOutputs {
@@ -314,7 +322,11 @@ export interface WebContentsViewContextManagerActionOutputs {
     resources: string[]
     inlineImages: string[]
   } | null
+  [WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT]: null
   [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: null
+  [WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT]: null
+  [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: null
+  [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: null
 }
 
 export type WebContentsViewContextManagerAction = {

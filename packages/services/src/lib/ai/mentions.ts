@@ -15,10 +15,11 @@ import {
   NOTE_MENTION,
   WIKIPEDIA_SEARCH_MENTION
 } from '../constants/chat'
-import { MentionItemType, type MentionItem } from '@deta/editor'
+import { MentionItemType, type MentionItem as MentionItemEditor } from '@deta/editor'
 import { type ResourceManager } from '@deta/services/resources'
 import type { MentionItemsFetcher } from '@deta/editor/extensions/Mention'
 import { SearchResourceTags } from '@deta/utils/formatting'
+import { MentionTypes, type MentionItem } from '../mentions/mention.types'
 
 export const createResourcesMentionsFetcher = (
   resourceManager: ResourceManager,
@@ -72,7 +73,7 @@ export const createResourcesMentionsFetcher = (
             icon: canonicalURL ? `favicon;;${canonicalURL}` : `file;;${getFileKind(resource.type)}`,
             type: MentionItemType.RESOURCE,
             data: resource
-          } as MentionItem
+          } as MentionItemEditor
         })
     } else {
       return []
@@ -103,7 +104,7 @@ export const createMentionsFetcher = (
       BROWSER_HISTORY_MENTION
     ]
 
-    let modelMentions: MentionItem[] = []
+    let modelMentions: MentionItemEditor[] = []
 
     if (query) {
       // With query: show all matching models, else only show the default models
@@ -119,7 +120,7 @@ export const createMentionsFetcher = (
             icon: model.icon,
             type: MentionItemType.MODEL,
             hideInRoot: model.provider !== Provider.Custom
-          }) as MentionItem
+          }) as MentionItemEditor
       )
     }
 
@@ -154,6 +155,40 @@ export const createMentionsFetcher = (
     const stuffResults = await resourceFetcher(query)
 
     return [...filteredActions, ...stuffResults]
+  }
+
+  return mentionItemsFetcher
+}
+
+export const createRemoteMentionsFetcher = (notResourceId?: string) => {
+  const log = useLogScope('MentionsHelper')
+
+  const mentionItemsFetcher: MentionItemsFetcher = async ({ query }) => {
+    log.debug('fetching mention items', query)
+
+    // @ts-ignore
+    const items = (await window.api.fetchMentions(query)) as MentionItem[]
+    log.debug('fetched mention items', items)
+
+    // Transform service items to editor format
+    return items.map((item) => {
+      let base = {
+        id: item.id,
+        label: item.name, // name -> label
+        icon: item.icon,
+        type: item.type,
+        faviconURL: undefined,
+        data: item.metadata
+      } as MentionItemEditor
+
+      if (item.type === MentionTypes.TAB) {
+        base.id = item.metadata?.tabId || item.id
+        base.icon = ''
+        base.faviconURL = item.icon
+      }
+
+      return base
+    })
   }
 
   return mentionItemsFetcher

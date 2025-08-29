@@ -13,6 +13,7 @@ import { TabsMentionProvider } from './providers/TabsMentionProvider'
 import type { TabsService } from '../tabs/tabs.svelte'
 
 import { MentionTypes } from './mention.types'
+import { tick } from 'svelte'
 
 export class MentionService {
   private providers = new Map<string, MentionProvider>()
@@ -66,6 +67,26 @@ export class MentionService {
     if (tabsService) {
       const tabsProvider = new TabsMentionProvider(tabsService)
       this.registerProvider(tabsProvider)
+    }
+
+    this.attachListeners()
+  }
+
+  get itemsValue() {
+    return get(this.items)
+  }
+
+  private attachListeners() {
+    // @ts-ignore
+    if (window.api.onFetchMentions) {
+      // @ts-ignore
+      window.api.onFetchMentions(async ({ query }) => {
+        this.log.debug('Received fetchMentions event', query)
+        const results = await this.performSearch(query)
+
+        this.log.debug('Returning fetched mentions:', results)
+        return results
+      })
     }
   }
 
@@ -172,7 +193,7 @@ export class MentionService {
    * Phase 1: Execute LOCAL providers immediately for instant results
    * Phase 2: Execute ASYNC providers progressively as they complete
    */
-  private async performSearch(query: string): Promise<void> {
+  async performSearch(query: string) {
     if (!query.trim()) {
       query = ''
     }
@@ -188,6 +209,10 @@ export class MentionService {
 
       // Phase 2: Execute ASYNC providers and stream results
       await this.executeAsyncProviders(query, localItems)
+
+      await tick()
+
+      return this.itemsValue
     } catch (error) {
       this.log.error('Search failed:', error)
       this.searchState.update((state) => ({

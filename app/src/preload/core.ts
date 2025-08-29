@@ -40,6 +40,7 @@ import { ControlWindow } from '@horizon/core/src/lib/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
 import { initBackend } from './helpers/backend'
+import { MentionItem } from '@deta/services/mentions'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -531,6 +532,16 @@ const eventHandlers = {
         return callback(payload)
       } catch (error) {
         return null
+      }
+    })
+  },
+
+  onFetchMentions: (callback: (data: { query: string }) => void) => {
+    return IPC_EVENTS_RENDERER.fetchMentions.handle((data) => {
+      try {
+        return callback(data)
+      } catch (error) {
+        // noop
       }
     })
   }

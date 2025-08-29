@@ -10,7 +10,10 @@ export interface MentionItem {
 }
 
 export const MentionTypes = {
-  TAB: 'tab'
+  TAB: 'tab',
+  RESOURCE: 'resource',
+  NOTEBOOK: 'notebook',
+  ALL_TABS: 'all-tabs'
 } as const
 
 export type MentionType = (typeof MentionTypes)[keyof typeof MentionTypes]

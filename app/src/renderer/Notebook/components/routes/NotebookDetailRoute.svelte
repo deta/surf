@@ -25,7 +25,7 @@
   }
 
   onMount(() => {
-    container.fetchContents()
+    notebook.fetchContents()
   })
 </script>
 

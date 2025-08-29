@@ -30,7 +30,8 @@ import {
   ContextItemPageTab,
   ContextItemResource,
   ContextItemScreenshot,
-  ContextItemSpace
+  ContextItemSpace,
+  ContextItemNotebook
 } from './context/index'
 import type { AIService, ChatPrompt } from './ai'
 import { ContextItemInbox } from './context/inbox'
@@ -51,6 +52,7 @@ import { ContextItemBrowsingHistory } from './context/history'
 import type { SearchResultLink } from '@deta/web-parser'
 import { ContextItemWebSearch } from './context/web'
 import { ContextManagerWCV } from './contextManagerWCV'
+import { Notebook, NotebookManager, useNotebookManager } from '../notebooks'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -81,6 +83,7 @@ export class ContextManager {
   ai: AIService
   tabsManager: TabsService
   resourceManager: ResourceManager
+  notebookManager: NotebookManager
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
@@ -96,6 +99,7 @@ export class ContextManager {
     this.ai = ai
     this.tabsManager = tabsManager
     this.resourceManager = resourceManager
+    this.notebookManager = useNotebookManager()
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope(`ContextManager ${key}`)
 
@@ -224,8 +228,17 @@ export class ContextManager {
           resourceIds,
           inlineImages
         }
-      } else if (WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT) {
+      } else if (type === WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT) {
         await this.addWebSearchContext(payload.results)
+        return null
+      } else if (type === WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT) {
+        await this.addTab(payload.id)
+        return null
+      } else if (type === WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT) {
+        await this.addTabs(this.tabsManager.tabsValue.map((x) => x.id))
+        return null
+      } else if (type === WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT) {
+        await this.addNotebook(payload.id)
         return null
       } else {
         this.log.error('Unknown WebContentsViewContextManagerActionType', type)
@@ -461,8 +474,16 @@ export class ContextManager {
     }
   }
 
-  async onlyUseTabInContext(tabId: string, trigger?: PageChatUpdateContextEventTrigger) {
-    const contextItem = await this.addTab(tabId)
+  async onlyUseTabInContext(
+    tabOrId: TabItem | string,
+    trigger?: PageChatUpdateContextEventTrigger
+  ) {
+    const contextItem = await this.addTab(tabOrId)
+    this.removeAllExcept(contextItem.id, trigger)
+  }
+
+  async onlyUseNotebookInContext(notebook: Notebook, trigger?: PageChatUpdateContextEventTrigger) {
+    const contextItem = await this.addNotebook(notebook)
     this.removeAllExcept(contextItem.id, trigger)
   }
 
@@ -491,12 +512,29 @@ export class ContextManager {
     // return this.addContextItem(item, opts)
   }
 
+  async addNotebook(notebookOrId: Notebook | string, opts?: AddContextItemOptions) {
+    const notebook =
+      typeof notebookOrId === 'string'
+        ? await this.notebookManager.getNotebook(notebookOrId)
+        : notebookOrId
+
+    if (!notebook) {
+      this.log.error(`Notebook not found: ${notebookOrId}`)
+      throw new Error(`Notebook not found: ${notebookOrId}`)
+    }
+
+    const item = new ContextItemNotebook(this.service, notebook)
+    return this.addContextItem(item, opts)
+  }
+
   async addTab(tabOrId: TabItem | string, opts?: AddContextItemOptions) {
     try {
       const tab =
         typeof tabOrId === 'string'
           ? await this.tabsManager.tabsValue.find((tab) => tab.id === tabOrId)
           : tabOrId
+
+      this.log.debug('Adding tab to context', tab)
 
       if (!tab) {
         throw new Error(`Tab not found: ${tabOrId}`)
@@ -1114,7 +1152,7 @@ export class ContextService {
    * Checks if a given item is in the context of the currently active note's context
    */
   checkIfItemInActiveNoteContext(item: ContextItem) {
-    const activeNoteContextManager = get(this.ai.activeContextManager)
+    const activeNoteContextManager = get(this.ai.activeContextManager) as ContextManager
 
     if (!activeNoteContextManager) {
       return false

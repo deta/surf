@@ -16,27 +16,43 @@
   //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
-  import { wait } from '@deta/utils'
+  import { isInternalRendererURL } from '@deta/utils/formatting'
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte';
+  import type { ContextManager } from '@deta/services/ai';
 
   const log = useLogScope('Core')
 
-  const { config, viewManager, tabsService, ai, keyboardManager, shortcutsManager } = initServices()
+  const { config, viewManager, notebookManager, tabsService, ai, keyboardManager, shortcutsManager } = initServices()
 
   // const overlayManager = useOverlayManager()
 
-  const contextManager = ai.contextManager
+  const contextManager = ai.contextManager as ContextManager
 
+  const activeTab = $derived(tabsService.activeTab)
   const activeTabView = $derived(tabsService.activeTab?.view)
+  const activeTabUrl = $derived(tabsService.activeTab?.view.url)
 
   let unsubs: Fn[] = []
-
-  // let overlayWrapper: HTMLDivElement | null = null
-
-  // const view1 = viewManager.create({ url: 'https://google.com', permanentlyActive: true })
-  // const view2 = viewManager.create({ url: 'https://wikipedia.org', permanentlyActive: true })
-
   let open = $state(false)
+
+  $effect(() => {
+    if (viewManager.sidebarViewOpen) {
+      const internalUrl = isInternalRendererURL($activeTabUrl)
+
+      if (!internalUrl) {
+        log.debug('External URL detected:', $activeTabUrl, 'adding tab to context', activeTab)
+        contextManager.onlyUseTabInContext(activeTab)
+      } else if (internalUrl && internalUrl.hostname === 'notebook') {
+        const notebookId = internalUrl.pathname.slice(1)
+        log.debug('Internal notebook URL detected:', internalUrl, 'adding notebook to context', notebookId)
+        notebookManager.getNotebook(notebookId).then(notebook => {
+          contextManager.onlyUseNotebookInContext(notebook)
+        })
+      } else {
+        log.debug('Other internal URL detected:', $activeTabUrl)
+      }
+    }
+  })
 
   onMount(async () => {
     log.debug('Core component mounted')
@@ -102,12 +118,6 @@
     })
 
     unsubs.push(handlePreloadEvents())
-
-    wait(2000).then(() => {
-      const tab = tabsService.tabsValue[0]
-      log.debug('Adding tab to context', tab.id)
-      contextManager.addTab(tab)
-    })
   })
 
   onDestroy(() => {

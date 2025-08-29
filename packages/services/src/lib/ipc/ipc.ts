@@ -18,9 +18,7 @@ type HandleHandler<T extends IPCEvent> = (
 export class IPCService {
   private requestCounter = 0
   private pendingRequests: Map<number, (response: any) => void> = new Map()
-  private handleRendererRequest: (payload: any) => Promise<any> | any = () => {
-    throw new Error('No handler registered for renderer request')
-  }
+  private rendererHandlers: Map<string, (payload: any) => Promise<any> | any> = new Map()
 
   addEvent<T>(name: string) {
     return {
@@ -67,18 +65,20 @@ export class IPCService {
   addEventWithReturn<T extends IPCEvent>(name: string) {
     // Set up response handler for main-to-renderer requests
     if (isRenderer()) {
-      const responseName = `${name}:response`
       ipcRenderer.on(`${name}:request`, (event, { id, payload }) => {
-        if (!this.handleRendererRequest) {
+        const responseName = `${name}:response:${id}`
+        const handler = this.rendererHandlers.get(name)
+
+        if (!handler) {
           event.sender.send(responseName, {
             id,
-            error: 'No handler registered for renderer request'
+            error: `No handler registered for renderer request '${name}'`
           })
           return
         }
 
         Promise.resolve()
-          .then(() => this.handleRendererRequest(payload))
+          .then(() => handler(payload))
           .then((response) => {
             event.sender.send(responseName, { id, response })
           })
@@ -102,7 +102,11 @@ export class IPCService {
           if (!isRenderer()) {
             throw new Error('Cannot handle renderer requests in main process')
           }
-          this.handleRendererRequest = handler
+          this.rendererHandlers.set(name, handler)
+
+          return () => {
+            this.rendererHandlers.delete(name)
+          }
         }
       },
       main: {
@@ -127,7 +131,8 @@ export class IPCService {
           }
 
           const requestId = ++this.requestCounter
-          const responseName = `${name}:response`
+          // Make response channel unique per request to avoid interference between multiple active requests
+          const responseName = `${name}:response:${requestId}`
 
           if (webContents.isDestroyed()) {
             return Promise.reject(new Error('WebContents is already destroyed'))
@@ -172,8 +177,8 @@ export class IPCService {
 
             // Set up timeout
             timeoutId = setTimeout(() => {
-              handleError(new Error('Request to renderer timed out after 30 seconds'))
-            }, 30000) // 30 second timeout
+              handleError(new Error('Request to renderer timed out after 2 minutes'))
+            }, 120000) // 2 minute timeout
 
             try {
               this.pendingRequests.set(requestId, resolve)

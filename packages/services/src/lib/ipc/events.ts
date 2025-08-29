@@ -21,6 +21,7 @@ import type {
   CitationClickEvent
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
+import { MentionItem } from '../mentions/mention.types'
 
 export const ipcService = createIPCService()
 
@@ -168,6 +169,11 @@ export type SpaceBasicData = {
   linked: boolean
 }
 
+export interface MentionSearch extends IPCEvent {
+  payload: { query: string }
+  output: MentionItem[]
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -269,7 +275,8 @@ const IPC_EVENTS = ipcService.registerEvents({
   webContentsViewContextManagerAction:
     ipcService.addEventWithReturn<WebContentsViewContextManagerActionEvent>(
       'webcontentsview-context-manager-action'
-    )
+    ),
+  fetchMentions: ipcService.addEventWithReturn<MentionSearch>('fetch-mentions')
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

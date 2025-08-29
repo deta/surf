@@ -111,7 +111,7 @@
   import WebSearch from './WebSearch.svelte'
   import { createResourcesFromMediaItems, processPaste } from '@deta/services'
   import { predefinedSurfletCode } from './predefinedSurflets'
-  import { createMentionsFetcher, createResourcesMentionsFetcher } from '@deta/services/ai'
+  import { createRemoteMentionsFetcher, createResourcesMentionsFetcher } from '@deta/services/ai'
   import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
   import ChatInput from './ChatInput.svelte'
@@ -399,7 +399,7 @@
     }
   )
 
-  const mentionItemsFetcher = createMentionsFetcher({ ai, resourceManager }, resourceId)
+  const mentionItemsFetcher = createRemoteMentionsFetcher(resourceId) // createMentionsFetcher({ ai, resourceManager }, resourceId)
   const linkItemsFetcher = createResourcesMentionsFetcher(resourceManager, resourceId)
 
   let initialLoad = true
@@ -900,13 +900,13 @@
         contextMentions.forEach((mention) => {
           chatContextManager.addMentionItem(mention)
         })
-        ai.telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Add,
-          contextManager.itemsValue.length,
-          mentions.length,
-          undefined,
-          PageChatUpdateContextEventTrigger.EditorMention
-        )
+        // ai.telemetry.trackPageChatContextUpdate(
+        //   PageChatUpdateContextEventAction.Add,
+        //   contextManager.itemsValue.length,
+        //   mentions.length,
+        //   undefined,
+        //   PageChatUpdateContextEventTrigger.EditorMention
+        // )
       }
     } else if ($selectedContext) {
       log.debug('Adding selected context to context', $selectedContext)

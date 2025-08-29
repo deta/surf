@@ -305,12 +305,35 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     if (options.active) {
       this.setActiveTab(item.id)
     } else if (options.activate) {
-      this.activatedTabs = [...this.activatedTabs, item.id]
+      this.activateTab(item.id)
     }
 
     this.emit(TabsServiceEmitterNames.CREATED, tab)
 
     return tab
+  }
+
+  async openOrCreate(url: string, opts: Partial<CreateTabOptions> = {}): Promise<TabItem> {
+    this.log.debug('Opening or creating tab for URL:', url)
+    const existingTab = this.tabs.find((tab) => tab.view.urlValue === url)
+    if (existingTab) {
+      this.log.debug('Tab already exists, activating:', existingTab.id)
+
+      if (opts.selectionHighlight) {
+        existingTab.view.highlightSelection(opts.selectionHighlight)
+      }
+
+      if (opts.active) {
+        await this.setActiveTab(existingTab.id)
+      } else if (opts.activate) {
+        this.activateTab(existingTab.id)
+      }
+
+      return existingTab
+    }
+
+    this.log.debug('Tab does not exist, creating new one')
+    return this.create(url, opts)
   }
 
   async get(id: string): Promise<TabItem | null> {
