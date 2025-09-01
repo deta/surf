@@ -51,6 +51,9 @@
     }
   }
 
+  import { mount, unmount } from 'svelte'
+  import { wait } from '@deta/utils'
+  import { type Overlay, type OverlayManager, useOverlayManager, useViewManager } from '@deta/services/views'
   import ContextMenu from './ContextMenu.svelte'
 
   const contextMenuOpen = writable(false)
@@ -58,14 +61,23 @@
   export const CONTEXT_MENU_OPEN = derived(contextMenuOpen, ($contextMenuOpen) => $contextMenuOpen)
   export const CONTEXT_MENU_KEY = derived(contextMenuKey, ($contextMenuKey) => $contextMenuKey)
 
-  let ctxMenuCmp: ContextMenu | null = null
+  // const overlayManager = useOverlayManager()
+
+  let overlayManager: OverlayManager
   let setupComplete = false
+  let ctxMenuCmp: ReturnType<typeof mount> | null = null
+  let overlay: Overlay | null = null
+
+  const log = useLogScope('ContextMenu')
 
   /**
    * Call once at app startup to prepare listener.
    */
   export function prepareContextMenu() {
     if (setupComplete) return
+
+    overlayManager = useOverlayManager()
+
     window.addEventListener(
       'contextmenu',
       async (e) => {
@@ -109,7 +121,7 @@
    * Open a context menu at the specified position.
    * You must either specify a target element or items directly!
    */
-  export function openContextMenu(props: {
+  export async function openContextMenu(props: {
     x: number
     y: number
     targetEl?: HTMLElement
@@ -124,21 +136,44 @@
 
     contextMenuOpen.set(true)
     contextMenuKey.set(props.key ?? null)
-    ctxMenuCmp = new ContextMenu({
-      target: document.body,
+
+    overlay = await overlayManager.create({
+      bounds: {
+        x: props.x,
+        y: props.y,
+        width: 300,
+        height: 600
+      }
+    })
+
+    // await wait(50)
+
+    ctxMenuCmp = mount(ContextMenu, {
+      target: overlay.wrapperElement ?? document.body,
       props: {
         targetX: props.x,
         targetY: props.y,
         targetEl: props.targetEl ?? null,
-        items: props.items
+        items: props.items,
+        overlay: overlay
       }
     })
+    
     document.body.setAttribute('data-context-menu', 'true')
   }
   export function closeContextMenu() {
-    ctxMenuCmp?.$destroy()
+    if (ctxMenuCmp) {
+      unmount(ctxMenuCmp)
+    }
+
     contextMenuOpen.set(false)
     contextMenuKey.set(null)
+
+    if (overlay) {
+      overlayManager.destroy(overlay.id)
+      overlay = null
+    }
+
     document.body.removeAttribute('data-context-menu')
   }
 
@@ -182,14 +217,15 @@
   // import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   // import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
+  import './style.scss'
+
   export let targetX: number
   export let targetY: number
   export let targetEl: HTMLElement | null
   export let items: CtxItem[] = []
+  export let overlay: Overlay | null = null
 
-  const log = useLogScope('ContextMenu')
-
-  // const viewManager = useTabsViewManager()
+  const viewManager = useViewManager()
 
   let ref: HTMLDialogElement | null = null
   onMount(async () => {
@@ -217,6 +253,35 @@
     if (targetY + height > window.innerHeight) {
       const edgeOffset = window.innerHeight - targetY
       targetY = window.innerHeight - height - edgeOffset
+    }
+
+    log.debug('Context menu opened at', targetX, targetY, overlay, ref)
+
+    if (ref) {
+      const bounds = ref.getBoundingClientRect()
+      log.debug('Context menu bounds:', bounds)
+
+      // @ts-ignore
+      // window.api.updateViewBounds({
+      //   x: targetX,
+      //   y: targetY,
+      //   width: bounds.width,
+      //   height: bounds.height
+      // })
+
+      // viewManager.updateViewBounds(overlayId, {
+      //   x: targetX,
+      //   y: targetY,
+      //   width: bounds.width,
+      //   height: bounds.height
+      // })
+
+      // overlay?.saveBounds({
+      //   width: Math.round(bounds.width + 20),
+      //   height: Math.round(bounds.height + 20) 
+      // })
+
+      // overlay?.focus()
     }
 
     // check if the context menu would overlap with the active webcontents view
@@ -271,63 +336,3 @@
 >
   <ContextMenuItems {items} />
 </dialog>
-
-<style lang="scss">
-  @keyframes scale-in {
-    0% {
-      transform: scale(0.5);
-      opacity: 0;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-
-  #context-menu {
-    --ctx-background: #fff;
-    --ctx-border: rgba(0, 0, 0, 0.25);
-    --ctx-shadow-color: rgba(0, 0, 0, 0.12);
-
-    --ctx-item-hover: #2497e9;
-    --ctx-item-danger-hover: #ff4d4f;
-    --ctx-item-submenu-open: rgba(0, 0, 0, 0.065);
-    --ctx-item-text: #210e1f;
-    --ctx-item-text-hover: #fff;
-
-    isolation: isolate;
-    position: fixed;
-    top: var(--y);
-    left: var(--x);
-    z-index: 2147483647; /* max value lol */
-    min-width: 180px;
-    height: fit-content;
-    background: var(--ctx-background);
-    padding: 0.25rem;
-    border-radius: 9px;
-    border: 0.5px solid var(--ctx-border);
-    box-shadow: 0 2px 10px var(--ctx-shadow-color);
-    user-select: none;
-    font-size: 0.9em;
-    transform-origin: top left;
-
-    animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
-
-    &::backdrop {
-      background-color: rgba(0, 0, 0, 0);
-    }
-  }
-
-  :global(body.dark) #context-menu {
-    --ctx-background: #111b2b;
-    --ctx-border: rgba(255, 255, 255, 0.25);
-
-    --ctx-item-text: #fff;
-    --ctx-item-submenu-open: rgba(255, 255, 255, 0.075);
-    --ctx-shadow-color: rgba(125, 125, 125, 0.25);
-  }
-
-  :global(body[data-context-menu='true'] *) {
-    -webkit-app-region: no-drag !important;
-  }
-</style>

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Fn } from "@deta/types";
-  import type { Snippet } from "svelte";
+  import type { Fn } from '@deta/types'
+  import type { Snippet } from 'svelte'
 
   const {
     active,
@@ -11,13 +11,13 @@
     children,
     ...restProps
   }: {
-    active?: boolean;
-    disabled?: boolean;
-    muted?: boolean;
-    separator?: boolean;
-    onclick?: Fn;
-    children?: Snippet;
-  } = $props();
+    active?: boolean
+    disabled?: boolean
+    muted?: boolean
+    separator?: boolean
+    onclick?: Fn
+    children?: Snippet
+  } = $props()
 </script>
 
 <button

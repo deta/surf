@@ -1,52 +1,50 @@
 <script lang="ts">
-	import { getAllContexts, mount, onMount, onDestroy, unmount } from "svelte";
-    import { useOverlayManager, type Overlay } from "@deta/services/views";
-    import type { Fn } from "@deta/types";
-    import { copyStyles } from "@deta/utils/src/dom/copy-styles.svelte"
+  import { getAllContexts, mount, onMount, onDestroy, unmount } from 'svelte'
+  import { useOverlayManager, type Overlay } from '@deta/services/views'
+  import type { Fn } from '@deta/types'
+  import { copyStyles } from '@deta/utils/src/dom/copy-styles.svelte'
 
-	import OverlayConsumer from "./OverlayConsumer.svelte";
-    import type { OverlayProps } from "./types.js";
+  import OverlayConsumer from './OverlayConsumer.svelte'
+  import type { OverlayProps } from './types.js'
 
-	let { bounds, children, disabled }: OverlayProps = $props();
+  let { bounds, children, disabled }: OverlayProps = $props()
 
-    const overlayManager = useOverlayManager()
+  const overlayManager = useOverlayManager()
 
-    let overlay: Overlay
-	let instance: ReturnType<typeof mount> | null;
+  let overlay: Overlay
+  let instance: ReturnType<typeof mount> | null
 
-	function unmountInstance() {
-        if (overlay) {
-            overlayManager.destroy(overlay.id)
-        }
+  function unmountInstance() {
+    if (overlay) {
+      overlayManager.destroy(overlay.id)
+    }
 
-		if (instance) {
-			unmount(instance);
-			instance = null;
-		}
-	}
+    if (instance) {
+      unmount(instance)
+      instance = null
+    }
+  }
 
-    let unsubs: Fn[] = []
+  let unsubs: Fn[] = []
 
-    onMount(async () => {
-        overlay = await overlayManager.create({ bounds })
+  onMount(async () => {
+    overlay = await overlayManager.create({ bounds })
 
-        instance = mount(OverlayConsumer, {
-            target: overlay.wrapperElement,
-            props: { children }
-        });
-
-        unsubs.push(
-           copyStyles(overlay.window)
-        )
+    instance = mount(OverlayConsumer, {
+      target: overlay.wrapperElement,
+      props: { children }
     })
 
-	onDestroy(() => {
-        unsubs.forEach(unsub => unsub())
+    unsubs.push(copyStyles(overlay.window))
+  })
 
-        unmountInstance();
-    });
+  onDestroy(() => {
+    unsubs.forEach((unsub) => unsub())
+
+    unmountInstance()
+  })
 </script>
 
 {#if disabled}
-	{@render children?.()}
+  {@render children?.()}
 {/if}

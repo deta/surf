@@ -174,6 +174,11 @@ export interface MentionSearch extends IPCEvent {
   output: MentionItem[]
 }
 
+export type UpdateViewBounds = {
+  viewId: string
+  bounds: Electron.Rectangle
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -244,6 +249,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
   webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
   citationClick: ipcService.addEvent<CitationClickEvent>('citation-click'),
+  updateViewBounds: ipcService.addEvent<UpdateViewBounds>('update-view-bounds'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),

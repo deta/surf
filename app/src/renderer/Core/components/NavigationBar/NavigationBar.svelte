@@ -6,7 +6,7 @@
   import { writable } from 'svelte/store'
   import LocationBar from './LocationBar.svelte'
   import WebContentsView from '../WebContentsView.svelte'
-  import { type Snippet } from "svelte"
+  import { type Snippet } from 'svelte'
   import NavigationBarGroup from './NavigationBarGroup.svelte'
   import SaveState from './SaveState.svelte'
   import { isInternalRendererURL } from '@deta/utils'
@@ -21,12 +21,23 @@
     hideNavigationControls = false,
     hideSearch = false,
 
-    leftChildren, rightChildren
-  }: { view: WebContentsView; centeredBreadcrumbs?: boolean; readonlyLocation?: boolean; locationInputDisabled?: boolean, hideNavigationControls?: boolean, hideSearch?: boolean, leftChildren?: Snippet; rightChildren?: Snippet } = $props()
+    leftChildren,
+    rightChildren
+  }: {
+    view: WebContentsView
+    centeredBreadcrumbs?: boolean
+    readonlyLocation?: boolean
+    locationInputDisabled?: boolean
+    hideNavigationControls?: boolean
+    hideSearch?: boolean
+    leftChildren?: Snippet
+    rightChildren?: Snippet
+  } = $props()
 
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
   const navigationHistoryIndex = $derived(view.navigationHistoryIndex)
+  const extractedResourceId = $derived(view.extractedResourceId)
 
   const canGoBack = $derived($navigationHistoryIndex > 0)
   const canGoForward = $derived($navigationHistoryIndex < $navigationHistory?.length - 1)
@@ -63,16 +74,18 @@
   {/if}
   <NavigationBarGroup fullWidth={!centeredBreadcrumbs}>
     <BreadcrumbItems {view} />
-    <LocationBar {view} readonly={readonlyLocation}/>
+    <LocationBar {view} readonly={readonlyLocation} />
     {#if !isInternalRendererURL($activeLocation)}
-      <SaveState {view} />
+      {#key $extractedResourceId}
+        <SaveState {view} />
+      {/key}
     {/if}
   </NavigationBarGroup>
 
   {#if !hideSearch}
     <NavigationBarGroup>
-        <!-- TODO: (maxu): Make better check -->
-        <SearchInput collapsed={!$activeLocation?.includes('notebook.html')} />
+      <!-- TODO: (maxu): Make better check -->
+      <SearchInput collapsed={!$activeLocation?.includes('notebook.html')} />
     </NavigationBarGroup>
   {/if}
 

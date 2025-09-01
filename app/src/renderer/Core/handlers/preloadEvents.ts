@@ -1,10 +1,12 @@
 import { type CitationClickEvent, type Fn } from '@deta/types'
 import { useLogScope } from '@deta/utils/io'
 import { useTabs } from '@deta/services/tabs'
+import { useViewManager } from '@deta/services/views'
 
 export function handlePreloadEvents() {
   const log = useLogScope('PreloadEvents')
   const tabsManager = useTabs()
+  const viewManager = useViewManager()
 
   const unsubs: Fn[] = []
 
@@ -77,7 +79,7 @@ export function handlePreloadEvents() {
     const activeTab = tabsManager.activeTabValue
     if (activeTab && activeTab.view.webContents) {
       if (force) {
-        activeTab.view.webContents.forceReload()
+        activeTab.view.webContents.reload(true)
       } else {
         activeTab.view.webContents.reload()
       }
@@ -90,6 +92,10 @@ export function handlePreloadEvents() {
       active: true,
       ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
     })
+  })
+
+  horizonPreloadEvents.onUpdateViewBounds((viewId, bounds) => {
+    viewManager.updateViewBounds(viewId, bounds)
   })
 
   return () => {

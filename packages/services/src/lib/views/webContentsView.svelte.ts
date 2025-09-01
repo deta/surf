@@ -26,7 +26,8 @@ import {
   ResourceTypes,
   type WebViewReceiveEvents,
   ResourceTagDataStateValue,
-  type PageHighlightSelectionData
+  type PageHighlightSelectionData,
+  WEBVIEW_MOUSE_CLICK_WINDOW_EVENT
 } from '@deta/types'
 import {
   useLogScope,
@@ -323,6 +324,16 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.emit(WebContentsEmitterNames.KEYDOWN, event)
   }
 
+  private handleMouseClick(event: WebViewSendEvents[WebViewEventSendNames.MouseClick]) {
+    this.log.debug('Mouse click event in webview:', event)
+    // emit a global event on the window
+    window.dispatchEvent(
+      new CustomEvent(WEBVIEW_MOUSE_CLICK_WINDOW_EVENT, {
+        detail: event
+      })
+    )
+  }
+
   private handleDetectedApp(detectedApp: WebViewSendEvents[WebViewEventSendNames.DetectedApp]) {
     this.log.debug('Detected app event in webview:', detectedApp)
     this.view.detectedApp.set(detectedApp)
@@ -341,6 +352,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     if (eventType === WebViewEventSendNames.KeyDown) {
       this.handleKeyDown(eventData as WebViewSendEvents[WebViewEventSendNames.KeyDown])
       return
+    } else if (eventType === WebViewEventSendNames.MouseClick) {
+      this.handleMouseClick(eventData as WebViewSendEvents[WebViewEventSendNames.MouseClick])
     } else if (eventType === WebViewEventSendNames.DetectedApp) {
       this.handleDetectedApp(eventData as WebViewSendEvents[WebViewEventSendNames.DetectedApp])
     }

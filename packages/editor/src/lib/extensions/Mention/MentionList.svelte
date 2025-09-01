@@ -3,7 +3,7 @@
   import { Favicon } from '@deta/ui'
   import { MentionItemType, type MentionItem } from '../../types'
 
-  let { 
+  let {
     items = [],
     callback,
     minimal = false,
@@ -22,18 +22,20 @@
   let itemElements: HTMLDivElement[] = $state([])
   let disableMouseover = $state(false)
 
-  const sections = $derived(items.reduce(
-    (acc, item) => {
-      const type = item.type ?? MentionItemType.OTHER
-      if (!acc[type]) {
-        acc[type] = []
-      }
+  const sections = $derived(
+    items.reduce(
+      (acc, item) => {
+        const type = item.type ?? MentionItemType.OTHER
+        if (!acc[type]) {
+          acc[type] = []
+        }
 
-      acc[type].push(item)
-      return acc
-    },
-    {} as Record<MentionItemType, MentionItem[]>
-  ))
+        acc[type].push(item)
+        return acc
+      },
+      {} as Record<MentionItemType, MentionItem[]>
+    )
+  )
 
   export function onKeyDown(event: KeyboardEvent): boolean {
     const flatItems = Object.values(sections).flat()
@@ -178,7 +180,7 @@
     display: flex;
     align-items: center;
     gap: 0.5em;
-    color: #5B6882;
+    color: #5b6882;
   }
 
   .item-text {
@@ -188,8 +190,8 @@
   }
 
   .active {
-    background-color: #E5E9FF;
-    color: #5B6882;
+    background-color: #e5e9ff;
+    color: #5b6882;
   }
 
   .section {

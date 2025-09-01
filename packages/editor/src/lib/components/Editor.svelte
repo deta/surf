@@ -649,22 +649,21 @@
 
   /* Suggestion pill styling */
   :global(.suggestion-pill) {
-    background: #E5E9FF;
+    background: #e5e9ff;
     border-radius: 12px;
     padding: 0 12px 1px 6px;
     margin: 0 1px;
     font-size: 1em;
-    color: #A4ABC0;
+    color: #a4abc0;
     font-weight: 400;
-    letter-spacing: 0.01em;    line-height: 1;
+    letter-spacing: 0.01em;
+    line-height: 1;
     vertical-align: baseline;
   }
-
 
   :global(.dark .suggestion-pill) {
     background: #1e3a8a;
     border-color: #3b82f6;
     color: #93c5fd;
   }
-
 </style>

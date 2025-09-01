@@ -17,12 +17,21 @@
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { isInternalRendererURL } from '@deta/utils/formatting'
-  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte';
-  import type { ContextManager } from '@deta/services/ai';
+  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
+  import type { ContextManager } from '@deta/services/ai'
+  import { prepareContextMenu } from '@deta/ui'
 
   const log = useLogScope('Core')
 
-  const { config, viewManager, notebookManager, tabsService, ai, keyboardManager, shortcutsManager } = initServices()
+  const {
+    config,
+    viewManager,
+    notebookManager,
+    tabsService,
+    ai,
+    keyboardManager,
+    shortcutsManager
+  } = initServices()
 
   // const overlayManager = useOverlayManager()
 
@@ -44,8 +53,13 @@
         contextManager.onlyUseTabInContext(activeTab)
       } else if (internalUrl && internalUrl.hostname === 'notebook') {
         const notebookId = internalUrl.pathname.slice(1)
-        log.debug('Internal notebook URL detected:', internalUrl, 'adding notebook to context', notebookId)
-        notebookManager.getNotebook(notebookId).then(notebook => {
+        log.debug(
+          'Internal notebook URL detected:',
+          internalUrl,
+          'adding notebook to context',
+          notebookId
+        )
+        notebookManager.getNotebook(notebookId).then((notebook) => {
           contextManager.onlyUseNotebookInContext(notebook)
         })
       } else {
@@ -61,6 +75,8 @@
     log.debug('User settings:', settings)
 
     await tabsService.ready
+
+    prepareContextMenu()
 
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Creating new tab (CMD+T)')

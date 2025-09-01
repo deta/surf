@@ -19,3 +19,25 @@ export type OverlayProps = {
    */
   bounds?: Rectangle
 }
+
+export type OverlayPopoverProps = {
+  /**
+   * Whether the popover is open.
+   */
+  open?: boolean
+
+  /**
+   * The position of the popover relative to the trigger.
+   */
+  position?: 'top' | 'bottom' | 'left' | 'right'
+
+  /**
+   * The children content to render within the portal.
+   */
+  children?: Snippet
+
+  /**
+   * The trigger content to render within the portal.
+   */
+  trigger?: Snippet
+}

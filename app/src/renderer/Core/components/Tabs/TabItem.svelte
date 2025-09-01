@@ -1,7 +1,7 @@
 <script lang="ts">
   import { useTabs, TabItem } from '@deta/services/tabs'
   import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
-  import { Favicon, Button } from '@deta/ui'
+  import { Favicon, Button, type CtxItem, contextMenu } from '@deta/ui'
   import { Icon } from '@deta/icons'
   import { HTMLDragItem, DragData } from '@deta/dragcula'
   import { DragTypeNames } from '@deta/types'
@@ -29,6 +29,10 @@
   const title = tab.view.title
   const url = tab.view.url
 
+  function closeTab() {
+    tabsService.delete(tab.id)
+  }
+
   function handleClick() {
     tabsService.setActiveTab(tab.id)
   }
@@ -52,6 +56,21 @@
   function handleDragStart() {
     tabsService.setActiveTab(tab.id)
   }
+
+  const items = [
+    {
+      type: 'action',
+      icon: 'reload',
+      text: 'Reload Tab',
+      action: () => tab.view.webContents?.reload()
+    },
+    {
+      type: 'action',
+      icon: 'close',
+      text: 'Close Tab',
+      action: () => closeTab()
+    }
+  ] satisfies CtxItem[]
 </script>
 
 <div
@@ -66,6 +85,7 @@
   onclick={handleClick}
   aria-hidden="true"
   draggable="true"
+  use:contextMenu={{ items }}
   use:HTMLDragItem.action={{
     id: `tab-${tab.id}`,
     data: (() => {

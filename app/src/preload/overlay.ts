@@ -2,62 +2,20 @@ import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 import path from 'path'
-import http from 'http'
+import { mkdirSync } from 'fs'
 
-import EventEmitter from 'events'
-import * as crypto from 'crypto'
-import { v4 as uuidv4 } from 'uuid'
-import {
-  promises as fsp,
-  createReadStream,
-  createWriteStream,
-  ReadStream,
-  WriteStream,
-  mkdirSync
-} from 'fs'
-import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/api'
 import { type UserSettings } from '@deta/types'
 
 import { getUserConfig } from '../main/config'
-import { IPC_EVENTS_RENDERER, SpaceBasicData } from '@deta/services/ipc'
+import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 
-enum ResourceProcessingStateType {
-  Pending = 'pending',
-  Started = 'started',
-  Failed = 'failed',
-  Finished = 'finished'
-}
-
-enum EventBusMessageType {
-  ResourceProcessingMessage = 'ResourceProcessingMessage'
-}
-
-type ResourceProcessingState =
-  | { type: ResourceProcessingStateType.Pending }
-  | { type: ResourceProcessingStateType.Started }
-  | { type: ResourceProcessingStateType.Failed; message: string }
-  | { type: ResourceProcessingStateType.Finished }
-
-type EventBusMessage = {
-  type: EventBusMessageType.ResourceProcessingMessage
-  resource_id: string
-  status: ResourceProcessingState
-}
-
-const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
-
-const ENABLE_DEBUG_PROXY = process.argv.includes('--enable-debug-proxy')
 
 const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
 const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
-const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
-
-const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
-const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
@@ -114,8 +72,15 @@ const api = {
     IPC_EVENTS_RENDERER.restartApp.send()
   },
 
-  updateSpacesList: async (data: SpaceBasicData[]) => {
-    IPC_EVENTS_RENDERER.updateSpacesList.send(data)
+  updateViewBounds: (bounds: Electron.Rectangle) => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const overlayId = searchParams.get('overlayId')
+    if (!overlayId) {
+      console.error('No overlayId found in URL search params')
+      return
+    }
+
+    IPC_EVENTS_RENDERER.updateViewBounds.send({ viewId: overlayId, bounds })
   }
 }
 

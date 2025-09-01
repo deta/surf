@@ -4,6 +4,7 @@ import '../assets/fonts/Bayshore.woff'
 import '../assets/fonts/Gambarino-Regular.woff'
 import '../assets/fonts/Gambarino-Regular.woff2'
 import '@deta/ui/src/app.css'
+import '@deta/ui/src/lib/components/ContextMenu/style.scss'
 import Overlay from './Overlay.svelte'
 import { mount } from 'svelte'
 

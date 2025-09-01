@@ -1,11 +1,11 @@
 <script lang="ts">
   // TODO: persist size
-  import { useViewManager } from "@deta/services/views"
+  import { useViewManager } from '@deta/services/views'
   import { Button } from '@deta/ui'
   import { Icon } from '@deta/icons'
-  import WebContentsView from "../WebContentsView.svelte"
-  import NavigationBar from "../NavigationBar/NavigationBar.svelte"
-  import NavigationBarGroup from "../NavigationBar/NavigationBarGroup.svelte"
+  import WebContentsView from '../WebContentsView.svelte'
+  import NavigationBar from '../NavigationBar/NavigationBar.svelte'
+  import NavigationBarGroup from '../NavigationBar/NavigationBarGroup.svelte'
 
   const viewManager = useViewManager()
 
@@ -42,13 +42,18 @@
   }
 </script>
 
-
 {#if viewManager.sidebarViewOpen && viewManager.activeSidebarView}
   <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
   <aside class:open={viewManager.sidebarViewOpen} style:--sidebarWidth={sidebarWidth + 'px'}>
     <div class="sidebar-content">
       {#if viewManager.activeSidebarView}
-        <NavigationBar view={viewManager.activeSidebarView} readonlyLocation hideNavigationControls centeredBreadcrumbs hideSearch>
+        <NavigationBar
+          view={viewManager.activeSidebarView}
+          readonlyLocation
+          hideNavigationControls
+          centeredBreadcrumbs
+          hideSearch
+        >
           {#snippet leftChildren()}
             <NavigationBarGroup slim>
               <!-- TODO: Implement sth like surf://new -->
@@ -66,7 +71,9 @@
             </NavigationBarGroup>
           {/snippet}
         </NavigationBar>
-        <div style="position:relative;height:100%;border-inline: 1px solid var(--border-color);margin-inline: -1px;">
+        <div
+          style="position:relative;height:100%;border-inline: 1px solid var(--border-color);margin-inline: -1px;"
+        >
           <WebContentsView view={viewManager.activeSidebarView} active />
         </div>
       {/if}
@@ -75,28 +82,28 @@
 {/if}
 
 <style lang="scss">
-.resize-handle {
-  position: relative;
-  width: 1.25rem;
+  .resize-handle {
+    position: relative;
+    width: 1.25rem;
     cursor: col-resize;
-  &::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    height: 30%;
-    width: 4px;
-    transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.08);
-    border-radius: 20px;
+    &::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      height: 30%;
+      width: 4px;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 20px;
 
-    transition: background 123ms ease-out;
+      transition: background 123ms ease-out;
+    }
+    &:hover::before {
+      background: rgba(0, 0, 0, 0.15);
+    }
   }
-  &:hover::before {
-    background: rgba(0,0,0,0.15);
-  }
-}
-aside {
+  aside {
     display: flex;
     width: var(--sidebarWidth);
 

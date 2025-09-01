@@ -55,6 +55,10 @@ export class Overlay {
     return this.window.document.getElementById('wcv-overlay-content') || this.window.document.body
   }
 
+  handleClickOutside(event: MouseEvent) {
+    this.manager.destroy(this.id)
+  }
+
   attachListeners() {
     const unsubWebContentsEvents = window.preloadEvents.onWebContentsViewEvent(
       (event: WebContentsViewEvent) => {
@@ -72,6 +76,8 @@ export class Overlay {
     )
 
     this.unsubs.push(unsubWebContentsEvents)
+
+    window.addEventListener('click', (event) => this.handleClickOutside(event), { passive: true })
   }
 
   async saveBounds(bounds: Electron.Rectangle) {
@@ -92,9 +98,35 @@ export class Overlay {
     )) as Promise<WebContentsViewActionOutputs[WebContentsViewActionType.ACTIVATE]>
   }
 
+  async focus() {
+    return (await window.api.webContentsViewAction(
+      this.id,
+      WebContentsViewActionType.FOCUS,
+      {}
+    )) as Promise<WebContentsViewActionOutputs[WebContentsViewActionType.FOCUS]>
+  }
+
+  async hide() {
+    return (await window.api.webContentsViewAction(
+      this.id,
+      WebContentsViewActionType.HIDE,
+      {}
+    )) as Promise<WebContentsViewActionOutputs[WebContentsViewActionType.HIDE]>
+  }
+
+  async openDevTools() {
+    return (await window.api.webContentsViewAction(
+      this.id,
+      WebContentsViewActionType.OPEN_DEV_TOOLS,
+      {}
+    )) as Promise<WebContentsViewActionOutputs[WebContentsViewActionType.OPEN_DEV_TOOLS]>
+  }
+
   destroy() {
     this.unsubs.forEach((unsub) => unsub())
     this.unsubs = []
+
+    window.removeEventListener('click', (event) => this.handleClickOutside(event))
 
     return window.api.webContentsViewAction(
       this.id,
@@ -111,6 +143,8 @@ export class OverlayManager {
   viewManager: ViewManager
 
   overlays: Map<string, Overlay> = new Map() // Maps overlay IDs to overlay instances
+  private overlayPool: Overlay[] = [] // Pool of pre-created overlays
+  private readonly poolSize = 3 // Number of overlays to pre-create
 
   constructor() {
     this.log = useLogScope('OverlayManager')
@@ -120,9 +154,24 @@ export class OverlayManager {
       // @ts-ignore
       window.overlayManager = this
     }
+
+    this.log.debug(`Initializing overlay pool with ${this.poolSize} overlays`)
+    this.refillPool()
   }
 
-  async create(opts?: { bounds?: Electron.Rectangle }) {
+  private async refillPool() {
+    this.log.debug('Refilling overlay pool')
+    const needed = this.poolSize - this.overlayPool.length
+
+    if (needed <= 0) return
+
+    for (let i = 0; i < needed; i++) {
+      const overlay = await this.createOverlay({ hidden: true })
+      this.overlayPool.push(overlay)
+    }
+  }
+
+  private async createOverlay(opts?: { bounds?: Electron.Rectangle; hidden?: boolean }) {
     const overlayId = `overlay-${Date.now()}`
 
     const overlayWindow = window.open(
@@ -145,7 +194,35 @@ export class OverlayManager {
 
     await overlay.init()
 
-    this.overlays.set(overlayId, overlay)
+    if (!opts?.hidden) {
+      await overlay.activate()
+    }
+
+    return overlay
+  }
+
+  async create(opts?: { bounds?: Electron.Rectangle }) {
+    // Try to get an overlay from the pool
+    const pooledOverlay = this.overlayPool.pop()
+    if (pooledOverlay) {
+      this.log.debug('Reusing overlay from pool', pooledOverlay)
+
+      if (opts?.bounds) {
+        await pooledOverlay.saveBounds(opts.bounds)
+      }
+
+      await pooledOverlay.activate()
+      this.overlays.set(pooledOverlay.id, pooledOverlay)
+
+      // Refill the pool asynchronously
+      setTimeout(() => this.refillPool(), 0)
+
+      return pooledOverlay
+    }
+
+    // If no overlay is available in the pool, create a new one
+    const overlay = await this.createOverlay(opts)
+    this.overlays.set(overlay.id, overlay)
 
     return overlay
   }
@@ -158,6 +235,7 @@ export class OverlayManager {
     }
 
     this.log.debug(`Destroying overlay with ID: ${overlayId}`, overlay)
+    this.overlays.delete(overlayId)
     await overlay.destroy()
   }
 

@@ -36,6 +36,7 @@ export enum WebViewEventSendNames {
   Focus = 'focus',
   KeyUp = 'key_up',
   KeyDown = 'key_down',
+  MouseClick = 'mouse_click',
   DetectedApp = 'detected_app',
   DetectedResource = 'detected_resource',
   ActionOutput = 'action_output',
@@ -95,6 +96,12 @@ export type WebViewEventWheel = {
   pageY: number
   screenX: number
   screenY: number
+}
+
+export type WebViewEventMouseClick = {
+  clientX: number
+  clientY: number
+  button: number
 }
 
 export type WebViewEventBookmark = { text?: string; url: string }
@@ -189,6 +196,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.Focus]: void
   [WebViewEventSendNames.KeyUp]: WebViewEventKeyUp
   [WebViewEventSendNames.KeyDown]: WebViewEventKeyDown
+  [WebViewEventSendNames.MouseClick]: WebViewEventMouseClick
   [WebViewEventSendNames.DetectedApp]: DetectedWebApp
   [WebViewEventSendNames.DetectedResource]: DetectedResource | null
   [WebViewEventSendNames.ActionOutput]: WebViewEventActionOutput
@@ -213,3 +221,5 @@ export enum WebviewAnnotationEventNames {
 export type WebviewAnnotationEvents = {
   [WebviewAnnotationEventNames.Click]: WebViewEventAnnotationClick
 }
+
+export const WEBVIEW_MOUSE_CLICK_WINDOW_EVENT = 'webview-mouse-click'

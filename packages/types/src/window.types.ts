@@ -77,7 +77,7 @@ export interface WebContentsViewActionPayloads {
   [WebContentsViewActionType.RELOAD]: { ignoreCache?: boolean } | undefined
   [WebContentsViewActionType.GO_FORWARD]: undefined
   [WebContentsViewActionType.GO_BACK]: undefined
-  [WebContentsViewActionType.SET_BOUNDS]: Rectangle
+  [WebContentsViewActionType.SET_BOUNDS]: Partial<Rectangle>
   [WebContentsViewActionType.LOAD_URL]: { url: string }
   [WebContentsViewActionType.INSERT_TEXT]: { text: string }
   [WebContentsViewActionType.GET_URL]: undefined

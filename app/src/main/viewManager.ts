@@ -87,14 +87,21 @@ export class WCView {
     console.log('[main] webcontentsview-create: view created successfully with id', this.id)
   }
 
-  setBounds(bounds: Electron.Rectangle) {
+  setBounds(bounds: Partial<Electron.Rectangle>) {
     console.log(
       '[main] webcontentsview-setBounds: setting bounds for view with id',
       this.id,
       'to',
       bounds
     )
-    this.wcv.setBounds(bounds)
+
+    const currentBounds = this.wcv.getBounds()
+    const fullBounds = {
+      ...currentBounds,
+      ...bounds
+    }
+
+    this.wcv.setBounds(fullBounds)
   }
 
   recreateWCVWithDifferentWebPreferences(webPreferences: Electron.WebPreferences) {
@@ -517,7 +524,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.views.set(view.id, view)
     this.activeOverlayViewId = view.id
 
-    this.addChildView(view)
+    //this.addChildView(view)
     console.log('[main] webcontentsview-create: added view to window with id', view.id)
 
     this.emit('create', view)
@@ -1029,7 +1036,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             await view.loadURL(payload.url)
             return true
           } else if (type === WebContentsViewActionType.HIDE) {
-            // this.hideView(viewId)
+            this.hideView(viewId)
             return true
           } else if (type === WebContentsViewActionType.INSERT_TEXT) {
             view.insertText(payload.text)

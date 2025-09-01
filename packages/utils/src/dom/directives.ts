@@ -1,11 +1,7 @@
-import type { Fn } from '@deta/types'
+import { WEBVIEW_MOUSE_CLICK_WINDOW_EVENT, type Fn } from '@deta/types'
 import type { Attachment } from 'svelte/attachments'
 import type { Writable } from 'svelte/store'
 
-/**
- * TODO: Needs to work with WebContentsViews as well -> Need some way of triggering when clicking
- * inside another WCV outside where this is used in.
- */
 export function clickOutside(callback: Fn): Attachment {
   return (element: Element) => {
     const handleClick = (e: MouseEvent) => {
@@ -13,7 +9,14 @@ export function clickOutside(callback: Fn): Attachment {
     }
 
     window.addEventListener('click', handleClick, { capture: true })
-    return () => window.removeEventListener('click', handleClick, { capture: true })
+    window.addEventListener(WEBVIEW_MOUSE_CLICK_WINDOW_EVENT, () => callback(), { capture: true })
+
+    return () => {
+      window.removeEventListener('click', handleClick, { capture: true })
+      window.removeEventListener(WEBVIEW_MOUSE_CLICK_WINDOW_EVENT, () => callback(), {
+        capture: true
+      })
+    }
   }
 }
 

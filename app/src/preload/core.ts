@@ -499,6 +499,16 @@ const eventHandlers = {
     })
   },
 
+  onUpdateViewBounds: (callback: (viewId: string, bounds: Electron.Rectangle) => void) => {
+    return IPC_EVENTS_RENDERER.updateViewBounds.on((_, { viewId, bounds }) => {
+      try {
+        callback(viewId, bounds)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
   onWebContentsViewEvent: (callback: (event: WebContentsViewEvent) => void) => {
     return IPC_EVENTS_RENDERER.webContentsViewEvent.on((_, event) => {
       try {

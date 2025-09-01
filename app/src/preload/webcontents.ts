@@ -311,6 +311,14 @@ window.addEventListener('DOMContentLoaded', async (_) => {
   runAppDetection()
 })
 
+window.addEventListener('click', (event: MouseEvent) => {
+  sendPageEvent(WebViewEventSendNames.MouseClick, {
+    button: event.button,
+    clientX: event.clientX,
+    clientY: event.clientY
+  })
+})
+
 window.addEventListener('keyup', (event: KeyboardEvent) => {
   sendPageEvent(WebViewEventSendNames.KeyUp, { key: event.key })
 })

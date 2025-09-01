@@ -141,6 +141,16 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     this.viewOverlays.set(viewId, overlayViewId)
   }
 
+  getViewById(viewId: string) {
+    const view = this.viewsValue.find((v) => v.id === viewId)
+    if (!view) {
+      this.log.warn(`WebContentsView with ID ${viewId} does not exist.`)
+      return null
+    }
+
+    return view
+  }
+
   create(data: Partial<WebContentsViewData>) {
     const fullData = {
       id: data.id || generateID(),
@@ -313,6 +323,24 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
     // @ts-ignore
     window.api.webContentsViewManagerAction(WebContentsViewManagerActionType.HIDE_ALL)
+  }
+
+  updateViewBounds(viewId: string, bounds: Electron.Rectangle) {
+    const view = this.getViewById(viewId)
+    if (!view) {
+      this.log.warn(`WebContentsView with ID ${viewId} does not exist. Cannot update bounds.`)
+      return
+    }
+
+    if (!view.webContents) {
+      this.log.warn(
+        `WebContents for view with ID ${viewId} is not initialized. Cannot update bounds.`
+      )
+      return
+    }
+
+    this.log.debug(`Updating bounds for WebContentsView with ID: ${viewId}`, bounds)
+    view.webContents.setBounds(bounds)
   }
 
   setSidebarState({ open, view }: { open?: boolean; view?: WebContentsView }) {

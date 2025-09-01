@@ -472,6 +472,12 @@ function setupIpcHandlers(backendRootPath: string) {
 
     return await IPC_EVENTS_MAIN.fetchMentions.requestFromRenderer(window.webContents, action)
   })
+
+  IPC_EVENTS_MAIN.updateViewBounds.on((event, { viewId, bounds }) => {
+    if (!validateIPCSender(event)) return
+
+    ipcSenders.updateViewBounds(viewId, bounds)
+  })
 }
 
 export const ipcSenders = {
@@ -827,5 +833,15 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.saveLink.sendToWebContents(window.webContents, { url, spaceId })
+  },
+
+  updateViewBounds(viewId: string, bounds: Electron.Rectangle) {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.updateViewBounds.sendToWebContents(window.webContents, { viewId, bounds })
   }
 }

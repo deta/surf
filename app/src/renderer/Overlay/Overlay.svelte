@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { wait } from '@deta/utils'
 
   const searchParams = new URLSearchParams(window.location.search)
   let overlayId: string = searchParams.get('overlayId') || 'default'
@@ -36,6 +37,7 @@
   onMount(() => {
     console.log('Overlay mounted with ID:', overlayId)
 
+    document.body.classList.remove('hide-everything')
     // // Check if the mouse is within the bounds of the overlay
     // const checkMouseInOverlay = () => {
     //   const overlayElement = document.querySelector('.overlay-content')
@@ -87,7 +89,7 @@
     width: 100%;
     margin: 0;
     padding: 10px;
-    background: #ffffff00;
+    background: transparent;
   }
 
   .overlay-wrapper {

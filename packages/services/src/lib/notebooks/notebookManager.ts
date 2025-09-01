@@ -289,7 +289,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   async addResourcesToNotebook(
     notebookId: string,
     resourceIds: string[],
-    origin: SpaceEntryOrigin
+    origin: SpaceEntryOrigin = SpaceEntryOrigin.ManuallyAdded
   ) {
     this.log.debug('adding resources to notebook', notebookId, resourceIds, origin)
 
