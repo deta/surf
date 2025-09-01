@@ -2,8 +2,10 @@ import { type ShortcutDefinition, ShortcutPriority } from './shortcutsManager'
 
 // Define all available shortcuts in the app
 export enum ShortcutActions {
+  TOGGLE_DEBUG_MODE = 'TOGGLE_DEBUG_MODE',
   CLOSE_TAB = 'CLOSE_TAB',
   NEW_TAB = 'NEW_TAB',
+  REOPEN_CLOSED_TAB = 'REOPEN_CLOSED_TAB',
   CLOSE_TELETYPE = 'CLOSE_TELETYPE',
   SWITCH_TO_TAB_1 = 'SWITCH_TO_TAB_1',
   SWITCH_TO_TAB_2 = 'SWITCH_TO_TAB_2',
@@ -20,6 +22,12 @@ export enum ShortcutActions {
 
 // Default shortcut definitions
 export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<ShortcutActions>> = {
+  [ShortcutActions.TOGGLE_DEBUG_MODE]: {
+    action: ShortcutActions.TOGGLE_DEBUG_MODE,
+    defaultCombo: 'Meta+Shift+D',
+    description: 'Toggle Debug Mode',
+    priority: ShortcutPriority.Normal
+  },
   [ShortcutActions.CLOSE_TAB]: {
     action: ShortcutActions.CLOSE_TAB,
     defaultCombo: 'Meta+W',
@@ -30,6 +38,12 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     action: ShortcutActions.NEW_TAB,
     defaultCombo: 'Meta+T',
     description: 'Create a new tab',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.REOPEN_CLOSED_TAB]: {
+    action: ShortcutActions.REOPEN_CLOSED_TAB,
+    defaultCombo: 'Meta+Shift+T',
+    description: 'Reopen the last closed tab',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.CLOSE_TELETYPE]: {

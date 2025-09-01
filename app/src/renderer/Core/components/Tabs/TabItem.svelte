@@ -30,11 +30,9 @@
   const title = tab.view.title
   const url = tab.view.url
   const faviconURL = tab.view.faviconURL
-  const stateIndicator = $derived(tab.stateIndicator)
+  const stateIndicator = $derived(tab?.stateIndicator)
 
   const hostname = $derived(getHostname($url))
-
-  $inspect(stateIndicator)
 
   function closeTab() {
     tabsService.delete(tab.id)

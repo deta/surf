@@ -20,6 +20,7 @@
   import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import type { ContextManager } from '@deta/services/ai'
   import { prepareContextMenu } from '@deta/ui'
+  import { debugMode } from './stores/debug'
 
   const log = useLogScope('Core')
 
@@ -78,6 +79,30 @@
 
     prepareContextMenu()
 
+    // @ts-ignore
+    window.setLogLevel = (level: LogLevel) => {
+      // @ts-ignore
+      window.LOG_LEVEL = level
+      log.debug(`[Logger]: Log level set to '${level}'`)
+
+      return level
+    }
+
+    shortcutsManager.registerHandler(ShortcutActions.TOGGLE_DEBUG_MODE, () => {
+      log.debug('Toggling debug mode')
+      debugMode.update((mode) => !mode)
+
+      // @ts-ignore
+      if (window.LOG_LEVEL === 'debug') {
+        // @ts-ignore
+        window.setLogLevel('info')
+      } else {
+        // @ts-ignore
+        window.setLogLevel('debug')
+      }
+      return true
+    })
+
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Creating new tab (CMD+T)')
       tabsService.openNewTabPage()
@@ -89,6 +114,12 @@
       if (tabsService.activeTab) {
         tabsService.delete(tabsService.activeTab.id)
       }
+      return true
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.REOPEN_CLOSED_TAB, () => {
+      log.debug('Reopening last closed tab (CMD+Shift+T)')
+      tabsService.reopenLastClosed()
       return true
     })
 

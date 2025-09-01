@@ -106,13 +106,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
 
     this.log.debug(`Updating tab ${this.id} with data:`, data)
 
-    this.manager.update(this.id, {
-      id: this.id,
-      index: this.index,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
-      view: this.view.dataValue
-    })
+    this.manager.update(this.id, this.dataValue)
 
     this.emit(TabItemEmitterNames.UPDATE, this)
   }
@@ -141,6 +135,24 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   }
 }
 
+class ClosedTabs {
+  private MAX_CLOSED_TABS = 96
+  private closedTabs: KVTabItem[] = []
+
+  push(tab: KVTabItem) {
+    this.closedTabs.unshift(tab)
+    if (this.closedTabs.length > this.MAX_CLOSED_TABS) this.closedTabs.pop()
+  }
+
+  pop(): KVTabItem | undefined {
+    return this.closedTabs.shift()
+  }
+
+  get tabs() {
+    return this.closedTabs
+  }
+}
+
 /**
  * Central service for managing browser tabs. Handles tab creation, deletion, activation, and persistence.
  * This service maintains the state of all tabs, manages their order, and coordinates with the ViewManager
@@ -156,6 +168,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   private log: ScopedLogger
   private viewManager: ViewManager
   private kv: KVStore<KVTabItem>
+  private closedTabs: ClosedTabs
 
   private _lastTabIndex = -1
   private unsubs: Fn[] = []
@@ -199,6 +212,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     this.log = useLogScope('TabsService')
     this.viewManager = useViewManager()
     this.kv = useKVTable<KVTabItem>('tabs')
+    this.closedTabs = new ClosedTabs()
 
     this.ready = this.kv.ready
 
@@ -442,6 +456,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     const tab = this.tabs.find((t) => t.id === id)
     if (tab) {
       this.tabs = this.tabs.filter((t) => t.id !== id)
+      this.closedTabs.push(tab.dataValue)
 
       if (this.activeTabId === id) {
         // Set first tab as active if available
@@ -541,6 +556,22 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     setTimeout(() => this.prepareNewTabPage(), 0)
 
     return tab
+  }
+
+  async reopenLastClosed() {
+    const tabData = this.closedTabs.pop()
+    if (tabData) {
+      this.log.debug('Opening previously closed tab')
+
+      const tab = this.itemToTabItem(tabData)
+      if (!tab) {
+        this.log.error('Failed to convert closed tab data to tab item:', tabData)
+        return
+      }
+
+      this.tabs = [...this.tabs, tab]
+      this.setActiveTab(tab.id)
+    }
   }
 
   onDestroy() {
