@@ -6,6 +6,7 @@
   import { type Notebook } from '@deta/services/notebook'
   import { Button, PageMention } from '@deta/ui'
   import { Icon } from '@deta/icons'
+  import { Renamable } from '@deta/ui'
 
   let { notebook }: { notebook: Notebook } = $props()
 
@@ -13,6 +14,7 @@
   const resourceManager = useResourceManager()
 
   const contents = notebook.contents
+  const notebookData = notebook.data
   const contentsNotes = $derived(
     $contents.filter((e) => e.resource_type === 'application/vnd.space.document.space-note')
   )
@@ -31,12 +33,19 @@
 
 <svelte:head>
   <title
-    >{`${notebook.dataValue.emoji ? notebook.dataValue.emoji + ' ' : ''}${notebook.dataValue.folderName ?? notebook.dataValue.name}`}</title
+    >{`${$notebookData.emoji ? $notebookData.emoji + ' ' : ''}${$notebookData.folderName ?? $notebookData.name}`}</title
   >
 </svelte:head>
 
 <h1>
-  {`${notebook.dataValue.emoji ? notebook.dataValue.emoji + ' ' : ''}${notebook.dataValue.folderName ?? notebook.dataValue.name}`}
+  <Renamable
+    value={$notebookData.folderName ?? $notebookData.name}
+    onConfirm={(newTitle) => {
+      console.log('Renaming notebook to:', newTitle)
+      notebookManager.updateNotebookData(notebook.id, { name: newTitle })
+    }}
+    placeholder="Untitled Notebook"
+  />
 </h1>
 <div class="notes-list">
   <span class="label">Notes</span>

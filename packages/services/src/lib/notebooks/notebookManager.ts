@@ -9,6 +9,8 @@ import {
   SearchResourceTags
 } from '@deta/utils'
 
+import { useKVTable, type BaseKVItem } from '../kv'
+
 import {
   DeleteResourceEventTrigger,
   ResourceTypes,
@@ -28,6 +30,10 @@ import { Notebook } from './notebook'
 import type { NotebookManagerEmitterEvents } from './notebook.types'
 import { IconTypes } from '@deta/icons'
 
+type NotebookSettings = BaseKVItem & {
+  title: string
+}
+
 export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEvents> {
   notebooks: Writable<Notebook[]>
   selectedNotebook: Writable<string | null>
@@ -40,6 +46,9 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   config: ConfigService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
+
+  // Settings management
+  private settingsStore = useKVTable<NotebookSettings>('notebook_settings')
 
   static self: NotebookManager
 
@@ -581,6 +590,54 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     } catch (error) {
       this.log.error('failed to move notebook:', error)
       throw new Error('Failed to move notebook')
+    }
+  }
+
+  // Settings management methods
+  async loadTitle(): Promise<string> {
+    try {
+      await this.settingsStore.ready
+      const settings = await this.settingsStore.read('main')
+      if (settings) {
+        this.log.debug('Loaded title:', settings.title)
+        return settings.title
+      }
+      this.log.debug('No saved title found, using default')
+      return 'maxus notebook'
+    } catch (error) {
+      this.log.error('Failed to load notebook title:', error)
+      return 'maxus notebook'
+    }
+  }
+
+  async saveTitle(newTitle: string): Promise<void> {
+    try {
+      await this.settingsStore.ready
+      const existingSettings = await this.settingsStore.read('main')
+
+      if (existingSettings) {
+        await this.settingsStore.update('main', { title: newTitle })
+        this.log.debug('Updated title:', newTitle)
+      } else {
+        await this.settingsStore.create({
+          id: 'main',
+          title: newTitle
+        })
+        this.log.debug('Created new title setting:', newTitle)
+      }
+    } catch (error) {
+      this.log.error('Failed to save notebook title:', error)
+      throw error
+    }
+  }
+
+  async getSettings(): Promise<NotebookSettings | undefined> {
+    try {
+      await this.settingsStore.ready
+      return await this.settingsStore.read('main')
+    } catch (error) {
+      this.log.error('Failed to get settings:', error)
+      return undefined
     }
   }
 

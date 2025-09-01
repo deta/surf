@@ -1,0 +1,1 @@
+export { default as Renamable } from './Renamable.svelte'

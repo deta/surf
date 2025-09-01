@@ -13,6 +13,7 @@
   import DraftsRoute from './components/routes/DraftsRoute.svelte'
   import HistoryRoute from './components/routes/HistoryRoute.svelte'
   import TeletypeEntry from '../Core/components/Teletype/TeletypeEntry.svelte'
+  import { Renamable } from '@deta/ui'
 
   const searchParams = new URLSearchParams(window.location.search)
   const notebookId = searchParams.get('notebookId') || null
@@ -23,28 +24,55 @@
   const tabsService = useTabs()
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
-  // Initialize services (variables unused but creation is needed for singleton pattern)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const mentionService = createMentionService(tabsService)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
 
   let notebook: Notebook = $state(null)
+  let title = $state('maxus notebook')
+  let isLoadingTitle = $state(true)
+
+  async function loadTitle() {
+    try {
+      const loadedTitle = await notebookManager.loadTitle()
+      title = loadedTitle
+    } catch (error) {
+      console.warn('Failed to load notebook title:', error)
+    } finally {
+      isLoadingTitle = false
+    }
+  }
+
+  async function saveTitle(newTitle: string) {
+    try {
+      await notebookManager.saveTitle(newTitle)
+      title = newTitle
+      console.log('Title saved:', newTitle)
+    } catch (error) {
+      console.error('Failed to save notebook title:', error)
+    }
+  }
 
   onMount(async () => {
+    await loadTitle()
+
     if (notebookId && !['drafts', 'history'].includes(notebookId)) {
       notebook = await notebookManager.getNotebook(notebookId)
     } else {
       notebook = notebookId
     }
   })
-
-  // TODO: Load by pattern match array -> component directly
 </script>
 
 <div class="wrapper">
   <div class="content">
-    <h1>Maxintosh HD</h1>
+    <h1>
+      {#if !isLoadingTitle}
+        <Renamable value={title} onConfirm={saveTitle} placeholder="Untitled Notebook" />
+      {/if}
+    </h1>
+
     <div>
       <TeletypeEntry open={true} />
     </div>
