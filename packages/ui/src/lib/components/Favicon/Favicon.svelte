@@ -1,42 +1,22 @@
 <script lang="ts">
-  import { DynamicIcon, Icon, type Icons } from '@deta/icons'
-  import { getFallbackFavicon } from '@deta/utils'
-  import { parseURL, generateRootDomain } from '@deta/utils'
+  import { Icon } from '@deta/icons'
 
   export let url: string
   export let title: string = ''
-  
+
   let error = false
   let loaded = false
   let imgElement: HTMLImageElement
 
-  // Derive favicon URL from the main URL
-  $: faviconURL = deriveFaviconURL(url)
-
   // Reset states when faviconURL changes
-  $: if (faviconURL) {
+  $: if (url) {
     error = false
     loaded = false
     preloadImage()
   }
 
-  const deriveFaviconURL = (pageURL: string): string => {
-    if (!pageURL || typeof pageURL !== 'string') return ''
-    
-    const urlObj = parseURL(pageURL)
-    if (!urlObj) {
-      console.warn('Failed to parse URL for favicon:', pageURL)
-      return ''
-    }
-    
-    const domain = generateRootDomain(urlObj)
-    if (!domain) return ''
-    
-    return getFallbackFavicon(domain, 32)
-  }
-
   const preloadImage = () => {
-    if (!faviconURL) return
+    if (!url) return
     
     const img = new Image()
     img.onload = () => {
@@ -53,7 +33,7 @@
       error = true
       loaded = false
     }
-    img.src = faviconURL
+    img.src = url
   }
 </script>
 
@@ -62,8 +42,8 @@
   <div class="favicon-fallback">
     <Icon name="squircle" size="100%" fill="yellow" />
   </div>
-{:else if loaded && !error && faviconURL}
-  <img bind:this={imgElement} src={faviconURL} alt={title} draggable="false" />
+{:else if loaded && !error && url}
+  <img bind:this={imgElement} src={url} alt={title} draggable="false" />
 {:else}
   <div class="favicon-fallback">
     <Icon name="squircle" size="100%" fill="white" />

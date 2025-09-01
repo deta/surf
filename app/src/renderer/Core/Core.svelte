@@ -80,7 +80,7 @@
 
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Creating new tab (CMD+T)')
-      tabsService.create('surf://notebook')
+      tabsService.openNewTabPage()
       return true
     })
 

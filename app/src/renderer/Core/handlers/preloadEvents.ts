@@ -57,7 +57,7 @@ export function handlePreloadEvents() {
   horizonPreloadEvents.onCopyActiveTabURL(() => {
     const activeTab = tabsManager.activeTabValue
     if (activeTab) {
-      activeTab.view.copyURL()
+      activeTab.copyURL()
     }
   })
 

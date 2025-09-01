@@ -40,6 +40,8 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   updatedAt: Date
   view: WebContentsView
 
+  stateIndicator = $state<'none' | 'success'>('none')
+
   private unsubs: Fn[] = []
 
   constructor(manager: TabsService, view: WebContentsView, data: KVTabItem) {
@@ -119,6 +121,16 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
     this.log.debug(`Debounced update for tab ${this.id}:`, data)
     this.update(data)
   }, 200)
+
+  copyURL() {
+    this.view.copyURL()
+
+    let currState = this.stateIndicator
+    this.stateIndicator = 'success'
+    setTimeout(() => {
+      this.stateIndicator = currState
+    }, 2000)
+  }
 
   onDestroy() {
     this.unsubs.forEach((unsub) => unsub())

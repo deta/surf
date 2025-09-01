@@ -5,6 +5,7 @@
   import { Icon } from '@deta/icons'
   import { HTMLDragItem, DragData } from '@deta/dragcula'
   import { DragTypeNames } from '@deta/types'
+  import { getHostname } from '@deta/utils'
 
   let {
     tab,
@@ -28,6 +29,12 @@
 
   const title = tab.view.title
   const url = tab.view.url
+  const faviconURL = tab.view.faviconURL
+  const stateIndicator = $derived(tab.stateIndicator)
+
+  const hostname = $derived(getHostname($url))
+
+  $inspect(stateIndicator)
 
   function closeTab() {
     tabsService.delete(tab.id)
@@ -66,6 +73,12 @@
     },
     {
       type: 'action',
+      icon: 'copy',
+      text: 'Copy URL',
+      action: () => tab.copyURL()
+    },
+    {
+      type: 'action',
       icon: 'close',
       text: 'Close Tab',
       action: () => closeTab()
@@ -80,6 +93,7 @@
   class:active
   class:collapsed
   class:squished
+  class:state-visible={stateIndicator !== 'none'}
   class:no-transition={isResizing}
   style:--width={`${width ?? '0'}px`}
   onclick={handleClick}
@@ -98,11 +112,11 @@
   ondragend={handleDragEnd}
 >
   <div class="tab-icon">
-    <Favicon url={$url} title={$title} />
+    <Favicon url={$faviconURL || $url} title={$title} />
   </div>
 
   {#if !collapsed && !squished}
-    <span class="tab-title typo-tab-title">{$title}</span>
+    <span class="tab-title typo-tab-title">{$title || hostname}</span>
   {/if}
 
   {#if showCloseButton && !collapsed && !squished}
@@ -110,6 +124,12 @@
       <Button size="xs" square onclick={handleClose}>
         <Icon name="close" />
       </Button>
+    </div>
+  {/if}
+
+  {#if stateIndicator === 'success'}
+    <div class="state-indicator success">
+      <Icon name="check" />
     </div>
   {/if}
 </div>
@@ -205,7 +225,8 @@
       }
     }
 
-    &:hover {
+    &:hover,
+    &.state-visible {
       .tab-title {
         -webkit-mask-image: linear-gradient(
           to right,
@@ -277,6 +298,25 @@
     &:hover {
       color: var(--accent);
       opacity: 1;
+    }
+  }
+
+  .state-indicator {
+    position: absolute;
+    right: 0.55rem;
+
+    flex-shrink: 0;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+
+    &.success {
+      color: var(--accent);
     }
   }
 </style>

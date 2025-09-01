@@ -18,7 +18,14 @@ export const useClipboard = (delay = 500) => {
 
 export const copyToClipboard = async (content: any) => {
   try {
-    await navigator.clipboard.writeText(content)
+    // @ts-ignore
+    if (window.api.copyToClipboard) {
+      // @ts-ignore
+      window.api.copyToClipboard(content)
+    } else {
+      await navigator.clipboard.writeText(content)
+    }
+
     // You can also show a user-friendly message or indication that the content was copied
   } catch (err) {
     console.error('Failed to copy: ', err)
