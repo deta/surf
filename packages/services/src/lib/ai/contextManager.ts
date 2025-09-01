@@ -542,7 +542,11 @@ export class ContextManager {
 
       const existingItem = this.getTabItem(tab.id)
       if (existingItem) {
-        this.log.debug('Tab already in context', tab.id)
+        this.log.debug('Tab already in context, making sure it is prepared', tab.id)
+        if (existingItem instanceof ContextItemPageTab) {
+          await existingItem.initPageTab()
+        }
+
         return existingItem
       }
 
