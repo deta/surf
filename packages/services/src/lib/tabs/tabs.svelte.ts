@@ -513,13 +513,12 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   }
 
   private async prepareNewTabPage() {
-    // this.log.debug('Preparing new tab page')
-    // this.newTabView = await this.viewManager.create({ url: 'surf://notebook' })
-    // await this.newTabView.preloadWebContents({ activate: false })
+    this.log.debug('Preparing new tab page')
+    this.newTabView = await this.viewManager.create({ url: 'surf://notebook' })
+    await this.newTabView.preloadWebContents({ activate: false })
   }
 
   async openNewTabPage() {
-    return this.create('surf://notebook')
     if (!this.newTabView) {
       return this.create('surf://notebook')
     }
