@@ -55,3 +55,11 @@ export type TabsServiceEmitterEvents = {
     newIndex: number
   }) => void
 }
+
+export enum TabType {
+  Page = 'page',
+  Notebook = 'notebook',
+  NotebookHome = 'notebook_home',
+  Resource = 'resource',
+  Internal = 'internal'
+}

@@ -2,6 +2,7 @@ import {
   EventEmitterBase,
   getHostname,
   isDev,
+  isInternalRendererURL,
   type ScopedLogger,
   useDebounce,
   useLogScope
@@ -18,7 +19,8 @@ import {
   TabItemEmitterNames,
   type CreateTabOptions,
   TabsServiceEmitterNames,
-  type TabsServiceEmitterEvents
+  type TabsServiceEmitterEvents,
+  TabType
 } from './tabs.types'
 
 /**
@@ -33,6 +35,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   id: string
   index: number
   title: Readable<string>
+  type: Readable<TabType>
   createdAt: Date
   updatedAt: Date
   view: WebContentsView
@@ -60,6 +63,18 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
         })
       })
     )
+
+    this.type = derived(this.view.url, (url) => {
+      const internalUrl = isInternalRendererURL(url)
+      if (!internalUrl) return TabType.Page
+      if (internalUrl.hostname === 'notebook') {
+        if (internalUrl.pathname === '/') return TabType.NotebookHome
+        return TabType.Notebook
+      }
+      if (internalUrl.hostname === 'resource') return TabType.Resource
+
+      return TabType.Internal
+    })
   }
 
   get titleValue() {
@@ -75,6 +90,10 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
       updatedAt: this.updatedAt.toISOString(),
       view: this.view.dataValue
     }
+  }
+
+  get typeValue(): TabType {
+    return get(this.type)
   }
 
   async update(data: Partial<KVTabItem>) {
@@ -128,6 +147,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
   private _lastTabIndex = -1
   private unsubs: Fn[] = []
+  newTabView: WebContentsView | null = null
 
   ready: Promise<void>
 
@@ -215,6 +235,8 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
         this.handleNewWindowRequest(details)
       })
     )
+
+    this.prepareNewTabPage()
   }
 
   private handleNewWindowRequest(details: NewWindowRequest) {
@@ -293,6 +315,45 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     const newIndex = (await this.getLastTabIndex()) + 1
     const hostname = getHostname(url) || 'unknown'
+
+    const item = await this.kv.create({
+      title: hostname,
+      view: view.dataValue,
+      index: newIndex
+    })
+
+    const tab = new TabItem(this, view, item)
+    this.tabs = [...this.tabs, tab]
+
+    if (options.active) {
+      this.setActiveTab(item.id)
+    } else if (options.activate) {
+      this.activateTab(item.id)
+    }
+
+    this.emit(TabsServiceEmitterNames.CREATED, tab)
+
+    return tab
+  }
+
+  async createWithView(
+    view: WebContentsView,
+    opts: Partial<CreateTabOptions> = {}
+  ): Promise<TabItem> {
+    const options = {
+      active: true,
+      activate: false,
+      ...opts
+    } as CreateTabOptions
+
+    if (options.selectionHighlight) {
+      view.addSelectionHighlight(options.selectionHighlight)
+    }
+
+    this.log.debug('Creating new tab with view:', view, 'options:', options)
+
+    const newIndex = (await this.getLastTabIndex()) + 1
+    const hostname = getHostname(view.urlValue) || 'unknown'
 
     const item = await this.kv.create({
       title: hostname,
@@ -449,6 +510,26 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     this.emit(TabsServiceEmitterNames.REORDERED, { tabId, oldIndex: currentIndex, newIndex })
     this.log.debug(`Successfully reordered tab ${tabId} from ${currentIndex} to ${newIndex}`)
+  }
+
+  private async prepareNewTabPage() {
+    // this.log.debug('Preparing new tab page')
+    // this.newTabView = await this.viewManager.create({ url: 'surf://notebook' })
+    // await this.newTabView.preloadWebContents({ activate: false })
+  }
+
+  async openNewTabPage() {
+    return this.create('surf://notebook')
+    if (!this.newTabView) {
+      return this.create('surf://notebook')
+    }
+
+    const tab = await this.createWithView(this.newTabView, { activate: true })
+
+    // prepare the next new tab page
+    setTimeout(() => this.prepareNewTabPage(), 0)
+
+    return tab
   }
 
   onDestroy() {

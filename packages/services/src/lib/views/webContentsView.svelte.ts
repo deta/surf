@@ -1114,13 +1114,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     }
   }
 
-  /**
-   * Cleans up the view and its resources.
-   * This method is called before the view gets fully destroyed.
-   */
-  onDestroy() {
-    // Clean up any resources or listeners associated with this view
-    this.action(WebContentsViewActionType.DESTROY)
+  cleanup() {
     // Clean up subscription handlers
     this._unsubs.forEach((unsub) => unsub())
 
@@ -1129,6 +1123,17 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       // @ts-ignore
       window.api.unregisterNewWindowHandler(this.webContentsId)
     }
+  }
+
+  /**
+   * Cleans up the view and its resources.
+   * This method is called before the view gets fully destroyed.
+   */
+  onDestroy() {
+    // Clean up any resources or listeners associated with this view
+    this.action(WebContentsViewActionType.DESTROY)
+
+    this.cleanup()
   }
 }
 
@@ -1375,11 +1380,25 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     }
 
     this.log.debug('Creating WebContents with options:', options)
-    // @ts-ignore
-    const { webContentsId } = await window.api.webContentsViewManagerAction(
-      WebContentsViewManagerActionType.CREATE,
-      options
-    )
+
+    let webContentsId = this.webContents?.webContentsId
+    if (!this.webContents) {
+      // @ts-ignore
+      const result = await window.api.webContentsViewManagerAction(
+        WebContentsViewManagerActionType.CREATE,
+        options
+      )
+
+      webContentsId = result.webContentsId
+    } else {
+      this.log.debug('View is already mounted, skipping creating view')
+      this.webContents.cleanup()
+    }
+
+    if (!webContentsId) {
+      this.log.error('Failed to create webContents:', options)
+      throw new Error('Failed to create webContents')
+    }
 
     const webContents = new WebContents(this, webContentsId, options, domElement)
     this.webContents = webContents
@@ -1390,6 +1409,28 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.manager.postMountedWebContents(this.id, webContents, options.activate)
 
     return webContents
+  }
+
+  async preloadWebContents(opts: Partial<WebContentsViewCreateOptions> = {}) {
+    const options = {
+      id: this.id,
+      partition: this.initialData.partition,
+      url: this.urlValue,
+      navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
+      navigationHistory: this.navigationHistoryValue ?? [],
+      activate: true,
+      permanentlyActive: this.initialData.permanentlyActive || false,
+      ...opts
+    } as WebContentsViewCreateOptions
+
+    // @ts-ignore
+    const { webContentsId } = await window.api.webContentsViewManagerAction(
+      WebContentsViewManagerActionType.CREATE,
+      options
+    )
+
+    const webContents = new WebContents(this, webContentsId, options)
+    this.webContents = webContents
   }
 
   async attachMounted(webContentsId: number, domElement?: HTMLElement) {

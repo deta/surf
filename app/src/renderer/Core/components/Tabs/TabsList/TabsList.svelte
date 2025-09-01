@@ -24,7 +24,7 @@
   const dnd = createTabsDragAndDrop(tabsService)
 
   const handleNewTab = () => {
-    tabsService.create('surf://notebook')
+    tabsService.openNewTabPage()
   }
 
   // Reactive calculation of layout

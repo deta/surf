@@ -166,11 +166,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       updatedAt: data.updatedAt || new Date().toISOString()
     } satisfies WebContentsViewData
 
+    this.log.debug('Creating WebContentsView with data:', fullData)
     const view = new WebContentsView(fullData, this)
     this.views.update((views) => [...views, view])
 
-    this.log.debug('Creating WebContentsView with data:', view)
-
+    this.log.debug('Created WebContentsView:', view)
     return view
   }
 
