@@ -64,6 +64,10 @@
     tabsService.setActiveTab(tab.id)
   }
 
+  function handleDragEnd() {
+    // no-op
+  }
+
   const items = [
     {
       type: 'action',
