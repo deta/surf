@@ -13,6 +13,7 @@ import { WebContentsView, type WebContents } from './webContentsView.svelte'
 import { ViewManagerEmitterNames, type ViewManagerEmitterEvents } from './types'
 import type { NewWindowRequest } from '../ipc/events'
 import { ResourceManager, useResourceManager } from '../resources'
+import { useMessagePortPrimary } from '../messagePort/messagePortEvents'
 
 export type OverlayState = {
   teletypeOpen: boolean
@@ -37,6 +38,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   config: ConfigService
   kv: KVStore<WebContentsViewData>
   resourceManager: ResourceManager
+  messagePort: ReturnType<typeof useMessagePortPrimary>
 
   webContentsViews: Map<string, WebContents> = new Map()
   viewOverlays: Map<string, string> = new Map() // Maps a view to its overlay view if it has one
@@ -61,6 +63,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     this.config = useConfig()
     this.kv = useKVTable<WebContentsViewData>('views')
     this.resourceManager = resourceManager || useResourceManager()
+    this.messagePort = useMessagePortPrimary()
 
     this.overlayState = writable({
       teletypeOpen: false
@@ -84,16 +87,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       return $overlayState.teletypeOpen
     })
 
-    this.unsubs.push(
-      this.shouldHideViews.subscribe((shouldHide) => {
-        this.log.debug('shouldHideViews changed:', shouldHide)
-        if (shouldHide) {
-          this.hideViews()
-        } else {
-          this.showViews()
-        }
-      })
-    )
+    this.attachListeners()
 
     if (isDev) {
       // @ts-ignore
@@ -123,6 +117,39 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   get activeViewIdValue() {
     return get(this.activeViewId)
+  }
+
+  attachListeners() {
+    this.unsubs.push(
+      this.shouldHideViews.subscribe((shouldHide) => {
+        this.log.debug('shouldHideViews changed:', shouldHide)
+        if (shouldHide) {
+          this.hideViews()
+        } else {
+          this.showViews()
+        }
+      })
+    )
+
+    // @ts-ignore
+    // window.api.onMessagePort(({ portId, payload }) => {
+    //   if (!portId) {
+    //     this.log.error('Received port event without portId:', portId)
+    //     return
+    //   }
+
+    //   const view = this.getViewById(portId)
+    //   if (!view || !view.webContents) {
+    //     this.log.error(
+    //       'Received port event for non-existent portId or view without webContents:',
+    //       portId
+    //     )
+    //     return
+    //   }
+
+    //   this.log.debug('Attaching message port to WebContentsView:', portId)
+    //   view.webContents.handleMessagePortMessage(payload)
+    // })
   }
 
   handleNewWindowRequest(viewId: string, details: NewWindowRequest) {
@@ -343,7 +370,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     view.webContents.setBounds(bounds)
   }
 
-  setSidebarState({ open, view }: { open?: boolean; view?: WebContentsView }) {
+  setSidebarState({ open, view }: { open?: boolean; view?: WebContentsView | null }) {
     if (open !== undefined) this.sidebarViewOpen = open
     if (view !== undefined) this.activeSidebarView = view
   }
@@ -354,6 +381,12 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       return this.webContentsViews.get(activeViewId) || null
     }
     return null
+  }
+
+  openNoteInSidebar(noteId: string) {
+    const view = this.create({ url: `surf://resource/${noteId}`, permanentlyActive: true })
+    this.setSidebarState({ open: true, view })
+    return view
   }
 
   onDestroy() {

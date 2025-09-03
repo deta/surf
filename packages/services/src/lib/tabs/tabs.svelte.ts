@@ -1,5 +1,6 @@
 import {
   EventEmitterBase,
+  getFormattedDate,
   getHostname,
   isDev,
   isInternalRendererURL,
@@ -22,6 +23,7 @@ import {
   type TabsServiceEmitterEvents,
   TabType
 } from './tabs.types'
+import { ResourceManager, useResourceManager } from '../resources'
 
 /**
  * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView
@@ -129,8 +131,6 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   onDestroy() {
     this.unsubs.forEach((unsub) => unsub())
 
-    this.view.manager.destroy(this.view.id)
-
     this.emit(TabItemEmitterNames.DESTROY, this.id)
   }
 }
@@ -167,6 +167,7 @@ class ClosedTabs {
 export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   private log: ScopedLogger
   private viewManager: ViewManager
+  private resourceManager: ResourceManager
   private kv: KVStore<KVTabItem>
   private closedTabs: ClosedTabs
 
@@ -211,6 +212,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     this.log = useLogScope('TabsService')
     this.viewManager = useViewManager()
+    this.resourceManager = useResourceManager()
     this.kv = useKVTable<KVTabItem>('tabs')
     this.closedTabs = new ClosedTabs()
 
@@ -297,7 +299,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   }
 
   async list(): Promise<TabItem[]> {
-    this.log.debug('Listing all tabs')
+    this.log.trace('Listing all tabs')
 
     const raw = await this.kv.all()
     if (raw.length === 0) {
@@ -556,6 +558,31 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     setTimeout(() => this.prepareNewTabPage(), 0)
 
     return tab
+  }
+
+  async createResourceTab(resourceId: string, opts?: Partial<CreateTabOptions>) {
+    this.log.debug('Creating new resource tab')
+    const tab = await this.create(`surf://resource/${resourceId}`, opts)
+    return tab
+  }
+
+  async changeActiveTabURL(url: string) {
+    this.log.debug('Replacing active tab with new URL:', url)
+    const activeTab = this.activeTabValue
+
+    if (!activeTab) {
+      this.log.warn('No active tab found to replace URL')
+      return
+    }
+
+    if (!activeTab.view.webContents) {
+      this.log.warn('Active tab has no webContents to load URL')
+      return
+    }
+
+    activeTab.view.webContents.loadURL(url)
+
+    return activeTab
   }
 
   async reopenLastClosed() {

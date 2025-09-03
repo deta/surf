@@ -25,7 +25,7 @@ import {
   type Model
 } from '@deta/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError } from './helpers'
-import type { TabsService } from '../tabs'
+import { useTabs, type TabsService } from '../tabs'
 import type { Telemetry } from '../telemetry'
 import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
 import { type ContextItem, ContextManager, ContextService } from './contextManager'
@@ -51,7 +51,6 @@ export class AIService {
 
   resourceManager: ResourceManager
   sffs: SFFS
-  tabsManager: TabsService
   config: ConfigService
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
@@ -83,22 +82,20 @@ export class AIService {
     }
   >()
 
-  constructor(
-    resourceManager: ResourceManager,
-    tabsManager: TabsService,
-    config: ConfigService,
-    global = true
-  ) {
+  constructor(resourceManager: ResourceManager, config: ConfigService, global = true) {
     this.resourceManager = resourceManager
     this.sffs = resourceManager.sffs
-    this.tabsManager = tabsManager
     this.config = config
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
-    this.contextService = ContextService.create(this, tabsManager, resourceManager)
-    this.fallbackContextManager = global
-      ? this.contextService.createDefault()
-      : this.contextService.createWCV()
+
+    if (global) {
+      const tabsManager = useTabs()
+      const contextService = ContextService.create(this, tabsManager, resourceManager)
+      this.fallbackContextManager = contextService.createDefault()
+    } else {
+      this.fallbackContextManager = ContextService.createWCV(this, resourceManager)
+    }
 
     this.showChatSidebar = writable(false)
     this.chats = writable([])
@@ -252,11 +249,6 @@ export class AIService {
   getMatchingBackendModel(tier: ModelTiers) {
     const model = this.getMatchingModel(tier)
     return this.modelToBackendModel(model)
-  }
-
-  createContextManager(key?: string) {
-    this.log.debug('creating context manager', key)
-    return this.contextService.create(undefined, key)
   }
 
   // cloneContextManager() {
@@ -843,13 +835,8 @@ export class AIService {
     return quotas
   }
 
-  static provide(
-    resourceManager: ResourceManager,
-    tabsManager: TabsService,
-    config: ConfigService,
-    global?: boolean
-  ) {
-    const service = new AIService(resourceManager, tabsManager, config, global)
+  static provide(resourceManager: ResourceManager, config: ConfigService, global?: boolean) {
+    const service = new AIService(resourceManager, config, global)
 
     setContext('ai', service)
     if (!AIService.self) AIService.self = service

@@ -1,3 +1,4 @@
+import { type MentionItem } from '@deta/editor'
 import type { ActionProvider, TeletypeAction } from '../types'
 import { generateUUID, useLogScope, prependProtocol } from '@deta/utils'
 
@@ -10,7 +11,7 @@ export class SearchProvider implements ActionProvider {
     return query.trim().length >= 2
   }
 
-  async getActions(query: string): Promise<TeletypeAction[]> {
+  async getActions(query: string, _mentions: MentionItem[]): Promise<TeletypeAction[]> {
     const actions: TeletypeAction[] = []
     const trimmedQuery = query.trim()
 
@@ -54,21 +55,19 @@ export class SearchProvider implements ActionProvider {
         return []
       }
 
-      const response = await fetch(
-        `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`,
+      // @ts-ignore
+      const data = await window.api.fetchJSON(
+        `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(
+          query
+        )}`,
         {
+          // HACK: this is needed to get Google to properly encode the suggestions, without this Umlaute are not encoded properly
           headers: {
             'User-Agent':
               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
           }
         }
       )
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
 
       // Google returns an array where the second element contains the suggestions
       const suggestions = data[1] || []

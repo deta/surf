@@ -46,7 +46,8 @@
 
   onDestroy(() => {
     log.debug('Destroying web contents view', view.id)
-    view.destroy()
+
+    view.unmount()
 
     unsubs.forEach((unsub) => unsub())
   })

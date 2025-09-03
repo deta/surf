@@ -4,6 +4,7 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 import {
   checkIfYoutubeUrl,
   generateID,
+  isInternalRendererURL,
   parseUrlIntoCanonical,
   useLocalStorage,
   useLogScope,
@@ -53,6 +54,7 @@ import type { SearchResultLink } from '@deta/web-parser'
 import { ContextItemWebSearch } from './context/web'
 import { ContextManagerWCV } from './contextManagerWCV'
 import { Notebook, NotebookManager, useNotebookManager } from '../notebooks'
+import { useViewManager, ViewManager } from '../views'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -84,6 +86,7 @@ export class ContextManager {
   tabsManager: TabsService
   resourceManager: ResourceManager
   notebookManager: NotebookManager
+  viewManager: ViewManager
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
@@ -100,6 +103,7 @@ export class ContextManager {
     this.tabsManager = tabsManager
     this.resourceManager = resourceManager
     this.notebookManager = useNotebookManager()
+    this.viewManager = useViewManager()
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope(`ContextManager ${key}`)
 
@@ -218,6 +222,38 @@ export class ContextManager {
       // Handle the event
 
       if (type === WebContentsViewContextManagerActionType.GET_ITEMS) {
+        const activeTab = this.tabsManager.activeTabValue
+        const numContextItems = this.itemsValue.length
+
+        if (numContextItems === 0 && this.viewManager.sidebarViewOpen && activeTab) {
+          const activeTabUrl = activeTab.view.urlValue
+          const internalUrl = isInternalRendererURL(activeTabUrl || '')
+
+          if (!internalUrl) {
+            this.log.debug(
+              'External URL detected:',
+              activeTabUrl,
+              'adding tab to context',
+              activeTab
+            )
+            this.onlyUseTabInContext(activeTab)
+          } else if (internalUrl && internalUrl.hostname === 'notebook') {
+            const notebookId = internalUrl.pathname.slice(1)
+            this.log.debug(
+              'Internal notebook URL detected:',
+              internalUrl,
+              'adding notebook to context',
+              notebookId
+            )
+            const notebook = await this.notebookManager.getNotebook(notebookId)
+            if (notebook) {
+              this.onlyUseNotebookInContext(notebook)
+            }
+          } else {
+            this.log.debug('Other internal URL detected:', activeTabUrl)
+          }
+        }
+
         const resourceIds = await this.getResourceIds(payload.prompt)
         this.log.debug('Got resource ids from context items', resourceIds)
 
@@ -239,6 +275,9 @@ export class ContextManager {
         return null
       } else if (type === WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT) {
         await this.addNotebook(payload.id)
+        return null
+      } else if (type === WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT) {
+        await this.addResource(payload.id)
         return null
       } else {
         this.log.error('Unknown WebContentsViewContextManagerActionType', type)
@@ -1185,8 +1224,6 @@ export class ContextService {
 
   createDefault(items?: ContextItem[]) {
     const ctxKey = DEFAULT_CONTEXT_MANAGER_KEY
-    this.log.debug('Creating default context manager', ctxKey, items)
-
     if (items) {
       this.log.debug('Using items', items)
 
@@ -1195,12 +1232,32 @@ export class ContextService {
       })
     }
 
-    return new ContextManager(ctxKey, this, this.ai, this.tabsManager, this.resourceManager)
+    return ContextService.createDefault(
+      ctxKey,
+      this,
+      this.ai,
+      this.tabsManager,
+      this.resourceManager
+    )
   }
 
   createWCV() {
+    return ContextService.createWCV(this.ai, this.resourceManager)
+  }
+
+  static createDefault(
+    ctxKey = DEFAULT_CONTEXT_MANAGER_KEY,
+    service: ContextService,
+    ai: AIService,
+    tabsManager: TabsService,
+    resourceManager: ResourceManager
+  ) {
+    return new ContextManager(ctxKey, service, ai, tabsManager, resourceManager)
+  }
+
+  static createWCV(ai: AIService, resourceManager: ResourceManager) {
     const ctxKey = DEFAULT_CONTEXT_MANAGER_KEY
-    return new ContextManagerWCV(ctxKey, this.ai, this.resourceManager)
+    return new ContextManagerWCV(ctxKey, ai, resourceManager)
   }
 
   static create(ai: AIService, tabsManager: TabsService, resourceManager: ResourceManager) {

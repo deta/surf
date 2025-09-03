@@ -1,14 +1,10 @@
 <script lang="ts">
-  import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype/src'
+  import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype'
   import { DynamicIcon } from '@deta/icons'
-  import { useViewManager } from '@deta/services/views'
-  import { useTeletypeService, useMentionService } from '@deta/services'
-  import { useTabs } from '@deta/services/tabs'
+  import { useTeletypeService } from '@deta/services'
+  import type { MentionItem } from '@deta/editor'
 
-  const viewManager = useViewManager()
   const teletypeService = useTeletypeService()
-  const tabsService = useTabs()
-  const mentionsService = useMentionService()
 
   let { open = $bindable() }: { open: boolean } = $props()
   let teletype: TeletypeSystem
@@ -22,9 +18,16 @@
     })
   })
 
-  const handleTeletypeInput = (event: CustomEvent<string>) => {
-    const query = event.detail
+  const handleTeletypeInput = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
+    console.log('Teletype input received:', event.detail)
+    const { query, mentions } = event.detail
+    teletypeService.setMentions(mentions)
     teletypeService.setQuery(query)
+  }
+
+  const handleAsk = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
+    const { query, mentions } = event.detail
+    teletypeService.ask(query, mentions)
   }
 
   $effect(() => {
@@ -48,6 +51,6 @@
       open: true
     }}
   >
-    <Teletype on:input={handleTeletypeInput} {mentionsService} />
+    <Teletype on:input={handleTeletypeInput} on:ask={handleAsk} />
   </TeletypeProvider>
 {/if}

@@ -5,16 +5,20 @@ import { SearchProvider } from './providers/SearchProvider'
 import { NavigationProvider } from './providers/NavigationProvider'
 import { AskProvider } from './providers/AskProvider'
 import { CurrentQueryProvider } from './providers/CurrentQueryProvider'
+import { useMessagePortClient } from '../messagePort'
+import { type MentionItem } from '@deta/editor'
 
 export class TeletypeService {
   private providers = new Map<string, ActionProvider>()
   private searchState: Writable<SearchState>
   private readonly options: Required<TeletypeServiceOptions>
   private readonly log = useLogScope('TeletypeService')
+  private messagePort = useMessagePortClient()
   private queryUnsubscribe?: () => void
 
   // Public reactive stores
   public readonly query: Writable<string>
+  public readonly mentions: Writable<MentionItem[]>
   public readonly isLoading: Readable<boolean>
   public readonly actions: Readable<TeletypeAction[]>
 
@@ -24,7 +28,7 @@ export class TeletypeService {
 
   constructor(options: TeletypeServiceOptions = {}) {
     this.options = {
-      debounceMs: 15,
+      debounceMs: 200,
       maxActionsPerProvider: 3,
       enabledProviders: [],
       ...options
@@ -39,6 +43,7 @@ export class TeletypeService {
     })
 
     this.query = writable('')
+    this.mentions = writable<MentionItem[]>([])
 
     // Derived stores
     this.isLoading = derived(this.searchState, ($state) => $state.isLoading)
@@ -53,11 +58,17 @@ export class TeletypeService {
       this.debouncedSearch(query)
     })
 
-    // Register default providers
+    // Register local providers
     this.registerProvider(new CurrentQueryProvider()) // Local, instant current query
-    this.registerProvider(new SearchProvider()) // Async Google suggestions
     this.registerProvider(new NavigationProvider())
-    this.registerProvider(new AskProvider())
+  }
+
+  get queryValue() {
+    return get(this.query)
+  }
+
+  get mentionsValue() {
+    return get(this.mentions)
   }
 
   /**
@@ -119,6 +130,13 @@ export class TeletypeService {
   }
 
   /**
+   * Set the mention items
+   */
+  setMentions(mentions: MentionItem[]): void {
+    this.mentions.set(mentions)
+  }
+
+  /**
    * Clear current search and actions
    */
   clear(): void {
@@ -150,6 +168,12 @@ export class TeletypeService {
     this.providers.clear()
   }
 
+  async ask(query: string, mentions: MentionItem[]): Promise<void> {
+    this.log.debug('Asking question:', query)
+    await this.messagePort.teletypeAsk.send({ query, mentions })
+    this.clear()
+  }
+
   /**
    * Perform the actual search across all providers using two-phase execution:
    * Phase 1: Execute LOCAL providers immediately for instant results
@@ -167,15 +191,27 @@ export class TeletypeService {
 
     this.searchState.update((state) => ({ ...state, isLoading: true }))
 
+    const mentions = this.mentionsValue
+
     try {
-      // Phase 1: Execute LOCAL providers immediately
-      const localActions = await this.executeLocalProviders(query)
+      // Get local actions immediately
+      const localActions = await this.getLocalActions(query, mentions)
+      this.log.debug(`Got local actions:`, localActions)
 
-      // Show local results immediately
-      this.updateResults(localActions, false) // Keep loading true for async providers
+      // Show local results first
+      this.updateResults(localActions, false)
 
-      // Phase 2: Execute ASYNC providers and stream results
-      await this.executeAsyncProviders(query, localActions)
+      // Get remote actions in parallel
+      const remoteActions = await this.getRemoteActions(query, mentions)
+      this.log.debug(`Got remote actions:`, remoteActions)
+
+      // Combine and sort all actions
+      const allActions = [...localActions, ...remoteActions].sort(
+        (a, b) => (b.priority || 0) - (a.priority || 0)
+      )
+
+      // Update final results
+      this.updateResults(allActions, true)
     } catch (error) {
       this.log.error('Search failed:', error)
       this.searchState.update((state) => ({
@@ -187,75 +223,59 @@ export class TeletypeService {
   }
 
   /**
-   * Execute all LOCAL providers immediately for instant results
+   * Get actions from local providers
    */
-  private async executeLocalProviders(query: string): Promise<TeletypeAction[]> {
-    const localActions: TeletypeAction[] = []
+  private async getLocalActions(query: string, mentions: MentionItem[]): Promise<TeletypeAction[]> {
+    const actions: TeletypeAction[] = []
 
     for (const provider of this.providers.values()) {
-      if (provider.isLocal && provider.canHandle(query)) {
-        try {
-          const actions = await provider.getActions(query)
-          const limitedActions = actions.slice(0, this.options.maxActionsPerProvider)
-          localActions.push(...limitedActions)
-        } catch (error) {
-          this.log.warn(`Local provider ${provider.name} failed:`, error)
-        }
+      if (provider.canHandle(query)) {
+        const providerActions = await provider.getActions(query, mentions)
+        const limitedActions = providerActions
+          .slice(0, this.options.maxActionsPerProvider)
+          .map((action) => ({
+            ...action,
+            provider
+          }))
+
+        actions.push(...limitedActions)
       }
     }
 
-    // Sort by priority (higher priority first)
-    localActions.sort((a, b) => (b.priority || 0) - (a.priority || 0))
-
-    return localActions
+    return actions.sort((a, b) => (b.priority || 0) - (a.priority || 0))
   }
 
   /**
-   * Execute ASYNC providers and stream results as they complete
+   * Get actions from remote providers via messagePort
    */
-  private async executeAsyncProviders(
+  private async getRemoteActions(
     query: string,
-    existingActions: TeletypeAction[]
-  ): Promise<void> {
-    const asyncProviders = Array.from(this.providers.values()).filter(
-      (provider) => !provider.isLocal && provider.canHandle(query)
-    )
+    mentions: MentionItem[]
+  ): Promise<TeletypeAction[]> {
+    try {
+      this.log.debug('Requesting remote actions for query:', query, mentions)
+      const response = await this.messagePort.teletypeSearch.request({ query, mentions })
 
-    if (asyncProviders.length === 0) {
-      // No async providers, just mark loading as complete
-      this.updateResults(existingActions, true)
-      return
+      this.log.debug('Got remote actions:', response.actions)
+
+      // Convert serialized actions back to TeletypeAction objects
+      return response.actions.map((action) => {
+        return {
+          ...action,
+          handler: async () => {
+            // Execute action via messagePort
+            await this.messagePort.teletypeExecuteAction.send({ actionId: action.id })
+          }
+        } as TeletypeAction
+      })
+    } catch (error) {
+      this.log.error('Failed to get remote actions:', error)
+      return []
     }
-
-    this.log.debug(`Executing ${asyncProviders.length} async providers`)
-
-    const asyncPromises = asyncProviders.map(async (provider) => {
-      try {
-        const actions = await provider.getActions(query)
-        const limitedActions = actions.slice(0, this.options.maxActionsPerProvider)
-
-        // Stream in results as each provider completes
-        this.appendResults(limitedActions)
-
-        return limitedActions
-      } catch (error) {
-        this.log.warn(`Async provider ${provider.name} failed:`, error)
-        return []
-      }
-    })
-
-    // Wait for all async providers to complete, then mark loading as done
-    await Promise.all(asyncPromises)
-
-    // Mark loading as complete
-    this.searchState.update((state) => ({
-      ...state,
-      isLoading: false
-    }))
   }
 
   /**
-   * Update results immediately (for local providers)
+   * Update results and state
    */
   private updateResults(actions: TeletypeAction[], isComplete: boolean): void {
     this.searchState.update((state) => ({

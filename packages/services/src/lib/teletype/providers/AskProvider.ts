@@ -1,16 +1,22 @@
+import { type MentionItem } from '@deta/editor'
+import { useBrowser } from '../../browser'
+import { useResourceManager } from '../../resources'
+import { TabType, useTabs } from '../../tabs'
+import { useViewManager } from '../../views'
 import type { ActionProvider, TeletypeAction } from '../types'
-import { generateUUID, useLogScope } from '@deta/utils'
+import { generateUUID, getFormattedDate, useLogScope, wait } from '@deta/utils'
 
 export class AskProvider implements ActionProvider {
   readonly name = 'ask'
   readonly isLocal = true
   private readonly log = useLogScope('AskProvider')
+  private readonly browser = useBrowser()
 
   canHandle(query: string): boolean {
     return query.trim().length > 0
   }
 
-  async getActions(query: string): Promise<TeletypeAction[]> {
+  async getActions(query: string, mentions: MentionItem[]): Promise<TeletypeAction[]> {
     const actions: TeletypeAction[] = []
     const trimmedQuery = query.trim()
 
@@ -26,17 +32,20 @@ export class AskProvider implements ActionProvider {
       description: `Create a new Note about "${trimmedQuery}"`,
       buttonText: 'Ask',
       handler: async () => {
-        await this.triggerAskAction(trimmedQuery)
+        await this.triggerAskAction(trimmedQuery, mentions)
       }
     })
 
     return actions
   }
 
-  private async triggerAskAction(query: string): Promise<void> {
+  async triggerAskAction(query: string, mentions: MentionItem[]): Promise<void> {
     try {
-      this.log.debug('Triggering ask action for query:', query)
-      // AI integration will be implemented here
+      this.log.debug('Triggering ask action for query:', query, 'with mentions:', mentions)
+
+      await this.browser.createNoteAndRunAIQuery(query, mentions, {
+        target: 'sidebar'
+      })
     } catch (error) {
       this.log.error('Failed to trigger ask action:', error)
     }

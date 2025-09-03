@@ -20,7 +20,7 @@
   )
 
   const handleCreateNote = async () => {
-    const note = await resourceManager.createResourceNote('kekw', {
+    const note = await resourceManager.createResourceNote('', {
       name: 'Untitled Note'
     })
     notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)

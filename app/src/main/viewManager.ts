@@ -14,6 +14,7 @@ import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
+import { MessageChannelMain } from 'electron/main'
 
 export class WCView {
   manager: WCViewManager
@@ -201,6 +202,10 @@ export class WCView {
         join(__dirname, `../renderer/Overlay/overlay.html?overlayId=${this.opts.overlayId}`)
       )
     }
+  }
+
+  changePermanentlyActive(value: boolean) {
+    this.opts.permanentlyActive = value
   }
 
   reload(ignoreCache = false) {
@@ -780,6 +785,17 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
   }
 
+  setupMessagePort(view: WCView) {
+    console.log('Creating new messagePort channel')
+    const { port1, port2 } = new MessageChannelMain()
+
+    console.log('Sending port1 to core renderer')
+    this.window.webContents.postMessage('port', { portId: view.id }, [port1])
+
+    console.log('Sending port2 to WebContentsView')
+    view.wcv.webContents.postMessage('port', null, [port2])
+  }
+
   attachViewIPCEvents(view: WCView) {
     // TODO: find way to automatically forward all events from WebContentsView to IPC without manually attaching each one
 
@@ -828,6 +844,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         viewId: view.id,
         payload: undefined
       })
+
+      this.setupMessagePort(view)
     })
 
     view.attachEventListener(
@@ -1043,6 +1061,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             return true
           } else if (type === WebContentsViewActionType.GET_URL) {
             return view.wcv.webContents.getURL()
+          } else if (type === WebContentsViewActionType.CHANGE_PERMANENTLY_ACTIVE) {
+            return view.changePermanentlyActive(payload)
           } else if (type === WebContentsViewActionType.FOCUS) {
             if (view.isOverlay && this.activeOverlayViewId !== view.id) {
               this.bringViewToFront(view.id)

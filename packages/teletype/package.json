@@ -4,6 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "svelte": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "svelte": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "ts": "tsc src/index.ts --declaration --emitDeclarationOnly --esModuleInterop --outDir dist",

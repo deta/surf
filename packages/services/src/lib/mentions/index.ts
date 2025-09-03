@@ -4,3 +4,4 @@ export * from './mentionUtils'
 
 // Providers
 export { TabsMentionProvider } from './providers/TabsMentionProvider'
+export { ResourceMentionProvider } from './providers/ResourceMentionProvider'

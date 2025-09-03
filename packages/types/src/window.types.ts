@@ -67,7 +67,8 @@ export enum WebContentsViewActionType {
   DOWNLOAD_URL = 'download-url',
   IS_CURRENTLY_AUDIBLE = 'is-currently-audible',
   GET_NAVIGATION_HISTORY = 'get-navigation-history',
-  CAPTURE_PAGE = 'capture-page'
+  CAPTURE_PAGE = 'capture-page',
+  CHANGE_PERMANENTLY_ACTIVE = 'change-permanently-active'
 }
 
 export interface WebContentsViewActionPayloads {
@@ -97,6 +98,7 @@ export interface WebContentsViewActionPayloads {
   [WebContentsViewActionType.CAPTURE_PAGE]:
     | { rect?: Electron.Rectangle; quality?: 'low' | 'medium' | 'high' }
     | undefined
+  [WebContentsViewActionType.CHANGE_PERMANENTLY_ACTIVE]: boolean
 }
 
 export interface WebContentsViewActionOutputs {
@@ -125,6 +127,7 @@ export interface WebContentsViewActionOutputs {
     entries: NavigationEntry[]
     index: number
   }
+  [WebContentsViewActionType.CHANGE_PERMANENTLY_ACTIVE]: boolean
 }
 
 export type WebContentsViewAction = {

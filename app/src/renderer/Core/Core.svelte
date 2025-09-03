@@ -17,7 +17,7 @@
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { isInternalRendererURL } from '@deta/utils/formatting'
-  import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
+  // import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import type { ContextManager } from '@deta/services/ai'
   import { prepareContextMenu } from '@deta/ui'
   import { debugMode } from './stores/debug'
@@ -45,29 +45,29 @@
   let unsubs: Fn[] = []
   let open = $state(false)
 
-  $effect(() => {
-    if (viewManager.sidebarViewOpen) {
-      const internalUrl = isInternalRendererURL($activeTabUrl)
+  // $effect(() => {
+  //   if (viewManager.sidebarViewOpen) {
+  //     const internalUrl = isInternalRendererURL($activeTabUrl)
 
-      if (!internalUrl) {
-        log.debug('External URL detected:', $activeTabUrl, 'adding tab to context', activeTab)
-        contextManager.onlyUseTabInContext(activeTab)
-      } else if (internalUrl && internalUrl.hostname === 'notebook') {
-        const notebookId = internalUrl.pathname.slice(1)
-        log.debug(
-          'Internal notebook URL detected:',
-          internalUrl,
-          'adding notebook to context',
-          notebookId
-        )
-        notebookManager.getNotebook(notebookId).then((notebook) => {
-          contextManager.onlyUseNotebookInContext(notebook)
-        })
-      } else {
-        log.debug('Other internal URL detected:', $activeTabUrl)
-      }
-    }
-  })
+  //     if (!internalUrl) {
+  //       log.debug('External URL detected:', $activeTabUrl, 'adding tab to context', activeTab)
+  //       contextManager.onlyUseTabInContext(activeTab)
+  //     } else if (internalUrl && internalUrl.hostname === 'notebook') {
+  //       const notebookId = internalUrl.pathname.slice(1)
+  //       log.debug(
+  //         'Internal notebook URL detected:',
+  //         internalUrl,
+  //         'adding notebook to context',
+  //         notebookId
+  //       )
+  //       notebookManager.getNotebook(notebookId).then((notebook) => {
+  //         contextManager.onlyUseNotebookInContext(notebook)
+  //       })
+  //     } else {
+  //       log.debug('Other internal URL detected:', $activeTabUrl)
+  //     }
+  //   }
+  // })
 
   onMount(async () => {
     log.debug('Core component mounted')
@@ -160,6 +160,7 @@
     })
 
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_SIDEBAR, () => {
+      log.debug('Toggling sidebar to', !viewManager.sidebarViewOpen)
       viewManager.setSidebarState({ open: !viewManager.sidebarViewOpen })
       return true
     })
@@ -190,7 +191,7 @@
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
 <div class="main">
-  <TeletypeEntry bind:open />
+  <!-- <TeletypeEntry bind:open /> -->
 
   <div class="app-bar">
     <div class="tabs">

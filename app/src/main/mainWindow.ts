@@ -11,7 +11,8 @@ import {
   isPDFViewerURL,
   PDFViewerParams,
   ResourceViewerParams,
-  NotebookViewerParams
+  NotebookViewerParams,
+  parseURL
 } from '@deta/utils/formatting'
 
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
@@ -223,7 +224,7 @@ export function createWindow() {
       details.webContents?.loadURL(`${PDFViewerEntryPoint}?${searchParams}`)
     }
 
-    const loadResourceViewer = (params: Partial<ResourceViewerParams>) => {
+    const loadResourceViewer = async (params: Partial<ResourceViewerParams>) => {
       const searchParams = new URLSearchParams()
       searchParams.set('path', params.path!)
       if (params.resourceId) searchParams.set('resourceId', params.resourceId)
@@ -250,13 +251,18 @@ export function createWindow() {
     const filename = getFilename(dispositionHeader?.[0])
 
     const requestData = requestHeaderMap.pop(details.id)
-    const url = requestData?.url ?? details.url
+    const url = parseURL(requestData?.url ?? details.url)
 
-    if (url.startsWith('surf:')) {
+    if (!url) {
+      callback({ cancel: false })
+      return
+    }
+
+    if (url.protocol === 'surf:') {
       console.log('surf protocol request:', url)
 
-      const isResource = url.startsWith('surf://resource/')
-      const isNotebook = url.startsWith('surf://notebook/')
+      const isResource = url.hostname === 'resource'
+      const isNotebook = url.hostname === 'notebook'
 
       if (isPDF) {
         callback({ cancel: true })
@@ -265,13 +271,13 @@ export function createWindow() {
         callback({ cancel: true })
         loadNotebookViewer({
           path: details.url,
-          notebookId: url.split('/').pop()
+          notebookId: url.pathname.slice(1)
         })
       } else if (isResource) {
         callback({ cancel: true })
         loadResourceViewer({
           path: details.url,
-          resourceId: url.split('/').pop()
+          resourceId: url.pathname.slice(1)
         })
       } else {
         callback({ cancel: false })

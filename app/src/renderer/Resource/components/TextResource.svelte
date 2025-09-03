@@ -82,7 +82,7 @@
     SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
   } from '@deta/services/constants'
   import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
-  import { Provider } from '@deta/types/src/ai.types'
+  import { ModelTiers, Provider } from '@deta/types/src/ai.types'
   import { Toast, useToasts } from '@deta/ui'
   import { useTelemetry } from '@deta/services'
   import { useConfig } from '@deta/services'
@@ -104,7 +104,6 @@
   } from '@deta/editor/src/lib/extensions/Slash/index'
   import type { SlashItemsFetcher } from '@deta/editor/src/lib/extensions/Slash/suggestion'
   import { BUILT_IN_SLASH_COMMANDS } from '@deta/editor/src/lib/extensions/Slash/actions'
-  import { ResourceManager } from '@deta/services/resources'
   import CaretPopover from './CaretPopover.svelte'
   import type { CaretPosition } from '@deta/editor/src/lib/extensions/CaretIndicator'
   import Surflet from './Surflet.svelte'
@@ -114,6 +113,7 @@
   import { createRemoteMentionsFetcher, createResourcesMentionsFetcher } from '@deta/services/ai'
   import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
+  import { CHAT_TITLE_GENERATOR_PROMPT } from '@deta/services/constants'
   import ChatInput from './ChatInput.svelte'
   import NoteTitle from './NoteTitle.svelte'
   import { SearchResourceTags, ResourceTag } from '@deta/utils/formatting'
@@ -126,6 +126,7 @@
   export let minimal: boolean = false
   export let similaritySearch: boolean = false
   export let contextManager: ContextManager | undefined = undefined
+  export let messagePort: any
   export let resource: ResourceNote
   export let origin: string = ''
   export let onCitationClick: (event: CitationClickEvent) => void
@@ -182,6 +183,54 @@
   }
   const handleIsFirstLineChanged = (e: CustomEvent<boolean>) => {
     isFirstLine.set(e.detail)
+  }
+
+  const generateTitle = async (query: string) => {
+    try {
+      log.debug('Generating note title', query)
+      const completion = await ai.createChatCompletion(
+        JSON.stringify({ message: query }),
+        CHAT_TITLE_GENERATOR_PROMPT,
+        { tier: ModelTiers.Standard }
+      )
+
+      log.debug('title completion', completion)
+
+      if (completion.error) {
+        log.error('Failed to generate title', completion.error)
+        return null
+      }
+
+      if (!completion.output) {
+        log.error('Failed to generate title, no output')
+        return null
+      }
+
+      title = completion.output.trim() ?? query
+
+      await resourceManager.updateResourceMetadata(resourceId, { name: title })
+    } catch (err) {
+      log.error('Error generating title:', err)
+    }
+  }
+
+  const handleNoteRunQuery = async (askQuery: string, mentions: MentionItem[]) => {
+    try {
+      if (askQuery) {
+        log.debug('Found ask query param:', askQuery)
+
+        generateTitle(askQuery)
+
+        await generateAndInsertAIOutput(
+          askQuery,
+          mentions,
+          PageChatMessageSentEventTrigger.NoteUseSuggestion,
+          { focusEnd: true, autoScroll: true, showPrompt: true, focusInput: true }
+        )
+      }
+    } catch (err) {
+      log.error('Error checking for ask query param:', err)
+    }
   }
 
   // Set up synchronization between local and global state
@@ -293,12 +342,20 @@
       document.addEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
       document.addEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
 
+      log.debug('Text resource setup complete')
+      messagePort.noteReady.send()
+
       return () => {
         document.removeEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
         document.removeEventListener('onboarding-open-stuff', handleOpenStuffEvent as EventListener)
         document.removeEventListener('update-surflet', handleUpdateSurfletEvent as EventListener)
       }
     }
+
+    unsubscribeNoteRunQuery = messagePort.noteRunQuery.handle((payload) => {
+      log.debug('Received note-run-query event', payload)
+      handleNoteRunQuery(payload.query, payload.mentions)
+    })
 
     // Start the async setup without waiting for it
     setupAsync()
@@ -1705,6 +1762,7 @@
   let unsubscribeValue: () => void
   let unsubscribeContent: () => void
   let unsubscribeTitle: () => void
+  let unsubscribeNoteRunQuery: () => void
 
   $: if (!$floatingMenuShown) {
     $showPrompts = false
@@ -2276,6 +2334,10 @@
 
     if (unsubscribeTitle) {
       unsubscribeTitle()
+    }
+
+    if (unsubscribeNoteRunQuery) {
+      unsubscribeNoteRunQuery()
     }
 
     if (editorElement) {

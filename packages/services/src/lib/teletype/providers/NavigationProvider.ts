@@ -1,3 +1,4 @@
+import { type MentionItem } from '@deta/editor'
 import type { ActionProvider, TeletypeAction } from '../types'
 import {
   optimisticCheckIfUrl,
@@ -16,7 +17,7 @@ export class NavigationProvider implements ActionProvider {
     return optimisticCheckIfUrl(query) || query.trim().length > 0
   }
 
-  async getActions(query: string): Promise<TeletypeAction[]> {
+  async getActions(query: string, _mentions: MentionItem[]): Promise<TeletypeAction[]> {
     const actions: TeletypeAction[] = []
     const trimmedQuery = query.trim()
 

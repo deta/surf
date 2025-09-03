@@ -6,6 +6,7 @@
   import { HTMLDragItem, DragData } from '@deta/dragcula'
   import { DragTypeNames } from '@deta/types'
   import { getHostname } from '@deta/utils'
+  import { useBrowser } from '@deta/services/browser'
 
   let {
     tab,
@@ -26,6 +27,7 @@
   } = $props()
 
   const tabsService = useTabs()
+  const browser = useBrowser()
 
   const title = tab.view.title
   const url = tab.view.url
@@ -74,6 +76,12 @@
       icon: 'copy',
       text: 'Copy URL',
       action: () => tab.copyURL()
+    },
+    {
+      type: 'action',
+      icon: 'sidebar.right',
+      text: 'Open in Sidebar',
+      action: () => browser.moveTabToSidebar(tab)
     },
     {
       type: 'action',

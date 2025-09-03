@@ -2,7 +2,7 @@ import { provideConfig } from '../config'
 import { createNotebookManager } from '../notebooks'
 import { createResourceManager } from '../resources'
 import { createMentionService } from '../mentions'
-import { createTeletypeService } from '../teletype'
+import { createTeletypeServiceCore } from '../teletype'
 import { useTabs } from '../tabs'
 import { useViewManager } from '../views'
 import {
@@ -19,10 +19,10 @@ export const initServices = () => {
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
-  const teletypeService = createTeletypeService()
+  const teletypeService = createTeletypeServiceCore()
   const viewManager = useViewManager(resourceManager)
   const tabsService = useTabs()
-  const ai = provideAI(resourceManager, tabsService, config, true)
+  const ai = provideAI(resourceManager, config, true)
   const mentionService = createMentionService(tabsService)
 
   const keyboardManager = createKeyboardManager()

@@ -30,17 +30,21 @@ import {
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs,
-  WebContentsViewContextManagerActionEvent,
-  WebContentsViewContextManagerActionOutputs,
   CitationClickEvent
 } from '@deta/types'
 
-import { IPC_EVENTS_RENDERER, NewWindowRequest, OpenURL, SpaceBasicData } from '@deta/services/ipc'
+import {
+  IPC_EVENTS_RENDERER,
+  NewWindowRequest,
+  OpenURL,
+  setupMessagePortPrimary,
+  SpaceBasicData
+} from '@deta/services/ipc'
 import { ControlWindow } from '@horizon/core/src/lib/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
 import { initBackend } from './helpers/backend'
-import { MentionItem } from '@deta/services/mentions'
+import type { MessagePortCallbackPrimary } from '@deta/services/messagePort'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -59,6 +63,8 @@ const SettingsWindowEntrypoint =
   process.argv.find((arg) => arg.startsWith('--settings-window-entry-point='))?.split('=')[1] || ''
 
 const webviewNewWindowHandlers: Record<number, (details: NewWindowRequest) => void> = {}
+
+const messagePort = setupMessagePortPrimary()
 
 const eventHandlers = {
   onOpenURL: (callback: (details: OpenURL) => void) => {
@@ -554,6 +560,10 @@ const eventHandlers = {
         // noop
       }
     })
+  },
+
+  onMessagePort: (callback: MessagePortCallbackPrimary) => {
+    messagePort.onMessage(callback)
   }
 }
 
@@ -561,6 +571,10 @@ const api = {
   disableTabSwitchingShortcuts: DISABLE_TAB_SWITCHING_SHORTCUTS,
   SettingsWindowEntrypoint: SettingsWindowEntrypoint,
   PDFViewerEntryPoint: PDFViewerEntryPoint,
+
+  postMessageToView(portId: string, message: any) {
+    messagePort.postMessage(portId, message)
+  },
 
   createToken: (data: any) => {
     return IPC_EVENTS_RENDERER.tokenCreate.invoke(data)

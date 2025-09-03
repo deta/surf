@@ -60,6 +60,7 @@ import {
 } from './types'
 import { Resource, ResourceManager } from '../resources'
 import { WebParser } from '@deta/web-parser'
+import { type MentionItem } from '@deta/editor'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -341,6 +342,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.debouncedDetectExistingResource()
   }
 
+  handleMessagePortMessage(event: any) {
+    this.log.debug('Message port message event in webview:', event)
+  }
+
   private handlePreloadIPCEvent(
     event: WebContentsViewEvents[WebContentsViewEventType.IPC_MESSAGE]
   ) {
@@ -451,6 +456,15 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         }
       })
     )
+
+    // this._unsubs.push(
+    //   this.manager.messagePort.updateView.on(this.view.id, async (payload) => {
+    //     this.log.debug('Update view payload received:', payload)
+
+    //     const response = await this.manager.messagePort.requestCapture.request(this.view.id)
+    //     this.log.debug('Request capture response received:', response)
+    //   })
+    // )
 
     // setup resize observer to resize the webview when the wrapper changes size
     if (this.wrapperElement) {
@@ -633,6 +647,16 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     >
   }
 
+  async sendMessage(type: string, data?: any) {
+    // @ts-ignore
+    window.api.postMessageToView(this.view.id, { type, data })
+  }
+
+  async runNoteQuery(query: string, mentions?: MentionItem[]) {
+    this.log.debug('Running note query', query, mentions)
+    return this.manager.messagePort.noteRunQuery.send(this.view.id, { query, mentions })
+  }
+
   getBoundingClientRect = (): DOMRect | null => {
     if (!this.wrapperElement) {
       this.log.error('WebContents wrapper element is not defined')
@@ -664,6 +688,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
   async insertText(text: string) {
     await this.action(WebContentsViewActionType.INSERT_TEXT, { text })
+  }
+
+  async changePermanentlyActive(value: boolean) {
+    await this.action(WebContentsViewActionType.CHANGE_PERMANENTLY_ACTIVE, value)
   }
 
   async getURL() {
@@ -1130,6 +1158,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
    * This method is called before the view gets fully destroyed.
    */
   onDestroy() {
+    this.log.debug('Destroying web contents view')
     // Clean up any resources or listeners associated with this view
     this.action(WebContentsViewActionType.DESTROY)
 
@@ -1160,6 +1189,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
   private initialData: WebContentsViewData
   private bookmarkingPromises: Map<string, Promise<Resource>> = new Map()
+  private preventUnmounting: boolean = false
 
   data: Readable<WebContentsViewData>
 
@@ -1171,6 +1201,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   backgroundColor: Writable<string | null>
   title: Writable<string>
   faviconURL: Writable<string>
+  permanentlyActive: Writable<boolean>
 
   historyStackIds: Writable<string[]>
   historyStackIndex: Writable<number>
@@ -1216,6 +1247,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.screenshot = writable(null)
     this.backgroundColor = writable(null)
     this.faviconURL = writable(data.faviconUrl || '')
+    this.permanentlyActive = writable(data.permanentlyActive || false)
 
     this.historyStackIds = writable([])
     this.historyStackIndex = writable(-1)
@@ -1237,7 +1269,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
         this.faviconURL,
         this.navigationHistoryIndex,
         this.navigationHistory,
-        this.extractedResourceId
+        this.extractedResourceId,
+        this.permanentlyActive
       ],
       ([
         $url,
@@ -1245,7 +1278,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
         $faviconURL,
         $navigationHistoryIndex,
         $navigationHistory,
-        $extractedResourceId
+        $extractedResourceId,
+        $permanentlyActive
       ]) => {
         return {
           id: this.id,
@@ -1253,7 +1287,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
           url: $url,
           title: $title,
           faviconUrl: $faviconURL,
-          permanentlyActive: this.initialData.permanentlyActive,
+          permanentlyActive: $permanentlyActive,
           navigationHistoryIndex: $navigationHistoryIndex,
           navigationHistory: $navigationHistory || [],
           extractedResourceId: $extractedResourceId
@@ -1283,6 +1317,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   }
   get faviconURLValue() {
     return get(this.faviconURL)
+  }
+  get permanentlyActiveValue() {
+    return get(this.permanentlyActive)
   }
   get isAudioMutedValue() {
     return get(this.isAudioMuted)
@@ -1365,7 +1402,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
       navigationHistory: this.navigationHistoryValue ?? [],
       activate: true,
-      permanentlyActive: this.initialData.permanentlyActive || false,
+      permanentlyActive: this.permanentlyActiveValue ?? false,
       ...opts
     } as WebContentsViewCreateOptions
 
@@ -1408,6 +1445,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
     this.manager.postMountedWebContents(this.id, webContents, options.activate)
 
+    // reset preventUnmounting after successful mount
+    this.preventUnmounting = false
+
     return webContents
   }
 
@@ -1419,7 +1459,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       navigationHistoryIndex: this.navigationHistoryIndexValue ?? -1,
       navigationHistory: this.navigationHistoryValue ?? [],
       activate: true,
-      permanentlyActive: this.initialData.permanentlyActive || false,
+      permanentlyActive: this.permanentlyActiveValue ?? false,
       ...opts
     } as WebContentsViewCreateOptions
 
@@ -1463,6 +1503,22 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.log.debug('View attached successfully:', this.id, webContents)
 
     return webContents
+  }
+
+  /**
+   * Prevents the view from unmounting until the next mount.
+   * This is used to move the view to a different part in the app without destroying the underlying WCV.
+   */
+  preventUnmountingUntilNextMount() {
+    this.log.debug('Marking view as unmountable')
+    this.preventUnmounting = true
+  }
+
+  changePermanentlyActive(value: boolean) {
+    this.log.debug('Changing permanently active state:', value)
+    this.initialData.permanentlyActive = value
+    this.permanentlyActive.set(value)
+    this.webContents?.changePermanentlyActive(value)
   }
 
   copyURL() {
@@ -1783,6 +1839,71 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     // })
 
     return resource
+  }
+
+  /**
+   * Waits until the webContents have updated the domReady store
+   */
+  waitForWebContentsReady(timeout: number = 10000) {
+    let timeoutId: ReturnType<typeof setTimeout>
+    let unsubscribe = () => {}
+
+    return new Promise<WebContents | null>((resolve) => {
+      unsubscribe = this.didFinishLoad.subscribe((didFinishLoad) => {
+        if (didFinishLoad) {
+          clearTimeout(timeoutId)
+          unsubscribe()
+
+          if (!this.webContents) {
+            resolve(null)
+          } else {
+            resolve(this.webContents)
+          }
+        }
+      })
+
+      timeoutId = setTimeout(() => {
+        unsubscribe()
+        resolve(null)
+      }, timeout)
+    })
+  }
+
+  /**
+   * Waits until the webContents have updated the domReady store
+   */
+  waitForNoteReady(timeout: number = 10000) {
+    let timeoutId: ReturnType<typeof setTimeout>
+    let unsubscribe = () => {}
+
+    return new Promise<WebContents | null>((resolve) => {
+      unsubscribe = this.manager.messagePort.noteReady.on((_) => {
+        this.log.debug('note is ready')
+
+        clearTimeout(timeoutId)
+        if (unsubscribe) {
+          unsubscribe()
+        }
+        resolve(this.webContents)
+      }, this.id)
+
+      timeoutId = setTimeout(() => {
+        if (unsubscribe) {
+          unsubscribe()
+        }
+        resolve(null)
+      }, timeout)
+    })
+  }
+
+  unmount() {
+    if (this.preventUnmounting) {
+      this.log.debug('Preventing unmounting of view:', this.id)
+      return
+    }
+
+    this.log.debug('Unmounting view:', this.id)
+    this.destroy()
   }
 
   destroy() {

@@ -196,6 +196,10 @@ body.custom .editor {
     &::after {
       content: '\200B';
     }
+
+    img {
+      margin: 0 !important;
+    }
   }
 
   h1,

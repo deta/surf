@@ -1,5 +1,6 @@
+import { type MentionItem } from '@deta/editor'
+
 export interface TeletypeAction {
-  type: 'teletype'
   id: string
   name: string
   icon: string
@@ -10,6 +11,7 @@ export interface TeletypeAction {
   description?: string
   shortcut?: string
   buttonText?: string
+  providerId?: string
 
   // Properties needed for teletype filtering logic
   parent?: string | null
@@ -30,7 +32,7 @@ export interface ActionProvider {
   /**
    * Get actions for the given query
    */
-  getActions(query: string): Promise<TeletypeAction[]>
+  getActions(query: string, mentions: MentionItem[]): Promise<TeletypeAction[]>
 
   /**
    * Check if this provider can handle the given query

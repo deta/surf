@@ -1,4 +1,5 @@
 export * from './teletypeService'
+export * from './teletypeServiceCore'
 export * from './types'
 
 // Provider exports

@@ -4,9 +4,6 @@
   import ConfirmationPrompt from './ConfirmationPrompt.svelte'
   import Notifications from './Notifications.svelte'
   import { createEventDispatcher } from 'svelte'
-  import type { UseMentionsResult } from '@deta/services'
-
-  let { mentionsService }: { mentionsService?: UseMentionsResult } = $props()
 
   const teletype = useTeletype()
 
@@ -57,7 +54,7 @@
 
 <div class="inner-wrapper">
   <Notifications {teletype} />
-  <TeletypeCore on:input on:actions-rendered on:ask {mentionsService}>
+  <TeletypeCore on:input on:actions-rendered on:ask>
     <slot name="header" slot="header" />
   </TeletypeCore>
 

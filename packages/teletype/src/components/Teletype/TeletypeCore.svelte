@@ -12,19 +12,20 @@
   import ToolsList from './ToolsList.svelte'
   import { onMount, tick, createEventDispatcher } from 'svelte'
   import { isMac } from '@deta/utils/system'
-  import { Editor } from '@deta/editor'
-  import type { MentionItem, UseMentionsResult } from '@deta/services'
-  import { MentionTypes } from '@deta/services'
+  import { Editor, type MentionItem } from '@deta/editor'
+  import { createRemoteMentionsFetcher } from '@deta/services/ai'
   import { Button } from '@deta/ui'
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<{
+    ask: { query: string; mentions: MentionItem[] }
+    input: { query: string; mentions: MentionItem[] }
+    'actions-rendered': boolean
+  }>()
 
   let {
-    key,
-    mentionsService
+    key
   }: {
     key?: string | undefined
-    mentionsService: UseMentionsResult
   } = $props()
 
   const teletype = useTeletype(key)
@@ -47,7 +48,7 @@
   const localIsMac = isMac()
 
   let showModalOverlay = false
-  let mentionItems: MentionItem[] = $state([])
+  let mentions: MentionItem[] = []
   let modalContent: Action | null = null
 
   const isModal = $derived(
@@ -184,37 +185,45 @@
   }
 
   const handleEditorUpdate = (content: string) => {
-    dispatch('input', content)
+    const mentionInProgressPattern = /@[\w\s]*$/
 
     // Check if content contains mentions using the editor's mention detection
     if (editorComponent) {
-      const mentions = editorComponent.getMentions()
+      const { mentions, text } = editorComponent.getParsedEditorContent()
       hasMentions = mentions && mentions.length > 0
+      isInMentionMode = mentionInProgressPattern.test(text.trim())
     } else {
       // Fallback to simple pattern matching
       const mentionPattern = /@\w+/g
       hasMentions = mentionPattern.test(content)
+
+      // Check if currently in mention selection mode (@ followed by text but not completed)
+      isInMentionMode = mentionInProgressPattern.test(content.trim())
     }
 
-    // Check if currently in mention selection mode (@ followed by text but not completed)
-    const mentionInProgressPattern = /@\w*$/
-    isInMentionMode = mentionInProgressPattern.test(content.trim())
+    dispatch('input', { query: content, mentions })
   }
 
-  const handleAskClick = (e: MouseEvent) => {
-    e.stopPropagation()
-    if ($selectedAction?.id === 'search' && $inputValue) {
-      dispatch('ask', $inputValue)
-    }
-  }
+  // const handleAskClick = (e: MouseEvent) => {
+  //   e.stopPropagation()
+  //   if ($selectedAction?.id === 'search' && $inputValue) {
+  //     dispatch('ask', $inputValue)
+  //   }
+  // }
 
   const handleHelperClick = () => {
     teletype.showAction('teletype-helper')
   }
 
-  const handleSendClick = () => {
+  const handleSubmit = () => {
     if ($selectedAction) {
       callAction($selectedAction)
+    } else {
+      if (!mentions) {
+        mentions = editorComponent.getMentions()
+      }
+
+      dispatch('ask', { query: $inputValue, mentions })
     }
   }
 
@@ -273,20 +282,10 @@
       !$currentAction?.requireInput
   )
 
-  $effect(() => {
-    dispatch('actions-rendered', $currentAction ? true : false)
-  })
+  const mentionItemsFetcher = createRemoteMentionsFetcher()
 
   $effect(() => {
-    return mentionsService.items.subscribe((items) => {
-      mentionItems = items || []
-      if (items?.length > 0) {
-        console.log(
-          'TeletypeCore - Mention items:',
-          items.map((i) => ({ id: i.id, type: i.type, name: i.name }))
-        )
-      }
-    })
+    dispatch('actions-rendered', $currentAction ? true : false)
   })
 
   $effect(() => {
@@ -405,26 +404,7 @@
               submitOnEnter={true}
               autofocus={true}
               parseMentions={true}
-              mentionItemsFetcher={async (queryParam) => {
-                // TipTap passes { query: string, editor: Editor } where query is text after @
-                const query = queryParam?.query || ''
-                // Set the query in the mentions service to trigger search
-                if (mentionsService) {
-                  mentionsService.setQuery(query)
-                }
-
-                const items = $state.snapshot(mentionItems)
-
-                // Transform service items to editor format
-                return items.map((item) => ({
-                  id: item.id,
-                  label: item.name, // name -> label
-                  icon: item.type === MentionTypes.TAB ? undefined : item.icon, // Don't use icon for tabs
-                  type: item.type,
-                  faviconURL: item.type === MentionTypes.TAB ? item.icon : undefined, // Use icon as faviconURL for tabs
-                  data: item.metadata
-                }))
-              }}
+              {mentionItemsFetcher}
               mentionConfig={{
                 preventReTrigger: false,
                 dismissOnSpace: false,
@@ -446,11 +426,7 @@
                 inputValue.set(plainText)
                 handleEditorUpdate(plainText)
               }}
-              on:submit={() => {
-                if ($selectedAction) {
-                  callAction($selectedAction)
-                }
-              }}
+              on:submit={handleSubmit}
             />
           {/if}
 
@@ -483,7 +459,7 @@
         <ToolsList tools={$tools} {teletype} />
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
-          <Button size="md" onclick={handleSendClick} class="send-button">
+          <Button size="md" onclick={handleSubmit} class="send-button">
             {$selectedAction?.buttonText || 'Send'}
           </Button>
         </div>

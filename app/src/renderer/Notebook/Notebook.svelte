@@ -5,9 +5,7 @@
   import { setupTelemetry } from '@deta/services/helpers'
   import { useLogScope } from '@deta/utils'
   import { createResourceManager } from '@deta/services/resources'
-  import { createMentionService } from '@deta/services/mentions'
   import { createTeletypeService } from '@deta/services/teletype'
-  import { useTabs } from '@deta/services/tabs'
   import IndexRoute from './components/routes/IndexRoute.svelte'
   import NotebookDetailRoute from './components/routes/NotebookDetailRoute.svelte'
   import DraftsRoute from './components/routes/DraftsRoute.svelte'
@@ -21,11 +19,9 @@
   const log = useLogScope('NotebookRenderer')
   const telemetry = setupTelemetry()
   const config = provideConfig()
-  const tabsService = useTabs()
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const mentionService = createMentionService(tabsService)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
 

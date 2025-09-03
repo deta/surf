@@ -1,5 +1,5 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store'
-import { useDebounce, useLogScope } from '@deta/utils'
+import { useDebounce, useLogScope, useThrottle } from '@deta/utils'
 import type {
   MentionProvider,
   MentionItem,
@@ -10,6 +10,8 @@ import type {
 } from './mention.types'
 
 import { TabsMentionProvider } from './providers/TabsMentionProvider'
+import { ResourceMentionProvider } from './providers/ResourceMentionProvider'
+import { NotebookMentionProvider } from './providers/NotebookMentionProvider'
 import type { TabsService } from '../tabs/tabs.svelte'
 
 import { MentionTypes } from './mention.types'
@@ -33,7 +35,7 @@ export class MentionService {
 
   constructor(tabsService?: TabsService, options: MentionServiceOptions = {}) {
     this.options = {
-      debounceMs: 15,
+      debounceMs: 500,
       maxItemsPerProvider: 5,
       enabledProviders: [],
       enabledTypes: Object.values(MentionTypes),
@@ -69,6 +71,12 @@ export class MentionService {
       this.registerProvider(tabsProvider)
     }
 
+    const resourceProvider = new ResourceMentionProvider()
+    this.registerProvider(resourceProvider)
+
+    const notebookProvider = new NotebookMentionProvider()
+    this.registerProvider(notebookProvider)
+
     this.attachListeners()
   }
 
@@ -82,10 +90,12 @@ export class MentionService {
       // @ts-ignore
       window.api.onFetchMentions(async ({ query }) => {
         this.log.debug('Received fetchMentions event', query)
-        const results = await this.performSearch(query)
+        const results = await (query.length > 0
+          ? this.debouncedPerformSearch(query)
+          : this.performSearch(query))
 
         this.log.debug('Returning fetched mentions:', results)
-        return results
+        return results || []
       })
     }
   }
@@ -222,6 +232,8 @@ export class MentionService {
       }))
     }
   }
+
+  debouncedPerformSearch = useDebounce((query: string) => this.performSearch(query), 300)
 
   /**
    * Execute all LOCAL providers immediately for instant results

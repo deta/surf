@@ -4,6 +4,7 @@ import type { API, PreloadEventHandlers } from './core'
 declare global {
   interface Window {
     electron: ElectronAPI
+    electronMessagePort: MessagePort | undefined
     api: API
     preloadEvents: PreloadEventHandlers
     backend: {

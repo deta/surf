@@ -1,6 +1,7 @@
 <script lang="ts">
   // TODO: persist size
   import { useViewManager } from '@deta/services/views'
+  import { useBrowser } from '@deta/services/browser'
   import { Button } from '@deta/ui'
   import { Icon } from '@deta/icons'
   import WebContentsView from '../WebContentsView.svelte'
@@ -8,9 +9,10 @@
   import NavigationBarGroup from '../NavigationBar/NavigationBarGroup.svelte'
 
   const viewManager = useViewManager()
+  const browser = useBrowser()
 
   // NOTE: We could move the initialization into core so that it loads a bit faster on first open
-  if (viewManager.activeSidebarView === undefined) {
+  if (!viewManager.activeSidebarView) {
     viewManager.setSidebarState({
       open: false,
       view: viewManager.create({ url: 'surf://notebook', permanentlyActive: true })
@@ -40,6 +42,14 @@
     window.removeEventListener('mousemove', handleResizingMouseMove, { capture: true })
     isResizing = false
   }
+
+  $effect(() => {
+    if (viewManager.sidebarViewOpen && viewManager.activeSidebarView === null) {
+      viewManager.setSidebarState({
+        view: viewManager.create({ url: 'surf://notebook', permanentlyActive: true })
+      })
+    }
+  })
 </script>
 
 {#if viewManager.sidebarViewOpen && viewManager.activeSidebarView}
@@ -65,6 +75,10 @@
 
           {#snippet rightChildren()}
             <NavigationBarGroup slim>
+              <Button size="md" square onclick={() => browser.moveSidebarViewToTab()}>
+                <Icon name="arrow.diagonal" size="1.2em" />
+              </Button>
+
               <Button size="md" square onclick={() => viewManager.setSidebarState({ open: false })}>
                 <Icon name="close" size="1.2em" />
               </Button>

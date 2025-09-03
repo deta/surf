@@ -1,3 +1,4 @@
+import { type MentionItem } from '@deta/editor'
 import type { ActionProvider, TeletypeAction } from '../types'
 import {
   generateUUID,
@@ -19,7 +20,7 @@ export class CurrentQueryProvider implements ActionProvider {
     return !optimisticCheckIfURLOrIPorFile(trimmedQuery)
   }
 
-  async getActions(query: string): Promise<TeletypeAction[]> {
+  async getActions(query: string, _mentions: MentionItem[]): Promise<TeletypeAction[]> {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length < 2) return []
 

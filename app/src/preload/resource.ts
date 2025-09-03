@@ -19,11 +19,12 @@ import {
   WebViewEventSendNames,
   type CitationClickEvent
 } from '@deta/types'
-import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
+import { IPC_EVENTS_RENDERER, setupMessagePortClient } from '@deta/services/ipc'
+import type { MessagePortCallbackClient } from '@deta/services/messagePort'
 
 import { getUserConfig } from '../main/config'
 import { initBackend } from './helpers/backend'
-import { ipcRenderer } from 'electron/renderer'
+import { ipcRenderer } from 'electron'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -33,6 +34,8 @@ const PDFViewerEntryPoint =
   process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
 const SettingsWindowEntrypoint =
   process.argv.find((arg) => arg.startsWith('--settings-window-entry-point='))?.split('=')[1] || ''
+
+const messagePort = setupMessagePortClient()
 
 const eventHandlers = {
   onOpenDevtools: (callback: () => void) => {
@@ -54,12 +57,20 @@ const eventHandlers = {
         // noop
       }
     })
+  },
+
+  onMessagePort: (callback: MessagePortCallbackClient) => {
+    messagePort.onMessage(callback)
   }
 }
 
 const api = {
   SettingsWindowEntrypoint: SettingsWindowEntrypoint,
   PDFViewerEntryPoint: PDFViewerEntryPoint,
+
+  postMessageToView(payload: any) {
+    messagePort.postMessage(payload)
+  },
 
   restartApp: () => {
     IPC_EVENTS_RENDERER.restartApp.send()
@@ -197,4 +208,31 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       altKey: event.altKey
     })
   })
+})
+
+function handlePortMessage(event) {
+  console.log('Received message from messagePort:', event.data)
+}
+
+ipcRenderer.on('port', (event) => {
+  try {
+    console.log('Received port event:', event)
+
+    const port = event.ports[0]
+
+    const postMessage = (data) => {
+      port.postMessage(data)
+    }
+
+    port.onmessage = handlePortMessage
+
+    if (process.contextIsolated) {
+      contextBridge.exposeInMainWorld('electronMessagePort', {
+        postMessage
+      })
+    } else {
+      // @ts-ignore (define in dts)
+      window.electronMessagePort = port
+    }
+  } catch (err) {}
 })

@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { createTelemetry, provideConfig } from '@deta/services'
+  import { provideConfig } from '@deta/services'
   import { createResourceManager, type Resource } from '@deta/services/resources'
   import { setupTelemetry } from '@deta/services/helpers'
-  import { useTabs } from '@deta/services/tabs'
   import { provideAI } from '@deta/services/ai'
   import { ResourceTypes, type CitationClickEvent } from '@deta/types'
 
   import { Note } from '@deta/ui'
   import TextResource from './components/TextResource.svelte'
+  import { useMessagePortClient } from '@deta/services/messagePort'
 
   const searchParams = new URLSearchParams(window.location.search)
   const resourceId = searchParams.get('resourceId') || ''
@@ -16,8 +16,8 @@
   const telemetry = setupTelemetry()
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
-  const tabs = useTabs()
-  const ai = provideAI(resourceManager, tabs, config, false)
+  const ai = provideAI(resourceManager, config, false)
+  const messagePort = useMessagePortClient()
 
   const contextManager = ai.contextManager
 
@@ -50,6 +50,7 @@
         resourceId={resource.id}
         {resource}
         {contextManager}
+        {messagePort}
         onCitationClick={handleCitationClick}
       />
     {:else}
