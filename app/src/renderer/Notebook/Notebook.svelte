@@ -3,20 +3,24 @@
   import { provideConfig } from '@deta/services'
   import { createNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { setupTelemetry } from '@deta/services/helpers'
-  import { useLogScope } from '@deta/utils'
+  import { SearchResourceTags } from '@deta/utils'
   import { createResourceManager } from '@deta/services/resources'
   import { createTeletypeService } from '@deta/services/teletype'
+  import { useTabs } from '@deta/services/tabs'
+  import { prepareContextMenu } from '@deta/ui'
   import IndexRoute from './components/routes/IndexRoute.svelte'
   import NotebookDetailRoute from './components/routes/NotebookDetailRoute.svelte'
   import DraftsRoute from './components/routes/DraftsRoute.svelte'
   import HistoryRoute from './components/routes/HistoryRoute.svelte'
-  import TeletypeEntry from '../Core/components/Teletype/TeletypeEntry.svelte'
-  import { Renamable } from '@deta/ui'
+  import { ResourceTypes } from '../../../../packages/types/src'
+  import { Resource } from '../../../../packages/services/src/lib/resources'
+  import NotebookSidebar from './components/NotebookSidebar.svelte'
+  import { writable } from 'svelte/store'
 
   const searchParams = new URLSearchParams(window.location.search)
   const notebookId = searchParams.get('notebookId') || null
+  const query = searchParams.get('query') || null
 
-  const log = useLogScope('NotebookRenderer')
   const telemetry = setupTelemetry()
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
@@ -26,62 +30,99 @@
   const teletypeService = createTeletypeService()
 
   let notebook: Notebook = $state(null)
-  let title = $state('maxus notebook')
-  let isLoadingTitle = $state(true)
+  let notebookData = $derived(notebook.data ?? writable(null))
+  const notebookContents = $derived(notebook ? notebook.contents : writable([]))
+  let notebookResources = $state([])
 
-  async function loadTitle() {
-    try {
-      const loadedTitle = await notebookManager.loadTitle()
-      title = loadedTitle
-    } catch (error) {
-      console.warn('Failed to load notebook title:', error)
-    } finally {
-      isLoadingTitle = false
-    }
-  }
+  $effect(() => {
+    Promise.all(
+      $notebookContents
+        //.filter((e) => e.resource_type !== 'application/vnd.space.document.space-note')
+        .map((e) => resourceManager.getResource(e.entry_id))
+    ).then((v) => {
+      notebookResources = v
+    })
+  })
 
-  async function saveTitle(newTitle: string) {
-    try {
-      await notebookManager.saveTitle(newTitle)
-      title = newTitle
-      console.log('Title saved:', newTitle)
-    } catch (error) {
-      console.error('Failed to save notebook title:', error)
-    }
-  }
+  let title = $derived(
+    !notebook ? 'Maxintosh HD' : ($notebookData?.folderName ?? $notebookData?.name ?? '')
+  )
+
+  let resourcesPanelOpen = $state(false)
+  let resources: Resource[] = $state([])
 
   onMount(async () => {
-    await loadTitle()
+    prepareContextMenu()
 
     if (notebookId && !['drafts', 'history'].includes(notebookId)) {
       notebook = await notebookManager.getNotebook(notebookId)
     } else {
       notebook = notebookId
     }
+
+    let resourceIds = []
+
+    if (!query) {
+      if (notebook) notebook.fetchContents()
+      else {
+        resourceIds = await resourceManager.listResourceIDsByTags([
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          SearchResourceTags.NotExists('silent')
+        ])
+      }
+    } else {
+      console.warn('DBG ', query)
+      const result = await resourceManager.searchResources(
+        query,
+        [
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          SearchResourceTags.NotExists('silent')
+          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
+          //...conditionalArrayItem(isNotesSpace, [
+          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          //])
+        ],
+        {
+          semanticEnabled: false,
+          spaceId: notebookId ?? undefined
+        }
+      )
+      resourceIds = result.resources.map((e) => e.id)
+    }
+    resources = (await Promise.all(resourceIds.map((id) => resourceManager.getResource(id)))).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    console.warn('DBG', resources, query, resourceIds)
+
+    if (query !== null && query?.length > 0) resourcesPanelOpen = true
   })
 </script>
 
-<div class="wrapper">
-  <div class="content">
-    <h1>
-      {#if !isLoadingTitle}
-        <Renamable value={title} onConfirm={saveTitle} placeholder="Untitled Notebook" />
-      {/if}
-    </h1>
+<div class="notebook">
+  <div class="bg"></div>
 
-    <div>
-      <TeletypeEntry open={true} />
-    </div>
-    {#if notebookId === null}
-      <IndexRoute />
-    {:else if notebook === 'drafts'}
-      <DraftsRoute />
-    {:else if notebook === 'history'}
-      <HistoryRoute />
-    {:else if notebook}
-      <NotebookDetailRoute {notebook} />
-    {/if}
-  </div>
+  {#if notebookId === null}
+    <IndexRoute {query} />
+  {:else if notebook === 'drafts'}
+    <DraftsRoute />
+  {:else if notebook === 'history'}
+    <HistoryRoute />
+  {:else if notebook}
+    <NotebookDetailRoute
+      {notebook}
+      resources={notebook && query === null ? notebookResources : resources}
+      {query}
+    />
+  {/if}
+
+  <NotebookSidebar
+    {title}
+    {notebook}
+    bind:open={resourcesPanelOpen}
+    resources={notebook && query === null ? notebookResources : resources}
+  />
 </div>
 
 <style lang="scss">
@@ -128,66 +169,65 @@
     width: 100%;
     margin: 0;
     padding: 0;
+    user-select: none;
+  }
+  :global(#app *) {
+    -electron-corner-smoothing: 60%;
   }
   :global(html, body) {
     height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
-    background: var(--page-gradient-color); // Gradient here to make scrolled page look nice
+    // overflow: hidden;
   }
 
-  .content {
-    height: 100%;
-    max-width: 675px;
-    margin: 0 auto;
-    padding-block: 5rem;
-    position: relative;
-
-    h1 {
-      font-size: 28px;
-      margin-inline: 0.5rem;
-      margin-bottom: 5px;
-      font-family: 'Gambarino';
-    }
+  :global(body) {
+    background: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
+      url('https://i.imgur.com/7XbyivJ.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: 50% 30%;
   }
 
-  .wrapper {
+  .notebook {
     position: relative;
-    background: var(--page-background);
+    overflow-x: hidden;
 
-    min-height: 100%;
+    //.bg {
+    //  content: '';
+    //  position: absolute;
+    //  inset: -4px;
+    //  background:
+    //    linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
+    //    url('https://i.imgur.com/7XbyivJ.png');
+    //  background-repeat: no-repeat;
+    //  background-size: cover;
+    //  background-position: 50% 30%;
+    //  //background: #fff;
+    //  z-index: -1;
+    //  filter: blur(2px);
+    //  pointer-events: none;
+    //}
+
+    height: 100vh;
     width: 100%;
-    margin: 0;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4rem;
-      z-index: 0;
-      pointer-events: none;
-      background: linear-gradient(to bottom, var(--page-gradient-color), transparent);
-    }
-    &::after {
-      content: '';
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 6rem;
-      z-index: 0;
-      pointer-events: none;
-      background: linear-gradient(to top, var(--page-background), transparent);
-    }
+    padding-inline: 1.5rem;
+    padding-block: 4.5rem;
 
-    h1 {
-      font-size: 28px;
-      margin-bottom: 5px;
-      font-family: 'Gambarino';
-    }
+    //&::before {
+    //  content: '';
+    //  position: absolute;
+    //  top: 0;
+    //  left: 0;
+    //  right: 0;
+    //  height: 2rem;
+    //  z-index: 0;
+    //  pointer-events: none;
+    //  background: linear-gradient(to bottom, var(--page-gradient-color), transparent);
+    //}
   }
 </style>

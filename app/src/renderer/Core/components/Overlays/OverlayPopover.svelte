@@ -12,7 +12,7 @@
 
   const log = useLogScope('OverlayPopover')
 
-  let bounds = $state({ x: 200, y: 200, width: 400, height: 500 })
+  let bounds = $state({ x: 200, y: 200, width: 300, height: 500 })
 
   let ref: HTMLElement
 
@@ -71,8 +71,8 @@
 
 <style lang="scss">
   .popover-content-wrapper {
-    background: white;
-    border: 1px solid #eee;
+    //background: white;
+    //border: 1px solid #eee;
     border-radius: 12px;
     overflow: hidden;
     height: calc(100vh - 32px);

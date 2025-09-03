@@ -2,9 +2,10 @@
   import { Icon } from '@deta/icons'
   import { type WebContentsView } from '@deta/services/views'
   import { Button } from '@deta/ui'
-  import { useLogScope } from '@deta/utils'
+  import { truncate, useLogScope } from '@deta/utils'
   import OverlayPopover from '../Overlays/OverlayPopover.svelte'
   import { Notebook, useNotebookManager } from '@deta/services/notebooks'
+  import { MaskedScroll } from '@deta/ui'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { writable } from 'svelte/store'
 
@@ -57,54 +58,72 @@
 
 <OverlayPopover bind:open={isMenuOpen} position="bottom">
   {#snippet trigger()}
-    <Button size="md" style="padding-block: 6px;padding-inline: 8px;">
+    <Button size="md" square>
       {#if $isSaved}
         <Icon name="bookmarkFilled" size="1.085em" />
-        Saved
+        <!--Saved-->
       {:else}
         <Icon name="bookmark" size="1.085em" />
-        Save
+        <!-- Save-->
       {/if}
     </Button>
   {/snippet}
 
   <div class="list">
-    {#each $notebooks as notebook (notebook.id)}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <button class="list-item" onclick={() => selectNotebook(notebook)}>
-        {#if $spaceIds.includes(notebook.id)}
-          <Icon name="check" />
-        {:else}
-          <Icon name="circle" />
-        {/if}
+    <MaskedScroll>
+      {#each $notebooks as notebook (notebook.id)}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <button class="list-item" onclick={() => selectNotebook(notebook)}>
+          {#if $spaceIds.includes(notebook.id)}
+            <Icon name="check" />
+          {:else}
+            <Icon name="circle" />
+          {/if}
 
-        <div class="list-item-label">
-          {notebook.dataValue.folderName || notebook.dataValue.name}
-        </div>
-      </button>
-    {/each}
+          <div class="list-item-label">
+            {truncate(notebook.dataValue.folderName || notebook.dataValue.name, 28)}
+          </div>
+        </button>
+      {/each}
+    </MaskedScroll>
   </div>
 </OverlayPopover>
 
 <style lang="scss">
   .list {
+    --ctx-border: rgba(0, 0, 0, 0.175);
+    --ctx-shadow-color: rgba(0, 0, 0, 0.12);
+    --ctx-item-hover: rgba(0, 0, 0, 0.06);
+    --ctx-item-text: #210e1f;
+    --ctx-item-text-hover: #000;
+
     padding: 0;
     margin: 0;
-    height: 100%;
-    overflow-y: auto;
+    height: fit-content;
+    max-height: 400px;
     list-style: none;
+    padding: 0.225rem;
+    border-radius: 12px;
+    border: 0.5px solid var(--ctx-border);
+    box-shadow: 0 2px 10px var(--ctx-shadow-color);
+    background: #fff;
+    font-size: 0.95rem;
+    display: flex;
+    flex-direction: column;
 
     .list-item {
       display: flex;
       align-items: center;
       gap: 0.25rem;
-      padding: 8px 12px;
+      padding: 0.4em 0.55em;
+      padding-bottom: 0.385rem;
+      border-radius: 9px;
       width: 100%;
-      border-bottom: 1px solid #eee;
 
       &:hover {
-        background: darken(#eee, 5%);
+        background: var(--ctx-item-hover);
+        color: var(--ctx-item-text-hover);
       }
     }
 

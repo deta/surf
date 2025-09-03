@@ -10,6 +10,8 @@
   import NavigationBarGroup from './NavigationBarGroup.svelte'
   import SaveState from './SaveState.svelte'
   import { isInternalRendererURL } from '@deta/utils'
+  import { useResourceManager } from '@deta/services/resources'
+  import { useViewManager } from '@deta/services/views'
 
   let {
     view,
@@ -20,6 +22,7 @@
     centeredBreadcrumbs = false,
     hideNavigationControls = false,
     hideSearch = false,
+    onsearchinput,
 
     leftChildren,
     rightChildren
@@ -30,9 +33,16 @@
     locationInputDisabled?: boolean
     hideNavigationControls?: boolean
     hideSearch?: boolean
+    onsearchinput?: (value: string) => void
     leftChildren?: Snippet
     rightChildren?: Snippet
   } = $props()
+
+  export function setIsEditingLocation(v: boolean) {
+    isEditingUrl = v
+  }
+  const resourceManager = useResourceManager()
+  const viewManager = useViewManager()
 
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
@@ -43,6 +53,8 @@
   const canGoForward = $derived($navigationHistoryIndex < $navigationHistory?.length - 1)
   const canReload = true
 
+  let isEditingUrl = $state(false)
+
   function onGoBack() {
     view.webContents.goBack()
   }
@@ -52,9 +64,17 @@
   function onReload(e: MouseEvent) {
     view.webContents.reload(e.shiftKey)
   }
+
+  async function handleNewNote() {
+    const note = await resourceManager.createResourceNote('', {
+      name: 'Untitled Note'
+    })
+
+    view.webContents.loadURL(`surf://resource/${note.id}`)
+  }
 </script>
 
-<nav>
+<nav class:grey={isInternalRendererURL($activeLocation)}>
   {@render leftChildren?.()}
 
   {#if !hideNavigationControls}
@@ -72,20 +92,29 @@
       </Button>
     </NavigationBarGroup>
   {/if}
+
   <NavigationBarGroup fullWidth={!centeredBreadcrumbs}>
     <BreadcrumbItems {view} />
-    <LocationBar {view} readonly={readonlyLocation} />
+    <LocationBar {view} readonly={readonlyLocation} bind:isEditingUrl />
     {#if !isInternalRendererURL($activeLocation)}
       {#key $extractedResourceId}
         <SaveState {view} />
       {/key}
+
+      {#if !viewManager.sidebarViewOpen}
+        <Button size="md" onclick={handleNewNote} style="padding-block: 6px;padding-inline: 8px;">
+          <Icon name="edit" size="1.085em" />
+          <span>Create Note</span>
+        </Button>
+      {/if}
     {/if}
   </NavigationBarGroup>
 
   {#if !hideSearch}
-    <NavigationBarGroup>
-      <!-- TODO: (maxu): Make better check -->
-      <SearchInput collapsed={!$activeLocation?.includes('notebook.html')} />
+    <NavigationBarGroup
+      style={!isInternalRendererURL($activeLocation) ? 'margin-left: -0.5rem' : ''}
+    >
+      <SearchInput collapsed={!isInternalRendererURL($activeLocation)} {onsearchinput} />
     </NavigationBarGroup>
   {/if}
 
@@ -112,5 +141,35 @@
     gap: 0.5rem;
     align-items: center;
     justify-content: space-between;
+
+    transition: background 123ms ease-out;
+
+    &.grey {
+      background: rgba(250, 250, 250, 1);
+    }
+
+    .group {
+      display: flex;
+      align-items: center;
+
+      // Smol trick to make the back & forwards buttons visually more balanced
+      &.slim {
+        :global([data-button-root]:first-child) {
+          margin-right: -1.5px;
+        }
+        :global([data-button-root]:last-child) {
+          margin-left: -1.5px;
+        }
+      }
+    }
+
+    .breadcrumbs {
+      width: 100%;
+      height: 100%;
+      flex-shrink: 1;
+    }
+    .search {
+      flex: 1;
+    }
   }
 </style>

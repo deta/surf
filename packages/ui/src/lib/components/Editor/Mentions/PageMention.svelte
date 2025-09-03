@@ -1,124 +1,83 @@
 <script lang="ts">
   import { DynamicIcon } from '@deta/icons'
-  import { useResourceManager } from '@deta/services/resources';
   import type { Fn } from '@deta/types';
-  import { onMount, tick } from 'svelte'
+  import { clickOutside } from '@deta/utils'
 
-  let {text, resourceId, icon, active, onclick, ...restProps}: {
-          text?: string
-          resourceId?:string, icon?:string, active?: boolean, onclick?: Fn
+  let {
+    text = $bindable(),
+    placeholder = '',
+    icon, 
+    editing = false,
+    active, 
+    onclick, 
+    oncancel,
+    onclose,
+    onchange, 
+    ...restProps
+  }: {
+    text?: string
+    placeholder?: string
+    icon?: string
+    editing: boolean
+    active?: boolean
+    onclick?: Fn
+    oncancel?: Fn
+    onclose?: Fn
+    onchange?: (value: String) => void
   } = $props()
 
-  const resourceManager = useResourceManager()
+  let editorEl: HTMLSpanElement = $state()
 
-  //export let text: string = 'Page Title'
-  //export let icon: string = 'document'
-  //export let active: boolean = false
-  //export let resourceId: string | undefined = undefined
-  //export let spaceId: string | undefined = undefined
-
-  let displayText = $state(text ?? '')
-
-  let isRenaming = false
-  let renameInput: HTMLInputElement
-  let originalText = text
-  let tempText = text
-  let mentionPageElement: HTMLSpanElement
-
-  async function startRename() {
-    isRenaming = true
-    originalText = text
-    tempText = text
-    await tick()
-    if (renameInput) {
-      renameInput.focus()
-      renameInput.select()
-    }
+  const handleClose = () => {
+    onchange?.(editorEl?.textContent)
+    onclose?.()
   }
 
-  //function confirmRename() {
-  //  if (tempText.trim() && tempText !== originalText) {
-  //    dispatch('rename', {
-  //      oldText: originalText,
-  //      newText: tempText.trim(),
-  //      resourceId,
-  //      spaceId
-  //    })
-  //    text = tempText.trim()
-  //  }
-  //  isRenaming = false
-  //}
+  $effect(() => {
+    if (!editorEl) return
 
-  //function cancelRename() {
-  //  tempText = originalText
-  //  isRenaming = false
-  //}
-
-  function handleRenameKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      confirmRename()
-    } else if (event.key === 'Escape') {
-      event.preventDefault()
-      cancelRename()
-    }
-  }
-
-  async function showDeleteConfirmation() {
-    const result = await openDialog({
-      icon: 'trash',
-      title: 'Delete Page',
-      message: `Are you sure you want to delete "${text}"? This action cannot be undone.`,
-      actions: [
-        { title: 'Cancel', type: 'reset' },
-        { title: 'Delete', type: 'submit', kind: 'danger' }
-      ]
-    })
-
-    if (result.closeType) {
-      // Get the bounding rectangle and pass it with the delete event
-      const rect = mentionPageElement?.getBoundingClientRect()
-
-      dispatch('delete', {
-        text,
-        resourceId,
-        spaceId,
-        rect
-      })
-    }
-  }
-
-  onMount(async () => {
-    if (resourceId && !text) {
-      const resource = await resourceManager.getResource(resourceId)
-      displayText = resource?.metadata.name
-    }
+    editorEl.focus()
+    const range = document.createRange()
+    range.selectNodeContents(editorEl)
+    const sel = window.getSelection()
+    sel!.removeAllRanges()
+    sel!.addRange(range)
   })
 </script>
 
 <span
-  bind:this={mentionPageElement}
+  {...restProps}
   class="mention-page"
   class:active
-  class:renaming={isRenaming}
-        {onclick}
+  class:editing
   role="none"
-  {...restProps}
+  {onclick}
 >
   {#if icon}<DynamicIcon name={icon} size="19px" />{/if}
-  {#if isRenaming}
-    <input
-      bind:this={renameInput}
-      bind:value={tempText}
-      onkeydown={handleRenameKeydown}
-      onblur={confirmRename}
-      class="rename-input"
-      type="text"
-    />
-  {:else if text?.length === 0}
-    <span class="text">null</span>
+
+  {#if !editing}
+    <span class="text">{text}</span>
   {:else}
-    <span class="text">{displayText}</span>
+    <span
+      bind:this={editorEl}
+      bind:textContent={text}
+      contenteditable="true"
+      class="text"
+      spellcheck="false"
+      role="none"
+      {placeholder}
+      onkeydown={(e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          oncancel?.()
+        }
+        else if (e.key === 'Enter') {
+          e.preventDefault()
+          handleClose()
+        }
+      }}
+      {@attach clickOutside(() => handleClose())}
+    ></span>
   {/if}
 </span>
 
@@ -130,46 +89,56 @@
     align-items: center;
     gap: 0.4ch;
     width: max-content;
+                  max-width: 100%;
+                  white-space: nowrap;
 
     font-family: 'Inter';
     font-weight: 500;
 
     user-select: none;
-    color: inherit;
+    color: color-mix(in oklch, currentColor, transparent 40%);
     padding: 2px 6px;
     border-radius: 8px;
-    -electron-corner-smoothing: 60%;
+    -electron-corner-smoothing: system-ui;
+    text-overflow: ellipsis;
+    overflow:hidden;
+
+          transition-property: background, color;
+                  transition-duration: 69ms;
+                  transition-timing-function: ease-out;
+
 
     &:hover,
-    &.active {
+    &.active,
+    &.editing {
       background: rgba(0, 0, 0, 0.05);
-    }
-
-    &.renaming {
-      background: rgba(0, 0, 0, 0.05);
+    color: color-mix(in oklch, currentColor, transparent 10%);
     }
 
     > .text {
       text-decoration: underline;
       text-decoration-color: rgba(0, 0, 0, 0.1);
+      text-decoration-color: color-mix(in oklch, currentColor, transparent 90%);
       text-underline-offset: 2px;
+
+      &:empty:before {
+        content: attr(placeholder);
+        color: rgba(0,0,0,0.175);
+        pointer-events: none;
+        user-select: none;
+      }
+
+
+      &:focus, &:focus-within {
+        outline: none;
+      }
     }
 
-    .rename-input {
-      background: transparent;
-      border: none;
-      outline: none;
-      font-family: inherit;
-      font-weight: inherit;
-      font-size: inherit;
-      color: inherit;
-      text-decoration: underline;
-      text-decoration-color: rgba(0, 0, 0, 0.1);
-      text-underline-offset: 2px;
-      padding: 0;
-      margin: 0;
-      min-width: 50px;
-      width: auto;
+    &.editing > .text {
+      text-decoration-style: dashed;
     }
+  }
+  :global([data-context-menu-anchor] .mention-page) {
+    background: rgba(0, 0, 0, 0.05);
   }
 </style>

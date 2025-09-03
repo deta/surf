@@ -1,83 +1,85 @@
 @keyframes scale-in {
-    0% {
-      transform: scale(0.5);
-      opacity: 0;
-    }
-
-    50% {
-      opacity: 0;
-    }
-
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
   }
 
-  #context-menu {
-    --ctx-background: #fff;
-    --ctx-border: rgba(0, 0, 0, 0.25);
-    --ctx-shadow-color: rgba(0, 0, 0, 0.12);
-
-    --ctx-item-hover: #2497e9;
-    --ctx-item-danger-hover: #ff4d4f;
-    --ctx-item-submenu-open: rgba(0, 0, 0, 0.065);
-    --ctx-item-text: #210e1f;
-    --ctx-item-text-hover: #fff;
-
-
-    /*isolation: isolate;
-    position: fixed;
-    top: var(--y);
-    left: var(--x);*/
-    z-index: 2147483647; /* max value lol */
-    min-width: 180px;
-    height: fit-content;
-    background: var(--ctx-background);
-    padding: 0.25rem;
-    border-radius: 9px;
-    border: 0.5px solid var(--ctx-border);
-    box-shadow: 0 2px 10px var(--ctx-shadow-color);
-    user-select: none;
-    font-size: 0.9em;
-    transform-origin: top left;
-
-    animation: scale-in 250ms cubic-bezier(0.19, 1, 0.22, 1);
-
-    &::backdrop {
-      background-color: rgba(0, 0, 0, 0);
-    }
-
-    &:focus {
-      outline: none;
-    }
+  50% {
+    opacity: 0;
   }
 
-  body.dark #context-menu {
-    --ctx-background: #111b2b;
-    --ctx-border: rgba(255, 255, 255, 0.25);
-
-    --ctx-item-text: #fff;
-    --ctx-item-submenu-open: rgba(255, 255, 255, 0.075);
-    --ctx-shadow-color: rgba(125, 125, 125, 0.25);
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
-
-  body[data-context-menu='true'] * {
-    -webkit-app-region: no-drag !important;
-  }
+}
 
 #context-menu {
-    // Safe are experiment
-  /*@keyframes clip {
-    from {
-      visibility: visible;
-    }
-    99% {
-    }
-    100% {
-      visibility: hidden;
-    }
-  }*/
+  --ctx-background: #fff;
+  --ctx-border: rgba(0, 0, 0, 0.175);
+  --ctx-shadow-color: rgba(0, 0, 0, 0.12);
+
+  --ctx-item-hover: rgba(0, 0, 0, 0.06);
+  --ctx-item-danger-hover: #ff4d4f;
+  --ctx-item-submenu-open: rgba(0, 0, 0, 0.065);
+  --ctx-item-text: #210e1f;
+  --ctx-item-text-hover: #000;
+
+
+  &:not(.overlay) {
+    isolation: isolate;
+    position: fixed;
+    top: var(--y);
+    left: var(--x);
+  }
+
+  z-index: 2147483647;
+  /* max value lol */
+  min-width: 180px;
+  height: fit-content;
+  background: var(--ctx-background);
+  padding: 0.225rem;
+  border-radius: 12px;
+  border: 1px solid var(--ctx-border);
+  box-shadow: 0 2px 10px var(--ctx-shadow-color);
+  user-select: none;
+  font-size: 0.85rem;
+  transform-origin: top left;
+
+  animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
+
+  &::backdrop {
+    background-color: rgba(0, 0, 0, 0);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 10px;
+    z-index: -1;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+body.dark #context-menu {
+  --ctx-background: #111b2b;
+  --ctx-border: rgba(255, 255, 255, 0.25);
+
+  --ctx-item-text: #fff;
+  --ctx-item-submenu-open: rgba(255, 255, 255, 0.075);
+  --ctx-shadow-color: rgba(125, 125, 125, 0.25);
+}
+
+body[data-context-menu='true'] * {
+  -webkit-app-region: no-drag !important;
+}
+
+#context-menu {
 
   /* NOTE: We only support a single sub-menu right now with this crude css */
   ul.sub-menu {
@@ -86,7 +88,7 @@
     overflow-y: auto;
     background: var(--ctx-background);
     padding: 0.25rem;
-    border-radius: 9px;
+    border-radius: 12px;
     border: 0.5px solid var(--ctx-border);
     box-shadow: 0 2px 10px var(--ctx-shadow-color);
     user-select: none;
@@ -128,19 +130,22 @@
       margin-right: -3px;
     }
   }
+
   ul.sub-menu:hover {
     display: flex;
   }
+
   :global(li.sub-item:hover + .sub-menu) {
     display: flex;
   }
+
   :global(li.sub-item:has(+ .sub-menu:hover)) {
     background: var(--ctx-item-submenu-open);
   }
 
   // Define a CSS variable for the submenu state
-  :global(body[data-has-active-submenu='true']) ul:not(.sub-menu) > button.selected,
-  :global(body[data-has-active-submenu='true']) ul:not(.sub-menu) > li.selected {
+  :global(body[data-has-active-submenu='true']) ul:not(.sub-menu)>button.selected,
+  :global(body[data-has-active-submenu='true']) ul:not(.sub-menu)>li.selected {
     // Mute the highlight when a submenu is open
     background: rgba(var(--ctx-item-hover-rgb, 36, 151, 233), 0.3);
     color: var(--ctx-item-text);
@@ -149,19 +154,21 @@
   ul {
     width: auto;
     flex-direction: column;
-    outline: none; /* Remove focus outline */
+    outline: none;
+
+    /* Remove focus outline */
     &:not(.sub-menu) {
       display: flex;
     }
 
-    > button,
-    > li {
+    >button,
+    >li {
       display: flex;
       align-items: center;
       gap: 0.35em;
       padding: 0.4em 0.55em;
       padding-bottom: 0.385rem;
-      border-radius: 6px;
+      border-radius: 9px;
       font-weight: 500;
       line-height: 1;
       letter-spacing: 0.0125rem;
@@ -200,6 +207,7 @@
           opacity: 1;
         }
       }
+
       &:focus {
         // FIX: This should share with :hover, buut
         // html autofocus the first element, so it looks weird and doesnt go away

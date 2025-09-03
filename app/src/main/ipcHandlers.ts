@@ -478,6 +478,16 @@ function setupIpcHandlers(backendRootPath: string) {
 
     ipcSenders.updateViewBounds(viewId, bounds)
   })
+
+  IPC_EVENTS_MAIN.focusMainRenderer.on((_) => {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return []
+    }
+    window.webContents.focus()
+    return true
+  })
 }
 
 export const ipcSenders = {

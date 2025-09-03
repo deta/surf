@@ -17,7 +17,8 @@ import {
   WebContentsViewContextManagerActionType,
   type WebViewSendEvents,
   WebViewEventSendNames,
-  type CitationClickEvent
+  type CitationClickEvent,
+  WebContentsViewEvent
 } from '@deta/types'
 import { IPC_EVENTS_RENDERER, setupMessagePortClient } from '@deta/services/ipc'
 import type { MessagePortCallbackClient } from '@deta/services/messagePort'
@@ -53,6 +54,16 @@ const eventHandlers = {
       try {
         userConfig.settings = settings
         callback(settings)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onWebContentsViewEvent: (callback: (event: WebContentsViewEvent) => void) => {
+    return IPC_EVENTS_RENDERER.webContentsViewEvent.on((_, event) => {
+      try {
+        callback(event)
       } catch (error) {
         // noop
       }
@@ -207,6 +218,14 @@ window.addEventListener('DOMContentLoaded', async (_) => {
       shiftKey: event.shiftKey,
       altKey: event.altKey
     })
+  })
+})
+
+window.addEventListener('click', (event: MouseEvent) => {
+  sendPageEvent(WebViewEventSendNames.MouseClick, {
+    button: event.button,
+    clientX: event.clientX,
+    clientY: event.clientY
   })
 })
 

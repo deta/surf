@@ -1,12 +1,23 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
+  import { clickOutside } from '@deta/utils'
 
-  let { collapsed = false }: { collapsed: boolean } = $props()
+  let {
+    collapsed = false,
+    onsearchinput
+  }: { collapsed: boolean; onsearchinput?: (value: string) => void } = $props()
+
+  let inputEl: HTMLInputElement
 </script>
 
 {#key collapsed}
-  <div class="input-container" class:collapsed>
-    <input type="text" placeholder="Search" />
+  <div class="input-container" class:collapsed {@attach clickOutside(() => inputEl?.blur())}>
+    <input
+      bind:this={inputEl}
+      type="text"
+      placeholder="Search"
+      oninput={(e) => onsearchinput?.(e.target.value)}
+    />
     <div class="icon">
       <Icon name="search" size="0.85rem" />
     </div>

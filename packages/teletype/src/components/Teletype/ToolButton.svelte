@@ -31,7 +31,7 @@
 
 <style lang="scss">
   // Apply Button component styles locally since global styles don't reach teletype package
-  :global([data-button-root]) {
+  :global(.tty-core [data-button-root]) {
     user-select: none;
     height: min-content;
     width: max-content;

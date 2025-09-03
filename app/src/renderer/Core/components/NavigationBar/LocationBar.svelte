@@ -15,10 +15,12 @@
 
   let {
     view,
-    readonly = false
+    readonly = false,
+    isEditingUrl = $bindable(false)
   }: {
     view: WebContentsView
     readonly?: boolean
+    isEditingUrl?: boolean
   } = $props()
 
   // TODO: This should be part of the WebContentsView itself returning a Readable<URL | null> directly
@@ -86,7 +88,21 @@
 
   let inputEl = $state() as HTMLInputElement
   let inputValue: string = $derived(sanizizeLocationInput($viewLocation))
-  let editingUrl = $state(false)
+
+  $effect(() => {
+    // Autofocus and select when editing
+    if (isEditingUrl) {
+      tick().then(() => {
+        inputEl?.select()
+        inputEl?.focus()
+      })
+    }
+
+    // NOTE: reset when exiting editing state
+    else {
+      inputValue = sanizizeLocationInput($viewLocation)
+    }
+  })
 
   // This animates the hostname everytime it changes
   $effect(() => {
@@ -181,16 +197,15 @@
 </script>
 
 <Breadcrumb
-  active={editingUrl}
+  active={isEditingUrl}
   class="location-bar"
   disabled={readonly}
   onclick={() => {
     if (readonly) return
-    editingUrl = true
-    tick().then(() => inputEl?.focus())
+    isEditingUrl = true
   }}
 >
-  {#if editingUrl}
+  {#if isEditingUrl}
     <input
       bind:this={inputEl}
       type="text"
@@ -198,7 +213,7 @@
       oninput={handleLocationInput}
       onkeydown={(e) => {
         if (e.key === 'Enter') {
-          editingUrl = false
+          isEditingUrl = false
           view.webContents.loadURL(
             new URL(
               `${!inputEl?.value.includes('://') ? 'https://' : ''}${inputEl?.value}`
@@ -207,12 +222,12 @@
         } else if (e.key === 'Escape') {
           e.preventDefault()
           e.stopPropagation()
-          editingUrl = false
+          isEditingUrl = false
         } else {
           e.stopPropagation()
         }
       }}
-      {@attach clickOutside(() => (editingUrl = false))}
+      {@attach clickOutside(() => (isEditingUrl = false))}
     />
   {:else}
     {#if hostnameText}

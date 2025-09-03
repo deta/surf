@@ -5,6 +5,7 @@ export enum ShortcutActions {
   TOGGLE_DEBUG_MODE = 'TOGGLE_DEBUG_MODE',
   CLOSE_TAB = 'CLOSE_TAB',
   NEW_TAB = 'NEW_TAB',
+  EDIT_TAB_URL = 'EDIT_TAB_URL',
   REOPEN_CLOSED_TAB = 'REOPEN_CLOSED_TAB',
   CLOSE_TELETYPE = 'CLOSE_TELETYPE',
   SWITCH_TO_TAB_1 = 'SWITCH_TO_TAB_1',
@@ -38,6 +39,12 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     action: ShortcutActions.NEW_TAB,
     defaultCombo: 'Meta+T',
     description: 'Create a new tab',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.EDIT_TAB_URL]: {
+    action: ShortcutActions.EDIT_TAB_URL,
+    defaultCombo: 'Meta+l',
+    description: 'Edit Tab URL',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.REOPEN_CLOSED_TAB]: {

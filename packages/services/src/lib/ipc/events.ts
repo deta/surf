@@ -249,6 +249,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
   webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
   citationClick: ipcService.addEvent<CitationClickEvent>('citation-click'),
+  focusMainRenderer: ipcService.addEvent<void>('focus-main-renderer'),
   updateViewBounds: ipcService.addEvent<UpdateViewBounds>('update-view-bounds'),
 
   // events that return a value

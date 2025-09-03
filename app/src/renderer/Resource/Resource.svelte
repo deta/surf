@@ -33,6 +33,11 @@
 
     resource = await resourceManager.getResource(resourceId)
     console.log('Loaded resource:', resource)
+
+    if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
+      // @ts-ignore - TODO: Add to window d.ts
+      navigation.navigate(resource.url, { history: 'replace' })
+    }
   })
 </script>
 

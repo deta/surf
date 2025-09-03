@@ -48,10 +48,10 @@
     interface HTMLElement {
       contextMenuItems?: CtxItem[] | (() => Promise<CtxItem[]>)
       contextMenuKey?: string
+      contextMenuUseOverlay?: boolean
     }
   }
 
-  import { mount, unmount } from 'svelte'
   import { wait } from '@deta/utils'
   import { type Overlay, type OverlayManager, useOverlayManager, useViewManager } from '@deta/services/views'
   import ContextMenu from './ContextMenu.svelte'
@@ -60,8 +60,6 @@
   const contextMenuKey = writable<string | null>(null)
   export const CONTEXT_MENU_OPEN = derived(contextMenuOpen, ($contextMenuOpen) => $contextMenuOpen)
   export const CONTEXT_MENU_KEY = derived(contextMenuKey, ($contextMenuKey) => $contextMenuKey)
-
-  // const overlayManager = useOverlayManager()
 
   let overlayManager: OverlayManager
   let setupComplete = false
@@ -73,10 +71,9 @@
   /**
    * Call once at app startup to prepare listener.
    */
-  export function prepareContextMenu() {
+  export function prepareContextMenu(useOverlay = false) {
     if (setupComplete) return
-
-    overlayManager = useOverlayManager()
+    if (useOverlay) overlayManager = useOverlayManager()
 
     window.addEventListener(
       'contextmenu',
@@ -109,7 +106,8 @@
           y: e.clientY,
           targetEl: target,
           items,
-          key: target.contextMenuKey
+          key: target.contextMenuKey,
+          useOverlay: useOverlay
         })
       },
       { capture: true }
@@ -122,12 +120,14 @@
    * You must either specify a target element or items directly!
    */
   export async function openContextMenu(props: {
+    useOverlay?: boolean
     x: number
     y: number
     targetEl?: HTMLElement
     items?: CtxItem[]
     key?: string
   }) {
+          console.trace("open ctx")
     if (get(contextMenuOpen)) {
       closeContextMenu()
     }
@@ -137,34 +137,34 @@
     contextMenuOpen.set(true)
     contextMenuKey.set(props.key ?? null)
 
-    overlay = await overlayManager.create({
-      bounds: {
-        x: props.x,
-        y: props.y,
-        width: 300,
-        height: 600
-      }
-    })
+    if (props.useOverlay) {
+      overlay = await overlayManager.create({
+        bounds: {
+          x: props.x,
+          y: props.y,
+          width: 300,
+          height: 600
+        }
+      })
+    }
 
     // await wait(50)
 
     ctxMenuCmp = mount(ContextMenu, {
-      target: overlay.wrapperElement ?? document.body,
+      target: props.useOverlay ? overlay.wrapperElement ?? document.body : document.body,
       props: {
         targetX: props.x,
         targetY: props.y,
         targetEl: props.targetEl ?? null,
         items: props.items,
-        overlay: overlay
+        overlay: props.useOverlay ? overlay : null
       }
     })
     
     document.body.setAttribute('data-context-menu', 'true')
   }
   export function closeContextMenu() {
-    if (ctxMenuCmp) {
-      unmount(ctxMenuCmp)
-    }
+    if (ctxMenuCmp) unmount(ctxMenuCmp)
 
     contextMenuOpen.set(false)
     contextMenuKey.set(null)
@@ -209,11 +209,12 @@
 </script>
 
 <script lang="ts">
-  import { onDestroy, onMount, tick } from 'svelte'
+  import { mount, onDestroy, onMount, tick, unmount } from 'svelte'
   import type { ActionReturn } from 'svelte/action'
   import { derived, writable, get } from 'svelte/store'
   import ContextMenuItems from './ContextMenuItems.svelte'
   import { useLogScope } from '@deta/utils/io'
+  import { clickOutside } from '@deta/utils'
   // import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   // import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
@@ -317,13 +318,7 @@
   })
 </script>
 
-<dialog
-  id="context-menu"
-  bind:this={ref}
-  style="--x: {targetX}px; --y: {targetY}px;"
-  on:click={(e) => {
-    closeContextMenu()
-  }}
+<svelte:window 
   on:contextmenu={(e) => {
     closeContextMenu()
   }}
@@ -332,7 +327,18 @@
       closeContextMenu()
     }
   }}
+/>
+
+<dialog
+  bind:this={ref}
+  id="context-menu"
+  class:overlay={overlay !== null}
+  style="--x: {targetX}px; --y: {targetY}px;"
   autofocus
+  on:click={(e) => {
+    closeContextMenu()
+  }}
+  {@attach clickOutside(() => closeContextMenu())}
 >
   <ContextMenuItems {items} />
 </dialog>

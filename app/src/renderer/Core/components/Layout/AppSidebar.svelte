@@ -1,5 +1,5 @@
 <script lang="ts">
-  // TODO: persist size
+  import { useNotebookManager } from '@deta/services/notebooks'
   import { useViewManager } from '@deta/services/views'
   import { useBrowser } from '@deta/services/browser'
   import { Button } from '@deta/ui'
@@ -7,17 +7,25 @@
   import WebContentsView from '../WebContentsView.svelte'
   import NavigationBar from '../NavigationBar/NavigationBar.svelte'
   import NavigationBarGroup from '../NavigationBar/NavigationBarGroup.svelte'
+  import { useKVTable, type BaseKVItem } from '@deta/services'
+  import { onMount } from 'svelte'
+  import { isInternalRendererURL, useDebounce } from '@deta/utils'
+  import { useResourceManager } from '@deta/services/resources'
+  import { writable } from 'svelte/store'
 
-  const viewManager = useViewManager()
+  const resourceManager = useResourceManager()
+  const notebookManager = useNotebookManager()
   const browser = useBrowser()
+  const viewManager = useViewManager()
+  const sidebarStore = useKVTable<
+    {
+      siderbar_width: number
+      sidebar_location: string
+    } & BaseKVItem
+  >('notebook_sidebar')
 
-  // NOTE: We could move the initialization into core so that it loads a bit faster on first open
-  if (!viewManager.activeSidebarView) {
-    viewManager.setSidebarState({
-      open: false,
-      view: viewManager.create({ url: 'surf://notebook', permanentlyActive: true })
-    })
-  }
+  const activeSidebarView = $derived(viewManager.activeSidebarView)
+  const activeSidebarLocation = $derived(activeSidebarView?.url ?? writable(null))
 
   let isResizing = $state(false)
   let targetSidebarWidth = 670
@@ -41,7 +49,32 @@
   const handleResizingMouseUp = (e: MouseEvent) => {
     window.removeEventListener('mousemove', handleResizingMouseMove, { capture: true })
     isResizing = false
+    sidebarStore.update('cfg', { siderbar_width: targetSidebarWidth })
   }
+
+  const handleNewNote = async () => {
+    const note = await resourceManager.createResourceNote('', {
+      name: 'Untitled Note'
+    })
+
+    if (isInternalRendererURL($activeSidebarLocation ?? '')) {
+      const url = isInternalRendererURL($activeSidebarLocation)
+      if (url.hostname === 'notebook' && url.pathname?.length > 0) {
+        const notebookId = url.pathname.slice(1)
+        notebookManager.addResourcesToNotebook(notebookId, [note.id], 1)
+      }
+    }
+
+    activeSidebarView?.webContents.loadURL(`surf://resource/${note.id}`)
+  }
+  const debouncedSaveLocation = useDebounce((location: string) => {
+    if (location === undefined || location === null || location.length <= 0) return
+    sidebarStore.update('cfg', { sidebar_location: location })
+  }, 250)
+
+  $effect(() => {
+    debouncedSaveLocation($activeSidebarLocation)
+  })
 
   $effect(() => {
     if (viewManager.sidebarViewOpen && viewManager.activeSidebarView === null) {
@@ -49,6 +82,25 @@
         view: viewManager.create({ url: 'surf://notebook', permanentlyActive: true })
       })
     }
+  })
+
+  onMount(async () => {
+    if ((await sidebarStore.read('cfg')) === undefined) {
+      await sidebarStore.create({ id: 'cfg', siderbar_width: 670, sidebar_location: 'surf://new' })
+    }
+
+    const cfg = await sidebarStore.read('cfg')
+
+    // NOTE: We could move the initialization into core so that it loads a bit faster on first open
+    if (viewManager.activeSidebarView === undefined) {
+      viewManager.setSidebarState({
+        open: false,
+        view: viewManager.create({ url: cfg.sidebar_location, permanentlyActive: true })
+      })
+    }
+
+    targetSidebarWidth = cfg.siderbar_width ?? 670
+    rafCbk()
   })
 </script>
 
@@ -67,7 +119,7 @@
           {#snippet leftChildren()}
             <NavigationBarGroup slim>
               <!-- TODO: Implement sth like surf://new -->
-              <Button size="md" square onclick={() => {}}>
+              <Button size="md" square onclick={handleNewNote}>
                 <Icon name="edit" size="1.2em" />
               </Button>
             </NavigationBarGroup>

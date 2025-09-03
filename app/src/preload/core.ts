@@ -841,6 +841,10 @@ const api = {
     IPC_EVENTS_RENDERER.updateSpacesList.send(data)
   },
 
+  focusMainRenderer: () => {
+    IPC_EVENTS_RENDERER.focusMainRenderer.send()
+  },
+
   webContentsViewManagerAction: <T extends WebContentsViewManagerActionType>(
     type: T,
     ...args: WebContentsViewManagerActionPayloads[T] extends undefined

@@ -1,6 +1,6 @@
 export const truncate = (text: string, length: number) => {
   if (text === null || text === undefined) return ''
-  return text.length > length ? text.slice(0, length) + '...' : text
+  return text.length > length ? text.slice(0, length) + '…' : text
 }
 
 export const capitalize = (text: string) => {

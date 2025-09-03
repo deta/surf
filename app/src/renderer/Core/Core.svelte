@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, tick } from 'svelte'
 
   import { useLogScope } from '@deta/utils/io'
   import type { Fn } from '@deta/types'
@@ -16,8 +16,9 @@
   //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
+  import { get } from 'svelte/store'
+  import { useDebounce, wait } from '@deta/utils'
   import { isInternalRendererURL } from '@deta/utils/formatting'
-  // import TeletypeEntry from './components/Teletype/TeletypeEntry.svelte'
   import type { ContextManager } from '@deta/services/ai'
   import { prepareContextMenu } from '@deta/ui'
   import { debugMode } from './stores/debug'
@@ -43,31 +44,14 @@
   const activeTabUrl = $derived(tabsService.activeTab?.view.url)
 
   let unsubs: Fn[] = []
-  let open = $state(false)
+  let activeTabNavigationBar: NavigationBar | undefined
 
-  // $effect(() => {
-  //   if (viewManager.sidebarViewOpen) {
-  //     const internalUrl = isInternalRendererURL($activeTabUrl)
-
-  //     if (!internalUrl) {
-  //       log.debug('External URL detected:', $activeTabUrl, 'adding tab to context', activeTab)
-  //       contextManager.onlyUseTabInContext(activeTab)
-  //     } else if (internalUrl && internalUrl.hostname === 'notebook') {
-  //       const notebookId = internalUrl.pathname.slice(1)
-  //       log.debug(
-  //         'Internal notebook URL detected:',
-  //         internalUrl,
-  //         'adding notebook to context',
-  //         notebookId
-  //       )
-  //       notebookManager.getNotebook(notebookId).then((notebook) => {
-  //         contextManager.onlyUseNotebookInContext(notebook)
-  //       })
-  //     } else {
-  //       log.debug('Other internal URL detected:', $activeTabUrl)
-  //     }
-  //   }
-  // })
+  // TODO: move into searchinput directly?
+  const handleSearchInput = useDebounce((value: string) => {
+    const url = new URL(get(tabsService.activeTab?.view.url))
+    url.searchParams.set('query', value)
+    tabsService.activeTab?.view.webContents.loadURL(url.toString())
+  }, 500)
 
   onMount(async () => {
     log.debug('Core component mounted')
@@ -76,8 +60,6 @@
     log.debug('User settings:', settings)
 
     await tabsService.ready
-
-    prepareContextMenu()
 
     // @ts-ignore
     window.setLogLevel = (level: LogLevel) => {
@@ -123,6 +105,13 @@
       return true
     })
 
+    shortcutsManager.registerHandler(ShortcutActions.EDIT_TAB_URL, () => {
+      window.api.focusMainRenderer()
+      // TODO: This should target the active wcv if it has a locationbar attached, not just the "active tab"
+      activeTabNavigationBar.setIsEditingLocation(true)
+      return true
+    })
+
     const tabSwitchActions = [
       ShortcutActions.SWITCH_TO_TAB_1,
       ShortcutActions.SWITCH_TO_TAB_2,
@@ -160,12 +149,18 @@
     })
 
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_SIDEBAR, () => {
-      log.debug('Toggling sidebar to', !viewManager.sidebarViewOpen)
       viewManager.setSidebarState({ open: !viewManager.sidebarViewOpen })
       return true
     })
 
     unsubs.push(handlePreloadEvents())
+
+    wait(500).then(() => prepareContextMenu(true))
+    wait(500).then(() => {
+      if (tabsService.tabs.length <= 0) {
+        tabsService.openNewTabPage()
+      }
+    })
   })
 
   onDestroy(() => {
@@ -191,8 +186,6 @@
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
 <div class="main">
-  <!-- <TeletypeEntry bind:open /> -->
-
   <div class="app-bar">
     <div class="tabs">
       <TabsList />
@@ -207,7 +200,11 @@
   <main>
     <div class="tab-view">
       {#if activeTabView}
-        <NavigationBar view={activeTabView} />
+        <NavigationBar
+          bind:this={activeTabNavigationBar}
+          view={activeTabView}
+          onsearchinput={handleSearchInput}
+        />
       {/if}
       <div class="tab-contents">
         {#each tabsService.tabs as tab, idx (tab.id)}
