@@ -528,12 +528,15 @@
     user-select: none;
     overflow: hidden;
     font-feature-settings: 'caps' on;
-    line-height: 1;
+    line-height: 0.8;
     padding-top: calc(0.4em + 1px);
     padding-bottom: calc(0.4em - 1px);
     padding-inline: 0.6rem;
     width: fit-content;
-
+    background: rgba(0, 0, 0, 0.06);
+    margin-right: 3px;
+    cursor: default;
+    letter-spacing: 0.1em;
     div {
       font-size: 0.8rem;
       line-height: 1.25em;

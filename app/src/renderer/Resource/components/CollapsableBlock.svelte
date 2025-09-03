@@ -337,7 +337,7 @@
 
   {#if !collapsed && expandable}
     <div
-      class="code-container bg-white w-full flex-grow overflow-auto {fullSize ||
+      class="code-container bg-gray-900 w-full flex-grow overflow-auto {fullSize ||
       resizable ||
       collapsed
         ? ''

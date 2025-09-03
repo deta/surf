@@ -769,7 +769,7 @@
     <pre
       bind:this={preElem}
       class="h-full overflow-auto code-wrapper"
-      style="color: white;"
+      style="color: #1a1a1a;"
       on:input={handleCodeInput}
       on:click|stopPropagation>
       <slot>{$codeContent}</slot>
@@ -816,6 +816,12 @@
   :global(code-block[data-drag-preview]) {
     width: var(--drag-width) !important;
     height: var(--drag-height) !important;
+  }
+
+  .code-container pre {
+    margin: 0 !important;
+    border-radius: 0 0 0.7rem 0.7rem;
+    border: 1px dashed #dddddd;
   }
 
   code-block {
