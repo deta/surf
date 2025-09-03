@@ -16,6 +16,7 @@
   import { Resource } from '../../../../packages/services/src/lib/resources'
   import NotebookSidebar from './components/NotebookSidebar.svelte'
   import { writable } from 'svelte/store'
+  import BackgroundImage from './assets/greenfield.png?url'
 
   const searchParams = new URLSearchParams(window.location.search)
   const notebookId = searchParams.get('notebookId') || null
@@ -184,7 +185,7 @@
 
   :global(body) {
     background: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
-      url('https://i.imgur.com/7XbyivJ.png');
+      url('./assets/greenfield.png');
     background-repeat: no-repeat;
     background-size: cover;
     background-position: 50% 30%;
