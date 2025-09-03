@@ -71,8 +71,8 @@ export class MentionService {
       this.registerProvider(tabsProvider)
     }
 
-    const resourceProvider = new ResourceMentionProvider()
-    this.registerProvider(resourceProvider)
+    // const resourceProvider = new ResourceMentionProvider()
+    // this.registerProvider(resourceProvider)
 
     const notebookProvider = new NotebookMentionProvider()
     this.registerProvider(notebookProvider)
