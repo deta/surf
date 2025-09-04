@@ -4,8 +4,8 @@
   import { Button } from '@deta/ui'
   import { truncate, useLogScope } from '@deta/utils'
   import OverlayPopover from '../Overlays/OverlayPopover.svelte'
+  import SearchableList from '../Overlays/SearchableList.svelte'
   import { Notebook, useNotebookManager } from '@deta/services/notebooks'
-  import { MaskedScroll } from '@deta/ui'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { writable } from 'svelte/store'
 
@@ -54,6 +54,15 @@
 
     isMenuOpen = false
   }
+
+  function filterNotebooks(notebook: Notebook, searchValue: string): boolean {
+    const name = notebook.dataValue.name || ''
+    const folderName = (notebook.dataValue as any).folderName || ''
+    return (
+      name.toLowerCase().includes(searchValue.toLowerCase()) ||
+      folderName.toLowerCase().includes(searchValue.toLowerCase())
+    )
+  }
 </script>
 
 <OverlayPopover bind:open={isMenuOpen} position="bottom">
@@ -70,8 +79,13 @@
   {/snippet}
 
   <div class="list">
-    <MaskedScroll>
-      {#each $notebooks as notebook (notebook.id)}
+    <SearchableList
+      items={$notebooks}
+      searchPlaceholder="Search notebooks..."
+      filterFunction={filterNotebooks}
+      autofocus={true}
+    >
+      {#snippet itemRenderer(notebook)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <button class="list-item" onclick={() => selectNotebook(notebook)}>
@@ -82,11 +96,11 @@
           {/if}
 
           <div class="list-item-label">
-            {truncate(notebook.dataValue.folderName || notebook.dataValue.name, 28)}
+            {truncate((notebook.dataValue as any).folderName || notebook.dataValue.name, 28)}
           </div>
         </button>
-      {/each}
-    </MaskedScroll>
+      {/snippet}
+    </SearchableList>
   </div>
 </OverlayPopover>
 

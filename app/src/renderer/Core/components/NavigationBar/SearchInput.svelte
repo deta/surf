@@ -4,19 +4,32 @@
 
   let {
     collapsed = false,
-    onsearchinput
-  }: { collapsed: boolean; onsearchinput?: (value: string) => void } = $props()
+    onsearchinput,
+    autofocus = false,
+    fullWidth = false
+  }: {
+    collapsed: boolean
+    onsearchinput?: (value: string) => void
+    autofocus?: boolean
+    fullWidth?: boolean
+  } = $props()
 
   let inputEl: HTMLInputElement
 </script>
 
 {#key collapsed}
-  <div class="input-container" class:collapsed {@attach clickOutside(() => inputEl?.blur())}>
+  <div
+    class="input-container"
+    class:full-width={fullWidth}
+    class:collapsed
+    {@attach clickOutside(() => inputEl?.blur())}
+  >
     <input
       bind:this={inputEl}
       type="text"
       placeholder="Search"
       oninput={(e) => onsearchinput?.(e.target.value)}
+      {autofocus}
     />
     <div class="icon">
       <Icon name="search" size="0.85rem" />
@@ -41,6 +54,11 @@
     transition:
       width 123ms ease-out,
       background 69ms ease-out;
+
+    &.full-width {
+      width: -webkit-fill-available;
+      max-width: initial;
+    }
 
     @starting-style {
       width: 0;
