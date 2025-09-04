@@ -5,6 +5,7 @@ export interface TeletypeActionSerialized {
   id: string
   name: string
   description?: string
+  section?: string
   icon?: string
   priority?: number
   providerId: string
@@ -90,14 +91,19 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
   })
 }
 
+let messagePortClientInstance: ReturnType<typeof createMessagePortEvents<false>> | null = null
+
 export const useMessagePortClient = () => {
-  return createMessagePortEvents<false>(
-    // @ts-ignore
-    window.api.onMessagePort,
-    // @ts-ignore
-    window.api.postMessageToView,
-    false as const
-  )
+  if (!messagePortClientInstance) {
+    messagePortClientInstance = createMessagePortEvents<false>(
+      // @ts-ignore
+      window.api.onMessagePort,
+      // @ts-ignore
+      window.api.postMessageToView,
+      false as const
+    )
+  }
+  return messagePortClientInstance
 }
 
 let messagePortPrimaryInstance: ReturnType<typeof createMessagePortEvents<true>> | null = null

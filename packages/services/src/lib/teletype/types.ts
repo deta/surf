@@ -51,7 +51,8 @@ export interface ActionProvider {
 }
 
 export interface TeletypeServiceOptions {
-  debounceMs?: number
+  debounceMsLocal?: number
+  debounceMsRemote?: number
   maxActionsPerProvider?: number
   enabledProviders?: string[]
 }

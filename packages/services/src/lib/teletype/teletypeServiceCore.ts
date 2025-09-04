@@ -5,19 +5,22 @@ import { AskProvider } from './providers/AskProvider'
 import { type TeletypeActionSerialized, useMessagePortPrimary } from '../messagePort'
 import { type MentionItem } from '@deta/editor'
 import { ResourcesProvider } from './providers/ResourcesProvider'
+import { useBrowser } from '../browser'
 
 export class TeletypeServiceCore {
   private providers = new Map<string, ActionProvider>()
   private readonly options: Required<TeletypeServiceOptions>
   private readonly log = useLogScope('TeletypeService Core')
-  private messagePort = useMessagePortPrimary()
+  private readonly messagePort = useMessagePortPrimary()
+  private readonly browser = useBrowser()
 
   static self: TeletypeServiceCore
   private actionMap = new Map<string, TeletypeAction>()
 
   constructor(options: TeletypeServiceOptions = {}) {
     this.options = {
-      debounceMs: 15,
+      debounceMsRemote: 15,
+      debounceMsLocal: 15,
       maxActionsPerProvider: 3,
       enabledProviders: [],
       ...options
@@ -33,6 +36,7 @@ export class TeletypeServiceCore {
             name: action.name,
             description: action.description,
             icon: action.icon,
+            section: action.section,
             priority: action.priority,
             providerId: action.providerId!
           }) satisfies TeletypeActionSerialized
@@ -54,17 +58,18 @@ export class TeletypeServiceCore {
       return false
     })
 
-    const askProvider = new AskProvider()
-
     this.messagePort.teletypeAsk.on(async ({ query, mentions }) => {
       this.log.debug('Asking question:', query, mentions)
-      askProvider.triggerAskAction(query, mentions)
+
+      await this.browser.createNoteAndRunAIQuery(query, mentions, {
+        target: 'tab',
+        notebookId: 'auto'
+      })
     })
 
     // Register external/async providers
     this.registerProvider(new SearchProvider()) // Async Google suggestions
     // this.registerProvider(new ResourcesProvider()) // SFFS Resources search
-    this.registerProvider(askProvider)
   }
 
   /**

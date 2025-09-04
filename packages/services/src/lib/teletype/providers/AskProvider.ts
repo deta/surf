@@ -3,12 +3,18 @@ import { generateUUID, useLogScope } from '@deta/utils'
 
 import { useBrowser } from '../../browser'
 import type { ActionProvider, TeletypeAction } from '../types'
+import { TeletypeService } from '../teletypeService'
 
 export class AskProvider implements ActionProvider {
   readonly name = 'ask'
   readonly isLocal = true
+
+  private readonly service: TeletypeService
   private readonly log = useLogScope('AskProvider')
-  private readonly browser = useBrowser()
+
+  constructor(service: TeletypeService) {
+    this.service = service
+  }
 
   canHandle(query: string): boolean {
     return query.trim().length > 0
@@ -40,11 +46,7 @@ export class AskProvider implements ActionProvider {
   async triggerAskAction(query: string, mentions: MentionItem[]): Promise<void> {
     try {
       this.log.debug('Triggering ask action for query:', query, 'with mentions:', mentions)
-
-      await this.browser.createNoteAndRunAIQuery(query, mentions, {
-        target: 'tab',
-        notebookId: 'auto'
-      })
+      await this.service.ask(query, mentions)
     } catch (error) {
       this.log.error('Failed to trigger ask action:', error)
     }
