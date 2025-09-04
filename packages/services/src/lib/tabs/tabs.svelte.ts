@@ -477,6 +477,10 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     await this.kv.delete(id)
 
     this.emit(TabsServiceEmitterNames.DELETED, id)
+
+    if (this.tabs.length <= 0) {
+      this.openNewTabPage()
+    }
   }
 
   activateTab(id: string) {
