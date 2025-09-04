@@ -261,7 +261,18 @@
   }
 
   .app-bar {
-    background: var(--app-background);
+    background: radial-gradient(
+      453.65% 343.29% at 50.04% 0%,
+      #deedff 0%,
+      #abd6ff 69.23%,
+      #c6ddff 93.37%
+    );
+    background: radial-gradient(
+      453.65% 343.29% at 50.04% 0%,
+      color(display-p3 0.8807 0.9291 0.9921) 0%,
+      color(display-p3 0.7031 0.8325 0.9963) 69.23%,
+      color(display-p3 0.7938 0.8654 0.9912) 93.37%
+    );
   }
 
   .tabs {

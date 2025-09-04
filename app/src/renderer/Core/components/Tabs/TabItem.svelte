@@ -184,12 +184,40 @@
     }
 
     &.active {
-      border: 0.5px solid white;
-      background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.75));
+      border: 0.5px solid #fff;
+      border: 0.5px solid color(display-p3 1 1 1);
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        rgba(237, 246, 255, 0.96) 0%,
+        rgba(246, 251, 255, 0.93) 100%
+      );
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        color(display-p3 0.9365 0.9644 0.9997 / 0.96) 0%,
+        color(display-p3 0.9686 0.9843 1 / 0.93) 100%
+      );
       box-shadow:
-        inset 0 0 0 0.75px rgba(255, 255, 255, 0.4),
-        inset 0 0.5px 0 1px rgba(255, 255, 255, 0.25),
-        inset 0 -0.75px 0 1px rgba(0, 0, 0, 0.01);
+        0 -0.5px 1px 0 rgba(119, 189, 255, 0.15) inset,
+        0 1px 1px 0 #fff inset,
+        0 12px 5px 0 #3e4750,
+        0 7px 4px 0 rgba(62, 71, 80, 0.01),
+        0 3px 3px 0 rgba(62, 71, 80, 0.02),
+        0 1px 2px 0 rgba(62, 71, 80, 0.02),
+        0 1px 1px 0 #000,
+        0 1px 1px 0 rgba(0, 0, 0, 0.01),
+        0 1px 1px 0 rgba(0, 0, 0, 0.05),
+        0 0 1px 0 rgba(0, 0, 0, 0.09);
+      box-shadow:
+        0 -0.5px 1px 0 color(display-p3 0.5294 0.7333 0.9961 / 0.15) inset,
+        0 1px 1px 0 color(display-p3 1 1 1) inset,
+        0 12px 5px 0 color(display-p3 0.251 0.2784 0.3098 / 0),
+        0 7px 4px 0 color(display-p3 0.251 0.2784 0.3098 / 0.01),
+        0 3px 3px 0 color(display-p3 0.251 0.2784 0.3098 / 0.02),
+        0 1px 2px 0 color(display-p3 0.251 0.2784 0.3098 / 0.02),
+        0 1px 1px 0 color(display-p3 0 0 0 / 0),
+        0 1px 1px 0 color(display-p3 0 0 0 / 0.01),
+        0 1px 1px 0 color(display-p3 0 0 0 / 0.05),
+        0 0 1px 0 color(display-p3 0 0 0 / 0.09);
       .tab-title {
         color: var(--on-surface-accent);
       }
