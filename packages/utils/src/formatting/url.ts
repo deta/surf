@@ -336,7 +336,7 @@ export const parseUrlIntoCanonical = (value: string | URL) => {
   return normalized
 }
 
-export const isPDFViewerURL = (url: string, entryPoint: string) => {
+export const isInternalViewerURL = (url: string, entryPoint: string) => {
   if (url.startsWith(entryPoint)) return true
   if (
     isWindows() &&
@@ -469,7 +469,9 @@ export function isInternalRendererURL(url: string | URL): URL | null {
     // TODO: Improve prod path
     if (
       _url.protocol === 'file:' &&
-      _url.pathname.includes('Contents/Resources/app.asar/out/renderer/Notebook/notebook.html')
+      ['/out/renderer/Notebook/notebook.html', '/out/renderer/Resource/resource.html'].includes(
+        _url.pathname
+      )
     ) {
       const rendererURL = new URL(
         _url.searchParams.get('path') ??

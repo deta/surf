@@ -22,7 +22,8 @@ export class TeletypeService {
   public readonly isLoading: Readable<boolean>
   public readonly actions: Readable<TeletypeAction[]>
 
-  private debouncedSearch: (query: string) => void
+  private debouncedLocalSearch: (query: string) => void
+  private debouncedRemoteSearch: (query: string) => void
 
   static self: TeletypeService
 
@@ -49,13 +50,17 @@ export class TeletypeService {
     this.isLoading = derived(this.searchState, ($state) => $state.isLoading)
     this.actions = derived(this.searchState, ($state) => $state.actions)
 
-    // Setup debounced search
-    this.debouncedSearch = useDebounce(this.performSearch.bind(this), this.options.debounceMs)
+    // Setup debounced searches with different timings
+    this.debouncedLocalSearch = useDebounce(this.performLocalSearch.bind(this), 15)
+    this.debouncedRemoteSearch = useDebounce(this.performRemoteSearch.bind(this), this.options.debounceMs)
 
     // Subscribe to query changes
     this.queryUnsubscribe = this.query.subscribe((query) => {
       this.searchState.update((state) => ({ ...state, query }))
-      this.debouncedSearch(query)
+      
+      // Trigger both searches independently
+      this.debouncedLocalSearch(query)
+      this.debouncedRemoteSearch(query)
     })
 
     // Register local providers
@@ -175,11 +180,9 @@ export class TeletypeService {
   }
 
   /**
-   * Perform the actual search across all providers using two-phase execution:
-   * Phase 1: Execute LOCAL providers immediately for instant results
-   * Phase 2: Execute ASYNC providers progressively as they complete
+   * Perform the local search immediately with minimal debounce
    */
-  private async performSearch(query: string): Promise<void> {
+  private async performLocalSearch(query: string): Promise<void> {
     if (!query.trim()) {
       this.searchState.update((state) => ({
         ...state,
@@ -190,7 +193,6 @@ export class TeletypeService {
     }
 
     this.searchState.update((state) => ({ ...state, isLoading: true }))
-
     const mentions = this.mentionsValue
 
     try {
@@ -198,12 +200,29 @@ export class TeletypeService {
       const localActions = await this.getLocalActions(query, mentions)
       this.log.debug(`Got local actions:`, localActions)
 
-      // Show local results first
+      // Update with local results first
       this.updateResults(localActions, false)
+    } catch (error) {
+      this.log.error('Local search failed:', error)
+    }
+  }
 
-      // Get remote actions in parallel
+  /**
+   * Perform the remote search with longer debounce
+   */
+  private async performRemoteSearch(query: string): Promise<void> {
+    if (!query.trim()) return
+
+    const mentions = this.mentionsValue
+
+    try {
+      // Get remote actions
       const remoteActions = await this.getRemoteActions(query, mentions)
       this.log.debug(`Got remote actions:`, remoteActions)
+
+      // Get current local actions
+      const currentState = get(this.searchState)
+      const localActions = currentState.actions
 
       // Combine and sort all actions
       const allActions = [...localActions, ...remoteActions].sort(
@@ -213,12 +232,7 @@ export class TeletypeService {
       // Update final results
       this.updateResults(allActions, true)
     } catch (error) {
-      this.log.error('Search failed:', error)
-      this.searchState.update((state) => ({
-        ...state,
-        isLoading: false,
-        actions: []
-      }))
+      this.log.error('Remote search failed:', error)
     }
   }
 

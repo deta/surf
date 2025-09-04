@@ -35,7 +35,7 @@ import {
   shouldIgnoreWebviewErrorCode,
   processFavicons,
   useDebounce,
-  isPDFViewerURL,
+  isInternalViewerURL,
   copyToClipboard,
   useTimeout
 } from '@deta/utils'
@@ -269,7 +269,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     const oldUrl = this.view.urlValue
 
     // @ts-ignore
-    if (isPDFViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
+    if (isInternalViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
       try {
         const urlParams = new URLSearchParams(new URL(newUrl).search)
         newUrl = decodeURIComponent(urlParams.get('path') || '') || newUrl
@@ -622,7 +622,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     const url = await this.getURL()
     if (url) {
       // @ts-ignore
-      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return
+      if (isInternalViewerURL(url, window.api.PDFViewerEntryPoint)) return
     }
 
     if (this.view.faviconURLValue === newFaviconURL) {

@@ -19,7 +19,7 @@ import {
 
 // import CommentIndicator from './components/CommentIndicator.svelte'
 import { type ResourceArticle, type Resource } from '@deta/services/resources'
-import { isPDFViewerURL, normalizeURL } from '@deta/utils/formatting'
+import { isInternalViewerURL, normalizeURL } from '@deta/utils/formatting'
 import { htmlToMarkdown } from '@deta/utils/formatting'
 import { setupChromeWebStoreApi } from './helpers/chrome-web-store'
 
@@ -48,7 +48,7 @@ type AppDetectionResult = PDFInfo | WebAppInfo
 
 function pdfViewerCheck(): PDFInfo | { isPDFPage: false } {
   const url = new URL(window.location.href)
-  if (!isPDFViewerURL(url.href, PDFViewerEntryPoint)) {
+  if (!isInternalViewerURL(url.href, PDFViewerEntryPoint)) {
     return { isPDFPage: false as const }
   }
 

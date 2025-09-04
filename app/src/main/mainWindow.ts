@@ -8,11 +8,11 @@ import { initDownloadManager } from './downloadManager'
 import { useLogScope } from '@deta/utils/io'
 import { isDev, isMac } from '@deta/utils/system'
 import {
-  isPDFViewerURL,
   PDFViewerParams,
   ResourceViewerParams,
   NotebookViewerParams,
-  parseURL
+  parseURL,
+  isInternalViewerURL
 } from '@deta/utils/formatting'
 
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
@@ -168,24 +168,29 @@ export function createWindow() {
     const isSurfletProtocol = details.url.startsWith('surflet:')
     const isInternalPageRequest = details.url.startsWith('surf-internal:')
 
-    const shouldBlockSurfRequest =
-      isSurfProtocol &&
-      // navigation and APIs like webContents.loadURL should be able to request resources
-      details.resourceType !== 'mainFrame' &&
-      // allow overlay requests and PDF viewer
-      (!details.webContents || !isPDFViewerURL(details.webContents.getURL(), PDFViewerEntryPoint))
+    const isMainFrameRequest = details.resourceType === 'mainFrame'
+    const url = details.webContents && details.webContents.getURL()
+
+    const isPDFViewerRequest = url && isInternalViewerURL(url, PDFViewerEntryPoint)
+    const isNotebookViewerRequest = url && isInternalViewerURL(url, NotebookViewerEntryPoint)
+    const isResourceViewerRequest = url && isInternalViewerURL(url, ResourceViewerEntryPoint)
+
+    const isInternalViewerRequest =
+      isPDFViewerRequest || isNotebookViewerRequest || isResourceViewerRequest
+
+    const shouldBlockSurfRequest = isSurfProtocol && !isMainFrameRequest && !isInternalViewerRequest
 
     const shouldBlockSurfletRequest =
-      isSurfletProtocol && (details.resourceType !== 'mainFrame' || !details.webContents)
+      isSurfletProtocol && (!isMainFrameRequest || !details.webContents)
 
     const shouldBlockInternalRequest =
-      isInternalPageRequest && (details.resourceType !== 'mainFrame' || !details.webContents)
+      isInternalPageRequest && (!isMainFrameRequest || !details.webContents)
 
     const shouldBlock =
       shouldBlockSurfRequest || shouldBlockSurfletRequest || shouldBlockInternalRequest
 
     if (shouldBlock) {
-      console.warn('Blocking request:', details.url, {
+      console.warn('Blocking request:', details.url, details.webContents?.getURL(), {
         shouldBlockSurfRequest,
         shouldBlockSurfletRequest,
         shouldBlockInternalRequest

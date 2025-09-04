@@ -45,7 +45,7 @@
     parseUrlIntoCanonical,
     generateID,
     shouldIgnoreWebviewErrorCode,
-    isPDFViewerURL,
+    isInternalViewerURL,
     processFavicons,
     getHostname
   } from '@deta/utils'
@@ -166,7 +166,7 @@
   }, NAVIGATION_DEBOUNCE_TIME)
 
   const handleNavigation = (newUrl: string) => {
-    if (isPDFViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
+    if (isInternalViewerURL(newUrl, window.api.PDFViewerEntryPoint)) {
       try {
         const urlParams = new URLSearchParams(new URL(newUrl).search)
         newUrl = decodeURIComponent(urlParams.get('path') || '') || newUrl
@@ -417,7 +417,7 @@
     // NOTE: This is an expensive operation invoking main thread! Make sure it is debounced
     const url = await webContents.getURL()
     if (url) {
-      if (isPDFViewerURL(url, window.api.PDFViewerEntryPoint)) return
+      if (isInternalViewerURL(url, window.api.PDFViewerEntryPoint)) return
     }
 
     if ($faviconURL === newFaviconURL) {
