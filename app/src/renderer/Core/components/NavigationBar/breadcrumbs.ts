@@ -1,6 +1,8 @@
 import type { Fn } from '@deta/types'
 import { get } from 'svelte/store'
 import { isInternalRendererURL } from '@deta/utils/formatting'
+import { type NotebookManager } from '@deta/services/notebooks'
+import { type WebContentsView, ViewType } from '@deta/services/views'
 
 interface BreadcrumbData {
   title: string
@@ -10,10 +12,11 @@ interface BreadcrumbData {
 }
 
 export async function constructBreadcrumbs(
-  notebookManager: NotebooksManager,
+  notebookManager: NotebookManager,
   history: { url: string; title: string }[],
-  currHisotryIndex: number
-): BreadcrumbData[] {
+  currHisotryIndex: number,
+  view: WebContentsView
+): Promise<BreadcrumbData[]> {
   if (!history) return []
   history = history.map((e, i) => ({ ...e, uid: i }))
   const originalHistory = [...history]
@@ -70,6 +73,20 @@ export async function constructBreadcrumbs(
       return rendererURL && rendererURL.pathname.length <= 1
     })
   )
+
+  const hasDraftsItem = history.some((item) => item.url === 'surf://notebook/drafts')
+  if (!hasDraftsItem && view.typeValue === ViewType.Resource) {
+    const resourceId = view.typeDataValue.id
+    if (resourceId) {
+      const resource = await notebookManager.resourceManager.getResource(resourceId)
+      if (resource?.spaceIdsValue.length === 0) {
+        history.push({
+          url: new URL('surf://notebook/drafts').toString(),
+          title: 'Drafts'
+        })
+      }
+    }
+  }
 
   for (const entry of history) {
     const _url = new URL(entry.url)

@@ -43,6 +43,7 @@ import { getTextElementsFromHtml } from '@deta/utils/dom'
 import {
   compareURLs,
   getHostname,
+  isInternalRendererURL,
   parseUrlIntoCanonical,
   ResourceTag
 } from '@deta/utils/formatting'
@@ -56,7 +57,9 @@ import {
   type WebContentsEmitterEvents,
   type WebContentsViewEmitterEvents,
   WebContentsEmitterNames,
-  type BookmarkPageOpts
+  type BookmarkPageOpts,
+  ViewType,
+  type ViewTypeData
 } from './types'
 import { Resource, ResourceManager } from '../resources'
 import { WebParser } from '@deta/web-parser'
@@ -1228,6 +1231,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   > = writable(null)
 
   currentHistoryEntry: Readable<HistoryEntry | undefined>
+  type: Readable<ViewType>
+  typeData: Readable<ViewTypeData>
 
   private unsubs: Fn[] = []
 
@@ -1295,6 +1300,33 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
     )
 
+    this.type = derived(this.url, (url) => {
+      const internalUrl = isInternalRendererURL(url)
+      if (!internalUrl) return ViewType.Page
+      if (internalUrl.hostname === 'notebook') {
+        if (internalUrl.pathname === '/') return ViewType.NotebookHome
+        return ViewType.Notebook
+      }
+      if (internalUrl.hostname === 'resource') return ViewType.Resource
+
+      return ViewType.Internal
+    })
+
+    this.typeData = derived([this.url, this.type], ([url, type]) => {
+      const internalUrl = isInternalRendererURL(url)
+      if (!internalUrl) return { type, id: null }
+
+      if (internalUrl.hostname === 'notebook') {
+        const notebookId = internalUrl.pathname.slice(1)
+        return { type, id: notebookId }
+      } else if (internalUrl.hostname === 'resource') {
+        const resourceId = internalUrl.pathname.slice(1)
+        return { type, id: resourceId }
+      } else {
+        return { type, id: null }
+      }
+    })
+
     this.unsubs.push(
       this.data.subscribe((data) => {
         this.log.debug('Data changed:', data)
@@ -1317,6 +1349,12 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   }
   get faviconURLValue() {
     return get(this.faviconURL)
+  }
+  get typeValue() {
+    return get(this.type)
+  }
+  get typeDataValue() {
+    return get(this.typeData)
   }
   get permanentlyActiveValue() {
     return get(this.permanentlyActive)

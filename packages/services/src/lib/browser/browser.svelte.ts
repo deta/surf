@@ -2,15 +2,18 @@ import { useLogScope } from '@deta/utils/io'
 
 import { Resource, useResourceManager } from '../resources'
 import { useViewManager, WebContentsView } from '../views'
-import { type CreateTabOptions, type TabItem, TabType, useTabs } from '../tabs'
+import { type CreateTabOptions, type TabItem, useTabs } from '../tabs'
 import { formatAIQueryToTitle } from './utils'
 import { type MentionItem } from '@deta/editor'
 import { ResourceTagsBuiltInKeys } from '@deta/types'
+import { useNotebookManager } from '../notebooks'
+import { ViewType } from '../views/types'
 
 export class BrowserService {
   private readonly resourceManager = useResourceManager()
   private readonly viewManager = useViewManager()
   private readonly tabsManager = useTabs()
+  private readonly notebookManager = useNotebookManager()
   private readonly log = useLogScope('BrowserService')
 
   static self: BrowserService
@@ -18,20 +21,42 @@ export class BrowserService {
   async createNoteAndRunAIQuery(
     query: string,
     mentions: MentionItem[],
-    opts?: { target?: 'tab' | 'sidebar' }
+    opts?: {
+      target?: 'tab' | 'sidebar'
+      notebookId?: string | 'auto'
+    }
   ) {
     try {
       const target = opts?.target || 'sidebar'
 
-      this.log.debug('Triggering ask action for query:', query)
+      this.log.debug(`Triggering ask action in ${target} for query: "${query}"`)
+
       const note = await this.resourceManager.createResourceNote('', {
         name: formatAIQueryToTitle(query)
       })
 
+      if (opts?.notebookId === 'auto') {
+        if (this.tabsManager.activeTabValue?.view.typeValue === ViewType.Notebook) {
+          const viewData = this.tabsManager.activeTabValue.view.typeDataValue
+          if (viewData.id) {
+            opts.notebookId = viewData.id
+          } else {
+            opts.notebookId = undefined
+          }
+        } else {
+          opts.notebookId = undefined
+        }
+      }
+
+      if (opts?.notebookId) {
+        this.log.debug(`Adding created note to notebook ${opts.notebookId}`)
+        await this.notebookManager.addResourcesToNotebook(opts.notebookId, [note.id])
+      }
+
       let view: WebContentsView
       if (target === 'sidebar') {
         if (
-          this.tabsManager.activeTabValue?.typeValue === TabType.NotebookHome &&
+          this.tabsManager.activeTabValue?.view.typeValue === ViewType.NotebookHome &&
           this.tabsManager.activeTabIdValue
         ) {
           this.tabsManager.delete(this.tabsManager.activeTabIdValue)

@@ -93,3 +93,16 @@ export type BookmarkPageOpts = {
   silent?: boolean
   createdForChat?: boolean
 }
+
+export enum ViewType {
+  Page = 'page',
+  Notebook = 'notebook',
+  NotebookHome = 'notebook_home',
+  Resource = 'resource',
+  Internal = 'internal'
+}
+
+export type ViewTypeData = {
+  type: ViewType
+  id: string | null
+}

@@ -1,10 +1,8 @@
 import { type MentionItem } from '@deta/editor'
+import { generateUUID, useLogScope } from '@deta/utils'
+
 import { useBrowser } from '../../browser'
-import { useResourceManager } from '../../resources'
-import { TabType, useTabs } from '../../tabs'
-import { useViewManager } from '../../views'
 import type { ActionProvider, TeletypeAction } from '../types'
-import { generateUUID, getFormattedDate, useLogScope, wait } from '@deta/utils'
 
 export class AskProvider implements ActionProvider {
   readonly name = 'ask'
@@ -44,7 +42,8 @@ export class AskProvider implements ActionProvider {
       this.log.debug('Triggering ask action for query:', query, 'with mentions:', mentions)
 
       await this.browser.createNoteAndRunAIQuery(query, mentions, {
-        target: 'sidebar'
+        target: 'tab',
+        notebookId: 'auto'
       })
     } catch (error) {
       this.log.error('Failed to trigger ask action:', error)

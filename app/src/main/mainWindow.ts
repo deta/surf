@@ -30,7 +30,11 @@ import {
 import { getWebRequestManager } from './webRequestManager'
 // import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
-import { surfInternalProtocolHandler, surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
+import {
+  surfInternalProtocolHandler,
+  surfProtocolHandler,
+  surfletProtocolHandler
+} from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager, WCViewManager } from './viewManager'
 
@@ -165,7 +169,7 @@ export function createWindow() {
     const isInternalPageRequest = details.url.startsWith('surf-internal:')
 
     const shouldBlockSurfRequest =
-      (isSurfProtocol) &&
+      isSurfProtocol &&
       // navigation and APIs like webContents.loadURL should be able to request resources
       details.resourceType !== 'mainFrame' &&
       // allow overlay requests and PDF viewer
@@ -177,10 +181,15 @@ export function createWindow() {
     const shouldBlockInternalRequest =
       isInternalPageRequest && (details.resourceType !== 'mainFrame' || !details.webContents)
 
-    const shouldBlock = shouldBlockSurfRequest || shouldBlockSurfletRequest || shouldBlockInternalRequest
+    const shouldBlock =
+      shouldBlockSurfRequest || shouldBlockSurfletRequest || shouldBlockInternalRequest
 
     if (shouldBlock) {
-      console.warn('Blocking request:', details.url, { shouldBlockSurfRequest, shouldBlockSurfletRequest, shouldBlockInternalRequest })
+      console.warn('Blocking request:', details.url, {
+        shouldBlockSurfRequest,
+        shouldBlockSurfletRequest,
+        shouldBlockInternalRequest
+      })
     }
 
     callback({ cancel: shouldBlock })

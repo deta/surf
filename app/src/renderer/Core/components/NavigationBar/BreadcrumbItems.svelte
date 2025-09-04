@@ -25,7 +25,8 @@
       (breadcrumbs = await constructBreadcrumbs(
         notebookManager,
         [...$activeHistory, { title: 'active', url: $activeLocation }],
-        $activeHistoryIndex
+        $activeHistoryIndex,
+        view
       ))
   )
 </script>

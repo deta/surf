@@ -20,8 +20,7 @@ import {
   TabItemEmitterNames,
   type CreateTabOptions,
   TabsServiceEmitterNames,
-  type TabsServiceEmitterEvents,
-  TabType
+  type TabsServiceEmitterEvents
 } from './tabs.types'
 import { ResourceManager, useResourceManager } from '../resources'
 
@@ -37,7 +36,6 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   id: string
   index: number
   title: Readable<string>
-  type: Readable<TabType>
   createdAt: Date
   updatedAt: Date
   view: WebContentsView
@@ -67,18 +65,6 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
         })
       })
     )
-
-    this.type = derived(this.view.url, (url) => {
-      const internalUrl = isInternalRendererURL(url)
-      if (!internalUrl) return TabType.Page
-      if (internalUrl.hostname === 'notebook') {
-        if (internalUrl.pathname === '/') return TabType.NotebookHome
-        return TabType.Notebook
-      }
-      if (internalUrl.hostname === 'resource') return TabType.Resource
-
-      return TabType.Internal
-    })
   }
 
   get titleValue() {
@@ -94,10 +80,6 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
       updatedAt: this.updatedAt.toISOString(),
       view: this.view.dataValue
     }
-  }
-
-  get typeValue(): TabType {
-    return get(this.type)
   }
 
   async update(data: Partial<KVTabItem>) {
