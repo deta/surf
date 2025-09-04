@@ -1,5 +1,6 @@
 const { spawn } = require('child_process')
 const { join } = require('path')
+const fs = require('fs')
 
 const binDir = process.env.RESOURCES_BIN_DIR || join(__dirname, '../../../app/resources/bin')
 const sourceBin = 'backend-server'
@@ -35,13 +36,21 @@ child.on('error', (error) => {
 })
 
 child.on('close', (code) => {
-  console.log(`process exited with code ${code}`)
+  console.log(`Cargo-cp-artifact process exited with code ${code}`)
+
+  console.log(`Copying binary now, current working directory: ${process.cwd()}`)
+
   if (code !== 0) {
     console.log('error: build failed')
     process.exit(code)
   }
-  console.log(`copying binary to ${targetBinPath}`)
-  const fs = require('fs')
+
+  if (!fs.existsSync(sourceBin)) {
+    console.error(`Source file does not exist: ${sourceBin}`)
+    process.exit(1)
+  }
+
+  console.log(`copying binary from ${sourceBin} to ${targetBinPath}`)
   try {
     if (!fs.existsSync(binDir)) {
       fs.mkdirSync(binDir)

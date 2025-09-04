@@ -28,14 +28,7 @@
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
-    "@deta/backend#build": {
-      "dependsOn": [],
-      "outputs": ["index.node"]
-    },
-    "@deta/backend#dev": {
-      "dependsOn": [],
-      "outputs": ["index.node"]
-    },
+
     "@deta/trackpad#build": {
       "dependsOn": [],
       "outputs": ["index.node"]
@@ -44,11 +37,17 @@
       "dependsOn": [],
       "outputs": ["index.node"]
     },
+    "@deta/backend#build": {
+      "cache": false
+    },
+    "@deta/backend#dev": {
+      "cache": false
+    },
     "@deta/backend-server#build": {
-      "outputs": ["backend-server"]
+      "cache": false
     },
     "@deta/backend-server#dev": {
-      "outputs": ["backend-server"]
+      "cache": false
     },
     "desktop#build": {
       "dependsOn": ["build:app"]
@@ -130,7 +129,7 @@
     "desktop#dev": {
       "dependsOn": [
         "@deta/backend#build",
-        "@deta/backend-server#build",
+        "@deta/backend-server#dev",
         "@horizon/core#build:tailwind",
         "@deta/dragcula#build"
       ],
@@ -147,7 +146,7 @@
     "dev": {
       "dependsOn": [
         "@deta/backend#build",
-        "@deta/backend-server#build",
+        "@deta/backend-server#dev",
         "@horizon/core#build:tailwind",
         "@deta/dragcula#build"
       ],
