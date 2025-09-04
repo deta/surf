@@ -37,16 +37,11 @@
   }
 </script>
 
-{#if url && typeof url === 'string' && url.startsWith('http://localhost')}
-  <!-- TODO: Replace this with proper notebook icon -->
-  <div class="favicon-fallback">
-    <Icon name="squircle" size="100%" fill="yellow" />
-  </div>
-{:else if loaded && !error && url}
+{#if loaded && !error && url}
   <img bind:this={imgElement} src={url} alt={title} draggable="false" />
 {:else}
   <div class="favicon-fallback">
-    <Icon name="squircle" size="100%" fill="white" />
+    <Icon name="squircle" size="100%" fill="yellow" />
   </div>
 {/if}
 

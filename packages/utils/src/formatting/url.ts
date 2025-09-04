@@ -441,20 +441,22 @@ export function isInternalRendererURL(url: string | URL): URL | null {
     const _url = url instanceof URL ? url : new URL(url)
     if (_url.protocol === 'surf:') return _url
 
+    const devPartialPaths = [
+      '/Notebook/notebook.html',
+      '/Resource/resource.html',
+      '/Overlay/overlay.html',
+      '/Announcements/announcements.html',
+      '/PDF/pdf.html',
+      '/Updates/updates.html',
+      '/Settings/settings.html',
+      '/Setup/setup.html',
+      '/Core/core.html'
+    ]
+
     if (
       isDev &&
       checkIfLocalhost(_url) &&
-      [
-        '/Notebook/notebook.html',
-        '/Resource/resource.html',
-        '/Overlay/overlay.html',
-        '/Announcements/announcements.html',
-        '/PDF/pdf.html',
-        '/Updates/updates.html',
-        '/Settings/settings.html',
-        '/Setup/setup.html',
-        '/Core/core.html'
-      ].includes(_url.pathname)
+      devPartialPaths.includes(_url.pathname)
     ) {
       const rendererURL = new URL(
         _url.searchParams.get('path') ??
@@ -466,12 +468,12 @@ export function isInternalRendererURL(url: string | URL): URL | null {
       return rendererURL
     }
 
+    const prodPartialPaths = ['/out/renderer/Notebook/notebook.html', '/out/renderer/Resource/resource.html']
+
     // TODO: Improve prod path
     if (
       _url.protocol === 'file:' &&
-      ['/out/renderer/Notebook/notebook.html', '/out/renderer/Resource/resource.html'].includes(
-        _url.pathname
-      )
+      prodPartialPaths.some((partial) => _url.pathname.includes(partial))
     ) {
       const rendererURL = new URL(
         _url.searchParams.get('path') ??
