@@ -193,15 +193,16 @@ export class WCView {
   }
 
   async loadOverlay() {
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      this.wcv.webContents.loadURL(
-        `${process.env['ELECTRON_RENDERER_URL']}/Overlay/overlay.html?overlayId=${this.opts.overlayId}`
-      )
-    } else {
-      this.wcv.webContents.loadFile(
-        join(__dirname, `../renderer/Overlay/overlay.html?overlayId=${this.opts.overlayId}`)
-      )
-    }
+    this.wcv.webContents.loadURL('surf-internal://Core/Overlay/overlay.html')
+    // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    //   this.wcv.webContents.loadURL(
+    //     `${process.env['ELECTRON_RENDERER_URL']}/Overlay/overlay.html?overlayId=${this.opts.overlayId}`
+    //   )
+    // } else {
+    //   this.wcv.webContents.loadFile(
+    //     join(__dirname, `../renderer/Overlay/overlay.html?overlayId=${this.opts.overlayId}`)
+    //   )
+    // }
   }
 
   changePermanentlyActive(value: boolean) {

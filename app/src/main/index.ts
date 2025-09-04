@@ -85,6 +85,18 @@ const registerProtocols = () => {
       }
     },
     {
+      scheme: 'surf-internal',
+      privileges: {
+        standard: true,
+        supportFetchAPI: true,
+        allowServiceWorkers: true,
+        secure: true,
+        corsEnabled: true,
+        bypassCSP: true,
+        stream: true
+      }
+    },
+    {
       scheme: 'surflet',
       privileges: {
         standard: true,

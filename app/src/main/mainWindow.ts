@@ -30,7 +30,7 @@ import {
 import { getWebRequestManager } from './webRequestManager'
 // import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
-import { surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
+import { surfInternalProtocolHandler, surfProtocolHandler, surfletProtocolHandler } from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager, WCViewManager } from './viewManager'
 
@@ -162,18 +162,28 @@ export function createWindow() {
   webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
     const isSurfProtocol = details.url.startsWith('surf:')
     const isSurfletProtocol = details.url.startsWith('surflet:')
+    const isInternalPageRequest = details.url.startsWith('surf-internal:')
 
     const shouldBlockSurfRequest =
-      isSurfProtocol &&
+      (isSurfProtocol) &&
       // navigation and APIs like webContents.loadURL should be able to request resources
       details.resourceType !== 'mainFrame' &&
-      // only the PDF renderer should be able to request resources, cancel if webContents is unavailable
+      // allow overlay requests and PDF viewer
       (!details.webContents || !isPDFViewerURL(details.webContents.getURL(), PDFViewerEntryPoint))
 
     const shouldBlockSurfletRequest =
       isSurfletProtocol && (details.resourceType !== 'mainFrame' || !details.webContents)
 
-    callback({ cancel: shouldBlockSurfRequest || shouldBlockSurfletRequest })
+    const shouldBlockInternalRequest =
+      isInternalPageRequest && (details.resourceType !== 'mainFrame' || !details.webContents)
+
+    const shouldBlock = shouldBlockSurfRequest || shouldBlockSurfletRequest || shouldBlockInternalRequest
+
+    if (shouldBlock) {
+      console.warn('Blocking request:', details.url, { shouldBlockSurfRequest, shouldBlockSurfletRequest, shouldBlockInternalRequest })
+    }
+
+    callback({ cancel: shouldBlock })
   })
 
   webRequestManager.addBeforeSendHeaders(webviewSession, (details, callback) => {
@@ -325,6 +335,7 @@ export function createWindow() {
     webviewSession.protocol.handle('surf', surfProtocolHandler)
     webviewSession.protocol.handle('surflet', surfletProtocolHandler)
     mainWindowSession.protocol.handle('surf', surfProtocolHandler)
+    mainWindowSession.protocol.handle('surf-internal', surfInternalProtocolHandler)
     ElectronChromeExtensions.handleCRXProtocol(mainWindowSession)
   } catch (e) {
     log.error('possibly failed to register surf protocol: ', e)
@@ -377,11 +388,13 @@ export function createWindow() {
 
   setupMainWindowWebContentsHandlers(mainWindow.webContents, viewManager)
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/Core/core.html`)
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/Core/core.html'))
-  }
+  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  //   mainWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/Core/core.html`)
+  // } else {
+  //   mainWindow.loadFile(join(__dirname, '../renderer/Core/core.html'))
+  // }
+
+  mainWindow.loadURL('surf-internal://Core/Core/core.html')
 }
 
 export function getMainWindow(): BrowserWindow | undefined {

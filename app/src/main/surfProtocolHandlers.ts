@@ -1,5 +1,5 @@
 import { app, net } from 'electron'
-import { isPathSafe } from './utils'
+import { isPathSafe, getContentType } from './utils'
 import path, { join } from 'path'
 import { stat, mkdir } from 'fs/promises'
 import { Worker } from 'worker_threads'
@@ -234,6 +234,61 @@ const surfProtocolHandleImages = async ({
   } catch (err) {
     log.error('Image processing error:', err)
     return new Response(`'Internal Server Error: ${err}`, { status: 500 })
+  }
+}
+
+const ALLOWED_HOSTNAMES = ['core', 'overlay']
+
+export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
+  try {
+    const url = new URL(req.url)
+
+    if (url.protocol !== 'surf-internal:') {
+      return new Response('Invalid Surf protocol URL', { status: 400 })
+    }
+
+    if (!ALLOWED_HOSTNAMES.includes(url.hostname.toLowerCase())) {
+      return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+    }
+
+    const targetPath = url.pathname
+    const base =
+      import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL
+        ? path.join(process.env.ELECTRON_RENDERER_URL)
+        : `file://${path.join(app.getAppPath(), 'out', 'renderer')}`
+
+    const filePath = join(base, targetPath)
+    if (!isPathSafe(base, filePath)) {
+      return new Response('Forbidden', { status: 403 })
+    }
+
+    const newURL = new URL(filePath)
+    if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+      const reqURL = URL.parse(req.url)
+      if (reqURL) {
+        newURL.search = reqURL.search
+        newURL.hash = reqURL.hash
+      }
+    }
+
+    const response = await net.fetch(newURL.href)
+
+    if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+      return response
+    }
+
+    const mimeType = getContentType(filePath)
+
+    // Create a new response with the correct MIME type
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        'Content-Type': mimeType
+      }
+    })
+  } catch (err) {
+    log.error('surf internal protocol error:', err, req.url)
+    return new Response('Internal Server Error', { status: 500 })
   }
 }
 

@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { execSync } from 'child_process'
 import path from 'path'
 import { promises as fsp } from 'fs'
+import mimeTypes from "mime-types"
 
 export let isAppSetup = false
 
@@ -150,6 +151,25 @@ export const NotebookViewerEntryPoint = (() => {
   }
 })()
 
+export const OverlayEntryPoint = (() => {
+  return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Overlay', 'overlay.html')}`
+  if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    return `${process.env.ELECTRON_RENDERER_URL}/Overlay/overlay.html`
+  } else {
+    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Overlay', 'overlay.html')}`
+  }
+})()
+
+export const CoreEntryPoint = (() => {
+  return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Core', 'core.html')}`
+  
+  if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    return `${process.env.ELECTRON_RENDERER_URL}/Overlay/overlay.html`
+  } else {
+    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Overlay', 'overlay.html')}`
+  }
+})()
+
 export function checkIfSurfProtocolUrl(url: string): boolean {
   return (
     url.startsWith('surf://') ||
@@ -165,4 +185,13 @@ export async function checkFileExists(path: string) {
   } catch {
     return false
   }
+}
+
+/**
+ * Get the content type of a file
+ * @param filePath - The path to get the content type of
+ * @returns The content type of the file
+ */
+export function getContentType(filePath: string) {
+  return mimeTypes.lookup(filePath) || "text/plain";
 }

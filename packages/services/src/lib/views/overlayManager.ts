@@ -175,7 +175,7 @@ export class OverlayManager {
     const overlayId = `overlay-${Date.now()}`
 
     const overlayWindow = window.open(
-      'about:blank',
+      'surf-internal://Core/Overlay/overlay.html',
       `portal_${overlayId}`,
       `componentId=${overlayId}`
     ) as Window | null
