@@ -30,13 +30,13 @@
 
   const notebookData = notebook.data
 
-  //const handleCreateNote = async () => {
-  //  const note = await resourceManager.createResourceNote('', {
-  //    name: 'Untitled Note'
-  //  })
-  //  notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
-  //  await navigation.navigate(`surf://resource/${note.id}`).finished
-  //}
+  const handleCreateNote = async () => {
+    const note = await resourceManager.createResourceNote('', {
+      name: 'Untitled Note'
+    })
+    notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
+    await navigation.navigate(`surf://resource/${note.id}`).finished
+  }
 
   const handleDeleteNote = async (note: ResourceNote) => {
     const { closeType: confirmed } = await openDialog({
@@ -79,7 +79,7 @@
     <header>
       <label>Notes</label>
       <Button
-        size="md"
+        size="xs"
         onclick={() => (showAllNotes = !showAllNotes)}
         disabled={resourcesNotes.length <= 6}
       >
@@ -90,9 +90,10 @@
     </header>
     {#if resourcesNotes.length <= 0}
       <div class="empty">
-        <p class="typo-title-sm">
-          Create notes through Teletype for them to appear in this Notebook.
-        </p>
+        <Button size="md" onclick={handleCreateNote}>
+          <span class="typo-title-sm">Create New Note</span>
+        </Button>
+        <p class="typo-title-sm">You can also create notes through Teletype.</p>
       </div>
     {:else}
       <ul class:showAllNotes={showAllNotes || resourcesNotes?.length <= 6}>
@@ -212,6 +213,7 @@
     padding: 0.75rem 0.75rem;
     border-radius: 10px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     color: rgba(0, 0, 0, 0.25);
@@ -219,6 +221,12 @@
     text-wrap: pretty;
     p {
       max-width: 28ch;
+    }
+
+    :global(button) {
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+      background: rgb(198 206 249 / 40%);
     }
   }
 

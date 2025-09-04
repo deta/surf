@@ -19,6 +19,14 @@
 
   let resourcesNotes = $state([])
 
+  const handleCreateNote = async () => {
+    const note = await resourceManager.createResourceNote('', {
+      name: 'Untitled Note'
+    })
+    notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
+    await navigation.navigate(`surf://resource/${note.id}`).finished
+  }
+
   const handleDeleteNote = async (note: ResourceNote) => {
     const { closeType: confirmed } = await openDialog({
       title: `Delete <i>${truncate(note.metadata.name, 26)}</i>`,
@@ -82,6 +90,9 @@
     </header>
     {#if resourcesNotes.length <= 0}
       <div class="empty">
+        <Button size="md" onclick={handleCreateNote}>
+          <span class="typo-title-sm">Create New Note</span>
+        </Button>
         <p class="typo-title-sm">
           Create notes through Teletype for them to appear in this Notebook.
         </p>
@@ -193,6 +204,7 @@
     padding: 0.75rem 0.75rem;
     border-radius: 10px;
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
     color: rgba(0, 0, 0, 0.25);
@@ -200,6 +212,11 @@
     text-wrap: pretty;
     p {
       max-width: 28ch;
+    }
+    :global(button) {
+      margin-bottom: 0.5rem;
+      background: rgb(198 206 249 / 40%);
+      color: var(--accent);
     }
   }
 
