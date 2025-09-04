@@ -50,6 +50,12 @@ export interface MPNoteReady extends MessagePortEvent {
   payload: void
 }
 
+export interface MPChangePageQuery extends MessagePortEvent {
+  payload: {
+    query: string
+  }
+}
+
 type MessagePortEventRegistry = {
   teletypeSetQuery: MPTeletypeSetQuery
   teletypeSearch: MPTeletypeSearchRequest
@@ -57,6 +63,7 @@ type MessagePortEventRegistry = {
   teletypeAsk: MPTeletypeAsk
   noteRunQuery: MPNoteRunQuery
   noteReady: MPNoteReady
+  changePageQuery: MPChangePageQuery
 }
 
 const createMessagePortEvents = <IsPrimary extends boolean>(
@@ -78,7 +85,8 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
       messagePortService.addEventWithReturn<MPTeletypeSearchRequest>('teletype-search'),
     teletypeAsk: messagePortService.addEvent<MPTeletypeAsk>('teletype-ask'),
     noteRunQuery: messagePortService.addEvent<MPNoteRunQuery>('note-run-query'),
-    noteReady: messagePortService.addEvent<MPNoteReady>('note-ready')
+    noteReady: messagePortService.addEvent<MPNoteReady>('note-ready'),
+    changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query')
   })
 }
 

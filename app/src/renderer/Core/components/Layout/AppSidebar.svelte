@@ -128,7 +128,7 @@
           {#snippet rightChildren()}
             <NavigationBarGroup slim>
               <Button size="md" square onclick={() => browser.moveSidebarViewToTab()}>
-                <Icon name="arrow.diagonal" size="1.2em" />
+                <Icon name="arrow.diagonal" size="1.15em" />
               </Button>
 
               <Button size="md" square onclick={() => viewManager.setSidebarState({ open: false })}>

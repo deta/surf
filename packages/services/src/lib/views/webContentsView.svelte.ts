@@ -660,6 +660,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     return this.manager.messagePort.noteRunQuery.send(this.view.id, { query, mentions })
   }
 
+  async updatePageQuery(query: string) {
+    this.log.debug('Updating page query', query)
+    return this.manager.messagePort.changePageQuery.send(this.view.id, { query })
+  }
+
   getBoundingClientRect = (): DOMRect | null => {
     if (!this.wrapperElement) {
       this.log.error('WebContents wrapper element is not defined')

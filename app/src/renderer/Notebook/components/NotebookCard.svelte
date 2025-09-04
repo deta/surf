@@ -132,10 +132,14 @@
   }
 
   const colors = $derived(
-    color ?? generateGradient($notebookData.folderName ?? $notebookData.name ?? title, 220)
+    color ??
+      generateGradient($notebookData?.folderName ?? $notebookData?.name ?? text ?? title, 220)
   )
 
   const handleClose = () => {
+    if ($notebookData?.folderName) $notebookData.folderName = editorEl?.textContent
+    if ($notebookData?.name) $notebookData.name = editorEl?.textContent
+
     onchange?.(editorEl?.textContent)
     onclose?.()
   }
@@ -303,6 +307,7 @@
 <style lang="scss">
   .cover {
     position: relative;
+    content-visibility: auto;
 
     transition:
       transform 123ms ease-out,
@@ -312,14 +317,16 @@
       position: absolute;
       top: 1.75em;
       left: 2em;
-      right: 0.5em;
+      right: 1em;
       color: #fff;
       font-size: 0.08em;
       color: var(--color-white);
       font-family: 'Inter';
       letter-spacing: 0.01em;
 
-      text-wrap: pretty;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      word-break: normal;
       overflow: hidden;
       display: -webkit-box;
       -webkit-line-clamp: 3;

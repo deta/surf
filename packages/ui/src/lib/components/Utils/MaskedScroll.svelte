@@ -38,6 +38,7 @@
                 --mask-default: 2rem;
 
           overflow-y: auto;
+                overflow-x: hidden;
                 overscroll-behavior: none;
 
 

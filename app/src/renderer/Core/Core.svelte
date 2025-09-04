@@ -48,10 +48,8 @@
 
   // TODO: move into searchinput directly?
   const handleSearchInput = useDebounce((value: string) => {
-    const url = new URL(get(tabsService.activeTab?.view.url))
-    url.searchParams.set('query', value)
-    tabsService.activeTab?.view.webContents.loadURL(url.toString())
-  }, 500)
+    tabsService.activeTab?.view?.webContents.updatePageQuery(value)
+  }, 100)
 
   onMount(async () => {
     log.debug('Core component mounted')

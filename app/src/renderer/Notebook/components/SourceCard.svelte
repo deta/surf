@@ -1,19 +1,17 @@
 <script lang="ts">
   import { openDialog } from '@deta/ui'
-  import {
-    getResourcePreview,
-    Resource,
-    useResourceManager
-  } from '@deta/services/resources'
+  import { getResourcePreview, Resource, useResourceManager } from '@deta/services/resources'
   import { contextMenu, type CtxItem } from '@deta/ui'
   import { getFileKind, truncate } from '../../../../../packages/utils/dist'
   import { ResourceTypes } from '@deta/types'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
   import { DynamicIcon } from '@deta/icons'
+  import { onMount } from 'svelte'
 
   // TODO: Decouple this rendering from the Resource?
   let {
     resource,
+    resourceId,
     text = false,
     onlyCard = false
     //title,
@@ -22,6 +20,7 @@
     //faviconImage
   }: {
     resource: Resource
+    resourceId?: string
     text?: boolean
     onlyCard?: boolean
     //title?: string
@@ -33,6 +32,7 @@
   const resourceManager = useResourceManager()
 
   let data = $state(null)
+  let _resource = $state(null)
   let faviconUrl = $derived(
     data.url
       ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(data.url)}&sz=48`
@@ -41,7 +41,7 @@
 
   const handleClick = (e: MouseEvent) => {
     // @ts-ignore - TODO: Add to window d.ts
-    navigation.navigate(`surf://resource/${resource.id}`)
+    navigation.navigate(`surf://resource/${resourceId ?? _resource.id}`)
   }
 
   const handleDeleteResource = async () => {
@@ -54,13 +54,16 @@
       ]
     })
     if (!confirmed) return
-    resourceManager.deleteResource(resource.id)
+    resourceManager.deleteResource(resourceId ?? _resource.id)
   }
 
-  getResourcePreview(resource, {}).then((v) => {
-    data = v
-    if (resource.id === '4828ed73-c0a3-437f-beea-f4fd6fb46d19') {
-      console.warn(resource, data)
+  onMount(async () => {
+    if (!resourceId && resource) getResourcePreview(resource, {}).then((v) => (data = v))
+    else if (resourceId) {
+      resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
+        _resource = resource
+        getResourcePreview(resource, {}).then((v) => (data = v))
+      })
     }
   })
 </script>
@@ -97,17 +100,24 @@
         }
       ]
     }}
-    data-resource-id={resource.id}
+    data-resource-id={_resource.id}
   >
     <div class="card">
       <div class="content">
         {#if data.image}
-          <img class="cover" src={data.image} alt="" ondragstart={(e) => e.preventDefault()} />
-        {:else if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+          <img
+            class="cover"
+            src={data.image}
+            alt={data?.title || data?.metadata?.text}
+            decoding="async"
+            loading="eager"
+            ondragstart={(e) => e.preventDefault()}
+          />
+        {:else if _resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
           <ReadOnlyRichText content={truncate(data.content, 2000)} />
         {:else}
           <div class="cover fallback">
-            <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
+            <DynamicIcon name={`file;;${getFileKind(_resource.type)}`} width="1em" height="1em" />
           </div>
         {/if}
 
@@ -178,6 +188,7 @@
       width: var(--width, 100%);
       aspect-ratio: 3.1 / 4;
       //height: var(--height, auto);
+      content-visibility: auto;
 
       box-shadow: rgba(99, 99, 99, 0.15) 0px 2px 8px 0px;
 

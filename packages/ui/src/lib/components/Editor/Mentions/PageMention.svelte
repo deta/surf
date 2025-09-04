@@ -1,9 +1,12 @@
 <script lang="ts">
+  import { useResourceManager } from '@deta/services/resources'
   import { DynamicIcon } from '@deta/icons'
   import type { Fn } from '@deta/types';
   import { clickOutside } from '@deta/utils'
+  import { onMount } from 'svelte'
 
   let {
+          resourceId,
     text = $bindable(),
     placeholder = '',
     icon, 
@@ -15,6 +18,7 @@
     onchange, 
     ...restProps
   }: {
+          resourceId?: string;
     text?: string
     placeholder?: string
     icon?: string
@@ -26,7 +30,11 @@
     onchange?: (value: String) => void
   } = $props()
 
+    const resourceManager = useResourceManager()
+
+
   let editorEl: HTMLSpanElement = $state()
+  let title = $state(null)
 
   const handleClose = () => {
     onchange?.(editorEl?.textContent)
@@ -43,6 +51,13 @@
     sel!.removeAllRanges()
     sel!.addRange(range)
   })
+
+  onMount(async () => {
+    if (resourceId && !text) {
+        const resource = await resourceManager.getResource(resourceId, { includeAnnotations: false })
+        title = resource.metadata.name
+    } else if (!resourceId && text) title = text
+  })
 </script>
 
 <span
@@ -56,11 +71,11 @@
   {#if icon}<DynamicIcon name={icon} size="19px" />{/if}
 
   {#if !editing}
-    <span class="text">{text}</span>
+    <span class="text">{title}</span>
   {:else}
     <span
       bind:this={editorEl}
-      bind:textContent={text}
+      bind:textContent={title}
       contenteditable="true"
       class="text"
       spellcheck="false"

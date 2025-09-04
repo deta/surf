@@ -6,29 +6,23 @@
   import { Button, PageMention } from '@deta/ui'
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
   import { contextMenu } from '@deta/ui'
-  import { truncate, useDebounce } from '@deta/utils'
+  import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
   import { type ResourceNote } from '@deta/services/src/lib/resources'
   import { ResourceTypes } from '@deta/types'
+  import { onMount } from 'svelte'
+  import { get } from 'svelte/store'
 
-  let {
-    notebook,
-    resources,
-    query
-  }: { notebook: Notebook; resources: Resource[]; query?: string } = $props()
+  let { notebook, query }: { notebook: Notebook; query?: string } = $props()
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
   let showAllNotes = $state(query !== null)
   let isRenamingNote = $state(null)
 
-  const resourcesNotes = $derived(
-    resources.filter((e) => e.type === ResourceTypes.DOCUMENT_SPACE_NOTE)
-  )
-  // const resourcesNotNotes = $derived(
-  //   resources.filter((e) => e.type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
-  // )
-
   const notebookData = notebook.data
+
+  let noteResources = $state([])
+  let noneNotesResources = $state([])
 
   const handleCreateNote = async () => {
     const note = await resourceManager.createResourceNote('', {
@@ -38,9 +32,10 @@
     await navigation.navigate(`surf://resource/${note.id}`).finished
   }
 
-  const handleDeleteNote = async (note: ResourceNote) => {
+  const handleDeleteNote = async (noteId: string) => {
     const { closeType: confirmed } = await openDialog({
-      title: `Delete <i>${truncate(note.metadata.name, 26)}</i>`,
+      //title: `Delete <i>${truncate(note.metadata.name, 26)}</i>`,
+      title: `Delete <i>${truncate('Note', 26)}</i>`,
       message: `This can't be undone.`,
       actions: [
         { title: 'Cancel', type: 'reset' },
@@ -49,8 +44,8 @@
     })
     if (!confirmed) return
 
-    await notebook.removeResources(note.id)
-    await resourceManager.deleteResource(note.id)
+    await notebook.removeResources(noteId)
+    await resourceManager.deleteResource(noteId)
   }
 
   const handleRenameNote = useDebounce((noteId: string, value: string) => {
@@ -60,6 +55,65 @@
   const handleCancelRenameNote = useDebounce(() => {
     isRenamingNote = undefined
   }, 75)
+
+  const fetchContents = async (query: string | null) => {
+    if (query) {
+      const resultNotes = await resourceManager.searchResources(
+        query,
+        [
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          SearchResourceTags.NotExists('silent'),
+          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
+          //...conditionalArrayItem(isNotesSpace, [
+          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          //])
+        ],
+        {
+          semanticEnabled: false,
+          spaceId: notebook?.id ?? undefined
+        }
+      )
+      const resultNoneNotes = await resourceManager.searchResources(
+        query,
+        [
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+          SearchResourceTags.NotExists('silent'),
+          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
+          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
+          //...conditionalArrayItem(isNotesSpace, [
+          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          //])
+        ],
+        {
+          semanticEnabled: false,
+          spaceId: notebook?.id ?? undefined
+        }
+      )
+      noteResources = resultNotes.resources.map((e) => e.id)
+      noneNotesResources = resultNoneNotes.resources.map((e) => e.id)
+    } else {
+      const results = await notebook.fetchContents()
+      const resultNotes = results
+        .filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
+        .map((e) => e.entry_id)
+
+      const resultNoneNotes = results
+        .filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
+        .map((e) => e.entry_id)
+
+      noteResources = resultNotes
+      noneNotesResources = resultNoneNotes
+    }
+  }
+
+  $effect(() => fetchContents(query))
+
+  onMount(async () => {
+    fetchContents(query)
+  })
 </script>
 
 <svelte:head>
@@ -81,14 +135,14 @@
       <Button
         size="xs"
         onclick={() => (showAllNotes = !showAllNotes)}
-        disabled={resourcesNotes.length <= 6}
+        disabled={noteResources.length <= 6}
       >
         <span class="typo-title-sm" style="opacity: 0.75;"
           >{showAllNotes ? 'Hide' : 'Show'} All</span
         >
       </Button>
     </header>
-    {#if resourcesNotes.length <= 0}
+    {#if noteResources.length <= 0}
       <div class="empty">
         <Button size="md" onclick={handleCreateNote}>
           <span class="typo-title-sm">Create New Note</span>
@@ -96,8 +150,8 @@
         <p class="typo-title-sm">You can also create notes through Teletype.</p>
       </div>
     {:else}
-      <ul class:showAllNotes={showAllNotes || resourcesNotes?.length <= 6}>
-        {#each resourcesNotes.slice(0, showAllNotes ? Infinity : 7) as note}
+      <ul class:showAllNotes={showAllNotes || noteResources?.length <= 6}>
+        {#each noteResources.slice(0, showAllNotes ? Infinity : 7) as resourceId}
           <li
             use:contextMenu={{
               canOpen: true,
@@ -112,29 +166,29 @@
                   type: 'action',
                   text: 'Rename',
                   icon: 'edit',
-                  action: () => (isRenamingNote = note.id)
+                  action: () => (isRenamingNote = resourceId)
                 },
                 {
                   type: 'action',
                   kind: 'danger',
                   text: 'Delete',
                   icon: 'trash',
-                  action: () => handleDeleteNote(note)
+                  action: () => handleDeleteNote(resourceId)
                 }
               ]
             }}
           >
             <PageMention
-              editing={isRenamingNote === note.id}
-              text={note.metadata.name}
+              editing={isRenamingNote === resourceId}
+              {resourceId}
               onchange={(v) => {
-                handleRenameNote(note.id, v)
+                handleRenameNote(resourceId, v)
                 isRenamingNote = undefined
               }}
               oncancel={handleCancelRenameNote()}
               onclick={async () => {
                 if (isRenamingNote) return
-                await navigation.navigate(`surf://resource/${note.id}`).finished
+                await navigation.navigate(`surf://resource/${resourceId}`).finished
               }}
             />
           </li>
@@ -227,18 +281,6 @@
       margin-bottom: 0.5rem;
       color: var(--accent);
       background: rgb(198 206 249 / 40%);
-    }
-  }
-
-  .tty-wrapper {
-    //position: fixed;
-    width: 100%;
-
-    h1 {
-      font-size: 30px;
-      margin-bottom: 0.75rem;
-      font-family: 'Gambarino';
-      text-align: center;
     }
   }
 

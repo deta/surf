@@ -3,7 +3,6 @@
   import { provideConfig } from '@deta/services'
   import { createNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { setupTelemetry } from '@deta/services/helpers'
-  import { SearchResourceTags } from '@deta/utils'
   import { createResourceManager } from '@deta/services/resources'
   import { createTeletypeService } from '@deta/services/teletype'
   import { useTabs } from '@deta/services/tabs'
@@ -12,15 +11,13 @@
   import NotebookDetailRoute from './components/routes/NotebookDetailRoute.svelte'
   import DraftsRoute from './components/routes/DraftsRoute.svelte'
   import HistoryRoute from './components/routes/HistoryRoute.svelte'
-  import { ResourceTypes } from '../../../../packages/types/src'
-  import { Resource } from '../../../../packages/services/src/lib/resources'
   import NotebookSidebar from './components/NotebookSidebar.svelte'
   import { writable } from 'svelte/store'
   import BackgroundImage from './assets/greenfield.png?url'
+  import { useMessagePortClient } from '@deta/services/messagePort'
 
   const searchParams = new URLSearchParams(window.location.search)
   const notebookId = searchParams.get('notebookId') || null
-  const query = searchParams.get('query') || null
 
   const telemetry = setupTelemetry()
   const config = provideConfig()
@@ -30,29 +27,28 @@
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
 
+  const messagePort = useMessagePortClient()
+
   let notebook: Notebook = $state(null)
   let notebookData = $derived(notebook.data ?? writable(null))
-  const notebookContents = $derived(notebook ? notebook.contents : writable([]))
-  let notebookResources = $state([])
-
-  $effect(() => {
-    Promise.all(
-      $notebookContents
-        //.filter((e) => e.resource_type !== 'application/vnd.space.document.space-note')
-        .map((e) => resourceManager.getResource(e.entry_id))
-    ).then((v) => {
-      notebookResources = v
-    })
-  })
+  let query = $state<string | null>(null)
 
   let title = $derived(
     !notebook ? 'Maxintosh HD' : ($notebookData?.folderName ?? $notebookData?.name ?? '')
   )
 
-  let resourcesPanelOpen = $state(false)
-  let resources: Resource[] = $state([])
+  let resourcesPanelOpen = $state(
+    localStorage.getItem('notebook_resourcePanelOpen')
+      ? localStorage.getItem('notebook_resourcePanelOpen') === 'true'
+      : true
+  )
+  $effect(() => localStorage.setItem('notebook_resourcePanelOpen', resourcesPanelOpen.toString()))
 
   onMount(async () => {
+    messagePort.changePageQuery.handle((event) => {
+      query = event.query && event.query?.length > 0 ? event.query : null
+    })
+
     prepareContextMenu()
 
     if (notebookId && !['drafts', 'history'].includes(notebookId)) {
@@ -60,42 +56,6 @@
     } else {
       notebook = notebookId
     }
-
-    let resourceIds = []
-
-    if (!query) {
-      if (notebook) notebook.fetchContents()
-      else {
-        resourceIds = await resourceManager.listResourceIDsByTags([
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent')
-        ])
-      }
-    } else {
-      console.warn('DBG ', query)
-      const result = await resourceManager.searchResources(
-        query,
-        [
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent')
-          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
-          //...conditionalArrayItem(isNotesSpace, [
-          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          //])
-        ],
-        {
-          semanticEnabled: false,
-          spaceId: notebookId ?? undefined
-        }
-      )
-      resourceIds = result.resources.map((e) => e.id)
-    }
-    resources = (await Promise.all(resourceIds.map((id) => resourceManager.getResource(id)))).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-    console.warn('DBG', resources, query, resourceIds)
 
     if (query !== null && query?.length > 0) resourcesPanelOpen = true
   })
@@ -106,24 +66,17 @@
 
   {#if notebookId === null}
     <IndexRoute {query} />
-  {:else if notebook === 'drafts'}
+  {:else if notebookId === 'drafts'}
     <DraftsRoute />
-  {:else if notebook === 'history'}
+  {:else if notebookId === 'history'}
     <HistoryRoute />
   {:else if notebook}
-    <NotebookDetailRoute
-      {notebook}
-      resources={notebook && query === null ? notebookResources : resources}
-      {query}
-    />
+    <NotebookDetailRoute {notebook} {query} />
   {/if}
 
-  <NotebookSidebar
-    {title}
-    {notebook}
-    bind:open={resourcesPanelOpen}
-    resources={notebook && query === null ? notebookResources : resources}
-  />
+  {#if (notebookId && notebook && notebookId !== 'drafts') || !notebookId}
+    <NotebookSidebar {title} {notebook} bind:open={resourcesPanelOpen} {query} />
+  {/if}
 </div>
 
 <style lang="scss">
@@ -171,6 +124,8 @@
     margin: 0;
     padding: 0;
     user-select: none;
+
+    --sidebar-width: 600px;
   }
   :global(#app *) {
     -electron-corner-smoothing: 60%;
@@ -191,6 +146,14 @@
     background-position: 50% 30%;
   }
 
+  @media screen and (min-width: 1200px) {
+    :global(.notebook:has(aside.open) main) {
+      transform: translateX(calc(-1 * var(--sidebar-width) / 2));
+    }
+    :global(.notebook main) {
+      transition: transform 123ms ease-out;
+    }
+  }
   .notebook {
     position: relative;
     overflow-x: hidden;
@@ -230,5 +193,16 @@
     //  pointer-events: none;
     //  background: linear-gradient(to bottom, var(--page-gradient-color), transparent);
     //}
+  }
+
+  :global(.tty-wrapper) {
+    width: 100%;
+
+    :global(h1) {
+      font-size: 30px;
+      margin-bottom: 0.75rem;
+      font-family: 'Gambarino';
+      text-align: center;
+    }
   }
 </style>

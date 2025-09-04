@@ -192,17 +192,6 @@
       }
     }
   }
-  .tty-wrapper {
-    //position: fixed;
-    width: 100%;
-
-    h1 {
-      font-size: 30px;
-      margin-bottom: 0.75rem;
-      font-family: 'Gambarino';
-      text-align: center;
-    }
-  }
 
   .empty {
     width: 100%;
