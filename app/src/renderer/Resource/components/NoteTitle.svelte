@@ -13,6 +13,10 @@
 
   let el: HTMLInputElement
 
+  const handleInput = () => {
+    document.title = el.value
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!['Enter', 'Escape'].includes(e.key)) return
     el.blur()
@@ -28,6 +32,7 @@
   {disabled}
   on:click
   on:blur
+  on:input={handleInput}
   on:keydown={handleKeyDown}
 />
 
