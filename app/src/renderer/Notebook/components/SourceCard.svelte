@@ -92,7 +92,7 @@
   <article
     onclick={handleClick}
     role="none"
-    use:contextMenu={{
+    {@attach contextMenu({
       canOpen: true,
       items: [
         {
@@ -117,7 +117,7 @@
           action: handleDeleteResource
         }
       ]
-    }}
+    })}
     data-resource-id={_resource.id}
   >
     <div class="card">

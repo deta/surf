@@ -225,7 +225,7 @@
                   class="notebook-wrapper"
                   style="width: 100%;max-width: 10ch;"
                   style:--delay={100 + i * 10 + 'ms'}
-                  use:contextMenu={{
+                  {@attach contextMenu({
                     canOpen: true,
                     items: [
                       {
@@ -249,7 +249,7 @@
                         action: () => handleDeleteNotebook(notebook)
                       }
                     ]
-                  }}
+                  })}
                 >
                   <NotebookCard
                     {notebook}
@@ -281,7 +281,7 @@
           <ul>
             {#each noteResources as resourceId (resourceId)}
               <li
-                use:contextMenu={{
+                {@attach contextMenu({
                   canOpen: true,
                   items: [
                     {
@@ -292,7 +292,7 @@
                       action: () => handleDeleteNote(resourceId)
                     }
                   ]
-                }}
+                })}
                 onclick={async () => {
                   await navigation.navigate(`surf://resource/${resourceId}`).finished
                 }}

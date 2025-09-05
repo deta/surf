@@ -101,7 +101,7 @@
       <ul class:showAllNotes={showAllNotes || resourcesNotes?.length <= 6}>
         {#each resourcesNotes.slice(0, showAllNotes ? Infinity : 7) as note}
           <li
-            use:contextMenu={{
+            {@attach contextMenu({
               canOpen: true,
               items: [
                 /*{
@@ -124,7 +124,7 @@
                   action: () => handleDeleteNote(note)
                 }
               ]
-            }}
+            })}
           >
             <PageMention
               editing={isRenamingNote === note.id}

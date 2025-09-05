@@ -51,6 +51,11 @@
     tabsService.activeTab?.view?.webContents.updatePageQuery(value)
   }, 100)
 
+  onMount(() => {
+    let unsub
+    wait(500).then(() => (unsub = prepareContextMenu(true)))
+    return () => unsub?.()
+  })
   onMount(async () => {
     log.debug('Core component mounted')
 
@@ -157,7 +162,6 @@
 
     unsubs.push(handlePreloadEvents())
 
-    wait(500).then(() => prepareContextMenu(true))
     wait(500).then(() => {
       if (tabsService.tabs.length <= 0) {
         tabsService.openNewTabPage()

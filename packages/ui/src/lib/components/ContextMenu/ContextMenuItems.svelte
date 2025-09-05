@@ -484,7 +484,7 @@
       text-align: left;
 
       color: var(--ctx-item-text);
-      font-family: system-ui;
+      font-family: 'Inter', sans-serif;
       -webkit-font-smoothing: antialiased;
 
       &:hover:not(.hover-override) {

@@ -121,7 +121,7 @@
               class="notebook-wrapper"
               style="width: 100%;max-width: 12ch;"
               style:--delay={100 + i * 10 + 'ms'}
-              use:contextMenu={{
+              {@attach contextMenu({
                 canOpen: true,
                 items: [
                   {
@@ -138,7 +138,7 @@
                     action: () => handleDeleteNotebook(notebook)
                   }
                 ]
-              }}
+              })}
             >
               <NotebookCard
                 {notebook}

@@ -43,12 +43,11 @@
   )
   $effect(() => localStorage.setItem('notebook_resourcePanelOpen', resourcesPanelOpen.toString()))
 
+  onMount(prepareContextMenu)
   onMount(async () => {
     messagePort.changePageQuery.handle((event) => {
       query = event.query && event.query?.length > 0 ? event.query : null
     })
-
-    prepareContextMenu()
 
     if (notebookId && !['drafts', 'history'].includes(notebookId)) {
       notebook = await notebookManager.getNotebook(notebookId)

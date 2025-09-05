@@ -75,13 +75,11 @@
     if (setupComplete) return
     if (useOverlay) overlayManager = useOverlayManager()
 
-    window.addEventListener(
-      'contextmenu',
-      async (e) => {
+    const cbk = async (e: Event) => {
         let target = e.target as HTMLElement | null
         // for browesr-action-list for extensions
         if (target?.tagName.toLowerCase() === 'browser-action-list') {
-          return
+          return e.preventDefault()
         }
 
         // Find closest element which has contextMenuHint property set
@@ -89,7 +87,7 @@
           target = target.parentElement
         }
 
-        if (target === null) return
+        if (target === null) return e.preventDefault()
         e.preventDefault()
         e.stopImmediatePropagation()
 
@@ -109,10 +107,15 @@
           key: target.contextMenuKey,
           useOverlay: useOverlay
         })
-      },
+    }
+
+    window.addEventListener(
+      'contextmenu',
+      cbk,
       { capture: true }
     )
     setupComplete = true
+    return () => window.removeEventListener('contextmenu', cbk, { capture: true })
   }
 
   /**
@@ -180,7 +183,29 @@
   // TODO: (maxu): FIx typings
   // TODO: (maxu): Add support for lazy evaluation of canOpen with reference to target element?
   // NOTE: We allow undefined for more easy items construction (ternary)
-  export function contextMenu(node: HTMLElement, props: CtxMenuProps): ActionReturn<any, any> {
+  export function contextMenu(props: CtxMenuProps): Attachment {
+    return (node: HTMLElement) => {
+        node.contextMenuKey = props.key
+        if (Array.isArray(props.items)) {
+          node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
+        } else {
+          node.contextMenuItems = props.items
+        }
+
+        if (props.canOpen === false) {
+          node.contextMenuItems = undefined
+          node.contextMenuKey = undefined
+        }
+
+        return () => {
+          node.contextMenuItems = undefined
+          node.contextMenuKey = undefined
+        }
+    }
+  }
+  /** @deprecated DONT USE 
+  */
+  export function contextMenuSvelte4(node: HTMLElement, props: CtxMenuProps): ActionReturn<any, any> {
     node.contextMenuKey = props.key
     if (Array.isArray(props.items)) {
       node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
@@ -219,6 +244,7 @@
   // import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   import './style.scss'
+  import { type Attachment } from 'svelte/attachments'
 
   export let targetX: number
   export let targetY: number

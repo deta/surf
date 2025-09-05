@@ -98,7 +98,10 @@
   onclick={handleClick}
   aria-hidden="true"
   draggable="true"
-  use:contextMenu={{ items }}
+  {@attach contextMenu({
+    canOpen: true,
+    items
+  })}
   use:HTMLDragItem.action={{
     id: `tab-${tab.id}`,
     data: (() => {

@@ -220,6 +220,7 @@
     window.api.resetBackgroundImage()
   }
 
+  onMount(prepareContextMenu)
   onMount(async () => {
     userConfig = await window.api.getUserConfig()
     console.log('loaded user config', userConfig)
@@ -252,8 +253,6 @@
     if (!isDev) {
       fetchLicenses()
     }
-
-    prepareContextMenu()
   })
 
   onDestroy(() => {
