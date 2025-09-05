@@ -72,7 +72,19 @@
       name: 'Untitled Note'
     })
 
-    viewManager.openNoteInSidebar(note.id)
+    if (viewManager.sidebarViewOpen) {
+      viewManager.setSidebarState({ open: true })
+      viewManager.activeSidebarView?.webContents.loadURL(`surf://resource/${note.id}`)
+    } else {
+      const sidebarView = viewManager.create({
+        url: `surf://resource/${note.id}`,
+        permanentlyActive: true
+      })
+      viewManager.setSidebarState({
+        open: true,
+        view: sidebarView
+      })
+    }
   }
 </script>
 
