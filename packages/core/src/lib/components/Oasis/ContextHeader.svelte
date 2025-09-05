@@ -121,7 +121,6 @@
       content: '';
       position: absolute;
       inset: -4px;
-      background: red;
       z-index: -2;
 
       background: linear-gradient(

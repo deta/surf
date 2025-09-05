@@ -464,10 +464,6 @@
       pointer-events: all;
       width: 18px;
 
-      &:hover {
-        background: red;
-      }
-
       .submit-hint {
         font-size: 0.65rem;
         font-weight: 500;
