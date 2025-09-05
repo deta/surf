@@ -1,6 +1,5 @@
 <script lang="ts">
   import { useTabs, TabItem } from '@deta/services/tabs'
-  import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
   import { Favicon, Button, type CtxItem, contextMenu } from '@deta/ui'
   import { Icon } from '@deta/icons'
   import { HTMLDragItem, DragData } from '@deta/dragcula'
@@ -46,17 +45,6 @@
 
   function handleClose(event: MouseEvent) {
     event.stopPropagation()
-
-    const rect = document.getElementById(`tab-${tab.id}`)?.getBoundingClientRect()
-    if (rect) {
-      spawnBoxSmoke(rect, {
-        densityN: 30,
-        size: 13,
-        //velocityScale: 0.5,
-        cloudPointN: 7
-      })
-    }
-
     tabsService.delete(tab.id)
   }
 

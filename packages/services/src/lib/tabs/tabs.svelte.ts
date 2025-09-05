@@ -13,6 +13,7 @@ import type { Fn } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from '../views'
 import { derived, get, writable, type Readable } from 'svelte/store'
 import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../views/types'
+import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
 import type { NewWindowRequest } from '../ipc/events'
 import {
   type TabItemEmitterEvents,
@@ -434,7 +435,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     return !!item
   }
 
-  async delete(id: string) {
+  async delete(id: string, spawnSmoke = true) {
     this.log.debug('Deleting tab with id:', id)
 
     const tab = this.tabs.find((t) => t.id === id)
@@ -454,6 +455,18 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       tab.onDestroy()
     } else {
       this.log.warn(`Tab with id "${id}" not found`)
+    }
+
+    if (spawnSmoke) {
+      const rect = document.getElementById(`tab-${id}`)?.getBoundingClientRect()
+      if (rect) {
+        spawnBoxSmoke(rect, {
+          densityN: 30,
+          size: 13,
+          //velocityScale: 0.5,
+          cloudPointN: 7
+        })
+      }
     }
 
     await this.kv.delete(id)
