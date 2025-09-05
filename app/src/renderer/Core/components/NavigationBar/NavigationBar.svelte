@@ -11,7 +11,7 @@
   import SaveState from './SaveState.svelte'
   import { isInternalRendererURL } from '@deta/utils'
   import { useResourceManager } from '@deta/services/resources'
-  import { useViewManager } from '@deta/services/views'
+  import { useViewManager, ViewType } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
 
   let {
@@ -45,6 +45,7 @@
   const resourceManager = useResourceManager()
   const viewManager = useViewManager()
 
+  const activeViewType = $derived(view.type ?? writable(''))
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
   const navigationHistoryIndex = $derived(view.navigationHistoryIndex)
@@ -75,7 +76,7 @@
   }
 </script>
 
-<nav class:grey={isInternalRendererURL($activeLocation)}>
+<nav class:grey={[ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}>
   {@render leftChildren?.()}
 
   {#if !hideNavigationControls}

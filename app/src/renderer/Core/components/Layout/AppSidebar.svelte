@@ -43,7 +43,10 @@
     isResizing = true
   }
   const handleResizingMouseMove = (e: MouseEvent) => {
-    targetSidebarWidth -= e.movementX
+    targetSidebarWidth = Math.max(
+      500,
+      Math.min(targetSidebarWidth - e.movementX, window.innerWidth - 500)
+    )
     if (raf === null) requestAnimationFrame(rafCbk)
   }
   const handleResizingMouseUp = (e: MouseEvent) => {
@@ -105,52 +108,63 @@
 </script>
 
 {#if viewManager.sidebarViewOpen && viewManager.activeSidebarView}
-  <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
-  <aside class:open={viewManager.sidebarViewOpen} style:--sidebarWidth={sidebarWidth + 'px'}>
-    <div class="sidebar-content">
-      {#if viewManager.activeSidebarView}
-        <NavigationBar
-          view={viewManager.activeSidebarView}
-          readonlyLocation
-          hideNavigationControls
-          centeredBreadcrumbs
-          hideSearch
-        >
-          {#snippet leftChildren()}
-            <NavigationBarGroup slim>
-              <!-- TODO: Implement sth like surf://new -->
-              <Button size="md" square onclick={handleNewNote}>
-                <Icon name="edit" size="1.2em" />
-              </Button>
-            </NavigationBarGroup>
-          {/snippet}
+  <div class="container" style:--sidebarWidth={sidebarWidth + 'px'}>
+    <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+    <aside class:open={viewManager.sidebarViewOpen}>
+      <div class="sidebar-content">
+        {#if viewManager.activeSidebarView}
+          <NavigationBar
+            view={viewManager.activeSidebarView}
+            readonlyLocation
+            hideNavigationControls
+            centeredBreadcrumbs
+            hideSearch
+          >
+            {#snippet leftChildren()}
+              <NavigationBarGroup slim>
+                <!-- TODO: Implement sth like surf://new -->
+                <Button size="md" square onclick={handleNewNote}>
+                  <Icon name="edit" size="1.2em" />
+                </Button>
+              </NavigationBarGroup>
+            {/snippet}
 
-          {#snippet rightChildren()}
-            <NavigationBarGroup slim>
-              <Button size="md" square onclick={() => browser.moveSidebarViewToTab()}>
-                <Icon name="arrow.diagonal" size="1.15em" />
-              </Button>
+            {#snippet rightChildren()}
+              <NavigationBarGroup slim>
+                <Button size="md" square onclick={() => browser.moveSidebarViewToTab()}>
+                  <Icon name="arrow.diagonal" size="1.15em" />
+                </Button>
 
-              <Button size="md" square onclick={() => viewManager.setSidebarState({ open: false })}>
-                <Icon name="close" size="1.2em" />
-              </Button>
-            </NavigationBarGroup>
-          {/snippet}
-        </NavigationBar>
-        <div
-          style="position:relative;height:100%;border-inline: 1px solid var(--border-color);margin-inline: -1px;"
-        >
-          <WebContentsView view={viewManager.activeSidebarView} active />
-        </div>
-      {/if}
-    </div>
-  </aside>
+                <Button
+                  size="md"
+                  square
+                  onclick={() => viewManager.setSidebarState({ open: false })}
+                >
+                  <Icon name="close" size="1.2em" />
+                </Button>
+              </NavigationBarGroup>
+            {/snippet}
+          </NavigationBar>
+          <div
+            style="position:relative;height:100%;border-inline: 1px solid var(--border-color);margin-inline: -1px;"
+          >
+            <WebContentsView view={viewManager.activeSidebarView} active />
+          </div>
+        {/if}
+      </div>
+    </aside>
+  </div>
 {/if}
 
 <style lang="scss">
+  .container {
+    display: flex;
+    width: var(--sidebarWidth);
+    flex-shrink: 0;
+  }
   .resize-handle {
     position: relative;
-    width: 1.25rem;
+    width: 0.75rem;
     cursor: col-resize;
     &::before {
       content: '';
@@ -158,20 +172,19 @@
       left: 50%;
       top: 50%;
       height: 30%;
-      width: 4px;
+      width: 3px;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.08);
+      background: transparent;
       border-radius: 20px;
-
       transition: background 123ms ease-out;
     }
     &:hover::before {
-      background: rgba(0, 0, 0, 0.15);
+      background: rgba(0, 0, 0, 0.125);
     }
   }
   aside {
     display: flex;
-    width: var(--sidebarWidth);
+    width: 100%;
 
     .sidebar-content {
       display: flex;

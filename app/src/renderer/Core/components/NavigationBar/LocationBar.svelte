@@ -275,6 +275,7 @@
         to right,
         transparent calc(var(--progress) + 0.05rem) #000 var(--progress)
       );
+      white-space: nowrap;
     }
 
     :global(svg.riso) {

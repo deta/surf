@@ -297,6 +297,7 @@
   main {
     height: 100%;
     display: flex;
+    justify-content: end;
     gap: 0rem;
   }
 
@@ -304,7 +305,9 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    flex-grow: 1;
+    min-width: 0;
+    width: 100%;
+    flex-grow: 0;
     flex-shrink: 1;
   }
   .tab-contents {
