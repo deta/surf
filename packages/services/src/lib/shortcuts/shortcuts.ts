@@ -25,31 +25,31 @@ export enum ShortcutActions {
 export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<ShortcutActions>> = {
   [ShortcutActions.TOGGLE_DEBUG_MODE]: {
     action: ShortcutActions.TOGGLE_DEBUG_MODE,
-    defaultCombo: 'Meta+Shift+D',
+    defaultCombo: 'CmdOrCtrl+Shift+D',
     description: 'Toggle Debug Mode',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.CLOSE_TAB]: {
     action: ShortcutActions.CLOSE_TAB,
-    defaultCombo: 'Meta+W',
+    defaultCombo: 'CmdOrCtrl+W',
     description: 'Close the current tab',
-    priority: ShortcutPriority.Low
+    priority: ShortcutPriority.Normal
   },
   [ShortcutActions.NEW_TAB]: {
     action: ShortcutActions.NEW_TAB,
-    defaultCombo: 'Meta+T',
+    defaultCombo: 'CmdOrCtrl+T',
     description: 'Create a new tab',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.EDIT_TAB_URL]: {
     action: ShortcutActions.EDIT_TAB_URL,
-    defaultCombo: 'Meta+l',
+    defaultCombo: 'CmdOrCtrl+l',
     description: 'Edit Tab URL',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.REOPEN_CLOSED_TAB]: {
     action: ShortcutActions.REOPEN_CLOSED_TAB,
-    defaultCombo: 'Meta+Shift+T',
+    defaultCombo: 'CmdOrCtrl+Shift+T',
     description: 'Reopen the last closed tab',
     priority: ShortcutPriority.Normal
   },
@@ -61,67 +61,67 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
   },
   [ShortcutActions.SWITCH_TO_TAB_1]: {
     action: ShortcutActions.SWITCH_TO_TAB_1,
-    defaultCombo: 'Meta+1',
+    defaultCombo: 'CmdOrCtrl+1',
     description: 'Switch to tab 1',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_2]: {
     action: ShortcutActions.SWITCH_TO_TAB_2,
-    defaultCombo: 'Meta+2',
+    defaultCombo: 'CmdOrCtrl+2',
     description: 'Switch to tab 2',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_3]: {
     action: ShortcutActions.SWITCH_TO_TAB_3,
-    defaultCombo: 'Meta+3',
+    defaultCombo: 'CmdOrCtrl+3',
     description: 'Switch to tab 3',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_4]: {
     action: ShortcutActions.SWITCH_TO_TAB_4,
-    defaultCombo: 'Meta+4',
+    defaultCombo: 'CmdOrCtrl+4',
     description: 'Switch to tab 4',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_5]: {
     action: ShortcutActions.SWITCH_TO_TAB_5,
-    defaultCombo: 'Meta+5',
+    defaultCombo: 'CmdOrCtrl+5',
     description: 'Switch to tab 5',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_6]: {
     action: ShortcutActions.SWITCH_TO_TAB_6,
-    defaultCombo: 'Meta+6',
+    defaultCombo: 'CmdOrCtrl+6',
     description: 'Switch to tab 6',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_7]: {
     action: ShortcutActions.SWITCH_TO_TAB_7,
-    defaultCombo: 'Meta+7',
+    defaultCombo: 'CmdOrCtrl+7',
     description: 'Switch to tab 7',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_8]: {
     action: ShortcutActions.SWITCH_TO_TAB_8,
-    defaultCombo: 'Meta+8',
+    defaultCombo: 'CmdOrCtrl+8',
     description: 'Switch to tab 8',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_TAB_9]: {
     action: ShortcutActions.SWITCH_TO_TAB_9,
-    defaultCombo: 'Meta+9',
+    defaultCombo: 'CmdOrCtrl+9',
     description: 'Switch to tab 9',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.SWITCH_TO_LAST_TAB]: {
     action: ShortcutActions.SWITCH_TO_LAST_TAB,
-    defaultCombo: 'Meta+0',
+    defaultCombo: 'CmdOrCtrl+0',
     description: 'Switch to last tab',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.TOGGLE_SIDEBAR]: {
     action: ShortcutActions.TOGGLE_SIDEBAR,
-    defaultCombo: 'Meta+e',
+    defaultCombo: 'CmdOrCtrl+E',
     description: 'Toggle Sidebar',
     priority: ShortcutPriority.Normal
   }

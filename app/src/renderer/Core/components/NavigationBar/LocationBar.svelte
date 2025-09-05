@@ -263,6 +263,7 @@
   :global(.location-bar) {
     width: 100%;
     flex: 1;
+    font-family: 'Inter', sans-serif;
   }
 
   .hostname,
@@ -271,6 +272,7 @@
     mix-blend-mode: darken;
 
     span {
+      font-family: 'Inter', sans-serif;
       mask-image: linear-gradient(
         to right,
         transparent calc(var(--progress) + 0.05rem) #000 var(--progress)
@@ -279,6 +281,7 @@
     }
 
     :global(svg.riso) {
+      font-family: 'Inter', sans-serif;
       position: absolute;
       inset: 0;
       padding-top: 1.5px;
@@ -286,6 +289,7 @@
   }
   .title {
     :global(svg.riso) {
+      font-family: 'Inter', sans-serif;
       mask-image: linear-gradient(
         to right,
         #000 var(--progress),

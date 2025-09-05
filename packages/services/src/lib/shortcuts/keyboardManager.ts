@@ -1,3 +1,4 @@
+import { isMac } from '@deta/utils'
 import { ShortcutPriority } from './shortcutsManager'
 
 interface KeyboardShortcut {
@@ -18,7 +19,13 @@ export class KeyboardManager {
   private parseKeyCombo(combo: string): { key: string; modifiers: string[] } {
     const parts = combo.split('+')
     const key = parts.pop()!.toLowerCase()
-    const modifiers = parts.map((mod) => mod.toLowerCase())
+    const modifiers = parts
+      .map((mod) => mod.toLowerCase())
+      .map((mod) => {
+        if (mod !== 'cmdorctrl') return mod
+        if (isMac()) return 'meta'
+        else return 'ctrl'
+      })
     return { key, modifiers }
   }
 
@@ -33,6 +40,9 @@ export class KeyboardManager {
       shift: event.shiftKey
     }
 
+    // Disable double meta ctrl key
+    if (!isMac() && pressedModifiers.meta && pressedModifiers.ctrl) pressedModifiers.meta = false
+
     // Check if the main key matches
     if (pressedKey !== key) return false
 
@@ -45,7 +55,7 @@ export class KeyboardManager {
     const activeModifiers = Object.entries(pressedModifiers)
       .filter(([mod, pressed]) => {
         // On macOS, ignore ctrl when meta (cmd) is pressed
-        if (navigator.platform.includes('Mac') && mod === 'ctrl' && pressedModifiers.meta) {
+        if (isMac() && mod === 'ctrl' && pressedModifiers.meta) {
           return false
         }
         return pressed
