@@ -374,8 +374,14 @@
     &.bottom {
       transition-property: top, left, right, padding;
       bottom: 0;
-      left: 0;
-      right: 0;
+      left: calc(50% - 780px / 2);
+      right: calc(50% - 780px / 2);
+
+      @media screen and (max-width: 780px) {
+        left: 0 !important;
+        right: 0 !important;
+      }
+
       top: unset;
       padding-bottom: 1rem;
       padding-inline: 1.5rem;
