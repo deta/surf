@@ -25,7 +25,6 @@ import { checkForUpdates, getAnnouncements } from './appUpdates'
 import { getAnnouncementsWindow } from './announcementsWindow'
 import { useAsDefaultBrowser } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
-import { setupHistorySwipeIpcSenders } from './historySwipe'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest, TrackEvent } from '@deta/services/ipc'
 import { getSetupWindow } from './setupWindow'
@@ -41,7 +40,6 @@ const log = useLogScope('Main IPC Handlers')
 // let prompts: EditablePrompt[] = []
 
 export function setupIpc(backendRootPath: string) {
-  setupHistorySwipeIpcSenders()
   setupIpcHandlers(backendRootPath)
 }
 

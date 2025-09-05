@@ -252,17 +252,17 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
     }
 
     const targetPath = url.pathname
-    const base =
-      import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL
-        ? path.join(process.env.ELECTRON_RENDERER_URL)
-        : `file://${path.join(app.getAppPath(), 'out', 'renderer')}`
-
-    const filePath = join(base, targetPath)
-    if (!isPathSafe(base, filePath)) {
-      return new Response('Forbidden', { status: 403 })
+    let base = `file://${path.join(app.getAppPath(), 'out', 'renderer')}`
+    let mainURL = path.join(base, targetPath)
+    if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+      base = process.env.ELECTRON_RENDERER_URL
+      mainURL = `${base}${targetPath}`
     }
 
-    const newURL = new URL(filePath)
+    if (!isPathSafe(base, mainURL)) {
+      return new Response('Forbidden', { status: 403 })
+    }
+    const newURL = new URL(mainURL)
     if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
       const reqURL = URL.parse(req.url)
       if (reqURL) {
@@ -277,7 +277,7 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
       return response
     }
 
-    const mimeType = getContentType(filePath)
+    const mimeType = getContentType(mainURL)
 
     // Create a new response with the correct MIME type
     return new Response(response.body, {

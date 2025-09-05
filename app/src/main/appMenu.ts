@@ -8,7 +8,6 @@ import { join } from 'path'
 import { isAppSetup, isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@deta/types'
 import { createSettingsWindow } from './settingsWindow'
-import { getHistorySwipeGestureConfig, toggleHistorySwipeGestureConfig } from './historySwipe'
 import { updateUserConfig } from './config'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -282,14 +281,6 @@ class AppMenu {
           label: 'Enable Adblocker',
           click: () => toggleAdblocker('persist:horizon')
         },
-        {
-          id: 'historySwipe',
-          label: getHistorySwipeGestureConfig()
-            ? 'Disable History Swipe Gesture'
-            : 'Enable History Swipe Gesture',
-          click: () => toggleHistorySwipeGestureConfig()
-        },
-
         { type: 'separator' },
         {
           label: 'Reload App',

@@ -28,15 +28,6 @@
       "outputs": ["dist/**"],
       "outputLogs": "new-only"
     },
-
-    "@deta/trackpad#build": {
-      "dependsOn": [],
-      "outputs": ["index.node"]
-    },
-    "@deta/trackpad#dev": {
-      "dependsOn": [],
-      "outputs": ["index.node"]
-    },
     "@deta/backend#build": {
       "cache": false
     },
@@ -113,7 +104,7 @@
       ]
     },
     "build:app:backend": {
-      "dependsOn": ["@deta/trackpad#build", "@deta/backend#build", "@deta/backend-server#build"]
+      "dependsOn": ["@deta/backend#build", "@deta/backend-server#build"]
     },
     "build:app": {
       "dependsOn": ["build:app:frontend", "build:app:backend"],
