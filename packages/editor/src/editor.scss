@@ -149,9 +149,10 @@ body.custom .editor {
   }
 
   span.suggestion[data-suggestion-placeholder] {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
     position: relative;
+    padding-left: 0.33rem;
+    padding-right: 0.25rem;
+    background: var(--accent-background);
 
     &::after {
       content: attr(data-suggestion-placeholder);
@@ -166,8 +167,9 @@ body.custom .editor {
       white-space: nowrap;
       pointer-events: none;
       margin-left: 0;
+      padding-right: 0.25rem;
       // background: var(--background-brand);
-      color: var(--color-text-muted);
+      color: var(--accent-muted);
       border-radius: 0.4em;
       border-top-left-radius: 0;
       border-bottom-left-radius: 0;
@@ -178,22 +180,24 @@ body.custom .editor {
     display: inline-flex;
     align-items: center;
     gap: 0.25em;
-    background-color: var(--background-brand);
+    background-color: var(--accent-background);
     border-radius: 0.4em;
     box-decoration-break: clone;
-    color: var(--color-brand) !important;
+    color: var(--accent) !important;
     padding: 0.2em 0.3em;
     cursor: default;
     line-height: 1.1;
     font-weight: 400;
     position: relative;
-    top: 1px;
+    top: 1.75px;
 
     &::after {
       content: '\200B';
     }
 
     img {
+      width: 16px;
+      height: 16px;
       margin: 0 !important;
     }
   }

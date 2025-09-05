@@ -67,10 +67,10 @@
     transition-timing-function: ease-out;
 
     width: 100%;
-    padding: 2px 8px;
+    padding: 2px 12px 2px 8px;
 
     display: flex;
-    align-items: start;
+    align-items: center;
     gap: 0.75rem;
 
     border-radius: 12px;

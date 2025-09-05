@@ -48,7 +48,7 @@
 
     font-size: 2.25rem;
     font-weight: 600;
-    padding-inline: 4rem;
+    padding-inline: 2rem;
     box-sizing: content-box;
 
     background: light-dark(#fff, rgba(24, 24, 24, 1));

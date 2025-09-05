@@ -326,6 +326,11 @@
   :global(.browser-content .editor-spacer) {
     height: 60px !important;
   }
+
+  :global(.note-chat-input.firstLine) {
+    background: green;
+  }
+
   .note-chat-input {
     transition-property: top, left, right, padding, opacity, filter;
     transition-duration: 234ms;
@@ -351,6 +356,10 @@
     &:global(._starting) {
       transition-delay: 200ms;
       opacity: 0 !important;
+    }
+
+    :global(.input-container .firstLine .submit-btn) {
+      margin-top: -3.3rem;
     }
 
     &.floaty {

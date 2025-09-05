@@ -70,7 +70,7 @@
     padding: 2px 8px;
 
     display: flex;
-    align-items: start;
+    align-items: center;
     gap: 0.75rem;
 
     border-radius: 12px;

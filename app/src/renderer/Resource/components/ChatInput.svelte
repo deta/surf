@@ -50,7 +50,7 @@
   const contextManagementDialogOpen = writable(false)
 
   const inputValue = writable('')
-  const isEditorEmpty = writable(false)
+  const isEditorEmpty = writable(true)
 
   // TODO: Can we not manually track responses here but give suggested prompts from service
   // directly & cleaned up already?
@@ -60,8 +60,10 @@
   $: if (activeState) savedPromptsDialogOpen.set(false)
   $: if (activeState) contextManagementDialogOpen.set(false)
   $: isContextEmpty = true // $contextItems.filter((e) => e.visibleValue).length <= 0
+  $: isEditorEmpty.set(!$inputValue || $inputValue.trim() === '')
 
   let focusInput: () => void
+  let chatInputElement: HTMLElement
 
   // ==== Suggested Prompts
 
@@ -144,26 +146,40 @@
   }
 
   const handleSubmit = () => {
-    log.debug('Handling submit', $inputValue, { firstLine })
+    // Get the current content from both sources to debug
+    const tiptapEditor = editor?.getEditor()
+    const htmlContent = tiptapEditor?.getHTML() || ''
+    const storeContent = $inputValue || ''
+
+    // Use the store content as primary since it's bound to the editor
+    const currentContent = storeContent || htmlContent
+    const trimmedContent = currentContent.trim()
+
+    log.debug('Handling submit', currentContent, { firstLine, htmlContent, storeContent })
 
     if ($isGeneratingAI) dispatch('cancel-completion')
-    if (!$inputValue && firstLine) {
+
+    // Handle empty input cases
+    if (!trimmedContent && firstLine) {
       dispatch('submit', null)
       return
     }
-    if (!$inputValue) return
+    if (!trimmedContent) {
+      log.debug('Empty content, not submitting')
+      return
+    }
 
     if (!editor) {
+      log.debug('No editor, submitting null')
       dispatch('submit', null)
       return
     }
 
     const mentions: MentionItem[] = editor.getMentions()
-    dispatch('submit', { query: $inputValue, mentions })
+    dispatch('submit', { query: currentContent, mentions })
 
     inputValue.set('')
     editor?.clear()
-    //editor.clear()
     tick().then(() => {
       focus()
     })
@@ -215,6 +231,7 @@
 {/if}-->
 
 <div
+  bind:this={chatInputElement}
   class="note-chat-input {activeState}"
   use:startingClass={{}}
   class:firstLine
@@ -295,7 +312,7 @@
         <!--{#if firstLine}
           <span class="submit-hint">{isMac() ? 'CMD' : 'Ctrl'} + ⮐</span>
         {/if}-->
-        <button class="-mr-1.5" on:click={handleSubmit} muted={false}>
+        <button class="-mr-1.5" on:click={handleSubmit}>
           {#if $isGeneratingAI}
             <Icon name="spinner" size="1.15rem" />
           {:else}
@@ -349,14 +366,13 @@
 
       &.firstLine {
         header {
-          margin-top: -1.25rem;
-        }
-        :global(.input-container .submit-btn) {
-          margin-top: -3.3rem;
+          margin-top: 0.2rem;
         }
 
+        // outline: 1px dashed red;
+
         position-anchor: --editor-active-line;
-        top: calc(anchor(--editor-active-line end) + 1rem);
+        top: calc(anchor(--editor-active-line start) + 0.33rem);
         left: calc(anchor(--editor-active-line start) - 0.6rem);
         right: calc(anchor(--editor-active-line end) - 0.6rem);
       }
@@ -372,6 +388,11 @@
     }
 
     &.bottom {
+      --chat-input-max-width: 800px;
+      --chat-input-half-width: calc(var(--chat-input-max-width) / 2);
+      --chat-input-padding: 1.5rem;
+      --chat-input-padding-px: 24px;
+
       transition-property: top, left, right, padding;
       bottom: 0;
       left: calc(50% - 780px / 2);
@@ -384,7 +405,9 @@
 
       top: unset;
       padding-bottom: 1rem;
-      padding-inline: 1.5rem;
+      padding-inline: var(--chat-input-padding);
+      width: 100%;
+      max-width: var(--chat-input-max-width);
 
       :global(.browser-content) & {
         left: calc(anchor(--editor-last-line start) - 2rem);
@@ -439,6 +462,11 @@
       align-items: center;
       gap: 0.25rem;
       pointer-events: all;
+      width: 18px;
+
+      &:hover {
+        background: red;
+      }
 
       .submit-hint {
         font-size: 0.65rem;
