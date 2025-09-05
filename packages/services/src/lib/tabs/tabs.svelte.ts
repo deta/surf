@@ -536,6 +536,8 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       tab.index = index
     })
 
+    await Promise.all(newTabs.map((tab) => this.update(tab.id, { index: tab.index })))
+
     this.emit(TabsServiceEmitterNames.REORDERED, { tabId, oldIndex: currentIndex, newIndex })
     this.log.debug(`Successfully reordered tab ${tabId} from ${currentIndex} to ${newIndex}`)
   }
