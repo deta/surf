@@ -373,8 +373,12 @@
 
         position-anchor: --editor-active-line;
         top: calc(anchor(--editor-active-line start) + 0.33rem);
+        top: calc(anchor(--editor-active-line start) + 1.75rem);
         left: calc(anchor(--editor-active-line start) - 0.6rem);
         right: calc(anchor(--editor-active-line end) - 0.6rem);
+        :global(.input-container) {
+          display: none;
+        }
       }
 
       header {
