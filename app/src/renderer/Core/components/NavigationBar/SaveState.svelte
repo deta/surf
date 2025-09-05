@@ -39,6 +39,21 @@
     }
   })
 
+  async function saveToSurf() {
+    if (!$isSaved || !resource) {
+      log.debug('Bookmarking page to Surf')
+      resource = await view.bookmarkPage()
+    }
+
+    if (!resource) {
+      log.error('Failed to retrieve resource')
+      return
+    }
+
+    log.debug('Resource saved to Surf:', resource.id)
+    isMenuOpen = false
+  }
+
   async function selectNotebook(notebook: Notebook) {
     if (!$isSaved || !resource) {
       log.debug('Bookmarking page')
@@ -79,28 +94,37 @@
   {/snippet}
 
   <div class="list">
-    <SearchableList
-      items={$notebooks}
-      searchPlaceholder="Search notebooks..."
-      filterFunction={filterNotebooks}
-      autofocus={true}
-    >
-      {#snippet itemRenderer(notebook)}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <button class="list-item" onclick={() => selectNotebook(notebook)}>
-          {#if $spaceIds.includes(notebook.id)}
-            <Icon name="check" />
-          {:else}
-            <Icon name="circle" />
-          {/if}
+    <!-- Save to Surf option -->
+    <div class="save-section">
+      <button class="list-item save-to-surf" onclick={saveToSurf}>
+        <Icon name="bookmark" />
+        <div class="list-item-label">Save to Surf</div>
+      </button>
+    </div>
 
-          <div class="list-item-label">
-            {truncate((notebook.dataValue as any).folderName || notebook.dataValue.name, 28)}
-          </div>
-        </button>
-      {/snippet}
-    </SearchableList>
+    <!-- Notebooks section -->
+    <div class="notebooks-section">
+      <SearchableList
+        items={$notebooks}
+        searchPlaceholder="Search notebooks..."
+        filterFunction={filterNotebooks}
+        autofocus={false}
+      >
+        {#snippet itemRenderer(notebook)}
+          <button class="list-item" onclick={() => selectNotebook(notebook)}>
+            {#if $spaceIds.includes(notebook.id)}
+              <Icon name="check" />
+            {:else}
+              <Icon name="circle" />
+            {/if}
+
+            <div class="list-item-label">
+              {truncate((notebook.dataValue as any).folderName || notebook.dataValue.name, 28)}
+            </div>
+          </button>
+        {/snippet}
+      </SearchableList>
+    </div>
   </div>
 </OverlayPopover>
 
@@ -108,9 +132,9 @@
   .list {
     --ctx-border: rgba(0, 0, 0, 0.175);
     --ctx-shadow-color: rgba(0, 0, 0, 0.12);
-    --ctx-item-hover: rgba(0, 0, 0, 0.06);
-    --ctx-item-text: #210e1f;
-    --ctx-item-text-hover: #000;
+    --ctx-item-hover: var(--accent-background);
+    --ctx-item-text: var(--on-surface-accent);
+    --ctx-item-text-hover: var(--on-surface-accent);
 
     padding: 0;
     margin: 0;
@@ -144,5 +168,30 @@
     .list-item-label {
       font-size: 0.9em;
     }
+
+    &.save-to-surf {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+
+      &:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.3);
+      }
+    }
+  }
+
+  .save-section {
+    padding: 0.25rem;
+  }
+
+  .divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 0.5rem 0;
+  }
+
+  .notebooks-section {
+    flex: 1;
+    min-height: 0;
   }
 </style>
