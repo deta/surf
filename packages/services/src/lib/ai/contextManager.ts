@@ -222,37 +222,37 @@ export class ContextManager {
       // Handle the event
 
       if (type === WebContentsViewContextManagerActionType.GET_ITEMS) {
-        const activeTab = this.tabsManager.activeTabValue
-        const numContextItems = this.itemsValue.length
+        // const activeTab = this.tabsManager.activeTabValue
+        // const numContextItems = this.itemsValue.length
 
-        if (numContextItems === 0 && this.viewManager.sidebarViewOpen && activeTab) {
-          const activeTabUrl = activeTab.view.urlValue
-          const internalUrl = isInternalRendererURL(activeTabUrl || '')
+        // if (numContextItems === 0 && this.viewManager.sidebarViewOpen && activeTab) {
+        //   const activeTabUrl = activeTab.view.urlValue
+        //   const internalUrl = isInternalRendererURL(activeTabUrl || '')
 
-          if (!internalUrl) {
-            this.log.debug(
-              'External URL detected:',
-              activeTabUrl,
-              'adding tab to context',
-              activeTab
-            )
-            this.onlyUseTabInContext(activeTab)
-          } else if (internalUrl && internalUrl.hostname === 'notebook') {
-            const notebookId = internalUrl.pathname.slice(1)
-            this.log.debug(
-              'Internal notebook URL detected:',
-              internalUrl,
-              'adding notebook to context',
-              notebookId
-            )
-            const notebook = await this.notebookManager.getNotebook(notebookId)
-            if (notebook) {
-              this.onlyUseNotebookInContext(notebook)
-            }
-          } else {
-            this.log.debug('Other internal URL detected:', activeTabUrl)
-          }
-        }
+        //   if (!internalUrl) {
+        //     this.log.debug(
+        //       'External URL detected:',
+        //       activeTabUrl,
+        //       'adding tab to context',
+        //       activeTab
+        //     )
+        //     this.onlyUseTabInContext(activeTab)
+        //   } else if (internalUrl && internalUrl.hostname === 'notebook') {
+        //     const notebookId = internalUrl.pathname.slice(1)
+        //     this.log.debug(
+        //       'Internal notebook URL detected:',
+        //       internalUrl,
+        //       'adding notebook to context',
+        //       notebookId
+        //     )
+        //     const notebook = await this.notebookManager.getNotebook(notebookId)
+        //     if (notebook) {
+        //       this.onlyUseNotebookInContext(notebook)
+        //     }
+        //   } else {
+        //     this.log.debug('Other internal URL detected:', activeTabUrl)
+        //   }
+        // }
 
         const resourceIds = await this.getResourceIds(payload.prompt)
         this.log.debug('Got resource ids from context items', resourceIds)
@@ -272,6 +272,9 @@ export class ContextManager {
         return null
       } else if (type === WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT) {
         await this.addTabs(this.tabsManager.tabsValue.map((x) => x.id))
+        return null
+      } else if (type === WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT) {
+        await this.addActiveTab()
         return null
       } else if (type === WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT) {
         await this.addNotebook(payload.id)
@@ -993,16 +996,23 @@ export class ContextService {
   ai: AIService
   tabsManager: TabsService
   resourceManager: ResourceManager
+  notebookManager: NotebookManager
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
   private _items: Writable<{ item: ContextItem; scopes: string[] }[]>
   items: Readable<{ item: ContextItem; scopes: string[] }[]>
 
-  constructor(ai: AIService, tabsManager: TabsService, resourceManager: ResourceManager) {
+  constructor(
+    ai: AIService,
+    tabsManager: TabsService,
+    resourceManager: ResourceManager,
+    notebookManager: NotebookManager
+  ) {
     this.ai = ai
     this.tabsManager = tabsManager
     this.resourceManager = resourceManager
+    this.notebookManager = notebookManager
     this.telemetry = resourceManager.telemetry
     this.log = useLogScope('ContextService')
 
@@ -1260,8 +1270,13 @@ export class ContextService {
     return new ContextManagerWCV(ctxKey, ai, resourceManager)
   }
 
-  static create(ai: AIService, tabsManager: TabsService, resourceManager: ResourceManager) {
-    return new ContextService(ai, tabsManager, resourceManager)
+  static create(
+    ai: AIService,
+    tabsManager: TabsService,
+    resourceManager: ResourceManager,
+    notebookManager: NotebookManager
+  ) {
+    return new ContextService(ai, tabsManager, resourceManager, notebookManager)
   }
 }
 

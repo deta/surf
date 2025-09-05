@@ -307,6 +307,7 @@ export enum WebContentsViewContextManagerActionType {
   ADD_TABS_CONTEXT = 'add-tabs-context',
   ADD_WEB_SEARCH_CONTEXT = 'add-web-search-context',
   ADD_TAB_CONTEXT = 'add-tab-context',
+  ADD_ACTIVE_TAB_CONTEXT = 'add-active-tab-context',
   ADD_RESOURCE_CONTEXT = 'add-resource-context',
   ADD_NOTEBOOK_CONTEXT = 'add-notebook-context'
 }
@@ -316,6 +317,7 @@ export interface WebContentsViewContextManagerActionPayloads {
   [WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT]: undefined
   [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: { results: SearchResultLink[] }
   [WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT]: { id: string }
+  [WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT]: undefined
   [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: { id: string }
   [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: { id: string }
 }
@@ -328,6 +330,7 @@ export interface WebContentsViewContextManagerActionOutputs {
   [WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT]: null
   [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: null
   [WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT]: null
+  [WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT]: null
   [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: null
   [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: null
 }

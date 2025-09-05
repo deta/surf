@@ -139,7 +139,7 @@
   .list {
     display: flex;
     flex-direction: column;
-    gap: 0.75em;
+    gap: 0.25em;
 
     --ctx-background: #fff;
     --ctx-border: rgba(0, 0, 0, 0.25);

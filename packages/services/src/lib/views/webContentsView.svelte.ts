@@ -2,7 +2,6 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 
 import {
   type HistoryEntry,
-  type WebContentsError,
   WebContentsViewActionType,
   type WebContentsViewData,
   type WebContentsViewEventListener,
@@ -27,7 +26,9 @@ import {
   type WebViewReceiveEvents,
   ResourceTagDataStateValue,
   type PageHighlightSelectionData,
-  WEBVIEW_MOUSE_CLICK_WINDOW_EVENT
+  WEBVIEW_MOUSE_CLICK_WINDOW_EVENT,
+  WEB_CONTENTS_ERRORS,
+  type WebContentsErrorParsed
 } from '@deta/types'
 import {
   useLogScope,
@@ -141,6 +142,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
   private handleDidStartLoading() {
     this.view.isLoading.set(true)
+
+    if (this.view.errorValue) {
+      this.activate()
+    }
+
     this.view.error.set(null)
 
     this.emit(WebContentsEmitterNames.DID_START_LOADING)
@@ -168,15 +174,21 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       return
     }
 
-    const parsedError = {
+    const error = {
       code: event.errorCode,
       description: event.errorDescription,
       url: event.validatedURL
     }
 
-    this.view.error.set(parsedError)
+    const parsedError = WEB_CONTENTS_ERRORS[error.code]
 
-    this.emit(WebContentsEmitterNames.LOADING_CHANGED, false, parsedError)
+    this.view.error.set(parsedError)
+    this.view.title.set(parsedError.title || 'Failed to load')
+    this.view.url.set(event.validatedURL)
+
+    this.hide()
+
+    this.emit(WebContentsEmitterNames.LOADING_CHANGED, false, error)
   }
 
   private async handleDidFinishLoad() {
@@ -959,11 +971,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   }, 500)
 
   async detectExistingResource() {
-    this.log.debug('detecting existing resource for', this.view.urlValue)
+    let url = parseUrlIntoCanonical(this.view.urlValue) ?? this.view.urlValue
 
-    const matchingResources = await this.view.resourceManager.getResourcesFromSourceURL(
-      this.view.urlValue
-    )
+    this.log.debug('detecting existing resource for', url)
+    const matchingResources = await this.view.resourceManager.getResourcesFromSourceURL(url)
     let bookmarkedResource = matchingResources.find(
       (resource) =>
         resource.type !== ResourceTypes.ANNOTATION &&
@@ -1062,8 +1073,17 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   }
 
   async highlightSelection(selectionData: PageHighlightSelectionData) {
-    const { source, text: answerText } = selectionData
+    const { source, text: answerText, timestamp } = selectionData
     const pdfPage = source?.metadata?.page ?? null
+
+    if (timestamp !== undefined && timestamp !== null) {
+      this.log.debug('seeking to timestamp', timestamp)
+      this.sendPageAction(WebViewEventReceiveNames.SeekToTimestamp, {
+        timestamp: timestamp
+      })
+
+      return
+    }
 
     try {
       this.log.debug('highlighting text', answerText, source)
@@ -1229,7 +1249,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   isMediaPlaying: Writable<boolean> = writable(false)
   isFullScreen: Writable<boolean> = writable(false)
   isFocused: Writable<boolean> = writable(false)
-  error: Writable<WebContentsError | null> = writable(null)
+  error: Writable<WebContentsErrorParsed | null> = writable(null)
   hoverTargetURL: Writable<string | null> = writable(null)
   foundInPageResult: Writable<
     WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE] | null

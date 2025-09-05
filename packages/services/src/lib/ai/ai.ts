@@ -36,6 +36,7 @@ import {
   SummarizeEventContentSource
 } from '@deta/types'
 import { ContextManagerWCV } from './contextManagerWCV'
+import { useNotebookManager } from '../notebooks'
 
 export interface AppCreationResult {
   appId: string
@@ -91,7 +92,13 @@ export class AIService {
 
     if (global) {
       const tabsManager = useTabs()
-      const contextService = ContextService.create(this, tabsManager, resourceManager)
+      const notebookManager = useNotebookManager()
+      const contextService = ContextService.create(
+        this,
+        tabsManager,
+        resourceManager,
+        notebookManager
+      )
       this.fallbackContextManager = contextService.createDefault()
     } else {
       this.fallbackContextManager = ContextService.createWCV(this, resourceManager)

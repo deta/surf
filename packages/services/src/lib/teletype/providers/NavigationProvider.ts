@@ -7,11 +7,18 @@ import {
   prependProtocol,
   useLogScope
 } from '@deta/utils'
+import { type TeletypeService } from '../teletypeService'
 
 export class NavigationProvider implements ActionProvider {
   readonly name = 'navigation'
   readonly isLocal = true // Local URL validation and navigation
+
+  private readonly service: TeletypeService
   private readonly log = useLogScope('NavigationProvider')
+
+  constructor(service: TeletypeService) {
+    this.service = service
+  }
 
   canHandle(query: string): boolean {
     return optimisticCheckIfUrl(query) || query.trim().length > 0
@@ -37,7 +44,7 @@ export class NavigationProvider implements ActionProvider {
         buttonText: 'Go',
         description: `Navigate to ${normalizedUrl}`,
         handler: async () => {
-          await this.navigateToUrl(normalizedUrl)
+          await this.service.navigateToUrl(normalizedUrl)
         }
       })
     }
@@ -59,17 +66,8 @@ export class NavigationProvider implements ActionProvider {
     return actions
   }
 
-  private async navigateToUrl(url: string): Promise<void> {
-    try {
-      const fullUrl = prependProtocol(url, true)
-      window.location.href = fullUrl
-    } catch (error) {
-      this.log.error('Failed to navigate to URL:', error)
-    }
-  }
-
   private async searchGoogle(query: string): Promise<void> {
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
-    await this.navigateToUrl(searchUrl)
+    await this.service.navigateToUrl(searchUrl)
   }
 }

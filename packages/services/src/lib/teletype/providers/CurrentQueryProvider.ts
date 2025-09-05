@@ -6,11 +6,17 @@ import {
   optimisticCheckIfURLOrIPorFile,
   prependProtocol
 } from '@deta/utils'
+import { type TeletypeService } from '../teletypeService'
 
 export class CurrentQueryProvider implements ActionProvider {
   readonly name = 'current-query'
   readonly isLocal = true // Instant, no async operations
   private readonly log = useLogScope('CurrentQueryProvider')
+  private readonly service: TeletypeService
+
+  constructor(service: TeletypeService) {
+    this.service = service
+  }
 
   canHandle(query: string): boolean {
     const trimmedQuery = query.trim()
@@ -44,18 +50,9 @@ export class CurrentQueryProvider implements ActionProvider {
     }
   }
 
-  private async navigateToUrl(url: string): Promise<void> {
-    try {
-      const fullUrl = prependProtocol(url, true)
-      window.location.href = fullUrl
-    } catch (error) {
-      this.log.error('Failed to navigate to URL:', error)
-    }
-  }
-
   private async searchGoogle(query: string): Promise<void> {
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
 
-    await this.navigateToUrl(searchUrl)
+    await this.service.navigateToUrl(searchUrl)
   }
 }

@@ -3,7 +3,13 @@
   import { tick } from 'svelte'
   import { Tween } from 'svelte/motion'
   import { cubicOut, expoOut } from 'svelte/easing'
-  import { clickOutside, isInternalRendererURL, truncate, useThrottle } from '@deta/utils'
+  import {
+    clickOutside,
+    isInternalRendererURL,
+    parseStringIntoBrowserLocation,
+    truncate,
+    useThrottle
+  } from '@deta/utils'
   import Breadcrumb from './Breadcrumb.svelte'
   import { RisoText, RisoTextController } from '@deta/ui'
   import WebContentsView from '../WebContentsView.svelte'
@@ -194,6 +200,19 @@
     }
     return value
   }
+
+  function handleSubmit() {
+    const raw = inputEl?.value.trim()
+
+    const url = parseStringIntoBrowserLocation(raw)
+    if (url) {
+      view.webContents.loadURL(url)
+      return
+    }
+
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(raw)}`
+    view.webContents.loadURL(searchUrl)
+  }
 </script>
 
 <Breadcrumb
@@ -214,11 +233,7 @@
       onkeydown={(e) => {
         if (e.key === 'Enter') {
           isEditingUrl = false
-          view.webContents.loadURL(
-            new URL(
-              `${!inputEl?.value.includes('://') ? 'https://' : ''}${inputEl?.value}`
-            ).toString()
-          )
+          handleSubmit()
         } else if (e.key === 'Escape') {
           e.preventDefault()
           e.stopPropagation()

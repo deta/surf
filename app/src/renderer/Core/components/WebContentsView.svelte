@@ -7,6 +7,7 @@
   import { useLogScope } from '@deta/utils/io'
   import { wait } from '@deta/utils/data'
   import { type WebContentsView } from '@deta/services/views'
+  import ErrorPage from './ErrorPage.svelte'
 
   export let active: boolean = true
   export let view: WebContentsView
@@ -15,6 +16,8 @@
 
   const webContentsBackgroundColor = writable<string | null>(null)
   const webContentsScreenshot = writable(null)
+
+  const error = view.error
 
   let webContentsWrapper: HTMLDivElement | null = null
   let unsubs: Fn[] = []
@@ -63,7 +66,11 @@
     : $webContentsBackgroundColor
       ? $webContentsBackgroundColor
       : 'white'};"
-></div>
+>
+  {#if $error}
+    <ErrorPage error={$error} on:reload={() => view.webContents.reload()} />
+  {/if}
+</div>
 
 <style lang="scss">
   .webcontentsview-container {

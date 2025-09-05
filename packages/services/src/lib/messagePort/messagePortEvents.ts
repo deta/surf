@@ -1,6 +1,6 @@
 import { type MentionItem } from '@deta/editor'
 import { createMessagePortService, type MessagePortEvent } from './messagePortService'
-import type { OpenResourceOptions } from '@deta/types'
+import type { NavigateURLOptions, OpenResourceOptions } from '@deta/types'
 
 export interface TeletypeActionSerialized {
   id: string
@@ -41,6 +41,10 @@ export interface MPTeletypeAsk extends MessagePortEvent {
   }
 }
 
+export interface MPNavigateURL extends MessagePortEvent {
+  payload: NavigateURLOptions
+}
+
 export interface MPNoteRunQuery extends MessagePortEvent {
   payload: {
     query: string
@@ -67,6 +71,7 @@ type MessagePortEventRegistry = {
   teletypeSearch: MPTeletypeSearchRequest
   teletypeExecuteAction: MPTeletypeExecuteAction
   teletypeAsk: MPTeletypeAsk
+  navigateURL: MPNavigateURL
   noteRunQuery: MPNoteRunQuery
   noteReady: MPNoteReady
   changePageQuery: MPChangePageQuery
@@ -91,6 +96,7 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     teletypeSearch:
       messagePortService.addEventWithReturn<MPTeletypeSearchRequest>('teletype-search'),
     teletypeAsk: messagePortService.addEvent<MPTeletypeAsk>('teletype-ask'),
+    navigateURL: messagePortService.addEvent<MPNavigateURL>('navigate-url'),
     noteRunQuery: messagePortService.addEvent<MPNoteRunQuery>('note-run-query'),
     noteReady: messagePortService.addEvent<MPNoteReady>('note-ready'),
     changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query'),

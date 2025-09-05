@@ -11,6 +11,7 @@ export enum MentionItemType {
   RESOURCE = 'resource',
   NOTEBOOK = 'notebook',
   ALL_TABS = 'all-tabs',
+  ACTIVE_TAB = 'active-tab',
   MODEL = 'model',
   OTHER = 'other',
   TAB = 'tab'

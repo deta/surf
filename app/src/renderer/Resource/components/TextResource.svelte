@@ -44,7 +44,8 @@
     useLogScope,
     useThrottle,
     wait,
-    htmlToMarkdown
+    htmlToMarkdown,
+    isDev
   } from '@deta/utils'
   import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
   import { generateContentHash, mapCitationsToText, parseChatOutputToHtml } from '@deta/services/ai'
@@ -2328,6 +2329,28 @@
     } catch (err) {
       log.error('Error inserting onboarding footer', err)
       toasts.error('Failed to insert resource links')
+    }
+  }
+
+  $: if (editorElem && isDev) {
+    // @ts-ignore
+    window.editor = editorElem
+  }
+
+  let insertedDefaultContent = false
+  $: if (!initialLoad && !insertedDefaultContent && editorElem) {
+    insertedDefaultContent = true
+    log.debug(
+      'Initial load - setting up editor content',
+      $content,
+      editorElem,
+      editorElem?.isEmptyy()
+    )
+
+    if (editorElem.isEmptyy()) {
+      editorElem.setContent(
+        '<p><span class="mention" data-type="mention" data-id="active_tab" data-label="Active Tab" data-mention-type="active-tab" data-icon="sparkles">@Active Tab</span>: ‎‎</p>'
+      )
     }
   }
 

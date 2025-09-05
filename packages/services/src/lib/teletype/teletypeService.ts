@@ -1,5 +1,5 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store'
-import { useDebounce, useLogScope } from '@deta/utils'
+import { prependProtocol, useDebounce, useLogScope } from '@deta/utils'
 import type { ActionProvider, TeletypeAction, TeletypeServiceOptions, SearchState } from './types'
 import { SearchProvider } from './providers/SearchProvider'
 import { NavigationProvider } from './providers/NavigationProvider'
@@ -76,8 +76,8 @@ export class TeletypeService {
     })
 
     // Register local providers
-    this.registerProvider(new CurrentQueryProvider()) // Local, instant current query
-    this.registerProvider(new NavigationProvider())
+    this.registerProvider(new CurrentQueryProvider(this)) // Local, instant current query
+    this.registerProvider(new NavigationProvider(this))
     this.registerProvider(new AskProvider(this))
   }
 
@@ -198,6 +198,15 @@ export class TeletypeService {
     this.log.debug('Asking question:', query)
     await this.messagePort.teletypeAsk.send({ query, mentions })
     this.clear()
+  }
+
+  async navigateToUrl(url: string): Promise<void> {
+    try {
+      const fullUrl = prependProtocol(url, true)
+      await this.messagePort.navigateURL.send({ url: fullUrl, target: 'active_tab' })
+    } catch (error) {
+      this.log.error('Failed to navigate to URL:', error)
+    }
   }
 
   /**

@@ -39,6 +39,19 @@ export class TabsMentionProvider implements MentionProvider {
         return []
       }
 
+      const activeTabItem: MentionItem = {
+        id: 'active_tab',
+        type: MentionTypes.ACTIVE_TAB,
+        name: `Active Tab`,
+        icon: 'sparkles',
+        description: `Currently active tab`,
+        priority: 200,
+        keywords: ['active', 'tab', 'current', 'focused'],
+        metadata: {
+          isAllTabs: false
+        }
+      }
+
       // Add default "All Tabs" action
       const allTabsItem: MentionItem = {
         id: 'all_tabs',
@@ -55,6 +68,7 @@ export class TabsMentionProvider implements MentionProvider {
       }
 
       const mentionItems: MentionItem[] = [
+        activeTabItem,
         allTabsItem,
         ...tabs
           .filter((tab: TabItem) => {

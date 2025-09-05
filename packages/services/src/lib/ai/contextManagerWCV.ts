@@ -1,6 +1,6 @@
 import { writable, type Writable } from 'svelte/store'
 
-import { useLogScope } from '@deta/utils'
+import { useLogScope, wait } from '@deta/utils'
 
 import {
   PageChatUpdateContextItemType,
@@ -149,13 +149,13 @@ export class ContextManagerWCV {
   }
 
   async addActiveTab(opts?: AddContextItemOptions) {
-    // const existingItem = this.itemsValue.find((item) => item.type === ContextItemTypes.ACTIVE_TAB)
-    // if (existingItem) {
-    //   this.log.debug('Active tab already in context')
-    //   return existingItem
-    // }
-    // const item = new ContextItemActiveTab(this.service)
-    // return this.addContextItem(item, opts)
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT,
+      undefined
+    )
+
+    this.log.debug('Added active tab context', result)
   }
 
   async addActiveSpaceContext() {
@@ -245,6 +245,8 @@ export class ContextManagerWCV {
       return this.addNotebook(item.id, opts)
     } else if (item.type === MentionItemType.ALL_TABS) {
       return this.addTabs()
+    } else if (item.type === MentionItemType.ACTIVE_TAB) {
+      return this.addActiveTab(opts)
     } else {
       this.log.error('Unknown mention item type', item)
       return null
@@ -309,6 +311,8 @@ export class ContextManagerWCV {
     // this.log.debug('Getting resource ids for context items', items)
     // const resourceIds = await Promise.all(items.map((item) => item.getResourceIds(prompt)))
     // return [...new Set(resourceIds.flat())] as string[]
+
+    await wait(500)
 
     // @ts-ignore
     const result = await window.api.webContentsViewContextManagerAction(

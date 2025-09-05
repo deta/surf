@@ -1,10 +1,12 @@
 import { type MentionItem } from '@deta/editor'
 import type { ActionProvider, TeletypeAction } from '../types'
-import { generateUUID, useLogScope, prependProtocol } from '@deta/utils'
+import { generateUUID, useLogScope } from '@deta/utils'
+import { useBrowser } from '../../browser'
 
 export class SearchProvider implements ActionProvider {
   readonly name = 'search'
   readonly isLocal = false // Async Google suggestions API calls
+  private readonly browser = useBrowser()
   private readonly log = useLogScope('SearchProvider')
 
   canHandle(query: string): boolean {
@@ -85,18 +87,9 @@ export class SearchProvider implements ActionProvider {
     }
   }
 
-  private async navigateToUrl(url: string): Promise<void> {
-    try {
-      const fullUrl = prependProtocol(url, true)
-      window.location.href = fullUrl
-    } catch (error) {
-      this.log.error('Failed to navigate to URL:', error)
-    }
-  }
-
   private async searchGoogle(query: string): Promise<void> {
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
 
-    await this.navigateToUrl(searchUrl)
+    await this.browser.navigateToUrl(searchUrl, { target: 'active_tab' })
   }
 }

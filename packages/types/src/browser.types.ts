@@ -87,3 +87,8 @@ export type OpenResourceOptions = {
   target?: 'tab' | 'tab_background' | 'sidebar'
   offline?: boolean
 }
+
+export type NavigateURLOptions = {
+  url: string
+  target?: 'tab' | 'tab_background' | 'active_tab' | 'sidebar'
+}

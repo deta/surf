@@ -5,7 +5,12 @@ import { useViewManager, WebContentsView } from '../views'
 import { type CreateTabOptions, type TabItem, useTabs } from '../tabs'
 import { formatAIQueryToTitle } from './utils'
 import { type MentionItem } from '@deta/editor'
-import { type Fn, ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
+import {
+  type Fn,
+  type NavigateURLOptions,
+  ResourceTagsBuiltInKeys,
+  ResourceTypes
+} from '@deta/types'
 import { useNotebookManager } from '../notebooks'
 import { ViewType } from '../views/types'
 import { useMessagePortPrimary } from '../messagePort'
@@ -31,6 +36,10 @@ export class BrowserService {
     this._unsubs.push(
       this.messagePort.openResource.on(async ({ resourceId, target, offline }) => {
         this.openResource(resourceId, { target, offline })
+      }),
+
+      this.messagePort.navigateURL.on(async ({ url, target }) => {
+        this.navigateToUrl(url, { target })
       })
     )
   }
@@ -186,6 +195,21 @@ export class BrowserService {
 
         return tab.view
       }
+    }
+  }
+
+  async navigateToUrl(url: string, opts?: { target?: NavigateURLOptions['target'] }) {
+    this.log.debug('Navigating to URL:', url, opts)
+    const target = opts?.target ?? 'tab'
+
+    if (target === 'sidebar') {
+      return this.viewManager.openURLInSidebar(url)
+    } else if (target === 'active_tab') {
+      const tab = await this.tabsManager.changeActiveTabURL(url)
+      return tab?.view
+    } else {
+      const tab = await this.tabsManager.create(url, { active: target === 'tab' })
+      return tab?.view
     }
   }
 

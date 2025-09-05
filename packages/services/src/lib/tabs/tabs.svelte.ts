@@ -4,9 +4,11 @@ import {
   getHostname,
   isDev,
   isInternalRendererURL,
+  parseUrlIntoCanonical,
   type ScopedLogger,
   useDebounce,
-  useLogScope
+  useLogScope,
+  wait
 } from '@deta/utils'
 import { KVStore, useKVTable } from '../kv'
 import type { Fn } from '@deta/types'
@@ -24,6 +26,7 @@ import {
   type TabsServiceEmitterEvents
 } from './tabs.types'
 import { ResourceManager, useResourceManager } from '../resources'
+import { tick } from 'svelte'
 
 /**
  * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView
@@ -215,6 +218,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
         return null
       }
 
+      this.log.debug('Active tab is now', tab.id)
       this.activeTabStore.set(tab)
       return tab
     })
@@ -388,7 +392,12 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
   async openOrCreate(url: string, opts: Partial<CreateTabOptions> = {}): Promise<TabItem> {
     this.log.debug('Opening or creating tab for URL:', url)
-    const existingTab = this.tabs.find((tab) => tab.view.urlValue === url)
+
+    const canonicalUrl = parseUrlIntoCanonical(url) ?? url
+    const existingTab = this.tabs.find(
+      (tab) => (parseUrlIntoCanonical(tab.view.urlValue) ?? tab.view.urlValue) === canonicalUrl
+    )
+
     if (existingTab) {
       this.log.debug('Tab already exists, activating:', existingTab.id)
 
@@ -432,6 +441,17 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     const item = await this.kv.update(id, data)
 
     this.log.debug('Tab updated:', item)
+
+    // NOTE: we manually update the activeTabStore here as changes to the data are not tracked by the activeTabStore derived.by
+    if (id === this.activeTabIdValue) {
+      this.log.debug(
+        'Updating activeTabStore for active tab',
+        id,
+        this.activeTabValue?.view.urlValue
+      )
+      this.activeTabStore.set(this.activeTabValue)
+    }
+
     return !!item
   }
 

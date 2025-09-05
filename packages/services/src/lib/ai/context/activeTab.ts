@@ -9,11 +9,12 @@ import {
 import type { TabItem } from '../../tabs'
 
 import { ContextItemBase } from './base'
-import type { ContextService } from '../contextManager'
+import { ContextItemNotebook, type ContextService } from '../contextManager'
 import { ContextItemResource } from './resource'
 import { ContextItemSpace } from './space'
 import { ContextItemTypes, ContextItemIconTypes, type ContextItemIcon } from './types'
 import { useDebounce, wait } from '@deta/utils'
+import { ViewType } from '../../views'
 
 export class ContextItemActiveTab extends ContextItemBase {
   type = ContextItemTypes.ACTIVE_TAB
@@ -23,6 +24,8 @@ export class ContextItemActiveTab extends ContextItemBase {
   currentTab: Writable<TabItem | null>
   item: Writable<ContextItemResource | ContextItemSpace | null>
 
+  currentTabUrl: Writable<string | null>
+
   activeTabUnsub: () => void
 
   constructor(service: ContextService) {
@@ -30,6 +33,7 @@ export class ContextItemActiveTab extends ContextItemBase {
 
     this.item = writable(null)
     this.currentTab = writable(null)
+    this.currentTabUrl = writable(null)
 
     this.label = derived([this.item], ([item]) => {
       if (item) {
@@ -52,16 +56,27 @@ export class ContextItemActiveTab extends ContextItemBase {
     })
 
     this.activeTabUnsub = this.service.tabsManager.activeTabStore.subscribe((activeTab) => {
-      this.log.debug('Active tab changed', activeTab?.id)
+      this.log.debug(
+        'Active tab changed',
+        activeTab?.id,
+        activeTab?.view.urlValue,
+        this.currentTabValue?.view.urlValue
+      )
 
       if (!activeTab) {
+        this.log.debug('No active tab, clearing item')
         this.item.set(null)
         this.currentTab.set(null)
+        this.currentTabUrl.set(null)
         return
       }
 
-      if (!this.currentTabValue || !this.compareTabs(activeTab, this.currentTabValue)) {
+      if (!this.currentTabValue || !this.compareTabs(activeTab)) {
+        this.loading.set(true)
+        this.currentTabUrl.set(activeTab.view.urlValue)
         this.debounceUpdateItem()
+      } else {
+        this.log.debug('Active tab is the same as current tab, not updating item')
       }
     })
   }
@@ -74,12 +89,16 @@ export class ContextItemActiveTab extends ContextItemBase {
     return get(this.currentTab)
   }
 
-  compareTabs(tab1: TabItem, tab2: TabItem) {
-    if (tab1.id !== tab2.id) {
+  get currentTabUrlValue() {
+    return get(this.currentTabUrl)
+  }
+
+  compareTabs(tab1: TabItem) {
+    if (tab1.id !== this.currentTabValue?.id) {
       return false
     }
 
-    return tab1.view.urlValue === tab2.view.urlValue
+    return tab1.view.urlValue === (this.currentTabUrlValue ?? this.currentTabValue?.view.urlValue)
   }
 
   async updateItem() {
@@ -101,31 +120,93 @@ export class ContextItemActiveTab extends ContextItemBase {
 
       await tick()
 
-      // if (tab.type === 'page') {
-      this.log.debug('Preparing page tab', tab)
-      const resource = await this.service.preparePageTab(tab)
-      if (!resource) {
-        this.log.error('Failed to prepare page tab', tab.id)
-        this.item.set(null)
-        return
-      }
+      if (tab.view.typeValue === ViewType.Page) {
+        this.log.debug('Preparing page tab', tab)
+        const resource = await this.service.preparePageTab(tab)
+        if (!resource) {
+          this.log.error('Failed to prepare page tab', tab.id)
+          this.item.set(null)
+          return
+        }
 
-      this.log.debug('Prepared page tab', tab.id, resource)
+        this.log.debug('Prepared page tab', tab.id, resource)
 
-      const newItem = new ContextItemResource(this.service, resource, tab)
-      this.item.set(newItem)
+        const newItem = new ContextItemResource(this.service, resource, tab)
+        this.item.set(newItem)
 
-      const showChatSidebar = this.service.ai.showChatSidebarValue
+        // Only track if the item is new and a completely different tab
+        const showChatSidebar = this.service.ai.showChatSidebarValue
+        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
+          this.service.telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.ActiveChanged,
+            0, // TODO: figure out how to get the correct count
+            0,
+            PageChatUpdateContextItemType.PageTab,
+            PageChatUpdateContextEventTrigger.ActiveTabChanged
+          )
+        }
+      } else if (tab.view.typeValue === ViewType.Resource) {
+        this.log.debug('Preparing resource tab', tab)
+        const resourceId = tab.view.typeDataValue.id
+        if (!resourceId) {
+          this.log.error('Resource tab has no resource id', tab.id)
+          this.item.set(null)
+          return
+        }
 
-      // Only track if the item is new and a completely different tab
-      if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-        this.service.telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.ActiveChanged,
-          0, // TODO: figure out how to get the correct count
-          0,
-          PageChatUpdateContextItemType.PageTab,
-          PageChatUpdateContextEventTrigger.ActiveTabChanged
-        )
+        const resource = await this.service.resourceManager.getResource(resourceId)
+        if (!resource) {
+          this.log.error('Failed to load resource for resource tab', tab.id, resourceId)
+          this.item.set(null)
+          return
+        }
+
+        this.log.debug('Prepared resource tab', tab.id, resource)
+        const newItem = new ContextItemResource(this.service, resource, tab)
+        this.item.set(newItem)
+
+        // Only track if the item is new and a completely different tab
+        const showChatSidebar = this.service.ai.showChatSidebarValue
+        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
+          this.service.telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.ActiveChanged,
+            0, // TODO: figure out how to get the correct count
+            0,
+            PageChatUpdateContextItemType.PageTab,
+            PageChatUpdateContextEventTrigger.ActiveTabChanged
+          )
+        }
+      } else if (tab.view.typeValue === ViewType.Notebook) {
+        this.log.debug('Preparing notebook tab', tab)
+        const notebookId = tab.view.typeDataValue.id
+        if (!notebookId) {
+          this.log.error('Notebook tab has no notebook id', tab.id)
+          this.item.set(null)
+          return
+        }
+
+        const notebook = await this.service.notebookManager.getNotebook(notebookId)
+        if (!notebook) {
+          this.log.error('Failed to load notebook for notebook tab', tab.id, notebookId)
+          this.item.set(null)
+          return
+        }
+
+        this.log.debug('Prepared notebook tab', tab.id, notebook)
+        const newItem = new ContextItemNotebook(this.service, notebook, tab)
+        this.item.set(newItem)
+
+        // Only track if the item is new and a completely different tab
+        const showChatSidebar = this.service.ai.showChatSidebarValue
+        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
+          this.service.telemetry.trackPageChatContextUpdate(
+            PageChatUpdateContextEventAction.ActiveChanged,
+            0, // TODO: figure out how to get the correct count
+            0,
+            PageChatUpdateContextItemType.PageTab,
+            PageChatUpdateContextEventTrigger.ActiveTabChanged
+          )
+        }
       }
       // } else if (tab.type === 'space') {
       //   this.log.debug('Preparing space tab', tab)
@@ -160,7 +241,7 @@ export class ContextItemActiveTab extends ContextItemBase {
     }
   }
 
-  debounceUpdateItem = useDebounce(() => this.updateItem(), 500)
+  debounceUpdateItem = useDebounce(() => this.updateItem(), 250)
 
   async getResourceIds(prompt?: string) {
     this.log.debug('Getting resource ids for active tab')
