@@ -72,7 +72,7 @@
       name: 'Untitled Note'
     })
 
-    view.webContents.loadURL(`surf://resource/${note.id}`)
+    viewManager.openNoteInSidebar(note.id)
   }
 </script>
 
