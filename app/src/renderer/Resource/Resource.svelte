@@ -4,7 +4,7 @@
   import { createResourceManager, type Resource } from '@deta/services/resources'
   import { setupTelemetry } from '@deta/services/helpers'
   import { provideAI } from '@deta/services/ai'
-  import { ResourceTypes, type CitationClickEvent } from '@deta/types'
+  import { ResourceTypes, WEB_RESOURCE_TYPES, type CitationClickEvent } from '@deta/types'
 
   import { Note } from '@deta/ui'
   import TextResource from './components/TextResource.svelte'
@@ -23,6 +23,11 @@
 
   let resource: Resource | null = $state(null)
 
+  let canBeNoteResource = $derived(
+    WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) ||
+      resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
+  )
+
   function handleCitationClick(data: CitationClickEvent) {
     console.log('Citation clicked:', data)
     window.api.citationClick(data)
@@ -34,10 +39,10 @@
     resource = await resourceManager.getResource(resourceId)
     console.log('Loaded resource:', resource)
 
-    if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
-      // @ts-ignore - TODO: Add to window d.ts
-      navigation.navigate(resource.url, { history: 'replace' })
-    }
+    // if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
+    //   // @ts-ignore - TODO: Add to window d.ts
+    //   navigation.navigate(resource.url, { history: 'replace' })
+    // }
   })
 </script>
 
@@ -49,7 +54,7 @@
 
 <div class="wrapper">
   {#if resource}
-    {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+    {#if canBeNoteResource}
       <!-- <Note {resource} /> -->
       <TextResource
         resourceId={resource.id}

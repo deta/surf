@@ -5,18 +5,35 @@ import { useViewManager, WebContentsView } from '../views'
 import { type CreateTabOptions, type TabItem, useTabs } from '../tabs'
 import { formatAIQueryToTitle } from './utils'
 import { type MentionItem } from '@deta/editor'
-import { ResourceTagsBuiltInKeys } from '@deta/types'
+import { type Fn, ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
 import { useNotebookManager } from '../notebooks'
 import { ViewType } from '../views/types'
+import { useMessagePortPrimary } from '../messagePort'
+import { isOffline } from '@deta/utils'
 
 export class BrowserService {
   private readonly resourceManager = useResourceManager()
   private readonly viewManager = useViewManager()
   private readonly tabsManager = useTabs()
   private readonly notebookManager = useNotebookManager()
+  private readonly messagePort = useMessagePortPrimary()
   private readonly log = useLogScope('BrowserService')
 
+  private _unsubs: Fn[] = []
+
   static self: BrowserService
+
+  constructor() {
+    this.attachListeners()
+  }
+
+  attachListeners() {
+    this._unsubs.push(
+      this.messagePort.openResource.on(async ({ resourceId, target, offline }) => {
+        this.openResource(resourceId, { target, offline })
+      })
+    )
+  }
 
   async createNoteAndRunAIQuery(
     query: string,
@@ -62,7 +79,7 @@ export class BrowserService {
           this.tabsManager.delete(this.tabsManager.activeTabIdValue)
         }
 
-        view = this.viewManager.openNoteInSidebar(note.id)
+        view = this.viewManager.openResourceInSidebar(note.id)
       } else {
         const tab = await this.tabsManager.changeActiveTabURL(
           `surf://resource/${note.id}?ask=${encodeURIComponent(query)}`
@@ -136,7 +153,54 @@ export class BrowserService {
     }
   }
 
-  static getInstance() {
+  async openResource(
+    resourceId: string,
+    opts?: { target?: 'tab' | 'tab_background' | 'sidebar'; offline?: boolean }
+  ) {
+    this.log.debug('Opening resource:', resourceId, opts)
+
+    const resource = await this.resourceManager.getResource(resourceId)
+    if (!resource) {
+      this.log.error('Resource not found:', resourceId)
+      return
+    }
+
+    const target = opts?.target ?? 'tab'
+    const offline = opts?.offline ?? isOffline()
+
+    if (offline || resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE || !resource.url) {
+      if (target === 'sidebar') {
+        return this.viewManager.openResourceInSidebar(resource.id)
+      } else {
+        const tab = await this.tabsManager.createResourceTab(resource.id, {
+          active: target === 'tab'
+        })
+
+        return tab.view
+      }
+    } else {
+      if (target === 'sidebar') {
+        return this.viewManager.openURLInSidebar(resource.url)
+      } else {
+        const tab = await this.tabsManager.create(resource.url, {
+          active: target === 'tab'
+        })
+
+        return tab.view
+      }
+    }
+  }
+
+  onDestroy() {
+    this._unsubs.forEach((unsub) => unsub())
+  }
+
+  static provide() {
+    BrowserService.self = new BrowserService()
+    return BrowserService.self
+  }
+
+  static use() {
     if (!BrowserService.self) {
       BrowserService.self = new BrowserService()
     }
@@ -145,6 +209,5 @@ export class BrowserService {
   }
 }
 
-export const useBrowser = () => {
-  return BrowserService.getInstance()
-}
+export const createBrowser = () => BrowserService.provide()
+export const useBrowser = () => BrowserService.use()

@@ -383,8 +383,14 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     return null
   }
 
-  openNoteInSidebar(noteId: string) {
-    const view = this.create({ url: `surf://resource/${noteId}`, permanentlyActive: true })
+  openResourceInSidebar(resourceId: string) {
+    const view = this.create({ url: `surf://resource/${resourceId}`, permanentlyActive: true })
+    this.setSidebarState({ open: true, view })
+    return view
+  }
+
+  openURLInSidebar(url: string) {
+    const view = this.create({ url, permanentlyActive: true })
     this.setSidebarState({ open: true, view })
     return view
   }

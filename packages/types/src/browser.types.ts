@@ -81,3 +81,9 @@ export type OpenAndChatEvent = string | string[] | OpenAndChatEventObject | Open
 export const BROWSER_CONTEXT_KEY = 'browser-utils'
 
 export type RightSidebarTab = 'chat' | 'annotations' | 'root'
+
+export type OpenResourceOptions = {
+  resourceId: string
+  target?: 'tab' | 'tab_background' | 'sidebar'
+  offline?: boolean
+}

@@ -31,7 +31,8 @@
     tabsService,
     ai,
     keyboardManager,
-    shortcutsManager
+    shortcutsManager,
+    browser
   } = initServices()
 
   // const overlayManager = useOverlayManager()
@@ -169,6 +170,7 @@
     unsubs.forEach((unsub) => unsub())
     viewManager.onDestroy()
     tabsService.onDestroy()
+    browser.onDestroy()
   })
 
   $inspect(tabsService.tabs).with((...e) => {

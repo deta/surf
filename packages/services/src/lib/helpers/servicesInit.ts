@@ -13,17 +13,19 @@ import {
 } from '../shortcuts'
 import { setupTelemetry } from './telemetry'
 import { provideAI } from '../ai'
+import { createBrowser } from '../browser'
 
 export const initServices = () => {
   const telemetry = setupTelemetry()
   const config = provideConfig()
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
-  const teletypeService = createTeletypeServiceCore()
   const viewManager = useViewManager(resourceManager)
   const tabsService = useTabs()
+  const browser = createBrowser()
   const ai = provideAI(resourceManager, config, true)
   const mentionService = createMentionService(tabsService)
+  const teletypeService = createTeletypeServiceCore()
 
   const keyboardManager = createKeyboardManager()
   const shortcutsManager = createShortcutManager<ShortcutActions>(keyboardManager, defaultShortcuts)
@@ -38,6 +40,7 @@ export const initServices = () => {
     mentionService,
     teletypeService,
     ai,
+    browser,
     keyboardManager,
     shortcutsManager
   }

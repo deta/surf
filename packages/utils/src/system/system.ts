@@ -11,3 +11,7 @@ export const isLinux = () => {
 }
 
 export const isDev = import.meta.env.DEV
+
+export const isOffline = () => {
+  return !navigator.onLine
+}

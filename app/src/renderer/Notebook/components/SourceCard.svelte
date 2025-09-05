@@ -2,11 +2,12 @@
   import { openDialog } from '@deta/ui'
   import { getResourcePreview, Resource, useResourceManager } from '@deta/services/resources'
   import { contextMenu, type CtxItem } from '@deta/ui'
-  import { getFileKind, truncate } from '../../../../../packages/utils/dist'
-  import { ResourceTypes } from '@deta/types'
+  import { getFileKind, isModKeyPressed, truncate } from '../../../../../packages/utils/dist'
+  import { type penResourceOptions, ResourceTypes } from '@deta/types'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
   import { DynamicIcon } from '@deta/icons'
   import { onMount } from 'svelte'
+  import { useMessagePortClient } from '@deta/services/messagePort'
 
   // TODO: Decouple this rendering from the Resource?
   let {
@@ -30,6 +31,7 @@
   } = $props()
 
   const resourceManager = useResourceManager()
+  const messagePort = useMessagePortClient()
 
   let data = $state(null)
   let _resource = $state(null)
@@ -39,9 +41,17 @@
       : null
   )
 
+  const openResource = (opts?: Partial<OpenResourceOptions>) => {
+    messagePort.openResource.send({
+      resourceId: resourceId ?? _resource.id,
+      target: 'tab',
+      ...opts
+    })
+  }
+
   const handleClick = (e: MouseEvent) => {
-    // @ts-ignore - TODO: Add to window d.ts
-    navigation.navigate(`surf://resource/${resourceId ?? _resource.id}`)
+    const backgroundTab = isModKeyPressed(e) && !e.shiftKey
+    openResource({ target: backgroundTab ? 'tab_background' : 'tab' })
   }
 
   const handleDeleteResource = async () => {
@@ -90,6 +100,14 @@
           text: 'Pin',
           icon: 'pin',
           action: () => {}
+        },
+        {
+          type: 'action',
+          text: 'View Offline',
+          icon: 'save',
+          action: () => {
+            openResource({ offline: true, target: 'tab' })
+          }
         },
         {
           type: 'action',

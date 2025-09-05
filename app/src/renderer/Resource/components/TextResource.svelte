@@ -13,7 +13,7 @@
 </script>
 
 <script lang="ts">
-  import { writable, derived } from 'svelte/store'
+  import { writable, derived, type Writable } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import tippy, { type Instance, type Placement, type Props } from 'tippy.js'
   import type { Editor as TiptapEditor } from '@tiptap/core'
@@ -86,7 +86,7 @@
   import { Toast, useToasts } from '@deta/ui'
   import { useTelemetry } from '@deta/services'
   import { useConfig } from '@deta/services'
-  import { createWikipediaAPI } from '@deta/web-parser'
+  import { createWikipediaAPI, WebParser } from '@deta/web-parser'
   import EmbeddedResource from './EmbeddedResource.svelte'
   import { isGeneratedResource } from '@deta/services/resources'
   import { updateCaretPopoverVisibility } from '@deta/editor/src/lib/extensions/CaretIndicator/utils'
@@ -117,7 +117,7 @@
   import ChatInput from './ChatInput.svelte'
   import NoteTitle from './NoteTitle.svelte'
   import { SearchResourceTags, ResourceTag } from '@deta/utils/formatting'
-  import { ResourceNote } from '@deta/services/resources'
+  import type { ResourceNote, ResourceJSON } from '@deta/services/resources'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -127,7 +127,7 @@
   export let similaritySearch: boolean = false
   export let contextManager: ContextManager | undefined = undefined
   export let messagePort: any
-  export let resource: ResourceNote
+  export let resource: ResourceNote | ResourceJSON
   export let origin: string = ''
   export let onCitationClick: (event: CitationClickEvent) => void
 
@@ -274,7 +274,19 @@
       //   }
       // }
 
-      const value = resource.parsedData
+      let value: Writable<string>
+
+      if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+        value = resource.parsedData
+        await resource.getContent()
+      } else {
+        const data = await resource.getParsedData()
+        const content = WebParser.getResourceContent(resource.type, data)
+
+        const text = content.html || content.plain || ''
+        value = writable(text)
+      }
+
       unsubscribeValue = value.subscribe((value) => {
         if (value) {
           content.set(value)
@@ -284,8 +296,6 @@
           }
         }
       })
-
-      await resource.getContent()
 
       initialLoad = false
 
@@ -1768,6 +1778,8 @@
     $showPrompts = false
   }
 
+  $: readOnlyMode = resource.type !== ResourceTypes.DOCUMENT_SPACE_NOTE
+
   const handleAutocomplete = async (e: CustomEvent<EditorAutocompleteEvent>) => {
     try {
       log.debug('autocomplete', e.detail)
@@ -2372,7 +2384,7 @@
       <NoteTitle bind:value={title} placeholder="New Note" on:blur={handleTitleBlur} />
     {/if}
 
-    {#if !initialLoad && origin !== 'homescreen'}
+    {#if !initialLoad && origin !== 'homescreen' && !readOnlyMode}
       <ChatInput
         {contextManager}
         bind:this={chatInputComp}
@@ -2427,9 +2439,10 @@
             showSlashMenu={!minimal}
             showSimilaritySearch={!minimal && similaritySearch}
             parseMentions
-            enableCaretIndicator={origin !== 'homescreen'}
+            enableCaretIndicator={origin !== 'homescreen' || !readOnlyMode}
             onCaretPositionUpdate={handleCaretPositionUpdate}
             onLinkClick={handleLinkClick}
+            readOnly={readOnlyMode}
             {slashItemsFetcher}
             {mentionItemsFetcher}
             {linkItemsFetcher}
