@@ -4,17 +4,17 @@
   import EmailView from './components/EmailView.svelte'
   import InviteView from './components/InviteView.svelte'
   import LanguageView from './components/LanguageView.svelte'
-  import PrefsView from './components/PrefsView.svelte'
+  // import PrefsView from './components/PrefsView.svelte'
   import PersonaView from './components/PersonaView.svelte'
-  import ExplainerStuff from './components/ExplainerStuff.svelte'
-  import ExplainerChat from './components/ExplainerChat.svelte'
+  // import ExplainerStuff from './components/ExplainerStuff.svelte'
+  // import ExplainerChat from './components/ExplainerChat.svelte'
   import DoneView from './components/DoneView.svelte'
 
   import type { UserSettings } from '@deta/types'
   // import { provideConfig, createResourceManager, createTelemetry } from '@deta/services'
   // import { provideOasis } from '@horizon/core/src/lib/service/oasis'
-  import ContextView from './components/ContextView.svelte'
-  import ImportView from './components/ImportView.svelte'
+  // import ContextView from './components/ContextView.svelte'
+  // import ImportView from './components/ImportView.svelte'
   // import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
   import AnalyticsView from './components/AnalyticsView.svelte'
 
@@ -45,12 +45,12 @@
     | 'email'
     | 'invite'
     | 'persona'
-    | 'import'
-    | 'explainer.stuff'
-    | 'contexts'
-    | 'explainer.chat'
+    // | 'import'
+    // | 'explainer.stuff'
+    // | 'contexts'
+    // | 'explainer.chat'
     | 'language'
-    | 'prefs'
+    // | 'prefs'
     | 'done'
     | 'disclaimer'
     | 'app_preferences'
@@ -201,22 +201,22 @@
         on:viewChange={handleViewChange}
         on:back={handleBack}
       />
-    {:else if view === 'import'}
-      <ImportView on:viewChange={handleViewChange} on:back={handleBack} />
-    {:else if view === 'explainer.stuff'}
+      <!-- {:else if view === 'import'}
+      <ImportView on:viewChange={handleViewChange} on:back={handleBack} /> -->
+      <!-- {:else if view === 'explainer.stuff'}
       <ExplainerStuff
         persona={selectedPersonas}
         on:viewChange={handleViewChange}
         on:back={handleBack}
       />
     {:else if view === 'contexts'}
-      <ContextView {selectedPersonas} on:viewChange={handleViewChange} on:back={handleBack} />
-    {:else if view === 'explainer.chat'}
+      <ContextView {selectedPersonas} on:viewChange={handleViewChange} on:back={handleBack} /> -->
+      <!-- {:else if view === 'explainer.chat'}
       <ExplainerChat
         persona={selectedPersonas}
         on:viewChange={handleViewChange}
         on:back={handleBack}
-      />
+      /> -->
     {:else if view === 'language'}
       <LanguageView
         {embeddingModel}

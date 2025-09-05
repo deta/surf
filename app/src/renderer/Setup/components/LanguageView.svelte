@@ -29,7 +29,7 @@
 
   const handleLanguageSubmit = () => {
     dispatch('modelChange', embeddingModel)
-    dispatch('viewChange', 'prefs')
+    dispatch('viewChange', 'disclaimer')
   }
 
   const handleBack = () => {
