@@ -3,7 +3,7 @@
   export let border = false
   export let fit: 'contain' | 'cover' = 'cover'
 
-  $: src = `surf://resource/${resourceId}`
+  $: src = `surf://resource/${resourceId}?raw`
 </script>
 
 <div class="wrapper" class:border>

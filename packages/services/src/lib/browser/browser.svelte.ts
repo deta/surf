@@ -81,9 +81,7 @@ export class BrowserService {
 
         view = this.viewManager.openResourceInSidebar(note.id)
       } else {
-        const tab = await this.tabsManager.changeActiveTabURL(
-          `surf://resource/${note.id}?ask=${encodeURIComponent(query)}`
-        )
+        const tab = await this.tabsManager.changeActiveTabURL(`surf://resource/${note.id}`)
 
         if (!tab) {
           this.log.error('Failed to change active tab URL')

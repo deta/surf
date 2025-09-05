@@ -404,7 +404,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
     } else if (resource.type.startsWith('image/')) {
       const hostname = getHostname(canonicalUrl ?? '')
 
-      const image = userMediaResource ?? `surf://resource/${resource.id}`
+      const image = userMediaResource ?? `surf://resource/${resource.id}?raw`
       const imageURL = new URL(image)
 
       if (opts?.quality !== undefined) {

@@ -10,8 +10,7 @@
   import TextResource from './components/TextResource.svelte'
   import { useMessagePortClient } from '@deta/services/messagePort'
 
-  const searchParams = new URLSearchParams(window.location.search)
-  const resourceId = searchParams.get('resourceId') || ''
+  const resourceId = window.location.pathname.slice(1)
 
   const telemetry = setupTelemetry()
   const config = provideConfig()

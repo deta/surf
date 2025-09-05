@@ -4050,7 +4050,7 @@
             ) {
               isVendorBackground = false
               return {
-                path: `url('surf://resource/${$background.resourceId}')`,
+                path: `url('surf://resource/${$background.resourceId}?raw')`,
                 customColors: $background.colorPalette
               }
             }

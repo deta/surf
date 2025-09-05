@@ -16,8 +16,7 @@
   import BackgroundImage from './assets/greenfield.png?url'
   import { useMessagePortClient } from '@deta/services/messagePort'
 
-  const searchParams = new URLSearchParams(window.location.search)
-  const notebookId = searchParams.get('notebookId') || null
+  const notebookId = window.location.pathname.slice(1) || null
 
   const telemetry = setupTelemetry()
   const config = provideConfig()

@@ -237,21 +237,17 @@ const surfProtocolHandleImages = async ({
   }
 }
 
-const ALLOWED_HOSTNAMES = ['core', 'overlay']
+const ALLOWED_HOSTNAMES = ['core', 'overlay', 'notebook', 'resource']
 
-export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
+const HOSTNAME_TO_ROOT = {
+  core: '/Core/core.html',
+  overlay: '/Overlay/overlay.html',
+  notebook: '/Notebook/notebook.html',
+  resource: '/Resource/resource.html'
+}
+
+export const serveFile = async (req: Request, targetPath: string) => {
   try {
-    const url = new URL(req.url)
-
-    if (url.protocol !== 'surf-internal:') {
-      return new Response('Invalid Surf protocol URL', { status: 400 })
-    }
-
-    if (!ALLOWED_HOSTNAMES.includes(url.hostname.toLowerCase())) {
-      return new Response('Invalid Surf internal protocol hostname', { status: 400 })
-    }
-
-    const targetPath = url.pathname
     let base = `file://${path.join(app.getAppPath(), 'out', 'renderer')}`
     let mainURL = path.join(base, targetPath)
     if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
@@ -260,8 +256,10 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
     }
 
     if (!isPathSafe(base, mainURL)) {
+      log.error('Path is not safe:', base, mainURL)
       return new Response('Forbidden', { status: 403 })
     }
+
     const newURL = new URL(mainURL)
     if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
       const reqURL = URL.parse(req.url)
@@ -292,31 +290,101 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
   }
 }
 
+export const handleSurfFileRequest = async (req: GlobalRequest) => {
+  try {
+    const url = new URL(req.url)
+
+    // log.debug('surf file request for', url.href)
+
+    if (url.protocol !== 'surf-internal:' && url.protocol !== 'surf:') {
+      log.error('Invalid protocol:', url.protocol)
+      return new Response('Invalid Surf protocol URL', { status: 400 })
+    }
+
+    if (!ALLOWED_HOSTNAMES.includes(url.hostname.toLowerCase())) {
+      log.error('Invalid hostname:', url.hostname)
+      return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+    }
+
+    let targetPath = url.pathname
+    if (targetPath === '/') {
+      const rootPath = HOSTNAME_TO_ROOT[url.hostname as keyof typeof HOSTNAME_TO_ROOT]
+      if (!rootPath) {
+        log.error('Invalid hostname for root path:', url.hostname)
+        return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+      }
+
+      targetPath = rootPath
+    } else if (url.hostname === 'notebook' || url.hostname === 'resource') {
+      // Handle root requests (surf://notebook/:id) and root assets
+      const id = url.pathname.match(/^\/([^\/]+)\/?$/)?.[1]
+
+      if (id) {
+        // If only notebook ID is present, serve the main notebook HTML
+        if (url.pathname === `/${id}`) {
+          const rootPath = HOSTNAME_TO_ROOT[url.hostname as keyof typeof HOSTNAME_TO_ROOT]
+          if (!rootPath) {
+            log.error('Invalid hostname for root path:', url.hostname)
+            return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+          }
+
+          targetPath = rootPath
+        } else {
+          // For asset requests (surf://notebook/:id/some/file.js), remove the ID prefix
+          targetPath = `${url.pathname.substring(id.length + 1)}`
+        }
+      } else {
+        // For root assets (surf://notebook/assets/style.css)
+        targetPath = `${url.pathname}`
+      }
+    }
+
+    return serveFile(req, targetPath)
+  } catch (err) {
+    log.error('surf internal protocol error:', err, req.url)
+    return new Response('Internal Server Error', { status: 500 })
+  }
+}
+
+const handleSurfResourceDataRequest = async (req: GlobalRequest, resourceId: string) => {
+  const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
+  const filePath = join(base, resourceId)
+
+  if (!isPathSafe(base, filePath)) {
+    return new Response('Forbidden', { status: 403 })
+  }
+
+  const response = await net.fetch(`file://${filePath}`)
+  if (
+    response.headers.get('content-type')?.startsWith('image/') &&
+    !response.headers.get('content-type')?.startsWith('image/gif')
+  ) {
+    return surfProtocolHandleImages({
+      requestURL: req.url,
+      resourceId: resourceId,
+      imgPath: filePath,
+      cacheDir: join(base, 'cache')
+    })
+  }
+
+  return response
+}
+
+export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
+  return handleSurfFileRequest(req)
+}
+
 export const surfProtocolHandler = async (req: GlobalRequest) => {
   try {
     const id = req.url.match(/^surf:\/\/resource\/([^\/\?]+)/)?.[1]
-    if (!id) return new Response('Invalid Surf protocol URL', { status: 400 })
-
-    const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
-    const filePath = join(base, id)
-
-    if (!isPathSafe(base, filePath)) {
-      return new Response('Forbidden', { status: 403 })
+    if (id) {
+      const searchParams = new URL(req.url).searchParams
+      if (searchParams.has('raw') && searchParams.get('raw') !== 'false') {
+        return handleSurfResourceDataRequest(req, id)
+      }
     }
 
-    const response = await net.fetch(`file://${filePath}`)
-    if (
-      response.headers.get('content-type')?.startsWith('image/') &&
-      !response.headers.get('content-type')?.startsWith('image/gif')
-    ) {
-      return surfProtocolHandleImages({
-        requestURL: req.url,
-        resourceId: id,
-        imgPath: filePath,
-        cacheDir: join(base, 'cache')
-      })
-    }
-    return response
+    return handleSurfFileRequest(req)
   } catch (err) {
     log.error('surf protocol error:', err, req.url)
     return new Response('Internal Server Error', { status: 500 })
@@ -360,6 +428,15 @@ export const surfletProtocolHandler = async (req: GlobalRequest) => {
   } catch (err) {
     log.error('surflet protocol error:', err, req.url)
     return new Response('Internal Server Error', { status: 500 })
+  }
+}
+
+export const checkSurfProtocolRequest = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'surf:' && ALLOWED_HOSTNAMES.includes(parsed.hostname.toLowerCase())
+  } catch {
+    return false
   }
 }
 

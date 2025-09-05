@@ -31,6 +31,7 @@ import { getWebRequestManager } from './webRequestManager'
 // import electronDragClick from 'electron-drag-click'
 import { writeFile } from 'fs/promises'
 import {
+  checkSurfProtocolRequest,
   surfInternalProtocolHandler,
   surfProtocolHandler,
   surfletProtocolHandler
@@ -169,16 +170,15 @@ export function createWindow() {
     const isInternalPageRequest = details.url.startsWith('surf-internal:')
 
     const isMainFrameRequest = details.resourceType === 'mainFrame'
-    const url = details.webContents && details.webContents.getURL()
+    const urlString = details.webContents && details.webContents.getURL()
+    const url = urlString ? new URL(urlString) : null
 
-    const isPDFViewerRequest = url && isInternalViewerURL(url, PDFViewerEntryPoint)
-    const isNotebookViewerRequest = url && isInternalViewerURL(url, NotebookViewerEntryPoint)
-    const isResourceViewerRequest = url && isInternalViewerURL(url, ResourceViewerEntryPoint)
+    // const isPDFViewerRequest = url && isInternalViewerURL(url, PDFViewerEntryPoint)
+    // const isNotebookViewerRequest = url && isInternalViewerURL(url, NotebookViewerEntryPoint)
+    // const isResourceViewerRequest = url && isInternalViewerURL(url, ResourceViewerEntryPoint)
 
-    const isInternalViewerRequest =
-      isPDFViewerRequest || isNotebookViewerRequest || isResourceViewerRequest
-
-    const shouldBlockSurfRequest = isSurfProtocol && !isMainFrameRequest && !isInternalViewerRequest
+    const shouldBlockSurfRequest =
+      isSurfProtocol && !(checkSurfProtocolRequest(details.url) || isMainFrameRequest)
 
     const shouldBlockSurfletRequest =
       isSurfletProtocol && (!isMainFrameRequest || !details.webContents)
@@ -190,11 +190,13 @@ export function createWindow() {
       shouldBlockSurfRequest || shouldBlockSurfletRequest || shouldBlockInternalRequest
 
     if (shouldBlock) {
-      console.warn('Blocking request:', details.url, details.webContents?.getURL(), {
-        shouldBlockSurfRequest,
-        shouldBlockSurfletRequest,
-        shouldBlockInternalRequest
-      })
+      // console.warn('Blocking request:', details.url, url, {
+      //   shouldBlockSurfRequest,
+      //   shouldBlockSurfletRequest,
+      //   shouldBlockInternalRequest
+      // })
+
+      console.warn('Blocked request:', details.url, url, details.frame, details.webContents?.id)
     }
 
     callback({ cancel: shouldBlock })
@@ -248,26 +250,6 @@ export function createWindow() {
       details.webContents?.loadURL(`${PDFViewerEntryPoint}?${searchParams}`)
     }
 
-    const loadResourceViewer = async (params: Partial<ResourceViewerParams>) => {
-      const searchParams = new URLSearchParams()
-      searchParams.set('path', params.path!)
-      if (params.resourceId) searchParams.set('resourceId', params.resourceId)
-
-      console.log('loading resource viewer with params:', searchParams.toString())
-
-      details.webContents?.loadURL(`${ResourceViewerEntryPoint}?${searchParams}`)
-    }
-
-    const loadNotebookViewer = (params: Partial<NotebookViewerParams>) => {
-      const searchParams = new URLSearchParams()
-      searchParams.set('path', params.path!)
-      if (params.notebookId) searchParams.set('notebookId', params.notebookId)
-
-      console.log('loading notebook viewer with params:', searchParams.toString())
-
-      details.webContents?.loadURL(`${NotebookViewerEntryPoint}?${searchParams}`)
-    }
-
     const contentTypeHeader = getHeaderValue('content-type')
     const dispositionHeader = getHeaderValue('content-disposition')
     const isPDF = contentTypeHeader?.[0]?.includes('application/pdf') ?? false
@@ -283,26 +265,11 @@ export function createWindow() {
     }
 
     if (url.protocol === 'surf:') {
-      console.log('surf protocol request:', url)
-
-      const isResource = url.hostname === 'resource'
-      const isNotebook = url.hostname === 'notebook'
+      console.log('surf protocol request:', url.href)
 
       if (isPDF) {
         callback({ cancel: true })
         loadPDFViewer({ path: details.url, filename })
-      } else if (isNotebook) {
-        callback({ cancel: true })
-        loadNotebookViewer({
-          path: details.url,
-          notebookId: url.pathname.slice(1)
-        })
-      } else if (isResource) {
-        callback({ cancel: true })
-        loadResourceViewer({
-          path: details.url,
-          resourceId: url.pathname.slice(1)
-        })
       } else {
         callback({ cancel: false })
       }
@@ -513,6 +480,15 @@ function setupMainWindowWebContentsHandlers(
         }
       }
 
+      const url = new URL(details.url)
+      if (
+        url.protocol === 'surf:' ||
+        url.protocol === 'surflet:' ||
+        url.protocol === 'surf-internal:'
+      ) {
+        return { action: 'deny' }
+      }
+
       const mainWindow = getMainWindow()
       if (mainWindow) {
         IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
@@ -531,42 +507,57 @@ function setupMainWindowWebContentsHandlers(
 
 function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents) {
   contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
-    // If there is a frame name or features provided we assume the request
-    // is part of a auth flow and we create a new isolated window for it
-    const shouldCreateWindow =
-      details.disposition === 'new-window' && (details.frameName !== '' || details.features !== '')
+    try {
+      // If there is a frame name or features provided we assume the request
+      // is part of a auth flow and we create a new isolated window for it
+      const shouldCreateWindow =
+        details.disposition === 'new-window' &&
+        (details.frameName !== '' || details.features !== '')
 
-    if (shouldCreateWindow) {
-      // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
-      // created window here. The creation of it is controlled from the renderer. Because
-      // of this, Surf won't play well with websites that for some reason utilizes more
-      // than one window. In the future, Each new window we create should receive its own
-      // instance of Surf.
-      return {
-        action: 'allow',
-        createWindow: undefined,
-        outlivesOpener: false,
-        overrideBrowserWindowOptions: {
-          webPreferences: {
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true,
-            webSecurity: true
+      if (shouldCreateWindow) {
+        // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
+        // created window here. The creation of it is controlled from the renderer. Because
+        // of this, Surf won't play well with websites that for some reason utilizes more
+        // than one window. In the future, Each new window we create should receive its own
+        // instance of Surf.
+        return {
+          action: 'allow',
+          createWindow: undefined,
+          outlivesOpener: false,
+          overrideBrowserWindowOptions: {
+            webPreferences: {
+              contextIsolation: true,
+              nodeIntegration: false,
+              sandbox: true,
+              webSecurity: true
+            }
           }
         }
       }
-    }
 
-    const mainWindow = getMainWindow()
-    if (mainWindow) {
-      IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
-        url: details.url,
-        disposition: details.disposition,
-        webContentsId: contents.id
-      })
-    }
+      const url = new URL(details.url)
+      if (
+        url.protocol === 'surf:' ||
+        url.protocol === 'surflet:' ||
+        url.protocol === 'surf-internal:'
+      ) {
+        return { action: 'deny' }
+      }
 
-    return { action: 'deny' }
+      const mainWindow = getMainWindow()
+      if (mainWindow) {
+        IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
+          url: details.url,
+          disposition: details.disposition,
+          webContentsId: contents.id
+        })
+      }
+
+      return { action: 'deny' }
+    } catch (error) {
+      console.error('Error in setWindowOpenHandler:', error)
+      return { action: 'deny' }
+    }
   })
 
   attachContextMenu(contents)

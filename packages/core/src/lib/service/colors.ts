@@ -39,7 +39,7 @@ export function getBackgroundImageUrlFromId(id: string | undefined, darkMode: bo
   if (!id || id.startsWith('url(')) {
     return `url('${darkMode ? vendorBackgroundDark : vendorBackgroundLight}')`
   } else {
-    return `url('surf://resource/${id}')`
+    return `url('surf://resource/${id}?raw')`
   }
 }
 
@@ -113,7 +113,7 @@ export class ColorService {
     try {
       const img = new Image()
 
-      img.src = `surf://resource/${imageResourceId}`
+      img.src = `surf://resource/${imageResourceId}?raw`
       this.log.debug('Extracting palette from :', img.src)
 
       await img.decode()
