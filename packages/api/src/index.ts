@@ -112,9 +112,10 @@ export class API {
     })
   }
 
-  async signup(email: string) {
+  async signup(email: string, flow?: string) {
     return await this.postJSONReturnRes(ENDPOINTS.signup, {
-      email: email
+      email: email,
+      flow: flow
     })
   }
 

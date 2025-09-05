@@ -31,7 +31,7 @@
     try {
       loading = true
       error = ''
-      const res = await window.api.signup($emailStore)
+      const res = await window.api.signup($emailStore, 'beta-signup')
       if (!res.ok) {
         error = 'Sorry, we could not resend the verification email.'
         return

@@ -122,9 +122,9 @@ const api = {
     return await api.resendInviteCode(email)
   },
 
-  signup: async (email: string) => {
+  signup: async (email: string, flow?: string) => {
     const api = createAPI(API_BASE)
-    return await api.signup(email)
+    return await api.signup(email, flow)
   },
 
   deanonymizeUser: async () => {
