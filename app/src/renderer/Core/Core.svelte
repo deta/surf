@@ -302,7 +302,6 @@
     height: 100%;
     display: flex;
     justify-content: end;
-    gap: 0rem;
   }
 
   .tab-view {
@@ -318,8 +317,6 @@
     height: 100%;
     width: 100%;
     position: relative;
-    margin-inline: 1px;
-    border-inline: 1px solid var(--border-color);
   }
 
   .overlay {

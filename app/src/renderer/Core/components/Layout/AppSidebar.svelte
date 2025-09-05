@@ -145,9 +145,7 @@
               </NavigationBarGroup>
             {/snippet}
           </NavigationBar>
-          <div
-            style="position:relative;height:100%;border-inline: 1px solid var(--border-color);margin-inline: -1px;"
-          >
+          <div style="position:relative;height:100%;">
             <WebContentsView view={viewManager.activeSidebarView} active />
           </div>
         {/if}
@@ -163,6 +161,7 @@
     flex-shrink: 0;
   }
   .resize-handle {
+    flex-shrink: 0;
     position: relative;
     width: 0.75rem;
     cursor: col-resize;

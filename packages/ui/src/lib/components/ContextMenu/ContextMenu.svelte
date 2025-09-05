@@ -185,7 +185,7 @@
   // NOTE: We allow undefined for more easy items construction (ternary)
   export function contextMenu(props: CtxMenuProps): Attachment {
     return (node: HTMLElement) => {
-        node.contextMenuKey = props.key
+        node.contextMenuKey = props?.key ?? null
         if (Array.isArray(props.items)) {
           node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
         } else {
@@ -206,7 +206,7 @@
   /** @deprecated DONT USE 
   */
   export function contextMenuSvelte4(node: HTMLElement, props: CtxMenuProps): ActionReturn<any, any> {
-    node.contextMenuKey = props.key
+    node.contextMenuKey = props?.key
     if (Array.isArray(props.items)) {
       node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
     } else {
@@ -349,6 +349,7 @@
     closeContextMenu()
   }}
   on:keydown={(e) => {
+          // TODO: FIX: Need to focus overlay automatically to make this work with WCVs
     if (e.key === 'Escape') {
       closeContextMenu()
     }

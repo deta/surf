@@ -135,10 +135,24 @@
     background: #fff;
     border-top-left-radius: 1rem;
     border-top-right-radius: 1rem;
-    border-top: 1px solid var(--border-color);
-    border-left: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    margin-inline: -1px;
+    //border-top: 1px solid var(--border-color);
+    //border-left: 1px solid var(--border-color);
+    //border-right: 1px solid var(--border-color);
+    margin-inline: 0px;
+
+    border: 0.5px solid #fff;
+    background: radial-gradient(
+      290.88% 100% at 50% 0%,
+      rgb(237 243 247 / 96%) 0%,
+      rgba(255, 255, 255, 1) 100%
+    );
+
+    box-shadow:
+      0 -0.5px 1px 0 #ffffff1f inset,
+      0 1px 1px 0 #fff inset,
+      0 -3px 1px 0 rgba(0, 0, 0, 0.025),
+      0 -2px 1px 0 rgba(9, 10, 11, 0.01),
+      0 -1px 1px 0 rgba(9, 10, 11, 0.03);
 
     display: flex;
     gap: 0.5rem;
@@ -148,7 +162,18 @@
     transition: background 123ms ease-out;
 
     &.grey {
-      background: rgba(250, 250, 250, 1);
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        rgb(237 243 247 / 96%) 0%,
+        rgba(250, 250, 250, 1) 100%
+      );
+
+      box-shadow:
+        0 -0.5px 1px 0 rgba(250, 250, 250, 1) inset,
+        0 1px 1px 0 #fff inset,
+        0 -3px 1px 0 rgba(0, 0, 0, 0.025),
+        0 -2px 1px 0 rgba(9, 10, 11, 0.01),
+        0 -1px 1px 0 rgba(9, 10, 11, 0.03);
     }
 
     .group {
