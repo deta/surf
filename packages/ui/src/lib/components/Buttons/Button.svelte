@@ -89,18 +89,22 @@
 }
 
 :global(.button-xs.button-square[data-button-root]) {
+  aspect-ratio: 1 / 1;
   padding: 0.25rem;
 }
 
 :global(.button-sm.button-square[data-button-root]) {
+  aspect-ratio: 1 / 1;
   padding: 0.375rem;
 }
 
 :global(.button-md.button-square[data-button-root]) {
+  aspect-ratio: 1 / 1;
   padding: 0.5rem;
 }
 
 :global(.button-lg.button-square[data-button-root]) {
+  aspect-ratio: 1 / 1;
   padding: 0.75rem;
 }
 

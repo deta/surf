@@ -7,7 +7,7 @@
     measureContainerWidth,
     type LayoutCalculation
   } from './tabsLayout.svelte'
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
 
   import { useDebounce } from '@deta/utils'
   import { Button } from '@deta/ui'
@@ -57,7 +57,7 @@
     }
 
     // Initial measurement
-    updateWidth()
+    tick().then(() => updateWidth())
 
     // Listen to window resize
     window.addEventListener('resize', handleResize)
@@ -97,16 +97,18 @@
   </div>
 </div>
 
-<style>
+<style lang="scss">
   .tabs-list {
-    display: flex;
+    position: relative;
+    flex-grow: 1;
+    width: 100%;
+    width: -webkit-fill-available;
+    flex-shrink: 1;
     overflow: hidden;
-    padding-left: 5rem;
+    display: flex;
     gap: 0.375rem;
     padding-top: 0.33rem;
     padding-bottom: 0.33rem;
-    width: 100%;
-    position: relative;
   }
 
   .add-tab-btn-container {

@@ -94,6 +94,7 @@
   class:state-visible={stateIndicator !== 'none'}
   class:no-transition={isResizing}
   style:--width={`${width ?? '0'}px`}
+  style:--tab-id={`tab-${tab.id}`}
   onclick={handleClick}
   aria-hidden="true"
   draggable="true"

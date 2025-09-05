@@ -33,7 +33,7 @@ const DEFAULT_CONFIG: TabLayoutConfig = {
   collapsedThreshold: 64,
   squishedThreshold: 40, // Even more compressed than collapsed
   tabGap: 6,
-  containerPadding: 80,
+  containerPadding: 0,
   addButtonWidth: 52,
   iconWidth: 16,
   tabHorizontalPadding: 24
@@ -43,20 +43,21 @@ const DEFAULT_CONFIG: TabLayoutConfig = {
  * Measures container width accounting for parent padding
  */
 export function measureContainerWidth(containerElement: HTMLElement): number {
+  return containerElement.offsetWidth
   // Get the parent container (.tabs) to account for its padding
-  const parentElement = containerElement.parentElement
-  if (parentElement) {
-    const parentStyle = getComputedStyle(parentElement)
-    const parentPaddingLeft = parseFloat(parentStyle.paddingLeft) || 0
-    const parentPaddingRight = parseFloat(parentStyle.paddingRight) || 0
-    const parentWidth = parentElement.clientWidth
+  //const parentElement = containerElement.parentElement
+  //if (parentElement) {
+  //  const parentStyle = getComputedStyle(parentElement)
+  //  const parentPaddingLeft = parseFloat(parentStyle.paddingLeft) || 0
+  //  const parentPaddingRight = parseFloat(parentStyle.paddingRight) || 0
+  //  const parentWidth = parentElement.clientWidth
 
-    // Available width is parent width minus its padding
-    return parentWidth - parentPaddingLeft - parentPaddingRight
-  } else {
-    // Fallback to element's own width
-    return containerElement.offsetWidth
-  }
+  //  // Available width is parent width minus its padding
+  //  return parentWidth - parentPaddingLeft - parentPaddingRight
+  //} else {
+  //  // Fallback to element's own width
+  //  return containerElement.offsetWidth
+  //}
 }
 
 /**

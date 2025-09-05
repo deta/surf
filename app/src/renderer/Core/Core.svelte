@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy, tick } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
 
   import { useLogScope } from '@deta/utils/io'
   import type { Fn } from '@deta/types'
@@ -16,12 +16,11 @@
   //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
-  import { get } from 'svelte/store'
-  import { useDebounce, wait } from '@deta/utils'
-  import { isInternalRendererURL } from '@deta/utils/formatting'
+  import { isLinux, isMac, isWindows, useDebounce, wait } from '@deta/utils'
   import type { ContextManager } from '@deta/services/ai'
   import { prepareContextMenu } from '@deta/ui'
   import { debugMode } from './stores/debug'
+  import AltWindowControls from './components/AltWindowControls.svelte'
 
   const log = useLogScope('Core')
 
@@ -53,6 +52,10 @@
 
   onMount(async () => {
     log.debug('Core component mounted')
+
+    if (isWindows()) document.body.classList.add('os_windows')
+    if (isMac()) document.body.classList.add('os_mac')
+    if (isLinux()) document.body.classList.add('os_linux')
 
     const settings = config.settingsValue
     log.debug('User settings:', settings)
@@ -192,6 +195,9 @@
       <!-- <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
       <Test />
     </Overlay> -->
+      {#if !isMac()}
+        <AltWindowControls />
+      {/if}
     </div>
   </div>
 
@@ -271,15 +277,19 @@
       color(display-p3 0.7031 0.8325 0.9963) 69.23%,
       color(display-p3 0.7938 0.8654 0.9912) 93.37%
     );
+
+    :global(body.os_mac) & {
+      padding-left: 5rem;
+    }
   }
 
   .tabs {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
     padding: 0 5px;
-    //border-bottom: 1px solid var(--border-color);
     app-region: drag;
+    gap: 10px;
   }
 
   main {
