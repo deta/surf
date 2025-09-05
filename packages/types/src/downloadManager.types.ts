@@ -1,3 +1,5 @@
+export type DownloadState = 'idle' | 'progressing' | 'interrupted' | 'completed' | 'cancelled'
+
 export interface DownloadRequestMessage {
   id: string
   url: string
@@ -17,7 +19,7 @@ export interface DownloadPathResponseMessage {
 
 export interface DownloadUpdatedMessage {
   id: string
-  state: 'progressing' | 'interrupted'
+  state: DownloadState
   receivedBytes: number
   totalBytes: number
   isPaused: boolean
@@ -26,7 +28,7 @@ export interface DownloadUpdatedMessage {
 
 export interface DownloadDoneMessage {
   id: string
-  state: 'interrupted' | 'completed' | 'cancelled'
+  state: DownloadState
   filename: string
   mimeType: string
   totalBytes: number
@@ -48,6 +50,10 @@ export interface Download {
   totalBytes: number
   contentDisposition: string
   startTime: number
+  state: DownloadState
+  receivedBytes?: number
+  isPaused?: boolean
+  canResume?: boolean
   endTime?: number
   lastModifiedTime?: string
   eTag?: string

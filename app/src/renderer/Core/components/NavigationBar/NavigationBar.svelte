@@ -12,6 +12,7 @@
   import { isInternalRendererURL } from '@deta/utils'
   import { useResourceManager } from '@deta/services/resources'
   import { useViewManager } from '@deta/services/views'
+  import DownloadsIndicator from './DownloadsIndicator.svelte'
 
   let {
     view,
@@ -96,6 +97,7 @@
   <NavigationBarGroup fullWidth={!centeredBreadcrumbs}>
     <BreadcrumbItems {view} />
     <LocationBar {view} readonly={readonlyLocation} bind:isEditingUrl />
+    <DownloadsIndicator />
     {#if !isInternalRendererURL($activeLocation)}
       {#key $extractedResourceId}
         <SaveState {view} />

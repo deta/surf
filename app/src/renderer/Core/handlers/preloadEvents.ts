@@ -1,24 +1,21 @@
-import { type CitationClickEvent, type Fn } from '@deta/types'
-import { useLogScope } from '@deta/utils/io'
-import { useTabs } from '@deta/services/tabs'
-import { useViewManager } from '@deta/services/views'
+import { type Fn } from '@deta/types'
 
-export function handlePreloadEvents() {
-  const log = useLogScope('PreloadEvents')
-  const tabsManager = useTabs()
-  const viewManager = useViewManager()
+import { setupDownloadEvents } from './downloadEvents'
+import { setupTabViewEvents } from './tabViewEvents'
 
+// @ts-ignore
+export type PreloadEvents = typeof window.preloadEvents
+
+function setupPreloadEvents() {
   const unsubs: Fn[] = []
 
   // Proxy the preload events to ensure that we unsubscribe from them
-  // @ts-ignore
-  const horizonPreloadEvents: typeof window.preloadEvents = {} as typeof window.preloadEvents
+  const horizonPreloadEvents: PreloadEvents = {} as PreloadEvents
 
   // @ts-ignore
   for (const [key, value] of Object.entries(window.preloadEvents)) {
     if (typeof value === 'function') {
-      // @ts-ignore
-      horizonPreloadEvents[key as keyof typeof window.preloadEvents] = (...args: any[]) => {
+      horizonPreloadEvents[key as keyof PreloadEvents] = (...args: any[]) => {
         // @ts-ignore
         const unsubscribe = (value as Function).apply(window.preloadEvents, args)
         if (typeof unsubscribe === 'function') {
@@ -27,78 +24,26 @@ export function handlePreloadEvents() {
         return unsubscribe
       }
     } else {
-      // @ts-ignore
-      horizonPreloadEvents[key as keyof typeof window.preloadEvents] = value
+      horizonPreloadEvents[key as keyof PreloadEvents] = value
     }
   }
 
-  horizonPreloadEvents.onBrowserFocusChange((state) => {
+  const unsubscribe = () => {
+    unsubs.forEach((unsubscribe) => unsubscribe())
+  }
+
+  return { events: horizonPreloadEvents, unsubscribe }
+}
+
+export function handlePreloadEvents() {
+  const { events, unsubscribe } = setupPreloadEvents()
+
+  events.onBrowserFocusChange((state) => {
     // no-op
   })
 
-  horizonPreloadEvents.onNewWindowRequest((details) => {
-    log.debug('new window request', details)
+  setupTabViewEvents(events)
+  setupDownloadEvents(events)
 
-    const { disposition, url } = details
-    if (disposition === 'new-window') {
-      // TODO: open in overlay
-      return
-    }
-
-    const active = disposition === 'foreground-tab'
-    tabsManager.create(url, { active })
-  })
-
-  horizonPreloadEvents.onOpenURL((details) => {
-    log.debug('open URL request', details)
-    tabsManager.create(details.url, { active: details.active })
-  })
-
-  horizonPreloadEvents.onCopyActiveTabURL(() => {
-    const activeTab = tabsManager.activeTabValue
-    if (activeTab) {
-      activeTab.copyURL()
-    }
-  })
-
-  horizonPreloadEvents.onOpenDevtools(() => {
-    const activeTab = tabsManager.activeTabValue
-    if (activeTab && activeTab.view.webContents) {
-      activeTab.view.webContents.openDevTools()
-    }
-  })
-
-  horizonPreloadEvents.onCloseActiveTab(() => {
-    const activeTab = tabsManager.activeTabValue
-    if (activeTab) {
-      tabsManager.delete(activeTab.id)
-    }
-  })
-
-  horizonPreloadEvents.onReloadActiveTab((force) => {
-    const activeTab = tabsManager.activeTabValue
-    if (activeTab && activeTab.view.webContents) {
-      if (force) {
-        activeTab.view.webContents.reload(true)
-      } else {
-        activeTab.view.webContents.reload()
-      }
-    }
-  })
-
-  horizonPreloadEvents.onCitationClick((data: CitationClickEvent) => {
-    // TODO: handle highlighting
-    tabsManager.openOrCreate(data.url, {
-      active: true,
-      ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-    })
-  })
-
-  horizonPreloadEvents.onUpdateViewBounds((viewId, bounds) => {
-    viewManager.updateViewBounds(viewId, bounds)
-  })
-
-  return () => {
-    unsubs.forEach((unsubscribe) => unsubscribe())
-  }
+  return () => unsubscribe()
 }

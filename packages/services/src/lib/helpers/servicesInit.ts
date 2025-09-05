@@ -13,6 +13,7 @@ import {
 } from '../shortcuts'
 import { setupTelemetry } from './telemetry'
 import { provideAI } from '../ai'
+import { createDownloadsManager } from '../downloads.svelte'
 import { createBrowser } from '../browser'
 
 export const initServices = () => {
@@ -25,6 +26,7 @@ export const initServices = () => {
   const browser = createBrowser()
   const ai = provideAI(resourceManager, config, true)
   const mentionService = createMentionService(tabsService)
+  const downloadsManager = createDownloadsManager()
   const teletypeService = createTeletypeServiceCore()
 
   const keyboardManager = createKeyboardManager()
@@ -39,6 +41,7 @@ export const initServices = () => {
     notebookManager,
     mentionService,
     teletypeService,
+    downloadsManager,
     ai,
     browser,
     keyboardManager,

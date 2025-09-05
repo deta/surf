@@ -1,5 +1,5 @@
 import { useLogScope } from '@deta/utils/io'
-import { session, ipcMain, app, shell } from 'electron'
+import { session, ipcMain, app, shell, dialog } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
 import fs, { promises as fsp } from 'fs'
@@ -42,17 +42,23 @@ export function initDownloadManager(partition: string) {
 
     log.debug('source is PDF viewer:', sourceIsPDFViewer)
 
+    const downloadsPath = app.getPath('downloads')
+    const downloadedFilePath = path.join(downloadsPath, filename)
+
+    let defaultPath: string | undefined = undefined
+    if (isPathSafe(downloadsPath, downloadedFilePath)) {
+      defaultPath = downloadedFilePath
+    }
+
+    const mainWindow = getMainWindow()
+    const webContents = mainWindow?.webContents
+    if (!webContents) {
+      log.error('No main window found')
+      return
+    }
+
     if (sourceIsPDFViewer) {
       log.debug('source is PDF viewer, skipping resource creation')
-
-      const downloadsPath = app.getPath('downloads')
-
-      const downloadedFilePath = path.join(downloadsPath, filename)
-
-      let defaultPath: string | undefined = undefined
-      if (isPathSafe(downloadsPath, downloadedFilePath)) {
-        defaultPath = downloadedFilePath
-      }
 
       downloadItem.setSaveDialogOptions({
         title: 'Save PDF',
@@ -62,12 +68,26 @@ export function initDownloadManager(partition: string) {
       return
     } else {
       downloadItem.setSavePath(tempDownloadPath)
-    }
 
-    const webContents = getMainWindow()?.webContents
-    if (!webContents) {
-      log.error('No main window found')
-      return
+      // downloadItem.setSaveDialogOptions({
+      //   title: 'Save File',
+      //   defaultPath: defaultPath
+      // })
+
+      // show electron save dialog
+      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Save File',
+        defaultPath: defaultPath
+      })
+
+      if (canceled || !filePath) {
+        log.debug('User canceled save dialog')
+        downloadItem.cancel()
+        return
+      }
+
+      log.debug('User selected save path:', filePath)
+      finalPath = filePath
     }
 
     const moveTempFile = async (finalPath: string) => {
@@ -142,16 +162,16 @@ export function initDownloadManager(partition: string) {
       async (_event, data: DownloadPathResponseMessage) => {
         const { path, copyToDownloads } = data
 
-        if (!path) {
-          log.error('No path received')
-          downloadItem.cancel()
-          return
-        }
+        // if (!path) {
+        //   log.error('No path received')
+        //   downloadItem.cancel()
+        //   return
+        // }
 
         downloadItem.resume()
 
         copyToUserDownloadsDirectory = copyToDownloads
-        finalPath = path
+        // finalPath = path
 
         log.debug(`download-path-response-${downloadId}`, path)
 
