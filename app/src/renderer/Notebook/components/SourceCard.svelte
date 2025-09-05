@@ -148,18 +148,18 @@
     </div>
 
     {#if !onlyCard}
-      {#if text || data.title || data.metadata.sourceURI}
+      {#if text || data.title || data.metadata?.sourceURI}
         <div class="metadata">
           {#if data.title && data.title.length > 0}
             <span class="title typo-title-sm">{data.title}</span>
-          {:else if data.metadata.text}
+          {:else if data.metadata?.text}
             <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
           {/if}
           {#if data.url}
             <span class="subtitle typo-title-sm" style="opacity: 0.3;"
-              >{new URL(data.url).host}</span
+              >{new URL(data.url)?.host}</span
             >
-          {:else if data.metadata.text}
+          {:else if data.metadata?.text}
             <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
           {/if}
         </div>
