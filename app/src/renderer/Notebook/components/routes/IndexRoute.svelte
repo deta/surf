@@ -11,7 +11,7 @@
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
   import NotebookCard from '../NotebookCard.svelte'
 
-  let { query }: { query?: string } = $props()
+  let { query, title }: { query?: string; title: string } = $props()
 
   let showAllNotebooks = $state(query !== null)
 
@@ -72,14 +72,10 @@
   })
 </script>
 
-<svelte:head>
-  <title>Maxintosh HD</title>
-</svelte:head>
-
 <main>
   <div class="tty-wrapper">
     <h1>
-      {'Maxintosh HD'}
+      {title}
     </h1>
     <TeletypeEntry open={true} />
   </div>

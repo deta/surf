@@ -66,10 +66,6 @@
   })
 </script>
 
-<svelte:head>
-  <title>Drafts</title>
-</svelte:head>
-
 <main>
   <div class="tty-wrapper">
     <h1>Drafts</h1>

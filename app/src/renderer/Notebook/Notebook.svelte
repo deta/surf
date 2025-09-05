@@ -23,7 +23,6 @@
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
 
   const messagePort = useMessagePortClient()
@@ -33,7 +32,13 @@
   let query = $state<string | null>(null)
 
   let title = $derived(
-    !notebook ? 'Maxintosh HD' : ($notebookData?.folderName ?? $notebookData?.name ?? '')
+    notebookId === 'drafts'
+      ? 'Drafts'
+      : notebookId === 'history'
+        ? 'History'
+        : !notebook
+          ? 'Surf'
+          : ($notebookData?.folderName ?? $notebookData?.name ?? 'null')
   )
 
   let resourcesPanelOpen = $state(
@@ -59,11 +64,15 @@
   })
 </script>
 
+<svelte:head>
+  <title>{title}</title>
+</svelte:head>
+
 <div class="notebook">
   <div class="bg"></div>
 
   {#if notebookId === null}
-    <IndexRoute {query} />
+    <IndexRoute {query} {title} />
   {:else if notebookId === 'drafts'}
     <DraftsRoute />
   {:else if notebookId === 'history'}
