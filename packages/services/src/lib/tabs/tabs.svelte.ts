@@ -459,6 +459,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     this.log.debug('Deleting tab with id:', id)
 
     const tab = this.tabs.find((t) => t.id === id)
+    const tabIdx = this.tabs.findIndex((t) => t.id === id)
     if (tab) {
       this.tabs = this.tabs.filter((t) => t.id !== id)
       this.closedTabs.push(tab.dataValue)
@@ -466,7 +467,9 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       if (this.activeTabId === id) {
         // Set first tab as active if available
         if (this.tabs.length > 0) {
-          this.setActiveTab(this.tabs[this.tabs.length - 1].id)
+          const nextTab = this.tabs.at(tabIdx)
+          if (nextTab) this.setActiveTab(nextTab.id)
+          else this.setActiveTab(this.tabs.at(-1)!.id)
         } else {
           this.activeTabId = null
         }
