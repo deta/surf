@@ -12,10 +12,10 @@ export const setupTabViewEvents = (events: PreloadEvents) => {
     log.debug('new window request', details)
 
     const { disposition, url } = details
-    if (disposition === 'new-window') {
-      // TODO: open in overlay
-      return
-    }
+    // if (disposition === 'new-window') {
+    //   // TODO: open in overlay
+    //   return
+    // }
 
     const active = disposition === 'foreground-tab'
     tabsManager.create(url, { active })
@@ -23,7 +23,7 @@ export const setupTabViewEvents = (events: PreloadEvents) => {
 
   events.onOpenURL((details) => {
     log.debug('open URL request', details)
-    tabsManager.create(details.url, { active: details.active })
+    tabsManager.create(details.url, { active: details.active, activate: true })
   })
 
   events.onCopyActiveTabURL(() => {

@@ -39,7 +39,7 @@ export class NavigationProvider implements ActionProvider {
       actions.push({
         id: generateUUID(),
         name: `Go to ${normalizedUrl}`,
-        icon: 'world',
+        icon: `favicon;;${url}`,
         section: 'Navigation',
         priority: 100,
         keywords: ['navigate', 'go', 'visit', 'url', 'website'],

@@ -263,6 +263,28 @@ export class TeletypeService {
         (a, b) => (b.priority || 0) - (a.priority || 0)
       )
 
+      this.log.debug('Combined actions:', allActions)
+
+      // If there is a action with providerId 'hostname-search', remove the action with providerId 'navigation' if the url matches
+      const hasHostnameAction = allActions.some(
+        (action) => action.providerId === 'hostname-search' && (action.priority ?? 0) >= 100
+      )
+      if (hasHostnameAction) {
+        const navigationActions = allActions.filter((action) => action.providerId === 'navigation')
+        for (const navAction of navigationActions) {
+          const navUrl = navAction.name.trim()
+          const hostnameAction = allActions.find(
+            (action) => action.providerId === 'hostname-search' && navUrl === action.name.trim()
+          )
+          if (hostnameAction) {
+            const index = allActions.indexOf(navAction)
+            if (index > -1) {
+              allActions.splice(index, 1)
+            }
+          }
+        }
+      }
+
       // Update final results
       this.updateResults(allActions, true)
     } catch (error) {
@@ -283,6 +305,7 @@ export class TeletypeService {
           .slice(0, this.options.maxActionsPerProvider)
           .map((action) => ({
             ...action,
+            providerId: provider.name,
             provider
           }))
 

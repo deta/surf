@@ -508,6 +508,7 @@ function setupMainWindowWebContentsHandlers(
 function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents) {
   contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
     try {
+      console.log('WebContentsView Window open handler called with details:', details)
       // If there is a frame name or features provided we assume the request
       // is part of a auth flow and we create a new isolated window for it
       const shouldCreateWindow =
@@ -541,16 +542,25 @@ function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents)
         url.protocol === 'surflet:' ||
         url.protocol === 'surf-internal:'
       ) {
+        console.warn('[main] Denied new window request:', details)
         return { action: 'deny' }
       }
 
       const mainWindow = getMainWindow()
       if (mainWindow) {
+        console.log(
+          '[main] Sending new window request to main window:',
+          contents.id,
+          details.url,
+          details.disposition
+        )
         IPC_EVENTS_MAIN.newWindowRequest.sendToWebContents(mainWindow.webContents, {
           url: details.url,
           disposition: details.disposition,
           webContentsId: contents.id
         })
+      } else {
+        console.warn('[main] No main window, cannot send new window request:', details)
       }
 
       return { action: 'deny' }

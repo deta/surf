@@ -426,6 +426,11 @@ const eventHandlers = {
         const handler = webviewNewWindowHandlers[details.webContentsId]
         if (handler) {
           handler(details)
+        } else {
+          console.warn(
+            `No new window handler for webContentsId ${details.webContentsId}, using default handler.`
+          )
+          callback(details)
         }
       } catch (error) {
         // noop

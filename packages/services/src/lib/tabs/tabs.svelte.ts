@@ -640,6 +640,11 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
   }
 
+  getTabByViewId(viewId: string): TabItem | null {
+    const tab = this.tabs.find((t) => t.view.id === viewId) || null
+    return tab
+  }
+
   onDestroy() {
     this.log.debug('Destroying TabsService')
     this.unsubs.forEach((unsub) => unsub())

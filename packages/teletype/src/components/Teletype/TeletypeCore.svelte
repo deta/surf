@@ -374,8 +374,12 @@
         <div class="icon-wrapper">
           {#if $editMode}
             <Icon name="edit" size="20" color="--(text)" />
-          {:else if $selectedAction?.icon}
-            <Icon name={$selectedAction.icon} size="18" color="--(text)" />
+          {:else if $selectedAction?.icon && typeof $selectedAction.icon === 'string'}
+            <Icon
+              name={$selectedAction.icon.startsWith('favicon') ? 'world' : $selectedAction.icon}
+              size="18"
+              color="--(text)"
+            />
           {:else}
             <Icon name="search" size="18" color="--(text)" />
           {/if}

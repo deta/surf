@@ -364,6 +364,31 @@ export class BrowserService {
     return this.navigateToUrl(url, opts)
   }
 
+  async replaceActiveTabUrl(rawUrl: string) {
+    this.log.debug('Replacing active tab URL with:', rawUrl)
+    let url = parseStringIntoBrowserLocation(rawUrl)
+    if (!url) {
+      url = this.getSearchUrl(rawUrl)
+    }
+
+    const tab = await this.tabsManager.changeActiveTabURL(url)
+    return tab?.view
+  }
+
+  /**
+   * For a given viewId, determine the current location of the view: 'tab' or 'sidebar'.
+   */
+  getViewLocation(viewId: string) {
+    if (this.viewManager.activeSidebarView?.id === viewId) {
+      return 'sidebar'
+    } else if (this.tabsManager.activeTabValue?.view.id === viewId) {
+      return 'tab'
+    } else {
+      const tab = this.tabsManager.getTabByViewId(viewId)
+      return tab ? 'tab' : null
+    }
+  }
+
   onDestroy() {
     this._unsubs.forEach((unsub) => unsub())
   }

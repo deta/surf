@@ -2,7 +2,7 @@ import contextMenu from 'electron-context-menu'
 import { ipcSenders } from './ipcHandlers'
 import { getCachedSpaces } from './spaces'
 import { type MenuItemConstructorOptions } from 'electron'
-import { SpaceBasicData } from '@horizon/core/src/lib/service/ipc/events'
+import { SpaceBasicData } from '@deta/services/ipc'
 import { conditionalArrayItem } from '@deta/utils/data'
 
 const createSpaceAction = (space: SpaceBasicData, handler: () => void) => {

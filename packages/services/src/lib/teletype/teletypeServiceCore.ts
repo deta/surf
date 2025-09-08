@@ -6,6 +6,7 @@ import { type TeletypeActionSerialized, useMessagePortPrimary } from '../message
 import { type MentionItem } from '@deta/editor'
 import { ResourcesProvider } from './providers/ResourcesProvider'
 import { useBrowser } from '../browser'
+import { HostnameProvider } from './providers/HostnameProvider'
 
 export class TeletypeServiceCore {
   private providers = new Map<string, ActionProvider>()
@@ -58,16 +59,17 @@ export class TeletypeServiceCore {
       return false
     })
 
-    this.messagePort.teletypeAsk.on(async ({ query, mentions }) => {
-      this.log.debug('Asking question:', query, mentions)
-
+    this.messagePort.teletypeAsk.on(async ({ query, mentions }, viewId) => {
+      const target = this.browser.getViewLocation(viewId)
+      this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions)
       await this.browser.createNoteAndRunAIQuery(query, mentions, {
-        target: 'tab',
+        target: target ?? 'tab',
         notebookId: 'auto'
       })
     })
 
     // Register external/async providers
+    this.registerProvider(new HostnameProvider()) // Async Hostname suggestions
     this.registerProvider(new SearchProvider()) // Async Google suggestions
     // this.registerProvider(new ResourcesProvider()) // SFFS Resources search
   }
