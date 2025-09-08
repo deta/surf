@@ -5,11 +5,14 @@ import type { Writable } from 'svelte/store'
 export function clickOutside(callback: Fn): Attachment {
   return (element: Element) => {
     const handleClick = (e: MouseEvent) => {
+      // NOTE: This check prevents spacebar from triggering this.. i rly hate webdev
+      // https://stackoverflow.com/questions/20849022/space-and-enter-click-on-the-input-thats-focused-how-do-i-disable-this-behav
+      if (e.detail === 0) return
       if (!element?.contains(e.target as HTMLElement)) callback()
     }
 
     window.addEventListener('click', handleClick, { capture: true })
-    window.addEventListener(WEBVIEW_MOUSE_CLICK_WINDOW_EVENT, () => callback(), { capture: true })
+    window.addEventListener(WEBVIEW_MOUSE_CLICK_WINDOW_EVENT, callback, { capture: true })
 
     return () => {
       window.removeEventListener('click', handleClick, { capture: true })

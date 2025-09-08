@@ -190,7 +190,7 @@
 
   function handleLocationInput(e: InputEvent) {
     e.preventDefault()
-    inputValue = sanizizeLocationInput(e.target.value)
+    inputValue = sanizizeLocationInput((e.target as HTMLInputElement).value)
   }
 
   function sanizizeLocationInput(value: string): string {
@@ -239,7 +239,7 @@
           e.stopPropagation()
           isEditingUrl = false
         } else {
-          e.stopPropagation()
+          e.stopPropagaton()
         }
       }}
       {@attach clickOutside(() => (isEditingUrl = false))}
