@@ -1,4 +1,4 @@
-:root {
+:root{
   --t-1: 0.25rem;
   --t-2: 0.5rem;
   --t-3: 0.75rem;
@@ -50,21 +50,10 @@
   --white-60: rgba(255, 255, 255, 0.6);
   --white-40: rgba(255, 255, 255, 0.4);
   --on-surface-accent: #330988;
+  --app-background-light: #fefeff;
+  --on-surface-heavy: ##374151;
 }
 
 /* Typography classes */
-.typo-title-sm {
-  font-family: var(--title-sm-fontFamily);
-  font-weight: var(--title-sm-fontWeight);
-  font-size: var(--title-sm-fontSize);
-  line-height: var(--title-sm-lineHeight);
-  letter-spacing: var(--title-sm-letterSpacing);
-}
-
-.typo-tab-title {
-  font-family: var(--tab-title-fontFamily);
-  font-weight: var(--tab-title-fontWeight);
-  font-size: var(--tab-title-fontSize);
-  line-height: var(--tab-title-lineHeight);
-  letter-spacing: var(--tab-title-letterSpacing);
-}
+.typo-title-sm{font-family:var(--title-sm-fontFamily);font-weight:var(--title-sm-fontWeight);font-size:var(--title-sm-fontSize);line-height:var(--title-sm-lineHeight);letter-spacing:var(--title-sm-letterSpacing);}
+.typo-tab-title{font-family:var(--tab-title-fontFamily);font-weight:var(--tab-title-fontWeight);font-size:var(--tab-title-fontSize);line-height:var(--tab-title-lineHeight);letter-spacing:var(--tab-title-letterSpacing);}

@@ -316,7 +316,7 @@
           {#if $isGeneratingAI}
             <Icon name="plane.loader" size="1.15rem" />
           {:else}
-            <Icon name="cursor" fill="#FF6426" size="1.15rem" />
+            <Icon name="cursor" fill="var(--accent)" size="1.15rem" />
           {/if}
         </button>
       </div>

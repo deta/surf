@@ -46,12 +46,14 @@
     margin-top: 4rem;
     margin-bottom: 0rem; // 0 for now as editor content already has top padding
 
-    font-size: 2.25rem;
+    font-size: 2.1rem;
     font-weight: 600;
     padding-inline: 2rem;
     box-sizing: content-box;
 
-    background: light-dark(#fff, rgba(24, 24, 24, 1));
+    color: var(--on-surface-heavy);
+
+    background: light-dark(var(--app-background-light), rgba(24, 24, 24, 1));
 
     &:active,
     &:focus {

@@ -2573,7 +2573,7 @@
     overflow: hidden;
     position: relative;
     padding-bottom: 0;
-    background: #fff;
+    background: var(--app-background-light);
     display: flex;
     justify-content: center;
     align-items: center;

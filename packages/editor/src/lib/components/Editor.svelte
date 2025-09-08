@@ -630,12 +630,17 @@
       overflow-y: hidden;
     }
 
-    :global(.prosemirror-dropcursor-block),
-    :global(.prosemirror-dropcursor-inline) {
-      --thiccness: 2px;
+    :global(.prosemirror-dropcursor-block) {
+      height: 3px !important;
+      width: 100% !important;
+    }
 
-      position: relative;
-      border-radius: 2rem;
+    :global(.prosemirror-dropcursor-inline) {
+      width: 3px !important;
+      height: 1.2em !important;
+      display: inline-block !important;
+      vertical-align: text-top !important;
+      background-color: #ff0000 !important;
     }
   }
 

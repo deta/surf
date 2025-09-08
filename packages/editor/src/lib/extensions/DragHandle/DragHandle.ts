@@ -8,30 +8,54 @@ import { NodeSelection, Plugin } from 'prosemirror-state'
 // @ts-ignore
 import { __serializeForClipboard, EditorView } from 'prosemirror-view'
 import tippy from 'tippy.js'
+import { DragHandleDebugTools, type DebugData } from './DragHandleDebug'
 
 export interface DragHandleOptions {
   /**
    * The width of the drag handle
    */
   dragHandleWidth: number
+  /**
+   * Enable debug tools for drag handle positioning
+   */
+  enableDebug?: boolean
 }
 
-function absoluteRect(node: Element, editorWrapper: Element | null) {
+function absoluteRect(
+  node: Element,
+  editorWrapper: Element | null,
+  debugTools?: DragHandleDebugTools
+) {
   const data = node.getBoundingClientRect()
   const wrapperRect = editorWrapper?.getBoundingClientRect()
 
-  return {
+  const result = {
     top: data.top - (wrapperRect?.top ?? 0),
     left: data.left - (wrapperRect?.left ?? 0),
     width: data.width
   }
+
+  // Debug logging via debug tools
+  debugTools?.logAbsoluteRect({
+    nodeBounds: data,
+    wrapperBounds: wrapperRect,
+    scrollTop: editorWrapper?.scrollTop,
+    scrollLeft: editorWrapper?.scrollLeft,
+    simpleCalculation: {
+      topDiff: data.top - (wrapperRect?.top ?? 0),
+      leftDiff: data.left - (wrapperRect?.left ?? 0)
+    },
+    result
+  })
+
+  return result
 }
 
 function nodeDOMAtCoords(coords: { x: number; y: number }) {
   return document
     .elementsFromPoint(coords.x, coords.y)
     .find(
-      (elem: HTMLElement) =>
+      (elem: Element) =>
         elem.parentElement?.matches?.('.ProseMirror') ||
         elem.matches(
           [
@@ -118,8 +142,7 @@ export default function DragHandle(options: DragHandleOptions) {
     if ($pos.parent.type.name === 'listItem' || $pos.node().type.name === 'listItem') {
       // Include the entire list item and its content
       const start = $pos.before($pos.depth)
-      const end = $pos.after($pos.depth)
-      selection = NodeSelection.create(view.state.doc, start, end)
+      selection = NodeSelection.create(view.state.doc, start)
     }
 
     view.dispatch(view.state.tr.setSelection(selection))
@@ -164,23 +187,22 @@ export default function DragHandle(options: DragHandleOptions) {
   }
 
   let dragHandleElement: HTMLElement | null = null
-  // let dragMenu: any = null
+  let debugTools: DragHandleDebugTools | null = null
 
   function hideDragHandle() {
     if (dragHandleElement) {
       dragHandleElement.classList.add('hidden')
     }
 
-    // if (dragMenu) {
-    //     dragMenu.hide()
-    //     dragMenu = null
-    // }
+    debugTools?.hide()
   }
 
   function showDragHandle() {
     if (dragHandleElement) {
       dragHandleElement.classList.remove('hidden')
     }
+
+    debugTools?.show()
   }
 
   return new Plugin({
@@ -198,12 +220,23 @@ export default function DragHandle(options: DragHandleOptions) {
 
       hideDragHandle()
 
-      view?.dom?.parentElement?.appendChild(dragHandleElement)
+      const editorWrapper = view.dom.closest('.editor-wrapper') as HTMLElement | null
+      const container = editorWrapper || view?.dom?.parentElement
+
+      if (container) {
+        container.appendChild(dragHandleElement)
+
+        if (options.enableDebug) {
+          debugTools = new DragHandleDebugTools(container)
+        }
+      }
 
       return {
         destroy: () => {
           dragHandleElement?.remove?.()
           dragHandleElement = null
+          debugTools?.destroy()
+          debugTools = null
         }
       }
     },
@@ -228,9 +261,14 @@ export default function DragHandle(options: DragHandleOptions) {
           const lineHeight = parseInt(compStyle.lineHeight, 10)
           const paddingTop = parseInt(compStyle.paddingTop, 10)
 
-          // Get the editor wrapper to calculate scroll position
-          const editorWrapper = view.dom.parentElement
-          const rect = absoluteRect(node, editorWrapper)
+          // Find the actual scrolling container (.editor-wrapper)
+          let editorWrapper = view.dom.parentElement
+          while (editorWrapper && !editorWrapper.classList.contains('editor-wrapper')) {
+            editorWrapper = editorWrapper.parentElement
+          }
+
+          const rect = absoluteRect(node, editorWrapper, debugTools)
+          const originalRect = { ...rect }
 
           rect.top += (lineHeight - 24) / 2
           rect.top += paddingTop
@@ -240,10 +278,43 @@ export default function DragHandle(options: DragHandleOptions) {
           }
           rect.width = options.dragHandleWidth
 
+          const finalLeft = rect.left - rect.width
+          const finalTop = rect.top
+
           if (!dragHandleElement) return
 
-          dragHandleElement.style.left = `${rect.left - rect.width}px`
-          dragHandleElement.style.top = `${rect.top}px`
+          // Prepare debug data
+          const wrapperBounds = editorWrapper?.getBoundingClientRect()
+          const nodeBounds = node.getBoundingClientRect()
+
+          const debugData: DebugData = {
+            mouseEvent: { x: event.clientX, y: event.clientY },
+            targetNode: node.tagName + (node.className ? `.${node.className}` : ''),
+            nodeText: (node.textContent || '').slice(0, 30) + '...',
+            editorWrapper: {
+              element: `${editorWrapper?.tagName || 'NOT_FOUND'}.${Array.from(editorWrapper?.classList || []).join('.')}`,
+              scrollTop: editorWrapper?.scrollTop || 0,
+              scrollLeft: editorWrapper?.scrollLeft || 0,
+              bounds: wrapperBounds
+            },
+            positioning: {
+              nodeBounds,
+              wrapperBounds,
+              originalRect,
+              adjustedRect: rect,
+              finalPosition: { left: finalLeft, top: finalTop }
+            },
+            computedStyle: { lineHeight, paddingTop },
+            dragHandleWidth: options.dragHandleWidth
+          }
+
+          // Update debug tools
+          debugTools?.updateDebugInfo(debugData)
+          debugTools?.updateBoundsVisualizer(nodeBounds, wrapperBounds)
+          debugTools?.logDragHandleDebug({ ...debugData, editorWrapperElement: editorWrapper })
+
+          dragHandleElement.style.left = `${finalLeft}px`
+          dragHandleElement.style.top = `${finalTop}px`
           showDragHandle()
         },
         keydown: () => {

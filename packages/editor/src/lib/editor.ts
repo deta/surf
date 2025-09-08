@@ -103,7 +103,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       levels: [1, 2, 3]
     },
     dropcursor: {
-      color: 'var(--contrast-color)',
+      color: 'var(--accent)',
       width: 2
     },
     codeBlock: false,
