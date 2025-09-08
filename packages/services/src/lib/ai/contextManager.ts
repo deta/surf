@@ -1172,7 +1172,10 @@ export class ContextService {
 
       this.log.debug('Bookmarking page for chat context', tab.id, 'fresh webview:', useFreshWebview)
 
-      tabResource = await tab.view.bookmarkPage({ freshWebview: useFreshWebview })
+      tabResource = await tab.view.bookmarkPage({
+        freshWebview: useFreshWebview,
+        createdForChat: true
+      })
     } else {
       this.log.debug('Existing resource found for tab, using it', tab.id, tabResource.id)
       // const url =

@@ -28,7 +28,9 @@ import {
   type PageHighlightSelectionData,
   WEBVIEW_MOUSE_CLICK_WINDOW_EVENT,
   WEB_CONTENTS_ERRORS,
-  type WebContentsErrorParsed
+  type WebContentsErrorParsed,
+  type ResourceDataPDF,
+  type Download
 } from '@deta/types'
 import {
   useLogScope,
@@ -65,6 +67,7 @@ import {
 import { Resource, ResourceManager } from '../resources'
 import { WebParser } from '@deta/web-parser'
 import { type MentionItem } from '@deta/editor'
+import { type DownloadsManager, useDownloadsManager } from '../downloads.svelte'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -1211,6 +1214,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   manager: ViewManager
   resourceManager: ResourceManager
   historyEntriesManager: HistoryEntriesManager
+  downloadsManager: DownloadsManager
 
   id: string
   webContents = $state<WebContents | null>(null)
@@ -1268,6 +1272,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.manager = manager
     this.resourceManager = manager.resourceManager
     this.historyEntriesManager = new HistoryEntriesManager()
+    this.downloadsManager = useDownloadsManager()
 
     this.id = data.id
     this.initialData = data
@@ -1692,92 +1697,77 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
 
       const isPDFPage = detectedResource.type === ResourceTypes.PDF
-      let filename = null
+      let filename: string | null = null
       try {
-        // if (isPDFPage) {
-        //   const resourceData = detectedResource.data as ResourceDataPDF
-        //   const url = resourceData.url
-        //   const pdfDownloadURL = resourceData?.downloadURL ?? url
+        if (isPDFPage) {
+          const resourceData = detectedResource.data as ResourceDataPDF
+          const url = resourceData.url
+          const pdfDownloadURL = resourceData?.downloadURL ?? url
 
-        //   this.log.debug('downloading PDF', pdfDownloadURL)
-        //   const downloadData = await new Promise<Download | null>((resolveDownload) => {
-        //     const timeout = setTimeout(() => {
-        //       downloadIntercepters.update((intercepters) => {
-        //         intercepters.delete(pdfDownloadURL)
-        //         return intercepters
-        //       })
-        //       resolveDownload(null)
-        //     }, 1000 * 60)
+          this.log.debug('downloading PDF', pdfDownloadURL)
+          const downloadData = await new Promise<Download | null>((resolveDownload) => {
+            if (!this.webContents) {
+              resolveDownload(null)
+            }
 
-        //     downloadIntercepters.update((intercepters) => {
-        //       intercepters.set(pdfDownloadURL, (data) => {
-        //         clearTimeout(timeout)
-        //         downloadIntercepters.update((intercepters) => {
-        //           intercepters.delete(pdfDownloadURL)
-        //           return intercepters
-        //         })
-        //         resolveDownload(data)
-        //       })
-        //       return intercepters
-        //     })
+            const timeout = setTimeout(() => {
+              this.downloadsManager.downloadInterceptors.delete(pdfDownloadURL)
+              resolveDownload(null)
+            }, 1000 * 60)
 
-        //     downloadURL(pdfDownloadURL)
-        //   })
+            this.downloadsManager.downloadInterceptors.set(pdfDownloadURL, (data) => {
+              clearTimeout(timeout)
+              this.downloadsManager.downloadInterceptors.delete(pdfDownloadURL)
+              resolveDownload(data)
+            })
 
-        //   log.debug('download data', downloadData, downloadData.resourceId)
+            this.webContents?.downloadURL(pdfDownloadURL)
+          })
 
-        //   if (downloadData && downloadData.resourceId) {
-        //     filename = downloadData.filename
-        //     const resource = (await resourceManager.getResource(downloadData.resourceId))!
+          this.log.debug('download data', downloadData, downloadData?.resourceId)
 
-        //     if (url !== pdfDownloadURL) {
-        //       await resourceManager.updateResourceTag(
-        //         resource.id,
-        //         ResourceTagsBuiltInKeys.CANONICAL_URL,
-        //         url
-        //       )
-        //     }
-        //     const hasSilentTag = (resource.tags ?? []).find(
-        //       (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
-        //     )
-        //     if (hasSilentTag && !silent)
-        //       await resourceManager.deleteResourceTag(resource.id, ResourceTagsBuiltInKeys.SILENT)
+          if (downloadData && downloadData.resourceId) {
+            filename = downloadData.filename
+            const resource = (await this.resourceManager.getResource(downloadData.resourceId))!
 
-        //     const hasCreatedForChatTag = (resource.tags ?? []).find(
-        //       (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
-        //     )
-        //     if (hasCreatedForChatTag && !createdForChat)
-        //       await resourceManager.deleteResourceTag(
-        //         resource.id,
-        //         ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
-        //       )
+            if (url !== pdfDownloadURL) {
+              await this.resourceManager.updateResourceTag(
+                resource.id,
+                ResourceTagsBuiltInKeys.CANONICAL_URL,
+                url
+              )
+            }
+            const hasSilentTag = (resource.tags ?? []).find(
+              (tag) => tag.name === ResourceTagsBuiltInKeys.SILENT
+            )
+            if (hasSilentTag && !silent)
+              await this.resourceManager.deleteResourceTag(
+                resource.id,
+                ResourceTagsBuiltInKeys.SILENT
+              )
 
-        //     if ($userConfigSettings.cleanup_filenames) {
-        //       const filename = tab.title || downloadData.filename
-        //       log.debug('cleaning up filename', filename, url)
-        //       const completion = await ai.cleanupTitle(filename, url)
-        //       if (!completion.error && completion.output) {
-        //         log.debug('cleaned up filename', filename, completion.output)
-        //         await resourceManager.updateResourceMetadata(resource.id, {
-        //           name: completion.output,
-        //           sourceURI: url !== pdfDownloadURL ? url : undefined
-        //         })
-        //       }
-        //     } else {
-        //       await resourceManager.updateResourceMetadata(resource.id, {
-        //         name: tab.title,
-        //         sourceURI: url !== pdfDownloadURL ? url : undefined
-        //       })
-        //     }
+            const hasCreatedForChatTag = (resource.tags ?? []).find(
+              (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+            )
+            if (hasCreatedForChatTag && !createdForChat)
+              await this.resourceManager.deleteResourceTag(
+                resource.id,
+                ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+              )
 
-        //     resolve(resource)
-        //     return
-        //   } else {
-        //     log.error('Failed to download PDF')
-        //     reject(null)
-        //     return
-        //   }
-        // }
+            await this.resourceManager.updateResourceMetadata(resource.id, {
+              name: this.titleValue ?? filename ?? '',
+              sourceURI: url !== pdfDownloadURL ? url : undefined
+            })
+
+            resolve(resource)
+            return
+          } else {
+            this.log.error('Failed to download PDF')
+            reject(null)
+            return
+          }
+        }
 
         const title = filename ?? (detectedResource.data as any)?.title ?? this.titleValue ?? ''
         const resource = await this.resourceManager.createDetectedResource(
@@ -1861,7 +1851,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
             sourceURI: url
           })
 
-          this.resourceCreatedByUser.set(true)
+          this.resourceCreatedByUser.set(!silent && !createdForChat)
           this.extractedResourceId.set(fetchedResource.id)
           // dispatch('update-tab', {
           //   resourceBookmark: fetchedResource.id,
@@ -1885,7 +1875,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
     }
 
-    this.log.debug('bookmarking', url)
+    this.log.debug('bookmarking', url, { silent, createdForChat, freshWebview })
     const resource = await this.createBookmarkResource(url, {
       silent,
       createdForChat,
@@ -1893,7 +1883,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     })
 
     this.extractedResourceId.set(resource.id)
-    this.resourceCreatedByUser.set(!silent)
+    this.resourceCreatedByUser.set(!silent && !createdForChat)
 
     // dispatch('update-tab', {
     //   resourceBookmark: resource.id,

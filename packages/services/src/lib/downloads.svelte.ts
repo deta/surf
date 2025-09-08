@@ -27,7 +27,8 @@ export class DownloadsManager {
   downloadProgress = $state(0)
 
   downloadState = $derived.by<DownloadState>(() => {
-    const states = Array.from(this.downloads.values()).map((d) => d.state)
+    const downloads = Array.from(this.downloads.values()).filter((d) => !d.silent)
+    const states = downloads.map((d) => d.state)
 
     if (states.length === 0) {
       return 'idle'
@@ -81,7 +82,8 @@ export class DownloadsManager {
         contentDisposition: data.contentDisposition,
         savePath: '',
         resourceId: '',
-        state: 'idle'
+        state: 'idle',
+        silent: !!downloadIntercepter
       }
 
       this.downloads.set(data.id, downloadData)
@@ -123,7 +125,7 @@ export class DownloadsManager {
 
       return {
         path: downloadData.savePath,
-        copyToDownloads: true // $userConfigSettings.save_to_user_downloads
+        copyToDownloads: !downloadData.silent // $userConfigSettings.save_to_user_downloads
       }
     } catch (err) {
       this.log.error('download path error', err)

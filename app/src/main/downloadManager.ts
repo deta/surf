@@ -21,6 +21,7 @@ export function initDownloadManager(partition: string) {
     downloadItem.pause()
 
     let finalPath = ''
+    let downloadFilePath = ''
     let copyToUserDownloadsDirectory = false
 
     const downloadId = randomUUID()
@@ -68,42 +69,23 @@ export function initDownloadManager(partition: string) {
       return
     } else {
       downloadItem.setSavePath(tempDownloadPath)
-
-      // downloadItem.setSaveDialogOptions({
-      //   title: 'Save File',
-      //   defaultPath: defaultPath
-      // })
-
-      // show electron save dialog
-      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
-        title: 'Save File',
-        defaultPath: defaultPath
-      })
-
-      if (canceled || !filePath) {
-        log.debug('User canceled save dialog')
-        downloadItem.cancel()
-        return
-      }
-
-      log.debug('User selected save path:', filePath)
-      finalPath = filePath
     }
 
     const moveTempFile = async (finalPath: string) => {
       // copy to downloads folder
-      const downloadsPath = app.getPath('downloads')
-
-      let downloadFileName = filename
-      let downloadFilePath = path.join(downloadsPath, downloadFileName)
-      if (await checkFileExists(downloadFilePath)) {
-        const ext = path.extname(downloadFileName)
-        const base = path.basename(downloadFileName, ext)
-        let i = 1
-        while (await checkFileExists(downloadFilePath)) {
-          downloadFileName = `${base} (${i})${ext}`
-          downloadFilePath = path.join(downloadsPath, downloadFileName)
-          i++
+      if (!downloadFilePath) {
+        const downloadsPath = app.getPath('downloads')
+        let downloadFileName = filename
+        downloadFilePath = path.join(downloadsPath, downloadFileName)
+        if (await checkFileExists(downloadFilePath)) {
+          const ext = path.extname(downloadFileName)
+          const base = path.basename(downloadFileName, ext)
+          let i = 1
+          while (await checkFileExists(downloadFilePath)) {
+            downloadFileName = `${base} (${i})${ext}`
+            downloadFilePath = path.join(downloadsPath, downloadFileName)
+            i++
+          }
         }
       }
 
@@ -162,18 +144,62 @@ export function initDownloadManager(partition: string) {
       async (_event, data: DownloadPathResponseMessage) => {
         const { path, copyToDownloads } = data
 
+        log.debug(`download-path-response-${downloadId}`, path)
+
         // if (!path) {
         //   log.error('No path received')
         //   downloadItem.cancel()
         //   return
         // }
 
-        downloadItem.resume()
-
         copyToUserDownloadsDirectory = copyToDownloads
-        // finalPath = path
 
-        log.debug(`download-path-response-${downloadId}`, path)
+        if (copyToUserDownloadsDirectory) {
+          const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Save File',
+            defaultPath: defaultPath
+          })
+
+          if (canceled || !filePath) {
+            log.debug('User canceled save dialog')
+            downloadItem.cancel()
+
+            // clean up temp file
+            try {
+              if (fs.existsSync(tempDownloadPath)) {
+                await fsp.unlink(tempDownloadPath)
+              }
+            } catch (err) {
+              log.error(`error deleting temp file: ${err}`)
+            }
+
+            IPC_EVENTS_MAIN.downloadDone.sendToWebContents(webContents, {
+              id: downloadId,
+              state: 'cancelled',
+              filename: downloadItem.getFilename(),
+              mimeType: mimeType,
+              totalBytes: downloadItem.getTotalBytes(),
+              contentDisposition: downloadItem.getContentDisposition(),
+              startTime: downloadItem.getStartTime(),
+              endTime: Date.now(),
+              urlChain: downloadItem.getURLChain(),
+              lastModifiedTime: downloadItem.getLastModifiedTime(),
+              eTag: downloadItem.getETag(),
+              savePath: finalPath
+            })
+
+            return
+          }
+
+          log.debug('User selected save path:', filePath)
+          downloadFilePath = filePath
+        }
+
+        if (path) {
+          finalPath = path
+        }
+
+        downloadItem.resume()
 
         if (downloadItem.getState() === 'completed') {
           await handleDownloadComplete('completed')

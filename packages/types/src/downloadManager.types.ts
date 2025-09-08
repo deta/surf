@@ -51,6 +51,7 @@ export interface Download {
   contentDisposition: string
   startTime: number
   state: DownloadState
+  silent?: boolean
   receivedBytes?: number
   isPaused?: boolean
   canResume?: boolean

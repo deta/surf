@@ -71,6 +71,13 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
     validIDs.push(announcementsWindow.webContents.id)
   }
 
+  if (
+    event.senderFrame?.url.startsWith('surf://resource/') ||
+    event.senderFrame?.url.startsWith('surf://notebook')
+  ) {
+    validIDs.push(event.sender.id)
+  }
+
   if (!validIDs.includes(event.sender.id)) {
     log.warn('Invalid sender:', event.senderFrame?.url)
     return false
