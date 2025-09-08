@@ -14,13 +14,20 @@ import {
 import { useNotebookManager } from '../notebooks'
 import { ViewType } from '../views/types'
 import { useMessagePortPrimary } from '../messagePort'
-import { isOffline } from '@deta/utils'
+import {
+  DEFAULT_SEARCH_ENGINE,
+  isOffline,
+  parseStringIntoBrowserLocation,
+  SEARCH_ENGINES
+} from '@deta/utils'
+import { useConfig } from '../config'
 
 export class BrowserService {
   private readonly resourceManager = useResourceManager()
   private readonly viewManager = useViewManager()
   private readonly tabsManager = useTabs()
   private readonly notebookManager = useNotebookManager()
+  private readonly config = useConfig()
   private readonly messagePort = useMessagePortPrimary()
   private readonly log = useLogScope('BrowserService')
 
@@ -198,9 +205,65 @@ export class BrowserService {
     }
   }
 
-  async navigateToUrl(url: string, opts?: { target?: NavigateURLOptions['target'] }) {
-    this.log.debug('Navigating to URL:', url, opts)
+  getSearchUrl(query: string): string {
+    const defaultSearchEngine =
+      SEARCH_ENGINES.find((e) => e.key === this.config.settingsValue.search_engine) ??
+      SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+
+    if (!defaultSearchEngine)
+      throw new Error('No search engine / default engine found, config error?')
+
+    this.log.debug('Using configured search engine', defaultSearchEngine.key)
+
+    const searchURL = defaultSearchEngine.getUrl(encodeURIComponent(query))
+    return searchURL
+  }
+
+  async getSearchSuggestions(query: string): Promise<string[]> {
+    try {
+      const defaultSearchEngine =
+        SEARCH_ENGINES.find((e) => e.key === this.config.settingsValue.search_engine) ??
+        SEARCH_ENGINES.find((e) => e.key === DEFAULT_SEARCH_ENGINE)
+
+      if (!defaultSearchEngine)
+        throw new Error('No search engine / default engine found, config error?')
+
+      if (defaultSearchEngine.getCompletions) {
+        this.log.debug('Fetching search suggestions from', defaultSearchEngine.key)
+        const suggestions = await defaultSearchEngine.getCompletions(query)
+        return suggestions
+      } else {
+        this.log.debug(
+          'Search engine does not support suggestions:',
+          defaultSearchEngine.key,
+          'using fallback'
+        )
+
+        const fallbackSearchEngine = SEARCH_ENGINES.find((e) => e.key === 'google')
+        if (!fallbackSearchEngine || !fallbackSearchEngine.getCompletions) {
+          this.log.error(
+            'Fallback search engine does not support suggestions, returning empty list'
+          )
+          return []
+        }
+
+        const suggestions = await fallbackSearchEngine.getCompletions(query)
+        return suggestions
+      }
+    } catch (error) {
+      this.log.error('Error fetching search suggestions:', error)
+      return []
+    }
+  }
+
+  async navigateToUrl(rawUrl: string, opts?: { target?: NavigateURLOptions['target'] }) {
+    this.log.debug('Navigating to URL:', rawUrl, opts)
     const target = opts?.target ?? 'tab'
+
+    let url = parseStringIntoBrowserLocation(rawUrl)
+    if (!url) {
+      url = this.getSearchUrl(rawUrl)
+    }
 
     if (target === 'sidebar') {
       return this.viewManager.openURLInSidebar(url)
@@ -211,6 +274,12 @@ export class BrowserService {
       const tab = await this.tabsManager.create(url, { active: target === 'tab' })
       return tab?.view
     }
+  }
+
+  async navigateToWebSearch(query: string, opts?: { target?: NavigateURLOptions['target'] }) {
+    this.log.debug('Navigating to web search:', query, opts)
+    const url = this.getSearchUrl(query)
+    return this.navigateToUrl(url, opts)
   }
 
   onDestroy() {

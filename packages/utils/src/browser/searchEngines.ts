@@ -10,7 +10,7 @@ export const SEARCH_ENGINES: {
     key: 'google',
     title: 'Search with Google',
     shortcuts: ['gg', 'google'],
-    getUrl: (query: string) => `https://google.com/search?q=${query}`,
+    getUrl: (query: string) => `https://www.google.com/search?q=${query}`,
     getCompletions: async (query: string) => {
       // @ts-ignore
       const data = await window.api.fetchJSON(

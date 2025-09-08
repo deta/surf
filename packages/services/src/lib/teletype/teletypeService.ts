@@ -200,10 +200,9 @@ export class TeletypeService {
     this.clear()
   }
 
-  async navigateToUrl(url: string): Promise<void> {
+  async navigateToUrlOrSearch(urlOrQuery: string): Promise<void> {
     try {
-      const fullUrl = prependProtocol(url, true)
-      await this.messagePort.navigateURL.send({ url: fullUrl, target: 'active_tab' })
+      await this.messagePort.navigateURL.send({ url: urlOrQuery, target: 'active_tab' })
     } catch (error) {
       this.log.error('Failed to navigate to URL:', error)
     }

@@ -21,10 +21,15 @@ export class SearchProvider implements ActionProvider {
 
     // Only return Google suggestions - current query is handled by CurrentQueryProvider
     try {
-      const suggestions = await this.fetchGoogleSuggestions(trimmedQuery)
+      const suggestions = await this.fetchSuggestions(trimmedQuery)
       suggestions.forEach((suggestion, index) => {
         actions.push(
-          this.createSearchAction(suggestion, 80 - index, ['search', 'suggestion', 'google'])
+          this.createSearchAction(suggestion, 80 - index, [
+            'search',
+            'suggestion',
+            'google',
+            'web search'
+          ])
         )
       })
     } catch (error) {
@@ -45,34 +50,19 @@ export class SearchProvider implements ActionProvider {
       description: ``,
       buttonText: 'Search',
       handler: async () => {
-        await this.searchGoogle(query)
+        await this.searchWeb(query)
       }
     }
   }
 
-  private async fetchGoogleSuggestions(query: string): Promise<string[]> {
+  private async fetchSuggestions(query: string): Promise<string[]> {
     try {
       if (typeof window === 'undefined' || typeof fetch === 'undefined') {
         this.log.warn('fetch API not available')
         return []
       }
 
-      // @ts-ignore
-      const data = await window.api.fetchJSON(
-        `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(
-          query
-        )}`,
-        {
-          // HACK: this is needed to get Google to properly encode the suggestions, without this Umlaute are not encoded properly
-          headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
-          }
-        }
-      )
-
-      // Google returns an array where the second element contains the suggestions
-      const suggestions = data[1] || []
+      const suggestions = await this.browser.getSearchSuggestions(query)
 
       // Filter out duplicates of the original query and limit to 2 suggestions
       // (since we already add the current query as top result)
@@ -87,9 +77,7 @@ export class SearchProvider implements ActionProvider {
     }
   }
 
-  private async searchGoogle(query: string): Promise<void> {
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
-
-    await this.browser.navigateToUrl(searchUrl, { target: 'active_tab' })
+  private async searchWeb(query: string): Promise<void> {
+    await this.browser.navigateToWebSearch(query, { target: 'active_tab' })
   }
 }

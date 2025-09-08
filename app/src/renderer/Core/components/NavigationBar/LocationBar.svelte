@@ -18,6 +18,7 @@
     WebContentsViewEmitterNames
   } from '@deta/services/dist/views/types.js'
   import { writable } from 'svelte/store'
+  import { useBrowser } from '@deta/services/browser'
 
   let {
     view,
@@ -28,6 +29,8 @@
     readonly?: boolean
     isEditingUrl?: boolean
   } = $props()
+
+  const browser = useBrowser()
 
   // TODO: This should be part of the WebContentsView itself returning a Readable<URL | null> directly
   const viewTitle = $derived(view.title)
@@ -210,7 +213,7 @@
       return
     }
 
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(raw)}`
+    const searchUrl = browser.getSearchUrl(raw)
     view.webContents.loadURL(searchUrl)
   }
 </script>

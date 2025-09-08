@@ -1,11 +1,10 @@
 import { type MentionItem } from '@deta/editor'
 import type { ActionProvider, TeletypeAction } from '../types'
 import {
-  optimisticCheckIfUrl,
   normalizeURL,
   generateUUID,
-  prependProtocol,
-  useLogScope
+  useLogScope,
+  parseStringIntoBrowserLocation
 } from '@deta/utils'
 import { type TeletypeService } from '../teletypeService'
 
@@ -21,7 +20,8 @@ export class NavigationProvider implements ActionProvider {
   }
 
   canHandle(query: string): boolean {
-    return optimisticCheckIfUrl(query) || query.trim().length > 0
+    const url = parseStringIntoBrowserLocation(query)
+    return !!url || query.trim().length > 0
   }
 
   async getActions(query: string, _mentions: MentionItem[]): Promise<TeletypeAction[]> {
@@ -30,9 +30,11 @@ export class NavigationProvider implements ActionProvider {
 
     if (!trimmedQuery) return actions
 
+    const url = parseStringIntoBrowserLocation(query)
+
     // If it looks like a URL, provide navigation action
-    if (optimisticCheckIfUrl(trimmedQuery)) {
-      const normalizedUrl = normalizeURL(trimmedQuery)
+    if (url) {
+      const normalizedUrl = normalizeURL(url)
 
       actions.push({
         id: generateUUID(),
@@ -44,7 +46,7 @@ export class NavigationProvider implements ActionProvider {
         buttonText: 'Go',
         description: `Navigate to ${normalizedUrl}`,
         handler: async () => {
-          await this.service.navigateToUrl(normalizedUrl)
+          await this.service.navigateToUrlOrSearch(url)
         }
       })
     }
@@ -56,18 +58,13 @@ export class NavigationProvider implements ActionProvider {
       icon: 'search',
       section: 'Search',
       priority: 50,
-      keywords: ['search', 'find', 'google'],
-      description: `Search Google for "${trimmedQuery}"`,
+      keywords: ['search', 'find', 'web'],
+      description: `Search the web for "${trimmedQuery}"`,
       handler: async () => {
-        await this.searchGoogle(trimmedQuery)
+        await this.service.navigateToUrlOrSearch(trimmedQuery)
       }
     })
 
     return actions
-  }
-
-  private async searchGoogle(query: string): Promise<void> {
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
-    await this.service.navigateToUrl(searchUrl)
   }
 }

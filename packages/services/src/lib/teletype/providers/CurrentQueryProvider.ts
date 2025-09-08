@@ -1,11 +1,6 @@
 import { type MentionItem } from '@deta/editor'
 import type { ActionProvider, TeletypeAction } from '../types'
-import {
-  generateUUID,
-  useLogScope,
-  optimisticCheckIfURLOrIPorFile,
-  prependProtocol
-} from '@deta/utils'
+import { generateUUID, useLogScope, parseStringIntoBrowserLocation } from '@deta/utils'
 import { type TeletypeService } from '../teletypeService'
 
 export class CurrentQueryProvider implements ActionProvider {
@@ -22,13 +17,15 @@ export class CurrentQueryProvider implements ActionProvider {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length < 2) return false
 
-    // Don't show search action for URLs - let navigation providers handle those
-    return !optimisticCheckIfURLOrIPorFile(trimmedQuery)
+    const url = parseStringIntoBrowserLocation(trimmedQuery)
+    return !url
   }
 
   async getActions(query: string, _mentions: MentionItem[]): Promise<TeletypeAction[]> {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length < 2) return []
+
+    console.log('CurrentQueryProvider handling query:', trimmedQuery)
 
     // Return only the current query as instant search action
     return [this.createSearchAction(trimmedQuery)]
@@ -45,14 +42,8 @@ export class CurrentQueryProvider implements ActionProvider {
       description: ``,
       buttonText: 'Search',
       handler: async () => {
-        await this.searchGoogle(query)
+        await this.service.navigateToUrlOrSearch(query)
       }
     }
-  }
-
-  private async searchGoogle(query: string): Promise<void> {
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
-
-    await this.service.navigateToUrl(searchUrl)
   }
 }
