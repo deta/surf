@@ -6,6 +6,7 @@ import { Worker } from 'worker_threads'
 import { useLogScope } from '@deta/utils/io'
 import { createSetupWindow, getSetupWindow } from './setupWindow'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
+import { pathToFileURL } from 'url'
 
 interface ImageProcessingParams {
   requestURL: string
@@ -248,20 +249,21 @@ const HOSTNAME_TO_ROOT = {
 
 export const serveFile = async (req: Request, targetPath: string) => {
   try {
-    let base = `file://${path.join(app.getAppPath(), 'out', 'renderer')}`
-    let mainURL = path.join(base, targetPath)
-    if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
-      base = process.env.ELECTRON_RENDERER_URL
-      mainURL = `${base}${targetPath}`
-    }
-
-    if (!isPathSafe(base, mainURL)) {
-      log.error('Path is not safe:', base, mainURL)
+    const basePath = path.join(app.getAppPath(), 'out', 'renderer')
+    const target = path.join(basePath, targetPath)
+    if (!isPathSafe(basePath, target)) {
+      log.error('Path is not safe:', basePath, targetPath)
       return new Response('Forbidden', { status: 403 })
     }
 
+    let mainURL = pathToFileURL(target).href
+    const devRendererURL = import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL
+    if (devRendererURL) {
+      mainURL = `${devRendererURL}${targetPath}`
+    }
+
     const newURL = new URL(mainURL)
-    if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
+    if (devRendererURL) {
       const reqURL = URL.parse(req.url)
       if (reqURL) {
         newURL.search = reqURL.search

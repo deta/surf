@@ -3,8 +3,20 @@ import fs from 'fs/promises'
 import path from 'path'
 import glob from 'fast-glob'
 import type { Plugin } from 'vite'
+import JavaScriptObfuscator from 'javascript-obfuscator'
+import type { ObfuscatorOptions } from 'javascript-obfuscator'
 
-export function esbuildConsolidatePreloads(outDir: string): Plugin {
+interface ConsolidateOptions {
+  obfuscate?: boolean
+  obfuscatorOptions?: ObfuscatorOptions
+}
+
+export function esbuildConsolidatePreloads(
+  outDir: string,
+  options: ConsolidateOptions = {}
+): Plugin {
+  const { obfuscate = false, obfuscatorOptions = {} } = options
+
   return {
     name: 'esbuild-consolidate-preloads',
     apply: 'build',
@@ -48,7 +60,7 @@ export function esbuildConsolidatePreloads(outDir: string): Plugin {
           bundle: true,
           format: 'cjs',
           platform: 'node',
-          sourcemap: true,
+          sourcemap: !obfuscate, // Disable sourcemap if obfuscating
           external: ['electron', '@deta/backend'], // Add other node builtins as needed
           loader: {
             '.js': 'js'
@@ -102,8 +114,42 @@ export function esbuildConsolidatePreloads(outDir: string): Plugin {
           }
         })
 
+        // Apply obfuscation if enabled
+        if (obfuscate) {
+          console.log(`[esbuild-consolidate] obfuscating ${filename}`)
+
+          try {
+            const bundledCode = await fs.readFile(tmpOut, 'utf8')
+
+            const obfuscatedResult = JavaScriptObfuscator.obfuscate(bundledCode, {
+              compact: true,
+              target: 'node', // for preloads
+              ...obfuscatorOptions
+            })
+
+            await fs.writeFile(tmpOut, obfuscatedResult.getObfuscatedCode())
+            console.log(`[esbuild-consolidate] ✅ successfully obfuscated ${filename}`)
+          } catch (error) {
+            console.warn(
+              `[esbuild-consolidate] ⚠️ obfuscation failed for ${filename}, using unobfuscated version`
+            )
+            console.warn(`[esbuild-consolidate] error:`, error)
+          }
+        }
+
         await fs.rename(tmpOut, preloadPath)
-        await fs.rename(tmpMapOut, mapPath)
+
+        // Only handle sourcemap if it exists
+        try {
+          if (!obfuscate) {
+            await fs.rename(tmpMapOut, mapPath)
+          } else {
+            // Remove sourcemap file if obfuscating
+            await fs.unlink(tmpMapOut).catch(() => {})
+          }
+        } catch (err) {
+          // Sourcemap might not exist, ignore
+        }
       }
 
       try {

@@ -1,6 +1,6 @@
 import { defineConfig, externalizeDepsPlugin, bytecodePlugin } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { resolve, sep } from 'path'
+import { resolve } from 'path'
 import { plugin as Markdown, Mode } from 'vite-plugin-markdown'
 // import { sentryVitePlugin } from '@sentry/vite-plugin'
 import replace from '@rollup/plugin-replace'
@@ -8,10 +8,13 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import obfuscator from 'rollup-plugin-obfuscator'
 // import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
+import { ObfuscatorOptions } from 'javascript-obfuscator'
 import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
-const disableAllObfuscation = true // process.env.DISABLE_ALL_OBFUSCATION === 'true' || IS_DEV
+const disableBytecode = process.env.DISABLE_BYTECODE === 'true' || IS_DEV
+const disableRendererObfuscation = process.env.DISABLE_RENDERER_OBFUSCATION === 'true' || IS_DEV
+const disablePreloadObfuscation = process.env.DISABLE_PRELOAD_OBFUSCATION === 'true' || IS_DEV
 
 // TODO: actually fix the warnings in the code
 const silenceWarnings = IS_DEV || process.env.SILENCE_WARNINGS === 'true'
@@ -39,13 +42,47 @@ const cssConfig = silenceWarnings
       }
     }
 
+const customObfuscator = (options?: Partial<ObfuscatorOptions>) => {
+  const plugin = obfuscator({
+    global: true,
+    options: {
+      compact: true,
+      target: 'browser',
+      ...options
+    }
+  })
+
+  const originalRenderChunk = plugin.renderChunk
+
+  plugin.renderChunk = function (code, chunk) {
+    console.log(`🔍 Attempting to obfuscate: ${chunk.fileName}`)
+    try {
+      // @ts-ignore
+      const result = originalRenderChunk.call(this, code, chunk)
+      console.log(`✅ Successfully obfuscated: ${chunk.fileName}`)
+      return result
+    } catch (error: any) {
+      console.warn(`⚠️Obfuscation failed for ${chunk.fileName}, skipping...`)
+      console.warn(`📝 Error: ${error}`)
+      console.warn(`🔄 Returning original code unchanged`)
+
+      return {
+        code: code,
+        map: null
+      }
+    }
+  }
+
+  return plugin
+}
+
 export default defineConfig({
   main: {
     envPrefix: 'M_VITE_',
     plugins: [
       externalizeDepsPlugin(),
       createLicensePlugin('main'),
-      ...(!disableAllObfuscation ? [bytecodePlugin({ removeBundleJS: true })] : [])
+      ...(!disableBytecode ? [bytecodePlugin({ removeBundleJS: true })] : [])
     ],
     build: {
       rollupOptions: {
@@ -81,7 +118,9 @@ export default defineConfig({
     plugins: [
       svelte(svelteOptions),
       externalizeDepsPlugin({ exclude: ['@deta/backend'] }),
-      esbuildConsolidatePreloads('out/preload'),
+      esbuildConsolidatePreloads('out/preload', {
+        obfuscate: !disablePreloadObfuscation
+      }),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (asset) => asset.fileName.endsWith('webcontents.js'),
         injectCode: (cssCode, _options) => {
@@ -91,10 +130,10 @@ export default defineConfig({
       replace({
         'doc.documentElement.style': '{}'
       }),
-      createLicensePlugin('preload')
-      // ...(!disableAllObfuscation
-      //   ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
-      //   : [])
+      createLicensePlugin('preload'),
+      ...(!disableBytecode
+        ? [bytecodePlugin({ removeBundleJS: true, chunkAlias: ['horizon'] })]
+        : [])
     ],
     build: {
       rollupOptions: {
@@ -107,25 +146,15 @@ export default defineConfig({
           overlay: resolve(__dirname, 'src/preload/overlay.ts'),
           resource: resolve(__dirname, 'src/preload/resource.ts')
         }
-        // plugins: [
-        //   ...(!disableAllObfuscation
-        //     ? [
-        //         obfuscator({
-        //           global: true,
-        //           options: {}
-        //         })
-        //       ]
-        //     : [])
-        // ]
       },
-      minify: !disableAllObfuscation
+      sourcemap: false,
+      minify: true
     },
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     },
     css: cssConfig
   },
-
   renderer: {
     envPrefix: 'R_VITE_',
     plugins: [
@@ -143,7 +172,7 @@ export default defineConfig({
       createConcatLicensesPlugin()
     ],
     build: {
-      sourcemap: true,
+      sourcemap: false,
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'src/renderer/Core/core.html'),
@@ -163,19 +192,9 @@ export default defineConfig({
           entryFileNames: 'assets/[name]-[hash].js',
           assetFileNames: 'assets/[name]-[hash][extname]'
         },
-        plugins: [
-          ...(!disableAllObfuscation
-            ? [
-                obfuscator({
-                  global: true,
-                  options: {}
-                })
-              ]
-            : [])
-        ]
+        plugins: [...(!disableRendererObfuscation ? [customObfuscator()] : [])]
       },
-      //sourcemap: disableAllObfuscation || process.env.NODE_ENV === 'development',
-      minify: !disableAllObfuscation
+      minify: true
     },
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
