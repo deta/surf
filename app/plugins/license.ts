@@ -1,6 +1,7 @@
 import { join } from 'path'
 import licensePlugin from 'rollup-plugin-license'
 import concat from './concat'
+import type { Plugin } from 'vite'
 
 const createLicenseOutputPath = (process: string) => {
   return join(__dirname, 'out', 'licenses', `dependencies-${process}.txt`)
@@ -14,7 +15,7 @@ export const createLicensePlugin = (process: string) => {
         file: createLicenseOutputPath(process)
       }
     }
-  })
+  }) as Plugin
 }
 
 export const createConcatLicensesPlugin = () => {
@@ -29,5 +30,5 @@ export const createConcatLicensesPlugin = () => {
         outputFile: join('assets', 'dependencies.txt')
       }
     ]
-  })
+  }) as Plugin
 }

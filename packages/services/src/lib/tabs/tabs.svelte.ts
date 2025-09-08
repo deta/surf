@@ -320,6 +320,11 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       ...opts
     } as CreateTabOptions
 
+    if (url === 'surf-internal://core/Core/core.html') {
+      this.log.warn('Attempted to open core URL directly, which is not allowed.')
+      throw new Error('Cannot open core URL directly')
+    }
+
     const view = await this.viewManager.create({ url })
 
     if (options.selectionHighlight) {

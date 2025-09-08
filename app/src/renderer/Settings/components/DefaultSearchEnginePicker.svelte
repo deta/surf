@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SEARCH_ENGINES } from '@deta/utils/src/browser/searchEngines'
+  import { SEARCH_ENGINES } from '@deta/utils/browser'
   import { createEventDispatcher } from 'svelte'
 
   export let value: string = 'google'

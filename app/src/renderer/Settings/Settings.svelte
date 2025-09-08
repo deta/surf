@@ -17,11 +17,10 @@
   import AppStylePicker from './components/AppStylePicker.svelte'
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
   import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, Provider, type Model } from '@deta/types/src/ai.types'
-  import { prepareContextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
-  import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
+  import { openDialog, prepareContextMenu } from '@deta/ui'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
   import ExtensionsManager from './components/ExtensionsManager.svelte'
-  import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@horizon/core/src/lib/utils/env'
+  import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@deta/utils/system'
   import LayoutPicker from '../components/LayoutPicker.svelte'
 
   // let error = ''
@@ -285,7 +284,7 @@
       <h1>AI</h1>
     </div>
 
-    <div
+    <!-- <div
       on:click={() => activeTab.set('appearance')}
       role="tab"
       tabindex="0"
@@ -294,9 +293,9 @@
     >
       <Icon name="sidebar.left" size="24" />
       <h1>Appearance</h1>
-    </div>
+    </div> -->
 
-    <div
+    <!-- <div
       on:click={() => activeTab.set('advanced')}
       role="tab"
       tabindex="0"
@@ -305,7 +304,7 @@
     >
       <Icon name="adjustments.horizontal" size="24" />
       <h1>Advanced</h1>
-    </div>
+    </div> -->
 
     <div
       on:click={() => activeTab.set('extensions')}
@@ -415,21 +414,23 @@
           >
         </div>
 
-        <div class="license-wrapper">
-          <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <div class="license-trigger" on:click={() => (showLicenses = !showLicenses)}>
-            <div class="license-icon" class:open={showLicenses}>
-              <Icon name="chevron.down" />
+        {#if licenses}
+          <div class="license-wrapper">
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div class="license-trigger" on:click={() => (showLicenses = !showLicenses)}>
+              <div class="license-icon" class:open={showLicenses}>
+                <Icon name="chevron.down" />
+              </div>
+              Open Source Licenses
             </div>
-            Open Source Licenses
-          </div>
 
-          {#if showLicenses}
-            <div class="license-output">
-              <pre>{licenses ?? 'Loading...'}</pre>
-            </div>
-          {/if}
-        </div>
+            {#if showLicenses}
+              <div class="license-output">
+                <pre>{licenses}</pre>
+              </div>
+            {/if}
+          </div>
+        {/if}
 
         <div class="license-wrapper">
           <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -462,7 +463,7 @@
           />
         {/if}
       </article>
-    {:else if $activeTab === 'appearance'}
+      <!-- {:else if $activeTab === 'appearance'}
       <article class="general">
         <LayoutPicker
           bind:orientation={userConfigSettings.tabs_orientation}
@@ -481,8 +482,8 @@
             on:update={handleSettingsUpdate}
           />
         </div>
-      </article>
-    {:else if $activeTab === 'advanced'}
+      </article> -->
+      <!-- {:else if $activeTab === 'advanced'}
       <article class="list">
         {#if userConfigSettings}
           <div class="box">
@@ -559,27 +560,7 @@
             on:update={handleSettingsUpdate}
           />
         {/if}
-
-        <!--<PromptSection
-          title="Inline Page Menu Prompts"
-          description="Customize prompts used for the inline AI menu in web pages."
-          image={inlineAIScreenshot}
-        >
-          {#each prompts.filter((x) => x.kind === 'inline') as prompt}
-            <Prompt
-              title={prompt.title}
-              description={prompt.description}
-              content={prompt.content}
-              on:update={(e) => debouncedPromptUpdate(prompt.id, e.detail)}
-            />
-          {/each}
-
-          <div class="box">
-            <Icon name="info" size="22px" />
-            <p>Prompts can be written with basic Markdown syntax.</p>
-          </div>
-        </PromptSection>-->
-      </article>
+      </article> -->
     {:else if $activeTab === 'extensions'}
       <ExtensionsManager />
     {/if}

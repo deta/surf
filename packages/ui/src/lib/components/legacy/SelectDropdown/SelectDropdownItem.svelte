@@ -5,7 +5,7 @@
 
   export let item: SelectItem
 
-  $: space = typeof item.data.contents !== 'undefined' ? (item.data as any) : undefined
+  $: space = typeof item?.data?.contents !== 'undefined' ? (item.data as any) : undefined
 
   const getAlternativeLabel = (item: SelectItem) => {
     if (!item.data?.type || item.data.type !== 'context-item') return undefined
@@ -58,6 +58,7 @@
     align-items: center;
     gap: 0.5rem;
     position: relative;
+    pointer-events: none;
   }
 
   .icon {

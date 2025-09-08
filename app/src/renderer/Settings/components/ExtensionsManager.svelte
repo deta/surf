@@ -3,9 +3,9 @@
 
   import { Icon } from '@deta/icons'
   import { wait } from '@deta/utils'
+  import { openDialog } from '@deta/ui'
 
-  import type { BrowserExtension } from '@horizon/core/src/lib/service/ipc/events'
-  import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
+  import type { BrowserExtension } from '@deta/services/ipc'
 
   let extensions: BrowserExtension[] = []
   let noExtensions: boolean = true

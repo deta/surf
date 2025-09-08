@@ -25,13 +25,11 @@
   export let side: 'top' | 'right' | 'bottom' | 'left' | undefined = undefined
   export let disabled: boolean = false
   export let loading = false
-  export let skipViewManager = false
 
   const dispatch = createEventDispatcher<{ select: string }>()
 
   const inputFocused = writable(false)
 
-  let tabsViewManager: any
   let listElem: HTMLDivElement
   let inputElem: HTMLInputElement
   let contentElem: HTMLDivElement
@@ -50,40 +48,9 @@
 
   const handleOpen = async () => {
     await wait(5)
-
-    // check if the menu would overlap with the active webcontents view
-    // and if so notify the view manager that the menu is open
-    const activeWebview = document.querySelector(
-      '.browser-window.active .webcontentsview-container'
-    )
-    if (activeWebview && contentElem) {
-      const viewRect = activeWebview.getBoundingClientRect()
-      const menuRect = contentElem.getBoundingClientRect()
-
-      // Check if any part of the menu overlaps with the view
-      const isOverlapping = !(
-        (
-          Math.round(menuRect.left) >= Math.round(viewRect.right) || // Menu is completely to the right
-          Math.round(menuRect.right) <= Math.round(viewRect.left) || // Menu is completely to the left
-          Math.round(menuRect.top) >= Math.round(viewRect.bottom) || // Menu is completely below
-          Math.round(menuRect.bottom) <= Math.round(viewRect.top)
-        ) // Menu is completely above
-      )
-
-      if (isOverlapping && !tabsViewManager?.overlayStateValue.selectPopupOpen) {
-        tabsViewManager?.changeOverlayState({ selectPopupOpen: true })
-      }
-    } else {
-      console.warn(
-        'No active webview found or contentElem is not set. Cannot check for overlap with select dropdown.'
-      )
-    }
   }
 
   const handleClose = () => {
-    if (tabsViewManager?.overlayStateValue.selectPopupOpen) {
-      tabsViewManager?.changeOverlayState({ selectPopupOpen: false })
-    }
   }
 
   const handleKeyDown = (e: CustomEventHandler<KeyboardEvent, HTMLDivElement>) => {
@@ -184,10 +151,6 @@
 
   onMount(() => {
     try {
-      // if (!skipViewManager) {
-      //   tabsViewManager = useTabsViewManager()
-      // }
-
       handleScrollCheck()
     } catch (error) {
       // no-op
@@ -220,7 +183,7 @@
       transition={(node, params) => flyAndScaleDirectional(node, { ...params, side })}
       sideOffset={8}
       {side}
-      on:keydown={handleKeyDown}
+      onkeydown={handleKeyDown}
     >
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
@@ -263,7 +226,7 @@
               {/if}
 
               <DropdownMenu.Item
-                on:click={() => dispatch('select', item.id)}
+                onclick={() => dispatch('select', item.id)}
                 disabled={item.disabled}
                 class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none {item.disabled
                   ? 'opacity-50'
@@ -302,7 +265,7 @@
           >
             <slot name="footer">
               <DropdownMenu.Item
-                on:click={() => dispatch('select', footerItem.id)}
+                onclick={() => dispatch('select', footerItem.id)}
                 class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
                 footerItem.id
                   ? 'text-sky-600 dark:text-sky-400'

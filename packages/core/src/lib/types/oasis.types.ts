@@ -1,4 +1,4 @@
-import { Resource } from '@deta/services'
+import { Resource } from '@deta/services/resources'
 import type { HistoryEntry } from '@deta/types'
 
 import { OasisSpace } from '../service/oasis'

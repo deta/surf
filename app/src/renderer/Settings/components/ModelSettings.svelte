@@ -28,12 +28,11 @@
     SelectDropdown,
     SelectDropdownItem,
     type SelectItem
-  } from '@deta/ui/dist/components/legacy'
+  } from '@deta/ui/legacy'
   import { Icon } from '@deta/icons'
   import { appendURLPath, generateID } from '@deta/utils'
-  import { createEventDispatcher, onMount, tick } from 'svelte'
-  import { contextMenu } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
-  import type { CtxItem } from '@horizon/core/src/lib/components/Core/ContextMenu.svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
+  import { contextMenu, type CtxItem } from '@deta/ui'
   import { SFFS } from '@deta/services'
   import type { Quota } from '@deta/backend/types'
   import TierQuota from '../components/TierQuota.svelte'
@@ -255,6 +254,8 @@
 
   const handleSelectedModelChange = (event: CustomEvent<string>) => {
     const model = $allModels.find((model) => model.id === event.detail)
+
+    console.log('selected model', model)
 
     if (model) {
       selectModel(model.id)

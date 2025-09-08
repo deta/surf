@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Switch } from '@deta/ui/dist/components/legacy'
+  import { Switch } from '@deta/ui/legacy'
   import { Icon, type Icons } from '@deta/icons'
-  import { openDialog } from '@horizon/core/src/lib/components/Core/Dialog/Dialog.svelte'
+  import { openDialog } from '@deta/ui'
   import { createEventDispatcher } from 'svelte'
 
   const dispatch = createEventDispatcher<{ update: boolean }>()
