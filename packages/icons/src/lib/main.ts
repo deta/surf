@@ -135,6 +135,7 @@ import ZenBrowser from './Icons/ZenBrowser.svelte'
 import TorBrowser from './Icons/TorBrowser.svelte'
 import ChartBar from './Icons/ChartBar.svelte'
 import ChartBarOff from './Icons/ChartBarOff.svelte'
+import PlaneLoader from './Icons/PlaneLoader.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -277,7 +278,8 @@ export const icons = {
   'browser.zen': ZenBrowser,
   'browser.tor': TorBrowser,
   'chart-bar': ChartBar,
-  'chart-bar.off': ChartBarOff
+  'chart-bar.off': ChartBarOff,
+  'plane.loader': PlaneLoader
 }
 
 export type Icons = keyof typeof icons
@@ -422,5 +424,6 @@ export {
   TorBrowser,
   ChartBar,
   ChartBarOff,
-  CircleCheckFilled
+  CircleCheckFilled,
+  PlaneLoader
 }

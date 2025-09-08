@@ -314,7 +314,7 @@
         {/if}-->
         <button class="-mr-1.5" on:click={handleSubmit}>
           {#if $isGeneratingAI}
-            <Icon name="spinner" size="1.15rem" />
+            <Icon name="plane.loader" size="1.15rem" />
           {:else}
             <Icon name="cursor" fill="#FF6426" size="1.15rem" />
           {/if}
