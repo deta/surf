@@ -47,7 +47,7 @@
     htmlToMarkdown,
     isDev
   } from '@deta/utils'
-  import CitationItem, { type CitationClickData, type CitationInfo } from './CitationItem.svelte'
+  import CitationItem from './CitationItem.svelte'
   import { generateContentHash, mapCitationsToText, parseChatOutputToHtml } from '@deta/services/ai'
   import {
     startAIGeneration,
@@ -67,7 +67,9 @@
     PromptType,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
-    WEB_RESOURCE_TYPES
+    WEB_RESOURCE_TYPES,
+    type CitationClickData,
+    type CitationInfo
   } from '@deta/types'
   import {
     DragTypeNames,
@@ -119,6 +121,7 @@
   import NoteTitle from './NoteTitle.svelte'
   import { SearchResourceTags, ResourceTag } from '@deta/utils/formatting'
   import type { ResourceNote, ResourceJSON } from '@deta/services/resources'
+  import { type MessagePortClient } from '@deta/services/messagePort'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -127,7 +130,7 @@
   export let minimal: boolean = false
   export let similaritySearch: boolean = false
   export let contextManager: ContextManager | undefined = undefined
-  export let messagePort: any
+  export let messagePort: MessagePortClient
   export let resource: ResourceNote | ResourceJSON
   export let origin: string = ''
   export let onCitationClick: (event: CitationClickEvent) => void
@@ -1227,6 +1230,38 @@
       const { id, type } = item
 
       telemetry.trackNoteOpenMention(getMentionType(id, type), action, showOnboarding)
+
+      if (type === MentionItemType.BUILT_IN || type === MentionItemType.MODEL) {
+        log.debug('Built-in or model mention clicked, cannot be opened')
+        toasts.info('This is a built-in mention and cannot be opened')
+        return
+      }
+
+      const target =
+        action === 'new-tab'
+          ? 'tab'
+          : action === 'new-background-tab'
+            ? 'background_tab'
+            : action === 'open'
+              ? 'active_tab'
+              : 'sidebar'
+
+      if (type === MentionItemType.RESOURCE) {
+        messagePort.openResource.send({
+          resourceId: id,
+          target
+        })
+        return
+      } else if (type === MentionItemType.NOTEBOOK) {
+        messagePort.navigateURL.send({
+          url: `surf://notebook/${id}`,
+          target
+        })
+        return
+      } else {
+        log.debug('Cannot open mention', item, action)
+        return
+      }
 
       if (action === 'overlay') {
         if (id === INBOX_MENTION.id) {

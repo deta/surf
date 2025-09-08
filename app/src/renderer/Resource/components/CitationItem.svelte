@@ -1,12 +1,6 @@
 <script lang="ts" context="module">
   export type CitationType = 'image' | 'resource'
 
-  // prettier-ignore
-  export type CitationInfo = { id: string; source?: AIChatMessageSource; renderID: string; text?: string, skipHighlight?: boolean, hideText?: boolean };
-
-  // prettier-ignore
-  export type CitationClickData = { citationID: string; uniqueID: string; preview?: boolean, source?: AIChatMessageSource, skipHighlight?: boolean };
-
   export const CITATION_HANDLER_CONTEXT = 'citation-handler'
 
   export type CitationHandlerContext = {
@@ -31,7 +25,13 @@
     normalizeURL,
     hover
   } from '@deta/utils'
-  import { DragTypeNames, ResourceTagsBuiltInKeys, type AIChatMessageSource } from '@deta/types'
+  import {
+    DragTypeNames,
+    ResourceTagsBuiltInKeys,
+    type AIChatMessageSource,
+    type CitationClickData,
+    type CitationInfo
+  } from '@deta/types'
   import { Icon, DynamicIcon } from '@deta/icons'
   import { ResourceJSON, type Resource, useResourceManager } from '@deta/services/resources'
   import { useToasts, ResourceSmallImagePreview } from '@deta/ui'
@@ -222,12 +222,22 @@
       return
     }
 
+    const backgroundTab = isModKeyPressed(e) && !e?.shiftKey
+    const foregroundTab = isModKeyPressed(e)
+    const activeTab = !isModKeyPressed(e)
+
     dispatchClick({
       citationID,
       uniqueID,
       source,
       skipHighlight,
-      preview: e?.shiftKey && !isModKeyPressed(e)
+      preview: backgroundTab
+        ? 'background_tab'
+        : foregroundTab
+          ? 'tab'
+          : activeTab
+            ? 'active_tab'
+            : false
     })
   }
 

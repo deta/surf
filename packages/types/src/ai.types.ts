@@ -1,3 +1,4 @@
+import { type OpenTarget } from './browser.types'
 import { PageChatMessageSentEventError, PageChatMessageSentEventTrigger } from './events.types'
 
 export enum Provider {
@@ -80,6 +81,22 @@ export type AIChatMessageSource = {
     url?: string
     page?: number
   }
+}
+
+export type CitationInfo = {
+  id: string
+  source?: AIChatMessageSource
+  renderID: string
+  text?: string
+  skipHighlight?: boolean
+  hideText?: boolean
+}
+export type CitationClickData = {
+  citationID: string
+  uniqueID: string
+  preview?: boolean | OpenTarget
+  source?: AIChatMessageSource
+  skipHighlight?: boolean
 }
 
 export type ChatMessageContentItem = {

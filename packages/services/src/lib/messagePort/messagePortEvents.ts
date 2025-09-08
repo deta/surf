@@ -1,6 +1,6 @@
 import { type MentionItem } from '@deta/editor'
 import { createMessagePortService, type MessagePortEvent } from './messagePortService'
-import type { NavigateURLOptions, OpenResourceOptions } from '@deta/types'
+import type { CitationClickEvent, NavigateURLOptions, OpenResourceOptions } from '@deta/types'
 
 export interface TeletypeActionSerialized {
   id: string
@@ -66,6 +66,10 @@ export interface MPOpenResource extends MessagePortEvent {
   payload: OpenResourceOptions
 }
 
+export interface MPCitationClick extends MessagePortEvent {
+  payload: CitationClickEvent
+}
+
 type MessagePortEventRegistry = {
   teletypeSetQuery: MPTeletypeSetQuery
   teletypeSearch: MPTeletypeSearchRequest
@@ -76,6 +80,7 @@ type MessagePortEventRegistry = {
   noteReady: MPNoteReady
   changePageQuery: MPChangePageQuery
   openResource: MPOpenResource
+  citationClick: MPCitationClick
 }
 
 const createMessagePortEvents = <IsPrimary extends boolean>(
@@ -100,7 +105,8 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     noteRunQuery: messagePortService.addEvent<MPNoteRunQuery>('note-run-query'),
     noteReady: messagePortService.addEvent<MPNoteReady>('note-ready'),
     changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query'),
-    openResource: messagePortService.addEvent<MPOpenResource>('open-resource')
+    openResource: messagePortService.addEvent<MPOpenResource>('open-resource'),
+    citationClick: messagePortService.addEvent<MPCitationClick>('citation-click')
   })
 }
 
@@ -134,3 +140,6 @@ export const useMessagePortPrimary = () => {
 
   return messagePortPrimaryInstance
 }
+
+export type MessagePortClient = ReturnType<typeof createMessagePortEvents<false>>
+export type MessagePortPrimary = ReturnType<typeof createMessagePortEvents<true>>

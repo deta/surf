@@ -29,7 +29,8 @@
 
   function handleCitationClick(data: CitationClickEvent) {
     console.log('Citation clicked:', data)
-    window.api.citationClick(data)
+
+    messagePort.citationClick.send(data)
   }
 
   onMount(async () => {

@@ -29,8 +29,7 @@ import {
   WebContentsViewActionType,
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
-  WebContentsViewActionOutputs,
-  CitationClickEvent
+  WebContentsViewActionOutputs
 } from '@deta/types'
 
 import {
@@ -489,16 +488,6 @@ const eventHandlers = {
     return IPC_EVENTS_RENDERER.saveLink.on((_, { url, spaceId }) => {
       try {
         callback(url, spaceId)
-      } catch (error) {
-        // noop
-      }
-    })
-  },
-
-  onCitationClick: (callback: (data: CitationClickEvent) => void) => {
-    return IPC_EVENTS_RENDERER.citationClick.on((_, data) => {
-      try {
-        callback(data)
       } catch (error) {
         // noop
       }

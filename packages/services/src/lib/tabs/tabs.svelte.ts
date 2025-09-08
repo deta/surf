@@ -595,7 +595,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     return tab
   }
 
-  async changeActiveTabURL(url: string) {
+  async changeActiveTabURL(url: string, opts?: Partial<CreateTabOptions>) {
     this.log.debug('Replacing active tab with new URL:', url)
     const activeTab = this.activeTabValue
 
@@ -610,6 +610,16 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     activeTab.view.webContents.loadURL(url)
+
+    if (opts?.selectionHighlight) {
+      activeTab.view.highlightSelection(opts.selectionHighlight)
+    }
+
+    if (opts?.active) {
+      this.setActiveTab(activeTab.id)
+    } else if (opts?.activate) {
+      this.activateTab(activeTab.id)
+    }
 
     return activeTab
   }

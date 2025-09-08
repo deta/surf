@@ -17,8 +17,7 @@ import type {
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
   ControlWindow,
-  WebContentsViewContextManagerActionEvent,
-  CitationClickEvent
+  WebContentsViewContextManagerActionEvent
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 import { MentionItem } from '../mentions/mention.types'
@@ -248,7 +247,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   removeExtension: ipcService.addEvent<string>('remove-extension'),
   setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
   webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
-  citationClick: ipcService.addEvent<CitationClickEvent>('citation-click'),
   focusMainRenderer: ipcService.addEvent<void>('focus-main-renderer'),
   updateViewBounds: ipcService.addEvent<UpdateViewBounds>('update-view-bounds'),
 

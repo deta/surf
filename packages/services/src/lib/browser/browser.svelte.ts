@@ -8,6 +8,7 @@ import { type MentionItem } from '@deta/editor'
 import {
   type Fn,
   type NavigateURLOptions,
+  type OpenResourceOptions,
   ResourceTagsBuiltInKeys,
   ResourceTypes
 } from '@deta/types'
@@ -47,6 +48,81 @@ export class BrowserService {
 
       this.messagePort.navigateURL.on(async ({ url, target }) => {
         this.navigateToUrl(url, { target })
+      }),
+
+      this.messagePort.citationClick.on(async (data, viewId) => {
+        const url = data.url ?? (data.resourceId ? `surf://resource/${data.resourceId}` : undefined)
+        if (!url) {
+          this.log.error('Citation click event has no URL or resourceId:', data)
+          return
+        }
+
+        // Otherwise, open in a new tab to not disturb the user's current context
+        if (data.preview === 'background_tab' || data.preview === 'tab') {
+          this.log.debug('Citation preview click event, opening in new tab')
+          this.tabsManager.openOrCreate(url, {
+            active: data.preview === 'tab',
+            activate: true,
+            ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+          })
+
+          return
+        }
+
+        // If we click was triggered from the active tab, open in sidebar (if sidebar is closed or showing NotebookHome)
+        if (this.tabsManager.activeTabValue?.view.id === viewId) {
+          this.log.debug('Citation preview click event from active tab')
+
+          if (
+            !this.viewManager.sidebarViewOpen ||
+            this.viewManager.activeSidebarView?.typeValue !== ViewType.Resource
+          ) {
+            this.log.debug('Opening citation in sidebar')
+            if (data.url) {
+              const view = this.viewManager.openURLInSidebar(data.url)
+              if (!data.skipHighlight && data.selection) {
+                view.highlightSelection(data.selection)
+              }
+            } else if (data.resourceId) {
+              const view = this.viewManager.openResourceInSidebar(data.resourceId)
+              if (!data.skipHighlight && data.selection) {
+                view.highlightSelection(data.selection)
+              }
+            }
+          } else {
+            this.log.debug('Opening citation in new tab')
+            this.tabsManager.openOrCreate(url, {
+              active: true,
+              ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+            })
+          }
+
+          return
+        }
+
+        // For clicks from the sidebar, open in active tab
+        if (this.viewManager.activeSidebarView?.id === viewId) {
+          this.log.debug('Citation click event from active sidebar view')
+
+          this.tabsManager.openOrCreate(url, {
+            active: true,
+            ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+          })
+
+          // const view = this.viewManager.openURLInSidebar(url)
+          // if (!data.skipHighlight && data.selection) {
+          //   view.highlightSelection(data.selection)
+          // }
+
+          return
+        }
+
+        // For normal clicks, replace the active view
+        this.log.debug('Citation click event, opening in active tab')
+        this.tabsManager.changeActiveTabURL(url, {
+          active: true,
+          ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+        })
       })
     )
   }
@@ -161,15 +237,15 @@ export class BrowserService {
       resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
 
     if (url) {
-      await this.tabsManager.changeActiveTabURL(url)
+      return this.tabsManager.changeActiveTabURL(url)
     } else {
-      await this.tabsManager.changeActiveTabURL(`surf://resource/${resource.id}`)
+      return this.tabsManager.changeActiveTabURL(`surf://resource/${resource.id}`)
     }
   }
 
   async openResource(
     resourceId: string,
-    opts?: { target?: 'tab' | 'tab_background' | 'sidebar'; offline?: boolean }
+    opts?: { target?: OpenResourceOptions['target']; offline?: boolean }
   ) {
     this.log.debug('Opening resource:', resourceId, opts)
 
@@ -185,6 +261,9 @@ export class BrowserService {
     if (offline || resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE || !resource.url) {
       if (target === 'sidebar') {
         return this.viewManager.openResourceInSidebar(resource.id)
+      } else if (target === 'active_tab') {
+        const tab = await this.openResourceInCurrentTab(resource)
+        return tab?.view
       } else {
         const tab = await this.tabsManager.createResourceTab(resource.id, {
           active: target === 'tab'
@@ -195,6 +274,9 @@ export class BrowserService {
     } else {
       if (target === 'sidebar') {
         return this.viewManager.openURLInSidebar(resource.url)
+      } else if (target === 'active_tab') {
+        const tab = await this.tabsManager.changeActiveTabURL(resource.url)
+        return tab?.view
       } else {
         const tab = await this.tabsManager.create(resource.url, {
           active: target === 'tab'

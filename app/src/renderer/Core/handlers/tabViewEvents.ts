@@ -1,6 +1,5 @@
 import { useTabs } from '@deta/services/tabs'
 import { useViewManager } from '@deta/services/views'
-import type { CitationClickEvent } from '@deta/types'
 import { useLogScope } from '@deta/utils/io'
 import type { PreloadEvents } from './preloadEvents'
 
@@ -57,14 +56,6 @@ export const setupTabViewEvents = (events: PreloadEvents) => {
         activeTab.view.webContents.reload()
       }
     }
-  })
-
-  events.onCitationClick((data: CitationClickEvent) => {
-    // TODO: handle highlighting
-    tabsManager.openOrCreate(data.url, {
-      active: true,
-      ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-    })
   })
 
   events.onUpdateViewBounds((viewId, bounds) => {

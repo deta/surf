@@ -70,7 +70,7 @@ export type PageHighlightSelectionData = {
 export type CitationClickEvent = {
   resourceId?: string
   url?: string
-  preview: boolean
+  preview: boolean | OpenTarget
   skipHighlight: boolean
   selection?: PageHighlightSelectionData
 }
@@ -82,13 +82,15 @@ export const BROWSER_CONTEXT_KEY = 'browser-utils'
 
 export type RightSidebarTab = 'chat' | 'annotations' | 'root'
 
+export type OpenTarget = 'tab' | 'background_tab' | 'active_tab' | 'sidebar'
+
 export type OpenResourceOptions = {
   resourceId: string
-  target?: 'tab' | 'tab_background' | 'sidebar'
+  target?: OpenTarget
   offline?: boolean
 }
 
 export type NavigateURLOptions = {
   url: string
-  target?: 'tab' | 'tab_background' | 'active_tab' | 'sidebar'
+  target?: OpenTarget
 }

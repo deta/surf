@@ -384,12 +384,24 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   openResourceInSidebar(resourceId: string) {
+    if (this.activeSidebarView && this.activeSidebarView.webContents) {
+      this.activeSidebarView.webContents.loadURL(`surf://resource/${resourceId}`)
+      this.setSidebarState({ open: true, view: this.activeSidebarView })
+      return this.activeSidebarView
+    }
+
     const view = this.create({ url: `surf://resource/${resourceId}`, permanentlyActive: true })
     this.setSidebarState({ open: true, view })
     return view
   }
 
   openURLInSidebar(url: string) {
+    if (this.activeSidebarView && this.activeSidebarView.webContents) {
+      this.activeSidebarView.webContents.loadURL(url)
+      this.setSidebarState({ open: true, view: this.activeSidebarView })
+      return this.activeSidebarView
+    }
+
     const view = this.create({ url, permanentlyActive: true })
     this.setSidebarState({ open: true, view })
     return view

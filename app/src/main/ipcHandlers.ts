@@ -448,21 +448,6 @@ function setupIpcHandlers(backendRootPath: string) {
     )
   })
 
-  IPC_EVENTS_MAIN.citationClick.on((_, action) => {
-    // The sender will be an arbitrary webContentsView, we'd need to extend our validation here.
-    // if (!validateIPCSender(event)) return null
-
-    log.debug('citationClick ipcHandlers', action)
-
-    const window = getMainWindow()
-    if (!window) {
-      log.error('Main window not found')
-      return
-    }
-
-    IPC_EVENTS_MAIN.citationClick.sendToWebContents(window.webContents, action)
-  })
-
   IPC_EVENTS_MAIN.fetchMentions.handle(async (_, action) => {
     // The sender will be an arbitrary webContentsView, we'd need to extend our validation here.
     // if (!validateIPCSender(event)) return null

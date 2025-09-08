@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
+  import SurfIcon from './surf.ico'
 
   export let url: string
   export let title: string = ''
@@ -41,7 +42,7 @@
   <img bind:this={imgElement} src={url} alt={title} draggable="false" />
 {:else}
   <div class="favicon-fallback">
-    <Icon name="squircle" size="100%" fill="yellow" />
+    <img bind:this={imgElement} src={SurfIcon} alt={title} draggable="false" />
   </div>
 {/if}
 

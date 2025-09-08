@@ -6,6 +6,7 @@
   import { DragTypeNames } from '@deta/types'
   import { getHostname } from '@deta/utils'
   import { useBrowser } from '@deta/services/browser'
+  import { ViewType } from '@deta/services/views'
 
   let {
     tab,
@@ -31,6 +32,7 @@
   const title = tab.view.title
   const url = tab.view.url
   const faviconURL = tab.view.faviconURL
+  const type = tab.view.type
   const stateIndicator = $derived(tab?.stateIndicator)
 
   const hostname = $derived(getHostname($url))
@@ -114,7 +116,11 @@
   ondragend={handleDragEnd}
 >
   <div class="tab-icon">
-    <Favicon url={$faviconURL || $url} title={$title} />
+    {#if $type === ViewType.Resource}
+      <Icon name="file-text-ai" />
+    {:else}
+      <Favicon url={$faviconURL || $url} title={$title} />
+    {/if}
   </div>
 
   {#if !collapsed && !squished}

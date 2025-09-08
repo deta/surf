@@ -51,7 +51,7 @@
 
   const handleClick = (e: MouseEvent) => {
     const backgroundTab = isModKeyPressed(e) && !e.shiftKey
-    openResource({ target: backgroundTab ? 'tab_background' : 'tab' })
+    openResource({ target: backgroundTab ? 'background_tab' : 'tab' })
   }
 
   const handleDeleteResource = async () => {

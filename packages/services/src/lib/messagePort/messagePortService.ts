@@ -6,8 +6,13 @@ export type MessagePortEvent = {
   output?: any
 }
 
-type HandleHandler<T extends MessagePortEvent> = (
+type ClientHandleHandler<T extends MessagePortEvent> = (
   payload: T['payload']
+) => T['output'] | Promise<T['output']>
+
+type PrimaryHandleHandler<T extends MessagePortEvent> = (
+  payload: T['payload'],
+  portId: string
 ) => T['output'] | Promise<T['output']>
 
 type ClientEvent<T extends MessagePortEvent> = {
@@ -17,17 +22,17 @@ type ClientEvent<T extends MessagePortEvent> = {
 
 type PrimaryEvent<T extends MessagePortEvent> = {
   send: (portId: string, payload: T['payload']) => void
-  on: (callback: (payload: T['payload']) => void, portId?: string) => () => void
+  on: (callback: (payload: T['payload'], portId: string) => void, portId?: string) => () => void
 }
 
 type ClientEventWithReturn<T extends MessagePortEvent> = {
   request: (payload: T['payload']) => Promise<T['output']>
-  handle: (handler: HandleHandler<T>) => () => void
+  handle: (handler: ClientHandleHandler<T>) => () => void
 }
 
 type PrimaryEventWithReturn<T extends MessagePortEvent> = {
   request: (portId: string, payload: T['payload']) => Promise<T['output']>
-  handle: (handler: HandleHandler<T>, portId?: string) => () => void
+  handle: (handler: PrimaryHandleHandler<T>, portId?: string) => () => void
 }
 
 export class MessagePortService<IsPrimary extends boolean> {
@@ -141,11 +146,11 @@ export class MessagePortService<IsPrimary extends boolean> {
           if (!this.primaryPostMessage) throw new Error('Primary post message not initialized')
           this.primaryPostMessage(portId, { type: name, data: payload })
         },
-        on: (callback: (payload: T) => void, portId?: string) => {
+        on: (callback: (payload: T, portId: string) => void, portId?: string) => {
           const wrappedCallback = (event: MessagePortEventPrimary) => {
             if (event.payload.type === name) {
               if (portId && event.portId !== portId) return
-              callback(event.payload.data)
+              callback(event.payload.data, event.portId)
             }
           }
 
@@ -246,13 +251,13 @@ export class MessagePortService<IsPrimary extends boolean> {
             this.primaryPostMessage!(portId, { type: name, data: payload })
           })
         },
-        handle: (handler: HandleHandler<T>, portId?: string) => {
+        handle: (handler: PrimaryHandleHandler<T>, portId?: string) => {
           const wrappedHandler = async (event: MessagePortEventPrimary) => {
             if (event.payload.type !== name) return
             if (portId && event.portId !== portId) return
 
             try {
-              const response = await handler(event.payload.data)
+              const response = await handler(event.payload.data, event.portId)
               if (response !== undefined) {
                 this.primaryPostMessage?.(event.portId, {
                   type: `${name}:response`,
@@ -335,14 +340,14 @@ export class MessagePortService<IsPrimary extends boolean> {
             this.clientPostMessage!({ type: name, data: payload })
           })
         },
-        handle: (handler: HandleHandler<T>) => {
+        handle: (handler: ClientHandleHandler<T>) => {
           this.handlers.set(name, handler)
 
           return () => {
             this.handlers.delete(name)
           }
         }
-      }
+      } as IsPrimary extends true ? PrimaryEventWithReturn<T> : ClientEventWithReturn<T>
     }
   }
 
