@@ -8,8 +8,6 @@ import { SettingsWindowEntrypoint } from './utils'
 
 let settingsWindow: BrowserWindow | undefined
 
-export const settingsEntryPoint = join(__dirname, '../renderer')
-
 export function createSettingsWindow(tab?: SettingsWindowTab) {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show()
@@ -78,7 +76,7 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
       `${process.env['ELECTRON_RENDERER_URL']}/Settings/settings.html${tabParam}`
     )
   } else {
-    settingsWindow.loadFile(join(settingsEntryPoint, 'settings.html') + tabParam)
+    settingsWindow.loadFile(join(__dirname, '../renderer', 'Settings', 'settings.html') + tabParam)
   }
 }
 

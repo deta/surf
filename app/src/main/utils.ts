@@ -123,7 +123,7 @@ export const SettingsWindowEntrypoint = (() => {
   if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
     return `${process.env.ELECTRON_RENDERER_URL}`
   } else {
-    return `file://${path.join(__dirname, '../renderer', 'Settings')}`
+    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Settings', 'settings.html')}`
   }
 })()
 
