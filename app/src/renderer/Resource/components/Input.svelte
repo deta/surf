@@ -78,7 +78,7 @@
     border-color: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.025));
     background: light-dark(rgba(0, 0, 0, 0.02), rgba(255, 255, 255, 0.04));
 
-    outline: 3px solid light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.025));
+    outline: 3px solid rgb(from var(--accent) r g b / 0.15);
     outline-offset: -1px;
     background: radial-gradient(
       290.88% 100% at 50% 0%,
@@ -125,7 +125,7 @@
     }
     &:not(&.hide) {
       &:hover {
-        outline: 3px solid light-dark(rgba(0, 0, 0, 0.09), rgba(255, 255, 255, 0.025));
+        outline: 3px solid rgb(from var(--accent) r g b / 0.4);
         background: radial-gradient(
           290.88% 100% at 50% 0%,
           rgba(219, 237, 255, 0.96) 0%,
@@ -162,7 +162,7 @@
 
       &:focus-within,
       &.active {
-        outline: 5px solid light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.025));
+        outline: 5px solid rgb(from var(--accent) r g b / 0.4);
         outline-offset: -1px;
         background: radial-gradient(
           290.88% 100% at 50% 0%,

@@ -59,6 +59,7 @@ import FloatyInput from './FloatyInput'
 import TableAddRowColumn from './extensions/TableAddRowColumn'
 import AIPrompt from './extensions/AIPrompt'
 import AIGeneration from './extensions/AIGeneration'
+import { TitleNode } from './extensions/TitleNode'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -87,6 +88,10 @@ export type ExtensionOptions = {
   webSearchComponent?: ComponentType<SvelteComponent>
   onWebSearchCompleted?: (event: CustomEvent<any>) => void
   onLinkClick?: LinkClickHandler
+  // Title node options
+  enableTitleNode?: boolean
+  titlePlaceholder?: string
+  onTitleChange?: (title: string) => void
 }
 
 const lowlight = createLowlight(all)
@@ -109,6 +114,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     codeBlock: false,
     blockquote: false
   }),
+  ...conditionalArrayItem(
+    !!opts?.enableTitleNode,
+    TitleNode.configure({
+      placeholder: opts?.titlePlaceholder || 'Untitled',
+      onTitleChange: opts?.onTitleChange
+    })
+  ),
   Mathematics.configure({
     regex: /\$\$([^$]+)\$\$|\$(?!\s)([^$\n]+)(?<!\s)\$/gi
   }),
@@ -168,12 +180,17 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
         return 'Toggle'
       }
 
+      if (node.type.name === 'titleNode') {
+        return opts?.titlePlaceholder || 'Untitled'
+      }
+
       return opts?.placeholder ?? "Write or type '/' for options…"
     }
   }),
   UniqueID.configure({
     attributeName: 'uuid',
     types: [
+      'titleNode',
       'heading',
       'paragraph',
       'resource',

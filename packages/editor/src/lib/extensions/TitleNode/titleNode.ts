@@ -1,0 +1,378 @@
+import { mergeAttributes, Node } from '@tiptap/core'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Selection, TextSelection } from '@tiptap/pm/state'
+
+export interface TitleNodeOptions {
+  /**
+   * The HTML attributes for a title node.
+   * @default {}
+   * @example { class: 'foo' }
+   */
+  HTMLAttributes: Record<string, any>
+
+  /**
+   * Placeholder text for empty title
+   * @default 'Untitled'
+   */
+  placeholder: string
+
+  /**
+   * Callback for when title changes
+   */
+  onTitleChange?: (title: string) => void
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    titleNode: {
+      /**
+       * Set title content
+       * @param title The title text
+       * @example editor.commands.setTitle('My Title')
+       */
+      setTitle: (title: string) => ReturnType
+
+      /**
+       * Focus the title node
+       * @example editor.commands.focusTitle()
+       */
+      focusTitle: () => ReturnType
+    }
+  }
+}
+
+/**
+ * This extension allows you to create a title node that appears at the top of documents
+ * Similar to Notion's title behavior
+ */
+export const TitleNode = Node.create<TitleNodeOptions>({
+  name: 'titleNode',
+
+  priority: 100,
+
+  addOptions() {
+    return {
+      HTMLAttributes: {},
+      placeholder: 'Untitled'
+    }
+  },
+
+  addAttributes() {
+    return {
+      title: {
+        default: '',
+        parseHTML: (element) => {
+          return element.textContent || ''
+        },
+        renderHTML: (attributes) => {
+          return {}
+        }
+      }
+    }
+  },
+
+  group: 'block',
+  inline: false,
+  content: 'text*',
+  marks: '',
+  defining: true,
+  isolating: false,
+
+  parseHTML() {
+    return [{ tag: 'h1[data-title-node]' }, { tag: 'div[data-title-node]' }]
+  },
+
+  renderHTML({ HTMLAttributes, node }) {
+    return [
+      'div',
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        'data-title-node': '',
+        class: 'title-node-container'
+      }),
+      0
+    ]
+  },
+
+  addNodeView() {
+    return ({ node, view, getPos }) => {
+      const dom = document.createElement('h1')
+      dom.className = 'title-node'
+      dom.setAttribute('data-title-node', '')
+
+      Object.assign(dom.style, {
+        fontFamily: 'Inter',
+        fontSize: '2.25rem',
+        fontWeight: '600',
+        letterSpacing: '-0.02em',
+        lineHeight: '1.2',
+        margin: '0',
+        padding: '0.5rem 0',
+        border: 'none',
+        outline: 'none',
+        background: 'transparent',
+        color: 'inherit',
+        cursor: 'text',
+        minHeight: '2.7rem',
+        position: 'relative',
+        display: 'block',
+        width: '100%'
+      })
+
+      const updatePlaceholder = () => {
+        try {
+          if (!node || !dom) return
+
+          const textContent = node.textContent || ''
+          const isEmpty = textContent.trim() === '' || textContent === '\u00A0'
+          dom.setAttribute('data-empty', isEmpty ? 'true' : 'false')
+          dom.setAttribute('data-placeholder', isEmpty ? this.options.placeholder : '')
+
+          if (isEmpty) {
+            dom.classList.add('is-title-empty')
+            dom.classList.add('title-empty')
+          } else {
+            dom.classList.remove('is-title-empty')
+            dom.classList.remove('title-empty')
+          }
+        } catch (error) {
+          console.warn('TitleNode updatePlaceholder error:', error)
+        }
+      }
+
+      updatePlaceholder()
+
+      const contentDOM = dom
+
+      return {
+        dom,
+        contentDOM,
+        update: (updatedNode) => {
+          if (updatedNode.type !== this.type) return false
+          node = updatedNode
+          setTimeout(() => updatePlaceholder(), 0)
+          return true
+        },
+        destroy: () => {}
+      }
+    }
+  },
+
+  addCommands() {
+    return {
+      setTitle:
+        (title: string) =>
+        ({ commands, state }) => {
+          const titleNode = state.doc.firstChild
+          if (titleNode && titleNode.type.name === this.name) {
+            const titleText = state.schema.text(title)
+            return commands.command(({ tr }) => {
+              tr.replaceRangeWith(1, titleNode.nodeSize - 1, titleText)
+              return true
+            })
+          }
+          return false
+        },
+
+      focusTitle:
+        () =>
+        ({ commands, editor }) => {
+          return commands.command(({ tr, dispatch }) => {
+            const pos = tr.doc.resolve(1)
+            const selection = TextSelection.create(tr.doc, pos.pos)
+            tr.setSelection(selection)
+            if (dispatch) dispatch(tr)
+            editor.view.focus()
+            return true
+          })
+        }
+    }
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      Enter: ({ editor }) => {
+        const { state } = editor
+        const { $from } = state.selection
+
+        if ($from.parent.type.name === this.name) {
+          const titleNode = state.doc.firstChild
+          if (titleNode) {
+            const afterTitle = titleNode.nodeSize
+
+            editor.commands.command(({ tr, state }) => {
+              const paragraph = state.schema.nodes.paragraph.create()
+              tr.insert(afterTitle, paragraph)
+              const newPos = tr.doc.resolve(afterTitle + 1)
+              tr.setSelection(TextSelection.near(newPos))
+              return true
+            })
+            return true
+          }
+        }
+        return false
+      },
+
+      Backspace: ({ editor }) => {
+        const { state } = editor
+        const { $from, $to, empty } = state.selection
+
+        if (
+          $from.parent.type.name === this.name &&
+          $to.parent.type.name === this.name &&
+          $from.pos === 1 &&
+          empty
+        ) {
+          return true
+        }
+        return false
+      },
+
+      Delete: ({ editor }) => {
+        const { state } = editor
+        const { $from, $to } = state.selection
+
+        if ($from.parent.type.name === this.name && $to.parent.type.name === this.name) {
+          const titleNode = state.doc.firstChild
+          if (titleNode && $from.pos === titleNode.nodeSize - 1) {
+            return true
+          }
+        }
+        return false
+      },
+
+      'Mod-Shift-t': ({ editor }) => {
+        const { state } = editor
+        const { $from, $to } = state.selection
+
+        if ($from.parent.type.name === this.name && $to.parent.type.name === this.name) {
+          return editor.commands.focusTitle()
+        }
+        return false
+      },
+
+      'Mod-a': ({ editor }) => {
+        const { state } = editor
+        const { $from, $to } = state.selection
+
+        if ($from.parent.type.name === this.name && $to.parent.type.name === this.name) {
+          const titleNode = state.doc.firstChild
+          if (titleNode && titleNode.type.name === this.name) {
+            const titleStart = 1
+            const titleEnd = titleNode.nodeSize - 1
+
+            if ($from.pos >= titleStart && $to.pos <= titleEnd) {
+              return editor.commands.command(({ tr, dispatch }) => {
+                const selection = TextSelection.create(tr.doc, titleStart, titleEnd)
+                tr.setSelection(selection)
+                if (dispatch) dispatch(tr)
+                return true
+              })
+            }
+          }
+        }
+        return false
+      }
+    }
+  },
+
+  addProseMirrorPlugins() {
+    const pluginKey = new PluginKey('titleNode')
+
+    return [
+      new Plugin({
+        key: pluginKey,
+        props: {
+          handleKeyDown: (view, event) => {
+            const { state } = view
+            const { selection } = state
+            const { $from } = selection
+
+            if (event.key === 'ArrowDown' && $from.parent.type.name === this.name) {
+              const titleNode = state.doc.firstChild
+              if (titleNode) {
+                const nextPos = titleNode.nodeSize
+                if (nextPos < state.doc.content.size) {
+                  const nextNode = state.doc.resolve(nextPos)
+                  if (nextNode.nodeAfter) {
+                    const newPos = state.doc.resolve(nextPos + 1)
+                    const newSelection = TextSelection.near(newPos)
+                    view.dispatch(state.tr.setSelection(newSelection))
+                    return true
+                  }
+                }
+              }
+            }
+
+            if (event.key === 'ArrowUp' && $from.pos > 1) {
+              const titleNode = state.doc.firstChild
+              if (titleNode && titleNode.type.name === this.name) {
+                const currentNodePos = $from.before($from.depth)
+                const titleEndPos = titleNode.nodeSize - 1
+
+                if (currentNodePos === titleNode.nodeSize) {
+                  const newPos = state.doc.resolve(titleEndPos)
+                  const newSelection = TextSelection.near(newPos)
+                  view.dispatch(state.tr.setSelection(newSelection))
+                  return true
+                }
+              }
+            }
+
+            return false
+          }
+        },
+        appendTransaction: (transactions, oldState, newState) => {
+          // Skip if this transaction was generated by our plugin
+          if (transactions.some((tr) => tr.getMeta(pluginKey))) {
+            return null
+          }
+
+          // Only proceed if the document changed
+          if (!transactions.some((tr) => tr.docChanged)) {
+            return null
+          }
+
+          const { doc, schema, tr } = newState
+          let modified = false
+
+          // Ensure document always starts with a titleNode (without schema enforcement)
+          const firstNode = doc.firstChild
+          if (!firstNode || firstNode.type.name !== this.name) {
+            const titleNode = schema.nodes.titleNode.create()
+            tr.insert(0, titleNode)
+            modified = true
+          }
+
+          // Ensure there's always at least one block after the title
+          if (doc.childCount === 1 && doc.firstChild?.type.name === this.name) {
+            const paragraph = schema.nodes.paragraph.create()
+            tr.insert(doc.firstChild.nodeSize, paragraph)
+            modified = true
+          }
+
+          // Handle title change notifications
+          const titleNode = newState.doc.firstChild
+          const oldTitleNode = oldState.doc.firstChild
+
+          if (
+            titleNode &&
+            titleNode.type.name === this.name &&
+            oldTitleNode &&
+            oldTitleNode.type.name === this.name
+          ) {
+            const newTitle = titleNode.textContent
+            const oldTitle = oldTitleNode.textContent
+
+            if (newTitle !== oldTitle && this.options.onTitleChange) {
+              setTimeout(() => {
+                this.options.onTitleChange?.(newTitle)
+              }, 0)
+            }
+          }
+
+          return modified ? tr.setMeta(pluginKey, true) : null
+        }
+      })
+    ]
+  }
+})

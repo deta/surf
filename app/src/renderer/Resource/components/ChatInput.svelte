@@ -402,6 +402,17 @@
       left: calc(50% - 780px / 2);
       right: calc(50% - 780px / 2);
 
+      background: radial-gradient(
+          ellipse 400px 60px at 50% 100%,
+          rgba(40, 87, 247, 0.15) 0%,
+          transparent 70%
+        ),
+        radial-gradient(ellipse 300px 45px at 50% 100%, rgba(40, 87, 247, 0.12) 0%, transparent 80%),
+        radial-gradient(ellipse 200px 30px at 50% 100%, rgba(40, 87, 247, 0.08) 0%, transparent 90%);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+
       @media screen and (max-width: 780px) {
         left: 0 !important;
         right: 0 !important;
@@ -456,8 +467,14 @@
       transition-duration: 200ms;
       transition-delay: 123ms;
       transition-timing-function: ease-out;
+      padding: 0.2rem;
       &:global(._starting) {
         opacity: 0;
+      }
+
+      &:hover {
+        border-radius: 5px;
+        background: rgb(from var(--accent) r g b / 0.12);
       }
 
       opacity: 1;
@@ -466,7 +483,7 @@
       align-items: center;
       gap: 0.25rem;
       pointer-events: all;
-      width: 18px;
+      width: 24px;
 
       .submit-hint {
         font-size: 0.65rem;
@@ -526,12 +543,13 @@
       right: -100vw;
 
       visibility: hidden;
-
-      background: linear-gradient(
-        0deg,
-        light-dark(#fff, rgb(24, 24, 24)) 80%,
-        light-dark(rgba(255, 255, 255, 0), rgba(24, 24, 24, 0)) 100%
-      );
+      &:not(.bottom) {
+        background: linear-gradient(
+          0deg,
+          light-dark(#fff, rgb(24, 24, 24)) 80%,
+          light-dark(rgba(255, 255, 255, 0), rgba(24, 24, 24, 0)) 100%
+        );
+      }
       backdrop-filter: blur(1px);
     }
     &:has(> header)::before {

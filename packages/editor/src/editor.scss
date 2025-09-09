@@ -248,9 +248,36 @@ body.custom .editor {
     pointer-events: none;
   }
 
-  h1.is-empty::after {
+  h1.is-empty:not(.title-node)::after {
     content: 'Heading 1';
     opacity: 0.75;
+  }
+
+  h1.title-node[data-empty="true"]::before,
+  h1.title-node.is-title-empty::before,
+  h1.title-node.title-empty::before {
+    content: attr(data-placeholder);
+    color: var(--color-text-muted, #9ca3af);
+    opacity: 0.75;
+    pointer-events: none;
+    font-weight: 600;
+    position: absolute;
+    top: 0.5rem;
+    left: 0;
+    z-index: 1;
+    font-size: inherit;
+    line-height: inherit;
+    font-family: inherit;
+  }
+
+  h1.title-node[data-empty="true"]::before,
+  h1.title-node.is-title-empty::before,
+  h1.title-node.title-empty::before {
+    color: #9ca3af;
+  }
+
+  h1.title-node:not([data-empty="true"]):not(.is-title-empty):not(.title-empty)::before {
+    display: none;
   }
 
   h2.is-empty::after {

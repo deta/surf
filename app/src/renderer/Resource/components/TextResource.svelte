@@ -118,7 +118,6 @@
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
   import { CHAT_TITLE_GENERATOR_PROMPT } from '@deta/services/constants'
   import ChatInput from './ChatInput.svelte'
-  import NoteTitle from './NoteTitle.svelte'
   import { SearchResourceTags, ResourceTag } from '@deta/utils/formatting'
   import type { ResourceNote, ResourceJSON } from '@deta/services/resources'
   import { type MessagePortClient } from '@deta/services/messagePort'
@@ -831,16 +830,15 @@
     }
   }
 
-  const handleTitleBlur = () => {
-    if (title) {
-      if (resourceId) {
-        resourceManager.updateResourceMetadata(resourceId, { name: title })
-      }
-
-      dispatch('update-title', title)
-
-      editorElem.focus()
+  const handleTitleChange = (newTitle: string) => {
+    title = newTitle
+    if (resourceId) {
+      resourceManager.updateResourceMetadata(resourceId, { name: title })
     }
+
+    document.title = title
+
+    dispatch('update-title', title)
   }
 
   // FIX: This interfears with the waa we use the active state -> e.g. inside visor
@@ -2438,10 +2436,6 @@
   on:paste={handlePaste}
 >
   <div class="content">
-    {#if showTitle}
-      <NoteTitle bind:value={title} placeholder="New Note" on:blur={handleTitleBlur} />
-    {/if}
-
     {#if !initialLoad && origin !== 'homescreen' && !readOnlyMode}
       <ChatInput
         {contextManager}
@@ -2501,6 +2495,9 @@
             onCaretPositionUpdate={handleCaretPositionUpdate}
             onLinkClick={handleLinkClick}
             readOnly={readOnlyMode}
+            enableTitleNode={showTitle && !readOnlyMode}
+            titlePlaceholder="Untitled"
+            onTitleChange={handleTitleChange}
             {slashItemsFetcher}
             {mentionItemsFetcher}
             {linkItemsFetcher}
@@ -2663,6 +2660,33 @@
 
   :global(.tiptap) {
     overscroll-behavior: auto;
+
+    :global(.title-node) {
+      max-width: 730px;
+      width: 100%;
+      margin: auto;
+      margin-top: 4rem;
+      margin-bottom: 0rem;
+      font-size: 2.1rem;
+      font-weight: 600;
+      box-sizing: content-box;
+      color: var(--on-surface-heavy);
+      background: light-dark(var(--app-background-light), rgba(24, 24, 24, 1));
+      border: none;
+      outline: none;
+
+      &::before {
+        content: attr(data-placeholder);
+        color: #9ca3af;
+        pointer-events: none;
+        position: absolute;
+        opacity: 1;
+      }
+
+      &:not(:empty)::before {
+        opacity: 0;
+      }
+    }
 
     :global(h1) {
       font-size: 1.875em;

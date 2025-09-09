@@ -57,9 +57,12 @@
 
   export let enableCaretIndicator: boolean = false
   export let onCaretPositionUpdate: ((position: any) => void) | undefined = undefined
-  undefined
   export let showSimilaritySearch: boolean = false
   export let editorElement: HTMLElement
+
+  export let enableTitleNode: boolean = false
+  export let titlePlaceholder: string = 'Untitled'
+  export let onTitleChange: ((title: string) => void) | undefined = undefined
 
   export const isEmptyy = () => !get(editor)?.state.doc.textContent.trim().length
 
@@ -334,6 +337,9 @@
     resourceComponent: resourceComponent,
     resourceComponentPreview: resourceComponentPreview,
     showDragHandle: showDragHandle,
+    enableTitleNode: enableTitleNode,
+    titlePlaceholder: titlePlaceholder,
+    onTitleChange: onTitleChange,
     showSlashMenu: showSlashMenu,
     onSlashCommand: handleSlashCommand,
     slashItems: slashItemsFetcher,

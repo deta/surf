@@ -117,7 +117,7 @@
 >
   <div class="tab-icon">
     {#if $type === ViewType.Resource}
-      <Icon name="file-text-ai" />
+      <Icon name="note" />
     {:else}
       <Favicon url={$faviconURL || $url} title={$title} />
     {/if}
