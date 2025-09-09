@@ -93,8 +93,16 @@ export class ContextManagerWCV {
     return item
   }
 
-  removeContextItem(id: string, trigger?: PageChatUpdateContextEventTrigger) {
+  async removeContextItem(id: string, trigger?: PageChatUpdateContextEventTrigger) {
     this.log.debug('Removing context item', id)
+
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM,
+      { id: id }
+    )
+
+    this.log.debug('Removed context item', result)
   }
 
   removeAllExcept(ids: string | string[], trigger?: PageChatUpdateContextEventTrigger) {

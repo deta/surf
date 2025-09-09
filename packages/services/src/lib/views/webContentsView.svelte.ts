@@ -675,6 +675,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     return this.manager.messagePort.noteRunQuery.send(this.view.id, { query, mentions })
   }
 
+  async insertNoteMentionQuery(mention: MentionItem, query: string) {
+    this.log.debug('Running note query', mention, query)
+    return this.manager.messagePort.noteInsertMentionQuery.send(this.view.id, { query, mention })
+  }
+
   async updatePageQuery(query: string) {
     this.log.debug('Updating page query', query)
     return this.manager.messagePort.changePageQuery.send(this.view.id, { query })

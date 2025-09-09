@@ -261,11 +261,17 @@
 
         generateTitle(askQuery)
 
+        let showPrompt = true
+        if (mentions.length === 1 && mentions[0].id === 'active_tab') {
+          showPrompt = false
+          insertMention(mentions[0], askQuery)
+        }
+
         await generateAndInsertAIOutput(
           askQuery,
           mentions,
           PageChatMessageSentEventTrigger.NoteUseSuggestion,
-          { focusEnd: true, autoScroll: true, showPrompt: true, focusInput: true }
+          { focusEnd: true, autoScroll: true, showPrompt: showPrompt, focusInput: true }
         )
       }
     } catch (err) {
@@ -327,32 +333,35 @@
         value = writable(text)
       }
 
-      unsubscribeValue = value.subscribe((value) => {
-        if (value) {
-          content.set(value)
+      title = resource.metadata.name ?? 'Untitled'
 
-          if (!editorFocused) {
-            editorElem?.setContent(value)
+      unsubs.push(
+        value.subscribe((value) => {
+          if (value) {
+            content.set(value)
+
+            if (!editorFocused) {
+              editorElem?.setContent(value)
+            }
           }
-        }
-      })
+        }),
+
+        content.subscribe((value) => {
+          debouncedSaveContent(value ?? '')
+
+          if (editorElem) {
+            isEmpty.set(editorElem.isEmptyy())
+          }
+        })
+
+        // note.title.subscribe((value) => {
+        //   if (value) {
+        //     title = value
+        //   }
+        // })
+      )
 
       initialLoad = false
-
-      unsubscribeContent = content.subscribe((value) => {
-        debouncedSaveContent(value ?? '')
-
-        if (editorElem) {
-          isEmpty.set(editorElem.isEmptyy())
-        }
-      })
-
-      title = resource.metadata.name ?? 'Untitled'
-      // unsubscribeTitle = note.title.subscribe((value) => {
-      //   if (value) {
-      //     title = value
-      //   }
-      // })
 
       log.debug('text resource', resource, title, $content)
 
@@ -402,10 +411,17 @@
       }
     }
 
-    unsubscribeNoteRunQuery = messagePort.noteRunQuery.handle((payload) => {
-      log.debug('Received note-run-query event', payload)
-      handleNoteRunQuery(payload.query, payload.mentions)
-    })
+    unsubs.push(
+      messagePort.noteRunQuery.handle((payload) => {
+        log.debug('Received note-run-query event', payload)
+        handleNoteRunQuery(payload.query, payload.mentions)
+      }),
+
+      messagePort.noteInsertMentionQuery.handle((payload) => {
+        log.debug('Received note-insert-mention-query event', payload)
+        insertMention(payload.mention, payload.query)
+      })
+    )
 
     // Start the async setup without waiting for it
     setupAsync()
@@ -1668,13 +1684,13 @@
         undefined,
         'Processing the results to answer your question...'
       )
-
-      // TODO: decide whether we should remove or keep the web search context after processing
-      // TODO: also use an enum for the context id
-      contextManager.removeContextItem('web_search')
     } catch (e) {
       log.error('Error handling web search completed', e)
       toasts.error('Failed to handle web search results')
+    } finally {
+      // TODO: decide whether we should remove or keep the web search context after processing
+      // TODO: also use an enum for the context id
+      contextManager?.removeContextItem('web_search')
     }
   }
 
@@ -1857,10 +1873,7 @@
     showInfoPopover('output[data-id="similarity-selection"]', `Select Text`, 'left')
   }
 
-  let unsubscribeValue: () => void
-  let unsubscribeContent: () => void
-  let unsubscribeTitle: () => void
-  let unsubscribeNoteRunQuery: () => void
+  let unsubs: Array<() => void> = []
 
   $: if (!$floatingMenuShown) {
     $showPrompts = false
@@ -2419,26 +2432,87 @@
     }
   }
 
+  const insertMention = (mentionItem: MentionItem, query?: string) => {
+    // editorElem?.setContent(
+    //   '<p><span class="mention" data-type="mention" data-id="active_tab" data-label="Active Tab" data-mention-type="active-tab" data-icon="sparkles">@Active Tab</span>: ‎‎</p>'
+    // )
+
+    try {
+      if (!mentionItem || !mentionItem.id || !mentionItem.label) {
+        log.error('Invalid mention data provided')
+        return
+      }
+
+      if (!editorElem) {
+        log.error('Editor element not initialized')
+        return
+      }
+
+      const noteEditor = editorElem.getEditor()
+      if (!noteEditor) {
+        log.error('Editor instance is not available')
+        return
+      }
+
+      // if (!chatInputEditorElem) {
+      //   log.error('Could not get chat input editor instance')
+      //   return
+      // }
+
+      // const chatInputEditor = chatInputEditorElem.getEditor()
+      // if (!chatInputEditor) {
+      //   log.error('Chat input editor instance is not available')
+      //   return
+      // }
+
+      // noteEditor
+      //   .chain()
+      //   .focus('end')
+      //   .insertContent([
+      //     {
+      //       type: 'paragraph'
+      //     },
+      //     {
+      //       type: 'paragraph'
+      //     }
+      //   ])
+      //   .run()
+
+      // Insert two line breaks followed by the mention
+      noteEditor
+        .chain()
+        .focus('end')
+        .insertContent([
+          {
+            type: 'mention',
+            attrs: {
+              id: mentionItem.id,
+              label: mentionItem.label,
+              mentionType: mentionItem.type,
+              icon: mentionItem.icon
+            }
+          },
+          {
+            type: 'text',
+            text: query ? ' ' : ': ‎‎'
+          }
+        ])
+        .run()
+
+      // If there's a query, insert it after the mention
+      if (query) {
+        noteEditor.chain().insertContent(query).run()
+      }
+
+      noteEditor.commands.focus('end')
+    } catch (error) {
+      log.error('Error inserting mention', error)
+    }
+  }
+
   $: if (editorElem && isDev) {
     // @ts-ignore
     window.editor = editorElem
-  }
-
-  let insertedDefaultContent = false
-  $: if (!initialLoad && !insertedDefaultContent && editorElem) {
-    insertedDefaultContent = true
-    log.debug(
-      'Initial load - setting up editor content',
-      $content,
-      editorElem,
-      editorElem?.isEmptyy()
-    )
-
-    if (editorElem.isEmptyy()) {
-      editorElem.setContent(
-        '<p><span class="mention" data-type="mention" data-id="active_tab" data-label="Active Tab" data-mention-type="active-tab" data-icon="sparkles">@Active Tab</span>: ‎‎</p>'
-      )
-    }
   }
 
   onDestroy(() => {
@@ -2446,21 +2520,7 @@
       resource.releaseData()
     }
 
-    if (unsubscribeContent) {
-      unsubscribeContent()
-    }
-
-    if (unsubscribeValue) {
-      unsubscribeValue()
-    }
-
-    if (unsubscribeTitle) {
-      unsubscribeTitle()
-    }
-
-    if (unsubscribeNoteRunQuery) {
-      unsubscribeNoteRunQuery()
-    }
+    unsubs.forEach((unsub) => unsub())
 
     if (editorElement) {
       editorElement.removeEventListener('scroll', handleScroll)

@@ -23,6 +23,7 @@ import {
 } from '@deta/utils'
 import { useConfig } from '../config'
 import type { NewWindowRequest, OpenURL } from '../ipc/events'
+import { useAI } from '../ai'
 
 export class BrowserService {
   private readonly resourceManager = useResourceManager()
@@ -30,6 +31,7 @@ export class BrowserService {
   private readonly tabsManager = useTabs()
   private readonly notebookManager = useNotebookManager()
   private readonly config = useConfig()
+  private readonly ai = useAI()
   private readonly messagePort = useMessagePortPrimary()
   private readonly log = useLogScope('BrowserService')
 
@@ -160,7 +162,7 @@ export class BrowserService {
     try {
       const target = opts?.target || 'sidebar'
 
-      this.log.debug(`Triggering ask action in ${target} for query: "${query}"`)
+      this.log.debug(`Triggering ask action in ${target} for query: "${query}"`, mentions)
 
       const note = await this.resourceManager.createResourceNote('', {
         name: formatAIQueryToTitle(query)
@@ -210,6 +212,9 @@ export class BrowserService {
         this.log.error('Failed to wait for web contents to be ready')
         return
       }
+
+      // Make sure to clear existing context to avoid confusion
+      this.ai.contextManager.clear()
 
       await webContents.runNoteQuery(query, mentions)
     } catch (error) {

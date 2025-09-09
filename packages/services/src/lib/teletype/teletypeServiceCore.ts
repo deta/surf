@@ -3,7 +3,7 @@ import type { ActionProvider, TeletypeAction, TeletypeServiceOptions } from './t
 import { SearchProvider } from './providers/SearchProvider'
 import { AskProvider } from './providers/AskProvider'
 import { type TeletypeActionSerialized, useMessagePortPrimary } from '../messagePort'
-import { type MentionItem } from '@deta/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import { ResourcesProvider } from './providers/ResourcesProvider'
 import { useBrowser } from '../browser'
 import { HostnameProvider } from './providers/HostnameProvider'
@@ -62,6 +62,17 @@ export class TeletypeServiceCore {
     this.messagePort.teletypeAsk.on(async ({ query, mentions }, viewId) => {
       const target = this.browser.getViewLocation(viewId)
       this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions)
+
+      if (target === 'sidebar' && mentions.length === 0) {
+        this.log.debug('No mentions in sidebar, adding active tab mention')
+        mentions.push({
+          id: 'active_tab',
+          label: 'Active Tab',
+          type: MentionItemType.ACTIVE_TAB,
+          icon: 'sparkles'
+        })
+      }
+
       await this.browser.createNoteAndRunAIQuery(query, mentions, {
         target: target ?? 'tab',
         notebookId: 'auto'

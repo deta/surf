@@ -54,7 +54,7 @@ import type { SearchResultLink } from '@deta/web-parser'
 import { ContextItemWebSearch } from './context/web'
 import { ContextManagerWCV } from './contextManagerWCV'
 import { Notebook, NotebookManager, useNotebookManager } from '../notebooks'
-import { useViewManager, ViewManager } from '../views'
+import { useViewManager, ViewManager, ViewType } from '../views'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -222,37 +222,40 @@ export class ContextManager {
       // Handle the event
 
       if (type === WebContentsViewContextManagerActionType.GET_ITEMS) {
-        // const activeTab = this.tabsManager.activeTabValue
-        // const numContextItems = this.itemsValue.length
+        const activeTab = this.tabsManager.activeTabValue
+        const numContextItems = this.itemsValue.length
 
-        // if (numContextItems === 0 && this.viewManager.sidebarViewOpen && activeTab) {
-        //   const activeTabUrl = activeTab.view.urlValue
-        //   const internalUrl = isInternalRendererURL(activeTabUrl || '')
+        if (
+          numContextItems === 0 &&
+          this.viewManager.sidebarViewOpen &&
+          this.viewManager.activeSidebarView?.typeValue === ViewType.Resource &&
+          activeTab
+        ) {
+          const viewData = activeTab.view.typeDataValue
+          if (viewData.type === ViewType.Page) {
+            this.log.debug(
+              'External URL detected:',
+              activeTab.view.urlValue,
+              'adding tab to context',
+              activeTab
+            )
 
-        //   if (!internalUrl) {
-        //     this.log.debug(
-        //       'External URL detected:',
-        //       activeTabUrl,
-        //       'adding tab to context',
-        //       activeTab
-        //     )
-        //     this.onlyUseTabInContext(activeTab)
-        //   } else if (internalUrl && internalUrl.hostname === 'notebook') {
-        //     const notebookId = internalUrl.pathname.slice(1)
-        //     this.log.debug(
-        //       'Internal notebook URL detected:',
-        //       internalUrl,
-        //       'adding notebook to context',
-        //       notebookId
-        //     )
-        //     const notebook = await this.notebookManager.getNotebook(notebookId)
-        //     if (notebook) {
-        //       this.onlyUseNotebookInContext(notebook)
-        //     }
-        //   } else {
-        //     this.log.debug('Other internal URL detected:', activeTabUrl)
-        //   }
-        // }
+            await this.onlyUseTabInContext(activeTab)
+            await wait(200)
+          } else if (viewData.type === ViewType.Notebook && viewData.id) {
+            this.log.debug(
+              'Internal notebook URL detected, adding notebook to context',
+              viewData.id
+            )
+            const notebook = await this.notebookManager.getNotebook(viewData.id)
+            if (notebook) {
+              await this.onlyUseNotebookInContext(notebook)
+              await wait(200)
+            }
+          } else {
+            this.log.debug('Other internal URL detected:', activeTab.view.urlValue)
+          }
+        }
 
         const resourceIds = await this.getResourceIds(payload.prompt)
         this.log.debug('Got resource ids from context items', resourceIds)
@@ -281,6 +284,9 @@ export class ContextManager {
         return null
       } else if (type === WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT) {
         await this.addResource(payload.id)
+        return null
+      } else if (type === WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM) {
+        await this.removeContextItem(payload.id)
         return null
       } else {
         this.log.error('Unknown WebContentsViewContextManagerActionType', type)

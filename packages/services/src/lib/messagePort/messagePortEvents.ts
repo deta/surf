@@ -52,6 +52,13 @@ export interface MPNoteRunQuery extends MessagePortEvent {
   }
 }
 
+export interface MPNoteInsertMentionQuery extends MessagePortEvent {
+  payload: {
+    query?: string
+    mention?: MentionItem
+  }
+}
+
 export interface MPNoteReady extends MessagePortEvent {
   payload: void
 }
@@ -77,6 +84,7 @@ type MessagePortEventRegistry = {
   teletypeAsk: MPTeletypeAsk
   navigateURL: MPNavigateURL
   noteRunQuery: MPNoteRunQuery
+  noteInsertMentionQuery: MPNoteInsertMentionQuery
   noteReady: MPNoteReady
   changePageQuery: MPChangePageQuery
   openResource: MPOpenResource
@@ -103,6 +111,9 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     teletypeAsk: messagePortService.addEvent<MPTeletypeAsk>('teletype-ask'),
     navigateURL: messagePortService.addEvent<MPNavigateURL>('navigate-url'),
     noteRunQuery: messagePortService.addEvent<MPNoteRunQuery>('note-run-query'),
+    noteInsertMentionQuery: messagePortService.addEvent<MPNoteInsertMentionQuery>(
+      'note-insert-mention-query'
+    ),
     noteReady: messagePortService.addEvent<MPNoteReady>('note-ready'),
     changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query'),
     openResource: messagePortService.addEvent<MPOpenResource>('open-resource'),
