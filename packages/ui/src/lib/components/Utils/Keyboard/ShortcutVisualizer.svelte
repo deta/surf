@@ -10,12 +10,13 @@
         win: KeyType[]
       }
   export let shortcut: ShortcutConfig
-  export let size: 'small' | 'medium' | 'large' = 'medium'
+  export let size: 'tiny' | 'small' | 'medium' | 'large' = 'medium'
   export let separator: string = '+'
   export let separatorStyle: 'light' | 'dark' = 'light'
   export let interactive = false
   export let showSeparator = false
   export let onSuccess: (() => void) | null = null
+  export let color: string | null = null
   // Setup event dispatcher
   const dispatch = createEventDispatcher<{
     success: void
@@ -229,12 +230,13 @@
   onDestroy(detachListeners)
 </script>
 
-<div class="shortcut-container">
+<div class="shortcut-container" class:tiny={size === 'tiny'}>
   {#each keysToDisplay as key, i}
     {@const keyRef = `key_${i}`}
     <KeyCap
       keySymbol={key}
       {size}
+      {color}
       isModifier={isModifier(key)}
       isActive={interactive && activeKeyStates[keyRef]}
       {isSuccess}
@@ -253,7 +255,14 @@
     gap: 0.33rem;
     margin: 0 0.25rem;
     padding: 0.33rem 0.33rem 0.4rem 0.33rem;
-    @include utils.squircle($fill: rgba(255, 255, 255, 0.1), $radius: 10px, $smooth: 0.24);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+
+    &.tiny {
+      margin: 0;
+      padding: 0;
+      background: none;
+    }
   }
   .separator {
     color: #fff;

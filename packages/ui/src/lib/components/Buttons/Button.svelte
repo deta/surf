@@ -125,7 +125,7 @@
 :global(.button-md[data-button-root]) {
   padding: 0.5rem 0.8rem;
   font-size: 13px;
-  gap: 0.25rem;
+  gap: 0.5rem;
   border-radius: 12px;
 }
 

@@ -15,6 +15,7 @@
   import { Editor, type MentionItem } from '@deta/editor'
   import { createRemoteMentionsFetcher } from '@deta/services/ai'
   import { Button } from '@deta/ui'
+  import { ShortcutVisualizer } from '@deta/ui'
 
   const dispatch = createEventDispatcher<{
     ask: { query: string; mentions: MentionItem[] }
@@ -495,9 +496,11 @@
               class="secondary-button"
               disabled={!$inputValue || $inputValue.length === 0}
             >
-              Ask Surf <span class="keycap">{isMac() ? '⌘' : 'Ctrl'}</span><span class="keycap"
-                >↵</span
-              >
+              Ask Surf <ShortcutVisualizer
+                shortcut={{ mac: ['cmd', 'return'], win: ['ctrl', 'return'] }}
+                size="tiny"
+                color="#e4e7ff"
+              />
             </Button>
           {/if}
 
@@ -508,11 +511,12 @@
             disabled={!$inputValue || $inputValue.length === 0}
           >
             {#if $selectedAction?.buttonText}
-              {$selectedAction?.buttonText} <span class="keycap">↵</span>
+              {$selectedAction?.buttonText}
+              <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
             {:else if isInMentionMode || hasMentions}
-              Ask Surf <span class="keycap">↵</span>
+              Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
             {:else}
-              Search <span class="keycap">↵</span>
+              Search <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
             {/if}
           </Button>
         </div>
@@ -877,7 +881,7 @@
     background: #8c9dff;
     color: #fff;
     border-radius: 12px;
-    padding: 0.25rem 0.75rem calc(0.25rem - 1px) 0.75rem;
+    padding: 0.25rem 0.33rem 0.25rem 0.5rem;
     min-width: 4.5rem;
     display: flex;
     justify-content: center;
@@ -897,16 +901,17 @@
   :global(.secondary-button[data-button-root]) {
     background: transparent;
     color: var(--text);
-    border: 1px solid var(--border-color);
+    outline: 0.5px solid var(--border-color);
+    outline-offset: -0.5px;
     border-radius: 12px;
-    padding: 0.25rem 0.75rem calc(0.25rem - 1px) 0.75rem;
+    padding: 0.25rem 0.33rem 0.25rem 0.5rem;
     min-width: 4.5rem;
     display: flex;
     justify-content: center;
     align-items: center;
 
     &:hover:not(&:disabled) {
-      background: var(--background-dark);
+      background: rgba(0, 0, 0, 0.033);
       color: var(--text);
     }
   }
