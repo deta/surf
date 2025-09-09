@@ -15,4 +15,12 @@ export abstract class EventEmitterBase<T extends EventMap> {
   emit<E extends keyof T>(event: E, ...args: Parameters<T[E]>) {
     this.eventEmitter.emit(event, ...args)
   }
+
+  listeners<E extends keyof T>(event: E) {
+    return this.eventEmitter.listeners(event)
+  }
+
+  eventNames() {
+    return this.eventEmitter.eventNames()
+  }
 }

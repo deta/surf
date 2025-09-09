@@ -337,6 +337,8 @@ export const parseUrlIntoCanonical = (value: string | URL) => {
 }
 
 export const isInternalViewerURL = (url: string, entryPoint: string) => {
+  if (!url || !entryPoint) return false
+
   if (url.startsWith(entryPoint)) return true
   if (
     isWindows() &&
@@ -453,11 +455,7 @@ export function isInternalRendererURL(url: string | URL): URL | null {
       '/Core/core.html'
     ]
 
-    if (
-      isDev &&
-      checkIfLocalhost(_url) &&
-      devPartialPaths.includes(_url.pathname)
-    ) {
+    if (isDev && checkIfLocalhost(_url) && devPartialPaths.includes(_url.pathname)) {
       const rendererURL = new URL(
         _url.searchParams.get('path') ??
           (() => {
@@ -468,7 +466,10 @@ export function isInternalRendererURL(url: string | URL): URL | null {
       return rendererURL
     }
 
-    const prodPartialPaths = ['/out/renderer/Notebook/notebook.html', '/out/renderer/Resource/resource.html']
+    const prodPartialPaths = [
+      '/out/renderer/Notebook/notebook.html',
+      '/out/renderer/Resource/resource.html'
+    ]
 
     // TODO: Improve prod path
     if (

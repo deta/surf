@@ -1,22 +1,18 @@
 import {
   EventEmitterBase,
-  getFormattedDate,
   getHostname,
   isDev,
-  isInternalRendererURL,
   parseUrlIntoCanonical,
   type ScopedLogger,
   useDebounce,
-  useLogScope,
-  wait
+  useLogScope
 } from '@deta/utils'
 import { KVStore, useKVTable } from '../kv'
 import type { Fn } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from '../views'
 import { derived, get, writable, type Readable } from 'svelte/store'
-import { ViewManagerEmitterNames, WebContentsViewEmitterNames } from '../views/types'
-import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
-import type { NewWindowRequest } from '../ipc/events'
+import { WebContentsViewEmitterNames } from '../views/types'
+import { spawnBoxSmoke } from '@deta/ui'
 import {
   type TabItemEmitterEvents,
   type KVTabItem,
@@ -26,7 +22,6 @@ import {
   type TabsServiceEmitterEvents
 } from './tabs.types'
 import { ResourceManager, useResourceManager } from '../resources'
-import { tick } from 'svelte'
 
 /**
  * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView
@@ -193,11 +188,11 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     return this.activatedTabs
   }
 
-  constructor() {
+  constructor(viewManager?: ViewManager) {
     super()
 
     this.log = useLogScope('TabsService')
-    this.viewManager = useViewManager()
+    this.viewManager = viewManager ?? useViewManager()
     this.resourceManager = useResourceManager()
     this.kv = useKVTable<KVTabItem>('tabs')
     this.closedTabs = new ClosedTabs()
@@ -245,19 +240,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       this.activeTabId = null
     }
 
-    this.unsubs.push(
-      this.viewManager.on(ViewManagerEmitterNames.NEW_WINDOW_REQUEST, (details) => {
-        this.handleNewWindowRequest(details)
-      })
-    )
-
     this.prepareNewTabPage()
-  }
-
-  private handleNewWindowRequest(details: NewWindowRequest) {
-    this.log.debug('New window request received', details)
-    const active = details.disposition !== 'background-tab'
-    this.create(details.url, { active, activate: true })
   }
 
   private async getLastTabIndex(): Promise<number> {
@@ -650,14 +633,15 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     this.unsubs.forEach((unsub) => unsub())
   }
 
+  static provide(viewManager?: ViewManager): TabsService {
+    TabsService.self = new TabsService(viewManager)
+    return TabsService.self
+  }
+
   static useTabs(): TabsService {
-    if (!TabsService.self) {
-      TabsService.self = new TabsService()
-    }
     return TabsService.self
   }
 }
 
-export function useTabs(): TabsService {
-  return TabsService.useTabs()
-}
+export const createTabsService = (viewManager?: ViewManager) => TabsService.provide(viewManager)
+export const useTabs = () => TabsService.useTabs()

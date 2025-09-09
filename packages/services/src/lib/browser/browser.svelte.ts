@@ -13,7 +13,7 @@ import {
   ResourceTypes
 } from '@deta/types'
 import { useNotebookManager } from '../notebooks'
-import { ViewType } from '../views/types'
+import { ViewManagerEmitterNames, ViewType } from '../views/types'
 import { useMessagePortPrimary } from '../messagePort'
 import {
   DEFAULT_SEARCH_ENGINE,
@@ -22,6 +22,7 @@ import {
   SEARCH_ENGINES
 } from '@deta/utils'
 import { useConfig } from '../config'
+import type { NewWindowRequest, OpenURL } from '../ipc/events'
 
 export class BrowserService {
   private readonly resourceManager = useResourceManager()
@@ -42,6 +43,10 @@ export class BrowserService {
 
   attachListeners() {
     this._unsubs.push(
+      this.viewManager.on(ViewManagerEmitterNames.NEW_WINDOW_REQUEST, (details) => {
+        this.handleNewWindowRequest(details)
+      }),
+
       this.messagePort.openResource.on(async ({ resourceId, target, offline }) => {
         this.openResource(resourceId, { target, offline })
       }),
@@ -125,6 +130,23 @@ export class BrowserService {
         })
       })
     )
+  }
+
+  handleNewWindowRequest(details: NewWindowRequest) {
+    this.log.debug('New window request received', details)
+
+    if (details.disposition === 'new-window') {
+      this.viewManager.openURLInSidebar(details.url)
+      return
+    }
+
+    const active = details.disposition !== 'background-tab'
+    this.tabsManager.create(details.url, { active, activate: true })
+  }
+
+  handleOpenURLRequest(details: OpenURL) {
+    this.log.debug('Open URL request received', details)
+    this.tabsManager.create(details.url, { active: details.active, activate: true })
   }
 
   async createNoteAndRunAIQuery(

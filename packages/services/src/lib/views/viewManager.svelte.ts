@@ -411,15 +411,16 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     this.unsubs.forEach((unsub) => unsub())
   }
 
-  static getInstance(resourceManager?: ResourceManager): ViewManager {
-    if (!ViewManager.self) {
-      ViewManager.self = new ViewManager(resourceManager)
-    }
+  static provide(resourceManager?: ResourceManager) {
+    ViewManager.self = new ViewManager(resourceManager)
+    return ViewManager.self
+  }
 
+  static use(): ViewManager {
     return ViewManager.self
   }
 }
 
-export const useViewManager = (resourceManager?: ResourceManager): ViewManager => {
-  return ViewManager.getInstance(resourceManager)
-}
+export const createViewManager = (resourceManager?: ResourceManager) =>
+  ViewManager.provide(resourceManager)
+export const useViewManager = () => ViewManager.use()

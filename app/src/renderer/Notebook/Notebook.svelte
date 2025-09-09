@@ -5,7 +5,6 @@
   import { setupTelemetry } from '@deta/services/helpers'
   import { createResourceManager } from '@deta/services/resources'
   import { createTeletypeService } from '@deta/services/teletype'
-  import { useTabs } from '@deta/services/tabs'
   import { prepareContextMenu } from '@deta/ui'
   import IndexRoute from './components/routes/IndexRoute.svelte'
   import NotebookDetailRoute from './components/routes/NotebookDetailRoute.svelte'

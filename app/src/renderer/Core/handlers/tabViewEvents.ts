@@ -1,29 +1,19 @@
 import { useTabs } from '@deta/services/tabs'
 import { useViewManager } from '@deta/services/views'
-import { useLogScope } from '@deta/utils/io'
 import type { PreloadEvents } from './preloadEvents'
+import { useBrowser } from '@deta/services/browser'
 
 export const setupTabViewEvents = (events: PreloadEvents) => {
-  const log = useLogScope('Preload TabViewEvents')
   const tabsManager = useTabs()
   const viewManager = useViewManager()
+  const browser = useBrowser()
 
   events.onNewWindowRequest((details) => {
-    log.debug('new window request', details)
-
-    const { disposition, url } = details
-    // if (disposition === 'new-window') {
-    //   // TODO: open in overlay
-    //   return
-    // }
-
-    const active = disposition === 'foreground-tab'
-    tabsManager.create(url, { active })
+    browser.handleNewWindowRequest(details)
   })
 
   events.onOpenURL((details) => {
-    log.debug('open URL request', details)
-    tabsManager.create(details.url, { active: details.active, activate: true })
+    browser.handleOpenURLRequest(details)
   })
 
   events.onCopyActiveTabURL(() => {

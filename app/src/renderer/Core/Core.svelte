@@ -24,24 +24,10 @@
 
   const log = useLogScope('Core')
 
-  const {
-    config,
-    viewManager,
-    notebookManager,
-    tabsService,
-    ai,
-    keyboardManager,
-    shortcutsManager,
-    browser
-  } = initServices()
+  const { config, viewManager, tabsService, keyboardManager, shortcutsManager, browser } =
+    initServices()
 
-  // const overlayManager = useOverlayManager()
-
-  const contextManager = ai.contextManager as ContextManager
-
-  const activeTab = $derived(tabsService.activeTab)
   const activeTabView = $derived(tabsService.activeTab?.view)
-  const activeTabUrl = $derived(tabsService.activeTab?.view.url)
 
   let unsubs: Fn[] = []
   let activeTabNavigationBar: NavigationBar | undefined
