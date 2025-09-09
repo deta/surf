@@ -262,8 +262,9 @@ body.custom .editor {
     pointer-events: none;
     font-weight: 600;
     position: absolute;
-    top: 0.5rem;
+    top: 0;
     left: 0;
+    padding: 2rem 0px 1rem;
     z-index: 1;
     font-size: inherit;
     line-height: inherit;
