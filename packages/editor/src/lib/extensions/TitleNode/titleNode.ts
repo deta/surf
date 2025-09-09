@@ -120,7 +120,7 @@ export const TitleNode = Node.create<TitleNodeOptions>({
         letterSpacing: '-0.02em',
         lineHeight: '1.2',
         margin: '0',
-        padding: '0.5rem 0',
+        padding: '2rem 0 1rem 0',
         border: 'none',
         outline: 'none',
         background: 'transparent',
