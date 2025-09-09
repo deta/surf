@@ -9,7 +9,7 @@
   import ActionItem from './Action.svelte'
 
   import { createEventDispatcher, onMount, tick, onDestroy } from 'svelte'
-  import { useLogScope } from '@deta/utils'
+  import { isModKeyPressed, useLogScope } from '@deta/utils'
 
   let {
     actions,
@@ -182,7 +182,7 @@
 
       activeActionIndex++
       keepActiveActionVisible()
-    } else if (e.key === 'Enter' && !e.shiftKey) {
+    } else if (e.key === 'Enter' && !e.shiftKey && !isModKeyPressed(e)) {
       e.preventDefault()
       if (activeActionIndex === undefined && parsedActions.length > 1) return
 

@@ -78,7 +78,7 @@ export class TeletypeService {
     // Register local providers
     this.registerProvider(new CurrentQueryProvider(this)) // Local, instant current query
     this.registerProvider(new NavigationProvider(this))
-    this.registerProvider(new AskProvider(this))
+    // this.registerProvider(new AskProvider(this))
   }
 
   get queryValue() {
@@ -197,6 +197,12 @@ export class TeletypeService {
   async ask(query: string, mentions: MentionItem[]): Promise<void> {
     this.log.debug('Asking question:', query)
     await this.messagePort.teletypeAsk.send({ query, mentions })
+    this.clear()
+  }
+
+  async createNote(content: string): Promise<void> {
+    this.log.debug('Creating note:', content)
+    await this.messagePort.teletypeCreateNote.send({ content })
     this.clear()
   }
 

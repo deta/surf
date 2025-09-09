@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useLogScope } from '@deta/utils/io'
+  import { isModKeyPressed, useLogScope } from '@deta/utils/io'
   import { useTeletype } from './index'
   import { createEventDispatcher, onMount, onDestroy } from 'svelte'
   import { slide, fade } from 'svelte/transition'
@@ -135,7 +135,7 @@
       return
     }
 
-    if (e.shiftKey) {
+    if (e.shiftKey || isModKeyPressed(e)) {
       // Don't interfere with shift key combos
       return
     }

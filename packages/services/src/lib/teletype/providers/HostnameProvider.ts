@@ -55,7 +55,7 @@ export class HostnameProvider implements ActionProvider {
       section: 'Suggestion',
       priority,
       keywords,
-      description: `Navigate to ${normalizeURL(url!)}`,
+      // description: `Navigate to ${normalizeURL(url!)}`,
       buttonText: 'Navigate',
       handler: async () => {
         await this.browser.replaceActiveTabUrl(entry.url!)

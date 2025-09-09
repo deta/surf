@@ -42,6 +42,12 @@ export interface MPTeletypeAsk extends MessagePortEvent {
   }
 }
 
+export interface MPTeletypeCreateNote extends MessagePortEvent {
+  payload: {
+    content: string
+  }
+}
+
 export interface MPNavigateURL extends MessagePortEvent {
   payload: NavigateURLOptions
 }
@@ -83,6 +89,7 @@ type MessagePortEventRegistry = {
   teletypeSearch: MPTeletypeSearchRequest
   teletypeExecuteAction: MPTeletypeExecuteAction
   teletypeAsk: MPTeletypeAsk
+  teletypeCreateNote: MPTeletypeCreateNote
   navigateURL: MPNavigateURL
   noteRunQuery: MPNoteRunQuery
   noteInsertMentionQuery: MPNoteInsertMentionQuery
@@ -110,6 +117,7 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     teletypeSearch:
       messagePortService.addEventWithReturn<MPTeletypeSearchRequest>('teletype-search'),
     teletypeAsk: messagePortService.addEvent<MPTeletypeAsk>('teletype-ask'),
+    teletypeCreateNote: messagePortService.addEvent<MPTeletypeCreateNote>('teletype-create-note'),
     navigateURL: messagePortService.addEvent<MPNavigateURL>('navigate-url'),
     noteRunQuery: messagePortService.addEvent<MPNoteRunQuery>('note-run-query'),
     noteInsertMentionQuery: messagePortService.addEvent<MPNoteInsertMentionQuery>(

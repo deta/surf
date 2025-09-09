@@ -18,6 +18,7 @@
 
   const dispatch = createEventDispatcher<{
     ask: { query: string; mentions: MentionItem[] }
+    'create-note': { content: string }
     input: { query: string; mentions: MentionItem[] }
     'actions-rendered': boolean
   }>()
@@ -221,8 +222,9 @@
     teletype.showAction('teletype-helper')
   }
 
-  const handleSubmit = () => {
-    if ($selectedAction && !isInMentionMode) {
+  const handleSubmit = (e: CustomEvent<boolean>) => {
+    const modKeyPressed = e.detail
+    if ($selectedAction && !isInMentionMode && !modKeyPressed) {
       callAction($selectedAction)
     } else {
       if (!mentions) {
@@ -231,6 +233,12 @@
 
       dispatch('ask', { query: $inputValue, mentions })
     }
+  }
+
+  const handleCreateNote = () => {
+    console.log('Creating note with query:', $inputValue, mentions)
+    const content = editorComponent.getParsedEditorContent()
+    dispatch('create-note', { content: content.html ?? content.text })
   }
 
   $effect(() => {
@@ -471,13 +479,40 @@
         <ToolsList tools={$tools} {teletype} />
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
-          <Button size="md" onclick={handleSubmit} class="send-button" disabled={!$inputValue || $inputValue.length === 0}>
+          {#if $selectedAction?.id === 'ask-action' || isInMentionMode || hasMentions}
+            <Button
+              size="md"
+              onclick={handleCreateNote}
+              class="secondary-button"
+              disabled={!$inputValue || $inputValue.length === 0}
+            >
+              Create Note
+            </Button>
+          {:else}
+            <Button
+              size="md"
+              onclick={handleSubmit}
+              class="secondary-button"
+              disabled={!$inputValue || $inputValue.length === 0}
+            >
+              Ask Surf <span class="keycap">{isMac() ? '⌘' : 'Ctrl'}</span><span class="keycap"
+                >↵</span
+              >
+            </Button>
+          {/if}
+
+          <Button
+            size="md"
+            onclick={handleSubmit}
+            class="send-button"
+            disabled={!$inputValue || $inputValue.length === 0}
+          >
             {#if $selectedAction?.buttonText}
-              {$selectedAction?.buttonText} ↵
-            {:else if isInMentionMode}
-              Ask ↵
+              {$selectedAction?.buttonText} <span class="keycap">↵</span>
+            {:else if isInMentionMode || hasMentions}
+              Ask Surf <span class="keycap">↵</span>
             {:else}
-              Send ↵
+              Search <span class="keycap">↵</span>
             {/if}
           </Button>
         </div>
@@ -833,6 +868,9 @@
 
   .send-button-wrapper {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   :global(.send-button[data-button-root]) {
@@ -848,6 +886,51 @@
     &:hover:not(&:disabled) {
       background: #8c9dff;
       color: #fff;
+    }
+
+    span.keycap {
+      background: rgba(255, 255, 255, 0.265);
+      color: #fff;
+    }
+  }
+
+  :global(.secondary-button[data-button-root]) {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.25rem 0.75rem calc(0.25rem - 1px) 0.75rem;
+    min-width: 4.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &:hover:not(&:disabled) {
+      background: var(--background-dark);
+      color: var(--text);
+    }
+  }
+
+  span.keycap {
+    font-family: 'Inter';
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    font-smoothing: antialiased;
+    font-size: 0.8rem;
+    line-height: 1rem;
+    height: 20px;
+    min-width: 20px;
+    text-align: center;
+    padding: 0px;
+    border-radius: 5px;
+    color: rgba(88, 104, 132, 1);
+    background: rgba(88, 104, 132, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:first-child {
+      margin-left: 0.25rem;
     }
   }
 </style>

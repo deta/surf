@@ -17,6 +17,7 @@ import { ViewManagerEmitterNames, ViewType } from '../views/types'
 import { useMessagePortPrimary } from '../messagePort'
 import {
   DEFAULT_SEARCH_ENGINE,
+  getFormattedDate,
   isOffline,
   parseStringIntoBrowserLocation,
   SEARCH_ENGINES
@@ -217,6 +218,65 @@ export class BrowserService {
       this.ai.contextManager.clear()
 
       await webContents.runNoteQuery(query, mentions)
+    } catch (error) {
+      this.log.error('Failed to trigger ask action:', error)
+    }
+  }
+
+  async createNoteWithContent(
+    content: string,
+    opts?: {
+      target?: 'tab' | 'sidebar'
+      notebookId?: string | 'auto'
+    }
+  ) {
+    try {
+      const target = opts?.target || 'sidebar'
+
+      this.log.debug(`Creating note in ${target} with content: "${content}"`)
+
+      const note = await this.resourceManager.createResourceNote(content, {
+        name: `Untitled ${getFormattedDate(Date.now())}`
+      })
+
+      if (opts?.notebookId === 'auto') {
+        if (this.tabsManager.activeTabValue?.view.typeValue === ViewType.Notebook) {
+          const viewData = this.tabsManager.activeTabValue.view.typeDataValue
+          if (viewData.id) {
+            opts.notebookId = viewData.id
+          } else {
+            opts.notebookId = undefined
+          }
+        } else {
+          opts.notebookId = undefined
+        }
+      }
+
+      if (opts?.notebookId) {
+        this.log.debug(`Adding created note to notebook ${opts.notebookId}`)
+        await this.notebookManager.addResourcesToNotebook(opts.notebookId, [note.id])
+      }
+
+      let view: WebContentsView
+      if (target === 'sidebar') {
+        if (
+          this.tabsManager.activeTabValue?.view.typeValue === ViewType.NotebookHome &&
+          this.tabsManager.activeTabIdValue
+        ) {
+          this.tabsManager.delete(this.tabsManager.activeTabIdValue)
+        }
+
+        view = this.viewManager.openResourceInSidebar(note.id)
+      } else {
+        const tab = await this.tabsManager.changeActiveTabURL(`surf://resource/${note.id}`)
+
+        if (!tab) {
+          this.log.error('Failed to change active tab URL')
+          return
+        }
+
+        view = tab.view
+      }
     } catch (error) {
       this.log.error('Failed to trigger ask action:', error)
     }

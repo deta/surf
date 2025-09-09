@@ -3,8 +3,10 @@
   import { DynamicIcon } from '@deta/icons'
   import { useTeletypeService } from '@deta/services'
   import type { MentionItem } from '@deta/editor'
+  import { useLogScope } from '@deta/utils/io'
 
   const teletypeService = useTeletypeService()
+  const log = useLogScope('TeletypeEntry')
 
   let { open = $bindable() }: { open: boolean } = $props()
   let teletype: TeletypeSystem
@@ -19,7 +21,7 @@
   })
 
   const handleTeletypeInput = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
-    console.log('Teletype input received:', event.detail)
+    log.debug('Teletype input received:', event.detail)
     const { query, mentions } = event.detail
     teletypeService.setMentions(mentions)
     teletypeService.setQuery(query)
@@ -27,7 +29,14 @@
 
   const handleAsk = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
     const { query, mentions } = event.detail
+    log.debug('Ask requested:', query, mentions)
     teletypeService.ask(query, mentions)
+  }
+
+  const handleCreateNote = (event: CustomEvent<{ content: string }>) => {
+    const { content } = event.detail
+    log.debug('Create note requested:', content)
+    teletypeService.createNote(content)
   }
 
   $effect(() => {
@@ -51,6 +60,6 @@
       open: true
     }}
   >
-    <Teletype on:input={handleTeletypeInput} on:ask={handleAsk} />
+    <Teletype on:input={handleTeletypeInput} on:ask={handleAsk} on:create-note={handleCreateNote} />
   </TeletypeProvider>
 {/if}

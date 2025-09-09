@@ -45,7 +45,8 @@
     useThrottle,
     wait,
     htmlToMarkdown,
-    isDev
+    isDev,
+    conditionalArrayItem
   } from '@deta/utils'
   import CitationItem from './CitationItem.svelte'
   import { generateContentHash, mapCitationsToText, parseChatOutputToHtml } from '@deta/services/ai'
@@ -2434,16 +2435,16 @@
     }
   }
 
-  const insertMention = (mentionItem: MentionItem, query?: string) => {
+  const insertMention = (mentionItem?: MentionItem, query?: string) => {
     // editorElem?.setContent(
     //   '<p><span class="mention" data-type="mention" data-id="active_tab" data-label="Active Tab" data-mention-type="active-tab" data-icon="sparkles">@Active Tab</span>: ‎‎</p>'
     // )
 
     try {
-      if (!mentionItem || !mentionItem.id || !mentionItem.label) {
-        log.error('Invalid mention data provided')
-        return
-      }
+      // if (!mentionItem || !mentionItem.id || !mentionItem.label) {
+      //   log.error('Invalid mention data provided')
+      //   return
+      // }
 
       if (!editorElem) {
         log.error('Editor element not initialized')
@@ -2485,15 +2486,17 @@
         .chain()
         .focus('end')
         .insertContent([
-          {
-            type: 'mention',
-            attrs: {
-              id: mentionItem.id,
-              label: mentionItem.label,
-              mentionType: mentionItem.type,
-              icon: mentionItem.icon
+          ...conditionalArrayItem(!!mentionItem, [
+            {
+              type: 'mention',
+              attrs: {
+                id: mentionItem?.id,
+                label: mentionItem?.label,
+                mentionType: mentionItem?.type,
+                icon: mentionItem?.icon
+              }
             }
-          },
+          ]),
           {
             type: 'text',
             text: query ? ' ' : ': ‎‎'

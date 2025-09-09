@@ -87,7 +87,7 @@
 
   const dispatch = createEventDispatcher<{
     update: string
-    submit: void
+    submit: boolean
     hashtags: string[]
     'citation-click': any
     autocomplete: EditorAutocompleteEvent
@@ -253,9 +253,9 @@
     }
   }
 
-  const onSubmit = () => {
+  const onSubmit = (isModKeyPressed: boolean) => {
     if (focused) {
-      dispatch('submit')
+      dispatch('submit', isModKeyPressed)
     }
   }
 
@@ -372,7 +372,7 @@
       return {
         Enter: () => {
           if (submitOnEnter) {
-            onSubmit()
+            onSubmit(false)
             return true
           }
 
@@ -380,7 +380,7 @@
         },
         'Meta-Enter': () => {
           if (submitOnEnter) {
-            onSubmit()
+            onSubmit(true)
             return true
           }
 

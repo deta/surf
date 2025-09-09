@@ -7,6 +7,7 @@ import { MentionItemType, type MentionItem } from '@deta/editor'
 import { ResourcesProvider } from './providers/ResourcesProvider'
 import { useBrowser } from '../browser'
 import { HostnameProvider } from './providers/HostnameProvider'
+import type { Fn } from '@deta/types'
 
 export class TeletypeServiceCore {
   private providers = new Map<string, ActionProvider>()
@@ -17,6 +18,7 @@ export class TeletypeServiceCore {
 
   static self: TeletypeServiceCore
   private actionMap = new Map<string, TeletypeAction>()
+  private unsubs: Fn[] = []
 
   constructor(options: TeletypeServiceOptions = {}) {
     this.options = {
@@ -27,63 +29,75 @@ export class TeletypeServiceCore {
       ...options
     }
 
-    // Handle search requests from main service
-    this.messagePort.teletypeSearch.handle(async ({ query, mentions }) => {
-      const actions = await this.getActionsForQuery(query, mentions)
-      const serializedActions = actions.map(
-        (action) =>
-          ({
-            id: action.id,
-            name: action.name,
-            description: action.description,
-            icon: action.icon,
-            section: action.section,
-            priority: action.priority,
-            providerId: action.providerId!,
-            buttonText: action.buttonText
-          }) satisfies TeletypeActionSerialized
-      )
+    this.unsubs.push(
+      // Handle search requests from main service
+      this.messagePort.teletypeSearch.handle(async ({ query, mentions }) => {
+        const actions = await this.getActionsForQuery(query, mentions)
+        const serializedActions = actions.map(
+          (action) =>
+            ({
+              id: action.id,
+              name: action.name,
+              description: action.description,
+              icon: action.icon,
+              section: action.section,
+              priority: action.priority,
+              providerId: action.providerId!,
+              buttonText: action.buttonText
+            }) satisfies TeletypeActionSerialized
+        )
 
-      return {
-        actions: serializedActions
-      }
-    })
+        return {
+          actions: serializedActions
+        }
+      }),
 
-    // Handle action execution requests
-    this.messagePort.teletypeExecuteAction.on(async ({ actionId }) => {
-      const action = this.actionMap.get(actionId)
-      if (action) {
-        await action.handler()
-        return true
-      }
+      // Handle action execution requests
+      this.messagePort.teletypeExecuteAction.on(async ({ actionId }) => {
+        const action = this.actionMap.get(actionId)
+        if (action) {
+          await action.handler()
+          return true
+        }
 
-      return false
-    })
+        return false
+      }),
 
-    this.messagePort.teletypeAsk.on(async ({ query, mentions }, viewId) => {
-      const target = this.browser.getViewLocation(viewId)
-      this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions)
+      this.messagePort.teletypeAsk.on(async ({ query, mentions }, viewId) => {
+        const target = this.browser.getViewLocation(viewId)
+        this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions)
 
-      if (target === 'sidebar' && mentions.length === 0) {
-        this.log.debug('No mentions in sidebar, adding active tab mention')
-        mentions.push({
-          id: 'active_tab',
-          label: 'Active Tab',
-          type: MentionItemType.ACTIVE_TAB,
-          icon: 'sparkles'
+        if (target === 'sidebar' && mentions.length === 0) {
+          this.log.debug('No mentions in sidebar, adding active tab mention')
+          mentions.push({
+            id: 'active_tab',
+            label: 'Active Tab',
+            type: MentionItemType.ACTIVE_TAB,
+            icon: 'sparkles'
+          })
+        }
+
+        await this.browser.createNoteAndRunAIQuery(query, mentions, {
+          target: target ?? 'tab',
+          notebookId: 'auto'
         })
-      }
+      }),
 
-      await this.browser.createNoteAndRunAIQuery(query, mentions, {
-        target: target ?? 'tab',
-        notebookId: 'auto'
+      this.messagePort.teletypeCreateNote.on(async ({ content }, viewId) => {
+        const target = this.browser.getViewLocation(viewId)
+        this.log.debug(`Creating note from ${viewId} in ${target}:`, content)
+
+        await this.browser.createNoteWithContent(content, {
+          target: target ?? 'tab',
+          notebookId: 'auto'
+        })
       })
-    })
+    )
 
     // Register external/async providers
     this.registerProvider(new HostnameProvider()) // Async Hostname suggestions
     this.registerProvider(new SearchProvider()) // Async Google suggestions
-    // this.registerProvider(new ResourcesProvider()) // SFFS Resources search
+    this.registerProvider(new ResourcesProvider()) // SFFS Resources search
   }
 
   /**
@@ -152,6 +166,8 @@ export class TeletypeServiceCore {
    * Destroy the service and cleanup all providers
    */
   destroy(): void {
+    this.unsubs.forEach((unsub) => unsub())
+
     // Cleanup providers
     for (const provider of this.providers.values()) {
       if (provider.destroy) {

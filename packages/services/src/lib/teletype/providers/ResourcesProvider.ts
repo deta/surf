@@ -9,7 +9,7 @@ import {
   getFileKind
 } from '@deta/utils'
 import { Resource, ResourceJSON, useResourceManager } from '../../resources'
-import { ResourceTagsBuiltInKeys } from '@deta/types'
+import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
 import { useBrowser } from '../../browser'
 
 export class ResourcesProvider implements ActionProvider {
@@ -64,10 +64,10 @@ export class ResourcesProvider implements ActionProvider {
         30
       ),
       icon: url ? `favicon;;${url}` : `file;;${getFileKind(resource.type)}`,
-      section: 'Search',
+      section: resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ? 'Your Notes' : 'Saved Sources',
       priority,
       keywords,
-      description: `Open Saved Resource`,
+      description: ``,
       buttonText: 'Open',
       handler: async () => {
         await this.browser.openResourceInCurrentTab(resource)

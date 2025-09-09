@@ -27,14 +27,14 @@ export class AskProvider implements ActionProvider {
     if (!trimmedQuery) return actions
 
     actions.push({
-      id: generateUUID(),
+      id: 'ask-action',
       name: `Ask about "${trimmedQuery}"`,
       icon: 'message',
       section: 'Ask',
       priority: 90,
       keywords: ['ask', 'question', 'ai', 'chat', 'help'],
-      description: `Create a new Note about "${trimmedQuery}"`,
-      buttonText: 'Ask',
+      // description: `Create a new Note about "${trimmedQuery}"`,
+      buttonText: 'Ask Surf',
       handler: async () => {
         await this.triggerAskAction(trimmedQuery, mentions)
       }

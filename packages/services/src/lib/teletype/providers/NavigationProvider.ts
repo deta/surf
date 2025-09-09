@@ -44,7 +44,7 @@ export class NavigationProvider implements ActionProvider {
         priority: 100,
         keywords: ['navigate', 'go', 'visit', 'url', 'website'],
         buttonText: 'Navigate',
-        description: `Navigate to ${normalizedUrl}`,
+        // description: `Navigate to ${normalizedUrl}`,
         handler: async () => {
           await this.service.navigateToUrlOrSearch(url)
         }
@@ -52,19 +52,19 @@ export class NavigationProvider implements ActionProvider {
     }
 
     // Always provide a search action as fallback
-    actions.push({
-      id: generateUUID(),
-      name: `Search for "${trimmedQuery}"`,
-      icon: 'search',
-      section: 'Search',
-      priority: 50,
-      keywords: ['search', 'find', 'web'],
-      buttonText: 'Search',
-      description: `Search the web for "${trimmedQuery}"`,
-      handler: async () => {
-        await this.service.navigateToUrlOrSearch(trimmedQuery)
-      }
-    })
+    // actions.push({
+    //   id: generateUUID(),
+    //   name: `Search for "${trimmedQuery}"`,
+    //   icon: 'search',
+    //   section: 'Search',
+    //   priority: 50,
+    //   keywords: ['search', 'find', 'web'],
+    //   buttonText: 'Search',
+    //   description: `Search the web for "${trimmedQuery}"`,
+    //   handler: async () => {
+    //     await this.service.navigateToUrlOrSearch(trimmedQuery)
+    //   }
+    // })
 
     return actions
   }
