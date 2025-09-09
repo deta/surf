@@ -9,6 +9,7 @@ export interface TeletypeActionSerialized {
   section?: string
   icon?: string
   priority?: number
+  buttonText?: string
   providerId: string
 }
 

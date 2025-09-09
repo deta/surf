@@ -39,7 +39,8 @@ export class TeletypeServiceCore {
             icon: action.icon,
             section: action.section,
             priority: action.priority,
-            providerId: action.providerId!
+            providerId: action.providerId!,
+            buttonText: action.buttonText
           }) satisfies TeletypeActionSerialized
       )
 

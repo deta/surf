@@ -43,7 +43,7 @@ export class NavigationProvider implements ActionProvider {
         section: 'Navigation',
         priority: 100,
         keywords: ['navigate', 'go', 'visit', 'url', 'website'],
-        buttonText: 'Go',
+        buttonText: 'Navigate',
         description: `Navigate to ${normalizedUrl}`,
         handler: async () => {
           await this.service.navigateToUrlOrSearch(url)
@@ -59,6 +59,7 @@ export class NavigationProvider implements ActionProvider {
       section: 'Search',
       priority: 50,
       keywords: ['search', 'find', 'web'],
+      buttonText: 'Search',
       description: `Search the web for "${trimmedQuery}"`,
       handler: async () => {
         await this.service.navigateToUrlOrSearch(trimmedQuery)

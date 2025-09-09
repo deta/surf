@@ -135,6 +135,11 @@
       return
     }
 
+    if (e.shiftKey) {
+      // Don't interfere with shift key combos
+      return
+    }
+
     switch (e.key) {
       case 'ArrowLeft': {
         e.preventDefault()

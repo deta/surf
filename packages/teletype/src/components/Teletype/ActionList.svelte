@@ -162,7 +162,7 @@
   const onKeyDown = (e: KeyboardEvent) => {
     if (freeze) return
 
-    if (e.key === 'ArrowUp' || (e.shiftKey && e.key === 'Tab')) {
+    if ((e.key === 'ArrowUp' && !e.shiftKey) || (e.shiftKey && e.key === 'Tab')) {
       e.preventDefault()
       if (activeActionIndex === 0) {
         activeActionIndex = parsedActions.length - 1
@@ -172,7 +172,7 @@
 
       activeActionIndex--
       keepActiveActionVisible()
-    } else if (e.key === 'ArrowDown' || e.key === 'Tab') {
+    } else if ((e.key === 'ArrowDown' && !e.shiftKey) || e.key === 'Tab') {
       e.preventDefault()
       if (activeActionIndex >= parsedActions.length - 1) {
         activeActionIndex = 0
@@ -182,7 +182,7 @@
 
       activeActionIndex++
       keepActiveActionVisible()
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (activeActionIndex === undefined && parsedActions.length > 1) return
 

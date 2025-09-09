@@ -172,7 +172,7 @@
       callAction(action)
     }
 
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       if ($currentAction?.requireInput) {
         e.preventDefault()
         callAction($currentAction)
@@ -190,15 +190,21 @@
     // Check if content contains mentions using the editor's mention detection
     if (editorComponent) {
       const { mentions, text } = editorComponent.getParsedEditorContent()
+      const hasMultipleLines = text.includes('\n')
       hasMentions = mentions && mentions.length > 0
-      isInMentionMode = mentionInProgressPattern.test(text.trim())
+      isInMentionMode = mentionInProgressPattern.test(text.trim()) || hasMultipleLines
     } else {
       // Fallback to simple pattern matching
       const mentionPattern = /@\w+/g
+      const hasMultipleLines = content.includes('\n')
       hasMentions = mentionPattern.test(content)
 
       // Check if currently in mention selection mode (@ followed by text but not completed)
-      isInMentionMode = mentionInProgressPattern.test(content.trim())
+      isInMentionMode = mentionInProgressPattern.test(content.trim()) || hasMultipleLines
+    }
+
+    if (isInMentionMode) {
+      selectedAction.set(null)
     }
 
     dispatch('input', { query: content, mentions })
@@ -216,7 +222,7 @@
   }
 
   const handleSubmit = () => {
-    if ($selectedAction) {
+    if ($selectedAction && !isInMentionMode) {
       callAction($selectedAction)
     } else {
       if (!mentions) {
@@ -380,6 +386,8 @@
               size="18"
               color="--(text)"
             />
+          {:else if isInMentionMode}
+            <Icon name="message" size="18" color="--(text)" />
           {:else}
             <Icon name="search" size="18" color="--(text)" />
           {/if}
@@ -463,8 +471,14 @@
         <ToolsList tools={$tools} {teletype} />
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
-          <Button size="md" onclick={handleSubmit} class="send-button">
-            {$selectedAction?.buttonText || 'Send'}
+          <Button size="md" onclick={handleSubmit} class="send-button" disabled={!$inputValue || $inputValue.length === 0}>
+            {#if $selectedAction?.buttonText}
+              {$selectedAction?.buttonText} ↵
+            {:else if isInMentionMode}
+              Ask ↵
+            {:else}
+              Send ↵
+            {/if}
           </Button>
         </div>
       </div>
