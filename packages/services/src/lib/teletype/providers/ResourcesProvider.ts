@@ -82,21 +82,21 @@ export class ResourcesProvider implements ActionProvider {
         [...SearchResourceTags.NonHiddenDefaultTags()],
         {
           includeAnnotations: false,
-          semanticEnabled: this.resourceManager.config.settingsValue.use_semantic_search,
-          semanticLimit: 0,
-          keywordLimit: 6
+          semanticEnabled: this.resourceManager.config.settingsValue.use_semantic_search
+          // semanticLimit: 0,
+          // keywordLimit: 6
         }
       )
 
       const resources = results.resources.map((x) => x.resource)
 
-      await Promise.all(
-        resources.map((resource) => {
-          if (resource instanceof ResourceJSON) {
-            return resource.getParsedData()
-          }
-        })
-      )
+      // await Promise.all(
+      //   resources.map((resource) => {
+      //     if (resource instanceof ResourceJSON) {
+      //       return resource.getParsedData()
+      //     }
+      //   })
+      // )
 
       return resources
     } catch (error) {

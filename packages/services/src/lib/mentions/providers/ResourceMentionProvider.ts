@@ -28,7 +28,7 @@ export class ResourceMentionProvider implements MentionProvider {
         return []
       }
 
-      const mentionItems: MentionItem[] = resources.map((resource) => {
+      const mentionItems: MentionItem[] = resources.slice(0, 5).map((resource) => {
         const url =
           resource.metadata?.sourceURI ??
           resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
@@ -56,7 +56,7 @@ export class ResourceMentionProvider implements MentionProvider {
         }
       })
 
-      return mentionItems.slice(0, 5)
+      return mentionItems
 
       // Strip the @ character from the query for filtering
       // const searchQuery = query.startsWith('@') ? query.slice(1) : query
@@ -76,21 +76,19 @@ export class ResourceMentionProvider implements MentionProvider {
         [...SearchResourceTags.NonHiddenDefaultTags()],
         {
           includeAnnotations: false,
-          semanticEnabled: this.resourceManager.config.settingsValue.use_semantic_search,
-          semanticLimit: 0,
-          keywordLimit: 6
+          semanticEnabled: this.resourceManager.config.settingsValue.use_semantic_search
         }
       )
 
       const resources = results.resources.map((x) => x.resource)
 
-      await Promise.all(
-        resources.map((resource) => {
-          if (resource instanceof ResourceJSON) {
-            return resource.getParsedData()
-          }
-        })
-      )
+      // await Promise.all(
+      //   resources.map((resource) => {
+      //     if (resource instanceof ResourceJSON) {
+      //       return resource.getParsedData()
+      //     }
+      //   })
+      // )
 
       return resources
     } catch (error) {
