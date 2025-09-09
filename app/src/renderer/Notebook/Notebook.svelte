@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { provideConfig } from '@deta/services'
   import { createNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { setupTelemetry } from '@deta/services/helpers'
@@ -14,17 +14,17 @@
   import { writable } from 'svelte/store'
   import BackgroundImage from './assets/greenfield.png?url'
   import { useMessagePortClient } from '@deta/services/messagePort'
+  import { wait } from '@deta/utils'
 
   const notebookId = window.location.pathname.slice(1) || null
 
-  const telemetry = setupTelemetry()
+  const messagePort = useMessagePortClient()
   const config = provideConfig()
+  const telemetry = setupTelemetry(config.getConfig().api_key)
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
-
-  const messagePort = useMessagePortClient()
 
   let notebook: Notebook = $state(null)
   let notebookData = $derived(notebook.data ?? writable(null))
@@ -49,11 +49,15 @@
 
   onMount(prepareContextMenu)
   onMount(async () => {
+    await telemetry.init({ messagePort })
+
     messagePort.changePageQuery.handle((event) => {
       query = event.query && event.query?.length > 0 ? event.query : null
     })
 
     if (notebookId && !['drafts', 'history'].includes(notebookId)) {
+      // NOTE: Ideally messagePort events optionally get queued up until connection established
+      wait(100).then(() => telemetry.trackNotebookOpen())
       notebook = await notebookManager.getNotebook(notebookId)
     } else {
       notebook = notebookId

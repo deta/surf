@@ -52,7 +52,7 @@
     }
   }
 
-  import { wait } from '@deta/utils'
+  import { isDev, wait } from '@deta/utils'
   import { type Overlay, type OverlayManager, useOverlayManager, useViewManager } from '@deta/services/views'
   import ContextMenu from './ContextMenu.svelte'
 
@@ -75,11 +75,12 @@
     if (setupComplete) return
     if (useOverlay) overlayManager = useOverlayManager()
 
+    const prevent = (e: Event) => (!isDev && e.preventDefault())
     const cbk = async (e: Event) => {
         let target = e.target as HTMLElement | null
         // for browesr-action-list for extensions
         if (target?.tagName.toLowerCase() === 'browser-action-list') {
-          return e.preventDefault()
+          return prevent(e)
         }
 
         // Find closest element which has contextMenuHint property set
@@ -87,7 +88,7 @@
           target = target.parentElement
         }
 
-        if (target === null) return e.preventDefault()
+        if (target === null) return prevent(e)
         e.preventDefault()
         e.stopImmediatePropagation()
 
@@ -109,11 +110,7 @@
         })
     }
 
-    window.addEventListener(
-      'contextmenu',
-      cbk,
-      { capture: true }
-    )
+    window.addEventListener('contextmenu', cbk, { capture: true })
     setupComplete = true
     return () => window.removeEventListener('contextmenu', cbk, { capture: true })
   }
@@ -362,7 +359,7 @@
   class:overlay={overlay !== null}
   style="--x: {targetX}px; --y: {targetY}px;"
   autofocus
-  on:click={(e) => {
+  on:click={(_) => {
     closeContextMenu()
   }}
   {@attach clickOutside(() => closeContextMenu())}

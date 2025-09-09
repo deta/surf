@@ -8,13 +8,15 @@
   import { DynamicIcon } from '@deta/icons'
   import { onMount } from 'svelte'
   import { useMessagePortClient } from '@deta/services/messagePort'
+  import { useNotebookManager } from '@deta/services/notebooks'
 
   // TODO: Decouple this rendering from the Resource?
   let {
     resource,
     resourceId,
     text = false,
-    onlyCard = false
+    onlyCard = false,
+    onDeleteResource
     //title,
     //subtitle,
     //coverImage,
@@ -24,12 +26,14 @@
     resourceId?: string
     text?: boolean
     onlyCard?: boolean
+    onDeleteResource?: (resource: Resource) => void
     //title?: string
     //subtitle?: string
     //coverImage?: string
     //faviconImage?: string
   } = $props()
 
+  const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
   const messagePort = useMessagePortClient()
 
@@ -55,16 +59,9 @@
   }
 
   const handleDeleteResource = async () => {
-    const { closeType: confirmed } = await openDialog({
-      title: `Delete <i>${truncate(data.title, 26)}</i>`,
-      message: `This can't be undone.`,
-      actions: [
-        { title: 'Cancel', type: 'reset' },
-        { title: 'Delete', type: 'submit', kind: 'danger' }
-      ]
-    })
-    if (!confirmed) return
-    resourceManager.deleteResource(resourceId ?? _resource.id)
+    if (_resource) {
+      onDeleteResource?.(_resource)
+    }
   }
 
   onMount(async () => {
@@ -253,7 +250,7 @@
           overflow: hidden;
           > img {
             border-radius: 6px;
-            widht: 100%;
+            width: 100%;
             height: 100%;
           }
         }

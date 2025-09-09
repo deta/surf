@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { provideConfig } from '@deta/services'
   import { createResourceManager, type Resource } from '@deta/services/resources'
   import { setupTelemetry } from '@deta/services/helpers'
@@ -9,14 +9,15 @@
   import { Note } from '@deta/ui'
   import TextResource from './components/TextResource.svelte'
   import { useMessagePortClient } from '@deta/services/messagePort'
+  import { wait } from '@deta/utils'
 
   const resourceId = window.location.pathname.slice(1)
 
-  const telemetry = setupTelemetry()
+  const messagePort = useMessagePortClient()
   const config = provideConfig()
+  const telemetry = setupTelemetry()
   const resourceManager = createResourceManager(telemetry, config)
   const ai = provideAI(resourceManager, config, false)
-  const messagePort = useMessagePortClient()
 
   const contextManager = ai.contextManager
 
@@ -35,9 +36,15 @@
 
   onMount(async () => {
     console.log('Resource mounted with ID:', resourceId)
+    await telemetry.init({ messagePort })
 
     resource = await resourceManager.getResource(resourceId)
     console.log('Loaded resource:', resource)
+
+    if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      // NOTE: Ideally messagePort events optionally get queued up until connection established
+      wait(100).then(() => telemetry.trackNoteOpen())
+    }
 
     // if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
     //   // @ts-ignore - TODO: Add to window d.ts

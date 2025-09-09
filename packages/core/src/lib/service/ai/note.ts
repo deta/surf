@@ -136,7 +136,8 @@ export class SmartNote {
   }
 
   private trackUpdateContent = useDebounce(() => {
-    this.telemetry.trackUpdateNote()
+    // We want to differentiate between user update & generate completion!
+    //this.telemetry.trackNoteUpdate()
   }, 1000)
 
   /**

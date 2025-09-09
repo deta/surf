@@ -1,6 +1,11 @@
 import type { CreateTabEventTrigger, EventContext } from '@deta/types'
 import type { AIChatMessageSource } from '@deta/types/src/ai.types'
 
+export enum RendererType {
+  Main = 'main',
+  WebContentsView = 'webContentsView'
+}
+
 export type AppsSidebar = {
   showSidebar: boolean
   running: boolean

@@ -71,9 +71,12 @@
     //  return
     //}
 
-    await notebookManager.createNotebook({
-      name: 'Untitled Notebook'
-    })
+    await notebookManager.createNotebook(
+      {
+        name: 'Untitled Notebook'
+      },
+      true
+    )
 
     //isCreatingNotebook = false
     //newNotebookName = undefined
@@ -90,7 +93,7 @@
       ]
     })
     if (!confirmed) return
-    notebookManager.deleteNotebook(notebook.id)
+    notebookManager.deleteNotebook(notebook.id, true)
   }
 
   const handleRenameNotebook = useDebounce((notebookId: string, value: string) => {
@@ -176,6 +179,19 @@
         noneNotesResources = resultNoneNotes
       }
     }
+  }
+
+  const onDeleteResource = async (resource: Resource) => {
+    const { closeType: confirmed } = await openDialog({
+      title: `Delete <i>${truncate(resource.metadata.name, 26)}</i>`,
+      message: `This can't be undone.`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Delete', type: 'submit', kind: 'danger' }
+      ]
+    })
+    if (!confirmed) return
+    notebookManager.removeResources(resource.id, notebook ? notebook.id : undefined, true)
   }
 
   $effect(() => fetchContents(query))
@@ -315,7 +331,13 @@
           {:else}
             <div class="sources-grid" onwheel={handleMediaWheel}>
               {#each noneNotesResources.slice(0, resourceRenderCnt) as resourceId (resourceId)}
-                <SourceCard --width={'5rem'} --max-width={''} {resourceId} text />
+                <SourceCard
+                  --width={'5rem'}
+                  --max-width={''}
+                  {resourceId}
+                  text
+                  {onDeleteResource}
+                />
               {/each}
             </div>
             {#if resourceRenderCnt < noneNotesResources.length}

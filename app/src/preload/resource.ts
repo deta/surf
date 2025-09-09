@@ -17,7 +17,9 @@ import {
   WebContentsViewContextManagerActionType,
   type WebViewSendEvents,
   WebViewEventSendNames,
-  WebContentsViewEvent
+  WebContentsViewEvent,
+  TelemetryEventTypes,
+  RendererType
 } from '@deta/types'
 import { IPC_EVENTS_RENDERER, setupMessagePortClient } from '@deta/services/ipc'
 import type { MessagePortCallbackClient } from '@deta/services/messagePort'
@@ -82,12 +84,10 @@ const api = {
     messagePort.postMessage(payload)
   },
 
+  getUserConfig: () => userConfig,
+
   restartApp: () => {
     IPC_EVENTS_RENDERER.restartApp.send()
-  },
-
-  getUserConfig: () => {
-    return IPC_EVENTS_RENDERER.getUserConfig.invoke()
   },
 
   getUserStats: () => {
@@ -161,6 +161,7 @@ IPC_EVENTS_RENDERER.setSurfBackendHealth.on((_, state) => {
 
 if (process.contextIsolated) {
   try {
+    contextBridge.exposeInMainWorld('RENDERER_TYPE', RendererType.WebContentsView)
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
     contextBridge.exposeInMainWorld('preloadEvents', eventHandlers)
@@ -172,6 +173,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
+  // @ts-ignore (define in dts)
+  window.RENDERER_TYPE = RendererType.WebContentsView
   // @ts-ignore (define in dts)
   window.electron = electronAPI
   // @ts-ignore (define in dts)

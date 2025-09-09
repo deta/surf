@@ -244,7 +244,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     }
 
     // Use the favicon utility to get the best favicon
-    const isDarkMode = this.config.settingsValue.app_style === 'dark'
+    const isDarkMode = this.config?.settingsValue?.app_style === 'dark'
     const bestFavicon = processFavicons(this._lastReceivedFavicons, domain, isDarkMode)
 
     this.updateFavicon(bestFavicon)
@@ -1889,6 +1889,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
     this.extractedResourceId.set(resource.id)
     this.resourceCreatedByUser.set(!silent && !createdForChat)
+
+    this.resourceManager.telemetry.trackSurfAddResource(resource.type)
 
     // dispatch('update-tab', {
     //   resourceBookmark: resource.id,

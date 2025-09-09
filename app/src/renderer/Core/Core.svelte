@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
+  import { setupTelemetry } from '@deta/services/helpers'
   import { useLogScope } from '@deta/utils/io'
-  import type { Fn } from '@deta/types'
+  import { TelemetryCreateTabSource, type Fn } from '@deta/types'
 
   import { ShortcutActions } from '@deta/services/shortcuts'
   import { initServices } from '@deta/services/helpers'
@@ -24,8 +25,17 @@
 
   const log = useLogScope('Core')
 
-  const { config, viewManager, tabsService, keyboardManager, shortcutsManager, browser } =
-    initServices()
+  const {
+    telemetry,
+    config,
+    viewManager,
+    notebookManager,
+    tabsService,
+    ai,
+    keyboardManager,
+    shortcutsManager,
+    browser
+  } = initServices()
 
   const activeTabView = $derived(tabsService.activeTab?.view)
 
@@ -44,6 +54,7 @@
   })
   onMount(async () => {
     log.debug('Core component mounted')
+    await telemetry.init({ configService: config })
 
     if (isWindows()) document.body.classList.add('os_windows')
     if (isMac()) document.body.classList.add('os_mac')
@@ -81,13 +92,15 @@
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Creating new tab (CMD+T)')
       tabsService.openNewTabPage()
+      telemetry.trackCreateTab(TelemetryCreateTabSource.KeyboardShortcut)
+
       return true
     })
 
     shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
       log.debug('Closing current tab (CMD+W)')
       if (tabsService.activeTab) {
-        tabsService.delete(tabsService.activeTab.id)
+        tabsService.delete(tabsService.activeTab.id, true)
       }
       return true
     })
@@ -125,7 +138,7 @@
         if (tabs.length > tabIndex) {
           const targetTab = tabs[tabIndex]
           log.debug(`Switching to tab ${tabIndex + 1} (${targetTab.id})`)
-          tabsService.setActiveTab(targetTab.id)
+          tabsService.setActiveTab(targetTab.id, true)
         }
         return true
       })
@@ -136,7 +149,7 @@
       if (tabs.length > 0) {
         const lastTab = tabs.at(-1)
         log.debug(`Switching to last tab (${lastTab.id})`)
-        tabsService.setActiveTab(lastTab.id)
+        tabsService.setActiveTab(lastTab.id, true)
       }
       return true
     })
@@ -216,22 +229,6 @@
 
     <AppSidebar />
   </main>
-
-  <!-- <Split>
-    {#snippet left()}
-      <WebContentsView
-        view={view1}
-        active
-      />
-    {/snippet}
-
-    {#snippet right()}
-      <WebContentsView
-        view={view2}
-        active
-      />
-    {/snippet}
-  </Split> -->
 </div>
 
 <style lang="scss">

@@ -4,12 +4,35 @@ import { type WebViewEventTransform } from './ipc.webview.types'
 import { type AnnotationType } from './resources.types'
 
 export enum TelemetryEventTypes {
-  // Tabs
+  // Resources
+  NotebookAddResource = 'Add Resource to Notebook',
+  NotebookRemoveResource = 'Remove Resource from Notebook',
+  SurfAddResource = 'Add Resource to Surf',
+  SurfRemoveResource = 'Remove Resource from Surf',
+
+  // General
   CreateTab = 'Create Tab',
   ActivateTab = 'Activate Tab',
+  DeleteTab = 'Delete Tab',
+  OpenSidebar = 'Open Sidebar',
+
+  // Notebook
+  NotebookCreate = 'Create Notebook',
+  NotebookDelete = 'Delete Notebook',
+  NotebookOpen = 'Open Notebook',
+
+  // Notes
+  NoteCreate = 'Create Note',
+  NoteDelete = 'Delete Note',
+  NoteOpen = 'Open Note',
+  NoteUpdate = 'Update Note',
+  NoteGenerateCompletion = 'Generate Note Completion',
+
+  /** @deprecated  OLD SURF EVENTS*/
+
+  // Tabs
   ActivateTabSpace = 'Activate Tab Space',
   SelectTab = 'Select Tab',
-  DeleteTab = 'Delete Tab',
   DeleteTabSpace = 'Delete Tab Space',
   MoveTab = 'Move Tab',
   MoveTabToContext = 'Move Tab to Context',
@@ -98,6 +121,28 @@ export enum TelemetryEventTypes {
   SetDefaultBrowser = 'Set Default Browser',
   ChangeTelemetryAnonymization = 'Change Telemetry Anonymization'
 }
+
+export enum TelemetryEventTriggerSurface {
+  FullScreen = 'Full Screen',
+  Sidebar = 'Sidebar'
+  // FloatyPanel = 'FloatyPanel',
+}
+
+export enum TelemetryCreateTabSource {
+  KeyboardShortcut = 'Keyboard Shortcut',
+  NewTabButton = 'New Tab Button',
+  WebpageLinkClick = 'Webpage Link Click',
+  NotebookLinkClick = 'Notebook Link Click',
+  CitationClick = 'Citation Click'
+}
+export enum TelemetryViewType {
+  SurfRoot = 'Surf Root',
+  Notebook = 'Notebook',
+  Webpage = 'Webpage',
+  Resource = 'Resource'
+}
+
+/** @deprecated - OLD SURF-alpha TYPES ==================== */
 
 export type AIMessageContext = 'inline' | 'chat'
 export type AIMessageBaseMedia = 'image' | 'text' | 'webpage' | 'pdf'

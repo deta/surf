@@ -117,6 +117,7 @@
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
+  const telemetry = resourceManager.telemetry
   const toasts = useToasts()
   const config = useConfig()
   const tabs = useTabs()
@@ -536,7 +537,7 @@
       '',
       { name: title ?? `Note ${getFormattedDate(Date.now())}` },
       undefined,
-      EventContext.CommandMenu
+      true
     )
     // await tabsManager.openResourceAsTab(resource, { active: true })
     toasts.success('Note created!')

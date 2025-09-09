@@ -69,9 +69,14 @@
   }
 
   async function handleNewNote() {
-    const note = await resourceManager.createResourceNote('', {
-      name: NotebookDefaults.NOTE_DEFAULT_NAME
-    })
+    const note = await resourceManager.createResourceNote(
+      '',
+      {
+        name: 'Untitled Note'
+      },
+      undefined,
+      true
+    )
 
     if (viewManager.sidebarViewOpen) {
       viewManager.setSidebarState({ open: true })

@@ -1238,11 +1238,17 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     }
   }
 
+  /**
+   * @param userAction - if true will track event for this created note, should be set whenever
+   * user interaction creates the note.
+   */
   async createResourceNote(
     content: string,
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[],
-    eventContext?: EventContext
+    isUserAction: boolean = false
+    /** @deprecated */
+    //eventContext?: EventContext,
   ) {
     const defaultMetadata = {
       name: `Note - ${getFormattedDate(Date.now())}`
@@ -1259,9 +1265,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
       tags
     )
 
-    if (eventContext) {
-      this.telemetry.trackCreateNote(eventContext)
-    }
+    if (isUserAction) this.telemetry.trackNoteCreate()
 
     return resource as ResourceNote
   }

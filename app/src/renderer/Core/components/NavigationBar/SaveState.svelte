@@ -8,6 +8,7 @@
   import { Notebook, useNotebookManager } from '@deta/services/notebooks'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { writable } from 'svelte/store'
+  import { SpaceEntryOrigin } from '@deta/types'
 
   let {
     view
@@ -65,7 +66,12 @@
       return
     }
 
-    await notebookManager.addResourcesToNotebook(notebook.id, [resource.id])
+    await notebookManager.addResourcesToNotebook(
+      notebook.id,
+      [resource.id],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
 
     isMenuOpen = false
   }

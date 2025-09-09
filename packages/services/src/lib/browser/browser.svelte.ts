@@ -10,7 +10,8 @@ import {
   type NavigateURLOptions,
   type OpenResourceOptions,
   ResourceTagsBuiltInKeys,
-  ResourceTypes
+  ResourceTypes,
+  TelemetryCreateTabSource
 } from '@deta/types'
 import { useNotebookManager } from '../notebooks'
 import { ViewManagerEmitterNames, ViewType } from '../views/types'
@@ -50,6 +51,10 @@ export class BrowserService {
         this.handleNewWindowRequest(details)
       }),
 
+      this.messagePort.trackEvent.on(async ({ eventName, eventProperties }) => {
+        this.resourceManager.telemetry.trackEvent(eventName, eventProperties)
+      }),
+
       this.messagePort.openResource.on(async ({ resourceId, target, offline }) => {
         this.openResource(resourceId, { target, offline })
       }),
@@ -68,11 +73,15 @@ export class BrowserService {
         // Otherwise, open in a new tab to not disturb the user's current context
         if (data.preview === 'background_tab' || data.preview === 'tab') {
           this.log.debug('Citation preview click event, opening in new tab')
-          this.tabsManager.openOrCreate(url, {
-            active: data.preview === 'tab',
-            activate: true,
-            ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-          })
+          this.tabsManager.openOrCreate(
+            url,
+            {
+              active: data.preview === 'tab',
+              activate: true,
+              ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+            },
+            true
+          )
 
           return
         }
@@ -99,10 +108,14 @@ export class BrowserService {
             }
           } else {
             this.log.debug('Opening citation in new tab')
-            this.tabsManager.openOrCreate(url, {
-              active: true,
-              ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-            })
+            this.tabsManager.openOrCreate(
+              url,
+              {
+                active: true,
+                ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+              },
+              true
+            )
           }
 
           return
@@ -112,10 +125,14 @@ export class BrowserService {
         if (this.viewManager.activeSidebarView?.id === viewId) {
           this.log.debug('Citation click event from active sidebar view')
 
-          this.tabsManager.openOrCreate(url, {
-            active: true,
-            ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-          })
+          this.tabsManager.openOrCreate(
+            url,
+            {
+              active: true,
+              ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+            },
+            true
+          )
 
           // const view = this.viewManager.openURLInSidebar(url)
           // if (!data.skipHighlight && data.selection) {
@@ -144,6 +161,9 @@ export class BrowserService {
     }
 
     const active = details.disposition !== 'background-tab'
+    this.tabsManager.resourceManager.telemetry.trackCreateTab(
+      TelemetryCreateTabSource.WebpageLinkClick
+    )
     this.tabsManager.create(details.url, { active, activate: true })
   }
 
@@ -165,9 +185,14 @@ export class BrowserService {
 
       this.log.debug(`Triggering ask action in ${target} for query: "${query}"`, mentions)
 
-      const note = await this.resourceManager.createResourceNote('', {
-        name: formatAIQueryToTitle(query)
-      })
+      const note = await this.resourceManager.createResourceNote(
+        '',
+        {
+          name: formatAIQueryToTitle(query)
+        },
+        undefined,
+        true
+      )
 
       if (opts?.notebookId === 'auto') {
         if (this.tabsManager.activeTabValue?.view.typeValue === ViewType.Notebook) {
@@ -352,6 +377,9 @@ export class BrowserService {
         const tab = await this.openResourceInCurrentTab(resource)
         return tab?.view
       } else {
+        this.tabsManager.resourceManager.telemetry.trackCreateTab(
+          TelemetryCreateTabSource.NotebookLinkClick
+        )
         const tab = await this.tabsManager.createResourceTab(resource.id, {
           active: target === 'tab'
         })

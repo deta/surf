@@ -37,9 +37,12 @@
     //  return
     //}
 
-    await notebookManager.createNotebook({
-      name: 'Untitled Notebook'
-    })
+    await notebookManager.createNotebook(
+      {
+        name: 'Untitled Notebook'
+      },
+      true
+    )
 
     isCreatingNotebook = false
     newNotebookName = undefined
@@ -56,7 +59,7 @@
       ]
     })
     if (!confirmed) return
-    notebookManager.deleteNotebook(notebook.id)
+    notebookManager.deleteNotebook(notebook.id, true)
   }
 
   const handleRenameNotebook = useDebounce((notebookId: string, value: string) => {

@@ -4,13 +4,14 @@ import {
   WebContentsViewActionType,
   type WebContentsViewData,
   WebContentsViewManagerActionType,
-  type Fn
+  type Fn,
+  TelemetryViewType
 } from '@deta/types'
 import { useLogScope, EventEmitterBase, generateID, isDev } from '@deta/utils'
 import { ConfigService, useConfig } from '../config'
 import { KVStore, useKVTable } from '../kv'
 import { WebContentsView, type WebContents } from './webContentsView.svelte'
-import { ViewManagerEmitterNames, type ViewManagerEmitterEvents } from './types'
+import { ViewManagerEmitterNames, ViewType, type ViewManagerEmitterEvents } from './types'
 import type { NewWindowRequest } from '../ipc/events'
 import { ResourceManager, useResourceManager } from '../resources'
 import { useMessagePortPrimary } from '../messagePort/messagePortEvents'
@@ -371,8 +372,30 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   setSidebarState({ open, view }: { open?: boolean; view?: WebContentsView | null }) {
-    if (open !== undefined) this.sidebarViewOpen = open
     if (view !== undefined) this.activeSidebarView = view
+    if (open !== undefined) {
+      if (this.sidebarViewOpen === false && open === true && this.activeSidebarView) {
+        const { type: view_type, id: view_resource_id } = this.activeSidebarView.typeDataValue
+        // NOTE: Make digestable for telemetry, we should make this prettier
+        const telem_tab_type: Record<ViewType, TelemetryViewType> = {
+          [ViewType.Page]: TelemetryViewType.Webpage,
+          [ViewType.Notebook]: TelemetryViewType.Notebook,
+          [ViewType.NotebookHome]: TelemetryViewType.SurfRoot,
+          [ViewType.Resource]: TelemetryViewType.Resource
+        }[view_type]
+
+        if (view_type === ViewType.Resource && view_resource_id) {
+          this.resourceManager
+            .getResource(view_resource_id, { includeAnnotations: false })
+            .then((resource) => {
+              this.resourceManager.telemetry.trackOpenSidebar(telem_tab_type, resource?.type)
+            })
+        } else {
+          this.resourceManager.telemetry.trackOpenSidebar(telem_tab_type)
+        }
+      }
+      this.sidebarViewOpen = open
+    }
   }
 
   getActiveView(): WebContents | null {

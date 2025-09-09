@@ -49,9 +49,7 @@ const eventHandlers = {
 const api = {
   getUserConfigSettings: () => userConfig.settings,
 
-  getUserConfig: async () => {
-    return IPC_EVENTS_RENDERER.getUserConfig.invoke()
-  },
+  getUserConfig: () => userConfig,
 
   updateUserConfigSettings: async (settings: Partial<UserSettings>) => {
     IPC_EVENTS_RENDERER.updateUserConfigSettings.send(settings)

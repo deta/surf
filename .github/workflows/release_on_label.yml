@@ -113,7 +113,7 @@ jobs:
           CSC_LINK: ${{ secrets.CSC_LINK_NEW }}
           CSC_FOR_PULL_REQUEST: 'true'
 
-          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
+          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL_BETA }}
           R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
           R_VITE_CHEAT_SHEET_URL: ${{ secrets.CHEAT_SHEET_URL }}
           R_VITE_SHORTCUTS_PAGE_URL: ${{ secrets.SHORTCUTS_PAGE_URL }}

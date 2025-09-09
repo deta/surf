@@ -21,8 +21,10 @@ export const initServices = () => {
   const log = useLogScope('ServicesInit')
   log.debug('Initializing services...')
 
-  const telemetry = setupTelemetry()
+  const telemetry = setupTelemetry('')
   const config = provideConfig()
+  // Is mir egal das det scheiße is muss build yetz!
+  telemetry.apiKey = config?.getConfig()?.api_key
   const resourceManager = createResourceManager(telemetry, config)
   const notebookManager = createNotebookManager(resourceManager, config)
   const viewManager = createViewManager(resourceManager)

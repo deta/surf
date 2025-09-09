@@ -37,21 +37,21 @@
 
   const hostname = $derived(getHostname($url))
 
-  function closeTab() {
-    tabsService.delete(tab.id)
+  function closeTab(userAction = false) {
+    tabsService.delete(tab.id, userAction)
   }
 
   function handleClick() {
-    tabsService.setActiveTab(tab.id)
+    tabsService.setActiveTab(tab.id, true)
   }
 
   function handleClose(event: MouseEvent) {
     event.stopPropagation()
-    tabsService.delete(tab.id)
+    tabsService.delete(tab.id, true)
   }
 
   function handleDragStart() {
-    tabsService.setActiveTab(tab.id)
+    tabsService.setActiveTab(tab.id, false)
   }
 
   function handleDragEnd() {
@@ -81,7 +81,7 @@
       type: 'action',
       icon: 'close',
       text: 'Close Tab',
-      action: () => closeTab()
+      action: () => closeTab(true)
     }
   ] satisfies CtxItem[]
 </script>

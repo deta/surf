@@ -13,8 +13,11 @@
   import { Button } from '@deta/ui'
   import { HTMLAxisDragZone } from '@deta/dragcula'
   import { createTabsDragAndDrop } from './dnd.svelte'
+  import { useTelemetry } from '@deta/services'
+  import { TelemetryCreateTabSource } from '@deta/types'
 
   const tabsService = useTabs()
+  const telemetry = useTelemetry()
 
   let containerElement: HTMLDivElement
   let containerWidth = $state(0)
@@ -25,6 +28,7 @@
 
   const handleNewTab = () => {
     tabsService.openNewTabPage()
+    telemetry.trackCreateTab(TelemetryCreateTabSource.NewTabButton)
   }
 
   // Reactive calculation of layout

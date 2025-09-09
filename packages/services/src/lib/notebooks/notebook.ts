@@ -108,17 +108,31 @@ export class Notebook {
     return result
   }
 
-  async addResources(resourceIds: string[], origin: SpaceEntryOrigin) {
+  async addResources(resourceIds: string[], origin: SpaceEntryOrigin, isUserAction = false) {
     this.log.debug('adding resources to space', resourceIds, origin)
     await this.resourceManager.addItemsToSpace(this.id, resourceIds, origin)
 
     this.log.debug('added resources to space, updating contents')
     await this.fetchContents()
 
+    resourceIds.forEach((resource_id) => {
+      this.resourceManager
+        .getResource(resource_id)
+        .then((resource) => {
+          if (!resource) {
+            this.log.error(`Could not fetch resource ${resource_id} for telemetry event.`)
+            return
+          }
+          this.telemetry.trackNotebookAddResource(resource.type)
+        })
+        .catch((e) => {
+          this.log.error(`Error fetch resource ${resource_id} for telemetry event.`, e)
+        })
+    })
     this.notebookManager.emit('added-resources', this, resourceIds)
   }
 
-  async removeResources(resourceIds: string | string[]) {
+  async removeResources(resourceIds: string | string[], isUserAction = false) {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
 
     this.log.debug('removing resources', resourceIds)
@@ -130,6 +144,8 @@ export class Notebook {
       return contents.filter((entry) => !resourceIds.includes(entry.entry_id))
     })
     this.log.debug('Resources removed:', resourceIds)
+
+    if (isUserAction) resourceIds.forEach(() => this.telemetry.trackNotebookRemoveResource())
     this.notebookManager.emit('removed-resources', this, resourceIds)
     return resourceIds
   }

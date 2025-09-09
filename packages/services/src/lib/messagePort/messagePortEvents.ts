@@ -1,6 +1,11 @@
 import { type MentionItem } from '@deta/editor'
 import { createMessagePortService, type MessagePortEvent } from './messagePortService'
-import type { CitationClickEvent, NavigateURLOptions, OpenResourceOptions } from '@deta/types'
+import type {
+  CitationClickEvent,
+  NavigateURLOptions,
+  OpenResourceOptions,
+  TelemetryEventTypes
+} from '@deta/types'
 
 export interface TeletypeActionSerialized {
   id: string
@@ -84,7 +89,12 @@ export interface MPCitationClick extends MessagePortEvent {
   payload: CitationClickEvent
 }
 
+export interface MPTrackEvent extends MessagePortEvent {
+  payload: { eventName: TelemetryEventTypes; eventProperties?: Record<string, any> }
+}
+
 type MessagePortEventRegistry = {
+  trackEvent: MPTrackEvent
   teletypeSetQuery: MPTeletypeSetQuery
   teletypeSearch: MPTeletypeSearchRequest
   teletypeExecuteAction: MPTeletypeExecuteAction
@@ -111,6 +121,7 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
   )
 
   return messagePortService.registerEvents<MessagePortEventRegistry>({
+    trackEvent: messagePortService.addEvent<MPTrackEvent>('track-event'),
     teletypeSetQuery: messagePortService.addEvent<MPTeletypeSetQuery>('teletype-set-query'),
     teletypeExecuteAction:
       messagePortService.addEvent<MPTeletypeExecuteAction>('teletype-execute-action'),

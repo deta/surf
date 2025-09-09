@@ -230,7 +230,6 @@
   const telemetry = createTelemetry({
     apiKey: telemetryAPIKey,
     active: telemetryActive,
-    trackHostnames: false,
     proxyUrl: telemetryProxyUrl
   })
 

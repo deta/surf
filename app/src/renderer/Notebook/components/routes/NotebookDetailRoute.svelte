@@ -17,6 +17,7 @@
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
+  const telemetry = resourceManager.telemetry
   let showAllNotes = $state(query !== null)
   let isRenamingNote = $state(null)
 
@@ -26,9 +27,15 @@
   let noneNotesResources = $state([])
 
   const handleCreateNote = async () => {
-    const note = await resourceManager.createResourceNote('', {
-      name: NotebookDefaults.NOTE_DEFAULT_NAME
-    })
+    const note = await resourceManager.createResourceNote(
+      '',
+      {
+        name: 'Untitled Note'
+      },
+      undefined,
+      true
+    )
+
     notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
     await navigation.navigate(`surf://resource/${note.id}`).finished
   }
@@ -45,7 +52,7 @@
     })
     if (!confirmed) return
 
-    await notebook.removeResources(noteId)
+    await notebook.removeResources(noteId, true)
     await resourceManager.deleteResource(noteId)
   }
 

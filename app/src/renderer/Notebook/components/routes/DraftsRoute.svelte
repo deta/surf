@@ -21,9 +21,15 @@
   let resourcesNotes = $state([])
 
   const handleCreateNote = async () => {
-    const note = await resourceManager.createResourceNote('', {
-      name: NotebookDefaults.NOTE_DEFAULT_NAME
-    })
+    const note = await resourceManager.createResourceNote(
+      '',
+      {
+        name: 'Untitled Note'
+      },
+      undefined,
+      true
+    )
+
     notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
     await navigation.navigate(`surf://resource/${note.id}`).finished
   }

@@ -180,7 +180,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     return result
   }
 
-  async createNotebook(data: Partial<NotebookData>) {
+  async createNotebook(data: Partial<NotebookData>, isUserAction = false) {
     this.log.debug('creating notebook', data)
 
     const defaults = {
@@ -207,12 +207,13 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     const space = this.createNotebookObject(result as unknown as NotebookSpace)
 
-    this.log.debug('created space:', space)
+    this.log.debug('cregted space:', space)
     this.notebooks.update((spaces) => {
       return [...spaces, space]
     })
 
     await this.loadNotebooks()
+    if (isUserAction) this.telemetry.trackNotebookCreate()
     this.emit('created', space)
     return space
   }
@@ -247,7 +248,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     return notebook
   }
 
-  async deleteNotebook(notebookId: string) {
+  async deleteNotebook(notebookId: string, isUserAction = false) {
     this.log.debug('deleting notebook', notebookId)
 
     // Proceed with normal notebook deletion
@@ -266,6 +267,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     }
 
     await this.loadNotebooks()
+    if (isUserAction) this.telemetry.trackNotebookDelete()
     this.emit('deleted', notebookId)
   }
 
@@ -289,7 +291,8 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   async addResourcesToNotebook(
     notebookId: string,
     resourceIds: string[],
-    origin: SpaceEntryOrigin = SpaceEntryOrigin.ManuallyAdded
+    origin: SpaceEntryOrigin = SpaceEntryOrigin.ManuallyAdded,
+    isUserAction = false
   ) {
     this.log.debug('adding resources to notebook', notebookId, resourceIds, origin)
 
@@ -299,9 +302,10 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       throw new Error('Notebook not found')
     }
 
-    await notebook.addResources(resourceIds, origin)
+    await notebook.addResources(resourceIds, origin, isUserAction)
     this.log.debug('added resources to notebook')
     this.triggerStoreUpdate(notebook)
+
     return notebook
   }
 
@@ -359,7 +363,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   }
 
   /** Deletes the provided resources from Oasis and gets rid of all references in any notebook */
-  async deleteResourcesFromSurf(resourceIds: string | string[]) {
+  async deleteResourcesFromSurf(resourceIds: string | string[], isUserAction = false) {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
     this.log.debug('removing resources', resourceIds)
 
@@ -417,24 +421,23 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       return contents.filter((resource) => !validResourceIDs.includes(resource.id))
     })
 
-    await Promise.all(
-      validResources.map((resource) =>
-        this.telemetry.trackDeleteResource(
-          resource.type,
-          false,
-          validResources.length > 1
-            ? DeleteResourceEventTrigger.OasisMultiSelect
-            : DeleteResourceEventTrigger.OasisItem
-        )
-      )
-    )
+    if (isUserAction)
+      validResources.forEach((resource) => {
+        this.telemetry.trackSurfRemoveResource()
+        if (resource?.type !== ResourceTypes.DOCUMENT_SPACE_NOTE) return
+        this.telemetry.trackNoteDelete()
+      })
 
     this.log.debug('deleted resources:', resourceIds)
     return resourceIds
   }
 
   /** Removes the provided resources from the notebook */
-  async removeResourcesFromNotebook(notebookId: string, resourceIds: string | string[]) {
+  async removeResourcesFromNotebook(
+    notebookId: string,
+    resourceIds: string | string[],
+    isUserAction = false
+  ) {
     const notebook = await this.getNotebook(notebookId)
     if (!notebook) {
       this.log.error('notebook not found:', notebookId)
@@ -457,23 +460,12 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     this.log.debug('removing resource entries from notebook...', validResources)
 
     const removedResources = await notebook.removeResources(
-      validResources.map((resource) => resource.id)
+      validResources.map((resource) => resource.id),
+      isUserAction
     )
     this.log.debug('removed resource entries from notebook', removedResources)
 
     this.triggerStoreUpdate(notebook)
-
-    await Promise.all(
-      validResources.map((resource) =>
-        this.telemetry.trackDeleteResource(
-          resource.type,
-          true,
-          validResources.length > 1
-            ? DeleteResourceEventTrigger.OasisMultiSelect
-            : DeleteResourceEventTrigger.OasisItem
-        )
-      )
-    )
 
     this.log.debug('resources removed from space:', resourceIds)
     return removedResources
@@ -482,14 +474,14 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   /** Remove a resource from a specific notebook, or from Stuff entirely if no notebook is provided.
    * throws: Error in various failure cases.
    */
-  async removeResources(resourceIds: string | string[], notebookId?: string) {
+  async removeResources(resourceIds: string | string[], notebookId?: string, isUserAction = false) {
     resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
     this.log.debug('removing resources from', notebookId ?? 'oasis', resourceIds)
 
     if (!notebookId) {
-      return this.deleteResourcesFromSurf(resourceIds)
+      return this.deleteResourcesFromSurf(resourceIds, isUserAction)
     }
-    return this.removeResourcesFromNotebook(notebookId, resourceIds)
+    return this.removeResourcesFromNotebook(notebookId, resourceIds, isUserAction)
   }
 
   async loadEverything() {

@@ -474,7 +474,7 @@ export const createResourcesFromMediaItems = async (
 
       let resource
       if (item.type === 'text') {
-        resource = await resourceManager.createResourceNote(item.data, item.metadata, tags)
+        resource = await resourceManager.createResourceNote(item.data, item.metadata, tags, false)
       } else if (item.type === 'url') {
         const parsed = await extractAndCreateWebResource(
           resourceManager,

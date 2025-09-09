@@ -2,9 +2,10 @@ import { getContext, setContext } from 'svelte'
 import { get, writable, type Writable } from 'svelte/store'
 
 import { useLogScope } from '@deta/utils/io'
-import type { UserSettings } from '@deta/types'
+import type { UserConfig, UserSettings } from '@deta/types'
 
 export class ConfigService {
+  config: Writable<UserConfig>
   settings: Writable<UserSettings>
 
   log: ReturnType<typeof useLogScope>
@@ -15,13 +16,12 @@ export class ConfigService {
     this.log = useLogScope('Config')
 
     // @ts-ignore
-    const loaded = window.api.getUserConfigSettings()
-    if (!loaded) {
+    const userConfig = window.api.getUserConfig()
+    if (!userConfig) {
       new Error('User config not found')
     }
-
-    this.log.debug('loaded user config settings', loaded)
-    this.settings = writable<UserSettings>(loaded)
+    this.config = writable<UserConfig>(userConfig)
+    this.settings = writable<UserSettings>(userConfig.settings)
 
     // @ts-ignore
     window.api.onUserConfigSettingsChange((settings) => {
@@ -36,6 +36,14 @@ export class ConfigService {
 
   getSettings() {
     return get(this.settings)
+  }
+
+  get configValue() {
+    return get(this.config)
+  }
+
+  getConfig() {
+    return get(this.config)
   }
 
   async updateSettings(settings: Partial<UserSettings>) {

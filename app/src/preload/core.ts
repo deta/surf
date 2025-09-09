@@ -29,7 +29,8 @@ import {
   WebContentsViewActionType,
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
-  WebContentsViewActionOutputs
+  WebContentsViewActionOutputs,
+  RendererType
 } from '@deta/types'
 
 import {
@@ -704,9 +705,7 @@ const api = {
     IPC_EVENTS_RENDERER.appReady.send()
   },
 
-  getUserConfig: () => {
-    return IPC_EVENTS_RENDERER.getUserConfig.invoke()
-  },
+  getUserConfig: () => userConfig,
 
   getUserStats: () => {
     return IPC_EVENTS_RENDERER.getUserStats.invoke()
@@ -876,6 +875,7 @@ IPC_EVENTS_RENDERER.setSurfBackendHealth.on((_, state) => {
 
 if (process.contextIsolated) {
   try {
+    contextBridge.exposeInMainWorld('RENDERER_TYPE', RendererType.Main)
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
     contextBridge.exposeInMainWorld('preloadEvents', eventHandlers)
@@ -887,6 +887,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
+  // @ts-ignore (define in dts)
+  window.RENDERER_TYPE = RendererType.Main
   // @ts-ignore (define in dts)
   window.electron = electronAPI
   // @ts-ignore (define in dts)

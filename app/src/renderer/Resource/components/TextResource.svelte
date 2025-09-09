@@ -7,13 +7,13 @@
     showPrompt: boolean
     clearContextOnMention?: boolean
     generationID?: string
-    screenshot?: Blob  
+    screenshot?: Blob
     addActiveTab?: boolean
   };
 </script>
 
 <script lang="ts">
-  import { writable, derived, type Writable } from 'svelte/store'
+  import { writable, derived, type Writable, get } from 'svelte/store'
   import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte'
   import tippy, { type Instance, type Placement, type Props } from 'tippy.js'
   import type { Editor as TiptapEditor } from '@tiptap/core'
@@ -145,6 +145,7 @@
 
   const dispatch = createEventDispatcher<{
     'update-title': string
+    changed: void
   }>()
 
   const userSettings = config.settings
@@ -948,7 +949,7 @@
       '',
       { name: title ?? `Note ${getFormattedDate(Date.now())}` },
       undefined,
-      EventContext.CommandMenu
+      true
     )
     // await tabsManager.openResourceAsTab(resource, { active: true })
     toasts.success('Note created!')
@@ -1103,6 +1104,7 @@
       if (!chat || !query) {
         log.error('Failed to create chat')
         updateAIGenerationProgress(100, 'Error generating AI output')
+        telemetry.trackNoteGenerateCompletion({ failed: true })
         return
       }
 
@@ -1217,12 +1219,14 @@
 
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
+        telemetry.trackNoteGenerateCompletion({ failed: true })
       } else if (!response.output) {
         log.error('No output found')
         toasts.error('Something went wrong generating the AI output. Please try again.')
 
         aiGeneration.updateStatus('failed')
         cleanupCompletion()
+        telemetry.trackNoteGenerateCompletion({ failed: true })
       } else {
         const content = await parseChatOutputToHtml(response.output)
 
@@ -1230,6 +1234,7 @@
 
         await wait(200)
         aiGeneration.updateStatus('completed')
+        telemetry.trackNoteGenerateCompletion({ failed: false })
 
         // Generate title if needed (empty/default title and any AI generation)
         const shouldGenerateTitle =
@@ -1267,6 +1272,7 @@
 
       // Update global AI generation state to indicate error
       updateAIGenerationProgress(100, 'Error generating AI output')
+      telemetry.trackNoteGenerateCompletion({ failed: true })
     } finally {
       // Reset both local and global generation state
       isGeneratingAI.set(false)
@@ -2520,6 +2526,15 @@
     window.editor = editorElem
   }
 
+  const handleContentUpdated = useDebounce(() => {
+    if (
+      get(isGeneratingAI) ||
+      !(editorElement === document.activeElement || editorElement.contains(document.activeElement))
+    )
+      return
+    telemetry.trackNoteUpdate()
+  }, 500)
+
   onDestroy(() => {
     if (resource) {
       resource.releaseData()
@@ -2624,6 +2639,7 @@
             on:blur={hidePopover}
             on:click
             on:dragstart
+            on:update={handleContentUpdated}
             on:citation-click={handleCitationClick}
             on:autocomplete={handleAutocomplete}
             on:suggestions={() => generatePrompts()}
