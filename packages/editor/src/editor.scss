@@ -950,3 +950,77 @@ body.custom .editor {
     background-color: #ffffff2e;
   }
 }
+
+/* Title Node Loading Animation */
+.title-loading[data-empty="true"]::before {
+  /* Override the placeholder text with animated version */
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 40%,
+      #aae5ff 45%,
+      transparent 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 40%,
+      white 45%,
+      transparent 50%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 40%,
+      #aae5ff 45%,
+      transparent 50%,
+      transparent 100%
+    ),
+    var(--accent, #399bf1);
+  
+  background-size:
+    200% 100%,
+    200% 100%,
+    200% 100%,
+    100% 100%;
+  
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  
+  animation: titleSlide 3s infinite linear;
+}
+
+@keyframes titleSlide {
+  0% {
+    background-position:
+      300% 0,
+      310% 0,
+      320% 0,
+      0 0;
+  }
+  
+  100% {
+    background-position:
+      -300% 0,
+      -310% 0,
+      -320% 0,
+      0 0;
+  }
+}
+
+/* Ensure the animation only applies when loading */
+.title-loading[data-empty="false"] {
+  /* No animation for non-empty titles */
+}
+
+.title-loading[data-empty="false"]::before {
+  /* Reset any animation styles */
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  background-clip: initial !important;
+  animation: none !important;
+}

@@ -62,6 +62,7 @@
 
   export let enableTitleNode: boolean = false
   export let titlePlaceholder: string = 'Untitled'
+  export let titleLoading: boolean = false
   export let onTitleChange: ((title: string) => void) | undefined = undefined
 
   export const isEmptyy = () => !get(editor)?.state.doc.textContent.trim().length
@@ -339,6 +340,7 @@
     showDragHandle: showDragHandle,
     enableTitleNode: enableTitleNode,
     titlePlaceholder: titlePlaceholder,
+    titleLoading: titleLoading,
     onTitleChange: onTitleChange,
     showSlashMenu: showSlashMenu,
     onSlashCommand: handleSlashCommand,

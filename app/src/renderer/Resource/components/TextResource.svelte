@@ -160,6 +160,8 @@
   const generatingSimilarities = writable(false)
   // Local store that syncs with the global AI generation state
   const isGeneratingAI = writable(false)
+  // State for tracking title generation specifically
+  const isGeneratingTitle = writable(false)
   // We use these to determine whether to display the big prompt bubbles
   // need to wire thi back when fixing the prompts with the new input bar
   const isEmpty = writable(false)
@@ -191,6 +193,18 @@
   const generateTitle = async (query: string) => {
     try {
       log.debug('Generating note title', query)
+
+      // Set loading state for title generation
+      isGeneratingTitle.set(true)
+
+      // Update TitleNode loading state if it's enabled
+      if (showTitle && !readOnlyMode && editorElem) {
+        const editor = editorElem.getEditor()
+        if (editor && editor.commands.setTitleLoading) {
+          editor.commands.setTitleLoading(true)
+        }
+      }
+
       const completion = await ai.createChatCompletion(
         JSON.stringify({ message: query }),
         CHAT_TITLE_GENERATOR_PROMPT,
@@ -209,11 +223,34 @@
         return null
       }
 
-      title = completion.output.trim() ?? query
+      const generatedTitle = completion.output.trim() ?? query
+      title = generatedTitle
 
-      await resourceManager.updateResourceMetadata(resourceId, { name: title })
+      // Update TitleNode if it's enabled
+      if (showTitle && !readOnlyMode && editorElem) {
+        const editor = editorElem.getEditor()
+        if (editor && editor.commands.setTitle) {
+          editor.commands.setTitle(generatedTitle)
+        }
+      }
+
+      await resourceManager.updateResourceMetadata(resourceId, { name: generatedTitle })
+
+      return generatedTitle
     } catch (err) {
       log.error('Error generating title:', err)
+      return null
+    } finally {
+      // Reset loading state
+      isGeneratingTitle.set(false)
+
+      // Update TitleNode loading state if it's enabled
+      if (showTitle && !readOnlyMode && editorElem) {
+        const editor = editorElem.getEditor()
+        if (editor && editor.commands.setTitleLoading) {
+          editor.commands.setTitleLoading(false)
+        }
+      }
     }
   }
 
@@ -1176,6 +1213,23 @@
 
         await wait(200)
         aiGeneration.updateStatus('completed')
+
+        // Generate title if needed (empty/default title and any AI generation)
+        const shouldGenerateTitle =
+          (!title || title.trim() === '' || title.startsWith('Untitled')) &&
+          showTitle &&
+          !readOnlyMode
+
+        if (shouldGenerateTitle) {
+          try {
+            log.debug('Generating title for AI generation')
+            const textQuery = getEditorContentText(query)
+            await generateTitle(textQuery)
+          } catch (err) {
+            log.error('Error generating title after AI generation:', err)
+            // Don't fail the whole operation if title generation fails
+          }
+        }
 
         // insert new line
         // editor.commands.insertContentAt(range.to, '<br>', {

@@ -91,6 +91,7 @@ export type ExtensionOptions = {
   // Title node options
   enableTitleNode?: boolean
   titlePlaceholder?: string
+  titleLoading?: boolean
   onTitleChange?: (title: string) => void
 }
 
@@ -118,7 +119,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     !!opts?.enableTitleNode,
     TitleNode.configure({
       placeholder: opts?.titlePlaceholder || 'Untitled',
-      onTitleChange: opts?.onTitleChange
+      onTitleChange: opts?.onTitleChange,
+      isLoading: opts?.titleLoading || false
     })
   ),
   Mathematics.configure({

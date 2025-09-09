@@ -20,6 +20,12 @@ export interface TitleNodeOptions {
    * Callback for when title changes
    */
   onTitleChange?: (title: string) => void
+
+  /**
+   * Whether title is currently being generated
+   * @default false
+   */
+  isLoading?: boolean
 }
 
 declare module '@tiptap/core' {
@@ -37,6 +43,13 @@ declare module '@tiptap/core' {
        * @example editor.commands.focusTitle()
        */
       focusTitle: () => ReturnType
+
+      /**
+       * Set title loading state
+       * @param loading Whether title is loading
+       * @example editor.commands.setTitleLoading(true)
+       */
+      setTitleLoading: (loading: boolean) => ReturnType
     }
   }
 }
@@ -53,7 +66,8 @@ export const TitleNode = Node.create<TitleNodeOptions>({
   addOptions() {
     return {
       HTMLAttributes: {},
-      placeholder: 'Untitled'
+      placeholder: 'Untitled',
+      isLoading: false
     }
   },
 
@@ -124,8 +138,15 @@ export const TitleNode = Node.create<TitleNodeOptions>({
 
           const textContent = node.textContent || ''
           const isEmpty = textContent.trim() === '' || textContent === '\u00A0'
+          const isLoading = this.options.isLoading
+
           dom.setAttribute('data-empty', isEmpty ? 'true' : 'false')
-          dom.setAttribute('data-placeholder', isEmpty ? this.options.placeholder : '')
+          dom.setAttribute('data-loading', isLoading ? 'true' : 'false')
+
+          // Set appropriate placeholder text based on loading state
+          const placeholderText =
+            isLoading && isEmpty ? 'Generating title...' : this.options.placeholder
+          dom.setAttribute('data-placeholder', isEmpty ? placeholderText : '')
 
           if (isEmpty) {
             dom.classList.add('is-title-empty')
@@ -133,6 +154,12 @@ export const TitleNode = Node.create<TitleNodeOptions>({
           } else {
             dom.classList.remove('is-title-empty')
             dom.classList.remove('title-empty')
+          }
+
+          if (isLoading && isEmpty) {
+            dom.classList.add('title-loading')
+          } else {
+            dom.classList.remove('title-loading')
           }
         } catch (error) {
           console.warn('TitleNode updatePlaceholder error:', error)
@@ -182,6 +209,37 @@ export const TitleNode = Node.create<TitleNodeOptions>({
             tr.setSelection(selection)
             if (dispatch) dispatch(tr)
             editor.view.focus()
+            return true
+          })
+        },
+
+      setTitleLoading:
+        (loading: boolean) =>
+        ({ commands }) => {
+          // Update the extension options
+          this.options.isLoading = loading
+
+          // Trigger DOM update by dispatching a transaction
+          return commands.command(({ tr, dispatch, view }) => {
+            // Force the nodeView to update by triggering a view update
+            setTimeout(() => {
+              const titleNodeDOM = view.dom.querySelector('[data-title-node]')
+              if (titleNodeDOM) {
+                const isEmpty = !titleNodeDOM.textContent?.trim()
+                const placeholderText =
+                  loading && isEmpty ? 'Generating title...' : this.options.placeholder
+                titleNodeDOM.setAttribute('data-placeholder', isEmpty ? placeholderText : '')
+                titleNodeDOM.setAttribute('data-loading', loading ? 'true' : 'false')
+
+                if (loading && isEmpty) {
+                  titleNodeDOM.classList.add('title-loading')
+                } else {
+                  titleNodeDOM.classList.remove('title-loading')
+                }
+              }
+            }, 0)
+
+            if (dispatch) dispatch(tr)
             return true
           })
         }
