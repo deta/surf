@@ -10,6 +10,7 @@
   import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
   import { useResourceManager, type Resource, type ResourceNote } from '@deta/services/resources'
   import { ResourceTypes } from '@deta/types'
+  import { NotebookDefaults } from '@deta/services/constants'
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
@@ -21,7 +22,7 @@
 
   const handleCreateNote = async () => {
     const note = await resourceManager.createResourceNote('', {
-      name: 'Untitled Note'
+      name: NotebookDefaults.NOTE_DEFAULT_NAME
     })
     notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
     await navigation.navigate(`surf://resource/${note.id}`).finished

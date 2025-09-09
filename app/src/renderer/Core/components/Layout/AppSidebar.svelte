@@ -57,7 +57,7 @@
 
   const handleNewNote = async () => {
     const note = await resourceManager.createResourceNote('', {
-      name: 'Untitled Note'
+      name: Defaults.NOTE_DEFAULT_NAME
     })
 
     if (isInternalRendererURL($activeSidebarLocation ?? '')) {

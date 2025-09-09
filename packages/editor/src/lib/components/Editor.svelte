@@ -13,6 +13,7 @@
   import { useAnimationFrameThrottle } from '@deta/utils'
 
   import { createEditorExtensions } from '../editor'
+  import { isInTitleNode } from '../utils'
   import type { EditorAutocompleteEvent, LinkItemsFetcher, MentionItem } from '../types'
   import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
   import type { MentionAction, MentionNodeAttrs } from '../extensions/Mention'
@@ -62,6 +63,7 @@
 
   export let enableTitleNode: boolean = false
   export let titlePlaceholder: string = 'Untitled'
+  export let initialTitle: string = ''
   export let titleLoading: boolean = false
   export let onTitleChange: ((title: string) => void) | undefined = undefined
 
@@ -215,6 +217,7 @@
 
   export const triggerAutocomplete = () => {
     const editor = getEditor()
+
     const getText = () => {
       const { from, to } = editor.view.state.selection
       if (from === to) {
@@ -340,6 +343,7 @@
     showDragHandle: showDragHandle,
     enableTitleNode: enableTitleNode,
     titlePlaceholder: titlePlaceholder,
+    initialTitle: initialTitle,
     titleLoading: titleLoading,
     onTitleChange: onTitleChange,
     showSlashMenu: showSlashMenu,
@@ -402,7 +406,6 @@
                 if (!autocomplete) {
                   return false
                 }
-
                 triggerAutocomplete()
 
                 return false
@@ -410,6 +413,11 @@
 
               Enter: () => {
                 if (!autocomplete || !isFirstLine) return false
+
+                if (isInTitleNode(this.editor)) {
+                  return false
+                }
+
                 triggerAutocomplete()
                 return true
               },

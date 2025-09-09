@@ -58,6 +58,9 @@ export const FloatyInput = Extension.create<FloatyInputOptions>({
 
               // Iterate through top-level nodes to find content-bearing nodes
               doc.forEach((node, offset) => {
+                if (node.type.name === 'titleNode') {
+                  return true
+                }
                 if (node.textContent.trim() !== '') {
                   if (firstContentNode === null) {
                     firstContentNode = { node, pos: offset, endPos: offset + node.nodeSize }

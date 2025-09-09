@@ -91,6 +91,7 @@ export type ExtensionOptions = {
   // Title node options
   enableTitleNode?: boolean
   titlePlaceholder?: string
+  initialTitle?: string
   titleLoading?: boolean
   onTitleChange?: (title: string) => void
 }
@@ -119,6 +120,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     !!opts?.enableTitleNode,
     TitleNode.configure({
       placeholder: opts?.titlePlaceholder || 'Untitled',
+      initialTitle: opts?.initialTitle || '',
       onTitleChange: opts?.onTitleChange,
       isLoading: opts?.titleLoading || false
     })

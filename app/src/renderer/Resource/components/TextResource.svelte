@@ -1885,6 +1885,8 @@
     try {
       log.debug('autocomplete', e.detail)
 
+      console.trace('xxx-autocomplete')
+
       // Prevent starting a new generation if one is already running
       if (checkIfAlreadyRunning('autocomplete')) return
 
@@ -2611,6 +2613,7 @@
             readOnly={readOnlyMode}
             enableTitleNode={showTitle && !readOnlyMode}
             titlePlaceholder="Untitled"
+            initialTitle={title}
             onTitleChange={handleTitleChange}
             {slashItemsFetcher}
             {mentionItemsFetcher}

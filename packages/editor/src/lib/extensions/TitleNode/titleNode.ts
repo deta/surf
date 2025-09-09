@@ -1,6 +1,16 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Selection, TextSelection } from '@tiptap/pm/state'
+import { NotebookDefaults } from '../../../../../services/src/lib/constants'
+
+const isValidInitialTitle = (title?: string): title is string => {
+  return Boolean(
+    title &&
+      title !== 'Untitled' &&
+      title !== NotebookDefaults.NOTE_DEFAULT_NAME &&
+      title.trim() !== ''
+  )
+}
 
 export interface TitleNodeOptions {
   /**
@@ -26,6 +36,12 @@ export interface TitleNodeOptions {
    * @default false
    */
   isLoading?: boolean
+
+  /**
+   * Initial title content to populate the TitleNode with
+   * @default ''
+   */
+  initialTitle?: string
 }
 
 declare module '@tiptap/core' {
@@ -67,7 +83,8 @@ export const TitleNode = Node.create<TitleNodeOptions>({
     return {
       HTMLAttributes: {},
       placeholder: 'Untitled',
-      isLoading: false
+      isLoading: false,
+      initialTitle: ''
     }
   },
 
@@ -176,7 +193,7 @@ export const TitleNode = Node.create<TitleNodeOptions>({
         update: (updatedNode) => {
           if (updatedNode.type !== this.type) return false
           node = updatedNode
-          setTimeout(() => updatePlaceholder(), 0)
+          requestAnimationFrame(() => updatePlaceholder())
           return true
         },
         destroy: () => {}
@@ -222,7 +239,7 @@ export const TitleNode = Node.create<TitleNodeOptions>({
           // Trigger DOM update by dispatching a transaction
           return commands.command(({ tr, dispatch, view }) => {
             // Force the nodeView to update by triggering a view update
-            setTimeout(() => {
+            requestAnimationFrame(() => {
               const titleNodeDOM = view.dom.querySelector('[data-title-node]')
               if (titleNodeDOM) {
                 const isEmpty = !titleNodeDOM.textContent?.trim()
@@ -237,7 +254,7 @@ export const TitleNode = Node.create<TitleNodeOptions>({
                   titleNodeDOM.classList.remove('title-loading')
                 }
               }
-            }, 0)
+            })
 
             if (dispatch) dispatch(tr)
             return true
@@ -333,6 +350,61 @@ export const TitleNode = Node.create<TitleNodeOptions>({
     }
   },
 
+  onCreate() {
+    const editor = this.editor
+    if (!editor) return
+
+    // Use requestAnimationFrame to ensure DOM is ready, then initialize
+    const initializeTitleNode = async () => {
+      // Wait for next frame to ensure editor is fully initialized
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+
+      const doc = editor.state.doc
+      const firstNode = doc.firstChild
+      const hasTitleNode = firstNode && firstNode.type.name === this.name
+
+      if (!hasTitleNode) {
+        const initialTitle = this.options.initialTitle
+        const titleNode = editor.state.schema.nodes.titleNode.create()
+
+        const tr = editor.state.tr
+        tr.insert(0, titleNode)
+
+        // Ensure there's a paragraph after the title
+        const paragraph = editor.state.schema.nodes.paragraph.create()
+        tr.insert(titleNode.nodeSize, paragraph)
+
+        editor.view.dispatch(tr)
+
+        // Set initial title if valid, using a proper transaction-based approach
+        if (isValidInitialTitle(initialTitle)) {
+          await setTitleWhenReady(editor, initialTitle)
+        }
+      } else if (this.options.initialTitle) {
+        // TitleNode exists, but check if it's empty and we have an initial title
+        const titleText = firstNode.textContent?.trim()
+        const initialTitle = this.options.initialTitle
+
+        if ((!titleText || titleText === '') && isValidInitialTitle(initialTitle)) {
+          editor.commands.setTitle(initialTitle)
+        }
+      }
+    }
+
+    const setTitleWhenReady = async (editor: any, title: string) => {
+      // Wait for the TitleNode to be properly created in the DOM
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+
+      // Verify the TitleNode exists before setting title
+      const firstNode = editor.state.doc.firstChild
+      if (firstNode && firstNode.type.name === this.name) {
+        editor.commands.setTitle(title)
+      }
+    }
+
+    initializeTitleNode()
+  },
+
   addProseMirrorPlugins() {
     const pluginKey = new PluginKey('titleNode')
 
@@ -399,6 +471,26 @@ export const TitleNode = Node.create<TitleNodeOptions>({
             const titleNode = schema.nodes.titleNode.create()
             tr.insert(0, titleNode)
             modified = true
+
+            // Set initial title if provided and TitleNode was just created
+            const initialTitle = this.options.initialTitle
+            if (isValidInitialTitle(initialTitle)) {
+              // Use requestAnimationFrame to set title after transaction completes
+              requestAnimationFrame(() => {
+                // Check if the editor still exists and has the setTitle command
+                if (this.editor && this.editor.commands && this.editor.commands.setTitle) {
+                  const currentFirstNode = this.editor.state.doc.firstChild
+                  // Only set if the TitleNode is still empty
+                  if (
+                    currentFirstNode &&
+                    currentFirstNode.type.name === this.name &&
+                    (!currentFirstNode.textContent || currentFirstNode.textContent.trim() === '')
+                  ) {
+                    this.editor.commands.setTitle(initialTitle)
+                  }
+                }
+              })
+            }
           }
 
           // Ensure there's always at least one block after the title
@@ -422,9 +514,9 @@ export const TitleNode = Node.create<TitleNodeOptions>({
             const oldTitle = oldTitleNode.textContent
 
             if (newTitle !== oldTitle && this.options.onTitleChange) {
-              setTimeout(() => {
+              requestAnimationFrame(() => {
                 this.options.onTitleChange?.(newTitle)
-              }, 0)
+              })
             }
           }
 

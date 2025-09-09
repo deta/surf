@@ -13,6 +13,7 @@
   import { useResourceManager } from '@deta/services/resources'
   import { useViewManager, ViewType } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
+  import { NotebookDefaults } from '@deta/services/constants'
 
   let {
     view,
@@ -69,7 +70,7 @@
 
   async function handleNewNote() {
     const note = await resourceManager.createResourceNote('', {
-      name: 'Untitled Note'
+      name: NotebookDefaults.NOTE_DEFAULT_NAME
     })
 
     if (viewManager.sidebarViewOpen) {

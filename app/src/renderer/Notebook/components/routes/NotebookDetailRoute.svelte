@@ -11,6 +11,7 @@
   import { ResourceTypes } from '@deta/types'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
+  import { NotebookDefaults } from '@deta/services/constants'
 
   let { notebook, query }: { notebook: Notebook; query?: string } = $props()
 
@@ -26,7 +27,7 @@
 
   const handleCreateNote = async () => {
     const note = await resourceManager.createResourceNote('', {
-      name: 'Untitled Note'
+      name: NotebookDefaults.NOTE_DEFAULT_NAME
     })
     notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
     await navigation.navigate(`surf://resource/${note.id}`).finished

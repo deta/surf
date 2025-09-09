@@ -155,11 +155,18 @@
     const currentContent = storeContent || htmlContent
     const trimmedContent = currentContent.trim()
 
+    if (firstLine && tiptapEditor?.state.selection.from === 0) {
+      const { selection, doc } = tiptapEditor.state
+      const node = doc.nodeAt(selection.from)
+      if (node?.type.name === 'titleNode') {
+        return
+      }
+    }
+
     log.debug('Handling submit', currentContent, { firstLine, htmlContent, storeContent })
 
     if ($isGeneratingAI) dispatch('cancel-completion')
 
-    // Handle empty input cases
     if (!trimmedContent && firstLine) {
       dispatch('submit', null)
       return
