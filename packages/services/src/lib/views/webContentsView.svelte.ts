@@ -1407,6 +1407,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   get errorValue() {
     return get(this.error)
   }
+  get didFinishLoadValue() {
+    return get(this.didFinishLoad)
+  }
   get isMediaPlayingValue() {
     return get(this.isMediaPlaying)
   }
@@ -1448,11 +1451,16 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.selectionHighlight.set(selection)
   }
 
-  highlightSelection(selection: PageHighlightSelectionData) {
+  async highlightSelection(selection: PageHighlightSelectionData) {
     this.selectionHighlight.set(selection)
-    if (this.webContents) {
-      this.webContents.highlightSelection(selection)
+
+    const webContents = await this.waitForWebContentsReady()
+    if (!webContents) {
+      this.log.error('WebContents is not available for highlighting selection')
+      return
     }
+
+    await webContents.highlightSelection(selection)
   }
 
   /**
@@ -1987,6 +1995,10 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
    * Waits until the webContents have updated the domReady store
    */
   waitForWebContentsReady(timeout: number = 10000) {
+    if (this.didFinishLoadValue && this.webContents) {
+      return Promise.resolve(this.webContents)
+    }
+
     let timeoutId: ReturnType<typeof setTimeout>
     let unsubscribe = () => {}
 

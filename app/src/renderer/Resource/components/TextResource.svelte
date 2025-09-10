@@ -939,15 +939,15 @@
     log.debug('Resource linked to citation', resource)
 
     onCitationClick?.({
-      resourceId: resource.id || source.resource_id,
-      url: source.metadata?.url,
+      resourceId: resource?.id || source?.resource_id,
+      url: source?.metadata?.url,
       preview: preview ?? false,
       skipHighlight: skipHighlight,
       selection: {
         source,
-        sourceUid: source.uid,
+        sourceUid: source?.uid,
         text: text,
-        timestamp: source.metadata?.timestamp
+        timestamp: source?.metadata?.timestamp
       }
     })
   }

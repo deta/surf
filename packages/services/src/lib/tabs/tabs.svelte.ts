@@ -403,14 +403,14 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     if (existingTab) {
       this.log.debug('Tab already exists, activating:', existingTab.id)
 
-      if (opts.selectionHighlight) {
-        existingTab.view.highlightSelection(opts.selectionHighlight)
-      }
-
       if (opts.active) {
         await this.setActiveTab(existingTab.id, isUserAction)
       } else if (opts.activate) {
         this.activateTab(existingTab.id)
+      }
+
+      if (opts.selectionHighlight) {
+        await existingTab.view.highlightSelection(opts.selectionHighlight)
       }
 
       return existingTab
