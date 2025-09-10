@@ -117,7 +117,7 @@ impl Processor {
     }
 
     fn handle_process_resource(&self, resource: CompositeResource) -> BackendResult<()> {
-        self.surf_backend_health.wait_until_healthy();
+        //self.surf_backend_health.wait_until_healthy();
 
         if !needs_processing(&resource.resource.resource_type) {
             return Ok(());
