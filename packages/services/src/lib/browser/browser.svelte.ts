@@ -54,6 +54,10 @@ export class BrowserService {
         this.handleNewWindowRequest(details)
       }),
 
+      this.viewManager.on(ViewManagerEmitterNames.SIDEBAR_CHANGE, (isOpen, view) => {
+        this.handleSidebarChange(isOpen, view)
+      }),
+
       this.messagePort.trackEvent.on(async ({ eventName, eventProperties }) => {
         this.resourceManager.telemetry.trackEvent(eventName, eventProperties)
       }),
@@ -94,6 +98,16 @@ export class BrowserService {
       active: details.active,
       activate: true
     })
+  }
+
+  handleSidebarChange(isOpen: boolean, view?: WebContentsView) {
+    this.log.debug('Sidebar state changed, isOpen:', isOpen, 'view:', view?.id)
+    if (!isOpen) {
+      const activeTab = this.tabsManager.activeTabValue
+
+      this.log.debug('Focusing active tab after sidebar closed', activeTab)
+      activeTab?.view.webContents?.focus()
+    }
   }
 
   async handleCitationClick(data: CitationClickEvent, viewId: string) {

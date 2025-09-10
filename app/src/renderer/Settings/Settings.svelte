@@ -61,13 +61,11 @@
   }
 
   const getUserId = () => {
-    return window.api
-      .getUserConfig()
-      .then((cfg) => (cfg.anon_telemetry ? cfg.anon_id : cfg.user_id))
-      .catch((e) => {
-        console.error(e)
-        return 'Could not get user ID!'
-      })
+    if (!userConfig) {
+      return null
+    }
+
+    return userConfig.anon_telemetry ? userConfig.anon_id : userConfig.user_id
   }
 
   const checkForUpdates = async () => {
@@ -207,7 +205,10 @@
 
   const fetchLicenses = async () => {
     // @ts-ignore
-    const data = await fetch(window.api.SettingsWindowEntrypoint + '/assets/dependencies.txt')
+    const data = await fetch(
+      window.api.SettingsWindowEntrypoint.replace('/Settings/settings.html', '') +
+        '/assets/dependencies.txt'
+    )
     const text = await data.text()
     if (text) {
       licenses = text
@@ -444,7 +445,8 @@
           {#if showMiscInfo}
             {#await getUserId() then id}
               <div style="display: flex; gap: 1ch; align-items: center;">
-                <span><b>Surf ID:</b></span> <span style="user-select: text;">{id}</span>
+                <span><b>Surf ID:</b></span>
+                <span style="user-select: text;">{id ?? 'no ID set'}</span>
               </div>
             {/await}
           {/if}

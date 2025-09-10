@@ -6,7 +6,7 @@ import type {
   WebViewEventSendNames,
   WebViewSendEvents
 } from '@deta/types'
-import type { WebContents } from './webContentsView.svelte'
+import type { WebContents, WebContentsView } from './webContentsView.svelte'
 import type { NewWindowRequest } from '../ipc'
 
 export enum WebContentsViewEmitterNames {
@@ -76,7 +76,9 @@ export enum ViewManagerEmitterNames {
   ACTIVATED = 'activated',
   SHOW_VIEWS = 'show-views',
   HIDE_VIEWS = 'hide-views',
-  NEW_WINDOW_REQUEST = 'new-window-request'
+  NEW_WINDOW_REQUEST = 'new-window-request',
+  WINDOW_RESIZE = 'window-resize',
+  SIDEBAR_CHANGE = 'sidebar-change'
 }
 
 export type ViewManagerEmitterEvents = {
@@ -86,6 +88,8 @@ export type ViewManagerEmitterEvents = {
   [ViewManagerEmitterNames.SHOW_VIEWS]: () => void
   [ViewManagerEmitterNames.HIDE_VIEWS]: () => void
   [ViewManagerEmitterNames.NEW_WINDOW_REQUEST]: (details: NewWindowRequest) => void
+  [ViewManagerEmitterNames.WINDOW_RESIZE]: () => void
+  [ViewManagerEmitterNames.SIDEBAR_CHANGE]: (isOpen: boolean, view?: WebContentsView) => void
 }
 
 export type BookmarkPageOpts = {

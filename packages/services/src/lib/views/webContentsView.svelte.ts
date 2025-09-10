@@ -62,7 +62,8 @@ import {
   WebContentsEmitterNames,
   type BookmarkPageOpts,
   ViewType,
-  type ViewTypeData
+  type ViewTypeData,
+  ViewManagerEmitterNames
 } from './types'
 import { Resource, ResourceManager } from '../resources'
 import { WebParser } from '@deta/web-parser'
@@ -475,6 +476,12 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       })
     )
 
+    this._unsubs.push(
+      this.manager.on(ViewManagerEmitterNames.WINDOW_RESIZE, () => {
+        this.syncWrapperBounds()
+      })
+    )
+
     // this._unsubs.push(
     //   this.manager.messagePort.updateView.on(this.view.id, async (payload) => {
     //     this.log.debug('Update view payload received:', payload)
@@ -486,17 +493,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
     // setup resize observer to resize the webview when the wrapper changes size
     if (this.wrapperElement) {
-      const resizeObserver = new ResizeObserver((entries) => {
-        if (!this.wrapperElement) return
-
-        const currentBounds = this.wrapperElement.getBoundingClientRect()
-        this.log.debug('Resizing web contents view to', currentBounds)
-        this.bounds.set({
-          x: currentBounds.x,
-          y: currentBounds.y,
-          width: currentBounds.width,
-          height: currentBounds.height
-        })
+      const resizeObserver = new ResizeObserver((_entries) => {
+        this.syncWrapperBounds()
       })
 
       resizeObserver.observe(this.wrapperElement)
@@ -541,6 +539,20 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       if (payload.channel === 'webview-page-event') {
         callback(payload.args)
       }
+    })
+  }
+
+  syncWrapperBounds() {
+    if (!this.wrapperElement) {
+      return
+    }
+
+    const currentBounds = this.wrapperElement.getBoundingClientRect()
+    this.bounds.set({
+      x: currentBounds.x,
+      y: currentBounds.y,
+      width: currentBounds.width,
+      height: currentBounds.height
     })
   }
 

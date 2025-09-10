@@ -7,7 +7,7 @@ import {
   type Fn,
   TelemetryViewType
 } from '@deta/types'
-import { useLogScope, EventEmitterBase, generateID, isDev } from '@deta/utils'
+import { useLogScope, EventEmitterBase, generateID, isDev, wait } from '@deta/utils'
 import { ConfigService, useConfig } from '../config'
 import { KVStore, useKVTable } from '../kv'
 import { WebContentsView, type WebContents } from './webContentsView.svelte'
@@ -135,6 +135,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       })
     )
 
+    window.addEventListener('resize', () => this.handleWindowResize(), { passive: true })
+    this.unsubs.push(() => {
+      window.removeEventListener('resize', () => this.handleWindowResize())
+    })
+
     // @ts-ignore
     // window.api.onMessagePort(({ portId, payload }) => {
     //   if (!portId) {
@@ -159,6 +164,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   handleNewWindowRequest(viewId: string, details: NewWindowRequest) {
     this.log.debug('New window request received', viewId, details)
     this.emit(ViewManagerEmitterNames.NEW_WINDOW_REQUEST, details)
+  }
+
+  handleWindowResize() {
+    this.emit(ViewManagerEmitterNames.WINDOW_RESIZE)
   }
 
   async changeOverlayState(changes: Partial<OverlayState>) {
@@ -347,8 +356,8 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   async hideViews(emitEvent = true) {
     if (emitEvent) {
       const activeView = this.getActiveView()
-      if (activeView) {
-        await activeView.refreshScreenshot()
+      if (activeView?.webContents) {
+        await activeView.webContents.refreshScreenshot()
       }
     }
 
@@ -398,13 +407,15 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
         }
       }
       this.sidebarViewOpen = open
+
+      this.emit(ViewManagerEmitterNames.SIDEBAR_CHANGE, open, view ?? undefined)
     }
   }
 
-  getActiveView(): WebContents | null {
+  getActiveView(): WebContentsView | null {
     const activeViewId = this.activeViewIdValue
     if (activeViewId) {
-      return this.webContentsViews.get(activeViewId) || null
+      return this.getViewById(activeViewId)
     }
     return null
   }
