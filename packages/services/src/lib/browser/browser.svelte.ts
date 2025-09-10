@@ -387,7 +387,8 @@ export class BrowserService {
           TelemetryCreateTabSource.NotebookLinkClick
         )
         const tab = await this.tabsManager.createResourceTab(resource.id, {
-          active: target === 'tab'
+          active: target === 'tab',
+          activate: true
         })
 
         return tab.view
@@ -400,7 +401,8 @@ export class BrowserService {
         return tab?.view
       } else {
         const tab = await this.tabsManager.create(resource.url, {
-          active: target === 'tab'
+          active: target === 'tab',
+          activate: true
         })
 
         return tab.view
