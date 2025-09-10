@@ -158,6 +158,12 @@
     $editor.view.dispatch(tr)
   }
 
+  export const scrollToTop = () => {
+    if ($editor) {
+      $editor.chain().focus('start').scrollIntoView().run()
+    }
+  }
+
   export const blur = () => {
     if ($editor) {
       $editor.commands.blur()
