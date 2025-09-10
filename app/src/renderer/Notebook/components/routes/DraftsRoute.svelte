@@ -10,7 +10,6 @@
   import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
   import { useResourceManager, type Resource, type ResourceNote } from '@deta/services/resources'
   import { ResourceTypes } from '@deta/types'
-  import { NotebookDefaults } from '@deta/services/constants'
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()

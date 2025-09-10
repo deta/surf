@@ -1,7 +1,7 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Selection, TextSelection } from '@tiptap/pm/state'
-import { NotebookDefaults } from '../../../../../services/src/lib/constants'
+import { NotebookDefaults } from '@deta/types'
 
 const isValidInitialTitle = (title?: string): title is string => {
   return Boolean(

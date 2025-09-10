@@ -13,7 +13,6 @@
   import { useResourceManager } from '@deta/services/resources'
   import { useViewManager, ViewType } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
-  import { NotebookDefaults } from '@deta/services/constants'
 
   let {
     view,

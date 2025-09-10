@@ -11,7 +11,6 @@
   import { ResourceTypes } from '@deta/types'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
-  import { NotebookDefaults } from '@deta/services/constants'
 
   let { notebook, query }: { notebook: Notebook; query?: string } = $props()
 
