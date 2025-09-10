@@ -62,7 +62,7 @@ import { getPrimaryResourceType } from './resources/resources'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'
-import { useMessagePortClient } from './messagePort'
+import { type MessagePortClient, useMessagePortClient } from './messagePort'
 
 export type TelemetryConfig = {
   apiKey: string
@@ -127,7 +127,6 @@ export class Telemetry {
     this.personas = this.userConfig.settings.personas || []
     // @ts-ignore
     this.appInfo = await window.api.getAppInfo()
-    this.active = true
     const initOptions = {
       // TODO: default tracking will be deprecated by the ampltiude SDK
       defaultTracking: {
@@ -186,7 +185,8 @@ export class Telemetry {
   }
 
   isActive() {
-    return (this.apiKey || this.messagePort) && this.active
+    if (isMainRenderer()) return this.apiKey && this.active
+    else return this.messagePort !== undefined
   }
 
   trackEvent(eventName: TelemetryEventTypes, eventProperties?: Record<string, any>) {
