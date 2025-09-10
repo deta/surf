@@ -6,6 +6,9 @@ node_modules
 .pnp.js
 packages/core/src/output.css
 
+# NOTE: tmp workaround to ignore the generated constants files
+packages/services/src/lib/constants/*
+
 # Local env files
 .env
 .env.local
