@@ -164,12 +164,18 @@ export class BrowserService {
     this.tabsManager.resourceManager.telemetry.trackCreateTab(
       TelemetryCreateTabSource.WebpageLinkClick
     )
-    this.tabsManager.create(details.url, { active, activate: true })
+    this.tabsManager.create(details.url, {
+      active,
+      activate: true
+    })
   }
 
   handleOpenURLRequest(details: OpenURL) {
     this.log.debug('Open URL request received', details)
-    this.tabsManager.create(details.url, { active: details.active, activate: true })
+    this.tabsManager.create(details.url, {
+      active: details.active,
+      activate: true
+    })
   }
 
   async createNoteAndRunAIQuery(

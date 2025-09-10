@@ -192,6 +192,10 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     return this.activatedTabs
   }
 
+  get activeTabIndex(): number {
+    return this.tabs.findIndex((e) => e.id === this.activeTabId)
+  }
+
   constructor(viewManager?: ViewManager) {
     super()
 
@@ -321,7 +325,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     this.log.debug('Creating new tab with view:', view, 'options:', options)
 
-    const newIndex = (await this.getLastTabIndex()) + 1
+    const newIndex = this.activeTabIndex + 1 || (await this.getLastTabIndex()) + 1
     const hostname = getHostname(url) || 'unknown'
 
     const item = await this.kv.create({
@@ -331,7 +335,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     })
 
     const tab = new TabItem(this, view, item)
-    this.tabs = [...this.tabs, tab]
+    this.tabs.splice(newIndex, 0, tab)
 
     if (options.active) {
       this.setActiveTab(item.id)
@@ -578,9 +582,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     this.tabs = newTabs
 
-    newTabs.forEach((tab, index) => {
-      tab.index = index
-    })
+    newTabs.forEach((tab, index) => (tab.index = index))
 
     await Promise.all(newTabs.map((tab) => this.update(tab.id, { index: tab.index })))
 
