@@ -288,6 +288,9 @@ export class ContextManager {
       } else if (type === WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM) {
         await this.removeContextItem(payload.id)
         return null
+      } else if (type === WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT) {
+        await this.clear()
+        return null
       } else {
         this.log.error('Unknown WebContentsViewContextManagerActionType', type)
       }

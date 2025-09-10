@@ -18,6 +18,7 @@
   import { ShortcutVisualizer } from '@deta/ui'
 
   const dispatch = createEventDispatcher<{
+    clear: void
     ask: { query: string; mentions: MentionItem[] }
     'create-note': { content: string }
     input: { query: string; mentions: MentionItem[] }
@@ -130,6 +131,9 @@
 
     await teletype.executeAction(action)
 
+    dispatch('clear')
+    editorComponent?.setContent('')
+
     if (action.requireInput) {
       editorComponent?.focus()
       inputValue.set('')
@@ -191,10 +195,11 @@
 
     // Check if content contains mentions using the editor's mention detection
     if (editorComponent) {
-      const { mentions, text } = editorComponent.getParsedEditorContent()
-      const hasMultipleLines = text.includes('\n')
+      const data = editorComponent.getParsedEditorContent()
+      const hasMultipleLines = data.text.includes('\n')
+      mentions = data.mentions || []
       hasMentions = mentions && mentions.length > 0
-      isInMentionMode = mentionInProgressPattern.test(text.trim()) || hasMultipleLines
+      isInMentionMode = mentionInProgressPattern.test(data.text.trim()) || hasMultipleLines
     } else {
       // Fallback to simple pattern matching
       const mentionPattern = /@\w+/g
@@ -223,17 +228,18 @@
     teletype.showAction('teletype-helper')
   }
 
-  const handleSubmit = (e: CustomEvent<boolean>) => {
-    const modKeyPressed = e.detail
-    if ($selectedAction && !isInMentionMode && !modKeyPressed) {
+  const handleSubmit = (modKeyPressed: boolean) => {
+    console.log('Submit clicked', $selectedAction, modKeyPressed)
+    if ($selectedAction && !modKeyPressed) {
       callAction($selectedAction)
     } else {
-      if (!mentions) {
-        mentions = editorComponent.getMentions()
-      }
-
-      dispatch('ask', { query: $inputValue, mentions })
+      handleAsk()
     }
+  }
+
+  const handleAsk = () => {
+    mentions = editorComponent.getMentions()
+    dispatch('ask', { query: $inputValue, mentions })
   }
 
   const handleCreateNote = () => {
@@ -447,7 +453,7 @@
                 inputValue.set(plainText)
                 handleEditorUpdate(plainText)
               }}
-              on:submit={handleSubmit}
+              on:submit={(e) => handleSubmit(e.detail)}
             />
           {/if}
 
@@ -492,7 +498,7 @@
           {:else}
             <Button
               size="md"
-              onclick={handleSubmit}
+              onclick={handleAsk}
               class="secondary-button"
               disabled={!$inputValue || $inputValue.length === 0}
             >
@@ -504,21 +510,26 @@
             </Button>
           {/if}
 
-          <Button
-            size="md"
-            onclick={handleSubmit}
-            class="send-button"
-            disabled={!$inputValue || $inputValue.length === 0}
-          >
-            {#if $selectedAction?.buttonText}
-              {$selectedAction?.buttonText}
-              <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-            {:else if isInMentionMode || hasMentions}
+          {#if isInMentionMode || hasMentions}
+            <Button
+              size="md"
+              onclick={handleAsk}
+              class="send-button"
+              disabled={!$inputValue || $inputValue.length === 0}
+            >
               Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-            {:else}
-              Search <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-            {/if}
-          </Button>
+            </Button>
+          {:else}
+            <Button
+              size="md"
+              onclick={() => handleSubmit(false)}
+              class="send-button"
+              disabled={!$inputValue || $inputValue.length === 0}
+            >
+              {$selectedAction?.buttonText || 'Search'}
+              <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
+            </Button>
+          {/if}
         </div>
       </div>
       {#if $open && !isModal}

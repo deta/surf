@@ -1225,7 +1225,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   webContents = $state<WebContents | null>(null)
 
   private initialData: WebContentsViewData
-  private bookmarkingPromises: Map<string, Promise<Resource>> = new Map()
+  private bookmarkingPromises = new Map<string, Promise<Resource>>()
+  private updatingResourcePromises = new Map<string, Promise<Resource>>()
   private preventUnmounting: boolean = false
 
   data: Readable<WebContentsViewData>
@@ -1276,7 +1277,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.log = useLogScope(`View ${data.id}`)
     this.manager = manager
     this.resourceManager = manager.resourceManager
-    this.historyEntriesManager = new HistoryEntriesManager()
+    this.historyEntriesManager = manager.historyEntriesManager
     this.downloadsManager = useDownloadsManager()
 
     this.id = data.id
@@ -1598,6 +1599,98 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     return copyToClipboard(this.urlValue)
   }
 
+  async refreshResourceWithPage(
+    resource: Resource,
+    url: string,
+    freshWebview = false
+  ): Promise<Resource> {
+    let updatingPromise = this.updatingResourcePromises.get(url)
+    if (updatingPromise !== undefined) {
+      this.log.debug('already updating resource, piggybacking on existing promise')
+      return new Promise(async (resolve, reject) => {
+        try {
+          const resource = await updatingPromise!
+          resolve(resource)
+        } catch (e) {
+          reject(null)
+        }
+      })
+    }
+
+    updatingPromise = new Promise(async (resolve, reject) => {
+      try {
+        if (this.detectedAppValue?.resourceType === 'application/pdf') {
+          resolve(resource)
+          return
+        }
+
+        resource.updateExtractionState('running')
+
+        // Run resource detection on a fresh webview to get the latest data
+        const detectedResource = await this.extractResource(url, freshWebview)
+
+        this.log.debug('extracted resource data', detectedResource)
+
+        if (detectedResource) {
+          this.log.debug('updating resource with fresh data', detectedResource.data)
+          await this.resourceManager.updateResourceParsedData(resource.id, detectedResource.data)
+          await this.resourceManager.updateResourceMetadata(resource.id, {
+            name: (detectedResource.data as any).title || this.titleValue || '',
+            sourceURI: url
+          })
+        }
+
+        if ((resource.tags ?? []).find((x) => x.name === ResourceTagsBuiltInKeys.DATA_STATE)) {
+          this.log.debug('updating resource data state to complete')
+          await this.resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.DATA_STATE,
+            ResourceTagDataStateValue.COMPLETE
+          )
+        }
+
+        resource.updateExtractionState('idle')
+
+        resolve(resource)
+      } catch (e) {
+        this.log.error('error refreshing resource', e)
+        resource.updateExtractionState('idle') // TODO: support error state
+        reject(null)
+      }
+    })
+
+    this.updatingResourcePromises.set(url, updatingPromise)
+    updatingPromise.then(() => {
+      this.updatingResourcePromises.delete(url)
+    })
+
+    return updatingPromise
+  }
+
+  async extractResource(url: string, freshWebview = false): Promise<DetectedResource | null> {
+    this.log.debug('extracting resource data', freshWebview ? 'using fresh webview' : '')
+
+    let detectedResource: DetectedResource | null = null
+
+    if (freshWebview) {
+      const webParser = new WebParser(url)
+      detectedResource = await webParser.extractResourceUsingWebview(document)
+    } else {
+      if (!this.webContents) {
+        return null
+      }
+
+      detectedResource = await this.webContents.detectResource()
+    }
+
+    if (!detectedResource) {
+      this.log.debug('no resource detected')
+      return null
+    }
+
+    return detectedResource
+  }
+
   async createBookmarkResource(url: string, opts?: BookmarkPageOpts): Promise<Resource> {
     this.log.debug('bookmarking', url, opts)
 
@@ -1675,7 +1768,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
         return
       }
 
-      const detectedResource = await this.webContents?.detectResource()
+      const detectedResource = await this.extractResource(url, freshWebview)
       const resourceTags = [
         ResourceTag.canonicalURL(url),
         ResourceTag.viewedByUser(true),
@@ -1858,22 +1951,17 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
           this.resourceCreatedByUser.set(!silent && !createdForChat)
           this.extractedResourceId.set(fetchedResource.id)
-          // dispatch('update-tab', {
-          //   resourceBookmark: fetchedResource.id,
-          //   resourceBookmarkedManually: tab.resourceBookmarkedManually
-          // })
 
-          // if (freshWebview) {
-          //   log.debug('updating resource with fresh data', fetchedResource.id)
-          //   refreshResourceWithPage(fetchedResource, url, true)
-          //     .then((resource) => {
-          //       log.debug('refreshed resource', resource)
-          //     })
-          //     .catch((e) => {
-          //       toasts.error('Failed to refresh resource')
-          //       fetchedResource.updateExtractionState('idle') // TODO: support error state
-          //     })
-          // }
+          if (freshWebview) {
+            this.log.debug('updating resource with fresh data', fetchedResource.id)
+            this.refreshResourceWithPage(fetchedResource, url, true)
+              .then((resource) => {
+                this.log.debug('refreshed resource', resource)
+              })
+              .catch((e) => {
+                fetchedResource.updateExtractionState('idle') // TODO: support error state
+              })
+          }
 
           return fetchedResource
         }
@@ -1891,12 +1979,6 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.resourceCreatedByUser.set(!silent && !createdForChat)
 
     this.resourceManager.telemetry.trackSurfAddResource(resource.type)
-
-    // dispatch('update-tab', {
-    //   resourceBookmark: resource.id,
-    //   chatResourceBookmark: resource.id,
-    //   resourceBookmarkedManually: tab.resourceBookmarkedManually
-    // })
 
     return resource
   }

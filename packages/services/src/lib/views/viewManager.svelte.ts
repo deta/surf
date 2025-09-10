@@ -15,6 +15,7 @@ import { ViewManagerEmitterNames, ViewType, type ViewManagerEmitterEvents } from
 import type { NewWindowRequest } from '../ipc/events'
 import { ResourceManager, useResourceManager } from '../resources'
 import { useMessagePortPrimary } from '../messagePort/messagePortEvents'
+import { HistoryEntriesManager } from '../history'
 
 export type OverlayState = {
   teletypeOpen: boolean
@@ -39,6 +40,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   config: ConfigService
   kv: KVStore<WebContentsViewData>
   resourceManager: ResourceManager
+  historyEntriesManager: HistoryEntriesManager
   messagePort: ReturnType<typeof useMessagePortPrimary>
 
   webContentsViews: Map<string, WebContents> = new Map()
@@ -64,6 +66,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     this.config = useConfig()
     this.kv = useKVTable<WebContentsViewData>('views')
     this.resourceManager = resourceManager || useResourceManager()
+    this.historyEntriesManager = new HistoryEntriesManager()
     this.messagePort = useMessagePortPrimary()
 
     this.overlayState = writable({

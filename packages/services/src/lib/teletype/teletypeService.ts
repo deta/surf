@@ -195,7 +195,7 @@ export class TeletypeService {
   }
 
   async ask(query: string, mentions: MentionItem[]): Promise<void> {
-    this.log.debug('Asking question:', query)
+    this.log.debug('Asking question:', query, mentions)
     await this.messagePort.teletypeAsk.send({ query, mentions })
     this.clear()
   }

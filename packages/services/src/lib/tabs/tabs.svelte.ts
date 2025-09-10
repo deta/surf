@@ -417,91 +417,105 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     this.log.debug('Tab does not exist, creating new one')
-    if (isUserAction) this.telemetry.trackCreateTab(interactionSource)
+    if (isUserAction && interactionSource) this.telemetry.trackCreateTab(interactionSource)
     return this.create(url, opts)
   }
 
   async get(id: string): Promise<TabItem | null> {
-    this.log.debug('Getting tab with id:', id)
-    const item = await this.kv.read(id)
+    try {
+      this.log.debug('Getting tab with id:', id)
+      const item = await this.kv.read(id)
 
-    if (!item) {
-      this.log.warn(`Tab with id "${id}" not found`)
+      if (!item) {
+        this.log.warn(`Tab with id "${id}" not found`)
+        return null
+      }
+
+      const tabItem = this.itemToTabItem(item)
+      if (!tabItem) {
+        this.log.warn(`Tab with id "${id}" could not be converted to TabItem`)
+        return null
+      }
+
+      return tabItem
+    } catch (error) {
+      this.log.error('Error getting tab:', error)
       return null
     }
-
-    const tabItem = this.itemToTabItem(item)
-    if (!tabItem) {
-      this.log.warn(`Tab with id "${id}" could not be converted to TabItem`)
-      return null
-    }
-
-    return tabItem
   }
 
   async update(id: string, data: Partial<KVTabItem>) {
-    this.log.debug('Updating tab with id:', id, 'data:', data)
-    const item = await this.kv.update(id, data)
+    try {
+      this.log.debug('Updating tab with id:', id, 'data:', data)
+      const item = await this.kv.update(id, data)
 
-    this.log.debug('Tab updated:', item)
+      this.log.debug('Tab updated:', item)
 
-    // NOTE: we manually update the activeTabStore here as changes to the data are not tracked by the activeTabStore derived.by
-    if (id === this.activeTabIdValue) {
-      this.log.debug(
-        'Updating activeTabStore for active tab',
-        id,
-        this.activeTabValue?.view.urlValue
-      )
-      this.activeTabStore.set(this.activeTabValue)
+      // NOTE: we manually update the activeTabStore here as changes to the data are not tracked by the activeTabStore derived.by
+      if (id === this.activeTabIdValue) {
+        this.log.debug(
+          'Updating activeTabStore for active tab',
+          id,
+          this.activeTabValue?.view.urlValue
+        )
+        this.activeTabStore.set(this.activeTabValue)
+      }
+
+      return !!item
+    } catch (error) {
+      this.log.error('Error updating tab:', error)
+      return false
     }
-
-    return !!item
   }
 
   async delete(id: string, userAction = false, spawnSmoke = true) {
-    this.log.debug('Deleting tab with id:', id)
+    try {
+      this.log.debug('Deleting tab with id:', id)
 
-    const tab = this.tabs.find((t) => t.id === id)
-    const tabIdx = this.tabs.findIndex((t) => t.id === id)
-    if (tab) {
-      this.tabs = this.tabs.filter((t) => t.id !== id)
-      this.closedTabs.push(tab.dataValue)
+      const tab = this.tabs.find((t) => t.id === id)
+      const tabIdx = this.tabs.findIndex((t) => t.id === id)
+      if (tab) {
+        this.tabs = this.tabs.filter((t) => t.id !== id)
+        this.closedTabs.push(tab.dataValue)
 
-      if (this.activeTabId === id) {
-        // Set first tab as active if available
-        if (this.tabs.length > 0) {
-          const nextTab = this.tabs.at(tabIdx)
-          if (nextTab) this.setActiveTab(nextTab.id, userAction)
-          else this.setActiveTab(this.tabs.at(-1)!.id, userAction)
-        } else {
-          this.activeTabId = null
+        if (this.activeTabId === id) {
+          // Set first tab as active if available
+          if (this.tabs.length > 0) {
+            const nextTab = this.tabs.at(tabIdx)
+            if (nextTab) this.setActiveTab(nextTab.id, userAction)
+            else this.setActiveTab(this.tabs.at(-1)!.id, userAction)
+          } else {
+            this.activeTabId = null
+          }
+        }
+
+        tab.onDestroy()
+      } else {
+        this.log.warn(`Tab with id "${id}" not found`)
+      }
+
+      if (spawnSmoke) {
+        const rect = document.getElementById(`tab-${id}`)?.getBoundingClientRect()
+        if (rect) {
+          spawnBoxSmoke(rect, {
+            densityN: 30,
+            size: 13,
+            //velocityScale: 0.5,
+            cloudPointN: 7
+          })
         }
       }
 
-      tab.onDestroy()
-    } else {
-      this.log.warn(`Tab with id "${id}" not found`)
-    }
+      await this.kv.delete(id)
 
-    if (spawnSmoke) {
-      const rect = document.getElementById(`tab-${id}`)?.getBoundingClientRect()
-      if (rect) {
-        spawnBoxSmoke(rect, {
-          densityN: 30,
-          size: 13,
-          //velocityScale: 0.5,
-          cloudPointN: 7
-        })
+      if (userAction) this.telemetry.trackDeleteTab()
+      this.emit(TabsServiceEmitterNames.DELETED, id)
+
+      if (this.tabs.length <= 0) {
+        this.openNewTabPage()
       }
-    }
-
-    await this.kv.delete(id)
-
-    if (userAction) this.telemetry.trackDeleteTab()
-    this.emit(TabsServiceEmitterNames.DELETED, id)
-
-    if (this.tabs.length <= 0) {
-      this.openNewTabPage()
+    } catch (error) {
+      this.log.error('Error deleting tab:', error)
     }
   }
 
@@ -511,45 +525,49 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   }
 
   async setActiveTab(id: string | null, userAction = false) {
-    this.log.debug('Setting active tab to id:', id)
+    try {
+      this.log.debug('Setting active tab to id:', id)
 
-    this.activeTabId = id
+      this.activeTabId = id
 
-    if (id) {
-      const tab = this.tabs.find((t) => t.id === id)
-      if (!tab) {
-        this.log.warn(`Tab with id "${id}" not found`)
-        return
-      }
+      if (id) {
+        const tab = this.tabs.find((t) => t.id === id)
+        if (!tab) {
+          this.log.warn(`Tab with id "${id}" not found`)
+          return
+        }
 
-      this.activateTab(tab.id)
-      this.viewManager.activate(tab.view.id)
+        this.activateTab(tab.id)
+        this.viewManager.activate(tab.view.id)
 
-      if (userAction) {
-        const { type: tab_type, id: tab_resource_id } = tab.view.typeDataValue
-        // NOTE: Make digestable for telemetry, we should make this prettier
-        const telem_tab_type: Record<ViewType, TelemetryViewType> = {
-          [ViewType.Page]: TelemetryViewType.Webpage,
-          [ViewType.Notebook]: TelemetryViewType.Notebook,
-          [ViewType.NotebookHome]: TelemetryViewType.SurfRoot,
-          [ViewType.Resource]: TelemetryViewType.Resource
-        }[tab_type]
+        if (userAction) {
+          const { type: tab_type, id: tab_resource_id } = tab.view.typeDataValue
+          // NOTE: Make digestable for telemetry, we should make this prettier
+          const telem_tab_type: Record<ViewType, TelemetryViewType> = {
+            [ViewType.Page]: TelemetryViewType.Webpage,
+            [ViewType.Notebook]: TelemetryViewType.Notebook,
+            [ViewType.NotebookHome]: TelemetryViewType.SurfRoot,
+            [ViewType.Resource]: TelemetryViewType.Resource
+          }[tab_type]
 
-        if (tab_resource_id) {
-          this.resourceManager
-            .getResource(tab_resource_id, { includeAnnotations: false })
-            .then((resource) => {
-              this.resourceManager.telemetry.trackActivateTab(telem_tab_type, resource?.type)
-            })
-        } else {
-          this.resourceManager.telemetry.trackActivateTab(telem_tab_type)
+          if (tab_resource_id) {
+            this.resourceManager
+              .getResource(tab_resource_id, { includeAnnotations: false })
+              .then((resource) => {
+                this.resourceManager.telemetry.trackActivateTab(telem_tab_type, resource?.type)
+              })
+          } else {
+            this.resourceManager.telemetry.trackActivateTab(telem_tab_type)
+          }
         }
       }
-    }
 
-    // NOTE: Do we need this here? for "safety" reactivity shit afterwards?
-    // or should this actually be inside the if (id) scope?
-    this.emit(TabsServiceEmitterNames.ACTIVATED, this.activeTab)
+      // NOTE: Do we need this here? for "safety" reactivity shit afterwards?
+      // or should this actually be inside the if (id) scope?
+      this.emit(TabsServiceEmitterNames.ACTIVATED, this.activeTab)
+    } catch (err) {
+      this.log.error('Error activating tab:', err)
+    }
   }
 
   /**
@@ -560,53 +578,65 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
    * @param newIndex The target index position (0-based)
    */
   async reorderTab(tabId: string, newIndex: number) {
-    this.log.debug(`Reordering tab ${tabId} to index ${newIndex}`)
+    try {
+      this.log.debug(`Reordering tab ${tabId} to index ${newIndex}`)
 
-    const currentIndex = this.tabs.findIndex((tab) => tab.id === tabId)
-    if (currentIndex === -1) {
-      this.log.warn(`Tab with id "${tabId}" not found for reordering`)
-      return
+      const currentIndex = this.tabs.findIndex((tab) => tab.id === tabId)
+      if (currentIndex === -1) {
+        this.log.warn(`Tab with id "${tabId}" not found for reordering`)
+        return
+      }
+
+      // Clamp newIndex to valid range
+      newIndex = Math.max(0, Math.min(newIndex, this.tabs.length - 1))
+
+      // Don't reorder if already in the correct position
+      if (currentIndex === newIndex) {
+        return
+      }
+
+      const newTabs = [...this.tabs]
+      const [movedTab] = newTabs.splice(currentIndex, 1)
+      newTabs.splice(newIndex, 0, movedTab)
+
+      this.tabs = newTabs
+
+      newTabs.forEach((tab, index) => (tab.index = index))
+
+      await Promise.all(newTabs.map((tab) => this.update(tab.id, { index: tab.index })))
+
+      this.emit(TabsServiceEmitterNames.REORDERED, { tabId, oldIndex: currentIndex, newIndex })
+      this.log.debug(`Successfully reordered tab ${tabId} from ${currentIndex} to ${newIndex}`)
+    } catch (error) {
+      this.log.error('Error reordering tab:', error)
     }
-
-    // Clamp newIndex to valid range
-    newIndex = Math.max(0, Math.min(newIndex, this.tabs.length - 1))
-
-    // Don't reorder if already in the correct position
-    if (currentIndex === newIndex) {
-      return
-    }
-
-    const newTabs = [...this.tabs]
-    const [movedTab] = newTabs.splice(currentIndex, 1)
-    newTabs.splice(newIndex, 0, movedTab)
-
-    this.tabs = newTabs
-
-    newTabs.forEach((tab, index) => (tab.index = index))
-
-    await Promise.all(newTabs.map((tab) => this.update(tab.id, { index: tab.index })))
-
-    this.emit(TabsServiceEmitterNames.REORDERED, { tabId, oldIndex: currentIndex, newIndex })
-    this.log.debug(`Successfully reordered tab ${tabId} from ${currentIndex} to ${newIndex}`)
   }
 
   private async prepareNewTabPage() {
-    this.log.debug('Preparing new tab page')
-    this.newTabView = await this.viewManager.create({ url: 'surf://notebook' })
-    await this.newTabView.preloadWebContents({ activate: false })
+    try {
+      this.log.debug('Preparing new tab page')
+      this.newTabView = await this.viewManager.create({ url: 'surf://notebook' })
+      await this.newTabView.preloadWebContents({ activate: false })
+    } catch (error) {
+      this.log.error('Error preparing new tab page:', error)
+    }
   }
 
   async openNewTabPage() {
-    if (!this.newTabView) {
-      return this.create('surf://notebook')
+    try {
+      if (!this.newTabView) {
+        return this.create('surf://notebook')
+      }
+
+      const tab = await this.createWithView(this.newTabView, { activate: true })
+
+      // prepare the next new tab page
+      setTimeout(() => this.prepareNewTabPage(), 0)
+
+      return tab
+    } catch (error) {
+      this.log.error('Error opening new tab page:', error)
     }
-
-    const tab = await this.createWithView(this.newTabView, { activate: true })
-
-    // prepare the next new tab page
-    setTimeout(() => this.prepareNewTabPage(), 0)
-
-    return tab
   }
 
   async createResourceTab(resourceId: string, opts?: Partial<CreateTabOptions>) {
@@ -616,47 +646,55 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   }
 
   async changeActiveTabURL(url: string, opts?: Partial<CreateTabOptions>) {
-    this.log.debug('Replacing active tab with new URL:', url)
-    const activeTab = this.activeTabValue
+    try {
+      this.log.debug('Replacing active tab with new URL:', url)
+      const activeTab = this.activeTabValue
 
-    if (!activeTab) {
-      this.log.warn('No active tab found to replace URL')
-      return
-    }
-
-    if (!activeTab.view.webContents) {
-      this.log.warn('Active tab has no webContents to load URL')
-      return
-    }
-
-    activeTab.view.webContents.loadURL(url)
-
-    if (opts?.selectionHighlight) {
-      activeTab.view.highlightSelection(opts.selectionHighlight)
-    }
-
-    if (opts?.active) {
-      this.setActiveTab(activeTab.id)
-    } else if (opts?.activate) {
-      this.activateTab(activeTab.id)
-    }
-
-    return activeTab
-  }
-
-  async reopenLastClosed() {
-    const tabData = this.closedTabs.pop()
-    if (tabData) {
-      this.log.debug('Opening previously closed tab')
-
-      const tab = this.itemToTabItem(tabData)
-      if (!tab) {
-        this.log.error('Failed to convert closed tab data to tab item:', tabData)
+      if (!activeTab) {
+        this.log.warn('No active tab found to replace URL')
         return
       }
 
-      this.tabs = [...this.tabs, tab]
-      this.setActiveTab(tab.id, true)
+      if (!activeTab.view.webContents) {
+        this.log.warn('Active tab has no webContents to load URL')
+        return
+      }
+
+      activeTab.view.webContents.loadURL(url)
+
+      if (opts?.selectionHighlight) {
+        activeTab.view.highlightSelection(opts.selectionHighlight)
+      }
+
+      if (opts?.active) {
+        this.setActiveTab(activeTab.id)
+      } else if (opts?.activate) {
+        this.activateTab(activeTab.id)
+      }
+
+      return activeTab
+    } catch (error) {
+      this.log.error('Error changing active tab URL:', error)
+    }
+  }
+
+  async reopenLastClosed() {
+    try {
+      const tabData = this.closedTabs.pop()
+      if (tabData) {
+        this.log.debug('Opening previously closed tab')
+
+        const tab = this.itemToTabItem(tabData)
+        if (!tab) {
+          this.log.error('Failed to convert closed tab data to tab item:', tabData)
+          return
+        }
+
+        this.tabs = [...this.tabs, tab]
+        this.setActiveTab(tab.id, true)
+      }
+    } catch (error) {
+      this.log.error('Error reopening last closed tab:', error)
     }
   }
 

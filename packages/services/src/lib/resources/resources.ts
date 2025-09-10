@@ -356,6 +356,15 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
       return filtered
     }, {})
   }
+
+  async refreshExtractedData() {
+    try {
+      this.log.debug('Refreshing resource for context', this.id)
+      await this.resourceManager.refreshResourceData(this)
+    } catch (error) {
+      this.log.error('Failed to refresh resource', this.id, error)
+    }
+  }
 }
 
 // TODO: adapt to new resource data

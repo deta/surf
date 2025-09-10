@@ -291,23 +291,13 @@ export class ContextManagerWCV {
     // return null
   }
 
-  clear(trigger?: PageChatUpdateContextEventTrigger) {
-    // const currentContextLength = this.itemsValue.length
-    // this.updateItems(() => [])
-    // this.persistItems()
-    // // We only want to clear the tab selection if we are the global context manager
-    // // if (this.key === DEFAULT_CONTEXT_MANAGER_KEY) {
-    // //   this.tabsManager.clearTabSelection()
-    // // }
-    // if (trigger) {
-    //   this.telemetry.trackPageChatContextUpdate(
-    //     PageChatUpdateContextEventAction.Clear,
-    //     0,
-    //     currentContextLength,
-    //     undefined,
-    //     trigger
-    //   )
-    // }
+  async clear(trigger?: PageChatUpdateContextEventTrigger) {
+    // @ts-ignore
+    const result = await window.api.webContentsViewContextManagerAction(
+      WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT
+    )
+
+    this.log.debug('Cleared all context items', result)
   }
 
   updateItems(updateFn: (items: ContextItem[]) => ContextItem[]) {

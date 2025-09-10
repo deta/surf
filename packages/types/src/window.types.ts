@@ -310,7 +310,8 @@ export enum WebContentsViewContextManagerActionType {
   ADD_ACTIVE_TAB_CONTEXT = 'add-active-tab-context',
   ADD_RESOURCE_CONTEXT = 'add-resource-context',
   ADD_NOTEBOOK_CONTEXT = 'add-notebook-context',
-  REMOVE_CONTEXT_ITEM = 'remove-context-item'
+  REMOVE_CONTEXT_ITEM = 'remove-context-item',
+  CLEAR_ALL_CONTEXT = 'clear-all-context'
 }
 
 export interface WebContentsViewContextManagerActionPayloads {
@@ -322,6 +323,7 @@ export interface WebContentsViewContextManagerActionPayloads {
   [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: { id: string }
   [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: { id: string }
   [WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM]: { id: string }
+  [WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT]: undefined
 }
 
 export interface WebContentsViewContextManagerActionOutputs {
@@ -336,6 +338,7 @@ export interface WebContentsViewContextManagerActionOutputs {
   [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: null
   [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: null
   [WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM]: null
+  [WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT]: null
 }
 
 export type WebContentsViewContextManagerAction = {

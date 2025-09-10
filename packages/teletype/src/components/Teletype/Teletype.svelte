@@ -54,7 +54,7 @@
 
 <div class="inner-wrapper">
   <Notifications {teletype} />
-  <TeletypeCore on:input on:actions-rendered on:ask on:create-note>
+  <TeletypeCore on:input on:actions-rendered on:ask on:create-note on:clear>
     <slot name="header" slot="header" />
   </TeletypeCore>
 

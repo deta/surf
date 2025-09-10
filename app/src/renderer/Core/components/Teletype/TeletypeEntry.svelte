@@ -39,6 +39,11 @@
     teletypeService.createNote(content)
   }
 
+  const handleClear = () => {
+    log.debug('Clear requested')
+    teletypeService.clear()
+  }
+
   $effect(() => {
     if (open) {
       teletype?.open()
@@ -60,6 +65,11 @@
       open: true
     }}
   >
-    <Teletype on:input={handleTeletypeInput} on:ask={handleAsk} on:create-note={handleCreateNote} />
+    <Teletype
+      on:input={handleTeletypeInput}
+      on:ask={handleAsk}
+      on:create-note={handleCreateNote}
+      on:clear={handleClear}
+    />
   </TeletypeProvider>
 {/if}

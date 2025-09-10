@@ -124,10 +124,10 @@ export class ContextItemResource extends ContextItemBase {
     } as ResourceContent
   }
 
-  async getResourceIds(_prompt?: string) {
+  async getResource(retryOnError = true) {
     const returnValue = [this.data.id]
     const resourceState = this.data.stateValue
-    this.log.debug('Getting resource ids', returnValue, resourceState)
+    this.log.debug('Making sure resource is prepared', returnValue, resourceState, { retryOnError })
 
     if (resourceState === 'extracting' || resourceState === 'post-processing') {
       this.log.debug('Resource is still extracting, waiting for it to finish')
@@ -163,9 +163,29 @@ export class ContextItemResource extends ContextItemBase {
           resolve(returnValue)
         }, RESOURCE_PROCESSING_TIMEOUT)
       })
+    } else if (resourceState === 'error') {
+      if (!retryOnError) {
+        this.log.debug('Resource is in error state, not retrying')
+        return returnValue
+      }
+
+      this.log.debug('Resource is in error state, triggering re-processing')
+
+      await this.data.refreshExtractedData()
+
+      return this.getResource(false) as Promise<string[]>
     }
 
     return returnValue
+  }
+
+  async getResourceIds(_prompt?: string) {
+    try {
+      return await this.getResource()
+    } catch (error) {
+      this.log.error('Failed to get resource ids', error)
+      return []
+    }
   }
 
   async getInlineImages() {

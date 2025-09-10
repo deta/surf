@@ -263,6 +263,10 @@
 
         generateTitle(askQuery)
 
+        if (contextManager) {
+          await contextManager.clear()
+        }
+
         let showPrompt = true
         if (mentions.length === 1 && mentions[0].id === 'active_tab') {
           showPrompt = false
@@ -1009,6 +1013,10 @@
       const query = getEditorContentText(content)
 
       if (!query.trim()) return
+
+      if (contextManager) {
+        await contextManager.clear()
+      }
 
       // Submit the message and generate AI output
       await generateAndInsertAIOutput(query)
@@ -1904,6 +1912,9 @@
       hideInfoPopover()
 
       setTimeout(() => focusInput(), 150)
+
+      contextManager?.clear()
+
       const { query, mentions } = e.detail
       await generateAndInsertAIOutput(
         query,
@@ -2177,6 +2188,10 @@
 
       if (chat) {
         if (needsFocusChatBar) setTimeout(() => focusInput(), 150)
+
+        if (contextManager) {
+          await contextManager.clear()
+        }
 
         await generateAndInsertAIOutput(
           query,
