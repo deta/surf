@@ -158,7 +158,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
   private _lastTabIndex = -1
   private unsubs: Fn[] = []
-  newTabView: WebContentsView | null = null
+  private newTabView: WebContentsView | null = null
 
   ready: Promise<void>
 
@@ -250,6 +250,16 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     this.prepareNewTabPage()
+  }
+
+  private async prepareNewTabPage() {
+    try {
+      this.log.debug('Preparing new tab page')
+      this.newTabView = await this.viewManager.create({ url: 'surf://notebook' }, true)
+      await this.newTabView.preloadWebContents({ activate: false })
+    } catch (error) {
+      this.log.error('Error preparing new tab page:', error)
+    }
   }
 
   private async getLastTabIndex(): Promise<number> {
@@ -612,16 +622,6 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
   }
 
-  private async prepareNewTabPage() {
-    try {
-      this.log.debug('Preparing new tab page')
-      this.newTabView = await this.viewManager.create({ url: 'surf://notebook' })
-      await this.newTabView.preloadWebContents({ activate: false })
-    } catch (error) {
-      this.log.error('Error preparing new tab page:', error)
-    }
-  }
-
   async openNewTabPage() {
     try {
       if (!this.newTabView) {
@@ -629,9 +629,9 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       }
 
       const tab = await this.createWithView(this.newTabView, { activate: true })
-
+      
       // prepare the next new tab page
-      setTimeout(() => this.prepareNewTabPage(), 0)
+      setTimeout(() => this.prepareNewTabPage(), 100)
 
       return tab
     } catch (error) {

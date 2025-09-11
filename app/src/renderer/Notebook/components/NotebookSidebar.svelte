@@ -13,6 +13,7 @@
   import { get, writable } from 'svelte/store'
   import { onMount } from 'svelte'
   import NotebookSidebarNoteName from './NotebookSidebarNoteName.svelte'
+  import { handleNotebookClick, handleResourceClick } from '../handlers/notebookOpenHandlers'
 
   let {
     notebook,
@@ -272,8 +273,8 @@
                     text={notebook.dataValue.folderName ?? notebook.dataValue.name}
                     size={10}
                     editing={isRenamingNotebook === notebook.id}
-                    onclick={async () => {
-                      await navigation.navigate(`surf://notebook/${notebook.id}`).finished
+                    onclick={async (event) => {
+                      handleNotebookClick(notebook.id, event)
                     }}
                     onchange={(v) => {
                       handleRenameNotebook(notebook.id, v)
@@ -309,8 +310,8 @@
                     }
                   ]
                 })}
-                onclick={async () => {
-                  await navigation.navigate(`surf://resource/${resourceId}`).finished
+                onclick={async (event) => {
+                  handleResourceClick(resourceId, event)
                 }}
               >
                 <span><NotebookSidebarNoteName {resourceId} /></span>

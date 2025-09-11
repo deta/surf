@@ -10,6 +10,7 @@
   import { truncate, useDebounce } from '@deta/utils'
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
   import NotebookCard from '../NotebookCard.svelte'
+  import { handleNotebookClick } from '../../handlers/notebookOpenHandlers'
 
   let { query, title }: { query?: string; title: string } = $props()
 
@@ -108,8 +109,8 @@
             class="notebook-wrapper"
             style="width: 100%;max-width: 12ch;"
             style:--delay={'100ms'}
-            onclick={async () => {
-              await navigation.navigate(`surf://notebook/drafts`).finished
+            onclick={async (event) => {
+              handleNotebookClick('drafts', event)
             }}
           >
             <NotebookCard title="Drafts" size={12} color={['#232323', 'green']} />
@@ -144,8 +145,8 @@
                 text={notebook.dataValue.folderName ?? notebook.dataValue.name}
                 size={12}
                 editing={isRenamingNotebook === notebook.id}
-                onclick={async () => {
-                  await navigation.navigate(`surf://notebook/${notebook.id}`).finished
+                onclick={async (event) => {
+                  handleNotebookClick(notebook.id, event)
                 }}
                 onchange={(v) => {
                   handleRenameNotebook(notebook.id, v)

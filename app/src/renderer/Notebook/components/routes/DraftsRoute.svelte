@@ -10,6 +10,7 @@
   import { useResourceManager, type Resource, type ResourceNote } from '@deta/services/resources'
   import { ResourceTypes } from '@deta/types'
   import { type MessagePortClient } from '@deta/services/messagePort'
+  import { handleResourceClick } from '../../handlers/notebookOpenHandlers'
 
   let { messagePort }: { messagePort: MessagePortClient } = $props()
 
@@ -127,9 +128,9 @@
                 isRenamingNote = undefined
               }}
               oncancel={handleCancelRenameNote()}
-              onclick={async () => {
+              onclick={async (event) => {
                 if (isRenamingNote) return
-                await navigation.navigate(`surf://resource/${note.id}`).finished
+                handleResourceClick(note.id, event)
               }}
             />
           </li>

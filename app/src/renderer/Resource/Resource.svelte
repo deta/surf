@@ -9,10 +9,11 @@
   import { Note } from '@deta/ui'
   import TextResource from './components/TextResource.svelte'
   import { useMessagePortClient } from '@deta/services/messagePort'
-  import { wait } from '@deta/utils'
+  import { useLogScope, wait } from '@deta/utils'
 
   const resourceId = window.location.pathname.slice(1)
 
+  const log = useLogScope('ResourceRenderer')
   const messagePort = useMessagePortClient()
   const config = provideConfig()
   const telemetry = setupTelemetry()
@@ -29,17 +30,23 @@
   )
 
   function handleCitationClick(data: CitationClickEvent) {
-    console.log('Citation clicked:', data)
+    log.debug('Citation clicked:', data)
 
     messagePort.citationClick.send(data)
   }
 
   onMount(async () => {
-    console.log('Resource mounted with ID:', resourceId)
+    log.debug('Resource mounted with ID:', resourceId)
+
+    if (resourceId === 'blank') {
+      log.debug('Blank resource, not loading anything')
+      return
+    }
+
     await telemetry.init({ messagePort })
 
     resource = await resourceManager.getResource(resourceId)
-    console.log('Loaded resource:', resource)
+    log.debug('Loaded resource:', resource)
 
     if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
       // NOTE: Ideally messagePort events optionally get queued up until connection established

@@ -95,6 +95,11 @@ export type OpenResourceOptions = {
   offline?: boolean
 }
 
+export type OpenNotebookOptions = {
+  notebookId: string
+  target?: OpenTarget
+}
+
 export type NavigateURLOptions = {
   url: string
   target?: OpenTarget

@@ -76,6 +76,10 @@ export class BrowserService {
         this.openResource(resourceId, { target, offline })
       }),
 
+      this.messagePort.openNotebook.on(async ({ notebookId, target }) => {
+        this.navigateToUrl(`surf://notebook/${notebookId}`, { target })
+      }),
+
       this.messagePort.navigateURL.on(async ({ url, target }) => {
         this.navigateToUrl(url, { target })
       }),
@@ -333,7 +337,7 @@ export class BrowserService {
       this.newNoteView = await this.viewManager.create({
         url: `surf://resource/${resource.id}`,
         permanentlyActive: true
-      })
+      }, true)
       await this.newNoteView.preloadWebContents({ activate: false })
     } catch (error) {
       this.log.error('Error preparing new note view:', error)
@@ -404,7 +408,7 @@ export class BrowserService {
       await this.openView(view, { target })
 
       // prepare the next new note view
-      setTimeout(() => this.prepareNewEmptyNoteView(), 0)
+      setTimeout(() => this.prepareNewEmptyNoteView(), 100)
 
       return view
     } catch (error) {

@@ -11,6 +11,7 @@
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { type MessagePortClient } from '@deta/services/messagePort'
+  import { handleResourceClick } from '../../handlers/notebookOpenHandlers'
 
   let {
     notebook,
@@ -186,9 +187,9 @@
                 isRenamingNote = undefined
               }}
               oncancel={handleCancelRenameNote()}
-              onclick={async () => {
+              onclick={async (event) => {
                 if (isRenamingNote) return
-                await navigation.navigate(`surf://resource/${resourceId}`).finished
+                handleResourceClick(resourceId, event)
               }}
             />
           </li>

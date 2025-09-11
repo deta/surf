@@ -3,6 +3,7 @@ import { createMessagePortService, type MessagePortEvent } from './messagePortSe
 import type {
   CitationClickEvent,
   NavigateURLOptions,
+  OpenNotebookOptions,
   OpenResourceOptions,
   OpenTarget,
   TelemetryEventTypes
@@ -94,6 +95,10 @@ export interface MPOpenResource extends MessagePortEvent {
   payload: OpenResourceOptions
 }
 
+export interface MPOpenNotebook extends MessagePortEvent {
+  payload: OpenNotebookOptions
+}
+
 export interface MPCitationClick extends MessagePortEvent {
   payload: CitationClickEvent
 }
@@ -116,6 +121,7 @@ type MessagePortEventRegistry = {
   noteRefreshContent: MPNoteRefreshContent
   changePageQuery: MPChangePageQuery
   openResource: MPOpenResource
+  openNotebook: MPOpenNotebook
   citationClick: MPCitationClick
 }
 
@@ -148,6 +154,7 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     noteRefreshContent: messagePortService.addEvent<MPNoteRefreshContent>('note-refresh-content'),
     changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query'),
     openResource: messagePortService.addEvent<MPOpenResource>('open-resource'),
+    openNotebook: messagePortService.addEvent<MPOpenNotebook>('open-notebook'),
     citationClick: messagePortService.addEvent<MPCitationClick>('citation-click')
   })
 }

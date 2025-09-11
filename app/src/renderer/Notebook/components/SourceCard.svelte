@@ -2,13 +2,13 @@
   import { openDialog } from '@deta/ui'
   import { getResourcePreview, Resource, useResourceManager } from '@deta/services/resources'
   import { contextMenu, type CtxItem } from '@deta/ui'
-  import { getFileKind, isModKeyPressed, truncate } from '../../../../../packages/utils/dist'
-  import { type penResourceOptions, ResourceTypes } from '@deta/types'
+  import { getFileKind, truncate } from '../../../../../packages/utils/dist'
+  import { ResourceTypes } from '@deta/types'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
   import { DynamicIcon } from '@deta/icons'
   import { onMount } from 'svelte'
-  import { useMessagePortClient } from '@deta/services/messagePort'
   import { useNotebookManager } from '@deta/services/notebooks'
+  import { handleResourceClick } from '../handlers/notebookOpenHandlers'
 
   // TODO: Decouple this rendering from the Resource?
   let {
@@ -35,7 +35,6 @@
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
-  const messagePort = useMessagePortClient()
 
   let data = $state(null)
   let _resource = $state(null)
@@ -45,17 +44,8 @@
       : null
   )
 
-  const openResource = (opts?: Partial<OpenResourceOptions>) => {
-    messagePort.openResource.send({
-      resourceId: resourceId ?? _resource.id,
-      target: 'tab',
-      ...opts
-    })
-  }
-
   const handleClick = (e: MouseEvent) => {
-    const backgroundTab = isModKeyPressed(e) && !e.shiftKey
-    openResource({ target: backgroundTab ? 'background_tab' : isModKeyPressed(e) ? 'tab' : 'active_tab' })
+    handleResourceClick(resourceId ?? _resource.id, e)
   }
 
   const handleDeleteResource = async () => {

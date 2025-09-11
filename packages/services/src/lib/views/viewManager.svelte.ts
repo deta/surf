@@ -56,6 +56,9 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   views: Writable<WebContentsView[]>
 
   private unsubs: Fn[] = []
+  private viewPoolWebPages: WebContentsView[] = [] // Pool of pre-created views for http(s)://
+  private viewPoolSurfProtocol: WebContentsView[] = [] // Pool of pre-created views for surf://
+  private readonly poolSize = 1 // Number of views to pre-create
 
   static self: ViewManager
 
@@ -92,6 +95,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     })
 
     this.attachListeners()
+    this.refillPool()
 
     if (isDev) {
       // @ts-ignore
@@ -123,7 +127,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     return get(this.activeViewId)
   }
 
-  attachListeners() {
+  private attachListeners() {
     this.unsubs.push(
       this.shouldHideViews.subscribe((shouldHide) => {
         this.log.debug('shouldHideViews changed:', shouldHide)
@@ -161,6 +165,81 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     // })
   }
 
+  private async refillPool(type?: 'web' | 'surf') {
+    if (!type) {
+      await Promise.all([
+        this.refillPool('web'),
+        this.refillPool('surf')
+      ])
+
+      return
+    }
+
+    this.log.debug('Refilling view pool', type)
+    const viewPool = type === 'surf' ? this.viewPoolSurfProtocol : this.viewPoolWebPages
+    const needed = this.poolSize - viewPool.length
+
+    if (needed <= 0) return
+
+    for (let i = 0; i < needed; i++) {
+      const fullData = {
+        id: generateID(),
+        partition: 'persist:horizon',
+        url: type === 'surf' ? 'surf://resource/blank' : 'about:blank',
+        title: 'New Tab',
+        faviconUrl: '',
+        navigationHistoryIndex: -1,
+        navigationHistory: [],
+        permanentlyActive: false,
+        extractedResourceId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } satisfies WebContentsViewData
+
+      this.log.debug('Creating WebContentsView with data:', fullData)
+      const view = new WebContentsView(fullData, this)
+
+      await view.preloadWebContents({ activate: false })
+      viewPool.push(view)
+    }
+  }
+
+  private reusePooledViewIfPossible(data: WebContentsViewData) {
+    if (this.viewPoolWebPages.length === 0 && this.viewPoolSurfProtocol.length === 0) {
+      return null
+    }
+
+    const url = new URL(data.url)
+
+    let view: WebContentsView | undefined
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      view = this.viewPoolWebPages.pop()
+    } else if (url.protocol === 'surf:') {
+      view = this.viewPoolSurfProtocol.pop()
+    }
+
+    // Use any available pooled view for web pages
+    if (!view) {
+      return null
+    }
+
+    this.log.debug('Found matching pooled WebContentsView:', view)
+
+    if (data.permanentlyActive !== undefined) {
+      view.changePermanentlyActive(data.permanentlyActive)
+    }
+
+    view.url.set(data.url)
+    view.title.set(data.title ?? url.hostname)
+
+    view.webContents?.loadURL(data.url)
+
+    // Refill the pool asynchronously
+    setTimeout(() => this.refillPool(), 100)
+
+    return view
+  }
+
   handleNewWindowRequest(viewId: string, details: NewWindowRequest) {
     this.log.debug('New window request received', viewId, details)
     this.emit(ViewManagerEmitterNames.NEW_WINDOW_REQUEST, details)
@@ -191,7 +270,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     return view
   }
 
-  create(data: Partial<WebContentsViewData>) {
+  create(data: Partial<WebContentsViewData>, fresh = false) {
     const fullData = {
       id: data.id || generateID(),
       partition: data.partition || 'persist:horizon',
@@ -205,6 +284,19 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString()
     } satisfies WebContentsViewData
+
+    if (fullData.navigationHistory.length > 0) {
+      fresh = true
+    }
+
+    if (!fresh) {
+      const reusedView = this.reusePooledViewIfPossible(fullData)
+      if (reusedView) {
+        this.log.debug('Reusing pooled WebContentsView:', reusedView)
+        this.views.update((views) => [...views, reusedView])
+        return reusedView
+      }
+    }
 
     this.log.debug('Creating WebContentsView with data:', fullData)
     const view = new WebContentsView(fullData, this)
@@ -451,6 +543,12 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   onDestroy() {
     this.unsubs.forEach((unsub) => unsub())
+
+    this.viewPoolSurfProtocol.forEach((view) => view.onDestroy())
+    this.viewPoolSurfProtocol = []
+
+    this.viewPoolWebPages.forEach((view) => view.onDestroy())
+    this.viewPoolWebPages = []
   }
 
   static provide(resourceManager?: ResourceManager) {
