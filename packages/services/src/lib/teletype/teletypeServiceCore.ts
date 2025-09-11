@@ -81,16 +81,8 @@ export class TeletypeServiceCore {
           target: target ?? 'tab',
           notebookId: 'auto'
         })
-      }),
 
-      this.messagePort.teletypeCreateNote.on(async ({ content }, viewId) => {
-        const target = this.browser.getViewLocation(viewId)
-        this.log.debug(`Creating note from ${viewId} in ${target}:`, content)
-
-        await this.browser.createNoteWithContent(content, {
-          target: target ?? 'tab',
-          notebookId: 'auto'
-        })
+        this.browser.closeNewTab()
       })
     )
 

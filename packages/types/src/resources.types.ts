@@ -47,7 +47,8 @@ export enum ResourceTagsBuiltInKeys {
   USER_VIEW_PREFS = 'userViewPreferences',
   LINKED_CHAT = 'linkedChat', // resource is linked to a chat
   DATA_STATE = 'dataState', // state of the resource data (e.g. 'partial', 'complete')
-  SURFLET_PROTOCOL_VERSION = 'surfletProtocolVersion' // version of the surflet protocol used to save the resource
+  SURFLET_PROTOCOL_VERSION = 'surfletProtocolVersion', // version of the surflet protocol used to save the resource
+  PRELOADED_RESOURCE = 'preloadedResource' // resource was preloaded (e.g. from a web clipper)
 }
 
 export interface ResourceTagsBuiltIn {
@@ -73,6 +74,8 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.USER_VIEW_PREFS]: UserViewPrefsTagValue
   [ResourceTagsBuiltInKeys.LINKED_CHAT]: string
   [ResourceTagsBuiltInKeys.DATA_STATE]: ResourceTagDataStateValue
+  [ResourceTagsBuiltInKeys.SURFLET_PROTOCOL_VERSION]: string
+  [ResourceTagsBuiltInKeys.PRELOADED_RESOURCE]: boolean
 }
 
 export type UserViewPrefsTagValue = {

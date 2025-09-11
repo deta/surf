@@ -1,6 +1,6 @@
 import { useLogScope } from '@deta/utils/io'
 
-import { Resource, useResourceManager } from '../resources'
+import { Resource, ResourceNote, useResourceManager } from '../resources'
 import { useViewManager, WebContentsView } from '../views'
 import { type CreateTabOptions, type TabItem, useTabs } from '../tabs'
 import { formatAIQueryToTitle } from './utils'
@@ -11,6 +11,7 @@ import {
   type Fn,
   type NavigateURLOptions,
   type OpenResourceOptions,
+  type OpenTarget,
   ResourceTagsBuiltInKeys,
   ResourceTypes,
   TelemetryCreateTabSource
@@ -21,8 +22,10 @@ import { useMessagePortPrimary } from '../messagePort'
 import {
   DEFAULT_SEARCH_ENGINE,
   getFormattedDate,
+  isDev,
   isOffline,
   parseStringIntoBrowserLocation,
+  ResourceTag,
   SEARCH_ENGINES,
   SearchResourceTags
 } from '@deta/utils'
@@ -41,11 +44,18 @@ export class BrowserService {
   private readonly log = useLogScope('BrowserService')
 
   private _unsubs: Fn[] = []
+  private newNoteView: WebContentsView | null = null
 
   static self: BrowserService
 
   constructor() {
     this.attachListeners()
+    this.prepareNewEmptyNoteView()
+
+    if (isDev) {
+      // @ts-ignore
+      window.browser = this
+    }
   }
 
   attachListeners() {
@@ -72,7 +82,29 @@ export class BrowserService {
 
       this.messagePort.citationClick.on(async (data, viewId) => {
         this.handleCitationClick(data, viewId)
-      })
+      }),
+
+      this.messagePort.createNote.on(
+        async ({ name, content, target, notebookId, isNewTabPage }, viewId) => {
+          if (!target) {
+            target = this.getViewLocation(viewId) ?? 'tab'
+          }
+
+          this.log.debug(`Creating note from ${viewId} in ${target}:`, content)
+
+          await this.createAndOpenNote(
+            { name, content },
+            {
+              target: target,
+              notebookId: notebookId ?? 'auto'
+            }
+          )
+
+          if (isNewTabPage) {
+            this.closeNewTab()
+          }
+        }
+      )
     )
   }
 
@@ -272,23 +304,146 @@ export class BrowserService {
     return { resourceId, source }
   }
 
-  async createNoteAndRunAIQuery(
-    query: string,
-    mentions: MentionItem[],
+  async prepareNewEmptyNoteView() {
+    try {
+      this.log.debug('Preparing new note view')
+
+      const existingResources = await this.resourceManager.listResourcesByTags([
+        SearchResourceTags.Deleted(false),
+        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
+        SearchResourceTags.PreloadedResource(true)
+      ])
+
+      this.log.debug('Found existing preloaded resources:', existingResources)
+
+      let resource: ResourceNote | null = null
+
+      if (existingResources.length > 0) {
+        resource = existingResources[0] as ResourceNote
+      } else {
+        resource = await this.resourceManager.createResourceNote(
+          '',
+          {
+            name: 'Untitled Note'
+          },
+          [ResourceTag.preloadedResource()]
+        )
+      }
+
+      this.newNoteView = await this.viewManager.create({
+        url: `surf://resource/${resource.id}`,
+        permanentlyActive: true
+      })
+      await this.newNoteView.preloadWebContents({ activate: false })
+    } catch (error) {
+      this.log.error('Error preparing new note view:', error)
+    }
+  }
+
+  async reuseNoteViewIfPossible(
+    data?: {
+      name?: string
+      content?: string
+    },
     opts?: {
-      target?: 'tab' | 'sidebar'
+      target?: OpenTarget
       notebookId?: string | 'auto'
     }
   ) {
     try {
       const target = opts?.target || 'sidebar'
+      const { content, name } = data || {}
 
-      this.log.debug(`Triggering ask action in ${target} for query: "${query}"`, mentions)
+      const view = this.newNoteView
+
+      if (!view || !view.typeDataValue.id) {
+        this.log.debug('No preloaded new note view available')
+        return null
+      }
+
+      const id = view.typeDataValue.id
+      this.log.debug('Using preloaded new note view', id)
+
+      const resource = await this.resourceManager.getResource(id)
+      if (!resource) {
+        this.log.error('Failed to get resource for preloaded new note view', id)
+        this.newNoteView = null
+        return null
+      }
+
+      // Make sure this view and resource are not used again
+      await this.resourceManager.deleteResourceTag(id, ResourceTagsBuiltInKeys.PRELOADED_RESOURCE)
+      this.newNoteView = null
+
+      if (name) {
+        try {
+          this.log.debug('Updating name of preloaded new note view resource', id, name)
+          await this.resourceManager.updateResourceMetadata(id, {
+            name: name
+          })
+        } catch (error) {
+          this.log.error('Failed to update name of preloaded new note view resource', id, error)
+        }
+      }
+
+      if (content && resource instanceof ResourceNote) {
+        try {
+          this.log.debug('Updating content of preloaded new note view resource', id)
+          await resource.updateContent(content)
+          view.webContents?.triggerRefreshNoteContent()
+        } catch (error) {
+          this.log.error('Failed to update content of preloaded new note view resource', id, error)
+        }
+      }
+
+      if (opts?.target !== 'sidebar') {
+        view.changePermanentlyActive(false)
+      }
+
+      this.log.debug('Opening preloaded new note view in', target)
+      await this.openView(view, { target })
+
+      // prepare the next new note view
+      setTimeout(() => this.prepareNewEmptyNoteView(), 0)
+
+      return view
+    } catch (error) {
+      this.log.error('Error reusing new note view:', error)
+      return null
+    }
+  }
+
+  async createAndOpenNote(
+    data?: {
+      name?: string
+      content?: string
+    },
+    opts?: {
+      target?: OpenTarget
+      notebookId?: string | 'auto'
+    }
+  ) {
+    try {
+      const target = opts?.target || 'sidebar'
+      let { content, name } = data || {}
+
+      if (!name) {
+        name = `Untitled ${getFormattedDate(Date.now())}`
+      }
+
+      this.log.debug(`Creating note in ${target} with content: "${content}"`)
+
+      const reusedNoteView = await this.reuseNoteViewIfPossible(data, opts)
+      if (reusedNoteView) {
+        this.log.debug('Reused existing new note view')
+        this.resourceManager.telemetry.trackNoteCreate()
+        return reusedNoteView
+      }
 
       const note = await this.resourceManager.createResourceNote(
-        '',
+        content ?? '',
         {
-          name: formatAIQueryToTitle(query)
+          name
         },
         undefined,
         true
@@ -312,31 +467,47 @@ export class BrowserService {
         await this.notebookManager.addResourcesToNotebook(opts.notebookId, [note.id])
       }
 
-      let view: WebContentsView
-      if (target === 'sidebar') {
-        if (
-          this.tabsManager.activeTabValue?.view.typeValue === ViewType.NotebookHome &&
-          this.tabsManager.activeTabIdValue
-        ) {
-          this.tabsManager.delete(this.tabsManager.activeTabIdValue)
-        }
+      const view = await this.openResource(note.id, {
+        target
+      })
 
-        view = this.viewManager.openResourceInSidebar(note.id)
-      } else {
-        const tab = await this.tabsManager.changeActiveTabURL(`surf://resource/${note.id}`)
-
-        if (!tab) {
-          this.log.error('Failed to change active tab URL')
-          return
-        }
-
-        view = tab.view
+      if (!view) {
+        this.log.error('Failed to open created note view')
+        return null
       }
 
-      const webContents = await view.waitForNoteReady()
-      if (!webContents) {
-        this.log.error('Failed to wait for web contents to be ready')
+      await view.waitForNoteReady()
+
+      return view
+    } catch (error) {
+      this.log.error('Failed to trigger ask action:', error)
+    }
+  }
+
+  async createNoteAndRunAIQuery(
+    query: string,
+    mentions: MentionItem[],
+    opts?: {
+      target?: 'tab' | 'sidebar'
+      notebookId?: string | 'auto'
+    }
+  ) {
+    try {
+      this.log.debug(`Triggering ask action in ${opts?.target} for query: "${query}"`, mentions)
+
+      const view = await this.createAndOpenNote({ name: formatAIQueryToTitle(query) }, opts)
+      if (!view) {
+        this.log.error('Failed to create and open note view')
         return
+      }
+
+      let webContents = view.webContents
+      if (!webContents) {
+        webContents = await view.waitForNoteReady()
+        if (!webContents) {
+          this.log.error('Failed to wait for web contents to be ready')
+          return
+        }
       }
 
       // Make sure to clear existing context to avoid confusion
@@ -348,62 +519,12 @@ export class BrowserService {
     }
   }
 
-  async createNoteWithContent(
-    content: string,
-    opts?: {
-      target?: 'tab' | 'sidebar'
-      notebookId?: string | 'auto'
-    }
-  ) {
-    try {
-      const target = opts?.target || 'sidebar'
-
-      this.log.debug(`Creating note in ${target} with content: "${content}"`)
-
-      const note = await this.resourceManager.createResourceNote(content, {
-        name: `Untitled ${getFormattedDate(Date.now())}`
-      })
-
-      if (opts?.notebookId === 'auto') {
-        if (this.tabsManager.activeTabValue?.view.typeValue === ViewType.Notebook) {
-          const viewData = this.tabsManager.activeTabValue.view.typeDataValue
-          if (viewData.id) {
-            opts.notebookId = viewData.id
-          } else {
-            opts.notebookId = undefined
-          }
-        } else {
-          opts.notebookId = undefined
-        }
-      }
-
-      if (opts?.notebookId) {
-        this.log.debug(`Adding created note to notebook ${opts.notebookId}`)
-        await this.notebookManager.addResourcesToNotebook(opts.notebookId, [note.id])
-      }
-
-      let view: WebContentsView
-      if (target === 'sidebar') {
-        if (
-          this.tabsManager.activeTabValue?.view.typeValue === ViewType.NotebookHome &&
-          this.tabsManager.activeTabIdValue
-        ) {
-          this.tabsManager.delete(this.tabsManager.activeTabIdValue)
-        }
-
-        view = this.viewManager.openResourceInSidebar(note.id)
-      } else {
-        const tab = await this.tabsManager.changeActiveTabURL(`surf://resource/${note.id}`)
-
-        if (!tab) {
-          this.log.error('Failed to change active tab URL')
-          return
-        }
-
-        view = tab.view
-      }
-    } catch (error) {
-      this.log.error('Failed to trigger ask action:', error)
+  async closeNewTab() {
+    if (
+      this.tabsManager.activeTabValue?.view.typeValue === ViewType.NotebookHome &&
+      this.tabsManager.activeTabIdValue
+    ) {
+      this.tabsManager.delete(this.tabsManager.activeTabIdValue)
     }
   }
 
@@ -499,6 +620,35 @@ export class BrowserService {
 
         return tab.view
       }
+    }
+  }
+
+  async openView(view: WebContentsView, opts?: { target?: OpenResourceOptions['target'] }) {
+    this.log.debug('Opening resource:', view.id, opts)
+
+    const target = opts?.target ?? 'tab'
+
+    if (target === 'sidebar') {
+      return this.viewManager.openViewInSidebar(view)
+    } else if (target === 'active_tab') {
+      const activeTabId = this.tabsManager.activeTabIdValue
+      const tab = await this.tabsManager.createWithView(view, {
+        active: true,
+        activate: true
+      })
+
+      if (activeTabId) {
+        await this.tabsManager.delete(activeTabId)
+      }
+
+      return tab?.view
+    } else {
+      const tab = await this.tabsManager.createWithView(view, {
+        active: target === 'tab',
+        activate: true
+      })
+
+      return tab.view
     }
   }
 
@@ -606,6 +756,11 @@ export class BrowserService {
 
   onDestroy() {
     this._unsubs.forEach((unsub) => unsub())
+
+    if (this.newNoteView) {
+      this.newNoteView.destroy()
+      this.newNoteView = null
+    }
   }
 
   static provide() {

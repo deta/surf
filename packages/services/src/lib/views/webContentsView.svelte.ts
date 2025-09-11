@@ -697,6 +697,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     return this.manager.messagePort.changePageQuery.send(this.view.id, { query })
   }
 
+  async triggerRefreshNoteContent() {
+    this.log.debug('Triggering refresh note content')
+    return this.manager.messagePort.noteRefreshContent.send(this.view.id)
+  }
+
   getBoundingClientRect = (): DOMRect | null => {
     if (!this.wrapperElement) {
       this.log.error('WebContents wrapper element is not defined')

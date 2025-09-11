@@ -307,10 +307,10 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
     this.emit('updated-tags', this.tags ?? [])
   }
 
-  getData() {
+  getData(fresh = false) {
     this.dataUsed += 1
 
-    if (this.rawData) {
+    if (this.rawData && !fresh) {
       return Promise.resolve(this.rawData)
     }
 
@@ -389,7 +389,7 @@ export class ResourceNote extends Resource {
       return this.parsedData
     }
 
-    const data = await this.getData()
+    const data = await this.getData(fresh)
     const text = await data.text()
 
     this.parsedData.set(text)

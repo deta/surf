@@ -420,6 +420,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     return null
   }
 
+  openViewInSidebar(view: WebContentsView) {
+    this.setSidebarState({ open: true, view })
+    return view
+  }
+
   openResourceInSidebar(resourceId: string) {
     if (this.activeSidebarView && this.activeSidebarView.webContents) {
       this.activeSidebarView.webContents.loadURL(`surf://resource/${resourceId}`)

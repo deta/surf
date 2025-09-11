@@ -13,6 +13,7 @@
   import { useResourceManager } from '@deta/services/resources'
   import { useViewManager, ViewType } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
+  import { useBrowser } from '@deta/services/browser'
 
   let {
     view,
@@ -44,6 +45,7 @@
   }
   const resourceManager = useResourceManager()
   const viewManager = useViewManager()
+  const browser = useBrowser()
 
   const activeViewType = $derived(view.type ?? writable(''))
   const activeLocation = $derived(view.url ?? writable(''))
@@ -68,28 +70,7 @@
   }
 
   async function handleNewNote() {
-    const note = await resourceManager.createResourceNote(
-      '',
-      {
-        name: 'Untitled Note'
-      },
-      undefined,
-      true
-    )
-
-    if (viewManager.sidebarViewOpen) {
-      viewManager.setSidebarState({ open: true })
-      viewManager.activeSidebarView?.webContents.loadURL(`surf://resource/${note.id}`)
-    } else {
-      const sidebarView = viewManager.create({
-        url: `surf://resource/${note.id}`,
-        permanentlyActive: true
-      })
-      viewManager.setSidebarState({
-        open: true,
-        view: sidebarView
-      })
-    }
+    await browser.createAndOpenNote({ name: 'Untitled Note', content: '' }, { target: 'sidebar' })
   }
 </script>
 

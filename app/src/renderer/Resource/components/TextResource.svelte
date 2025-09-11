@@ -285,6 +285,26 @@
     }
   }
 
+  const refreshContent = async () => {
+    if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      await resource.getContent(true)
+
+      log.debug('Refreshed note content', resource, resource.contentValue)
+    } else {
+      const data = await resource.getParsedData()
+      const parsedContent = WebParser.getResourceContent(resource.type, data)
+
+      const text = parsedContent.html || parsedContent.plain || ''
+      content.set(text)
+    }
+
+    await tick()
+
+    if (editorElem) {
+      editorElem.setContent(get(content) || '')
+    }
+  }
+
   // Set up synchronization between local and global state
   onMount(() => {
     // @ts-ignore
@@ -430,6 +450,11 @@
       messagePort.noteInsertMentionQuery.handle((payload) => {
         log.debug('Received note-insert-mention-query event', payload)
         insertMention(payload.mention, payload.query)
+      }),
+
+      messagePort.noteRefreshContent.handle(() => {
+        log.debug('Received note-refresh-content event')
+        refreshContent()
       })
     )
 

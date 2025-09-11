@@ -114,6 +114,11 @@
 
   const openTeletype = () => teletype.open()
 
+  const clearTeletype = () => {
+    dispatch('clear')
+    editorComponent?.setContent('')
+  }
+
   const handleModalClose = () => {
     if (!$currentAction?.forceSelection) {
       closeTeletype()
@@ -131,8 +136,7 @@
 
     await teletype.executeAction(action)
 
-    dispatch('clear')
-    editorComponent?.setContent('')
+    clearTeletype()
 
     if (action.requireInput) {
       editorComponent?.focus()
@@ -240,12 +244,14 @@
   const handleAsk = () => {
     mentions = editorComponent.getMentions()
     dispatch('ask', { query: $inputValue, mentions })
+    clearTeletype()
   }
 
   const handleCreateNote = () => {
     console.log('Creating note with query:', $inputValue, mentions)
     const content = editorComponent.getParsedEditorContent()
     dispatch('create-note', { content: content.html ?? content.text })
+    clearTeletype()
   }
 
   $effect(() => {

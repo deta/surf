@@ -77,11 +77,11 @@
   {#if notebookId === null}
     <IndexRoute {query} {title} />
   {:else if notebookId === 'drafts'}
-    <DraftsRoute />
+    <DraftsRoute {messagePort} />
   {:else if notebookId === 'history'}
     <HistoryRoute />
   {:else if notebook}
-    <NotebookDetailRoute {notebook} {query} />
+    <NotebookDetailRoute {notebook} {query} {messagePort} />
   {/if}
 
   {#if (notebookId && notebook && notebookId !== 'drafts') || !notebookId}

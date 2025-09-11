@@ -4,6 +4,7 @@ import type {
   CitationClickEvent,
   NavigateURLOptions,
   OpenResourceOptions,
+  OpenTarget,
   TelemetryEventTypes
 } from '@deta/types'
 
@@ -47,14 +48,18 @@ export interface MPTeletypeAsk extends MessagePortEvent {
   }
 }
 
-export interface MPTeletypeCreateNote extends MessagePortEvent {
-  payload: {
-    content: string
-  }
-}
-
 export interface MPNavigateURL extends MessagePortEvent {
   payload: NavigateURLOptions
+}
+
+export interface MPNoteCreate extends MessagePortEvent {
+  payload: {
+    name?: string
+    content?: string
+    target?: OpenTarget
+    notebookId?: string
+    isNewTabPage?: boolean
+  }
 }
 
 export interface MPNoteRunQuery extends MessagePortEvent {
@@ -72,6 +77,10 @@ export interface MPNoteInsertMentionQuery extends MessagePortEvent {
 }
 
 export interface MPNoteReady extends MessagePortEvent {
+  payload: void
+}
+
+export interface MPNoteRefreshContent extends MessagePortEvent {
   payload: void
 }
 
@@ -99,11 +108,12 @@ type MessagePortEventRegistry = {
   teletypeSearch: MPTeletypeSearchRequest
   teletypeExecuteAction: MPTeletypeExecuteAction
   teletypeAsk: MPTeletypeAsk
-  teletypeCreateNote: MPTeletypeCreateNote
   navigateURL: MPNavigateURL
+  createNote: MPNoteCreate
   noteRunQuery: MPNoteRunQuery
   noteInsertMentionQuery: MPNoteInsertMentionQuery
   noteReady: MPNoteReady
+  noteRefreshContent: MPNoteRefreshContent
   changePageQuery: MPChangePageQuery
   openResource: MPOpenResource
   citationClick: MPCitationClick
@@ -128,13 +138,14 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     teletypeSearch:
       messagePortService.addEventWithReturn<MPTeletypeSearchRequest>('teletype-search'),
     teletypeAsk: messagePortService.addEvent<MPTeletypeAsk>('teletype-ask'),
-    teletypeCreateNote: messagePortService.addEvent<MPTeletypeCreateNote>('teletype-create-note'),
     navigateURL: messagePortService.addEvent<MPNavigateURL>('navigate-url'),
+    createNote: messagePortService.addEvent<MPNoteCreate>('create-note'),
     noteRunQuery: messagePortService.addEvent<MPNoteRunQuery>('note-run-query'),
     noteInsertMentionQuery: messagePortService.addEvent<MPNoteInsertMentionQuery>(
       'note-insert-mention-query'
     ),
     noteReady: messagePortService.addEvent<MPNoteReady>('note-ready'),
+    noteRefreshContent: messagePortService.addEvent<MPNoteRefreshContent>('note-refresh-content'),
     changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query'),
     openResource: messagePortService.addEvent<MPOpenResource>('open-resource'),
     citationClick: messagePortService.addEvent<MPCitationClick>('citation-click')

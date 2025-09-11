@@ -706,6 +706,11 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   onDestroy() {
     this.log.debug('Destroying TabsService')
     this.unsubs.forEach((unsub) => unsub())
+
+    if (this.newTabView) {
+      this.newTabView.destroy()
+      this.newTabView = null
+    }
   }
 
   static provide(viewManager?: ViewManager): TabsService {

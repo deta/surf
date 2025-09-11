@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { useNotebookManager } from '@deta/services/notebooks'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { openDialog } from '@deta/ui'
   import { type Notebook } from '@deta/services/notebook'
@@ -11,10 +10,14 @@
   import { ResourceTypes } from '@deta/types'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
+  import { type MessagePortClient } from '@deta/services/messagePort'
 
-  let { notebook, query }: { notebook: Notebook; query?: string } = $props()
+  let {
+    notebook,
+    messagePort,
+    query
+  }: { notebook: Notebook; messagePort: MessagePortClient; query?: string } = $props()
 
-  const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
   let showAllNotes = $state(query !== null)
@@ -26,17 +29,7 @@
   let noneNotesResources = $state([])
 
   const handleCreateNote = async () => {
-    const note = await resourceManager.createResourceNote(
-      '',
-      {
-        name: 'Untitled Note'
-      },
-      undefined,
-      true
-    )
-
-    notebookManager.addResourcesToNotebook(notebook.id, [note.id], 1)
-    await navigation.navigate(`surf://resource/${note.id}`).finished
+    await messagePort.createNote.send({ notebookId: notebook.id, isNewTabPage: true })
   }
 
   const handleDeleteNote = async (noteId: string) => {

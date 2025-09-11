@@ -144,7 +144,7 @@ export class OverlayManager {
 
   overlays: Map<string, Overlay> = new Map() // Maps overlay IDs to overlay instances
   private overlayPool: Overlay[] = [] // Pool of pre-created overlays
-  private readonly poolSize = 3 // Number of overlays to pre-create
+  private readonly poolSize = 1 // Number of overlays to pre-create
 
   constructor() {
     this.log = useLogScope('OverlayManager')

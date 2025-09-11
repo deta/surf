@@ -202,7 +202,7 @@ export class TeletypeService {
 
   async createNote(content: string): Promise<void> {
     this.log.debug('Creating note:', content)
-    await this.messagePort.teletypeCreateNote.send({ content })
+    await this.messagePort.createNote.send({ content, isNewTabPage: true })
     this.clear()
   }
 

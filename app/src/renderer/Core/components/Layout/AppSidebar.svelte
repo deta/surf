@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useNotebookManager } from '@deta/services/notebooks'
-  import { useViewManager } from '@deta/services/views'
+  import { useViewManager, ViewType } from '@deta/services/views'
   import { useBrowser } from '@deta/services/browser'
   import { Button } from '@deta/ui'
   import { Icon } from '@deta/icons'
@@ -56,24 +56,16 @@
   }
 
   const handleNewNote = async () => {
-    const note = await resourceManager.createResourceNote(
-      '',
-      {
-        name: 'Untitled Note'
-      },
-      undefined,
-      true
-    )
-
-    if (isInternalRendererURL($activeSidebarLocation ?? '')) {
-      const url = isInternalRendererURL($activeSidebarLocation)
-      if (url.hostname === 'notebook' && url.pathname?.length > 0) {
-        const notebookId = url.pathname.slice(1)
-        notebookManager.addResourcesToNotebook(notebookId, [note.id], 1)
-      }
+    let notebookId: string | undefined = undefined
+    const { type, id } = activeSidebarView.typeDataValue
+    if (type === ViewType.Notebook && id) {
+      notebookId = id
     }
 
-    activeSidebarView?.webContents.loadURL(`surf://resource/${note.id}`)
+    await browser.createAndOpenNote(
+      { name: 'Untitled Note', content: '' },
+      { target: 'sidebar', notebookId }
+    )
   }
   const debouncedSaveLocation = useDebounce((location: string) => {
     if (location === undefined || location === null || location.length <= 0) return
@@ -151,7 +143,9 @@
             {/snippet}
           </NavigationBar>
           <div style="position:relative;height:100%;">
-            <WebContentsView view={viewManager.activeSidebarView} active />
+            {#key viewManager.activeSidebarView.id}
+              <WebContentsView view={viewManager.activeSidebarView} active />
+            {/key}
           </div>
         {/if}
       </div>

@@ -121,6 +121,10 @@ export class ResourceTag {
   static dataState(value: ResourceTagDataStateValue) {
     return { name: ResourceTagsBuiltInKeys.DATA_STATE, value: value }
   }
+
+  static preloadedResource(value: boolean = true) {
+    return { name: ResourceTagsBuiltInKeys.PRELOADED_RESOURCE, value: `${value}` }
+  }
 }
 
 /**
@@ -216,6 +220,10 @@ export class SearchResourceTags {
 
   static NotExists(name: string): SFFSResourceTag {
     return { name: name, value: '', op: 'notexists' }
+  }
+
+  static PreloadedResource(value: boolean = true): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.PRELOADED_RESOURCE, value: `${value}`, op: 'eq' }
   }
 
   static NonHiddenDefaultTags(opts?: { excludeAnnotations?: boolean }): SFFSResourceTag[] {
