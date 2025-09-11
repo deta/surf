@@ -272,7 +272,8 @@
       }
     }
 
-    &:hover:not(.active) {
+    &:hover:not(.active),
+    &:global([data-context-menu-anchor]) {
       background: rgba(255, 255, 255, 0.6);
       box-shadow:
         inset 0 0 0 0.75px rgba(255, 255, 255, 0.1),

@@ -140,8 +140,8 @@
     if (props.useOverlay) {
       overlay = await overlayManager.create({
         bounds: {
-          x: props.x,
-          y: props.y,
+          x: props.x - 12,
+          y: props.y - 12,
           width: 300,
           height: 600
         }

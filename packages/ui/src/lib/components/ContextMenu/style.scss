@@ -33,6 +33,10 @@
     left: var(--x);
   }
 
+  &.overlay {
+    margin: 12px;
+  }
+
   z-index: 2147483647;
   /* max value lol */
   min-width: 180px;
