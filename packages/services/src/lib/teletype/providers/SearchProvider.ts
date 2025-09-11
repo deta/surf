@@ -49,8 +49,8 @@ export class SearchProvider implements ActionProvider {
       keywords,
       description: ``,
       buttonText: 'Search',
-      handler: async () => {
-        await this.searchWeb(query)
+      handler: async ({ viewId }) => {
+        await this.browser.handleTeletypeNavigateURL(query, 'active_tab', viewId)
       }
     }
   }
@@ -75,9 +75,5 @@ export class SearchProvider implements ActionProvider {
       this.log.error('Error fetching Google suggestions:', error)
       return []
     }
-  }
-
-  private async searchWeb(query: string): Promise<void> {
-    await this.browser.navigateToWebSearch(query, { target: 'active_tab' })
   }
 }

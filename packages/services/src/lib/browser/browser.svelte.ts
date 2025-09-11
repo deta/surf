@@ -4,7 +4,7 @@ import { Resource, ResourceNote, useResourceManager } from '../resources'
 import { useViewManager, WebContentsView } from '../views'
 import { type CreateTabOptions, type TabItem, useTabs } from '../tabs'
 import { formatAIQueryToTitle } from './utils'
-import { type MentionItem } from '@deta/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
 import {
   type AIChatMessageSource,
   type CitationClickEvent,
@@ -27,7 +27,8 @@ import {
   parseStringIntoBrowserLocation,
   ResourceTag,
   SEARCH_ENGINES,
-  SearchResourceTags
+  SearchResourceTags,
+  wait
 } from '@deta/utils'
 import { useConfig } from '../config'
 import type { NewWindowRequest, OpenURL } from '../ipc/events'
@@ -72,16 +73,24 @@ export class BrowserService {
         this.resourceManager.telemetry.trackEvent(eventName, eventProperties)
       }),
 
-      this.messagePort.openResource.on(async ({ resourceId, target, offline }) => {
+      this.messagePort.openResource.on(async ({ resourceId, target, offline }, viewId) => {
+        if (target === 'auto') {
+          target = this.getViewOpenTarget(viewId)
+        }
+
         this.openResource(resourceId, { target, offline })
       }),
 
-      this.messagePort.openNotebook.on(async ({ notebookId, target }) => {
+      this.messagePort.openNotebook.on(async ({ notebookId, target }, viewId) => {
+        if (target === 'auto') {
+          target = this.getViewOpenTarget(viewId)
+        }
+
         this.navigateToUrl(`surf://notebook/${notebookId}`, { target })
       }),
 
-      this.messagePort.navigateURL.on(async ({ url, target }) => {
-        this.navigateToUrl(url, { target })
+      this.messagePort.navigateURL.on(async ({ url, target }, viewId) => {
+        this.handleTeletypeNavigateURL(url, target, viewId)
       }),
 
       this.messagePort.citationClick.on(async (data, viewId) => {
@@ -162,11 +171,15 @@ export class BrowserService {
         return
       }
 
+      if (data.preview === 'auto') {
+        data.preview = this.getViewOpenTarget(viewId)
+      }
+
       let url = data.url
       if (metadata.resourceId) {
         const resource = await this.resourceManager.getResource(metadata.resourceId)
         if (resource?.type === ResourceTypes.PDF) {
-          url = `surf://resource/${resource.id}`
+          url = `surf://resource/${resource.id}?raw`
         } else if (resource?.url) {
           url = resource.url
         } else if (resource) {
@@ -181,87 +194,124 @@ export class BrowserService {
         return
       }
 
-      // Otherwise, open in a new tab to not disturb the user's current context
-      if (data.preview === 'background_tab' || data.preview === 'tab') {
-        this.log.debug('Citation preview click event, opening in new tab')
+      if (data.preview === 'background_tab') {
+        this.log.debug('Citation preview click event, opening in new background tab')
         await this.tabsManager.openOrCreate(
           url,
           {
-            active: data.preview === 'tab',
+            active: false,
             activate: true,
             ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
           },
           true
         )
-
-        return
-      }
-
-      // If we click was triggered from the active tab, open in sidebar (if sidebar is closed or showing NotebookHome)
-      if (this.tabsManager.activeTabValue?.view.id === viewId) {
-        this.log.debug('Citation preview click event from active tab')
-
-        if (
-          !this.viewManager.sidebarViewOpen ||
-          this.viewManager.activeSidebarView?.typeValue !== ViewType.Resource
-        ) {
-          this.log.debug('Opening citation in sidebar')
-          if (data.url) {
-            const view = this.viewManager.openURLInSidebar(data.url)
-            if (!data.skipHighlight && data.selection) {
-              await view.highlightSelection(data.selection)
-            }
-          } else if (data.resourceId) {
-            const view = this.viewManager.openResourceInSidebar(data.resourceId)
-            if (!data.skipHighlight && data.selection) {
-              await view.highlightSelection(data.selection)
-            }
-          }
-        } else {
-          this.log.debug('Opening citation in new tab')
-          await this.tabsManager.openOrCreate(
-            url,
-            {
-              active: true,
-              ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-            },
-            true
-          )
+      } else if (data.preview === 'sidebar') {
+        this.log.debug('Opening citation in sidebar')
+        const view = this.viewManager.openURLInSidebar(url)
+        if (!data.skipHighlight && data.selection) {
+          await view.highlightSelection(data.selection)
         }
-
-        return
-      }
-
-      // For clicks from the sidebar, open in active tab
-      if (this.viewManager.activeSidebarView?.id === viewId) {
-        this.log.debug('Citation click event from active sidebar view')
-
+      } else if (data.preview === 'active_tab') {
+        this.log.debug('Citation click event, opening in active tab')
+        this.tabsManager.changeActiveTabURL(url, {
+          active: true,
+          ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
+        })
+      } else {
+        this.log.debug('Citation preview click event, opening in new active tab')
         await this.tabsManager.openOrCreate(
           url,
           {
             active: true,
+            activate: true,
             ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
           },
           true
         )
-
-        // const view = this.viewManager.openURLInSidebar(url)
-        // if (!data.skipHighlight && data.selection) {
-        //   view.highlightSelection(data.selection)
-        // }
-
-        return
       }
-
-      // For normal clicks, replace the active view
-      this.log.debug('Citation click event, opening in active tab')
-      this.tabsManager.changeActiveTabURL(url, {
-        active: true,
-        ...(data.skipHighlight ? {} : { selectionHighlight: data.selection })
-      })
     } catch (err) {
       this.log.error('Failed to handle citation click event:', err)
     }
+  }
+
+  async handleTeletypeAsk(query: string, mentions: MentionItem[], viewId: string) {
+    try {
+      const target = this.getViewLocation(viewId)
+
+      const view = this.viewManager.getViewById(viewId)
+      if (!view) {
+        this.log.warn('View not found for ask action:', viewId)
+        return
+      }
+
+      let notebookId: string | null = null
+
+      const { type, id } = view.typeDataValue
+      if (type === ViewType.Notebook && id) {
+        notebookId = id
+      }
+
+      this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions, notebookId)
+
+      if (mentions.length === 1 && mentions[0].id === 'active_tab') {
+        mentions[0] = {
+          ...mentions[0],
+          data: {
+            insertIntoEditor: true
+          }
+        }
+      }
+
+      mentions.forEach((mention) => {
+        query = query.replace(`@${mention.label}`, '').trim()
+      })
+
+      // if (target === 'sidebar' && mentions.length === 0) {
+      //   this.log.debug('No mentions in sidebar, adding active tab mention')
+      //   mentions.push({
+      //     id: 'active_tab',
+      //     label: 'Active Tab',
+      //     type: MentionItemType.ACTIVE_TAB,
+      //     icon: 'sparkles'
+      //   })
+      // }
+
+      if (notebookId) {
+        const notebook = await this.notebookManager.getNotebook(notebookId)
+        if (notebook) {
+          mentions.push({
+            id: notebookId,
+            label: notebook.nameValue,
+            type: MentionItemType.NOTEBOOK,
+            data: {
+              insertIntoEditor: true
+            },
+            icon: 'note'
+          })
+        }
+      }
+
+      await this.createNoteAndRunAIQuery(query, mentions, {
+        target: target ?? 'tab',
+        notebookId: notebookId ?? 'auto'
+      })
+
+      this.closeNewTab()
+    } catch (error) {
+      this.log.error('Failed to trigger ask action:', error)
+    }
+  }
+
+  async handleTeletypeNavigateURL(
+    url: string,
+    target: NavigateURLOptions['target'],
+    viewId?: string
+  ) {
+    if (target === 'auto') {
+      target = viewId ? this.getViewOpenTarget(viewId) : 'tab'
+    }
+
+    this.navigateToUrl(url, { target })
   }
 
   async getCitationSourceAndResource(
@@ -334,10 +384,13 @@ export class BrowserService {
         )
       }
 
-      this.newNoteView = await this.viewManager.create({
-        url: `surf://resource/${resource.id}`,
-        permanentlyActive: true
-      }, true)
+      this.newNoteView = await this.viewManager.create(
+        {
+          url: `surf://resource/${resource.id}`,
+          permanentlyActive: true
+        },
+        true
+      )
       await this.newNoteView.preloadWebContents({ activate: false })
     } catch (error) {
       this.log.error('Error preparing new note view:', error)
@@ -595,35 +648,31 @@ export class BrowserService {
     const target = opts?.target ?? 'tab'
     const offline = opts?.offline ?? isOffline()
 
-    if (offline || resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE || !resource.url) {
-      if (target === 'sidebar') {
-        return this.viewManager.openResourceInSidebar(resource.id)
-      } else if (target === 'active_tab') {
-        const tab = await this.openResourceInCurrentTab(resource)
-        return tab?.view
-      } else {
-        this.resourceManager.telemetry.trackCreateTab(TelemetryCreateTabSource.NotebookLinkClick)
-        const tab = await this.tabsManager.createResourceTab(resource.id, {
-          active: target === 'tab',
-          activate: true
-        })
+    let url: string | null = null
 
-        return tab.view
-      }
+    if (
+      offline ||
+      !resource.url ||
+      resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ||
+      resource.type === ResourceTypes.PDF
+    ) {
+      url = `surf://resource/${resource.id}` + (resource.type === ResourceTypes.PDF ? '?raw' : '')
     } else {
-      if (target === 'sidebar') {
-        return this.viewManager.openURLInSidebar(resource.url)
-      } else if (target === 'active_tab') {
-        const tab = await this.tabsManager.changeActiveTabURL(resource.url)
-        return tab?.view
-      } else {
-        const tab = await this.tabsManager.create(resource.url, {
-          active: target === 'tab',
-          activate: true
-        })
+      url = resource.url
+    }
 
-        return tab.view
-      }
+    if (target === 'sidebar') {
+      return this.viewManager.openURLInSidebar(url)
+    } else if (target === 'active_tab') {
+      const tab = await this.tabsManager.changeActiveTabURL(url)
+      return tab?.view
+    } else {
+      const tab = await this.tabsManager.create(url, {
+        active: target === 'tab',
+        activate: true
+      })
+
+      return tab.view
     }
   }
 
@@ -722,7 +771,7 @@ export class BrowserService {
       const tab = await this.tabsManager.changeActiveTabURL(url)
       return tab?.view
     } else {
-      const tab = await this.tabsManager.create(url, { active: target === 'tab' })
+      const tab = await this.tabsManager.create(url, { active: target === 'tab', activate: true })
       return tab?.view
     }
   }
@@ -744,6 +793,29 @@ export class BrowserService {
     return tab?.view
   }
 
+  async openAskInSidebar() {
+    const view = await this.viewManager.openNewHomepage()
+    if (!view) {
+      this.log.error('Failed to open new homepage view')
+      return
+    }
+
+    const webContents = await view.waitForWebContentsReady()
+    if (!webContents) {
+      this.log.error('Failed to wait for web contents to be ready')
+      return
+    }
+
+    await wait(100)
+
+    await webContents.insertNoteMentionQuery({
+      id: 'active_tab',
+      label: 'Active Tab',
+      type: MentionItemType.ACTIVE_TAB,
+      icon: 'sparkles'
+    })
+  }
+
   /**
    * For a given viewId, determine the current location of the view: 'tab' or 'sidebar'.
    */
@@ -756,6 +828,30 @@ export class BrowserService {
       const tab = this.tabsManager.getTabByViewId(viewId)
       return tab ? 'tab' : null
     }
+  }
+
+  getViewOpenTarget(viewId: string) {
+    const view = this.viewManager.getViewById(viewId)
+    const viewType = view?.typeValue ?? ViewType.Page
+    const viewLocation = this.getViewLocation(viewId) ?? 'tab'
+
+    this.log.debug('Determining open target for view', viewId, viewType, viewLocation)
+
+    if (viewType === ViewType.Resource) {
+      if (viewLocation === 'sidebar') {
+        return 'tab'
+      } else if (viewLocation === 'tab') {
+        return 'sidebar'
+      }
+    } else if (viewType === ViewType.NotebookHome || viewType === ViewType.Notebook) {
+      if (viewLocation === 'sidebar') {
+        return 'sidebar'
+      } else if (viewLocation === 'tab') {
+        return 'active_tab'
+      }
+    }
+
+    return viewLocation
   }
 
   onDestroy() {

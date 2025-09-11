@@ -87,7 +87,7 @@ export const BROWSER_CONTEXT_KEY = 'browser-utils'
 
 export type RightSidebarTab = 'chat' | 'annotations' | 'root'
 
-export type OpenTarget = 'tab' | 'background_tab' | 'active_tab' | 'sidebar'
+export type OpenTarget = 'tab' | 'background_tab' | 'active_tab' | 'sidebar' | 'auto'
 
 export type OpenResourceOptions = {
   resourceId: string

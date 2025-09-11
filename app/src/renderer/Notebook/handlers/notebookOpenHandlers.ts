@@ -24,7 +24,14 @@ export const openNotebook = (notebookId: string, opts?: Partial<OpenNotebookOpti
 
 export const determineClickOpenTarget = (e: MouseEvent): OpenTarget => {
   const backgroundTab = isModKeyPressed(e) && !e.shiftKey
-  return backgroundTab ? 'background_tab' : isModKeyPressed(e) ? 'tab' : 'active_tab'
+  const sidebarTab = e.shiftKey
+  return backgroundTab
+    ? 'background_tab'
+    : isModKeyPressed(e)
+      ? 'tab'
+      : sidebarTab
+        ? 'sidebar'
+        : 'auto'
 }
 
 export const handleResourceClick = (resourceId: string, e: MouseEvent) => {

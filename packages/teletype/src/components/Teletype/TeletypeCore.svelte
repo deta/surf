@@ -11,11 +11,12 @@
   import ActionPanel from './ActionPanel.svelte'
   import ToolsList from './ToolsList.svelte'
   import { onMount, tick, createEventDispatcher } from 'svelte'
-  import { isMac } from '@deta/utils/system'
+  import { isDev, isMac } from '@deta/utils/system'
   import { Editor, type MentionItem } from '@deta/editor'
   import { createRemoteMentionsFetcher } from '@deta/services/ai'
   import { Button } from '@deta/ui'
   import { ShortcutVisualizer } from '@deta/ui'
+  import { useMessagePortClient } from '@deta/services/messagePort'
 
   const dispatch = createEventDispatcher<{
     clear: void
@@ -233,6 +234,8 @@
   }
 
   const handleSubmit = (modKeyPressed: boolean) => {
+    if (!$inputValue || $inputValue.length === 0) return
+
     console.log('Submit clicked', $selectedAction, modKeyPressed)
     if ($selectedAction && !modKeyPressed) {
       callAction($selectedAction)
@@ -338,6 +341,23 @@
     if ($open) {
       editorComponent?.focus()
     }
+
+    const messagePort = useMessagePortClient()
+
+    const unsubMessagePort = messagePort.noteInsertMentionQuery.handle((payload) => {
+      console.debug('Received note-insert-mention-query event', payload)
+      editorComponent?.insertMention(payload.mention, payload.query)
+      editorComponent?.focus()
+    })
+
+    if (editorComponent && isDev) {
+      // @ts-ignore
+      window.editor = editorComponent
+    }
+
+    return () => {
+      unsubMessagePort()
+    }
   })
 </script>
 
@@ -434,6 +454,7 @@
               bind:this={editorComponent}
               bind:content={$inputValue}
               {placeholder}
+              placeholderNewLine={placeholder}
               submitOnEnter={true}
               autofocus={true}
               parseMentions={true}

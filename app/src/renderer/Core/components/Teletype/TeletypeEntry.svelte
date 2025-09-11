@@ -4,6 +4,7 @@
   import { useTeletypeService } from '@deta/services'
   import type { MentionItem } from '@deta/editor'
   import { useLogScope } from '@deta/utils/io'
+  import { onMount } from 'svelte'
 
   const teletypeService = useTeletypeService()
   const log = useLogScope('TeletypeEntry')
@@ -12,13 +13,6 @@
   let teletype: TeletypeSystem
 
   let actionsArray = $state([])
-
-  // Subscribe to teletype actions
-  $effect(() => {
-    return teletypeService.actions.subscribe((actions) => {
-      actionsArray = actions || []
-    })
-  })
 
   const handleTeletypeInput = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
     log.debug('Teletype input received:', event.detail)
@@ -50,6 +44,14 @@
     } else {
       teletype?.close()
     }
+  })
+
+  onMount(() => {
+    return teletypeService.actions.subscribe((actions) => {
+      log.debug('Received actions update:', actions)
+      actionsArray = actions || []
+      // teletype?.setActions(actionsArray)
+    })
   })
 </script>
 

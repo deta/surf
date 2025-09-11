@@ -39,6 +39,8 @@ export interface MPTeletypeSearchRequest extends MessagePortEvent {
 export interface MPTeletypeExecuteAction extends MessagePortEvent {
   payload: {
     actionId: string
+    query: string
+    mentions: MentionItem[]
   }
 }
 

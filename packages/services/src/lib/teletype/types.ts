@@ -1,10 +1,16 @@
 import { type MentionItem } from '@deta/editor'
 
+export type TeletypeActionPayload = {
+  query: string
+  mentions: MentionItem[]
+  viewId?: string
+}
+
 export interface TeletypeAction {
   id: string
   name: string
   icon: string
-  handler: () => void | Promise<void>
+  handler: (payload: TeletypeActionPayload) => void | Promise<void>
   section?: string
   priority?: number
   keywords?: string[]

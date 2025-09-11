@@ -224,7 +224,7 @@
 
     const backgroundTab = isModKeyPressed(e) && !e?.shiftKey
     const foregroundTab = isModKeyPressed(e)
-    const activeTab = !isModKeyPressed(e)
+    const sidebarTab = e.shiftKey
 
     dispatchClick({
       citationID,
@@ -235,9 +235,9 @@
         ? 'background_tab'
         : foregroundTab
           ? 'tab'
-          : activeTab
-            ? 'active_tab'
-            : false
+          : sidebarTab
+            ? 'sidebar'
+            : 'auto'
     })
   }
 

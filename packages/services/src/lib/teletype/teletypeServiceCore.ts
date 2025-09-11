@@ -53,10 +53,10 @@ export class TeletypeServiceCore {
       }),
 
       // Handle action execution requests
-      this.messagePort.teletypeExecuteAction.on(async ({ actionId }) => {
+      this.messagePort.teletypeExecuteAction.on(async ({ actionId, query, mentions }, viewId) => {
         const action = this.actionMap.get(actionId)
         if (action) {
-          await action.handler()
+          await action.handler({ query, mentions, viewId })
           return true
         }
 
@@ -64,25 +64,7 @@ export class TeletypeServiceCore {
       }),
 
       this.messagePort.teletypeAsk.on(async ({ query, mentions }, viewId) => {
-        const target = this.browser.getViewLocation(viewId)
-        this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions)
-
-        if (target === 'sidebar' && mentions.length === 0) {
-          this.log.debug('No mentions in sidebar, adding active tab mention')
-          mentions.push({
-            id: 'active_tab',
-            label: 'Active Tab',
-            type: MentionItemType.ACTIVE_TAB,
-            icon: 'sparkles'
-          })
-        }
-
-        await this.browser.createNoteAndRunAIQuery(query, mentions, {
-          target: target ?? 'tab',
-          notebookId: 'auto'
-        })
-
-        this.browser.closeNewTab()
+        this.browser.handleTeletypeAsk(query, mentions, viewId)
       })
     )
 

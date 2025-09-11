@@ -19,9 +19,7 @@
   // Update actions when the prop changes (Svelte 5 runes)
   $effect(() => {
     log.debug('Actions changed:', actions, 'length:', actions.length)
-    if (actions.length > 0) {
-      teletype.setActions([...includedActions, ...actions])
-    }
+    teletype.setActions([...includedActions, ...actions])
   })
   const show = teletype.isShown
   const isOpen = teletype.isOpen

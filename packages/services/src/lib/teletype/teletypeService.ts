@@ -144,7 +144,10 @@ export class TeletypeService {
     const action = currentState.actions.find((a) => a.id === actionId)
 
     if (action) {
-      await action.handler()
+      await action.handler({
+        query: this.queryValue,
+        mentions: this.mentionsValue
+      })
     }
   }
 
@@ -341,7 +344,11 @@ export class TeletypeService {
           ...action,
           handler: async () => {
             // Execute action via messagePort
-            await this.messagePort.teletypeExecuteAction.send({ actionId: action.id })
+            await this.messagePort.teletypeExecuteAction.send({
+              actionId: action.id,
+              query: this.queryValue,
+              mentions: this.mentionsValue
+            })
           }
         } as TeletypeAction
       })

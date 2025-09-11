@@ -312,6 +312,30 @@ export class NoteEditor {
     return generation
   }
 
+  cleanupLoadingNodes() {
+    try {
+      this.log.debug('Cleaning up loading nodes')
+      const tr = this.editor.view.state.tr
+      const loadingNodes = this.editor.$nodes('loading')
+
+      if (!loadingNodes || loadingNodes.length === 0) {
+        this.log.debug('No loading nodes found, nothing to clean up')
+        return
+      }
+
+      this.log.debug('Found loading nodes to clean up', loadingNodes)
+
+      const reversed = [...loadingNodes].reverse()
+      reversed.forEach((nodePos) => {
+        tr.delete(nodePos.pos, nodePos.pos + nodePos.node.nodeSize)
+      })
+
+      this.editor.view.dispatch(tr)
+    } catch (error) {
+      this.log.error('Error cleaning up loading nodes', error)
+    }
+  }
+
   static create(editor: Editor, component: EditorComp, element: HTMLElement) {
     return new NoteEditor(editor, component, element)
   }

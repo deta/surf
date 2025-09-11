@@ -10,7 +10,7 @@
 
   import { createEditor, Editor, EditorContent, FloatingMenu } from 'svelte-tiptap'
   import { Extension, generateHTML, generateJSON, generateText } from '@tiptap/core'
-  import { useAnimationFrameThrottle } from '@deta/utils'
+  import { conditionalArrayItem, useAnimationFrameThrottle } from '@deta/utils'
 
   import { createEditorExtensions } from '../editor'
   import { isInTitleNode } from '../utils'
@@ -256,6 +256,51 @@
     const data = getText()
     if (data) {
       dispatch('autocomplete', { query: data.text, mentions: data.mentions })
+    }
+  }
+
+  export const insertMention = (mentionItem?: MentionItem, query?: string) => {
+    try {
+      const editor = getEditor()
+      if (!editor) {
+        console.error('Editor instance is not available')
+        return
+      }
+
+      // Insert two line breaks followed by the mention
+      editor
+        .chain()
+        .focus('end')
+        .insertContent(
+          [
+            ...conditionalArrayItem(!!mentionItem, [
+              {
+                type: 'mention',
+                attrs: {
+                  id: mentionItem?.id,
+                  label: mentionItem?.label,
+                  mentionType: mentionItem?.type,
+                  icon: mentionItem?.icon
+                }
+              }
+            ]),
+            {
+              type: 'text',
+              text: ' '
+            }
+          ],
+          { parseOptions: { preserveWhitespace: 'full' } }
+        )
+        .run()
+
+      // If there's a query, insert it after the mention
+      if (query) {
+        editor.chain().insertContent(query).run()
+      }
+
+      editor.commands.focus('end')
+    } catch (error) {
+      console.error('Error inserting mention', error)
     }
   }
 

@@ -56,6 +56,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   views: Writable<WebContentsView[]>
 
   private unsubs: Fn[] = []
+  private newHomepageView: WebContentsView | null = null
   private viewPoolWebPages: WebContentsView[] = [] // Pool of pre-created views for http(s)://
   private viewPoolSurfProtocol: WebContentsView[] = [] // Pool of pre-created views for surf://
   private readonly poolSize = 1 // Number of views to pre-create
@@ -95,6 +96,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     })
 
     this.attachListeners()
+    this.prepareNewHomepage()
     this.refillPool()
 
     if (isDev) {
@@ -167,10 +169,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   private async refillPool(type?: 'web' | 'surf') {
     if (!type) {
-      await Promise.all([
-        this.refillPool('web'),
-        this.refillPool('surf')
-      ])
+      await Promise.all([this.refillPool('web'), this.refillPool('surf')])
 
       return
     }
@@ -518,15 +517,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   openResourceInSidebar(resourceId: string) {
-    if (this.activeSidebarView && this.activeSidebarView.webContents) {
-      this.activeSidebarView.webContents.loadURL(`surf://resource/${resourceId}`)
-      this.setSidebarState({ open: true, view: this.activeSidebarView })
-      return this.activeSidebarView
-    }
-
-    const view = this.create({ url: `surf://resource/${resourceId}`, permanentlyActive: true })
-    this.setSidebarState({ open: true, view })
-    return view
+    return this.openURLInSidebar(`surf://resource/${resourceId}`)
   }
 
   openURLInSidebar(url: string) {
@@ -541,8 +532,39 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     return view
   }
 
+  private async prepareNewHomepage() {
+    try {
+      this.log.debug('Preparing new homepage')
+      this.newHomepageView = await this.create({ url: 'surf://notebook' }, true)
+      await this.newHomepageView.preloadWebContents({ activate: false })
+    } catch (error) {
+      this.log.error('Error preparing new homepage:', error)
+    }
+  }
+
+  async openNewHomepage() {
+    try {
+      if (!this.newHomepageView) {
+        return this.openURLInSidebar('surf://notebook')
+      }
+
+      const view = await this.openViewInSidebar(this.newHomepageView)
+      view.changePermanentlyActive(true)
+      view.webContents?.activate()
+      this.newHomepageView = null
+
+      // prepare the next new homepage
+      setTimeout(() => this.prepareNewHomepage(), 300)
+
+      return view
+    } catch (error) {
+      this.log.error('Error opening new homepage:', error)
+    }
+  }
+
   onDestroy() {
     this.unsubs.forEach((unsub) => unsub())
+    this.newHomepageView?.onDestroy()
 
     this.viewPoolSurfProtocol.forEach((view) => view.onDestroy())
     this.viewPoolSurfProtocol = []

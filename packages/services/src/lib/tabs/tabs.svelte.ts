@@ -629,7 +629,8 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       }
 
       const tab = await this.createWithView(this.newTabView, { activate: true })
-      
+      this.newTabView = null
+
       // prepare the next new tab page
       setTimeout(() => this.prepareNewTabPage(), 100)
 

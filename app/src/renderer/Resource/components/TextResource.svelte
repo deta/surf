@@ -268,7 +268,7 @@
         }
 
         let showPrompt = true
-        if (mentions.length === 1 && mentions[0].id === 'active_tab') {
+        if (mentions.length === 1 && mentions[0]?.data?.insertIntoEditor) {
           showPrompt = false
           insertMention(mentions[0], askQuery)
         }
@@ -277,7 +277,7 @@
           askQuery,
           mentions,
           PageChatMessageSentEventTrigger.NoteUseSuggestion,
-          { focusEnd: true, autoScroll: true, showPrompt: showPrompt, focusInput: true }
+          { focusEnd: true, autoScroll: false, showPrompt: showPrompt, focusInput: true }
         )
       }
     } catch (err) {
@@ -425,6 +425,12 @@
 
       if (editorElement) {
         editorElement.addEventListener('scroll', handleScroll)
+      }
+
+      if (editorElem && editorElement) {
+        const editor = editorElem.getEditor()
+        const noteEditor = NoteEditor.create(editor, editorElem, editorElement)
+        noteEditor?.cleanupLoadingNodes()
       }
 
       document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
@@ -1315,6 +1321,7 @@
       isGeneratingAI.set(false)
       endAIGeneration()
       autocompleting.set(false)
+      noteEditor?.cleanupLoadingNodes()
     }
   }
 
@@ -1355,7 +1362,7 @@
           : action === 'new-background-tab'
             ? 'background_tab'
             : action === 'open'
-              ? 'active_tab'
+              ? 'auto'
               : 'sidebar'
 
       if (type === MentionItemType.RESOURCE) {
@@ -1546,54 +1553,33 @@
   }
 
   const handleLinkClick: LinkClickHandler = async (e, href) => {
-    const target =
-      e.shiftKey && !isModKeyPressed(e)
-        ? 'preview'
-        : e.altKey
-          ? 'details'
-          : isModKeyPressed(e)
-            ? 'new-tab'
-            : 'current-tab'
-    const activeTab = target === 'current-tab'
+    const backgroundTab = isModKeyPressed(e) && !e.shiftKey
+    const target = backgroundTab
+      ? 'background_tab'
+      : isModKeyPressed(e)
+        ? 'tab'
+        : e.shiftKey
+          ? 'sidebar'
+          : 'auto'
 
     log.debug('Link clicked', href, target)
 
     const resourceId = parseSurfProtocolURL(href)
     if (resourceId) {
-      log.debug('Trying to open resource', resourceId)
-      const resource = await resourceManager.getResource(resourceId)
-      if (!resource) {
-        log.error('Resource not found', resourceId)
-        toasts.error('Resource to open not found')
-        return
-      }
+      log.debug('Opening resource', resourceId)
 
-      // if (target === 'preview') {
-      //   globalMiniBrowser.openResource(resource.id, {
-      //     from: OpenInMiniBrowserEventFrom.NoteLink
-      //   })
-      // } else if (target === 'details') {
-      //   oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: 'auto' })
-      // } else {
-      //   tabsManager.openResourcFromContextAsPageTab(resource.id, {
-      //     active: activeTab,
-      //     trigger: CreateTabEventTrigger.NoteLink
-      //   })
-      // }
+      messagePort.openResource.send({
+        resourceId: resourceId,
+        target
+      })
 
       return
     }
 
-    // if (target === 'preview') {
-    //   globalMiniBrowser.openWebpage(href, {
-    //     from: OpenInMiniBrowserEventFrom.NoteLink
-    //   })
-    // } else {
-    //   tabsManager.addPageTab(href, {
-    //     active: activeTab,
-    //     trigger: CreateTabEventTrigger.NoteLink
-    //   })
-    // }
+    messagePort.navigateURL.send({
+      url: href,
+      target
+    })
   }
 
   const handleEditorKeyDown = (e: KeyboardEvent) => {
@@ -2493,80 +2479,13 @@
   }
 
   const insertMention = (mentionItem?: MentionItem, query?: string) => {
-    // editorElem?.setContent(
-    //   '<p><span class="mention" data-type="mention" data-id="active_tab" data-label="Active Tab" data-mention-type="active-tab" data-icon="sparkles">@Active Tab</span>: ‎‎</p>'
-    // )
-
     try {
-      // if (!mentionItem || !mentionItem.id || !mentionItem.label) {
-      //   log.error('Invalid mention data provided')
-      //   return
-      // }
-
       if (!editorElem) {
         log.error('Editor element not initialized')
         return
       }
 
-      const noteEditor = editorElem.getEditor()
-      if (!noteEditor) {
-        log.error('Editor instance is not available')
-        return
-      }
-
-      // if (!chatInputEditorElem) {
-      //   log.error('Could not get chat input editor instance')
-      //   return
-      // }
-
-      // const chatInputEditor = chatInputEditorElem.getEditor()
-      // if (!chatInputEditor) {
-      //   log.error('Chat input editor instance is not available')
-      //   return
-      // }
-
-      // noteEditor
-      //   .chain()
-      //   .focus('end')
-      //   .insertContent([
-      //     {
-      //       type: 'paragraph'
-      //     },
-      //     {
-      //       type: 'paragraph'
-      //     }
-      //   ])
-      //   .run()
-
-      // Insert two line breaks followed by the mention
-      noteEditor
-        .chain()
-        .focus('end')
-        .insertContent([
-          ...conditionalArrayItem(!!mentionItem, [
-            {
-              type: 'mention',
-              attrs: {
-                id: mentionItem?.id,
-                label: mentionItem?.label,
-                mentionType: mentionItem?.type,
-                icon: mentionItem?.icon
-              }
-            }
-          ]),
-          {
-            type: 'text',
-            text: query ? ' ' : ': ‎‎'
-          }
-        ])
-        .run()
-
-      // If there's a query, insert it after the mention
-      if (query) {
-        noteEditor.chain().insertContent(query).run()
-      }
-
-      noteEditor.commands.focus('end')
+      editorElem.insertMention(mentionItem, query)
     } catch (error) {
       log.error('Error inserting mention', error)
     }

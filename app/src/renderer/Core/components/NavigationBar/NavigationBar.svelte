@@ -69,8 +69,8 @@
     view.webContents.reload(e.shiftKey)
   }
 
-  async function handleNewNote() {
-    await browser.createAndOpenNote({ name: 'Untitled Note', content: '' }, { target: 'sidebar' })
+  async function handleAskInSidebar() {
+    await browser.openAskInSidebar()
   }
 </script>
 
@@ -103,9 +103,13 @@
       {/key}
 
       {#if !viewManager.sidebarViewOpen}
-        <Button size="md" onclick={handleNewNote} style="padding-block: 6px;padding-inline: 8px;">
-          <Icon name="edit" size="1.085em" />
-          <span>Create Note</span>
+        <Button
+          size="md"
+          onclick={handleAskInSidebar}
+          style="padding-block: 6px;padding-inline: 8px;"
+        >
+          <Icon name="chat" size="1.085em" />
+          <span>Ask</span>
         </Button>
       {/if}
     {/if}

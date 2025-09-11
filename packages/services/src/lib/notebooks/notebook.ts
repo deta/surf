@@ -81,6 +81,11 @@ export class Notebook {
     return getIconString(this.dataValue.icon)
   }
 
+  get nameValue() {
+    // also handle legacy space name
+    return (this.dataValue as any).folderName || this.dataValue.name
+  }
+
   async updateData(updates: Partial<NotebookData>) {
     this.log.debug('updating space', updates)
 
