@@ -27,6 +27,9 @@ export enum WebContentsEmitterNames {
   LOADING_CHANGED = 'loading-changed',
   PAGE_TITLE_UPDATED = 'page-title-updated',
   PAGE_FAVICON_UPDATED = 'page-favicon-updated',
+  WILL_NAVIGATE = 'will-navigate',
+  DID_NAVIGATE = 'did-navigate',
+  DOM_READY = 'dom-ready',
   NAVIGATED = 'navigated',
   MEDIA_PLAYBACK_CHANGED = 'media-playback-changed',
   FULLSCREEN_CHANGED = 'fullscreen-changed',
@@ -58,6 +61,7 @@ export type WebContentsEmitterEvents = {
   [WebContentsEmitterNames.FULLSCREEN_CHANGED]: (isFullScreen: boolean) => void
   [WebContentsEmitterNames.FOCUS_CHANGED]: (isFocused: boolean) => void
   [WebContentsEmitterNames.HOVER_TARGET_URL_CHANGED]: (url: string | null) => void
+  [WebContentsEmitterNames.DOM_READY]: () => void
   [WebContentsEmitterNames.FOUND_IN_PAGE]: (
     result: WebContentsViewEvents[WebContentsViewEventType.FOUND_IN_PAGE]
   ) => void

@@ -1,24 +1,37 @@
 <script lang="ts">
-  // suuper long loading page to test: https://www.rtty.com/CODECARD/codecrd1.htm
-  import { tick } from 'svelte'
-  import { Tween } from 'svelte/motion'
-  import { cubicOut, expoOut } from 'svelte/easing'
+  // FIX: Some pages cause weird double/triple loading events
+  // i.e. https://www.ciid.dk/pop-up-schools
+  // Use custom throttle but cancel timeout on every user navigation!
+  // FIX: Switching tabs while loading, the loading animation should be stopped
+  // TODO: (maxu): Make it nicer, by waiting a few millis after a navigation
+  // for the title to change before starting the animation / going through with it
+  //
+  // https://www.electronjs.org/docs/latest/api/web-contents
+  import { useBrowser } from '@deta/services/browser'
+  import {
+    useViewManager,
+    ViewManagerEmitterNames,
+    WebContents,
+    WebContentsEmitterNames,
+    WebContentsView,
+    WebContentsViewEmitterNames
+  } from '@deta/services/views'
   import {
     clickOutside,
     isInternalRendererURL,
     parseStringIntoBrowserLocation,
     truncate,
-    useThrottle
+    useDebounce,
+    useLogScope
   } from '@deta/utils'
   import Breadcrumb from './Breadcrumb.svelte'
-  import { RisoText, RisoTextController } from '@deta/ui'
-  import WebContentsView from '../WebContentsView.svelte'
-  import {
-    WebContentsEmitterNames,
-    WebContentsViewEmitterNames
-  } from '@deta/services/dist/views/types.js'
   import { writable } from 'svelte/store'
-  import { useBrowser } from '@deta/services/browser'
+  import { RisoText, RisoTextController } from '@deta/ui'
+  import { cubicOut, expoOut } from 'svelte/easing'
+  import { Tween } from 'svelte/motion'
+  import { onMount, tick } from 'svelte'
+  import { SvelteMap } from 'svelte/reactivity'
+  import type { Fn } from '@deta/types'
 
   let {
     view,
@@ -30,17 +43,17 @@
     isEditingUrl?: boolean
   } = $props()
 
+  const log = useLogScope('LocationBar')
   const browser = useBrowser()
+  const viewManager = useViewManager()
 
-  // TODO: This should be part of the WebContentsView itself returning a Readable<URL | null> directly
   const viewTitle = $derived(view.title)
   const viewLocation = $derived(view.url ?? writable(''))
   const viewURL = $derived($viewLocation !== '' ? new URL($viewLocation) : null)
-  const activeHostname = $derived(viewURL ? viewURL.host : null)
   const isActiveLocationInternalRenderer = $derived(isInternalRendererURL(viewURL))
-
+  const activeHostname = $derived(viewURL ? viewURL.host : null)
   const hostnameText = $derived(
-    !isActiveLocationInternalRenderer ? truncate(activeHostname, 69) : null
+    !isActiveLocationInternalRenderer ? truncate(activeHostname, 36) : null
   )
   const titleText = $derived(
     truncate(
@@ -52,7 +65,10 @@
       69
     )
   )
-  const t_progress_title = new Tween(0, { duration: 500, easing: expoOut })
+
+  // Input editing
+  let inputEl = $state() as HTMLInputElement
+  let inputValue: string = $derived(sanitizeLocationInput($viewLocation))
 
   const hostnameTextController = new RisoTextController({
     rasterDensity: {
@@ -74,134 +90,29 @@
       easing: cubicOut
     }
   })
-  const titleTextController = new RisoTextController({
-    rasterDensity: {
-      start: 10,
-      duration: 900, // 600
-      delay: 0,
-      easing: cubicOut
-    },
-    rasterFill: {
-      start: 0.65,
-      duration: 350,
-      delay: 0,
-      easing: cubicOut
-    },
-    textBleed: {
-      start: 0.54,
-      duration: 175,
-      delay: 0,
-      easing: expoOut
-    }
-  })
 
-  let inputEl = $state() as HTMLInputElement
-  let inputValue: string = $derived(sanizizeLocationInput($viewLocation))
-
-  $effect(() => {
-    // Autofocus and select when editing
-    if (isEditingUrl) {
-      tick().then(() => {
-        inputEl?.select()
-        inputEl?.focus()
-      })
-    }
-
-    // NOTE: reset when exiting editing state
-    else {
-      inputValue = sanizizeLocationInput($viewLocation)
-    }
-  })
-
-  // This animates the hostname everytime it changes
-  $effect(() => {
-    if (hostnameText) {
-      hostnameTextController.reset()
-      hostnameTextController.t_rasterDensity.target = 1.75
-      hostnameTextController.t_rasterFill.target = 0.7
-      hostnameTextController.t_textBleed.target = 0.25
-    }
-  })
-
-  let unsubs = []
-  $effect(() => {
-    unsubs.forEach((e) => e && e())
-    unsubs = []
-    unsubs.push(
-      view.on(WebContentsViewEmitterNames.MOUNTED, () => {
-        debouncedHandleStartLoading()
-      }),
-      view.webContents?.on(WebContentsEmitterNames.DID_START_LOADING, () => {
-        debouncedHandleStartLoading()
-      }),
-      view.webContents?.on(WebContentsEmitterNames.DID_STOP_LOADING, () => {
-        flowTimers.forEach((e) => {
-          clearTimeout(e)
-          clearInterval(e)
-        })
-        t_progress_title.target = 1
-        flowTimers.push(
-          setTimeout(() => {
-            titleTextController.t_textBleed.target = 0
-          }, 100)
-        )
-      })
-    )
-  })
-
-  let flowTimers: NodeJS.Timeout[] = []
-  // FIX: Some pages cause weird double/triple loading events
-  // i.e. https://www.ciid.dk/pop-up-schools
-  // Use custom throttle but cancel timeout on every user navigation!
-  // FIX: Switching tabs while loading, the loading animation should be stopped
-  // TODO: (maxu): Make it nicer, by waiting a few millis after a navigation
-  // for the title to change before starting the animation / going through with it
-  const debouncedHandleStartLoading = useThrottle(handleStartLoading, 0)
-  function handleStartLoading() {
-    if (t_progress_title.current !== 1) return
-    titleTextController.reset()
-
-    flowTimers.forEach((e) => {
-      clearTimeout(e)
-      clearInterval(e)
-    })
-
-    flowTimers.push(
-      setTimeout(() => {
-        titleTextController.t_rasterDensity.target = 1.55
-        titleTextController.t_rasterFill.target = 0.45
-      }, 75),
-      setTimeout(() => {
-        t_progress_title.target = 0.35
-      }, 400),
-      setTimeout(() => {
-        t_progress_title.target = 0.55
-      }, 1000),
-      setTimeout(() => {
-        const interval = setInterval(() => {
-          // Exponential decay
-          t_progress_title.target += (1 - t_progress_title.target) * 0.04
-          if (t_progress_title.target > 0.98) {
-            clearInterval(interval)
-          }
-        }, 20)
-        flowTimers.push(interval)
-      }, 1300)
-    )
-    t_progress_title.set(0, { duration: 0 })
+  // View Tracking
+  interface ViewState {
+    isLoading: boolean
+    loadingProgress: Tween<number>
+    textController: RisoTextController
+    unsubs: Fn[]
+    flowTimers: NodeJS.Timeout[]
   }
+  const viewStates = new SvelteMap<string, ViewState>()
+  const activeViewState = $derived(viewStates.get(view.id))
 
-  function handleLocationInput(e: InputEvent) {
-    e.preventDefault()
-    inputValue = sanizizeLocationInput((e.target as HTMLInputElement).value)
-  }
-
-  function sanizizeLocationInput(value: string): string {
+  function sanitizeLocationInput(value: string): string {
     if (isInternalRendererURL(value)) {
       const url = isInternalRendererURL(value)
       return url.toString().replace(/\/+$/, '')
     }
     return value
+  }
+
+  function handleLocationInput(e: InputEvent) {
+    e.preventDefault()
+    inputValue = sanitizeLocationInput((e.target as HTMLInputElement).value)
   }
 
   function handleSubmit() {
@@ -216,6 +127,205 @@
     const searchUrl = browser.getSearchUrl(raw)
     view.webContents.loadURL(searchUrl)
   }
+
+  function handleWCVStartLoading(view: WebContentsView) {
+    //log.debug('View started loading', view.id)
+    const state = viewStates.get(view.id)
+    if (!state) throw new Error('View loading without state!')
+    if (state.isLoading) {
+      log.debug('! Skipping loading start -> view already loading', view.id)
+      return
+    }
+    state.isLoading = true
+
+    state.flowTimers.forEach((e) => {
+      clearTimeout(e)
+      clearInterval(e)
+    })
+    state.flowTimers.length = 0
+
+    state.textController.reset()
+    state.loadingProgress.set(0, { duration: 0 })
+
+    state.flowTimers.push(
+      setTimeout(() => {
+        state.textController.t_rasterDensity.target = 1.55
+        state.textController.t_rasterFill.target = 0.45
+      }, 75),
+      setTimeout(() => {
+        state.loadingProgress.target = 0.35
+      }, 400),
+      setTimeout(() => {
+        state.loadingProgress.target = 0.55
+      }, 1000),
+      setTimeout(() => {
+        const interval = setInterval(() => {
+          // Exponential decay
+          state.loadingProgress.target += (1 - state.loadingProgress.target) * 0.04
+          if (state.loadingProgress.target > 0.98) {
+            clearInterval(interval)
+          }
+        }, 20)
+        state.flowTimers.push(interval)
+      }, 1300)
+    )
+  }
+  function handleWCVStopLoading(view: WebContentsView) {
+    //log.debug('View stopped loading', view.id)
+    const state = viewStates.get(view.id)
+    if (!state) throw new Error('View loading without state!')
+    if (!state.isLoading) {
+      log.debug('! Skipping loading stop -> view not loading', view.id)
+      return
+    }
+
+    state.flowTimers.forEach((e) => {
+      clearTimeout(e)
+      clearInterval(e)
+    })
+    state.flowTimers.length = 0
+    state.loadingProgress.target = 1
+
+    // experiment with this maybe
+    //state.flowTimers.push(
+    //  setTimeout(() => {
+    //    state.textController.t_textBleed.target = 0
+    //    // state.textController.t_rasterDensity.target = 1.55
+    //    // state.textController.t_rasterFill.target = 0.45
+
+    //  }, 200)
+    //)
+    state.textController.t_textBleed.target = 0
+    state.textController.t_rasterDensity.target = 1.55
+    state.textController.t_rasterFill.target = 0.45
+
+    state.isLoading = false
+  }
+
+  const handleDidNavigate = useDebounce((view) => {
+    handleWCVStopLoading(view)
+  }, 100)
+
+  function handleViewChanged(view: WebContentsView) {
+    if (viewStates.has(view.id)) return
+    log.debug('Tracking new viewState ', view.id)
+
+    if (!view.webContents) return // throw new Error('Cannot track view withotu webContents in LocationBar!')
+
+    const unsubs = [
+      view.on(WebContentsViewEmitterNames.MOUNTED, (webContents: WebContents) => {
+        //log.debug(view.id + ' | View mounted')
+        handleWCVStartLoading(webContents.view)
+      }),
+      //view.webContents?.on(WebContentsEmitterNames.DID_START_LOADING, () =>
+      //  log.debug(view.id + ' | Loading')
+      //),
+      //view.webContents?.on(WebContentsEmitterNames.DID_START_LOADING, () =>
+      //  log.debug(view.id + ' | DONE Loading')
+      //),
+      view.webContents?.on(WebContentsEmitterNames.WILL_NAVIGATE, () => {
+        //log.debug(view.id + ' | will navigate')
+        handleWCVStartLoading(view)
+      }),
+      view.webContents?.on(WebContentsEmitterNames.DID_NAVIGATE, async () => {
+        //log.debug(view.id + ' | DID navigate')
+        //handleDidNavigate(view)
+        handleWCVStartLoading(view)
+      }),
+      view.webContents?.on(WebContentsEmitterNames.DOM_READY, async () => {
+        //log.debug(view.id + ' | DOM READY')
+        handleDidNavigate(view)
+      })
+      // TODO: (maxu): figure out in page navigation
+      //view.webContents?.on(WebContentsEmitterNames.DID_NAVIGATE_IN_PAGE, async () => {
+      //  log.debug(view.id + ' | DID navigate in page')
+      //  handleWCVStartLoading(view)
+      //})
+    ]
+
+    viewStates.set(view.id, {
+      isLoading: false,
+      loadingProgress: new Tween(1, { duration: 500, easing: expoOut }),
+      textController: new RisoTextController({
+        rasterDensity: {
+          start: 10,
+          duration: 900, // 600
+          delay: 0,
+          easing: cubicOut
+        },
+        rasterFill: {
+          start: 0.65,
+          duration: 350,
+          delay: 0,
+          easing: cubicOut
+        },
+        textBleed: {
+          start: 0.54,
+          duration: 175,
+          delay: 0,
+          easing: expoOut
+        }
+      }),
+      unsubs,
+      flowTimers: []
+    })
+
+    handleWCVStartLoading(view)
+  }
+
+  $effect(() => {
+    // Autofocus and select when editing
+    if (isEditingUrl) {
+      tick().then(() => {
+        inputEl?.select()
+        inputEl?.focus()
+      })
+    }
+
+    // Reset when exiting editing state
+    else {
+      inputValue = sanitizeLocationInput($viewLocation)
+    }
+  })
+
+  // This animates the hostname everytime it changes
+  $effect(() => {
+    if (hostnameText) {
+      hostnameTextController.reset()
+      hostnameTextController.t_rasterDensity.target = 1.75
+      hostnameTextController.t_rasterFill.target = 0.7
+      hostnameTextController.t_textBleed.target = 0.25
+    }
+  })
+  //$effect(() => handleViewChanged(view))
+
+  onMount(() => {
+    const unsubs = [
+      viewManager.on(ViewManagerEmitterNames.CREATED, (view: WebContents) => {
+        handleViewChanged(view.view)
+      }),
+      viewManager.on(ViewManagerEmitterNames.DELETED, (viewId: string) => {
+        log.debug('Deleting viewState ', viewId)
+        viewStates.get(viewId)?.unsubs?.forEach((f) => f())
+        viewStates.get(viewId)?.flowTimers?.forEach((e) => {
+          clearTimeout(e)
+          clearInterval(e)
+        })
+        viewStates.delete(viewId)
+      })
+    ]
+    return () => {
+      viewStates.values().forEach((state) => {
+        state.unsubs.forEach((f) => f())
+        state.flowTimers.forEach((e) => {
+          clearTimeout(e)
+          clearInterval(e)
+        })
+      })
+      viewStates.clear()
+      unsubs.forEach((f) => f())
+    }
+  })
 </script>
 
 <Breadcrumb
@@ -242,7 +352,7 @@
           e.stopPropagation()
           isEditingUrl = false
         } else {
-          e.stopPropagaton()
+          e.stopPropagation()
         }
       }}
       {@attach clickOutside(() => (isEditingUrl = false))}
@@ -261,17 +371,23 @@
         />
       </div>
     {/if}
-    {#if titleText}
-      <div class="title" style:--progress={`${t_progress_title.current * 100}%`}>
+    {#if titleText && activeViewState}
+      <div class="title" style:--progress={`${activeViewState.loadingProgress.current * 100}%`}>
         <span style="opacity: 0.1;">{titleText}</span>
-        <RisoText
-          text={titleText}
-          incBleed={1}
-          textBleed={0.225}
-          rasterDensity={1.55}
-          rasterFill={0.45}
-          animationController={titleTextController}
-        />
+        <!--
+          NOTE: This key is ensuring no weird inbetween states.. should work
+                without but let's be sure!
+        -->
+        {#key activeViewState}
+          <RisoText
+            text={titleText}
+            incBleed={1}
+            textBleed={0.225}
+            rasterDensity={1.55}
+            rasterFill={0.45}
+            animationController={activeViewState.textController}
+          />
+        {/key}
       </div>
     {/if}
   {/if}

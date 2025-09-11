@@ -129,6 +129,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
   private handleDOMReady() {
     this.view.domReady.set(true)
+    this.emit(WebContentsEmitterNames.DOM_READY)
 
     if (!this._newWindowHandlerRegistered && this.webContentsId) {
       // @ts-ignore
@@ -258,6 +259,9 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.emit(WebContentsEmitterNames.HOVER_TARGET_URL_CHANGED, event.url)
   }
 
+  private handleWillNavigate(event: WebContentsViewEvents[WebContentsViewEventType.WILL_NAVIGATE]) {
+    this.emit(WebContentsEmitterNames.WILL_NAVIGATE)
+  }
   private handleDidNavigate(event: WebContentsViewEvents[WebContentsViewEventType.DID_NAVIGATE]) {
     const newUrl = event.url
     this.log.debug('did navigate', newUrl)
@@ -266,6 +270,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       return
     }
 
+    this.emit(WebContentsEmitterNames.DID_NAVIGATE)
     this.handleNavigation(newUrl)
   }
 
@@ -278,6 +283,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       return
     }
 
+    this.emit(WebContentsEmitterNames.DID_NAVIGATE_IN_PAGE)
     this.handleNavigation(event.url)
   }
 
@@ -434,6 +440,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
           this.handlePageFaviconUpdated(event.payload)
         } else if (event.type === WebContentsViewEventType.UPDATE_TARGET_URL) {
           this.handleUpdateTargetURL(event.payload)
+        } else if (event.type === WebContentsViewEventType.WILL_NAVIGATE) {
+          this.handleWillNavigate(event.payload)
         } else if (event.type === WebContentsViewEventType.DID_NAVIGATE) {
           this.handleDidNavigate(event.payload)
         } else if (event.type === WebContentsViewEventType.DID_NAVIGATE_IN_PAGE) {

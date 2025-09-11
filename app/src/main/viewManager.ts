@@ -799,7 +799,6 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
   attachViewIPCEvents(view: WCView) {
     // TODO: find way to automatically forward all events from WebContentsView to IPC without manually attaching each one
-
     view.attachEventListener('did-start-loading', () => {
       IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
         type: WebContentsViewEventType.DID_START_LOADING,
@@ -851,12 +850,11 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     view.attachEventListener(
       'will-navigate',
-      (details, url, isInPlace, isMainFrame, frameProcessId, frameRoutingId) => {
+      (_, url, isInPlace, isMainFrame, frameProcessId, frameRoutingId) => {
         IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
           type: WebContentsViewEventType.WILL_NAVIGATE,
           viewId: view.id,
           payload: {
-            details,
             url,
             isInPlace,
             isMainFrame,

@@ -231,7 +231,6 @@ export interface WebContentsViewEventPayloads {
   }
   [WebContentsViewEventType.DOM_READY]: undefined
   [WebContentsViewEventType.WILL_NAVIGATE]: {
-    details: Electron.Event<WebContentsWillNavigateEventParams>
     url: string
     isInPlace: boolean
     isMainFrame: boolean
