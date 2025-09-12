@@ -57,6 +57,7 @@ export interface NoteMessageOptions {
   resource_ids?: string[]
   inline_images?: string[]
   general?: boolean
+  websearch?: boolean
 }
 
 export interface QueryResourcesOptions {

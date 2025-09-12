@@ -196,6 +196,8 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         pub limit: i32,
         #[serde(default)]
         pub general: bool,
+        #[serde(default)]
+        pub websearch: bool,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -220,6 +222,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             inline_images: opts.inline_images,
             number_documents: opts.limit,
             general: opts.general,
+            websearch: opts.websearch,
         }),
         deferred,
     );

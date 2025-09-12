@@ -396,6 +396,7 @@ impl AI {
         resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        websearch: bool,
         should_cluster: bool,
         history: Vec<Message>,
     ) -> BackendResult<ChatResult> {
@@ -444,7 +445,7 @@ impl AI {
         // system message
         let current_time = human_readable_current_time();
         let system_message_prompt = match note_resource_id {
-            Some(_) => note_prompt(&current_time),
+            Some(_) => note_prompt(&current_time, websearch),
             None => match general {
                 true => general_chat_prompt(&current_time),
                 false => chat_prompt(&current_time),

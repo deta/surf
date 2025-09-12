@@ -153,6 +153,7 @@ impl Worker {
         resource_ids: Option<Vec<String>>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        websearch: bool,
         app_creation: bool,
     ) -> BackendResult<()> {
         // frontend sends a query with a trailing <p></p> for some reason
@@ -177,6 +178,7 @@ impl Worker {
             resource_ids.unwrap_or_default(),
             inline_images,
             general,
+            websearch,
             callback,
         )
     }
@@ -266,6 +268,7 @@ impl Worker {
         mut resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        websearch: bool,
         callback: Root<JsFunction>,
     ) -> BackendResult<()> {
         let mut history: Vec<Message> = vec![];
@@ -322,6 +325,7 @@ impl Worker {
             resource_ids,
             inline_images,
             general,
+            websearch,
             should_cluster,
             history,
         )?;
@@ -404,6 +408,7 @@ impl Worker {
         resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        websearch: bool,
         should_cluster: bool,
         history: Vec<Message>,
     ) -> BackendResult<(String, ChatResult)> {
@@ -417,6 +422,7 @@ impl Worker {
             resource_ids,
             inline_images,
             general,
+            websearch,
             should_cluster,
             history,
         )?;
@@ -812,6 +818,7 @@ pub fn handle_misc_message(
                 resource_ids,
                 inline_images,
                 general,
+                false,
                 app_creation,
             );
             send_worker_response(&mut worker.channel, oneshot, result)
@@ -826,6 +833,7 @@ pub fn handle_misc_message(
             resource_ids,
             inline_images,
             general,
+            websearch,
         } => {
             let result = worker.send_chat_query(
                 query,
@@ -839,6 +847,7 @@ pub fn handle_misc_message(
                 resource_ids,
                 inline_images,
                 general,
+                websearch,
                 false,
             );
             send_worker_response(&mut worker.channel, oneshot, result)

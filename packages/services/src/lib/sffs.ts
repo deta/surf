@@ -1131,6 +1131,7 @@ export class SFFS {
       resourceIds?: string[]
       inlineImages?: string[]
       general?: boolean
+      websearch?: boolean
     }
   ): Promise<void> {
     this.log.debug(
@@ -1157,7 +1158,8 @@ export class SFFS {
       resource_ids: opts?.resourceIds,
       inline_images: opts?.inlineImages,
       limit: opts?.limit ?? 20,
-      general: opts?.general
+      general: opts?.general,
+      websearch: opts?.websearch
     }
     return this.withErrorHandling(
       this.backend,

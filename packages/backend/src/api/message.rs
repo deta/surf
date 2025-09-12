@@ -191,6 +191,7 @@ pub enum MiscMessage {
         resource_ids: Option<Vec<String>>,
         inline_images: Option<Vec<String>>,
         general: bool,
+        websearch: bool,
     },
     CreateAppQuery {
         chunk_callback: Root<JsFunction>,

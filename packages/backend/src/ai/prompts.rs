@@ -268,7 +268,37 @@ Here's the current date and time in UTC: {}
 ", current_time).to_string()
 }
 
-pub fn note_prompt(current_time: &str) -> String {
+pub fn note_prompt(current_time: &str, websearch: bool) -> String {
+    let websearch_section = if websearch {
+        "
+
+**Websearch:**
+
+Perform a web search for the query if you think it will be helpful. 
+
+If you do so, use the following format:
+    <answer>
+    :::websearch{{query=\"detailed search query based on user query\"}}
+    </answer>
+
+ALWAYS USE WEB SEARCH IF THE QUERY IS ASKING FOR RECENT OR LATEST INFORMATION, OR IF THE KNOWLEDGE IS BEYOND YOUR KNOWLEDGE CUTOFF DATE.
+Be mindful of the current date and time (given to you in UTC) when forming the queries.
+
+The document might contain web search already completed, in that case, you can use the existing web search results to answer the query. The results will be provided as context documents. The document will contain the websearch results as:
+    <websearch data-query=\"query\" data-results=\"[{{}}]\"></websearch>
+
+In cases where you need both a websearch and a surflet, do not use both in the same response, use a surflet only after the document already has a web search result."
+    } else {
+        ""
+    };
+
+    let context_websearch_text = if websearch {
+        "
+  You can also use the web search to find more information or if the information is beyond your knowledge cutoff date."
+    } else {
+        ""
+    };
+
     format!(
         "You are an AI assistant who helps users create documents. These documents are stored as notes and stored in HTML format.
 
@@ -298,30 +328,12 @@ pub fn note_prompt(current_time: &str) -> String {
   - USE A SINGLE LINE ONLY AND DO NOT USE ANY HTML UNSAFE CHARACTERS IN THE PROMPT
   - Write clear, detailed prompts that specify functionality
   - Include key features and user interactions
-  - Be specific about the type of app (game, tool, visualization, etc.)
-
-**Websearch:**
-
-Perform a web search for the query if you think it will be helpful. 
-
-If you do so, use the following format:
-    <answer>
-    :::websearch{{query=\"detailed search query based on user query\"}}
-    </answer>
-
-ALWAYS USE WEB SEARCH IF THE QUERY IS ASKING FOR RECENT OR LATEST INFORMATION, OR IF THE KNOWLEDGE IS BEYOND YOUR KNOWLEDGE CUTOFF DATE.
-Be mindful of the current date and time (given to you in UTC) when forming the queries.
-
-The document might contain web search already completed, in that case, you can use the existing web search results to answer the query. The results will be provided as context documents. The document will contain the websearch results as:
-    <websearch data-query=\"query\" data-results=\"[{{}}]\"></websearch>
-
-In cases where you need both a websearch and a surflet, do not use both in the same response, use a surflet only after the document already has a web search result.
+  - Be specific about the type of app (game, tool, visualization, etc.){}
 
 **When Context Documents Are Provided:**
 
 - Multiple documents may be provided as JSON context
-- Try to root answers in provided context with proper citations when context is available, when not enough information is provided, you can use your own knowledge to answer the question. 
-  You can also use the web search to find more information or if the information is beyond your knowledge cutoff date.
+- Try to root answers in provided context with proper citations when context is available, when not enough information is provided, you can use your own knowledge to answer the question.{}
 - Citation format: `<citation>context_id</citation>` immediately after supported statements, use separate tags for each context ID
 - For images: `<citation type=\"image\"></citation>`
 - Each factual statement needs its own citation - never group multiple context IDs
@@ -335,6 +347,8 @@ In cases where you need both a websearch and a surflet, do not use both in the s
 If you need more information from the user to answer a question, simply ask for it from the user. For e.g. if the user referes to a vague term or a pronoun that you don't know what it refers to, ask the user to clarify it. Do not make assumptions about the user's intent or the context.
 
 Current date/time (UTC): {}",
+        websearch_section,
+        context_websearch_text,
         current_time
     )
 }

@@ -58,6 +58,7 @@ export type ChatMessageOptions = {
   trigger?: PageChatMessageSentEventTrigger
   onboarding?: boolean
   noteResourceId?: string
+  websearch?: boolean
 }
 
 export type ChatCompletionResponse = {
@@ -371,6 +372,7 @@ export class AIChat {
       resourceIds?: string[]
       inlineImages?: string[]
       general?: boolean
+      websearch?: boolean
       appCreation?: boolean
       noteResourceId?: string
     }
@@ -880,7 +882,8 @@ export class AIChat {
         inlineImages: inlineImages,
         general: resourceIds.length === 0,
         appCreation: chatMode === ChatMode.AppCreation,
-        noteResourceId: options.noteResourceId
+        noteResourceId: options.noteResourceId,
+        websearch: options.websearch
       })
 
       // Wait for either the generation to complete or be stopped
