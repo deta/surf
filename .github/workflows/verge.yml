@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.18.0
+          node-version: 22.19.0
 
       - run: npm install semver
 
@@ -81,7 +81,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.18.0
+          node-version: 22.19.0
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1

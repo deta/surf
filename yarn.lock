@@ -4826,10 +4826,10 @@ electron-vite@^4.0.0:
     magic-string "^0.30.17"
     picocolors "^1.1.1"
 
-electron@38.0.0:
-  version "38.0.0"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-38.0.0.tgz#e51803f62c8d4c368f77642a1b1b05444c687fba"
-  integrity sha512-egljptiPJqbL/oamFCEY+g3RNeONWTVxZSGeyLqzK8xq106JhzuxnhJZ3sxt4DzJFaofbGyGJA37Oe9d+gVzYw==
+electron@38.1.0:
+  version "38.1.0"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-38.1.0.tgz#caebed7f3d7b1d43a9d01811db1f62744a753aa4"
+  integrity sha512-ypA8GF8RU4HD5pA1sa0/2U8k+92EPP2c7pX+3XbgB760F7OmqrFXtYkOilVw6HfV4+lk88XxqigmsUKTACQYoQ==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^22.7.7"
