@@ -118,7 +118,7 @@ export const FloatyInput = Extension.create<FloatyInputOptions>({
                 endPosition,
                 (view, getPos) => {
                   const spacer = document.createElement('div')
-                  spacer.className = 'editor-spacer'
+                  spacer.className = 'editor-spacer no-drag-handle'
                   spacer.style.height = '200px'
                   spacer.style.setProperty('anchor-name', '--editor-last-line')
 

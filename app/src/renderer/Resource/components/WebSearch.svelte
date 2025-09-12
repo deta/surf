@@ -237,7 +237,7 @@
               <path d="m21 21-4.35-4.35" />
             </svg>
           </div>
-          <h3 class="websearch-title">{$searchTitle}</h3>
+          <h3 class="websearch-title no-drag-handle">{$searchTitle}</h3>
           <div class="websearch-status">
             {#if $isSearching}
               <div class="websearch-loading-spinner-small"></div>

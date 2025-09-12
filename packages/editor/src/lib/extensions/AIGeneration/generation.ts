@@ -70,9 +70,9 @@ export const AIGeneration = Node.create<AIGenerationOptions>({
 
   content: 'prompt? output? loading?',
 
-  selectable: true,
+  selectable: false,
 
-  draggable: true,
+  draggable: false,
 
   parseHTML() {
     return [{ tag: 'generation' }]

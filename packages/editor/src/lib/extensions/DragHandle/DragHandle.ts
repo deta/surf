@@ -56,23 +56,24 @@ function nodeDOMAtCoords(coords: { x: number; y: number }) {
     .elementsFromPoint(coords.x, coords.y)
     .find(
       (elem: Element) =>
-        elem.parentElement?.matches?.('.ProseMirror') ||
-        elem.matches(
-          [
-            'li',
-            'p:not(:first-child)',
-            'pre',
-            'blockquote',
-            'h1, h2, h3',
-            'resource',
-            'output',
-            '[data-type=callout]',
-            '[data-type=horizontalRule]',
-            '.tableWrapper',
-            '.node-subdocument',
-            '.node-equationBlock'
-          ].join(', ')
-        )
+        !elem.classList.contains('no-drag-handle') &&
+        (elem.parentElement?.matches?.('.ProseMirror') ||
+          elem.matches(
+            [
+              'li',
+              'p:not(:first-child)',
+              'pre',
+              'blockquote',
+              'h1, h2, h3',
+              'resource',
+              'output',
+              '[data-type=callout]',
+              '[data-type=horizontalRule]',
+              '.tableWrapper',
+              '.node-subdocument',
+              '.node-equationBlock'
+            ].join(', ')
+          ))
     )
 }
 
@@ -253,6 +254,11 @@ export default function DragHandle(options: DragHandleOptions) {
           })
 
           if (!(node instanceof Element)) {
+            hideDragHandle()
+            return
+          }
+
+          if (node.matches('p') && node.textContent?.trim() === '') {
             hideDragHandle()
             return
           }
