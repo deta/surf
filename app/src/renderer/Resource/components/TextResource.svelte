@@ -185,11 +185,30 @@
   }
   const lastLineVisible = writable<boolean>(true)
   const isFirstLine = writable<boolean>(true)
+  const isTitleFocused = writable<boolean>(false)
+
   const handleLastLineVisibilityChanged = (e: CustomEvent<boolean>) => {
     lastLineVisible.set(e.detail)
   }
   const handleIsFirstLineChanged = (e: CustomEvent<boolean>) => {
     isFirstLine.set(e.detail)
+  }
+
+  // Handler to detect when cursor is in TitleNode
+  const handleEditorSelectionUpdate = () => {
+    const editor = editorElem?.getEditor()
+    if (!editor || !showTitle) {
+      isTitleFocused.set(false)
+      return
+    }
+
+    const { state } = editor
+    const { selection } = state
+    const { $from, $to } = selection
+
+    // Check if cursor is in titleNode
+    const isInTitle = $from.parent.type.name === 'titleNode' && $to.parent.type.name === 'titleNode'
+    isTitleFocused.set(isInTitle)
   }
 
   const generateTitle = async (query: string) => {
@@ -2548,9 +2567,9 @@
         bind:this={chatInputComp}
         bind:editor={chatInputEditorElem}
         bind:focus={focusInput}
-        state={$lastLineVisible ? 'floaty' : 'bottom'}
+        state={$isTitleFocused ? 'bottom' : $lastLineVisible ? 'floaty' : 'bottom'}
         firstLine={$isFirstLine && !escapeFirstLineChat}
-        disabled={showCaretPopover && editorFocused && !$isFirstLine}
+        disabled={(showCaretPopover && editorFocused && !$isFirstLine) || $isTitleFocused}
         {mentionItemsFetcher}
         on:run-prompt={handleRunPrompt}
         on:submit={handleChatSubmit}
@@ -2612,6 +2631,7 @@
             on:click
             on:dragstart
             on:update={handleContentUpdated}
+            on:caret-position-update={handleEditorSelectionUpdate}
             on:citation-click={handleCitationClick}
             on:autocomplete={handleAutocomplete}
             on:suggestions={() => generatePrompts()}

@@ -127,7 +127,7 @@ export const TitleNode = Node.create<TitleNodeOptions>({
   addNodeView() {
     return ({ node, view, getPos }) => {
       const dom = document.createElement('h1')
-      dom.className = 'title-node'
+      dom.className = 'title-node no-drag-handle'
       dom.setAttribute('data-title-node', '')
 
       Object.assign(dom.style, {
@@ -264,6 +264,108 @@ export const TitleNode = Node.create<TitleNodeOptions>({
   },
 
   addKeyboardShortcuts() {
+    type SelectionBehavior = 'title-only' | 'content-excluding-title'
+
+    interface SelectionBehaviorOptions {
+      behavior: SelectionBehavior
+      requireContentAfterTitle?: boolean
+    }
+
+    const createSelection = (editor: any, options: SelectionBehaviorOptions) => {
+      const { state } = editor
+      const titleNode = state.doc.firstChild
+
+      if (!titleNode || titleNode.type.name !== this.name) {
+        return false
+      }
+
+      return editor.commands.command(({ tr, dispatch }) => {
+        let selectionStart: number
+        let selectionEnd: number
+
+        if (options.behavior === 'title-only') {
+          selectionStart = 1
+          selectionEnd = titleNode.nodeSize - 1
+        } else {
+          selectionStart = titleNode.nodeSize
+          selectionEnd = state.doc.content.size
+
+          // Check if content exists after title when required
+          if (options.requireContentAfterTitle && selectionStart >= selectionEnd) {
+            return false
+          }
+        }
+
+        const selection = TextSelection.create(tr.doc, selectionStart, selectionEnd)
+        tr.setSelection(selection)
+        if (dispatch) dispatch(tr)
+        return true
+      })
+    }
+
+    const isCursorInTitle = (editor: any) => {
+      const { state } = editor
+      const { $from, $to } = state.selection
+      return $from.parent.type.name === this.name && $to.parent.type.name === this.name
+    }
+
+    const isBackspaceAtTitleStart = (editor: any) => {
+      const { state } = editor
+      const { $from, $to, empty } = state.selection
+
+      return (
+        $from.parent.type.name === this.name &&
+        $to.parent.type.name === this.name &&
+        $from.pos === 1 &&
+        empty
+      )
+    }
+
+    const isBackspaceAtFirstParagraphStart = (editor: any) => {
+      const { state } = editor
+      const { $from, empty } = state.selection
+      const titleNode = state.doc.firstChild
+
+      if (!titleNode || titleNode.type.name !== this.name || !empty || $from.parentOffset !== 0) {
+        return false
+      }
+
+      const titleEndPos = titleNode.nodeSize
+      return $from.pos === titleEndPos + 1
+    }
+
+    const deleteCurrentParagraph = (editor: any, tr: any) => {
+      const { state } = editor
+      const { $from } = state.selection
+
+      const paragraphStart = $from.before($from.depth)
+      const paragraphEnd = $from.after($from.depth)
+      tr.delete(paragraphStart, paragraphEnd)
+    }
+
+    const moveCursorToEndOfTitle = (editor: any, tr: any) => {
+      const { state } = editor
+      const titleNode = state.doc.firstChild
+
+      const titleEndPos = titleNode!.nodeSize - 1
+      tr.setSelection(TextSelection.create(tr.doc, titleEndPos))
+    }
+
+    const deleteEmptyParagraphAndMoveToTitle = (editor: any) => {
+      return editor.commands.command(({ tr }) => {
+        deleteCurrentParagraph(editor, tr)
+        moveCursorToEndOfTitle(editor, tr)
+        return true
+      })
+    }
+
+    const isParagraphEmpty = (editor: any) => {
+      const { state } = editor
+      const { $from } = state.selection
+      const currentParagraph = $from.parent
+      return currentParagraph.textContent.trim() === ''
+    }
+
     return {
       Enter: ({ editor }) => {
         const { state } = editor
@@ -288,17 +390,22 @@ export const TitleNode = Node.create<TitleNodeOptions>({
       },
 
       Backspace: ({ editor }) => {
-        const { state } = editor
-        const { $from, $to, empty } = state.selection
-
-        if (
-          $from.parent.type.name === this.name &&
-          $to.parent.type.name === this.name &&
-          $from.pos === 1 &&
-          empty
-        ) {
+        // Prevent backspace at the beginning of title
+        if (isBackspaceAtTitleStart(editor)) {
           return true
         }
+
+        // Handle backspace at the beginning of first paragraph after title
+        if (isBackspaceAtFirstParagraphStart(editor)) {
+          if (isParagraphEmpty(editor)) {
+            // Delete empty paragraph and move cursor to end of title
+            return deleteEmptyParagraphAndMoveToTitle(editor)
+          } else {
+            // Prevent merging paragraph content into title
+            return true
+          }
+        }
+
         return false
       },
 
@@ -326,26 +433,14 @@ export const TitleNode = Node.create<TitleNodeOptions>({
       },
 
       'Mod-a': ({ editor }) => {
-        const { state } = editor
-        const { $from, $to } = state.selection
-
-        if ($from.parent.type.name === this.name && $to.parent.type.name === this.name) {
-          const titleNode = state.doc.firstChild
-          if (titleNode && titleNode.type.name === this.name) {
-            const titleStart = 1
-            const titleEnd = titleNode.nodeSize - 1
-
-            if ($from.pos >= titleStart && $to.pos <= titleEnd) {
-              return editor.commands.command(({ tr, dispatch }) => {
-                const selection = TextSelection.create(tr.doc, titleStart, titleEnd)
-                tr.setSelection(selection)
-                if (dispatch) dispatch(tr)
-                return true
-              })
-            }
-          }
+        if (isCursorInTitle(editor)) {
+          return createSelection(editor, { behavior: 'title-only' })
+        } else {
+          return createSelection(editor, {
+            behavior: 'content-excluding-title',
+            requireContentAfterTitle: true
+          })
         }
-        return false
       }
     }
   },
