@@ -2197,25 +2197,27 @@
       //   new CustomEvent(CompletionEventID.AIGenerationStarted, { bubbles: true })
       // )
 
-      if (chat) {
-        if (needsFocusChatBar) setTimeout(() => focusInput(), 150)
-
-        if (contextManager) {
-          await contextManager.clear()
-        }
-
-        await generateAndInsertAIOutput(
-          query,
-          mentions,
-          PageChatMessageSentEventTrigger.NoteChatInput,
-          {
-            focusEnd: true,
-            autoScroll: showPromptAndScroll,
-            showPrompt: showPromptAndScroll,
-            generationID: chatInputGenerationID
-          }
-        )
+      if (!chat) {
+        chat = await createNewNoteChat(mentions)
       }
+
+      if (needsFocusChatBar) setTimeout(() => focusInput(), 150)
+
+      if (contextManager) {
+        await contextManager.clear()
+      }
+
+      await generateAndInsertAIOutput(
+        query,
+        mentions,
+        PageChatMessageSentEventTrigger.NoteChatInput,
+        {
+          focusEnd: true,
+          autoScroll: showPromptAndScroll,
+          showPrompt: showPromptAndScroll,
+          generationID: chatInputGenerationID
+        }
+      )
     } catch (e) {
       log.error('Error doing magic', e)
     } finally {
