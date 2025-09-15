@@ -330,7 +330,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     const view = await this.viewManager.create({ url })
 
     if (options.selectionHighlight) {
-      view.addSelectionHighlight(options.selectionHighlight)
+      view.highlightSelection(options.selectionHighlight)
     }
 
     this.log.debug('Creating new tab with view:', view, 'options:', options)
@@ -369,7 +369,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     } as CreateTabOptions
 
     if (options.selectionHighlight) {
-      view.addSelectionHighlight(options.selectionHighlight)
+      view.highlightSelection(options.selectionHighlight)
     }
 
     this.log.debug('Creating new tab with view:', view, 'options:', options)
@@ -403,7 +403,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     isUserAction = false,
     interactionSource: TelemetryCreateTabSource | undefined = undefined
   ): Promise<TabItem> {
-    this.log.debug('Opening or creating tab for URL:', url)
+    this.log.debug('Opening or creating tab for URL:', url, opts)
 
     const canonicalUrl = parseUrlIntoCanonical(url) ?? url
     const existingTab = this.tabs.find(

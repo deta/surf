@@ -308,7 +308,9 @@ window.addEventListener('DOMContentLoaded', async (_) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
 
-  runAppDetection()
+  if (window.location.href !== 'about:blank') {
+    runAppDetection()
+  }
 })
 
 window.addEventListener('click', (event: MouseEvent) => {

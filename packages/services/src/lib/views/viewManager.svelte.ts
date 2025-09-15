@@ -237,6 +237,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
     view.url.set(data.url)
     view.title.set(data.title ?? url.hostname)
+    view.detectedApp.set(null)
 
     view.webContents?.loadURL(data.url)
 

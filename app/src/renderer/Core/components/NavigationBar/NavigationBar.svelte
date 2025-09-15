@@ -47,6 +47,8 @@
   const browser = useBrowser()
 
   const activeViewType = $derived(view.type ?? writable(''))
+  const activeViewTypeData = $derived(view.typeData ?? writable(''))
+
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
   const navigationHistoryIndex = $derived(view.navigationHistoryIndex)
@@ -96,29 +98,34 @@
     <BreadcrumbItems {view} />
     <LocationBar {view} readonly={readonlyLocation} bind:isEditingUrl />
     <DownloadsIndicator />
-    {#if !isInternalRendererURL($activeLocation)}
+    {#if $activeViewType === ViewType.Page}
       {#key $extractedResourceId}
         <SaveState {view} />
       {/key}
+    {/if}
 
-      {#if !viewManager.sidebarViewOpen}
-        <Button
-          size="md"
-          onclick={handleAskInSidebar}
-          style="padding-block: 6px;padding-inline: 8px;"
-        >
-          <Icon name="chat" size="1.085em" />
-          <span>Ask</span>
-        </Button>
-      {/if}
+    {#if !viewManager.sidebarViewOpen && ($activeViewType === ViewType.Page || ($activeViewType === ViewType.Resource && $activeViewTypeData.raw))}
+      <Button
+        size="md"
+        onclick={handleAskInSidebar}
+        style="padding-block: 6px;padding-inline: 8px;"
+      >
+        <Icon name="chat" size="1.085em" />
+        <span>Ask</span>
+      </Button>
     {/if}
   </NavigationBarGroup>
 
   {#if !hideSearch}
     <NavigationBarGroup
-      style={!isInternalRendererURL($activeLocation) ? 'margin-left: -0.5rem' : ''}
+      style={![ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)
+        ? 'margin-left: -0.5rem'
+        : ''}
     >
-      <SearchInput collapsed={!isInternalRendererURL($activeLocation)} {onsearchinput} />
+      <SearchInput
+        collapsed={![ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}
+        {onsearchinput}
+      />
     </NavigationBarGroup>
   {/if}
 

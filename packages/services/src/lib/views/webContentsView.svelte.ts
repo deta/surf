@@ -309,6 +309,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
     this.view.url.set(newUrl)
     this.view.selectionHighlight.set(null)
+    this.view.detectedApp.set(null)
 
     this.emit(WebContentsEmitterNames.NAVIGATED, newUrl, oldUrl, this._programmaticNavigation)
 
@@ -566,6 +567,12 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   }
 
   async waitForAppDetection(timeout: number) {
+    const canonicalUrl = parseUrlIntoCanonical(this.view.urlValue)
+    if (this.view.detectedAppValue && this.view.detectedAppValue.canonicalUrl === canonicalUrl) {
+      this.log.debug('app already detected', this.view.detectedAppValue)
+      return Promise.resolve(this.view.detectedAppValue)
+    }
+
     let timeoutId: ReturnType<typeof setTimeout>
     let unsubscribe = () => {}
 
@@ -574,6 +581,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         if (detectedApp) {
           clearTimeout(timeoutId)
           unsubscribe()
+          this.log.debug('detected app', detectedApp)
           resolve(detectedApp)
         }
       })
@@ -1369,7 +1377,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
         if (internalUrl.pathname === '/') return ViewType.NotebookHome
         return ViewType.Notebook
       }
-      if (internalUrl.hostname === 'resource') return ViewType.Resource
+      if (internalUrl.hostname === 'resource') {
+        return ViewType.Resource
+      }
 
       return ViewType.Internal
     })
@@ -1382,10 +1392,14 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
         const notebookId = internalUrl.pathname.slice(1)
         return { type, id: notebookId }
       } else if (internalUrl.hostname === 'resource') {
+        const raw =
+          internalUrl.searchParams.has('raw') && internalUrl.searchParams.get('raw') !== 'false'
+
         const resourceId = internalUrl.pathname.slice(1)
-        return { type, id: resourceId }
+        return { type, id: resourceId, raw }
       } else {
-        return { type, id: null }
+        const canonicalUrl = parseUrlIntoCanonical(this.urlValue)
+        return { type, id: canonicalUrl }
       }
     })
 
@@ -1473,10 +1487,6 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     return get(this.data)
   }
 
-  addSelectionHighlight(selection: PageHighlightSelectionData) {
-    this.selectionHighlight.set(selection)
-  }
-
   async highlightSelection(selection: PageHighlightSelectionData) {
     this.selectionHighlight.set(selection)
 
@@ -1486,6 +1496,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       return
     }
 
+    await webContents.waitForAppDetection(5000)
+
+    this.log.debug('Highlighting selection', selection)
     await webContents.highlightSelection(selection)
   }
 
