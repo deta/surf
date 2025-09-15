@@ -36,8 +36,6 @@
   import { SFFS } from '@deta/services'
   import type { Quota } from '@deta/backend/types'
   import TierQuota from '../components/TierQuota.svelte'
-  import QuotaItem from '../components/Quota.svelte'
-  import QuotaWrapper from '../components/QuotaWrapper.svelte'
 
   export let selectedModelId: Writable<string>
   export let models: Writable<Model[]>
@@ -443,9 +441,11 @@
 
         <p>Surf may switch to more efficient models from the same provider for certain features.</p>
 
+        <!--
         <p>
           <b>Tip:</b> The model can also be changed from the chat sidebar, vision tool, and within notes.
         </p>
+        -->
       </div>
     </div>
   </div>
@@ -610,7 +610,7 @@
     <div class="dev-wrapper">
       <div class="explainer">
         <div class="quota-header">
-          <h2 class="text-xl font-medium">AI Quotas</h2>
+          <h2 class="text-xl font-medium">Quotas</h2>
           <button on:click={() => loadQuotas()}>
             {#if $fetchingQuotas}
               <Icon name="spinner" />
@@ -622,14 +622,9 @@
         </div>
 
         <p>
-          During Surf's alpha phase, we have quotas in place to ensure fair usage of the AI models
-          and to give everyone a chance to try them out for free.
-        </p>
-
-        <p>
-          As you use Surf's AI and chat features, you will spend tokens from your quota. You have a
-          daily and a monthly limit for each tier of the AI models. When you reach the limit of the
-          higher tier, you will be switched to the lower tier.
+          You have monthly credits for premium (more intelligent but costlier) and standard (chaper
+          and faster but less intelligent) tier of AI models. If you reach the limit of the premium
+          tier, you will be switched to the standard tier automatically.
         </p>
 
         <p>
@@ -638,25 +633,20 @@
       </div>
 
       <div class="tiers-wrapper">
-        <TierQuota
-          name="Premium Tier (GPT-4o / Claude Sonnet/ O3 Mini)"
-          parsedQuota={$premiumTierQuotas}
-        />
+        <TierQuota name="Premium Tier" parsedQuota={$premiumTierQuotas} />
 
-        <TierQuota
-          name="Standard Tier (GPT-4o Mini / Claude Haiku/ Gemini Flash)"
-          parsedQuota={$standardTierQuotas}
-        />
+        <TierQuota name="Standard Tier" parsedQuota={$standardTierQuotas} />
 
-        <QuotaWrapper name="Vision Features (Image Tagging)">
+        <!--
+        <QuotaWrapper name="Image Tagging">
           <QuotaItem label="Monthly Requests" quota={$visionRequestQuoata} />
         </QuotaWrapper>
+        -->
       </div>
 
       <p>
-        If you reach both limits you can wait for the next day or provide your own OpenAI or
-        Anthropic API key. If you need more tokens or have any questions <a
-          href="mailto:hello@deta.surf">reach out to us</a
+        If you need more tokens or have any questions <a href="mailto:hello@deta.surf"
+          >reach out to us</a
         >.
       </p>
     </div>

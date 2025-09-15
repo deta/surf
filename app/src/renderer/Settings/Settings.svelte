@@ -305,7 +305,7 @@
     >
       <Icon name="adjustments.horizontal" size="24" />
       <h1>Advanced</h1>
-    </div> -->
+    </div>
 
     <div
       on:click={() => activeTab.set('extensions')}
@@ -317,6 +317,7 @@
       <Icon name="puzzle" size="24" />
       <h1>Extensions</h1>
     </div>
+    -->
   </div>
 
   <div class="content-wrapper">
@@ -331,26 +332,6 @@
 
         <div class="links-wrapper">
           <button on:click={checkForUpdates}>Check for Updates</button>
-
-          -
-
-          <button
-            on:click={() => {
-              // @ts-ignore
-              window.api.openURL(CHANGELOG_URL, true)
-            }}
-          >
-            Changelog
-          </button>
-
-          -
-
-          <button
-            on:click={() => {
-              // @ts-ignore
-              window.api.openURL(SHORTCUTS_PAGE_URL, true)
-            }}>Keyboard Shortcuts</button
-          >
         </div>
 
         {#if !$isDefaultBrowser}
@@ -404,16 +385,6 @@
             />
           </div>
         {/if}
-
-        <div class="dev-wrapper">
-          <h3>Invite Friends</h3>
-          <button
-            on:click={() => {
-              // @ts-ignore
-              return window.api.openInvitePage(() => {})
-            }}>Create Invite Link</button
-          >
-        </div>
 
         {#if licenses}
           <div class="license-wrapper">

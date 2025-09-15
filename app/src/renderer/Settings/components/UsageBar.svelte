@@ -1,35 +1,178 @@
 <script lang="ts">
   export let used: number
   export let total: number
+  export let label: string = ''
+  export let showPercentage: boolean = true
+  export let showValues: boolean = false
+  export let size: 'sm' | 'md' | 'lg' = 'md'
+
+  $: percentage = Math.round((used / total) * 100)
+  $: remaining = total - used
+
+  $: status = percentage >= 90 ? 'danger' : percentage >= 75 ? 'warning' : 'good'
 </script>
 
-<div class="wrapper">
-  <div class="bar">
-    <div class="used" style="width: {(used / total) * 100}%"></div>
+<div class="usage-bar size-{size}">
+  {#if label || showPercentage || showValues}
+    <div class="bar-header">
+      {#if label}
+        <span class="label">{label}</span>
+      {/if}
+      <div class="bar-info">
+        {#if showPercentage}
+          <span class="percentage status-{status}">{percentage}%</span>
+        {/if}
+        {#if showValues}
+          <span class="values">{used} / {total}</span>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  <div class="bar-container">
+    <div class="bar-track">
+      <div class="bar-fill status-{status}" style="width: {Math.min(percentage, 100)}%">
+        <div class="bar-shine"></div>
+      </div>
+    </div>
   </div>
+
+  {#if showValues && !label && !showPercentage}
+    <div class="bar-footer">
+      <span>{used} used</span>
+      <span>{remaining} remaining</span>
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">
-  .wrapper {
-    width: 100%;
-    overflow: hidden;
-    border-radius: 0.5rem;
-    color: var(--color-text);
+  :root {
+    --usage-good: #10b981;
+    --usage-warning: #f59e0b;
+    --usage-danger: #ef4444;
+    --usage-bg: #e5e7eb;
+    --usage-text: #374151;
+    --usage-text-muted: #6b7280;
+    --usage-white: #ffffff;
   }
 
-  .bar {
+  .usage-bar {
     width: 100%;
-    height: 1.5rem;
-    border-radius: 0.5rem;
-    background: var(--color-background-light);
+
+    &.size-sm {
+      font-size: 0.75rem;
+
+      .bar-track {
+        height: 6px;
+      }
+
+      .bar-header,
+      .bar-footer {
+        margin-bottom: 0.375rem;
+      }
+    }
+
+    &.size-md {
+      font-size: 0.875rem;
+
+      .bar-track {
+        height: 8px;
+      }
+    }
+
+    &.size-lg {
+      font-size: 1rem;
+
+      .bar-track {
+        height: 12px;
+      }
+
+      .bar-header,
+      .bar-footer {
+        margin-bottom: 0.75rem;
+      }
+    }
+  }
+
+  .bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    .label {
+      font-weight: 500;
+      color: var(--usage-text);
+    }
+
+    .bar-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .percentage {
+      font-weight: 600;
+    }
+
+    .values {
+      color: var(--usage-text-muted);
+      font-size: 0.8em;
+    }
+  }
+
+  .bar-container {
+    width: 100%;
+  }
+
+  .bar-track {
+    width: 100%;
+    background: var(--usage-bg);
+    border-radius: 9999px;
     overflow: hidden;
     position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
 
-    .used {
-      height: 100%;
-      background: var(--color-brand);
-      opacity: 0.5;
-      transition: width 0.3s;
+  .bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    position: relative;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+
+    &.status-good {
+      background: linear-gradient(90deg, var(--usage-good), #059669);
     }
+
+    &.status-warning {
+      background: linear-gradient(90deg, var(--usage-warning), #d97706);
+    }
+
+    &.status-danger {
+      background: linear-gradient(90deg, var(--usage-danger), #dc2626);
+    }
+  }
+
+  .bar-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+  }
+
+  .bar-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.75em;
+    color: var(--usage-text-muted);
   }
 </style>

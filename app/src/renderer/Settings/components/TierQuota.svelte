@@ -15,17 +15,23 @@
 </script>
 
 <script lang="ts">
-  import { writable } from 'svelte/store'
   import QuotaItem from './Quota.svelte'
   import QuotaWrapper from './QuotaWrapper.svelte'
 
   export let name: string
   export let parsedQuota: ParsedQuota
 
-  const tab = writable<'daily' | 'monthly'>('daily')
+  const credits = {
+    used: Math.ceil((parsedQuota.monthly.input.used + parsedQuota.monthly.output.used) / 1000),
+    total: Math.ceil((parsedQuota.monthly.input.total + parsedQuota.monthly.output.total) / 1000),
+    resets_at: parsedQuota.monthly.input.resets_at
+  }
+
+  //const tab = writable<'daily' | 'monthly'>('daily')
 </script>
 
 <QuotaWrapper {name}>
+  <!--
   <div slot="tabs" class="flex items-center gap-6">
     <button on:click={() => tab.set('daily')} class="tab" class:active={$tab === 'daily'}
       >Daily</button
@@ -34,7 +40,6 @@
       >Monthly</button
     >
   </div>
-
   {#if $tab === 'daily'}
     <div class="tier">
       <QuotaItem label="Input Tokens" quota={parsedQuota.daily.input} />
@@ -46,9 +51,14 @@
       <QuotaItem label="Output Tokens" quota={parsedQuota.monthly.output} />
     </div>
   {/if}
+  -->
+  <div class="tier">
+    <QuotaItem label="Monthly Credits" quota={credits} />
+  </div>
 </QuotaWrapper>
 
 <style lang="scss">
+  /*
   .tab {
     padding: 0.25rem 0.5rem;
     font-size: 1rem;
@@ -68,6 +78,7 @@
       opacity: 1;
     }
   }
+  */
 
   .tier {
     display: flex;
