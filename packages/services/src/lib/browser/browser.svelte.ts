@@ -10,6 +10,7 @@ import {
   type CitationClickEvent,
   type Fn,
   type NavigateURLOptions,
+  NotebookDefaults,
   type OpenResourceOptions,
   type OpenTarget,
   ResourceTagsBuiltInKeys,
@@ -388,7 +389,7 @@ export class BrowserService {
           {
             name: 'Untitled Note'
           },
-          [ResourceTag.preloadedResource()]
+          [ResourceTag.preloadedResource(), ResourceTag.emptyResource()]
         )
       }
 
@@ -493,7 +494,7 @@ export class BrowserService {
       let { content, name } = data || {}
 
       if (!name) {
-        name = `Untitled ${getFormattedDate(Date.now())}`
+        name = NotebookDefaults.NOTE_DEFAULT_NAME
       }
 
       this.log.debug(`Creating note in ${target} with content: "${content}"`)

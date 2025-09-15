@@ -44,6 +44,7 @@ import {
   ResourceProcessingStateType,
   ResourceTagDataStateValue,
   WEB_RESOURCE_TYPES,
+  NotebookDefaults,
   type DetectedResource,
   type EventBusMessage,
   type ResourceData,
@@ -1141,6 +1142,15 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
     resource.updateMetadata(updates)
     this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
+
+    if (
+      updates.name &&
+      updates.name.trim().length > 0 &&
+      updates.name !== NotebookDefaults.NOTE_DEFAULT_NAME &&
+      !updates.name.startsWith('Note - ')
+    ) {
+      await this.unmarkResourceAsEmpty(id)
+    }
   }
 
   async updateResourceTag(resourceId: string, tagName: string, tagValue: string) {
@@ -1198,6 +1208,16 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
     resource.removeTagByID(id)
     this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
+  }
+
+  async unmarkResourceAsEmpty(resourceId: string) {
+    try {
+      this.log.trace('Unmarking resource as empty', resourceId)
+      await this.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
+    } catch (error) {
+      this.log.error('failed to unmark resource as empty', resourceId, error)
+      // ignore
+    }
   }
 
   async markResourceAsSavedByUser(resourceId: string) {
@@ -1267,6 +1287,18 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     const blob = new Blob([content], {
       type: ResourceTypes.DOCUMENT_SPACE_NOTE
     })
+
+    const isEmptyNote =
+      (!content || content.trim().length === 0) &&
+      (fullMetadata.name.startsWith('Untitled') || fullMetadata.name.startsWith('Note - '))
+    const existingTags = tags ?? []
+    if (
+      isEmptyNote &&
+      !existingTags.find((t) => t.name === ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
+    ) {
+      tags = [...existingTags, ResourceTag.emptyResource()]
+    }
+
     const resource = await this.createResource(
       ResourceTypes.DOCUMENT_SPACE_NOTE,
       blob,

@@ -8,7 +8,7 @@
   import NotebookCover from '../NotebookCover.svelte'
   import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
   import { useResourceManager, type Resource, type ResourceNote } from '@deta/services/resources'
-  import { ResourceTypes } from '@deta/types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
   import { type MessagePortClient } from '@deta/services/messagePort'
   import { handleResourceClick } from '../../handlers/notebookOpenHandlers'
 
@@ -51,10 +51,14 @@
     const resources = await resourceManager.listResourcesByTags(
       [
         ...SearchResourceTags.NonHiddenDefaultTags(),
-        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
+        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
       ],
       { includeAnnotations: false, excludeWithinSpaces: true }
     )
+
+    console.log('Draft notes:', resources)
+
     resourcesNotes = resources
   }
 

@@ -12,6 +12,7 @@
   import { isInternalRendererURL, useDebounce } from '@deta/utils'
   import { useResourceManager } from '@deta/services/resources'
   import { writable } from 'svelte/store'
+  import { NotebookDefaults } from '@deta/types'
 
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
@@ -62,10 +63,7 @@
       notebookId = id
     }
 
-    await browser.createAndOpenNote(
-      { name: 'Untitled Note', content: '' },
-      { target: 'sidebar', notebookId }
-    )
+    await browser.createAndOpenNote(undefined, { target: 'sidebar', notebookId })
   }
   const debouncedSaveLocation = useDebounce((location: string) => {
     if (location === undefined || location === null || location.length <= 0) return

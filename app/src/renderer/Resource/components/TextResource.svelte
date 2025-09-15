@@ -579,6 +579,10 @@
   const debouncedSaveContent = useDebounce((value: string) => {
     resource.updateContent(value)
 
+    if (value && !editorElem?.isEmptyy()) {
+      resourceManager.unmarkResourceAsEmpty(resourceId)
+    }
+
     // if (editorElem && !resource?.metadata?.name && autoGenerateTitle) {
     //   const { text } = editorElem.getParsedEditorContent()
     //   resource.generateTitle(text)

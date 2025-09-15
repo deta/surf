@@ -5,9 +5,9 @@
   import { Button, PageMention } from '@deta/ui'
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
   import { contextMenu } from '@deta/ui'
-  import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
+  import { SearchResourceTags, truncate, useDebounce, useLogScope } from '@deta/utils'
   import { type ResourceNote } from '@deta/services/src/lib/resources'
-  import { ResourceTypes } from '@deta/types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { type MessagePortClient } from '@deta/services/messagePort'
@@ -19,6 +19,7 @@
     query
   }: { notebook: Notebook; messagePort: MessagePortClient; query?: string } = $props()
 
+  const log = useLogScope('NotebookDetailRoute')
   const resourceManager = useResourceManager()
   const telemetry = resourceManager.telemetry
   let showAllNotes = $state(query !== null)
@@ -65,7 +66,8 @@
           SearchResourceTags.Deleted(false),
           SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
           SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
+          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
+          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
           //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
           //...conditionalArrayItem(isNotesSpace, [
           //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
@@ -93,6 +95,8 @@
           spaceId: notebook?.id ?? undefined
         }
       )
+
+      log.debug('Search results notes:', resultNotes)
       noteResources = resultNotes.resources.map((e) => e.id)
       noneNotesResources = resultNoneNotes.resources.map((e) => e.id)
     } else {
