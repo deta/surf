@@ -86,7 +86,7 @@ export type ExtensionOptions = {
   onLastLineVisibilityChanged?: (visible: boolean) => void
   surfletComponent?: ComponentType<SvelteComponent>
   webSearchComponent?: ComponentType<SvelteComponent>
-  onWebSearchCompleted?: (event: CustomEvent<any>) => void
+  onWebSearchCompleted?: (results: any, query: string) => void
   onLinkClick?: LinkClickHandler
   // Title node options
   enableTitleNode?: boolean
@@ -261,7 +261,8 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     !!opts?.webSearchComponent,
     WebSearch.configure({
       component: opts?.webSearchComponent,
-      onWebSearchCompleted: opts?.onWebSearchCompleted
+      onWebSearchCompleted: opts?.onWebSearchCompleted,
+      onLinkClick: opts?.onLinkClick
     })
   ),
   ...conditionalArrayItem(!!opts?.showDragHandle, DragHandle),

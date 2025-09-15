@@ -1,11 +1,13 @@
 import { mergeAttributes, Node } from '@tiptap/core'
 import type { ComponentType, SvelteComponent } from 'svelte'
 import { createClassComponent } from 'svelte/legacy'
+import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
 
 export interface WebSearchOptions {
   HTMLAttributes: Record<string, any>
   component?: ComponentType<SvelteComponent>
-  onWebSearchCompleted?: (event: CustomEvent<any>) => void
+  onWebSearchCompleted?: (results: any, query: string) => void
+  onLinkClick?: LinkClickHandler
 }
 
 export const WebSearch = Node.create<WebSearchOptions>({
@@ -150,12 +152,14 @@ export const WebSearch = Node.create<WebSearchOptions>({
       }
 
       const onWebSearchCompleted = this.options.onWebSearchCompleted
+      const onLinkClick = this.options.onLinkClick
       const component = createClassComponent({
         component: this.options.component,
         target: container,
         props: {
           updateAttributes,
           onWebSearchCompleted,
+          onLinkClick,
           ...node.attrs
         }
       })

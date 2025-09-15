@@ -3,6 +3,7 @@
   import { writable, type Writable } from 'svelte/store'
   import { useLogScope } from '@deta/utils/io'
   import { DuckDuckGoAPI } from '@deta/web-parser'
+  import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
 
   // NOTE: created by tiptap but not needed
   export const node: any = undefined
@@ -14,6 +15,7 @@
     results: Array<{ title: string; url: string }>,
     query: string
   ) => void
+  export let onLinkClick: LinkClickHandler
   export let name: string = 'Web Search'
   export let query: string = ''
   export let results: Array<{ title: string; url: string }> = []
@@ -287,16 +289,14 @@
                 <div class="websearch-result-number">{index + 1}</div>
                 <div class="websearch-result-content">
                   <h5 class="websearch-result-title">
-                    <a href={result.url} target="_blank" rel="noopener noreferrer">
-                      {result.title}
-                    </a>
+                    {result.title}
                   </h5>
-                  <p class="websearch-result-url">{result.url}</p>
+                  <p class="websearch-result-url no-drag-handle">{result.url}</p>
                 </div>
                 <div class="websearch-result-actions">
                   <button
                     class="websearch-visit-button"
-                    on:click={() => window.open(result.url, '_blank')}
+                    on:click={(e) => onLinkClick(e, result.url)}
                   >
                     <svg
                       width="14"
