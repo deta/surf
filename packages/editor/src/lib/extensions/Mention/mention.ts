@@ -138,7 +138,7 @@ export const Mention = Node.create<MentionOptions>({
         pluginKey: MentionPluginKey,
         preventReTrigger: true,
         dismissOnSpace: true,
-        placeholder: 'Mention any Tab',
+        placeholder: 'Search for a tab, notebook or source…',
         command: ({ editor, range, props }) => {
           // increase range.to by one when the next node is of type "text"
           // and starts with a space character

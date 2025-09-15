@@ -56,6 +56,10 @@
   <Notifications {teletype} />
   <TeletypeCore on:input on:actions-rendered on:ask on:create-note on:clear>
     <slot name="header" slot="header" />
+
+    <svelte:fragment slot="tools" let:disabled>
+      <slot name="tools" {disabled}></slot>
+    </svelte:fragment>
   </TeletypeCore>
 
   <slot name="sidecar-right" />

@@ -20,7 +20,7 @@ import type {
   WebContentsViewContextManagerActionEvent
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
-import { MentionItem } from '../mentions/mention.types'
+import { type MentionItem } from '../mentions/mention.types'
 
 export const ipcService = createIPCService()
 
@@ -58,6 +58,11 @@ export interface GetAdblockerState extends IPCEvent {
 export interface CaptureWebContents extends IPCEvent {
   payload: void
   output: string | null
+}
+
+export interface ShowOpenDialog extends IPCEvent {
+  payload: Electron.OpenDialogOptions
+  output: string[] | null
 }
 
 export interface GetUserConfig extends IPCEvent {
@@ -270,6 +275,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   getExtensionsEnabled:
     ipcService.addEventWithReturn<GetExtensionsEnabled>('get-extensions-enabled'),
   listExtensions: ipcService.addEventWithReturn<ListExtensions>('list-extensions'),
+  showOpenDialog: ipcService.addEventWithReturn<ShowOpenDialog>('show-open-dialog'),
 
   // WebContentsView events
   webContentsViewManagerAction: ipcService.addEventWithReturn<WebContentsViewManagerActionEvent>(

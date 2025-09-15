@@ -63,8 +63,8 @@ export class TeletypeServiceCore {
         return false
       }),
 
-      this.messagePort.teletypeAsk.on(async ({ query, mentions }, viewId) => {
-        this.browser.handleTeletypeAsk(query, mentions, viewId)
+      this.messagePort.teletypeAsk.on(async (payload, viewId) => {
+        this.browser.handleTeletypeAsk(payload, viewId)
       })
     )
 

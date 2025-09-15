@@ -29,9 +29,7 @@ export class ResourceMentionProvider implements MentionProvider {
       }
 
       const mentionItems: MentionItem[] = resources.slice(0, 5).map((resource) => {
-        const url =
-          resource.metadata?.sourceURI ??
-          resource.tags?.find((tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL)?.value
+        const url = resource.url
         const data = (resource as ResourceJSON<any>).parsedData
 
         return {

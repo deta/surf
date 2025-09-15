@@ -114,6 +114,7 @@
     "fuse.js": "^7.0.0",
     "@deta/editor": "*",
     "@deta/utils": "*",
+    "@deta/teletype": "*",
     "@deta/web-parser": "*"
   },
   "devDependencies": {

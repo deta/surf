@@ -38,6 +38,7 @@ import {
   NewWindowRequest,
   OpenURL,
   setupMessagePortPrimary,
+  type ShowOpenDialog,
   SpaceBasicData
 } from '@deta/services/ipc'
 import { ControlWindow } from '@horizon/core/src/lib/types'
@@ -581,6 +582,29 @@ const api = {
 
   captureWebContents: () => {
     return IPC_EVENTS_RENDERER.captureWebContents.invoke()
+  },
+
+  showOpenDialog: async (options: ShowOpenDialog['payload']) => {
+    try {
+      const filePaths = await IPC_EVENTS_RENDERER.showOpenDialog.invoke(options)
+      if (!filePaths) return null
+
+      const files = await Promise.all(
+        filePaths.map(async (filePath) => {
+          const fileBuffer = await fsp.readFile(filePath)
+          const fileName = path.basename(filePath)
+          const fileType = mime.lookup(fileName.toLowerCase()) || 'application/octet-stream'
+          return new File([fileBuffer as BlobPart], fileName, {
+            type: fileType
+          })
+        })
+      )
+
+      return files
+    } catch (err) {
+      console.error('Failed to import files: ', err)
+    }
+    return IPC_EVENTS_RENDERER.showOpenDialog.invoke(options)
   },
 
   setExtensionMode: (mode: 'horizontal' | 'vertical') => {

@@ -1,4 +1,11 @@
-import { useLogScope, checkIfUrl, parseStringIntoUrl, ResourceTag } from '@deta/utils'
+import {
+  useLogScope,
+  checkIfUrl,
+  parseStringIntoUrl,
+  ResourceTag,
+  truncate,
+  getFileKind
+} from '@deta/utils'
 import {
   ResourceTagsBuiltInKeys,
   type SFFSResourceMetadata,
@@ -7,6 +14,7 @@ import {
 import { WebParser } from '@deta/web-parser'
 
 import { Resource, type ResourceManager } from './resources/resources'
+import { type MentionItem, MentionItemType } from '@deta/editor'
 
 const log = useLogScope('mediaImporter')
 
@@ -576,4 +584,60 @@ export const createResourcesFromFiles = async (files: File[], resourceManager: R
   const newResources = await createResourcesFromMediaItems(resourceManager, processedFiles, '')
 
   return newResources
+}
+
+export const promptUserToSelectFiles = async (
+  opts?: Electron.OpenDialogOptions
+): Promise<File[]> => {
+  // @ts-ignore
+  const files = await window.api.showOpenDialog({
+    ...opts,
+    properties: ['openFile', 'multiSelections']
+  })
+  log.debug('Import files:', files)
+  if (!files) return []
+
+  return files
+}
+
+export const promptForFilesAndTurnIntoResourceMentions = async (
+  resourceManager: ResourceManager
+) => {
+  const files = await promptUserToSelectFiles({
+    title: 'Select File to Use as Context',
+    buttonLabel: 'Import to Surf',
+    filters: [{ name: 'PDF', extensions: ['pdf'] }]
+  })
+
+  if (files.length === 0) {
+    log.debug('No files selected')
+    return
+  }
+
+  log.debug('Files selected:', files)
+
+  const resources = await createResourcesFromFiles(files, resourceManager)
+  if (resources.length === 0) {
+    log.warn('No resources created from selected files')
+    return
+  }
+
+  log.debug('Resources created:', resources)
+
+  return resources.map((resource) => {
+    const url = resource.url
+    const mentionItem: MentionItem = {
+      id: resource.id,
+      type: MentionItemType.RESOURCE,
+      label: truncate(
+        resource.metadata?.name || url || `${resource.id} - ${resource.type}` || 'Undefined',
+        30
+      ),
+      icon: url ? `favicon;;${url}` : `file;;${getFileKind(resource.type)}`,
+      data: {
+        resourceId: resource.id
+      }
+    }
+    return mentionItem
+  })
 }

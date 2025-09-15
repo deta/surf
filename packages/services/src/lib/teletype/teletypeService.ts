@@ -1,12 +1,42 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store'
-import { prependProtocol, useDebounce, useLogScope } from '@deta/utils'
-import type { ActionProvider, TeletypeAction, TeletypeServiceOptions, SearchState } from './types'
+import {
+  getFileKind,
+  isDev,
+  prependProtocol,
+  truncate,
+  useDebounce,
+  useLogScope
+} from '@deta/utils'
+import type {
+  ActionProvider,
+  TeletypeAction,
+  TeletypeServiceOptions,
+  SearchState,
+  ToolEnhancementHandler,
+  ToolEnhancement
+} from './types'
 import { SearchProvider } from './providers/SearchProvider'
 import { NavigationProvider } from './providers/NavigationProvider'
 import { AskProvider } from './providers/AskProvider'
 import { CurrentQueryProvider } from './providers/CurrentQueryProvider'
 import { useMessagePortClient } from '../messagePort'
-import { type MentionItem } from '@deta/editor'
+import { MentionItemType, type MentionItem } from '@deta/editor'
+import type { TeletypeSystem } from '@deta/teletype'
+import type { Fn } from '@deta/types'
+import { promptForFilesAndTurnIntoResourceMentions } from '../mediaImporter'
+import { useResourceManager } from '../resources'
+import { AI_TOOLS } from '../constants'
+
+export type ToolsMap = Map<
+  string,
+  {
+    active: boolean
+    name: string
+    icon?: string
+    disabled?: boolean
+    enhancementHandler?: ToolEnhancementHandler
+  }
+>
 
 export class TeletypeService {
   private providers = new Map<string, ActionProvider>()
@@ -14,13 +44,17 @@ export class TeletypeService {
   private readonly options: Required<TeletypeServiceOptions>
   private readonly log = useLogScope('TeletypeService')
   private messagePort = useMessagePortClient()
-  private queryUnsubscribe?: () => void
+  private readonly resourceManager = useResourceManager()
+
+  private unsubs: Fn[] = []
+  teletype: TeletypeSystem
 
   // Public reactive stores
   public readonly query: Writable<string>
   public readonly mentions: Writable<MentionItem[]>
   public readonly localActions: Writable<TeletypeAction[]>
   public readonly remoteActions: Writable<TeletypeAction[]>
+  public readonly tools: Writable<ToolsMap>
 
   public readonly isLoading: Readable<boolean>
   public readonly actions: Readable<TeletypeAction[]>
@@ -52,6 +86,13 @@ export class TeletypeService {
     this.localActions = writable<TeletypeAction[]>([])
     this.remoteActions = writable<TeletypeAction[]>([])
 
+    this.tools = writable(new Map())
+
+    // Register default tools
+    AI_TOOLS.forEach((tool) => {
+      this.registerTool(tool.id, tool.name, tool.icon, undefined, tool.active, tool.disabled)
+    })
+
     // Derived stores
     this.isLoading = derived(this.searchState, ($state) => $state.isLoading)
     this.actions = derived(this.searchState, ($state) => $state.actions)
@@ -67,18 +108,25 @@ export class TeletypeService {
     )
 
     // Subscribe to query changes
-    this.queryUnsubscribe = this.query.subscribe((query) => {
-      this.searchState.update((state) => ({ ...state, query }))
+    this.unsubs.push(
+      this.query.subscribe((query) => {
+        this.searchState.update((state) => ({ ...state, query }))
 
-      // Trigger both searches independently
-      this.debouncedLocalSearch(query)
-      this.debouncedRemoteSearch(query)
-    })
+        // Trigger both searches independently
+        this.debouncedLocalSearch(query)
+        this.debouncedRemoteSearch(query)
+      })
+    )
 
     // Register local providers
     this.registerProvider(new CurrentQueryProvider(this)) // Local, instant current query
     this.registerProvider(new NavigationProvider(this))
     // this.registerProvider(new AskProvider(this))
+
+    if (isDev) {
+      // @ts-ignore
+      window.teletypeService = this
+    }
   }
 
   get queryValue() {
@@ -95,6 +143,19 @@ export class TeletypeService {
 
   get remoteActionsValue() {
     return get(this.remoteActions)
+  }
+
+  attachTeletype(teletype: TeletypeSystem) {
+    this.teletype = teletype
+  }
+
+  attachListeners() {
+    this.unsubs.push(
+      this.messagePort.noteInsertMentionQuery.handle((payload) => {
+        console.debug('Received note-insert-mention-query event', payload)
+        this.insertMention(payload.mention, payload.query)
+      })
+    )
   }
 
   /**
@@ -178,28 +239,15 @@ export class TeletypeService {
     })
   }
 
-  /**
-   * Destroy the service and cleanup all providers
-   */
-  destroy(): void {
-    // Cleanup query subscription
-    if (this.queryUnsubscribe) {
-      this.queryUnsubscribe()
-      this.queryUnsubscribe = undefined
-    }
-
-    // Cleanup providers
-    for (const provider of this.providers.values()) {
-      if (provider.destroy) {
-        provider.destroy()
-      }
-    }
-    this.providers.clear()
-  }
-
   async ask(query: string, mentions: MentionItem[]): Promise<void> {
     this.log.debug('Asking question:', query, mentions)
-    await this.messagePort.teletypeAsk.send({ query, mentions })
+
+    const tools = {
+      websearch: this.isToolActive('websearch'),
+      surflet: this.isToolActive('surflet')
+    }
+
+    await this.messagePort.teletypeAsk.send({ query, mentions, tools })
     this.clear()
   }
 
@@ -388,6 +436,123 @@ export class TeletypeService {
         lastUpdated: Date.now()
       }
     })
+  }
+
+  registerTool(
+    id: string,
+    name: string,
+    icon?: string,
+    enhancementHandler?: ToolEnhancementHandler,
+    active: boolean = false,
+    disabled: boolean = false
+  ) {
+    this.log.debug('Registering tool:', id, name)
+    this.tools.update((tools) => {
+      tools.set(id, { active, name, icon, enhancementHandler, disabled })
+      return tools
+    })
+  }
+
+  toggleTool(id: string) {
+    this.log.debug('toggleTool called for:', id)
+    this.tools.update((tools) => {
+      const tool = tools.get(id)
+      if (tool) {
+        this.log.debug('Tool before toggle:', tool)
+        // Create a new tool object to ensure reactivity
+        const newTool = { ...tool, active: !tool.active }
+        tools.set(id, newTool)
+        this.log.debug('Tool after toggle:', newTool)
+      } else {
+        this.log.warn('Tool not found:', id)
+      }
+      return new Map(tools)
+    })
+  }
+
+  isToolActive(id: string): boolean {
+    const tools = get(this.tools)
+    const tool = tools.get(id)
+    return tool ? tool.active && !tool.disabled : false
+  }
+
+  getActiveTool(): string | null {
+    const tools = get(this.tools)
+    for (const [id, tool] of tools) {
+      if (tool.active && !tool.disabled) return id
+    }
+    return null
+  }
+
+  getActiveToolEnhancements(): ToolEnhancement[] {
+    const tools = get(this.tools)
+    const enhancements: ToolEnhancement[] = []
+
+    for (const [id, tool] of tools) {
+      if (tool.active && !tool.disabled && tool.enhancementHandler) {
+        const enhancement = tool.enhancementHandler()
+        if (enhancement) {
+          enhancements.push({ toolId: id, ...enhancement })
+        }
+      }
+    }
+
+    return enhancements
+  }
+
+  runQueryEnhancements(query: string): string {
+    const enhancements = this.getActiveToolEnhancements()
+    for (const enhancement of enhancements) {
+      if (enhancement.executeQueryModifier) {
+        query = enhancement.executeQueryModifier(query)
+        this.log.debug(`Tool "${enhancement.toolId}" modified query to:`, query)
+      }
+    }
+
+    return query
+  }
+
+  insertMention(mentionItem?: MentionItem, query?: string): void {
+    if (!this.teletype || !this.teletype.editorComponent) {
+      this.log.warn('Editor component not available to insert mention')
+      return
+    }
+    const editorComponent = this.teletype.editorComponent
+    editorComponent.insertMention(mentionItem, query)
+    editorComponent.focus()
+  }
+
+  async promptForAndInsertFileMentions() {
+    if (!this.teletype || !this.teletype.editorComponent) {
+      this.log.warn('Editor component not available')
+      return
+    }
+
+    const mentions = await promptForFilesAndTurnIntoResourceMentions(this.resourceManager)
+    if (!mentions || mentions.length === 0) {
+      this.log.debug('No files selected or no mentions created')
+      return
+    }
+
+    for (const mentionItem of mentions) {
+      this.insertMention(mentionItem)
+    }
+  }
+
+  /**
+   * Destroy the service and cleanup all providers
+   */
+  destroy(): void {
+    this.unsubs.forEach((unsub) => unsub())
+    this.unsubs.length = 0
+
+    // Cleanup providers
+    for (const provider of this.providers.values()) {
+      if (provider.destroy) {
+        provider.destroy()
+      }
+    }
+    this.providers.clear()
   }
 
   static provide(options?: TeletypeServiceOptions) {

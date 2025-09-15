@@ -268,7 +268,7 @@ Here's the current date and time in UTC: {}
 ", current_time).to_string()
 }
 
-pub fn note_prompt(current_time: &str, websearch: bool) -> String {
+pub fn note_prompt(current_time: &str, websearch: bool, surflet: bool) -> String {
     let websearch_section = if websearch {
         "
 
@@ -292,23 +292,8 @@ In cases where you need both a websearch and a surflet, do not use both in the s
         ""
     };
 
-    let context_websearch_text = if websearch {
+    let surflet_section = if surflet {
         "
-  You can also use the web search to find more information or if the information is beyond your knowledge cutoff date."
-    } else {
-        ""
-    };
-
-    format!(
-        "You are an AI assistant who helps users create documents. These documents are stored as notes and stored in HTML format.
-
-**Response Format:**
-
-- Enclose your answer in an <answer> tag formatted with Markdown
-- Be short & concise, this is important. Only provide a long answer if the user asks for it.
-- Make use of headings, lists, bold, italics, etc. and separate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists.
-- For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
-
 
 **For Apps and Visualizations:**
 
@@ -328,8 +313,43 @@ In cases where you need both a websearch and a surflet, do not use both in the s
   - USE A SINGLE LINE ONLY AND DO NOT USE ANY HTML UNSAFE CHARACTERS IN THE PROMPT
   - Write clear, detailed prompts that specify functionality
   - Include key features and user interactions
-  - Be specific about the type of app (game, tool, visualization, etc.){}
+  - Be specific about the type of app (game, tool, visualization, etc.)"
+    } else {
+        ""
+    };
 
+    let context_websearch_text = if websearch {
+        "
+  You can also use the web search to find more information or if the information is beyond your knowledge cutoff date."
+    } else {
+        ""
+    };
+
+    let context_surflet_text = if surflet {
+        "
+- For apps and visualizations, provide all needed information from the context in the prompt attribute of the surflet syntax WHILE STILL IN A SINGLE LINE."
+    } else {
+        ""
+    };
+
+    let citation_surflet_text = if surflet {
+        "
+- No citations are needed for apps or visualizations (surflets) and answers based on your own knowledge."
+    } else {
+        "
+- No citations are needed for answers based on your own knowledge."
+    };
+
+    format!(
+        "You are an AI assistant who helps users create documents. These documents are stored as notes and stored in HTML format.
+
+**Response Format:**
+
+- Enclose your answer in an <answer> tag formatted with Markdown
+- Be short & concise, this is important. Only provide a long answer if the user asks for it.
+- Make use of headings, lists, bold, italics, etc. and separate your response into different sections to make your response clear and structured. Start headings with level 1 (#) and don't go lower than level 3 (###). You can use GitHub Flavored Markdown features like tables and task lists.
+- For math equations you can write LaTeX enclosed between dollar signs, `$` for inline mode and `$$` for equation blocks or display mode. Avoid using code blocks, but if you need to set the language to `math` instead of `latex`. Other syntaxes won't work and will render incorrectly.
+{}{}
 **When Context Documents Are Provided:**
 
 - Multiple documents may be provided as JSON context
@@ -337,10 +357,8 @@ In cases where you need both a websearch and a surflet, do not use both in the s
 - Citation format: `<citation>context_id</citation>` immediately after supported statements, use separate tags for each context ID
 - For images: `<citation type=\"image\"></citation>`
 - Each factual statement needs its own citation - never group multiple context IDs
-- Place citations outside punctuation but inside paragraphs/lists
-- No citations are needed for apps or visualizations (surflets) and answers based on your own knowledge.
-- Never use phrases like \"According to the context\" or \"Based on the context\"
-- For apps and visualizations, provide all needed information from the context in the prompt attribute of the surflet syntax WHILE STILL IN A SINGLE LINE.
+- Place citations outside punctuation but inside paragraphs/lists{}
+- Never use phrases like \"According to the context\" or \"Based on the context\"{}
 
 **When you need more information from the user:**
 
@@ -348,7 +366,10 @@ If you need more information from the user to answer a question, simply ask for 
 
 Current date/time (UTC): {}",
         websearch_section,
+        surflet_section,
         context_websearch_text,
+        citation_surflet_text,
+        context_surflet_text,
         current_time
     )
 }

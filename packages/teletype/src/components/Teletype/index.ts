@@ -8,12 +8,11 @@ import type {
   Confirmation,
   LazyParentAction,
   Notification,
-  Options,
-  ToolEnhancementHandler,
-  ToolEnhancement
+  Options
 } from './types'
 import { useDebounce } from '../../utils/debounce'
 import { useLogScope } from '@deta/utils'
+import type { Editor } from '@deta/editor'
 
 class TeletypeCore {
   options?: Options
@@ -39,12 +38,8 @@ class TeletypeCore {
   selectedAction: Writable<Action>
   inputValue: Writable<string>
   editMode: Writable<boolean> = writable(false)
-  tools: Writable<
-    Map<
-      string,
-      { active: boolean; name: string; icon?: string; enhancementHandler?: ToolEnhancementHandler }
-    >
-  >
+
+  editorComponent: Editor | undefined
 
   constructor(opts?: Options, defaultActions?: Action[]) {
     const defaultOpts = {
@@ -82,12 +77,6 @@ class TeletypeCore {
     this.selectedAction = writable(null)
     this.inputValue = writable(null)
     this.editMode = writable(false)
-    this.tools = writable(new Map())
-
-    // Register default tools
-    this.registerTool('web-search', 'Web Search', 'world', () => ({
-      executeQueryModifier: (query: string) => `${query} do a websearch.`
-    }))
 
     this.log.debug('TeletypeCore initialized with options:', opts)
   }
@@ -98,6 +87,10 @@ class TeletypeCore {
 
   get prefillInputValue() {
     return get(this.prefillInput)
+  }
+
+  attachEditor(editor: Editor) {
+    this.editorComponent = editor
   }
 
   flattenActions(actions: Action[]) {
@@ -480,66 +473,6 @@ class TeletypeCore {
       this.showAction(action)
       return false
     }
-  }
-
-  registerTool(
-    id: string,
-    name: string,
-    icon?: string,
-    enhancementHandler?: ToolEnhancementHandler
-  ) {
-    this.log.debug('Registering tool:', id, name)
-    this.tools.update((tools) => {
-      tools.set(id, { active: false, name, icon, enhancementHandler })
-      return tools
-    })
-  }
-
-  toggleTool(id: string) {
-    this.log.debug('toggleTool called for:', id)
-    this.tools.update((tools) => {
-      const tool = tools.get(id)
-      if (tool) {
-        this.log.debug('Tool before toggle:', tool)
-        // Create a new tool object to ensure reactivity
-        const newTool = { ...tool, active: !tool.active }
-        tools.set(id, newTool)
-        this.log.debug('Tool after toggle:', newTool)
-      } else {
-        this.log.warn('Tool not found:', id)
-      }
-      return new Map(tools)
-    })
-  }
-
-  isToolActive(id: string): boolean {
-    const tools = get(this.tools)
-    const tool = tools.get(id)
-    return tool ? tool.active : false
-  }
-
-  getActiveTool(): string | null {
-    const tools = get(this.tools)
-    for (const [id, tool] of tools) {
-      if (tool.active) return id
-    }
-    return null
-  }
-
-  getActiveToolEnhancements(): ToolEnhancement[] {
-    const tools = get(this.tools)
-    const enhancements: ToolEnhancement[] = []
-
-    for (const [id, tool] of tools) {
-      if (tool.active && tool.enhancementHandler) {
-        const enhancement = tool.enhancementHandler()
-        if (enhancement) {
-          enhancements.push({ toolId: id, ...enhancement })
-        }
-      }
-    }
-
-    return enhancements
   }
 }
 

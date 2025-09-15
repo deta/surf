@@ -21,12 +21,20 @@ import {
   TelemetryEventTypes,
   RendererType
 } from '@deta/types'
-import { IPC_EVENTS_RENDERER, setupMessagePortClient } from '@deta/services/ipc'
+import {
+  IPC_EVENTS_RENDERER,
+  setupMessagePortClient,
+  type ShowOpenDialog
+} from '@deta/services/ipc'
 import type { MessagePortCallbackClient } from '@deta/services/messagePort'
 
 import { getUserConfig } from '../main/config'
 import { initBackend } from './helpers/backend'
 import { ipcRenderer } from 'electron'
+
+import path from 'path'
+import mime from 'mime-types'
+import { promises as fsp } from 'fs'
 
 const USER_DATA_PATH =
   process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
@@ -106,6 +114,29 @@ const api = {
 
   openURL: (url: string, active: boolean, scopeId?: string) => {
     IPC_EVENTS_RENDERER.openURL.send({ url, active, scopeId })
+  },
+
+  showOpenDialog: async (options: ShowOpenDialog['payload']) => {
+    try {
+      const filePaths = await IPC_EVENTS_RENDERER.showOpenDialog.invoke(options)
+      if (!filePaths) return null
+
+      const files = await Promise.all(
+        filePaths.map(async (filePath) => {
+          const fileBuffer = await fsp.readFile(filePath)
+          const fileName = path.basename(filePath)
+          const fileType = mime.lookup(fileName.toLowerCase()) || 'application/octet-stream'
+          return new File([fileBuffer as BlobPart], fileName, {
+            type: fileType
+          })
+        })
+      )
+
+      return files
+    } catch (err) {
+      console.error('Failed to import files: ', err)
+    }
+    return IPC_EVENTS_RENDERER.showOpenDialog.invoke(options)
   },
 
   webContentsViewManagerAction: <T extends WebContentsViewManagerActionType>(

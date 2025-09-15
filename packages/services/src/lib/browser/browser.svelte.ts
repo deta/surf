@@ -18,7 +18,7 @@ import {
 } from '@deta/types'
 import { useNotebookManager } from '../notebooks'
 import { ViewManagerEmitterNames, ViewType } from '../views/types'
-import { useMessagePortPrimary } from '../messagePort'
+import { type AIQueryPayload, useMessagePortPrimary } from '../messagePort'
 import {
   DEFAULT_SEARCH_ENGINE,
   getFormattedDate,
@@ -234,9 +234,9 @@ export class BrowserService {
     }
   }
 
-  async handleTeletypeAsk(query: string, mentions: MentionItem[], viewId: string) {
+  async handleTeletypeAsk(payload: AIQueryPayload, viewId: string) {
     try {
-      const target = this.getViewLocation(viewId)
+      const target = this.getViewLocation(viewId) ?? 'tab'
 
       const view = this.viewManager.getViewById(viewId)
       if (!view) {
@@ -251,19 +251,25 @@ export class BrowserService {
         notebookId = id
       }
 
-      this.log.debug(`Asking question from ${viewId} in ${target}:`, query, mentions, notebookId)
+      this.log.debug(
+        `Asking question from ${viewId} in ${target}:`,
+        payload.query,
+        payload.mentions,
+        payload.tools,
+        notebookId
+      )
 
-      if (mentions.length === 1 && mentions[0].id === 'active_tab') {
-        mentions[0] = {
-          ...mentions[0],
+      if (payload.mentions.length === 1 && payload.mentions[0].id === 'active_tab') {
+        payload.mentions[0] = {
+          ...payload.mentions[0],
           data: {
             insertIntoEditor: true
           }
         }
       }
 
-      mentions.forEach((mention) => {
-        query = query.replace(`@${mention.label}`, '').trim()
+      payload.mentions.forEach((mention) => {
+        payload.query = payload.query.replace(`@${mention.label}`, '').trim()
       })
 
       // if (target === 'sidebar' && mentions.length === 0) {
@@ -279,7 +285,7 @@ export class BrowserService {
       if (notebookId) {
         const notebook = await this.notebookManager.getNotebook(notebookId)
         if (notebook) {
-          mentions.push({
+          payload.mentions.push({
             id: notebookId,
             label: notebook.nameValue,
             type: MentionItemType.NOTEBOOK,
@@ -291,8 +297,8 @@ export class BrowserService {
         }
       }
 
-      await this.createNoteAndRunAIQuery(query, mentions, {
-        target: target ?? 'tab',
+      await this.createNoteAndRunAIQuery(payload, {
+        target: target === 'tab' ? 'active_tab' : target,
         notebookId: notebookId ?? 'auto'
       })
 
@@ -542,17 +548,20 @@ export class BrowserService {
   }
 
   async createNoteAndRunAIQuery(
-    query: string,
-    mentions: MentionItem[],
+    payload: AIQueryPayload,
     opts?: {
-      target?: 'tab' | 'sidebar'
+      target?: OpenTarget
       notebookId?: string | 'auto'
     }
   ) {
     try {
-      this.log.debug(`Triggering ask action in ${opts?.target} for query: "${query}"`, mentions)
+      this.log.debug(
+        `Triggering ask action in ${opts?.target} for query: "${payload.query}"`,
+        payload.mentions,
+        payload.tools
+      )
 
-      const view = await this.createAndOpenNote({ name: formatAIQueryToTitle(query) }, opts)
+      const view = await this.createAndOpenNote({ name: formatAIQueryToTitle(payload.query) }, opts)
       if (!view) {
         this.log.error('Failed to create and open note view')
         return
@@ -570,7 +579,7 @@ export class BrowserService {
       // Make sure to clear existing context to avoid confusion
       this.ai.contextManager.clear()
 
-      await webContents.runNoteQuery(query, mentions)
+      await webContents.runNoteQuery(payload)
     } catch (error) {
       this.log.error('Failed to trigger ask action:', error)
     }
@@ -794,9 +803,20 @@ export class BrowserService {
   }
 
   async openAskInSidebar() {
-    const view = await this.viewManager.openNewHomepage()
+    // const view = await this.viewManager.openNewHomepage()
+    // if (!view) {
+    //   this.log.error('Failed to open new homepage view')
+    //   return
+    // }
+
+    const view = await this.createAndOpenNote(
+      {},
+      {
+        target: 'sidebar'
+      }
+    )
     if (!view) {
-      this.log.error('Failed to open new homepage view')
+      this.log.error('Failed to create and open note view')
       return
     }
 

@@ -58,6 +58,7 @@ export interface NoteMessageOptions {
   inline_images?: string[]
   general?: boolean
   websearch?: boolean
+  surflet?: boolean
 }
 
 export interface QueryResourcesOptions {

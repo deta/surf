@@ -192,6 +192,7 @@ pub enum MiscMessage {
         inline_images: Option<Vec<String>>,
         general: bool,
         websearch: bool,
+        surflet: bool,
     },
     CreateAppQuery {
         chunk_callback: Root<JsFunction>,

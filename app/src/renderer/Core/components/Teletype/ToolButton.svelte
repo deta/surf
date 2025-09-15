@@ -5,19 +5,22 @@
   let {
     toolId,
     tool,
-    onToggle
+    onToggle,
+    disabled = false
   }: {
     toolId: string
     tool: { active: boolean; name: string; icon?: string }
     onToggle: (toolId: string) => void
+    disabled?: boolean
   } = $props()
 </script>
 
 <Button
-  class={tool.active ? 'active' : ''}
+  class={tool.active ? 'active tool-button' : 'tool-button'}
   size="md"
   onclick={() => onToggle(toolId)}
   title={tool.name}
+  {disabled}
 >
   {#if tool.icon}
     <Icon name={tool.icon} size="14" />
@@ -31,7 +34,7 @@
 
 <style lang="scss">
   // Apply Button component styles locally since global styles don't reach teletype package
-  :global(.tty-core [data-button-root]) {
+  :global(.tools-bar .tool-button[data-button-root]) {
     user-select: none;
     height: min-content;
     width: max-content;

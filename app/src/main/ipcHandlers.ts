@@ -1,6 +1,6 @@
 import { useLogScope } from '@deta/utils/io'
 import { isMac } from '@deta/utils/system'
-import { app, session } from 'electron'
+import { app, dialog, session } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
 import { getMainWindow } from './mainWindow'
@@ -150,6 +150,17 @@ function setupIpcHandlers(backendRootPath: string) {
       y: PADDING
     })
     return image.toDataURL()
+  })
+
+  IPC_EVENTS_MAIN.showOpenDialog.handle(async (event, options) => {
+    if (!validateIPCSender(event)) return null
+
+    const window = getMainWindow()
+    if (!window) return null
+
+    const result = await dialog.showOpenDialog(window, options)
+    if (result.canceled) return null
+    return result.filePaths
   })
 
   IPC_EVENTS_MAIN.restartApp.on((event) => {

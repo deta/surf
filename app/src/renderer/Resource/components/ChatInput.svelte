@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { derived, writable, type Readable } from 'svelte/store'
+  import { derived, type Writable, writable, type Readable } from 'svelte/store'
   import Input from './Input.svelte'
   import { Icon } from '@deta/icons'
   import PromptPills, { type PromptPillItem } from './PromptPills.svelte'
@@ -19,6 +19,8 @@
   import { isGeneratingAI } from '@deta/services/ai'
   import { startingClass } from '@deta/utils/dom'
   import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
+  import { AddToContextMenu, Dropdown } from '@deta/ui'
+  import type { AITool } from '@deta/types'
 
   const log = useLogScope('ChatInput')
   const dispatch = createEventDispatcher<{
@@ -39,7 +41,12 @@
   // TODO: THis should use svelte getContext() api instead
   export let mentionItemsFetcher: MentionItemsFetcher | undefined = undefined
 
+  export let tools: Writable<AITool[]>
+
   export let focus = () => editor?.focus()
+
+  export let onFileSelect: () => void
+  export let onMentionSelect: () => void
 
   const config = useConfig()
 
@@ -136,6 +143,31 @@
       )
     }
   )
+
+  const toolsDropdownItems = derived(tools, ($tools) => {
+    if (!$tools) return []
+
+    return $tools.map((tool) => ({
+      id: tool.id,
+      label: tool.name,
+      icon: tool.icon,
+      disabled: tool.disabled,
+      disabledLabel: tool.disabled ? 'coming soon!' : undefined,
+      checked: tool.active,
+      type: 'checkbox',
+      action: () => {
+        log.debug('Toggling tool:', tool.id)
+        tool.active = !tool.active
+        tools.update((all) => {
+          const index = all.findIndex((t) => t.id === tool.id)
+          if (index !== -1) {
+            all[index] = tool
+          }
+          return all
+        })
+      }
+    }))
+  })
 
   const handleClickPrompt = (e: CustomEvent<PromptPillItem>) => {
     usedPrompts.update((v) => {
@@ -258,6 +290,16 @@
         class:open-context-picker={$contextManagementDialogOpen}
       >
         <div>
+          <!-- {#if !firstLine} -->
+          <AddToContextMenu {onFileSelect} {onMentionSelect} align="end" />
+          <Dropdown
+            items={$toolsDropdownItems}
+            triggerText="Tools"
+            triggerIcon="bolt"
+            align="end"
+          />
+          <!-- {/if} -->
+
           {#if !$contextManagementDialogOpen}
             <!-- {#if $userConfigSettings.enable_custom_prompts}
               <NoteInputSavedPrompts

@@ -9,14 +9,12 @@
   import ActionList from './ActionList.svelte'
   import { Icon } from '@deta/icons'
   import ActionPanel from './ActionPanel.svelte'
-  import ToolsList from './ToolsList.svelte'
-  import { onMount, tick, createEventDispatcher } from 'svelte'
+  import { onMount, tick, createEventDispatcher, type Snippet } from 'svelte'
   import { isDev, isMac } from '@deta/utils/system'
   import { Editor, type MentionItem } from '@deta/editor'
   import { createRemoteMentionsFetcher } from '@deta/services/ai'
   import { Button } from '@deta/ui'
   import { ShortcutVisualizer } from '@deta/ui'
-  import { useMessagePortClient } from '@deta/services/messagePort'
 
   const dispatch = createEventDispatcher<{
     clear: void
@@ -27,8 +25,10 @@
   }>()
 
   let {
+    tools,
     key
   }: {
+    tools: Snippet
     key?: string | undefined
   } = $props()
 
@@ -47,7 +47,6 @@
   const showHelper = teletype.options?.showHelper
   const showActionPanel = teletype.showActionPanel
   const editMode = teletype.editMode
-  const tools = teletype.tools
 
   const localIsMac = isMac()
 
@@ -337,26 +336,20 @@
     }
   })
 
+  $effect(() => {
+    if (editorComponent && !teletype.editorComponent) {
+      teletype.attachEditor(editorComponent)
+    }
+  })
+
   onMount(() => {
     if ($open) {
       editorComponent?.focus()
     }
 
-    const messagePort = useMessagePortClient()
-
-    const unsubMessagePort = messagePort.noteInsertMentionQuery.handle((payload) => {
-      console.debug('Received note-insert-mention-query event', payload)
-      editorComponent?.insertMention(payload.mention, payload.query)
-      editorComponent?.focus()
-    })
-
     if (editorComponent && isDev) {
       // @ts-ignore
       window.editor = editorComponent
-    }
-
-    return () => {
-      unsubMessagePort()
     }
   })
 </script>
@@ -510,7 +503,10 @@
 
       <!-- Results section moved below input -->
       <div class="tools-and-send-wrapper">
-        <ToolsList tools={$tools} {teletype} />
+        <slot
+          name="tools"
+          disabled={!isInMentionMode && !hasMentions && $selectedAction?.id !== 'ask-action'}
+        ></slot>
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
           {#if $selectedAction?.id === 'ask-action' || isInMentionMode || hasMentions}

@@ -69,3 +69,16 @@ export interface SearchState {
   actions: TeletypeAction[]
   lastUpdated: number
 }
+
+/*
+  ToolEnhancementPayload allows tools to modify user queries before execution.
+*/
+export type ToolEnhancementPayload = {
+  executeQueryModifier?: (query: string) => string
+}
+
+export type ToolEnhancementHandler = () => ToolEnhancementPayload | null
+
+export type ToolEnhancement = {
+  toolId: string
+} & ToolEnhancementPayload

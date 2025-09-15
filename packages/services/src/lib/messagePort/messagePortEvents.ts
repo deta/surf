@@ -20,6 +20,15 @@ export interface TeletypeActionSerialized {
   providerId: string
 }
 
+export type AIQueryPayload = {
+  query: string
+  mentions: MentionItem[]
+  tools?: {
+    websearch?: boolean
+    surflet?: boolean
+  }
+}
+
 export interface MPTeletypeSetQuery extends MessagePortEvent {
   payload: {
     query: string
@@ -45,10 +54,7 @@ export interface MPTeletypeExecuteAction extends MessagePortEvent {
 }
 
 export interface MPTeletypeAsk extends MessagePortEvent {
-  payload: {
-    query: string
-    mentions: MentionItem[]
-  }
+  payload: AIQueryPayload
 }
 
 export interface MPNavigateURL extends MessagePortEvent {
@@ -66,10 +72,7 @@ export interface MPNoteCreate extends MessagePortEvent {
 }
 
 export interface MPNoteRunQuery extends MessagePortEvent {
-  payload: {
-    query: string
-    mentions?: MentionItem[]
-  }
+  payload: AIQueryPayload
 }
 
 export interface MPNoteInsertMentionQuery extends MessagePortEvent {

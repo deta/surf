@@ -141,7 +141,6 @@ const handleOpenUrl = (url: string) => {
     IPC_EVENTS_MAIN.openURL.sendToWebContents(mainWindow.webContents, { url, active: true })
   } catch (error) {
     log.error('Error handling open URL:', error)
-    if (is.dev) throw error
   }
 }
 

@@ -86,7 +86,7 @@
     SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
   } from '@deta/services/constants'
   import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
-  import { ModelTiers, Provider } from '@deta/types/src/ai.types'
+  import { type AITool, ModelTiers, Provider } from '@deta/types/src/ai.types'
   import { Toast, useToasts } from '@deta/ui'
   import { useTelemetry } from '@deta/services'
   import { useConfig } from '@deta/services'
@@ -117,11 +117,12 @@
   import { createRemoteMentionsFetcher, createResourcesMentionsFetcher } from '@deta/services/ai'
   import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
-  import { CHAT_TITLE_GENERATOR_PROMPT } from '@deta/services/constants'
+  import { CHAT_TITLE_GENERATOR_PROMPT, AI_TOOLS } from '@deta/services/constants'
   import ChatInput from './ChatInput.svelte'
   import { SearchResourceTags, ResourceTag } from '@deta/utils/formatting'
   import type { ResourceNote, ResourceJSON } from '@deta/services/resources'
-  import { type MessagePortClient } from '@deta/services/messagePort'
+  import { type MessagePortClient, type AIQueryPayload } from '@deta/services/messagePort'
+  import { promptForFilesAndTurnIntoResourceMentions } from '@deta/services'
 
   export let resourceId: string
   export let autofocus: boolean = true
@@ -167,6 +168,8 @@
   // We use these to determine whether to display the big prompt bubbles
   // need to wire thi back when fixing the prompts with the new input bar
   const isEmpty = writable(false)
+
+  const tools = writable<AITool[]>(AI_TOOLS)
 
   const floatyBarState = writable<'inline' | 'floaty' | 'bottom'>('inline')
   const inlineBarStyle = derived(
@@ -275,26 +278,30 @@
     }
   }
 
-  const handleNoteRunQuery = async (askQuery: string, mentions: MentionItem[]) => {
+  const handleNoteRunQuery = async (payload: AIQueryPayload) => {
     try {
-      if (askQuery) {
-        log.debug('Found ask query param:', askQuery)
+      if (payload.query) {
+        log.debug('Found ask query param:', payload.query, payload.mentions)
 
-        generateTitle(askQuery)
+        generateTitle(payload.query)
 
         if (contextManager) {
           await contextManager.clear()
         }
 
         let showPrompt = true
-        if (mentions.length === 1 && mentions[0]?.data?.insertIntoEditor) {
+        if (payload.mentions.length === 1 && payload.mentions[0]?.data?.insertIntoEditor) {
           showPrompt = false
-          insertMention(mentions[0], askQuery)
+          insertMention(payload.mentions[0], payload.query)
         }
 
+        tools.update((tools) =>
+          tools.map((tool) => ({ ...tool, active: payload.tools[tool.id] ?? tool.active }))
+        ) // make sure we have the latest state
+
         await generateAndInsertAIOutput(
-          askQuery,
-          mentions,
+          payload.query,
+          payload.mentions,
           PageChatMessageSentEventTrigger.NoteUseSuggestion,
           { focusEnd: true, autoScroll: false, showPrompt: showPrompt, focusInput: true }
         )
@@ -469,7 +476,7 @@
     unsubs.push(
       messagePort.noteRunQuery.handle((payload) => {
         log.debug('Received note-run-query event', payload)
-        handleNoteRunQuery(payload.query, payload.mentions)
+        handleNoteRunQuery(payload)
       }),
 
       messagePort.noteInsertMentionQuery.handle((payload) => {
@@ -539,48 +546,12 @@
 
   let focusInput: () => void
 
-  const emptyPlaceholder = 'Start typing or hit space for suggestions…'
-
-  const editorPlaceholder = derived(
-    [floatingMenuShown, showPrompts, generatingPrompts, autocompleting],
-    ([$floatingMenuShown, $showPrompts, $generatingPrompts, $autocompleting]) => {
-      if ($autocompleting) {
-        return ''
-      }
-
-      let contextName = ''
-      if ($selectedContext) {
-        if ($selectedContext === 'everything') {
-          contextName = 'all your stuff'
-        } else if ($selectedContext === 'tabs') {
-          contextName = 'your tabs'
-        } else if ($selectedContext === 'active-context') {
-          contextName = 'the active context'
-        } else if ($selectedContext === NO_CONTEXT_MENTION.id) {
-          contextName = ''
-        }
-      }
-
-      if ($floatingMenuShown) {
-        if ($generatingPrompts) {
-          const mentions = editorElem.getMentions()
-          if (!contextName) {
-            return `Generating suggestions based on the mentioned contexts…`
-          }
-          return `Generating suggestions based on "${contextName}"${mentions.length > 0 ? ' and the mentioned contexts' : ''}…`
-        } else if ($showPrompts) {
-          if (!contextName) {
-            return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf continue writing…`
-          }
-          return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf write based on ${contextName}`
-        } else {
-          return `Write or type / for commands…`
-        }
-      }
-
-      return `Write or type / for commands…`
-    }
-  )
+  const editorPlaceholder = writable<string>(`Write or type / for commands…`)
+  $: if (!escapeFirstLineChat) {
+    editorPlaceholder.set(`Ask me anything…`)
+  } else {
+    editorPlaceholder.set(`Write or type / for commands…`)
+  }
 
   const mentionItemsFetcher = createRemoteMentionsFetcher(resourceId) // createMentionsFetcher({ ai, resourceManager }, resourceId)
   const linkItemsFetcher = createResourcesMentionsFetcher(resourceManager, resourceId)
@@ -1143,6 +1114,12 @@
     const editor = editorElem.getEditor()
     const noteEditor = NoteEditor.create(editor, editorElem, editorElement)
 
+    const enabledTools = get(tools).filter((tool) => tool.active)
+    const toolsConfiguration = {
+      websearch: enabledTools.some((tool) => tool.id === 'websearch'),
+      surflet: enabledTools.some((tool) => tool.id === 'surflet')
+    }
+
     // Hide the caret popover when generation starts
     hidePopover()
 
@@ -1245,7 +1222,9 @@
           trigger,
           generationID: options.generationID,
           onboarding: showOnboarding,
-          noteResourceId: useNoteResource ? resourceId : undefined
+          noteResourceId: useNoteResource ? resourceId : undefined,
+          websearch: toolsConfiguration.websearch,
+          surflet: toolsConfiguration.surflet
         },
         renderFunction
       )
@@ -2499,17 +2478,35 @@
     }
   }
 
-  const insertMention = (mentionItem?: MentionItem, query?: string) => {
+  const insertMention = (mentionItem?: MentionItem, query?: string, editor?: Editor) => {
     try {
-      if (!editorElem) {
-        log.error('Editor element not initialized')
+      let focusedEditor = editor || editorElem
+      if (!focusedEditor) {
+        log.error('no focused editor found to insert mention into')
         return
       }
-
-      editorElem.insertMention(mentionItem, query)
+      focusedEditor.insertMention(mentionItem, query)
     } catch (error) {
       log.error('Error inserting mention', error)
     }
+  }
+
+  const onFileSelect = async () => {
+    log.debug('File select triggered')
+    const mentions = await promptForFilesAndTurnIntoResourceMentions(resourceManager)
+    if (!mentions || mentions.length === 0) {
+      log.debug('No files selected or no mentions created')
+      return
+    }
+
+    for (const mentionItem of mentions) {
+      insertMention(mentionItem, undefined, chatInputEditorElem)
+    }
+  }
+
+  const onMentionSelect = async () => {
+    log.debug('Mention select triggered')
+    insertMention(undefined, '@', chatInputEditorElem)
   }
 
   $: if (editorElem && isDev) {
@@ -2571,6 +2568,9 @@
         firstLine={$isFirstLine && !escapeFirstLineChat}
         disabled={(showCaretPopover && editorFocused && !$isFirstLine) || $isTitleFocused}
         {mentionItemsFetcher}
+        {onFileSelect}
+        {onMentionSelect}
+        {tools}
         on:run-prompt={handleRunPrompt}
         on:submit={handleChatSubmit}
         on:cancel-completion={handleStopGeneration}

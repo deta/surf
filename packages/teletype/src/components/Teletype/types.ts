@@ -2,19 +2,6 @@ import type { SvelteComponent } from 'svelte'
 import type { TeletypeSystem } from '.'
 import type { TeletypeAction } from '@deta/services/teletype'
 
-/*
-  ToolEnhancementPayload allows tools to modify user queries before execution.
-*/
-export type ToolEnhancementPayload = {
-  executeQueryModifier?: (query: string) => string
-}
-
-export type ToolEnhancementHandler = () => ToolEnhancementPayload | null
-
-export type ToolEnhancement = {
-  toolId: string
-} & ToolEnhancementPayload
-
 export type HandlerReturn = {
   preventClose?: boolean
   afterClose?: (teletype: TeletypeSystem) => void

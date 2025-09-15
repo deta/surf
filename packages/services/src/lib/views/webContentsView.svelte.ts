@@ -69,6 +69,7 @@ import { Resource, ResourceManager } from '../resources'
 import { WebParser } from '@deta/web-parser'
 import { type MentionItem } from '@deta/editor'
 import { type DownloadsManager, useDownloadsManager } from '../downloads.svelte'
+import { type AIQueryPayload } from '../messagePort'
 
 const NAVIGATION_DEBOUNCE_TIME = 500
 
@@ -690,9 +691,9 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     window.api.postMessageToView(this.view.id, { type, data })
   }
 
-  async runNoteQuery(query: string, mentions?: MentionItem[]) {
-    this.log.debug('Running note query', query, mentions)
-    return this.manager.messagePort.noteRunQuery.send(this.view.id, { query, mentions })
+  async runNoteQuery(payload: AIQueryPayload) {
+    this.log.debug('Running note query', payload)
+    return this.manager.messagePort.noteRunQuery.send(this.view.id, payload)
   }
 
   async insertNoteMentionQuery(mention?: MentionItem, query?: string) {

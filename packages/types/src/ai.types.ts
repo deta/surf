@@ -118,6 +118,14 @@ export type YoutubeTranscript = {
   }
 }
 
+export type AITool = {
+  id: string
+  name: string
+  icon: string
+  active: boolean
+  disabled?: boolean
+}
+
 export type ChatPrompt = {
   label: string
   prompt: string

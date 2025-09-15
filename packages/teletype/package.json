@@ -22,6 +22,7 @@
     "lint:fix": "eslint --fix './src/**/*.{js,ts,svelte}'"
   },
   "devDependencies": {
+    "@deta/editor": "*",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@tsconfig/svelte": "^5.0.4",
     "focus-svelte": "^0.3.4",

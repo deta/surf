@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { TeletypeProvider, Teletype, type TeletypeSystem } from '@deta/teletype'
+  import { TeletypeProvider, Teletype } from '@deta/teletype'
   import { DynamicIcon } from '@deta/icons'
   import { useTeletypeService } from '@deta/services'
   import type { MentionItem } from '@deta/editor'
   import { useLogScope } from '@deta/utils/io'
   import { onMount } from 'svelte'
+  import ToolsList from './ToolsList.svelte'
+  import { AddToContextMenu } from '@deta/ui'
 
   const teletypeService = useTeletypeService()
   const log = useLogScope('TeletypeEntry')
 
   let { open = $bindable() }: { open: boolean } = $props()
-  let teletype: TeletypeSystem
+
+  let teletypeProvider: TeletypeProvider
 
   let actionsArray = $state([])
 
@@ -38,11 +41,28 @@
     teletypeService.clear()
   }
 
+  const onFileSelect = async () => {
+    log.debug('File select triggered')
+    teletypeService.promptForAndInsertFileMentions()
+  }
+
+  const onMentionSelect = async () => {
+    log.debug('Mention select triggered')
+    teletypeService.insertMention(undefined, '@')
+  }
+
   $effect(() => {
     if (open) {
-      teletype?.open()
+      teletypeProvider?.teletype?.open()
     } else {
-      teletype?.close()
+      teletypeProvider?.teletype?.close()
+    }
+  })
+
+  $effect(() => {
+    if (teletypeProvider?.teletype && !teletypeService.teletype) {
+      // Attach the teletype instance to the service for internal use
+      teletypeService.attachTeletype(teletypeProvider.teletype)
     }
   })
 
@@ -57,7 +77,7 @@
 
 {#if open}
   <TeletypeProvider
-    bind:teletype
+    bind:this={teletypeProvider}
     actions={actionsArray}
     class="teletype-provider"
     options={{
@@ -72,6 +92,21 @@
       on:ask={handleAsk}
       on:create-note={handleCreateNote}
       on:clear={handleClear}
-    />
+    >
+      <svelte:fragment slot="tools">
+        <div class="controls-list">
+          <AddToContextMenu {onFileSelect} {onMentionSelect} />
+          <ToolsList teletype={teletypeService} />
+        </div>
+      </svelte:fragment>
+    </Teletype>
   </TeletypeProvider>
 {/if}
+
+<style lang="scss">
+  .controls-list {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+</style>

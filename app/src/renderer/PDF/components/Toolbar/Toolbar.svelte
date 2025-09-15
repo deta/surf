@@ -6,6 +6,7 @@
   //import ZoomSelector from './ZoomSelector.svelte'
   //import MoreActions from './MoreActions.svelte'
   import DocumentInfo from './DocumentInfo.svelte'
+  import Tooltip from '../../Tooltip.svelte'
 
   let wantedPageNumber: number | string = 1
   let currentPageNumber = 1
@@ -116,6 +117,12 @@
   </div>
 
   <div class="px-1 space-x-1 flex items-center justify-end">
+    <Button size="md" square onclick={() => $pdfSlickStore?.pdfSlick?.downloadOrSave()}>
+      <iconify-icon height="1em" icon="tabler:download" />
+      <Tooltip position="bottom" alignX="right">
+        <p class="whitespace-nowrap">Download to System</p>
+      </Tooltip>
+    </Button>
     <DocumentInfo />
     <!--------<MoreActions />-->
   </div>

@@ -59,6 +59,7 @@ export type ChatMessageOptions = {
   onboarding?: boolean
   noteResourceId?: string
   websearch?: boolean
+  surflet?: boolean
 }
 
 export type ChatCompletionResponse = {
@@ -373,6 +374,7 @@ export class AIChat {
       inlineImages?: string[]
       general?: boolean
       websearch?: boolean
+      surflet?: boolean
       appCreation?: boolean
       noteResourceId?: string
     }
@@ -390,7 +392,9 @@ export class AIChat {
         limit: opts?.limit,
         resourceIds: opts?.resourceIds,
         inlineImages: opts?.inlineImages,
-        general: opts?.general
+        general: opts?.general,
+        websearch: opts?.websearch,
+        surflet: opts?.surflet
       })
     } else {
       await this.sffs.sendAIChatMessage(callback, this.id, query, backendModel, {
@@ -658,6 +662,8 @@ export class AIChat {
       skipScreenshot: false,
       limit: 30,
       ragOnly: false,
+      websearch: true,
+      surflet: true,
       ...opts
     } as Required<ChatMessageOptions>
 
@@ -883,7 +889,8 @@ export class AIChat {
         general: resourceIds.length === 0,
         appCreation: chatMode === ChatMode.AppCreation,
         noteResourceId: options.noteResourceId,
-        websearch: options.websearch
+        websearch: options.websearch,
+        surflet: options.surflet
       })
 
       // Wait for either the generation to complete or be stopped
