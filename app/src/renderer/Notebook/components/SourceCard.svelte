@@ -1,6 +1,11 @@
 <script lang="ts">
   import { openDialog } from '@deta/ui'
-  import { getResourcePreview, Resource, useResourceManager } from '@deta/services/resources'
+  import {
+    getResourcePreview,
+    Resource,
+    useResourceManager,
+    isGeneratedResource
+  } from '@deta/services/resources'
   import { contextMenu, type CtxItem } from '@deta/ui'
   import { getFileKind, truncate } from '../../../../../packages/utils/dist'
   import { ResourceTypes } from '@deta/types'
@@ -9,10 +14,11 @@
   import { onMount } from 'svelte'
   import { useNotebookManager } from '@deta/services/notebooks'
   import { handleResourceClick, openResource } from '../handlers/notebookOpenHandlers'
+  import { getFileType } from '@deta/utils'
 
   // TODO: Decouple this rendering from the Resource?
   let {
-    resource,
+    resource: _resource,
     resourceId,
     text = false,
     onlyCard = false,
@@ -37,31 +43,40 @@
   const resourceManager = useResourceManager()
 
   let data = $state(null)
-  let _resource = $state(null)
+  let resource = $state(null)
   let faviconUrl = $derived(
-    data.url
+    data.source.imageUrl || data.url
       ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(data.url)}&sz=48`
       : null
   )
+  let imageError = $state(false)
 
   const handleClick = (e: MouseEvent) => {
-    handleResourceClick(resourceId ?? _resource.id, e)
+    handleResourceClick(resourceId ?? resource.id, e)
   }
 
   const handleDeleteResource = async () => {
-    if (_resource) {
-      onDeleteResource?.(_resource)
+    if (resource) {
+      onDeleteResource?.(resource)
     }
   }
 
+  const handleImageError = () => {
+    imageError = true
+  }
+
   onMount(async () => {
-    if (!resourceId && resource) getResourcePreview(resource, {}).then((v) => (data = v))
-    else if (resourceId) {
-      resourceManager.getResource(resourceId, { includeAnnotations: false }).then((resource) => {
-        _resource = resource
-        getResourcePreview(resource, {}).then((v) => (data = v))
-      })
+    if (!resourceId && _resource) {
+      resource = _resource
+    } else if (resourceId) {
+      resource = await resourceManager.getResource(resourceId, { includeAnnotations: false })
     }
+
+    if (!resource) {
+      return
+    }
+
+    data = await getResourcePreview(resource, {})
   })
 </script>
 
@@ -93,7 +108,7 @@
           text: 'View Offline',
           icon: 'save',
           action: () => {
-            openResource(resourceId ?? _resource.id, { offline: true, target: 'tab' })
+            openResource(resourceId ?? resource.id, { offline: true, target: 'tab' })
           }
         },
         {
@@ -105,11 +120,11 @@
         }
       ]
     })}
-    data-resource-id={_resource.id}
+    data-resource-id={resource.id}
   >
     <div class="card">
       <div class="content">
-        {#if data.image}
+        {#if data.image && !imageError}
           <img
             class="cover"
             src={data.image}
@@ -117,12 +132,17 @@
             decoding="async"
             loading="eager"
             ondragstart={(e) => e.preventDefault()}
+            onerror={handleImageError}
           />
-        {:else if _resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+        {:else if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
           <ReadOnlyRichText content={truncate(data.content, 2000)} />
+        {:else if data.source.icon}
+          <div class="cover fallback">
+            <DynamicIcon name={data.source.icon} width="1em" height="1em" />
+          </div>
         {:else}
           <div class="cover fallback">
-            <DynamicIcon name={`file;;${getFileKind(_resource.type)}`} width="1em" height="1em" />
+            <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
           </div>
         {/if}
 
@@ -135,19 +155,30 @@
     </div>
 
     {#if !onlyCard}
-      {#if text || data.title || data.metadata?.sourceURI}
+      {#if text || data.title || data.metadata?.sourceURI || data.source}
         <div class="metadata">
           {#if data.title && data.title.length > 0}
             <span class="title typo-title-sm">{data.title}</span>
           {:else if data.metadata?.text}
             <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
+          {:else if data.content}
+            <span class="title typo-title-sm">{data.content}</span>
+          {:else if data.source.text}
+            <span class="title typo-title-sm">{data.source.text}</span>
           {/if}
-          {#if data.url}
+
+          {#if isGeneratedResource(resource)}
+            <span class="subtitle typo-title-sm" style="opacity: 0.3;">Surflet</span>
+          {:else if data.url}
             <span class="subtitle typo-title-sm" style="opacity: 0.3;"
               >{new URL(data.url)?.host}</span
             >
           {:else if data.metadata?.text}
             <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
+          {:else if resource}
+            <span class="subtitle typo-title-sm" style="opacity: 0.3;"
+              >{getFileType(resource.type)}</span
+            >
           {/if}
         </div>
       {/if}
