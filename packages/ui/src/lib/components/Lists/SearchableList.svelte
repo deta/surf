@@ -44,7 +44,7 @@
   </div>
 
   <div class="list-container">
-    <MaskedScroll grow={true}>
+    <MaskedScroll grow>
       {#if filteredItems.length > 0}
         {#each filteredItems as item (item.id)}
           {@render itemRenderer(item)}
@@ -83,7 +83,6 @@
     overflow: hidden;
     min-height: 0;
     height: 292px;
-    padding: 0.5rem 0;
   }
 
   .empty-state {

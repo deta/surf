@@ -36,7 +36,7 @@
   } = $props()
 
   let editorEl: HTMLSpanElement = $state()
-  const notebookData = notebook?.data ?? writable('')
+  const notebookData = notebook?.data
 
   $effect(() => {
     if (!editorEl) return
@@ -132,13 +132,12 @@
   }
 
   const colors = $derived(
-    color ??
-      generateGradient($notebookData?.folderName ?? $notebookData?.name ?? text ?? title, 220)
+    color ?? generateGradient(notebookData?.folderName ?? notebookData?.name ?? text ?? title, 220)
   )
 
   const handleClose = () => {
-    if ($notebookData?.folderName) $notebookData.folderName = editorEl?.textContent
-    if ($notebookData?.name) $notebookData.name = editorEl?.textContent
+    if (notebookData?.folderName) notebookData.folderName = editorEl?.textContent
+    if (notebookData?.name) notebookData.name = editorEl?.textContent
 
     onchange?.(editorEl?.textContent)
     onclose?.()
@@ -156,7 +155,7 @@
 >
   {#if !editing}
     <span class="text">
-      {`${$notebookData.emoji ? $notebookData.emoji + ' ' : ''}${$notebookData?.folderName ?? $notebookData?.name ?? title}`}
+      {`${notebookData?.folderName ?? notebookData?.name ?? title}`}
     </span>
   {:else}
     <span

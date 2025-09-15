@@ -235,6 +235,7 @@ body[data-context-menu='true'] * {
 
       &.danger {
         --ctx-item-hover: var(--ctx-item-danger-hover);
+        --ctx-item-text-hover: #fff;
       }
 
       :global(svg) {

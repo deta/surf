@@ -15,11 +15,8 @@ async function getNotebookDisplayName(
   notebookManager: NotebookManager,
   notebookId: string
 ): Promise<string> {
-  const notebookData = get((await notebookManager.getNotebook(notebookId)).data)
-  return (
-    (notebookData.emoji ? notebookData.emoji + ' ' : '') +
-    (notebookData.folderName ?? notebookData.name)
-  )
+  const notebook = await notebookManager.getNotebook(notebookId)
+  return notebook.nameValue
 }
 
 export async function constructBreadcrumbs(

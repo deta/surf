@@ -11,7 +11,8 @@ import {
   generateHash,
   codeLanguageToMimeType,
   conditionalArrayItem,
-  getNormalizedHostname
+  getNormalizedHostname,
+  isMainRenderer
 } from '@deta/utils'
 import { SFFS } from '../sffs'
 import {
@@ -58,6 +59,8 @@ import type { Model } from '@deta/backend/types'
 import { WebParser } from '@deta/web-parser'
 import type { ConfigService } from '../config'
 import { EventEmitterBase, ResourceTag, SearchResourceTags } from '@deta/utils'
+import { type CtxItem } from '@deta/ui'
+import { Notebook } from '../notebooks'
 
 type Telemetry = any
 
@@ -87,20 +90,117 @@ export const getPrimaryResourceType = (type: string) => {
 
 const DUMMY_PATH = '__dummy'
 
+export const getResourceCtxItems = ({
+  resource,
+  sortedNotebooks,
+  onPin,
+  onUnPin,
+  onAddToNotebook,
+  onOpenOffline,
+  onDeleteResource,
+  onRemove
+}: {
+  resource: Resource
+  sortedNotebooks: Notebook[]
+  onPin?: () => void
+  onUnPin?: () => void
+  onAddToNotebook: (notebookId: string) => void
+  onOpenOffline: (resourceId: string) => void
+  onDeleteResource: (resourceId: string) => void
+  onRemove: (resourceId: string) => void
+}): CtxItem[] => {
+  return [
+    ...conditionalArrayItem(onPin, {
+      type: 'action',
+      text: 'Pin',
+      icon: 'pin',
+      action: () => {}
+    }),
+    {
+      type: 'sub-menu',
+      icon: '',
+      text: 'Add to Notebook',
+      search: true,
+      items: sortedNotebooks
+        .filter((e) => e.data?.name?.toLowerCase() !== '.tempspace')
+        .filter((e) => e !== undefined)
+        .map((notebook) => ({
+          type: 'action',
+          //icon: space.iconString, // TODO: FIX for ntoebooks
+          text: notebook.data.name ?? notebook.data.folderName,
+          action: () => onAddToNotebook(notebook.id)
+        }))
+    },
+    ...conditionalArrayItem(onOpenOffline !== undefined, {
+      type: 'action',
+      text: 'View Offline',
+      icon: 'save',
+      action: () => onOpenOffline(resource.id)
+    }),
+
+    ...(onRemove
+      ? [
+          {
+            type: 'sub-menu',
+            icon: 'trash',
+            text: 'Remove',
+            kind: 'danger',
+            items: [
+              {
+                type: 'action',
+                icon: 'close',
+                text: 'Remove from Notebook',
+                kind: 'danger',
+                action: () => onRemove(resource.id)
+              },
+              {
+                type: 'action',
+                icon: 'trash',
+                text: 'Delete from Surf',
+                kind: 'danger',
+                action: () => onDeleteResource(resource.id)
+              }
+            ]
+          }
+        ]
+      : [
+          {
+            type: 'action',
+            kind: 'danger',
+            text: 'Delete',
+            icon: 'trash',
+            action: () => onDeleteResource(resource.id)
+          }
+        ])
+  ]
+}
+
 export type ResourceManagerEvents = {
   created: (resource: ResourceObject) => void
   deleted: (resourceId: string) => void
   updated: (resource: ResourceObject) => void
   recovered: (resourceId: string) => void
+
+  notebookAddResources: (notebookId: string, resourceIds: string[]) => void
+  notebookRemoveResources: (notebookId: string, resourceIds: string[]) => void
 }
 
 export type ResourceEvents = {
   'updated-metadata': (metadata: SFFSResourceMetadata) => void
   'updated-tags': (tags: SFFSResourceTag[]) => void
   'updated-data': (data: Blob) => void
+
+  // Extern state updates
+  extern_resourceUpdateMetadata: (resourceId: string) => void
+  extern_resourceUpdateTags: (resourceId: string) => void
+  extern_resourceUpdateData: (resourceId: string) => void
 }
 
 export class Resource extends EventEmitterBase<ResourceEvents> {
+  private sffs: SFFS
+  private resourceManager: ResourceManager
+  private log: ScopedLogger
+
   id: string
   type: string
   path: string
@@ -121,10 +221,6 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
   extractionState: Writable<ResourceState>
   postProcessingState: Writable<ResourceState>
   state: Readable<ResourceStateCombined>
-
-  sffs: SFFS
-  resourceManager: ResourceManager
-  log: ScopedLogger
 
   constructor(sffs: SFFS, resourceManager: ResourceManager, data: SFFSResource) {
     super()
@@ -479,14 +575,20 @@ export type SpaceSearchResultItem = {
   engine: SFFSSearchResultEngine
 }
 
-export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
-  resources: Writable<ResourceObject[]>
+export interface ResourceSearchResult {
+  resources: ResourceSearchResultItem[]
+  spaces: SpaceSearchResultItem[]
+  space_entries: any[]
+}
 
-  log: ScopedLogger
-  sffs: SFFS
-  telemetry: Telemetry
+export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
+  private sffs: SFFS
+  private log: ScopedLogger
   config: ConfigService
+  telemetry: Telemetry
   // ai!: AIService
+
+  resources: Writable<ResourceObject[]>
 
   static self: ResourceManager
 
@@ -772,7 +874,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     query: string,
     tags?: SFFSResourceTag[],
     parameters?: SFFSSearchParameters
-  ) {
+  ): Promise<ResourceSearchResult> {
     const rawResults = await this.sffs.searchResources(query, tags, parameters)
     const resources = rawResults.items.map(
       (item) =>
@@ -1507,7 +1609,14 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
       })
     }
 
+    this.emit('notebookAddResources', space_id, resourceIds)
     return res
+  }
+
+  async removeItemsFromSpace(space_id: string, resourceIds: string[]) {
+    await this.sffs.deleteEntriesInSpaceByEntryIds(space_id, resourceIds)
+
+    this.emit('notebookRemoveResources', space_id, resourceIds)
   }
 
   async getSpaceContents(space_id: string, opts?: SpaceEntrySearchOptions): Promise<SpaceEntry[]> {
@@ -1519,7 +1628,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
       [
         SearchResourceTags.Deleted(false),
         SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.SILENT)
+        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.SILENT),
+        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
       ],
       {
         spaceId: space_id,

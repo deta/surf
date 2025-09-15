@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SearchInput from './SearchInput.svelte'
+  import SearchInput from '@deta/ui'
   import type { Readable } from 'svelte/store'
 
   export let searchValue: Readable<string>

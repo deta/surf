@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { Button, openDialog, PageMention } from '@deta/ui'
+  import { Button, openDialog, PageMention, ResourceLoader, SurfLoader } from '@deta/ui'
   import { onMount } from 'svelte'
   import { MaskedScroll } from '@deta/ui'
   import { contextMenu, type CtxItem } from '@deta/ui'
@@ -18,8 +18,6 @@
 
   let showAllNotes = $state(false)
   let isRenamingNote = $state(null)
-
-  let resourcesNotes = $state([])
 
   const handleCreateNote = async () => {
     await messagePort.createNote.send({ isNewTabPage: true })
@@ -47,24 +45,9 @@
     isRenamingNote = undefined
   }, 75)
 
-  const updateResources = async () => {
-    const resources = await resourceManager.listResourcesByTags(
-      [
-        ...SearchResourceTags.NonHiddenDefaultTags(),
-        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
-        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
-      ],
-      { includeAnnotations: false, excludeWithinSpaces: true }
-    )
-
-    console.log('Draft notes:', resources)
-
-    resourcesNotes = resources
-  }
-
   onMount(async () => {
-    updateResources()
-    return resourceManager.on('deleted', () => updateResources)
+    const unsubs = [resourceManager.on('deleted', () => (refreshKey = {}))]
+    return () => unsubs.forEach((f) => f())
   })
 </script>
 
@@ -74,75 +57,68 @@
     <TeletypeEntry open={true} />
   </div>
   <section class="notes">
-    <header>
-      <label>Notes</label>
-      <Button
-        size="md"
-        onclick={() => (showAllNotes = !showAllNotes)}
-        disabled={resourcesNotes.length <= 6}
-      >
-        <span class="typo-title-sm" style="opacity: 0.75;"
-          >{showAllNotes ? 'Hide' : 'Show'} All</span
-        >
-      </Button>
-    </header>
-    {#if resourcesNotes.length <= 0}
-      <div class="empty">
-        <Button size="md" onclick={handleCreateNote}>
-          <span class="typo-title-sm">Create New Note</span>
-        </Button>
-        <p class="typo-title-sm">
-          Create notes through Teletype for them to appear in this Notebook.
-        </p>
-      </div>
-    {:else}
-      <ul class:showAllNotes={showAllNotes || resourcesNotes?.length <= 6}>
-        {#each resourcesNotes.slice(0, showAllNotes ? Infinity : 7) as note}
-          <li
-            {@attach contextMenu({
-              canOpen: true,
-              items: [
-                /*{
-            type: 'action',
-            text: 'Pin',
-            icon: 'pin',
-            action: () => {}
-          },*/
-                {
-                  type: 'action',
-                  text: 'Rename',
-                  icon: 'edit',
-                  action: () => (isRenamingNote = note.id)
-                },
-                {
-                  type: 'action',
-                  kind: 'danger',
-                  text: 'Delete',
-                  icon: 'trash',
-                  action: () => handleDeleteNote(note)
-                }
-              ]
-            })}
+    <SurfLoader
+      excludeWithinSpaces
+      tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
+      search={{
+        tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
+        parameters: {
+          semanticSearch: false
+        }
+      }}
+    >
+      {#snippet children([resources, searchResult, searching])}
+        <header>
+          <label>Notes</label>
+          <Button
+            size="md"
+            onclick={() => (showAllNotes = !showAllNotes)}
+            disabled={(searchResult ?? resources).length <= 6}
           >
-            <PageMention
-              editing={isRenamingNote === note.id}
-              text={note.metadata.name}
-              onchange={(v) => {
-                handleRenameNote(note.id, v)
-                isRenamingNote = undefined
-              }}
-              oncancel={handleCancelRenameNote()}
-              onclick={async (event) => {
-                if (isRenamingNote) return
-                handleResourceClick(note.id, event)
-              }}
-            />
-          </li>
-        {/each}
-      </ul>
-    {/if}
+            <span class="typo-title-sm" style="opacity: 0.75;"
+              >{showAllNotes ? 'Hide' : 'Show'} All</span
+            >
+          </Button>
+        </header>
+
+        {#if (searchResult ?? resources).length > 0}
+          <ul class:showAllNotes={showAllNotes || (searchResult ?? resources).length <= 6}>
+            {#each (searchResult ?? resources).slice(0, showAllNotes ? Infinity : 7) as resource (resource.id)}
+              <li>
+                <ResourceLoader {resource}>
+                  {#snippet children(resource: Resource)}
+                    <PageMention
+                      {resource}
+                      editing={isRenamingNote === resource.id}
+                      onchange={(v) => {
+                        handleRenameNote(resource.id, v)
+                        isRenamingNote = undefined
+                      }}
+                      oncancel={handleCancelRenameNote}
+                      onclick={async (event) => {
+                        if (isRenamingNote) return
+                        handleResourceClick(resource.id, event)
+                      }}
+                      onrename={() => (isRenamingNote = resource.id)}
+                    />
+                  {/snippet}
+                </ResourceLoader>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <div class="empty">
+            <Button size="md" onclick={handleCreateNote}>
+              <span class="typo-title-sm">Create New Note</span>
+            </Button>
+            <p class="typo-title-sm"></p>
+          </div>
+        {/if}
+      {/snippet}
+    </SurfLoader>
+
     <!--    {#if !showAllNotes}
-      <span class="more typo-title-sm">+ {resourcesNotes.length - 6} more</span>
+      <span class="more typo-title-sm">+ {(searchResult ?? resources).length - 6} more</span>
     {/if}-->
   </section>
 </main>

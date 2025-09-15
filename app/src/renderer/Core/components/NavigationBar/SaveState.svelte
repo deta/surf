@@ -19,7 +19,7 @@
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
 
-  let notebooks = notebookManager.notebooks
+  const notebooks = notebookManager.sortedNotebooks
 
   let isMenuOpen = $state(false)
   let resource = $state<Resource | null>(null)
@@ -29,7 +29,7 @@
   let spaceIds = $derived(resource?.spaceIds ?? writable([]))
 
   let notebookItems = $derived(
-    $notebooks.map(
+    notebooks.map(
       (notebook) =>
         ({
           id: notebook.id,

@@ -6,6 +6,7 @@
   import { createResourceManager } from '@deta/services/resources'
   import { createTeletypeService } from '@deta/services/teletype'
   import { prepareContextMenu } from '@deta/ui'
+  import type { Option } from '@deta/types'
   import IndexRoute from './components/routes/IndexRoute.svelte'
   import NotebookDetailRoute from './components/routes/NotebookDetailRoute.svelte'
   import DraftsRoute from './components/routes/DraftsRoute.svelte'
@@ -22,13 +23,13 @@
   const config = provideConfig()
   const telemetry = setupTelemetry(config.getConfig().api_key)
   const resourceManager = createResourceManager(telemetry, config)
-  const notebookManager = createNotebookManager(resourceManager, config)
+  const notebookManager = createNotebookManager(resourceManager, config, messagePort)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
 
   let notebook: Notebook = $state(null)
   let notebookData = $derived(notebook.data ?? writable(null))
-  let query = $state<string | null>(null)
+  let query = $state<Option<string>>()
 
   let title = $derived(
     notebookId === 'drafts'
@@ -37,15 +38,18 @@
         ? 'History'
         : !notebook
           ? 'Surf'
-          : ($notebookData?.folderName ?? $notebookData?.name ?? 'null')
+          : (notebook.nameValue ?? 'null')
   )
 
   let resourcesPanelOpen = $state(
     localStorage.getItem('notebook_resourcePanelOpen')
       ? localStorage.getItem('notebook_resourcePanelOpen') === 'true'
-      : true
+      : false
   )
   $effect(() => localStorage.setItem('notebook_resourcePanelOpen', resourcesPanelOpen.toString()))
+  $effect(() => {
+    if (query !== null && query?.length > 0) resourcesPanelOpen = true
+  })
 
   onMount(prepareContextMenu)
   onMount(async () => {
@@ -75,18 +79,24 @@
   <div class="bg"></div>
 
   {#if notebookId === null}
-    <IndexRoute {query} {title} />
+    <IndexRoute {query} {title} onopensidebar={() => (resourcesPanelOpen = true)} />
   {:else if notebookId === 'drafts'}
     <DraftsRoute {messagePort} />
   {:else if notebookId === 'history'}
     <HistoryRoute />
   {:else if notebook}
-    <NotebookDetailRoute {notebook} {query} {messagePort} />
+    <NotebookDetailRoute {notebookId} {query} {messagePort} />
   {/if}
 
-  {#if (notebookId && notebook && notebookId !== 'drafts') || !notebookId}
-    <NotebookSidebar {title} {notebook} bind:open={resourcesPanelOpen} {query} />
-  {/if}
+  <NotebookSidebar
+    {title}
+    {notebookId}
+    bind:open={resourcesPanelOpen}
+    {query}
+    onquerychange={(v) => {
+      query = v || null
+    }}
+  />
 </div>
 
 <style lang="scss">
@@ -150,6 +160,10 @@
 
   :global(body) {
     background: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
+      url('./assets/greenfield.png');
+    background: rgba(250, 250, 250, 1);
+    background: linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(255, 255, 255, 0.9) 10%),
+      radial-gradient(at bottom right, transparent, rgba(255, 255, 255, 0.8) 90%),
       url('./assets/greenfield.png');
     background-repeat: no-repeat;
     background-size: cover;

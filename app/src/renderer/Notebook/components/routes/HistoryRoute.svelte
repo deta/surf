@@ -26,7 +26,7 @@
       <!--{#each $sortedNotebooksList as container, i}
         <li>
           <PageMention
-            text={`${container.dataValue.emoji ? container.dataValue.emoji + " " : ""}${container.dataValue.folderName}`}
+            text={`${container.data.emoji ? container.data.emoji + " " : ""}${container.data.folderName}`}
             onclick={async () => {
               await navigation.navigate(`surf://notebook/${container.id}`)
                 .finished;

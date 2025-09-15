@@ -280,6 +280,7 @@
   data-sub-menu-ref={subMenuRef}
   class:sub-items={subMenuRef !== undefined}
   class:anchor-left={anchor === 'left'}
+        class:hidden={$parentActiveSubMenuStore !== subMenuRef}
   style={subMenuRef !== undefined
     ? `position:fixed; --sub-id: --sub-${subMenuRef}; --y-offset: ${subMenuYOffset}px;`
     : ''}
@@ -327,7 +328,7 @@
               <DynamicIcon name={`colors;;${item.icon}`} size="1.1em" />
             {:else if typeof item.icon.contents !== 'undefined'}
               <div class="space-icon">
-                <DynamicIcon name={item.icon.getIconString()} interactive={false} size="sm" />
+                <DynamicIcon name={item.icon} interactive={false} size="sm" />
               </div>
             {/if}
           {/if}
@@ -355,6 +356,9 @@
             parentActiveSubMenuStore.set(`${i}`)
             updateHoverStyles()
           }}
+          on:mouseleave={() => {
+            parentActiveSubMenuStore.set(undefined)
+          }}
         >
           {#if item.icon}
             {#if typeof item.icon === 'string'}
@@ -363,7 +367,7 @@
               <DynamicIcon name={`colors;;${item.icon}`} size="1.1em" />
             {:else if typeof item.icon.contents !== 'undefined'}
               <div class="space-icon">
-                <DynamicIcon name={item.icon.getIconString()} interactive={false} size="sm" />
+                <DynamicIcon name={item.icon} interactive={false} size="sm" />
               </div>
             {/if}
           {/if}

@@ -1,6 +1,7 @@
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
 import {
+  ResourceTypes,
   SpaceEntryOrigin,
   type NotebookData,
   type NotebookEntry,
@@ -8,31 +9,29 @@ import {
   type SpaceEntrySearchOptions
 } from '@deta/types'
 
-import { useLogScope, blobToSmallImageUrl } from '@deta/utils'
+import { useLogScope, blobToSmallImageUrl, isMainRenderer } from '@deta/utils'
 import { getIconString, IconTypes } from '@deta/icons'
 
 import { type Telemetry } from '../telemetry'
 import { type ResourceManager } from '../resources'
 
-import type { NotebookManager } from './notebookManager'
+import type { NotebookManager } from './notebookManager.svelte'
+import { useMessagePortClient, useMessagePortPrimary } from '../messagePort'
+import { useViewManager } from '../views'
 
 export class Notebook {
+  private log: ReturnType<typeof useLogScope>
+  private notebookManager: NotebookManager
+  private resourceManager: ResourceManager
+  private telemetry: Telemetry
+
   id: string
   createdAt: string
   updatedAt: string
   deleted: number
 
-  /** Svelte store for the associated space data, use dataValue to access the value directly  */
-  data: Writable<NotebookData>
-  /** Svelte store for the associated space contents, use contentsValue to access the value directly */
-  contents: Writable<NotebookEntry[]>
-  /** Svelte store for the associated space index, use index to access the value directly */
-  index: Readable<number>
-
-  log: ReturnType<typeof useLogScope>
-  notebookManager: NotebookManager
-  resourceManager: ResourceManager
-  telemetry: Telemetry
+  data = $state() as NotebookData
+  contents = $state() as NotebookEntry[]
 
   constructor(space: NotebookSpace, oasis: NotebookManager) {
     this.id = space.id
@@ -40,61 +39,48 @@ export class Notebook {
     this.updatedAt = space.updated_at
     this.deleted = space.deleted
 
-    this.contents = writable<NotebookEntry[]>([])
+    this.contents = []
 
     this.log = useLogScope(`Notebook ${this.id}`)
     this.notebookManager = oasis
     this.resourceManager = oasis.resourceManager
     this.telemetry = oasis.telemetry
 
-    this.data = writable<NotebookData>(space.name)
-    this.index = derived(this.data, ($data) => $data.index ?? -1)
+    this.data = space.name
   }
 
-  /** Access the data of the space directly */
-  get dataValue() {
-    return get(this.data)
-  }
+  noteResources: NotebookEntry[] = $derived(
+    this.contents.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
+  )
 
   /** Returns the space data in the format of the old/sffs Space object */
   get spaceValue() {
     return {
       id: this.id,
-      name: this.dataValue,
+      name: this.data,
       created_at: this.createdAt,
       updated_at: this.updatedAt,
       deleted: this.deleted
     } as NotebookSpace
   }
 
-  /** Access the contents of the space directly */
-  get contentsValue() {
-    return get(this.contents)
-  }
-
-  /** Access the index of the space directly */
-  get indexValue() {
-    return get(this.index)
-  }
-
   get iconString() {
-    return getIconString(this.dataValue.icon)
+    return getIconString(this.data.icon)
   }
 
   get nameValue() {
     // also handle legacy space name
-    return (this.dataValue as any).folderName || this.dataValue.name
+    return (this.data as any)?.folderName || this.data?.name
   }
 
   async updateData(updates: Partial<NotebookData>) {
     this.log.debug('updating space', updates)
 
-    const data = { ...this.dataValue, ...updates }
-    this.data.set(data)
+    this.data = { ...this.data, ...updates }
 
-    await this.resourceManager.updateSpace(this.id, data)
+    await this.resourceManager.updateSpace(this.id, this.data)
 
-    this.notebookManager.triggerStoreUpdate(this)
+    //this.notebookManager.triggerStoreUpdate(this)
     this.notebookManager.emit('updated', this, updates)
   }
 
@@ -109,7 +95,7 @@ export class Notebook {
     const result = await this.resourceManager.getSpaceContents(this.id, opts)
 
     this.log.debug('got space contents:', result)
-    this.contents.set(result)
+    this.contents = result
     return result
   }
 
@@ -137,18 +123,10 @@ export class Notebook {
     this.notebookManager.emit('added-resources', this, resourceIds)
   }
 
-  async removeResources(resourceIds: string | string[], isUserAction = false) {
-    resourceIds = Array.isArray(resourceIds) ? resourceIds : [resourceIds]
+  async removeResources(resourceIds: string[], isUserAction = false) {
+    this.resourceManager.removeItemsFromSpace(this.id, resourceIds)
 
-    this.log.debug('removing resources', resourceIds)
-
-    await this.resourceManager.sffs.deleteEntriesInSpaceByEntryIds(this.id, resourceIds)
-
-    this.log.debug('removing resources from space contents store')
-    this.contents.update((contents) => {
-      return contents.filter((entry) => !resourceIds.includes(entry.entry_id))
-    })
-    this.log.debug('Resources removed:', resourceIds)
+    this.contents = this.contents.filter((entry) => !resourceIds.includes(entry.entry_id))
 
     if (isUserAction) resourceIds.forEach(() => this.telemetry.trackNotebookRemoveResource())
     this.notebookManager.emit('removed-resources', this, resourceIds)

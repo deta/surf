@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
-  import { setupTelemetry } from '@deta/services/helpers'
   import { useLogScope } from '@deta/utils/io'
   import { TelemetryCreateTabSource, type Fn } from '@deta/types'
 
@@ -11,14 +10,9 @@
 
   import WebContentsView from './components/WebContentsView.svelte'
   import TabsList from './components/Tabs/TabsList/TabsList.svelte'
-  //import Overlay from './components/Overlays/Overlay.svelte'
-
-  //import Test from './components/Overlays/Test.svelte'
-  //import Split from './components/Layout/Split.svelte'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { isLinux, isMac, isWindows, useDebounce, wait } from '@deta/utils'
-  import type { ContextManager } from '@deta/services/ai'
   import { Button, prepareContextMenu } from '@deta/ui'
   import { debugMode } from './stores/debug'
   import AltWindowControls from './components/AltWindowControls.svelte'
@@ -30,9 +24,7 @@
     telemetry,
     config,
     viewManager,
-    notebookManager,
     tabsService,
-    ai,
     keyboardManager,
     shortcutsManager,
     browser
@@ -221,6 +213,9 @@
           bind:this={activeTabNavigationBar}
           view={activeTabView}
           onsearchinput={handleSearchInput}
+          tab={tabsService.activeTab}
+          roundLeftCorner
+          roundRightCorner={!viewManager.sidebarViewOpen}
         />
       {/if}
       <div class="tab-contents">

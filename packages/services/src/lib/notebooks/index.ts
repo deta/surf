@@ -1,3 +1,3 @@
-export * from './notebookManager'
-export * from './notebook'
+export * from './notebookManager.svelte'
+export * from './notebook.svelte'
 export * from './notebook.types'

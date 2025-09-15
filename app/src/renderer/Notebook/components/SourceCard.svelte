@@ -4,11 +4,12 @@
     getResourcePreview,
     Resource,
     useResourceManager,
+    getResourceCtxItems,
     isGeneratedResource
   } from '@deta/services/resources'
   import { contextMenu, type CtxItem } from '@deta/ui'
+  import { type openResourceOptions, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
   import { getFileKind, truncate } from '../../../../../packages/utils/dist'
-  import { ResourceTypes } from '@deta/types'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
   import { DynamicIcon } from '@deta/icons'
   import { onMount } from 'svelte'
@@ -18,8 +19,8 @@
 
   // TODO: Decouple this rendering from the Resource?
   let {
-    resource: _resource,
-    resourceId,
+    resource,
+    sourceNotebookId,
     text = false,
     onlyCard = false,
     onDeleteResource
@@ -29,7 +30,7 @@
     //faviconImage
   }: {
     resource: Resource
-    resourceId?: string
+    sourceNotebookId?: string
     text?: boolean
     onlyCard?: boolean
     onDeleteResource?: (resource: Resource) => void
@@ -43,7 +44,6 @@
   const resourceManager = useResourceManager()
 
   let data = $state(null)
-  let resource = $state(null)
   let faviconUrl = $derived(
     data.source.imageUrl || data.url
       ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(data.url)}&sz=48`
@@ -52,13 +52,24 @@
   let imageError = $state(false)
 
   const handleClick = (e: MouseEvent) => {
-    handleResourceClick(resourceId ?? resource.id, e)
+    handleResourceClick(resource.id, e)
+  }
+
+  const handleAddToNotebook = (notebookId: string) => {
+    notebookManager.addResourcesToNotebook(
+      notebookId,
+      [resource.id],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
+  }
+  const handleRemoveFromNotebook = (notebookId: string) => {
+    notebookManager.removeResourcesFromNotebook(notebookId, [resource.id], true)
   }
 
   const handleDeleteResource = async () => {
-    if (resource) {
-      onDeleteResource?.(resource)
-    }
+    if (!resource) return
+    onDeleteResource?.(resource)
   }
 
   const handleImageError = () => {
@@ -66,18 +77,20 @@
   }
 
   onMount(async () => {
-    if (!resourceId && _resource) {
-      resource = _resource
-    } else if (resourceId) {
-      resource = await resourceManager.getResource(resourceId, { includeAnnotations: false })
-    }
-
-    if (!resource) {
-      return
-    }
-
-    data = await getResourcePreview(resource, {})
+    getResourcePreview(resource, {}).then((v) => (data = v))
   })
+
+  const CTX_MENU_ITEMS: CtxItem[] = $derived(
+    getResourceCtxItems({
+      resource,
+      sortedNotebooks: notebookManager.sortedNotebooks,
+      onAddToNotebook: handleAddToNotebook,
+      onOpenOffline: (resourceId: string) =>
+        openResource(resourceId, { offline: true, target: 'tab' }),
+      onDeleteResource: handleDeleteResource,
+      onRemove: !sourceNotebookId ? undefined : () => handleRemoveFromNotebook(sourceNotebookId)
+    })
+  )
 </script>
 
 {#if !data}
@@ -96,29 +109,7 @@
     role="none"
     {@attach contextMenu({
       canOpen: true,
-      items: [
-        {
-          type: 'action',
-          text: 'Pin',
-          icon: 'pin',
-          action: () => {}
-        },
-        {
-          type: 'action',
-          text: 'View Offline',
-          icon: 'save',
-          action: () => {
-            openResource(resourceId ?? resource.id, { offline: true, target: 'tab' })
-          }
-        },
-        {
-          type: 'action',
-          kind: 'danger',
-          text: 'Delete',
-          icon: 'trash',
-          action: handleDeleteResource
-        }
-      ]
+      items: CTX_MENU_ITEMS
     })}
     data-resource-id={resource.id}
   >
@@ -293,7 +284,8 @@
       }
     }
 
-    &:hover {
+    &:hover,
+    &:global([data-context-menu-anchor]) {
       .card {
         transform: scale(1.025) rotate3d(1, 2, 4, 1.5deg);
         // NOTE: We shouldnt animate this succer, use ::pseudo element and just animate its opacity instead

@@ -1,12 +1,21 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { Button, contextMenu, LazyScroll, MaskedScroll, openDialog } from '@deta/ui'
+  import {
+    Button,
+    contextMenu,
+    LazyScroll,
+    MaskedScroll,
+    openDialog,
+    ResourceLoader,
+    SearchInput
+  } from '@deta/ui'
   import SourceCard from './SourceCard.svelte'
-  import { ResourceTypes } from '@deta/types'
+  import { type NotebookEntry, ResourceTypes, type Option } from '@deta/types'
+  import { NotebookLoader, SurfLoader } from '@deta/ui'
   import { type Notebook } from '@deta/services/notebook'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { SearchResourceTags, truncate, useDebounce, useThrottle } from '@deta/utils'
-  import type { ResourceNote } from '@deta/services/resources'
+  import type { ResourceNote, ResourceSearchResult } from '@deta/services/resources'
   import NotebookCard from './NotebookCard.svelte'
   import NotebookSidebarSection from './NotebookSidebarSection.svelte'
   import { useNotebookManager } from '@deta/services/notebooks'
@@ -16,54 +25,60 @@
   import { handleNotebookClick, handleResourceClick } from '../handlers/notebookOpenHandlers'
 
   let {
-    notebook,
+    notebookId,
     title,
     open = $bindable(),
-    query
+    query,
+    onquerychange
   }: {
-    notebook?: Notebook
+    notebookId?: string
     title: string
     open: boolean
     query: string | null
+    onquerychange: (v: string) => void
   } = $props()
 
-  const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
-  const sortedNotebooksList = $derived(notebookManager.sortedNotebooksList)
   const notebooksList = $derived(
-    $sortedNotebooksList.toReversed().filter((e) => {
-      if (!query) return true
-      return (e.dataValue.folderName ?? e.dataValue.name)
-        .toLowerCase()
-        .includes(query.toLowerCase())
-    })
+    notebookManager.sortedNotebooks
+      .filter((e) => {
+        if (!query) return true
+        return e.nameValue.toLowerCase().includes(query.toLowerCase())
+      })
+      .sort((a, b) => (b.data.pinned === true) - (a.data.pinned === true))
   )
 
-  const notebookData = $derived(notebook?.data ?? writable(null))
+  // TODO: Make this conversion more sane and put it in a generalized place!
+  const filterNoteResources = (
+    resources: NotebookEntry[],
+    searchResults: Option<ResourceSearchResult>
+  ) => {
+    if (searchResults) {
+      return searchResults.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
+    } else {
+      return resources.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
+    }
+  }
+  const filterOtherResources = (
+    resources: NotebookEntry[],
+    searchResults: Option<ResourceSearchResult>
+  ) => {
+    if (searchResults) {
+      return searchResults.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
+    } else return resources.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
+  }
 
-  let noteResources = $state([])
-  let noneNotesResources = $state([])
+  // TODO: put this in lazy scroll component
   let resourceRenderCnt = $state(20)
   $effect(() => {
     if (!open) resourceRenderCnt = 20
   })
+  // TODO: Put this into lazy scroll component, no need for rawdogging crude js
+  const handleMediaWheel = useThrottle(() => {
+    resourceRenderCnt += 2
+  }, 5)
 
   let isRenamingNotebook: string | undefined = $state(undefined)
-
-  const handleDeleteNote = async (noteId: string) => {
-    const { closeType: confirmed } = await openDialog({
-      title: `Delete <i>${truncate('Note', 26)}</i>`, // note.metadata.name
-      message: `This can't be undone.`,
-      actions: [
-        { title: 'Cancel', type: 'reset' },
-        { title: 'Delete', type: 'submit', kind: 'danger' }
-      ]
-    })
-    if (!confirmed) return
-
-    //await notebook.removeResources(note.id)
-    await resourceManager.deleteResource(noteId)
-  }
 
   const handleCreateNotebook = async () => {
     //if (newNotebookName === undefined || newNotebookName.length < 1) {
@@ -86,7 +101,7 @@
 
   const handleDeleteNotebook = async (notebook: Notebook) => {
     const { closeType: confirmed } = await openDialog({
-      title: `Delete <i>${truncate(notebook.dataValue.folderName ?? notebook.dataValue.name, 26)}</i>`,
+      title: `Delete <i>${truncate(notebook.nameValue, 26)}</i>`,
       message: `This can't be undone. <br>Your resources won't be deleted.`,
       actions: [
         { title: 'Cancel', type: 'reset' },
@@ -105,81 +120,11 @@
     isRenamingNotebook = undefined
   }
 
-  const handlePinNotebook = (notebookId: string) => {}
-  const handleUnPinNotebook = (notebookId: string) => {}
-
-  const handleMediaWheel = useThrottle(() => {
-    if (resourceRenderCnt > noneNotesResources.length) return
-    resourceRenderCnt += 1
-  }, 5)
-
-  const fetchContents = async (query: string | null) => {
-    if (query) {
-      const resultNotes = await resourceManager.searchResources(
-        query,
-        [
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
-          //...conditionalArrayItem(isNotesSpace, [
-          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          //])
-        ],
-        {
-          semanticEnabled: false,
-          spaceId: notebook?.id ?? undefined
-        }
-      )
-      const resultNoneNotes = await resourceManager.searchResources(
-        query,
-        [
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
-          //...conditionalArrayItem(isNotesSpace, [
-          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          //])
-        ],
-        {
-          semanticEnabled: false,
-          spaceId: notebook?.id ?? undefined
-        }
-      )
-      noteResources = resultNotes.resources.map((e) => e.id)
-      noneNotesResources = resultNoneNotes.resources.map((e) => e.id)
-    } else {
-      if (notebook) {
-        const results = await notebook.fetchContents()
-
-        const resultNotes = get(notebook.contents)
-          .filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
-          .map((e) => e.entry_id)
-        const resultNoneNotes = get(notebook.contents)
-          .filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
-          .map((e) => e.entry_id)
-        noteResources = resultNotes
-        noneNotesResources = resultNoneNotes
-      } else {
-        const resultNotes = await resourceManager.listResourceIDsByTags([
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-        ])
-        const resultNoneNotes = await resourceManager.listResourceIDsByTags([
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-        ])
-        noteResources = resultNotes
-        noneNotesResources = resultNoneNotes
-      }
-    }
+  const handlePinNotebook = (notebookId: string) => {
+    notebookManager.updateNotebookData(notebookId, { pinned: true })
+  }
+  const handleUnPinNotebook = (notebookId: string) => {
+    notebookManager.updateNotebookData(notebookId, { pinned: false })
   }
 
   const onDeleteResource = async (resource: Resource) => {
@@ -192,14 +137,8 @@
       ]
     })
     if (!confirmed) return
-    notebookManager.removeResources(resource.id, notebook ? notebook.id : undefined, true)
+    notebookManager.removeResources(resource.id, notebookId ?? undefined, true)
   }
-
-  $effect(() => fetchContents(query))
-
-  onMount(async () => {
-    fetchContents(query)
-  })
 </script>
 
 <aside class:open>
@@ -207,149 +146,399 @@
     <header class="px pt">
       <Button size="md" onclick={() => (open = true)}>
         <span class="typo-title-sm" style="opacity: 0.5;">Show Sources</span>
-        <Icon name="sidebar.right" size="1.2em" />
       </Button>
     </header>
-  {:else}
+  {:else if notebookId === 'drafts'}
     <header class="px pt">
       <div class="hstack" style="gap: 0.5rem; padding-left:0.5rem;">
-        <!--<NotebookCover />-->
         <h1>
-          {query
-            ? 'Search Results'
-            : notebook
-              ? ($notebookData.folderName ?? $notebookData.name)
-              : title}
+          {query ? 'Search Results' : 'Drafts'}
         </h1>
       </div>
-      <Button size="md" onclick={() => (open = false)}>
-        <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
-        <Icon name="sidebar.right" size="1.2em" />
-      </Button>
+      <div class="hstack" style="gap: 0.5rem;">
+        <SearchInput onsearchinput={(v) => onquerychange(v)} autofocus />
+        <Button size="md" onclick={() => (open = false)}>
+          <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
+        </Button>
+      </div>
     </header>
 
     <MaskedScroll --padding={'0.5rem 0.5rem 0rem 0.5rem'}>
-      {#if !notebook}
-        {#if query === null || query.length <= 0 || (query !== null && query.length > 0 && notebooksList.length > 0)}
-          <NotebookSidebarSection
-            title="Notebooks"
-            class="notebooks"
-            open={query !== null && query.length > 0}
-          >
-            <div class="notebook-grid">
-              {#each notebooksList as notebook, i (notebook.id)}
-                <div
-                  class="notebook-wrapper"
-                  style="width: 100%;max-width: 10ch;"
-                  style:--delay={100 + i * 10 + 'ms'}
-                  {@attach contextMenu({
-                    canOpen: true,
-                    items: [
-                      {
-                        type: 'action',
-                        text: 'Pin',
-                        icon: 'pin',
-                        action: () => handlePinNotebook(notebook.id)
-                      },
-                      {
-                        type: 'action',
-                        text: 'Rename',
-                        icon: 'edit',
-                        action: () => (isRenamingNotebook = notebook.id)
-                      },
+      <SurfLoader
+        excludeWithinSpaces
+        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
+        search={{
+          query,
+          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
+          parameters: {
+            semanticSearch: false
+          }
+        }}
+      >
+        {#snippet children([resources, searchResult, searching])}
+          {#if !query || (searchResult ?? resources).length > 0}
+            <NotebookSidebarSection title="Notes" class="chapters" open={query}>
+              <ul>
+                {#each searchResult ?? resources as resource (resource.id)}
+                  <ResourceLoader {resource}>
+                    {#snippet children(resource: Resource)}
+                      <NotebookSidebarNoteName {resource} />
+                    {/snippet}
+                  </ResourceLoader>
+                {/each}
+              </ul>
+            </NotebookSidebarSection>
+          {/if}
+        {/snippet}
+      </SurfLoader>
 
-                      {
-                        type: 'action',
-                        kind: 'danger',
-                        text: 'Delete',
-                        icon: 'trash',
-                        action: () => handleDeleteNotebook(notebook)
-                      }
-                    ]
-                  })}
-                >
-                  <NotebookCard
-                    {notebook}
-                    text={notebook.dataValue.folderName ?? notebook.dataValue.name}
-                    size={10}
-                    editing={isRenamingNotebook === notebook.id}
-                    onclick={async (event) => {
-                      handleNotebookClick(notebook.id, event)
-                    }}
-                    onchange={(v) => {
-                      handleRenameNotebook(notebook.id, v)
-                      isRenamingNotebook = undefined
-                    }}
-                    oncancel={handleCancelRenameNotebook}
-                  />
+      <SurfLoader
+        excludeWithinSpaces
+        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
+        search={{
+          query,
+          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')],
+          parameters: {
+            semanticSearch: false
+          }
+        }}
+      >
+        {#snippet children([resources, searchResult, searching])}
+          {#if !query || (searchResult ?? resources).length > 0}
+            <NotebookSidebarSection title="Media" class="sources" open>
+              {#if (searchResult ?? resources).length <= 0}
+                <div class="px py">
+                  <div class="empty">
+                    <p class="typo-title-sm">
+                      Save webpages or drop in files to add to this notebook.
+                    </p>
+                  </div>
                 </div>
-              {/each}
-            </div>
-          </NotebookSidebarSection>
-        {/if}
-      {/if}
+              {:else}
+                <div class="sources-grid" onwheel={handleMediaWheel}>
+                  {#each (searchResult ?? resources).slice(0, searchResult ? Infinity : resourceRenderCnt) as resource (resource.id)}
+                    <ResourceLoader {resource}>
+                      {#snippet children(resource: Resource)}
+                        <SourceCard
+                          --width={'5rem'}
+                          --max-width={''}
+                          {resource}
+                          text
+                          {onDeleteResource}
+                        />
+                      {/snippet}
+                    </ResourceLoader>
+                  {/each}
+                </div>
+                {#if resourceRenderCnt < (searchResult ?? resources).length}
+                  <div style="text-align:center;width:100%;margin-top:1rem;">
+                    <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
+                  </div>
+                {/if}
+              {/if}
+            </NotebookSidebarSection>
+          {/if}
+        {/snippet}
+      </SurfLoader>
+    </MaskedScroll>
+  {:else if !notebookId}
+    <header class="px pt">
+      <div class="hstack" style="gap: 0.5rem; padding-left:0.5rem;">
+        <!--<NotebookCover />-->
 
-      {#if query === null || query.length <= 0 || (query !== null && query.length > 0 && noteResources.length > 0)}
-        <NotebookSidebarSection
-          title="Notes"
-          class="chapters"
-          open={query !== null && query.length > 0}
-        >
-          <ul>
-            {#each noteResources as resourceId (resourceId)}
-              <li
+        <h1>
+          {query ? 'Search Results' : 'Surf'}
+        </h1>
+      </div>
+      <div class="hstack" style="gap: 0.5rem;">
+        <SearchInput onsearchinput={(v) => onquerychange(v)} autofocus />
+        <Button size="md" onclick={() => (open = false)}>
+          <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
+        </Button>
+      </div>
+    </header>
+
+    <MaskedScroll --padding={'0.5rem 0.5rem 0rem 0.5rem'}>
+      {#if !query || (query !== null && query.length > 0 && notebooksList.length > 0)}
+        <NotebookSidebarSection title="Notebooks" class="notebooks" open={query}>
+          <div class="notebook-grid">
+            <div
+              class="notebook-wrapper"
+              style="width: 100%;max-width: 12ch;"
+              style:--delay={'100ms'}
+              onclick={async (event) => {
+                open = false
+                handleNotebookClick('drafts', event)
+              }}
+            >
+              <NotebookCard title="Drafts" size={12} color={['#232323', 'green']} />
+            </div>
+            {#each notebooksList as notebook, i (notebook.id)}
+              <div
+                class="notebook-wrapper"
+                style="width: 100%;max-width: 12ch;"
+                style:--delay={100 + i * 10 + 'ms'}
                 {@attach contextMenu({
                   canOpen: true,
                   items: [
+                    !notebook.data.pinned
+                      ? {
+                          type: 'action',
+                          text: 'Pin',
+                          icon: 'pin',
+                          action: () => handlePinNotebook(notebook.id)
+                        }
+                      : {
+                          type: 'action',
+                          text: 'Unpin',
+                          icon: 'pin',
+                          action: () => handleUnPinNotebook(notebook.id)
+                        },
+                    {
+                      type: 'action',
+                      text: 'Rename',
+                      icon: 'edit',
+                      action: () => (isRenamingNotebook = notebook.id)
+                    },
+
                     {
                       type: 'action',
                       kind: 'danger',
                       text: 'Delete',
                       icon: 'trash',
-                      action: () => handleDeleteNote(resourceId)
+                      action: () => handleDeleteNotebook(notebook)
                     }
                   ]
                 })}
-                onclick={async (event) => {
-                  handleResourceClick(resourceId, event)
-                }}
               >
-                <span><NotebookSidebarNoteName {resourceId} /></span>
-              </li>
+                <NotebookCard
+                  {notebook}
+                  text={notebook.nameValue}
+                  size={12}
+                  editing={isRenamingNotebook === notebook.id}
+                  onclick={(e) => handleNotebookClick(notebook.id, e)}
+                  onchange={(v) => {
+                    handleRenameNotebook(notebook.id, v)
+                    isRenamingNotebook = undefined
+                  }}
+                  oncancel={handleCancelRenameNotebook}
+                />
+              </div>
             {/each}
-          </ul>
+          </div>
         </NotebookSidebarSection>
       {/if}
 
-      {#if query === null || query.length <= 0 || (query !== null && query.length > 0 && noneNotesResources.length > 0)}
-        <NotebookSidebarSection title="Media" class="sources" open>
-          {#if noneNotesResources.length <= 0}
-            <div class="px py">
-              <div class="empty">
-                <p class="typo-title-sm">Save webpages or drop in files to add to this notebook.</p>
-              </div>
-            </div>
-          {:else}
-            <div class="sources-grid" onwheel={handleMediaWheel}>
-              {#each noneNotesResources.slice(0, resourceRenderCnt) as resourceId (resourceId)}
-                <SourceCard
-                  --width={'5rem'}
-                  --max-width={''}
-                  {resourceId}
-                  text
-                  {onDeleteResource}
-                />
-              {/each}
-            </div>
-            {#if resourceRenderCnt < noneNotesResources.length}
-              <div style="text-align:center;width:100%;margin-top:1rem;">
-                <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
-              </div>
+      <SurfLoader
+        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
+        search={{
+          query,
+          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
+          parameters: {
+            semanticSearch: false
+          }
+        }}
+      >
+        {#snippet children([resources, searchResult, searching])}
+          {#if !query || (searchResult ?? resources).length > 0}
+            <NotebookSidebarSection title="Notes" class="chapters" open={query}>
+              <ul>
+                {#each searchResult ?? resources as resource (resource.id)}
+                  <ResourceLoader {resource}>
+                    {#snippet children(resource: Resource)}
+                      <NotebookSidebarNoteName {resource} />
+                    {/snippet}
+                  </ResourceLoader>
+                {/each}
+              </ul>
+            </NotebookSidebarSection>
+          {/if}
+        {/snippet}
+      </SurfLoader>
+
+      <SurfLoader
+        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
+        search={{
+          query,
+          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')],
+          parameters: {
+            semanticSearch: false
+          }
+        }}
+      >
+        {#snippet children([resources, searchResult, searching])}
+          {#if !query || (searchResult ?? resources).length > 0}
+            <NotebookSidebarSection title="Media" class="sources" open>
+              {#if (searchResult ?? resources).length <= 0}
+                <div class="px py">
+                  <div class="empty">
+                    <p class="typo-title-sm">
+                      Save webpages or drop in files to add to this notebook.
+                    </p>
+                  </div>
+                </div>
+              {:else}
+                <div class="sources-grid" onwheel={handleMediaWheel}>
+                  {#each (searchResult ?? resources).slice(0, searchResult ? Infinity : resourceRenderCnt) as resource (resource.id)}
+                    <ResourceLoader {resource}>
+                      {#snippet children(resource: Resource)}
+                        <SourceCard
+                          --width={'5rem'}
+                          --max-width={''}
+                          {resource}
+                          text
+                          {onDeleteResource}
+                        />
+                      {/snippet}
+                    </ResourceLoader>
+                  {/each}
+                </div>
+                {#if resourceRenderCnt < (searchResult ?? resources).length}
+                  <div style="text-align:center;width:100%;margin-top:1rem;">
+                    <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
+                  </div>
+                {/if}
+              {/if}
+            </NotebookSidebarSection>
+          {/if}
+        {/snippet}
+      </SurfLoader>
+    </MaskedScroll>
+  {:else}
+    <NotebookLoader
+      {notebookId}
+      search={{
+        query,
+        parameters: {
+          semanticSearch: false
+        }
+      }}
+      fetchContents
+    >
+      {#snippet children([notebook, searchResult, searching])}
+        <header class="px pt">
+          <div class="hstack" style="gap: 0.5rem; padding-left:0.5rem;">
+            <!--<NotebookCover />-->
+
+            <h1>
+              {query ? 'Search Results' : notebook ? notebook.nameValue : title}
+            </h1>
+          </div>
+          <div class="hstack" style="gap: 0.5rem;">
+            <SearchInput onsearchinput={(v) => onquerychange(v)} autofocus />
+            <Button size="md" onclick={() => (open = false)}>
+              <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
+            </Button>
+          </div>
+        </header>
+
+        <MaskedScroll --padding={'0.5rem 0.5rem 0rem 0.5rem'}>
+          {#if !notebookId}
+            {#if !query || (query !== null && query.length > 0 && notebooksList.length > 0)}
+              <NotebookSidebarSection title="Notebooks" class="notebooks" open={query}>
+                <div class="notebook-grid">
+                  {#each notebooksList as notebook, i (notebook.id)}
+                    <div
+                      class="notebook-wrapper"
+                      style="width: 100%;max-width: 10ch;"
+                      style:--delay={100 + i * 10 + 'ms'}
+                      {@attach contextMenu({
+                        canOpen: true,
+                        items: [
+                          {
+                            type: 'action',
+                            text: 'Pin',
+                            icon: 'pin',
+                            action: () => handlePinNotebook(notebook.id)
+                          },
+                          {
+                            type: 'action',
+                            text: 'Rename',
+                            icon: 'edit',
+                            action: () => (isRenamingNotebook = notebook.id)
+                          },
+
+                          {
+                            type: 'action',
+                            kind: 'danger',
+                            text: 'Delete',
+                            icon: 'trash',
+                            action: () => handleDeleteNotebook(notebook)
+                          }
+                        ]
+                      })}
+                    >
+                      <NotebookCard
+                        {notebook}
+                        text={notebook.nameValue}
+                        size={10}
+                        editing={isRenamingNotebook === notebook.id}
+                        onclick={(e) => handleNotebookClick(notebook.id, e)}
+                        onchange={(v) => {
+                          handleRenameNotebook(notebook.id, v)
+                          isRenamingNotebook = undefined
+                        }}
+                        oncancel={handleCancelRenameNotebook}
+                      />
+                    </div>
+                  {/each}
+                </div>
+              </NotebookSidebarSection>
             {/if}
           {/if}
-        </NotebookSidebarSection>
-      {/if}
-    </MaskedScroll>
+
+          {#if !query || filterNoteResources(notebook.contents, searchResult).length > 0}
+            <NotebookSidebarSection title="Notes" class="chapters" open={query}>
+              <ul>
+                {#each filterNoteResources(notebook.contents, searchResult) as { entry_id: resourceId } (resourceId)}
+                  <ResourceLoader resource={resourceId}>
+                    {#snippet children(resource: Resource)}
+                      <NotebookSidebarNoteName {resource} sourceNotebookId={notebook.id} />
+                    {/snippet}
+                  </ResourceLoader>
+                {/each}
+              </ul>
+            </NotebookSidebarSection>
+          {/if}
+
+          {#if !query || filterOtherResources(notebook.contents, searchResult).length > 0}
+            <NotebookSidebarSection title="Media" class="sources" open>
+              {#if filterOtherResources(notebook.contents, searchResult).length <= 0}
+                <div class="px py">
+                  <div class="empty">
+                    <p class="typo-title-sm">
+                      Save webpages or drop in files to add to this notebook.
+                    </p>
+                  </div>
+                </div>
+              {:else}
+                <div class="sources-grid" onwheel={handleMediaWheel}>
+                  {#each filterOtherResources(notebook.contents, searchResult).slice(0, resourceRenderCnt) as { entry_id: resourceId } (resourceId)}
+                    <ResourceLoader resource={resourceId}>
+                      {#snippet children(resource: Resource)}
+                        <SourceCard
+                          --width={'5rem'}
+                          --max-width={''}
+                          {resource}
+                          text
+                          {onDeleteResource}
+                          sourceNotebookId={notebook.id}
+                        />
+                      {/snippet}
+                    </ResourceLoader>
+                  {/each}
+                </div>
+                {#if resourceRenderCnt < filterOtherResources(notebook.contents, searchResult).length}
+                  <div style="text-align:center;width:100%;margin-top:1rem;">
+                    <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
+                  </div>
+                {/if}
+              {/if}
+            </NotebookSidebarSection>
+          {/if}
+        </MaskedScroll>
+      {/snippet}
+    </NotebookLoader>
   {/if}
 </aside>
 
@@ -509,40 +698,6 @@
 
   :global(aside section.chapters) {
     font-size: 0.9rem;
-    ul {
-      li {
-        padding: 0.5em;
-        border-radius: 8px;
-        overflow: hidden;
-
-        &:hover {
-          background: rgba(0, 0, 0, 0.05);
-        }
-
-        span {
-          //display: -webkit-box;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 1;
-          overflow: hidden;
-          leading-trim: both;
-          text-edge: cap;
-          text-overflow: ellipsis;
-          font-family: Inter;
-          font-style: normal;
-          font-weight: 400;
-          line-height: 0.9355rem; /* 106.916% */
-
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-
-          &:not(.active) {
-            opacity: 0.5;
-          }
-        }
-      }
-    }
   }
 
   .empty {

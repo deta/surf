@@ -2,52 +2,54 @@
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { openDialog } from '@deta/ui'
   import { type Notebook } from '@deta/services/notebook'
-  import { Button, PageMention } from '@deta/ui'
+  import { Button, PageMention, NotebookLoader } from '@deta/ui'
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
-  import { contextMenu } from '@deta/ui'
+  import { contextMenu, ResourceLoader } from '@deta/ui'
+  import { type ResourceSearchResult, type ResourceNote } from '@deta/services/resources'
+  import type { Fn, NotebookEntry, Option } from '@deta/types'
+  import { ResourceTypes, SpaceEntryOrigin, ResourceTagsBuiltInKeys } from '@deta/types'
   import { SearchResourceTags, truncate, useDebounce, useLogScope } from '@deta/utils'
-  import { type ResourceNote } from '@deta/services/src/lib/resources'
-  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
   import { onMount } from 'svelte'
   import { get } from 'svelte/store'
   import { type MessagePortClient } from '@deta/services/messagePort'
-  import { handleResourceClick } from '../../handlers/notebookOpenHandlers'
+  import NotebookSidebarSection from '../NotebookSidebarSection.svelte'
+  import { handleResourceClick, openResource } from '../../handlers/notebookOpenHandlers'
+  import { Icon } from '@deta/icons'
+  import { useNotebookManager } from '@deta/services/notebooks'
 
   let {
-    notebook,
+    notebookId,
     messagePort,
     query
-  }: { notebook: Notebook; messagePort: MessagePortClient; query?: string } = $props()
+  }: {
+    notebookId: string
+    messagePort: MessagePortClient
+    query?: string
+  } = $props()
 
   const log = useLogScope('NotebookDetailRoute')
   const resourceManager = useResourceManager()
-  const telemetry = resourceManager.telemetry
-  let showAllNotes = $state(query !== null)
+  const notebookManager = useNotebookManager()
+  let showAllNotes = $state(false)
   let isRenamingNote = $state(null)
 
-  const notebookData = notebook.data
-
-  let noteResources = $state([])
-  let noneNotesResources = $state([])
-
   const handleCreateNote = async () => {
-    await messagePort.createNote.send({ notebookId: notebook.id, isNewTabPage: true })
-  }
+    const note = await resourceManager.createResourceNote(
+      '',
+      {
+        name: 'Untitled Note'
+      },
+      undefined,
+      true
+    )
+    await notebookManager.addResourcesToNotebook(
+      notebookId,
+      [note.id],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
 
-  const handleDeleteNote = async (noteId: string) => {
-    const { closeType: confirmed } = await openDialog({
-      //title: `Delete <i>${truncate(note.metadata.name, 26)}</i>`,
-      title: `Delete <i>${truncate('Note', 26)}</i>`,
-      message: `This can't be undone.`,
-      actions: [
-        { title: 'Cancel', type: 'reset' },
-        { title: 'Delete', type: 'submit', kind: 'danger' }
-      ]
-    })
-    if (!confirmed) return
-
-    await notebook.removeResources(noteId, true)
-    await resourceManager.deleteResource(noteId)
+    openResource(note.id, { target: 'active_tab' })
   }
 
   const handleRenameNote = useDebounce((noteId: string, value: string) => {
@@ -58,153 +60,113 @@
     isRenamingNote = undefined
   }, 75)
 
-  const fetchContents = async (query: string | null) => {
-    if (query) {
-      const resultNotes = await resourceManager.searchResources(
-        query,
-        [
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
-          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
-          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
-          //...conditionalArrayItem(isNotesSpace, [
-          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          //])
-        ],
-        {
-          semanticEnabled: false,
-          spaceId: notebook?.id ?? undefined
-        }
+  const filterNoteResources = (
+    resources: NotebookEntry[],
+    searchResults: Option<ResourceSearchResult>
+  ) => {
+    if (searchResults) {
+      return searchResults.resources.filter(
+        (e) => e.resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
       )
-      const resultNoneNotes = await resourceManager.searchResources(
-        query,
-        [
-          SearchResourceTags.Deleted(false),
-          SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
-          SearchResourceTags.NotExists('silent'),
-          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-          //...hashtags.map((x) => SearchResourceTags.Hashtag(x)),
-          //...conditionalArrayItem(isNotesSpace, [
-          //  SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          //])
-        ],
-        {
-          semanticEnabled: false,
-          spaceId: notebook?.id ?? undefined
-        }
-      )
-
-      log.debug('Search results notes:', resultNotes)
-      noteResources = resultNotes.resources.map((e) => e.id)
-      noneNotesResources = resultNoneNotes.resources.map((e) => e.id)
-    } else {
-      const results = await notebook.fetchContents()
-      const resultNotes = results
-        .filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
-        .map((e) => e.entry_id)
-
-      const resultNoneNotes = results
-        .filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
-        .map((e) => e.entry_id)
-
-      noteResources = resultNotes
-      noneNotesResources = resultNoneNotes
-    }
+    } else return resources.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
   }
-
-  $effect(() => fetchContents(query))
-
-  onMount(async () => {
-    fetchContents(query)
-  })
 </script>
 
-<svelte:head>
+<!--<svelte:head>
   <title
     >{`${$notebookData.emoji ? $notebookData.emoji + ' ' : ''}${$notebookData.folderName ?? $notebookData.name}`}</title
   >
-</svelte:head>
+</svelte:head>-->
 
-<main>
-  <div class="tty-wrapper">
-    <h1>
-      {`${$notebookData.emoji ? $notebookData.emoji + ' ' : ''}${$notebookData.folderName ?? $notebookData.name}`}
-    </h1>
-    <TeletypeEntry open={true} />
-  </div>
-  <section class="notes">
-    <header>
-      <label>Notes</label>
-      <Button
-        size="xs"
-        onclick={() => (showAllNotes = !showAllNotes)}
-        disabled={noteResources.length <= 6}
-      >
-        <span class="typo-title-sm" style="opacity: 0.75;"
-          >{showAllNotes ? 'Hide' : 'Show'} All</span
-        >
-      </Button>
-    </header>
-    {#if noteResources.length <= 0}
-      <div class="empty">
-        <Button size="md" onclick={handleCreateNote}>
-          <span class="typo-title-sm">Create New Note</span>
-        </Button>
-        <p class="typo-title-sm">You can also create notes through Teletype.</p>
+<NotebookLoader
+  {notebookId}
+  search={{
+    query,
+    tags: [
+      SearchResourceTags.Deleted(false),
+      SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
+      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne'),
+      SearchResourceTags.NotExists('silent')
+    ]
+  }}
+  fetchContents
+>
+  {#snippet loading()}
+    loading
+  {/snippet}
+
+  {#snippet children([notebook, _])}
+    <main>
+      <div class="tty-wrapper">
+        <h1>
+          {notebook.nameValue}
+        </h1>
+        <TeletypeEntry open={true} />
       </div>
-    {:else}
-      <ul class:showAllNotes={showAllNotes || noteResources?.length <= 6}>
-        {#each noteResources.slice(0, showAllNotes ? Infinity : 7) as resourceId}
-          <li
-            {@attach contextMenu({
-              canOpen: true,
-              items: [
-                /*{
-            type: 'action',
-            text: 'Pin',
-            icon: 'pin',
-            action: () => {}
-          },*/
-                {
-                  type: 'action',
-                  text: 'Rename',
-                  icon: 'edit',
-                  action: () => (isRenamingNote = resourceId)
-                },
-                {
-                  type: 'action',
-                  kind: 'danger',
-                  text: 'Delete',
-                  icon: 'trash',
-                  action: () => handleDeleteNote(resourceId)
-                }
-              ]
-            })}
+
+      <section class="notes">
+        <header>
+          <label>Latest Notes</label>
+
+          <Button size="md" onclick={handleCreateNote}>
+            <Icon name="add" size="0.95rem" />
+            <span class="typo-title-sm" style="opacity: 0.75;">Create Note</span>
+          </Button>
+          <!--<Button size="md" onclick={handleCreateNote}>
+            <span class="typo-title-sm" style="opacity: 0.75;">View all Notes</span>
+          </Button>-->
+        </header>
+        {#if filterNoteResources(notebook.contents, undefined).length <= 0}
+          <div class="empty">
+            <Button size="md" onclick={handleCreateNote}>
+              <span class="typo-title-sm">Create New Note</span>
+            </Button>
+            <p class="typo-title-sm">You can also create notes through Teletype.</p>
+          </div>
+        {:else}
+          <ul
+            class:showAllNotes={filterNoteResources(notebook.contents, undefined).length <= 5 ||
+              showAllNotes}
           >
-            <PageMention
-              editing={isRenamingNote === resourceId}
-              {resourceId}
-              onchange={(v) => {
-                handleRenameNote(resourceId, v)
-                isRenamingNote = undefined
-              }}
-              oncancel={handleCancelRenameNote()}
-              onclick={async (event) => {
-                if (isRenamingNote) return
-                handleResourceClick(resourceId, event)
-              }}
-            />
-          </li>
-        {/each}
-      </ul>
-    {/if}
-    <!--    {#if !showAllNotes}
-      <span class="more typo-title-sm">+ {resourcesNotes.length - 6} more</span>
-    {/if}-->
-  </section>
-</main>
+            {#each filterNoteResources(notebook.contents, undefined).slice(0, showAllNotes ? Infinity : 7) as { entry_id: resourceId } (resourceId)}
+              <ResourceLoader resource={resourceId}>
+                {#snippet loading()}
+                  loading
+                {/snippet}
+                {#snippet children(resource: Resource)}
+                  <li>
+                    <PageMention
+                      sourceNotebookId={notebookId}
+                      {resource}
+                      editing={isRenamingNote === resourceId}
+                      onchange={(v) => {
+                        handleRenameNote(resourceId, v)
+                        isRenamingNote = undefined
+                      }}
+                      oncancel={handleCancelRenameNote}
+                      onclick={async (e) => {
+                        if (isRenamingNote) return
+                        handleResourceClick(resourceId, e)
+                      }}
+                      onrename={() => (isRenamingNote = resourceId)}
+                    />
+                  </li>
+                {/snippet}
+              </ResourceLoader>
+            {/each}
+          </ul>
+        {/if}
+        {#if filterNoteResources(notebook.contents, undefined).length > 5}
+          <Button size="md" onclick={() => (showAllNotes = !showAllNotes)}>
+            <span class="more"
+              >{#if !showAllNotes}Show {filterNoteResources(notebook.contents, undefined).length -
+                  6} more{:else}Hide{/if}</span
+            >
+          </Button>{/if}
+      </section>
+    </main>
+  {/snippet}
+</NotebookLoader>
 
 <style lang="scss">
   main {
@@ -260,10 +222,12 @@
         mask-image: linear-gradient(to bottom, black 40%, transparent 83%);
       }
     }
-    //.more {
-    //  margin-top: -3rem;
-    //  opacity: 0.25;
-    //}
+    .more {
+      opacity: 0.5;
+      &:hover {
+        opacity: 1;
+      }
+    }
   }
 
   .empty {

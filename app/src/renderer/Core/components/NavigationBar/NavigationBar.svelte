@@ -1,21 +1,24 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { Button, SearchInput } from '@deta/ui'
+  import { Button, ResourceLoader, SearchInput } from '@deta/ui'
   import BreadcrumbItems from './BreadcrumbItems.svelte'
   import { writable } from 'svelte/store'
   import LocationBar from './LocationBar.svelte'
-  import WebContentsView from '../WebContentsView.svelte'
   import { type Snippet } from 'svelte'
   import NavigationBarGroup from './NavigationBarGroup.svelte'
   import SaveState from './SaveState.svelte'
   import { isInternalRendererURL } from '@deta/utils'
-  import { useResourceManager } from '@deta/services/resources'
-  import { useViewManager, ViewType } from '@deta/services/views'
+  import { Resource, useResourceManager } from '@deta/services/resources'
+  import { useViewManager, ViewType, type WebContentsView } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
   import { useBrowser } from '@deta/services/browser'
+  import NoteMenu from './NoteMenu.svelte'
+  import { ResourceTypes } from '@deta/types'
+  import type { TabItem } from '@deta/services/tabs'
 
   let {
     view,
+    tab,
 
     // Allow changing the view location url or not
     readonlyLocation = false,
@@ -25,10 +28,14 @@
     hideSearch = false,
     onsearchinput,
 
+    roundLeftCorner,
+    roundRightCorner,
+
     leftChildren,
     rightChildren
   }: {
     view: WebContentsView
+    tab?: TabItem
     centeredBreadcrumbs?: boolean
     readonlyLocation?: boolean
     locationInputDisabled?: boolean
@@ -37,6 +44,10 @@
     onsearchinput?: (value: string) => void
     leftChildren?: Snippet
     rightChildren?: Snippet
+
+    // sheeeeet not timmmmeee
+    roundLeftCorner?: boolean
+    roundRightCorner?: boolean
   } = $props()
 
   export function setIsEditingLocation(v: boolean) {
@@ -47,7 +58,7 @@
   const browser = useBrowser()
 
   const activeViewType = $derived(view.type ?? writable(''))
-  const activeViewTypeData = $derived(view.typeData ?? writable(''))
+  const activeViewTypeData = $derived(view.typeData ?? writable({}))
 
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
@@ -75,7 +86,11 @@
   }
 </script>
 
-<nav class:grey={[ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}>
+<nav
+  class:grey={[ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}
+  class:roundLeftCorner
+  class:roundRightCorner
+>
   {@render leftChildren?.()}
 
   {#if !hideNavigationControls}
@@ -94,7 +109,7 @@
     </NavigationBarGroup>
   {/if}
 
-  <NavigationBarGroup fullWidth={!centeredBreadcrumbs}>
+  <NavigationBarGroup fullWidth={!centeredBreadcrumbs} shrink>
     <BreadcrumbItems {view} />
     <LocationBar {view} readonly={readonlyLocation} bind:isEditingUrl />
     <DownloadsIndicator />
@@ -102,6 +117,16 @@
       {#key $extractedResourceId}
         <SaveState {view} />
       {/key}
+    {/if}
+
+    {#if $activeViewType === ViewType.Resource}
+      <ResourceLoader resourceId={view.typeDataValue.id}>
+        {#snippet children(resource: Resource)}
+          {#if resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+            <NoteMenu {resource} {tab} {view} />
+          {/if}
+        {/snippet}
+      </ResourceLoader>
     {/if}
 
     {#if !viewManager.sidebarViewOpen && ($activeViewType === ViewType.Page || ($activeViewType === ViewType.Resource && $activeViewTypeData.raw))}
@@ -116,18 +141,19 @@
     {/if}
   </NavigationBarGroup>
 
-  {#if !hideSearch}
+  <!--{#if false && !hideSearch}
     <NavigationBarGroup
       style={![ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)
         ? 'margin-left: -0.5rem'
         : ''}
     >
       <SearchInput
+        placeholder="Search sources"
         collapsed={![ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}
         {onsearchinput}
       />
     </NavigationBarGroup>
-  {/if}
+  {/if}-->
 
   {@render rightChildren?.()}
 </nav>
@@ -136,17 +162,25 @@
   nav {
     padding: 0.3rem 0.75rem;
     padding-left: 0.35rem;
-    padding-right: 0.3rem;
+    padding-right: 0.35rem;
     background: var(--app-background);
     color: var(--on-app-background);
 
     background: #fff;
     border-top-left-radius: 1rem;
     border-top-right-radius: 1rem;
+
     //border-top: 1px solid var(--border-color);
     //border-left: 1px solid var(--border-color);
     //border-right: 1px solid var(--border-color);
     margin-inline: 0px;
+
+    //&.roundRightCorner {
+    //  border-top-right-radius: 1rem;
+    //}
+    //&.roundLeftCorner {
+    //  border-top-left-radius: 1rem;
+    //}
 
     border: 0.5px solid #fff;
     background: radial-gradient(
@@ -178,7 +212,7 @@
 
       box-shadow:
         0 -0.5px 1px 0 rgba(250, 250, 250, 1) inset,
-        0 1px 1px 0 #fff inset,
+        0 0px 1px 0 #fff inset,
         0 -3px 1px 0 rgba(0, 0, 0, 0.025),
         0 -2px 1px 0 rgba(9, 10, 11, 0.01),
         0 -1px 1px 0 rgba(9, 10, 11, 0.03);

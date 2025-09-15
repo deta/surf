@@ -373,7 +373,7 @@
     {/if}
     {#if titleText && activeViewState}
       <div class="title" style:--progress={`${activeViewState.loadingProgress.current * 100}%`}>
-        <span style="opacity: 0.1;">{titleText}</span>
+        <span>{titleText}</span>
         <!--
           NOTE: This key is ensuring no weird inbetween states.. should work
                 without but let's be sure!
@@ -397,7 +397,9 @@
   :global(.location-bar) {
     width: 100%;
     flex: 1;
+    flex-shrink: 1;
     font-family: 'Inter', sans-serif;
+    min-width: 0;
   }
 
   .hostname,
@@ -421,7 +423,21 @@
       padding-top: 1.5px;
     }
   }
+
   .title {
+    flex-shrink: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+
+    span {
+      opacity: 0.1;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
     :global(svg.riso) {
       font-family: 'Inter', sans-serif;
       mask-image: linear-gradient(

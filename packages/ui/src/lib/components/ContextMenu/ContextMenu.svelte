@@ -127,7 +127,6 @@
     items?: CtxItem[]
     key?: string
   }) {
-          console.trace("open ctx")
     if (get(contextMenuOpen)) {
       closeContextMenu()
     }

@@ -13,6 +13,7 @@ export interface NotebookData {
   description: string
   icon: IconData
   index: number
+  pinned: boolean
 }
 
 export const NotebookEntryOrigin = {

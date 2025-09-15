@@ -1,4 +1,4 @@
-import { tick } from 'svelte'
+import { onMount, tick } from 'svelte'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 
 import {
@@ -6,7 +6,8 @@ import {
   isDev,
   useLogScope,
   EventEmitterBase,
-  SearchResourceTags
+  SearchResourceTags,
+  isMainRenderer
 } from '@deta/utils'
 
 import { useKVTable, type BaseKVItem } from '../kv'
@@ -18,7 +19,9 @@ import {
   type SpaceEntrySearchOptions,
   type NotebookData,
   type NotebookSpace,
-  type Space
+  type Space,
+  type Lock,
+  type Fn
 } from '@deta/types'
 
 import { ResourceNote, type ResourceManager, type Resource } from '../resources'
@@ -26,68 +29,146 @@ import { type ConfigService } from '../config'
 import { type Telemetry } from '../telemetry'
 import type { SpaceBasicData } from '../ipc/events'
 
-import { Notebook } from './notebook'
+import { Notebook } from './notebook.svelte'
 import type { NotebookManagerEmitterEvents } from './notebook.types'
 import { IconTypes } from '@deta/icons'
+import { SvelteMap } from 'svelte/reactivity'
+import type { MessagePortClient, MessagePortPrimary } from '../messagePort'
+import { useViewManager } from '@deta/services/views'
 
 type NotebookSettings = BaseKVItem & {
   title: string
 }
 
 export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEvents> {
-  notebooks: Writable<Notebook[]>
-  selectedNotebook: Writable<string | null>
+  private messagePort
+  private resourceManager: ResourceManager
+  private config: ConfigService
+  private telemetry: Telemetry
+  private log: ReturnType<typeof useLogScope>
+
+  notebooks = new SvelteMap<string, Notebook>()
+  private notebooks_lock: Lock = null
+
+  sortedNotebooks = $derived(
+    Array.from(this.notebooks.values())
+      // TODO: Can we nuke this succer?
+      .filter((space) => space.data.name !== '.tempspace')
+      .sort((a, b) => b.data.index - a.data.index)
+  )
 
   everythingContents: Writable<Resource[]>
   loadingEverythingContents: Writable<boolean>
-  sortedNotebooksList: Readable<Notebook[]>
-
-  resourceManager: ResourceManager
-  config: ConfigService
-  telemetry: Telemetry
-  log: ReturnType<typeof useLogScope>
 
   // Settings management
   private settingsStore = useKVTable<NotebookSettings>('notebook_settings')
 
   static self: NotebookManager
 
-  constructor(resourceManager: ResourceManager, config: ConfigService) {
+  constructor(
+    resourceManager: ResourceManager,
+    config: ConfigService,
+    messagePort: MessagePortPrimary | MessagePortClient
+  ) {
     super()
     this.log = useLogScope('NotebookManager')
     this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
     this.config = config
 
-    this.notebooks = writable<Notebook[]>([])
-    this.selectedNotebook = writable<string | null>(null)
-
     this.everythingContents = writable([])
     this.loadingEverythingContents = writable(false)
+    this.messagePort = messagePort
 
-    this.sortedNotebooksList = derived(
-      [this.notebooks, this.config.settings],
-      ([$spaces, $userSettings]) => {
-        const filteredSpaces = $spaces
-          .filter((space) => space.dataValue.name !== '.tempspace')
-          .sort((a, b) => {
-            return a.indexValue - b.indexValue
-          })
+    onMount(() => {
+      let unsubs: Fn[] = []
 
-        return filteredSpaces
+      unsubs.push(
+        this.resourceManager.on(
+          'notebookAddResources',
+          (notebookId: string, resourceIds: string[]) => {
+            if (isMainRenderer()) {
+              useViewManager()?.viewsValue.forEach((view) =>
+                this.messagePort.extern_state_notebookRemoveResources.send(view.id, {
+                  notebookId,
+                  resourceIds
+                })
+              )
+            } else {
+              this.messagePort.extern_state_notebookRemoveResources.send({
+                notebookId,
+                resourceIds
+              })
+            }
+          }
+        ),
+        this.resourceManager.on(
+          'notebookRemoveResources',
+          (notebookId: string, resourceIds: string[]) => {
+            if (isMainRenderer()) {
+              useViewManager()?.viewsValue.forEach((view) =>
+                this.messagePort.extern_state_notebookAddResources.send(view.id, {
+                  notebookId,
+                  resourceIds
+                })
+              )
+            } else {
+              this.messagePort.extern_state_notebookAddResources.send({
+                notebookId,
+                resourceIds
+              })
+            }
+          }
+        )
+      )
+
+      if (isMainRenderer()) {
+        unsubs.push(
+          this.messagePort.extern_state_notebookAddResources.on(({ notebookId, resourceIds }) => {
+            this.getNotebook(notebookId).then((e) => e?.fetchContents())
+            useViewManager().viewsValue.forEach((view) => {
+              this.messagePort.extern_state_notebookAddResources.send(view.id, {
+                notebookId,
+                resourceIds
+              })
+            })
+          }),
+          this.messagePort.extern_state_notebookRemoveResources.on(
+            ({ notebookId, resourceIds }) => {
+              this.getNotebook(notebookId).then((e) => e?.fetchContents())
+              useViewManager().viewsValue.forEach((view) => {
+                this.messagePort.extern_state_notebookRemoveResources.send(view.id, {
+                  notebookId,
+                  resourceIds
+                })
+              })
+            }
+          )
+        )
+      } else {
+        unsubs.push(
+          this.messagePort.extern_state_notebookAddResources.handle(
+            ({ notebookId, resourceIds }) => {
+              this.getNotebook(notebookId).then((e) => e?.fetchContents())
+            }
+          ),
+          this.messagePort.extern_state_notebookRemoveResources.handle(
+            ({ notebookId, resourceIds }) => {
+              this.getNotebook(notebookId).then((e) => e?.fetchContents())
+            }
+          )
+        )
       }
-    )
 
-    this.init()
+      return () => unsubs.forEach((f) => f())
+    })
+
+    this.loadNotebooks()
 
     if (isDev) {
       // @ts-ignore
       window.notebookManager = this
     }
-  }
-
-  private async init() {
-    await this.loadNotebooks()
   }
 
   reloadNotebook(notebookId: string) {
@@ -98,28 +179,16 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     return new Notebook(space, this)
   }
 
-  get notebooksValue() {
-    return get(this.notebooks)
-  }
-
-  get selectedNotebookValue() {
-    return get(this.selectedNotebook)
-  }
-
   get notebookSpacesValue() {
-    return get(this.notebooks).map((notebook) => notebook.spaceValue)
-  }
-
-  get sortedNotebooksListValue() {
-    return get(this.sortedNotebooksList)
+    return Array.from(this.notebooks.values()).map((notebook) => notebook.spaceValue)
   }
 
   updateMainProcessNotebooksList() {
-    const items = this.sortedNotebooksListValue.map(
+    const items = this.sortedNotebooks.map(
       (space) =>
         ({
           id: space.id,
-          name: space.dataValue.name,
+          name: space.data.name,
           pinned: false,
           linked: false
         }) as SpaceBasicData
@@ -134,16 +203,17 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     if (window.api.updateSpacesList) window.api.updateSpacesList(filteredItems)
   }
 
-  triggerStoreUpdate(space: Notebook) {
-    // trigger Svelte reactivity
-    this.notebooks.update((spaces) => {
-      return spaces.map((s) => (s.id === space.id ? space : s))
-    })
+  //// TODO: Maxu: nuke
+  //triggerStoreUpdate(space: Notebook) {
+  //// trigger Svelte reactivity
+  //  this.notebooks.update((spaces) => {
+  //    return spaces.map((s) => (s.id === space.id ? space : s))
+  //  })
 
-    // tick().then(() => {
-    //   this.updateMainProcessNotebooksList();
-    // });
-  }
+  //  // tick().then(() => {
+  //  //   this.updateMainProcessNotebooksList();
+  //  // });
+  //}
 
   async loadNotebooks() {
     this.log.debug('fetching spaces')
@@ -171,7 +241,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     this.log.debug('loaded spaces:', spaces)
 
-    this.notebooks.set(spaces)
+    spaces.forEach((space) => this.notebooks.set(space.id, space))
 
     // tick().then(() => {
     //   this.updateMainProcessNotebooksList();
@@ -186,7 +256,8 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     const defaults = {
       name: 'New Notebook',
       description: '',
-      index: this.notebooksValue.length,
+      index: this.notebooks.size,
+      pinned: false,
       icon: {
         type: IconTypes.ICON,
         data: 'file-text-ai'
@@ -208,9 +279,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     const space = this.createNotebookObject(result as unknown as NotebookSpace)
 
     this.log.debug('cregted space:', space)
-    this.notebooks.update((spaces) => {
-      return [...spaces, space]
-    })
+    this.notebooks.set(space.id, space)
 
     await this.loadNotebooks()
     if (isUserAction) this.telemetry.trackNotebookCreate()
@@ -219,25 +288,32 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
   }
 
   async getNotebook(notebookId: string, fresh = false) {
-    const storedSpace = get(this.notebooks).find((space) => space.id === notebookId)
-    if (storedSpace && !fresh) {
-      return storedSpace
+    if (this.notebooks_lock)
+      await this.notebooks_lock.catch(() => this.log.warn('Lock rejected @ getNotebook()'))
+
+    if (this.notebooks.has(notebookId) && !fresh) {
+      return this.notebooks.get(notebookId)
     }
 
-    const result = await this.resourceManager.getSpace(notebookId)
-    if (!result) {
-      this.log.error('space not found:', notebookId)
-      return null
-    }
+    this.notebooks_lock = new Promise(async (res, rej) => {
+      try {
+        const result = await this.resourceManager.getSpace(notebookId)
+        if (!result) {
+          this.log.error('space not found:', notebookId)
+          return null
+        }
 
-    const space = this.createNotebookObject(result as unknown as NotebookSpace)
-    this.notebooks.update((notebooks) => {
-      return notebooks.map((s) => (s.id === notebookId ? space : s))
+        const space = this.createNotebookObject(result as unknown as NotebookSpace)
+        this.notebooks.set(notebookId, space)
+
+        this.log.debug('got space:', space)
+
+        res(space)
+      } catch {
+        rej()
+      }
     })
-
-    this.log.debug('got space:', space)
-
-    return space
+    return this.notebooks_lock
   }
 
   async getOrCreateNotebook(id: string, defaults: Partial<NotebookData> = {}) {
@@ -256,15 +332,9 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     this.log.debug('deleted notebook:', notebookId)
 
-    const filtered = get(this.notebooks).filter((space) => space.id !== notebookId)
-
-    await Promise.all(filtered.map((space, idx) => space.updateIndex(idx)))
-
-    this.notebooks.set(filtered)
-
-    if (get(this.selectedNotebook) === notebookId && notebookId !== '.tempspace') {
-      this.changeSelectedNotebook(null)
-    }
+    this.notebooks.delete(notebookId)
+    //const filtered = this.notebooks.filter((space) => space.id !== notebookId)
+    //await Promise.all(filtered.map((space, idx) => space.updateIndex(idx)))
 
     await this.loadNotebooks()
     if (isUserAction) this.telemetry.trackNotebookDelete()
@@ -283,7 +353,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     await space.updateData(updates)
     this.log.debug('updated space:', space)
 
-    this.triggerStoreUpdate(space)
+    //this.triggerStoreUpdate(space)
 
     return space
   }
@@ -304,7 +374,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     await notebook.addResources(resourceIds, origin, isUserAction)
     this.log.debug('added resources to notebook')
-    this.triggerStoreUpdate(notebook)
+    //this.triggerStoreUpdate(notebook)
 
     return notebook
   }
@@ -401,9 +471,9 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     this.log.debug('deleting resource references from spaces', spacesWithReferences)
     await Promise.all(
       spacesWithReferences.map(async (entry) => {
-        const space = await this.getNotebook(entry.spaceId!)
-        if (space) {
-          await space.removeResources(entry.resourceIds)
+        const notebook = await this.getNotebook(entry.spaceId!)
+        if (notebook) {
+          await notebook.removeResources(entry.resourceIds)
         }
       })
     )
@@ -465,7 +535,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     )
     this.log.debug('removed resource entries from notebook', removedResources)
 
-    this.triggerStoreUpdate(notebook)
+    //this.triggerStoreUpdate(notebook)
 
     this.log.debug('resources removed from space:', resourceIds)
     return removedResources
@@ -503,16 +573,12 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
         [
           ...SearchResourceTags.NonHiddenDefaultTags({
             excludeAnnotations: excludeAnnotations
-          }),
+          })
           // ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
-          ...conditionalArrayItem(
-            get(this.selectedNotebook) === 'notes',
-            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE)
-          )
         ],
         {
-          includeAnnotations: true,
-          excludeWithinSpaces: get(this.selectedNotebook) === 'inbox'
+          includeAnnotations: true
+          //excludeWithinSpaces: get(this.selectedNotebook) === 'inbox'
         }
       )
 
@@ -528,61 +594,55 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     }
   }
 
-  async changeSelectedNotebook(notebookId: string | null) {
-    this.selectedNotebook.set(notebookId)
-    // this.selectedFilterTypeId.set(null)
-  }
-
-  async resetSelectedNotebook() {
-    this.changeSelectedNotebook(null)
-  }
-
+  /** @deprecated */
   async moveNotebookToIndex(notebookId: string, targetIndex: number) {
-    const notebook = await this.getNotebook(notebookId)
-    if (!notebook) {
-      this.log.error('notebook not found:', notebookId)
-      throw new Error('Notebook not found')
-    }
+    alert('deprecated')
+    throw new Error('Dont use this!')
+    //const notebook = await this.getNotebook(notebookId)
+    //if (!notebook) {
+    //  this.log.error('notebook not found:', notebookId)
+    //  throw new Error('Notebook not found')
+    //}
 
-    const notebooks = get(this.notebooks)
-    const currentIndex = notebooks.findIndex((s) => s.id === notebookId)
+    //const notebooks = get(this.notebooks)
+    //const currentIndex = notebooks.findIndex((s) => s.id === notebookId)
 
-    if (currentIndex === -1) {
-      throw new Error('Notebook not found in notebooks array')
-    }
+    //if (currentIndex === -1) {
+    //  throw new Error('Notebook not found in notebooks array')
+    //}
 
-    const clampedTargetIndex = Math.min(Math.max(0, targetIndex), notebooks.length - 1)
+    //const clampedTargetIndex = Math.min(Math.max(0, targetIndex), notebooks.length - 1)
 
-    if (currentIndex === clampedTargetIndex) return
+    //if (currentIndex === clampedTargetIndex) return
 
-    this.log.debug(
-      'moving notebook',
-      notebookId,
-      'from index',
-      currentIndex,
-      'to index',
-      clampedTargetIndex,
-      targetIndex !== clampedTargetIndex ? `(clamped from ${targetIndex})` : ''
-    )
+    //this.log.debug(
+    //  'moving notebook',
+    //  notebookId,
+    //  'from index',
+    //  currentIndex,
+    //  'to index',
+    //  clampedTargetIndex,
+    //  targetIndex !== clampedTargetIndex ? `(clamped from ${targetIndex})` : ''
+    //)
 
-    const newNotebooks = [...notebooks]
-    const [movedNotebook] = newNotebooks.splice(currentIndex, 1)
-    newNotebooks.splice(clampedTargetIndex, 0, movedNotebook!)
+    //const newNotebooks = [...notebooks]
+    //const [movedNotebook] = newNotebooks.splice(currentIndex, 1)
+    //newNotebooks.splice(clampedTargetIndex, 0, movedNotebook!)
 
-    try {
-      const updates = newNotebooks
-        .map((notebook, index) => ({ notebook, index }))
-        .filter(({ notebook, index }) => notebook.indexValue !== index)
+    //try {
+    //  const updates = newNotebooks
+    //    .map((notebook, index) => ({ notebook, index }))
+    //    .filter(({ notebook, index }) => notebook.data.index !== index)
 
-      await Promise.all(updates.map(({ notebook, index }) => notebook.updateIndex(index)))
+    //  await Promise.all(updates.map(({ notebook, index }) => notebook.updateIndex(index)))
 
-      this.notebooks.set(newNotebooks)
+    //  this.notebooks.set(newNotebooks)
 
-      this.log.debug('moved notebook', notebookId, 'to index', targetIndex)
-    } catch (error) {
-      this.log.error('failed to move notebook:', error)
-      throw new Error('Failed to move notebook')
-    }
+    //  this.log.debug('moved notebook', notebookId, 'to index', targetIndex)
+    //} catch (error) {
+    //  this.log.error('failed to move notebook:', error)
+    //  throw new Error('Failed to move notebook')
+    //}
   }
 
   // Settings management methods
@@ -633,8 +693,12 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
     }
   }
 
-  static provide(resourceManager: ResourceManager, config: ConfigService) {
-    const service = new NotebookManager(resourceManager, config)
+  static provide(
+    resourceManager: ResourceManager,
+    config: ConfigService,
+    messagePort: MessagePortPrimary | MessagePortClient
+  ) {
+    const service = new NotebookManager(resourceManager, config, messagePort)
     if (!NotebookManager.self) NotebookManager.self = service
 
     return service

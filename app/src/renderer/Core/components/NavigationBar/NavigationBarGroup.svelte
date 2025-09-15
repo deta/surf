@@ -4,12 +4,19 @@
   let {
     fullWidth = false,
     slim = false,
+    shrink = false,
     children,
     ...restProps
-  }: { fullWidth?: boolean; slim?: boolean; children?: Snippet } = $props()
+  }: { fullWidth?: boolean; slim?: boolean; shrink?: boolean; children?: Snippet } = $props()
 </script>
 
-<div {...restProps} class="group {restProps['class'] ?? ''}" class:slim class:fullWidth>
+<div
+  {...restProps}
+  class="group {restProps['class'] ?? ''}"
+  class:slim
+  class:fullWidth
+  class:shrink
+>
   {@render children?.()}
 </div>
 
@@ -18,6 +25,9 @@
     display: flex;
     align-items: center;
     flex-shrink: 1;
+    &.shrink {
+      min-width: 0;
+    }
 
     &.fullWidth {
       width: 100%;

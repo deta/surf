@@ -8,11 +8,13 @@
     children, 
     size = 'md',
     square = false,
+          active,
     ...restProps 
   }: {
     children?: Snippet;
     size?: ButtonSize;
     square?: boolean;
+          active?: boolean
     class?: string;
   } = $props();
 
@@ -22,7 +24,7 @@
 
 <Button.Root
   {...restProps}
-  class={`${sizeClass} ${shapeClass} ${restProps.class ?? ''}`}
+  class={`${sizeClass} ${shapeClass} ${restProps.class ?? ''} ${active ? 'active' : ''}`}
 >
   {@render children?.()}
 </Button.Root>

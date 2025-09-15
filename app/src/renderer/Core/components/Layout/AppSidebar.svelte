@@ -65,6 +65,11 @@
 
     await browser.createAndOpenNote(undefined, { target: 'sidebar', notebookId })
   }
+
+  const handleSearchInput = useDebounce((value: string) => {
+    viewManager.activeSidebarView?.webContents.updatePageQuery(value)
+  }, 100)
+
   const debouncedSaveLocation = useDebounce((location: string) => {
     if (location === undefined || location === null || location.length <= 0) return
     sidebarStore.update('cfg', { sidebar_location: location })
@@ -112,8 +117,8 @@
             view={viewManager.activeSidebarView}
             readonlyLocation
             hideNavigationControls
-            centeredBreadcrumbs
-            hideSearch
+            onsearchinput={handleSearchInput}
+            roundRightCorner
           >
             {#snippet leftChildren()}
               <NavigationBarGroup slim>
@@ -126,10 +131,6 @@
 
             {#snippet rightChildren()}
               <NavigationBarGroup slim>
-                <Button size="md" square onclick={() => browser.moveSidebarViewToTab()}>
-                  <Icon name="arrow.diagonal" size="1.15em" />
-                </Button>
-
                 <Button
                   size="md"
                   square
@@ -154,18 +155,65 @@
 <style lang="scss">
   .container {
     display: flex;
+    position: relative;
     width: var(--sidebarWidth);
     flex-shrink: 0;
+    --fold-width: 0.5rem;
+
+    //&::before {
+    //  content: '';
+    //  position: absolute;
+    //  z-index: 3;
+    //  pointer-events: none;
+    //  top: 0;
+    //  left: 0;
+    //  bottom: 0;
+    //  width: var(--fold-width);
+    //  background: linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, #fff 10%);
+
+    //  --darkness: 240;
+    //  background: linear-gradient(
+    //    to right,
+    //    rgba(255, 255, 255, 1) 0%,
+    //    rgba(var(--darkness), var(--darkness), var(--darkness), 1) 50%,
+    //    rgba(255, 255, 255, 1) 100%
+    //  );
+    //  background: linear-gradient(
+    //    to right,
+    //    rgba(255, 255, 255, 0) 20%,
+    //    rgba(var(--darkness), var(--darkness), var(--darkness), 1) 50%,
+    //    rgba(255, 255, 255, 0) 80%
+    //  );
+    //}
+    //&::after {
+    //  content: '';
+    //  position: absolute;
+    //  z-index: 0;
+    //  pointer-events: none;
+    //  top: 0;
+    //  left: 0;
+    //  bottom: 0;
+    //  width: var(--fold-width);
+
+    //  background: rgba(255, 255, 255, 1);
+    //  box-shadow:
+    //    //0 -0.5px 1px 0 rgba(250, 250, 250, 1) inset,
+    //    //0 1px 1px 0 #fff inset,
+    //    0 -3px 1px 0 rgba(0, 0, 0, 0.025),
+    //    0 -2px 1px 0 rgba(9, 10, 11, 0.01),
+    //    0 -1px 1px 0 rgba(9, 10, 11, 0.03);
+    //}
   }
   .resize-handle {
     flex-shrink: 0;
     position: relative;
-    width: 0.75rem;
+    width: var(--fold-width);
     cursor: col-resize;
     &::before {
       content: '';
+      z-index: 5;
       position: absolute;
-      left: 50%;
+      left: calc(50%);
       top: 50%;
       height: 30%;
       width: 3px;
@@ -175,7 +223,7 @@
       transition: background 123ms ease-out;
     }
     &:hover::before {
-      background: rgba(0, 0, 0, 0.125);
+      background: rgba(0, 0, 0, 0.25);
     }
   }
   aside {

@@ -16,17 +16,19 @@ import { provideAI } from '../ai'
 import { createDownloadsManager } from '../downloads.svelte'
 import { createBrowser } from '../browser'
 import { useLogScope } from '@deta/utils'
+import { useMessagePortPrimary } from '../messagePort'
 
 export const initServices = () => {
   const log = useLogScope('ServicesInit')
   log.debug('Initializing services...')
 
+  const messagePort = useMessagePortPrimary()
   const telemetry = setupTelemetry('')
   const config = provideConfig()
   // Is mir egal das det scheiße is muss build yetz!
   telemetry.apiKey = config?.getConfig()?.api_key
   const resourceManager = createResourceManager(telemetry, config)
-  const notebookManager = createNotebookManager(resourceManager, config)
+  const notebookManager = createNotebookManager(resourceManager, config, messagePort)
   const viewManager = createViewManager(resourceManager)
   const tabsService = createTabsService(viewManager)
   const ai = provideAI(resourceManager, config, true)

@@ -480,11 +480,7 @@ export class SFFS {
     query: string,
     tags?: SFFSResourceTag[],
     parameters?: SFFSSearchParameters
-  ): Promise<{
-    items: SFFSSearchResultItem[]
-    spaces: SFFSSearchResultItemSpace[]
-    space_entries?: SpaceEntry[]
-  }> {
+  ): Promise<SFFSSearchResult> {
     this.log.debug(
       'searching resources with query',
       query,

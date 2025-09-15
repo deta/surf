@@ -10,9 +10,12 @@
   import { truncate, useDebounce } from '@deta/utils'
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
   import NotebookCard from '../NotebookCard.svelte'
-  import { handleNotebookClick } from '../../handlers/notebookOpenHandlers'
+  import { handleNotebookClick, openResource } from '../../handlers/notebookOpenHandlers'
+  import { type Fn, SpaceEntryOrigin } from '@deta/types'
+  import { useResourceManager } from '@deta/services/resources'
 
-  let { query, title }: { query?: string; title: string } = $props()
+  let { query, title, onopensidebar }: { query?: string; title: string; onopensidebar: Fn } =
+    $props()
 
   let showAllNotebooks = $state(query !== null)
 
@@ -20,16 +23,9 @@
   let isRenamingNotebook: string | undefined = $state(undefined)
   let newNotebookName: string | undefined = $state(undefined)
 
+  const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
-  const sortedNotebooksList = $derived(notebookManager.sortedNotebooksList)
-  const notebooksList = $derived(
-    $sortedNotebooksList.toReversed().filter((e) => {
-      if (!query) return true
-      return (e.dataValue.folderName ?? e.dataValue.name)
-        .toLowerCase()
-        .includes(query.toLowerCase())
-    })
-  )
+  const notebooks = $derived(notebookManager.sortedNotebooks.filter((e) => e.data.pinned))
 
   const handleCreateNotebook = async () => {
     //if (newNotebookName === undefined || newNotebookName.length < 1) {
@@ -38,9 +34,10 @@
     //  return
     //}
 
-    await notebookManager.createNotebook(
+    const nb = await notebookManager.createNotebook(
       {
-        name: 'Untitled Notebook'
+        name: 'Untitled Notebook',
+        pinned: true
       },
       true
     )
@@ -48,11 +45,13 @@
     isCreatingNotebook = false
     newNotebookName = undefined
     notebookManager.loadNotebooks()
+
+    onopensidebar?.()
   }
 
   const handleDeleteNotebook = async (notebook: Notebook) => {
     const { closeType: confirmed } = await openDialog({
-      title: `Delete <i>${truncate(notebook.dataValue.folderName ?? notebook.dataValue.name, 26)}</i>`,
+      title: `Delete <i>${truncate(notebook.nameValue, 26)}</i>`,
       message: `This can't be undone. <br>Your resources won't be deleted.`,
       actions: [
         { title: 'Cancel', type: 'reset' },
@@ -71,6 +70,22 @@
     isRenamingNotebook = undefined
   }
 
+  const handleUnPinNotebook = (notebookId: string) => {
+    notebookManager.updateNotebookData(notebookId, { pinned: false })
+  }
+
+  const handleCreateNote = async () => {
+    const note = await resourceManager.createResourceNote(
+      '',
+      {
+        name: 'Untitled Note'
+      },
+      undefined,
+      true
+    )
+    openResource(note.id, { target: 'active_tab' })
+  }
+
   onMount(() => {
     notebookManager.loadNotebooks()
   })
@@ -78,34 +93,39 @@
 
 <main>
   <div class="tty-wrapper">
-    <h1>
+    <!--<h1>
       {title}
-    </h1>
+    </h1>-->
     <TeletypeEntry open={true} />
   </div>
   <section>
     <div
-      style="display: flex; justify-content: space-between;align-items: center;margin-top: 0.5rem; opacity: 1;"
+      style="display: flex; justify-content: space-between;align-items: center;margin-top: 0rem; opacity: 0.5;"
     >
       <Button size="md" onclick={handleCreateNotebook}
         ><Icon name="add" size="1.1em" />New Notebook</Button
       >
-      <Button size="md" onclick={() => (showAllNotebooks = !showAllNotebooks)}
+      <!--<Button size="md" onclick={() => (showAllNotebooks = !showAllNotebooks)}
         >{showAllNotebooks ? 'Hide All' : 'Show All'}</Button
-      >
+      >-->
+      <Button size="md" onclick={handleCreateNote}>
+        <Icon name="add" size="1.1em" />
+        Create Note
+      </Button>
     </div>
   </section>
   <section>
-    {#if notebooksList.length <= 0}
+    <!--{#if notebooks.length <= 0}
       <div class="empty">
         <p class="typo-title-sm">
-          You don't have any notebooks yet. Create your first one to organize notes, media and more.
+          Pin your favourite notebooks here by right-clicking them in the <i>Sources</i> panel on the
+          right.
         </p>
       </div>
     {:else}
       <MaskedScroll>
         <div class="notebook-grid">
-          <div
+          <!--<div
             class="notebook-wrapper"
             style="width: 100%;max-width: 12ch;"
             style:--delay={'100ms'}
@@ -114,9 +134,9 @@
             }}
           >
             <NotebookCard title="Drafts" size={12} color={['#232323', 'green']} />
-          </div>
+          </div>--
 
-          {#each notebooksList.slice(0, showAllNotebooks ? Infinity : 4) as notebook, i (notebook.id)}
+          {#each notebooks.slice(0, showAllNotebooks ? Infinity : 4) as notebook, i (notebook.id)}
             <div
               class="notebook-wrapper"
               style="width: 100%;max-width: 12ch;"
@@ -124,6 +144,12 @@
               {@attach contextMenu({
                 canOpen: true,
                 items: [
+                  {
+                    type: 'action',
+                    text: 'Unpin',
+                    icon: 'pin',
+                    action: () => handleUnPinNotebook(notebook.id)
+                  },
                   {
                     type: 'action',
                     text: 'Rename',
@@ -142,7 +168,6 @@
             >
               <NotebookCard
                 {notebook}
-                text={notebook.dataValue.folderName ?? notebook.dataValue.name}
                 size={12}
                 editing={isRenamingNotebook === notebook.id}
                 onclick={async (event) => {
@@ -162,6 +187,7 @@
         style="display: flex; justify-content: center;align-items: center;margin-bottom: 0.5rem; opacity: 1;"
       ></div>
     {/if}
+  </section>-->
   </section>
 </main>
 

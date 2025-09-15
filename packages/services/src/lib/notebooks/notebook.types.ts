@@ -1,5 +1,5 @@
 import type { NotebookData } from '@deta/types'
-import type { Notebook } from './notebook'
+import type { Notebook } from './notebook.svelte'
 
 export type NotebookManagerEmitterEvents = {
   created: (notebook: Notebook) => void

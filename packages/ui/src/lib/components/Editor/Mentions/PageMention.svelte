@@ -1,12 +1,15 @@
 <script lang="ts">
-  import { useResourceManager } from '@deta/services/resources'
+  import { useResourceManager, getResourceCtxItems, type Resource } from '@deta/services/resources'
+  import { useNotebookManager } from '@deta/services/notebooks'
   import { DynamicIcon } from '@deta/icons'
-  import type { Fn } from '@deta/types';
-  import { clickOutside } from '@deta/utils'
+  import { contextMenu, openDialog, type CtxItem} from "@deta/ui"
+  import { SpaceEntryOrigin, type Fn } from '@deta/types';
+  import { clickOutside, truncate } from '@deta/utils'
   import { onMount } from 'svelte'
 
   let {
-          resourceId,
+    resource,
+    sourceNotebookId,
     text = $bindable(),
     placeholder = '',
     icon, 
@@ -16,9 +19,11 @@
     oncancel,
     onclose,
     onchange, 
+    onrename,
     ...restProps
   }: {
-          resourceId?: string;
+    resource?: Resource;
+    sourceNotebookId?: string
     text?: string
     placeholder?: string
     icon?: string
@@ -28,13 +33,15 @@
     oncancel?: Fn
     onclose?: Fn
     onchange?: (value: String) => void
+    onrename?: Fn
   } = $props()
 
     const resourceManager = useResourceManager()
+    const notebookManager = useNotebookManager()
 
 
   let editorEl: HTMLSpanElement = $state()
-  let title = $state(null)
+  let title = $derived(resource?.metadata?.name ?? text)
 
   const handleClose = () => {
     onchange?.(editorEl?.textContent)
@@ -52,13 +59,51 @@
     sel!.addRange(range)
   })
 
-  onMount(async () => {
-    if (resourceId && !text) {
-        const resource = await resourceManager.getResource(resourceId, { includeAnnotations: false })
-        title = resource.metadata.name
-    } else if (!resourceId && text) title = text
-  })
-</script>
+  const handleDeleteResource = async () => {
+    const { closeType: confirmed } = await openDialog({
+      title: `Delete <i>${truncate('Note', 26)}</i>`, // note.metadata.name
+      message: `This can't be undone.`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Delete', type: 'submit', kind: 'danger' }
+      ]
+    })
+    if (!confirmed) return
+
+    await notebookManager.deleteResourcesFromSurf(resource.id, true)
+  }
+
+  const handleAddToNotebook = (notebookId: string) => {
+    notebookManager.addResourcesToNotebook(
+      notebookId,
+      [resource.id],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
+  }
+  const handleRemoveFromNotebook = (notebookId: string) => {
+    notebookManager.removeResourcesFromNotebook(notebookId, [resource.id], true)
+  }
+
+  const CTX_MENU_ITEMS: CtxItem[] = $derived(resource ?
+    [
+        {
+          type: 'action',
+          text: 'Rename',
+          icon: 'edit',
+          action: () => onrename?.()
+        },
+      ...getResourceCtxItems({
+              resource,
+              sortedNotebooks: notebookManager.sortedNotebooks,
+              onAddToNotebook: handleAddToNotebook,
+              onDeleteResource: handleDeleteResource,
+              onRemove: !sourceNotebookId ? undefined : () => handleRemoveFromNotebook(sourceNotebookId)
+       })
+     ] : null
+  )
+
+    </script>
 
 <span
   {...restProps}
@@ -67,6 +112,10 @@
   class:editing
   role="none"
   {onclick}
+  {@attach contextMenu({
+    canOpen: resource != undefined,
+    items: CTX_MENU_ITEMS
+  })}
 >
   {#if icon}<DynamicIcon name={icon} size="19px" />{/if}
 
@@ -119,13 +168,13 @@
     overflow:hidden;
 
           transition-property: background, color;
-                  transition-duration: 69ms;
+                  transition-duration: 52ms;
                   transition-timing-function: ease-out;
 
 
     &:hover,
     &.active,
-    &.editing {
+    &.editing, &:global([data-context-menu-anchor])  {
       background: rgba(0, 0, 0, 0.05);
     color: color-mix(in oklch, currentColor, transparent 10%);
     }

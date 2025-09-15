@@ -31,11 +31,11 @@ export class NotebookMentionProvider implements MentionProvider {
         return {
           id: notebook.id,
           type: MentionTypes.NOTEBOOK,
-          name: (notebook.dataValue as any).folderName || notebook.dataValue.name,
+          name: notebook.data.name || (notebook.data as any).folderName,
           icon:
-            notebook.dataValue.icon && notebook.dataValue.icon.type
+            notebook.data.icon && notebook.data.icon.type
               ? notebook.iconString
-              : notebook.dataValue.icon,
+              : notebook.data.icon,
           priority: 50,
           keywords: ['notebook'],
           metadata: {
@@ -59,9 +59,9 @@ export class NotebookMentionProvider implements MentionProvider {
 
   private async searchNotebooks(query: string): Promise<Notebook[]> {
     try {
-      const notebooks = this.notebookManager.notebooksValue
+      const notebooks = Array.from(this.notebookManager.notebooks.values())
       return notebooks.filter((notebook) =>
-        ((notebook.dataValue as any).folderName || notebook.dataValue.name)
+        (notebook.data.name || (notebook.data as any).folderName)
           .toLowerCase()
           .includes(query.toLowerCase())
       )

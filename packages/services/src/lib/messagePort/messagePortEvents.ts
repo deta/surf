@@ -112,7 +112,20 @@ export interface MPTrackEvent extends MessagePortEvent {
   payload: { eventName: TelemetryEventTypes; eventProperties?: Record<string, any> }
 }
 
+export interface MPExternStateNotebookChanged extends MessagePortEvent {
+  payload: { resourceIds: string[]; notebookId: string }
+}
+export interface MPExternStateResourceChanged extends MessagePortEvent {
+  payload: { resourceIds: string[] }
+}
+
 type MessagePortEventRegistry = {
+  extern_state_notebookAddResources: MPExternStateNotebookChanged
+  extern_state_notebookRemoveResources: MPExternStateNotebookChanged
+  extern_state_resourceUpdateMetadata: MPExternStateResourceChanged
+  extern_state_resourceUpdateTags: MPExternStateResourceChanged
+  extern_state_resourceUpdateData: MPExternStateResourceChanged
+
   trackEvent: MPTrackEvent
   teletypeSetQuery: MPTeletypeSetQuery
   teletypeSearch: MPTeletypeSearchRequest
@@ -142,6 +155,22 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
   )
 
   return messagePortService.registerEvents<MessagePortEventRegistry>({
+    extern_state_notebookAddResources: messagePortService.addEvent<MPExternStateNotebookChanged>(
+      'extern-state-notebook-add-resources'
+    ),
+    extern_state_notebookRemoveResources: messagePortService.addEvent<MPExternStateNotebookChanged>(
+      'extern-state-notebook-remove-resources'
+    ),
+    extern_state_resourceUpdateMetadata: messagePortService.addEvent<MPExternStateResourceChanged>(
+      'extern-state-resource-update-metadata'
+    ),
+    extern_state_resourceUpdateTags: messagePortService.addEvent<MPExternStateResourceChanged>(
+      'extern-state-resource-update-tags'
+    ),
+    extern_state_resourceUpdateData: messagePortService.addEvent<MPExternStateResourceChanged>(
+      'extern-state-resource-update-data'
+    ),
+
     trackEvent: messagePortService.addEvent<MPTrackEvent>('track-event'),
     teletypeSetQuery: messagePortService.addEvent<MPTeletypeSetQuery>('teletype-set-query'),
     teletypeExecuteAction:
