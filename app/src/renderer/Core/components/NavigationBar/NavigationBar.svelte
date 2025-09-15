@@ -135,7 +135,7 @@
         onclick={handleAskInSidebar}
         style="padding-block: 6px;padding-inline: 8px;"
       >
-        <Icon name="chat" size="1.085em" />
+        <Icon name="note" size="1.085em" />
         <span>Ask</span>
       </Button>
     {/if}
