@@ -7,7 +7,14 @@ import {
   type Fn,
   TelemetryViewType
 } from '@deta/types'
-import { useLogScope, EventEmitterBase, generateID, isDev, wait } from '@deta/utils'
+import {
+  useLogScope,
+  EventEmitterBase,
+  generateID,
+  isDev,
+  wait,
+  stripTrailingSlash
+} from '@deta/utils'
 import { ConfigService, useConfig } from '../config'
 import { KVStore, useKVTable } from '../kv'
 import { WebContentsView, type WebContents } from './webContentsView.svelte'
@@ -522,6 +529,11 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   openURLInSidebar(url: string) {
     if (this.activeSidebarView && this.activeSidebarView.webContents) {
+      const activeUrl = stripTrailingSlash(this.activeSidebarView.dataValue.url)
+      const requestedUrl = stripTrailingSlash(url)
+      if (activeUrl === requestedUrl) {
+        return this.activeSidebarView
+      }
       this.activeSidebarView.webContents.loadURL(url)
       this.setSidebarState({ open: true, view: this.activeSidebarView })
       return this.activeSidebarView

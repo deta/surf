@@ -156,6 +156,7 @@ export class BrowserService {
   }
 
   async handleCitationClick(data: CitationClickEvent, viewId: string) {
+    this.log.debug('Citation click event received', data, viewId)
     try {
       const metadata = await this.getCitationSourceAndResource(
         data.resourceId,
@@ -174,6 +175,7 @@ export class BrowserService {
       if (data.preview === 'auto') {
         data.preview = this.getViewOpenTarget(viewId)
       }
+      this.log.debug('Determined citation open target:', data.preview)
 
       let url = data.url
       if (metadata.resourceId) {

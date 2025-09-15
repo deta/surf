@@ -18,6 +18,9 @@ export const prependProtocol = (url: string, secure = true) => {
   }
 }
 
+export const stripTrailingSlash = (url: string): string =>
+  url.endsWith('/') ? url.slice(0, -1) : url
+
 export const parseURL = (url: string) => {
   try {
     return new URL(url)
