@@ -5,7 +5,7 @@
    *
    *  Usage:
    *
-   *  <ResourceLoader {resourceId}>
+   *  <ResourceLoader {resource}>
    *    {#snippet loading()}
    *    {/snippet}
    *

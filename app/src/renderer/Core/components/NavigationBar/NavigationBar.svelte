@@ -120,9 +120,9 @@
     {/if}
 
     {#if $activeViewType === ViewType.Resource}
-      <ResourceLoader resourceId={view.typeDataValue.id}>
+      <ResourceLoader resource={$activeViewTypeData?.id}>
         {#snippet children(resource: Resource)}
-          {#if resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+          {#if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
             <NoteMenu {resource} {tab} {view} />
           {/if}
         {/snippet}
