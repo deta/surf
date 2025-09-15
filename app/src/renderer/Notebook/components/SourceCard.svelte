@@ -8,7 +8,7 @@
   import { DynamicIcon } from '@deta/icons'
   import { onMount } from 'svelte'
   import { useNotebookManager } from '@deta/services/notebooks'
-  import { handleResourceClick } from '../handlers/notebookOpenHandlers'
+  import { handleResourceClick, openResource } from '../handlers/notebookOpenHandlers'
 
   // TODO: Decouple this rendering from the Resource?
   let {
@@ -93,7 +93,7 @@
           text: 'View Offline',
           icon: 'save',
           action: () => {
-            openResource({ offline: true, target: 'tab' })
+            openResource(resourceId ?? _resource.id, { offline: true, target: 'tab' })
           }
         },
         {

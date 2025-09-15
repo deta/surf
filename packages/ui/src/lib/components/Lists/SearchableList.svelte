@@ -1,18 +1,13 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import SearchInput from '../NavigationBar/SearchInput.svelte'
-  import { MaskedScroll } from '@deta/ui'
+  import { MaskedScroll, SearchInput } from '@deta/ui'
   import type { Snippet } from 'svelte'
 
-  type SearchableItem = {
-    id: string
-    [key: string]: any
-  }
+  import type { SearchableItem } from './searchable.types'
 
   type SearchableListProps<T extends SearchableItem> = {
     items: T[]
     searchPlaceholder?: string
-    filterFunction?: (item: T, searchValue: string) => boolean
     itemRenderer: Snippet<[T]>
     emptyState?: Snippet
     autofocus?: boolean
@@ -20,14 +15,19 @@
 
   let {
     items,
-    filterFunction = (item, searchValue) =>
-      JSON.stringify(item).toLowerCase().includes(searchValue.toLowerCase()),
     itemRenderer,
     emptyState,
     autofocus = false
   }: SearchableListProps<any> = $props()
 
   let searchValue = $state('')
+
+  const filterFunction = (item: SearchableItem, searchValue: string) => {
+    return (
+      item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchValue.toLowerCase())
+    )
+  }
 
   let filteredItems = $derived(
     searchValue ? items.filter((item) => filterFunction(item, searchValue)) : items

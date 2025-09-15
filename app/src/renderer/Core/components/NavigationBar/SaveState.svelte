@@ -1,10 +1,9 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
   import { type WebContentsView } from '@deta/services/views'
-  import { Button } from '@deta/ui'
+  import { Button, SearchableList, type SearchableItem } from '@deta/ui'
   import { truncate, useLogScope } from '@deta/utils'
   import OverlayPopover from '../Overlays/OverlayPopover.svelte'
-  import SearchableList from '../Overlays/SearchableList.svelte'
   import { Notebook, useNotebookManager } from '@deta/services/notebooks'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { writable } from 'svelte/store'
@@ -28,6 +27,18 @@
   let extractedResourceId = $derived(view.extractedResourceId)
   let isSaved = $derived(view.extractedResourceId && view.resourceCreatedByUser)
   let spaceIds = $derived(resource?.spaceIds ?? writable([]))
+
+  let notebookItems = $derived(
+    $notebooks.map(
+      (notebook) =>
+        ({
+          id: notebook.id,
+          label: truncate(notebook.nameValue, 28),
+          icon: $spaceIds.includes(notebook.id) ? 'check' : 'circle',
+          data: notebook
+        }) as SearchableItem<Notebook>
+    )
+  )
 
   $inspect(resource)
 
@@ -55,7 +66,7 @@
     isMenuOpen = false
   }
 
-  async function selectNotebook(notebook: Notebook) {
+  async function selectNotebook(notebookId: string) {
     if (!$isSaved || !resource) {
       log.debug('Bookmarking page')
       resource = await view.bookmarkPage()
@@ -67,22 +78,13 @@
     }
 
     await notebookManager.addResourcesToNotebook(
-      notebook.id,
+      notebookId,
       [resource.id],
       SpaceEntryOrigin.ManuallyAdded,
       true
     )
 
     isMenuOpen = false
-  }
-
-  function filterNotebooks(notebook: Notebook, searchValue: string): boolean {
-    const name = notebook.dataValue.name || ''
-    const folderName = (notebook.dataValue as any).folderName || ''
-    return (
-      name.toLowerCase().includes(searchValue.toLowerCase()) ||
-      folderName.toLowerCase().includes(searchValue.toLowerCase())
-    )
   }
 </script>
 
@@ -102,30 +104,36 @@
   <div class="list">
     <!-- Save to Surf option -->
     <div class="save-section">
-      <button class="list-item save-to-surf" onclick={saveToSurf}>
-        <Icon name="bookmark" />
-        <div class="list-item-label">Save to Surf</div>
-      </button>
+      {#if $isSaved}
+        <button class="list-item save-to-surf" disabled>
+          <Icon name="bookmarkFilled" />
+          <div class="list-item-label">Saved to Surf!</div>
+        </button>
+      {:else}
+        <button class="list-item save-to-surf" onclick={saveToSurf}>
+          <Icon name="bookmark" />
+          <div class="list-item-label">Save to Surf</div>
+        </button>
+      {/if}
     </div>
 
     <!-- Notebooks section -->
     <div class="notebooks-section">
       <SearchableList
-        items={$notebooks}
+        items={notebookItems}
         searchPlaceholder="Search notebooks..."
-        filterFunction={filterNotebooks}
         autofocus={false}
       >
-        {#snippet itemRenderer(notebook)}
-          <button class="list-item" onclick={() => selectNotebook(notebook)}>
-            {#if $spaceIds.includes(notebook.id)}
+        {#snippet itemRenderer(item)}
+          <button class="list-item" onclick={() => selectNotebook(item.id)}>
+            {#if $spaceIds.includes(item.id)}
               <Icon name="check" />
             {:else}
               <Icon name="circle" />
             {/if}
 
             <div class="list-item-label">
-              {truncate((notebook.dataValue as any).folderName || notebook.dataValue.name, 28)}
+              {item.label}
             </div>
           </button>
         {/snippet}

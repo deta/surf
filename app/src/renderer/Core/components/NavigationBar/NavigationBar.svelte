@@ -1,8 +1,7 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { Button } from '@deta/ui'
+  import { Button, SearchInput } from '@deta/ui'
   import BreadcrumbItems from './BreadcrumbItems.svelte'
-  import SearchInput from './SearchInput.svelte'
   import { writable } from 'svelte/store'
   import LocationBar from './LocationBar.svelte'
   import WebContentsView from '../WebContentsView.svelte'
