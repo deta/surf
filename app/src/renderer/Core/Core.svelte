@@ -19,9 +19,10 @@
   import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { isLinux, isMac, isWindows, useDebounce, wait } from '@deta/utils'
   import type { ContextManager } from '@deta/services/ai'
-  import { prepareContextMenu } from '@deta/ui'
+  import { Button, prepareContextMenu } from '@deta/ui'
   import { debugMode } from './stores/debug'
   import AltWindowControls from './components/AltWindowControls.svelte'
+  import { Icon } from '@deta/icons'
 
   const log = useLogScope('Core')
 
@@ -194,6 +195,13 @@
 <div class="main">
   <div class="app-bar">
     <div class="tabs">
+      {#if !isMac()}
+        <div class="windows-menu-button">
+          <Button onclick={window.api.showAppMenuPopup} square size="md">
+            <Icon name="menu" size="1.1em" />
+          </Button>
+        </div>
+      {/if}
       <TabsList />
       <!-- <Button onclick={handleClick}>Create Overlay</Button> -->
 
@@ -515,5 +523,9 @@
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
     padding-top: 1px;
     margin-top: -1px;
+  }
+
+  .windows-menu-button {
+    app-region: no-drag;
   }
 </style>
