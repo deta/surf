@@ -11,10 +11,21 @@ interface BreadcrumbData {
   onclick?: Fn
 }
 
+async function getNotebookDisplayName(
+  notebookManager: NotebookManager,
+  notebookId: string
+): Promise<string> {
+  const notebookData = get((await notebookManager.getNotebook(notebookId)).data)
+  return (
+    (notebookData.emoji ? notebookData.emoji + ' ' : '') +
+    (notebookData.folderName ?? notebookData.name)
+  )
+}
+
 export async function constructBreadcrumbs(
   notebookManager: NotebookManager,
   history: { url: string; title: string }[],
-  currHisotryIndex: number,
+  currHistoryIndex: number,
   view: WebContentsView
 ): Promise<BreadcrumbData[]> {
   if (!history) return []
@@ -22,7 +33,7 @@ export async function constructBreadcrumbs(
   const originalHistory = [...history]
 
   const breadcrumbs = []
-  history = history.slice(0, currHisotryIndex + 1)
+  history = history.slice(0, currHistoryIndex + 1)
 
   // Replace all internal urls with parsed version
   history = history.map((entry) => {
@@ -74,37 +85,66 @@ export async function constructBreadcrumbs(
     })
   )
 
-  const hasDraftsItem = history.some((item) => item.url === 'surf://notebook/drafts')
-  if (!hasDraftsItem && view.typeValue === ViewType.Resource) {
-    const resourceId = view.typeDataValue.id
+  // breadcrumbs should only have one notebook slot
+  let notebookSlot = null
+  if (view.typeValue === ViewType.Resource) {
+    const resourceId = view.typeDataValue?.id
     if (resourceId) {
       const resource = await notebookManager.resourceManager.getResource(resourceId)
       if (resource?.spaceIdsValue.length === 0) {
-        history.push({
+        notebookSlot = {
           url: new URL('surf://notebook/drafts').toString(),
           title: 'Drafts'
-        })
+        }
+      } else {
+        const notebookId = resource?.spaceIdsValue[0]
+        if (notebookId) {
+          notebookSlot = {
+            url: new URL(`surf://notebook/${notebookId}`).toString(),
+            title: await getNotebookDisplayName(notebookManager, notebookId)
+          }
+        }
       }
     }
   }
 
-  for (const entry of history) {
-    const _url = new URL(entry.url)
-    let title = entry.title
-    if (
-      _url.hostname === 'notebook' &&
-      _url.pathname.length > 1 &&
-      !['drafts', 'history'].map((e) => _url.pathname.startsWith(`/${e}`))
-    ) {
-      // Extract notebook name
-      const notebookData = get((await notebookManager.getNotebook(_url.pathname.slice(1))).data)
-      title =
-        (notebookData.emoji ? notebookData.emoji + ' ' : '') + notebookData.folderName ??
-        notebookData.name
-    }
+  if (!notebookSlot) {
+    const notebookEntry = history.find((item) => {
+      const url = new URL(item.url)
+      return (
+        url.hostname === 'notebook' &&
+        url.pathname.length > 1 &&
+        !['drafts', 'history'].some((e) => url.pathname.startsWith(`/${e}`))
+      )
+    })
 
+    if (notebookEntry) {
+      const url = new URL(notebookEntry.url)
+      const notebookId = url.pathname.slice(1) // remove leading slash
+
+      notebookSlot = {
+        url: notebookEntry.url,
+        title: await getNotebookDisplayName(notebookManager, notebookId)
+      }
+    }
+  }
+
+  // remove any existing notebook/drafts items from history
+  history = history.filter((item) => {
+    const url = new URL(item.url)
+    if (url.hostname !== 'notebook' || url.pathname.length <= 1) {
+      return true
+    }
+    return false
+  })
+
+  if (notebookSlot) {
+    history.push(notebookSlot)
+  }
+
+  for (const entry of history) {
     breadcrumbs.push({
-      title,
+      title: entry.title,
       url: entry.url,
       navigationIdx: originalHistory.findIndex((e) => e.uid === entry.uid)
     })
@@ -112,8 +152,8 @@ export async function constructBreadcrumbs(
 
   if (originalHistory.length === 0) return []
   if (originalHistory.length > 0) {
-    if (isInternalRendererURL(originalHistory[currHisotryIndex]?.url)) {
-      const _url = isInternalRendererURL(originalHistory[currHisotryIndex].url)
+    if (isInternalRendererURL(originalHistory[currHistoryIndex]?.url)) {
+      const _url = isInternalRendererURL(originalHistory[currHistoryIndex].url)
       const lastURL = new URL(breadcrumbs.at(-1).url)
 
       if (_url.href === lastURL.href) breadcrumbs.pop()
