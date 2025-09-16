@@ -201,7 +201,7 @@
     // Check if content contains mentions using the editor's mention detection
     if (editorComponent) {
       const data = editorComponent.getParsedEditorContent()
-      const hasMultipleLines = data.text.includes('\n')
+      const hasMultipleLines = data.text.trim().includes('\n')
       mentions = data.mentions || []
       hasMentions = mentions && mentions.length > 0
       isInMentionMode = mentionInProgressPattern.test(data.text.trim()) || hasMultipleLines
