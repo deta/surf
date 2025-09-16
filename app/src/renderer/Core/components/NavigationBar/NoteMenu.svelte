@@ -111,7 +111,7 @@
         useOverlay: true,
         x: rect.right - 185,
         y: rect.bottom,
-        targetEl: ref.ref,
+        targetEl: buttonTrigger.ref,
         items: CTX_MENU_ITEMS
       })
     }
