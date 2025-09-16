@@ -260,4 +260,15 @@
       opacity: 0;
     }
   }
+
+  .tty-wrapper {
+    width: 100%;
+
+    h1 {
+      font-size: 30px;
+      margin-bottom: 0.75rem;
+      font-family: 'Gambarino';
+      text-align: center;
+    }
+  }
 </style>

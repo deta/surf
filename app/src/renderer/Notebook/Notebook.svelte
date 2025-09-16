@@ -218,15 +218,4 @@
     //  background: linear-gradient(to bottom, var(--page-gradient-color), transparent);
     //}
   }
-
-  :global(.tty-wrapper) {
-    width: 100%;
-
-    :global(h1) {
-      font-size: 30px;
-      margin-bottom: 0.75rem;
-      font-family: 'Gambarino';
-      text-align: center;
-    }
-  }
 </style>

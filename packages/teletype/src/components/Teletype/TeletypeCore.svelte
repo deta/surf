@@ -15,6 +15,7 @@
   import { createRemoteMentionsFetcher } from '@deta/services/ai'
   import { Button } from '@deta/ui'
   import { ShortcutVisualizer } from '@deta/ui'
+  import '@deta/editor/src/editor.scss'
 
   const dispatch = createEventDispatcher<{
     clear: void
