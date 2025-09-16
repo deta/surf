@@ -12,7 +12,9 @@ import {
   codeLanguageToMimeType,
   conditionalArrayItem,
   getNormalizedHostname,
-  isMainRenderer
+  isMainRenderer,
+  isMac,
+  copyToClipboard
 } from '@deta/utils'
 import { SFFS } from '../sffs'
 import {
@@ -36,7 +38,8 @@ import {
   SpaceEntryOrigin,
   type SFFSRawResource,
   type SpaceEntrySearchOptions,
-  type NotebookData
+  type NotebookData,
+  type OpenTarget
 } from '@deta/types'
 // import type { Telemetry } from './telemetry'
 import {
@@ -95,6 +98,7 @@ export const getResourceCtxItems = ({
   sortedNotebooks,
   onPin,
   onUnPin,
+  onOpen,
   onAddToNotebook,
   onOpenOffline,
   onDeleteResource,
@@ -104,21 +108,50 @@ export const getResourceCtxItems = ({
   sortedNotebooks: Notebook[]
   onPin?: () => void
   onUnPin?: () => void
+  onOpen?: (target: OpenTarget) => void
   onAddToNotebook: (notebookId: string) => void
   onOpenOffline: (resourceId: string) => void
   onDeleteResource: (resourceId: string) => void
   onRemove: (resourceId: string) => void
 }): CtxItem[] => {
   return [
-    ...conditionalArrayItem(onPin, {
+    ...conditionalArrayItem<CtxItem>(!!onPin, {
       type: 'action',
       text: 'Pin',
       icon: 'pin',
       action: () => {}
     }),
+
+    ...conditionalArrayItem<CtxItem>(!!onOpen, [
+      {
+        type: 'action',
+        icon: 'eye',
+        text: 'Open in Tab',
+        tagIcon: 'cursor-arrow-rays',
+        action: () => onOpen?.('active_tab')
+      },
+      {
+        type: 'action',
+        icon: 'arrow.up.right',
+        text: 'Open in Background',
+        tagIcon: 'cursor-arrow-rays',
+        tagText: isMac() ? '⌘ + ' : 'Ctrl + ',
+        action: () => onOpen?.('background_tab')
+      },
+      {
+        type: 'action',
+        icon: 'sidebar.right',
+        text: 'Open in Sidebar',
+        tagIcon: 'cursor-arrow-rays',
+        tagText: 'shift + ',
+        action: () => onOpen?.('sidebar')
+      },
+      { type: 'separator' }
+    ]),
+
     {
       type: 'sub-menu',
-      icon: '',
+      icon: 'add',
       text: 'Add to Notebook',
       search: true,
       items: sortedNotebooks
@@ -127,16 +160,43 @@ export const getResourceCtxItems = ({
         .map((notebook) => ({
           type: 'action',
           //icon: space.iconString, // TODO: FIX for ntoebooks
-          text: notebook.data.name ?? notebook.data.folderName,
+          text: notebook.nameValue,
           action: () => onAddToNotebook(notebook.id)
         }))
     },
-    ...conditionalArrayItem(onOpenOffline !== undefined, {
+
+    ...conditionalArrayItem<CtxItem>(!!resource.url, {
       type: 'action',
-      text: 'View Offline',
-      icon: 'save',
-      action: () => onOpenOffline(resource.id)
+      icon: 'copy',
+      text: 'Copy URL',
+      action: () => copyToClipboard(resource.url)
     }),
+
+    ...conditionalArrayItem<CtxItem>(onOpenOffline !== undefined, [
+      { type: 'separator' },
+      {
+        type: 'action',
+        text: 'View Offline',
+        icon: 'save',
+        action: () => onOpenOffline(resource.id)
+      }
+    ]),
+
+    ...conditionalArrayItem<CtxItem>(resource.canBeRefreshed.value, {
+      type: 'action',
+      disabled: resource.stateValue === 'extracting',
+      icon: 'reload',
+      text: resource.canBeRefreshed.type === 'refresh' ? 'Refresh Content' : 'Reprocess Content',
+      action: () => {
+        try {
+          resource.refreshExtractedData()
+        } catch (error) {
+          // no-op
+        }
+      }
+    }),
+
+    { type: 'separator' },
 
     ...(onRemove
       ? [
@@ -172,7 +232,7 @@ export const getResourceCtxItems = ({
             action: () => onDeleteResource(resource.id)
           }
         ])
-  ]
+  ] as CtxItem[]
 }
 
 export type ResourceManagerEvents = {
@@ -291,6 +351,16 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
 
   get spaceIdsValue() {
     return get(this.spaceIds)
+  }
+
+  get canBeRefreshed() {
+    const canBeRefreshed = WEB_RESOURCE_TYPES.some((x) => this.type.startsWith(x))
+    const canBeReprocessed = this.type === ResourceTypes.PDF || this.type.startsWith('image/')
+
+    return {
+      value: canBeRefreshed || canBeReprocessed,
+      type: canBeRefreshed ? 'refresh' : canBeReprocessed ? 'reprocess' : null
+    }
   }
 
   private async readDataAsBlob() {
@@ -1750,11 +1820,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
       throw new Error('resource not found')
     }
 
-    const canBeRefreshed = WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x))
-    const canBeReprocessed =
-      resource.type === ResourceTypes.PDF || resource.type.startsWith('image/')
-
-    if (!canBeRefreshed && !canBeReprocessed) {
+    if (!resource.canBeRefreshed.value) {
       this.log.debug('skipping refresh for non-refreshable resource', resource.id)
       return
     }
@@ -1765,7 +1831,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     }
 
     try {
-      if (canBeReprocessed) {
+      if (resource.type === ResourceTypes.PDF || resource.type.startsWith('image/')) {
         this.log.debug(
           'refreshing resource by only re-running post processing',
           resource.id,

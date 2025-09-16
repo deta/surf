@@ -4,8 +4,8 @@
   import { contextMenu, openDialog, type CtxItem } from '@deta/ui'
   import { useNotebookManager } from '@deta/services/notebooks'
   import { truncate } from '@deta/utils'
-  import { SpaceEntryOrigin } from '@deta/types'
-  import { handleResourceClick } from '../handlers/notebookOpenHandlers'
+  import { type OpenTarget, SpaceEntryOrigin } from '@deta/types'
+  import { handleResourceClick, openResource } from '../handlers/notebookOpenHandlers'
 
   let { resource, sourceNotebookId }: { resource: Resource; sourceNotebookId?: string } = $props()
 
@@ -29,6 +29,7 @@
     getResourceCtxItems({
       resource,
       sortedNotebooks: notebookManager.sortedNotebooks,
+      onOpen: (target: OpenTarget) => openResource(resource.id, { target, offline: false }),
       onAddToNotebook: (id: string) => handleAddToNotebook(id),
       onDeleteResource: async (resourceId: string) => {
         const { closeType: confirmed } = await openDialog({

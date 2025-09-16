@@ -8,7 +8,7 @@
     isGeneratedResource
   } from '@deta/services/resources'
   import { contextMenu, type CtxItem } from '@deta/ui'
-  import { type openResourceOptions, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
+  import { type OpenTarget, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
   import { getFileKind, truncate } from '../../../../../packages/utils/dist'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
   import { DynamicIcon } from '@deta/icons'
@@ -85,6 +85,7 @@
       resource,
       sortedNotebooks: notebookManager.sortedNotebooks,
       onAddToNotebook: handleAddToNotebook,
+      onOpen: (target: OpenTarget) => openResource(resource.id, { target, offline: false }),
       onOpenOffline: (resourceId: string) =>
         openResource(resourceId, { offline: true, target: 'tab' }),
       onDeleteResource: handleDeleteResource,
