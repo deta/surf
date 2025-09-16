@@ -29,6 +29,8 @@
   const activeHistory = $derived(view.navigationHistory)
   const activeHistoryIndex = $derived(view.navigationHistoryIndex)
 
+  let buttonTrigger
+
   // TODO: is there a better way to get breadcrumbs??
   let breadcrumbs = $state([])
   $effect(
@@ -96,20 +98,23 @@
 
 <!-- TODO: Maxu we should have proper overlay menu component -->
 <Button
+  bind:ref={buttonTrigger}
   size="md"
   square
   active={$CONTEXT_MENU_KEY === '_note-actions'}
   onclick={() => {
     if ($CONTEXT_MENU_KEY === '_note-actions') closeContextMenu()
-    else
+    else {
+      const rect = (buttonTrigger.ref as HTMLButtonElement).getBoundingClientRect()
       openContextMenu({
         key: '_note-actions',
         useOverlay: true,
-        x: window.innerWidth - 185,
-        y: 82,
-        //targetEl: ref,
+        x: rect.right - 185,
+        y: rect.bottom,
+        targetEl: ref.ref,
         items: CTX_MENU_ITEMS
       })
+    }
   }}
 >
   <Icon name="dots.vertical" size="1.085em" />

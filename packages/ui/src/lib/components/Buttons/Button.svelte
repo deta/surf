@@ -5,12 +5,14 @@
   type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
   let {
+    ref = $bindable(),
     children, 
     size = 'md',
     square = false,
           active,
     ...restProps 
   }: {
+    ref?: unknown;
     children?: Snippet;
     size?: ButtonSize;
     square?: boolean;
@@ -25,6 +27,7 @@
 <Button.Root
   {...restProps}
   class={`${sizeClass} ${shapeClass} ${restProps.class ?? ''} ${active ? 'active' : ''}`}
+  bind:this={ref}
 >
   {@render children?.()}
 </Button.Root>
