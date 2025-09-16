@@ -74,7 +74,7 @@
         spaceId: undefined
       }).then(results => {
         searchResults = results.resources
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .sort((a, b) => new Date(b.resource.updatedAt).getTime() - new Date(a.resource.updatedAt).getTime())
           .map(e => e.resource)
           .filter((e) => {
             if (excludeWithinSpaces && resources !== undefined) {
@@ -105,7 +105,7 @@
         SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE),
         ...(tags ?? [])
       ], { includeAnnotations: false, excludeWithinSpaces }).then(result => {
-        resources = result
+        resources = result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       })
     }
   }, 250)

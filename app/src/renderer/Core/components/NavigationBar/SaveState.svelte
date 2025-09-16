@@ -38,15 +38,24 @@
   let spaceIds = $derived(resource?.spaceIds ?? writable([]))
 
   let notebookItems = $derived(
-    notebooks.map(
-      (notebook) =>
-        ({
-          id: notebook.id,
-          label: truncate(notebook.nameValue, 28),
-          icon: $spaceIds.includes(notebook.id) ? 'check' : 'circle',
-          data: notebook
-        }) as SearchableItem<Notebook>
-    )
+    notebooks
+      .sort((a, b) => {
+        // Sort notebooks in spaceIds to the top
+        const aInSpace = $spaceIds.includes(a.id)
+        const bInSpace = $spaceIds.includes(b.id)
+        if (aInSpace && !bInSpace) return -1
+        if (!aInSpace && bInSpace) return 1
+        return 0
+      })
+      .map(
+        (notebook) =>
+          ({
+            id: notebook.id,
+            label: truncate(notebook.nameValue, 28),
+            icon: $spaceIds.includes(notebook.id) ? 'check' : 'circle',
+            data: notebook
+          }) as SearchableItem<Notebook>
+      )
   )
 
   $effect(() => {
