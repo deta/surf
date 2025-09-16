@@ -7,7 +7,12 @@
   import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
   import NotebookCover from '../NotebookCover.svelte'
   import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
-  import { useResourceManager, type Resource, type ResourceNote } from '@deta/services/resources'
+  import {
+    useResourceManager,
+    type Resource,
+    type ResourceNote,
+    ResourceManagerEvents
+  } from '@deta/services/resources'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
   import { type MessagePortClient } from '@deta/services/messagePort'
   import { handleResourceClick } from '../../handlers/notebookOpenHandlers'
@@ -46,7 +51,7 @@
   }, 75)
 
   onMount(async () => {
-    const unsubs = [resourceManager.on('deleted', () => (refreshKey = {}))]
+    const unsubs = [resourceManager.on(ResourceManagerEvents.Deleted, () => (refreshKey = {}))]
     return () => unsubs.forEach((f) => f())
   })
 </script>

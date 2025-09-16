@@ -13,7 +13,6 @@ import {
 import { useKVTable, type BaseKVItem } from '../kv'
 
 import {
-  DeleteResourceEventTrigger,
   ResourceTypes,
   SpaceEntryOrigin,
   type SpaceEntrySearchOptions,
@@ -24,13 +23,18 @@ import {
   type Fn
 } from '@deta/types'
 
-import { ResourceNote, type ResourceManager, type Resource } from '../resources'
+import {
+  ResourceNote,
+  type ResourceManager,
+  type Resource,
+  ResourceManagerEvents
+} from '../resources'
 import { type ConfigService } from '../config'
 import { type Telemetry } from '../telemetry'
 import type { SpaceBasicData } from '../ipc/events'
 
 import { Notebook } from './notebook.svelte'
-import type { NotebookManagerEmitterEvents } from './notebook.types'
+import { NotebookManagerEvents, type NotebookManagerEventHandlers } from './notebook.types'
 import { IconTypes } from '@deta/icons'
 import { SvelteMap } from 'svelte/reactivity'
 import type { MessagePortClient, MessagePortPrimary } from '../messagePort'
@@ -40,8 +44,8 @@ type NotebookSettings = BaseKVItem & {
   title: string
 }
 
-export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEvents> {
-  private messagePort
+export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandlers> {
+  private messagePort: MessagePortClient | MessagePortPrimary
   private resourceManager: ResourceManager
   private config: ConfigService
   private telemetry: Telemetry
@@ -84,26 +88,39 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       let unsubs: Fn[] = []
 
       unsubs.push(
-        this.resourceManager.on(
-          'notebookAddResources',
-          (notebookId: string, resourceIds: string[]) => {
-            if (isMainRenderer()) {
-              useViewManager()?.viewsValue.forEach((view) =>
-                this.messagePort.extern_state_notebookRemoveResources.send(view.id, {
-                  notebookId,
-                  resourceIds
-                })
-              )
-            } else {
-              this.messagePort.extern_state_notebookRemoveResources.send({
-                notebookId,
-                resourceIds
-              })
-            }
+        //this.resourceManager.on(ResourceManagerEvents.Created, (resource: Resource) => {
+        //  if (isMainRenderer()) {
+        //    useViewManager()?.viewsValue.forEach((view) =>
+        //      this.messagePort.extern_state_resourceCreated.send(view.id, {
+        //        resourceId: resource.id
+        //      })
+        //    )
+        //  } else {
+        //    this.messagePort.extern_state_resourceCreated.send({
+        //      resourceId: resource.id
+        //    })
+        //  }
+        //}),
+        this.resourceManager.on(ResourceManagerEvents.Deleted, (resourceId: string) => {
+          for (const notebook of this.notebooks.values()) {
+            notebook.contents = notebook.contents.filter((e) => e.id !== resourceId)
           }
-        ),
+
+          if (isMainRenderer()) {
+            useViewManager()?.viewsValue.forEach((view) =>
+              this.messagePort.extern_state_resourceDeleted.send(view.id, {
+                resourceId
+              })
+            )
+          } else {
+            this.messagePort.extern_state_resourceDeleted.send({
+              resourceId
+            })
+          }
+        }),
+
         this.resourceManager.on(
-          'notebookRemoveResources',
+          ResourceManagerEvents.NotebookAddResources,
           (notebookId: string, resourceIds: string[]) => {
             if (isMainRenderer()) {
               useViewManager()?.viewsValue.forEach((view) =>
@@ -119,13 +136,52 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
               })
             }
           }
+        ),
+        this.resourceManager.on(
+          ResourceManagerEvents.NotebookRemoveResources,
+          (notebookId: string, resourceIds: string[]) => {
+            if (isMainRenderer()) {
+              useViewManager()?.viewsValue.forEach((view) =>
+                this.messagePort.extern_state_notebookRemoveResources.send(view.id, {
+                  notebookId,
+                  resourceIds
+                })
+              )
+            } else {
+              this.messagePort.extern_state_notebookRemoveResources.send({
+                notebookId,
+                resourceIds
+              })
+            }
+          }
         )
       )
 
       if (isMainRenderer()) {
         unsubs.push(
+          this.messagePort.extern_state_resourceDeleted.on(({ resourceId }) => {
+            this.emit(NotebookManagerEvents.DeletedResource, resourceId)
+            useViewManager().viewsValue.forEach((view) => {
+              this.messagePort.extern_state_resourceDeleted.send(view.id, {
+                resourceId
+              })
+            })
+          }),
+          this.messagePort.extern_state_resourceCreated.on(({ resourceId }) => {
+            this.emit(NotebookManagerEvents.CreatedResource, resourceId)
+            useViewManager().viewsValue.forEach((view) => {
+              this.messagePort.extern_state_resourceCreated.send(view.id, {
+                resourceId
+              })
+            })
+          }),
+
           this.messagePort.extern_state_notebookAddResources.on(({ notebookId, resourceIds }) => {
             this.getNotebook(notebookId).then((e) => e?.fetchContents())
+            this.getNotebook(notebookId, { cacheOnly: true }).then((notebook) =>
+              notebook?.fetchContents()
+            )
+
             useViewManager().viewsValue.forEach((view) => {
               this.messagePort.extern_state_notebookAddResources.send(view.id, {
                 notebookId,
@@ -135,26 +191,49 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
           }),
           this.messagePort.extern_state_notebookRemoveResources.on(
             ({ notebookId, resourceIds }) => {
-              this.getNotebook(notebookId).then((e) => e?.fetchContents())
               useViewManager().viewsValue.forEach((view) => {
                 this.messagePort.extern_state_notebookRemoveResources.send(view.id, {
                   notebookId,
                   resourceIds
                 })
               })
+              this.getNotebook(notebookId).then((notebook) => {
+                if (!notebook) return
+                notebook.contents = notebook.contents.filter((e) => !resourceIds.includes(e.id))
+              })
             }
           )
         )
       } else {
         unsubs.push(
+          //this.messagePort.extern_state_resourceCreated.handle(({ resourceId }) => {
+          //  this.emit(NotebookManagerEvents.CreatedResource, resourceId)
+          //}),
+          this.messagePort.extern_state_resourceDeleted.handle(({ resourceId }) => {
+            this.emit(NotebookManagerEvents.DeletedResource, resourceId)
+          }),
+
           this.messagePort.extern_state_notebookAddResources.handle(
             ({ notebookId, resourceIds }) => {
-              this.getNotebook(notebookId).then((e) => e?.fetchContents())
+              this.emit(NotebookManagerEvents.AddedResources, notebookId, resourceIds)
+              this.getNotebook(notebookId, { cacheOnly: true }).then((notebook) =>
+                notebook?.fetchContents()
+              )
             }
           ),
           this.messagePort.extern_state_notebookRemoveResources.handle(
             ({ notebookId, resourceIds }) => {
-              this.getNotebook(notebookId).then((e) => e?.fetchContents())
+              this.getNotebook(notebookId).then((notebook) => {
+                if (!notebook) return
+                notebook.contents = notebook.contents.filter((e) => !resourceIds.includes(e.id))
+              })
+
+              this.emit(NotebookManagerEvents.RemovedResources, notebookId, resourceIds)
+              //this.getNotebook(notebookId, { cacheOnly: true }).then((notebook) => {
+              //  if (!notebook) return
+              //  console.warn('removing res', resourceIds, notebook)
+              //  notebook.contents = notebook.contents.filter((e) => !resourceIds.includes(e.id))
+              //})
             }
           )
         )
@@ -169,10 +248,6 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
       // @ts-ignore
       window.notebookManager = this
     }
-  }
-
-  reloadNotebook(notebookId: string) {
-    this.emit('reload-notebook', notebookId)
   }
 
   private createNotebookObject(space: NotebookSpace) {
@@ -283,15 +358,30 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     await this.loadNotebooks()
     if (isUserAction) this.telemetry.trackNotebookCreate()
-    this.emit('created', space)
+    this.emit(NotebookManagerEvents.Created, space.id)
     return space
   }
 
-  async getNotebook(notebookId: string, fresh = false) {
-    if (this.notebooks_lock)
+  /**
+   * @param cacheOnly - will return null if notebook is not already loaded in cache.
+   */
+  async getNotebook(
+    notebookId: string,
+    { fresh, cacheOnly }: { fresh?: boolean; cacheOnly?: boolean } = {
+      fresh: false,
+      cacheOnly: false
+    }
+  ) {
+    fresh = fresh ?? false
+    cacheOnly = cacheOnly ?? false
+    if (fresh && cacheOnly) throw new Error('Cannot fetch notebook with fresh and cacheOnly!')
+    if (this.notebooks_lock) {
       await this.notebooks_lock.catch(() => this.log.warn('Lock rejected @ getNotebook()'))
+    }
 
-    if (this.notebooks.has(notebookId) && !fresh) {
+    if (cacheOnly) {
+      return this.notebooks.get(notebookId)
+    } else if (this.notebooks.has(notebookId) && !fresh) {
       return this.notebooks.get(notebookId)
     }
 
@@ -338,7 +428,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEmitterEven
 
     await this.loadNotebooks()
     if (isUserAction) this.telemetry.trackNotebookDelete()
-    this.emit('deleted', notebookId)
+    this.emit(NotebookManagerEvents.Deleted, notebookId)
   }
 
   async updateNotebookData(id: string, updates: Partial<NotebookData>) {

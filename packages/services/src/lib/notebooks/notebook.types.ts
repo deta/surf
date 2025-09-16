@@ -1,12 +1,23 @@
 import type { NotebookData } from '@deta/types'
 import type { Notebook } from './notebook.svelte'
 
-export type NotebookManagerEmitterEvents = {
-  created: (notebook: Notebook) => void
-  updated: (notebook: Notebook, changes: Partial<NotebookData>) => void
-  'added-resources': (notebook: Notebook, resourceIds: string[]) => void
-  'removed-resources': (notebook: Notebook, resourceIds: string[]) => void
-  deleted: (notebookId: string) => void
-  'changed-active-notebook': (notebook: Notebook | null) => void
-  'reload-notebook': (notebookId: string) => void
+export enum NotebookManagerEvents {
+  Created = 'created-notebook',
+  Updated = 'updated-notebook',
+  Deleted = 'deleted-notebook',
+  AddedResources = 'added-notebook-resource',
+  RemovedResources = 'removed-notebook-resource',
+
+  CreatedResource = 'created-resource',
+  DeletedResource = 'deleted-resource'
+}
+export type NotebookManagerEventHandlers = {
+  [NotebookManagerEvents.Created]: (notebookId: string) => void
+  [NotebookManagerEvents.Updated]: (notebookId: string, changes: Partial<NotebookData>) => void
+  [NotebookManagerEvents.Deleted]: (notebookId: string) => void
+  [NotebookManagerEvents.AddedResources]: (notebookId: string, resourceIds: string[]) => void
+  [NotebookManagerEvents.RemovedResources]: (notebookId: string, resourceIds: string[]) => void
+
+  [NotebookManagerEvents.CreatedResource]: (resourceId: string) => void
+  [NotebookManagerEvents.DeletedResource]: (resourceId: string) => void
 }

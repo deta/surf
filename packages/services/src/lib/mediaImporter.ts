@@ -13,7 +13,7 @@ import {
 } from '@deta/types'
 import { WebParser } from '@deta/web-parser'
 
-import { Resource, type ResourceManager } from './resources/resources'
+import { Resource, type ResourceManager } from './resources/resources.svelte'
 import { type MentionItem, MentionItemType } from '@deta/editor'
 
 const log = useLogScope('mediaImporter')

@@ -1,2 +1,2 @@
-export * from './resources'
+export * from './resources.svelte'
 export * from './resourcePreview'

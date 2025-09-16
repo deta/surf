@@ -3,8 +3,9 @@
   import { type Resource } from '@deta/services/resources'
   import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { ResourceTagsBuiltInKeys, ResourceTypes, type Option, type SFFSResourceTag, type SFFSSearchParameters, type SFFSSearchResult } from '@deta/types'
-  import { type ResourceSearchResult, useResourceManager } from '@deta/services/resources'
+  import { type ResourceSearchResult, useResourceManager, ResourceManagerEvents} from '@deta/services/resources'
   import { SearchResourceTags, useThrottle } from '@deta/utils'
+  import { NotebookManagerEvents } from '@deta/services/notebooks'
 
   interface Search {
     query: string
@@ -30,6 +31,7 @@
   } = $props()
 
   const resourceManager = useResourceManager()
+  const notebookManager = useNotebookManager()
 
   // TODO: Reuse or dispose
   //const getNotebook = (id: string) => {
@@ -113,15 +115,21 @@
 
   onMount(() => {
     const unsubs =  [
-      resourceManager.on('created', () => load()),
-      resourceManager.on('deleted', (resourceId) => {
-        resources = resources.filter(e => e.id !== resourceId)
+      //notebookManager.on(NotebookManagerEvents.CreatedResource, () => load()),
+      notebookManager.on(NotebookManagerEvents.DeletedResource, (resourceId: string) => {
+        resources = resources.filter(e => resourceId != e.id)
+        if (searchResults) searchResults = searchResults.filter(e => resourceId != e.id)
+      }),
+      notebookManager.on(NotebookManagerEvents.RemovedResources, (_, resourceIds: string[]) => {
+        resources = resources.filter(e => !resourceIds.includes(e.id))
+        if (searchResults) searchResults = searchResults.filter(e => !resourceIds.includes(e.id))
       })
     ]
-          if (excludeWithinSpaces) {
-                  unsubs.push(resourceManager.on('notebookAddResources', () => load()),
-                  resourceManager.on('notebookRemoveResources', () => load()))
-          }
+    if (excludeWithinSpaces) {
+      unsubs.push(
+        notebookManager.on(NotebookManagerEvents.AddedResources, () => load()),
+      )
+    }
     return () => unsubs.forEach(f => f())
   })
 </script>

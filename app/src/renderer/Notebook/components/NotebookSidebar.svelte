@@ -75,7 +75,7 @@
   })
   // TODO: Put this into lazy scroll component, no need for rawdogging crude js
   const handleMediaWheel = useThrottle(() => {
-    resourceRenderCnt += 2
+    resourceRenderCnt += 4
   }, 5)
 
   let isRenamingNotebook: string | undefined = $state(undefined)

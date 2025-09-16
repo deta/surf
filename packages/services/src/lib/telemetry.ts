@@ -58,7 +58,7 @@ import {
 
 import { useLogScope } from '@deta/utils/io'
 import { isMainRenderer } from '@deta/utils/system'
-import { getPrimaryResourceType } from './resources/resources'
+import { getPrimaryResourceType } from './resources/resources.svelte'
 import { getContext, setContext } from 'svelte'
 import type { ConfigService } from './config'
 import { UserStatsService } from './userStats'

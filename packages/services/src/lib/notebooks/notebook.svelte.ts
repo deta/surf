@@ -18,6 +18,7 @@ import { type ResourceManager } from '../resources'
 import type { NotebookManager } from './notebookManager.svelte'
 import { useMessagePortClient, useMessagePortPrimary } from '../messagePort'
 import { useViewManager } from '../views'
+import { NotebookManagerEvents } from '../notebooks/notebook.types'
 
 export class Notebook {
   private log: ReturnType<typeof useLogScope>
@@ -81,7 +82,7 @@ export class Notebook {
     await this.resourceManager.updateSpace(this.id, this.data)
 
     //this.notebookManager.triggerStoreUpdate(this)
-    this.notebookManager.emit('updated', this, updates)
+    this.notebookManager.emit(NotebookManagerEvents.Updated, this.id, updates)
   }
 
   async updateIndex(index: number) {
@@ -120,7 +121,7 @@ export class Notebook {
           this.log.error(`Error fetch resource ${resource_id} for telemetry event.`, e)
         })
     })
-    this.notebookManager.emit('added-resources', this, resourceIds)
+    this.notebookManager.emit(NotebookManagerEvents.AddedResources, this.id, resourceIds)
   }
 
   async removeResources(resourceIds: string[], isUserAction = false) {
@@ -129,7 +130,7 @@ export class Notebook {
     this.contents = this.contents.filter((entry) => !resourceIds.includes(entry.entry_id))
 
     if (isUserAction) resourceIds.forEach(() => this.telemetry.trackNotebookRemoveResource())
-    this.notebookManager.emit('removed-resources', this, resourceIds)
+    this.notebookManager.emit(NotebookManagerEvents.RemovedResources, this.id, resourceIds)
     return resourceIds
   }
 

@@ -118,13 +118,18 @@ export interface MPExternStateNotebookChanged extends MessagePortEvent {
 export interface MPExternStateResourceChanged extends MessagePortEvent {
   payload: { resourceIds: string[] }
 }
+export interface MPExternStateResourceCreated extends MessagePortEvent {
+  payload: { resourceId: string }
+}
+export interface MPExternStateResourceDeleted extends MessagePortEvent {
+  payload: { resourceId: string }
+}
 
 type MessagePortEventRegistry = {
+  extern_state_resourceCreated: MPExternStateResourceCreated
+  extern_state_resourceDeleted: MPExternStateResourceDeleted
   extern_state_notebookAddResources: MPExternStateNotebookChanged
   extern_state_notebookRemoveResources: MPExternStateNotebookChanged
-  extern_state_resourceUpdateMetadata: MPExternStateResourceChanged
-  extern_state_resourceUpdateTags: MPExternStateResourceChanged
-  extern_state_resourceUpdateData: MPExternStateResourceChanged
 
   trackEvent: MPTrackEvent
   teletypeSetQuery: MPTeletypeSetQuery
@@ -155,20 +160,17 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
   )
 
   return messagePortService.registerEvents<MessagePortEventRegistry>({
+    extern_state_resourceCreated: messagePortService.addEvent<MPExternStateResourceCreated>(
+      'extern-state-resource-created'
+    ),
+    extern_state_resourceDeleted: messagePortService.addEvent<MPExternStateResourceDeleted>(
+      'extern-state-resource-deleted'
+    ),
     extern_state_notebookAddResources: messagePortService.addEvent<MPExternStateNotebookChanged>(
       'extern-state-notebook-add-resources'
     ),
     extern_state_notebookRemoveResources: messagePortService.addEvent<MPExternStateNotebookChanged>(
       'extern-state-notebook-remove-resources'
-    ),
-    extern_state_resourceUpdateMetadata: messagePortService.addEvent<MPExternStateResourceChanged>(
-      'extern-state-resource-update-metadata'
-    ),
-    extern_state_resourceUpdateTags: messagePortService.addEvent<MPExternStateResourceChanged>(
-      'extern-state-resource-update-tags'
-    ),
-    extern_state_resourceUpdateData: messagePortService.addEvent<MPExternStateResourceChanged>(
-      'extern-state-resource-update-data'
     ),
 
     trackEvent: messagePortService.addEvent<MPTrackEvent>('track-event'),

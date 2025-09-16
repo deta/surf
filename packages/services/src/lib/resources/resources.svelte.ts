@@ -64,6 +64,7 @@ import type { ConfigService } from '../config'
 import { EventEmitterBase, ResourceTag, SearchResourceTags } from '@deta/utils'
 import { type CtxItem } from '@deta/ui'
 import { Notebook } from '../notebooks'
+import { SvelteMap } from 'svelte/reactivity'
 
 type Telemetry = any
 
@@ -235,28 +236,49 @@ export const getResourceCtxItems = ({
   ] as CtxItem[]
 }
 
-export type ResourceManagerEvents = {
-  created: (resource: ResourceObject) => void
-  deleted: (resourceId: string) => void
-  updated: (resource: ResourceObject) => void
-  recovered: (resourceId: string) => void
+export enum ResourceManagerEvents {
+  Created = 'created',
+  Deleted = 'deleted',
+  Updated = 'updated',
+  Recovered = 'recovered',
 
-  notebookAddResources: (notebookId: string, resourceIds: string[]) => void
-  notebookRemoveResources: (notebookId: string, resourceIds: string[]) => void
+  NotebookAddResources = 'notebookAddResources',
+  NotebookRemoveResources = 'notebookRemoveResources'
+}
+export type ResourceManagerEventHandlers = {
+  [ResourceManagerEvents.Created]: (resource: ResourceObject) => void
+  [ResourceManagerEvents.Deleted]: (resourceId: string) => void
+  [ResourceManagerEvents.Updated]: (resource: ResourceObject) => void
+  [ResourceManagerEvents.Recovered]: (resourceId: string) => void
+
+  [ResourceManagerEvents.NotebookAddResources]: (notebookId: string, resourceIds: string[]) => void
+  [ResourceManagerEvents.NotebookRemoveResources]: (
+    notebookId: string,
+    resourceIds: string[]
+  ) => void
 }
 
-export type ResourceEvents = {
-  'updated-metadata': (metadata: SFFSResourceMetadata) => void
-  'updated-tags': (tags: SFFSResourceTag[]) => void
-  'updated-data': (data: Blob) => void
+export enum ResourceEvents {
+  UpdatedMetadata = 'updated-metadata',
+  UpdatedTags = 'updated-tags',
+  UpdatedData = 'updated-data',
+
+  Extern_UpdatedMetadata = 'extern_updated-metadata',
+  Extern_UpdatedTags = 'extern_updated-tags',
+  Extern_UpdatedData = 'extern_updated-data'
+}
+export type ResourceEventHandlers = {
+  [ResourceEvents.UpdatedMetadata]: (metadata: SFFSResourceMetadata) => void
+  [ResourceEvents.UpdatedTags]: (tags: SFFSResourceTag[]) => void
+  [ResourceEvents.UpdatedData]: (data: Blob) => void
 
   // Extern state updates
-  extern_resourceUpdateMetadata: (resourceId: string) => void
-  extern_resourceUpdateTags: (resourceId: string) => void
-  extern_resourceUpdateData: (resourceId: string) => void
+  [ResourceEvents.Extern_UpdatedMetadata]: (resourceId: string) => void
+  [ResourceEvents.Extern_UpdatedTags]: (resourceId: string) => void
+  [ResourceEvents.Extern_UpdatedData]: (resourceId: string) => void
 }
 
-export class Resource extends EventEmitterBase<ResourceEvents> {
+export class Resource extends EventEmitterBase<ResourceEventHandlers> {
   private sffs: SFFS
   private resourceManager: ResourceManager
   private log: ScopedLogger
@@ -408,8 +430,8 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
     this.rawData = data
     this.updatedAt = new Date().toISOString()
 
-    this.emit('updated-data', data)
-    this.resourceManager.emit('updated', this)
+    this.emit(ResourceEvents.UpdatedData, data)
+    this.resourceManager.emit(ResourceManagerEvents.Updated, this)
     if (write) {
       return this.writeData()
     } else {
@@ -425,7 +447,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
       ...updates
     } as SFFSResourceMetadata
     this.updatedAt = new Date().toISOString()
-    this.emit('updated-metadata', this.metadata)
+    this.emit(ResourceEvents.UpdatedMetadata, this.metadata)
   }
 
   updateTags(updates: SFFSResourceTag[]) {
@@ -433,7 +455,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
 
     this.tags = [...(this.tags ?? []), ...updates]
     this.updatedAt = new Date().toISOString()
-    this.emit('updated-tags', this.tags ?? [])
+    this.emit(ResourceEvents.UpdatedTags, this.tags ?? [])
   }
 
   updateTag(name: string, value: string) {
@@ -447,7 +469,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
     }
 
     this.updatedAt = new Date().toISOString()
-    this.emit('updated-tags', this.tags ?? [])
+    this.emit(ResourceEvents.UpdatedTags, this.tags ?? [])
   }
 
   addTag(tag: SFFSResourceTag) {
@@ -455,7 +477,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
 
     this.tags = [...(this.tags ?? []), tag]
     this.updatedAt = new Date().toISOString()
-    this.emit('updated-tags', this.tags ?? [])
+    this.emit(ResourceEvents.UpdatedTags, this.tags ?? [])
   }
 
   removeTag(name: string) {
@@ -463,7 +485,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
 
     this.tags = this.tags?.filter((t) => t.name !== name)
     this.updatedAt = new Date().toISOString()
-    this.emit('updated-tags', this.tags ?? [])
+    this.emit(ResourceEvents.UpdatedTags, this.tags ?? [])
   }
 
   removeTagByID(id: string) {
@@ -471,7 +493,7 @@ export class Resource extends EventEmitterBase<ResourceEvents> {
 
     this.tags = this.tags?.filter((t) => t?.id !== id)
     this.updatedAt = new Date().toISOString()
-    this.emit('updated-tags', this.tags ?? [])
+    this.emit(ResourceEvents.UpdatedTags, this.tags ?? [])
   }
 
   getData(fresh = false) {
@@ -651,24 +673,24 @@ export interface ResourceSearchResult {
   space_entries: any[]
 }
 
-export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
+export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandlers> {
   private sffs: SFFS
   private log: ScopedLogger
   config: ConfigService
   telemetry: Telemetry
   // ai!: AIService
 
-  resources: Writable<ResourceObject[]>
+  resources = $state() as SvelteMap<string, ResourceObject>
 
   static self: ResourceManager
 
   constructor(telemetry: Telemetry, config: ConfigService) {
     super()
     this.log = useLogScope('SFFSResourceManager')
-    this.resources = writable([])
     this.sffs = new SFFS()
     this.telemetry = telemetry
     this.config = config
+    this.resources = new SvelteMap()
 
     if (isDev) {
       // @ts-ignore
@@ -713,18 +735,19 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   }
 
   private findOrCreateResourceObject(resource: SFFSResource) {
-    const existingResource = get(this.resources).find((r) => r.id === resource.id)
+    // TODO: Id should match right? :thinking:
+    const existingResource = this.resources.get(resource.id)
     if (existingResource) {
       return existingResource
     }
 
     let res = this.createResourceObject(resource)
-    this.emit('created', res)
+    this.emit(ResourceManagerEvents.Created, res)
     return res
   }
 
   private findOrGetResourceObject(id: string, opts: { includeAnnotations?: boolean } = {}) {
-    const existingResource = get(this.resources).find((r) => r.id === id)
+    const existingResource = this.resources.get(id)
     if (existingResource) {
       return Promise.resolve(existingResource)
     }
@@ -741,7 +764,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   private async handleResourceProcessingMessage(id: string, status: ResourceProcessingStateType) {
     this.log.debug('handling resource processing message', id, status)
 
-    const resource = get(this.resources).find((r) => r.id === id)
+    const resource = this.resources.get(id)
     if (!resource) {
       this.log.debug('resource not used, ignoring event', id)
       return
@@ -756,8 +779,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     } else if (status === ResourceProcessingStateType.Failed) {
       resource.updatePostProcessingState('error')
     }
-
-    this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
   }
 
   async createDummyResource(
@@ -805,9 +826,9 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
     this.log.debug('created dummy resource', resource)
 
-    this.resources.update((resources) => [...resources, resource])
+    this.resources.set(resource.id, resource)
 
-    this.emit('created', resource)
+    this.emit(ResourceManagerEvents.Created, resource)
     return resource as ResourceObject
   }
 
@@ -859,7 +880,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     const resource = this.createResourceObject(sffsItem)
 
     this.log.debug('created resource', resource)
-    this.resources.update((resources) => [...resources, resource])
+    this.resources.set(resource.id, resource)
 
     // store the data in the resource and write it to sffs
     if (data) {
@@ -880,14 +901,16 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     //   })
     // }
 
-    this.emit('created', resource)
+    this.emit(ResourceManagerEvents.Created, resource)
     return resource
   }
 
   async readResources() {
     const resourceItems = await this.sffs.readResources()
-    const resources = resourceItems.map((item) => new Resource(this.sffs, this, item))
-    this.resources.set(resources)
+    const resources = resourceItems
+      .map((item) => new Resource(this.sffs, this, item))
+      .map((e) => [e.id, e])
+    this.resources = new SvelteMap<string, ResourceObject>(resources)
   }
 
   async listResourceIDsByTags(tags: SFFSResourceTag[], excludeWithinSpaces: boolean = false) {
@@ -1064,8 +1087,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   }
 
   async getResourceWithAnnotations(id: string) {
-    const loadedResources = get(this.resources)
-    const loadedResource = loadedResources.find((r) => r.id === id)
+    const loadedResource = this.resources.get(id)
     if (loadedResource) {
       return loadedResource
     }
@@ -1079,17 +1101,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     }
 
     const resource = this.findOrCreateResourceObject(resourceItem)
-
-    this.resources.update((resources) => {
-      const index = resources.findIndex((r) => r.id === id)
-      if (index > -1) {
-        resources[index] = resource
-      } else {
-        resources.push(resource)
-      }
-
-      return resources
-    })
+    this.resources.set(resource.id, resource)
 
     // const annotations = (resourceItem.annotations ?? []).map((a) =>
     //   this.findOrCreateResourceObject(a)
@@ -1108,8 +1120,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   }
 
   addAnnotationToLoadedResource(resourceId: string, annotation: ResourceAnnotation) {
-    const loadedResources = get(this.resources)
-    const loadedResource = loadedResources.find((r) => r.id === resourceId)
+    const loadedResource = this.resources.get(resourceId)
     if (loadedResource) {
       this.log.debug('adding annotation to loaded resource', resourceId, annotation)
       loadedResource.annotations = [...(loadedResource.annotations ?? []), annotation]
@@ -1120,8 +1131,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
   async getResource(id: string, opts: { includeAnnotations?: boolean } = {}) {
     // check if resource is already loaded
-    const loadedResources = get(this.resources)
-    const loadedResource = loadedResources.find((r) => r.id === id)
+    const loadedResource = this.resources.get(id)
     if (loadedResource) {
       return loadedResource
     }
@@ -1133,17 +1143,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     }
 
     const resource = this.findOrCreateResourceObject(resourceItem)
-
-    this.resources.update((resources) => {
-      const index = resources.findIndex((r) => r.id === id)
-      if (index > -1) {
-        resources[index] = resource
-      } else {
-        resources.push(resource)
-      }
-
-      return resources
-    })
+    this.resources.set(resource.id, resource)
 
     return resource
   }
@@ -1167,8 +1167,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
       // this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
     }
 
-    this.resources.update((resources) => resources.filter((r) => r.id !== id))
-    this.emit('deleted', id)
+    this.resources.delete(resource.id)
+    this.emit(ResourceManagerEvents.Deleted, id)
   }
 
   async cleanupResourceTags(ids: string[]) {
@@ -1198,10 +1198,10 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     await this.cleanupResourceTags(ids)
 
     await this.sffs.deleteResources(ids)
-    this.resources.update((resources) => resources.filter((r) => !ids.includes(r.id)))
+    ids.forEach((id) => this.resources.delete(id))
 
     ids.forEach((id) => {
-      this.emit('deleted', id)
+      this.emit(ResourceManagerEvents.Deleted, id)
     })
   }
 
@@ -1228,19 +1228,9 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
       return null
     }
     const resource = this.createResourceObject(resourceItem)
+    this.resources.set(resource.id, resource)
 
-    this.resources.update((resources) => {
-      const index = resources.findIndex((r) => r.id === id)
-      if (index > -1) {
-        resources[index] = resource
-      } else {
-        resources.push(resource)
-      }
-
-      return resources
-    })
-
-    this.emit('updated', resource)
+    this.emit(ResourceManagerEvents.Updated, resource)
     return resource
   }
 
@@ -1313,7 +1303,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     await this.sffs.updateResourceMetadata(id, fullMetadata)
 
     resource.updateMetadata(updates)
-    this.resources.update((resources) => resources.map((r) => (r.id === id ? resource : r)))
 
     if (
       updates.name &&
@@ -1336,7 +1325,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     await this.sffs.updateResourceTag(resourceId, tagName, tagValue)
 
     resource.updateTag(tagName, tagValue)
-    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async createResourceTag(resourceId: string, tagName: string, tagValue: string) {
@@ -1351,7 +1339,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     this.log.warn('created resource tag', tag)
 
     resource.addTag(tag ? tag : { name: tagName, value: tagValue })
-    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async deleteResourceTag(resourceId: string, tagName: string) {
@@ -1365,7 +1352,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     await this.sffs.deleteResourceTag(resourceId, tagName)
 
     resource.removeTag(tagName)
-    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async deleteResourceTagByID(resourceId: string, id: string) {
@@ -1379,7 +1365,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     await this.sffs.deleteResourceTagByID(id)
 
     resource.removeTagByID(id)
-    this.resources.update((resources) => resources.map((r) => (r.id === resourceId ? resource : r)))
   }
 
   async unmarkResourceAsEmpty(resourceId: string) {
@@ -1669,23 +1654,20 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
     // update the spaceIds of the resources if we have them loaded
     if (origin === SpaceEntryOrigin.ManuallyAdded) {
-      const loadedResources = get(this.resources)
-      loadedResources.map((r) => {
-        if (resourceIds.includes(r.id)) {
-          r.spaceIds.update((ids) => [...ids, space_id])
+      for (const [id, resource] of this.resources) {
+        if (resourceIds.includes(id)) {
+          resource.spaceIds.update((ids) => [...ids, space_id])
         }
-
-        return r
-      })
+      }
     }
 
-    this.emit('notebookAddResources', space_id, resourceIds)
+    this.emit(ResourceManagerEvents.NotebookAddResources, space_id, resourceIds)
     return res
   }
 
   async removeItemsFromSpace(space_id: string, resourceIds: string[]) {
     for (const resourceId of resourceIds) {
-      const resource = get(this.resources).find((e) => e.id === resourceId)
+      const resource = this.resources.get(resourceId)
       if (!resource) continue
 
       resource.spaceIds.update((v) => {
@@ -1695,7 +1677,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
 
     await this.sffs.deleteEntriesInSpaceByEntryIds(space_id, resourceIds)
 
-    this.emit('notebookRemoveResources', space_id, resourceIds)
+    this.emit(ResourceManagerEvents.NotebookRemoveResources, space_id, resourceIds)
   }
 
   async getSpaceContents(space_id: string, opts?: SpaceEntrySearchOptions): Promise<SpaceEntry[]> {
@@ -1725,9 +1707,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
     await this.sffs.deleteSpaceEntries(entry_ids)
 
     // update the spaceIds of the resources if we have them loaded
-    const loadedResources = get(this.resources)
     entries.map(async (entry) => {
-      const resource = loadedResources.find((r) => r.id === entry.entry_id)
+      const resource = this.resources.get(entry.entry_id)
       this.log.debug('deleting space entry', entry, resource)
       if (resource) {
         this.log.debug('updating resource spaceIds', resource.id, resource.spaceIdsValue)
@@ -1736,9 +1717,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
         this.log.debug('updated resource spaceIds', resource.id, resource.spaceIdsValue)
       }
     })
-
-    // trigger reactivity upadte
-    this.resources.update((resources) => resources)
   }
 
   async deleteSubSpaceEntries(ids: string[]) {
@@ -1972,7 +1950,7 @@ class ResourceDebugger {
   take() {
     const snapshot: ResourceSnapshot = {
       timestamp: new Date().toISOString(),
-      resources: get(this.rm.resources).map((r) => ({
+      resources: Array.from(this.rm.resources.values()).map((r) => ({
         id: r.id,
         type: r.type,
         name: r.metadata?.name,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte'
-  import { type Resource } from '@deta/services/resources'
-  import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
+  import { type Resource, ResourceManagerEvents } from '@deta/services/resources'
+  import { useNotebookManager, type Notebook, NotebookManagerEvents } from '@deta/services/notebooks'
   import { ResourceTagsBuiltInKeys, type Option, type SFFSResourceTag, type SFFSSearchParameters, type SFFSSearchResult } from '@deta/types'
   import { type ResourceSearchResult, useResourceManager } from '@deta/services/resources'
   import { SearchResourceTags, useThrottle } from '@deta/utils'
@@ -111,7 +111,17 @@
 
   onMount(() => {
     const unsubs = [
-      resourceManager.on('created', () => load()),
+      notebookManager.on(NotebookManagerEvents.DeletedResource, (resourceId: string) => {
+        //notebook.contents = notebook.contents.filter((e) => e.entry_id !== resourceId)
+                          notebook?.fetchContents()
+        if (searchResults) searchResults = searchResults.filter(e => e.entry_id !== resourceId)
+      }),
+      notebookManager.on(NotebookManagerEvents.RemovedResources, (_notebookId: string, resourceIds: string[]) => {
+                //notebook.contents = notebook.contents.filter((e) => !resourceIds.includes(e.id))
+        if (notebookId !== _notebookId) return
+                          notebook?.fetchContents()
+        if (searchResults) searchResults = searchResults.filter(e => !resourceIds.includes(e.entry_id))
+      })
     ]
     return () => unsubs.forEach(f => f())
   })
