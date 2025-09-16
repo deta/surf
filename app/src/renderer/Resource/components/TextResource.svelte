@@ -1209,12 +1209,6 @@
         }
       }, 15)
 
-      // Use the note resource in the chat if the note is mentioned or automaticall if nothing is mentioned
-      const useNoteResource =
-        mentions?.some((mention) => mention.id === NOTE_MENTION.id) ||
-        !mentions ||
-        mentions.filter((mention) => mention.type !== MentionItemType.MODEL).length === 0
-
       let markdownQuery = await htmlToMarkdown(query)
       if (!markdownQuery) {
         markdownQuery = query
@@ -1226,7 +1220,7 @@
           trigger,
           generationID: options.generationID,
           onboarding: showOnboarding,
-          noteResourceId: useNoteResource ? resourceId : undefined,
+          noteResourceId: resourceId,
           websearch: toolsConfiguration.websearch,
           surflet: toolsConfiguration.surflet
         },
