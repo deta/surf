@@ -117,6 +117,16 @@
       {#key $extractedResourceId}
         <SaveState {view} />
       {/key}
+    {:else if $activeViewType === ViewType.Resource}
+      <ResourceLoader resource={$activeViewTypeData?.id}>
+        {#snippet children(resource: Resource)}
+          {#if [ResourceTypes.DOCUMENT_SPACE_NOTE, ResourceTypes.PDF].includes(resource.type)}
+            {#key $activeViewTypeData.id}
+              <SaveState {view} />
+            {/key}
+          {/if}
+        {/snippet}
+      </ResourceLoader>
     {/if}
 
     {#if $activeViewType === ViewType.Resource}

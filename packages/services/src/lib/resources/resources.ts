@@ -1614,6 +1614,15 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEvents> {
   }
 
   async removeItemsFromSpace(space_id: string, resourceIds: string[]) {
+    for (const resourceId of resourceIds) {
+      const resource = get(this.resources).find((e) => e.id === resourceId)
+      if (!resource) continue
+
+      resource.spaceIds.update((v) => {
+        return v.filter((e) => e !== space_id)
+      })
+    }
+
     await this.sffs.deleteEntriesInSpaceByEntryIds(space_id, resourceIds)
 
     this.emit('notebookRemoveResources', space_id, resourceIds)

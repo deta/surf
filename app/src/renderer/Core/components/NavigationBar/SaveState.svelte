@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { type WebContentsView } from '@deta/services/views'
+  import { ViewType, type WebContentsView } from '@deta/services/views'
   import { Button, SearchableList, type SearchableItem } from '@deta/ui'
   import { truncate, useLogScope } from '@deta/utils'
   import OverlayPopover from '../Overlays/OverlayPopover.svelte'
@@ -24,8 +24,17 @@
   let isMenuOpen = $state(false)
   let resource = $state<Resource | null>(null)
 
-  let extractedResourceId = $derived(view.extractedResourceId)
-  let isSaved = $derived(view.extractedResourceId && view.resourceCreatedByUser)
+  const activeViewType = $derived(view.type ?? writable(''))
+  const activeViewTypeData = $derived(view.typeData ?? writable({ id: null }))
+
+  let extractedResourceId = $derived(
+    $activeViewType === ViewType.Page ? view.extractedResourceId : writable($activeViewTypeData.id)
+  )
+  let isSaved = $derived(
+    $activeViewType === ViewType.Page
+      ? view.extractedResourceId && view.resourceCreatedByUser
+      : writable(true)
+  )
   let spaceIds = $derived(resource?.spaceIds ?? writable([]))
 
   let notebookItems = $derived(
@@ -39,8 +48,6 @@
         }) as SearchableItem<Notebook>
     )
   )
-
-  $inspect(resource)
 
   $effect(() => {
     if ($extractedResourceId) {
@@ -77,12 +84,16 @@
       return
     }
 
-    await notebookManager.addResourcesToNotebook(
-      notebookId,
-      [resource.id],
-      SpaceEntryOrigin.ManuallyAdded,
-      true
-    )
+    if ($spaceIds.includes(notebookId)) {
+      await notebookManager.removeResourcesFromNotebook(notebookId, [resource.id], true)
+    } else {
+      await notebookManager.addResourcesToNotebook(
+        notebookId,
+        [resource.id],
+        SpaceEntryOrigin.ManuallyAdded,
+        true
+      )
+    }
 
     isMenuOpen = false
   }
