@@ -94,7 +94,7 @@
       {#if $isSaved}
         <Icon name="bookmarkFilled" size="1.085em" />
       {:else}
-        <Icon name="bookmark" size="1.085em" />
+        <Icon name="save" size="1.085em" />
       {/if}
     </Button>
   {/snippet}
@@ -109,7 +109,7 @@
         </button>
       {:else}
         <button class="list-item save-to-surf" onclick={saveToSurf}>
-          <Icon name="bookmark" />
+          <Icon name="save" />
           <div class="list-item-label">Add to Surf</div>
         </button>
       {/if}
