@@ -462,6 +462,11 @@ export class BrowserService {
         }
       }
 
+      if (opts?.notebookId) {
+        this.log.debug(`Adding note to notebook ${opts.notebookId}`)
+        await this.notebookManager.addResourcesToNotebook(opts.notebookId, [resource.id])
+      }
+
       if (opts?.target !== 'sidebar') {
         view.changePermanentlyActive(false)
       }
@@ -499,6 +504,19 @@ export class BrowserService {
 
       this.log.debug(`Creating note in ${target} with content: "${content}"`)
 
+      if (opts?.notebookId === 'auto') {
+        if (this.tabsManager.activeTabValue?.view.typeValue === ViewType.Notebook) {
+          const viewData = this.tabsManager.activeTabValue.view.typeDataValue
+          if (viewData.id) {
+            opts.notebookId = viewData.id
+          } else {
+            opts.notebookId = undefined
+          }
+        } else {
+          opts.notebookId = undefined
+        }
+      }
+
       const reusedNoteView = await this.reuseNoteViewIfPossible(data, opts)
       if (reusedNoteView) {
         this.log.debug('Reused existing new note view')
@@ -514,19 +532,6 @@ export class BrowserService {
         undefined,
         true
       )
-
-      if (opts?.notebookId === 'auto') {
-        if (this.tabsManager.activeTabValue?.view.typeValue === ViewType.Notebook) {
-          const viewData = this.tabsManager.activeTabValue.view.typeDataValue
-          if (viewData.id) {
-            opts.notebookId = viewData.id
-          } else {
-            opts.notebookId = undefined
-          }
-        } else {
-          opts.notebookId = undefined
-        }
-      }
 
       if (opts?.notebookId) {
         this.log.debug(`Adding created note to notebook ${opts.notebookId}`)
