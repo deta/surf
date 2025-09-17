@@ -7,7 +7,8 @@
     open = $bindable(false),
     position = 'top',
     children,
-    trigger
+    trigger,
+    autofocus = false
   }: OverlayPopoverProps = $props()
 
   const log = useLogScope('OverlayPopover')
@@ -54,13 +55,13 @@
 </script>
 
 <div class="popover-root">
-  <button bind:this={ref} onclick={onClick} class="trigger">
+  <button bind:this={ref} onclick={onClick} class="trigger ignore-click-outside">
     {@render trigger?.()}
   </button>
 
   {#if open}
     <div {@attach clickOutside(() => (open = false))}>
-      <Overlay {bounds}>
+      <Overlay {bounds} {autofocus}>
         <div class="popover-content-wrapper">
           {@render children?.()}
         </div>

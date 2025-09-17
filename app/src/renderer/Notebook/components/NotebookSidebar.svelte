@@ -1,28 +1,33 @@
 <script lang="ts">
-  import { Icon } from '@deta/icons'
   import {
     Button,
     contextMenu,
-    LazyScroll,
     MaskedScroll,
     openDialog,
     ResourceLoader,
     SearchInput
   } from '@deta/ui'
-  import SourceCard from './SourceCard.svelte'
-  import { type NotebookEntry, ResourceTypes, type Option } from '@deta/types'
-  import { NotebookLoader, SurfLoader } from '@deta/ui'
+  import {
+    type NotebookEntry,
+    ResourceTypes,
+    type Option,
+    type OpenTarget,
+    SpaceEntryOrigin
+  } from '@deta/types'
+  import { NotebookLoader, SurfLoader, SourceCard } from '@deta/ui'
   import { type Notebook } from '@deta/services/notebook'
-  import { useResourceManager, type Resource } from '@deta/services/resources'
+  import { type Resource, getResourceCtxItems } from '@deta/services/resources'
   import { SearchResourceTags, truncate, useDebounce, useThrottle } from '@deta/utils'
-  import type { ResourceNote, ResourceSearchResult } from '@deta/services/resources'
+  import type { ResourceSearchResult } from '@deta/services/resources'
   import NotebookCard from './NotebookCard.svelte'
   import NotebookSidebarSection from './NotebookSidebarSection.svelte'
   import { useNotebookManager } from '@deta/services/notebooks'
-  import { get, writable } from 'svelte/store'
-  import { onMount } from 'svelte'
   import NotebookSidebarNoteName from './NotebookSidebarNoteName.svelte'
-  import { handleNotebookClick, handleResourceClick } from '../handlers/notebookOpenHandlers'
+  import {
+    handleNotebookClick,
+    handleResourceClick,
+    openResource
+  } from '../handlers/notebookOpenHandlers'
 
   let {
     notebookId,
@@ -139,6 +144,32 @@
     if (!confirmed) return
     notebookManager.removeResources(resource.id, notebookId ?? undefined, true)
   }
+
+  const handleAddToNotebook = (notebookId: string, resourceId: string) => {
+    notebookManager.addResourcesToNotebook(
+      notebookId,
+      [resourceId],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
+  }
+  const handleRemoveFromNotebook = (notebookId: string, resourceId: string) => {
+    notebookManager.removeResourcesFromNotebook(notebookId, [resourceId], true)
+  }
+
+  const getSourceCardCtxItems = (resource: Resource, sourceNotebookId?: string) =>
+    getResourceCtxItems({
+      resource,
+      sortedNotebooks: notebookManager.sortedNotebooks,
+      onAddToNotebook: (notebookId) => handleAddToNotebook(notebookId, resource.id),
+      onOpen: (target: OpenTarget) => openResource(resource.id, { target, offline: false }),
+      onOpenOffline: (resourceId: string) =>
+        openResource(resourceId, { offline: true, target: 'tab' }),
+      onDeleteResource: () => onDeleteResource(resource),
+      onRemove: !sourceNotebookId
+        ? undefined
+        : () => handleRemoveFromNotebook(sourceNotebookId, resource.id)
+    })
 </script>
 
 <aside class:open>
@@ -225,6 +256,11 @@
                           {resource}
                           text
                           {onDeleteResource}
+                          onClick={(e) => handleResourceClick(resource.id, e)}
+                          {@attach contextMenu({
+                            canOpen: true,
+                            items: getSourceCardCtxItems(resource)
+                          })}
                         />
                       {/snippet}
                     </ResourceLoader>
@@ -388,6 +424,11 @@
                           {resource}
                           text
                           {onDeleteResource}
+                          onClick={(e) => handleResourceClick(resource.id, e)}
+                          {@attach contextMenu({
+                            canOpen: true,
+                            items: getSourceCardCtxItems(resource)
+                          })}
                         />
                       {/snippet}
                     </ResourceLoader>
@@ -522,6 +563,11 @@
                           {resource}
                           text
                           {onDeleteResource}
+                          onClick={(e) => handleResourceClick(resource.id, e)}
+                          {@attach contextMenu({
+                            canOpen: true,
+                            items: getSourceCardCtxItems(resource, notebook.id)
+                          })}
                           sourceNotebookId={notebook.id}
                         />
                       {/snippet}

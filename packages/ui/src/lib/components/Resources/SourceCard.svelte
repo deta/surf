@@ -1,21 +1,14 @@
 <script lang="ts">
-  import { openDialog } from '@deta/ui'
   import {
     getResourcePreview,
     Resource,
-    useResourceManager,
-    getResourceCtxItems,
     isGeneratedResource
   } from '@deta/services/resources'
-  import { contextMenu, type CtxItem } from '@deta/ui'
-  import { type OpenTarget, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
-  import { getFileKind, truncate } from '../../../../../packages/utils/dist'
+  import { ResourceTypes } from '@deta/types'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
-  import { DynamicIcon } from '@deta/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import { onMount } from 'svelte'
-  import { useNotebookManager } from '@deta/services/notebooks'
-  import { handleResourceClick, openResource } from '../handlers/notebookOpenHandlers'
-  import { getFileType } from '@deta/utils'
+  import { getFileType, getFileKind, truncate } from '@deta/utils'
 
   // TODO: Decouple this rendering from the Resource?
   let {
@@ -23,7 +16,12 @@
     sourceNotebookId,
     text = false,
     onlyCard = false,
-    onDeleteResource
+    showSaved = false,
+    interactive = true,
+    permanentlyTilted = false,
+    onDeleteResource,
+    onClick,
+    ...props
     //title,
     //subtitle,
     //coverImage,
@@ -33,15 +31,16 @@
     sourceNotebookId?: string
     text?: boolean
     onlyCard?: boolean
+    showSaved?: boolean
+    interactive?: boolean
+    permanentlyTilted?: boolean
     onDeleteResource?: (resource: Resource) => void
+    onClick?: (e: MouseEvent) => void
     //title?: string
     //subtitle?: string
     //coverImage?: string
     //faviconImage?: string
   } = $props()
-
-  const notebookManager = useNotebookManager()
-  const resourceManager = useResourceManager()
 
   let data = $state(null)
   let faviconUrl = $derived(
@@ -52,24 +51,7 @@
   let imageError = $state(false)
 
   const handleClick = (e: MouseEvent) => {
-    handleResourceClick(resource.id, e)
-  }
-
-  const handleAddToNotebook = (notebookId: string) => {
-    notebookManager.addResourcesToNotebook(
-      notebookId,
-      [resource.id],
-      SpaceEntryOrigin.ManuallyAdded,
-      true
-    )
-  }
-  const handleRemoveFromNotebook = (notebookId: string) => {
-    notebookManager.removeResourcesFromNotebook(notebookId, [resource.id], true)
-  }
-
-  const handleDeleteResource = async () => {
-    if (!resource) return
-    onDeleteResource?.(resource)
+    onClick?.(e)
   }
 
   const handleImageError = () => {
@@ -79,19 +61,6 @@
   onMount(async () => {
     getResourcePreview(resource, {}).then((v) => (data = v))
   })
-
-  const CTX_MENU_ITEMS: CtxItem[] = $derived(
-    getResourceCtxItems({
-      resource,
-      sortedNotebooks: notebookManager.sortedNotebooks,
-      onAddToNotebook: handleAddToNotebook,
-      onOpen: (target: OpenTarget) => openResource(resource.id, { target, offline: false }),
-      onOpenOffline: (resourceId: string) =>
-        openResource(resourceId, { offline: true, target: 'tab' }),
-      onDeleteResource: handleDeleteResource,
-      onRemove: !sourceNotebookId ? undefined : () => handleRemoveFromNotebook(sourceNotebookId)
-    })
-  )
 </script>
 
 {#if !data}
@@ -108,11 +77,10 @@
   <article
     onclick={handleClick}
     role="none"
-    {@attach contextMenu({
-      canOpen: true,
-      items: CTX_MENU_ITEMS
-    })}
     data-resource-id={resource.id}
+    class:interactive
+    class:permanently-tilted={permanentlyTilted}
+    {...props}
   >
     <div class="card">
       <div class="content">
@@ -171,6 +139,13 @@
             <span class="subtitle typo-title-sm" style="opacity: 0.3;"
               >{getFileType(resource.type)}</span
             >
+          {/if}
+
+          {#if showSaved}
+            <div class="saved-info">
+              <Icon name="check" size="17px" color="rgb(6, 158, 54)" />
+              <span class="subtitle typo-title-sm">Added to Surf</span>
+            </div>
           {/if}
         </div>
       {/if}
@@ -285,7 +260,7 @@
       }
     }
 
-    &:hover,
+    &.interactive:hover,
     &:global([data-context-menu-anchor]) {
       .card {
         transform: scale(1.025) rotate3d(1, 2, 4, 1.5deg);
@@ -296,7 +271,15 @@
         opacity: 0.5;
       }
     }
-    &:active {
+
+    &:hover,
+    &.permanently-tilted {
+      .card {
+        transform: scale(1.025) rotate3d(1, 2, 4, 1.5deg);
+      }
+    }
+
+    &.interactive:active {
       .card {
         transform: scale(0.98) rotate3d(1, 2, 4, 1.5deg);
         // NOTE: We shouldnt animate this succer, use ::pseudo element and just animate its opacity instead
@@ -304,5 +287,14 @@
         box-shadow: rgba(99, 99, 99, 0.07) 0px 4px 12px 0px;
       }
     }
+  }
+
+  .saved-info {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.5);
+    margin-top: 0.4rem;
   }
 </style>

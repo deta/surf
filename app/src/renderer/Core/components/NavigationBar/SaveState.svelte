@@ -1,13 +1,13 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
   import { ViewType, type WebContentsView } from '@deta/services/views'
-  import { Button, SearchableList, type SearchableItem } from '@deta/ui'
+  import { Button, SearchableList, type SearchableItem, SourceCard } from '@deta/ui'
   import { truncate, useLogScope } from '@deta/utils'
   import OverlayPopover from '../Overlays/OverlayPopover.svelte'
-  import { Notebook, useNotebookManager } from '@deta/services/notebooks'
+  import { Notebook, NotebookManagerEvents, useNotebookManager } from '@deta/services/notebooks'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { writable } from 'svelte/store'
-  import { SpaceEntryOrigin } from '@deta/types'
+  import { ResourceTypes, SpaceEntryOrigin, type Fn } from '@deta/types'
 
   let {
     view
@@ -21,8 +21,12 @@
 
   const notebooks = notebookManager.sortedNotebooks
 
+  let searchableList: SearchableList
+  let unsubResourceDeleted: Fn | null = null
+
   let isMenuOpen = $state(false)
   let resource = $state<Resource | null>(null)
+  let searchValue = $state('')
 
   const activeViewType = $derived(view.type ?? writable(''))
   const activeViewTypeData = $derived(view.typeData ?? writable({ id: null }))
@@ -64,6 +68,23 @@
         log.debug('Retrieved resource:', res)
         resource = res
       })
+
+      unsubResourceDeleted = notebookManager.on(
+        NotebookManagerEvents.DeletedResource,
+        (deletedResourceId) => {
+          if (deletedResourceId === $extractedResourceId) {
+            view.setExtractedResourceId(null, false)
+            resource = null
+          }
+        }
+      )
+    }
+
+    return () => {
+      if (unsubResourceDeleted) {
+        unsubResourceDeleted()
+        unsubResourceDeleted = null
+      }
     }
   })
 
@@ -79,7 +100,7 @@
     }
 
     log.debug('Resource saved to Surf:', resource.id)
-    isMenuOpen = false
+    // isMenuOpen = false
   }
 
   async function selectNotebook(notebookId: string) {
@@ -104,11 +125,13 @@
       )
     }
 
-    isMenuOpen = false
+    searchValue = ''
+    searchableList?.focus()
+    // isMenuOpen = false
   }
 </script>
 
-<OverlayPopover bind:open={isMenuOpen} position="bottom">
+<OverlayPopover bind:open={isMenuOpen} position="bottom" autofocus>
   {#snippet trigger()}
     <Button size="md" square>
       {#if $isSaved}
@@ -123,10 +146,22 @@
     <!-- Save to Surf option -->
     <div class="save-section">
       {#if $isSaved}
-        <button class="list-item save-to-surf" disabled>
-          <Icon name="bookmarkFilled" />
-          <div class="list-item-label">Added to Surf!</div>
-        </button>
+        {#if resource.url}
+          <SourceCard
+            --width={'5rem'}
+            --max-width={''}
+            {resource}
+            text
+            showSaved
+            permanentlyTilted
+            interactive={false}
+          />
+        {:else if resource.type !== ResourceTypes.DOCUMENT_SPACE_NOTE}
+          <button class="list-item save-to-surf" disabled>
+            <Icon name="check" size="19px" color="rgb(6, 158, 54)" />
+            <div class="list-item-label">Added to Surf!</div>
+          </button>
+        {/if}
       {:else}
         <button class="list-item save-to-surf" onclick={saveToSurf}>
           <Icon name="save" />
@@ -135,12 +170,18 @@
       {/if}
     </div>
 
+    {#if !resource || resource.type !== ResourceTypes.DOCUMENT_SPACE_NOTE}
+      <hr class="divider" />
+    {/if}
+
     <!-- Notebooks section -->
     <div class="notebooks-section">
       <SearchableList
+        bind:this={searchableList}
+        bind:value={searchValue}
         items={notebookItems}
-        searchPlaceholder="Search notebooks..."
-        autofocus={false}
+        searchPlaceholder="Search notebooks to add to..."
+        autofocus={true}
       >
         {#snippet itemRenderer(item)}
           <button class="list-item" onclick={() => selectNotebook(item.id)}>
@@ -214,6 +255,9 @@
 
   .save-section {
     padding: 0.25rem;
+    padding-left: 0.5rem;
+    padding-top: 0.5rem;
+    user-select: none;
   }
 
   .divider {
@@ -225,5 +269,8 @@
   .notebooks-section {
     flex: 1;
     min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 </style>

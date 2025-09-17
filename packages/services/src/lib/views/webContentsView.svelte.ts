@@ -1100,7 +1100,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         }
       } else {
         this.log.error('resource not found', this.view.extractedResourceIdValue)
-        this.view.extractedResourceId.set(null)
+        this.view.setExtractedResourceId(null)
       }
     }
 
@@ -1120,12 +1120,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       const isFromLiveSpace = isHideInEverything && isFromSpaceSource
       const manuallySaved = !isSilent && !isFromLiveSpace
 
-      this.view.extractedResourceId.set(bookmarkedResource.id)
-      this.view.resourceCreatedByUser.set(manuallySaved)
+      this.view.setExtractedResourceId(bookmarkedResource.id, manuallySaved)
     } else {
       this.log.debug('no bookmarked resource found')
-      this.view.extractedResourceId.set(null)
-      this.view.resourceCreatedByUser.set(false)
+      this.view.setExtractedResourceId(null, false)
     }
   }
 
@@ -1500,6 +1498,14 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   }
   get dataValue() {
     return get(this.data)
+  }
+
+  setExtractedResourceId(resourceId: string | null, createdByUser?: boolean) {
+    this.extractedResourceId.set(resourceId)
+
+    if (createdByUser !== undefined) {
+      this.resourceCreatedByUser.set(createdByUser)
+    }
   }
 
   async highlightSelection(selection: PageHighlightSelectionData) {
@@ -2012,7 +2018,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
           })
 
           this.resourceCreatedByUser.set(!silent && !createdForChat)
-          this.extractedResourceId.set(fetchedResource.id)
+          this.setExtractedResourceId(fetchedResource.id)
 
           if (freshWebview) {
             this.log.debug('updating resource with fresh data', fetchedResource.id)
@@ -2037,9 +2043,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       freshWebview
     })
 
-    this.extractedResourceId.set(resource.id)
-    this.resourceCreatedByUser.set(!silent && !createdForChat)
-
+    this.setExtractedResourceId(resource.id, !silent && !createdForChat)
     this.resourceManager.telemetry.trackSurfAddResource(resource.type)
 
     return resource

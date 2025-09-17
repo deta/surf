@@ -3,15 +3,15 @@
   import { clickOutside } from '@deta/utils'
 
   let {
-          placeholder = 'Search',
-          value,
+    placeholder = 'Search',
+    value = $bindable(''),
     collapsed = false,
     onsearchinput,
     autofocus = false,
     fullWidth = false
   }: {
-          placeholder?: string
-          value?: string
+    placeholder?: string
+    value?: string
     collapsed: boolean
     onsearchinput?: (value: string) => void
     autofocus?: boolean
@@ -19,6 +19,10 @@
   } = $props()
 
   let inputEl: HTMLInputElement
+
+  export const focus = () => {
+    inputEl?.focus()
+  }
 </script>
 
 {#key collapsed}
@@ -31,8 +35,8 @@
     <input
       bind:this={inputEl}
       type="text"
-                {value}
-                        {placeholder}
+      bind:value={value}
+      {placeholder}
       oninput={(e) => onsearchinput?.(e.target.value)}
       {autofocus}
     />

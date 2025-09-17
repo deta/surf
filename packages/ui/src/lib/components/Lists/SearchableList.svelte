@@ -6,6 +6,7 @@
   import type { SearchableItem } from './searchable.types'
 
   type SearchableListProps<T extends SearchableItem> = {
+    value?: string
     items: T[]
     searchPlaceholder?: string
     itemRenderer: Snippet<[T]>
@@ -14,13 +15,19 @@
   }
 
   let {
+    value = $bindable(''),
     items,
     itemRenderer,
     emptyState,
+    searchPlaceholder = 'Search...',
     autofocus = false
   }: SearchableListProps<any> = $props()
 
-  let searchValue = $state('')
+  let input: SearchInput
+
+  export const focus = () => {
+    input?.focus()
+  }
 
   const filterFunction = (item: SearchableItem, searchValue: string) => {
     return (
@@ -30,17 +37,13 @@
   }
 
   let filteredItems = $derived(
-    searchValue ? items.filter((item) => filterFunction(item, searchValue)) : items
+    value ? items.filter((item) => filterFunction(item, value)) : items
   )
-
-  function handleSearchInput(value: string) {
-    searchValue = value
-  }
 </script>
 
 <div class="searchable-list">
   <div class="search-container">
-    <SearchInput collapsed={false} onsearchinput={handleSearchInput} {autofocus} fullWidth />
+    <SearchInput bind:this={input} collapsed={false} bind:value={value} {autofocus} placeholder={searchPlaceholder} fullWidth />
   </div>
 
   <div class="list-container">
@@ -49,14 +52,14 @@
         {#each filteredItems as item (item.id)}
           {@render itemRenderer(item)}
         {/each}
-      {:else if searchValue}
+      {:else if value}
         <div class="empty-state">
           {#if emptyState}
             {@render emptyState()}
           {:else}
             <div class="default-empty">
               <Icon name="search" size="1.5rem" />
-              <div>No results found for "{searchValue}"</div>
+              <div>No results found for "{value}"</div>
             </div>
           {/if}
         </div>
@@ -69,20 +72,20 @@
   .searchable-list {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    overflow: hidden;
+    flex: 1;
   }
 
   .search-container {
     padding: 0.5rem 0.4rem 0.625rem 0.4rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
   }
 
   .list-container {
     flex: 1;
     overflow: hidden;
-    min-height: 0;
-    height: 292px;
+    display: flex;
+    flex-direction: column;
   }
 
   .empty-state {

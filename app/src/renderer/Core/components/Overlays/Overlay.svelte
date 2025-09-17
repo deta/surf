@@ -7,7 +7,7 @@
   import OverlayConsumer from './OverlayConsumer.svelte'
   import type { OverlayProps } from './types.js'
 
-  let { bounds, children, disabled }: OverlayProps = $props()
+  let { bounds, children, disabled, autofocus = false }: OverlayProps = $props()
 
   const overlayManager = useOverlayManager()
 
@@ -36,6 +36,23 @@
     })
 
     unsubs.push(copyStyles(overlay.window))
+
+    if (autofocus) {
+      overlay.focus()
+
+      // sue me
+      setTimeout(() => {
+        overlay.focus()
+      }, 100)
+
+      setTimeout(() => {
+        overlay.focus()
+      }, 300)
+
+      setTimeout(() => {
+        overlay.focus()
+      }, 400)
+    }
   })
 
   onDestroy(() => {

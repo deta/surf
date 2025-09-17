@@ -1,4 +1,4 @@
-export type SearchableItem<T extends any> = {
+export type SearchableItem<T = any> = {
     id: string
     icon?: string
     label: string

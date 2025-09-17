@@ -18,6 +18,13 @@ export type OverlayProps = {
    * The initial bounds of the overlay.
    */
   bounds?: Rectangle
+
+  /**
+   * Whether the overlay should autofocus the first focusable element when opened.
+   *
+   * @defaultValue false
+   */
+  autofocus?: boolean
 }
 
 export type OverlayPopoverProps = {
@@ -40,4 +47,11 @@ export type OverlayPopoverProps = {
    * The trigger content to render within the portal.
    */
   trigger?: Snippet
+
+  /**
+   * Whether the popover should autofocus the first focusable element when opened.
+   *
+   * @defaultValue false
+   */
+  autofocus?: boolean
 }
