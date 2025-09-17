@@ -244,6 +244,7 @@ export class SearchResourceTags {
       SearchResourceTags.ResourceType(ResourceTypes.HISTORY_ENTRY, 'ne'),
       SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.HIDE_IN_EVERYTHING),
       SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.SILENT),
+      SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.CREATED_FOR_CHAT),
       ...conditionalArrayItem(
         options.excludeAnnotations,
         SearchResourceTags.ResourceType(ResourceTypes.ANNOTATION, 'ne')

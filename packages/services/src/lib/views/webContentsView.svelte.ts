@@ -128,6 +128,13 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.manager.handleNewWindowRequest(this.view.id, details)
   }
 
+  private async handleLocationChange() {
+    const url = await this.getURL()
+    if (this.view.typeValue === ViewType.Page && url !== 'about:blank') {
+      this.runAppDetection()
+    }
+  }
+
   private handleDOMReady() {
     this.view.domReady.set(true)
     this.emit(WebContentsEmitterNames.DOM_READY)
@@ -208,6 +215,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     if (this.view.selectionHighlightValue) {
       this.highlightSelection(this.view.selectionHighlightValue)
     }
+
+    this.handleLocationChange()
   }
 
   private handlePageTitleUpdated(
@@ -321,6 +330,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
     this.persistNavigationHistory()
     this.addHistoryEntry(newUrl)
+    this.handleLocationChange()
   }
 
   private handleWebviewMediaPlaybackChanged(state: boolean) {
@@ -875,6 +885,11 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     })
     //}
   }
+
+  runAppDetection = useDebounce(async () => {
+    this.log.debug('Running app detection')
+    this.sendPageAction(WebViewEventReceiveNames.GetApp)
+  }, 350)
 
   detectResource(totalTimeout = 10000, pageLoadTimeout = 5000) {
     return new Promise<DetectedResource | null>((resolve) => {

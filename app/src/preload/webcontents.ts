@@ -307,10 +307,6 @@ window.addEventListener('DOMContentLoaded', async (_) => {
   document.addEventListener('dragstart', (event: DragEvent) => {
     event.dataTransfer?.setData('text/space-source', window.location.href)
   })
-
-  if (window.location.href !== 'about:blank') {
-    runAppDetection()
-  }
 })
 
 window.addEventListener('click', (event: MouseEvent) => {

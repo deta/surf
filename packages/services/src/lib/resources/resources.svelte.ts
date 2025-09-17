@@ -674,8 +674,8 @@ export interface ResourceSearchResult {
 }
 
 export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandlers> {
-  private sffs: SFFS
   private log: ScopedLogger
+  sffs: SFFS
   config: ConfigService
   telemetry: Telemetry
   // ai!: AIService
