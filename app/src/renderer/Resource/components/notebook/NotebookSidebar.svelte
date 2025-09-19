@@ -27,20 +27,18 @@
     handleNotebookClick,
     handleResourceClick,
     openResource
-  } from '../handlers/notebookOpenHandlers'
+  } from '../../handlers/notebookOpenHandlers'
+  import { onMount } from 'svelte'
+  import { useMessagePortClient } from '@deta/services/messagePort'
 
   let {
     notebookId,
     title,
-    open = $bindable(),
-    query,
-    onquerychange
+    open = $bindable()
   }: {
     notebookId?: string
     title: string
     open: boolean
-    query: string | null
-    onquerychange: (v: string) => void
   } = $props()
 
   const notebookManager = useNotebookManager()
@@ -52,6 +50,8 @@
       })
       .sort((a, b) => (b.data.pinned === true) - (a.data.pinned === true))
   )
+
+  let query = $state('')
 
   // TODO: Make this conversion more sane and put it in a generalized place!
   const filterNoteResources = (
@@ -76,7 +76,10 @@
   // TODO: put this in lazy scroll component
   let resourceRenderCnt = $state(20)
   $effect(() => {
-    if (!open) resourceRenderCnt = 20
+    if (!open) {
+      resourceRenderCnt = 20
+      query = ''
+    }
   })
   // TODO: Put this into lazy scroll component, no need for rawdogging crude js
   const handleMediaWheel = useThrottle(() => {
@@ -170,6 +173,17 @@
         ? undefined
         : () => handleRemoveFromNotebook(sourceNotebookId, resource.id)
     })
+
+  onMount(() => {
+    const messagePort = useMessagePortClient()
+    const unsubMessagePort = messagePort.changePageQuery.handle((event) => {
+      query = event.query && event.query?.length > 0 ? event.query : null
+    })
+
+    return () => {
+      unsubMessagePort()
+    }
+  })
 </script>
 
 <aside class:open>
@@ -187,7 +201,7 @@
         </h1>
       </div>
       <div class="hstack" style="gap: 0.5rem;">
-        <SearchInput onsearchinput={(v) => onquerychange(v)} autofocus />
+        <SearchInput onsearchinput={(v) => (query = v)} autofocus />
         <Button size="md" onclick={() => (open = false)}>
           <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
         </Button>
@@ -287,7 +301,7 @@
         </h1>
       </div>
       <div class="hstack" style="gap: 0.5rem;">
-        <SearchInput onsearchinput={(v) => onquerychange(v)} autofocus />
+        <SearchInput onsearchinput={(v) => (query = v)} autofocus />
         <Button size="md" onclick={() => (open = false)}>
           <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
         </Button>
@@ -466,7 +480,7 @@
             </h1>
           </div>
           <div class="hstack" style="gap: 0.5rem;">
-            <SearchInput onsearchinput={(v) => onquerychange(v)} autofocus />
+            <SearchInput onsearchinput={(v) => (query = v)} autofocus />
             <Button size="md" onclick={() => (open = false)}>
               <span class="typo-title-sm" style="opacity: 0.5;">Hide Sources</span>
             </Button>

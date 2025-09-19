@@ -1,5 +1,6 @@
 import { isIP } from 'is-ip'
 import { isWindows, isDev } from '../system/system'
+import { ViewType } from '@deta/types'
 
 export const prependProtocol = (url: string, secure = true) => {
   try {
@@ -412,7 +413,7 @@ export const appendURLPath = (url: string, path: string) => {
 
 /**
  * Try to parse a surf protocol URL and return the resourceId
- * Surf protocol URL format: surf://resource/<id>
+ * Surf protocol URL format: surf://surf/resource/<id>
  * @deprecated This is no longer valid with having other surf paths not only resource
  * @param rawUrl The URL to parse
  * @returns resourceId or null if the URL is not a surf protocol URL
@@ -424,7 +425,7 @@ export const parseSurfProtocolURL = (rawUrl: URL | string) => {
   }
 
   if (url.protocol === 'surf:') {
-    const resourceId = url.pathname.replace('/', '')
+    const resourceId = url.pathname.split('/')[2]
     if (!resourceId) {
       return null
     }
@@ -447,7 +448,6 @@ export function isInternalRendererURL(url: string | URL): URL | null {
     if (_url.protocol === 'surf:') return _url
 
     const devPartialPaths = [
-      '/Notebook/notebook.html',
       '/Resource/resource.html',
       '/Overlay/overlay.html',
       '/Announcements/announcements.html',
@@ -469,10 +469,7 @@ export function isInternalRendererURL(url: string | URL): URL | null {
       return rendererURL
     }
 
-    const prodPartialPaths = [
-      '/out/renderer/Notebook/notebook.html',
-      '/out/renderer/Resource/resource.html'
-    ]
+    const prodPartialPaths = ['/out/renderer/Resource/resource.html', '/out/renderer/PDF/pdf.html']
 
     // TODO: Improve prod path
     if (
@@ -491,5 +488,72 @@ export function isInternalRendererURL(url: string | URL): URL | null {
     return null
   } catch {
     return null
+  }
+}
+
+export const getViewTypeData = (url: string) => {
+  const internalUrl = isInternalRendererURL(url)
+  const canonicalUrl = parseUrlIntoCanonical(url)
+
+  if (!internalUrl) return { type: ViewType.Page, id: canonicalUrl }
+
+  if (internalUrl.pathname === '/notebook') {
+    return { type: ViewType.NotebookHome, id: null }
+  }
+
+  if (internalUrl.pathname.startsWith('/notebook/')) {
+    const notebookId = internalUrl.pathname.split('/')[2]
+    return { type: ViewType.Notebook, id: notebookId }
+  }
+
+  if (internalUrl.pathname.startsWith('/resource/')) {
+    const raw =
+      internalUrl.searchParams.has('raw') && internalUrl.searchParams.get('raw') !== 'false'
+    const resourceId = internalUrl.pathname.split('/')[2]
+    return { type: ViewType.Resource, id: resourceId, raw }
+  }
+
+  return { type: ViewType.Internal, id: null }
+}
+
+export const getViewType = (url: string) => {
+  return getViewTypeData(url).type
+}
+
+export const getCleanHostname = (url: string) => {
+  try {
+    const viewType = getViewType(url)
+    if (viewType === ViewType.Resource) {
+      return 'Resource'
+    } else if (viewType === ViewType.Notebook) {
+      return 'Notebook'
+    } else if (viewType === ViewType.NotebookHome) {
+      return 'Surf'
+    } else {
+      return getHostname(url) || url
+    }
+  } catch {
+    return url
+  }
+}
+
+export const cleanupPageTitle = (title: string) => {
+  try {
+    if (!title.startsWith('surf://')) {
+      return title
+    }
+
+    const viewType = getViewType(title)
+    if (viewType === ViewType.Resource) {
+      return 'Resource'
+    } else if (viewType === ViewType.Notebook) {
+      return 'Notebook'
+    } else if (viewType === ViewType.NotebookHome) {
+      return 'Surf'
+    } else {
+      return title
+    }
+  } catch {
+    return title
   }
 }

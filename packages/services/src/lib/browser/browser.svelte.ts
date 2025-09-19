@@ -87,7 +87,7 @@ export class BrowserService {
           target = this.getViewOpenTarget(viewId)
         }
 
-        this.navigateToUrl(`surf://notebook/${notebookId}`, { target })
+        this.navigateToUrl(`surf://surf/notebook/${notebookId}`, { target })
       }),
 
       this.messagePort.navigateURL.on(async ({ url, target }, viewId) => {
@@ -182,11 +182,11 @@ export class BrowserService {
       if (metadata.resourceId) {
         const resource = await this.resourceManager.getResource(metadata.resourceId)
         if (resource?.type === ResourceTypes.PDF) {
-          url = `surf://resource/${resource.id}?raw`
+          url = `surf://surf/resource/${resource.id}?raw`
         } else if (resource?.url) {
           url = resource.url
         } else if (resource) {
-          url = `surf://resource/${resource.id}`
+          url = `surf://surf/resource/${resource.id}`
         } else {
           this.log.error('Citation click event has invalid resourceId:', metadata.resourceId)
         }
@@ -395,7 +395,7 @@ export class BrowserService {
 
       this.newNoteView = await this.viewManager.create(
         {
-          url: `surf://resource/${resource.id}`,
+          url: `surf://surf/resource/${resource.id}`,
           permanentlyActive: true
         },
         true
@@ -646,7 +646,7 @@ export class BrowserService {
     if (url) {
       return this.tabsManager.changeActiveTabURL(url)
     } else {
-      return this.tabsManager.changeActiveTabURL(`surf://resource/${resource.id}`)
+      return this.tabsManager.changeActiveTabURL(`surf://surf/resource/${resource.id}`)
     }
   }
 
@@ -673,7 +673,8 @@ export class BrowserService {
       resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ||
       resource.type === ResourceTypes.PDF
     ) {
-      url = `surf://resource/${resource.id}` + (resource.type === ResourceTypes.PDF ? '?raw' : '')
+      url =
+        `surf://surf/resource/${resource.id}` + (resource.type === ResourceTypes.PDF ? '?raw' : '')
     } else {
       url = resource.url
     }

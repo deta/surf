@@ -5,7 +5,7 @@
   import { useNotebookManager } from '@deta/services/notebooks'
   import { truncate } from '@deta/utils'
   import { type OpenTarget, SpaceEntryOrigin } from '@deta/types'
-  import { handleResourceClick, openResource } from '../handlers/notebookOpenHandlers'
+  import { handleResourceClick, openResource } from '../../handlers/notebookOpenHandlers'
 
   let { resource, sourceNotebookId }: { resource: Resource; sourceNotebookId?: string } = $props()
 

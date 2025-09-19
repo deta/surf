@@ -7,13 +7,7 @@ import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
 import { useLogScope } from '@deta/utils/io'
 import { isDev, isMac } from '@deta/utils/system'
-import {
-  PDFViewerParams,
-  ResourceViewerParams,
-  NotebookViewerParams,
-  parseURL,
-  isInternalViewerURL
-} from '@deta/utils/formatting'
+import { PDFViewerParams, parseURL } from '@deta/utils/formatting'
 
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { setupPermissionHandlers } from './permissionHandler'
@@ -21,9 +15,7 @@ import { applyCSPToSession } from './csp'
 import {
   isAppSetup,
   normalizeElectronUserAgent,
-  NotebookViewerEntryPoint,
   PDFViewerEntryPoint,
-  ResourceViewerEntryPoint,
   SettingsWindowEntrypoint
 } from './utils'
 
@@ -265,13 +257,19 @@ export function createWindow() {
     }
 
     if (url.protocol === 'surf:') {
-      console.log('surf protocol request:', url.href)
-
       if (isPDF) {
         callback({ cancel: true })
         loadPDFViewer({ path: details.url, filename })
       } else {
-        callback({ cancel: false })
+        if (url.hostname === 'resource') {
+          callback({ cancel: true })
+          details.webContents?.loadURL(`surf://surf/resource/${url.pathname.slice(1)}`)
+        } else if (url.hostname === 'notebook') {
+          callback({ cancel: true })
+          details.webContents?.loadURL(`surf://surf/notebook/${url.pathname.slice(1)}`)
+        } else {
+          callback({ cancel: false })
+        }
       }
 
       return

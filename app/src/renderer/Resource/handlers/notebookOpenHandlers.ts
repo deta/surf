@@ -43,6 +43,7 @@ export const handleResourceClick = (resourceId: string, e: MouseEvent) => {
 
 export const handleNotebookClick = (notebookId: string, e: MouseEvent) => {
   const target = determineClickOpenTarget(e)
+
   openNotebook(notebookId, {
     target
   })

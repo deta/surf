@@ -40,7 +40,6 @@ export function esbuildConsolidatePreloads(
           cwd: outAbs,
           absolute: true
         })
-        console.log(`[esbuild-consolidate] found chunks:`, chunkFiles)
 
         // Read the contents of all chunks
         const chunks = new Map()

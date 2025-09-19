@@ -31,7 +31,7 @@
   import { Tween } from 'svelte/motion'
   import { onMount, tick } from 'svelte'
   import { SvelteMap } from 'svelte/reactivity'
-  import type { Fn } from '@deta/types'
+  import { type Fn, ViewType } from '@deta/types'
 
   let {
     view,
@@ -48,6 +48,7 @@
   const viewManager = useViewManager()
 
   const viewTitle = $derived(view.title)
+  const viewTypeData = $derived(view.typeData)
   const viewLocation = $derived(view.url ?? writable(''))
   const viewURL = $derived($viewLocation !== '' ? new URL($viewLocation) : null)
   const isActiveLocationInternalRenderer = $derived(isInternalRendererURL(viewURL))
@@ -55,16 +56,42 @@
   const hostnameText = $derived(
     !isActiveLocationInternalRenderer ? truncate(activeHostname, 36) : null
   )
-  const titleText = $derived(
-    truncate(
-      !isActiveLocationInternalRenderer
-        ? $viewTitle.length > 0
-          ? `/ ${$viewTitle}`
-          : ''
-        : $viewTitle,
-      69
-    )
-  )
+
+  const titleText = $derived.by(() => {
+    if ($viewTypeData.type === ViewType.Page) {
+      return truncate($viewTitle.length > 0 ? `/ ${$viewTitle}` : '', 69)
+    }
+
+    if ($viewTypeData.type === ViewType.Notebook || $viewTypeData.type === ViewType.NotebookHome) {
+      if ($viewTitle.startsWith('surf://')) {
+        return $viewTypeData.type === ViewType.NotebookHome ? 'Surf' : 'Notebook'
+      }
+
+      return truncate($viewTitle, 69)
+    }
+
+    if ($viewTypeData.type === ViewType.Resource) {
+      if ($viewTypeData.raw) {
+        if (!isActiveLocationInternalRenderer) {
+          return 'Resource'
+        }
+
+        if (isActiveLocationInternalRenderer.href.startsWith('surf://')) {
+          return 'Resource'
+        }
+
+        return truncate(isActiveLocationInternalRenderer.href, 69)
+      }
+
+      if ($viewTitle.startsWith('surf://')) {
+        return 'Resource'
+      }
+
+      return truncate($viewTitle, 69)
+    }
+
+    return truncate($viewTitle, 69)
+  })
 
   // Input editing
   let inputEl = $state() as HTMLInputElement
@@ -120,12 +147,12 @@
 
     const url = parseStringIntoBrowserLocation(raw)
     if (url) {
-      view.webContents.loadURL(url)
+      view.webContents.loadURL(url, true)
       return
     }
 
     const searchUrl = browser.getSearchUrl(raw)
-    view.webContents.loadURL(searchUrl)
+    view.webContents.loadURL(searchUrl, true)
   }
 
   function handleWCVStartLoading(view: WebContentsView) {

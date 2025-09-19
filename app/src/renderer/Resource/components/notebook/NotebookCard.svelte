@@ -1,8 +1,7 @@
 <script lang="ts">
   import { type Notebook } from '@deta/services/notebook'
   import { type Fn } from '@deta/types'
-  import { clickOutside, pickRandomColorPair } from '@deta/utils'
-  import { writable } from 'svelte/store'
+  import { clickOutside } from '@deta/utils'
 
   let {
     notebook,

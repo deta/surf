@@ -16,6 +16,10 @@ import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 import { MessageChannelMain } from 'electron/main'
 
+type ContentData = {
+  title: string
+}
+
 export class WCView {
   manager: WCViewManager
 
@@ -25,6 +29,10 @@ export class WCView {
   opts: WebContentsViewCreateOptions
   wcv: WebContentsView
   eventListeners: Array<() => void> = []
+
+  contentData: ContentData = {
+    title: ''
+  }
 
   constructor(opts: WebContentsViewCreateOptions, manager: WCViewManager, extraOpts?: any) {
     this.manager = manager
@@ -797,6 +805,19 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     view.wcv.webContents.postMessage('port', null, [port2])
   }
 
+  refreshViewContentData(view: WCView) {
+    const currentTitle = view.wcv.webContents.getTitle() || ''
+    if (currentTitle && currentTitle !== view.contentData.title) {
+      view.contentData.title = currentTitle
+
+      IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
+        type: WebContentsViewEventType.PAGE_TITLE_UPDATED,
+        viewId: view.id,
+        payload: { title: view.contentData.title, explicitSet: false }
+      })
+    }
+  }
+
   attachViewIPCEvents(view: WCView) {
     // TODO: find way to automatically forward all events from WebContentsView to IPC without manually attaching each one
     view.attachEventListener('did-start-loading', () => {
@@ -821,6 +842,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         viewId: view.id,
         payload: undefined
       })
+
+      this.refreshViewContentData(view)
     })
 
     view.attachEventListener('did-fail-load', (_e, ...args) => {
@@ -836,6 +859,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           frameRoutingId: args[5]
         }
       })
+
+      this.refreshViewContentData(view)
     })
 
     view.attachEventListener('dom-ready', () => {
@@ -875,6 +900,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
           httpStatusText
         }
       })
+
+      this.refreshViewContentData(view)
     })
 
     view.attachEventListener(
@@ -890,6 +917,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             frameRoutingId
           }
         })
+
+        this.refreshViewContentData(view)
       }
     )
 
@@ -902,6 +931,8 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     })
 
     view.attachEventListener('page-title-updated', (_e, title, explicitSet) => {
+      view.contentData.title = title
+
       IPC_EVENTS_MAIN.webContentsViewEvent.sendToWebContents(this.window.webContents, {
         type: WebContentsViewEventType.PAGE_TITLE_UPDATED,
         viewId: view.id,

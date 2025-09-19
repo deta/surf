@@ -1,120 +1,170 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onMount } from 'svelte'
+  import * as router from '@mateothegreat/svelte5-router'
+  import { Router, type RouteConfig } from '@mateothegreat/svelte5-router'
+
+  import { prepareContextMenu } from '@deta/ui'
   import { provideConfig } from '@deta/services'
-  import { createResourceManager, type Resource } from '@deta/services/resources'
+  import { createNotebookManager } from '@deta/services/notebooks'
   import { setupTelemetry } from '@deta/services/helpers'
-  import { provideAI } from '@deta/services/ai'
-  import { ResourceTypes, WEB_RESOURCE_TYPES, type CitationClickEvent } from '@deta/types'
-
-  import { Note } from '@deta/ui'
-  import TextResource from './components/TextResource.svelte'
+  import { createResourceManager } from '@deta/services/resources'
+  import { createTeletypeService } from '@deta/services/teletype'
   import { useMessagePortClient } from '@deta/services/messagePort'
-  import { useLogScope, wait } from '@deta/utils'
 
-  const resourceId = window.location.pathname.slice(1)
+  import IndexRoute from './routes/IndexRoute.svelte'
+  import NotebookDetailRoute from './routes/NotebookDetailRoute.svelte'
+  import DraftsRoute from './routes/DraftsRoute.svelte'
+  import Resource from './routes/ResourceRoute.svelte'
 
-  const log = useLogScope('ResourceRenderer')
+  const notebookId = window.location.pathname.slice(1) || null
+
   const messagePort = useMessagePortClient()
   const config = provideConfig()
-  const telemetry = setupTelemetry()
+  const telemetry = setupTelemetry(config.getConfig().api_key)
   const resourceManager = createResourceManager(telemetry, config)
-  const ai = provideAI(resourceManager, config, false)
+  const notebookManager = createNotebookManager(resourceManager, config, messagePort)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const teletypeService = createTeletypeService()
 
-  const contextManager = ai.contextManager
-
-  let resource: Resource | null = $state(null)
-
-  let canBeNoteResource = $derived(
-    WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) ||
-      resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
+  let resourcesPanelOpen = $state(
+    localStorage.getItem('notebook_resourcePanelOpen')
+      ? localStorage.getItem('notebook_resourcePanelOpen') === 'true'
+      : false
   )
 
-  function handleCitationClick(data: CitationClickEvent) {
-    log.debug('Citation clicked:', data)
+  let title = $derived(
+    notebookId === 'drafts'
+      ? 'Drafts'
+      : notebookId === 'history'
+        ? 'History'
+        : !notebookId
+          ? 'Surf'
+          : 'Notebook'
+  )
 
-    messagePort.citationClick.send(data)
-  }
+  $effect(() => localStorage.setItem('notebook_resourcePanelOpen', resourcesPanelOpen.toString()))
 
+  onMount(prepareContextMenu)
   onMount(async () => {
-    log.debug('Resource mounted with ID:', resourceId)
-
-    if (resourceId === 'blank') {
-      log.debug('Blank resource, not loading anything')
-      return
-    }
-
     await telemetry.init({ messagePort })
-
-    resource = await resourceManager.getResource(resourceId)
-    log.debug('Loaded resource:', resource)
-
-    if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
-      // NOTE: Ideally messagePort events optionally get queued up until connection established
-      wait(100).then(() => telemetry.trackNoteOpen())
-    }
-
-    // if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
-    //   // @ts-ignore - TODO: Add to window d.ts
-    //   navigation.navigate(resource.url, { history: 'replace' })
-    // }
   })
+
+  onMount(() => {
+    const unsub = messagePort.navigateURL.handle(({ url }) => {
+      try {
+        console.log('Received navigateURL message:', url)
+        router.goto(url)
+      } catch (error) {
+        console.error('Error navigating to URL:', error)
+      }
+    })
+
+    return () => {
+      unsub()
+    }
+  })
+
+  const routes: RouteConfig[] = [
+    {
+      path: '/notebook',
+      component: IndexRoute,
+      props: {
+        resourcesPanelOpen: resourcesPanelOpen,
+        onopensidebar: () => (resourcesPanelOpen = true)
+      }
+    },
+    {
+      path: '/notebook/drafts',
+      component: DraftsRoute,
+      props: {
+        resourcesPanelOpen: resourcesPanelOpen
+      }
+    },
+    {
+      path: '/notebook/(?!drafts)(?<notebookId>[^/]+)',
+      component: NotebookDetailRoute,
+      props: {
+        messagePort: messagePort,
+        resourcesPanelOpen: resourcesPanelOpen
+      }
+    },
+    {
+      path: '/resource/(?<resourceId>[^/]+)',
+      component: Resource
+    }
+  ]
 </script>
 
-<svelte:head>
-  {#if resource}
-    <title>{resource.metadata.name}</title>
-  {/if}
-</svelte:head>
-
-<div class="wrapper">
-  {#if resource}
-    {#if canBeNoteResource}
-      <!-- <Note {resource} /> -->
-      <TextResource
-        resourceId={resource.id}
-        {resource}
-        {contextManager}
-        {messagePort}
-        onCitationClick={handleCitationClick}
-      />
-    {:else}
-      <div>
-        <p><strong>Name:</strong> {resource.metadata.name}</p>
-        <p><strong>Description:</strong> {resource.type}</p>
-      </div>
-    {/if}
-  {:else}
-    <!-- NOTE: This should be instant, if we show it like this it creates a flicker at the top -->
-    <!-- If we want we can add a delay to show it after 1 sec of loading just in case -->
-    <!--<p>Loading resource…</p>-->
-  {/if}
-</div>
+<Router {routes} />
 
 <style lang="scss">
+  :root {
+    --page-gradient-color: #f7ebff;
+    --page-background: #fbf9f7;
+
+    -electron-corner-smoothing: 60%;
+    //font-size: 11px;
+    --text: #586884;
+    --text-p3: color(display-p3 0.3571 0.406 0.5088);
+    --text-light: #666666;
+    --background-dark: radial-gradient(
+      143.56% 143.56% at 50% -43.39%,
+      #eef4ff 0%,
+      #ecf3ff 50%,
+      #d2e2ff 100%
+    );
+    --background-dark-p3: radial-gradient(
+      143.56% 143.56% at 50% -43.39%,
+      color(display-p3 0.9373 0.9569 1) 0%,
+      color(display-p3 0.9321 0.9531 1) 50%,
+      color(display-p3 0.8349 0.8849 0.9974) 100%
+    );
+    --background-accent: #eff2ff;
+    --background-accent-hover: rgb(246, 247, 253);
+    --background-accent-p3: color(display-p3 0.9381 0.9473 1);
+    --border-color: #e0e0e088;
+    --outline-color: #e0e0e080;
+    --primary: #2a62f1;
+    --primary-dark: #a48e8e;
+    --green: #0ec463;
+    --red: #f24441;
+    --orange: #fa870c;
+    --border-width: 0.5px;
+    --color-brand: #b7065c;
+    --color-brand-muted: #b7065cba;
+    --color-brand-dark: #ff4fa4;
+    --border-radius: 18px;
+  }
+
   :global(#app) {
     height: 100%;
     width: 100%;
     margin: 0;
+    padding: 0;
+    user-select: none;
+
+    --sidebar-width: 600px;
+  }
+  :global(#app *) {
+    -electron-corner-smoothing: 60%;
   }
   :global(html, body) {
     height: 100%;
     width: 100%;
     margin: 0;
-    background: #ffffff00;
+    padding: 0;
+    // overflow: hidden;
   }
 
-  .wrapper {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #ffffff73;
-    border: 0.5px solid rgba(0, 0, 0, 0.1);
-
-    h1 {
-      font-size: 20px;
-      margin-bottom: 5px;
-    }
+  :global(body) {
+    background: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
+      url('./assets/greenfield.png');
+    background: rgba(250, 250, 250, 1);
+    background: linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(255, 255, 255, 0.9) 10%),
+      radial-gradient(at bottom right, transparent, rgba(255, 255, 255, 0.8) 90%),
+      url('./assets/greenfield.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: 50% 30%;
   }
 </style>

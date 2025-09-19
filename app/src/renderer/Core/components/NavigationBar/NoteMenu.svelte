@@ -65,7 +65,7 @@
       if (targetBreadcrumb) {
         view.webContents.loadURL(targetBreadcrumb.url)
       } else {
-        view.webContents.loadURL('surf://notebook')
+        view.webContents.loadURL('surf://surf/notebook')
       }
     } catch (err) {
       log.error('Failed to delete note', err)

@@ -58,6 +58,7 @@
     "@electron-toolkit/eslint-config-ts": "^1.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@electron/fuses": "^1.7.0",
+    "@mateothegreat/svelte5-router": "^2.16.19",
     "@svelte-plugins/tooltips": "^3.0.1",
     "@sveltejs/vite-plugin-svelte": "^6.1.0",
     "@types/mime-types": "^2.1.4",

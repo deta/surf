@@ -191,7 +191,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       const fullData = {
         id: generateID(),
         partition: 'persist:horizon',
-        url: type === 'surf' ? 'surf://resource/blank' : 'about:blank',
+        url: type === 'surf' ? 'surf://surf/resource/blank' : 'about:blank',
         title: 'New Tab',
         faviconUrl: '',
         navigationHistoryIndex: -1,
@@ -525,7 +525,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   openResourceInSidebar(resourceId: string) {
-    return this.openURLInSidebar(`surf://resource/${resourceId}`)
+    return this.openURLInSidebar(`surf://surf/resource/${resourceId}`)
   }
 
   openURLInSidebar(url: string) {
@@ -548,7 +548,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   private async prepareNewHomepage() {
     try {
       this.log.debug('Preparing new homepage')
-      this.newHomepageView = await this.create({ url: 'surf://notebook' }, true)
+      this.newHomepageView = await this.create({ url: 'surf://surf/notebook' }, true)
       await this.newHomepageView.preloadWebContents({ activate: false })
     } catch (error) {
       this.log.error('Error preparing new homepage:', error)
@@ -558,7 +558,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   async openNewHomepage() {
     try {
       if (!this.newHomepageView) {
-        return this.openURLInSidebar('surf://notebook')
+        return this.openURLInSidebar('surf://surf/notebook')
       }
 
       const view = await this.openViewInSidebar(this.newHomepageView)

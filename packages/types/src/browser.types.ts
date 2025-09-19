@@ -104,3 +104,45 @@ export type NavigateURLOptions = {
   url: string
   target?: OpenTarget
 }
+
+export enum ViewType {
+  /**
+   * External web pages
+   * @example https://example.com
+   */
+  Page = 'page',
+  /**
+   * A specific notebook
+   * @example surf://surf/notebook/:id
+   */
+  Notebook = 'notebook',
+  /**
+   * The notebooks home/root view
+   * @example surf://surf/notebook
+   */
+  NotebookHome = 'notebook_home',
+  /**
+   * A specific resource (most likely note)
+   * @example surf://surf/resource/:id
+   */
+  Resource = 'resource',
+  /**
+   * Some other internal page
+   */
+  Internal = 'internal'
+}
+
+export type ViewTypeData = {
+  /**
+   * The type of view
+   */
+  type: ViewType
+  /**
+   * Unique identifier for the resource or notebook displayed in the view
+   */
+  id: string | null
+  /**
+   * Weather the view is in `raw` mode e.g. for a resource or is PDF viewer
+   */
+  raw?: boolean
+}

@@ -183,7 +183,6 @@ const surfProtocolHandleImages = async ({
   cacheDir
 }: ImageProcessingParams): Promise<Response> => {
   try {
-    // log.debug('Processing handle size ', imageProcessorHandles.size) // Sanity check
     await createCacheDirIfNotExists(cacheDir)
     const url = new URL(requestURL)
     const options = extractImageOptions(url)
@@ -238,13 +237,12 @@ const surfProtocolHandleImages = async ({
   }
 }
 
-const ALLOWED_HOSTNAMES = ['core', 'overlay', 'notebook', 'resource']
+const ALLOWED_HOSTNAMES = ['core', 'overlay', 'surf']
 
 const HOSTNAME_TO_ROOT = {
   core: '/Core/core.html',
   overlay: '/Overlay/overlay.html',
-  notebook: '/Notebook/notebook.html',
-  resource: '/Resource/resource.html'
+  surf: '/Resource/resource.html'
 }
 
 export const serveFile = async (req: Request, targetPath: string) => {
@@ -271,6 +269,10 @@ export const serveFile = async (req: Request, targetPath: string) => {
       }
     }
 
+    if (targetPath.endsWith('.html')) {
+      log.debug('serve file:', req.url, targetPath, newURL.href)
+    }
+
     const response = await net.fetch(newURL.href)
 
     if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
@@ -287,7 +289,7 @@ export const serveFile = async (req: Request, targetPath: string) => {
       }
     })
   } catch (err) {
-    log.error('surf internal protocol error:', err, req.url)
+    log.error('serve file:', err, req.url, targetPath)
     return new Response('Internal Server Error', { status: 500 })
   }
 }
@@ -295,8 +297,6 @@ export const serveFile = async (req: Request, targetPath: string) => {
 export const handleSurfFileRequest = async (req: GlobalRequest) => {
   try {
     const url = new URL(req.url)
-
-    // log.debug('surf file request for', url.href)
 
     if (url.protocol !== 'surf-internal:' && url.protocol !== 'surf:') {
       log.error('Invalid protocol:', url.protocol)
@@ -317,14 +317,37 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
       }
 
       targetPath = rootPath
-    } else if (url.hostname === 'notebook' || url.hostname === 'resource') {
-      // Handle root requests (surf://notebook/:id) and root assets
-      const id = url.pathname.match(/^\/([^\/]+)\/?$/)?.[1]
+    } else if (url.hostname === 'surf') {
+      // Handle root requests (surf://surf/notebook/:id) and root assets
+      const match = url.pathname.match(/^\/(notebook|resource)(?:\/([^\/]+))?\/?$/)
 
-      if (id) {
-        // If only notebook ID is present, serve the main notebook HTML
-        if (url.pathname === `/${id}`) {
-          const rootPath = HOSTNAME_TO_ROOT[url.hostname as keyof typeof HOSTNAME_TO_ROOT]
+      if (match) {
+        const [, type, id] = match
+
+        if (id) {
+          // If only ID is present, serve the main HTML
+          if (url.pathname === `/${type}/${id}`) {
+            const rootPath = HOSTNAME_TO_ROOT['surf']
+            if (!rootPath) {
+              log.error('Invalid hostname for root path:', url.hostname)
+              return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+            }
+
+            targetPath = rootPath
+          } else if (url.pathname === `/${type}`) {
+            const rootPath = HOSTNAME_TO_ROOT['surf']
+            if (!rootPath) {
+              log.error('Invalid hostname for root path:', url.hostname)
+              return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+            }
+
+            targetPath = rootPath
+          } else {
+            // For asset requests (surf://surf/notebook/:id/some/file.js), remove the type and ID prefix
+            targetPath = url.href.replace(`surf://surf/${type}/${id}/`, '')
+          }
+        } else if (url.pathname === `/${type}`) {
+          const rootPath = HOSTNAME_TO_ROOT['surf']
           if (!rootPath) {
             log.error('Invalid hostname for root path:', url.hostname)
             return new Response('Invalid Surf internal protocol hostname', { status: 400 })
@@ -332,12 +355,11 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
 
           targetPath = rootPath
         } else {
-          // For asset requests (surf://notebook/:id/some/file.js), remove the ID prefix
-          targetPath = `${url.pathname.substring(id.length + 1)}`
+          // For root assets (surf://surf/notebook/assets/style.css)
+          targetPath = `${url.pathname.substring(type.length + 1)}`
         }
       } else {
-        // For root assets (surf://notebook/assets/style.css)
-        targetPath = `${url.pathname}`
+        targetPath = url.pathname
       }
     }
 
@@ -378,7 +400,7 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
 
 export const surfProtocolHandler = async (req: GlobalRequest) => {
   try {
-    const id = req.url.match(/^surf:\/\/resource\/([^\/\?]+)/)?.[1]
+    const id = req.url.match(/^surf:\/\/surf\/resource\/([^\/\?]+)/)?.[1]
     if (id) {
       const searchParams = new URL(req.url).searchParams
       if (searchParams.has('raw') && searchParams.get('raw') !== 'false') {

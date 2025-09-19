@@ -4,7 +4,7 @@
   import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { ResourceTagsBuiltInKeys, ResourceTypes, type Option, type SFFSResourceTag, type SFFSSearchParameters, type SFFSSearchResult } from '@deta/types'
   import { type ResourceSearchResult, useResourceManager, ResourceManagerEvents} from '@deta/services/resources'
-  import { SearchResourceTags, useThrottle } from '@deta/utils'
+  import { SearchResourceTags, useDebounce, useThrottle } from '@deta/utils'
   import { NotebookManagerEvents } from '@deta/services/notebooks'
 
   interface Search {
@@ -63,7 +63,7 @@
   let searchResults: Option<ResourceSearchResult> = $state()
   let searching: boolean = $state(false)
 
-  const runQuery = (search: Search) => {
+  const runQuery = useDebounce((search: Search) => {
     searching = true
     resourceManager.searchResources(search.query, [
         ...SearchResourceTags.NonHiddenDefaultTags({
@@ -86,7 +86,8 @@
           })
         searching = false
       })
-  }
+  }, 250)
+  
   $effect(() => {
     if (search && search.query) {
       runQuery(search)

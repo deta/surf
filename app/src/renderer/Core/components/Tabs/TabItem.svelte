@@ -4,7 +4,7 @@
   import { Icon } from '@deta/icons'
   import { HTMLDragItem, DragData } from '@deta/dragcula'
   import { DragTypeNames } from '@deta/types'
-  import { getHostname } from '@deta/utils'
+  import { getCleanHostname } from '@deta/utils'
   import { useBrowser } from '@deta/services/browser'
   import { ViewType } from '@deta/services/views'
 
@@ -35,7 +35,7 @@
   const type = tab.view.type
   const stateIndicator = $derived(tab?.stateIndicator)
 
-  const hostname = $derived(getHostname($url))
+  const hostname = $derived(getCleanHostname($url))
 
   function closeTab(userAction = false) {
     tabsService.delete(tab.id, userAction)

@@ -1,0 +1,126 @@
+<script lang="ts">
+  import { onMount, tick } from 'svelte'
+  import { provideConfig } from '@deta/services'
+  import { createResourceManager, type Resource } from '@deta/services/resources'
+  import { setupTelemetry } from '@deta/services/helpers'
+  import { provideAI } from '@deta/services/ai'
+  import { ResourceTypes, WEB_RESOURCE_TYPES, type CitationClickEvent } from '@deta/types'
+
+  import TextResource from '../components/TextResource.svelte'
+  import { useMessagePortClient } from '@deta/services/messagePort'
+  import { useLogScope, wait } from '@deta/utils'
+  import { type RouteResult } from '@mateothegreat/svelte5-router'
+
+  let {
+    route
+  }: {
+    route: RouteResult
+  } = $props()
+
+  const resourceId = (route.result.path.params as any).resourceId as string
+
+  const log = useLogScope('ResourceRenderer')
+  const messagePort = useMessagePortClient()
+  const config = provideConfig()
+  const telemetry = setupTelemetry()
+  const resourceManager = createResourceManager(telemetry, config)
+  const ai = provideAI(resourceManager, config, false)
+
+  const contextManager = ai.contextManager
+
+  let resource: Resource | null = $state(null)
+
+  let canBeNoteResource = $derived(
+    WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) ||
+      resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
+  )
+
+  function handleCitationClick(data: CitationClickEvent) {
+    log.debug('Citation clicked:', data)
+
+    messagePort.citationClick.send(data)
+  }
+
+  onMount(async () => {
+    log.debug('Resource mounted with ID:', resourceId)
+
+    if (resourceId === 'blank') {
+      log.debug('Blank resource, not loading anything')
+      return
+    }
+
+    await telemetry.init({ messagePort })
+
+    resource = await resourceManager.getResource(resourceId)
+    log.debug('Loaded resource:', resource)
+
+    if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+      // NOTE: Ideally messagePort events optionally get queued up until connection established
+      wait(100).then(() => telemetry.trackNoteOpen())
+    }
+
+    // if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
+    //   // @ts-ignore - TODO: Add to window d.ts
+    //   navigation.navigate(resource.url, { history: 'replace' })
+    // }
+  })
+</script>
+
+<svelte:head>
+  {#if resource}
+    <title>{resource.metadata.name}</title>
+  {/if}
+</svelte:head>
+
+<div class="wrapper">
+  {#if resource}
+    {#if canBeNoteResource}
+      <!-- <Note {resource} /> -->
+      <TextResource
+        resourceId={resource.id}
+        {resource}
+        {contextManager}
+        {messagePort}
+        onCitationClick={handleCitationClick}
+      />
+    {:else}
+      <div>
+        <p><strong>Name:</strong> {resource.metadata.name}</p>
+        <p><strong>Description:</strong> {resource.type}</p>
+      </div>
+    {/if}
+  {:else}
+    <!-- NOTE: This should be instant, if we show it like this it creates a flicker at the top -->
+    <!-- If we want we can add a delay to show it after 1 sec of loading just in case -->
+    <!--<p>Loading resource…</p>-->
+  {/if}
+</div>
+
+<style lang="scss">
+  :global(#app) {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+  }
+  :global(html, body) {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    background: #ffffff00;
+  }
+
+  .wrapper {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #ffffff73;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 5px;
+    }
+  }
+</style>

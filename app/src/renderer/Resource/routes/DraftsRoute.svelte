@@ -4,8 +4,8 @@
   import { onMount } from 'svelte'
   import { MaskedScroll } from '@deta/ui'
   import { contextMenu, type CtxItem } from '@deta/ui'
-  import TeletypeEntry from '../../../Core/components/Teletype/TeletypeEntry.svelte'
-  import NotebookCover from '../NotebookCover.svelte'
+  import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
+  import NotebookCover from '../components/notebook/NotebookCover.svelte'
   import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
   import {
     useResourceManager,
@@ -15,9 +15,14 @@
   } from '@deta/services/resources'
   import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
   import { type MessagePortClient } from '@deta/services/messagePort'
-  import { handleResourceClick } from '../../handlers/notebookOpenHandlers'
+  import { handleResourceClick } from '../handlers/notebookOpenHandlers'
+  import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
+  import NotebookLayout from '../layouts/NotebookLayout.svelte'
 
-  let { messagePort }: { messagePort: MessagePortClient } = $props()
+  let {
+    messagePort,
+    resourcesPanelOpen = false
+  }: { messagePort: MessagePortClient; resourcesPanelOpen?: boolean } = $props()
 
   const resourceManager = useResourceManager()
 
@@ -56,77 +61,85 @@
   })
 </script>
 
-<main>
-  <div class="tty-wrapper">
-    <h1>Drafts</h1>
-    <TeletypeEntry open={true} />
-  </div>
-  <section class="notes">
-    <SurfLoader
-      excludeWithinSpaces
-      tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
-      search={{
-        tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
-        parameters: {
-          semanticSearch: false
-        }
-      }}
-    >
-      {#snippet children([resources, searchResult, searching])}
-        <header>
-          <label>Notes</label>
-          <Button
-            size="md"
-            onclick={() => (showAllNotes = !showAllNotes)}
-            disabled={(searchResult ?? resources).length <= 6}
-          >
-            <span class="typo-title-sm" style="opacity: 0.75;"
-              >{showAllNotes ? 'Hide' : 'Show'} All</span
+<svelte:head>
+  <title>Drafts</title>
+</svelte:head>
+
+<NotebookLayout>
+  <main>
+    <div class="tty-wrapper">
+      <h1>Drafts</h1>
+      <TeletypeEntry open={true} />
+    </div>
+    <section class="notes">
+      <SurfLoader
+        excludeWithinSpaces
+        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
+        search={{
+          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
+          parameters: {
+            semanticSearch: false
+          }
+        }}
+      >
+        {#snippet children([resources, searchResult, searching])}
+          <header>
+            <label>Notes</label>
+            <Button
+              size="md"
+              onclick={() => (showAllNotes = !showAllNotes)}
+              disabled={(searchResult ?? resources).length <= 6}
             >
-          </Button>
-        </header>
-
-        {#if (searchResult ?? resources).length > 0}
-          <ul class:showAllNotes={showAllNotes || (searchResult ?? resources).length <= 6}>
-            {#each (searchResult ?? resources).slice(0, showAllNotes ? Infinity : 7) as resource (resource.id)}
-              <li>
-                <ResourceLoader {resource}>
-                  {#snippet children(resource: Resource)}
-                    <PageMention
-                      {resource}
-                      editing={isRenamingNote === resource.id}
-                      onchange={(v) => {
-                        handleRenameNote(resource.id, v)
-                        isRenamingNote = undefined
-                      }}
-                      oncancel={handleCancelRenameNote}
-                      onclick={async (event) => {
-                        if (isRenamingNote) return
-                        handleResourceClick(resource.id, event)
-                      }}
-                      onrename={() => (isRenamingNote = resource.id)}
-                    />
-                  {/snippet}
-                </ResourceLoader>
-              </li>
-            {/each}
-          </ul>
-        {:else}
-          <div class="empty">
-            <Button size="md" onclick={handleCreateNote}>
-              <span class="typo-title-sm">Create New Note</span>
+              <span class="typo-title-sm" style="opacity: 0.75;"
+                >{showAllNotes ? 'Hide' : 'Show'} All</span
+              >
             </Button>
-            <p class="typo-title-sm"></p>
-          </div>
-        {/if}
-      {/snippet}
-    </SurfLoader>
+          </header>
 
-    <!--    {#if !showAllNotes}
-      <span class="more typo-title-sm">+ {(searchResult ?? resources).length - 6} more</span>
-    {/if}-->
-  </section>
-</main>
+          {#if (searchResult ?? resources).length > 0}
+            <ul class:showAllNotes={showAllNotes || (searchResult ?? resources).length <= 6}>
+              {#each (searchResult ?? resources).slice(0, showAllNotes ? Infinity : 7) as resource (resource.id)}
+                <li>
+                  <ResourceLoader {resource}>
+                    {#snippet children(resource: Resource)}
+                      <PageMention
+                        {resource}
+                        editing={isRenamingNote === resource.id}
+                        onchange={(v) => {
+                          handleRenameNote(resource.id, v)
+                          isRenamingNote = undefined
+                        }}
+                        oncancel={handleCancelRenameNote}
+                        onclick={async (event) => {
+                          if (isRenamingNote) return
+                          handleResourceClick(resource.id, event)
+                        }}
+                        onrename={() => (isRenamingNote = resource.id)}
+                      />
+                    {/snippet}
+                  </ResourceLoader>
+                </li>
+              {/each}
+            </ul>
+          {:else}
+            <div class="empty">
+              <Button size="md" onclick={handleCreateNote}>
+                <span class="typo-title-sm">Create New Note</span>
+              </Button>
+              <p class="typo-title-sm"></p>
+            </div>
+          {/if}
+        {/snippet}
+      </SurfLoader>
+
+      <!--    {#if !showAllNotes}
+        <span class="more typo-title-sm">+ {(searchResult ?? resources).length - 6} more</span>
+      {/if}-->
+    </section>
+  </main>
+
+  <NotebookSidebar title="Drafts" notebookId="drafts" bind:open={resourcesPanelOpen} />
+</NotebookLayout>
 
 <style lang="scss">
   main {

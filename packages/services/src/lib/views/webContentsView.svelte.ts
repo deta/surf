@@ -46,9 +46,11 @@ import { getTextElementsFromHtml } from '@deta/utils/dom'
 import {
   compareURLs,
   getHostname,
-  isInternalRendererURL,
+  getViewTypeData,
+  getViewType,
   parseUrlIntoCanonical,
-  ResourceTag
+  ResourceTag,
+  cleanupPageTitle
 } from '@deta/utils/formatting'
 import { HistoryEntriesManager } from '../history'
 import { ConfigService } from '../config'
@@ -223,12 +225,14 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     event: WebContentsViewEvents[WebContentsViewEventType.PAGE_TITLE_UPDATED]
   ) {
     const oldTitle = this.view.titleValue
-    if (oldTitle === event.title) {
+    const newTitle = cleanupPageTitle(event.title)
+
+    this.log.debug('Page title updated', event.title, newTitle)
+    if (oldTitle === newTitle) {
       this.log.debug('Page title did not change, skipping update')
       return
     }
 
-    const newTitle = event.title
     this.view.title.set(newTitle)
     // dispatch('title-change', newTitle)
 
@@ -742,7 +746,31 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     this.bounds.set(bounds)
   }
 
-  async loadURL(url: string) {
+  async loadURL(url: string, force = false) {
+    const validNotebookTypes = [ViewType.Notebook, ViewType.NotebookHome, ViewType.Resource]
+
+    const oldViewTypeData = this.view.typeDataValue
+    const newViewTypeData = getViewTypeData(url)
+
+    const currentIsValid = validNotebookTypes.includes(oldViewTypeData.type)
+    const newIsValid = validNotebookTypes.includes(newViewTypeData.type)
+
+    const oldIsRawResource = oldViewTypeData.type === ViewType.Resource && oldViewTypeData.raw
+    const newIsRawResource = newViewTypeData.type === ViewType.Resource && newViewTypeData.raw
+
+    // const currentIsResource = this.view.typeValue === ViewType.Resource
+    // const newIsResource = getViewType(url) === ViewType.Resource
+
+    // const canNavigateBetweenNotebooks = currentIsNotebook && newIsNotebook
+    // const canNavigateBetweenResources = currentIsResource && newIsResource
+
+    this.log.debug('Loading URL', url, { currentIsValid, newIsValid, newIsRawResource, force })
+
+    if (!force && currentIsValid && newIsValid && !newIsRawResource && !oldIsRawResource) {
+      this.manager.messagePort.navigateURL.send(this.view.id, { url })
+      return
+    }
+
     await this.action(WebContentsViewActionType.LOAD_URL, { url })
   }
 
@@ -750,12 +778,27 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     await this.action(WebContentsViewActionType.RELOAD, { ignoreCache })
   }
 
+  private handlePostManualNavigation() {
+    const entry = this.view.navigationHistoryValue?.[this.view.navigationHistoryIndexValue || 0]
+    if (
+      entry &&
+      entry.url === this.view.urlValue &&
+      entry.title &&
+      !entry.title.startsWith('surf://')
+    ) {
+      this.log.debug('URL matches current history entry', entry)
+      this.view.title.set(entry.title)
+    }
+  }
+
   async goBack() {
     await this.action(WebContentsViewActionType.GO_BACK)
+    // this.handlePostManualNavigation()
   }
 
   async goForward() {
     await this.action(WebContentsViewActionType.GO_FORWARD)
+    // this.handlePostManualNavigation()
   }
 
   async insertText(text: string) {
@@ -1383,37 +1426,12 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       }
     )
 
-    this.type = derived(this.url, (url) => {
-      const internalUrl = isInternalRendererURL(url)
-      if (!internalUrl) return ViewType.Page
-      if (internalUrl.hostname === 'notebook') {
-        if (internalUrl.pathname === '/') return ViewType.NotebookHome
-        return ViewType.Notebook
-      }
-      if (internalUrl.hostname === 'resource') {
-        return ViewType.Resource
-      }
-
-      return ViewType.Internal
+    this.typeData = derived([this.url], ([url]) => {
+      return getViewTypeData(url)
     })
 
-    this.typeData = derived([this.url, this.type], ([url, type]) => {
-      const internalUrl = isInternalRendererURL(url)
-      if (!internalUrl) return { type, id: null }
-
-      if (internalUrl.hostname === 'notebook') {
-        const notebookId = internalUrl.pathname.slice(1)
-        return { type, id: notebookId }
-      } else if (internalUrl.hostname === 'resource') {
-        const raw =
-          internalUrl.searchParams.has('raw') && internalUrl.searchParams.get('raw') !== 'false'
-
-        const resourceId = internalUrl.pathname.slice(1)
-        return { type, id: resourceId, raw }
-      } else {
-        const canonicalUrl = parseUrlIntoCanonical(this.urlValue)
-        return { type, id: canonicalUrl }
-      }
+    this.type = derived(this.typeData, (typeData) => {
+      return typeData.type
     })
 
     this.unsubs.push(

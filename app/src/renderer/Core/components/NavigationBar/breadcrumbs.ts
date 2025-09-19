@@ -1,8 +1,10 @@
 import type { Fn } from '@deta/types'
-import { get } from 'svelte/store'
-import { isInternalRendererURL } from '@deta/utils/formatting'
+import { getViewType, isInternalRendererURL, getViewTypeData } from '@deta/utils/formatting'
 import { type NotebookManager } from '@deta/services/notebooks'
 import { type WebContentsView, ViewType } from '@deta/services/views'
+import { useLogScope } from '@deta/utils/io'
+
+const log = useLogScope('Breadcrumbs')
 
 interface BreadcrumbData {
   title: string
@@ -19,143 +21,142 @@ async function getNotebookDisplayName(
   return notebook.nameValue
 }
 
+async function getResourceName(
+  notebookManager: NotebookManager,
+  resourceId: string
+): Promise<string> {
+  const resource = await notebookManager.resourceManager.getResource(resourceId)
+  return resource?.metadata?.name || 'Untitled'
+}
+
 export async function constructBreadcrumbs(
   notebookManager: NotebookManager,
   history: { url: string; title: string }[],
   currHistoryIndex: number,
   view: WebContentsView
 ): Promise<BreadcrumbData[]> {
-  if (!history) return []
-  history = history.map((e, i) => ({ ...e, uid: i }))
-  const originalHistory = [...history]
+  try {
+    if (!history) return []
 
-  const breadcrumbs = []
-  history = history.slice(0, currHistoryIndex + 1)
+    const breadcrumbs: BreadcrumbData[] = []
+    const currentHistory = history.slice(0, currHistoryIndex + 1)
 
-  // Replace all internal urls with parsed version
-  history = history.map((entry) => {
-    const internalURL = isInternalRendererURL(entry.url)
-    if (!internalURL) return entry
-    else
-      return {
-        ...entry,
-        url: internalURL.toString()
-      }
-  })
+    // Get the current view type and data
+    const viewType = view.typeValue
+    const viewData = view.typeDataValue
 
-  // We manually prepend surf root
-  if (
-    !history
-      .map((e) => e.url)
-      .find((e) => {
-        const rendererURL = isInternalRendererURL(e)
-        return (
-          rendererURL && rendererURL.hostname === 'notebook' && rendererURL.pathname.length <= 1
+    log.debug('Constructing breadcrumbs for view type:', viewData, currentHistory)
+
+    if (viewType === ViewType.NotebookHome) {
+      log.debug('Final breadcrumbs:', breadcrumbs)
+      return breadcrumbs
+    } else {
+      // Always start with Surf root
+      breadcrumbs.push({
+        title: 'Surf',
+        url: new URL('surf://surf/notebook').toString(),
+        navigationIdx: currentHistory.findIndex(
+          (entry) => getViewType(entry.url) === ViewType.NotebookHome
         )
       })
-  ) {
-    history.unshift({
-      url: new URL('surf://notebook').toString(),
-      title: 'Surf'
-    })
-  }
+    }
 
-  // Slice from last surf://notebook/ item
-  history = history
-    .slice(
-      history.findLastIndex((e) => {
-        const url = new URL(e.url)
-        return url.hostname === 'notebook' && url.pathname.length <= 1
-      })
-    )
-    .filter((e) => {
-      const url = isInternalRendererURL(e.url)
-      return url && url.hostname === 'notebook'
-    })
+    // Handle based on current view type
+    if (viewType === ViewType.Resource) {
+      const resourceId = viewData?.id
+      if (resourceId) {
+        const resource = await notebookManager.resourceManager.getResource(resourceId)
+        if (resource) {
+          // Add notebook/drafts breadcrumb
+          if (resource.spaceIdsValue.length === 0) {
+            breadcrumbs.push({
+              title: 'Drafts',
+              url: new URL('surf://surf/notebook/drafts').toString(),
+              navigationIdx: currentHistory.findIndex((entry) =>
+                entry.url.includes('/notebook/drafts')
+              )
+            })
+          } else {
+            const notebookId = resource.spaceIdsValue[0]
+            const notebookName = await getNotebookDisplayName(notebookManager, notebookId)
+            breadcrumbs.push({
+              title: notebookName,
+              url: new URL(`surf://surf/notebook/${notebookId}`).toString(),
+              navigationIdx: currentHistory.findIndex((entry) =>
+                entry.url.includes(`/notebook/${notebookId}`)
+              )
+            })
+          }
 
-  history = history.filter((item, i, arr) => arr.findIndex((obj) => obj.url === item.url) === i)
-
-  history = history.slice(
-    history.findLastIndex((e) => {
-      const rendererURL = isInternalRendererURL(e.url)
-      return rendererURL && rendererURL.pathname.length <= 1
-    })
-  )
-
-  // breadcrumbs should only have one notebook slot
-  let notebookSlot = null
-  if (view.typeValue === ViewType.Resource) {
-    const resourceId = view.typeDataValue?.id
-    if (resourceId) {
-      const resource = await notebookManager.resourceManager.getResource(resourceId)
-      if (resource?.spaceIdsValue.length === 0) {
-        notebookSlot = {
-          url: new URL('surf://notebook/drafts').toString(),
-          title: 'Drafts'
+          // Add resource breadcrumb
+          // breadcrumbs.push({
+          //   title: resource.metadata?.name || 'Untitled',
+          //   url: new URL(`surf://surf/resource/${resourceId}`).toString(),
+          //   navigationIdx: currentHistory.findIndex(entry => entry.url.includes(`/resource/${resourceId}`))
+          // })
         }
-      } else {
-        const notebookId = resource?.spaceIdsValue[0]
-        if (notebookId) {
-          notebookSlot = {
-            url: new URL(`surf://notebook/${notebookId}`).toString(),
-            title: await getNotebookDisplayName(notebookManager, notebookId)
+      }
+      // } else if (viewType === ViewType.Notebook) {
+      //   const notebookId = viewData?.id
+      //   if (notebookId) {
+      //     if (notebookId === 'drafts') {
+      //       breadcrumbs.push({
+      //         title: 'Drafts',
+      //         url: new URL('surf://surf/notebook/drafts').toString(),
+      //         navigationIdx: currentHistory.findIndex(entry => entry.url.includes('/notebook/drafts'))
+      //       })
+      //     } else {
+      //       const notebookName = await getNotebookDisplayName(notebookManager, notebookId)
+      //       breadcrumbs.push({
+      //         title: notebookName,
+      //         url: new URL(`surf://surf/notebook/${notebookId}`).toString(),
+      //         navigationIdx: currentHistory.findIndex(entry => entry.url.includes(`/notebook/${notebookId}`))
+      //       })
+      //     }
+      //   }
+    } else if (viewType === ViewType.Page) {
+      // For web pages, check if we're in a notebook context
+      const lastNotebookEntry = currentHistory.findLast((entry) => {
+        const type = getViewType(entry.url)
+        return type === ViewType.Notebook || type === ViewType.NotebookHome
+      })
+
+      if (lastNotebookEntry) {
+        const viewTypeData = getViewTypeData(lastNotebookEntry.url)
+        if (viewTypeData.type === ViewType.Notebook) {
+          if (viewTypeData.id === 'drafts') {
+            breadcrumbs.push({
+              title: 'Drafts',
+              url: lastNotebookEntry.url,
+              navigationIdx: currentHistory.findIndex(
+                (entry) => entry.url === lastNotebookEntry.url
+              )
+            })
+          } else if (viewTypeData.id) {
+            const notebookName = await getNotebookDisplayName(notebookManager, viewTypeData.id)
+            breadcrumbs.push({
+              title: notebookName,
+              url: lastNotebookEntry.url,
+              navigationIdx: currentHistory.findIndex(
+                (entry) => entry.url === lastNotebookEntry.url
+              )
+            })
           }
         }
       }
+
+      // Add the page title as the last breadcrumb
+      // breadcrumbs.push({
+      //   title: view.titleValue || 'Untitled Page',
+      //   url: view.urlValue,
+      //   navigationIdx: currHistoryIndex
+      // })
     }
+
+    log.debug('Final breadcrumbs:', breadcrumbs)
+    return breadcrumbs
+  } catch (err) {
+    console.error('Error constructing breadcrumbs:', err)
+    return []
   }
-
-  if (!notebookSlot) {
-    const notebookEntry = history.find((item) => {
-      const url = new URL(item.url)
-      return (
-        url.hostname === 'notebook' &&
-        url.pathname.length > 1 &&
-        !['drafts', 'history'].some((e) => url.pathname.startsWith(`/${e}`))
-      )
-    })
-
-    if (notebookEntry) {
-      const url = new URL(notebookEntry.url)
-      const notebookId = url.pathname.slice(1) // remove leading slash
-
-      notebookSlot = {
-        url: notebookEntry.url,
-        title: await getNotebookDisplayName(notebookManager, notebookId)
-      }
-    }
-  }
-
-  // remove any existing notebook/drafts items from history
-  history = history.filter((item) => {
-    const url = new URL(item.url)
-    if (url.hostname !== 'notebook' || url.pathname.length <= 1) {
-      return true
-    }
-    return false
-  })
-
-  if (notebookSlot) {
-    history.push(notebookSlot)
-  }
-
-  for (const entry of history) {
-    breadcrumbs.push({
-      title: entry.title,
-      url: entry.url,
-      navigationIdx: originalHistory.findIndex((e) => e.uid === entry.uid)
-    })
-  }
-
-  if (originalHistory.length === 0) return []
-  if (originalHistory.length > 0) {
-    if (isInternalRendererURL(originalHistory[currHistoryIndex]?.url)) {
-      const _url = isInternalRendererURL(originalHistory[currHistoryIndex].url)
-      const lastURL = new URL(breadcrumbs.at(-1).url)
-
-      if (_url.href === lastURL.href) breadcrumbs.pop()
-    }
-  }
-
-  return breadcrumbs
 }

@@ -46,10 +46,10 @@ type NotebookSettings = BaseKVItem & {
 
 export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandlers> {
   private messagePort: MessagePortClient | MessagePortPrimary
-  private resourceManager: ResourceManager
   private config: ConfigService
   private telemetry: Telemetry
   private log: ReturnType<typeof useLogScope>
+  resourceManager: ResourceManager
 
   notebooks = new SvelteMap<string, Notebook>()
   private notebooks_lock: Lock = null

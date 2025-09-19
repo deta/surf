@@ -67,7 +67,7 @@
       if (pdfDownloadURL) {
         pdfSlick.loadDocument(pdfDownloadURL).then(async () => {
           if (pdfSlickReady) pdfSlickReady(pdfSlick)
-          if (!path.startsWith('surf://resource')) {
+          if (!path.startsWith('surf://surf/resource')) {
             const title = filename ?? (await getDocumentTitle(pdfSlick))
             if (title && title !== 'document.pdf') document.title = title
           }
