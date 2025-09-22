@@ -8,13 +8,15 @@
     callback,
     minimal = false,
     hideSectionTitle = false,
-    hideEmpty = false
+    hideEmpty = false,
+    loading = false
   }: {
     items?: MentionItem[]
     callback: (item: MentionItem) => void
     minimal?: boolean
     hideSectionTitle?: boolean
     hideEmpty?: boolean
+    loading?: boolean
   } = $props()
 
   let activeIdx = $state(0)
@@ -130,6 +132,11 @@
         {/each}
       </div>
     {/each}
+  {:else if loading}
+    <div class="item">
+      <DynamicIcon name="spinner" size="16px" />
+      <div class="item-text">Searching…</div>
+    </div>
   {:else if !hideEmpty}
     <div class="item">Nothing found</div>
   {/if}

@@ -21,6 +21,7 @@ export default {
           props: {
             items: props.items,
             callback: props.command,
+            loading: props.loading,
             hideSectionTitle: true
           }
         })
@@ -39,6 +40,7 @@ export default {
       onUpdate: (props) => {
         if (component) {
           component.items = props.items
+          component.loading = props.loading
           component.callback = props.command
         }
 
