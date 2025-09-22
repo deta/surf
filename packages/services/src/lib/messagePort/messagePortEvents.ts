@@ -125,11 +125,16 @@ export interface MPExternStateResourceDeleted extends MessagePortEvent {
   payload: { resourceId: string }
 }
 
+export interface MPExternStateNotebooksChanged extends MessagePortEvent {
+  payload: { notebookIds: string[] }
+}
+
 type MessagePortEventRegistry = {
   extern_state_resourceCreated: MPExternStateResourceCreated
   extern_state_resourceDeleted: MPExternStateResourceDeleted
   extern_state_notebookAddResources: MPExternStateNotebookChanged
   extern_state_notebookRemoveResources: MPExternStateNotebookChanged
+  extern_state_notebooksChanged: MPExternStateNotebooksChanged
 
   trackEvent: MPTrackEvent
   teletypeSetQuery: MPTeletypeSetQuery
@@ -171,6 +176,9 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     ),
     extern_state_notebookRemoveResources: messagePortService.addEvent<MPExternStateNotebookChanged>(
       'extern-state-notebook-remove-resources'
+    ),
+    extern_state_notebooksChanged: messagePortService.addEvent<MPExternStateNotebooksChanged>(
+      'extern-state-notebooks-changed'
     ),
 
     trackEvent: messagePortService.addEvent<MPTrackEvent>('track-event'),

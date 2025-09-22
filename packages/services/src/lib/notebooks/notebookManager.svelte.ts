@@ -202,7 +202,10 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
                 notebook.contents = notebook.contents.filter((e) => !resourceIds.includes(e.id))
               })
             }
-          )
+          ),
+          this.messagePort.extern_state_notebooksChanged.on(() => {
+            this.loadNotebooks()
+          })
         )
       } else {
         unsubs.push(
@@ -235,9 +238,24 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
               //  notebook.contents = notebook.contents.filter((e) => !resourceIds.includes(e.id))
               //})
             }
-          )
+          ),
+          this.messagePort.extern_state_notebooksChanged.handle(() => {
+            this.loadNotebooks()
+          })
         )
       }
+
+      unsubs.push(
+        this.on(NotebookManagerEvents.Created, () => {
+          this.updateRendererNotebooks()
+        }),
+        this.on(NotebookManagerEvents.Deleted, () => {
+          this.updateRendererNotebooks()
+        }),
+        this.on(NotebookManagerEvents.Updated, () => {
+          this.updateRendererNotebooks()
+        })
+      )
 
       return () => unsubs.forEach((f) => f())
     })
@@ -278,6 +296,20 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     if (window.api.updateSpacesList) window.api.updateSpacesList(filteredItems)
   }
 
+  updateRendererNotebooks() {
+    if (isMainRenderer()) {
+      useViewManager()?.viewsValue.forEach((view) =>
+        this.messagePort.extern_state_notebooksChanged.send(view.id, {
+          notebookIds: Array.from(this.notebooks.keys())
+        })
+      )
+    } else {
+      this.messagePort.extern_state_notebooksChanged.send({
+        notebookIds: Array.from(this.notebooks.keys())
+      })
+    }
+  }
+
   //// TODO: Maxu: nuke
   //triggerStoreUpdate(space: Notebook) {
   //// trigger Svelte reactivity
@@ -316,6 +348,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
 
     this.log.debug('loaded spaces:', spaces)
 
+    this.notebooks.clear()
     spaces.forEach((space) => this.notebooks.set(space.id, space))
 
     // tick().then(() => {

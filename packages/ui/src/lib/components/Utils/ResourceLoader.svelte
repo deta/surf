@@ -60,7 +60,6 @@
   <div oncontentvisibilityautostatechange={onContentVisibilityChanged}>
     {#if resourcePromise}
       {#await resourcePromise}
-        load
         {@render loading?.()}
       {:then resource}
         {@render children?.(resource)}
