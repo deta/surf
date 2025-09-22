@@ -148,7 +148,7 @@
     })
 
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_SIDEBAR, () => {
-      viewManager.setSidebarState({ open: !viewManager.sidebarViewOpen })
+      viewManager.toggleSidebar()
       return true
     })
 

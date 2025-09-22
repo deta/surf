@@ -44,8 +44,8 @@ class AppMenu {
       this.getViewMenu(),
       this.getNavigateMenu(),
       this.getWindowMenu(),
-      this.getToolsMenu(),
-      this.getHelpMenu()
+      this.getToolsMenu()
+      // this.getHelpMenu()
     ]
   }
 
@@ -102,10 +102,10 @@ class AppMenu {
         label: 'Check for Updates',
         click: checkUpdatesMenuClickHandler
       },
-      {
-        label: 'Invite Friends',
-        click: () => ipcSenders.openInvitePage()
-      },
+      // {
+      //   label: 'Invite Friends',
+      //   click: () => ipcSenders.openInvitePage()
+      // },
       ...(isMacApp
         ? [
             { type: 'separator' },
@@ -150,23 +150,23 @@ class AppMenu {
           click: () => ipcSenders.closeActiveTab()
         },
         { type: 'separator' },
-        {
-          label: 'Take Screenshot',
-          accelerator: 'CmdOrCtrl+Shift+1',
-          click: () => ipcSenders.startScreenshotPicker()
-        },
+        // {
+        //   label: 'Take Screenshot',
+        //   accelerator: 'CmdOrCtrl+Shift+1',
+        //   click: () => ipcSenders.startScreenshotPicker()
+        // },
         {
           id: 'importFiles',
           label: 'Import Files',
           click: () => importFiles()
         },
-        {
-          id: 'openImporter',
-          label: 'Import Bookmarks and History',
-          click: () => {
-            ipcSenders.openImporter()
-          }
-        },
+        // {
+        //   id: 'openImporter',
+        //   label: 'Import Bookmarks and History',
+        //   click: () => {
+        //     ipcSenders.openImporter()
+        //   }
+        // },
         ...(isMac() ? [] : [{ type: 'separator' }, { role: 'quit' }])
       ] as MenuConfig[]
     }
@@ -195,42 +195,27 @@ class AppMenu {
     return {
       label: 'View',
       submenu: [
+        // { type: 'separator' },
+        // {
+        //   label: 'Change Tabs Orientation',
+        //   accelerator: 'CmdOrCtrl+Shift+Alt+B',
+        //   click: () => ipcSenders.toggleTabsPosition()
+        // },
+        // {
+        //   id: 'toggleTheme',
+        //   label: 'Switch Theme',
+        //   click: () => ipcSenders.toggleTheme()
+        // },
+        // { type: 'separator' },
+        // { role: 'resetZoom' },
+        // { role: 'zoomIn' },
+        // { role: 'zoomOut' },
+        // { type: 'separator' },
         {
-          label: 'Toggle Tabs',
-          accelerator: 'CmdOrCtrl+Shift+B',
-          click: () => ipcSenders.toggleSidebar()
-        },
-        {
-          label: 'Toggle Right Sidebar',
-          accelerator: 'Alt+X',
+          label: 'Toggle Sidebar',
+          accelerator: 'CmdOrCtrl+E',
           click: () => ipcSenders.toggleRightSidebar()
         },
-        {
-          label: 'Toggle Chat Sidebar',
-          accelerator: 'CmdOrCtrl+E',
-          click: () => ipcSenders.toggleRightSidebarTab('chat')
-        },
-        {
-          label: 'Toggle Annotations Sidebar',
-          accelerator: 'Alt+A',
-          click: () => ipcSenders.toggleRightSidebarTab('annotations')
-        },
-        { type: 'separator' },
-        {
-          label: 'Change Tabs Orientation',
-          accelerator: 'CmdOrCtrl+Shift+Alt+B',
-          click: () => ipcSenders.toggleTabsPosition()
-        },
-        {
-          id: 'toggleTheme',
-          label: 'Switch Theme',
-          click: () => ipcSenders.toggleTheme()
-        },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
         { role: 'togglefullscreen' },
         {
           label: 'Toggle Developer Tools',
@@ -245,17 +230,17 @@ class AppMenu {
     return {
       label: 'Navigate',
       submenu: [
-        {
-          label: 'My Stuff',
-          accelerator: 'CmdOrCtrl+O',
-          click: () => ipcSenders.openOasis()
-        },
-        {
-          label: 'Browsing History',
-          accelerator: 'CmdOrCtrl+Y',
-          click: () => ipcSenders.openHistory()
-        },
-        { type: 'separator' },
+        // {
+        //   label: 'My Stuff',
+        //   accelerator: 'CmdOrCtrl+O',
+        //   click: () => ipcSenders.openOasis()
+        // },
+        // {
+        //   label: 'Browsing History',
+        //   accelerator: 'CmdOrCtrl+Y',
+        //   click: () => ipcSenders.openHistory()
+        // },
+        // { type: 'separator' },
         {
           label: 'Reload Tab',
           accelerator: 'CmdOrCtrl+R',

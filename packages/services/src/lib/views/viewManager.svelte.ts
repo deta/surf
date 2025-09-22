@@ -518,6 +518,10 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     return null
   }
 
+  toggleSidebar() {
+    this.setSidebarState({ open: !this.sidebarViewOpen })
+  }
+
   openViewInSidebar(view: WebContentsView) {
     this.setSidebarState({ open: true, view })
     return view

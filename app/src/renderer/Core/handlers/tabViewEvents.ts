@@ -30,6 +30,10 @@ export const setupTabViewEvents = (events: PreloadEvents) => {
     }
   })
 
+  events.onCreateNewTab(() => {
+    tabsManager.openNewTabPage()
+  })
+
   events.onCloseActiveTab(() => {
     const activeTab = tabsManager.activeTabValue
     if (activeTab) {
@@ -50,5 +54,9 @@ export const setupTabViewEvents = (events: PreloadEvents) => {
 
   events.onUpdateViewBounds((viewId, bounds) => {
     viewManager.updateViewBounds(viewId, bounds)
+  })
+
+  events.onToggleRightSidebar(() => {
+    viewManager.toggleSidebar()
   })
 }

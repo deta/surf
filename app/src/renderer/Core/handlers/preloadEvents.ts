@@ -2,6 +2,7 @@ import { type Fn } from '@deta/types'
 
 import { setupDownloadEvents } from './downloadEvents'
 import { setupTabViewEvents } from './tabViewEvents'
+import { setupImportEvents } from './importerEvents'
 
 // @ts-ignore
 export type PreloadEvents = typeof window.preloadEvents
@@ -38,12 +39,13 @@ function setupPreloadEvents() {
 export function handlePreloadEvents() {
   const { events, unsubscribe } = setupPreloadEvents()
 
-  events.onBrowserFocusChange((state) => {
+  events.onBrowserFocusChange((_state) => {
     // no-op
   })
 
   setupTabViewEvents(events)
   setupDownloadEvents(events)
+  setupImportEvents(events)
 
   return () => unsubscribe()
 }
