@@ -15,7 +15,6 @@
       transform="rotate(-4.25 0.301514 1.54297)"
       fill="white"
       style="fill:white;fill-opacity:1;"
-      shape-rendering="crispEdges"
     />
     <rect
       x="0.301514"
@@ -26,7 +25,6 @@
       transform="rotate(-4.25 0.301514 1.54297)"
       fill="url(#paint0_radial_33_191)"
       style=""
-      shape-rendering="crispEdges"
     />
     <rect
       x="0.301514"
@@ -38,7 +36,6 @@
       fill="url(#paint1_linear_33_191)"
       fill-opacity="0.2"
       style=""
-      shape-rendering="crispEdges"
     />
     <path
       d="M1.79625 4.79149C1.7103 3.63488 2.57824 2.62759 3.73485 2.54164L11.3139 1.97841C12.4706 1.89246 13.4779 2.7604 13.5638 3.91701L14.253 13.1914C14.339 14.348 13.471 15.3553 12.3144 15.4413L4.73532 16.0045C3.57871 16.0905 2.57141 15.2225 2.48546 14.0659L1.79625 4.79149Z"
