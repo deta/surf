@@ -48,7 +48,7 @@ export const checkIfUrl = (url: string) => {
 }
 
 export const optimisticCheckIfUrl = (url: string) => {
-  const pattern = /^(?:https?:\/\/)?(?:[\w-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?$/
+  const pattern = /^(?:https?:\/\/|surf:\/\/)(?:[\w-]+\.)*[\w-]+(?:\/[^\s]*)?$/
   return pattern.test(url)
 }
 
