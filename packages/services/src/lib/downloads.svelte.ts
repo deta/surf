@@ -90,12 +90,14 @@ export class DownloadsManager {
 
       this.log.debug('new download request', downloadData, data)
 
-      // if (!downloadIntercepter) {
-      //   toast = toasts.loading(`Downloading "${downloadData.filename}"...`, {
-      //     dismissText: 'Hide (download will continue)'
-      //   })
-      //   downloadToastsMap.set(data.id, toast)
-      // }
+      if (!downloadData.silent) {
+        this.downloads.set(data.id, downloadData)
+
+        return {
+          path: undefined,
+          copyToDownloads: true
+        }
+      }
 
       // TODO: add metadata/tags here
       const resource = await this.resourceManager.createResource(
@@ -125,7 +127,7 @@ export class DownloadsManager {
 
       return {
         path: downloadData.savePath,
-        copyToDownloads: !downloadData.silent // $userConfigSettings.save_to_user_downloads
+        copyToDownloads: false // $userConfigSettings.save_to_user_downloads
       }
     } catch (err) {
       this.log.error('download path error', err)

@@ -32,7 +32,7 @@ export function initDownloadManager(partition: string) {
     const mimeType = mime.lookup(fileExtension) || downloadItem.getMimeType()
     const url = downloadItem.getURL()
 
-    log.debug('will-download', url, filename)
+    log.debug('will-download', url.startsWith('http') ? url : mimeType, filename)
 
     const sourcePageUrl = sourceWebContents ? sourceWebContents.getURL() : null
     log.debug('sourceWebContents', sourcePageUrl)
@@ -197,6 +197,8 @@ export function initDownloadManager(partition: string) {
 
         if (path) {
           finalPath = path
+        } else if (downloadFilePath) {
+          finalPath = downloadFilePath
         }
 
         downloadItem.resume()
